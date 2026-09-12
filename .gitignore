@@ -1,0 +1,38 @@
+# --- Python / backend ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.db
+*.sqlite3
+
+# --- Node / frontend ---
+node_modules/
+dist/
+.vite/
+.env
+.env.local
+
+# --- Secrets & config ---
+*.pem
+*.key
+.env*
+!.env.example
+
+# --- OS / editor ---
+.DS_Store
+.idea/
+.vscode/
+
+# --- App data (never commit real portfolio/source docs) ---
+storage/
+uploads/
+*.pdf
+*.pptx
+*.xlsx
+!docs/**/*.pdf

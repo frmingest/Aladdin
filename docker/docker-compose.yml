@@ -1,0 +1,19 @@
+version: "3.9"
+
+# Local development only — matches DATABASE_URL in backend/.env.example.
+# Production hosting choice is deployment documentation, not an architectural
+# assumption (see docs/architecture.md §4).
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: aladdin
+      POSTGRES_PASSWORD: aladdin
+      POSTGRES_DB: aladdin
+    ports:
+      - "5432:5432"
+    volumes:
+      - aladdin_pgdata:/var/lib/postgresql/data
+
+volumes:
+  aladdin_pgdata:
