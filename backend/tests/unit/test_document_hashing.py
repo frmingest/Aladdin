@@ -25,8 +25,19 @@ def test_valid_csv_is_readable():
 
 
 def test_invalid_utf8_csv_is_rejected():
+    # Not valid UTF-8 *or* UTF-16 (the latter matters since Phase 2's
+    # readability check also accepts UTF-16 for the real Nordnet export —
+    # decision 0003 — so this fixture must fail both to actually test
+    # rejection rather than accidentally exercising the UTF-16 path).
     with pytest.raises(UnreadableFileError):
-        check_basic_readability("portfolio.csv", b"\xff\xfe\x00bad")
+        check_basic_readability("portfolio.csv", b"\x80\x81\x82")
+
+
+def test_utf16_nordnet_style_csv_is_readable():
+    # decision 0003: the real Nordnet export is UTF-16 with a BOM despite
+    # the .csv extension — the readability check must accept it, not just
+    # the portfolio parser further downstream.
+    check_basic_readability("beholdning.csv", "Handel\tVerdi NOK\nVår Energi\t1000\n".encode("utf-16"))
 
 
 def test_valid_xlsx_is_readable():

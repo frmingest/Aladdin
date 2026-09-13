@@ -81,6 +81,10 @@ class ParsedPosition:
     cost_basis: Decimal | None
     sector: str | None
     notes: str | None
+    # Phase 2 (§26) market-data symbol — see Holding.market_ticker. Present
+    # for canonical-schema uploads (same value as `ticker`), None for a
+    # Nordnet export (no ticker column to derive it from).
+    market_ticker: str | None
 
 
 @dataclass
@@ -156,6 +160,11 @@ def _rows_from_canonical(
     rows: list[dict[str, str]] = []
     for raw_row in data_rows:
         row = {canonical: (raw_row[i].strip() if i < len(raw_row) else "") for i, canonical in header_map.items()}
+        # §7's canonical schema already requires an exchange-qualified
+        # ticker (e.g. "VAR.OL"), so it doubles as the Phase 2 market-data
+        # symbol with no extra column needed — unlike the Nordnet shape
+        # below, which has no ticker at all (see Holding.market_ticker).
+        row["market_ticker"] = row.get("ticker", "")
         rows.append(row)
     return rows
 
@@ -199,6 +208,11 @@ def _rows_from_nordnet(
                 "cost_basis": cell(raw_row, "avg_cost"),
                 "sector": "",
                 "notes": "",
+                # No ticker in this export — Holding.market_ticker stays
+                # NULL until set explicitly (PATCH /portfolio/holdings/{id}),
+                # rather than guessing a Yahoo symbol from the instrument
+                # name (§21).
+                "market_ticker": "",
             }
         )
         try:
@@ -298,6 +312,8 @@ def parse_and_validate(*, filename: str, content: bytes) -> PortfolioParseResult
                 result.row_errors.append({"row": idx, "message": message})
             continue
 
+        market_ticker = (row.get("market_ticker") or "").strip() or None
+
         result.positions.append(
             ParsedPosition(
                 row_number=idx,
@@ -311,6 +327,7 @@ def parse_and_validate(*, filename: str, content: bytes) -> PortfolioParseResult
                 cost_basis=cost_basis,
                 sector=sector,
                 notes=notes,
+                market_ticker=market_ticker,
             )
         )
 

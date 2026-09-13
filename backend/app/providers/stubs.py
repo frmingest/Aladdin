@@ -8,10 +8,12 @@ questions (market-data provider, research provider) are resolved.
 from datetime import datetime
 
 from app.providers.base import (
+    DividendObservation,
     FxRate,
     LLMProvider,
     LLMResponse,
     MarketDataProvider,
+    MarketMetadata,
     ObjectStorageProvider,
     PriceObservation,
     ResearchItem,
@@ -20,6 +22,9 @@ from app.providers.base import (
 
 
 class StubMarketDataProvider(MarketDataProvider):
+    """Deliberately unimplemented — used only when MARKET_DATA_PROVIDER=stub,
+    e.g. to run the app/tests with no market-data dependency at all."""
+
     def get_latest_price(self, ticker: str) -> PriceObservation:
         raise NotImplementedError(f"No market data provider configured for '{ticker}' — see §29.")
 
@@ -27,6 +32,12 @@ class StubMarketDataProvider(MarketDataProvider):
         raise NotImplementedError("No market data provider configured — see §29.")
 
     def get_fx_rate(self, from_currency: str, to_currency: str) -> FxRate:
+        raise NotImplementedError("No market data provider configured — see §29.")
+
+    def get_dividends(self, ticker: str) -> list[DividendObservation]:
+        raise NotImplementedError("No market data provider configured — see §29.")
+
+    def get_market_metadata(self, ticker: str) -> MarketMetadata:
         raise NotImplementedError("No market data provider configured — see §29.")
 
 

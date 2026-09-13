@@ -32,8 +32,48 @@ class FxRate:
     provider: str
 
 
+@dataclass(frozen=True)
+class DividendObservation:
+    ticker: str
+    ex_date: datetime
+    amount: Decimal
+    currency: str
+
+
+@dataclass(frozen=True)
+class MarketMetadata:
+    ticker: str
+    currency: str
+    exchange: str | None
+    shares_outstanding: Decimal | None
+    provider: str
+
+
+class MarketDataUnavailableError(Exception):
+    """Raised by a MarketDataProvider when no observation could be obtained
+    for the given ticker/symbol.
+
+    This is a normal, expected outcome (a delisted ticker, an unsupported
+    FX pair, a transient provider issue) — not a bug. Callers must treat it
+    as an explicit "unavailable" data-quality state (§8.3) and surface that
+    to the user, never substitute a stale value or silently drop the holding
+    from a total without saying so (§21: fail visibly rather than silently
+    invent or omit).
+    """
+
+    def __init__(self, ticker: str, reason: str):
+        self.ticker = ticker
+        self.reason = reason
+        super().__init__(f"market data unavailable for '{ticker}': {reason}")
+
+
 class MarketDataProvider(ABC):
-    """§8.1 — current/historical prices, dividends, metadata, FX."""
+    """§8.1 — current/historical prices, dividends, metadata, FX.
+
+    Implementations should raise MarketDataUnavailableError rather than
+    returning a fabricated or zero value when a ticker/symbol can't be
+    resolved — see that class's docstring.
+    """
 
     @abstractmethod
     def get_latest_price(self, ticker: str) -> PriceObservation: ...
@@ -43,6 +83,12 @@ class MarketDataProvider(ABC):
 
     @abstractmethod
     def get_fx_rate(self, from_currency: str, to_currency: str) -> FxRate: ...
+
+    @abstractmethod
+    def get_dividends(self, ticker: str) -> list[DividendObservation]: ...
+
+    @abstractmethod
+    def get_market_metadata(self, ticker: str) -> MarketMetadata: ...
 
 
 @dataclass(frozen=True)

@@ -14,6 +14,18 @@ class HoldingOut(BaseModel):
     asset_class: str
     sector: str | None
     trading_currency: str
+    market_ticker: str | None
+
+
+class HoldingUpdate(BaseModel):
+    """PATCH body for setting a holding's market-data symbol (§26 Phase 2).
+
+    Only market_ticker is editable here — descriptive fields (name, sector,
+    currency) are owned by the portfolio upload (see ingestion.py), not this
+    endpoint, so there's one source of truth for each.
+    """
+
+    market_ticker: str | None = None
 
 
 class PortfolioPositionOut(BaseModel):

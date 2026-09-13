@@ -8,8 +8,16 @@ This is decision support, not a trading engine — no order execution, no automa
 
 ## Status
 
-Architecture and solution design phase. See [`docs/architecture.md`](docs/architecture.md) for the
-full design document (data model, service boundaries, scoring methodology, risk model, build phasing).
+Phase 0 (foundation), Phase 1 (portfolio + document ingestion), and Phase 2 (market data, FX,
+deterministic financial metrics) are built. See [`docs/architecture.md`](docs/architecture.md) for
+the full design document (data model, service boundaries, scoring methodology, risk model, build
+phasing) and `docs/decisions/` for implementation-level choices made along the way.
+
+Phase 2 adds a yfinance-backed market-data layer: `POST /portfolio/snapshots/{id}/valuation`
+fetches live prices/FX for a snapshot's holdings and returns deterministic market value, unrealized
+P&L, and concentration/exposure. A holding ingested from a Nordnet export has no market-data symbol
+until you set one via `PATCH /portfolio/holdings/{id}` (see
+`docs/decisions/0004-phase2-market-data-and-financial-metrics.md`).
 
 ## Core principles
 

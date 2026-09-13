@@ -15,14 +15,18 @@ from app.domain.errors import (
 )
 from app.models.holding import Holding
 from app.models.portfolio import PortfolioPosition, PortfolioSnapshot
-from app.providers.factory import get_object_storage
+from app.providers.base import MarketDataProvider
+from app.providers.factory import get_market_data_provider, get_object_storage
+from app.schemas.market_data import PortfolioValuationOut
 from app.schemas.portfolio import (
     HoldingOut,
+    HoldingUpdate,
     PortfolioPositionOut,
     PortfolioSnapshotDetail,
     PortfolioSnapshotSummary,
     PortfolioUploadResponse,
 )
+from app.services.market_data.valuation import refresh_and_value_snapshot
 from app.services.portfolio.ingestion import ingest_portfolio_upload
 
 router = APIRouter(prefix="/portfolio", tags=["portfolio"])
@@ -122,3 +126,45 @@ def list_holdings(db: Session = Depends(get_db)) -> list[HoldingOut]:
     report belongs to (documents.holding_id, §20)."""
     holdings = db.query(Holding).order_by(Holding.ticker).all()
     return [HoldingOut.model_validate(h) for h in holdings]
+
+
+@router.patch("/holdings/{holding_id}", response_model=HoldingOut)
+def update_holding(
+    holding_id: UUID, body: HoldingUpdate, db: Session = Depends(get_db)
+) -> HoldingOut:
+    """Sets a holding's market-data symbol (§26 Phase 2). Needed for any
+    holding ingested from a Nordnet export (decision 0003), which has no
+    exchange ticker of its own — market_ticker starts NULL for those and
+    must be supplied explicitly here rather than guessed (§21)."""
+    holding = db.get(Holding, holding_id)
+    if holding is None:
+        raise HTTPException(status_code=404, detail="holding not found")
+
+    market_ticker = (body.market_ticker or "").strip() or None
+    holding.market_ticker = market_ticker
+    db.commit()
+    db.refresh(holding)
+    return HoldingOut.model_validate(holding)
+
+
+@router.post("/snapshots/{snapshot_id}/valuation", response_model=PortfolioValuationOut)
+def refresh_valuation(
+    snapshot_id: UUID,
+    db: Session = Depends(get_db),
+    provider: MarketDataProvider = Depends(get_market_data_provider),
+) -> PortfolioValuationOut:
+    """Fetches live prices/FX for every holding in the snapshot, persists
+    the observations (§8.3 provenance), and returns deterministic market
+    value, unrealized P&L, and concentration/exposure (§26 Phase 2, §2.2 —
+    no LLM involvement).
+
+    A holding failing to price (no market_ticker set, delisted ticker, FX
+    pair unavailable) does not fail this request — it's reported per-holding
+    via `data_warning` and excluded from totals, with that exclusion also
+    surfaced in `warnings` (§21: fail visibly, not silently)."""
+    snapshot = db.get(PortfolioSnapshot, snapshot_id)
+    if snapshot is None:
+        raise HTTPException(status_code=404, detail="snapshot not found")
+
+    valuation = refresh_and_value_snapshot(db, provider, snapshot)
+    return PortfolioValuationOut.model_validate(valuation, from_attributes=True)

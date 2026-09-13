@@ -77,6 +77,7 @@ def ingest_portfolio_upload(
                 asset_class_raw=position.asset_class_raw,
                 sector=position.sector,
                 trading_currency=position.currency,
+                market_ticker=position.market_ticker,
             )
             db.add(holding)
             db.flush()
@@ -88,6 +89,13 @@ def ingest_portfolio_upload(
             holding.asset_class_raw = position.asset_class_raw
             holding.sector = position.sector
             holding.trading_currency = position.currency
+            # Only adopt an upload-provided market_ticker if the holding
+            # doesn't already have one — a value set manually via
+            # PATCH /portfolio/holdings/{id} (e.g. for a Nordnet holding
+            # with no ticker in its own export) must survive a re-upload,
+            # never get silently cleared back to None.
+            if holding.market_ticker is None and position.market_ticker is not None:
+                holding.market_ticker = position.market_ticker
 
         db.add(
             PortfolioPosition(

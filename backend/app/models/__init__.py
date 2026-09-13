@@ -7,6 +7,7 @@ autogenerate, and what Base.metadata.create_all() uses in tests.
 from app.models.document import Document, DocumentChunk, DocumentPage, DocumentStatus, DocumentType
 from app.models.financial_fact import FinancialLineItem
 from app.models.holding import Holding
+from app.models.market_data import FxObservation, MarketObservation
 from app.models.portfolio import PortfolioPosition, PortfolioSnapshot, SnapshotStatus
 
 __all__ = [
@@ -16,7 +17,9 @@ __all__ = [
     "DocumentStatus",
     "DocumentType",
     "FinancialLineItem",
+    "FxObservation",
     "Holding",
+    "MarketObservation",
     "PortfolioPosition",
     "PortfolioSnapshot",
     "SnapshotStatus",

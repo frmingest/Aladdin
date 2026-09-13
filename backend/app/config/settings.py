@@ -36,8 +36,9 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
     anthropic_model: str = "claude-sonnet-4-6"
 
-    # --- Market data provider ---
-    market_data_provider: str = "stub"  # stub until §29 open question is resolved
+    # --- Market data provider (§29 resolved in Phase 2 — see
+    # docs/decisions/0004-phase2-market-data-and-financial-metrics.md) ---
+    market_data_provider: str = "yfinance"  # yfinance | stub
 
     # --- Research provider ---
     research_provider: str = "stub"

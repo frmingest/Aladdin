@@ -26,7 +26,21 @@ def check_basic_readability(filename: str, content: bytes) -> None:
     ext = extension_of(filename)
     try:
         if ext == ".csv":
-            content.decode("utf-8-sig")
+            # Mirrors app.services.portfolio.parser._decode_csv_text: a
+            # canonical-schema upload is UTF-8, but the real Nordnet export
+            # (decision 0003) is UTF-16 with a BOM despite the .csv
+            # extension. This check runs before that parser sees the file
+            # at all (§6.1), so it needs the same tolerance or every real
+            # Nordnet upload is rejected here as "unreadable" before
+            # parsing ever gets a chance to prove otherwise.
+            for encoding in ("utf-8-sig", "utf-16"):
+                try:
+                    content.decode(encoding)
+                    break
+                except UnicodeDecodeError:
+                    continue
+            else:
+                raise UnicodeDecodeError("utf-8-sig/utf-16", content, 0, 1, "not valid UTF-8 or UTF-16 text")
         elif ext == ".xlsx":
             import openpyxl
 
