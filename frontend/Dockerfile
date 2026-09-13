@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.7
 # Production image for the frontend: a Vite build served as static files
 # (architecture §26 "Deployment & production hardening" phase — see
 # docs/decisions/0010). Not used by local dev, which runs `npm run dev`
@@ -25,7 +26,27 @@ RUN npm run build
 
 FROM nginx:1.27-alpine
 COPY --from=build /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/templates/default.conf.template
+
+# Written inline with RUN instead of `COPY nginx.conf ...` — Railway's
+# builder (multi-stage Dockerfile + a custom Root Directory) has been seen
+# to fail resolving a plain build-context file referenced only in a later
+# stage ("failed to calculate checksum of ref ...: not found") even though
+# the file is present in the repo. Baking the config in with RUN sidesteps
+# that context-snapshot lookup entirely. Content matches the former
+# frontend/nginx.conf (kept in the repo for local `docker build` reference).
+COPY <<EOF /etc/nginx/templates/default.conf.template
+server {
+    listen \${PORT};
+    server_name _;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # SPA fallback — client-side routing owns every unknown path.
+    location / {
+        try_files \$uri \$uri/ /index.html;
+    }
+}
+EOF
 
 # Railway (and most PaaS targets) inject PORT; nginx's templating
 # (docker-entrypoint.d, built into the nginx image) substitutes it into the
