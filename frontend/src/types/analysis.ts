@@ -54,7 +54,7 @@ export type HoldingAnalysisSummary = {
   holding_id: string;
   ticker: string;
   name: string;
-  overall_score: number | null;
+  overall_score: string | null; // Decimal -> JSON string; see types/market_valuation.ts's note
   confidence: string;
   thesis_status: string;
 };
@@ -65,7 +65,7 @@ export type HoldingAnalysisDetail = {
   holding_id: string;
   ticker: string;
   name: string;
-  overall_score: number | null;
+  overall_score: string | null; // Decimal -> JSON string; see types/market_valuation.ts's note
   confidence: string;
   structured_output: HoldingAnalysisOutput;
   factor_assessments: FactorAssessmentOut[];

@@ -12,6 +12,11 @@ import type {
 } from "../types/portfolio";
 import type { DocumentDetail, DocumentSummary, DocumentUploadResponse } from "../types/document";
 import type { AnalysisRunDetail, HoldingAnalysisDetail, HoldingAnalysisSummary } from "../types/analysis";
+import type { PortfolioValuationOut } from "../types/market_valuation";
+import type { PortfolioRiskSnapshotOut } from "../types/portfolio_risk";
+import type { InvalidationSignalOut, ThesisOut } from "../types/thesis";
+import type { ValuationCaseOut } from "../types/dcf";
+import type { MacroSnapshotOut, ResearchRunOut, SectorResearchOut } from "../types/research";
 
 const API_BASE = "/api";
 
@@ -109,4 +114,60 @@ export async function getHoldingAnalysisMemo(id: string): Promise<string> {
     throw new ApiError(response.status, await response.text().catch(() => null));
   }
   return response.text();
+}
+
+// --- Phase 2/5 — market valuation & portfolio risk (§26) -------------------
+
+export function refreshSnapshotValuation(snapshotId: string): Promise<PortfolioValuationOut> {
+  return apiFetch(`/portfolio/snapshots/${snapshotId}/valuation`, { method: "POST" });
+}
+
+export function createPortfolioRiskSnapshot(snapshotId: string): Promise<PortfolioRiskSnapshotOut> {
+  return apiFetch(`/portfolio/snapshots/${snapshotId}/risk-snapshot`, { method: "POST" });
+}
+
+export function listPortfolioRiskSnapshots(snapshotId: string): Promise<PortfolioRiskSnapshotOut[]> {
+  return apiFetch(`/portfolio/snapshots/${snapshotId}/risk-snapshots`);
+}
+
+export function getPortfolioRiskSnapshot(id: string): Promise<PortfolioRiskSnapshotOut> {
+  return apiFetch(`/portfolio/risk-snapshots/${id}`);
+}
+
+// --- Phase 5 — thesis ledger (§16) ------------------------------------------
+
+export function listHoldingTheses(holdingId: string): Promise<ThesisOut[]> {
+  return apiFetch(`/thesis/holdings/${holdingId}`);
+}
+
+export function getInvalidationCheck(thesisId: string): Promise<InvalidationSignalOut> {
+  return apiFetch(`/thesis/${thesisId}/invalidation-check`);
+}
+
+// --- Phase 5 — DCF valuation cases (§17) ------------------------------------
+
+export function listHoldingValuationCases(holdingId: string): Promise<ValuationCaseOut[]> {
+  return apiFetch(`/valuation/holdings/${holdingId}/cases`);
+}
+
+// --- Phase 4 — external research (§9) ---------------------------------------
+
+export function getMacroSnapshot(): Promise<MacroSnapshotOut> {
+  return apiFetch("/research/macro/snapshot");
+}
+
+export function refreshMacroSnapshot(force = false): Promise<ResearchRunOut> {
+  return apiFetch(`/research/macro/refresh?force=${force}`, { method: "POST" });
+}
+
+export function listKnownSectors(): Promise<string[]> {
+  return apiFetch("/research/sectors");
+}
+
+export function getSectorResearch(sector: string): Promise<SectorResearchOut> {
+  return apiFetch(`/research/sectors/${encodeURIComponent(sector)}/items`);
+}
+
+export function refreshSectorResearch(sector: string, force = false): Promise<ResearchRunOut> {
+  return apiFetch(`/research/sectors/${encodeURIComponent(sector)}/refresh?force=${force}`, { method: "POST" });
 }
