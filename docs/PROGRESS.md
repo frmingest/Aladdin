@@ -83,6 +83,21 @@ both when a phase completes: the ADR for *why*, this file for *how far along thi
   (`_json_safe`) previously documented — corrected across the frontend's TypeScript types (Phase 6's
   own new types plus a type-only fix to Phase 1/3's `types/portfolio.ts`/`types/analysis.ts`); see
   ADR 0009.
+- No application authentication exists anywhere in the codebase (architecture §24 "authenticate
+  application access") — `main.py` mounts every router unauthenticated. Harmless while the API is
+  only reachable via `localhost`/Vite's dev proxy; becomes a real gap the moment the backend is
+  deployed to Railway with a public URL, since anyone with the URL could read/upload portfolio data.
+  Not previously tracked as its own gap — folded into the Deployment readiness checklist below.
+- §23 (Observability & Cost Tracking) is only half-built: `LLMAnalysisService`/`AnalysisRunResult`
+  compute `total_input_tokens`/`total_output_tokens` per run (`app/services/analysis/llm_analysis.py`),
+  but that figure is never persisted (no column on `analysis_runs`, no separate cost-log table) or
+  surfaced anywhere — it's discarded after the run completes. Latency and estimated cost are not
+  captured at all. The near-zero-cost objective §23 exists to make measurable currently isn't
+  measurable after the fact.
+- `backend/tests/golden_documents/` and `backend/tests/regression/` have existed as scaffolded
+  packages (`__init__.py` only, no test files) since Phase 0 — architecture §22.2 (golden document
+  extraction tests) and §22.3 (prompt/model regression tests) were never actually built despite the
+  directories implying they had a home. All 31 existing test files live under `unit/`/`integration/`.
 
 ## Deployment readiness (Railway)
 
@@ -113,6 +128,65 @@ Not yet deployed anywhere. Gaps, as of Phase 3:
       `GOOGLE_AI_STUDIO_API_KEY` (critique) and live `MarketDataProvider.get_historical_prices`
       (correlation) as Phase 3/2 — no new secrets needed, but neither has been smoke-tested live from
       this build environment (see ADR 0008's Consequences).
+- [ ] Application authentication (architecture §24) — currently none. At minimum a single-user
+      login (e.g. one shared credential/session cookie or a bearer token checked via FastAPI
+      dependency) gating every router before this is reachable from a public Railway URL.
+
+## Next phases & identified follow-up work
+
+Reviewed 2026-09-13 against the current codebase (`backend/app`, `frontend/src`, `docs/`) to find
+what's next after Phase 6, beyond what "Known gaps" above already tracks line-by-line. Phases 0-6
+(architecture §26) are all complete — nothing here revises that. This is additive: candidate next
+phases, plus improvements that don't need a phase of their own.
+
+### Candidate next phases
+
+1. **Deployment & production hardening** — turns the "Deployment readiness (Railway)" checklist
+   above from a checklist into actual work. This is the most concrete, most overdue next phase:
+   the app has been feature-complete through Phase 6 but has never been deployed anywhere.
+   Scope: Dockerfile(s) (backend + frontend build/serve), CORS middleware, a durable object-storage
+   provider (Supabase Storage or R2) replacing local-filesystem, `alembic upgrade head` run against
+   real Postgres/Supabase, single-user authentication (new — see "Known gaps" above; §24 was never
+   implemented), all required env vars/secrets set (`GOOGLE_AI_STUDIO_API_KEY`, `FRED_API_KEY`,
+   `DATABASE_URL`, `MARKET_DATA_PROVIDER`), and the first live smoke tests this build environment
+   has never been able to run: yfinance, Gemini analysis + Gemini Search grounding, FRED, Norges
+   Bank. Nothing else on this list matters if the app never leaves localhost.
+2. **Track-record & calibration engine** (architecture §22.5, `calibration_checks` table already
+   specified in §20 but never migrated) — the one architecturally-specified capability with zero
+   implementation. Scope: `calibration_checks` model + Alembic migration, a periodic (e.g.
+   quarterly, APScheduler-driven like Phase 4's research refresh) job comparing each past
+   `analysis_run`'s score/thesis_status against subsequent price movement and any new documents
+   ingested since, and a read-only dashboard view (was high confidence associated with better
+   outcomes?). Purely deterministic per §22.5 — no new LLM calls. Recommend after deployment
+   hardening since it needs weeks of real, live-deployed analysis history to be useful at all —
+   building it against only synthetic/test data would just be untested code with nothing to
+   calibrate against yet.
+3. **Testing debt** — populate `tests/golden_documents/` (known source documents with expected
+   extraction values, §22.2) and `tests/regression/` (fixed-`AnalysisContext` prompt/model
+   comparison, §22.3), both empty since Phase 0. Also: add a `black` config and run the codebase
+   through it once (currently never formatted); add the frontend's missing `eslint.config.js` so
+   `npm run lint` stops failing outright, then fix whatever it flags.
+
+### Smaller improvements (don't need their own phase)
+
+- Persist §23's already-computed `total_input_tokens`/`total_output_tokens` (currently discarded
+  after each analysis run) onto `analysis_runs`, plus latency and a rough estimated-cost figure —
+  most of the plumbing already exists in `LLMAnalysisService`, this is largely wiring it to a column.
+- Frontend data-entry: creating a thesis or a valuation case is still API-only (Phase 6 was
+  visualization-only by design) — a form in `HoldingDetailSection` would close that loop.
+- Evidence-packet excerpt selection (§5.3) has no relevance ranking, just most-recent-first —
+  worth revisiting once any holding accumulates more than one or two documents.
+- Regime classification (§13.1) is a manual `active_macro_regime_profile` setting — could be
+  informed by the macro snapshot instead, per the architecture's own suggested path.
+- Jurisdictional concentration (§15.1) is proxied via `Holding.institution`; a dedicated
+  custodian-country field would make it a verified value rather than an approximation.
+- Norwegian wealth-tax estimate (§15.1) is single-bracket with no per-couple splitting — revisit
+  fidelity if it's ever relied on for a real filing rather than a directional risk signal.
+- `vite build`'s ~600 kB single bundle (mostly `recharts`) has no code-splitting — fine at
+  single-user scale, worth it only before any wider rollout.
+- PDF/PPT structured financial-fact extraction remains a deliberate non-goal (Phase 3 treats them
+  as qualitative text, XLSX-only for structured facts) — revisit only if a holding's primary
+  source material is consistently PDF-only with no XLSX equivalent.
 
 ## Git status
 
