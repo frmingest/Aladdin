@@ -1,0 +1,83 @@
+# Macro series registry v1 (architecture §9.1, §26 Phase 4).
+#
+# Read by app.domain.macro_series — do not rename keys without updating that
+# module. Each entry maps one canonical `series_key` (what the rest of the
+# application, including LLM evidence packets, ever sees) to the vendor that
+# owns it and that vendor's own series identifier. Adding/removing/repointing
+# a series is a config change here, never an application-code change (§2.4,
+# §28 rule 8) — app.providers.composite_macro_provider reads this file to
+# decide which child provider to call for a given series_key.
+#
+# "Hybrid" resolution of the §29 "research provider" open question for
+# numeric central-bank/macro data: FRED as the primary source (broad,
+# reliable, one API for most series), Norges Bank's own API for NOK-specific
+# series FRED doesn't carry.
+#
+# To change a series without losing the ability to reproduce past runs
+# (§2.4, §28 rule 9), add a new versions/v2.yaml and point
+# settings.active_macro_series_version at it — never edit an existing
+# version's mappings in place once any macro_observations row references it.
+version: v1
+description: >
+  Initial Phase 4 registry: US series via FRED covering policy rate, headline
+  inflation, the 10y real yield, the 10y breakeven, and the broad dollar
+  index (§9.1's named transmission variables); Norway's policy rate via
+  Norges Bank.
+series:
+  us_policy_rate:
+    provider: fred
+    provider_series_id: DFF
+    fred_units: lin
+    description: Effective Federal Funds Rate (daily), as a US policy-rate proxy.
+    unit: percent
+    region: US
+  us_headline_cpi_yoy:
+    provider: fred
+    provider_series_id: CPIAUCSL
+    fred_units: pc1
+    description: >
+      CPI for All Urban Consumers, requested as FRED's own "percent change
+      from year ago" (units=pc1) transform — headline YoY inflation.
+    unit: percent
+    region: US
+  us_real_yield_10y:
+    provider: fred
+    provider_series_id: DFII10
+    fred_units: lin
+    description: 10-Year Treasury Inflation-Indexed Security, constant maturity — the real yield.
+    unit: percent
+    region: US
+  us_breakeven_10y:
+    provider: fred
+    provider_series_id: T10YIE
+    fred_units: lin
+    description: 10-Year Breakeven Inflation Rate.
+    unit: percent
+    region: US
+  us_dollar_index_broad:
+    provider: fred
+    provider_series_id: DTWEXBGS
+    fred_units: lin
+    description: >
+      Trade Weighted U.S. Dollar Index, Broad, Goods and Services — a free
+      FRED-hosted proxy for broad dollar strength (the proprietary ICE DXY
+      index itself isn't on FRED).
+    unit: index
+    region: US
+  no_policy_rate:
+    provider: norges_bank
+    dataset: IR
+    key: "B.KPRA.SD."
+    description: >
+      Norway's key policy rate (sight deposit rate). CAUTION: this build
+      environment has no verified live access to the Norges Bank API (see
+      docs/decisions/0007's Consequences) — the dataset/key above is a
+      best-effort reading of Norges Bank's published API guide, not a value
+      confirmed against a real response. Verify it against
+      https://data.norges-bank.no/api/data/IR/ before relying on this series;
+      it is a one-line config fix here if the code needs to change.
+    unit: percent
+    # Quoted deliberately: YAML 1.1's default resolver parses an unquoted
+    # `NO` as the boolean `false` (the classic "Norway problem"), which
+    # PyYAML's safe_load reproduces — confirmed directly in this sandbox.
+    region: "NO"

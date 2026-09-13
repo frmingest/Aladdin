@@ -16,6 +16,7 @@ from app.models.financial_fact import FinancialLineItem
 from app.models.holding import Holding
 from app.models.market_data import MarketObservation
 from app.models.portfolio import PortfolioPosition, PortfolioSnapshot, SnapshotStatus
+from app.models.research import MacroObservation, ResearchItem, ResearchRun, ResearchRunStatus, ResearchRunType
 from app.services.analysis.context import InsufficientContextError, build_analysis_context
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -160,6 +161,87 @@ def test_context_includes_financial_metrics_and_evidence(db):
 
     assert context.macro_snapshot.available is False
     assert context.sector_research.available is False
+
+
+def test_context_surfaces_macro_and_sector_research_when_available(db):
+    """§26 Phase 4: once a macro/sector research refresh has persisted data,
+    build_analysis_context must surface it (not the UnavailableSection
+    fallback) and add it as citable evidence, reusing the same generic
+    evidence-citation mechanism as document/financial/market evidence."""
+    snapshot = _make_snapshot(db)
+    holding = _make_holding(db)  # sector="Energy" per the fixture default
+    db.add(PortfolioPosition(snapshot_id=snapshot.id, holding_id=holding.id, weight_pct=Decimal("100")))
+
+    db.add(
+        MacroObservation(
+            series_key="us_policy_rate",
+            provider="fred",
+            region="US",
+            value=Decimal("5.33"),
+            unit="percent",
+            observed_at=datetime.now(timezone.utc),
+        )
+    )
+    macro_run = ResearchRun(
+        type=ResearchRunType.MACRO.value,
+        sector=None,
+        status=ResearchRunStatus.COMPLETED.value,
+        methodology_version="v1",
+        completed_at=datetime.now(timezone.utc),
+    )
+    db.add(macro_run)
+    db.flush()
+    db.add(
+        ResearchItem(
+            research_run_id=macro_run.id,
+            holding_id=None,
+            source_url="https://example.com/macro",
+            source_name="example.com",
+            published_at=None,
+            retrieved_at=datetime.now(timezone.utc),
+            title="Fed holds rates steady",
+            summary="The Fed left rates unchanged this month.",
+            source_type="macro_news",
+        )
+    )
+
+    sector_run = ResearchRun(
+        type=ResearchRunType.SECTOR.value,
+        sector="Energy",
+        status=ResearchRunStatus.COMPLETED.value,
+        methodology_version="v1",
+        completed_at=datetime.now(timezone.utc),
+    )
+    db.add(sector_run)
+    db.flush()
+    db.add(
+        ResearchItem(
+            research_run_id=sector_run.id,
+            holding_id=None,
+            source_url="https://example.com/sector",
+            source_name="example.com",
+            published_at=None,
+            retrieved_at=datetime.now(timezone.utc),
+            title="Oil prices tick up",
+            summary="Energy sector benefits from higher crude prices.",
+            source_type="sector_research",
+        )
+    )
+    db.commit()
+
+    context = build_analysis_context(db, holding.id, snapshot.id)
+
+    assert context.macro_snapshot.available is True
+    assert context.macro_snapshot.observations[0].series_key == "us_policy_rate"
+    assert context.sector_research.available is True
+    assert context.sector_research.items[0].title == "Oil prices tick up"
+
+    macro_evidence = [e for e in context.evidence_items if e.source_type == "macro_observation"]
+    assert len(macro_evidence) == 1
+    research_evidence = [e for e in context.evidence_items if e.source_type == "research_item"]
+    assert len(research_evidence) == 2
+    assert any("macro news" in e.label for e in research_evidence)
+    assert any("Energy sector research" in e.label for e in research_evidence)
 
 
 def test_excerpt_char_budget_truncates_and_flags(db, monkeypatch):

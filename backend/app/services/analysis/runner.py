@@ -22,9 +22,11 @@ from app.config.settings import Settings, get_settings
 from app.domain import scoring
 from app.models.analysis import AnalysisRun, AnalysisRunStatus, EvidenceReference, FactorAssessment, HoldingAnalysis
 from app.models.portfolio import PortfolioSnapshot
+from app.models.research import ResearchRunType
 from app.providers.base import LLMProvider, LLMUnavailableError
 from app.services.analysis.context import InsufficientContextError, build_analysis_context
 from app.services.analysis.llm_analysis import run_two_pass_analysis
+from app.services.research.common import latest_completed_run
 
 _FACTOR_FIELDS = ("business_quality", "financial_strength", "valuation")
 
@@ -55,6 +57,14 @@ def run_analysis(
     if snapshot is None:
         raise ValueError(f"portfolio snapshot '{snapshot_id}' not found")
 
+    # §26 Phase 4: macro conditions apply portfolio-wide, so this points at
+    # the one MACRO research_runs row shared by every holding in this
+    # analysis run, not a per-holding value — sector research is finer-
+    # grained and stays visible per holding via each HoldingAnalysis's own
+    # EvidenceReference rows instead (source_type="research_item", §5.2).
+    # None until a macro refresh has ever completed (see decision 0007).
+    macro_research_run = latest_completed_run(db, ResearchRunType.MACRO)
+
     run = AnalysisRun(
         portfolio_snapshot_id=snapshot_id,
         status=AnalysisRunStatus.RUNNING.value,
@@ -64,6 +74,7 @@ def run_analysis(
         scoring_version=settings.active_scoring_version,
         extraction_schema_version=settings.active_extraction_schema_version,
         application_version=settings.application_version,
+        research_snapshot_id=macro_research_run.id if macro_research_run else None,
         requested_holding_ids=[str(h) for h in holding_ids],
     )
     db.add(run)

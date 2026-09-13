@@ -18,7 +18,9 @@ from typing import Any
 
 from app.config.paths import PROMPTS_DIR
 from app.schemas.analysis import BlindAnalysisOutput
-from app.services.analysis.context import AnalysisContext
+from app.services.analysis.context import AnalysisContext, UnavailableSection
+from app.services.research.macro import MacroSnapshotView
+from app.services.research.sector import SectorResearchView
 
 
 class UnknownPromptVersionError(Exception):
@@ -53,6 +55,33 @@ def _json_default(value: Any) -> Any:
     if isinstance(value, Decimal):
         return str(value)
     raise TypeError(f"not JSON serializable: {value!r}")
+
+
+def _macro_snapshot_payload(section: MacroSnapshotView | UnavailableSection) -> dict:
+    if isinstance(section, UnavailableSection):
+        return {"available": False, "reason": section.reason}
+    return {
+        "available": section.available,
+        "as_of": section.as_of.isoformat() if section.as_of else None,
+        # Full detail lives in the numbered evidence list (each observation/
+        # narrative item is its own citable EvidenceItem, app.services.
+        # analysis.context._add_research_evidence) — this block is a
+        # compact summary so the model doesn't have to reconstruct it from
+        # scattered evidence entries.
+        "observation_count": len(section.observations),
+        "narrative_item_count": len(section.narrative_items),
+    }
+
+
+def _sector_research_payload(section: SectorResearchView | UnavailableSection) -> dict:
+    if isinstance(section, UnavailableSection):
+        return {"available": False, "reason": section.reason}
+    return {
+        "available": section.available,
+        "sector": section.sector,
+        "as_of": section.as_of.isoformat() if section.as_of else None,
+        "item_count": len(section.items),
+    }
 
 
 def render_blind_user_content(context: AnalysisContext) -> str:
@@ -90,14 +119,8 @@ def render_blind_user_content(context: AnalysisContext) -> str:
             "fx_rate_to_reporting": context.market.fx_rate_to_reporting,
             "reporting_currency": context.market.reporting_currency,
         },
-        "macro_snapshot": {
-            "available": context.macro_snapshot.available,
-            "reason": context.macro_snapshot.reason,
-        },
-        "sector_research": {
-            "available": context.sector_research.available,
-            "reason": context.sector_research.reason,
-        },
+        "macro_snapshot": _macro_snapshot_payload(context.macro_snapshot),
+        "sector_research": _sector_research_payload(context.sector_research),
         "recent_events": {
             "available": context.recent_events.available,
             "reason": context.recent_events.reason,

@@ -8,10 +8,17 @@ and assembles it into one structured object, so the analysis stays
 evidence-first (§2.1): the LLM never queries arbitrary application state
 directly, and every item handed to it is traceable back to a source (§5.2).
 
-Sections the architecture calls for but Phase 4 (external research) hasn't
-built yet — macro snapshot, sector research, recent events — are represented
-as explicitly `available=False` entries rather than omitted silently (§21:
-never present missing data as if it simply doesn't apply).
+Macro snapshot and sector research (§9.1-§9.3) are now populated from
+whatever app.services.research has persisted (§26 Phase 4) — real data when
+a refresh has run, an explicit `available=False` `UnavailableSection`
+otherwise (§21: never present missing data as if it simply doesn't apply).
+Both are also added as citable EvidenceItems alongside document/financial/
+market evidence, reusing the existing generic evidence-citation mechanism
+(§28 rule 8 in spirit: no LLM-output-schema or prompt-version change needed
+for the model to be able to cite them — see docs/decisions/0007).
+`recent_events` remains unbuilt this phase — the macro/sector narrative
+items partially cover that need, but a dedicated event-detection feature is
+a deliberate, documented follow-up (see docs/PROGRESS.md's known gaps).
 """
 
 from collections import defaultdict
@@ -30,6 +37,8 @@ from app.models.financial_fact import FinancialLineItem
 from app.models.holding import Holding
 from app.models.market_data import FxObservation, MarketObservation
 from app.models.portfolio import PortfolioPosition, PortfolioSnapshot
+from app.services.research.macro import MacroSnapshotView, get_latest_macro_snapshot
+from app.services.research.sector import SectorResearchView, get_latest_sector_research
 
 
 @dataclass
@@ -101,8 +110,8 @@ class AnalysisContext:
     evidence_items: list[EvidenceItem]
     excerpts_truncated: bool
 
-    macro_snapshot: UnavailableSection
-    sector_research: UnavailableSection
+    macro_snapshot: MacroSnapshotView | UnavailableSection
+    sector_research: SectorResearchView | UnavailableSection
     recent_events: UnavailableSection
 
     previous_analysis: PreviousAnalysisSummary | None
@@ -148,6 +157,15 @@ def build_analysis_context(db: Session, holding_id: UUID, portfolio_snapshot_id:
         db, holding_id, settings.llm_excerpt_char_budget
     )
     evidence_items = _add_metric_evidence(db, holding_id, evidence_items)
+
+    macro_snapshot = get_latest_macro_snapshot(db)
+    sector_research = (
+        get_latest_sector_research(db, holding.sector)
+        if holding.sector
+        else SectorResearchView(available=False, sector="", as_of=None, reason="holding has no sector assigned")
+    )
+    evidence_items = _add_research_evidence(evidence_items, macro_snapshot, sector_research)
+
     previous_analysis = _build_previous_analysis(db, holding_id)
 
     if not evidence_items and financial_metrics.insufficient_data and market.data_status == "unavailable":
@@ -169,9 +187,9 @@ def build_analysis_context(db: Session, holding_id: UUID, portfolio_snapshot_id:
         market=market,
         evidence_items=evidence_items,
         excerpts_truncated=excerpts_truncated,
-        macro_snapshot=UnavailableSection(reason="Phase 4 (external research) not yet implemented"),
-        sector_research=UnavailableSection(reason="Phase 4 (external research) not yet implemented"),
-        recent_events=UnavailableSection(reason="Phase 4 (external research) not yet implemented"),
+        macro_snapshot=macro_snapshot,
+        sector_research=sector_research,
+        recent_events=UnavailableSection(reason="not built this phase — see docs/PROGRESS.md known gaps"),
         previous_analysis=previous_analysis,
         user_notes=(position.notes if position else None),
     )
@@ -368,6 +386,70 @@ def _add_metric_evidence(db: Session, holding_id: UUID, items: list[EvidenceItem
                 ),
             )
         )
+
+    return items
+
+
+def _add_research_evidence(
+    items: list[EvidenceItem],
+    macro_snapshot: MacroSnapshotView | UnavailableSection,
+    sector_research: SectorResearchView | UnavailableSection,
+) -> list[EvidenceItem]:
+    """Adds Phase 4 macro/sector research as citable evidence, exactly like
+    _add_metric_evidence does for deterministic facts — same evidence_id
+    numbering, same generic citation mechanism the persona prompt already
+    describes ("a numbered list of evidence items"), so no prompt-version
+    bump is needed for the model to be able to reference these (decision
+    0007)."""
+    counter = len(items) + 1
+
+    if isinstance(macro_snapshot, MacroSnapshotView) and macro_snapshot.available:
+        for obs in macro_snapshot.observations:
+            items.append(
+                EvidenceItem(
+                    evidence_id=f"E{counter}",
+                    source_type="macro_observation",
+                    source_id=obs.series_key,
+                    page_start=None,
+                    page_end=None,
+                    section=None,
+                    label=(
+                        f"{obs.series_key} = {obs.value}{obs.unit} "
+                        f"({obs.region}, {obs.provider}, as of {obs.observed_at.date().isoformat()})"
+                    ),
+                )
+            )
+            counter += 1
+        for news_item in macro_snapshot.narrative_items:
+            items.append(
+                EvidenceItem(
+                    evidence_id=f"E{counter}",
+                    source_type="research_item",
+                    source_id=news_item.source_url,
+                    page_start=None,
+                    page_end=None,
+                    section=None,
+                    label=f"[macro news, {news_item.source_name}] {news_item.title}",
+                    content=news_item.summary,
+                )
+            )
+            counter += 1
+
+    if isinstance(sector_research, SectorResearchView) and sector_research.available:
+        for sector_item in sector_research.items:
+            items.append(
+                EvidenceItem(
+                    evidence_id=f"E{counter}",
+                    source_type="research_item",
+                    source_id=sector_item.source_url,
+                    page_start=None,
+                    page_end=None,
+                    section=None,
+                    label=f"[{sector_research.sector} sector research, {sector_item.source_name}] {sector_item.title}",
+                    content=sector_item.summary,
+                )
+            )
+            counter += 1
 
     return items
 

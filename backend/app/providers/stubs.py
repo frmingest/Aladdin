@@ -1,8 +1,11 @@
 """
 Stub providers — deliberately unimplemented, so the application fails loudly
 (§21: "fail visibly rather than silently invent") rather than silently
-returning fabricated data. Replace with real implementations as the §29 open
-questions (market-data provider, research provider) are resolved.
+returning fabricated data. Used only when the corresponding settings flag is
+set to "stub" (e.g. to run the app/tests with no external dependency at
+all) — every §29 open question this file used to leave open (market data,
+LLM, research) now has a real implementation selected by default; see
+app.providers.factory.
 """
 
 from datetime import datetime
@@ -14,6 +17,8 @@ from app.providers.base import (
     FxRate,
     LLMProvider,
     LLMResponse,
+    MacroDataProvider,
+    MacroSeriesPoint,
     MarketDataProvider,
     MarketMetadata,
     ObjectStorageProvider,
@@ -49,6 +54,17 @@ class StubResearchProvider(ResearchProvider):
 
     def get_sector_research(self, sector: str) -> list[ResearchItem]:
         raise NotImplementedError("No research provider configured — see §29.")
+
+
+class StubMacroDataProvider(MacroDataProvider):
+    """Deliberately unimplemented — used only when MACRO_DATA_PROVIDER=stub,
+    e.g. to run the app/tests with no macro-data dependency at all."""
+
+    def get_latest(self, series_key: str) -> MacroSeriesPoint:
+        raise NotImplementedError(f"No macro data provider configured for '{series_key}' — see §29.")
+
+    def get_series(self, series_key: str, start: datetime, end: datetime) -> list[MacroSeriesPoint]:
+        raise NotImplementedError("No macro data provider configured — see §29.")
 
 
 class LocalObjectStorageProvider(ObjectStorageProvider):

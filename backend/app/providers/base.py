@@ -94,6 +94,54 @@ class MarketDataProvider(ABC):
 
 
 @dataclass(frozen=True)
+class MacroSeriesPoint:
+    """One observation of a deterministic, numeric central-bank/macro series
+    (§9.1: policy rates, inflation, real yields, breakevens, dollar index).
+
+    `series_key` is the canonical key from the registry
+    (app.domain.macro_series), not a vendor-specific series id — callers
+    never see "DFII10" or a Norges Bank dataset/key, only "us_real_yield_10y"
+    (§28 rule 8: provider details stay behind the provider)."""
+
+    series_key: str
+    value: Decimal
+    unit: str
+    observed_at: datetime
+    """The period/date the observation covers, per the vendor (e.g. FRED's
+    `date`) — not when this application retrieved it. See MacroObservation
+    (app.models.research) for the separate `retrieved_at` provenance field."""
+    provider: str
+    region: str
+
+
+class MacroDataUnavailableError(Exception):
+    """Raised by a MacroDataProvider when a series can't be resolved —
+    unknown series_key, vendor error, or no observation in range. Mirrors
+    MarketDataUnavailableError's role and rationale (§21, §8.3): an expected,
+    explicit failure mode the caller must surface, never paper over."""
+
+    def __init__(self, series_key: str, reason: str):
+        self.series_key = series_key
+        self.reason = reason
+        super().__init__(f"macro data unavailable for '{series_key}': {reason}")
+
+
+class MacroDataProvider(ABC):
+    """§9.1 — deterministic, numeric central-bank/macro data (policy rates,
+    inflation, real yields, breakevens, dollar index). Deliberately separate
+    from ResearchProvider below: this interface returns application-defined
+    facts an application can do arithmetic on (§2.2), never LLM-mediated
+    narrative — the qualitative "what does this mean" research streams
+    (§9.2/§9.3) are ResearchProvider's job."""
+
+    @abstractmethod
+    def get_latest(self, series_key: str) -> MacroSeriesPoint: ...
+
+    @abstractmethod
+    def get_series(self, series_key: str, start: datetime, end: datetime) -> list[MacroSeriesPoint]: ...
+
+
+@dataclass(frozen=True)
 class ResearchItem:
     source_url: str
     source_name: str
@@ -104,12 +152,29 @@ class ResearchItem:
     retrieved_at: datetime
 
 
+class ResearchUnavailableError(Exception):
+    """Raised by a ResearchProvider when a research call fails outright
+    (vendor/network error, no groundable response at all) — not when a
+    grounded call simply finds nothing new, which is a legitimate empty
+    result (see app.services.research), not an error. Mirrors
+    LLMUnavailableError's role (§21, §28 rule 10)."""
+
+    def __init__(self, reason: str):
+        self.reason = reason
+        super().__init__(f"research provider unavailable: {reason}")
+
+
 class ResearchProvider(ABC):
-    """§9 — macro, central-bank, and sector research streams."""
+    """§9.2/§9.3 — qualitative macro/world-news and sector research streams,
+    each item traceable to a real source (§9.4). Numeric central-bank/macro
+    data (policy rates, real yields, breakevens, dollar index — §9.1) is
+    MacroDataProvider's job, not this interface's — see that class's
+    docstring for why the split exists."""
 
     @abstractmethod
     def get_macro_snapshot(self) -> list[ResearchItem]:
-        """Real yields, breakevens, dollar index, policy rates — see §9.1."""
+        """Macro/geopolitical narrative and news (§9.2) — not the numeric
+        series covered by MacroDataProvider."""
         ...
 
     @abstractmethod

@@ -31,6 +31,11 @@ apscheduler==3.10.4
 # docs/decisions/0004-phase2-market-data-and-financial-metrics.md) ---
 yfinance==1.7.0
 
+# --- External research (§29 resolved in Phase 4 — see
+# docs/decisions/0007-phase4-external-research.md): FRED + Norges Bank HTTP
+# calls. Gemini's Google Search grounding reuses google-genai above. ---
+requests==2.32.3
+
 # --- Testing ---
 pytest==8.3.3
 pytest-asyncio==0.24.0

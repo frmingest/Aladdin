@@ -20,3 +20,8 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 PROMPTS_DIR = REPO_ROOT / "prompts"
 SCHEMAS_DIR = REPO_ROOT / "schemas"
 SCORING_DIR = REPO_ROOT / "scoring" / "versions"
+# Central-bank/macro series registry (architecture §9.1, §26 Phase 4) — see
+# app.domain.macro_series. Versioned for the same reason as SCORING_DIR: the
+# mapping from a canonical series key to a vendor series id can change
+# without touching application code.
+RESEARCH_DIR = REPO_ROOT / "research" / "versions"

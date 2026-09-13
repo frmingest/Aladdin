@@ -48,8 +48,36 @@ class Settings(BaseSettings):
     # docs/decisions/0004-phase2-market-data-and-financial-metrics.md) ---
     market_data_provider: str = "yfinance"  # yfinance | stub
 
-    # --- Research provider ---
-    research_provider: str = "stub"
+    # --- External research (§26 Phase 4 — see
+    # docs/decisions/0007-phase4-external-research.md) ---
+    # Central-bank/macro numeric data (§9.1). "fred_norges_bank" routes each
+    # registered series (app.domain.macro_series) to whichever of the two
+    # vendor providers the registry says owns it.
+    macro_data_provider: str = "fred_norges_bank"  # fred_norges_bank | stub
+    fred_api_key: str = ""
+    active_macro_series_version: str = "v1"
+
+    # Qualitative macro/world-news and sector research (§9.2/§9.3) — resolves
+    # the §29 "Research provider" open question for Phase 4. Reuses the
+    # already-configured Google AI Studio key/model (decision 0005) with
+    # Gemini's Google Search grounding tool rather than a second vendor
+    # account.
+    research_provider: str = "gemini_search"  # gemini_search | stub
+    research_max_grounded_items: int = 8
+    # Independent of active_prompt_version (the analysis persona) — these
+    # templates live under prompts/research/ and version on their own.
+    active_research_prompt_version: str = "v1"
+
+    # §2.7 "cache aggressively" / §9.1 "refresh approximately daily" / §9.3
+    # "cached for a rolling period" — a refresh is skipped (the most recent
+    # completed research_runs row is reused) until its age exceeds these.
+    macro_refresh_interval_hours: int = 24
+    sector_research_refresh_interval_days: int = 7
+
+    # APScheduler background jobs (§4) driving the two intervals above.
+    # Disabled in tests (see tests/__init__.py) so the test suite never opens
+    # a real scheduler thread or makes a live provider call on import.
+    enable_scheduler: bool = True
 
     # --- Reporting ---
     default_reporting_currency: str = "NOK"

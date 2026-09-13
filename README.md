@@ -9,8 +9,8 @@ This is decision support, not a trading engine — no order execution, no automa
 ## Status
 
 Phase 0 (foundation), Phase 1 (portfolio + document ingestion), Phase 2 (market data, FX,
-deterministic financial metrics), and Phase 3 (AI analysis) are built. See
-[`docs/architecture.md`](docs/architecture.md) for the full design document (data model, service
+deterministic financial metrics), Phase 3 (AI analysis), and Phase 4 (external research) are built.
+See [`docs/architecture.md`](docs/architecture.md) for the full design document (data model, service
 boundaries, scoring methodology, risk model, build phasing) and `docs/decisions/` for
 implementation-level choices made along the way. See [`docs/PROGRESS.md`](docs/PROGRESS.md) for the
 current phase-by-phase status and known gaps.
@@ -31,6 +31,18 @@ Gemini API rather than the architecture's original Anthropic recommendation (see
 `backend/.env` — without it, a run fails immediately with an explicit error rather than a silent
 no-op.
 
+Phase 4 adds external research: a `MacroDataProvider` (FRED primary, Norges Bank for NOK-specific
+series) refreshes central-bank/macro numeric series (policy rates, inflation, real yields,
+breakevens, the dollar index), and a `ResearchProvider` (Gemini + Google Search grounding) refreshes
+macro-news and per-sector qualitative research. Both run on a background schedule (macro daily,
+sector research weekly per sector currently held) and are also triggerable on demand via
+`POST /research/macro/refresh` and `POST /research/sectors/{sector}/refresh`; `GET
+/research/macro/snapshot` and `GET /research/sectors/{sector}/items` read back the latest persisted
+data with no provider call. Analysis runs (Phase 3) now cite this data as evidence when it's
+available. Requires `FRED_API_KEY` in `backend/.env` (free at
+https://fred.stlouisfed.org/docs/api/api_key.html) — without it, macro refresh fails immediately with
+an explicit error for FRED-backed series. See `docs/decisions/0007-phase4-external-research.md`.
+
 ## Core principles
 
 - **Evidence first, AI second.** The LLM interprets; it is never the system of record.
@@ -44,9 +56,10 @@ no-op.
 ```text
 backend/    FastAPI application (services, domain, providers, tests)
 frontend/   React + Vite dashboard
-prompts/    Versioned persona/extraction/synthesis prompt templates
+prompts/    Versioned persona/extraction/synthesis/research prompt templates
 scoring/    Versioned scoring configuration
 schemas/    Versioned extraction/output schemas
+research/   Versioned macro series registry (FRED/Norges Bank routing)
 docs/       Architecture and design decisions
 docker/     Container/deployment config
 ```
@@ -59,7 +72,7 @@ docker/     Container/deployment config
 cd backend
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements-dev.txt
-cp .env.example .env                                 # fill in GOOGLE_AI_STUDIO_API_KEY to run Phase 3 analyses
+cp .env.example .env                                 # fill in GOOGLE_AI_STUDIO_API_KEY (Phase 3) and FRED_API_KEY (Phase 4)
 docker compose -f ../docker/docker-compose.yml up -d  # starts local Postgres
 uvicorn app.main:app --reload                         # http://localhost:8000/health
 ```

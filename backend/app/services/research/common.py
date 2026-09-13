@@ -1,0 +1,30 @@
+"""Shared helpers for the research refresh/read services (macro.py, sector.py)
+— architecture §2.7 "cache aggressively": a research_runs row's own
+completed_at is the cache, so "is a refresh due" is one query, not a
+separate cache layer (matching the Phase 2 valuation service's per-run
+_FxCache precedent for the same principle at a smaller scale)."""
+
+from datetime import datetime, timedelta, timezone
+
+from sqlalchemy.orm import Session
+
+from app.models.research import ResearchRun, ResearchRunStatus, ResearchRunType
+
+
+def latest_completed_run(db: Session, run_type: ResearchRunType, sector: str | None = None) -> ResearchRun | None:
+    query = db.query(ResearchRun).filter(
+        ResearchRun.type == run_type.value,
+        ResearchRun.status.in_([ResearchRunStatus.COMPLETED.value, ResearchRunStatus.PARTIAL.value]),
+    )
+    if run_type is ResearchRunType.SECTOR:
+        query = query.filter(ResearchRun.sector == sector)
+    return query.order_by(ResearchRun.completed_at.desc()).first()
+
+
+def is_stale(run: ResearchRun | None, max_age: timedelta) -> bool:
+    if run is None or run.completed_at is None:
+        return True
+    completed_at = run.completed_at
+    if completed_at.tzinfo is None:  # SQLite loses tz-awareness on round-trip
+        completed_at = completed_at.replace(tzinfo=timezone.utc)
+    return datetime.now(timezone.utc) - completed_at > max_age
