@@ -56,7 +56,7 @@ class S3ObjectStorageProvider(ObjectStorageProvider):
         try:
             self._client.upload_fileobj(io.BytesIO(content), self.bucket, key)
         except ClientError as exc:
-            raise ObjectStorageUnavailableError(f"Failed to store object '{key}': {exc}") from exc
+            raise ObjectStorageUnavailableError(f"Failed to store object '{key}': {_describe(exc)}") from exc
         # §24 "avoid exposing raw source files through public URLs" — the
         # bucket key, not a signed/public URL, is what the app persists and
         # later passes back into retrieve().
@@ -67,5 +67,23 @@ class S3ObjectStorageProvider(ObjectStorageProvider):
         try:
             self._client.download_fileobj(self.bucket, key, buffer)
         except ClientError as exc:
-            raise ObjectStorageUnavailableError(f"Failed to retrieve object '{key}': {exc}") from exc
+            raise ObjectStorageUnavailableError(f"Failed to retrieve object '{key}': {_describe(exc)}") from exc
         return buffer.getvalue()
+
+
+def _describe(exc: ClientError) -> str:
+    # R2/Supabase sometimes answer with a body botocore can't parse as S3's
+    # XML error schema, which collapses str(exc) down to "An error occurred
+    # () when calling the X operation: " with the code/message stripped out —
+    # the HTTP status and request id still survive on ResponseMetadata, so
+    # surface those instead of the useless blank message.
+    metadata = exc.response.get("ResponseMetadata", {})
+    status = metadata.get("HTTPStatusCode")
+    request_id = metadata.get("RequestId") or metadata.get("HostId")
+    error = exc.response.get("Error", {})
+    details = f"HTTP {status}" if status else "no HTTP status in response"
+    if request_id:
+        details += f", request id {request_id}"
+    if error.get("Code") or error.get("Message"):
+        details += f", {error.get('Code', '')} {error.get('Message', '')}".rstrip()
+    return f"{exc} ({details})"
