@@ -9,11 +9,11 @@ This is decision support, not a trading engine — no order execution, no automa
 ## Status
 
 Phase 0 (foundation), Phase 1 (portfolio + document ingestion), Phase 2 (market data, FX,
-deterministic financial metrics), Phase 3 (AI analysis), and Phase 4 (external research) are built.
-See [`docs/architecture.md`](docs/architecture.md) for the full design document (data model, service
-boundaries, scoring methodology, risk model, build phasing) and `docs/decisions/` for
-implementation-level choices made along the way. See [`docs/PROGRESS.md`](docs/PROGRESS.md) for the
-current phase-by-phase status and known gaps.
+deterministic financial metrics), Phase 3 (AI analysis), Phase 4 (external research), and Phase 5
+(thesis & portfolio intelligence) are built. See [`docs/architecture.md`](docs/architecture.md) for
+the full design document (data model, service boundaries, scoring methodology, risk model, build
+phasing) and `docs/decisions/` for implementation-level choices made along the way. See
+[`docs/PROGRESS.md`](docs/PROGRESS.md) for the current phase-by-phase status and known gaps.
 
 Phase 2 adds a yfinance-backed market-data layer: `POST /portfolio/snapshots/{id}/valuation`
 fetches live prices/FX for a snapshot's holdings and returns deterministic market value, unrealized
@@ -43,6 +43,17 @@ available. Requires `FRED_API_KEY` in `backend/.env` (free at
 https://fred.stlouisfed.org/docs/api/api_key.html) — without it, macro refresh fails immediately with
 an explicit error for FRED-backed series. See `docs/decisions/0007-phase4-external-research.md`.
 
+Phase 5 adds thesis & portfolio intelligence: an investment thesis ledger
+(`POST`/`GET`/`PATCH /thesis/...`) that replaces free-text position notes as the "existing thesis"
+Phase 3's confirmation-bias guardrail reconciles against, plus a read-only, deterministic
+`GET /thesis/{id}/invalidation-check` (never auto-updates the thesis itself); a deterministic DCF
+valuation engine with a best-effort LLM assumption critique (`POST /valuation/holdings/{id}/cases`);
+and portfolio risk snapshots (`POST /portfolio/snapshots/{id}/risk-snapshot`) covering concentration,
+correlation, currency/commodity exposure, systemic/state risk (deposit concentration vs. the
+per-institution guarantee limit, custody-type breakdown, a Norwegian wealth-tax estimate,
+institution-proxied jurisdictional concentration), and estimated impact under eight macro/stress
+scenarios. See `docs/decisions/0008-phase5-thesis-and-portfolio-intelligence.md`.
+
 ## Core principles
 
 - **Evidence first, AI second.** The LLM interprets; it is never the system of record.
@@ -56,10 +67,11 @@ an explicit error for FRED-backed series. See `docs/decisions/0007-phase4-extern
 ```text
 backend/    FastAPI application (services, domain, providers, tests)
 frontend/   React + Vite dashboard
-prompts/    Versioned persona/extraction/synthesis/research prompt templates
-scoring/    Versioned scoring configuration
+prompts/    Versioned persona/extraction/synthesis/research/valuation prompt templates
+scoring/    Versioned scoring configuration (holding factors + portfolio risk)
 schemas/    Versioned extraction/output schemas
 research/   Versioned macro series registry (FRED/Norges Bank routing)
+scenarios/  Versioned macro/stress scenario registry (§18)
 docs/       Architecture and design decisions
 docker/     Container/deployment config
 ```

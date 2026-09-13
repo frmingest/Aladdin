@@ -39,6 +39,7 @@ from app.models.market_data import FxObservation, MarketObservation
 from app.models.portfolio import PortfolioPosition, PortfolioSnapshot
 from app.services.research.macro import MacroSnapshotView, get_latest_macro_snapshot
 from app.services.research.sector import SectorResearchView, get_latest_sector_research
+from app.services.thesis.service import format_thesis_for_context, get_active_thesis
 
 
 @dataclass
@@ -191,8 +192,24 @@ def build_analysis_context(db: Session, holding_id: UUID, portfolio_snapshot_id:
         sector_research=sector_research,
         recent_events=UnavailableSection(reason="not built this phase — see docs/PROGRESS.md known gaps"),
         previous_analysis=previous_analysis,
-        user_notes=(position.notes if position else None),
+        user_notes=_build_user_notes(db, holding_id, position),
     )
+
+
+def _build_user_notes(db: Session, holding_id: UUID, position: PortfolioPosition | None) -> str | None:
+    """§26 Phase 5 / decision 0008: the investment thesis ledger
+    (app.models.thesis.InvestmentThesis) replaces PortfolioPosition.notes as
+    the "existing thesis" the §11.3 reconciliation guardrail compares the
+    blind assessment against — a thesis row carries the bull/bear case and
+    invalidation conditions §16 wants the LLM to actually see, not just a
+    free-text notes field. Falls back to position.notes when the holding has
+    no ACTIVE/UNDER_REVIEW thesis on record yet, so a holding analyzed
+    before its thesis ledger was ever populated doesn't lose the guardrail
+    entirely."""
+    thesis = get_active_thesis(db, holding_id)
+    if thesis is not None:
+        return format_thesis_for_context(thesis)
+    return position.notes if position else None
 
 
 def _build_financial_metrics(db: Session, holding_id: UUID) -> FinancialMetricsSnapshot:
