@@ -2,6 +2,11 @@
  * Thin fetch wrapper for the Phase 1 endpoints. Routes go through /api,
  * which Vite's dev proxy strips before forwarding to the backend (see
  * vite.config.ts) — matches the pattern already established for /health.
+ *
+ * In production, where frontend and backend can be separate origins (e.g.
+ * two Railway services — see docs/decisions/0010), VITE_API_BASE_URL is set
+ * at build time to the backend's own origin (no /api suffix — the backend
+ * mounts every route unprefixed, same as what the dev proxy forwards to).
  */
 
 import type {
@@ -18,7 +23,10 @@ import type { InvalidationSignalOut, ThesisOut } from "../types/thesis";
 import type { ValuationCaseOut } from "../types/dcf";
 import type { MacroSnapshotOut, ResearchRunOut, SectorResearchOut } from "../types/research";
 
-const API_BASE = "/api";
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "/api";
+// Paired with the backend's optional APP_AUTH_TOKEN (see
+// backend/app/api/auth.py) — unset in local dev, where auth is disabled.
+const API_KEY = import.meta.env.VITE_API_KEY;
 
 export class ApiError extends Error {
   status: number;
@@ -31,8 +39,13 @@ export class ApiError extends Error {
   }
 }
 
+function withAuthHeaders(init?: RequestInit): RequestInit | undefined {
+  if (!API_KEY) return init;
+  return { ...init, headers: { ...init?.headers, "X-API-Key": API_KEY } };
+}
+
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, init);
+  const response = await fetch(`${API_BASE}${path}`, withAuthHeaders(init));
   if (!response.ok) {
     const body = await response.json().catch(() => null);
     throw new ApiError(response.status, body?.detail ?? body);
@@ -109,7 +122,7 @@ export function getHoldingAnalysis(id: string): Promise<HoldingAnalysisDetail> {
 }
 
 export async function getHoldingAnalysisMemo(id: string): Promise<string> {
-  const response = await fetch(`${API_BASE}/analysis/holding-analyses/${id}/memo`);
+  const response = await fetch(`${API_BASE}/analysis/holding-analyses/${id}/memo`, withAuthHeaders());
   if (!response.ok) {
     throw new ApiError(response.status, await response.text().catch(() => null));
   }

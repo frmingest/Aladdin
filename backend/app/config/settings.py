@@ -24,12 +24,35 @@ class Settings(BaseSettings):
     database_url: str = "postgresql://aladdin:aladdin@localhost:5432/aladdin"
 
     # --- Object storage ---
-    object_storage_provider: str = "local"  # local | supabase | r2
+    object_storage_provider: str = "local"  # local | r2 | supabase
     object_storage_bucket: str = "aladdin-documents"
     object_storage_local_path: str = "./storage"
+    # Only used by object_storage_provider in {r2, supabase} — both expose an
+    # S3-compatible API (see docs/decisions/0010), so one provider class
+    # serves either, distinguished only by these connection settings.
+    # R2: https://<account_id>.r2.cloudflarestorage.com, region "auto".
+    # Supabase Storage: https://<project_ref>.supabase.co/storage/v1/s3,
+    # region matches the project's region.
+    object_storage_endpoint_url: str = ""
+    object_storage_region: str = "auto"
+    object_storage_access_key_id: str = ""
+    object_storage_secret_access_key: str = ""
 
     # --- Ingestion (§6.1 file validation) ---
     max_upload_size_mb: int = 25
+
+    # --- Application access (§24 "authenticate application access") ---
+    # Empty disables auth (local dev/tests, matching this codebase's existing
+    # "fail loudly only once configured" convention for optional secrets —
+    # e.g. google_ai_studio_api_key/fred_api_key above). Deploying with a
+    # public URL requires setting this — see docs/decisions/0010.
+    app_auth_token: str = ""
+    # Comma-separated list of allowed browser origins for CORS, e.g.
+    # "https://aladdin-frontend.up.railway.app". Empty means no cross-origin
+    # requests are allowed — fine when frontend/backend share an origin
+    # (local dev's Vite proxy), required once they're separate Railway
+    # services (see docs/decisions/0010).
+    cors_allowed_origins: str = ""
 
     # --- AI provider (§26 Phase 3 — switched from the architecture's original
     # Anthropic recommendation to Google AI Studio's free tier, see

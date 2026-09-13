@@ -13,6 +13,7 @@ from app.providers.fred_provider import FredMacroDataProvider
 from app.providers.gemini_research_provider import GeminiResearchProvider
 from app.providers.google_ai_studio_provider import GoogleAIStudioProvider
 from app.providers.norges_bank_provider import NorgesBankMacroDataProvider
+from app.providers.s3_storage_provider import S3ObjectStorageProvider
 from app.providers.stubs import (
     LocalObjectStorageProvider,
     StubLLMProvider,
@@ -28,6 +29,16 @@ def get_object_storage() -> ObjectStorageProvider:
     settings = get_settings()
     if settings.object_storage_provider == "local":
         return LocalObjectStorageProvider(settings.object_storage_local_path)
+    if settings.object_storage_provider in ("r2", "supabase"):
+        # Both are S3-compatible — see docs/decisions/0010 and
+        # S3ObjectStorageProvider's docstring.
+        return S3ObjectStorageProvider(
+            bucket=settings.object_storage_bucket,
+            endpoint_url=settings.object_storage_endpoint_url,
+            region=settings.object_storage_region,
+            access_key_id=settings.object_storage_access_key_id,
+            secret_access_key=settings.object_storage_secret_access_key,
+        )
     raise NotImplementedError(
         f"Object storage provider '{settings.object_storage_provider}' not yet wired — see §29."
     )
