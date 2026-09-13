@@ -88,6 +88,34 @@ class Settings(BaseSettings):
     active_extraction_schema_version: str = "v1"
     active_macro_regime_profile: str = "baseline"  # baseline | stagflation | crisis — see §13.1
 
+    # --- Thesis & portfolio intelligence (§26 Phase 5) ---
+    # app.domain.portfolio_risk's composite-risk-score weights/band thresholds
+    # (scoring/versions/{version}.yaml, same file naming convention as
+    # active_scoring_version but a distinct version namespace — see decision
+    # 0008) and app.domain.scenarios' shock registry (scenarios/versions/).
+    active_risk_scoring_version: str = "risk_v1"
+    active_scenario_version: str = "v1"
+    # §17 — the LLM critiques valuation assumptions; the deterministic DCF
+    # calculation itself (app.domain.valuation) never depends on this.
+    active_valuation_prompt_version: str = "v1"
+
+    # §15.1 systemic/state risk — deterministic, jurisdiction-specific
+    # constants. Only Norway is implemented (matches Faiz's own portfolio and
+    # the architecture's single-user, NOK-reporting scope); a holding whose
+    # institution isn't recognized as Norwegian is simply excluded from the
+    # wealth-tax estimate rather than guessed at (§21).
+    deposit_guarantee_limit_nok: int = 2_000_000  # Norwegian Banks' Guarantee Fund, per institution
+    # Norwegian formuesskatt (wealth tax), 2024 rules: combined state+
+    # municipal rate above the bunnfradrag (basic allowance), with a
+    # skjermingsfradrag-style discount on listed shares/funds (currently 20%
+    # of market value is exempt from the tax base — "the taxable value of
+    # shares is 80% of market value"). This is a simplification (real rules
+    # have a second, higher bracket and per-couple splitting) documented as a
+    # known gap, not a tax-advice claim (§25 non-goals).
+    wealth_tax_bunnfradrag_nok: int = 1_700_000
+    wealth_tax_rate_pct: float = 1.1
+    wealth_tax_share_discount_pct: float = 20.0
+
 
 @lru_cache
 def get_settings() -> Settings:

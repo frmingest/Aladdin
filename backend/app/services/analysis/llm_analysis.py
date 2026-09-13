@@ -9,9 +9,12 @@ before it can be anchored by what the user already believes.
 
 Pass 2 — reconciliation: Pass 1's own output plus the user's notes go to the
 synthesis persona (prompts/synthesis/{version}.md) with
-response_schema=ReconciliationOutput. There is no thesis ledger yet (that's
-Phase 5) so `app.models.portfolio.PortfolioPosition.notes` is the stand-in
-"existing thesis" for this guardrail — see docs/decisions/0006.
+response_schema=ReconciliationOutput. "The user's notes" is
+`AnalysisContext.user_notes`, which since §26 Phase 5 is built from the
+holding's active investment thesis (app.models.thesis.InvestmentThesis) when
+one exists, falling back to `app.models.portfolio.PortfolioPosition.notes`
+otherwise — see app.services.analysis.context._build_user_notes and
+docs/decisions/0006/0008.
 
 Only the reconciliation fields are taken from Pass 2 — the persisted factor
 scores are always Pass 1's. The whole point of the blind pass is that it

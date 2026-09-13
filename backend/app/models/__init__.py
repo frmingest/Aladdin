@@ -10,7 +10,10 @@ from app.models.financial_fact import FinancialLineItem
 from app.models.holding import Holding
 from app.models.market_data import FxObservation, MarketObservation
 from app.models.portfolio import PortfolioPosition, PortfolioSnapshot, SnapshotStatus
+from app.models.portfolio_risk import PortfolioRiskSnapshot
 from app.models.research import MacroObservation, ResearchItem, ResearchRun, ResearchRunStatus, ResearchRunType
+from app.models.thesis import InvestmentThesis, InvestmentThesisStatus
+from app.models.valuation import ValuationCase, ValuationCaseType
 
 __all__ = [
     "AnalysisRun",
@@ -26,13 +29,18 @@ __all__ = [
     "FxObservation",
     "Holding",
     "HoldingAnalysis",
+    "InvestmentThesis",
+    "InvestmentThesisStatus",
     "MacroObservation",
     "MarketObservation",
     "PortfolioPosition",
+    "PortfolioRiskSnapshot",
     "PortfolioSnapshot",
     "ResearchItem",
     "ResearchRun",
     "ResearchRunStatus",
     "ResearchRunType",
     "SnapshotStatus",
+    "ValuationCase",
+    "ValuationCaseType",
 ]

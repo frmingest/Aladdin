@@ -25,3 +25,7 @@ SCORING_DIR = REPO_ROOT / "scoring" / "versions"
 # mapping from a canonical series key to a vendor series id can change
 # without touching application code.
 RESEARCH_DIR = REPO_ROOT / "research" / "versions"
+# Macro/stress-scenario registry (architecture §18, §26 Phase 5) — see
+# app.domain.scenarios. Same versioning discipline: a scenario's shocks are
+# data a non-engineer can tune, not an if/elif chain in application code.
+SCENARIOS_DIR = REPO_ROOT / "scenarios" / "versions"
