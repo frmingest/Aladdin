@@ -17,9 +17,10 @@ const STATUS_COLOR: Record<string, string> = {
   QUEUED: "text-slate-400",
 };
 
-function ScorePill({ score }: { score: number | null }) {
+function ScorePill({ score }: { score: string | number | null }) {
   if (score === null) return <span className="text-slate-500">n/a</span>;
-  const color = score >= 7 ? "bg-emerald-700" : score >= 5 ? "bg-amber-700" : "bg-red-700";
+  const numericScore = Number(score);
+  const color = numericScore >= 7 ? "bg-emerald-700" : numericScore >= 5 ? "bg-amber-700" : "bg-red-700";
   return <span className={`${color} rounded px-2 py-0.5 text-xs font-medium`}>{score}/10</span>;
 }
 

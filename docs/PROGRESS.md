@@ -18,7 +18,7 @@ both when a phase completes: the ADR for *why*, this file for *how far along thi
 | 3 — AI analysis | ✅ Done | Evidence packet / AnalysisContext, Google AI Studio (Gemini) `LLMProvider`, two-pass Buffett/Munger analysis with confirmation-bias guardrail, structured LLM output + schema contract, deterministic scoring, `analysis_runs`/`holding_analyses`/`factor_assessments`/`evidence_references`, memo generation, `POST /analysis/snapshots/{id}/runs` + read endpoints, bare-bones frontend page. See [ADR 0005](decisions/0005-phase3-google-ai-studio-llm-provider.md), [ADR 0006](decisions/0006-phase3-ai-analysis-engine.md). |
 | 4 — External research | ✅ Done | Hybrid FRED + Norges Bank `MacroDataProvider` for central-bank/macro numeric series, Gemini + Google Search grounding `ResearchProvider` for macro-news and sector research, `research_runs`/`research_items`/`macro_observations` tables, APScheduler background refresh (macro daily, sector research weekly per distinct sector) plus manual `POST /research/*/refresh` endpoints, `AnalysisContext` wired to cite macro/sector research as evidence. See [ADR 0007](decisions/0007-phase4-external-research.md). |
 | 5 — Thesis & portfolio intelligence | ✅ Done | Investment thesis ledger (`investment_theses`, replacing `PortfolioPosition.notes` as Phase 3's reconciliation-guardrail input) with a deterministic invalidation-signal check; deterministic DCF valuation engine (`app.domain.valuation`) plus a best-effort LLM assumption critique (§17); deterministic scenario-impact engine (`app.domain.scenarios`, `scenarios/versions/v1.yaml`, the eight §18 scenarios) over concentration exposures; portfolio risk snapshots (`portfolio_risk_snapshots`) covering concentration (reused from Phase 2), correlation, currency/commodity exposure, systemic/state risk (§15.1 — deposit concentration vs. guarantee limit, custody-type breakdown, Norwegian wealth-tax estimate, institution-proxied jurisdictional concentration), a worst-dimension risk band, and a secondary composite score (`scoring/versions/risk_v1.yaml`). See [ADR 0008](decisions/0008-phase5-thesis-and-portfolio-intelligence.md). |
-| 6 — Visualization | ⬜ Not started | Dashboard, allocation history, factor views, risk heatmaps, macro dashboard, thesis timeline. |
+| 6 — Visualization | ✅ Done | A `Dashboard` tab (now the default landing tab) covering every §19 visualization: portfolio composition, allocation drift, factor profile, portfolio risk heatmap + scenario impact + systemic/state risk detail, macro dashboard + sector research, and a per-holding drill-down (analysis comparison, evidence panel, thesis timeline, valuation scenarios). Built entirely on existing Phase 1-5 endpoints — no backend changes. See [ADR 0009](decisions/0009-phase6-visualization-dashboard.md). |
 
 **Known gaps inside completed phases**, not yet worth their own phase:
 - PDF/PPT structured financial-fact extraction remains XLSX-only, by deliberate choice, not
@@ -46,9 +46,8 @@ both when a phase completes: the ADR for *why*, this file for *how far along thi
   https://fred.stlouisfed.org/docs/api/api_key.html) is required before macro refresh does anything.
 - `recent_events` on `AnalysisContext` remains unbuilt — macro/sector narrative items partially cover
   the need, but dedicated holding-specific event detection is deferred (see ADR 0007).
-- No frontend page renders the Phase 4 research endpoints yet (`GET /research/macro/snapshot`,
-  `GET /research/sectors/{sector}/items`) — API-only this phase, matching how Phase 2's market data
-  landed before Phase 3 added a frontend page.
+- ~~No frontend page renders the Phase 4 research endpoints yet~~ — resolved by Phase 6's
+  `MacroSection` (`frontend/src/pages/dashboard/MacroSection.tsx`).
 - No calibration/track-record engine (architecture §22.5) — `check_invalidation_signal`
   (Phase 5, per-thesis) covers a related but narrower need; the periodic, portfolio-wide "was high
   confidence associated with better outcomes" dashboard, with its own `calibration_checks` table, is a
@@ -63,11 +62,27 @@ both when a phase completes: the ADR for *why*, this file for *how far along thi
   `app.config.settings.Settings`'s wealth-tax fields and ADR 0008.
 - No portfolio-risk LLM narrative (`PortfolioRiskSnapshot.narrative` is a short, deterministic,
   code-generated summary, not LLM prose) — a deliberate scope decision this phase, see ADR 0008.
-- No frontend page renders any Phase 5 endpoint yet (`/thesis/...`, `/valuation/...`,
-  `/portfolio/.../risk-snapshot(s)`) — API-only this phase, matching the Phase 2/Phase 4 precedent.
+- ~~No frontend page renders any Phase 5 endpoint yet~~ — resolved by Phase 6's `RiskSection` and
+  `HoldingDetailSection` (thesis timeline, valuation scenarios). Creating a thesis or a valuation case
+  is still API-only — the dashboard only reads/lists what already exists, matching Phase 6's scope as
+  visualization, not a new data-entry surface.
 - Correlation (Phase 5) depends on `MarketDataProvider.get_historical_prices` against real yfinance
   data, which — like every other yfinance/Gemini/FRED/Norges Bank call in this codebase — this build
   environment has no network path to smoke-test live (see ADR 0004/0005/0007's matching caveats).
+- The Phase 6 risk heatmap's per-tile shading uses illustrative public reference conventions (US
+  DOJ/FTC HHI bands, standard correlation-strength ranges), not the app's own versioned
+  `scoring/versions/risk_v1.yaml` thresholds — `PortfolioRiskSnapshotOut` doesn't expose the
+  per-dimension bands the backend computes internally. The overall `risk_band`/`composite_risk_score`
+  shown alongside it are the real, authoritative assessment (see ADR 0009).
+- The frontend has no project-wide ESLint config (`npm run lint` fails: "couldn't find an
+  eslint.config.js file") — a Phase 0 gap Phase 6 didn't introduce or fix.
+- `vite build`'s single JS bundle is ~600 kB (167 kB gzipped, mostly `recharts`) — no code-splitting
+  yet; fine for a single-user personal app per §2.9, worth revisiting only for a public rollout.
+- Building/smoke-testing the Phase 6 dashboard surfaced that pydantic v2 serializes every `Decimal`
+  field as a JSON string throughout this API, not just the Phase 5 risk-snapshot JSON columns
+  (`_json_safe`) previously documented — corrected across the frontend's TypeScript types (Phase 6's
+  own new types plus a type-only fix to Phase 1/3's `types/portfolio.ts`/`types/analysis.ts`); see
+  ADR 0009.
 
 ## Deployment readiness (Railway)
 
@@ -101,5 +116,6 @@ Not yet deployed anywhere. Gaps, as of Phase 3:
 
 ## Git status
 
-Phases 0-5 are committed to the `claude/next-development-phase-0cer0a` branch of
+Phases 0-5 are committed to the `claude/next-development-phase-0cer0a` branch (merged to `main`);
+Phase 6 is committed to the `claude/next-phase-development-16lo2r` branch of
 `github.com/frmingest/Aladdin`.

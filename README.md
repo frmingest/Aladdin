@@ -9,11 +9,12 @@ This is decision support, not a trading engine — no order execution, no automa
 ## Status
 
 Phase 0 (foundation), Phase 1 (portfolio + document ingestion), Phase 2 (market data, FX,
-deterministic financial metrics), Phase 3 (AI analysis), Phase 4 (external research), and Phase 5
-(thesis & portfolio intelligence) are built. See [`docs/architecture.md`](docs/architecture.md) for
-the full design document (data model, service boundaries, scoring methodology, risk model, build
-phasing) and `docs/decisions/` for implementation-level choices made along the way. See
-[`docs/PROGRESS.md`](docs/PROGRESS.md) for the current phase-by-phase status and known gaps.
+deterministic financial metrics), Phase 3 (AI analysis), Phase 4 (external research), Phase 5
+(thesis & portfolio intelligence), and Phase 6 (visualization dashboard) are built. See
+[`docs/architecture.md`](docs/architecture.md) for the full design document (data model, service
+boundaries, scoring methodology, risk model, build phasing) and `docs/decisions/` for
+implementation-level choices made along the way. See [`docs/PROGRESS.md`](docs/PROGRESS.md) for the
+current phase-by-phase status and known gaps.
 
 Phase 2 adds a yfinance-backed market-data layer: `POST /portfolio/snapshots/{id}/valuation`
 fetches live prices/FX for a snapshot's holdings and returns deterministic market value, unrealized
@@ -53,6 +54,15 @@ correlation, currency/commodity exposure, systemic/state risk (deposit concentra
 per-institution guarantee limit, custody-type breakdown, a Norwegian wealth-tax estimate,
 institution-proxied jurisdictional concentration), and estimated impact under eight macro/stress
 scenarios. See `docs/decisions/0008-phase5-thesis-and-portfolio-intelligence.md`.
+
+Phase 6 adds the visualization dashboard (architecture §19): a `Dashboard` tab (the default landing
+tab) covering portfolio composition, allocation drift, factor profile, a portfolio risk heatmap with
+scenario impact, a macro dashboard with sector research, and a per-holding drill-down (analysis
+comparison, evidence panel, thesis timeline, valuation scenarios). It's frontend-only — every number
+it shows comes from an existing Phase 1-5 endpoint; operations that call a live provider (valuation
+refresh, risk-snapshot compute, macro/sector research refresh) are manual triggers, matching
+`Analysis.tsx`'s existing convention. See
+`docs/decisions/0009-phase6-visualization-dashboard.md`.
 
 ## Core principles
 

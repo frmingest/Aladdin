@@ -14,9 +14,13 @@ export type PortfolioPosition = {
   asset_class: string;
   sector: string | null;
   trading_currency: string;
-  weight_pct: number | null;
-  quantity: number | null;
-  cost_basis: number | null;
+  // Decimal fields serialize as JSON strings, not numbers (pydantic v2's
+  // default Decimal->JSON encoding — confirmed against a live response;
+  // see frontend/src/types/market_valuation.ts's note). Parse with Number()
+  // or ../lib/num's num() before arithmetic/formatting.
+  weight_pct: string | null;
+  quantity: string | null;
+  cost_basis: string | null;
   cost_basis_currency: string | null;
   notes: string | null;
 };
