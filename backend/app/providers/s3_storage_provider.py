@@ -43,7 +43,7 @@ class S3ObjectStorageProvider(ObjectStorageProvider):
                 "'supabase' object storage provider — see .env.example."
             )
         self.bucket = bucket
-                self._client = boto3.client(
+        self._client = boto3.client(
             "s3",
             endpoint_url=endpoint_url,
             region_name=region,
