@@ -1,0 +1,164 @@
+{
+  "$defs": {
+    "ConfidenceLevel": {
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "title": "ConfidenceLevel",
+      "type": "string"
+    },
+    "FactorAssessmentOutput": {
+      "properties": {
+        "confidence": {
+          "$ref": "#/$defs/ConfidenceLevel"
+        },
+        "reasoning": {
+          "title": "Reasoning",
+          "type": "string"
+        },
+        "score": {
+          "description": "1 = very poor, 10 = excellent",
+          "maximum": 10,
+          "minimum": 1,
+          "title": "Score",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "score",
+        "confidence",
+        "reasoning"
+      ],
+      "title": "FactorAssessmentOutput",
+      "type": "object"
+    },
+    "ThesisDivergenceOutput": {
+      "properties": {
+        "blind_assessment_summary": {
+          "title": "Blind Assessment Summary",
+          "type": "string"
+        },
+        "disagreement_notes": {
+          "title": "Disagreement Notes",
+          "type": "string"
+        },
+        "material_disagreement": {
+          "title": "Material Disagreement",
+          "type": "boolean"
+        },
+        "user_thesis_summary": {
+          "title": "User Thesis Summary",
+          "type": "string"
+        }
+      },
+      "required": [
+        "blind_assessment_summary",
+        "user_thesis_summary",
+        "material_disagreement",
+        "disagreement_notes"
+      ],
+      "title": "ThesisDivergenceOutput",
+      "type": "object"
+    },
+    "ThesisStatus": {
+      "enum": [
+        "new",
+        "intact",
+        "weakening",
+        "broken"
+      ],
+      "title": "ThesisStatus",
+      "type": "string"
+    }
+  },
+  "description": "The final structured_output_json persisted on HoldingAnalysis \u2014 Pass\n1's independent judgment plus Pass 2's reconciliation, merged by\napp.services.analysis.llm_analysis. This is the illustrative \u00a712 shape,\nsimplified: one `source_references` list (evidence_ids cited) stands in\nfor \u00a712's separate supporting/contradicting-evidence arrays \u2014 see\ndocs/decisions/0006 for the reasoning.",
+  "properties": {
+    "business_quality": {
+      "$ref": "#/$defs/FactorAssessmentOutput"
+    },
+    "decision_considerations": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Decision Considerations",
+      "type": "array"
+    },
+    "executive_summary": {
+      "title": "Executive Summary",
+      "type": "string"
+    },
+    "financial_strength": {
+      "$ref": "#/$defs/FactorAssessmentOutput"
+    },
+    "insufficient_evidence_areas": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Insufficient Evidence Areas",
+      "type": "array"
+    },
+    "invalidation_triggers": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Invalidation Triggers",
+      "type": "array"
+    },
+    "key_risks": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Key Risks",
+      "type": "array"
+    },
+    "key_strengths": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Key Strengths",
+      "type": "array"
+    },
+    "new_information": {
+      "items": {
+        "type": "string"
+      },
+      "title": "New Information",
+      "type": "array"
+    },
+    "source_references": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Source References",
+      "type": "array"
+    },
+    "thesis_divergence": {
+      "$ref": "#/$defs/ThesisDivergenceOutput"
+    },
+    "thesis_status": {
+      "$ref": "#/$defs/ThesisStatus"
+    },
+    "valuation": {
+      "$ref": "#/$defs/FactorAssessmentOutput"
+    }
+  },
+  "required": [
+    "executive_summary",
+    "thesis_status",
+    "business_quality",
+    "financial_strength",
+    "valuation",
+    "key_strengths",
+    "key_risks",
+    "new_information",
+    "thesis_divergence",
+    "invalidation_triggers",
+    "decision_considerations",
+    "source_references",
+    "insufficient_evidence_areas"
+  ],
+  "title": "HoldingAnalysisOutput",
+  "type": "object"
+}

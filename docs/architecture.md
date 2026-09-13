@@ -235,7 +235,7 @@ This allows providers to be replaced without redesigning the application.
 | PDF parsing | PyMuPDF / `fitz`, pdfplumber | Text + tables + page rendering |
 | PPT parsing | python-pptx | Text, notes, slide metadata |
 | Excel parsing | openpyxl / pandas | Structured validation |
-| AI | Anthropic Claude API | Exact model IDs live in configuration |
+| AI | Google AI Studio (Gemini) — switched from this table's original Anthropic Claude API recommendation for its free tier; see [ADR 0005](decisions/0005-phase3-google-ai-studio-llm-provider.md) | Exact model IDs live in configuration; isolated behind `LLMProvider` (§3) so the choice can change again without a service-layer rewrite |
 | Background jobs | APScheduler initially; external cron/worker later if needed | Avoid Celery/Redis at single-user scale |
 | Hosting | Railway / Supabase / equivalent low-cost managed infrastructure | Exact vendor choice is deployment documentation |
 | Auth | Simple single-user auth initially | Avoid premature multi-tenant complexity |

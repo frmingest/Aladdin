@@ -11,6 +11,7 @@ import type {
   PortfolioUploadResponse,
 } from "../types/portfolio";
 import type { DocumentDetail, DocumentSummary, DocumentUploadResponse } from "../types/document";
+import type { AnalysisRunDetail, HoldingAnalysisDetail, HoldingAnalysisSummary } from "../types/analysis";
 
 const API_BASE = "/api";
 
@@ -77,4 +78,35 @@ export function uploadDocument(params: {
 
 export function getDocument(id: string): Promise<DocumentDetail> {
   return apiFetch(`/documents/${id}`);
+}
+
+export function createAnalysisRun(
+  snapshotId: string,
+  holdingIds?: string[],
+): Promise<AnalysisRunDetail> {
+  return apiFetch(`/analysis/snapshots/${snapshotId}/runs`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ holding_ids: holdingIds ?? null }),
+  });
+}
+
+export function getAnalysisRun(id: string): Promise<AnalysisRunDetail> {
+  return apiFetch(`/analysis/runs/${id}`);
+}
+
+export function listHoldingAnalyses(holdingId: string): Promise<HoldingAnalysisSummary[]> {
+  return apiFetch(`/analysis/holdings/${holdingId}/analyses`);
+}
+
+export function getHoldingAnalysis(id: string): Promise<HoldingAnalysisDetail> {
+  return apiFetch(`/analysis/holding-analyses/${id}`);
+}
+
+export async function getHoldingAnalysisMemo(id: string): Promise<string> {
+  const response = await fetch(`${API_BASE}/analysis/holding-analyses/${id}/memo`);
+  if (!response.ok) {
+    throw new ApiError(response.status, await response.text().catch(() => null));
+  }
+  return response.text();
 }

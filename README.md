@@ -8,16 +8,28 @@ This is decision support, not a trading engine — no order execution, no automa
 
 ## Status
 
-Phase 0 (foundation), Phase 1 (portfolio + document ingestion), and Phase 2 (market data, FX,
-deterministic financial metrics) are built. See [`docs/architecture.md`](docs/architecture.md) for
-the full design document (data model, service boundaries, scoring methodology, risk model, build
-phasing) and `docs/decisions/` for implementation-level choices made along the way.
+Phase 0 (foundation), Phase 1 (portfolio + document ingestion), Phase 2 (market data, FX,
+deterministic financial metrics), and Phase 3 (AI analysis) are built. See
+[`docs/architecture.md`](docs/architecture.md) for the full design document (data model, service
+boundaries, scoring methodology, risk model, build phasing) and `docs/decisions/` for
+implementation-level choices made along the way. See [`docs/PROGRESS.md`](docs/PROGRESS.md) for the
+current phase-by-phase status and known gaps.
 
 Phase 2 adds a yfinance-backed market-data layer: `POST /portfolio/snapshots/{id}/valuation`
 fetches live prices/FX for a snapshot's holdings and returns deterministic market value, unrealized
 P&L, and concentration/exposure. A holding ingested from a Nordnet export has no market-data symbol
 until you set one via `PATCH /portfolio/holdings/{id}` (see
 `docs/decisions/0004-phase2-market-data-and-financial-metrics.md`).
+
+Phase 3 adds the AI analysis engine: `POST /analysis/snapshots/{id}/runs` runs a two-pass
+Buffett/Munger assessment (an independent blind read, then reconciliation against any notes on that
+holding's position — the confirmation-bias guardrail in architecture §11.3) over every holding in a
+snapshot that has at least one document or financial fact on record, using Google AI Studio's
+Gemini API rather than the architecture's original Anthropic recommendation (see
+`docs/decisions/0005-phase3-google-ai-studio-llm-provider.md`,
+`docs/decisions/0006-phase3-ai-analysis-engine.md`). Requires `GOOGLE_AI_STUDIO_API_KEY` in
+`backend/.env` — without it, a run fails immediately with an explicit error rather than a silent
+no-op.
 
 ## Core principles
 
@@ -47,7 +59,7 @@ docker/     Container/deployment config
 cd backend
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements-dev.txt
-cp .env.example .env                                 # fill in ANTHROPIC_API_KEY when you reach Phase 3
+cp .env.example .env                                 # fill in GOOGLE_AI_STUDIO_API_KEY to run Phase 3 analyses
 docker compose -f ../docker/docker-compose.yml up -d  # starts local Postgres
 uvicorn app.main:app --reload                         # http://localhost:8000/health
 ```

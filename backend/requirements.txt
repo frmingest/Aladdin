@@ -4,16 +4,18 @@ uvicorn[standard]==0.30.6
 python-multipart==0.0.12  # required by FastAPI for Form()/UploadFile parsing
 
 # --- Config & validation ---
-pydantic==2.9.2
-pydantic-settings==2.5.2
+pydantic==2.12.5
+pydantic-settings==2.12.0
 
 # --- Database ---
 sqlalchemy==2.0.35
 alembic==1.13.3
 psycopg2-binary==2.9.9
 
-# --- AI ---
-anthropic==0.34.2
+# --- AI (§26 Phase 3 — Google AI Studio's free tier, see
+# docs/decisions/0005-phase3-google-ai-studio-llm-provider.md) ---
+google-genai==2.23.0
+pyyaml==6.0.2  # scoring/versions/*.yaml (app.domain.scoring)
 
 # --- Document parsing ---
 pymupdf==1.24.10
@@ -32,7 +34,7 @@ yfinance==1.7.0
 # --- Testing ---
 pytest==8.3.3
 pytest-asyncio==0.24.0
-httpx==0.27.2
+httpx==0.28.1
 
 # --- Logging ---
 structlog==24.4.0

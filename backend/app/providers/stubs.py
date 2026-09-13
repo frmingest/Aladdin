@@ -7,6 +7,8 @@ questions (market-data provider, research provider) are resolved.
 
 from datetime import datetime
 
+from pydantic import BaseModel
+
 from app.providers.base import (
     DividendObservation,
     FxRate,
@@ -75,12 +77,19 @@ class LocalObjectStorageProvider(ObjectStorageProvider):
             return f.read()
 
 
-class AnthropicLLMProvider(LLMProvider):
-    """Thin wrapper — actual client wiring added in Phase 3 (AI analysis)."""
+class StubLLMProvider(LLMProvider):
+    """Deliberately unimplemented — used only when LLM_PROVIDER=stub, e.g. to
+    run the app/tests with no LLM dependency at all. The real implementation
+    is GoogleAIStudioProvider (see docs/decisions/0005 for why Google AI
+    Studio rather than the architecture's original Anthropic recommendation);
+    this stub replaced an earlier unimplemented `AnthropicLLMProvider` here."""
 
-    def __init__(self, api_key: str, model: str):
-        self.api_key = api_key
-        self.model = model
-
-    def analyze(self, prompt: str, prompt_version: str) -> LLMResponse:
-        raise NotImplementedError("LLM analysis service not yet implemented — Phase 3.")
+    def generate_structured(
+        self,
+        *,
+        system_prompt: str,
+        user_content: str,
+        response_schema: type[BaseModel],
+        prompt_version: str,
+    ) -> LLMResponse:
+        raise NotImplementedError("No LLM provider configured — see §29 and decision 0005.")

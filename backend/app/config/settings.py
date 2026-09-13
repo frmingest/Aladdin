@@ -31,10 +31,18 @@ class Settings(BaseSettings):
     # --- Ingestion (§6.1 file validation) ---
     max_upload_size_mb: int = 25
 
-    # --- AI provider ---
-    llm_provider: str = "anthropic"
-    anthropic_api_key: str = ""
-    anthropic_model: str = "claude-sonnet-4-6"
+    # --- AI provider (§26 Phase 3 — switched from the architecture's original
+    # Anthropic recommendation to Google AI Studio's free tier, see
+    # docs/decisions/0005-phase3-google-ai-studio-llm-provider.md) ---
+    llm_provider: str = "google_ai_studio"  # google_ai_studio | stub
+    google_ai_studio_api_key: str = ""
+    llm_model_name: str = "gemini-2.5-flash"
+    llm_max_output_tokens: int = 8192
+    llm_temperature: float = 0.2
+    # Naive evidence-packet excerpt budget (§5.3) — total characters of
+    # document_chunk text included per holding analysis. No relevance
+    # ranking yet (decision 0006); this just caps prompt size/cost.
+    llm_excerpt_char_budget: int = 12000
 
     # --- Market data provider (§29 resolved in Phase 2 — see
     # docs/decisions/0004-phase2-market-data-and-financial-metrics.md) ---

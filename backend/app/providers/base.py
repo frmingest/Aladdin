@@ -12,6 +12,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 
+from pydantic import BaseModel
+
 
 @dataclass(frozen=True)
 class PriceObservation:
@@ -117,16 +119,47 @@ class ResearchProvider(ABC):
 @dataclass(frozen=True)
 class LLMResponse:
     content: str
+    """Raw response text — a JSON string matching whatever `response_schema`
+    was requested. Parsing/validation into the app's own pydantic models
+    happens in the calling service (app.services.analysis.llm_analysis), not
+    here, so this interface stays vendor-agnostic (§28 rule 8)."""
     model: str
-    input_tokens: int
-    output_tokens: int
+    input_tokens: int | None
+    output_tokens: int | None
+    latency_ms: float | None
+
+
+class LLMUnavailableError(Exception):
+    """Raised by an LLMProvider when a generation call fails outright, or
+    returns content that isn't usable (empty, blocked, not valid JSON for
+    the requested schema). Mirrors MarketDataUnavailableError's role: this is
+    an explicit, expected failure mode the caller must surface, not silently
+    paper over with a plausible-looking fallback (§28 rule 10)."""
+
+    def __init__(self, reason: str):
+        self.reason = reason
+        super().__init__(f"LLM generation unavailable: {reason}")
 
 
 class LLMProvider(ABC):
-    """§11 — the LLM interprets evidence; it is never the system of record."""
+    """§11 — the LLM interprets evidence; it is never the system of record.
+
+    `response_schema` is a pydantic model class (not a raw JSON-schema dict)
+    so callers get real validation for free via
+    `response_schema.model_validate_json(response.content)` — the provider's
+    job is only to ask its vendor's API to constrain generation to that
+    shape, however that vendor's SDK expects the schema expressed.
+    """
 
     @abstractmethod
-    def analyze(self, prompt: str, prompt_version: str) -> LLMResponse: ...
+    def generate_structured(
+        self,
+        *,
+        system_prompt: str,
+        user_content: str,
+        response_schema: type[BaseModel],
+        prompt_version: str,
+    ) -> LLMResponse: ...
 
 
 class ObjectStorageProvider(ABC):

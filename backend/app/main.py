@@ -11,6 +11,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from app.api.analysis import router as analysis_router
 from app.api.documents import router as documents_router
 from app.api.portfolio import router as portfolio_router
 from app.config.logging import configure_logging, get_logger
@@ -36,6 +37,7 @@ app = FastAPI(
 
 app.include_router(portfolio_router)
 app.include_router(documents_router)
+app.include_router(analysis_router)
 
 
 @app.get("/health")

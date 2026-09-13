@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
+import Analysis from "./pages/Analysis";
 import DocumentUpload from "./pages/DocumentUpload";
 import PortfolioUpload from "./pages/PortfolioUpload";
 
-type Tab = "portfolio" | "documents";
+type Tab = "portfolio" | "documents" | "analysis";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "portfolio", label: "Portfolio" },
   { id: "documents", label: "Documents" },
+  { id: "analysis", label: "Analysis" },
 ];
 
 function BackendStatusBadge() {
@@ -25,9 +27,10 @@ function BackendStatusBadge() {
 }
 
 /**
- * Phase 1 — portfolio and document ingestion (docs/architecture.md §26).
- * No router dependency yet (§2.9: avoid premature complexity) — plain tab
- * state is enough for two pages. Revisit once Phase 6's dashboard lands.
+ * Phases 1-3 — portfolio/document ingestion (§26 Phase 1) and AI analysis
+ * (§26 Phase 3). No router dependency yet (§2.9: avoid premature
+ * complexity) — plain tab state is enough for three pages. Revisit once
+ * Phase 6's dashboard lands.
  */
 export default function App() {
   const [tab, setTab] = useState<Tab>("portfolio");
@@ -38,7 +41,7 @@ export default function App() {
         <h1 className="text-2xl font-semibold">Aladdin</h1>
         <BackendStatusBadge />
       </div>
-      <p className="text-slate-400 mb-6">Phase 1 — portfolio and document ingestion.</p>
+      <p className="text-slate-400 mb-6">Portfolio ingestion, document analysis, and AI-driven holding analysis.</p>
 
       <nav className="flex gap-2 mb-6 border-b border-slate-800">
         {TABS.map((t) => (
@@ -58,6 +61,7 @@ export default function App() {
 
       {tab === "portfolio" && <PortfolioUpload />}
       {tab === "documents" && <DocumentUpload />}
+      {tab === "analysis" && <Analysis />}
     </div>
   );
 }
