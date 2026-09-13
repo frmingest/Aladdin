@@ -9,9 +9,11 @@ the frontend's Vite dev proxy adds/strips it (see frontend/vite.config.ts).
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.analysis import router as analysis_router
+from app.api.auth import require_auth
 from app.api.documents import router as documents_router
 from app.api.portfolio import router as portfolio_router
 from app.api.portfolio_risk import router as portfolio_risk_router
@@ -48,13 +50,30 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-app.include_router(portfolio_router)
-app.include_router(documents_router)
-app.include_router(analysis_router)
-app.include_router(research_router)
-app.include_router(thesis_router)
-app.include_router(valuation_router)
-app.include_router(portfolio_risk_router)
+if settings.cors_allowed_origins:
+    # §24/§26 "Deployment & production hardening" — needed once frontend and
+    # backend are separate origins (e.g. two Railway services); empty by
+    # default so local dev (same-origin via Vite's proxy) and tests need no
+    # CORS config at all. See docs/decisions/0010.
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[origin.strip() for origin in settings.cors_allowed_origins.split(",") if origin.strip()],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+# §24 "authenticate application access" — a no-op dependency until
+# APP_AUTH_TOKEN is set (see app.api.auth), so every domain router (not
+# /health, which stays an unauthenticated liveness check) requires it.
+_auth = [Depends(require_auth)]
+app.include_router(portfolio_router, dependencies=_auth)
+app.include_router(documents_router, dependencies=_auth)
+app.include_router(analysis_router, dependencies=_auth)
+app.include_router(research_router, dependencies=_auth)
+app.include_router(thesis_router, dependencies=_auth)
+app.include_router(valuation_router, dependencies=_auth)
+app.include_router(portfolio_risk_router, dependencies=_auth)
 
 
 @app.get("/health")

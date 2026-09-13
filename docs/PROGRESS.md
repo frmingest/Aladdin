@@ -19,6 +19,7 @@ both when a phase completes: the ADR for *why*, this file for *how far along thi
 | 4 — External research | ✅ Done | Hybrid FRED + Norges Bank `MacroDataProvider` for central-bank/macro numeric series, Gemini + Google Search grounding `ResearchProvider` for macro-news and sector research, `research_runs`/`research_items`/`macro_observations` tables, APScheduler background refresh (macro daily, sector research weekly per distinct sector) plus manual `POST /research/*/refresh` endpoints, `AnalysisContext` wired to cite macro/sector research as evidence. See [ADR 0007](decisions/0007-phase4-external-research.md). |
 | 5 — Thesis & portfolio intelligence | ✅ Done | Investment thesis ledger (`investment_theses`, replacing `PortfolioPosition.notes` as Phase 3's reconciliation-guardrail input) with a deterministic invalidation-signal check; deterministic DCF valuation engine (`app.domain.valuation`) plus a best-effort LLM assumption critique (§17); deterministic scenario-impact engine (`app.domain.scenarios`, `scenarios/versions/v1.yaml`, the eight §18 scenarios) over concentration exposures; portfolio risk snapshots (`portfolio_risk_snapshots`) covering concentration (reused from Phase 2), correlation, currency/commodity exposure, systemic/state risk (§15.1 — deposit concentration vs. guarantee limit, custody-type breakdown, Norwegian wealth-tax estimate, institution-proxied jurisdictional concentration), a worst-dimension risk band, and a secondary composite score (`scoring/versions/risk_v1.yaml`). See [ADR 0008](decisions/0008-phase5-thesis-and-portfolio-intelligence.md). |
 | 6 — Visualization | ✅ Done | A `Dashboard` tab (now the default landing tab) covering every §19 visualization: portfolio composition, allocation drift, factor profile, portfolio risk heatmap + scenario impact + systemic/state risk detail, macro dashboard + sector research, and a per-holding drill-down (analysis comparison, evidence panel, thesis timeline, valuation scenarios). Built entirely on existing Phase 1-5 endpoints — no backend changes. See [ADR 0009](decisions/0009-phase6-visualization-dashboard.md). |
+| 7 — Deployment & production hardening | 🟡 Code done, not yet deployed | `backend/Dockerfile` + `frontend/Dockerfile` (nginx static serve), CORS middleware (opt-in via `CORS_ALLOWED_ORIGINS`), single-user auth (`APP_AUTH_TOKEN`/`X-API-Key`, every domain router except `/health`), a durable S3-compatible object storage provider (`S3ObjectStorageProvider`, serves both `r2` and `supabase`) replacing `LocalObjectStorageProvider` for real deployments, `alembic upgrade head` run from the backend container's entrypoint. See [ADR 0010](decisions/0010-deployment-and-production-hardening.md) for what remains genuinely unverified (no live Railway/bucket/Postgres deploy from this build environment). |
 
 **Known gaps inside completed phases**, not yet worth their own phase:
 - PDF/PPT structured financial-fact extraction remains XLSX-only, by deliberate choice, not
@@ -83,11 +84,9 @@ both when a phase completes: the ADR for *why*, this file for *how far along thi
   (`_json_safe`) previously documented — corrected across the frontend's TypeScript types (Phase 6's
   own new types plus a type-only fix to Phase 1/3's `types/portfolio.ts`/`types/analysis.ts`); see
   ADR 0009.
-- No application authentication exists anywhere in the codebase (architecture §24 "authenticate
-  application access") — `main.py` mounts every router unauthenticated. Harmless while the API is
-  only reachable via `localhost`/Vite's dev proxy; becomes a real gap the moment the backend is
-  deployed to Railway with a public URL, since anyone with the URL could read/upload portfolio data.
-  Not previously tracked as its own gap — folded into the Deployment readiness checklist below.
+- ~~No application authentication exists anywhere in the codebase~~ — resolved by Phase 7's
+  `APP_AUTH_TOKEN`/`X-API-Key` (see ADR 0010). Still only a single shared token, not a real
+  user/session system — sufficient for §24's letter and §25's single-user scope, not more.
 - §23 (Observability & Cost Tracking) is only half-built: `LLMAnalysisService`/`AnalysisRunResult`
   compute `total_input_tokens`/`total_output_tokens` per run (`app/services/analysis/llm_analysis.py`),
   but that figure is never persisted (no column on `analysis_runs`, no separate cost-log table) or
@@ -101,19 +100,31 @@ both when a phase completes: the ADR for *why*, this file for *how far along thi
 
 ## Deployment readiness (Railway)
 
-Not yet deployed anywhere. Gaps, as of Phase 3:
+Not yet deployed anywhere. Phase 7 (see above, [ADR 0010](decisions/0010-deployment-and-production-hardening.md))
+closed every code-level gap below; what's left is account/infrastructure setup and the first live
+run, which this build environment has no network path to do itself.
 
+- [x] A durable object-storage provider wired in (Supabase Storage or R2) — `S3ObjectStorageProvider`
+      (`app/providers/s3_storage_provider.py`), selected via `OBJECT_STORAGE_PROVIDER=r2|supabase`.
+      Untested against a real bucket (unit tests mock boto3) — first real upload/retrieve is still
+      outstanding.
+- [x] CORS middleware added to the FastAPI app — opt-in via `CORS_ALLOWED_ORIGINS` (see `main.py`).
+- [x] A Dockerfile for the backend (`backend/Dockerfile`, built from the repo root — see ADR 0010)
+      and a production build/serve setup for the frontend (`frontend/Dockerfile`, Vite build served
+      via nginx). Neither has been through an actual `docker build` — this build environment's Docker
+      daemon isn't reachable — only manually verified path arithmetic plus the existing
+      `npm run build`/pytest suite.
+- [x] Single-user application authentication (see next section) — `APP_AUTH_TOKEN`/`X-API-Key`,
+      checked via `app/api/auth.py`, applied to every domain router.
 - [ ] `DATABASE_URL` pointed at Supabase and `alembic upgrade head` run against it (only ever run
       against SQLite in tests, and once by hand against a throwaway local SQLite file to confirm
-      all three migrations apply cleanly — never against real Postgres).
-- [ ] A durable object-storage provider wired in (Supabase Storage or R2) — the only implemented
-      provider is local-filesystem, which won't survive Railway's ephemeral disk.
-- [ ] CORS middleware added to the FastAPI app — needed once frontend and backend are separate
-      Railway services/origins; invisible locally because Vite's dev proxy hides it.
-- [ ] A Dockerfile (or Railway-compatible build config) for the backend and a production build/serve
-      setup for the frontend — neither exists yet, only `docker/docker-compose.yml` for local Postgres.
+      all three migrations apply cleanly — never against real Postgres). Phase 7 wires
+      `alembic upgrade head` into the backend container's entrypoint so this happens automatically
+      on first deploy — still needs an actual Supabase/Postgres instance to run against.
 - [ ] Environment variables set in the Railway project (`DATABASE_URL`, `MARKET_DATA_PROVIDER`,
-      `GOOGLE_AI_STUDIO_API_KEY`, etc.).
+      `GOOGLE_AI_STUDIO_API_KEY`, `APP_AUTH_TOKEN`, `CORS_ALLOWED_ORIGINS`,
+      `OBJECT_STORAGE_PROVIDER`/`OBJECT_STORAGE_ENDPOINT_URL`/etc., `VITE_API_BASE_URL`/
+      `VITE_API_KEY` as frontend build args, etc.).
 - [ ] `GOOGLE_AI_STUDIO_API_KEY` obtained and set in `backend/.env` — analysis runs fail immediately
       with an explicit error until this is set (see ADR 0005); a live smoke test against the real
       Gemini API is still outstanding (this build environment has no network path to it).
@@ -128,9 +139,8 @@ Not yet deployed anywhere. Gaps, as of Phase 3:
       `GOOGLE_AI_STUDIO_API_KEY` (critique) and live `MarketDataProvider.get_historical_prices`
       (correlation) as Phase 3/2 — no new secrets needed, but neither has been smoke-tested live from
       this build environment (see ADR 0008's Consequences).
-- [ ] Application authentication (architecture §24) — currently none. At minimum a single-user
-      login (e.g. one shared credential/session cookie or a bearer token checked via FastAPI
-      dependency) gating every router before this is reachable from a public Railway URL.
+- [x] Application authentication (architecture §24) — `APP_AUTH_TOKEN`, a shared bearer token
+      checked via a FastAPI dependency (`app/api/auth.py`), gating every router except `/health`.
 
 ## Next phases & identified follow-up work
 
@@ -139,26 +149,28 @@ what's next after Phase 6, beyond what "Known gaps" above already tracks line-by
 (architecture §26) are all complete — nothing here revises that. This is additive: candidate next
 phases, plus improvements that don't need a phase of their own.
 
+**Update, same day:** candidate #1 below (deployment & production hardening) is now Phase 7 — see
+the phase table and [ADR 0010](decisions/0010-deployment-and-production-hardening.md). Its code-level
+scope (Dockerfiles, CORS, single-user auth, durable object storage, migrations-on-boot) is done;
+what's left is account/infrastructure setup and the first live deploy, which this build environment
+cannot do itself (no reachable Docker daemon, no Railway/Supabase/R2 credentials or network path).
+Candidates #2-#3 below are unaffected and still open.
+
 ### Candidate next phases
 
-1. **Deployment & production hardening** — turns the "Deployment readiness (Railway)" checklist
-   above from a checklist into actual work. This is the most concrete, most overdue next phase:
-   the app has been feature-complete through Phase 6 but has never been deployed anywhere.
-   Scope: Dockerfile(s) (backend + frontend build/serve), CORS middleware, a durable object-storage
-   provider (Supabase Storage or R2) replacing local-filesystem, `alembic upgrade head` run against
-   real Postgres/Supabase, single-user authentication (new — see "Known gaps" above; §24 was never
-   implemented), all required env vars/secrets set (`GOOGLE_AI_STUDIO_API_KEY`, `FRED_API_KEY`,
-   `DATABASE_URL`, `MARKET_DATA_PROVIDER`), and the first live smoke tests this build environment
-   has never been able to run: yfinance, Gemini analysis + Gemini Search grounding, FRED, Norges
-   Bank. Nothing else on this list matters if the app never leaves localhost.
+1. ~~**Deployment & production hardening**~~ — now Phase 7 (see above). The actual Railway
+   project/services, real secrets, and first live smoke test (yfinance, Gemini analysis + Search
+   grounding, FRED, Norges Bank, a real Supabase/R2 bucket, real Postgres) remain outstanding — code
+   readiness and infrastructure readiness are different things, and only the former was in this
+   build environment's reach.
 2. **Track-record & calibration engine** (architecture §22.5, `calibration_checks` table already
    specified in §20 but never migrated) — the one architecturally-specified capability with zero
    implementation. Scope: `calibration_checks` model + Alembic migration, a periodic (e.g.
    quarterly, APScheduler-driven like Phase 4's research refresh) job comparing each past
    `analysis_run`'s score/thesis_status against subsequent price movement and any new documents
    ingested since, and a read-only dashboard view (was high confidence associated with better
-   outcomes?). Purely deterministic per §22.5 — no new LLM calls. Recommend after deployment
-   hardening since it needs weeks of real, live-deployed analysis history to be useful at all —
+   outcomes?). Purely deterministic per §22.5 — no new LLM calls. Recommend after a real deploy
+   exists since it needs weeks of real, live-deployed analysis history to be useful at all —
    building it against only synthetic/test data would just be untested code with nothing to
    calibrate against yet.
 3. **Testing debt** — populate `tests/golden_documents/` (known source documents with expected
@@ -191,5 +203,5 @@ phases, plus improvements that don't need a phase of their own.
 ## Git status
 
 Phases 0-5 are committed to the `claude/next-development-phase-0cer0a` branch (merged to `main`);
-Phase 6 is committed to the `claude/next-phase-development-16lo2r` branch of
-`github.com/frmingest/Aladdin`.
+Phase 6 is committed to the `claude/next-phase-development-16lo2r` branch; Phase 7 is committed to
+the `claude/next-phase-planning-3oboz6` branch of `github.com/frmingest/Aladdin`.

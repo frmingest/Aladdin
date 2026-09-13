@@ -1,0 +1,24 @@
+# Applies to both backend/Dockerfile and frontend/Dockerfile builds — the
+# build context for the backend image is the repo root (see backend/
+# Dockerfile's header comment); the frontend image builds from frontend/
+# directly, so only the frontend/-relative entries below apply to it.
+.git/
+**/__pycache__/
+**/*.py[cod]
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+**/*.db
+**/*.sqlite3
+backend/storage/
+node_modules/
+frontend/dist/
+frontend/.vite/
+.env
+.env.local
+**/.env
+**/.env.local
+!.env.example
+.DS_Store
+.idea/
+.vscode/

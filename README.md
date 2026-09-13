@@ -10,7 +10,8 @@ This is decision support, not a trading engine — no order execution, no automa
 
 Phase 0 (foundation), Phase 1 (portfolio + document ingestion), Phase 2 (market data, FX,
 deterministic financial metrics), Phase 3 (AI analysis), Phase 4 (external research), Phase 5
-(thesis & portfolio intelligence), and Phase 6 (visualization dashboard) are built. See
+(thesis & portfolio intelligence), Phase 6 (visualization dashboard), and Phase 7 (deployment &
+production hardening) are built. See
 [`docs/architecture.md`](docs/architecture.md) for the full design document (data model, service
 boundaries, scoring methodology, risk model, build phasing) and `docs/decisions/` for
 implementation-level choices made along the way. See [`docs/PROGRESS.md`](docs/PROGRESS.md) for the
@@ -63,6 +64,14 @@ it shows comes from an existing Phase 1-5 endpoint; operations that call a live 
 refresh, risk-snapshot compute, macro/sector research refresh) are manual triggers, matching
 `Analysis.tsx`'s existing convention. See
 `docs/decisions/0009-phase6-visualization-dashboard.md`.
+
+Phase 7 adds deployment & production hardening: `backend/Dockerfile` + `frontend/Dockerfile`
+(nginx static serve), CORS middleware (opt-in via `CORS_ALLOWED_ORIGINS`), single-user auth
+(`APP_AUTH_TOKEN`/`X-API-Key`, every domain router except `/health`), a durable S3-compatible
+object storage provider (`OBJECT_STORAGE_PROVIDER=r2|supabase`) replacing local-filesystem storage
+for real deployments, and `alembic upgrade head` run automatically from the backend container's
+entrypoint. See [Deployment](#deployment) below and
+`docs/decisions/0010-deployment-and-production-hardening.md`.
 
 ## Core principles
 
@@ -122,11 +131,38 @@ alembic revision --autogenerate -m "description"
 alembic upgrade head
 ```
 
+## Deployment
+
+Both services are container images built from the repository root (see
+`docs/decisions/0010-deployment-and-production-hardening.md` for why the backend image in
+particular needs a repo-root build context, not `backend/`):
+
+```bash
+# Backend — context is the repo root
+docker build -f backend/Dockerfile -t aladdin-backend .
+docker run -p 8000:8000 --env-file backend/.env aladdin-backend
+
+# Frontend — context is frontend/; VITE_* args are baked in at build time
+docker build -f frontend/Dockerfile \
+  --build-arg VITE_API_BASE_URL=https://<backend-url> \
+  --build-arg VITE_API_KEY=<same value as APP_AUTH_TOKEN> \
+  -t aladdin-frontend frontend
+docker run -p 8080:8080 aladdin-frontend
+```
+
+On Railway, deploy each as its own service: set the backend service's Root Directory to the repo
+root and Dockerfile Path to `backend/Dockerfile`; set the frontend service's Root Directory to
+`frontend/` and Dockerfile Path to `frontend/Dockerfile` (with `VITE_API_BASE_URL`/`VITE_API_KEY`
+as build-time variables). Set `CORS_ALLOWED_ORIGINS` on the backend to the frontend's Railway URL.
+See `backend/.env.example` and `frontend/.env.example` for every variable, and PROGRESS.md's
+"Deployment readiness (Railway)" checklist for what's left beyond code (real secrets, the Railway
+project itself, the first live smoke test).
+
 ## Build phasing
 
 See §26 of the architecture doc. Summary: Foundation → Portfolio & document ingestion
 (no AI dependency) → Deterministic financial/market data → AI analysis → External research →
-Thesis & portfolio intelligence → Visualization.
+Thesis & portfolio intelligence → Visualization → Deployment & production hardening.
 
 ## License
 

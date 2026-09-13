@@ -27,6 +27,10 @@ pandas==2.2.3
 # --- Background jobs ---
 apscheduler==3.10.4
 
+# --- Object storage (§26 "Deployment & production hardening" phase — R2/
+# Supabase Storage are both S3-compatible, see docs/decisions/0010) ---
+boto3==1.35.36
+
 # --- Market data (§29 resolved in Phase 2 — see
 # docs/decisions/0004-phase2-market-data-and-financial-metrics.md) ---
 yfinance==1.7.0
