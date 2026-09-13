@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     object_storage_bucket: str = "aladdin-documents"
     object_storage_local_path: str = "./storage"
 
+    # --- Ingestion (§6.1 file validation) ---
+    max_upload_size_mb: int = 25
+
     # --- AI provider ---
     llm_provider: str = "anthropic"
     anthropic_api_key: str = ""

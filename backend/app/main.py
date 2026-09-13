@@ -1,8 +1,9 @@
 """
 Application entrypoint.
 
-Phase 0: foundation only — no domain endpoints yet. Portfolio/document
-endpoints are added in Phase 1 (see docs/architecture.md §26).
+Phase 1 adds the portfolio and document ingestion endpoints (see
+docs/architecture.md §26). Both are mounted without an /api prefix here —
+the frontend's Vite dev proxy adds/strips it (see frontend/vite.config.ts).
 """
 
 from collections.abc import AsyncGenerator
@@ -10,6 +11,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from app.api.documents import router as documents_router
+from app.api.portfolio import router as portfolio_router
 from app.config.logging import configure_logging, get_logger
 from app.config.settings import get_settings
 
@@ -30,6 +33,9 @@ app = FastAPI(
     description="Investment-grade portfolio analyzer — evidence-first architecture.",
     lifespan=lifespan,
 )
+
+app.include_router(portfolio_router)
+app.include_router(documents_router)
 
 
 @app.get("/health")

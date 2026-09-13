@@ -1,39 +1,63 @@
 import { useEffect, useState } from "react";
+import DocumentUpload from "./pages/DocumentUpload";
+import PortfolioUpload from "./pages/PortfolioUpload";
 
-type HealthResponse = {
-  status: string;
-  environment: string;
-  application_version: string;
-  active_prompt_version: string;
-  active_scoring_version: string;
-  active_extraction_schema_version: string;
-  active_macro_regime_profile: string;
-};
+type Tab = "portfolio" | "documents";
 
-/**
- * Phase 0 placeholder. Portfolio/Research/Memos pages (architecture §3) are
- * added starting Phase 1. This component's only job right now is to prove
- * the frontend can reach the backend.
- */
-export default function App() {
-  const [health, setHealth] = useState<HealthResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
+const TABS: { id: Tab; label: string }[] = [
+  { id: "portfolio", label: "Portfolio" },
+  { id: "documents", label: "Documents" },
+];
+
+function BackendStatusBadge() {
+  const [ok, setOk] = useState<boolean | null>(null);
 
   useEffect(() => {
     fetch("/health")
-      .then((res) => res.json())
-      .then(setHealth)
-      .catch(() => setError("Could not reach backend at /api/health"));
+      .then((res) => setOk(res.ok))
+      .catch(() => setOk(false));
   }, []);
+
+  const label = ok === null ? "checking backend…" : ok ? "backend ok" : "backend unreachable";
+  const color = ok === null ? "bg-slate-700" : ok ? "bg-emerald-700" : "bg-red-700";
+
+  return <span className={`text-xs px-2 py-0.5 rounded ${color}`}>{label}</span>;
+}
+
+/**
+ * Phase 1 — portfolio and document ingestion (docs/architecture.md §26).
+ * No router dependency yet (§2.9: avoid premature complexity) — plain tab
+ * state is enough for two pages. Revisit once Phase 6's dashboard lands.
+ */
+export default function App() {
+  const [tab, setTab] = useState<Tab>("portfolio");
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-8">
-      <h1 className="text-2xl font-semibold mb-4">Aladdin</h1>
-      <p className="text-slate-400 mb-6">Phase 0 — foundation. Dashboard arrives in Phase 6.</p>
-      {error && <p className="text-red-400">{error}</p>}
-      {health && (
-        <pre className="bg-slate-900 rounded p-4 text-sm">{JSON.stringify(health, null, 2)}</pre>
-      )}
+      <div className="flex items-center gap-3 mb-1">
+        <h1 className="text-2xl font-semibold">Aladdin</h1>
+        <BackendStatusBadge />
+      </div>
+      <p className="text-slate-400 mb-6">Phase 1 — portfolio and document ingestion.</p>
+
+      <nav className="flex gap-2 mb-6 border-b border-slate-800">
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            className={`px-3 py-2 text-sm font-medium border-b-2 -mb-px ${
+              tab === t.id
+                ? "border-emerald-500 text-slate-100"
+                : "border-transparent text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </nav>
+
+      {tab === "portfolio" && <PortfolioUpload />}
+      {tab === "documents" && <DocumentUpload />}
     </div>
   );
 }
