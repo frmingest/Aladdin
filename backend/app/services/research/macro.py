@@ -8,7 +8,11 @@ macro-news pass via ResearchProvider, persists both, and records one
 research_runs row — but only if the most recent completed run has aged past
 `macro_refresh_interval_hours` (§9.1: "refresh approximately daily"), unless
 `force=True`. This is the "is a refresh due" cache check itself (§2.7); there
-is no separate cache store.
+is no separate cache store. It also records the narrative pass's Gemini
+usage into llm_usage_events (§28 observability follow-up, docs/decisions/
+0013) via research_provider.last_usage, set by GeminiResearchProvider right
+after its call returns — a research call that never triggers (research
+disabled/stubbed) simply leaves last_usage at None and nothing is recorded.
 
 `get_latest_macro_snapshot` is the read path used by both the API
 (app.api.research) and the analysis evidence packet
@@ -33,9 +37,11 @@ from sqlalchemy.orm import Session
 
 from app.config.settings import Settings, get_settings
 from app.domain.macro_series import load_macro_series_registry
+from app.models.llm_usage import LLMCallType
 from app.models.research import MacroObservation, ResearchItem, ResearchRun, ResearchRunStatus, ResearchRunType
 from app.providers.base import MacroDataProvider, MacroDataUnavailableError, ResearchProvider, ResearchUnavailableError
 from app.services.research.common import is_stale, latest_completed_run
+from app.services.usage import record_llm_usage
 
 
 @dataclass
@@ -122,6 +128,19 @@ def refresh_macro_snapshot(
     except ResearchUnavailableError as exc:
         warnings.append(str(exc))
         narrative_items = []
+
+    usage = research_provider.last_usage
+    if usage is not None:
+        record_llm_usage(
+            db,
+            provider=settings.research_provider,
+            model_name=settings.llm_model_name,
+            call_type=LLMCallType.RESEARCH_MACRO,
+            input_tokens=usage.input_tokens,
+            output_tokens=usage.output_tokens,
+            latency_ms=usage.latency_ms,
+            prompt_version=settings.active_research_prompt_version,
+        )
 
     for item in narrative_items[: settings.research_max_grounded_items]:
         db.add(

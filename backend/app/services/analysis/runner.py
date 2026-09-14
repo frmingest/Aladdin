@@ -1,5 +1,4 @@
-"""
-Analysis-run orchestration (architecture §11 recommended flow, §26 Phase 3).
+"""Analysis-run orchestration (architecture §11 recommended flow, §26 Phase 3).
 
 Runs synchronously within the request — a background job queue (APScheduler,
 §4) is a natural addition once analysis runs take long enough, or happen
@@ -10,6 +9,16 @@ invalid LLM output, provider error) does not fail the whole run — it's
 recorded as a failure and excluded from `holding_analyses`, mirroring the
 Phase 2 valuation precedent (§21: fail visibly, per-item, not silently or
 all-or-nothing).
+
+Also records one (or two) llm_usage_events rows per successfully-analyzed
+holding — §28 observability follow-up, docs/decisions/0013: this is exactly
+the "computed per analysis run, never persisted" gap the Phase 8 status
+review flagged, since result.total_input_tokens/total_output_tokens used to
+be computed by app.services.analysis.llm_analysis and then simply discarded
+here. A failed holding records no usage row even though the call happened
+and cost tokens — LLMUnavailableError's own message is the only trace of
+that today (a real gap, but a pre-existing one this pass doesn't attempt to
+close — see ADR 0013's Consequences).
 """
 
 from dataclasses import dataclass
@@ -21,12 +30,14 @@ from sqlalchemy.orm import Session
 from app.config.settings import Settings, get_settings
 from app.domain import scoring
 from app.models.analysis import AnalysisRun, AnalysisRunStatus, EvidenceReference, FactorAssessment, HoldingAnalysis
+from app.models.llm_usage import LLMCallType
 from app.models.portfolio import PortfolioSnapshot
 from app.models.research import ResearchRunType
 from app.providers.base import LLMProvider, LLMUnavailableError
 from app.services.analysis.context import InsufficientContextError, build_analysis_context
-from app.services.analysis.llm_analysis import run_two_pass_analysis
+from app.services.analysis.llm_analysis import LLMAnalysisResult, run_two_pass_analysis
 from app.services.research.common import latest_completed_run
+from app.services.usage import record_llm_usage
 
 _FACTOR_FIELDS = ("business_quality", "financial_strength", "valuation")
 
@@ -106,6 +117,8 @@ def run_analysis(
         db.add(holding_analysis)
         db.flush()
 
+        _record_analysis_usage(db, settings, run.id, holding_id, holding_analysis.id, result)
+
         for factor in _FACTOR_FIELDS:
             assessment = getattr(result.output, factor)
             db.add(
@@ -153,3 +166,44 @@ def run_analysis(
     db.refresh(run)
 
     return AnalysisRunOutcome(analysis_run=run, holding_analyses=holding_analyses, failures=failures)
+
+
+def _record_analysis_usage(
+    db: Session,
+    settings: Settings,
+    analysis_run_id: UUID,
+    holding_id: UUID,
+    holding_analysis_id: UUID,
+    result: LLMAnalysisResult,
+) -> None:
+    """One llm_usage_events row per Gemini call `result` actually represents
+    (§28 observability follow-up, ADR 0013) — added to `db` alongside the
+    rest of this holding's rows, committed together with them by the caller,
+    never a separate transaction."""
+    record_llm_usage(
+        db,
+        provider=settings.llm_provider,
+        model_name=result.model_name,
+        call_type=LLMCallType.ANALYSIS_BLIND,
+        input_tokens=result.blind_input_tokens,
+        output_tokens=result.blind_output_tokens,
+        latency_ms=result.blind_latency_ms,
+        prompt_version=f"persona/{result.prompt_version}",
+        holding_id=holding_id,
+        analysis_run_id=analysis_run_id,
+        holding_analysis_id=holding_analysis_id,
+    )
+    if result.reconciliation_ran:
+        record_llm_usage(
+            db,
+            provider=settings.llm_provider,
+            model_name=result.model_name,
+            call_type=LLMCallType.ANALYSIS_RECONCILIATION,
+            input_tokens=result.reconciliation_input_tokens,
+            output_tokens=result.reconciliation_output_tokens,
+            latency_ms=result.reconciliation_latency_ms,
+            prompt_version=f"synthesis/{result.prompt_version}",
+            holding_id=holding_id,
+            analysis_run_id=analysis_run_id,
+            holding_analysis_id=holding_analysis_id,
+        )

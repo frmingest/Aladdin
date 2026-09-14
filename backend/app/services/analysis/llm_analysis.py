@@ -1,5 +1,4 @@
-"""
-Two-pass LLM analysis (architecture §11.3 confirmation-bias guardrail,
+"""Two-pass LLM analysis (architecture §11.3 confirmation-bias guardrail,
 §26 Phase 3).
 
 Pass 1 — blind: the evidence packet WITHOUT the user's own notes/thesis is
@@ -20,6 +19,13 @@ Only the reconciliation fields are taken from Pass 2 — the persisted factor
 scores are always Pass 1's. The whole point of the blind pass is that it
 isn't influenced by what the user already believes, and folding Pass 2 back
 into the scores would quietly undo that on every single run.
+
+Per-pass token/latency figures (blind_*/reconciliation_*, §28 observability
+follow-up, docs/decisions/0013) are exposed here rather than only as the
+`total_*` figures the dataclass already had, so app.services.analysis.runner
+can record one llm_usage_events row per Gemini call actually made (one when
+a holding has no notes/thesis to reconcile against yet, two once it does)
+instead of one blended row that would hide which pass cost what.
 """
 
 from dataclasses import dataclass
@@ -49,6 +55,15 @@ class LLMAnalysisResult:
     model_name: str
     total_input_tokens: int
     total_output_tokens: int
+    # Per-pass breakdown (§28 observability follow-up, ADR 0013) — reconciliation_ran
+    # tells the caller whether to record one usage-ledger row or two.
+    blind_input_tokens: int | None = None
+    blind_output_tokens: int | None = None
+    blind_latency_ms: float | None = None
+    reconciliation_ran: bool = False
+    reconciliation_input_tokens: int | None = None
+    reconciliation_output_tokens: int | None = None
+    reconciliation_latency_ms: float | None = None
 
 
 def run_two_pass_analysis(
@@ -66,7 +81,9 @@ def run_two_pass_analysis(
     except Exception as exc:  # noqa: BLE001 — schema-invalid output must fail loudly (§28 rule 10)
         raise LLMUnavailableError(f"blind-pass output failed schema validation: {exc}") from exc
 
-    if context.user_notes and context.user_notes.strip():
+    reconciliation_ran = bool(context.user_notes and context.user_notes.strip())
+    reconciliation_response = None
+    if reconciliation_ran:
         synthesis_prompt = load_synthesis_prompt(prompt_version)
         reconciliation_response = provider.generate_structured(
             system_prompt=synthesis_prompt,
@@ -121,4 +138,11 @@ def run_two_pass_analysis(
         model_name=blind_response.model,
         total_input_tokens=total_input,
         total_output_tokens=total_output,
+        blind_input_tokens=blind_response.input_tokens,
+        blind_output_tokens=blind_response.output_tokens,
+        blind_latency_ms=blind_response.latency_ms,
+        reconciliation_ran=reconciliation_ran,
+        reconciliation_input_tokens=reconciliation_response.input_tokens if reconciliation_response else None,
+        reconciliation_output_tokens=reconciliation_response.output_tokens if reconciliation_response else None,
+        reconciliation_latency_ms=reconciliation_response.latency_ms if reconciliation_response else None,
     )

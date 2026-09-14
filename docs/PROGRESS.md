@@ -10,7 +10,8 @@ successfully. Phase 8 (alternative assets) planned; Phase 9 (document evidence q
 Documents/Analysis/Dashboard/research/risk haven't been manually exercised on the live deploy yet —
 see "Open gaps" below. Whether the deployed code is committed to git is unconfirmed (see "Manual
 to-do" below). Last full test-suite run 2026-09-14: 260 backend tests / ruff / tsc / vite build all
-clean; `npm run lint` still fails (known gap below).
+clean; `npm run lint` still fails (known gap below). **The LLM usage ledger (ADR 0013, this pass)
+was written after that run and has not itself been test-verified yet — see "Open gaps."**
 
 ---
 
@@ -22,6 +23,7 @@ now just "has anyone actually clicked it," not "is it blocked"):
 - ⬜ AI analysis (Gemini) — **attempted 2026-09-14, failed**: `gemini-2.5-flash` (the configured default) now 404s with "no longer available to new users" — Google's Gemini API has restricted it to existing accounts only. Fixed in code (default changed to `gemini-3.6-flash`, the replacement model Google's own error response named — see ADR 0005's Update section) but **not yet redeployed/reverified** — this is still the recommended verification step for Phase 9 planning below once the fix is live, since a real run against Vår Energi's two PDFs would confirm or correct the evidence-truncation estimate in ADR 0012.
 - ⬜ Macro/sector research (FRED + Norges Bank) — `FRED_API_KEY` is set, but no confirmed refresh against the live deploy yet.
 - ⬜ Portfolio risk snapshots, DCF valuation + critique, document upload — not yet exercised on the live deploy per Faiz's update.
+- ⬜ **LLM usage ledger (new this pass, ADR 0013)** — `llm_usage_events` table, `/usage/summary` endpoint, Dashboard's new "Gemini usage today" section. **Not yet migrated, deployed, or test-verified**: `device_bash` was unavailable again this session (the Windows-update mount issue tracked since 2026-09-08), so this went through the stage → edit → commit-back path with no way to run `alembic upgrade head`/`pytest`/`tsc` locally. Needs: the new migration applied, a redeploy, and one real analysis run to confirm a row actually lands in `llm_usage_events` and the Dashboard widget renders correctly.
 - yfinance/Gemini/FRED/Norges Bank were previously verified only against mocks/docs from this build environment (no network path to any of them) — a live deploy removes that excuse; worth confirming each actually works once, not just that the key is present. ADR 0004/0005/0007.
 
 **Deliberate scope limits** (not oversights — see the linked ADR if you want the reasoning):
@@ -31,6 +33,7 @@ now just "has anyone actually clicked it," not "is it blocked"):
 - Jurisdictional concentration is proxied via `Holding.institution`, not a real custodian-country field.
 - Portfolio-risk narrative is short deterministic text, not LLM prose (ADR 0008).
 - Risk heatmap tile shading uses illustrative public reference bands, not the app's own `risk_v1.yaml` thresholds — the overall risk band/score next to it *is* the authoritative one (ADR 0009).
+- Free-tier rate limits (`LLM_RATE_LIMIT_RPM/TPM/RPD`, ADR 0013) are entered by hand, not fetched from Google — no public API exposes a free-tier AI Studio key's quota/usage, so these drift if the account's tier or model changes and need updating manually when they do.
 
 **Tooling debt:**
 - No `eslint.config.js` — `npm run lint` fails outright (Phase 0 gap).
@@ -42,11 +45,11 @@ now just "has anyone actually clicked it," not "is it blocked"):
 **Feature gaps:**
 - No calibration/track-record engine (§22.5) — needs weeks of real deployed history to be useful, so recommended *after* a live deploy exists.
 - Evidence-packet excerpt selection has no relevance ranking, just most-recent-first, and the excerpt budget is shared across all of a holding's documents rather than per-document (ADR 0006) — reviewed in detail 2026-09-14 against Vår Energi's real documents (a 208-page annual report likely gets truncated to near-zero content by a smaller, more-recently-uploaded quarterly report); concrete proposal in **ADR 0012 (Phase 9, proposed)**.
-- Token/cost tracking is computed per analysis run but discarded, never persisted or surfaced (§23).
 - `AssetClass` has no `COMMODITY`/`COLLECTIBLE` value yet — needed for Phase 8 (ADR 0011).
 - `recent_events` on `AnalysisContext` unbuilt — macro/sector research partially covers the need.
 - PDF/PPT-only holdings never get a structured `financial_metrics` snapshot (XLSX-only extraction, ADR 0002/0006) — `financial_metrics.insufficient_data` stays `True` for a holding like Vår Energi unless an XLSX with the same figures is also uploaded. Addressed as item 5 of ADR 0012.
 - No visibility, on the Documents tab itself, into whether an uploaded document's content actually reaches an analysis run (page/chunk usage, truncation) — a processed PDF with `FACTS: 0` currently looks identical whether it contributed 200 pages of evidence or zero. Addressed as item 2 of ADR 0012.
+- A failed holding analysis (LLMUnavailableError) still costs a Gemini call but records no `llm_usage_events` row — only a successfully-completed holding analysis does today (ADR 0013's Consequences). Low-stakes at single-user scale but means the usage ledger slightly undercounts against what Google's own dashboard would show if a run partially fails.
 
 ---
 
@@ -66,6 +69,7 @@ now just "has anyone actually clicked it," not "is it blocked"):
 - [x] `GOOGLE_AI_STUDIO_API_KEY` + `FRED_API_KEY` obtained and set on Railway.
 - [x] End-to-end smoke test — Portfolio flow tested and working ("good for an alpha," per Faiz 2026-09-14). Documents/Analysis/Dashboard not yet manually exercised on the live deploy — see "Open gaps" above.
 - [ ] Live check of Phase 5's DCF critique + risk correlation (same keys as above) — not yet exercised.
+- [ ] `alembic upgrade head` for the new `llm_usage_events` table (migration `c7e2f9a1b8d3`, ADR 0013) — not yet applied anywhere.
 
 ## Manual to-do for Faiz
 
@@ -92,6 +96,13 @@ now just "has anyone actually clicked it," not "is it blocked"):
   `gemini-2.5-flash` and the code default won't override it; update the Railway variable directly
   to `gemini-3.6-flash` (or unset it to fall back to the code default), then redeploy. Same check
   for `backend/.env` locally if you run analyses outside Railway. See ADR 0005's Update section.
+- **New, blocking for the usage ledger (ADR 0013) to do anything:** run `alembic upgrade head`
+  (new migration `c7e2f9a1b8d3` adds `llm_usage_events`) against the real Postgres, then redeploy
+  both backend (new `/usage` router, `app/services/usage`) and frontend (Dashboard's new "Gemini
+  usage today" section). Then run the full backend `pytest`/`ruff`/`mypy` and frontend
+  `tsc`/`build`/`lint` checks once `device_bash` is back — every file this pass touched (see the
+  changelog entry below) was written but never executed this session, since the mount issue meant
+  no local Python/Node was reachable to run them against.
 
 ## Up next (candidates)
 
@@ -125,6 +136,31 @@ now just "has anyone actually clicked it," not "is it blocked"):
 
 ### Changelog
 
+- **2026-09-14 (LLM usage ledger, ADR 0013):** Faiz asked whether a token-consumption indicator was
+  feasible/reliable and whether it could integrate with Google AI Studio directly, using the Vår
+  Energi run (3 documents/280 pages, single blind-pass call — Google AI Studio's own usage
+  dashboard showed ~5.87K input / ~1.484K output tokens, 1 request) as a baseline. Researched: no
+  public API exposes a free-tier AI Studio key's quota/usage — that dashboard is a Cloud Console UI
+  backed by Cloud Monitoring, which would need a full GCP project plus service-account credentials
+  wired up just to read numbers this app can already capture for free from its own Gemini
+  responses. And it already half-does: `LLMAnalysisResult.total_input_tokens/total_output_tokens`
+  (`app/services/analysis/llm_analysis.py`) were computed on every analysis call and then discarded
+  before reaching the database — exactly the gap the Phase 8 status review flagged ("computed per
+  analysis run, never persisted or surfaced"). Built: `llm_usage_events` table (new migration
+  `c7e2f9a1b8d3`) recording one row per real Gemini call — analysis blind/reconciliation passes and
+  macro/sector research grounding — straight from the vendor's own `usage_metadata`
+  (`app.providers.base.LLMUsageMetrics`, a new vendor-agnostic shape both `GoogleAIStudioProvider`
+  and `GeminiResearchProvider` now expose); `app.services.usage` compares the ledger against three
+  new settings (`LLM_RATE_LIMIT_RPM/TPM/RPD`, defaults matching gemini-3.6-flash's free tier per
+  Faiz's own screenshots) to estimate how many more holding analyses can run today, falling back to
+  the Vår Energi numbers (`LLM_BASELINE_INPUT/OUTPUT_TOKENS`) as a calibration baseline until real
+  ledger history exists to average instead; new `GET /usage/summary` endpoint; new "Gemini usage
+  today" Dashboard section (requests-used bar, estimated analyses remaining, this-minute RPM/TPM,
+  a note while still on the calibration fallback). Full reasoning: **ADR 0013**. **Not yet migrated,
+  deployed, or test-verified this pass** — `device_bash` was unavailable again this session (the
+  Windows-update mount issue tracked since 2026-09-08), so this went through the stage → edit →
+  commit-back path with no way to run `alembic upgrade head`, `pytest`, `tsc`, or `vite build`
+  locally; see "Manual to-do" and "Open gaps" above.
 - **2026-09-14 (Gemini model fix):** Faiz's first real analysis run against Vår Energi (on the live
   Railway deploy) failed outright: `gemini-2.5-flash` — `settings.llm_model_name`'s default since
   ADR 0005 — 404s with "This model... is no longer available to new users," naming
@@ -195,3 +231,7 @@ now just "has anyone actually clicked it," not "is it blocked"):
 - ~~No application authentication anywhere~~ — resolved by Phase 7's `APP_AUTH_TOKEN`.
 - ~~Pydantic v2 serializes `Decimal` as a JSON string, undocumented beyond risk-snapshot columns~~ —
   corrected across frontend TypeScript types during Phase 6.
+- ~~Token/cost tracking is computed per analysis run but discarded, never persisted or surfaced
+  (§23)~~ — resolved 2026-09-14: `llm_usage_events` ledger, `/usage/summary` endpoint, and the
+  Dashboard's "Gemini usage today" section (ADR 0013). Pending migration/deploy/test-verification —
+  see "Open gaps."

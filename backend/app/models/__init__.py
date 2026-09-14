@@ -9,6 +9,7 @@ from app.models.analysis import AnalysisRun, AnalysisRunStatus, EvidenceReferenc
 from app.models.document import Document, DocumentChunk, DocumentPage, DocumentStatus, DocumentType
 from app.models.financial_fact import FinancialLineItem
 from app.models.holding import Holding
+from app.models.llm_usage import LLMCallType, LLMUsageEvent
 from app.models.market_data import FxObservation, MarketObservation
 from app.models.portfolio import PortfolioPosition, PortfolioSnapshot, SnapshotStatus
 from app.models.portfolio_risk import PortfolioRiskSnapshot
@@ -33,6 +34,8 @@ __all__ = [
     "HoldingAnalysis",
     "InvestmentThesis",
     "InvestmentThesisStatus",
+    "LLMCallType",
+    "LLMUsageEvent",
     "MacroObservation",
     "MarketObservation",
     "PortfolioPosition",

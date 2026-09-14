@@ -72,6 +72,31 @@ class Settings(BaseSettings):
     # ranking yet (decision 0006); this just caps prompt size/cost.
     llm_excerpt_char_budget: int = 12000
 
+    # --- LLM usage ledger & free-tier rate-limit estimation (§28
+    # observability follow-up — see docs/decisions/0013-llm-usage-ledger-and-
+    # rate-limit-estimation.md). Every real Gemini call (analysis + research)
+    # is recorded in llm_usage_events (app.models.llm_usage) straight from
+    # the vendor's own usage_metadata; app.services.usage compares that
+    # ledger against these three limits to estimate "how many more holding
+    # analyses today". They are NOT fetched from Google — no public API
+    # exposes a free-tier AI Studio key's quota/usage (see the ADR) — so keep
+    # them in sync by hand with whatever aistudio.google.com/usage shows for
+    # llm_model_name's tier; defaults below match gemini-3.6-flash's free
+    # tier as observed 2026-09-14.
+    llm_rate_limit_rpm: int = 5
+    llm_rate_limit_tpm: int = 250_000
+    llm_rate_limit_rpd: int = 20
+    # Calibration baseline for the "how many analyses can we run" estimate
+    # before the ledger has any real history of its own (it can't — this
+    # feature postdates every analysis run so far). Seeded from Faiz's first
+    # real run — Vår Energi: 3 documents / 280 pages, single blind-pass call
+    # (no thesis/notes on file yet to trigger a reconciliation pass) — per
+    # Google AI Studio's own usage dashboard. app.services.usage prefers the
+    # real historical average over this fallback the moment any
+    # ANALYSIS_BLIND/ANALYSIS_RECONCILIATION events exist.
+    llm_baseline_input_tokens: int = 5870
+    llm_baseline_output_tokens: int = 1484
+
     # --- Market data provider (§29 resolved in Phase 2 — see
     # docs/decisions/0004-phase2-market-data-and-financial-metrics.md) ---
     market_data_provider: str = "yfinance"  # yfinance | stub

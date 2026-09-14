@@ -26,6 +26,7 @@ import type { PortfolioRiskSnapshotOut } from "../types/portfolio_risk";
 import type { InvalidationSignalOut, ThesisCreate, ThesisOut, ThesisUpdate } from "../types/thesis";
 import type { ValuationCaseCreate, ValuationCaseOut } from "../types/dcf";
 import type { MacroSnapshotOut, ResearchRunOut, SectorResearchOut } from "../types/research";
+import type { UsageSummaryOut } from "../types/usage";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "/api";
 // Paired with the backend's optional APP_AUTH_TOKEN (see
@@ -265,4 +266,10 @@ export function getSectorResearch(sector: string): Promise<SectorResearchOut> {
 
 export function refreshSectorResearch(sector: string, force = false): Promise<ResearchRunOut> {
   return apiFetch(`/research/sectors/${encodeURIComponent(sector)}/refresh?force=${force}`, { method: "POST" });
+}
+
+// --- LLM usage ledger (§28 observability follow-up, ADR 0013) --------------
+
+export function getUsageSummary(): Promise<UsageSummaryOut> {
+  return apiFetch("/usage/summary");
 }

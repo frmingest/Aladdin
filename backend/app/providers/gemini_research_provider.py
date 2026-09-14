@@ -34,8 +34,15 @@ metadata but zero supports is a legitimate empty result (the model found
 nothing to ground its answer in) and returns an empty list, not an error —
 see app.services.research, which relies on this distinction to decide
 whether a "no new items" run should still update the cache's retrieved_at.
+
+`self.last_usage` (§28 observability follow-up, docs/decisions/0013) is set
+from the vendor's own `usage_metadata` right after a call returns — even
+when the call later turns out to have no usable grounding, since the token
+cost was still incurred — so app.services.research can persist a usage-
+ledger row without this interface's return type needing to carry it.
 """
 
+import time
 from datetime import datetime, timezone
 from typing import Any
 
@@ -43,7 +50,7 @@ from google import genai
 from google.genai import types
 
 from app.config.paths import PROMPTS_DIR
-from app.providers.base import ResearchItem, ResearchProvider, ResearchUnavailableError
+from app.providers.base import LLMUsageMetrics, ResearchItem, ResearchProvider, ResearchUnavailableError
 
 _MACRO_SOURCE_TYPE = "macro_news"
 _SECTOR_SOURCE_TYPE = "sector_research"
@@ -79,6 +86,8 @@ class GeminiResearchProvider(ResearchProvider):
     # --- internal helpers ---
 
     def _grounded_items(self, prompt: str, *, source_type: str) -> list[ResearchItem]:
+        self.last_usage = None
+        started = time.monotonic()
         try:
             response = self._client.models.generate_content(
                 model=self._model,
@@ -91,6 +100,14 @@ class GeminiResearchProvider(ResearchProvider):
             )
         except Exception as exc:  # noqa: BLE001 — vendor-SDK failures never leak past this boundary (§28 rule 8)
             raise ResearchUnavailableError(f"Gemini grounded search call failed: {exc}") from exc
+
+        latency_ms = (time.monotonic() - started) * 1000
+        usage = getattr(response, "usage_metadata", None)
+        self.last_usage = LLMUsageMetrics(
+            input_tokens=getattr(usage, "prompt_token_count", None) if usage else None,
+            output_tokens=getattr(usage, "candidates_token_count", None) if usage else None,
+            latency_ms=latency_ms,
+        )
 
         candidates = getattr(response, "candidates", None) or []
         if not candidates:

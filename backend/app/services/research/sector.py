@@ -9,7 +9,10 @@ Same caching/partial-failure shape as the macro service: a refresh is
 skipped unless the most recent completed run for this sector has aged past
 `sector_research_refresh_interval_days` (§9.3) or `force=True`; a provider
 failure is recorded as a FAILED run rather than silently returning stale or
-fabricated data (§21).
+fabricated data (§21). Also records the grounded search call's Gemini usage
+into llm_usage_events (§28 observability follow-up, docs/decisions/0013) via
+research_provider.last_usage — see app.services.research.macro's docstring
+for the same mechanism.
 """
 
 from dataclasses import dataclass, field
@@ -18,9 +21,11 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 
 from app.config.settings import Settings, get_settings
+from app.models.llm_usage import LLMCallType
 from app.models.research import ResearchItem, ResearchRun, ResearchRunStatus, ResearchRunType
 from app.providers.base import ResearchProvider, ResearchUnavailableError
 from app.services.research.common import is_stale, latest_completed_run
+from app.services.usage import record_llm_usage
 
 
 @dataclass
@@ -71,12 +76,15 @@ def refresh_sector_research(
     try:
         items = research_provider.get_sector_research(sector)
     except ResearchUnavailableError as exc:
+        _record_sector_usage(db, settings, research_provider, sector)
         run.completed_at = datetime.now(timezone.utc)
         run.status = ResearchRunStatus.FAILED.value
         run.error_message = str(exc)
         db.commit()
         db.refresh(run)
         return run
+
+    _record_sector_usage(db, settings, research_provider, sector)
 
     for item in items[: settings.research_max_grounded_items]:
         db.add(
@@ -99,6 +107,27 @@ def refresh_sector_research(
     db.commit()
     db.refresh(run)
     return run
+
+
+def _record_sector_usage(db: Session, settings: Settings, research_provider: ResearchProvider, sector: str) -> None:
+    """Records the grounded search call's usage regardless of whether it
+    ultimately succeeded or raised ResearchUnavailableError — the vendor
+    call itself still cost tokens either way (§28 observability follow-up,
+    ADR 0013; mirrors app.services.research.macro's same choice)."""
+    usage = research_provider.last_usage
+    if usage is None:
+        return
+    record_llm_usage(
+        db,
+        provider=settings.research_provider,
+        model_name=settings.llm_model_name,
+        call_type=LLMCallType.RESEARCH_SECTOR,
+        input_tokens=usage.input_tokens,
+        output_tokens=usage.output_tokens,
+        latency_ms=usage.latency_ms,
+        prompt_version=settings.active_research_prompt_version,
+        sector=sector,
+    )
 
 
 def get_latest_sector_research(db: Session, sector: str) -> SectorResearchView:

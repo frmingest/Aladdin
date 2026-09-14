@@ -8,6 +8,7 @@ import RiskSection from "./dashboard/RiskSection";
 import FactorProfileSection from "./dashboard/FactorProfileSection";
 import MacroSection from "./dashboard/MacroSection";
 import HoldingDetailSection from "./dashboard/HoldingDetailSection";
+import UsageSection from "./dashboard/UsageSection";
 
 /**
  * Phase 6 — Visualization (architecture §19, §26). Composes every
@@ -18,6 +19,11 @@ import HoldingDetailSection from "./dashboard/HoldingDetailSection";
  * (valuation, risk snapshot, macro/sector refresh) are manual triggers,
  * matching the convention Analysis.tsx established for Phase 3; everything
  * else reads whatever's already on record.
+ *
+ * UsageSection (§28 observability follow-up, ADR 0013) sits above the
+ * snapshot-scoped sections deliberately — Gemini usage/quota is a portfolio-
+ * wide, always-current concern, not something that depends on which
+ * snapshot or account filter is selected below.
  *
  * The dashboard always looks at the *current* portfolio (the latest
  * snapshot — uploads merge forward onto it, so it's every account's present
@@ -51,6 +57,8 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8">
+      <UsageSection />
+
       <div className="terminal-card space-y-3">
         <div className="flex items-end justify-between gap-3 flex-wrap">
           <AccountFilter accounts={accounts} selected={accountIds} onChange={setAccountIds} />

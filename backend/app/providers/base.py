@@ -164,12 +164,36 @@ class ResearchUnavailableError(Exception):
         super().__init__(f"research provider unavailable: {reason}")
 
 
+@dataclass(frozen=True)
+class LLMUsageMetrics:
+    """Vendor-reported token/latency accounting for one LLM call (§28 rule
+    8: vendor-agnostic — every provider fills this from its own SDK's usage
+    fields, e.g. Gemini's `usage_metadata`). Exact, not estimated — these
+    are the same counts the vendor bills/rate-limits against, which is what
+    makes app.models.llm_usage/app.services.usage a reliable ledger rather
+    than a guess (see docs/decisions/0013-llm-usage-ledger-and-rate-limit-
+    estimation.md)."""
+
+    input_tokens: int | None
+    output_tokens: int | None
+    latency_ms: float | None
+
+
 class ResearchProvider(ABC):
     """§9.2/§9.3 — qualitative macro/world-news and sector research streams,
     each item traceable to a real source (§9.4). Numeric central-bank/macro
     data (policy rates, real yields, breakevens, dollar index — §9.1) is
     MacroDataProvider's job, not this interface's — see that class's
     docstring for why the split exists."""
+
+    # Set by a concrete provider after each get_macro_snapshot/
+    # get_sector_research call, so app.services.research can persist a
+    # usage-ledger row (app.models.llm_usage) without widening this
+    # interface's return type (§28 rule 8 — the interface itself stays
+    # vendor-agnostic; only a concrete provider knows what its vendor's SDK
+    # reports). None for StubResearchProvider and for any call that raised
+    # before a vendor response came back.
+    last_usage: "LLMUsageMetrics | None" = None
 
     @abstractmethod
     def get_macro_snapshot(self) -> list[ResearchItem]:

@@ -20,6 +20,7 @@ from app.api.portfolio import router as portfolio_router
 from app.api.portfolio_risk import router as portfolio_risk_router
 from app.api.research import router as research_router
 from app.api.thesis import router as thesis_router
+from app.api.usage import router as usage_router
 from app.api.valuation import router as valuation_router
 from app.config.logging import configure_logging, get_logger
 from app.config.settings import get_settings
@@ -53,9 +54,9 @@ app = FastAPI(
 
 if settings.cors_allowed_origins:
     # §24/§26 "Deployment & production hardening" — needed once frontend and
-    # backend are separate origins (e.g. two Railway services); empty by
-    # default so local dev (same-origin via Vite's proxy) and tests need no
-    # CORS config at all. See docs/decisions/0010.
+    # backend are separate origins (e.g. two Railway services — see
+    # docs/decisions/0010); empty by default so local dev (same-origin via
+    # Vite's proxy) and tests need no CORS config at all. See docs/decisions/0010.
     app.add_middleware(
         CORSMiddleware,
         allow_origins=[origin.strip() for origin in settings.cors_allowed_origins.split(",") if origin.strip()],
@@ -76,6 +77,7 @@ app.include_router(research_router, dependencies=_auth)
 app.include_router(thesis_router, dependencies=_auth)
 app.include_router(valuation_router, dependencies=_auth)
 app.include_router(portfolio_risk_router, dependencies=_auth)
+app.include_router(usage_router, dependencies=_auth)
 
 
 @app.get("/health")
