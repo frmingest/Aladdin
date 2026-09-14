@@ -106,16 +106,31 @@ now just "has anyone actually clicked it," not "is it blocked"):
 
 ## Up next (candidates)
 
-1. **Document evidence quality (Phase 9, new this pass)** — per-document evidence budget (fixes a
+1. **Macro-economic methodology fixes (new this pass, ADR 0014)** — a macro-economist-lens review
+   of the analysis/valuation/risk logic found: the DCF discount rate and FX conversion are
+   free-typed with no link to the risk-free/FX data the app already fetches (ECON-001);
+   regime-conditional factor weights were approved in the v3.0 architecture (§13.1) but never
+   implemented — weights are still fixed 40/30/30 (ECON-002); the macro registry has no commodity
+   price series despite a real, sector-flagged commodity-exposure risk dimension and a portfolio
+   that is meaningfully commodity-exposed (Vår Energi oil & gas, a gold mining ETF, physical
+   gold/silver) (ECON-003); no Eurozone/ECB or China series even though the research prompt asks
+   about the ECB and commodity demand is China-driven (ECON-004); the one Norway-specific series
+   (`no_policy_rate`) is explicitly self-flagged as never verified against a live API response
+   (ECON-005); and macro/FX evidence reaches the LLM as raw citations without being a required line
+   in the persona's assessment checklist, so whether it's actually used varies run to run
+   (ECON-006). Full findings, severities, and recommended fixes in **ADR 0014**. Recommended ahead
+   of Phase 9/Phase 8 below: ECON-001/002 in particular are corrections to already-approved design
+   (§13.1), not new scope.
+2. **Document evidence quality (Phase 9)** — per-document evidence budget (fixes a
    large report getting truncated to near-zero by a smaller, more-recent upload), evidence-usage
    visibility on the Documents tab, section-aware chunk prioritization, and closing the PDF-only
-   `financial_metrics` gap. Design in ADR 0012. Recommended ahead of the items below: it makes an
-   already-built, already-in-use feature (document upload) deliver more of the value it was built
-   for, rather than adding new surface area.
-2. **Track-record & calibration engine** (§22.5) — a real deploy now exists, but it still needs weeks of live analysis history to have anything to calibrate against.
-3. **Testing debt** — populate `golden_documents`/`regression`, add `black` + `eslint.config.js`.
-4. **Precious metals** (Phase 8) — `COMMODITY` asset class, dated lots, manual single-holding entry, gold-api.com spot pricing. Design in ADR 0011.
-5. **Whisky collection** (Phase 8) — manual CSV import (Whiskybase export format), carried at cost basis since no live pricing feed exists. Needs a real sample export from Faiz first. Design in ADR 0011.
+   `financial_metrics` gap. Design in ADR 0012. Makes an already-built, already-in-use feature
+   (document upload) deliver more of the value it was built for, rather than adding new surface
+   area.
+3. **Track-record & calibration engine** (§22.5) — a real deploy now exists, but it still needs weeks of live analysis history to have anything to calibrate against.
+4. **Testing debt** — populate `golden_documents`/`regression`, add `black` + `eslint.config.js`.
+5. **Precious metals** (Phase 8) — `COMMODITY` asset class, dated lots, manual single-holding entry, gold-api.com spot pricing. Design in ADR 0011.
+6. **Whisky collection** (Phase 8) — manual CSV import (Whiskybase export format), carried at cost basis since no live pricing feed exists. Needs a real sample export from Faiz first. Design in ADR 0011.
 
 ---
 
@@ -136,6 +151,32 @@ now just "has anyone actually clicked it," not "is it blocked"):
 
 ### Changelog
 
+- **2026-09-14 (Dashboard: full analysis detail per security; macro-economic review, ADR 0014):**
+  Two independent asks. (1) Faiz wanted the same per-security "detail view" that appears after
+  running an analysis on the Analysis tab (executive summary, business quality/financial
+  strength/valuation factor breakdown with confidence + reasoning, key strengths/risks, blind-vs-
+  thesis divergence, insufficient-evidence flags, and the Markdown memo) also available on the
+  Dashboard's bottom section. That rendering lived only inside `Analysis.tsx`'s
+  `HoldingAnalysisPanel`; extracted it into a shared `frontend/src/components/
+  HoldingAnalysisDetail.tsx` (`ScorePill`, `FactorRow`, `HoldingAnalysisFullDetail`,
+  `HoldingAnalysisFullDetailWithMemo`) so both places render identically instead of drifting apart,
+  and added a new "Latest analysis — full detail" block to `HoldingDetailSection.tsx` (the
+  Dashboard's bottom-most section) using the `latest` analysis it already fetches for the selected
+  holding — no new API calls beyond the existing memo endpoint, which is now called on demand from
+  the Dashboard too. `Analysis.tsx` itself was simplified to use the shared component rather than
+  duplicating the JSX. Verified in the cloud mirror before writing back to `E:\Aladdin` (`device_bash`
+  still can't mount it this session): `tsc --noEmit` clean, `vite build` succeeds. (2) Reviewed the
+  analysis/valuation/portfolio-risk logic through a macro-economist lens (ADR 0014, planning only —
+  no code changed for this part): found the DCF discount rate and FX conversion are manually typed
+  with no link to the risk-free/FX data already fetched (ECON-001), factor weights are still fixed
+  40/30/30 despite regime-conditional weighting being approved in the v3.0 architecture but never
+  built (ECON-002), the macro registry has no commodity price series despite a real
+  commodity-exposure risk dimension and a commodity-heavy portfolio (ECON-003), no Eurozone/China
+  coverage despite the research prompt asking about the ECB (ECON-004), the Norway policy-rate
+  series is self-flagged as never verified live (ECON-005), and macro evidence reaches the LLM
+  without being a required line in its assessment checklist (ECON-006). Full findings and
+  recommended fixes in ADR 0014; added as "Up next" item 1 above ADR 0012's Phase 9, since
+  ECON-001/002 correct already-approved design rather than add new scope.
 - **2026-09-14 (LLM usage ledger, ADR 0013):** Faiz asked whether a token-consumption indicator was
   feasible/reliable and whether it could integrate with Google AI Studio directly, using the Vår
   Energi run (3 documents/280 pages, single blind-pass call — Google AI Studio's own usage

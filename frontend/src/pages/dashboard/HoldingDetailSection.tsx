@@ -18,9 +18,10 @@ import type { ValuationCaseCreate, ValuationCaseOut } from "../../types/dcf";
 import { num } from "../../lib/num";
 import ValuationScenarioChart from "../../charts/ValuationScenarioChart";
 import InfoTooltip from "../../components/InfoTooltip";
+import { HoldingAnalysisFullDetailWithMemo } from "../../components/HoldingAnalysisDetail";
 
 const SECTION_EXPLANATION =
-  "A drill-down into one holding at a time: how its AI analysis score has moved over time, the evidence behind the latest read, your own written thesis for owning it (and whether anything since invalidates it), and bear/base/bull valuation cases from the DCF model. Use this to understand the story behind any position that stands out elsewhere on the dashboard.";
+  "A drill-down into one holding at a time: how its AI analysis score has moved over time, the full results of its latest AI analysis run (the same detail view shown right after running an analysis), your own written thesis for owning it (and whether anything since invalidates it), and bear/base/bull valuation cases from the DCF model. Use this to understand the story behind any position that stands out elsewhere on the dashboard.";
 
 // Every status app.models.thesis.InvestmentThesisStatus defines. Missing
 // INVALIDATED from this map (the pre-existing bug this pass fixes) meant a
@@ -629,6 +630,17 @@ export default function HoldingDetailSection({ accountIds }: { accountIds: strin
           </div>
         )}
       </div>
+
+      {latest && (
+        <div>
+          <h3 className="text-sm font-medium text-secondary mb-2">
+            Latest analysis — full detail
+          </h3>
+          <div className="terminal-panel">
+            <HoldingAnalysisFullDetailWithMemo detail={latest} />
+          </div>
+        </div>
+      )}
 
       {latest && (
         <div>
