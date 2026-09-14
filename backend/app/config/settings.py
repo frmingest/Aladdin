@@ -59,7 +59,12 @@ class Settings(BaseSettings):
     # docs/decisions/0005-phase3-google-ai-studio-llm-provider.md) ---
     llm_provider: str = "google_ai_studio"  # google_ai_studio | stub
     google_ai_studio_api_key: str = ""
-    llm_model_name: str = "gemini-2.5-flash"
+    # Was "gemini-2.5-flash" (ADR 0005's original pick) until 2026-09-14, when
+    # it started 404ing for this account with "no longer available to new
+    # users" — see ADR 0005's Update section. ADR 0005 flagged this default as
+    # something to revisit as free-tier model availability changes, not a
+    # permanently-correct choice; revisit again if this one is retired too.
+    llm_model_name: str = "gemini-3.6-flash"
     llm_max_output_tokens: int = 8192
     llm_temperature: float = 0.2
     # Naive evidence-packet excerpt budget (§5.3) — total characters of

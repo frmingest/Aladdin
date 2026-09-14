@@ -86,3 +86,45 @@ application, the same way `MarketDataProvider` isolated the yfinance choice.
   wasn't judged worth the complexity yet — a `LLMUnavailableError` simply
   surfaces as a per-holding analysis failure (§21), which is the same
   fail-visibly behavior any other transient provider issue gets.
+
+## Update — 2026-09-14
+
+This ADR's own Consequences flagged the default model as unverified against a
+live call; that live call finally happened when Faiz ran an analysis against
+the deployed Railway instance for the first time and it failed outright:
+
+```
+LLM generation unavailable: Gemini API call failed (prompt_version=persona/v1,
+model=gemini-2.5-flash): 404 NOT_FOUND. {'error': {'code': 404, 'message':
+'This model models/gemini-2.5-flash is no longer available to new users.
+Please update your code to use models/gemini-3.6-flash for the latest
+features and improvements. ...', 'status': 'NOT_FOUND'}}
+```
+
+`gemini-2.5-flash` has been restricted to existing users only since this ADR
+was written — a new Google AI Studio API key (Faiz's, created after the
+restriction) can no longer call it at all, matching this ADR's own caveat
+that the default "is not meant to be the permanently-correct choice."
+
+**`settings.llm_model_name`'s default is changed to `gemini-3.6-flash`** —
+the exact replacement model ID Google's own 404 response named, confirmed
+(via web search, since this session's sandbox still has no network path to
+the Gemini API to check directly) to be a GA Flash model with its own free
+tier as of 2026-09. `backend/.env.example`'s `LLM_MODEL_NAME` line updated to
+match. This is a config-value change only — no code in
+`GoogleAIStudioProvider` changed, matching this ADR's original intent that
+exact model IDs stay out of application code (§4).
+
+Newer GA Flash models exist as of this update (`gemini-3.7-flash`,
+`gemini-3.8-flash`) — `gemini-3.6-flash` was chosen over them specifically
+because it's the one Google's API itself named as the direct replacement for
+the model this deployment was actually using, not because it's the newest
+option. Revisit again if this one is ever retired too — same standing
+caveat as the original decision above.
+
+**Action needed from Faiz beyond this doc/code change:** the code default
+only takes effect where nothing overrides it. If Railway's `LLM_MODEL_NAME`
+service variable is set explicitly (rather than relying on the code
+default), it still points at the retired `gemini-2.5-flash` and needs
+updating there directly, then redeploying. Same check for `backend/.env` if
+`LLM_MODEL_NAME` is set there for local dev.
