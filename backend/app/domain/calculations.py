@@ -20,11 +20,16 @@ Conventions:
 """
 
 from decimal import ROUND_HALF_UP, Decimal
+from typing import overload
 
 MONEY_PLACES = Decimal("0.01")
 PERCENT_PLACES = Decimal("0.0001")
 
 
+@overload
+def quantize(value: Decimal, places: Decimal = MONEY_PLACES) -> Decimal: ...
+@overload
+def quantize(value: None, places: Decimal = MONEY_PLACES) -> None: ...
 def quantize(value: Decimal | None, places: Decimal = MONEY_PLACES) -> Decimal | None:
     """Rounds a computed value to a fixed number of decimal places at the
     point it becomes something a user sees or a value gets persisted for
@@ -35,7 +40,15 @@ def quantize(value: Decimal | None, places: Decimal = MONEY_PLACES) -> Decimal |
     level of accuracy the inputs don't have. Defaults to money's 2 decimal
     places (cents); pass `places=Decimal("0.0001")` for a percentage, which
     matches the precision the upload schema already stores weights at
-    (portfolio_positions.weight_pct, Numeric(9,4))."""
+    (portfolio_positions.weight_pct, Numeric(9,4)).
+
+    Overloaded (rather than a single `Decimal | None -> Decimal | None`
+    signature) so a call site passing a value it knows is non-None gets
+    back a plain `Decimal`, not `Decimal | None` — the untyped version
+    made every such call site look like it could produce None (a mypy
+    arg-type/assignment error against a `Decimal`-typed field or a
+    `list[Decimal]`) even though `quantize` only ever returns None when
+    its input was None. See PROGRESS.md's 2026-09-14 verification pass."""
     if value is None:
         return None
     return value.quantize(places, rounding=ROUND_HALF_UP)

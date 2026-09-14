@@ -113,6 +113,33 @@ both when a phase completes: the ADR for *why*, this file for *how far along thi
   2026-09-14 without its own ADR or a PROGRESS.md update at the time — presentation-only, no
   behavior change, but noted here so this file stays the accurate single source of truth on "what's
   built."
+- **Bug fixed 2026-09-14** (found by this session's verification pass, see below):
+  `app.domain.calculations.quantize()` was typed `Decimal | None -> Decimal | None`, so every call
+  site that only ever passes it a definite `Decimal` (the overwhelming majority — `None` is only
+  possible at a handful of ratio-with-zero-denominator call sites) type-checked as if it could get
+  back `None` too. Under a full `mypy app` run (apparently never actually run end-to-end before —
+  see below) this produced 8 real arg-type/assignment/operator errors in
+  `app/domain/valuation.py`, `app/domain/scenarios.py`, `app/domain/portfolio_risk.py`, and
+  `app/services/portfolio_risk/builder.py` (e.g. appending a `Decimal | None` into a `list[Decimal]`,
+  constructing `DepositExposure`/`WealthTaxEstimate` with a `Decimal | None` where the dataclass
+  declares `Decimal`). Not a runtime bug — `quantize` only returns `None` when its input was
+  `None`, and none of these call sites ever passed it one — but a real type-safety gap: nothing
+  would have caught it if a future edit *did* start passing a possibly-`None` value into one of
+  these `Decimal`-typed slots. Fixed by giving `quantize` an `@overload` pair
+  (`Decimal -> Decimal`, `None -> None`) instead of the single blended signature — no behavior
+  change, all 260 backend tests still pass. Committed directly to `E:\Aladdin` via the device
+  bridge (same cloud-mirror workaround as every prior phase this session — see "Manual follow-ups"
+  below).
+- **New minor gap found 2026-09-14**: with the quantize bug above fixed, `mypy app` still reports
+  11 `import-untyped` errors — `pandas`, `openpyxl`, `fitz` (PyMuPDF), `yfinance`, `boto3`,
+  `botocore`, and `apscheduler` have no type stubs installed (and no `mypy.ini`/`pyproject.toml`
+  exists to configure `ignore_missing_imports` for the ones with no official stub package —
+  `pandas-stubs`/`types-openpyxl` exist and could be added to `requirements-dev.txt`; `fitz`,
+  `yfinance`, `boto3`/`botocore`, and `apscheduler` don't ship or have third-party stubs, so those
+  would need a per-module `ignore_missing_imports` override instead). Cosmetic noise on every
+  `mypy` run, not a correctness issue — every prior phase's "ruff/mypy clean" claim was evidently
+  checked without ever running plain `mypy app` over the whole tree at once. Not fixed this pass
+  (out of this pass's scope — flagged for "Smaller improvements" below).
 
 ## Deployment readiness (Railway)
 
@@ -123,38 +150,48 @@ run, which this build environment has no network path to do itself.
 - [x] A durable object-storage provider wired in (Supabase Storage or R2) — `S3ObjectStorageProvider`
       (`app/providers/s3_storage_provider.py`), selected via `OBJECT_STORAGE_PROVIDER=r2|supabase`.
       Untested against a real bucket (unit tests mock boto3) — first real upload/retrieve is still
-      outstanding.
+      outstanding, and **blocked on Faiz**: needs a real R2/Supabase bucket and credentials only he
+      can provision.
 - [x] CORS middleware added to the FastAPI app — opt-in via `CORS_ALLOWED_ORIGINS` (see `main.py`).
 - [x] A Dockerfile for the backend (`backend/Dockerfile`, built from the repo root — see ADR 0010)
       and a production build/serve setup for the frontend (`frontend/Dockerfile`, Vite build served
       via nginx). Neither has been through an actual `docker build` — this build environment's Docker
       daemon isn't reachable — only manually verified path arithmetic plus the existing
-      `npm run build`/pytest suite.
+      `npm run build`/pytest suite (both re-verified live this session — see "Manual follow-ups"
+      below). **Blocked on Faiz**: an actual `docker build`/`docker compose up` needs his own machine
+      (he has WSL2 + Docker Desktop installed) since this build environment can't reach a Docker
+      daemon.
 - [x] Single-user application authentication (see next section) — `APP_AUTH_TOKEN`/`X-API-Key`,
       checked via `app/api/auth.py`, applied to every domain router.
-- [ ] `DATABASE_URL` pointed at Supabase and `alembic upgrade head` run against it (only ever run
-      against SQLite in tests, and once by hand against a throwaway local SQLite file to confirm
-      all three migrations apply cleanly — never against real Postgres). Phase 7 wires
-      `alembic upgrade head` into the backend container's entrypoint so this happens automatically
-      on first deploy — still needs an actual Supabase/Postgres instance to run against.
-- [ ] Environment variables set in the Railway project (`DATABASE_URL`, `MARKET_DATA_PROVIDER`,
-      `GOOGLE_AI_STUDIO_API_KEY`, `APP_AUTH_TOKEN`, `CORS_ALLOWED_ORIGINS`,
+- [ ] **Blocked on Faiz** — `DATABASE_URL` pointed at Supabase and `alembic upgrade head` run
+      against it (only ever run against SQLite in tests, and once by hand against a throwaway local
+      SQLite file to confirm all three migrations apply cleanly — never against real Postgres).
+      Phase 7 wires `alembic upgrade head` into the backend container's entrypoint so this happens
+      automatically on first deploy — still needs an actual Supabase/Postgres instance to run
+      against, which only Faiz can provision/authorize.
+- [ ] **Blocked on Faiz** — Environment variables set in the Railway project (`DATABASE_URL`,
+      `MARKET_DATA_PROVIDER`, `GOOGLE_AI_STUDIO_API_KEY`, `APP_AUTH_TOKEN`, `CORS_ALLOWED_ORIGINS`,
       `OBJECT_STORAGE_PROVIDER`/`OBJECT_STORAGE_ENDPOINT_URL`/etc., `VITE_API_BASE_URL`/
-      `VITE_API_KEY` as frontend build args, etc.).
-- [ ] `GOOGLE_AI_STUDIO_API_KEY` obtained and set in `backend/.env` — analysis runs fail immediately
+      `VITE_API_KEY` as frontend build args, etc.) — requires a Railway account/project only Faiz
+      has access to.
+- [ ] **Blocked on Faiz** — `GOOGLE_AI_STUDIO_API_KEY` obtained (free at
+      https://aistudio.google.com/apikey) and set in `backend/.env` — analysis runs fail immediately
       with an explicit error until this is set (see ADR 0005); a live smoke test against the real
-      Gemini API is still outstanding (this build environment has no network path to it).
-- [ ] `FRED_API_KEY` obtained (free at https://fred.stlouisfed.org/docs/api/api_key.html) and set in
-      `backend/.env` — macro refresh fails immediately with an explicit error until this is set (see
-      ADR 0007); Norges Bank's dataset/key also needs a one-time live verification (see that ADR's
-      Consequences).
-- [ ] End-to-end smoke test on the deployed instance: upload the real Nordnet export, set a
-      `market_ticker`, refresh valuation, upload a document, run an analysis, confirm the frontend
-      renders the result and memo.
-- [ ] Phase 5's DCF valuation critique and portfolio-risk correlation depend on the same
-      `GOOGLE_AI_STUDIO_API_KEY` (critique) and live `MarketDataProvider.get_historical_prices`
-      (correlation) as Phase 3/2 — no new secrets needed, but neither has been smoke-tested live from
-      this build environment (see ADR 0008's Consequences).
+      Gemini API is still outstanding (this build environment has no network path to it, and the key
+      itself can only come from Faiz's Google account).
+- [ ] **Blocked on Faiz** — `FRED_API_KEY` obtained (free at
+      https://fred.stlouisfed.org/docs/api/api_key.html) and set in `backend/.env` — macro refresh
+      fails immediately with an explicit error until this is set (see ADR 0007); Norges Bank's
+      dataset/key also needs a one-time live verification (see that ADR's Consequences) — both
+      require live network access this build environment doesn't have.
+- [ ] **Blocked on Faiz** — End-to-end smoke test on the deployed instance: upload the real Nordnet
+      export, set a `market_ticker`, refresh valuation, upload a document, run an analysis, confirm
+      the frontend renders the result and memo. Requires a live deployment (see the Railway items
+      above) that only Faiz can stand up.
+- [ ] **Blocked on Faiz** — Phase 5's DCF valuation critique and portfolio-risk correlation depend on
+      the same `GOOGLE_AI_STUDIO_API_KEY` (critique) and live `MarketDataProvider.get_historical_prices`
+      (correlation) as Phase 3/2 — no new secrets needed beyond the key above, but neither has been
+      smoke-tested live from this build environment (see ADR 0008's Consequences).
 - [x] Application authentication (architecture §24) — `APP_AUTH_TOKEN`, a shared bearer token
       checked via a FastAPI dependency (`app/api/auth.py`), gating every router except `/health`.
 
@@ -182,6 +219,16 @@ via The Whisky Exchange / Whiskybase. Neither is built yet; both are added below
 and #5, with the design reasoning in [ADR 0011](decisions/0011-phase8-alternative-assets.md).
 Candidates #2-#3 are unaffected and still open — nothing here reprioritizes them, it only adds two
 new candidates alongside them.
+
+**Update, 2026-09-14 (verification pass):** at Faiz's request, this session addressed the known
+gaps/issues in this file before further development rather than adding new features. Ran the
+frontend `tsc --noEmit`/`npm run build`/`npm run lint` and the full backend `pytest`/`ruff`/`mypy`
+checks explicitly flagged as never having been run after the prior "Frontend data-entry & UX
+review" pass (see "Manual follow-ups for Faiz" below for full results) — found and fixed one real
+bug (a `quantize()` typing gap, see "Known gaps" above), confirmed everything else already
+documented as a gap is still accurately described, and added explicit "blocked on Faiz" markers to
+every remaining deployment-readiness item that genuinely needs his accounts/keys/hardware rather
+than more code. No new candidates added; #2-#5 above are unaffected.
 
 ### Candidate next phases
 
@@ -248,6 +295,11 @@ new candidates alongside them.
 - PDF/PPT structured financial-fact extraction remains a deliberate non-goal (Phase 3 treats them
   as qualitative text, XLSX-only for structured facts) — revisit only if a holding's primary
   source material is consistently PDF-only with no XLSX equivalent.
+- `mypy app` reports 11 `import-untyped` errors with no fix applied this pass (found 2026-09-14 —
+  see "Known gaps" above): add `pandas-stubs` and `types-openpyxl` to `requirements-dev.txt` (both
+  exist and would resolve two of the affected modules), and add a `mypy.ini`/`pyproject.toml`
+  `[[tool.mypy.overrides]]` with `ignore_missing_imports = true` for `fitz`, `yfinance`, `boto3`,
+  `botocore.*`, and `apscheduler.*` (none of which ship or have third-party stubs).
 
 ## Frontend data-entry & UX review (2026-09-14)
 
@@ -289,12 +341,32 @@ one finding severe enough to fix immediately (the status-color gap above) is fol
 
 ### Manual follow-ups for Faiz
 
-- **This pass could not run `device_bash`** — a Windows update (2026-09-08) broke the
-  `E:\Aladdin` mount for this session's device shell (tracked, Claude Code unaffected). All file
-  edits went through the stage → edit → commit-back path instead, and unlike every prior phase's
-  status note, **`tsc --noEmit`, `npm run build`, `npm run lint`, and the backend test suite were
-  never run this pass** — please run `cd frontend && npx tsc --noEmit` (and ideally `npm run
-  build`) before trusting this compiles cleanly.
+- ~~This pass could not run `device_bash`... `tsc --noEmit`, `npm run build`, `npm run lint`, and
+  the backend test suite were never run this pass~~ — **resolved 2026-09-14 (verification pass)**:
+  `device_bash` still can't mount `E:\Aladdin` this session (same tracked Windows-update issue), so
+  all four checks were run by staging the frontend `src`/config and the full backend `app`/`tests`
+  tree (plus the repo-root `prompts/`, `schemas/`, `scoring/`, `research/`, `scenarios/` directories
+  the backend reads at a repo-root-relative path) into a cloud-side mirror and running them there —
+  same workaround as every prior phase this session. Results:
+  - `npx tsc --noEmit` — **clean**, no errors.
+  - `npm run build` — **succeeds** (`vite build`, 852 modules, ~615 kB / 172 kB gzipped single
+    bundle — the known no-code-splitting gap, unchanged).
+  - `npm run lint` — **still fails outright** exactly as already documented ("couldn't find an
+    eslint.config.js file") — a pre-existing Phase 0 gap, not something this pass introduced or
+    worsened.
+  - Backend `pytest` — **260 passed, 0 failed** (up from the last-recorded 111; the count grew
+    across Phases 4-7's additional tests, none of which had had a full-suite run recorded in this
+    file until now).
+  - Backend `ruff check .` — **clean**.
+  - Backend `mypy app` — **found and fixed one real gap**: a `quantize()` typing bug that produced
+    8 arg-type/assignment/operator errors across `valuation.py`/`scenarios.py`/`portfolio_risk.py`/
+    `builder.py` (not a runtime bug — see "Known gaps" above for the full writeup and the fix, now
+    committed to `E:\Aladdin\backend\app\domain\calculations.py`). 11 `import-untyped` errors
+    remain (missing stubs for pandas/openpyxl/fitz/yfinance/boto3/apscheduler) — cosmetic, not
+    fixed this pass, see "Known gaps" above.
 - Manually exercise the two new forms once: create a thesis, change its status, create a bull/base/
-  bear valuation case for a holding with a revenue fact on record, expand its critique.
-- Git commit this work (still uncommitted, per the existing convention).
+  bear valuation case for a holding with a revenue fact on record, expand its critique. Still
+  outstanding — needs your own eyes on the running app, which this build environment can't drive.
+- Git commit this work (still uncommitted, per the existing convention) — this now includes the
+  `calculations.py` quantize fix from this pass alongside the existing uncommitted Phases 1-7 and
+  the frontend data-entry forms.
