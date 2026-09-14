@@ -35,7 +35,7 @@ now just "has anyone actually clicked it," not "is it blocked"):
 - ⬜ **Macro-economic fixes ECON-001/002 (ADR 0014)** — discount-rate/FX suggestion endpoint and regime-conditional scoring weights. **Migration not yet applied/deployed**: `alembic upgrade head` needed for the new `macro_regime` column (migration `d8f3a6b2c710`, chained onto the still-pending `c7e2f9a1b8d3`), then a redeploy of backend + frontend. Fully test-verified in the cloud mirror before writing back — see the changelog entry below.
 - ⬜ **Macro-economic fixes ECON-003/004/006 (new this pass, ADR 0014)** — commodity (WTI/Brent oil) + Eurozone/China macro series (`research/versions/v2.yaml`), and an explicit macro/FX checklist item in the analysis persona (`prompts/persona/v2.md` + a matching `prompts/synthesis/v2.md`). **No migration needed** — just a redeploy to pick up the new `settings.active_macro_series_version="v2"` / `active_prompt_version="v2"` defaults. Fully test-verified in the cloud mirror (297 backend tests, ruff, mypy, tsc, vite build) before writing back — see the changelog entry below. ECON-005 (Norway rate) attempted this pass but still unverifiable from any tool available in this environment — see ADR 0014's second Update section for exactly what was tried and the fastest real path forward.
 - yfinance/Gemini/FRED/Norges Bank were previously verified only against mocks/docs from this build environment (no network path to any of them) — a live deploy removes that excuse; worth confirming each actually works once, not just that the key is present. ADR 0004/0005/0007.
-- ⬜ **Portfolio composition Total value/Unrealized P&L still implausible (new this pass)** — fixed the confirmed `single_name_weights` bug (see changelog), but Total value/Unrealized P&L are still ~13-17x too high versus Faiz's real Nordnet portfolio report and don't trace to any bug found in the valuation/FX/parsing code. Needs Faiz to open the Portfolio tab's Market Tickers panel and check each `market_ticker` against Yahoo Finance, starting with the two gold-linked instruments (L&G Gold Mining ETF, Xetra-Gold ETC) — most likely a wrong share class or a futures/spot symbol instead of the fund's actual ticker. Couldn't be verified from this session: no route to the Supabase Postgres port, no known deployed API URL, and `device_bash` down.
+- ✅ ~~Portfolio composition Total value/Unrealized P&L implausible~~ — **resolved same pass**: root cause was `market_ticker=AUCP.L` (wrong London/GBP-pence share class) on the L&G Gold Mining ETF holding, corrected to `AUCO.MI` (EUR, Milan) via the Market Tickers panel. Total value 13.9M → 633K NOK. See changelog. Residual ~23% gap vs. the real report (632,997.60 vs. ~826,363 NOK) not investigated — likely just live price drift since the report's date.
 
 **Deliberate scope limits** (not oversights — see the linked ADR if you want the reasoning):
 - PDF/PPT are read as qualitative LLM text, not structured facts — XLSX-only for that (ADR 0006). **`FACTS: 0` on a processed PDF/PPT document is expected, not a failure** — see ADR 0012 for what value that document actually delivers instead (document-chunk evidence at analysis time) and where that pipeline currently falls short.
@@ -189,6 +189,27 @@ now just "has anyone actually clicked it," not "is it blocked"):
 
 ### Changelog
 
+- **2026-09-14 (Portfolio composition false values — RESOLVED, root cause found):** Follow-up to
+  the entry just below. With `device_bash` still down, reached the live Railway deployment through
+  the browser instead (granted access to the frontend, `exciting-gratitude-production-71b5.up.railway.app`
+  — distinct from the backend's `aladdin-production-bd25...` domain) and read the actual
+  `market_ticker` values off the Portfolio tab's Market Tickers panel. Found it: **L&G Gold Mining
+  ETF's `market_ticker` was `AUCP.L`**, one keystroke off the app's own UI hint example (`AUCO.L`).
+  Both are real Yahoo Finance tickers but different London share classes of the same fund (ISIN
+  IE00B3CNHG25) — `AUCO.L` is the USD class, `AUCP.L` the GBP class, and London ETF GBP classes
+  quote in **pence**, not pounds. Faiz's real broker prices this fund in EUR (~106 EUR), matching
+  neither London listing but matching the Milan listing, `AUCO.MI` (Borsa Italiana, EUR). So this
+  one holding was being priced ~100x too high in the wrong currency — enough on its own to explain
+  the full inflation, since it's a large share of the portfolio by value. **Fix: corrected
+  `market_ticker` to `AUCO.MI` directly in the Market Tickers panel** (a data correction, confirmed
+  with Faiz first since it submits a form on live production data — not a code change, no
+  redeploy). Confirmed by re-running "Refresh valuation": Total value 13,906,874.82 → **632,997.60
+  NOK**, Unrealized P&L +13,281,549.31 → **+7,539.75 NOK**, Largest position 96.4% → **33.9%**
+  (Vår Energi, ≈34.5% by the real report's combined two-account value — confirms the
+  `single_name_weights` fix from the entry below is correctly summing that holding across
+  accounts). 632,997.60 NOK is still ~23% below the real report's ~826,363 NOK (securities only),
+  plausibly just live price drift since the report's 2026-09-13 date — not investigated further.
+  Full writeup: `claude/portfolio-composition-false-values.md` in the project.
 - **2026-09-14 (Portfolio composition — false total value/P&L, dashboard):** Faiz reported the
   Dashboard's Portfolio composition showing an obviously wrong Total value (~13.9M NOK vs. ~1.04M
   NOK on his real Nordnet portfolio report) and a huge fake Unrealized P&L, plus "By sector"
