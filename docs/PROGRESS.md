@@ -9,10 +9,17 @@ online, keys set, Faiz has smoke-tested the Portfolio flow (accounts, CSV/XLSX u
 successfully. Phase 8 (alternative assets) planned; Phase 9 (document evidence quality) planned.
 Documents/Analysis/Dashboard/research/risk haven't been manually exercised on the live deploy yet —
 see "Open gaps" below. Whether the deployed code is committed to git is unconfirmed (see "Manual
-to-do" below). Last full test-suite run 2026-09-14 (ECON-001/002 pass): 289 backend tests / ruff /
-tsc / vite build all clean; `npm run lint` still fails (known gap below). **The LLM usage ledger
-(ADR 0013) and the ECON-001/002 macro fixes (ADR 0014) were both written this pass and are
-test-verified in the cloud mirror but not yet migrated/deployed to Railway — see "Open gaps."**
+to-do" below). Last full test-suite run 2026-09-14 (ECON-003/004/006 pass): 297 backend tests /
+ruff / tsc / vite build all clean; `npm run lint` still fails (known gap below). **The LLM usage
+ledger (ADR 0013), ECON-001/002 (ADR 0014), and now ECON-003/004/006 (ADR 0014) were all written
+this pass or the previous one and are test-verified in the cloud mirror but not yet
+migrated/deployed to Railway — see "Open gaps."** Unlike the usage ledger and ECON-001/002,
+ECON-003/004/006 need **no database migration** — settings-default + config/prompt-file changes
+only, so a plain redeploy (no `alembic upgrade head` step) is enough to pick them up. ECON-005
+(Norway rate live verification) remains open — this session confirmed the block is an org egress
+policy denial (not a transient issue) and separately found `device_bash` failed to start at all
+this session, wider than the previously-tracked single-folder mount issue — see ADR 0014's second
+Update section.
 
 ---
 
@@ -25,7 +32,8 @@ now just "has anyone actually clicked it," not "is it blocked"):
 - ⬜ Macro/sector research (FRED + Norges Bank) — `FRED_API_KEY` is set, but no confirmed refresh against the live deploy yet.
 - ⬜ Portfolio risk snapshots, DCF valuation + critique, document upload — not yet exercised on the live deploy per Faiz's update.
 - ⬜ **LLM usage ledger (ADR 0013)** — `llm_usage_events` table, `/usage/summary` endpoint, Dashboard's new "Gemini usage today" section. **Migration not yet applied/deployed** (test-verified in the cloud mirror this pass — see the ECON-001/002 changelog entry below for why full `pytest`/`tsc` could finally be run). Needs: `alembic upgrade head`, a redeploy, and one real analysis run to confirm a row actually lands in `llm_usage_events` and the Dashboard widget renders correctly.
-- ⬜ **Macro-economic fixes ECON-001/002 (new this pass, ADR 0014)** — discount-rate/FX suggestion endpoint and regime-conditional scoring weights. **Migration not yet applied/deployed**: `alembic upgrade head` needed for the new `macro_regime` column (migration `d8f3a6b2c710`, chained onto the still-pending `c7e2f9a1b8d3`), then a redeploy of backend + frontend. Fully test-verified in the cloud mirror (289 backend tests, tsc, vite build) before writing back — see the changelog entry below.
+- ⬜ **Macro-economic fixes ECON-001/002 (ADR 0014)** — discount-rate/FX suggestion endpoint and regime-conditional scoring weights. **Migration not yet applied/deployed**: `alembic upgrade head` needed for the new `macro_regime` column (migration `d8f3a6b2c710`, chained onto the still-pending `c7e2f9a1b8d3`), then a redeploy of backend + frontend. Fully test-verified in the cloud mirror before writing back — see the changelog entry below.
+- ⬜ **Macro-economic fixes ECON-003/004/006 (new this pass, ADR 0014)** — commodity (WTI/Brent oil) + Eurozone/China macro series (`research/versions/v2.yaml`), and an explicit macro/FX checklist item in the analysis persona (`prompts/persona/v2.md` + a matching `prompts/synthesis/v2.md`). **No migration needed** — just a redeploy to pick up the new `settings.active_macro_series_version="v2"` / `active_prompt_version="v2"` defaults. Fully test-verified in the cloud mirror (297 backend tests, ruff, mypy, tsc, vite build) before writing back — see the changelog entry below. ECON-005 (Norway rate) attempted this pass but still unverifiable from any tool available in this environment — see ADR 0014's second Update section for exactly what was tried and the fastest real path forward.
 - yfinance/Gemini/FRED/Norges Bank were previously verified only against mocks/docs from this build environment (no network path to any of them) — a live deploy removes that excuse; worth confirming each actually works once, not just that the key is present. ADR 0004/0005/0007.
 
 **Deliberate scope limits** (not oversights — see the linked ADR if you want the reasoning):
@@ -107,20 +115,34 @@ now just "has anyone actually clicked it," not "is it blocked"):
   analysis run to confirm a `llm_usage_events` row lands and `macro_regime` is populated on the
   run, and a macro refresh + second analysis run to confirm the regime actually changes when the
   macro reading does (ADR 0014's stagflation test only exercises this against a fake provider).
+- **New, no migration needed but still needs a redeploy:** ECON-003/004/006 (ADR 0014) — redeploy
+  backend + frontend to pick up `active_macro_series_version="v2"` (commodity + Eurozone/China
+  series) and `active_prompt_version="v2"` (macro/FX checklist item in the analysis persona). Once
+  live, run a macro refresh and confirm the five new series (`commodity_oil_wti`,
+  `commodity_oil_brent`, `eurozone_policy_rate`, `eurozone_hicp_yoy`, `china_cpi_yoy`) actually come
+  back from FRED — this environment could only confirm the series IDs exist via web search, never
+  via a live API call (egress blocked — see the changelog entry).
+- **New, not blocking but worth 30 seconds:** verify the Norway policy-rate series (ECON-005) —
+  run `curl "https://data.norges-bank.no/api/data/IR/B.KPRA.SD.?format=csv&lastNObservations=1&locale=en"`
+  from your own machine (outside the device bridge, which couldn't reach it either this session)
+  and confirm it returns a row rather than an error. If it errors, the fix is a one-line change to
+  `no_policy_rate`'s `dataset`/`key` in `research/versions/v2.yaml` (do not edit `v1.yaml` — see its
+  own "never edit in place" comment).
 
 ## Up next (candidates)
 
 1. **Macro-economic methodology fixes (ADR 0014)** — a macro-economist-lens review of the
-   analysis/valuation/risk logic found seven issues; **ECON-001 and ECON-002 are now implemented**
-   (this pass — see changelog below), pending only migration + redeploy (see "Open gaps"/"Manual
-   to-do" above). Remaining, still open: the macro registry has no commodity price series despite
-   a real, sector-flagged commodity-exposure risk dimension and a portfolio that is meaningfully
-   commodity-exposed (Vår Energi oil & gas, a gold mining ETF, physical gold/silver) (ECON-003); no
-   Eurozone/ECB or China series even though the research prompt asks about the ECB and commodity
-   demand is China-driven (ECON-004); the one Norway-specific series (`no_policy_rate`) is
-   explicitly self-flagged as never verified against a live API response (ECON-005); and macro/FX
-   evidence reaches the LLM as raw citations without being a required line in the persona's
-   assessment checklist, so whether it's actually used varies run to run (ECON-006). Full findings,
+   analysis/valuation/risk logic found seven issues. **ECON-001, ECON-002, ECON-003, ECON-004, and
+   ECON-006 are now implemented** (across this pass and the previous one — see changelog below),
+   pending redeploy (ECON-001/002 also need a migration; ECON-003/004/006 don't — see "Open
+   gaps"/"Manual to-do" above). Remaining, still open: **ECON-005** — the one Norway-specific series
+   (`no_policy_rate`) is still unverified against a live API response; this pass confirmed the
+   block is a deliberate org egress policy (not a flaky connection) from this cloud environment,
+   and that `device_bash` itself failed to start this session (wider than the previously-tracked
+   E:\Aladdin mount issue) — the fastest real path is a `curl` from Faiz's own machine or checking
+   what the next live Railway macro refresh actually gets back. **ECON-007** — commodity/currency
+   risk bands in `scoring/versions/risk_v1.yaml` are still static percentages, not regime-aware;
+   lowest severity of the seven, untouched by either implementation pass so far. Full findings,
    severities, and recommended fixes in **ADR 0014**.
 2. **Document evidence quality (Phase 9)** — per-document evidence budget (fixes a
    large report getting truncated to near-zero by a smaller, more-recent upload), evidence-usage
@@ -152,6 +174,31 @@ now just "has anyone actually clicked it," not "is it blocked"):
 
 ### Changelog
 
+- **2026-09-14 (ECON-003/004/006 implemented; ECON-005 attempted, ADR 0014):** Faiz asked to keep
+  going down the "Up next" list from the ECON-001/002 pass. New `research/versions/v2.yaml` adds
+  commodity coverage (ECON-003 — FRED `DCOILWTICO`/`DCOILBRENTEU`, WTI + Brent since Brent is what
+  Vår Energi's own production is actually priced against) and Eurozone/China coverage (ECON-004 —
+  FRED `ECBDFR`, `CP0000EZ19M086NEST`, `CHNCPIALLMINMEI`), carrying v1's five existing series
+  byte-identical (test-enforced); `settings.active_macro_series_version` moved to `v2`. New
+  `prompts/persona/v2.md` adds one checklist item requiring the analysis to explicitly engage with
+  macro/FX evidence when available rather than treating a holding in isolation (ECON-006), keeping
+  every v1 hard rule unchanged (test-enforced); `settings.active_prompt_version` moved to `v2`,
+  which also required a pass-through `prompts/synthesis/v2.md` (byte-identical to v1) since both
+  prompts load off the same version string. **No database migration needed** for any of this —
+  config/prompt files plus two settings defaults. ECON-005 (Norway policy-rate live verification)
+  was attempted from both this cloud container and the device bridge: this container's egress
+  proxy returns a 403 policy denial for `data.norges-bank.no` (confirmed via the proxy's own status
+  endpoint — a deliberate block, not a flaky connection), and `device_bash` failed to start at all
+  this session even for a command untouched by the `E:\Aladdin` mount issue, so it remains
+  unverified — see ADR 0014's second Update section for the fastest real path forward (a `curl`
+  from Faiz's own machine, or reading what the next live Railway macro refresh gets back). ECON-007
+  (regime-aware risk bands) remains open, untouched, lowest severity of the seven.
+  **Verified in the cloud mirror** before writing back to `E:\Aladdin` (same stage → edit →
+  commit-back path as every prior pass, `device_bash` being down this session): 297/297 backend
+  tests pass (was 289 — +8: 4 for the v2 macro registry, 4 for the v2 persona/synthesis prompts),
+  `ruff check .` clean, `mypy app` unchanged baseline-only errors, frontend `tsc --noEmit` clean,
+  `vite build` succeeds. **Not yet redeployed** — see "Open gaps"/"Manual to-do" above. Full detail:
+  ADR 0014's second "Update" section.
 - **2026-09-14 (ECON-001/002 implemented, ADR 0014):** Faiz asked to proceed on the macro-economic
   review's top findings. Built both:
   (1) **ECON-001 — discount rate / FX grounding.** New versioned config

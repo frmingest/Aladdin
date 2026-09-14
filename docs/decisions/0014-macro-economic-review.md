@@ -278,3 +278,70 @@ baseline-only errors, frontend `tsc --noEmit` clean, `vite build` succeeds.
 ECON-005 (Norway policy-rate live verification), ECON-006 (macro sensitivity in the persona
 checklist), ECON-007 (regime-aware risk bands) — all remain open findings, unchanged from the
 original review above.
+
+## Update — 2026-09-14 (ECON-003/004/006 implemented; ECON-005 attempted, still open)
+
+Faiz asked to keep going down the "Up next" list. Built, tested, and verified in the cloud mirror
+(`device_bash` still can't mount `E:\Aladdin` this session — confirmed dead for the whole session,
+not just this folder, when even a no-`mnt`-touching command failed at shell startup; written back
+via the stage → edit → commit-back path as with every prior pass). Unlike ECON-001/002, **none of
+this needs a database migration** — it's config/prompt-file additions plus two settings defaults,
+no new columns or tables.
+
+**ECON-003 (commodity price series):**
+- New `research/versions/v2.yaml`, carrying v1's five series byte-identical (test-enforced — see
+  `test_v2_registry_carries_v1_series_byte_identical`) and adding `commodity_oil_wti` (FRED
+  `DCOILWTICO`) and `commodity_oil_brent` (FRED `DCOILBRENTEU`). Brent is included specifically
+  because it's the benchmark Vår Energi's own North Sea production is priced against, not just WTI
+  as the generic global reference. Deliberately does *not* add a macro-registry gold series: gold
+  spot pricing is already covered on the market-data side by Phase 8's planned gold-api.com
+  integration (ADR 0011) for the physical-metals holdings themselves — this registry is
+  portfolio-wide macro *context*, not holding pricing, so duplicating it would be redundant.
+- `settings.active_macro_series_version` moved from `v1` to `v2`.
+
+**ECON-004 (Eurozone/China coverage):** same `v2.yaml`, same reasoning — added
+`eurozone_policy_rate` (FRED `ECBDFR`, the ECB's operative Deposit Facility Rate),
+`eurozone_hicp_yoy` (FRED `CP0000EZ19M086NEST`, `pc1` YoY transform), and `china_cpi_yoy` (FRED
+`CHNCPIALLMINMEI`, `pc1` YoY transform) — directly answering the original finding that the research
+prompt already asks the LLM about the ECB with nothing behind it. All three series IDs confirmed to
+exist on FRED via web search this session (fred.stlouisfed.org/series/&lt;id&gt;); this build
+environment still has no live network path to actually call FRED's API (org egress policy blocks
+`data.norges-bank.no` outbound with a 403 at the proxy level, and presumably FRED too — confirmed
+via `curl`/proxy-status this session, see ECON-005 below), so — same caveat as every prior FRED
+series in this registry — the identifiers are search-confirmed, not live-response-confirmed.
+
+**ECON-006 (macro evidence required in the persona checklist):** new `prompts/persona/v2.md` —
+v1's text unchanged (test-enforced — `test_persona_v2_keeps_every_v1_hard_rule`) plus one new
+checklist item, "Macro and FX backdrop," instructing the model to explicitly engage with
+`macro_snapshot`/macro-news evidence when available (which central bank/inflation/yield/dollar/
+commodity signals plausibly support or undercut the thesis) and to say so plainly when it isn't,
+rather than silently treating the holding in isolation either way. `settings.active_prompt_version`
+moved from `v1` to `v2`. Because `run_two_pass_analysis` loads the reconciliation prompt off the
+same version string as the persona prompt (`app/services/analysis/prompts.py`,
+`app/services/analysis/runner.py`), this also required a `prompts/synthesis/v2.md` — byte-identical
+to v1 except for a one-line note explaining why it exists, since ECON-006 only touches the blind
+pass, not reconciliation.
+
+**ECON-005 (Norway policy-rate live verification) — attempted, still open, now better understood:**
+tried from both sides this session. From this cloud container: `curl` to
+`data.norges-bank.no` returned a 403 at the egress proxy (`connect_rejected`, confirmed via the
+proxy's own `/__agentproxy/status` — an org-level policy denial, not a transient failure). From the
+device bridge (`device_bash`, which runs on Faiz's own machine and would follow *his* egress
+instead): the shell failed at startup this session even for a command that never touches the
+`E:\Aladdin` mount (`echo hello-world; curl ...` still errored before running) — so the previously
+recurring "can't mount this one folder" issue has, at least for this session, become "the whole
+`device_bash` shell won't start," a strictly worse state worth flagging on its own. Net effect:
+ECON-005 still can't be verified from any tool available this session. **Fastest real path:** run
+`curl "https://data.norges-bank.no/api/data/IR/B.KPRA.SD.?format=csv&lastNObservations=1&locale=en"`
+directly from Faiz's own machine (outside the device bridge) or check the response the *next* live
+macro refresh against the deployed Railway backend actually gets for `no_policy_rate` — either
+confirms the dataset/key or hands back the real error to fix it against.
+
+**Not done as part of this pass:** ECON-007 (regime-aware risk bands) remains open, unchanged —
+lowest severity (ℹ️) in the original review, and the risk-band thresholds it would touch
+(`scoring/versions/risk_v1.yaml`) are a separate versioned config from everything touched this
+pass or in the ECON-001/002 pass.
+
+**Verification:** 297 backend tests passing (was 289 — 8 new: 4 for the v2 macro registry, 4 for
+the v2 persona/synthesis prompts), `ruff check .` clean, `mypy app` unchanged baseline-only errors,
+frontend `tsc --noEmit` clean, `vite build` succeeds.

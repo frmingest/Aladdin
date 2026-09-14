@@ -80,3 +80,56 @@ def test_registry_is_frozen_dataclass():
     registry = MacroSeriesRegistry(version="test", series={})
     with pytest.raises(Exception):
         registry.version = "changed"  # type: ignore[misc]
+
+
+# --- ECON-003/ECON-004 fixes: commodity + Eurozone/China coverage (v2, docs/decisions/0014) ---
+
+
+def test_v2_registry_carries_v1_series_byte_identical():
+    load_macro_series_registry.cache_clear()
+    v1 = load_macro_series_registry("v1")
+    v2 = load_macro_series_registry("v2")
+
+    for key in v1.series:
+        assert v2.get(key) == v1.get(key), f"v2 must not alter v1's existing mapping for '{key}'"
+
+
+def test_v2_registry_adds_commodity_series():
+    load_macro_series_registry.cache_clear()
+    registry = load_macro_series_registry("v2")
+
+    wti = registry.get("commodity_oil_wti")
+    assert isinstance(wti, FredSeriesDefinition)
+    assert wti.provider_series_id == "DCOILWTICO"
+    assert wti.region == "GLOBAL"
+
+    brent = registry.get("commodity_oil_brent")
+    assert isinstance(brent, FredSeriesDefinition)
+    assert brent.provider_series_id == "DCOILBRENTEU"
+
+
+def test_v2_registry_adds_eurozone_and_china_series():
+    load_macro_series_registry.cache_clear()
+    registry = load_macro_series_registry("v2")
+
+    ecb_rate = registry.get("eurozone_policy_rate")
+    assert isinstance(ecb_rate, FredSeriesDefinition)
+    assert ecb_rate.provider_series_id == "ECBDFR"
+    assert ecb_rate.region == "EA"
+
+    hicp = registry.get("eurozone_hicp_yoy")
+    assert hicp.provider_series_id == "CP0000EZ19M086NEST"
+    assert hicp.fred_units == "pc1"
+
+    china_cpi = registry.get("china_cpi_yoy")
+    assert isinstance(china_cpi, FredSeriesDefinition)
+    assert china_cpi.provider_series_id == "CHNCPIALLMINMEI"
+    assert china_cpi.region == "CN"
+
+
+def test_v1_registry_unaffected_by_v2_additions():
+    load_macro_series_registry.cache_clear()
+    v1 = load_macro_series_registry("v1")
+
+    with pytest.raises(UnknownMacroSeriesKeyError):
+        v1.get("commodity_oil_wti")

@@ -25,6 +25,12 @@ const MACRO_SERIES_LABELS: Record<string, string> = {
   us_breakeven_10y: "US 10y breakeven inflation",
   us_dollar_index_broad: "US dollar index (broad)",
   no_policy_rate: "Norway policy rate",
+  // ECON-003/ECON-004 additions (research/versions/v2.yaml, docs/decisions/0014).
+  commodity_oil_wti: "Oil price (WTI)",
+  commodity_oil_brent: "Oil price (Brent)",
+  eurozone_policy_rate: "Eurozone policy rate (ECB)",
+  eurozone_hicp_yoy: "Eurozone inflation (HICP, YoY)",
+  china_cpi_yoy: "China inflation (CPI, YoY)",
 };
 
 function macroSeriesLabel(seriesKey: string): string {

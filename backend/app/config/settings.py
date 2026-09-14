@@ -108,7 +108,11 @@ class Settings(BaseSettings):
     # vendor providers the registry says owns it.
     macro_data_provider: str = "fred_norges_bank"  # fred_norges_bank | stub
     fred_api_key: str = ""
-    active_macro_series_version: str = "v1"
+    # v2 adds commodity (WTI/Brent oil) and Eurozone/China coverage (ECON-003/
+    # ECON-004 fixes, docs/decisions/0014) — v1 remains loadable (and is what
+    # any pre-v2 macro_observations/analysis_runs row is still interpreted
+    # against) for reproducibility (§2.4), it's just no longer the default.
+    active_macro_series_version: str = "v2"
 
     # Qualitative macro/world-news and sector research (§9.2/§9.3) — resolves
     # the §29 "Research provider" open question for Phase 4. Reuses the
@@ -136,7 +140,11 @@ class Settings(BaseSettings):
     default_reporting_currency: str = "NOK"
 
     # --- Versioning (persona/scoring/schema — see docs/architecture.md §2.4) ---
-    active_prompt_version: str = "v1"
+    # v2 adds an explicit requirement to engage with macro/FX evidence when
+    # it's present (ECON-006 fix, docs/decisions/0014) — v1 remains loadable
+    # (and is what any pre-v2 analysis_runs row is still interpreted against)
+    # for reproducibility (§2.4), it's just no longer the default.
+    active_prompt_version: str = "v2"
     # v2 adds regime-conditional factor weights (ECON-002 fix, docs/
     # decisions/0014) — app.domain.scoring.classify_macro_regime picks the
     # profile per run from the latest macro snapshot; v1 remains loadable
