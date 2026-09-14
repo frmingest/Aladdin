@@ -4,18 +4,26 @@ source file as a Document, upsert Holdings, and persist a PortfolioSnapshot +
 PortfolioPositions. No AI dependency — this is pure deterministic ingestion.
 
 Uploads are additive, not replace-in-full: each new upload is merged on top
-of the most recent snapshot (matched by ticker) rather than starting from a
-blank portfolio, so uploading one broker's export and then another's builds
-one combined "current" portfolio instead of two disconnected ones. A ticker
-present in the new file always wins (its row fully replaces the prior one);
-a ticker absent from the new file is carried forward unchanged. This means a
-sold-out position has to be cleared with a full reset (see
-app.services.portfolio.reset) or a fresh upload that still lists it at zero
-— there's no "remove just this one" upload action yet.
+of the most recent snapshot (matched by (account, ticker)) rather than
+starting from a blank portfolio, so uploading one broker's export and then
+another's builds one combined "current" portfolio instead of two disconnected
+ones. A ticker present in the new file for the *same account* always wins
+(its row fully replaces the prior one); everything else is carried forward
+unchanged. This means a sold-out position has to be cleared with a full reset
+(see app.services.portfolio.reset) or a fresh upload for that account that
+still lists it at zero — there's no "remove just this one" upload action yet.
+
+The merge key is (account_id, ticker), not ticker alone. Faiz's holdings span
+several accounts (Aksje & fonds konto, ASK, EPK Aktiv/Passiv, ...), and the
+same instrument can legitimately sit in more than one of them at once (e.g.
+"Salmon Evolution" held in both an ASK and Ezra's ASK) — merging by ticker
+alone would silently collapse those into a single row and lose one account's
+position outright the moment the other account's file was uploaded next.
 """
 
 from dataclasses import dataclass
 from decimal import Decimal
+from uuid import UUID
 
 from sqlalchemy.orm import Session
 
@@ -30,9 +38,13 @@ from app.services.documents.ingestion import intake_raw_file
 from app.services.portfolio.parser import ParsedPosition, parse_and_validate
 
 # Same tolerance the parser applies to a single file's own weights (§7) —
-# reused here for the post-merge sanity check, since merging two full
-# uploads is exactly the case most likely to blow the total past ~100%.
+# reused here for the post-merge, per-account sanity check.
 _WEIGHT_SUM_TOLERANCE_PCT = Decimal("1.0")
+
+# Key used to merge positions across uploads: (account_id, ticker). account_id
+# may be None (an upload not tagged to any account), which is still a
+# perfectly good, distinct bucket to merge within.
+_MergeKey = tuple[UUID | None, str]
 
 
 @dataclass
@@ -61,16 +73,17 @@ class _MergedPosition:
     sector: str | None
     notes: str | None
     market_ticker: str | None
+    account_id: UUID | None
     carried_forward: bool
 
 
-def _carried_forward_from(previous_snapshot: PortfolioSnapshot | None) -> dict[str, _MergedPosition]:
+def _carried_forward_from(previous_snapshot: PortfolioSnapshot | None) -> dict[_MergeKey, _MergedPosition]:
     if previous_snapshot is None:
         return {}
-    merged: dict[str, _MergedPosition] = {}
+    merged: dict[_MergeKey, _MergedPosition] = {}
     for position in previous_snapshot.positions:
         holding = position.holding
-        merged[holding.ticker] = _MergedPosition(
+        merged[(position.account_id, holding.ticker)] = _MergedPosition(
             ticker=holding.ticker,
             name=holding.name,
             asset_class=holding.asset_class,
@@ -82,12 +95,13 @@ def _carried_forward_from(previous_snapshot: PortfolioSnapshot | None) -> dict[s
             sector=holding.sector,
             notes=position.notes,
             market_ticker=holding.market_ticker,
+            account_id=position.account_id,
             carried_forward=True,
         )
     return merged
 
 
-def _from_parsed(position: ParsedPosition) -> _MergedPosition:
+def _from_parsed(position: ParsedPosition, account_id: UUID | None) -> _MergedPosition:
     return _MergedPosition(
         ticker=position.ticker,
         name=position.name,
@@ -100,44 +114,61 @@ def _from_parsed(position: ParsedPosition) -> _MergedPosition:
         sector=position.sector,
         notes=position.notes,
         market_ticker=position.market_ticker,
+        account_id=account_id,
         carried_forward=False,
     )
 
 
 def _merge_positions(
-    previous_snapshot: PortfolioSnapshot | None, new_positions: list[ParsedPosition]
+    previous_snapshot: PortfolioSnapshot | None,
+    new_positions: list[ParsedPosition],
+    account_id: UUID | None,
 ) -> tuple[list[_MergedPosition], int, int]:
     """Merges this upload's positions on top of the previous snapshot's,
-    keyed by ticker. Returns (merged, new_count, updated_count) — the
+    keyed by (account_id, ticker) — see module docstring for why account is
+    part of the key. Returns (merged, new_count, updated_count) — the
     carried-forward count is len(merged) - new_count - updated_count."""
     merged = _carried_forward_from(previous_snapshot)
 
     new_count = 0
     updated_count = 0
     for position in new_positions:
-        if position.ticker in merged:
+        key: _MergeKey = (account_id, position.ticker)
+        if key in merged:
             updated_count += 1
         else:
             new_count += 1
-        merged[position.ticker] = _from_parsed(position)
+        merged[key] = _from_parsed(position, account_id)
 
     return list(merged.values()), new_count, updated_count
 
 
-def _merged_weight_sum_warning(positions: list[_MergedPosition]) -> str | None:
-    weights = [p.weight_pct for p in positions if p.weight_pct is not None]
-    if not positions or len(weights) != len(positions):
-        return None
-    total = sum(weights)
-    if abs(total - Decimal("100")) > _WEIGHT_SUM_TOLERANCE_PCT:
-        return (
-            f"merged portfolio weights sum to {total}%, expected ~100% "
-            f"(tolerance ±{_WEIGHT_SUM_TOLERANCE_PCT}%) — carrying forward "
-            "positions from a prior upload alongside a new file commonly "
-            "does this if the new file's weights were computed against a "
-            "different total; re-upload a full export to reset weights"
-        )
-    return None
+def _merged_weight_sum_warning(positions: list[_MergedPosition]) -> list[str]:
+    """Checks weights sum to ~100% *within each account* rather than across
+    the whole merged set — accounts are independent portfolios, so summing
+    every account's weights together would almost always (correctly) miss
+    100% once more than one account is represented, which isn't a real
+    problem worth warning about."""
+    by_account: dict[UUID | None, list[_MergedPosition]] = {}
+    for position in positions:
+        by_account.setdefault(position.account_id, []).append(position)
+
+    warnings: list[str] = []
+    for account_id, account_positions in by_account.items():
+        weights = [p.weight_pct for p in account_positions if p.weight_pct is not None]
+        if not account_positions or len(weights) != len(account_positions):
+            continue
+        total = sum(weights)
+        if abs(total - Decimal("100")) > _WEIGHT_SUM_TOLERANCE_PCT:
+            label = "unassigned positions" if account_id is None else f"account {account_id}"
+            warnings.append(
+                f"merged weights for {label} sum to {total}%, expected ~100% "
+                f"(tolerance ±{_WEIGHT_SUM_TOLERANCE_PCT}%) — carrying forward "
+                "positions from a prior upload alongside a new file commonly "
+                "does this if the new file's weights were computed against a "
+                "different total; re-upload a full export to reset weights"
+            )
+    return warnings
 
 
 def ingest_portfolio_upload(
@@ -148,6 +179,7 @@ def ingest_portfolio_upload(
     content: bytes,
     mime_type: str,
     reporting_currency: str,
+    account_id: UUID | None = None,
 ) -> PortfolioIngestResult:
     settings = get_settings()
 
@@ -177,7 +209,7 @@ def ingest_portfolio_upload(
         db.query(PortfolioSnapshot).order_by(PortfolioSnapshot.uploaded_at.desc()).first()
     )
     merged_positions, new_count, updated_count = _merge_positions(
-        previous_snapshot, parse_result.positions
+        previous_snapshot, parse_result.positions, account_id
     )
     carried_forward_count = len(merged_positions) - new_count - updated_count
 
@@ -187,14 +219,13 @@ def ingest_portfolio_upload(
             f"merged with previous snapshot: {new_count} new, {updated_count} updated, "
             f"{carried_forward_count} carried forward unchanged"
         )
-    merge_warning = _merged_weight_sum_warning(merged_positions)
-    if merge_warning:
-        warnings.append(merge_warning)
+    warnings.extend(_merged_weight_sum_warning(merged_positions))
 
     snapshot = PortfolioSnapshot(
         source_file_id=intake.document.id,
         reporting_currency=reporting_currency,
         status=SnapshotStatus.PENDING.value,
+        account_id=account_id,
     )
     db.add(snapshot)
     db.flush()
@@ -234,6 +265,7 @@ def ingest_portfolio_upload(
             PortfolioPosition(
                 snapshot_id=snapshot.id,
                 holding_id=holding.id,
+                account_id=position.account_id,
                 weight_pct=position.weight_pct,
                 quantity=position.quantity,
                 cost_basis=position.cost_basis,

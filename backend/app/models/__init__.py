@@ -4,6 +4,7 @@ fully populated — this is what alembic/env.py's `target_metadata` walks for
 autogenerate, and what Base.metadata.create_all() uses in tests.
 """
 
+from app.models.account import Account
 from app.models.analysis import AnalysisRun, AnalysisRunStatus, EvidenceReference, FactorAssessment, HoldingAnalysis
 from app.models.document import Document, DocumentChunk, DocumentPage, DocumentStatus, DocumentType
 from app.models.financial_fact import FinancialLineItem
@@ -16,6 +17,7 @@ from app.models.thesis import InvestmentThesis, InvestmentThesisStatus
 from app.models.valuation import ValuationCase, ValuationCaseType
 
 __all__ = [
+    "Account",
     "AnalysisRun",
     "AnalysisRunStatus",
     "Document",

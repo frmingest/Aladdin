@@ -12,6 +12,7 @@ from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.accounts import router as accounts_router
 from app.api.analysis import router as analysis_router
 from app.api.auth import require_auth
 from app.api.documents import router as documents_router
@@ -67,6 +68,7 @@ if settings.cors_allowed_origins:
 # APP_AUTH_TOKEN is set (see app.api.auth), so every domain router (not
 # /health, which stays an unauthenticated liveness check) requires it.
 _auth = [Depends(require_auth)]
+app.include_router(accounts_router, dependencies=_auth)
 app.include_router(portfolio_router, dependencies=_auth)
 app.include_router(documents_router, dependencies=_auth)
 app.include_router(analysis_router, dependencies=_auth)

@@ -155,3 +155,150 @@ def test_reset_wipes_all_portfolio_data(client):
     fresh = client.post("/portfolio/upload", files={"file": ("portfolio.csv", VALID_CSV, "text/csv")})
     assert fresh.json()["new_position_count"] == 2
     assert fresh.json()["carried_forward_position_count"] == 0
+
+
+# --- Regression: holdings.ticker used to be varchar(32) (Postgres-enforced,
+# not caught by SQLite tests) — a Nordnet export with a long fund name as its
+# instrument-name-as-ticker (see app.services.portfolio.parser) blew straight
+# past that limit and raised StringDataRightTruncation. ------------------------
+
+LONG_TICKER = "A" * 60  # well past the old 32-char limit
+
+
+def test_upload_accepts_a_ticker_longer_than_the_old_32_char_limit(client):
+    csv = make_portfolio_csv([f"{LONG_TICKER},Some Long Fund Name,Aksje,100,100,10,NOK,,"])
+
+    response = client.post("/portfolio/upload", files={"file": ("portfolio.csv", csv, "text/csv")})
+
+    assert response.status_code == 201, response.text
+    positions = response.json()["snapshot"]["positions"]
+    assert positions[0]["ticker"] == LONG_TICKER  # not truncated
+
+    holdings = client.get("/portfolio/holdings").json()
+    assert holdings[0]["ticker"] == LONG_TICKER
+
+
+# --- Accounts (§26 accounts feature) ----------------------------------------
+
+
+def _create_account(client, name: str, account_number: str) -> str:
+    response = client.post("/accounts", json={"name": name, "account_number": account_number})
+    assert response.status_code == 201, response.text
+    return response.json()["id"]
+
+
+def test_upload_can_be_tagged_with_an_account(client):
+    account_id = _create_account(client, "Aksje & fonds konto", "70541644")
+
+    response = client.post(
+        "/portfolio/upload",
+        files={"file": ("portfolio.csv", VALID_CSV, "text/csv")},
+        data={"account_id": account_id},
+    )
+
+    assert response.status_code == 201, response.text
+    body = response.json()
+    assert body["snapshot"]["account_id"] == account_id
+    assert body["snapshot"]["account_name"] == "Aksje & fonds konto"
+    for position in body["snapshot"]["positions"]:
+        assert position["account_id"] == account_id
+
+
+def test_upload_with_unknown_account_id_returns_404(client):
+    response = client.post(
+        "/portfolio/upload",
+        files={"file": ("portfolio.csv", VALID_CSV, "text/csv")},
+        data={"account_id": "00000000-0000-0000-0000-000000000000"},
+    )
+    assert response.status_code == 404
+
+
+def test_same_instrument_in_two_accounts_stays_two_distinct_positions(client):
+    """The merge key is (account_id, ticker), not ticker alone — otherwise
+    uploading a second account's file that happens to hold the same
+    instrument would silently collapse the first account's position."""
+    account_a = _create_account(client, "ASK konto", "24175564")
+    account_b = _create_account(client, "Ezra's ASK konto", "50911270")
+
+    shared_position_csv = make_portfolio_csv(["SALM.OL,Salmon Evolution,Aksje,209,100,3.9588,NOK,,"])
+    other_position_csv = make_portfolio_csv(["SALM.OL,Salmon Evolution,Aksje,522,100,4.0028,NOK,,"])
+
+    client.post(
+        "/portfolio/upload",
+        files={"file": ("a.csv", shared_position_csv, "text/csv")},
+        data={"account_id": account_a},
+    )
+    response = client.post(
+        "/portfolio/upload",
+        files={"file": ("b.csv", other_position_csv, "text/csv")},
+        data={"account_id": account_b},
+    )
+
+    assert response.status_code == 201, response.text
+    positions = response.json()["snapshot"]["positions"]
+    salm_positions = [p for p in positions if p["ticker"] == "SALM.OL"]
+    assert len(salm_positions) == 2
+    by_account = {p["account_id"]: p for p in salm_positions}
+    assert float(by_account[account_a]["quantity"]) == 209
+    assert float(by_account[account_b]["quantity"]) == 522
+
+
+def test_snapshots_and_holdings_can_be_filtered_by_account(client):
+    account_a = _create_account(client, "ASK konto", "24175564")
+    account_b = _create_account(client, "Ezra's ASK konto", "50911270")
+
+    client.post(
+        "/portfolio/upload",
+        files={"file": ("a.csv", VALID_CSV, "text/csv")},
+        data={"account_id": account_a},
+    )
+    only_b_csv = make_portfolio_csv(["MOWI.OL,Mowi,Aksje,300,100,150,NOK,,"])
+    client.post(
+        "/portfolio/upload",
+        files={"file": ("b.csv", only_b_csv, "text/csv")},
+        data={"account_id": account_b},
+    )
+
+    snapshots_a = client.get(f"/portfolio/snapshots?account_id={account_a}").json()
+    assert len(snapshots_a) == 1
+    assert snapshots_a[0]["account_id"] == account_a
+
+    # Holdings filtering reflects the latest snapshot only (current picture).
+    holdings_b = client.get(f"/portfolio/holdings?account_id={account_b}").json()
+    assert {h["ticker"] for h in holdings_b} == {"MOWI.OL"}
+
+
+def test_deleting_an_account_referenced_by_a_snapshot_is_blocked(client):
+    account_id = _create_account(client, "Aksje & fonds konto", "70541644")
+    client.post(
+        "/portfolio/upload",
+        files={"file": ("portfolio.csv", VALID_CSV, "text/csv")},
+        data={"account_id": account_id},
+    )
+
+    response = client.delete(f"/accounts/{account_id}")
+    assert response.status_code == 409
+
+
+def test_accounts_crud(client):
+    created = client.post(
+        "/accounts", json={"name": "EPK Aktiv konto", "account_number": "73898066"}
+    )
+    assert created.status_code == 201
+    account_id = created.json()["id"]
+
+    duplicate = client.post(
+        "/accounts", json={"name": "Duplicate", "account_number": "73898066"}
+    )
+    assert duplicate.status_code == 409
+
+    listed = client.get("/accounts").json()
+    assert any(a["id"] == account_id for a in listed)
+
+    updated = client.patch(f"/accounts/{account_id}", json={"institution": "Nordnet"})
+    assert updated.status_code == 200
+    assert updated.json()["institution"] == "Nordnet"
+
+    deleted = client.delete(f"/accounts/{account_id}")
+    assert deleted.status_code == 204
+    assert client.get("/accounts").json() == []

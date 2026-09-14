@@ -40,6 +40,11 @@ class PortfolioPositionOut(BaseModel):
     cost_basis: Decimal | None
     cost_basis_currency: str | None
     notes: str | None
+    # Which account this position was uploaded under (None = unassigned) —
+    # see app.services.portfolio.ingestion for why the merge key includes
+    # account, not just ticker.
+    account_id: UUID | None
+    account_name: str | None
 
 
 class PortfolioSnapshotSummary(BaseModel):
@@ -49,6 +54,8 @@ class PortfolioSnapshotSummary(BaseModel):
     reporting_currency: str
     status: str
     position_count: int
+    account_id: UUID | None
+    account_name: str | None
 
 
 class PortfolioSnapshotDetail(PortfolioSnapshotSummary):

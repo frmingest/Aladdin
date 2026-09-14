@@ -13,6 +13,7 @@ from app.domain.errors import (
     UnreadableFileError,
     UnsupportedFileTypeError,
 )
+from app.models.account import Account
 from app.models.holding import Holding
 from app.models.portfolio import PortfolioPosition, PortfolioSnapshot
 from app.providers.base import MarketDataProvider
@@ -48,6 +49,8 @@ def _position_to_out(position: PortfolioPosition) -> PortfolioPositionOut:
         cost_basis=position.cost_basis,
         cost_basis_currency=position.cost_basis_currency,
         notes=position.notes,
+        account_id=position.account_id,
+        account_name=position.account.name if position.account is not None else None,
     )
 
 
@@ -59,6 +62,8 @@ def _snapshot_to_summary(snapshot: PortfolioSnapshot) -> PortfolioSnapshotSummar
         reporting_currency=snapshot.reporting_currency,
         status=snapshot.status,
         position_count=len(snapshot.positions),
+        account_id=snapshot.account_id,
+        account_name=snapshot.account.name if snapshot.account is not None else None,
     )
 
 
@@ -74,10 +79,15 @@ def _snapshot_to_detail(snapshot: PortfolioSnapshot) -> PortfolioSnapshotDetail:
 async def upload_portfolio(
     file: UploadFile = File(...),
     reporting_currency: str | None = Form(default=None),
+    account_id: UUID | None = Form(default=None),
     db: Session = Depends(get_db),
     storage=Depends(get_object_storage),
 ) -> PortfolioUploadResponse:
     settings = get_settings()
+
+    if account_id is not None and db.get(Account, account_id) is None:
+        raise HTTPException(status_code=404, detail=f"account '{account_id}' not found")
+
     content = await file.read()
 
     try:
@@ -88,6 +98,7 @@ async def upload_portfolio(
             content=content,
             mime_type=file.content_type or "application/octet-stream",
             reporting_currency=(reporting_currency or settings.default_reporting_currency).upper(),
+            account_id=account_id,
         )
     except PortfolioValidationError as exc:
         raise HTTPException(
@@ -132,8 +143,13 @@ def reset_portfolio(confirm: bool = False, db: Session = Depends(get_db)) -> Por
 
 
 @router.get("/snapshots", response_model=list[PortfolioSnapshotSummary])
-def list_snapshots(db: Session = Depends(get_db)) -> list[PortfolioSnapshotSummary]:
-    snapshots = db.query(PortfolioSnapshot).order_by(PortfolioSnapshot.uploaded_at.desc()).all()
+def list_snapshots(
+    account_id: UUID | None = None, db: Session = Depends(get_db)
+) -> list[PortfolioSnapshotSummary]:
+    query = db.query(PortfolioSnapshot)
+    if account_id is not None:
+        query = query.filter(PortfolioSnapshot.account_id == account_id)
+    snapshots = query.order_by(PortfolioSnapshot.uploaded_at.desc()).all()
     return [_snapshot_to_summary(s) for s in snapshots]
 
 
@@ -146,10 +162,34 @@ def get_snapshot(snapshot_id: UUID, db: Session = Depends(get_db)) -> PortfolioS
 
 
 @router.get("/holdings", response_model=list[HoldingOut])
-def list_holdings(db: Session = Depends(get_db)) -> list[HoldingOut]:
+def list_holdings(
+    account_id: UUID | None = None, db: Session = Depends(get_db)
+) -> list[HoldingOut]:
     """Used by the document-upload UI to let the user pick which holding a
-    report belongs to (documents.holding_id, §20)."""
-    holdings = db.query(Holding).order_by(Holding.ticker).all()
+    report belongs to (documents.holding_id, §20), and by the dashboard to
+    let the user narrow the holding picker down to one account.
+
+    `account_id` filters to holdings that appear, tagged with that account,
+    in the *latest* snapshot — i.e. what that account currently holds, not
+    everything it has ever held (older, since-cleared positions aren't
+    "watched" for that account anymore)."""
+    query = db.query(Holding)
+    if account_id is not None:
+        latest_snapshot = (
+            db.query(PortfolioSnapshot).order_by(PortfolioSnapshot.uploaded_at.desc()).first()
+        )
+        if latest_snapshot is None:
+            return []
+        holding_ids = (
+            db.query(PortfolioPosition.holding_id)
+            .filter(
+                PortfolioPosition.snapshot_id == latest_snapshot.id,
+                PortfolioPosition.account_id == account_id,
+            )
+            .scalar_subquery()
+        )
+        query = query.filter(Holding.id.in_(holding_ids))
+    holdings = query.order_by(Holding.ticker).all()
     return [HoldingOut.model_validate(h) for h in holdings]
 
 

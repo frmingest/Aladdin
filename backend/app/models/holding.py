@@ -14,7 +14,17 @@ class Holding(Base):
     __tablename__ = "holdings"
 
     id: Mapped["uuid.UUID"] = mapped_column(GUID, primary_key=True, default=new_uuid)
-    ticker: Mapped[str] = mapped_column(String(32), unique=True, index=True, nullable=False)
+    # 255 (not a "real" ticker's usual handful of characters) because a
+    # Nordnet-export holding (decision 0003) has no exchange ticker at all —
+    # the full instrument name is used as the key instead, and fund names
+    # like "Xtrackers Europe Defence Technologies UCITS ETF 1C" or "Alfred
+    # Berg Nordic High Yield II R (NOK)" run well past a short ticker's
+    # length. This used to be String(32), which silently truncated on
+    # SQLite in tests but raised a hard StringDataRightTruncation on
+    # Postgres for any upload containing a long fund name (see migration
+    # e1a2b3c4d5f6). Matches `name`'s width since the two are the same value
+    # for a Nordnet holding.
+    ticker: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
 
     # The Yahoo-Finance-resolvable symbol used by the Phase 2 market-data
