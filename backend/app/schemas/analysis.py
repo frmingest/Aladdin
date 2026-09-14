@@ -174,6 +174,9 @@ class AnalysisRunSummary(BaseModel):
     model_name: str
     prompt_version: str
     scoring_version: str
+    # ECON-002 fix (docs/decisions/0014, §13.1) — which named factor-weight
+    # profile was used for every holding in this run (app.domain.scoring).
+    macro_regime: str
     holding_analysis_count: int
     failure_count: int
 

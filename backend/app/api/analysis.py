@@ -64,6 +64,7 @@ def _run_to_summary(run: AnalysisRun) -> AnalysisRunSummary:
         model_name=run.model_name,
         prompt_version=run.prompt_version,
         scoring_version=run.scoring_version,
+        macro_regime=run.macro_regime,
         holding_analysis_count=len(run.holding_analyses),
         failure_count=len(run.requested_holding_ids) - len(run.holding_analyses),
     )

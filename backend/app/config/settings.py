@@ -137,9 +137,13 @@ class Settings(BaseSettings):
 
     # --- Versioning (persona/scoring/schema — see docs/architecture.md §2.4) ---
     active_prompt_version: str = "v1"
-    active_scoring_version: str = "v1"
+    # v2 adds regime-conditional factor weights (ECON-002 fix, docs/
+    # decisions/0014) — app.domain.scoring.classify_macro_regime picks the
+    # profile per run from the latest macro snapshot; v1 remains loadable
+    # (and is what any pre-v2 analysis_runs row is still interpreted
+    # against) for reproducibility (§2.4), it's just no longer the default.
+    active_scoring_version: str = "v2"
     active_extraction_schema_version: str = "v1"
-    active_macro_regime_profile: str = "baseline"  # baseline | stagflation | crisis — see §13.1
 
     # --- Thesis & portfolio intelligence (§26 Phase 5) ---
     # app.domain.portfolio_risk's composite-risk-score weights/band thresholds
@@ -151,6 +155,11 @@ class Settings(BaseSettings):
     # §17 — the LLM critiques valuation assumptions; the deterministic DCF
     # calculation itself (app.domain.valuation) never depends on this.
     active_valuation_prompt_version: str = "v1"
+    # ECON-001 fix (docs/decisions/0014) — app.domain.discount_rate's
+    # currency->risk-free-series mapping and equity risk premium constant.
+    # Powers a *suggestion* only (GET /valuation/holdings/{id}/defaults);
+    # compute_dcf_value never depends on this either.
+    active_discount_rate_version: str = "v1"
 
     # §15.1 systemic/state risk — deterministic, jurisdiction-specific
     # constants. Only Norway is implemented (matches Faiz's own portfolio and

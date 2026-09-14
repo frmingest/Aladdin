@@ -92,8 +92,8 @@ def health() -> dict:
         "active_prompt_version": settings.active_prompt_version,
         "active_scoring_version": settings.active_scoring_version,
         "active_extraction_schema_version": settings.active_extraction_schema_version,
-        "active_macro_regime_profile": settings.active_macro_regime_profile,
         "active_risk_scoring_version": settings.active_risk_scoring_version,
         "active_scenario_version": settings.active_scenario_version,
         "active_valuation_prompt_version": settings.active_valuation_prompt_version,
+        "active_discount_rate_version": settings.active_discount_rate_version,
     }

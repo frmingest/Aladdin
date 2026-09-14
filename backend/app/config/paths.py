@@ -29,3 +29,10 @@ RESEARCH_DIR = REPO_ROOT / "research" / "versions"
 # app.domain.scenarios. Same versioning discipline: a scenario's shocks are
 # data a non-engineer can tune, not an if/elif chain in application code.
 SCENARIOS_DIR = REPO_ROOT / "scenarios" / "versions"
+# Discount-rate suggestion registry (architecture §17, ECON-001 fix, ADR
+# 0014) — see app.domain.discount_rate. Maps a holding's trading currency to
+# the macro series that anchor its risk-free rate, plus the equity risk
+# premium constant, so a DCF discount_rate_pct default can be grounded in
+# the macro data Phase 4 already fetches instead of being free-typed with no
+# visible anchor. Same versioning discipline as SCORING_DIR/RESEARCH_DIR.
+DISCOUNT_RATE_DIR = REPO_ROOT / "discount_rate" / "versions"

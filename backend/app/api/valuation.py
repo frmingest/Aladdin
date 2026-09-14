@@ -10,8 +10,16 @@ from app.models.holding import Holding
 from app.models.valuation import ValuationCase
 from app.providers.base import LLMProvider
 from app.providers.factory import get_llm_provider
-from app.schemas.valuation import ValuationCaseCreate, ValuationCaseOut, ValuationCritiqueOutput
+from app.schemas.valuation import (
+    DiscountRateSuggestionOut,
+    FxRateSuggestionOut,
+    ValuationCaseCreate,
+    ValuationCaseOut,
+    ValuationCritiqueOutput,
+    ValuationDefaultsOut,
+)
 from app.services.valuation.dcf import create_valuation_case
+from app.services.valuation.defaults import get_valuation_defaults
 
 router = APIRouter(prefix="/valuation", tags=["valuation"])
 
@@ -54,6 +62,41 @@ def create_holding_valuation_case(
 
     case = create_valuation_case(db, llm_provider, holding, body)
     return _case_to_out(case)
+
+
+@router.get("/holdings/{holding_id}/defaults", response_model=ValuationDefaultsOut)
+def get_holding_valuation_defaults(holding_id: UUID, db: Session = Depends(get_db)) -> ValuationDefaultsOut:
+    """ECON-001 fix (docs/decisions/0014): a suggested discount_rate_pct
+    (risk-free leg for the holding's currency + a configurable equity risk
+    premium) and fx_rate_to_reporting, grounded in macro/FX data the app
+    already persists (Phase 4/Phase 2) — never auto-applied, just a visible
+    anchor for the "New valuation case" form (§21)."""
+    holding = db.get(Holding, holding_id)
+    if holding is None:
+        raise HTTPException(status_code=404, detail="holding not found")
+
+    defaults = get_valuation_defaults(db, holding)
+    return ValuationDefaultsOut(
+        discount_rate=DiscountRateSuggestionOut(
+            available=defaults.discount_rate.available,
+            currency=defaults.discount_rate.currency,
+            config_version=defaults.discount_rate.config_version,
+            risk_free_pct=defaults.discount_rate.risk_free_pct,
+            equity_risk_premium_pct=defaults.discount_rate.equity_risk_premium_pct,
+            suggested_discount_rate_pct=defaults.discount_rate.suggested_discount_rate_pct,
+            risk_free_series_used=defaults.discount_rate.risk_free_series_used,
+            macro_as_of=defaults.discount_rate.macro_as_of,
+            reason=defaults.discount_rate.reason,
+        ),
+        fx_rate=FxRateSuggestionOut(
+            available=defaults.fx_rate.available,
+            from_currency=defaults.fx_rate.from_currency,
+            to_currency=defaults.fx_rate.to_currency,
+            rate=defaults.fx_rate.rate,
+            observed_at=defaults.fx_rate.observed_at,
+            reason=defaults.fx_rate.reason,
+        ),
+    )
 
 
 @router.get("/holdings/{holding_id}/cases", response_model=list[ValuationCaseOut])

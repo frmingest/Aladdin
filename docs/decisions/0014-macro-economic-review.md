@@ -2,8 +2,8 @@
 
 ## Status
 
-Accepted (review). Findings below are tracked as new "Up next" candidates in
-`docs/PROGRESS.md` — nothing in this ADR has been implemented yet.
+Accepted (review). ECON-001 and ECON-002 implemented 2026-09-14 (see "Update" section below).
+ECON-003 through ECON-007 remain findings only, tracked in `docs/PROGRESS.md`'s "Up next" list.
 
 ## Context
 
@@ -223,3 +223,58 @@ Findings ECON-001 through ECON-007 have been added to `docs/PROGRESS.md`'s "Up n
 by the order above (discount-rate grounding and regime-conditional weights first, since both were
 already-approved architecture gaps rather than new scope). No code changed in this pass — Faiz
 asked for the review itself, not implementation.
+
+## Update — 2026-09-14 (ECON-001/002 implemented)
+
+Faiz asked to proceed with the two highest-priority findings. Both are built, tested, and verified
+in the cloud mirror (`device_bash` still can't mount `E:\Aladdin` this session — written back via
+the stage → edit → commit-back path); neither has been migrated/deployed to Railway yet.
+
+**ECON-001 (discount rate / FX grounding):**
+- New versioned config `discount_rate/versions/v1.yaml` (mirrors the `scoring/`/`research/`
+  pattern): an equity risk premium constant plus a per-currency risk-free method — NOK reads
+  `no_policy_rate` directly (`single_series`); USD combines `us_real_yield_10y` +
+  `us_breakeven_10y` (`real_plus_breakeven`) to approximate a nominal 10y rate.
+- New `app/domain/discount_rate.py`: `load_discount_rate_config()`, `suggest_discount_rate()`
+  (risk-free + ERP from the latest macro observations), `suggest_fx_rate()` (latest
+  `FxObservation` for the holding's currency → reporting currency). Both return an
+  `available: bool` + `reason` when the underlying series/observation isn't there yet, rather
+  than fabricating a number.
+- New `app/services/valuation/defaults.py`: `get_valuation_defaults(db, holding)` ties the above
+  to a specific holding (its `trading_currency` and the configured `default_reporting_currency`).
+- New endpoint `GET /valuation/holdings/{holding_id}/defaults` → `ValuationDefaultsOut`.
+- Frontend: `NewValuationCaseForm` now fetches these defaults on open and shows a hint next to
+  `discount_rate_pct` and the FX rate field with a "use" button — per §21, the suggestion is
+  displayed, never silently substituted; the user still types (or accepts) the final value.
+- `compute_dcf_value` itself is untouched — this only changes what pre-fills the form.
+
+**ECON-002 (regime-conditional factor weights):**
+- New `scoring/versions/v2.yaml`: three weight profiles (`baseline` — identical to v1's
+  40/30/30, `stagflation`, `crisis`) plus deterministic `regime_classification` thresholds read
+  from the macro registry (`us_real_yield_10y`, `us_headline_cpi_yoy`), crisis checked before
+  stagflation. `settings.active_scoring_version` moved from `v1` to `v2`.
+- `app/domain/scoring.py`: `classify_macro_regime()` (pure threshold logic, no LLM involved —
+  consistent with the app's evidence-first discipline) and `compute_overall_score()` gained an
+  optional `regime` parameter, defaulting to `"baseline"` for full backward compatibility.
+- `AnalysisRun` gained a `macro_regime` column (migration `d8f3a6b2c710`, chained onto
+  `c7e2f9a1b8d3`, the still-unapplied usage-ledger migration — **both need `alembic upgrade
+  head` on the real Postgres**). `run_analysis()` now classifies the regime from the latest
+  macro snapshot before scoring and records it on the run; it's surfaced in
+  `AnalysisRunSummary.macro_regime` via the API.
+- Verified byte-for-byte backward compatible: with no macro refresh yet performed (the common
+  case until Faiz runs one on the live deploy), classification falls back to `baseline`, whose
+  weights are identical to v1's — the existing `overall_score == 6.10` integration-test
+  assertion is unchanged. A new test seeds a stagflation-classifying macro snapshot and confirms
+  both the recorded regime and a different resulting score (`5.90`).
+- The now-unused `active_macro_regime_profile` setting (present but never read since the
+  architecture doc's original §13.1 approval) was removed; the `/health` endpoint reports
+  `active_discount_rate_version` instead.
+
+**Verification:** 289 backend tests passing (was 260 — 16 new for ECON-001, 10 new + 1 modified
+for ECON-002; net +29 accounting for the 1 modified), `ruff check .` clean, `mypy app` unchanged
+baseline-only errors, frontend `tsc --noEmit` clean, `vite build` succeeds.
+
+**Not done as part of this pass:** ECON-003 (commodity series), ECON-004 (Eurozone/China series),
+ECON-005 (Norway policy-rate live verification), ECON-006 (macro sensitivity in the persona
+checklist), ECON-007 (regime-aware risk bands) — all remain open findings, unchanged from the
+original review above.

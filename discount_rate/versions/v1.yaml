@@ -1,0 +1,45 @@
+# Discount-rate suggestion registry v1 (architecture §17, ECON-001 fix,
+# docs/decisions/0014-macro-economic-review.md).
+#
+# Read by app.domain.discount_rate — do not rename keys without updating
+# that module. This does NOT change how compute_dcf_value (app.domain.
+# valuation) works — discount_rate_pct is still whatever the caller
+# actually supplies. This config only powers a *suggestion* the API can
+# surface (GET /valuation/holdings/{holding_id}/defaults) so the number a
+# user types has a visible anchor in the macro data the app already
+# fetches (Phase 4, research/versions/v1.yaml), rather than being picked
+# from memory with no reference point (§21: never silently substitute a
+# value the user didn't see — this is shown, never auto-applied).
+#
+# `equity_risk_premium_pct` is a single configurable constant added on top
+# of the risk-free leg to produce `suggested_discount_rate_pct`. Kept here
+# (not in backend/app/config/settings.py) so it versions the same way as
+# the currency->series mapping below, and so a past valuation case's
+# suggested default stays interpretable against the config that actually
+# produced it (§2.4) even after this number is revised.
+#
+# To change the equity risk premium or a currency's risk-free mapping
+# without losing that reproducibility, add discount_rate/versions/v2.yaml
+# and point settings.active_discount_rate_version at it — never edit this
+# file's numbers in place once a valuation case's response has cited them.
+version: v1
+description: >
+  Initial discount-rate-suggestion registry. Maps a holding's trading
+  currency to the macro series (app.domain.macro_series) that anchor its
+  risk-free rate. Currencies not listed here have no suggestion available
+  yet — see docs/decisions/0014's ECON-001 for why NOK/USD were the first
+  two (they cover every holding in the reviewed portfolio).
+equity_risk_premium_pct: 5.0
+currency_risk_free:
+  # Norway's key policy rate is already a nominal rate (§9.1) — used as-is,
+  # no further adjustment.
+  NOK:
+    method: single_series
+    series_keys: [no_policy_rate]
+  # A nominal US risk-free proxy built the conventional way: the 10y real
+  # yield (already inflation-stripped) plus the 10y breakeven (the market's
+  # own inflation expectation) sums back to a nominal rate — the same pair
+  # ECON-001 named as sitting unused in the registry.
+  USD:
+    method: real_plus_breakeven
+    series_keys: [us_real_yield_10y, us_breakeven_10y]

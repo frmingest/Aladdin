@@ -53,6 +53,16 @@ class AnalysisRun(Base):
     model_name: Mapped[str] = mapped_column(String(64), nullable=False)
     prompt_version: Mapped[str] = mapped_column(String(16), nullable=False)
     scoring_version: Mapped[str] = mapped_column(String(16), nullable=False)
+    # ECON-002 fix (docs/decisions/0014, architecture §13.1) — which named
+    # weight profile (app.domain.scoring, scoring/versions/{scoring_version}.yaml)
+    # was actually used for every holding in this run, classified once
+    # up front from the macro snapshot in effect at run time
+    # (app.domain.scoring.classify_macro_regime). Recorded alongside
+    # scoring_version (not instead of it) so a past run's weights stay
+    # reconstructable even after regime-classification thresholds change
+    # later (§2.4) — "baseline" for a scoring_version with no regime
+    # profiles at all (e.g. v1), matching that version's only behavior.
+    macro_regime: Mapped[str] = mapped_column(String(16), nullable=False, default="baseline")
     extraction_schema_version: Mapped[str] = mapped_column(String(16), nullable=False)
     application_version: Mapped[str] = mapped_column(String(32), nullable=False)
     # Phase 4 (external research) doesn't exist yet — always NULL until then.

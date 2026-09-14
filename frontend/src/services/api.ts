@@ -24,7 +24,7 @@ import type { AnalysisRunDetail, HoldingAnalysisDetail, HoldingAnalysisSummary }
 import type { PortfolioValuationOut } from "../types/market_valuation";
 import type { PortfolioRiskSnapshotOut } from "../types/portfolio_risk";
 import type { InvalidationSignalOut, ThesisCreate, ThesisOut, ThesisUpdate } from "../types/thesis";
-import type { ValuationCaseCreate, ValuationCaseOut } from "../types/dcf";
+import type { ValuationCaseCreate, ValuationCaseOut, ValuationDefaults } from "../types/dcf";
 import type { MacroSnapshotOut, ResearchRunOut, SectorResearchOut } from "../types/research";
 import type { UsageSummaryOut } from "../types/usage";
 
@@ -230,6 +230,12 @@ export function getInvalidationCheck(thesisId: string): Promise<InvalidationSign
 }
 
 // --- Phase 5 — DCF valuation cases (§17) ------------------------------------
+
+// ECON-001 fix (docs/decisions/0014) — a suggested discount_rate_pct/
+// fx_rate_to_reporting anchored in macro/FX data the app already fetches.
+export function getHoldingValuationDefaults(holdingId: string): Promise<ValuationDefaults> {
+  return apiFetch(`/valuation/holdings/${holdingId}/defaults`);
+}
 
 export function listHoldingValuationCases(holdingId: string): Promise<ValuationCaseOut[]> {
   return apiFetch(`/valuation/holdings/${holdingId}/cases`);

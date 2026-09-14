@@ -4,6 +4,7 @@ import {
   createHoldingThesis,
   createHoldingValuationCase,
   getHoldingAnalysis,
+  getHoldingValuationDefaults,
   getInvalidationCheck,
   listHoldingAnalyses,
   listHoldingTheses,
@@ -14,7 +15,7 @@ import {
 import type { Holding } from "../../types/portfolio";
 import type { ConfidenceLevel, HoldingAnalysisDetail, HoldingAnalysisSummary } from "../../types/analysis";
 import type { InvalidationSignalOut, ThesisCreate, ThesisOut } from "../../types/thesis";
-import type { ValuationCaseCreate, ValuationCaseOut } from "../../types/dcf";
+import type { ValuationCaseCreate, ValuationCaseOut, ValuationDefaults } from "../../types/dcf";
 import { num } from "../../lib/num";
 import ValuationScenarioChart from "../../charts/ValuationScenarioChart";
 import InfoTooltip from "../../components/InfoTooltip";
@@ -273,6 +274,63 @@ const REQUIRED_DCF_FIELDS: DcfFieldKey[] = [
   "shares_outstanding",
 ];
 
+/** ECON-001 fix (docs/decisions/0014-macro-economic-review.md): a small
+ * hint under discount_rate_pct showing the risk-free-rate + equity-risk-
+ * premium anchor the app already has, with a one-click "Use" — never
+ * auto-filled (§21). Renders nothing while the suggestion is unavailable
+ * (no macro refresh yet, or an unmapped currency) rather than an empty box. */
+function DiscountRateHint({
+  suggestion,
+  onUse,
+}: {
+  suggestion: import("../../types/dcf").DiscountRateSuggestion | null;
+  onUse: (value: string) => void;
+}) {
+  if (!suggestion) return null;
+  if (!suggestion.available) {
+    return <p className="text-xs text-tertiary mt-1">{suggestion.reason}</p>;
+  }
+  return (
+    <p className="text-xs text-tertiary mt-1">
+      Anchor: {num(suggestion.risk_free_pct)}% risk-free ({suggestion.risk_free_series_used.join(" + ")}) +{" "}
+      {num(suggestion.equity_risk_premium_pct)}% ERP ={" "}
+      <button
+        type="button"
+        onClick={() => onUse(suggestion.suggested_discount_rate_pct ?? "")}
+        className="underline hover:text-secondary"
+      >
+        {num(suggestion.suggested_discount_rate_pct)}% — use
+      </button>
+    </p>
+  );
+}
+
+/** Same pattern as DiscountRateHint for fx_rate_to_reporting. */
+function FxRateHint({
+  suggestion,
+  onUse,
+}: {
+  suggestion: import("../../types/dcf").FxRateSuggestion | null;
+  onUse: (value: string) => void;
+}) {
+  if (!suggestion) return null;
+  if (!suggestion.available) {
+    return <p className="text-xs text-tertiary mt-1">{suggestion.reason}</p>;
+  }
+  return (
+    <p className="text-xs text-tertiary mt-1">
+      Latest: {suggestion.from_currency}/{suggestion.to_currency} ={" "}
+      <button
+        type="button"
+        onClick={() => onUse(suggestion.rate ?? "")}
+        className="underline hover:text-secondary"
+      >
+        {num(suggestion.rate)} — use
+      </button>
+    </p>
+  );
+}
+
 /** Inline "+ New valuation case" toggle + form — the DCF engine (§17) was
  * API-only until this pass. Required inputs are a flat grid (the common
  * case); the currency/FX/commodity/base-revenue overrides that most
@@ -306,6 +364,26 @@ function NewValuationCaseForm({
   const [runCritique, setRunCritique] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // ECON-001 fix (docs/decisions/0014): a suggested discount rate/FX rate,
+  // grounded in the macro/FX data the app already fetches — shown next to
+  // the fields it applies to, never auto-filled (§21).
+  const [defaults, setDefaults] = useState<ValuationDefaults | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    getHoldingValuationDefaults(holdingId)
+      .then((d) => {
+        if (!cancelled) setDefaults(d);
+      })
+      .catch(() => {
+        if (!cancelled) setDefaults(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, holdingId]);
 
   const requiredFilled = REQUIRED_DCF_FIELDS.every((k) => fields[k].trim() !== "");
 
@@ -385,6 +463,12 @@ function NewValuationCaseForm({
               placeholder={f.placeholder}
               className={inputClass}
             />
+            {f.key === "discount_rate_pct" && (
+              <DiscountRateHint
+                suggestion={defaults?.discount_rate ?? null}
+                onUse={(value) => updateField("discount_rate_pct", value)}
+              />
+            )}
           </div>
         ))}
       </div>
@@ -412,6 +496,7 @@ function NewValuationCaseForm({
           <div>
             <label className={labelClass}>FX rate to reporting ccy</label>
             <input type="number" step="any" value={fxRate} onChange={(e) => setFxRate(e.target.value)} className={inputClass} />
+            <FxRateHint suggestion={defaults?.fx_rate ?? null} onUse={setFxRate} />
           </div>
           <div>
             <label className={labelClass}>Net debt</label>

@@ -6,6 +6,38 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+# --- ECON-001 fix (docs/decisions/0014) — discount-rate/FX suggestions ------
+
+
+class DiscountRateSuggestionOut(BaseModel):
+    available: bool
+    currency: str
+    config_version: str
+    risk_free_pct: Decimal | None = None
+    equity_risk_premium_pct: Decimal | None = None
+    suggested_discount_rate_pct: Decimal | None = None
+    risk_free_series_used: list[str] = Field(default_factory=list)
+    macro_as_of: datetime | None = None
+    reason: str | None = None
+
+
+class FxRateSuggestionOut(BaseModel):
+    available: bool
+    from_currency: str
+    to_currency: str
+    rate: Decimal | None = None
+    observed_at: datetime | None = None
+    reason: str | None = None
+
+
+class ValuationDefaultsOut(BaseModel):
+    """A suggestion only — never silently applied (§21). The frontend shows
+    these next to discount_rate_pct/fx_rate_to_reporting and lets the user
+    click to accept, or ignore and type their own."""
+
+    discount_rate: DiscountRateSuggestionOut
+    fx_rate: FxRateSuggestionOut
+
 # --- LLM structured-output contract (§17's "LLM critiques") ----------------
 
 

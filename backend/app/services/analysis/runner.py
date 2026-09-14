@@ -37,6 +37,7 @@ from app.providers.base import LLMProvider, LLMUnavailableError
 from app.services.analysis.context import InsufficientContextError, build_analysis_context
 from app.services.analysis.llm_analysis import LLMAnalysisResult, run_two_pass_analysis
 from app.services.research.common import latest_completed_run
+from app.services.research.macro import get_latest_macro_snapshot
 from app.services.usage import record_llm_usage
 
 _FACTOR_FIELDS = ("business_quality", "financial_strength", "valuation")
@@ -76,6 +77,17 @@ def run_analysis(
     # None until a macro refresh has ever completed (see decision 0007).
     macro_research_run = latest_completed_run(db, ResearchRunType.MACRO)
 
+    # ECON-002 fix (docs/decisions/0014, §13.1): classify the macro regime
+    # once per run (it applies portfolio-wide, same reasoning as
+    # macro_research_run above) from whatever macro observations are
+    # currently on record — no provider call, §2.7 — and use it for every
+    # holding's factor-weight blend below. Falls back to "baseline" (v1's
+    # only behavior) if no macro refresh has ever completed, or if
+    # scoring_version defines no regime_classification at all.
+    macro_snapshot = get_latest_macro_snapshot(db)
+    latest_macro_values = {obs.series_key: obs.value for obs in macro_snapshot.observations}
+    macro_regime = scoring.classify_macro_regime(latest_macro_values, settings.active_scoring_version)
+
     run = AnalysisRun(
         portfolio_snapshot_id=snapshot_id,
         status=AnalysisRunStatus.RUNNING.value,
@@ -83,6 +95,7 @@ def run_analysis(
         model_name=settings.llm_model_name,
         prompt_version=settings.active_prompt_version,
         scoring_version=settings.active_scoring_version,
+        macro_regime=macro_regime,
         extraction_schema_version=settings.active_extraction_schema_version,
         application_version=settings.application_version,
         research_snapshot_id=macro_research_run.id if macro_research_run else None,
@@ -104,7 +117,7 @@ def run_analysis(
 
         factor_scores = {f: getattr(result.output, f).score for f in _FACTOR_FIELDS}
         confidences = [getattr(result.output, f).confidence.value for f in _FACTOR_FIELDS]
-        overall_score = scoring.compute_overall_score(factor_scores, settings.active_scoring_version)
+        overall_score = scoring.compute_overall_score(factor_scores, settings.active_scoring_version, regime=macro_regime)
         overall_confidence = scoring.aggregate_confidence(confidences, settings.active_scoring_version)
 
         holding_analysis = HoldingAnalysis(

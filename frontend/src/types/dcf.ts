@@ -25,6 +25,38 @@ export type ValuationCaseOut = {
   created_at: string;
 };
 
+// ECON-001 fix (docs/decisions/0014-macro-economic-review.md) — mirrors
+// backend/app/schemas/valuation.py's DiscountRateSuggestionOut/
+// FxRateSuggestionOut/ValuationDefaultsOut. A *suggestion* only: the form
+// shows these next to discount_rate_pct/fx_rate_to_reporting and lets the
+// user click to accept, or ignore them and type their own (§21 — never
+// silently substituted).
+export type DiscountRateSuggestion = {
+  available: boolean;
+  currency: string;
+  config_version: string;
+  risk_free_pct: string | null;
+  equity_risk_premium_pct: string | null;
+  suggested_discount_rate_pct: string | null;
+  risk_free_series_used: string[];
+  macro_as_of: string | null;
+  reason: string | null;
+};
+
+export type FxRateSuggestion = {
+  available: boolean;
+  from_currency: string;
+  to_currency: string;
+  rate: string | null;
+  observed_at: string | null;
+  reason: string | null;
+};
+
+export type ValuationDefaults = {
+  discount_rate: DiscountRateSuggestion;
+  fx_rate: FxRateSuggestion;
+};
+
 // Mirrors backend/app/schemas/valuation.py's ValuationCaseCreate. holding_id
 // is not a field here — it's the path param on
 // POST /valuation/holdings/{holding_id}/cases. Every *_pct field is a plain

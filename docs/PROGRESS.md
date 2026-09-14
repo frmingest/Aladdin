@@ -9,9 +9,10 @@ online, keys set, Faiz has smoke-tested the Portfolio flow (accounts, CSV/XLSX u
 successfully. Phase 8 (alternative assets) planned; Phase 9 (document evidence quality) planned.
 Documents/Analysis/Dashboard/research/risk haven't been manually exercised on the live deploy yet —
 see "Open gaps" below. Whether the deployed code is committed to git is unconfirmed (see "Manual
-to-do" below). Last full test-suite run 2026-09-14: 260 backend tests / ruff / tsc / vite build all
-clean; `npm run lint` still fails (known gap below). **The LLM usage ledger (ADR 0013, this pass)
-was written after that run and has not itself been test-verified yet — see "Open gaps."**
+to-do" below). Last full test-suite run 2026-09-14 (ECON-001/002 pass): 289 backend tests / ruff /
+tsc / vite build all clean; `npm run lint` still fails (known gap below). **The LLM usage ledger
+(ADR 0013) and the ECON-001/002 macro fixes (ADR 0014) were both written this pass and are
+test-verified in the cloud mirror but not yet migrated/deployed to Railway — see "Open gaps."**
 
 ---
 
@@ -23,7 +24,8 @@ now just "has anyone actually clicked it," not "is it blocked"):
 - ⬜ AI analysis (Gemini) — **attempted 2026-09-14, failed**: `gemini-2.5-flash` (the configured default) now 404s with "no longer available to new users" — Google's Gemini API has restricted it to existing accounts only. Fixed in code (default changed to `gemini-3.6-flash`, the replacement model Google's own error response named — see ADR 0005's Update section) but **not yet redeployed/reverified** — this is still the recommended verification step for Phase 9 planning below once the fix is live, since a real run against Vår Energi's two PDFs would confirm or correct the evidence-truncation estimate in ADR 0012.
 - ⬜ Macro/sector research (FRED + Norges Bank) — `FRED_API_KEY` is set, but no confirmed refresh against the live deploy yet.
 - ⬜ Portfolio risk snapshots, DCF valuation + critique, document upload — not yet exercised on the live deploy per Faiz's update.
-- ⬜ **LLM usage ledger (new this pass, ADR 0013)** — `llm_usage_events` table, `/usage/summary` endpoint, Dashboard's new "Gemini usage today" section. **Not yet migrated, deployed, or test-verified**: `device_bash` was unavailable again this session (the Windows-update mount issue tracked since 2026-09-08), so this went through the stage → edit → commit-back path with no way to run `alembic upgrade head`/`pytest`/`tsc` locally. Needs: the new migration applied, a redeploy, and one real analysis run to confirm a row actually lands in `llm_usage_events` and the Dashboard widget renders correctly.
+- ⬜ **LLM usage ledger (ADR 0013)** — `llm_usage_events` table, `/usage/summary` endpoint, Dashboard's new "Gemini usage today" section. **Migration not yet applied/deployed** (test-verified in the cloud mirror this pass — see the ECON-001/002 changelog entry below for why full `pytest`/`tsc` could finally be run). Needs: `alembic upgrade head`, a redeploy, and one real analysis run to confirm a row actually lands in `llm_usage_events` and the Dashboard widget renders correctly.
+- ⬜ **Macro-economic fixes ECON-001/002 (new this pass, ADR 0014)** — discount-rate/FX suggestion endpoint and regime-conditional scoring weights. **Migration not yet applied/deployed**: `alembic upgrade head` needed for the new `macro_regime` column (migration `d8f3a6b2c710`, chained onto the still-pending `c7e2f9a1b8d3`), then a redeploy of backend + frontend. Fully test-verified in the cloud mirror (289 backend tests, tsc, vite build) before writing back — see the changelog entry below.
 - yfinance/Gemini/FRED/Norges Bank were previously verified only against mocks/docs from this build environment (no network path to any of them) — a live deploy removes that excuse; worth confirming each actually works once, not just that the key is present. ADR 0004/0005/0007.
 
 **Deliberate scope limits** (not oversights — see the linked ADR if you want the reasoning):
@@ -69,7 +71,7 @@ now just "has anyone actually clicked it," not "is it blocked"):
 - [x] `GOOGLE_AI_STUDIO_API_KEY` + `FRED_API_KEY` obtained and set on Railway.
 - [x] End-to-end smoke test — Portfolio flow tested and working ("good for an alpha," per Faiz 2026-09-14). Documents/Analysis/Dashboard not yet manually exercised on the live deploy — see "Open gaps" above.
 - [ ] Live check of Phase 5's DCF critique + risk correlation (same keys as above) — not yet exercised.
-- [ ] `alembic upgrade head` for the new `llm_usage_events` table (migration `c7e2f9a1b8d3`, ADR 0013) — not yet applied anywhere.
+- [ ] `alembic upgrade head` for the new `llm_usage_events` table (migration `c7e2f9a1b8d3`, ADR 0013) and the new `analysis_runs.macro_regime` column (migration `d8f3a6b2c710`, ADR 0014) — neither applied anywhere yet; `d8f3a6b2c710` is chained onto `c7e2f9a1b8d3`, so one `alembic upgrade head` picks up both.
 
 ## Manual to-do for Faiz
 
@@ -97,30 +99,29 @@ now just "has anyone actually clicked it," not "is it blocked"):
   to `gemini-3.6-flash` (or unset it to fall back to the code default), then redeploy. Same check
   for `backend/.env` locally if you run analyses outside Railway. See ADR 0005's Update section.
 - **New, blocking for the usage ledger (ADR 0013) to do anything:** run `alembic upgrade head`
-  (new migration `c7e2f9a1b8d3` adds `llm_usage_events`) against the real Postgres, then redeploy
-  both backend (new `/usage` router, `app/services/usage`) and frontend (Dashboard's new "Gemini
-  usage today" section). Then run the full backend `pytest`/`ruff`/`mypy` and frontend
-  `tsc`/`build`/`lint` checks once `device_bash` is back — every file this pass touched (see the
-  changelog entry below) was written but never executed this session, since the mount issue meant
-  no local Python/Node was reachable to run them against.
+  against the real Postgres — this now picks up both `c7e2f9a1b8d3` (`llm_usage_events`) and
+  `d8f3a6b2c710` (`analysis_runs.macro_regime`, ADR 0014) in one pass, since the second is chained
+  onto the first — then redeploy both backend (new `/usage` router, `app/services/usage`, new
+  `/valuation/holdings/{id}/defaults` endpoint) and frontend (Dashboard's "Gemini usage today"
+  section, the new discount-rate/FX hints on the valuation-case form). Once live, run one real
+  analysis run to confirm a `llm_usage_events` row lands and `macro_regime` is populated on the
+  run, and a macro refresh + second analysis run to confirm the regime actually changes when the
+  macro reading does (ADR 0014's stagflation test only exercises this against a fake provider).
 
 ## Up next (candidates)
 
-1. **Macro-economic methodology fixes (new this pass, ADR 0014)** — a macro-economist-lens review
-   of the analysis/valuation/risk logic found: the DCF discount rate and FX conversion are
-   free-typed with no link to the risk-free/FX data the app already fetches (ECON-001);
-   regime-conditional factor weights were approved in the v3.0 architecture (§13.1) but never
-   implemented — weights are still fixed 40/30/30 (ECON-002); the macro registry has no commodity
-   price series despite a real, sector-flagged commodity-exposure risk dimension and a portfolio
-   that is meaningfully commodity-exposed (Vår Energi oil & gas, a gold mining ETF, physical
-   gold/silver) (ECON-003); no Eurozone/ECB or China series even though the research prompt asks
-   about the ECB and commodity demand is China-driven (ECON-004); the one Norway-specific series
-   (`no_policy_rate`) is explicitly self-flagged as never verified against a live API response
-   (ECON-005); and macro/FX evidence reaches the LLM as raw citations without being a required line
-   in the persona's assessment checklist, so whether it's actually used varies run to run
-   (ECON-006). Full findings, severities, and recommended fixes in **ADR 0014**. Recommended ahead
-   of Phase 9/Phase 8 below: ECON-001/002 in particular are corrections to already-approved design
-   (§13.1), not new scope.
+1. **Macro-economic methodology fixes (ADR 0014)** — a macro-economist-lens review of the
+   analysis/valuation/risk logic found seven issues; **ECON-001 and ECON-002 are now implemented**
+   (this pass — see changelog below), pending only migration + redeploy (see "Open gaps"/"Manual
+   to-do" above). Remaining, still open: the macro registry has no commodity price series despite
+   a real, sector-flagged commodity-exposure risk dimension and a portfolio that is meaningfully
+   commodity-exposed (Vår Energi oil & gas, a gold mining ETF, physical gold/silver) (ECON-003); no
+   Eurozone/ECB or China series even though the research prompt asks about the ECB and commodity
+   demand is China-driven (ECON-004); the one Norway-specific series (`no_policy_rate`) is
+   explicitly self-flagged as never verified against a live API response (ECON-005); and macro/FX
+   evidence reaches the LLM as raw citations without being a required line in the persona's
+   assessment checklist, so whether it's actually used varies run to run (ECON-006). Full findings,
+   severities, and recommended fixes in **ADR 0014**.
 2. **Document evidence quality (Phase 9)** — per-document evidence budget (fixes a
    large report getting truncated to near-zero by a smaller, more-recent upload), evidence-usage
    visibility on the Documents tab, section-aware chunk prioritization, and closing the PDF-only
@@ -151,6 +152,37 @@ now just "has anyone actually clicked it," not "is it blocked"):
 
 ### Changelog
 
+- **2026-09-14 (ECON-001/002 implemented, ADR 0014):** Faiz asked to proceed on the macro-economic
+  review's top findings. Built both:
+  (1) **ECON-001 — discount rate / FX grounding.** New versioned config
+  `discount_rate/versions/v1.yaml` (equity risk premium + per-currency risk-free method: NOK reads
+  `no_policy_rate` directly, USD combines `us_real_yield_10y` + `us_breakeven_10y`); new
+  `app/domain/discount_rate.py` (`suggest_discount_rate`/`suggest_fx_rate`, returning
+  `available: bool` + a reason rather than fabricating a number when the underlying data isn't
+  there); new `app/services/valuation/defaults.py` tying that to a specific holding's currency and
+  the reporting currency's latest `FxObservation`; new `GET
+  /valuation/holdings/{holding_id}/defaults` endpoint. Frontend: `NewValuationCaseForm` now shows a
+  "use" hint next to `discount_rate_pct` and the FX rate field, fetched on open — the suggestion is
+  displayed, never silently substituted (§21); `compute_dcf_value` itself is unchanged.
+  (2) **ECON-002 — regime-conditional factor weights.** New `scoring/versions/v2.yaml`
+  (`baseline`/`stagflation`/`crisis` weight profiles — `baseline` is byte-identical to v1's
+  40/30/30 — plus deterministic `regime_classification` thresholds read from
+  `us_real_yield_10y`/`us_headline_cpi_yoy`); `app/domain/scoring.py` gained
+  `classify_macro_regime()` (pure threshold logic, no LLM) and an optional `regime` parameter on
+  `compute_overall_score()`, defaulting to `baseline` for full backward compatibility;
+  `AnalysisRun` gained a `macro_regime` column (migration `d8f3a6b2c710`, chained onto the
+  still-pending `c7e2f9a1b8d3`); `run_analysis()` now classifies the regime from the latest macro
+  snapshot before scoring and records/returns it. `settings.active_scoring_version` moved to `v2`;
+  the now-dead `active_macro_regime_profile` setting (never read since §13.1's original approval)
+  was removed. Verified backward-compatible: with no macro refresh performed, classification falls
+  back to `baseline` and the existing `overall_score == 6.10` integration-test assertion is
+  unchanged; a new test seeds a stagflation-classifying macro snapshot and confirms both the
+  recorded regime and a different score (`5.90`). Full detail: ADR 0014's "Update" section.
+  **Verified in the cloud mirror** before writing back to `E:\Aladdin` (`device_bash` still can't
+  mount it this session): 289/289 backend tests pass (was 260 — +29 net across both fixes),
+  `ruff check .` clean, `mypy app` unchanged baseline-only errors, frontend `tsc --noEmit` clean,
+  `vite build` succeeds. **Not yet migrated or deployed** — see "Open gaps"/"Manual to-do" above.
+  ECON-003 through ECON-007 remain open findings, unchanged.
 - **2026-09-14 (Dashboard: full analysis detail per security; macro-economic review, ADR 0014):**
   Two independent asks. (1) Faiz wanted the same per-security "detail view" that appears after
   running an analysis on the Analysis tab (executive summary, business quality/financial
