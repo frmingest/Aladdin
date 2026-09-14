@@ -59,6 +59,20 @@ class PortfolioUploadResponse(BaseModel):
     snapshot: PortfolioSnapshotDetail
     warnings: list[str]
     was_duplicate_file: bool
+    # How this upload's positions relate to the previous snapshot (uploads
+    # merge on top of it by ticker rather than replacing it outright — see
+    # app.services.portfolio.ingestion).
+    new_position_count: int
+    updated_position_count: int
+    carried_forward_position_count: int
+
+
+class PortfolioResetResponse(BaseModel):
+    """Result of the irreversible full-reset (DELETE /portfolio/reset)."""
+
+    holdings_deleted: int
+    snapshots_deleted: int
+    documents_deleted: int
 
 
 class RowError(BaseModel):

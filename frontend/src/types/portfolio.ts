@@ -42,6 +42,17 @@ export type PortfolioUploadResponse = {
   snapshot: PortfolioSnapshotDetail;
   warnings: string[];
   was_duplicate_file: boolean;
+  // Uploads merge onto the previous snapshot by ticker rather than
+  // replacing it outright — see backend/app/services/portfolio/ingestion.py.
+  new_position_count: number;
+  updated_position_count: number;
+  carried_forward_position_count: number;
+};
+
+export type PortfolioResetResponse = {
+  holdings_deleted: number;
+  snapshots_deleted: number;
+  documents_deleted: number;
 };
 
 export type RowError = { row: number; message: string };

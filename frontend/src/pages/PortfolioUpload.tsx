@@ -1,16 +1,28 @@
-import { useEffect, useState } from "react";
-import { ApiError, listSnapshots, uploadPortfolio } from "../services/api";
-import type { PortfolioSnapshotDetail, PortfolioSnapshotSummary, RowError } from "../types/portfolio";
+import { useEffect, useRef, useState } from "react";
+import { ApiError, listSnapshots, resetPortfolio, uploadPortfolio } from "../services/api";
+import type {
+  PortfolioSnapshotDetail,
+  PortfolioSnapshotSummary,
+  PortfolioUploadResponse,
+  RowError,
+} from "../types/portfolio";
 
 export default function PortfolioUpload() {
   const [file, setFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [reportingCurrency, setReportingCurrency] = useState("NOK");
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<PortfolioSnapshotDetail | null>(null);
+  const [uploadStats, setUploadStats] = useState<Pick<
+    PortfolioUploadResponse,
+    "new_position_count" | "updated_position_count" | "carried_forward_position_count"
+  > | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [rowErrors, setRowErrors] = useState<RowError[] | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [snapshots, setSnapshots] = useState<PortfolioSnapshotSummary[]>([]);
+  const [resetting, setResetting] = useState(false);
+  const [resetMessage, setResetMessage] = useState<string | null>(null);
 
   const refreshSnapshots = () => {
     listSnapshots()
@@ -26,15 +38,27 @@ export default function PortfolioUpload() {
 
     setSubmitting(true);
     setResult(null);
+    setUploadStats(null);
     setWarnings([]);
     setRowErrors(null);
     setErrorMessage(null);
+    setResetMessage(null);
 
     try {
       const response = await uploadPortfolio(file, reportingCurrency);
       setResult(response.snapshot);
+      setUploadStats({
+        new_position_count: response.new_position_count,
+        updated_position_count: response.updated_position_count,
+        carried_forward_position_count: response.carried_forward_position_count,
+      });
       setWarnings(response.warnings);
       refreshSnapshots();
+      // Clear the picked file so the input is ready for the next upload —
+      // uploads are additive (merged onto the current portfolio by ticker),
+      // so adding another file is the normal next action, not a re-upload.
+      setFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     } catch (err) {
       if (err instanceof ApiError && err.detail && typeof err.detail === "object" && "row_errors" in (err.detail as object)) {
         const detail = err.detail as { message: string; row_errors: RowError[] };
@@ -50,14 +74,59 @@ export default function PortfolioUpload() {
     }
   }
 
+  async function handleResetAll() {
+    const confirmed = window.confirm(
+      "Delete ALL portfolio data? This permanently removes every holding, snapshot, uploaded file, " +
+        "and any analysis/thesis/valuation data derived from them. This cannot be undone.",
+    );
+    if (!confirmed) return;
+
+    setResetting(true);
+    setResetMessage(null);
+    setErrorMessage(null);
+    try {
+      const response = await resetPortfolio();
+      setResult(null);
+      setUploadStats(null);
+      setWarnings([]);
+      setRowErrors(null);
+      setFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      setResetMessage(
+        `Deleted ${response.holdings_deleted} holding(s), ${response.snapshots_deleted} snapshot(s), ` +
+          `and ${response.documents_deleted} uploaded file(s).`,
+      );
+      refreshSnapshots();
+    } catch {
+      setErrorMessage("Reset failed — could not reach the backend.");
+    } finally {
+      setResetting(false);
+    }
+  }
+
   return (
     <div className="space-y-8">
       <section>
-        <h2 className="text-lg font-semibold mb-3">Upload portfolio (CSV/XLSX)</h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-semibold">Upload portfolio (CSV/XLSX)</h2>
+          <button
+            type="button"
+            onClick={handleResetAll}
+            disabled={resetting || submitting}
+            className="text-red-400 hover:text-red-300 disabled:opacity-40 disabled:cursor-not-allowed border border-red-900 hover:border-red-700 rounded px-3 py-1 text-xs font-medium"
+          >
+            {resetting ? "Deleting…" : "Delete all data"}
+          </button>
+        </div>
+        <p className="text-xs text-slate-500 mb-3">
+          Each upload adds to your current portfolio — a ticker in the new file replaces its old row,
+          and any ticker not in the new file is kept as-is. Use "Delete all data" to start over from scratch.
+        </p>
         <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-3">
           <div>
             <label className="block text-sm text-slate-400 mb-1">Portfolio file</label>
             <input
+              ref={fileInputRef}
               type="file"
               accept=".csv,.xlsx"
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
@@ -83,6 +152,7 @@ export default function PortfolioUpload() {
           </button>
         </form>
 
+        {resetMessage && <p className="text-emerald-400 text-sm mt-3">{resetMessage}</p>}
         {errorMessage && <p className="text-red-400 text-sm mt-3">{errorMessage}</p>}
         {rowErrors && (
           <ul className="text-red-400 text-sm mt-2 list-disc list-inside">
@@ -105,6 +175,13 @@ export default function PortfolioUpload() {
           <div className="mt-4 overflow-x-auto">
             <p className="text-sm text-slate-400 mb-2">
               Snapshot {result.id.slice(0, 8)} — {result.status} — {result.positions.length} position(s)
+              {uploadStats && (
+                <>
+                  {" "}
+                  ({uploadStats.new_position_count} new, {uploadStats.updated_position_count} updated,{" "}
+                  {uploadStats.carried_forward_position_count} carried forward)
+                </>
+              )}
             </p>
             <table className="w-full text-sm border-collapse">
               <thead>

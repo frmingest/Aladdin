@@ -22,12 +22,14 @@ from app.schemas.portfolio import (
     HoldingOut,
     HoldingUpdate,
     PortfolioPositionOut,
+    PortfolioResetResponse,
     PortfolioSnapshotDetail,
     PortfolioSnapshotSummary,
     PortfolioUploadResponse,
 )
 from app.services.market_data.valuation import refresh_and_value_snapshot
 from app.services.portfolio.ingestion import ingest_portfolio_upload
+from app.services.portfolio.reset import reset_all_portfolio_data
 
 router = APIRouter(prefix="/portfolio", tags=["portfolio"])
 
@@ -103,6 +105,29 @@ async def upload_portfolio(
         snapshot=_snapshot_to_detail(result.snapshot),
         warnings=result.warnings,
         was_duplicate_file=result.was_duplicate_file,
+        new_position_count=result.new_position_count,
+        updated_position_count=result.updated_position_count,
+        carried_forward_position_count=result.carried_forward_position_count,
+    )
+
+
+@router.delete("/reset", response_model=PortfolioResetResponse)
+def reset_portfolio(confirm: bool = False, db: Session = Depends(get_db)) -> PortfolioResetResponse:
+    """Wipes every holding, snapshot, and uploaded portfolio file, plus every
+    document/financial-fact/market-observation/thesis/valuation-case/
+    analysis-run/risk-snapshot derived from them — a full, irreversible
+    reset back to an empty portfolio. Requires `?confirm=true` so this can
+    never fire from an accidental DELETE with no query string."""
+    if not confirm:
+        raise HTTPException(
+            status_code=400,
+            detail="pass ?confirm=true to confirm this irreversible full reset",
+        )
+    result = reset_all_portfolio_data(db)
+    return PortfolioResetResponse(
+        holdings_deleted=result.holdings_deleted,
+        snapshots_deleted=result.snapshots_deleted,
+        documents_deleted=result.documents_deleted,
     )
 
 

@@ -11,6 +11,7 @@
 
 import type {
   Holding,
+  PortfolioResetResponse,
   PortfolioSnapshotDetail,
   PortfolioSnapshotSummary,
   PortfolioUploadResponse,
@@ -73,6 +74,12 @@ export function uploadPortfolio(
 
 export function getSnapshot(id: string): Promise<PortfolioSnapshotDetail> {
   return apiFetch(`/portfolio/snapshots/${id}`);
+}
+
+// Irreversible: wipes every holding, snapshot, uploaded file, and everything
+// derived from them (see backend/app/services/portfolio/reset.py).
+export function resetPortfolio(): Promise<PortfolioResetResponse> {
+  return apiFetch("/portfolio/reset?confirm=true", { method: "DELETE" });
 }
 
 export function listDocuments(holdingId?: string): Promise<DocumentSummary[]> {
