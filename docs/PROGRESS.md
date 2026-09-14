@@ -4,20 +4,25 @@ What's built, what's not, and where the detail lives. Build phases are architect
 reasoning behind each phase's choices lives in [`docs/decisions/`](decisions/) (ADRs). This file
 tracks status — update it and the relevant ADR together when something changes.
 
-**Status:** Phases 0–6 done, Phase 7 (deployment hardening) code-complete but not deployed
-anywhere, Phase 8 (alternative assets) planned. Nothing has been committed to git since Phase 0 —
-all later work sits directly in `E:\Aladdin`, uncommitted. Last verified 2026-09-14: 260 backend
-tests / ruff / tsc / vite build all clean; `npm run lint` still fails (known gap below).
+**Status:** Phases 0–7 done and **deployed to Railway (production)** — backend + frontend both
+online, keys set, Faiz has smoke-tested the Portfolio flow (accounts, CSV/XLSX upload, snapshots)
+successfully. Phase 8 (alternative assets) planned. Documents/Analysis/Dashboard/research/risk
+haven't been manually exercised on the live deploy yet — see "Open gaps" below. Whether the deployed
+code is committed to git is unconfirmed (see "Manual to-do" below). Last full test-suite run
+2026-09-14: 260 backend tests / ruff / tsc / vite build all clean; `npm run lint` still fails
+(known gap below).
 
 ---
 
 ## Open gaps
 
-**Needs Faiz's keys/accounts/hardware to move further** (all code-complete on this side, only
-live verification is missing):
-- Real API keys not yet set: `GOOGLE_AI_STUDIO_API_KEY` ([get one](https://aistudio.google.com/apikey)) and `FRED_API_KEY` ([get one](https://fred.stlouisfed.org/docs/api/api_key.html)) — analysis and macro refresh fail immediately without them.
-- No live smoke test yet against yfinance, Gemini, FRED, or Norges Bank — all verified only against mocks/docs so far (this build environment has no network path to any of them). ADR 0004/0005/0007.
-- No real deploy — Railway project, Supabase/Postgres, R2/Supabase bucket, `docker build` all still need Faiz's own accounts/machine. See "Deployment checklist" below.
+**Deployed, but not all of it manually exercised yet** (keys are set and the app is live — this is
+now just "has anyone actually clicked it," not "is it blocked"):
+- ✅ Portfolio flow (accounts, CSV/XLSX upload, snapshots) — Faiz smoke-tested 2026-09-14, working "good for an alpha."
+- ⬜ AI analysis (Gemini) — key is set on Railway, but no confirmed run against the live deploy yet.
+- ⬜ Macro/sector research (FRED + Norges Bank) — `FRED_API_KEY` is set, but no confirmed refresh against the live deploy yet.
+- ⬜ Portfolio risk snapshots, DCF valuation + critique, document upload — not yet exercised on the live deploy per Faiz's update.
+- yfinance/Gemini/FRED/Norges Bank were previously verified only against mocks/docs from this build environment (no network path to any of them) — a live deploy removes that excuse; worth confirming each actually works once, not just that the key is present. ADR 0004/0005/0007.
 
 **Deliberate scope limits** (not oversights — see the linked ADR if you want the reasoning):
 - PDF/PPT are read as qualitative LLM text, not structured facts — XLSX-only for that (ADR 0006).
@@ -45,28 +50,42 @@ live verification is missing):
 
 ## Deployment checklist (Railway)
 
-Phase 7 closed every code-level item (Dockerfiles, CORS, single-user auth, durable object storage,
-migrations-on-boot — ADR 0010). Everything left needs Faiz's own accounts/hardware:
+**Live in production** as of 2026-09-14: backend + frontend both "Online" on Railway
+(`exciting-gratitude-production-*.up.railway.app`), 13 service variables set including
+`DATABASE_URL`, `GOOGLE_AI_STUDIO_API_KEY`, `FRED_API_KEY`, `APP_AUTH_TOKEN`, and the full
+`OBJECT_STORAGE_*` set. Frontend shows "BACKEND OK."
 
-- [x] Object storage provider (`S3ObjectStorageProvider`, R2/Supabase) — code done, untested against a real bucket.
+- [x] Object storage provider (`S3ObjectStorageProvider`, R2/Supabase) — env vars set on Railway; not yet confirmed with a real upload/retrieve on the live deploy.
 - [x] CORS middleware.
-- [x] Backend + frontend Dockerfiles — code done, never actually `docker build`'d (needs Faiz's WSL2/Docker Desktop).
+- [x] Backend + frontend Dockerfiles — these are presumably what Railway built from (Railway supports building from a Dockerfile directly, without a separate local `docker build`).
 - [x] Single-user auth (`APP_AUTH_TOKEN`/`X-API-Key`) on every router except `/health`.
-- [ ] Supabase `DATABASE_URL` + `alembic upgrade head` against real Postgres.
-- [ ] Railway project + env vars set.
-- [ ] `GOOGLE_AI_STUDIO_API_KEY` + `FRED_API_KEY` obtained and set.
-- [ ] End-to-end smoke test on the deployed instance.
-- [ ] Live check of Phase 5's DCF critique + risk correlation (same keys as above).
+- [x] Supabase `DATABASE_URL` set + app is reading/writing through it — Faiz confirms Supabase is up; the working Portfolio flow (uploads persisting, snapshot history listing) is itself evidence `alembic upgrade head` applied cleanly.
+- [x] Railway project + env vars set — confirmed via the Variables screen (13 service variables).
+- [x] `GOOGLE_AI_STUDIO_API_KEY` + `FRED_API_KEY` obtained and set on Railway.
+- [x] End-to-end smoke test — Portfolio flow tested and working ("good for an alpha," per Faiz 2026-09-14). Documents/Analysis/Dashboard not yet manually exercised on the live deploy — see "Open gaps" above.
+- [ ] Live check of Phase 5's DCF critique + risk correlation (same keys as above) — not yet exercised.
 
 ## Manual to-do for Faiz
 
-- Exercise the new thesis/valuation forms once in the running app (create, change status, expand critique) — needs your own eyes on it.
-- Git commit — everything since Phase 0 (through today's `calculations.py` fix) is still uncommitted.
+- Exercise the new thesis/valuation forms, document upload, and an AI analysis run once on the live
+  deploy (create a thesis, change status, expand critique; upload a document; run an analysis) —
+  the Portfolio tab is confirmed working, these aren't yet.
+- **Git commit — status unclear, worth double-checking.** Railway's dashboard shows the services
+  connected to GitHub repos (icons for "exciting-gratitude" and "Aladdin" under a GitHub-style
+  connection). If Railway is set to auto-deploy from a GitHub repo, then yes — the running code was
+  pushed to GitHub to get there, and this item is effectively done (though it's worth confirming
+  today's `calculations.py` fix specifically made it in, since that was written directly to
+  `E:\Aladdin` afterward and may not be in whatever commit Railway last deployed). If instead
+  Railway was deployed via `railway up`/CLI from local files, that uploads whatever's on disk
+  regardless of git status, and this item is still open — a live deploy isn't itself proof of a git
+  commit. Quickest way to check: `git status`/`git log` in `E:\Aladdin`, or look at which commit
+  Railway's Deployments tab says it last built from. Committing matters regardless of deploy
+  method — it's your rollback point and history, independent of whether Railway has a copy.
 - Optional: add `pandas-stubs`/`types-openpyxl` + a `mypy.ini` override for the untyped-import stub gaps above.
 
 ## Up next (candidates)
 
-1. **Track-record & calibration engine** (§22.5) — best done after a real deploy exists to calibrate against.
+1. **Track-record & calibration engine** (§22.5) — a real deploy now exists, but it still needs weeks of live analysis history to have anything to calibrate against.
 2. **Testing debt** — populate `golden_documents`/`regression`, add `black` + `eslint.config.js`.
 3. **Precious metals** (Phase 8) — `COMMODITY` asset class, dated lots, manual single-holding entry, gold-api.com spot pricing. Design in ADR 0011.
 4. **Whisky collection** (Phase 8) — manual CSV import (Whiskybase export format), carried at cost basis since no live pricing feed exists. Needs a real sample export from Faiz first. Design in ADR 0011.
@@ -86,10 +105,17 @@ migrations-on-boot — ADR 0010). Everything left needs Faiz's own accounts/hard
 | 4 — External research | ✅ Done | FRED + Norges Bank macro data, Gemini+Search grounding for macro/sector research, APScheduler background refresh. ADR 0007. |
 | 5 — Thesis & portfolio intelligence | ✅ Done | Thesis ledger with invalidation checks, DCF valuation engine, scenario-impact engine, portfolio risk snapshots (concentration, correlation, systemic/state risk, wealth tax). ADR 0008. |
 | 6 — Visualization | ✅ Done | Dashboard tab covering every §19 visualization, built entirely on Phase 1–5 endpoints. ADR 0009. |
-| 7 — Deployment & production hardening | 🟡 Code done, not deployed | Dockerfiles, CORS, single-user auth, durable object storage, migrations-on-boot. ADR 0010. |
+| 7 — Deployment & production hardening | ✅ Done — live on Railway | Dockerfiles, CORS, single-user auth, durable object storage, migrations-on-boot. Deployed to production 2026-09-14; Portfolio flow smoke-tested. ADR 0010. |
 
 ### Changelog
 
+- **2026-09-14 (deployed):** Faiz deployed backend + frontend to Railway (production) — both
+  services "Online," `BACKEND OK` shown in the frontend header, 13 service variables set
+  (`DATABASE_URL`/Supabase, `GOOGLE_AI_STUDIO_API_KEY`, `FRED_API_KEY`, `APP_AUTH_TOKEN`,
+  `OBJECT_STORAGE_*`, etc.). Smoke-tested the Portfolio tab: accounts, CSV/XLSX upload, and
+  snapshot history all working. Phase 7 marked done. Documents/Analysis/Dashboard/research/risk
+  not yet manually exercised on the live deploy; whether the deployed code is committed to git is
+  unconfirmed (see "Manual to-do" above).
 - **2026-09-14 (verification pass):** Reviewed this file with Faiz and addressed known gaps before
   further development. Ran the frontend `tsc`/`build`/`lint` and full backend `pytest`/`ruff`/`mypy`
   checks that had never been run after the data-entry pass below (via the cloud-mirror workaround —
