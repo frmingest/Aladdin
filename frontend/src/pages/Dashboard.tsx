@@ -45,6 +45,7 @@ export default function Dashboard() {
             {snapshots.map((s) => (
               <option key={s.id} value={s.id}>
                 {new Date(s.uploaded_at).toLocaleString()} — {s.position_count} position(s)
+                {s.account_name ? ` — upload: ${s.account_name}` : ""}
               </option>
             ))}
           </select>

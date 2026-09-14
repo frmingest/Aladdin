@@ -7,6 +7,24 @@ export type Holding = {
   trading_currency: string;
 };
 
+// A real-world custody/brokerage account an upload can be tagged with (§26
+// accounts feature) — see backend/app/models/account.py.
+export type Account = {
+  id: string;
+  name: string;
+  account_number: string;
+  institution: string | null;
+  created_at: string;
+};
+
+export type AccountCreate = {
+  name: string;
+  account_number: string;
+  institution?: string | null;
+};
+
+export type AccountUpdate = Partial<AccountCreate>;
+
 export type PortfolioPosition = {
   holding_id: string;
   ticker: string;
@@ -23,6 +41,8 @@ export type PortfolioPosition = {
   cost_basis: string | null;
   cost_basis_currency: string | null;
   notes: string | null;
+  account_id: string | null;
+  account_name: string | null;
 };
 
 export type PortfolioSnapshotSummary = {
@@ -32,6 +52,8 @@ export type PortfolioSnapshotSummary = {
   reporting_currency: string;
   status: string;
   position_count: number;
+  account_id: string | null;
+  account_name: string | null;
 };
 
 export type PortfolioSnapshotDetail = PortfolioSnapshotSummary & {

@@ -10,6 +10,9 @@
  */
 
 import type {
+  Account,
+  AccountCreate,
+  AccountUpdate,
   Holding,
   PortfolioResetResponse,
   PortfolioSnapshotDetail,
@@ -20,8 +23,8 @@ import type { DocumentDetail, DocumentSummary, DocumentUploadResponse } from "..
 import type { AnalysisRunDetail, HoldingAnalysisDetail, HoldingAnalysisSummary } from "../types/analysis";
 import type { PortfolioValuationOut } from "../types/market_valuation";
 import type { PortfolioRiskSnapshotOut } from "../types/portfolio_risk";
-import type { InvalidationSignalOut, ThesisOut } from "../types/thesis";
-import type { ValuationCaseOut } from "../types/dcf";
+import type { InvalidationSignalOut, ThesisCreate, ThesisOut, ThesisUpdate } from "../types/thesis";
+import type { ValuationCaseCreate, ValuationCaseOut } from "../types/dcf";
 import type { MacroSnapshotOut, ResearchRunOut, SectorResearchOut } from "../types/research";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "/api";
@@ -51,25 +54,56 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
     const body = await response.json().catch(() => null);
     throw new ApiError(response.status, body?.detail ?? body);
   }
+  if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
 }
 
-export function listHoldings(): Promise<Holding[]> {
-  return apiFetch("/portfolio/holdings");
+export function listHoldings(accountId?: string): Promise<Holding[]> {
+  const qs = accountId ? `?account_id=${encodeURIComponent(accountId)}` : "";
+  return apiFetch(`/portfolio/holdings${qs}`);
 }
 
-export function listSnapshots(): Promise<PortfolioSnapshotSummary[]> {
-  return apiFetch("/portfolio/snapshots");
+export function listSnapshots(accountId?: string): Promise<PortfolioSnapshotSummary[]> {
+  const qs = accountId ? `?account_id=${encodeURIComponent(accountId)}` : "";
+  return apiFetch(`/portfolio/snapshots${qs}`);
 }
 
 export function uploadPortfolio(
   file: File,
   reportingCurrency?: string,
+  accountId?: string,
 ): Promise<PortfolioUploadResponse> {
   const form = new FormData();
   form.append("file", file);
   if (reportingCurrency) form.append("reporting_currency", reportingCurrency);
+  if (accountId) form.append("account_id", accountId);
   return apiFetch("/portfolio/upload", { method: "POST", body: form });
+}
+
+// --- Accounts (§26 accounts feature) ----------------------------------------
+
+export function listAccounts(): Promise<Account[]> {
+  return apiFetch("/accounts");
+}
+
+export function createAccount(body: AccountCreate): Promise<Account> {
+  return apiFetch("/accounts", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+export function updateAccount(id: string, body: AccountUpdate): Promise<Account> {
+  return apiFetch(`/accounts/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+export function deleteAccount(id: string): Promise<void> {
+  return apiFetch(`/accounts/${id}`, { method: "DELETE" });
 }
 
 export function getSnapshot(id: string): Promise<PortfolioSnapshotDetail> {
@@ -160,6 +194,22 @@ export function listHoldingTheses(holdingId: string): Promise<ThesisOut[]> {
   return apiFetch(`/thesis/holdings/${holdingId}`);
 }
 
+export function createHoldingThesis(holdingId: string, body: ThesisCreate): Promise<ThesisOut> {
+  return apiFetch(`/thesis/holdings/${holdingId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+export function updateThesis(thesisId: string, body: ThesisUpdate): Promise<ThesisOut> {
+  return apiFetch(`/thesis/${thesisId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
 export function getInvalidationCheck(thesisId: string): Promise<InvalidationSignalOut> {
   return apiFetch(`/thesis/${thesisId}/invalidation-check`);
 }
@@ -168,6 +218,17 @@ export function getInvalidationCheck(thesisId: string): Promise<InvalidationSign
 
 export function listHoldingValuationCases(holdingId: string): Promise<ValuationCaseOut[]> {
   return apiFetch(`/valuation/holdings/${holdingId}/cases`);
+}
+
+export function createHoldingValuationCase(
+  holdingId: string,
+  body: ValuationCaseCreate,
+): Promise<ValuationCaseOut> {
+  return apiFetch(`/valuation/holdings/${holdingId}/cases`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
 }
 
 // --- Phase 4 — external research (§9) ---------------------------------------
