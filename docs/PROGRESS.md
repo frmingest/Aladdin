@@ -35,6 +35,7 @@ now just "has anyone actually clicked it," not "is it blocked"):
 - ⬜ **Macro-economic fixes ECON-001/002 (ADR 0014)** — discount-rate/FX suggestion endpoint and regime-conditional scoring weights. **Migration not yet applied/deployed**: `alembic upgrade head` needed for the new `macro_regime` column (migration `d8f3a6b2c710`, chained onto the still-pending `c7e2f9a1b8d3`), then a redeploy of backend + frontend. Fully test-verified in the cloud mirror before writing back — see the changelog entry below.
 - ⬜ **Macro-economic fixes ECON-003/004/006 (new this pass, ADR 0014)** — commodity (WTI/Brent oil) + Eurozone/China macro series (`research/versions/v2.yaml`), and an explicit macro/FX checklist item in the analysis persona (`prompts/persona/v2.md` + a matching `prompts/synthesis/v2.md`). **No migration needed** — just a redeploy to pick up the new `settings.active_macro_series_version="v2"` / `active_prompt_version="v2"` defaults. Fully test-verified in the cloud mirror (297 backend tests, ruff, mypy, tsc, vite build) before writing back — see the changelog entry below. ECON-005 (Norway rate) attempted this pass but still unverifiable from any tool available in this environment — see ADR 0014's second Update section for exactly what was tried and the fastest real path forward.
 - yfinance/Gemini/FRED/Norges Bank were previously verified only against mocks/docs from this build environment (no network path to any of them) — a live deploy removes that excuse; worth confirming each actually works once, not just that the key is present. ADR 0004/0005/0007.
+- ⬜ **Portfolio composition Total value/Unrealized P&L still implausible (new this pass)** — fixed the confirmed `single_name_weights` bug (see changelog), but Total value/Unrealized P&L are still ~13-17x too high versus Faiz's real Nordnet portfolio report and don't trace to any bug found in the valuation/FX/parsing code. Needs Faiz to open the Portfolio tab's Market Tickers panel and check each `market_ticker` against Yahoo Finance, starting with the two gold-linked instruments (L&G Gold Mining ETF, Xetra-Gold ETC) — most likely a wrong share class or a futures/spot symbol instead of the fund's actual ticker. Couldn't be verified from this session: no route to the Supabase Postgres port, no known deployed API URL, and `device_bash` down.
 
 **Deliberate scope limits** (not oversights — see the linked ADR if you want the reasoning):
 - PDF/PPT are read as qualitative LLM text, not structured facts — XLSX-only for that (ADR 0006). **`FACTS: 0` on a processed PDF/PPT document is expected, not a failure** — see ADR 0012 for what value that document actually delivers instead (document-chunk evidence at analysis time) and where that pipeline currently falls short.
@@ -188,6 +189,38 @@ now just "has anyone actually clicked it," not "is it blocked"):
 
 ### Changelog
 
+- **2026-09-14 (Portfolio composition — false total value/P&L, dashboard):** Faiz reported the
+  Dashboard's Portfolio composition showing an obviously wrong Total value (~13.9M NOK vs. ~1.04M
+  NOK on his real Nordnet portfolio report) and a huge fake Unrealized P&L, plus "By sector"
+  showing 100% Unclassified and "By currency" skewed almost entirely to EUR. Root-caused two
+  separate things:
+  1. **Confirmed code bug, fixed** — `app/services/market_data/valuation.py::_build_concentration`
+     built `single_name_weights` as `{hv.ticker: hv.computed_weight_pct for hv in valued}`. Since
+     the same instrument legitimately sits in more than one account (the accounts feature's own
+     design note — e.g. "Vår Energi" in both Ezra's ASK and Malik Faiz's ASK, "Salmon Evolution"
+     likewise, "L&G Gold Mining ETF" in both Ezra's ASK and EPK Passiv), a later position for a
+     ticker silently clobbered an earlier one in that dict instead of being combined, corrupting
+     "By holding" and `largest_single_name_pct`/`single_name_hhi`. Fixed by summing market value
+     per ticker first (same pattern already used for sector/currency/asset-class weights just
+     below it), then converting to weights — no change to the total/denominator each weight is
+     measured against. `device_bash` still can't mount `E:\Aladdin` this session (same
+     Windows-update regression as prior passes), so this went through the stage → edit →
+     commit-back path; only `valuation.py` was touched.
+  2. **Not yet root-caused — needs Faiz to check** — the ~13-17x inflation in Total value/Unrealized
+     P&L itself doesn't trace to the composition/weighting math (audited `domain/calculations.py`'s
+     FX/P&L functions and the parser's number handling — both look correct), and isn't explained by
+     a duplicated-position bug either (the "By holding" chart shows exactly the 6 real instruments
+     from Faiz's report, no phantom extras). The likely cause is a wrong/mismatched `market_ticker`
+     (Yahoo Finance symbol) on one or more holdings — most likely the two gold-linked instruments
+     (L&G Gold Mining ETF, Xetra-Gold ETC), since gold ETPs/ETCs are a common source of ticker
+     mix-ups (wrong share class, or a futures/spot-gold symbol instead of the actual fund) and they
+     make up roughly half of Faiz's valued portfolio by weight — which would explain both the scale
+     of the inflation and the all-EUR currency skew better than any other candidate. Couldn't
+     verify directly this pass: Postgres (Supabase) isn't reachable from this cloud session (no
+     route to port 5432), there's no known deployed API URL to query over HTTPS, and `device_bash`
+     is down. **Also noted, not a bug:** "By sector" shows 100% Unclassified because Nordnet-format
+     uploads never carry a sector column (`parser.py::_rows_from_nordnet` hardcodes
+     `"sector": ""`) — expected given the current importer, not something this pass changed.
 - **2026-09-14 (Portfolio tab: self-serve market ticker UI):** Faiz reported the dashboard always
   showing 0 NOK / "no market value available" for every holding, even after repeatedly clicking
   "Refresh valuation." Traced it to `app/services/market_data/valuation.py::_value_one_holding`:

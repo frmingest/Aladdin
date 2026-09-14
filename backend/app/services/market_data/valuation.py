@@ -304,8 +304,27 @@ def _build_concentration(valuations: list[HoldingValuation], warnings: list[str]
     valued = [hv for hv in valuations if hv.computed_weight_pct is not None]
     excluded = [hv.ticker for hv in valuations if hv.computed_weight_pct is None]
 
-    single_name_weights: dict[str, Decimal] = {
-        hv.ticker: hv.computed_weight_pct for hv in valued if hv.computed_weight_pct is not None
+    # Grouped by ticker rather than taken straight from computed_weight_pct:
+    # the same instrument legitimately sits in more than one account (e.g.
+    # "Vår Energi" in both Ezra's ASK and Malik Faiz's ASK — see
+    # app.services.portfolio.ingestion's module docstring), so `valued` can
+    # contain several HoldingValuation entries that share a ticker. A plain
+    # `{hv.ticker: hv.computed_weight_pct for hv in valued}` dict comprehension
+    # silently let the last position for a given ticker clobber every earlier
+    # one instead of combining them, understating (or, depending on
+    # iteration order, wildly overstating relative to what should have been
+    # the largest slice) that instrument's true weight in "By holding" and in
+    # largest_single_name_pct/single_name_hhi. Summing market value per
+    # ticker first — the same pattern already used for sector/currency/
+    # asset-class below — fixes that without changing the total each
+    # weight is measured against (still every valued position's market
+    # value, matching _apply_computed_weights).
+    single_name_values: dict[str, Decimal] = defaultdict(lambda: Decimal("0"))
+    for hv in valued:
+        if hv.market_value_reporting_ccy is not None:
+            single_name_values[hv.ticker] += hv.market_value_reporting_ccy
+    single_name_weights = {
+        k: _quantize_pct(v) for k, v in calc.weights_by_group(dict(single_name_values)).items()
     }
     single_name_hhi = calc.quantize(calc.herfindahl_hirschman_index(list(single_name_weights.values())))
     largest = calc.largest_weight_pct(list(single_name_weights.values()))
