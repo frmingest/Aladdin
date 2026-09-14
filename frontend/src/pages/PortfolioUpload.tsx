@@ -4,12 +4,15 @@ import {
   createAccount,
   deleteAccount,
   listAccounts,
+  listHoldings,
   listSnapshots,
   resetPortfolio,
+  updateHoldingMarketTicker,
   uploadPortfolio,
 } from "../services/api";
 import type {
   Account,
+  Holding,
   PortfolioSnapshotDetail,
   PortfolioSnapshotSummary,
   PortfolioUploadResponse,
@@ -165,6 +168,145 @@ function AccountsSection({
   );
 }
 
+/**
+ * Every holding uploaded from a Nordnet export (decision 0003) starts with
+ * `market_ticker` unset — Nordnet's export has no exchange ticker column, so
+ * `ticker` is the full instrument name instead, which the Phase 2 market-data
+ * layer (yfinance) can't price directly (app/services/market_data/valuation.py
+ * skips any holding with no market_ticker and excludes it from totals rather
+ * than guess — §21). This section is the self-serve fix: it lists every
+ * holding and lets you set the real Yahoo-Finance-resolvable symbol, so
+ * "Refresh valuation" on the dashboard has something to price.
+ */
+function MarketTickersSection() {
+  const [holdings, setHoldings] = useState<Holding[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [savingId, setSavingId] = useState<string | null>(null);
+  const [savedId, setSavedId] = useState<string | null>(null);
+  const [errorId, setErrorId] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const refresh = () => {
+    setLoading(true);
+    listHoldings()
+      .then((hs) => {
+        setHoldings(hs);
+        setDrafts(Object.fromEntries(hs.map((h) => [h.id, h.market_ticker ?? ""])));
+      })
+      .catch(() => undefined)
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(refresh, []);
+
+  async function handleSave(holding: Holding) {
+    const value = (drafts[holding.id] ?? "").trim();
+    setSavingId(holding.id);
+    setSavedId(null);
+    setErrorId(null);
+    setErrorMessage(null);
+    try {
+      const updated = await updateHoldingMarketTicker(holding.id, value || null);
+      setHoldings((prev) => prev.map((h) => (h.id === holding.id ? updated : h)));
+      setDrafts((prev) => ({ ...prev, [holding.id]: updated.market_ticker ?? "" }));
+      setSavedId(holding.id);
+      window.setTimeout(() => setSavedId((cur) => (cur === holding.id ? null : cur)), 2000);
+    } catch (err) {
+      setErrorId(holding.id);
+      setErrorMessage(
+        err instanceof ApiError ? String(err.detail ?? err.message) : "Could not save market ticker.",
+      );
+    } finally {
+      setSavingId(null);
+    }
+  }
+
+  const unpricedCount = holdings.filter((h) => !h.market_ticker).length;
+
+  return (
+    <section className="terminal-card">
+      <h2 className="terminal-card-title mb-2">Market data tickers</h2>
+      <p className="text-xs text-tertiary mb-3">
+        A Nordnet export has no exchange ticker, so the instrument's full name is stored as the
+        holding's ticker instead — the dashboard can't price a holding, and it's excluded from
+        Composition/Risk totals, until you give it a real market symbol here. Look it up on{" "}
+        <a
+          href="https://finance.yahoo.com"
+          target="_blank"
+          rel="noreferrer"
+          className="underline"
+        >
+          finance.yahoo.com
+        </a>{" "}
+        — e.g. <code>VAR.OL</code> for Oslo Børs, <code>XDEF.DE</code> for Xetra,{" "}
+        <code>AUCO.L</code> for London. Leave it blank and save to clear a symbol.
+      </p>
+      {!loading && holdings.length > 0 && unpricedCount > 0 && (
+        <p className="text-warning text-sm mb-3">
+          {unpricedCount} of {holdings.length} holding(s) have no market ticker set yet.
+        </p>
+      )}
+      {loading ? (
+        <p className="text-tertiary text-sm">Loading holdings…</p>
+      ) : holdings.length === 0 ? (
+        <p className="text-tertiary text-sm">No holdings yet — upload a portfolio file below first.</p>
+      ) : (
+        <div className="terminal-table-wrapper">
+          <table className="terminal-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Uploaded ticker</th>
+                <th>Currency</th>
+                <th>Market ticker</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {holdings.map((h) => {
+                const draft = drafts[h.id] ?? "";
+                const dirty = draft.trim() !== (h.market_ticker ?? "");
+                return (
+                  <tr key={h.id}>
+                    <td className="primary">{h.name}</td>
+                    <td>{h.ticker}</td>
+                    <td>{h.trading_currency}</td>
+                    <td>
+                      <input
+                        type="text"
+                        value={draft}
+                        onChange={(e) =>
+                          setDrafts((prev) => ({ ...prev, [h.id]: e.target.value }))
+                        }
+                        placeholder="e.g. VAR.OL"
+                        className="input-terminal w-32"
+                      />
+                    </td>
+                    <td style={{ textAlign: "right" }}>
+                      <button
+                        type="button"
+                        onClick={() => handleSave(h)}
+                        disabled={savingId === h.id || !dirty}
+                        className="btn-terminal btn-terminal-primary text-xs px-3 py-1"
+                      >
+                        {savingId === h.id ? "Saving…" : savedId === h.id && !dirty ? "Saved" : "Save"}
+                      </button>
+                      {errorId === h.id && errorMessage && (
+                        <div className="text-negative text-xs mt-1">{errorMessage}</div>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+
 export default function PortfolioUpload() {
   const [file, setFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -284,6 +426,8 @@ export default function PortfolioUpload() {
   return (
     <div className="space-y-8">
       <AccountsSection accounts={accounts} onChanged={refreshAccounts} />
+
+      <MarketTickersSection />
 
       <section className="terminal-card">
         <div className="terminal-card-header">

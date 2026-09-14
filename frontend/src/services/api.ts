@@ -68,6 +68,17 @@ export function listHoldings(accountIds?: string[]): Promise<Holding[]> {
   return apiFetch(`/portfolio/holdings${accountIdsQuery(accountIds)}`);
 }
 
+// Sets a holding's market_ticker (§26 Phase 2) — required before it can be
+// priced by "Refresh valuation"; see the "Market data tickers" section of
+// the Portfolio tab. Passing null/empty clears it back to unset.
+export function updateHoldingMarketTicker(holdingId: string, marketTicker: string | null): Promise<Holding> {
+  return apiFetch(`/portfolio/holdings/${holdingId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ market_ticker: marketTicker }),
+  });
+}
+
 export function listSnapshots(accountId?: string): Promise<PortfolioSnapshotSummary[]> {
   const qs = accountId ? `?account_id=${encodeURIComponent(accountId)}` : "";
   return apiFetch(`/portfolio/snapshots${qs}`);

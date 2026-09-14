@@ -5,6 +5,13 @@ export type Holding = {
   asset_class: string;
   sector: string | null;
   trading_currency: string;
+  // The Yahoo-Finance-resolvable symbol the Phase 2 market-data layer prices
+  // this holding by (e.g. "VAR.OL") — distinct from `ticker` above, which is
+  // the full instrument name for a Nordnet-imported holding (decision 0003)
+  // and can't be priced directly. Null until set via PATCH
+  // /portfolio/holdings/{id} — see the "Market data tickers" section of the
+  // Portfolio tab.
+  market_ticker: string | null;
 };
 
 // A real-world custody/brokerage account an upload can be tagged with (§26

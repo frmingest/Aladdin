@@ -100,6 +100,20 @@ now just "has anyone actually clicked it," not "is it blocked"):
   Railway's Deployments tab says it last built from. Committing matters regardless of deploy
   method — it's your rollback point and history, independent of whether Railway has a copy.
 - Optional: add `pandas-stubs`/`types-openpyxl` + a `mypy.ini` override for the untyped-import stub gaps above.
+- **New — Portfolio tab now has a self-serve "Market data tickers" section** (fixes the dashboard
+  showing 0 NOK / "no market value available" for every holding, no matter how many times
+  "Refresh valuation" is clicked). Root cause: `Holding.market_ticker` — the yfinance-resolvable
+  symbol Phase 2 valuation actually prices by — starts NULL for every Nordnet-imported holding by
+  design (decision 0003, §21: never guessed from the instrument name) and had to be set via
+  `PATCH /portfolio/holdings/{id}`, but no frontend ever called that endpoint. **No migration —
+  just redeploy the frontend** to pick it up. Once live, open the Portfolio tab and fill in:
+  `VAR.OL` (Vår Energi), `SALME.OL` (Salmon Evolution), `AUCO.L` (L&G Gold Mining UCITS ETF — check
+  this against your contract note, it's cross-listed as `AUCO.AS`/`ETLX.DE` on other exchanges),
+  `XDEF.DE` (Xtrackers Europe Defence Technologies UCITS ETF 1C), `4GLD.DE` (Xetra-Gold). Alfred
+  Berg Nordic High Yield II R (NOK) and Heimdal Høyrente Pluss B (NOK) are Norwegian retail mutual
+  funds not available on Yahoo Finance (yfinance is this app's only price source, ADR 0004) —
+  leave those two blank; they'll keep showing as excluded until Phase 8-style alternative pricing
+  exists for funds (same class of gap already tracked for precious metals/collectibles, ADR 0011).
 - **New, blocking:** redeploy the backend to Railway to pick up the `gemini-3.6-flash` default
   (code fix landed 2026-09-14, not yet deployed) — **and check whether Railway's `LLM_MODEL_NAME`
   service variable is set explicitly.** If it is, it still points at the retired
@@ -174,6 +188,38 @@ now just "has anyone actually clicked it," not "is it blocked"):
 
 ### Changelog
 
+- **2026-09-14 (Portfolio tab: self-serve market ticker UI):** Faiz reported the dashboard always
+  showing 0 NOK / "no market value available" for every holding, even after repeatedly clicking
+  "Refresh valuation." Traced it to `app/services/market_data/valuation.py::_value_one_holding`:
+  it correctly skips any holding with `market_ticker is None` (excluded from totals, not silently
+  invented — §21) rather than a bug in the refresh logic itself. `market_ticker` — the
+  yfinance-resolvable symbol Phase 2 actually prices by, e.g. `VAR.OL` — is deliberately never
+  derived from `ticker`/`name` (decision 0003: a Nordnet export's `ticker` is the full instrument
+  name, not a real exchange symbol, so guessing from it risks silently pricing the wrong
+  instrument) and must be set via `PATCH /portfolio/holdings/{id}`. That endpoint, `HoldingOut`,
+  and `HoldingUpdate` have existed since the Phase 2 build — **but no frontend code ever called
+  it**, so every holding from every Nordnet upload has been permanently unpriced with no way to
+  fix it short of a raw API call.
+  Added a "Market data tickers" section to the Portfolio tab (new component in
+  `frontend/src/pages/PortfolioUpload.tsx`, rendered between Accounts and Upload): lists every
+  holding via the existing `GET /portfolio/holdings`, with an editable market-ticker field per row
+  wired to the PATCH endpoint, a warning count of how many holdings are still unpriced, and inline
+  guidance on the Yahoo Finance suffix convention (`.OL`, `.DE`, `.L`, …). Added the matching
+  `market_ticker: string | null` field to the `Holding` type and a new `updateHoldingMarketTicker`
+  function (`frontend/src/types/portfolio.ts`, `frontend/src/services/api.ts`). **Pure frontend
+  change — no backend, schema, or migration changes**, since the backend side of this was already
+  complete.
+  **Verified in a cloud mirror** before writing back to `E:\Aladdin` (`device_bash` still
+  unavailable this session — this is the Windows KB5124008/KB5124012/KB5122878 Plan9-mount
+  regression from the September 8 cumulative update, tracked on Anthropic's status page as
+  "Identified" since 2026-09-10 with no ETA from Microsoft yet; used the stage → edit →
+  commit-back path instead, same as every session since the mount broke): `npm ci` fresh, baseline
+  `tsc --noEmit` clean, edits applied, `tsc --noEmit` clean again, `vite build` succeeds (631 kB /
+  176 kB gzip — the pre-existing single-bundle warning, unrelated to this change). `npm run lint`
+  not run — known pre-existing gap (no `eslint.config.js`), unrelated to this change.
+  **Needs a redeploy to reach the live Railway site — no migration required.** The actual tickers
+  to enter for Faiz's current 5 identifiable holdings, and the two that can't be priced this way,
+  are listed in "Manual to-do" above.
 - **2026-09-14 (ECON-003/004/006 implemented; ECON-005 attempted, ADR 0014):** Faiz asked to keep
   going down the "Up next" list from the ECON-001/002 pass. New `research/versions/v2.yaml` adds
   commodity coverage (ECON-003 — FRED `DCOILWTICO`/`DCOILBRENTEU`, WTI + Brent since Brent is what
