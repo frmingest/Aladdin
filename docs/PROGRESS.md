@@ -64,9 +64,10 @@ both when a phase completes: the ADR for *why*, this file for *how far along thi
 - No portfolio-risk LLM narrative (`PortfolioRiskSnapshot.narrative` is a short, deterministic,
   code-generated summary, not LLM prose) — a deliberate scope decision this phase, see ADR 0008.
 - ~~No frontend page renders any Phase 5 endpoint yet~~ — resolved by Phase 6's `RiskSection` and
-  `HoldingDetailSection` (thesis timeline, valuation scenarios). Creating a thesis or a valuation case
-  is still API-only — the dashboard only reads/lists what already exists, matching Phase 6's scope as
-  visualization, not a new data-entry surface.
+  `HoldingDetailSection` (thesis timeline, valuation scenarios). ~~Creating a thesis or a valuation
+  case is still API-only~~ — resolved this pass: `HoldingDetailSection` now has a "+ New thesis" and
+  a "+ New valuation case" inline form (see "Frontend data-entry" below, moved out of Smaller
+  improvements).
 - Correlation (Phase 5) depends on `MarketDataProvider.get_historical_prices` against real yfinance
   data, which — like every other yfinance/Gemini/FRED/Norges Bank call in this codebase — this build
   environment has no network path to smoke-test live (see ADR 0004/0005/0007's matching caveats).
@@ -97,6 +98,10 @@ both when a phase completes: the ADR for *why*, this file for *how far along thi
   packages (`__init__.py` only, no test files) since Phase 0 — architecture §22.2 (golden document
   extraction tests) and §22.3 (prompt/model regression tests) were never actually built despite the
   directories implying they had a home. All 31 existing test files live under `unit/`/`integration/`.
+- `HoldingDetailSection`'s thesis-status color map didn't cover `INVALIDATED`
+  (`app.models.thesis.InvestmentThesisStatus` has four values: ACTIVE/UNDER_REVIEW/INVALIDATED/CLOSED;
+  the frontend map only had three) — an invalidated thesis silently rendered in the same neutral
+  color as a healthy one. Fixed this pass; see "Frontend data-entry & UX review" below.
 
 ## Deployment readiness (Railway)
 
@@ -156,6 +161,10 @@ what's left is account/infrastructure setup and the first live deploy, which thi
 cannot do itself (no reachable Docker daemon, no Railway/Supabase/R2 credentials or network path).
 Candidates #2-#3 below are unaffected and still open.
 
+**Update, 2026-09-14:** the "Frontend data-entry" smaller improvement below (creating a thesis or a
+valuation case from the dashboard) is done — see "Frontend data-entry & UX review" below. Candidates
+#2-#3 are unaffected and still open.
+
 ### Candidate next phases
 
 1. ~~**Deployment & production hardening**~~ — now Phase 7 (see above). The actual Railway
@@ -184,8 +193,6 @@ Candidates #2-#3 below are unaffected and still open.
 - Persist §23's already-computed `total_input_tokens`/`total_output_tokens` (currently discarded
   after each analysis run) onto `analysis_runs`, plus latency and a rough estimated-cost figure —
   most of the plumbing already exists in `LLMAnalysisService`, this is largely wiring it to a column.
-- Frontend data-entry: creating a thesis or a valuation case is still API-only (Phase 6 was
-  visualization-only by design) — a form in `HoldingDetailSection` would close that loop.
 - Evidence-packet excerpt selection (§5.3) has no relevance ranking, just most-recent-first —
   worth revisiting once any holding accumulates more than one or two documents.
 - Regime classification (§13.1) is a manual `active_macro_regime_profile` setting — could be
@@ -200,8 +207,52 @@ Candidates #2-#3 below are unaffected and still open.
   as qualitative text, XLSX-only for structured facts) — revisit only if a holding's primary
   source material is consistently PDF-only with no XLSX equivalent.
 
-## Git status
+## Frontend data-entry & UX review (2026-09-14)
 
-Phases 0-5 are committed to the `claude/next-development-phase-0cer0a` branch (merged to `main`);
-Phase 6 is committed to the `claude/next-phase-development-16lo2r` branch; Phase 7 is committed to
-the `claude/next-phase-planning-3oboz6` branch of `github.com/frmingest/Aladdin`.
+Committed directly to `E:\Aladdin` (frontend only — no backend/API changes; both endpoints this
+uses already existed). **Not yet committed to git** — same manual step as every prior phase, and
+this pass additionally couldn't run `tsc`/`npm run build`/git itself (see "Manual follow-ups"
+below) — verify before committing.
+
+Closes the "Frontend data-entry" smaller improvement noted above:
+
+- **New thesis form** (`HoldingDetailSection`) — a "+ New thesis" toggle opens an inline form
+  (thesis, optional bull/bear case, key assumptions and invalidation conditions as one-per-line
+  text, confidence) that POSTs to the existing `POST /thesis/holdings/{holding_id}`. Each thesis-
+  ledger entry's status is now an editable control (PATCH `/thesis/{id}`) instead of static text,
+  so a thesis can actually be moved to UNDER_REVIEW/INVALIDATED/CLOSED from the dashboard — before
+  this, a thesis could be created via the API but never updated from the UI at all.
+- **New valuation case form** (`HoldingDetailSection`) — a "+ New valuation case" toggle opens the
+  DCF inputs (case type, the seven required assumption fields, projection years) with the
+  currency/FX/commodity/base-revenue overrides tucked behind an "Advanced options" disclosure,
+  plus a "run AI critique" checkbox (on by default) surfacing that this triggers an LLM call.
+  POSTs to the existing `POST /valuation/holdings/{holding_id}/cases`.
+- **Valuation case list** — previously a holding's valuation cases fed only the scenario bar chart;
+  there was no way to see a case's confidence, calculation note, or AI critique anywhere in the UI.
+  Added a compact list below the chart (case type, value, confidence, date) with the critique
+  (assumptions-reasonable verdict, reasoning, key risks) behind a "Show critique" toggle per case.
+- **Bug fix**: `THESIS_STATUS_COLOR` only mapped three of the four `InvestmentThesisStatus` values
+  — `INVALIDATED` was missing, so an invalidated thesis rendered in the same neutral color as a
+  healthy one instead of flagging as risk. Fixed (now red, matching the app's existing
+  emerald/amber/red semantic convention).
+
+No new dependencies, no design-system changes — both forms and the status control reuse this
+codebase's existing form/button/card conventions (`bg-slate-900`/`border-slate-700` inputs, the
+`bg-emerald-700` primary-button style already used by "Add account" and "Compute new risk
+snapshot", the same `ApiError`-catching error-display pattern used throughout). A full UX pass
+(applying the same review rigor as the CWO UX Designer skill, judged against Aladdin's own actual
+tokens rather than that skill's Bloomberg-terminal palette — this app has no design-token file,
+just Tailwind's slate scale + emerald/amber/red used consistently) is written up separately; the
+one finding severe enough to fix immediately (the status-color gap above) is folded into this pass.
+
+### Manual follow-ups for Faiz
+
+- **This pass could not run `device_bash`** — a Windows update (2026-09-08) broke the
+  `E:\Aladdin` mount for this session's device shell (tracked, Claude Code unaffected). All file
+  edits went through the stage → edit → commit-back path instead, and unlike every prior phase's
+  status note, **`tsc --noEmit`, `npm run build`, `npm run lint`, and the backend test suite were
+  never run this pass** — please run `cd frontend && npx tsc --noEmit` (and ideally `npm run
+  build`) before trusting this compiles cleanly.
+- Manually exercise the two new forms once: create a thesis, change its status, create a bull/base/
+  bear valuation case for a holding with a revenue fact on record, expand its critique.
+- Git commit this work (still uncommitted, per the existing convention).
