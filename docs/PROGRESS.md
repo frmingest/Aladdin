@@ -1,372 +1,122 @@
 # Progress
 
-One place to see what's built, what's not, and where the detail lives. The build phases below
-are §26 of [`architecture.md`](architecture.md); the reasoning behind specific choices made while
-building each one lives in [`docs/decisions/`](decisions/) (ADRs, numbered sequentially per
-[ADR 0001](decisions/0001-record-architecture-decisions.md)).
+What's built, what's not, and where the detail lives. Build phases are architecture §26; the
+reasoning behind each phase's choices lives in [`docs/decisions/`](decisions/) (ADRs). This file
+tracks status — update it and the relevant ADR together when something changes.
 
-This file tracks build phases and deployment readiness. It does not replace the ADRs — update
-both when a phase completes: the ADR for *why*, this file for *how far along things are*.
+**Status:** Phases 0–6 done, Phase 7 (deployment hardening) code-complete but not deployed
+anywhere, Phase 8 (alternative assets) planned. Nothing has been committed to git since Phase 0 —
+all later work sits directly in `E:\Aladdin`, uncommitted. Last verified 2026-09-14: 260 backend
+tests / ruff / tsc / vite build all clean; `npm run lint` still fails (known gap below).
 
-## Build phases (architecture §26)
+---
+
+## Open gaps
+
+**Needs Faiz's keys/accounts/hardware to move further** (all code-complete on this side, only
+live verification is missing):
+- Real API keys not yet set: `GOOGLE_AI_STUDIO_API_KEY` ([get one](https://aistudio.google.com/apikey)) and `FRED_API_KEY` ([get one](https://fred.stlouisfed.org/docs/api/api_key.html)) — analysis and macro refresh fail immediately without them.
+- No live smoke test yet against yfinance, Gemini, FRED, or Norges Bank — all verified only against mocks/docs so far (this build environment has no network path to any of them). ADR 0004/0005/0007.
+- No real deploy — Railway project, Supabase/Postgres, R2/Supabase bucket, `docker build` all still need Faiz's own accounts/machine. See "Deployment checklist" below.
+
+**Deliberate scope limits** (not oversights — see the linked ADR if you want the reasoning):
+- PDF/PPT are read as qualitative LLM text, not structured facts — XLSX-only for that (ADR 0006).
+- DCF valuation and scenario shocks are illustrative/directionally-reasoned, not fitted to real market data (ADR 0008).
+- Norwegian wealth-tax estimate is single-bracket, no per-couple splitting (ADR 0008).
+- Jurisdictional concentration is proxied via `Holding.institution`, not a real custodian-country field.
+- Portfolio-risk narrative is short deterministic text, not LLM prose (ADR 0008).
+- Risk heatmap tile shading uses illustrative public reference bands, not the app's own `risk_v1.yaml` thresholds — the overall risk band/score next to it *is* the authoritative one (ADR 0009).
+
+**Tooling debt:**
+- No `eslint.config.js` — `npm run lint` fails outright (Phase 0 gap).
+- No `black` config — codebase never run through it.
+- `mypy app`: 11 `import-untyped` errors (missing stubs for pandas/openpyxl/fitz/yfinance/boto3/apscheduler) — cosmetic, not fixed yet.
+- `tests/golden_documents/` and `tests/regression/` are empty scaffolds since Phase 0 (architecture §22.2/§22.3).
+- `vite build`'s single JS bundle is ~615 kB / 172 kB gzipped (mostly recharts) — no code-splitting; fine at single-user scale.
+
+**Feature gaps:**
+- No calibration/track-record engine (§22.5) — needs weeks of real deployed history to be useful, so recommended *after* a live deploy exists.
+- Evidence-packet excerpt selection has no relevance ranking, just most-recent-first (ADR 0006).
+- Token/cost tracking is computed per analysis run but discarded, never persisted or surfaced (§23).
+- `AssetClass` has no `COMMODITY`/`COLLECTIBLE` value yet — needed for Phase 8 (ADR 0011).
+- `recent_events` on `AnalysisContext` unbuilt — macro/sector research partially covers the need.
+
+---
+
+## Deployment checklist (Railway)
+
+Phase 7 closed every code-level item (Dockerfiles, CORS, single-user auth, durable object storage,
+migrations-on-boot — ADR 0010). Everything left needs Faiz's own accounts/hardware:
+
+- [x] Object storage provider (`S3ObjectStorageProvider`, R2/Supabase) — code done, untested against a real bucket.
+- [x] CORS middleware.
+- [x] Backend + frontend Dockerfiles — code done, never actually `docker build`'d (needs Faiz's WSL2/Docker Desktop).
+- [x] Single-user auth (`APP_AUTH_TOKEN`/`X-API-Key`) on every router except `/health`.
+- [ ] Supabase `DATABASE_URL` + `alembic upgrade head` against real Postgres.
+- [ ] Railway project + env vars set.
+- [ ] `GOOGLE_AI_STUDIO_API_KEY` + `FRED_API_KEY` obtained and set.
+- [ ] End-to-end smoke test on the deployed instance.
+- [ ] Live check of Phase 5's DCF critique + risk correlation (same keys as above).
+
+## Manual to-do for Faiz
+
+- Exercise the new thesis/valuation forms once in the running app (create, change status, expand critique) — needs your own eyes on it.
+- Git commit — everything since Phase 0 (through today's `calculations.py` fix) is still uncommitted.
+- Optional: add `pandas-stubs`/`types-openpyxl` + a `mypy.ini` override for the untyped-import stub gaps above.
+
+## Up next (candidates)
+
+1. **Track-record & calibration engine** (§22.5) — best done after a real deploy exists to calibrate against.
+2. **Testing debt** — populate `golden_documents`/`regression`, add `black` + `eslint.config.js`.
+3. **Precious metals** (Phase 8) — `COMMODITY` asset class, dated lots, manual single-holding entry, gold-api.com spot pricing. Design in ADR 0011.
+4. **Whisky collection** (Phase 8) — manual CSV import (Whiskybase export format), carried at cost basis since no live pricing feed exists. Needs a real sample export from Faiz first. Design in ADR 0011.
+
+---
+
+## History
+
+### Build phases (architecture §26)
 
 | Phase | Status | Summary |
 |---|---|---|
-| 0 — Foundation | ✅ Done | Repo structure, FastAPI backend, React+Vite+Tailwind frontend, Postgres via Docker Compose, Alembic, pytest scaffold, provider interfaces. Pushed to `main` on GitHub. |
-| 1 — Portfolio + document ingestion | ✅ Done | Portfolio CSV/XLSX upload (canonical schema + real Nordnet export format), document upload (PDF/PPT/XLSX) with SHA-256 dedup + object storage, deterministic fact extraction from XLSX. No AI dependency, as specified. See [ADR 0002](decisions/0002-phase1-portfolio-and-document-ingestion.md), [ADR 0003](decisions/0003-nordnet-export-support.md). |
-| 2 — Deterministic financial & market data | ✅ Done | yfinance-backed `MarketDataProvider`, `market_observations`/`fx_observations` tables, deterministic metrics (growth, margins, ROIC/ROE, multiples, dividend yield, FX, P&L, HHI concentration), `POST /portfolio/snapshots/{id}/valuation`. See [ADR 0004](decisions/0004-phase2-market-data-and-financial-metrics.md). |
-| 3 — AI analysis | ✅ Done | Evidence packet / AnalysisContext, Google AI Studio (Gemini) `LLMProvider`, two-pass Buffett/Munger analysis with confirmation-bias guardrail, structured LLM output + schema contract, deterministic scoring, `analysis_runs`/`holding_analyses`/`factor_assessments`/`evidence_references`, memo generation, `POST /analysis/snapshots/{id}/runs` + read endpoints, bare-bones frontend page. See [ADR 0005](decisions/0005-phase3-google-ai-studio-llm-provider.md), [ADR 0006](decisions/0006-phase3-ai-analysis-engine.md). |
-| 4 — External research | ✅ Done | Hybrid FRED + Norges Bank `MacroDataProvider` for central-bank/macro numeric series, Gemini + Google Search grounding `ResearchProvider` for macro-news and sector research, `research_runs`/`research_items`/`macro_observations` tables, APScheduler background refresh (macro daily, sector research weekly per distinct sector) plus manual `POST /research/*/refresh` endpoints, `AnalysisContext` wired to cite macro/sector research as evidence. See [ADR 0007](decisions/0007-phase4-external-research.md). |
-| 5 — Thesis & portfolio intelligence | ✅ Done | Investment thesis ledger (`investment_theses`, replacing `PortfolioPosition.notes` as Phase 3's reconciliation-guardrail input) with a deterministic invalidation-signal check; deterministic DCF valuation engine (`app.domain.valuation`) plus a best-effort LLM assumption critique (§17); deterministic scenario-impact engine (`app.domain.scenarios`, `scenarios/versions/v1.yaml`, the eight §18 scenarios) over concentration exposures; portfolio risk snapshots (`portfolio_risk_snapshots`) covering concentration (reused from Phase 2), correlation, currency/commodity exposure, systemic/state risk (§15.1 — deposit concentration vs. guarantee limit, custody-type breakdown, Norwegian wealth-tax estimate, institution-proxied jurisdictional concentration), a worst-dimension risk band, and a secondary composite score (`scoring/versions/risk_v1.yaml`). See [ADR 0008](decisions/0008-phase5-thesis-and-portfolio-intelligence.md). |
-| 6 — Visualization | ✅ Done | A `Dashboard` tab (now the default landing tab) covering every §19 visualization: portfolio composition, allocation drift, factor profile, portfolio risk heatmap + scenario impact + systemic/state risk detail, macro dashboard + sector research, and a per-holding drill-down (analysis comparison, evidence panel, thesis timeline, valuation scenarios). Built entirely on existing Phase 1-5 endpoints — no backend changes. See [ADR 0009](decisions/0009-phase6-visualization-dashboard.md). |
-| 7 — Deployment & production hardening | 🟡 Code done, not yet deployed | `backend/Dockerfile` + `frontend/Dockerfile` (nginx static serve), CORS middleware (opt-in via `CORS_ALLOWED_ORIGINS`), single-user auth (`APP_AUTH_TOKEN`/`X-API-Key`, every domain router except `/health`), a durable S3-compatible object storage provider (`S3ObjectStorageProvider`, serves both `r2` and `supabase`) replacing `LocalObjectStorageProvider` for real deployments, `alembic upgrade head` run from the backend container's entrypoint. See [ADR 0010](decisions/0010-deployment-and-production-hardening.md) for what remains genuinely unverified (no live Railway/bucket/Postgres deploy from this build environment). |
+| 0 — Foundation | ✅ Done | FastAPI backend, React+Vite+Tailwind frontend, Postgres/Docker Compose, Alembic, pytest scaffold. Pushed to `main` on GitHub. |
+| 1 — Portfolio + document ingestion | ✅ Done | CSV/XLSX upload (canonical + Nordnet export), PDF/PPT/XLSX document upload with dedup + object storage, deterministic XLSX fact extraction. ADR 0002, 0003. |
+| 2 — Deterministic financial & market data | ✅ Done | yfinance `MarketDataProvider`, deterministic metrics (growth, margins, ROIC/ROE, multiples, FX, P&L, HHI). ADR 0004. |
+| 3 — AI analysis | ✅ Done | Evidence packet, Google AI Studio (Gemini) two-pass Buffett/Munger analysis with confirmation-bias guardrail, deterministic scoring, memo generation. ADR 0005, 0006. |
+| 4 — External research | ✅ Done | FRED + Norges Bank macro data, Gemini+Search grounding for macro/sector research, APScheduler background refresh. ADR 0007. |
+| 5 — Thesis & portfolio intelligence | ✅ Done | Thesis ledger with invalidation checks, DCF valuation engine, scenario-impact engine, portfolio risk snapshots (concentration, correlation, systemic/state risk, wealth tax). ADR 0008. |
+| 6 — Visualization | ✅ Done | Dashboard tab covering every §19 visualization, built entirely on Phase 1–5 endpoints. ADR 0009. |
+| 7 — Deployment & production hardening | 🟡 Code done, not deployed | Dockerfiles, CORS, single-user auth, durable object storage, migrations-on-boot. ADR 0010. |
 
-**Known gaps inside completed phases**, not yet worth their own phase:
-- PDF/PPT structured financial-fact extraction remains XLSX-only, by deliberate choice, not
-  oversight — Phase 3 reads PDF/PPT text as qualitative LLM evidence instead of extracting
-  structured line items from it (see ADR 0006).
-- Holdings ingested from a Nordnet export have no market-data symbol until set manually via
-  `PATCH /portfolio/holdings/{id}` (no ticker exists in that export — see ADR 0003/0004).
-- yfinance's live behavior is verified against mocked responses only; this build environment
-  can't reach Yahoo Finance to smoke-test it for real (see ADR 0004's Consequences).
-- Google AI Studio's live behavior is likewise verified only against the installed `google-genai`
-  SDK's documented shapes, not a real API call — this build environment has no network path to
-  Gemini either. A manual smoke test with a real `GOOGLE_AI_STUDIO_API_KEY` is a recommended
-  follow-up (see ADR 0005's Consequences).
-- Evidence-packet excerpt selection has no relevance ranking (most-recent-documents-first, in
-  page order, until a character budget runs out — see ADR 0006). Fine for one recent report per
-  holding; will under-serve a holding with many/older documents.
-- No `black` formatting config committed — the codebase has never actually been run through
-  `black`'s default line length (see ADR 0004's Consequences).
-- Norges Bank's exact dataset/key for the `no_policy_rate` series (`research/versions/v1.yaml`) is a
-  best-effort reading of Norges Bank's published API guide, not confirmed against a live response —
-  this build environment has no network path to `data.norges-bank.no` (see ADR 0007's Consequences).
-- FRED's and Gemini's grounded-search request/response shapes are likewise verified only against
-  documentation and the installed SDK, not a live call (see ADR 0007's Consequences, matching ADR
-  0004/0005's yfinance/Gemini-analysis caveats). A real `FRED_API_KEY` (free at
-  https://fred.stlouisfed.org/docs/api/api_key.html) is required before macro refresh does anything.
-- `recent_events` on `AnalysisContext` remains unbuilt — macro/sector narrative items partially cover
-  the need, but dedicated holding-specific event detection is deferred (see ADR 0007).
-- ~~No frontend page renders the Phase 4 research endpoints yet~~ — resolved by Phase 6's
-  `MacroSection` (`frontend/src/pages/dashboard/MacroSection.tsx`).
-- No calibration/track-record engine (architecture §22.5) — `check_invalidation_signal`
-  (Phase 5, per-thesis) covers a related but narrower need; the periodic, portfolio-wide "was high
-  confidence associated with better outcomes" dashboard, with its own `calibration_checks` table, is a
-  deliberate, documented follow-up (see ADR 0008).
-- The DCF valuation engine and the scenario-shock registry are both illustrative/directionally-reasoned,
-  not fitted to or validated against real market data (see ADR 0008) — same caveat the architecture
-  doc's own §18 example carries.
-- Jurisdictional concentration (§15.1) is approximated via `Holding.institution`, not a dedicated
-  custodian-country field — a reasonable proxy for Faiz's own portfolio, not a verified jurisdiction.
-- The Norwegian wealth-tax estimate (§15.1) only runs when a snapshot's `reporting_currency` is NOK, and
-  is a simplification of the real rules (single bracket, no per-couple splitting) — see
-  `app.config.settings.Settings`'s wealth-tax fields and ADR 0008.
-- No portfolio-risk LLM narrative (`PortfolioRiskSnapshot.narrative` is a short, deterministic,
-  code-generated summary, not LLM prose) — a deliberate scope decision this phase, see ADR 0008.
-- ~~No frontend page renders any Phase 5 endpoint yet~~ — resolved by Phase 6's `RiskSection` and
-  `HoldingDetailSection` (thesis timeline, valuation scenarios). ~~Creating a thesis or a valuation
-  case is still API-only~~ — resolved this pass: `HoldingDetailSection` now has a "+ New thesis" and
-  a "+ New valuation case" inline form (see "Frontend data-entry" below, moved out of Smaller
-  improvements).
-- Correlation (Phase 5) depends on `MarketDataProvider.get_historical_prices` against real yfinance
-  data, which — like every other yfinance/Gemini/FRED/Norges Bank call in this codebase — this build
-  environment has no network path to smoke-test live (see ADR 0004/0005/0007's matching caveats).
-- The Phase 6 risk heatmap's per-tile shading uses illustrative public reference conventions (US
-  DOJ/FTC HHI bands, standard correlation-strength ranges), not the app's own versioned
-  `scoring/versions/risk_v1.yaml` thresholds — `PortfolioRiskSnapshotOut` doesn't expose the
-  per-dimension bands the backend computes internally. The overall `risk_band`/`composite_risk_score`
-  shown alongside it are the real, authoritative assessment (see ADR 0009).
-- The frontend has no project-wide ESLint config (`npm run lint` fails: "couldn't find an
-  eslint.config.js file") — a Phase 0 gap Phase 6 didn't introduce or fix.
-- `vite build`'s single JS bundle is ~600 kB (167 kB gzipped, mostly `recharts`) — no code-splitting
-  yet; fine for a single-user personal app per §2.9, worth revisiting only for a public rollout.
-- Building/smoke-testing the Phase 6 dashboard surfaced that pydantic v2 serializes every `Decimal`
-  field as a JSON string throughout this API, not just the Phase 5 risk-snapshot JSON columns
-  (`_json_safe`) previously documented — corrected across the frontend's TypeScript types (Phase 6's
-  own new types plus a type-only fix to Phase 1/3's `types/portfolio.ts`/`types/analysis.ts`); see
-  ADR 0009.
-- ~~No application authentication exists anywhere in the codebase~~ — resolved by Phase 7's
-  `APP_AUTH_TOKEN`/`X-API-Key` (see ADR 0010). Still only a single shared token, not a real
-  user/session system — sufficient for §24's letter and §25's single-user scope, not more.
-- §23 (Observability & Cost Tracking) is only half-built: `LLMAnalysisService`/`AnalysisRunResult`
-  compute `total_input_tokens`/`total_output_tokens` per run (`app/services/analysis/llm_analysis.py`),
-  but that figure is never persisted (no column on `analysis_runs`, no separate cost-log table) or
-  surfaced anywhere — it's discarded after the run completes. Latency and estimated cost are not
-  captured at all. The near-zero-cost objective §23 exists to make measurable currently isn't
-  measurable after the fact.
-- `backend/tests/golden_documents/` and `backend/tests/regression/` have existed as scaffolded
-  packages (`__init__.py` only, no test files) since Phase 0 — architecture §22.2 (golden document
-  extraction tests) and §22.3 (prompt/model regression tests) were never actually built despite the
-  directories implying they had a home. All 31 existing test files live under `unit/`/`integration/`.
-- `HoldingDetailSection`'s thesis-status color map didn't cover `INVALIDATED`
-  (`app.models.thesis.InvestmentThesisStatus` has four values: ACTIVE/UNDER_REVIEW/INVALIDATED/CLOSED;
-  the frontend map only had three) — an invalidated thesis silently rendered in the same neutral
-  color as a healthy one. Fixed this pass; see "Frontend data-entry & UX review" below.
-- `app.domain.asset_class.AssetClass` has six values (EQUITY/ETF/FUND/CASH/BOND/OTHER) and no
-  `COMMODITY` or `COLLECTIBLE` value, even though §15.1's systemic-risk dimension already discusses
-  "commodity exposure," "gold mining cost curves," and a holding-level `custody_type` field meant
-  specifically for physically-allocated commodities (architecture.md line 862). Today a gold/silver
-  holding would normalize to `OTHER`, which is usable but loses the semantic distinction the risk
-  model already assumes exists. See [ADR 0011](decisions/0011-phase8-alternative-assets.md).
-- The CWO visual redesign (terminal design system, IBM Plex fonts, `.terminal-*` component classes
-  across every page — see `claude/cwo-design-redesign.md` in the Aladdin claude.ai Project) shipped
-  2026-09-14 without its own ADR or a PROGRESS.md update at the time — presentation-only, no
-  behavior change, but noted here so this file stays the accurate single source of truth on "what's
-  built."
-- **Bug fixed 2026-09-14** (found by this session's verification pass, see below):
-  `app.domain.calculations.quantize()` was typed `Decimal | None -> Decimal | None`, so every call
-  site that only ever passes it a definite `Decimal` (the overwhelming majority — `None` is only
-  possible at a handful of ratio-with-zero-denominator call sites) type-checked as if it could get
-  back `None` too. Under a full `mypy app` run (apparently never actually run end-to-end before —
-  see below) this produced 8 real arg-type/assignment/operator errors in
-  `app/domain/valuation.py`, `app/domain/scenarios.py`, `app/domain/portfolio_risk.py`, and
-  `app/services/portfolio_risk/builder.py` (e.g. appending a `Decimal | None` into a `list[Decimal]`,
-  constructing `DepositExposure`/`WealthTaxEstimate` with a `Decimal | None` where the dataclass
-  declares `Decimal`). Not a runtime bug — `quantize` only returns `None` when its input was
-  `None`, and none of these call sites ever passed it one — but a real type-safety gap: nothing
-  would have caught it if a future edit *did* start passing a possibly-`None` value into one of
-  these `Decimal`-typed slots. Fixed by giving `quantize` an `@overload` pair
-  (`Decimal -> Decimal`, `None -> None`) instead of the single blended signature — no behavior
-  change, all 260 backend tests still pass. Committed directly to `E:\Aladdin` via the device
-  bridge (same cloud-mirror workaround as every prior phase this session — see "Manual follow-ups"
-  below).
-- **New minor gap found 2026-09-14**: with the quantize bug above fixed, `mypy app` still reports
-  11 `import-untyped` errors — `pandas`, `openpyxl`, `fitz` (PyMuPDF), `yfinance`, `boto3`,
-  `botocore`, and `apscheduler` have no type stubs installed (and no `mypy.ini`/`pyproject.toml`
-  exists to configure `ignore_missing_imports` for the ones with no official stub package —
-  `pandas-stubs`/`types-openpyxl` exist and could be added to `requirements-dev.txt`; `fitz`,
-  `yfinance`, `boto3`/`botocore`, and `apscheduler` don't ship or have third-party stubs, so those
-  would need a per-module `ignore_missing_imports` override instead). Cosmetic noise on every
-  `mypy` run, not a correctness issue — every prior phase's "ruff/mypy clean" claim was evidently
-  checked without ever running plain `mypy app` over the whole tree at once. Not fixed this pass
-  (out of this pass's scope — flagged for "Smaller improvements" below).
+### Changelog
 
-## Deployment readiness (Railway)
+- **2026-09-14 (verification pass):** Reviewed this file with Faiz and addressed known gaps before
+  further development. Ran the frontend `tsc`/`build`/`lint` and full backend `pytest`/`ruff`/`mypy`
+  checks that had never been run after the data-entry pass below (via the cloud-mirror workaround —
+  `device_bash` still can't mount `E:\Aladdin` this session, a tracked Windows-update issue).
+  Results: tsc clean, build succeeds, lint still fails (pre-existing gap), 260/260 backend tests
+  pass, ruff clean. `mypy` found one real bug: `app.domain.calculations.quantize()` was typed
+  `Decimal | None -> Decimal | None`, so 8 call sites that only ever pass a definite `Decimal`
+  type-checked as if they could get `None` back (not a runtime bug, but a real gap against future
+  edits) — fixed with an `@overload` pair, no behavior change. Also restructured this file for
+  readability and added explicit "blocked on Faiz" markers throughout.
+- **2026-09-14:** Frontend data-entry pass — added inline "+ New thesis" and "+ New valuation case"
+  forms to `HoldingDetailSection`, made thesis status editable from the dashboard, added a
+  valuation-case list with critique detail. Fixed a bug where `INVALIDATED` thesis status rendered
+  in the same neutral color as a healthy one. Frontend-only, no backend changes; not yet verified
+  or committed at the time (resolved by the verification pass above).
+- **2026-09-14:** CWO visual redesign shipped (terminal design system, IBM Plex fonts,
+  `.terminal-*` component classes) — presentation-only, no behavior change.
+- **2026-09-14:** Faiz asked for two new asset types (physical gold/silver, whisky collection) —
+  added as Phase 8 candidates, design in ADR 0011.
+- **2026-09-13:** Reviewed codebase for what's next after Phase 6; promoted deployment hardening
+  from a candidate to Phase 7.
 
-Not yet deployed anywhere. Phase 7 (see above, [ADR 0010](decisions/0010-deployment-and-production-hardening.md))
-closed every code-level gap below; what's left is account/infrastructure setup and the first live
-run, which this build environment has no network path to do itself.
+### Resolved gaps
 
-- [x] A durable object-storage provider wired in (Supabase Storage or R2) — `S3ObjectStorageProvider`
-      (`app/providers/s3_storage_provider.py`), selected via `OBJECT_STORAGE_PROVIDER=r2|supabase`.
-      Untested against a real bucket (unit tests mock boto3) — first real upload/retrieve is still
-      outstanding, and **blocked on Faiz**: needs a real R2/Supabase bucket and credentials only he
-      can provision.
-- [x] CORS middleware added to the FastAPI app — opt-in via `CORS_ALLOWED_ORIGINS` (see `main.py`).
-- [x] A Dockerfile for the backend (`backend/Dockerfile`, built from the repo root — see ADR 0010)
-      and a production build/serve setup for the frontend (`frontend/Dockerfile`, Vite build served
-      via nginx). Neither has been through an actual `docker build` — this build environment's Docker
-      daemon isn't reachable — only manually verified path arithmetic plus the existing
-      `npm run build`/pytest suite (both re-verified live this session — see "Manual follow-ups"
-      below). **Blocked on Faiz**: an actual `docker build`/`docker compose up` needs his own machine
-      (he has WSL2 + Docker Desktop installed) since this build environment can't reach a Docker
-      daemon.
-- [x] Single-user application authentication (see next section) — `APP_AUTH_TOKEN`/`X-API-Key`,
-      checked via `app/api/auth.py`, applied to every domain router.
-- [ ] **Blocked on Faiz** — `DATABASE_URL` pointed at Supabase and `alembic upgrade head` run
-      against it (only ever run against SQLite in tests, and once by hand against a throwaway local
-      SQLite file to confirm all three migrations apply cleanly — never against real Postgres).
-      Phase 7 wires `alembic upgrade head` into the backend container's entrypoint so this happens
-      automatically on first deploy — still needs an actual Supabase/Postgres instance to run
-      against, which only Faiz can provision/authorize.
-- [ ] **Blocked on Faiz** — Environment variables set in the Railway project (`DATABASE_URL`,
-      `MARKET_DATA_PROVIDER`, `GOOGLE_AI_STUDIO_API_KEY`, `APP_AUTH_TOKEN`, `CORS_ALLOWED_ORIGINS`,
-      `OBJECT_STORAGE_PROVIDER`/`OBJECT_STORAGE_ENDPOINT_URL`/etc., `VITE_API_BASE_URL`/
-      `VITE_API_KEY` as frontend build args, etc.) — requires a Railway account/project only Faiz
-      has access to.
-- [ ] **Blocked on Faiz** — `GOOGLE_AI_STUDIO_API_KEY` obtained (free at
-      https://aistudio.google.com/apikey) and set in `backend/.env` — analysis runs fail immediately
-      with an explicit error until this is set (see ADR 0005); a live smoke test against the real
-      Gemini API is still outstanding (this build environment has no network path to it, and the key
-      itself can only come from Faiz's Google account).
-- [ ] **Blocked on Faiz** — `FRED_API_KEY` obtained (free at
-      https://fred.stlouisfed.org/docs/api/api_key.html) and set in `backend/.env` — macro refresh
-      fails immediately with an explicit error until this is set (see ADR 0007); Norges Bank's
-      dataset/key also needs a one-time live verification (see that ADR's Consequences) — both
-      require live network access this build environment doesn't have.
-- [ ] **Blocked on Faiz** — End-to-end smoke test on the deployed instance: upload the real Nordnet
-      export, set a `market_ticker`, refresh valuation, upload a document, run an analysis, confirm
-      the frontend renders the result and memo. Requires a live deployment (see the Railway items
-      above) that only Faiz can stand up.
-- [ ] **Blocked on Faiz** — Phase 5's DCF valuation critique and portfolio-risk correlation depend on
-      the same `GOOGLE_AI_STUDIO_API_KEY` (critique) and live `MarketDataProvider.get_historical_prices`
-      (correlation) as Phase 3/2 — no new secrets needed beyond the key above, but neither has been
-      smoke-tested live from this build environment (see ADR 0008's Consequences).
-- [x] Application authentication (architecture §24) — `APP_AUTH_TOKEN`, a shared bearer token
-      checked via a FastAPI dependency (`app/api/auth.py`), gating every router except `/health`.
-
-## Next phases & identified follow-up work
-
-Reviewed 2026-09-13 against the current codebase (`backend/app`, `frontend/src`, `docs/`) to find
-what's next after Phase 6, beyond what "Known gaps" above already tracks line-by-line. Phases 0-6
-(architecture §26) are all complete — nothing here revises that. This is additive: candidate next
-phases, plus improvements that don't need a phase of their own.
-
-**Update, same day:** candidate #1 below (deployment & production hardening) is now Phase 7 — see
-the phase table and [ADR 0010](decisions/0010-deployment-and-production-hardening.md). Its code-level
-scope (Dockerfiles, CORS, single-user auth, durable object storage, migrations-on-boot) is done;
-what's left is account/infrastructure setup and the first live deploy, which this build environment
-cannot do itself (no reachable Docker daemon, no Railway/Supabase/R2 credentials or network path).
-Candidates #2-#3 below are unaffected and still open.
-
-**Update, 2026-09-14:** the "Frontend data-entry" smaller improvement below (creating a thesis or a
-valuation case from the dashboard) is done — see "Frontend data-entry & UX review" below. Candidates
-#2-#3 are unaffected and still open.
-
-**Update, 2026-09-14 (later):** Faiz asked for the portfolio to also cover two asset types outside
-the brokerage-upload world — physical gold/silver coins and a whisky collection currently tracked
-via The Whisky Exchange / Whiskybase. Neither is built yet; both are added below as candidates #4
-and #5, with the design reasoning in [ADR 0011](decisions/0011-phase8-alternative-assets.md).
-Candidates #2-#3 are unaffected and still open — nothing here reprioritizes them, it only adds two
-new candidates alongside them.
-
-**Update, 2026-09-14 (verification pass):** at Faiz's request, this session addressed the known
-gaps/issues in this file before further development rather than adding new features. Ran the
-frontend `tsc --noEmit`/`npm run build`/`npm run lint` and the full backend `pytest`/`ruff`/`mypy`
-checks explicitly flagged as never having been run after the prior "Frontend data-entry & UX
-review" pass (see "Manual follow-ups for Faiz" below for full results) — found and fixed one real
-bug (a `quantize()` typing gap, see "Known gaps" above), confirmed everything else already
-documented as a gap is still accurately described, and added explicit "blocked on Faiz" markers to
-every remaining deployment-readiness item that genuinely needs his accounts/keys/hardware rather
-than more code. No new candidates added; #2-#5 above are unaffected.
-
-### Candidate next phases
-
-1. ~~**Deployment & production hardening**~~ — now Phase 7 (see above). The actual Railway
-   project/services, real secrets, and first live smoke test (yfinance, Gemini analysis + Search
-   grounding, FRED, Norges Bank, a real Supabase/R2 bucket, real Postgres) remain outstanding — code
-   readiness and infrastructure readiness are different things, and only the former was in this
-   build environment's reach.
-2. **Track-record & calibration engine** (architecture §22.5, `calibration_checks` table already
-   specified in §20 but never migrated) — the one architecturally-specified capability with zero
-   implementation. Scope: `calibration_checks` model + Alembic migration, a periodic (e.g.
-   quarterly, APScheduler-driven like Phase 4's research refresh) job comparing each past
-   `analysis_run`'s score/thesis_status against subsequent price movement and any new documents
-   ingested since, and a read-only dashboard view (was high confidence associated with better
-   outcomes?). Purely deterministic per §22.5 — no new LLM calls. Recommend after a real deploy
-   exists since it needs weeks of real, live-deployed analysis history to be useful at all —
-   building it against only synthetic/test data would just be untested code with nothing to
-   calibrate against yet.
-3. **Testing debt** — populate `tests/golden_documents/` (known source documents with expected
-   extraction values, §22.2) and `tests/regression/` (fixed-`AnalysisContext` prompt/model
-   comparison, §22.3), both empty since Phase 0. Also: add a `black` config and run the codebase
-   through it once (currently never formatted); add the frontend's missing `eslint.config.js` so
-   `npm run lint` stops failing outright, then fix whatever it flags.
-4. **Precious metals (physical gold/silver coins)** — not started; proposed design in
-   [ADR 0011](decisions/0011-phase8-alternative-assets.md). Scope: a `COMMODITY` (or
-   `PRECIOUS_METAL`) `AssetClass` value; an optional `acquired_at` date on `PortfolioPosition` so
-   each coin purchase is its own dated lot rather than being merged into one Nordnet-style position;
-   a manual single-holding entry path (today everything goes through bulk CSV/XLSX upload — no
-   endpoint/UI exists for adding one holding by hand); and a new keyless, free `MetalPriceProvider`
-   (gold-api.com — supports XAU/XAG spot, no API key, no documented rate limit) wired in behind the
-   existing `MarketDataProvider` abstraction, reusing Phase 2's `market_observations`/FX-conversion
-   machinery rather than adding new tables. Spot-based value and Faiz's actual cost basis (which
-   includes dealer premium) are kept as two separate numbers, consistent with §13.3's "never false
-   precision."
-5. **Whisky collection (collectibles)** — not started; proposed design in
-   [ADR 0011](decisions/0011-phase8-alternative-assets.md). Neither The Whisky Exchange (a retailer,
-   no personal-collection feature or public API found) nor Whiskybase (has a public API, but it
-   explicitly excludes personal/customer collection data and isn't free — partner access only)
-   offers an automatable feed of Faiz's own collection. Whiskybase does offer a free CSV/Excel
-   export of a member's own collection if Faiz catalogs his bottles there — the recommended path is
-   a manual CSV import (same "schema-flexible, canonical-validated" pattern as the Nordnet importer,
-   decision 0003), covering bottle name/distillery, ABV, volume, quantity, purchase date, purchase
-   price + currency, and an optional self-entered current value. No free live pricing feed exists
-   for whisky secondary-market value, so — unlike gold/silver — this asset class would carry at
-   cost basis with value explicitly flagged as user-supplied/stale rather than market-derived (§21).
-   Needs a real sample export or a filled-in template from Faiz before building, same as how Nordnet
-   support got built from a real sample (decision 0003).
-
-### Smaller improvements (don't need their own phase)
-
-- Persist §23's already-computed `total_input_tokens`/`total_output_tokens` (currently discarded
-  after each analysis run) onto `analysis_runs`, plus latency and a rough estimated-cost figure —
-  most of the plumbing already exists in `LLMAnalysisService`, this is largely wiring it to a column.
-- Evidence-packet excerpt selection (§5.3) has no relevance ranking, just most-recent-first —
-  worth revisiting once any holding accumulates more than one or two documents.
-- Regime classification (§13.1) is a manual `active_macro_regime_profile` setting — could be
-  informed by the macro snapshot instead, per the architecture's own suggested path.
-- Jurisdictional concentration (§15.1) is proxied via `Holding.institution`; a dedicated
-  custodian-country field would make it a verified value rather than an approximation.
-- Norwegian wealth-tax estimate (§15.1) is single-bracket with no per-couple splitting — revisit
-  fidelity if it's ever relied on for a real filing rather than a directional risk signal.
-- `vite build`'s ~600 kB single bundle (mostly `recharts`) has no code-splitting — fine at
-  single-user scale, worth it only before any wider rollout.
-- PDF/PPT structured financial-fact extraction remains a deliberate non-goal (Phase 3 treats them
-  as qualitative text, XLSX-only for structured facts) — revisit only if a holding's primary
-  source material is consistently PDF-only with no XLSX equivalent.
-- `mypy app` reports 11 `import-untyped` errors with no fix applied this pass (found 2026-09-14 —
-  see "Known gaps" above): add `pandas-stubs` and `types-openpyxl` to `requirements-dev.txt` (both
-  exist and would resolve two of the affected modules), and add a `mypy.ini`/`pyproject.toml`
-  `[[tool.mypy.overrides]]` with `ignore_missing_imports = true` for `fitz`, `yfinance`, `boto3`,
-  `botocore.*`, and `apscheduler.*` (none of which ship or have third-party stubs).
-
-## Frontend data-entry & UX review (2026-09-14)
-
-Committed directly to `E:\Aladdin` (frontend only — no backend/API changes; both endpoints this
-uses already existed). **Not yet committed to git** — same manual step as every prior phase, and
-this pass additionally couldn't run `tsc`/`npm run build`/git itself (see "Manual follow-ups"
-below) — verify before committing.
-
-Closes the "Frontend data-entry" smaller improvement noted above:
-
-- **New thesis form** (`HoldingDetailSection`) — a "+ New thesis" toggle opens an inline form
-  (thesis, optional bull/bear case, key assumptions and invalidation conditions as one-per-line
-  text, confidence) that POSTs to the existing `POST /thesis/holdings/{holding_id}`. Each thesis-
-  ledger entry's status is now an editable control (PATCH `/thesis/{id}`) instead of static text,
-  so a thesis can actually be moved to UNDER_REVIEW/INVALIDATED/CLOSED from the dashboard — before
-  this, a thesis could be created via the API but never updated from the UI at all.
-- **New valuation case form** (`HoldingDetailSection`) — a "+ New valuation case" toggle opens the
-  DCF inputs (case type, the seven required assumption fields, projection years) with the
-  currency/FX/commodity/base-revenue overrides tucked behind an "Advanced options" disclosure,
-  plus a "run AI critique" checkbox (on by default) surfacing that this triggers an LLM call.
-  POSTs to the existing `POST /valuation/holdings/{holding_id}/cases`.
-- **Valuation case list** — previously a holding's valuation cases fed only the scenario bar chart;
-  there was no way to see a case's confidence, calculation note, or AI critique anywhere in the UI.
-  Added a compact list below the chart (case type, value, confidence, date) with the critique
-  (assumptions-reasonable verdict, reasoning, key risks) behind a "Show critique" toggle per case.
-- **Bug fix**: `THESIS_STATUS_COLOR` only mapped three of the four `InvestmentThesisStatus` values
-  — `INVALIDATED` was missing, so an invalidated thesis rendered in the same neutral color as a
-  healthy one instead of flagging as risk. Fixed (now red, matching the app's existing
-  emerald/amber/red semantic convention).
-
-No new dependencies, no design-system changes — both forms and the status control reuse this
-codebase's existing form/button/card conventions (`bg-slate-900`/`border-slate-700` inputs, the
-`bg-emerald-700` primary-button style already used by "Add account" and "Compute new risk
-snapshot", the same `ApiError`-catching error-display pattern used throughout). A full UX pass
-(applying the same review rigor as the CWO UX Designer skill, judged against Aladdin's own actual
-tokens rather than that skill's Bloomberg-terminal palette — this app has no design-token file,
-just Tailwind's slate scale + emerald/amber/red used consistently) is written up separately; the
-one finding severe enough to fix immediately (the status-color gap above) is folded into this pass.
-
-### Manual follow-ups for Faiz
-
-- ~~This pass could not run `device_bash`... `tsc --noEmit`, `npm run build`, `npm run lint`, and
-  the backend test suite were never run this pass~~ — **resolved 2026-09-14 (verification pass)**:
-  `device_bash` still can't mount `E:\Aladdin` this session (same tracked Windows-update issue), so
-  all four checks were run by staging the frontend `src`/config and the full backend `app`/`tests`
-  tree (plus the repo-root `prompts/`, `schemas/`, `scoring/`, `research/`, `scenarios/` directories
-  the backend reads at a repo-root-relative path) into a cloud-side mirror and running them there —
-  same workaround as every prior phase this session. Results:
-  - `npx tsc --noEmit` — **clean**, no errors.
-  - `npm run build` — **succeeds** (`vite build`, 852 modules, ~615 kB / 172 kB gzipped single
-    bundle — the known no-code-splitting gap, unchanged).
-  - `npm run lint` — **still fails outright** exactly as already documented ("couldn't find an
-    eslint.config.js file") — a pre-existing Phase 0 gap, not something this pass introduced or
-    worsened.
-  - Backend `pytest` — **260 passed, 0 failed** (up from the last-recorded 111; the count grew
-    across Phases 4-7's additional tests, none of which had had a full-suite run recorded in this
-    file until now).
-  - Backend `ruff check .` — **clean**.
-  - Backend `mypy app` — **found and fixed one real gap**: a `quantize()` typing bug that produced
-    8 arg-type/assignment/operator errors across `valuation.py`/`scenarios.py`/`portfolio_risk.py`/
-    `builder.py` (not a runtime bug — see "Known gaps" above for the full writeup and the fix, now
-    committed to `E:\Aladdin\backend\app\domain\calculations.py`). 11 `import-untyped` errors
-    remain (missing stubs for pandas/openpyxl/fitz/yfinance/boto3/apscheduler) — cosmetic, not
-    fixed this pass, see "Known gaps" above.
-- Manually exercise the two new forms once: create a thesis, change its status, create a bull/base/
-  bear valuation case for a holding with a revenue fact on record, expand its critique. Still
-  outstanding — needs your own eyes on the running app, which this build environment can't drive.
-- Git commit this work (still uncommitted, per the existing convention) — this now includes the
-  `calculations.py` quantize fix from this pass alongside the existing uncommitted Phases 1-7 and
-  the frontend data-entry forms.
+- ~~No frontend page renders Phase 4 research endpoints~~ — resolved by Phase 6's `MacroSection`.
+- ~~No frontend page renders any Phase 5 endpoint~~ / ~~thesis/valuation creation is API-only~~ —
+  resolved by Phase 6's `RiskSection`/`HoldingDetailSection`, then the 2026-09-14 data-entry pass.
+- ~~No application authentication anywhere~~ — resolved by Phase 7's `APP_AUTH_TOKEN`.
+- ~~Pydantic v2 serializes `Decimal` as a JSON string, undocumented beyond risk-snapshot columns~~ —
+  corrected across frontend TypeScript types during Phase 6.
