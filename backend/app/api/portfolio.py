@@ -2,7 +2,7 @@
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from sqlalchemy.orm import Session
 
 from app.config.database import get_db
@@ -163,18 +163,20 @@ def get_snapshot(snapshot_id: UUID, db: Session = Depends(get_db)) -> PortfolioS
 
 @router.get("/holdings", response_model=list[HoldingOut])
 def list_holdings(
-    account_id: UUID | None = None, db: Session = Depends(get_db)
+    account_id: list[UUID] = Query(default=[]), db: Session = Depends(get_db)
 ) -> list[HoldingOut]:
     """Used by the document-upload UI to let the user pick which holding a
     report belongs to (documents.holding_id, §20), and by the dashboard to
-    let the user narrow the holding picker down to one account.
+    let the user narrow the holding picker down to one or more accounts (the
+    dashboard's account filter, §26 accounts feature — pass `?account_id=`
+    once per selected account; omit it entirely for "all accounts").
 
-    `account_id` filters to holdings that appear, tagged with that account,
-    in the *latest* snapshot — i.e. what that account currently holds, not
-    everything it has ever held (older, since-cleared positions aren't
-    "watched" for that account anymore)."""
+    `account_id` filters to holdings that appear, tagged with one of those
+    accounts, in the *latest* snapshot — i.e. what those accounts currently
+    hold, not everything they have ever held (older, since-cleared positions
+    aren't "watched" for an account anymore)."""
     query = db.query(Holding)
-    if account_id is not None:
+    if account_id:
         latest_snapshot = (
             db.query(PortfolioSnapshot).order_by(PortfolioSnapshot.uploaded_at.desc()).first()
         )
@@ -184,7 +186,7 @@ def list_holdings(
             db.query(PortfolioPosition.holding_id)
             .filter(
                 PortfolioPosition.snapshot_id == latest_snapshot.id,
-                PortfolioPosition.account_id == account_id,
+                PortfolioPosition.account_id.in_(account_id),
             )
             .scalar_subquery()
         )
@@ -215,6 +217,7 @@ def update_holding(
 @router.post("/snapshots/{snapshot_id}/valuation", response_model=PortfolioValuationOut)
 def refresh_valuation(
     snapshot_id: UUID,
+    account_id: list[UUID] = Query(default=[]),
     db: Session = Depends(get_db),
     provider: MarketDataProvider = Depends(get_market_data_provider),
 ) -> PortfolioValuationOut:
@@ -222,6 +225,11 @@ def refresh_valuation(
     the observations (§8.3 provenance), and returns deterministic market
     value, unrealized P&L, and concentration/exposure (§26 Phase 2, §2.2 —
     no LLM involvement).
+
+    `account_id` (repeatable) scopes the computation to just those accounts'
+    positions — the dashboard's account filter (§26 accounts feature).
+    Omitting it values every position in the snapshot, same as before this
+    parameter existed.
 
     A holding failing to price (no market_ticker set, delisted ticker, FX
     pair unavailable) does not fail this request — it's reported per-holding
@@ -231,5 +239,7 @@ def refresh_valuation(
     if snapshot is None:
         raise HTTPException(status_code=404, detail="snapshot not found")
 
-    valuation = refresh_and_value_snapshot(db, provider, snapshot)
+    valuation = refresh_and_value_snapshot(
+        db, provider, snapshot, account_ids=set(account_id) if account_id else None
+    )
     return PortfolioValuationOut.model_validate(valuation, from_attributes=True)

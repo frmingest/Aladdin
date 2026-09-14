@@ -54,4 +54,8 @@ export type PortfolioValuationOut = {
   holdings: HoldingValuationOut[];
   concentration: ConcentrationProfileOut;
   warnings: string[];
+  // null = every account (no filter applied). The account_id filter this
+  // valuation was actually computed against (§26 accounts feature dashboard
+  // filter).
+  account_ids: string[] | null;
 };

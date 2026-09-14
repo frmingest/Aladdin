@@ -203,6 +203,45 @@ def test_patch_unknown_holding_returns_404(client, fake_provider):
     assert response.status_code == 404
 
 
+# --- Accounts (§26 accounts feature) — valuation scoped to a subset -------
+
+
+def _create_account(client, name: str, account_number: str) -> str:
+    response = client.post("/accounts", json={"name": name, "account_number": account_number})
+    assert response.status_code == 201, response.text
+    return response.json()["id"]
+
+
+def test_valuation_can_be_scoped_to_one_account(client, fake_provider):
+    account_a = _create_account(client, "Aksje & fonds konto", "70541644")
+    account_b = _create_account(client, "ASK konto", "24175564")
+
+    client.post(
+        "/portfolio/upload",
+        files={"file": ("a.csv", make_portfolio_csv(["VAR.OL,Vår Energi,Aksje,1200,100,28.40,NOK,Energy,"]), "text/csv")},
+        data={"account_id": account_a},
+    )
+    upload_b = client.post(
+        "/portfolio/upload",
+        files={"file": ("b.csv", make_portfolio_csv(["EQNR.OL,Equinor,Aksje,500,100,300,NOK,Energy,"]), "text/csv")},
+        data={"account_id": account_b},
+    )
+    snapshot_id = upload_b.json()["snapshot"]["id"]  # merged snapshot has both accounts' positions
+
+    scoped = client.post(f"/portfolio/snapshots/{snapshot_id}/valuation?account_id={account_a}")
+    assert scoped.status_code == 200, scoped.text
+    scoped_body = scoped.json()
+    assert scoped_body["account_ids"] == [account_a]
+    assert [h["ticker"] for h in scoped_body["holdings"]] == ["VAR.OL"]
+    assert Decimal(scoped_body["total_market_value"]) == Decimal("36000.00")  # 1200 * 30.00
+
+    unscoped = client.post(f"/portfolio/snapshots/{snapshot_id}/valuation")
+    assert unscoped.status_code == 200
+    unscoped_body = unscoped.json()
+    assert unscoped_body["account_ids"] is None
+    assert {h["ticker"] for h in unscoped_body["holdings"]} == {"VAR.OL", "EQNR.OL"}
+
+
 def test_reupload_does_not_clobber_manually_set_market_ticker(client, fake_provider):
     upload = _upload(client, content=NORDNET_FIXTURE, filename="beholdning.csv")
     holding_id = _find_position(upload, "Vår Energi")["holding_id"]

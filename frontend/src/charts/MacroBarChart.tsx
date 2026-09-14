@@ -2,7 +2,7 @@ import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis
 import { categoricalColor, CHROME } from "./palette";
 import { tooltipContentStyle, tooltipLabelStyle } from "./tooltip";
 
-export type MacroBarPoint = { series: string; value: number; unit: string };
+export type MacroBarPoint = { series: string; label: string; value: number; unit: string };
 
 /**
  * Macro dashboard (architecture §19 "Macro dashboard — rates, inflation,
@@ -10,6 +10,11 @@ export type MacroBarPoint = { series: string; value: number; unit: string };
  * the latest observation per series — no history — so this is a snapshot
  * bar chart of current levels rather than a time series; a line chart here
  * would fabricate trend data that doesn't exist (§21).
+ *
+ * The Y-axis renders each point's plain-language `label` (see
+ * MacroSection's MACRO_SERIES_LABELS) rather than the raw backend
+ * `series_key` (e.g. "us_headline_cpi_yoy") — a name meant for config
+ * lookups, not for reading on a chart.
  */
 export default function MacroBarChart({ data }: { data: MacroBarPoint[] }) {
   if (data.length === 0) {
@@ -21,7 +26,7 @@ export default function MacroBarChart({ data }: { data: MacroBarPoint[] }) {
         <BarChart data={data} layout="vertical" margin={{ top: 8, right: 40, bottom: 0, left: 8 }}>
           <CartesianGrid stroke={CHROME.grid} horizontal={false} />
           <XAxis type="number" stroke={CHROME.axis} tick={{ fontSize: 11 }} />
-          <YAxis type="category" dataKey="series" stroke={CHROME.axis} tick={{ fontSize: 11 }} width={140} />
+          <YAxis type="category" dataKey="label" stroke={CHROME.axis} tick={{ fontSize: 11 }} width={170} />
           <Tooltip
             contentStyle={tooltipContentStyle}
             labelStyle={tooltipLabelStyle}

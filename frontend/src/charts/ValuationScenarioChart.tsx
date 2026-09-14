@@ -26,7 +26,12 @@ export default function ValuationScenarioChart({ data }: { data: ValuationScenar
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={sorted} margin={{ top: 8, right: 16, bottom: 0, left: 8 }}>
           <CartesianGrid stroke={CHROME.grid} vertical={false} />
-          <XAxis dataKey="case_type" stroke={CHROME.axis} tick={{ fontSize: 11 }} />
+          <XAxis
+            dataKey="case_type"
+            stroke={CHROME.axis}
+            tick={{ fontSize: 11 }}
+            tickFormatter={(value: string) => value.charAt(0).toUpperCase() + value.slice(1)}
+          />
           <YAxis stroke={CHROME.axis} tick={{ fontSize: 11 }} unit={` ${currency}`} width={70} />
           <Tooltip contentStyle={tooltipContentStyle} labelStyle={tooltipLabelStyle} />
           <Bar dataKey="calculated_value" radius={[3, 3, 0, 0]} isAnimationActive={false}>

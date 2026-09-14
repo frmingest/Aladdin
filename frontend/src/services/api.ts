@@ -58,9 +58,13 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T;
 }
 
-export function listHoldings(accountId?: string): Promise<Holding[]> {
-  const qs = accountId ? `?account_id=${encodeURIComponent(accountId)}` : "";
-  return apiFetch(`/portfolio/holdings${qs}`);
+function accountIdsQuery(accountIds?: string[]): string {
+  if (!accountIds || accountIds.length === 0) return "";
+  return "?" + accountIds.map((id) => `account_id=${encodeURIComponent(id)}`).join("&");
+}
+
+export function listHoldings(accountIds?: string[]): Promise<Holding[]> {
+  return apiFetch(`/portfolio/holdings${accountIdsQuery(accountIds)}`);
 }
 
 export function listSnapshots(accountId?: string): Promise<PortfolioSnapshotSummary[]> {
@@ -172,12 +176,22 @@ export async function getHoldingAnalysisMemo(id: string): Promise<string> {
 
 // --- Phase 2/5 — market valuation & portfolio risk (§26) -------------------
 
-export function refreshSnapshotValuation(snapshotId: string): Promise<PortfolioValuationOut> {
-  return apiFetch(`/portfolio/snapshots/${snapshotId}/valuation`, { method: "POST" });
+export function refreshSnapshotValuation(
+  snapshotId: string,
+  accountIds?: string[],
+): Promise<PortfolioValuationOut> {
+  return apiFetch(`/portfolio/snapshots/${snapshotId}/valuation${accountIdsQuery(accountIds)}`, {
+    method: "POST",
+  });
 }
 
-export function createPortfolioRiskSnapshot(snapshotId: string): Promise<PortfolioRiskSnapshotOut> {
-  return apiFetch(`/portfolio/snapshots/${snapshotId}/risk-snapshot`, { method: "POST" });
+export function createPortfolioRiskSnapshot(
+  snapshotId: string,
+  accountIds?: string[],
+): Promise<PortfolioRiskSnapshotOut> {
+  return apiFetch(`/portfolio/snapshots/${snapshotId}/risk-snapshot${accountIdsQuery(accountIds)}`, {
+    method: "POST",
+  });
 }
 
 export function listPortfolioRiskSnapshots(snapshotId: string): Promise<PortfolioRiskSnapshotOut[]> {

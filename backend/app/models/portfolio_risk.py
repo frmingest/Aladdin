@@ -49,6 +49,13 @@ class PortfolioRiskSnapshot(Base):
     narrative: Mapped[str] = mapped_column(Text, nullable=False)
     risk_scoring_version: Mapped[str] = mapped_column(String(16), nullable=False)
     scenario_version: Mapped[str] = mapped_column(String(16), nullable=False)
+    # NULL = built for every account (no filter). A sorted list of account-id
+    # strings records which accounts (§26 accounts feature dashboard filter)
+    # this particular row was scoped to, so the dashboard can tell an
+    # all-accounts risk snapshot apart from one computed for a subset without
+    # re-deriving it, and so this table's append-only history (§28: never
+    # overwrite, only add rows) stays legible across both kinds.
+    account_ids_json: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)

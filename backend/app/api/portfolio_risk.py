@@ -2,7 +2,7 @@
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.config.database import get_db
@@ -32,24 +32,33 @@ def _snapshot_to_out(row: PortfolioRiskSnapshot) -> PortfolioRiskSnapshotOut:
         risk_scoring_version=row.risk_scoring_version,
         scenario_version=row.scenario_version,
         created_at=row.created_at,
+        account_ids=row.account_ids_json,
     )
 
 
 @router.post("/snapshots/{snapshot_id}/risk-snapshot", response_model=PortfolioRiskSnapshotOut, status_code=201)
 def create_portfolio_risk_snapshot(
     snapshot_id: UUID,
+    account_id: list[UUID] = Query(default=[]),
     db: Session = Depends(get_db),
     provider: MarketDataProvider = Depends(get_market_data_provider),
 ) -> PortfolioRiskSnapshotOut:
     """Builds and persists a new risk profile (concentration, correlation,
     exposure, systemic/state risk, scenario impact — §15/§15.1/§18) for this
     portfolio snapshot, refreshing market data as a side effect (reuses
-    §26 Phase 2's refresh_and_value_snapshot)."""
+    §26 Phase 2's refresh_and_value_snapshot).
+
+    `account_id` (repeatable) scopes the whole profile to just those
+    accounts' positions (the dashboard's account filter, §26 accounts
+    feature); the resulting row records that scope (`account_ids` below) so
+    it stays distinguishable in history from an all-accounts snapshot."""
     snapshot = db.get(PortfolioSnapshot, snapshot_id)
     if snapshot is None:
         raise HTTPException(status_code=404, detail="snapshot not found")
 
-    row = build_portfolio_risk_snapshot(db, provider, snapshot)
+    row = build_portfolio_risk_snapshot(
+        db, provider, snapshot, account_ids=set(account_id) if account_id else None
+    )
     return _snapshot_to_out(row)
 
 

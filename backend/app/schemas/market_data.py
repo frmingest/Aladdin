@@ -53,3 +53,7 @@ class PortfolioValuationOut(BaseModel):
     holdings: list[HoldingValuationOut]
     concentration: ConcentrationProfileOut
     warnings: list[str]
+    # None = every account (no filter applied). Echoes back the account_id
+    # filter this valuation was actually computed against (§26 accounts
+    # feature dashboard filter), so a caller never has to guess.
+    account_ids: list[UUID] | None = None

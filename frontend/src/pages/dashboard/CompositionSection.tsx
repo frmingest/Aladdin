@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ApiError, refreshSnapshotValuation } from "../../services/api";
 import type { PortfolioValuationOut } from "../../types/market_valuation";
 import { num } from "../../lib/num";
 import CompositionBreakdown from "../../charts/CompositionBreakdown";
+import InfoTooltip from "../../components/InfoTooltip";
 
 function toSlices(weights: Record<string, string>, topN = 8): { name: string; value: number }[] {
   const entries = Object.entries(weights).map(([name, value]) => [name, num(value) ?? 0] as const);
@@ -13,6 +14,9 @@ function toSlices(weights: Record<string, string>, topN = 8): { name: string; va
   return [...head.map(([name, value]) => ({ name, value })), { name: "Other", value: restTotal }];
 }
 
+const SECTION_EXPLANATION =
+  "Shows what you actually own right now — total value, gain/loss, and how concentrated it is by holding, sector, and currency. This is the starting point for risk: a portfolio that's heavily weighted in one stock, sector, or currency carries more concentration risk than one spread out, even before you look at anything else.";
+
 /**
  * Portfolio composition (architecture §19 "Portfolio composition — current
  * allocation"). Requires a live market-data valuation
@@ -21,16 +25,37 @@ function toSlices(weights: Record<string, string>, topN = 8): { name: string; va
  * convention as Analysis.tsx's manual "Run analysis" for the network-
  * dependent Phase 3 endpoint.
  */
-export default function CompositionSection({ snapshotId }: { snapshotId: string }) {
+export default function CompositionSection({
+  snapshotId,
+  accountIds,
+}: {
+  snapshotId: string;
+  accountIds: string[];
+}) {
   const [valuation, setValuation] = useState<PortfolioValuationOut | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Tracks whether `valuation` above still reflects the current filter —
+  // a live valuation is a paid provider call (§2.7), so switching accounts
+  // clears the stale numbers and asks for an explicit re-refresh rather than
+  // silently re-fetching on every filter change.
+  const isFirstRun = useRef(true);
+
+  useEffect(() => {
+    if (isFirstRun.current) {
+      isFirstRun.current = false;
+      return;
+    }
+    setValuation(null);
+    setError(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [snapshotId, accountIds.join(",")]);
 
   async function handleRefresh() {
     setLoading(true);
     setError(null);
     try {
-      setValuation(await refreshSnapshotValuation(snapshotId));
+      setValuation(await refreshSnapshotValuation(snapshotId, accountIds));
     } catch (err) {
       setError(err instanceof ApiError ? String(err.detail ?? err.message) : "Valuation refresh failed.");
     } finally {
@@ -45,7 +70,10 @@ export default function CompositionSection({ snapshotId }: { snapshotId: string 
   return (
     <section className="terminal-card">
       <div className="terminal-card-header">
-        <h2 className="terminal-card-title">Portfolio composition</h2>
+        <h2 className="terminal-card-title flex items-center gap-2">
+          Portfolio composition
+          <InfoTooltip text={SECTION_EXPLANATION} />
+        </h2>
         <button onClick={handleRefresh} disabled={loading} className="btn-terminal btn-terminal-primary text-xs px-3 py-1">
           {loading ? "Refreshing…" : valuation ? "Refresh valuation" : "Load valuation"}
         </button>
@@ -55,7 +83,8 @@ export default function CompositionSection({ snapshotId }: { snapshotId: string 
 
       {!valuation && !loading && (
         <p className="text-sm text-tertiary">
-          Fetches live prices/FX and computes market value, P&amp;L, and concentration for this snapshot.
+          Fetches live prices/FX and computes market value, P&amp;L, and concentration for{" "}
+          {accountIds.length === 0 ? "the whole portfolio" : "the selected account(s)"}.
         </p>
       )}
 

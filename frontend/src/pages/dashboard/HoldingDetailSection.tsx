@@ -5,19 +5,22 @@ import {
   createHoldingValuationCase,
   getHoldingAnalysis,
   getInvalidationCheck,
-  listAccounts,
   listHoldingAnalyses,
   listHoldingTheses,
   listHoldingValuationCases,
   listHoldings,
   updateThesis,
 } from "../../services/api";
-import type { Account, Holding } from "../../types/portfolio";
+import type { Holding } from "../../types/portfolio";
 import type { ConfidenceLevel, HoldingAnalysisDetail, HoldingAnalysisSummary } from "../../types/analysis";
 import type { InvalidationSignalOut, ThesisCreate, ThesisOut } from "../../types/thesis";
 import type { ValuationCaseCreate, ValuationCaseOut } from "../../types/dcf";
 import { num } from "../../lib/num";
 import ValuationScenarioChart from "../../charts/ValuationScenarioChart";
+import InfoTooltip from "../../components/InfoTooltip";
+
+const SECTION_EXPLANATION =
+  "A drill-down into one holding at a time: how its AI analysis score has moved over time, the evidence behind the latest read, your own written thesis for owning it (and whether anything since invalidates it), and bear/base/bull valuation cases from the DCF model. Use this to understand the story behind any position that stands out elsewhere on the dashboard.";
 
 // Every status app.models.thesis.InvestmentThesisStatus defines. Missing
 // INVALIDATED from this map (the pre-existing bug this pass fixes) meant a
@@ -29,9 +32,19 @@ const THESIS_STATUS_COLOR: Record<string, string> = {
   INVALIDATED: "text-negative",
   CLOSED: "text-tertiary",
 };
+// Plain-language labels for app.models.thesis.InvestmentThesisStatus's
+// SCREAMING_SNAKE_CASE values — those are the wire format, not something
+// meant to be read as-is in a dropdown.
+const THESIS_STATUS_LABELS: Record<string, string> = {
+  ACTIVE: "Active",
+  UNDER_REVIEW: "Under review",
+  INVALIDATED: "Invalidated",
+  CLOSED: "Closed",
+};
 const THESIS_STATUSES = ["ACTIVE", "UNDER_REVIEW", "INVALIDATED", "CLOSED"];
 const CONFIDENCE_LEVELS: ConfidenceLevel[] = ["low", "medium", "high"];
 const CASE_TYPES = ["bull", "base", "bear"] as const;
+const CASE_TYPE_LABELS: Record<string, string> = { bull: "Bull", base: "Base", bear: "Bear" };
 
 // Shared form-control classes — the finance-terminal design system's own
 // input-terminal/label-terminal/btn-terminal component classes, matching
@@ -220,7 +233,7 @@ function ThesisStatusSelect({ thesis, onUpdated }: { thesis: ThesisOut; onUpdate
       >
         {THESIS_STATUSES.map((s) => (
           <option key={s} value={s} className="bg-secondary text-primary">
-            {s}
+            {THESIS_STATUS_LABELS[s] ?? s}
           </option>
         ))}
       </select>
@@ -352,7 +365,7 @@ function NewValuationCaseForm({
           >
             {CASE_TYPES.map((c) => (
               <option key={c} value={c}>
-                {c}
+                {CASE_TYPE_LABELS[c] ?? c}
               </option>
             ))}
           </select>
@@ -507,9 +520,7 @@ function ValuationCaseRow({ c }: { c: ValuationCaseOut }) {
  * (with its AI critique surfaced) without leaving the dashboard. Reading
  * analyses/evidence stays exactly as it was.
  */
-export default function HoldingDetailSection() {
-  const [accounts, setAccounts] = useState<Account[]>([]);
-  const [accountFilter, setAccountFilter] = useState<string>("");
+export default function HoldingDetailSection({ accountIds }: { accountIds: string[] }) {
   const [holdings, setHoldings] = useState<Holding[]>([]);
   const [holdingId, setHoldingId] = useState<string>("");
 
@@ -523,13 +534,7 @@ export default function HoldingDetailSection() {
   const [cases, setCases] = useState<ValuationCaseOut[]>([]);
 
   useEffect(() => {
-    listAccounts()
-      .then(setAccounts)
-      .catch(() => undefined);
-  }, []);
-
-  useEffect(() => {
-    listHoldings(accountFilter || undefined)
+    listHoldings(accountIds)
       .then((list) => {
         setHoldings(list);
         // Keep the current selection if it's still in the filtered list;
@@ -539,7 +544,8 @@ export default function HoldingDetailSection() {
         );
       })
       .catch(() => undefined);
-  }, [accountFilter]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accountIds.join(",")]);
 
   useEffect(() => {
     if (!holdingId) return;
@@ -568,20 +574,10 @@ export default function HoldingDetailSection() {
   return (
     <section className="terminal-card space-y-6">
       <div className="flex items-center gap-3 flex-wrap">
-        <h2 className="terminal-card-title">Holding detail</h2>
-        <select
-          value={accountFilter}
-          onChange={(e) => setAccountFilter(e.target.value)}
-          className="input-terminal w-auto text-xs py-1"
-          title="Filter holdings by account"
-        >
-          <option value="">All accounts</option>
-          {accounts.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.name} ({a.account_number})
-            </option>
-          ))}
-        </select>
+        <h2 className="terminal-card-title flex items-center gap-2">
+          Holding detail
+          <InfoTooltip text={SECTION_EXPLANATION} />
+        </h2>
         <select
           value={holdingId}
           onChange={(e) => setHoldingId(e.target.value)}

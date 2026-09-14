@@ -83,19 +83,20 @@ def _commodity_exposure_pct(sector_weights_pct: dict[str, Decimal]) -> Decimal |
 
 
 def _compute_cash_positions(
-    db: Session, snapshot: PortfolioSnapshot, reporting_currency: str
+    db: Session, positions: list, reporting_currency: str
 ) -> tuple[list[tuple[str | None, Decimal]], Decimal, list[str]]:
     """Cash/deposit positions valued from `quantity` directly (cash has no
     market price to fetch — quantity *is* the value in its trading
     currency), converted via the most recent FxObservation on record. A
     position that can't be converted (foreign-currency cash with no FX rate
     ever observed) is excluded with an explicit warning, not silently
-    dropped (§21)."""
+    dropped (§21). `positions` is already filtered to the requested account
+    scope (§26 accounts feature) by the caller."""
     warnings: list[str] = []
     positions_value: list[tuple[str | None, Decimal]] = []
     total = Decimal("0")
 
-    for position in snapshot.positions:
+    for position in positions:
         holding = position.holding
         if holding.asset_class != AssetClass.CASH.value:
             continue
@@ -234,11 +235,26 @@ def build_portfolio_risk_snapshot(
     snapshot: PortfolioSnapshot,
     analysis_run_id: UUID | None = None,
     settings: Settings | None = None,
+    account_ids: set[UUID] | None = None,
 ) -> PortfolioRiskSnapshot:
+    """`account_ids=None` builds the risk profile for every position in the
+    snapshot (every account), same as before this parameter existed. A
+    non-None set scopes every dimension here — concentration/exposure (via
+    the underlying valuation), correlation (only the filtered holdings'
+    tickers), cash/deposit concentration, custody and jurisdictional
+    weights — to just those accounts' positions (§26 accounts feature
+    dashboard filter), and the resulting row records that scope in
+    `account_ids_json` so its history stays distinguishable from an
+    all-accounts snapshot."""
     settings = settings or get_settings()
     reporting_currency = snapshot.reporting_currency
+    positions = (
+        snapshot.positions
+        if account_ids is None
+        else [p for p in snapshot.positions if p.account_id in account_ids]
+    )
 
-    valuation = refresh_and_value_snapshot(db, market_provider, snapshot)
+    valuation = refresh_and_value_snapshot(db, market_provider, snapshot, account_ids=account_ids)
     concentration = valuation.concentration
     warnings: list[str] = list(valuation.warnings)
 
@@ -252,7 +268,7 @@ def build_portfolio_risk_snapshot(
     currency_exposure_pct = _currency_exposure_pct(concentration.currency_weights, reporting_currency)
     commodity_exposure_pct = _commodity_exposure_pct(concentration.sector_weights)
 
-    cash_positions, cash_total, cash_warnings = _compute_cash_positions(db, snapshot, reporting_currency)
+    cash_positions, cash_total, cash_warnings = _compute_cash_positions(db, positions, reporting_currency)
     warnings.extend(cash_warnings)
     deposit_exposures, deposits_over_guarantee_pct = risk.compute_deposit_concentration(
         cash_positions, Decimal(str(settings.deposit_guarantee_limit_nok))
@@ -353,6 +369,7 @@ def build_portfolio_risk_snapshot(
         narrative=narrative,
         risk_scoring_version=risk_config.version,
         scenario_version=scenario_registry.version,
+        account_ids_json=sorted(str(a) for a in account_ids) if account_ids is not None else None,
     )
     db.add(row)
     db.commit()

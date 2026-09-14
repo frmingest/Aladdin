@@ -149,3 +149,48 @@ def test_unknown_snapshot_returns_404_for_risk_snapshot(client, fake_provider):
         "/portfolio/snapshots/00000000-0000-0000-0000-000000000000/risk-snapshot"
     )
     assert response.status_code == 404
+
+
+# --- Accounts (§26 accounts feature) — risk snapshot scoped to a subset ----
+
+
+def _create_account(client, name: str, account_number: str) -> str:
+    response = client.post("/accounts", json={"name": name, "account_number": account_number})
+    assert response.status_code == 201, response.text
+    return response.json()["id"]
+
+
+def test_risk_snapshot_can_be_scoped_to_one_account(client, fake_provider):
+    account_a = _create_account(client, "Aksje & fonds konto", "70541644")
+    account_b = _create_account(client, "ASK konto", "24175564")
+
+    client.post(
+        "/portfolio/upload",
+        files={"file": ("a.csv", make_portfolio_csv(["VAR.OL,Vår Energi,Aksje,1200,100,28.40,NOK,Energy,"]), "text/csv")},
+        data={"account_id": account_a},
+    )
+    upload_b = client.post(
+        "/portfolio/upload",
+        files={"file": ("b.csv", make_portfolio_csv(["EQNR.OL,Equinor,Aksje,500,100,300,NOK,Energy,"]), "text/csv")},
+        data={"account_id": account_b},
+    )
+    snapshot_id = upload_b.json()["snapshot"]["id"]
+
+    scoped = client.post(f"/portfolio/snapshots/{snapshot_id}/risk-snapshot?account_id={account_a}")
+    assert scoped.status_code == 201, scoped.text
+    scoped_body = scoped.json()
+    assert scoped_body["account_ids"] == [account_a]
+    # Only VAR.OL counted -> single-name HHI is a full 10000 (one holding = 100% weight).
+    assert scoped_body["concentration"]["single_name_hhi"] == "10000.00" or Decimal(
+        scoped_body["concentration"]["single_name_hhi"]
+    ) == Decimal("10000")
+
+    unscoped = client.post(f"/portfolio/snapshots/{snapshot_id}/risk-snapshot")
+    assert unscoped.status_code == 201
+    assert unscoped.json()["account_ids"] is None
+
+    # Both rows persist independently in this snapshot's risk-snapshot history.
+    listed = client.get(f"/portfolio/snapshots/{snapshot_id}/risk-snapshots").json()
+    assert len(listed) == 2
+    account_id_scopes = {tuple(r["account_ids"]) if r["account_ids"] else None for r in listed}
+    assert account_id_scopes == {(account_a,), None}

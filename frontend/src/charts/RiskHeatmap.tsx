@@ -1,6 +1,6 @@
 import { bandColor } from "./palette";
 
-export type RiskCell = { dimension: string; band: string | null; detail?: string };
+export type RiskCell = { dimension: string; band: string | null; detail?: string; label?: string };
 
 /**
  * Portfolio risk heatmap (architecture §19 "Portfolio risk heatmap — risk
@@ -26,7 +26,7 @@ export default function RiskHeatmap({ cells, footnote }: { cells: RiskCell[]; fo
             className="rounded-lg p-3 border border-primary"
             style={{ backgroundColor: `${bandColor(cell.band)}1F` }}
           >
-            <p className="stat-label mb-1">{cell.dimension.replace(/_/g, " ")}</p>
+            <p className="stat-label mb-1">{cell.label ?? cell.dimension.replace(/_/g, " ")}</p>
             <p className="text-sm font-semibold font-mono" style={{ color: bandColor(cell.band) }}>
               {cell.band ?? "INSUFFICIENT DATA"}
             </p>

@@ -93,4 +93,8 @@ export type PortfolioRiskSnapshotOut = {
   risk_scoring_version: string;
   scenario_version: string;
   created_at: string;
+  // null = built for every account (no filter). The account_id set this row
+  // was actually computed against (§26 accounts feature dashboard filter) —
+  // used to pick the right historical row for the current filter selection.
+  account_ids: string[] | null;
 };

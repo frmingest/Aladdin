@@ -32,3 +32,8 @@ class PortfolioRiskSnapshotOut(BaseModel):
     risk_scoring_version: str
     scenario_version: str
     created_at: datetime
+    # None = built for every account (no filter). The account_id set (§26
+    # accounts feature dashboard filter) this row was actually computed
+    # against, so a caller can pick the right historical row for a given
+    # filter selection out of GET .../risk-snapshots without recomputing.
+    account_ids: list[str] | None = None

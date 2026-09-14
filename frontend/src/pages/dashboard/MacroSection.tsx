@@ -10,6 +10,29 @@ import {
 import type { MacroSnapshotOut, SectorResearchOut } from "../../types/research";
 import { num } from "../../lib/num";
 import MacroBarChart, { type MacroBarPoint } from "../../charts/MacroBarChart";
+import InfoTooltip from "../../components/InfoTooltip";
+
+// Plain-language stand-ins for the raw series_key values app.domain
+// .macro_series registers (research/versions/v1.yaml) — the API only
+// exposes the canonical config key (e.g. "us_headline_cpi_yoy"), which is
+// meant for code and YAML, not for reading on a chart axis. Falls back to
+// a lightly cleaned-up version of the key itself for any series added to
+// the registry later without a matching entry here.
+const MACRO_SERIES_LABELS: Record<string, string> = {
+  us_policy_rate: "US policy rate (Fed funds)",
+  us_headline_cpi_yoy: "US inflation (CPI, YoY)",
+  us_real_yield_10y: "US 10y real yield",
+  us_breakeven_10y: "US 10y breakeven inflation",
+  us_dollar_index_broad: "US dollar index (broad)",
+  no_policy_rate: "Norway policy rate",
+};
+
+function macroSeriesLabel(seriesKey: string): string {
+  return MACRO_SERIES_LABELS[seriesKey] ?? seriesKey.replace(/_/g, " ");
+}
+
+const SECTION_EXPLANATION =
+  "The macroeconomic backdrop your portfolio sits in — interest rates, inflation, and dollar strength — plus AI-researched news for a sector you pick. These don't score your portfolio directly, but they're the context that makes a scenario (like the recession/stagflation impacts in Portfolio risk) plausible or not right now.";
 
 /**
  * Macro dashboard (architecture §19 "Macro dashboard — rates, inflation,
@@ -75,14 +98,17 @@ export default function MacroSection() {
   }
 
   const macroBars: MacroBarPoint[] = (macro?.observations ?? [])
-    .map((o) => ({ series: o.series_key, value: num(o.value), unit: o.unit }))
+    .map((o) => ({ series: o.series_key, label: macroSeriesLabel(o.series_key), value: num(o.value), unit: o.unit }))
     .filter((o): o is MacroBarPoint => o.value !== null);
 
   return (
     <section className="terminal-card space-y-6">
       <div>
         <div className="terminal-card-header">
-          <h2 className="terminal-card-title">Macro dashboard</h2>
+          <h2 className="terminal-card-title flex items-center gap-2">
+            Macro dashboard
+            <InfoTooltip text={SECTION_EXPLANATION} />
+          </h2>
           <button
             onClick={handleMacroRefresh}
             disabled={macroLoading}

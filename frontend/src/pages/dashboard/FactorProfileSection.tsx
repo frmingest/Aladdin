@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import { getHoldingAnalysis, listHoldingAnalyses, listHoldings } from "../../services/api";
 import FactorProfileChart, { type FactorProfilePoint } from "../../charts/FactorProfileChart";
+import InfoTooltip from "../../components/InfoTooltip";
+
+const SECTION_EXPLANATION =
+  "Each holding's most recent AI analysis, scored 1-10 on business quality, financial strength, and valuation. It's a fundamentals check that sits alongside the numbers-only risk metrics elsewhere on this page — a stock can look fine on concentration and correlation while still resting on a weak business or an expensive valuation.";
 
 /**
  * Factor profile (architecture §19 "Factor profile — business/financial/
@@ -9,12 +13,13 @@ import FactorProfileChart, { type FactorProfilePoint } from "../../charts/Factor
  * analyzed are simply omitted (§21: no basis for a score isn't the same as
  * a score of zero).
  */
-export default function FactorProfileSection() {
+export default function FactorProfileSection({ accountIds }: { accountIds: string[] }) {
   const [points, setPoints] = useState<FactorProfilePoint[] | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    listHoldings()
+    setPoints(null);
+    listHoldings(accountIds)
       .then(async (holdings) => {
         const results = await Promise.all(
           holdings.map(async (holding) => {
@@ -39,11 +44,15 @@ export default function FactorProfileSection() {
     return () => {
       cancelled = true;
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accountIds.join(",")]);
 
   return (
     <section className="terminal-card">
-      <h2 className="terminal-card-title mb-3">Factor profile</h2>
+      <h2 className="terminal-card-title mb-3 flex items-center gap-2">
+        Factor profile
+        <InfoTooltip text={SECTION_EXPLANATION} />
+      </h2>
       {points === null ? <p className="text-sm text-tertiary">Loading…</p> : <FactorProfileChart data={points} />}
     </section>
   );

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { listSnapshots } from "../services/api";
-import type { PortfolioSnapshotSummary } from "../types/portfolio";
+import { listAccounts, listSnapshots } from "../services/api";
+import type { Account, PortfolioSnapshotSummary } from "../types/portfolio";
+import AccountFilter from "../components/AccountFilter";
 import CompositionSection from "./dashboard/CompositionSection";
 import AllocationDriftSection from "./dashboard/AllocationDriftSection";
 import RiskSection from "./dashboard/RiskSection";
@@ -17,49 +18,112 @@ import HoldingDetailSection from "./dashboard/HoldingDetailSection";
  * (valuation, risk snapshot, macro/sector refresh) are manual triggers,
  * matching the convention Analysis.tsx established for Phase 3; everything
  * else reads whatever's already on record.
+ *
+ * The dashboard always looks at the *current* portfolio (the latest
+ * snapshot — uploads merge forward onto it, so it's every account's present
+ * holdings, not one point-in-time file) and lets the single account filter
+ * below narrow which accounts' positions each section counts. Browsing an
+ * older upload is a "Snapshot history" side-trip, not the main control —
+ * see the collapsible panel below.
  */
 export default function Dashboard() {
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [accountIds, setAccountIds] = useState<string[]>([]);
+
   const [snapshots, setSnapshots] = useState<PortfolioSnapshotSummary[]>([]);
   const [snapshotId, setSnapshotId] = useState<string>("");
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   useEffect(() => {
+    listAccounts()
+      .then(setAccounts)
+      .catch(() => undefined);
     listSnapshots()
       .then((list) => {
         setSnapshots(list);
-        if (list.length > 0) setSnapshotId(list[0].id);
+        if (list.length > 0) setSnapshotId(list[0].id); // list is newest-first (§ backend order_by desc)
       })
       .catch(() => undefined);
   }, []);
 
+  const latestSnapshotId = snapshots[0]?.id ?? "";
+  const viewingHistorical = snapshotId !== "" && snapshotId !== latestSnapshotId;
+
   return (
     <div className="space-y-8">
-      <div className="terminal-card flex items-end gap-3">
-        <div>
-          <label className="label-terminal">Portfolio snapshot</label>
-          <select
-            value={snapshotId}
-            onChange={(e) => setSnapshotId(e.target.value)}
-            className="input-terminal min-w-[280px]"
-          >
-            {snapshots.length === 0 && <option value="">No snapshots uploaded yet</option>}
-            {snapshots.map((s) => (
-              <option key={s.id} value={s.id}>
-                {new Date(s.uploaded_at).toLocaleString()} — {s.position_count} position(s)
-                {s.account_name ? ` — upload: ${s.account_name}` : ""}
-              </option>
-            ))}
-          </select>
+      <div className="terminal-card space-y-3">
+        <div className="flex items-end justify-between gap-3 flex-wrap">
+          <AccountFilter accounts={accounts} selected={accountIds} onChange={setAccountIds} />
+          {snapshots.length > 1 && (
+            <button
+              type="button"
+              onClick={() => setHistoryOpen((v) => !v)}
+              className="text-xs text-tertiary hover:text-accent underline"
+            >
+              {historyOpen ? "Hide snapshot history" : "Snapshot history"}
+            </button>
+          )}
         </div>
+
+        {viewingHistorical && (
+          <p className="text-xs text-warning">
+            Viewing an older upload from {new Date(snapshots.find((s) => s.id === snapshotId)?.uploaded_at ?? "").toLocaleString()} —{" "}
+            <button type="button" onClick={() => setSnapshotId(latestSnapshotId)} className="underline hover:text-accent">
+              back to current portfolio
+            </button>
+            .
+          </p>
+        )}
+
+        {historyOpen && (
+          <div className="terminal-table-wrapper">
+            <table className="terminal-table">
+              <thead>
+                <tr>
+                  <th>Uploaded</th>
+                  <th>Upload account</th>
+                  <th className="numeric">Positions</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {snapshots.map((s) => (
+                  <tr key={s.id}>
+                    <td className="primary font-mono">{new Date(s.uploaded_at).toLocaleString()}</td>
+                    <td>{s.account_name ?? "—"}</td>
+                    <td className="numeric font-mono">{s.position_count}</td>
+                    <td>
+                      {s.id === snapshotId ? (
+                        <span className="text-xs text-tertiary">Viewing</span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSnapshotId(s.id);
+                            setHistoryOpen(false);
+                          }}
+                          className="text-xs text-accent hover:underline"
+                        >
+                          View this upload
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {snapshotId ? (
         <>
-          <CompositionSection snapshotId={snapshotId} />
-          <AllocationDriftSection />
-          <RiskSection snapshotId={snapshotId} />
-          <FactorProfileSection />
+          <CompositionSection snapshotId={snapshotId} accountIds={accountIds} />
+          <AllocationDriftSection accountIds={accountIds} />
+          <RiskSection snapshotId={snapshotId} accountIds={accountIds} />
+          <FactorProfileSection accountIds={accountIds} />
           <MacroSection />
-          <HoldingDetailSection />
+          <HoldingDetailSection accountIds={accountIds} />
         </>
       ) : (
         <p className="text-sm text-tertiary">Upload a portfolio to see the dashboard.</p>

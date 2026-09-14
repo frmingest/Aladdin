@@ -6,6 +6,19 @@ import { bandColor } from "../../charts/palette";
 import RiskHeatmap, { type RiskCell } from "../../charts/RiskHeatmap";
 import { correlationReferenceBand, hhiReferenceBand, percentReferenceBand } from "../../charts/referenceBands";
 import ScenarioImpactChart, { type ScenarioImpactPoint } from "../../charts/ScenarioImpactChart";
+import InfoTooltip from "../../components/InfoTooltip";
+
+// Plain-language stand-ins for the raw dimension keys app.domain.portfolio_risk
+// scores (single_name_concentration, sector_concentration, ...) — same idea as
+// FactorProfileChart's FACTORS map, applied to the risk heatmap.
+const DIMENSION_LABELS: Record<string, string> = {
+  single_name_concentration: "Single-stock concentration",
+  sector_concentration: "Sector concentration",
+  currency_exposure: "Currency exposure",
+  commodity_exposure: "Commodity exposure",
+  correlation: "Holding correlation",
+  systemic_state_risk: "Bank deposit risk",
+};
 
 function buildHeatmapCells(snapshot: PortfolioRiskSnapshotOut): RiskCell[] {
   const singleNameHhi = num(snapshot.concentration.single_name_hhi);
@@ -23,7 +36,9 @@ function buildHeatmapCells(snapshot: PortfolioRiskSnapshotOut): RiskCell[] {
     { dimension: "correlation", band: correlationReferenceBand(correlation), detail: correlation !== null ? `avg r ${correlation.toFixed(2)}` : undefined },
     { dimension: "systemic_state_risk", band: percentReferenceBand(depositsOverGuarantee), detail: depositsOverGuarantee !== null ? `${depositsOverGuarantee.toFixed(1)}% over guarantee` : undefined },
   ];
-  return cells.filter((c) => c.band !== null);
+  return cells
+    .filter((c) => c.band !== null)
+    .map((c) => ({ ...c, label: DIMENSION_LABELS[c.dimension] }));
 }
 
 function buildScenarioImpacts(snapshot: PortfolioRiskSnapshotOut): ScenarioImpactPoint[] {
@@ -33,6 +48,21 @@ function buildScenarioImpacts(snapshot: PortfolioRiskSnapshotOut): ScenarioImpac
     .sort((a, b) => a.impact_pct - b.impact_pct);
 }
 
+/** True when a persisted risk-snapshot row's account scope matches the
+ * dashboard's current account filter — null/empty both mean "all
+ * accounts", so they match each other regardless of representation. */
+function scopeMatches(rowAccountIds: string[] | null, filterAccountIds: string[]): boolean {
+  const row = rowAccountIds ?? [];
+  if (row.length === 0 && filterAccountIds.length === 0) return true;
+  if (row.length !== filterAccountIds.length) return false;
+  const sortedRow = [...row].sort();
+  const sortedFilter = [...filterAccountIds].sort();
+  return sortedRow.every((id, i) => id === sortedFilter[i]);
+}
+
+const SECTION_EXPLANATION =
+  "The risk picture behind the numbers: how concentrated you are in one stock, sector, or currency, how closely your holdings move together (low correlation is what actually diversifies a portfolio), and exposure to bank deposit and Norwegian wealth-tax rules. The scenario chart below estimates how a recession, stagflation, or commodity shock would hit this portfolio specifically.";
+
 /**
  * Portfolio risk (architecture §19 "Portfolio risk heatmap", "Scenario
  * impact"; §15, §15.1, §18, §26 Phase 5). Computing a fresh snapshot
@@ -40,7 +70,13 @@ function buildScenarioImpacts(snapshot: PortfolioRiskSnapshotOut): ScenarioImpac
  * it's a manual trigger; reading the latest existing one on mount is free
  * (§2.7 — reading never costs a provider call).
  */
-export default function RiskSection({ snapshotId }: { snapshotId: string }) {
+export default function RiskSection({
+  snapshotId,
+  accountIds,
+}: {
+  snapshotId: string;
+  accountIds: string[];
+}) {
   const [snapshot, setSnapshot] = useState<PortfolioRiskSnapshotOut | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,15 +84,16 @@ export default function RiskSection({ snapshotId }: { snapshotId: string }) {
   useEffect(() => {
     setSnapshot(null);
     listPortfolioRiskSnapshots(snapshotId)
-      .then((rows) => setSnapshot(rows[0] ?? null))
+      .then((rows) => setSnapshot(rows.find((r) => scopeMatches(r.account_ids, accountIds)) ?? null))
       .catch(() => undefined);
-  }, [snapshotId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [snapshotId, accountIds.join(",")]);
 
   async function handleCompute() {
     setLoading(true);
     setError(null);
     try {
-      setSnapshot(await createPortfolioRiskSnapshot(snapshotId));
+      setSnapshot(await createPortfolioRiskSnapshot(snapshotId, accountIds));
     } catch (err) {
       setError(err instanceof ApiError ? String(err.detail ?? err.message) : "Risk snapshot computation failed.");
     } finally {
@@ -67,14 +104,21 @@ export default function RiskSection({ snapshotId }: { snapshotId: string }) {
   return (
     <section className="terminal-card">
       <div className="terminal-card-header">
-        <h2 className="terminal-card-title">Portfolio risk</h2>
+        <h2 className="terminal-card-title flex items-center gap-2">
+          Portfolio risk
+          <InfoTooltip text={SECTION_EXPLANATION} />
+        </h2>
         <button onClick={handleCompute} disabled={loading} className="btn-terminal btn-terminal-primary text-xs px-3 py-1">
           {loading ? "Computing…" : "Compute new risk snapshot"}
         </button>
       </div>
 
       {error && <p className="text-negative text-sm mb-3">{error}</p>}
-      {!snapshot && !loading && <p className="text-sm text-tertiary">No risk snapshot yet for this portfolio.</p>}
+      {!snapshot && !loading && (
+        <p className="text-sm text-tertiary">
+          No risk snapshot yet for {accountIds.length === 0 ? "the whole portfolio" : "this account selection"}.
+        </p>
+      )}
 
       {snapshot && (
         <div className="space-y-4">

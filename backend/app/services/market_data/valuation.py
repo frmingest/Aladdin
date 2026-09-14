@@ -88,6 +88,13 @@ class PortfolioValuation:
     holdings: list[HoldingValuation]
     concentration: ConcentrationProfile
     warnings: list[str] = field(default_factory=list)
+    # None = every position in the snapshot (every account, including
+    # unassigned ones). A non-None set scopes this computation to just those
+    # accounts' positions — the dashboard's account filter (§26 accounts
+    # feature) — so it's echoed back here rather than only living on the
+    # request, letting a caller confirm what a given valuation actually
+    # covers.
+    account_ids: frozenset[UUID] | None = None
 
 
 class _FxCache:
@@ -127,14 +134,26 @@ def refresh_and_value_snapshot(
     db: Session,
     provider: MarketDataProvider,
     snapshot: PortfolioSnapshot,
+    account_ids: set[UUID] | None = None,
 ) -> PortfolioValuation:
+    """`account_ids=None` values every position in the snapshot, same as
+    before this parameter existed. A non-None set restricts market value,
+    P&L, and concentration/exposure to just the positions tagged with one of
+    those accounts (§26 accounts feature) — a position with no account at
+    all is excluded whenever a filter is given, matching how
+    `GET /portfolio/holdings?account_id=` already treats "unassigned"."""
     reporting_currency = snapshot.reporting_currency
     fx_cache = _FxCache(db, provider)
+    positions = (
+        snapshot.positions
+        if account_ids is None
+        else [p for p in snapshot.positions if p.account_id in account_ids]
+    )
 
     valuations: list[HoldingValuation] = []
     warnings: list[str] = []
 
-    for position in snapshot.positions:
+    for position in positions:
         holding = position.holding
         hv = HoldingValuation(
             holding_id=holding.id,
@@ -179,6 +198,7 @@ def refresh_and_value_snapshot(
         holdings=valuations,
         concentration=concentration,
         warnings=warnings,
+        account_ids=frozenset(account_ids) if account_ids is not None else None,
     )
 
 
