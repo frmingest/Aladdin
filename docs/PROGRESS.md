@@ -102,6 +102,17 @@ both when a phase completes: the ADR for *why*, this file for *how far along thi
   (`app.models.thesis.InvestmentThesisStatus` has four values: ACTIVE/UNDER_REVIEW/INVALIDATED/CLOSED;
   the frontend map only had three) — an invalidated thesis silently rendered in the same neutral
   color as a healthy one. Fixed this pass; see "Frontend data-entry & UX review" below.
+- `app.domain.asset_class.AssetClass` has six values (EQUITY/ETF/FUND/CASH/BOND/OTHER) and no
+  `COMMODITY` or `COLLECTIBLE` value, even though §15.1's systemic-risk dimension already discusses
+  "commodity exposure," "gold mining cost curves," and a holding-level `custody_type` field meant
+  specifically for physically-allocated commodities (architecture.md line 862). Today a gold/silver
+  holding would normalize to `OTHER`, which is usable but loses the semantic distinction the risk
+  model already assumes exists. See [ADR 0011](decisions/0011-phase8-alternative-assets.md).
+- The CWO visual redesign (terminal design system, IBM Plex fonts, `.terminal-*` component classes
+  across every page — see `claude/cwo-design-redesign.md` in the Aladdin claude.ai Project) shipped
+  2026-09-14 without its own ADR or a PROGRESS.md update at the time — presentation-only, no
+  behavior change, but noted here so this file stays the accurate single source of truth on "what's
+  built."
 
 ## Deployment readiness (Railway)
 
@@ -165,6 +176,13 @@ Candidates #2-#3 below are unaffected and still open.
 valuation case from the dashboard) is done — see "Frontend data-entry & UX review" below. Candidates
 #2-#3 are unaffected and still open.
 
+**Update, 2026-09-14 (later):** Faiz asked for the portfolio to also cover two asset types outside
+the brokerage-upload world — physical gold/silver coins and a whisky collection currently tracked
+via The Whisky Exchange / Whiskybase. Neither is built yet; both are added below as candidates #4
+and #5, with the design reasoning in [ADR 0011](decisions/0011-phase8-alternative-assets.md).
+Candidates #2-#3 are unaffected and still open — nothing here reprioritizes them, it only adds two
+new candidates alongside them.
+
 ### Candidate next phases
 
 1. ~~**Deployment & production hardening**~~ — now Phase 7 (see above). The actual Railway
@@ -187,6 +205,30 @@ valuation case from the dashboard) is done — see "Frontend data-entry & UX rev
    comparison, §22.3), both empty since Phase 0. Also: add a `black` config and run the codebase
    through it once (currently never formatted); add the frontend's missing `eslint.config.js` so
    `npm run lint` stops failing outright, then fix whatever it flags.
+4. **Precious metals (physical gold/silver coins)** — not started; proposed design in
+   [ADR 0011](decisions/0011-phase8-alternative-assets.md). Scope: a `COMMODITY` (or
+   `PRECIOUS_METAL`) `AssetClass` value; an optional `acquired_at` date on `PortfolioPosition` so
+   each coin purchase is its own dated lot rather than being merged into one Nordnet-style position;
+   a manual single-holding entry path (today everything goes through bulk CSV/XLSX upload — no
+   endpoint/UI exists for adding one holding by hand); and a new keyless, free `MetalPriceProvider`
+   (gold-api.com — supports XAU/XAG spot, no API key, no documented rate limit) wired in behind the
+   existing `MarketDataProvider` abstraction, reusing Phase 2's `market_observations`/FX-conversion
+   machinery rather than adding new tables. Spot-based value and Faiz's actual cost basis (which
+   includes dealer premium) are kept as two separate numbers, consistent with §13.3's "never false
+   precision."
+5. **Whisky collection (collectibles)** — not started; proposed design in
+   [ADR 0011](decisions/0011-phase8-alternative-assets.md). Neither The Whisky Exchange (a retailer,
+   no personal-collection feature or public API found) nor Whiskybase (has a public API, but it
+   explicitly excludes personal/customer collection data and isn't free — partner access only)
+   offers an automatable feed of Faiz's own collection. Whiskybase does offer a free CSV/Excel
+   export of a member's own collection if Faiz catalogs his bottles there — the recommended path is
+   a manual CSV import (same "schema-flexible, canonical-validated" pattern as the Nordnet importer,
+   decision 0003), covering bottle name/distillery, ABV, volume, quantity, purchase date, purchase
+   price + currency, and an optional self-entered current value. No free live pricing feed exists
+   for whisky secondary-market value, so — unlike gold/silver — this asset class would carry at
+   cost basis with value explicitly flagged as user-supplied/stale rather than market-derived (§21).
+   Needs a real sample export or a filled-in template from Faiz before building, same as how Nordnet
+   support got built from a real sample (decision 0003).
 
 ### Smaller improvements (don't need their own phase)
 
