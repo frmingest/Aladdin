@@ -17,7 +17,7 @@ const CASE_ORDER = ["bear", "base", "bull"];
  */
 export default function ValuationScenarioChart({ data }: { data: ValuationScenarioPoint[] }) {
   if (data.length === 0) {
-    return <p className="text-sm text-slate-500">No valuation cases on record for this holding yet.</p>;
+    return <p className="text-sm text-tertiary">No valuation cases on record for this holding yet.</p>;
   }
   const sorted = [...data].sort((a, b) => CASE_ORDER.indexOf(a.case_type) - CASE_ORDER.indexOf(b.case_type));
   const currency = sorted[0]?.currency ?? "";
@@ -31,7 +31,7 @@ export default function ValuationScenarioChart({ data }: { data: ValuationScenar
           <Tooltip contentStyle={tooltipContentStyle} labelStyle={tooltipLabelStyle} />
           <Bar dataKey="calculated_value" radius={[3, 3, 0, 0]} isAnimationActive={false}>
             {sorted.map((entry) => (
-              <Cell key={entry.case_type} fill={CASE_COLOR[entry.case_type] ?? "#64748b"} />
+              <Cell key={entry.case_type} fill={CASE_COLOR[entry.case_type] ?? CHROME.axis} />
             ))}
           </Bar>
         </BarChart>

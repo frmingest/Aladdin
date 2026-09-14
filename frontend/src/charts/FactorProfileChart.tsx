@@ -25,7 +25,7 @@ const FACTORS: { key: keyof Omit<FactorProfilePoint, "name">; label: string; col
  */
 export default function FactorProfileChart({ data }: { data: FactorProfilePoint[] }) {
   if (data.length === 0) {
-    return <p className="text-sm text-slate-500">No completed holding analyses yet.</p>;
+    return <p className="text-sm text-tertiary">No completed holding analyses yet.</p>;
   }
   return (
     <div style={{ height: Math.max(220, data.length * 44) }}>
@@ -35,7 +35,7 @@ export default function FactorProfileChart({ data }: { data: FactorProfilePoint[
           <XAxis type="number" domain={[0, 10]} stroke={CHROME.axis} tick={{ fontSize: 11 }} />
           <YAxis type="category" dataKey="name" stroke={CHROME.axis} tick={{ fontSize: 11 }} width={120} />
           <Tooltip contentStyle={tooltipContentStyle} labelStyle={tooltipLabelStyle} />
-          <Legend wrapperStyle={{ fontSize: 12, color: "#cbd5e1" }} />
+          <Legend wrapperStyle={{ fontSize: 12, color: CHROME.legend }} />
           {FACTORS.map((f) => (
             <Bar key={f.key} dataKey={f.key} name={f.label} fill={f.color} radius={[0, 3, 3, 0]} isAnimationActive={false} />
           ))}

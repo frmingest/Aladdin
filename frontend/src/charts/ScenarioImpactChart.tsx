@@ -12,7 +12,7 @@ export type ScenarioImpactPoint = { label: string; impact_pct: number };
  */
 export default function ScenarioImpactChart({ data }: { data: ScenarioImpactPoint[] }) {
   if (data.length === 0) {
-    return <p className="text-sm text-slate-500">No scenario impacts computed yet.</p>;
+    return <p className="text-sm text-tertiary">No scenario impacts computed yet.</p>;
   }
   return (
     <div style={{ height: Math.max(220, data.length * 40) }}>

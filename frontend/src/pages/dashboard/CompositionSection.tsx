@@ -43,55 +43,53 @@ export default function CompositionSection({ snapshotId }: { snapshotId: string 
   const largestSingleNamePct = valuation ? num(valuation.concentration.largest_single_name_pct) : null;
 
   return (
-    <section>
-      <div className="flex items-center gap-3 mb-3">
-        <h2 className="text-lg font-semibold">Portfolio composition</h2>
-        <button
-          onClick={handleRefresh}
-          disabled={loading}
-          className="bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 rounded px-3 py-1 text-xs font-medium"
-        >
+    <section className="terminal-card">
+      <div className="terminal-card-header">
+        <h2 className="terminal-card-title">Portfolio composition</h2>
+        <button onClick={handleRefresh} disabled={loading} className="btn-terminal btn-terminal-primary text-xs px-3 py-1">
           {loading ? "Refreshing…" : valuation ? "Refresh valuation" : "Load valuation"}
         </button>
       </div>
 
-      {error && <p className="text-red-400 text-sm mb-3">{error}</p>}
+      {error && <p className="text-negative text-sm mb-3">{error}</p>}
 
       {!valuation && !loading && (
-        <p className="text-sm text-slate-500">
-          Fetches live prices/FX and computes market value, P&L, and concentration for this snapshot.
+        <p className="text-sm text-tertiary">
+          Fetches live prices/FX and computes market value, P&amp;L, and concentration for this snapshot.
         </p>
       )}
 
       {valuation && (
         <>
-          <div className="flex flex-wrap gap-4 mb-4 text-sm">
+          <div className="grid-3 mb-4">
             {totalMarketValue !== null && (
-              <div>
-                <span className="text-slate-500">Total value: </span>
-                <span className="font-medium">
-                  {totalMarketValue.toLocaleString()} {valuation.reporting_currency}
-                </span>
+              <div className="stat-panel">
+                <div className="stat-label">Total value</div>
+                <div className="stat-value">
+                  {totalMarketValue.toLocaleString()}
+                  <span className="text-sm text-tertiary font-normal ml-1">{valuation.reporting_currency}</span>
+                </div>
               </div>
             )}
             {totalUnrealizedPnl !== null && (
-              <div>
-                <span className="text-slate-500">Unrealized P&L: </span>
-                <span className={totalUnrealizedPnl >= 0 ? "text-emerald-400" : "text-red-400"}>
-                  {totalUnrealizedPnl.toLocaleString()} {valuation.reporting_currency}
-                </span>
+              <div className="stat-panel">
+                <div className="stat-label">Unrealized P&amp;L</div>
+                <div className={`stat-value ${totalUnrealizedPnl >= 0 ? "text-positive" : "text-negative"}`}>
+                  {totalUnrealizedPnl.toLocaleString()}
+                  <span className="text-sm font-normal ml-1">{valuation.reporting_currency}</span>
+                </div>
               </div>
             )}
             {largestSingleNamePct !== null && (
-              <div>
-                <span className="text-slate-500">Largest position: </span>
-                <span className="font-medium">{largestSingleNamePct.toFixed(1)}%</span>
+              <div className="stat-panel">
+                <div className="stat-label">Largest position</div>
+                <div className="stat-value">{largestSingleNamePct.toFixed(1)}%</div>
               </div>
             )}
           </div>
 
           {valuation.warnings.length > 0 && (
-            <ul className="text-xs text-amber-400 list-disc list-inside mb-4">
+            <ul className="text-xs text-warning list-disc list-inside mb-4">
               {valuation.warnings.map((w, i) => (
                 <li key={i}>{w}</li>
               ))}
@@ -100,15 +98,15 @@ export default function CompositionSection({ snapshotId }: { snapshotId: string 
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <h3 className="text-sm font-medium text-slate-300 mb-1">By holding</h3>
+              <h3 className="text-sm font-medium text-secondary mb-1">By holding</h3>
               <CompositionBreakdown data={toSlices(valuation.concentration.single_name_weights)} />
             </div>
             <div>
-              <h3 className="text-sm font-medium text-slate-300 mb-1">By sector</h3>
+              <h3 className="text-sm font-medium text-secondary mb-1">By sector</h3>
               <CompositionBreakdown data={toSlices(valuation.concentration.sector_weights)} />
             </div>
             <div>
-              <h3 className="text-sm font-medium text-slate-300 mb-1">By currency</h3>
+              <h3 className="text-sm font-medium text-secondary mb-1">By currency</h3>
               <CompositionBreakdown data={toSlices(valuation.concentration.currency_weights)} />
             </div>
           </div>

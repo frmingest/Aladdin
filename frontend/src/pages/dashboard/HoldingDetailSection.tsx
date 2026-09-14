@@ -24,24 +24,23 @@ import ValuationScenarioChart from "../../charts/ValuationScenarioChart";
 // broken thesis rendered in the same neutral text color as everything else
 // — the one status that most needs to read as risk silently didn't.
 const THESIS_STATUS_COLOR: Record<string, string> = {
-  ACTIVE: "text-emerald-400",
-  UNDER_REVIEW: "text-amber-400",
-  INVALIDATED: "text-red-400",
-  CLOSED: "text-slate-500",
+  ACTIVE: "text-positive",
+  UNDER_REVIEW: "text-warning",
+  INVALIDATED: "text-negative",
+  CLOSED: "text-tertiary",
 };
 const THESIS_STATUSES = ["ACTIVE", "UNDER_REVIEW", "INVALIDATED", "CLOSED"];
 const CONFIDENCE_LEVELS: ConfidenceLevel[] = ["low", "medium", "high"];
 const CASE_TYPES = ["bull", "base", "bear"] as const;
 
-// Shared form-control classes — matches the existing convention across
-// PortfolioUpload.tsx / RiskSection.tsx / AccountsSection rather than
-// introducing a new style vocabulary for these two forms.
-const inputClass = "bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm w-full";
-const labelClass = "block text-xs text-slate-400 mb-1";
-const primaryButtonClass =
-  "bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed rounded px-3 py-1.5 text-xs font-medium";
-const ghostButtonClass =
-  "border border-slate-700 hover:border-slate-500 text-slate-300 rounded px-3 py-1.5 text-xs font-medium";
+// Shared form-control classes — the finance-terminal design system's own
+// input-terminal/label-terminal/btn-terminal component classes, matching
+// the convention across PortfolioUpload.tsx / RiskSection.tsx /
+// AccountsSection rather than introducing a new style vocabulary.
+const inputClass = "input-terminal";
+const labelClass = "label-terminal";
+const primaryButtonClass = "btn-terminal btn-terminal-primary text-xs px-3 py-1.5";
+const ghostButtonClass = "btn-terminal text-xs px-3 py-1.5";
 
 function ScoreTrend({ analyses }: { analyses: HoldingAnalysisSummary[] }) {
   // Oldest -> newest for a left-to-right reading of the trend.
@@ -51,10 +50,10 @@ function ScoreTrend({ analyses }: { analyses: HoldingAnalysisSummary[] }) {
       {ordered.map((a) => {
         const score = num(a.overall_score) ?? 0;
         const height = Math.max(4, (score / 10) * 100);
-        const color = score >= 7 ? "bg-emerald-600" : score >= 5 ? "bg-amber-600" : "bg-red-600";
+        const color = score >= 7 ? "var(--color-positive)" : score >= 5 ? "var(--color-warning)" : "var(--color-negative)";
         return (
           <div key={a.id} className="flex flex-col items-center gap-1" title={`${a.thesis_status} — ${a.overall_score ?? "n/a"}/10`}>
-            <div className={`w-4 rounded-t ${color}`} style={{ height: `${height}%` }} />
+            <div className="w-4 rounded-t" style={{ height: `${height}%`, background: color }} />
           </div>
         );
       })}
@@ -121,7 +120,7 @@ function NewThesisForm({ holdingId, onCreated }: { holdingId: string; onCreated:
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-slate-900/60 border border-slate-800 rounded p-3 space-y-3 mb-3">
+    <form onSubmit={handleSubmit} className="terminal-panel space-y-3 mb-3">
       <div>
         <label className={labelClass}>Thesis</label>
         <textarea
@@ -182,7 +181,7 @@ function NewThesisForm({ holdingId, onCreated }: { holdingId: string; onCreated:
           Cancel
         </button>
       </div>
-      {error && <p className="text-red-400 text-xs">{error}</p>}
+      {error && <p className="text-negative text-xs">{error}</p>}
     </form>
   );
 }
@@ -215,17 +214,17 @@ function ThesisStatusSelect({ thesis, onUpdated }: { thesis: ThesisOut; onUpdate
         onChange={(e) => handleChange(e.target.value)}
         disabled={saving}
         title="Update thesis status"
-        className={`bg-slate-900 border border-slate-800 rounded px-1 py-0.5 text-xs font-medium disabled:opacity-50 ${
-          THESIS_STATUS_COLOR[thesis.status] ?? "text-slate-300"
+        className={`bg-tertiary border border-primary rounded px-1 py-0.5 text-xs font-medium font-mono disabled:opacity-50 ${
+          THESIS_STATUS_COLOR[thesis.status] ?? "text-secondary"
         }`}
       >
         {THESIS_STATUSES.map((s) => (
-          <option key={s} value={s} className="bg-slate-900 text-slate-100">
+          <option key={s} value={s} className="bg-secondary text-primary">
             {s}
           </option>
         ))}
       </select>
-      {error && <span className="text-red-400 text-xs">{error}</span>}
+      {error && <span className="text-negative text-xs">{error}</span>}
     </span>
   );
 }
@@ -342,7 +341,7 @@ function NewValuationCaseForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-slate-900/60 border border-slate-800 rounded p-3 space-y-3 mb-3">
+    <form onSubmit={handleSubmit} className="terminal-panel space-y-3 mb-3">
       <div className="flex items-end gap-3">
         <div>
           <label className={labelClass}>Case type</label>
@@ -379,7 +378,7 @@ function NewValuationCaseForm({
       <button
         type="button"
         onClick={() => setShowAdvanced((v) => !v)}
-        className="text-xs text-slate-400 hover:text-slate-200 underline"
+        className="text-xs text-tertiary hover:text-secondary underline"
       >
         {showAdvanced ? "Hide advanced options" : "Advanced options (commodity multiplier, FX, net debt, currency override)"}
       </button>
@@ -428,7 +427,7 @@ function NewValuationCaseForm({
         </div>
       )}
 
-      <label className="flex items-center gap-2 text-xs text-slate-400">
+      <label className="flex items-center gap-2 text-xs text-tertiary">
         <input type="checkbox" checked={runCritique} onChange={(e) => setRunCritique(e.target.checked)} />
         Run AI critique of these assumptions
       </label>
@@ -441,7 +440,7 @@ function NewValuationCaseForm({
           Cancel
         </button>
       </div>
-      {error && <p className="text-red-400 text-xs">{error}</p>}
+      {error && <p className="text-negative text-xs">{error}</p>}
     </form>
   );
 }
@@ -454,31 +453,31 @@ function ValuationCaseRow({ c }: { c: ValuationCaseOut }) {
   const [expanded, setExpanded] = useState(false);
   const value = num(c.calculated_value);
   return (
-    <li className="border-l-2 border-slate-800 pl-3">
+    <li className="border-l-2 border-primary pl-3">
       <div className="flex items-center gap-2 text-sm flex-wrap">
-        <span className="font-medium text-slate-200 uppercase">{c.case_type}</span>
-        <span className="text-slate-100 font-medium">{value !== null ? `${value.toFixed(2)} ${c.currency}` : "n/a"}</span>
-        <span className="text-xs text-slate-500">{c.confidence} confidence</span>
-        <span className="text-xs text-slate-600">{new Date(c.created_at).toLocaleDateString()}</span>
+        <span className="font-medium text-primary uppercase">{c.case_type}</span>
+        <span className="text-primary font-medium font-mono">{value !== null ? `${value.toFixed(2)} ${c.currency}` : "n/a"}</span>
+        <span className="text-xs text-tertiary">{c.confidence} confidence</span>
+        <span className="text-xs text-disabled font-mono">{new Date(c.created_at).toLocaleDateString()}</span>
         {(c.critique || c.critique_error) && (
           <button
             type="button"
             onClick={() => setExpanded((v) => !v)}
-            className="text-xs text-emerald-400 hover:underline ml-auto"
+            className="text-xs text-accent hover:underline ml-auto"
           >
             {expanded ? "Hide critique" : "Show critique"}
           </button>
         )}
       </div>
-      {c.calculation_note && <p className="text-xs text-slate-500 mt-1">{c.calculation_note}</p>}
+      {c.calculation_note && <p className="text-xs text-tertiary mt-1">{c.calculation_note}</p>}
       {expanded && c.critique && (
-        <div className="text-xs text-slate-300 mt-1 space-y-1">
-          <p className={c.critique.assumptions_reasonable ? "text-emerald-400" : "text-amber-400"}>
+        <div className="text-xs text-secondary mt-1 space-y-1">
+          <p className={c.critique.assumptions_reasonable ? "text-positive" : "text-warning"}>
             {c.critique.assumptions_reasonable ? "Assumptions look reasonable" : "Assumptions flagged for review"}
           </p>
           <p>{c.critique.reasoning}</p>
           {c.critique.key_risks_to_assumptions.length > 0 && (
-            <ul className="list-disc list-inside text-slate-400">
+            <ul className="list-disc list-inside text-tertiary">
               {c.critique.key_risks_to_assumptions.map((r, i) => (
                 <li key={i}>{r}</li>
               ))}
@@ -487,7 +486,7 @@ function ValuationCaseRow({ c }: { c: ValuationCaseOut }) {
         </div>
       )}
       {expanded && c.critique_error && (
-        <p className="text-xs text-slate-500 mt-1">Critique unavailable: {c.critique_error}</p>
+        <p className="text-xs text-tertiary mt-1">Critique unavailable: {c.critique_error}</p>
       )}
     </li>
   );
@@ -567,13 +566,13 @@ export default function HoldingDetailSection() {
   }
 
   return (
-    <section className="space-y-6">
-      <div className="flex items-center gap-3">
-        <h2 className="text-lg font-semibold">Holding detail</h2>
+    <section className="terminal-card space-y-6">
+      <div className="flex items-center gap-3 flex-wrap">
+        <h2 className="terminal-card-title">Holding detail</h2>
         <select
           value={accountFilter}
           onChange={(e) => setAccountFilter(e.target.value)}
-          className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs"
+          className="input-terminal w-auto text-xs py-1"
           title="Filter holdings by account"
         >
           <option value="">All accounts</option>
@@ -586,7 +585,7 @@ export default function HoldingDetailSection() {
         <select
           value={holdingId}
           onChange={(e) => setHoldingId(e.target.value)}
-          className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm"
+          className="input-terminal w-auto"
           title="Selected holding"
         >
           {holdings.length === 0 && <option value="">No holdings</option>}
@@ -599,32 +598,32 @@ export default function HoldingDetailSection() {
       </div>
 
       <div>
-        <h3 className="text-sm font-medium text-slate-300 mb-2">Analysis comparison</h3>
-        {analyses.length === 0 && <p className="text-sm text-slate-500">No analyses on record for this holding.</p>}
+        <h3 className="text-sm font-medium text-secondary mb-2">Analysis comparison</h3>
+        {analyses.length === 0 && <p className="text-sm text-tertiary">No analyses on record for this holding.</p>}
         {analyses.length > 0 && (
           <div className="flex items-center gap-4">
             <ScoreTrend analyses={analyses} />
-            <span className="text-xs text-slate-500">{analyses.length} run(s), oldest to newest</span>
+            <span className="text-xs text-tertiary">{analyses.length} run(s), oldest to newest</span>
           </div>
         )}
         {latest && previous && (
           <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-            <div className="bg-slate-900 rounded p-3">
-              <p className="text-xs uppercase text-slate-500 mb-1">
+            <div className="terminal-panel">
+              <p className="stat-label mb-1">
                 Previous ({new Date(previous.created_at).toLocaleDateString()})
               </p>
-              <p>Overall: {previous.overall_score ?? "n/a"}/10 — {previous.structured_output.thesis_status}</p>
+              <p className="text-secondary">Overall: <span className="font-mono text-primary">{previous.overall_score ?? "n/a"}/10</span> — {previous.structured_output.thesis_status}</p>
             </div>
-            <div className="bg-slate-900 rounded p-3">
-              <p className="text-xs uppercase text-slate-500 mb-1">
+            <div className="terminal-panel">
+              <p className="stat-label mb-1">
                 Latest ({new Date(latest.created_at).toLocaleDateString()})
               </p>
-              <p>Overall: {latest.overall_score ?? "n/a"}/10 — {latest.structured_output.thesis_status}</p>
+              <p className="text-secondary">Overall: <span className="font-mono text-primary">{latest.overall_score ?? "n/a"}/10</span> — {latest.structured_output.thesis_status}</p>
             </div>
             {latest.structured_output.new_information.length > 0 && (
               <div className="sm:col-span-2">
-                <p className="text-xs uppercase text-slate-500 mb-1">New information since previous run</p>
-                <ul className="list-disc list-inside text-slate-300">
+                <p className="stat-label mb-1">New information since previous run</p>
+                <ul className="list-disc list-inside text-secondary">
                   {latest.structured_output.new_information.map((s, i) => (
                     <li key={i}>{s}</li>
                   ))}
@@ -637,17 +636,17 @@ export default function HoldingDetailSection() {
 
       {latest && (
         <div>
-          <h3 className="text-sm font-medium text-slate-300 mb-2">Evidence panel</h3>
+          <h3 className="text-sm font-medium text-secondary mb-2">Evidence panel</h3>
           {latest.evidence_references.length === 0 ? (
-            <p className="text-sm text-slate-500">No evidence references on the latest analysis.</p>
+            <p className="text-sm text-tertiary">No evidence references on the latest analysis.</p>
           ) : (
             <ul className="text-sm space-y-1">
               {latest.evidence_references.map((ref, i) => (
-                <li key={i} className="text-slate-300">
-                  <span className="text-slate-500">[{ref.source_type}]</span> {ref.source_id}
+                <li key={i} className="text-secondary">
+                  <span className="text-tertiary">[{ref.source_type}]</span> {ref.source_id}
                   {ref.section && ` — ${ref.section}`}
                   {ref.page_start && ` (p.${ref.page_start}${ref.page_end && ref.page_end !== ref.page_start ? `-${ref.page_end}` : ""})`}
-                  <span className="text-xs text-slate-600"> · {ref.relevance}</span>
+                  <span className="text-xs text-disabled"> · {ref.relevance}</span>
                 </li>
               ))}
             </ul>
@@ -657,7 +656,7 @@ export default function HoldingDetailSection() {
 
       <div>
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-medium text-slate-300">Thesis timeline</h3>
+          <h3 className="text-sm font-medium text-secondary">Thesis timeline</h3>
           {holdingId && (
             <NewThesisForm
               key={`thesis-${holdingId}`}
@@ -666,24 +665,24 @@ export default function HoldingDetailSection() {
             />
           )}
         </div>
-        {theses.length === 0 && <p className="text-sm text-slate-500">No thesis recorded for this holding.</p>}
+        {theses.length === 0 && <p className="text-sm text-tertiary">No thesis recorded for this holding.</p>}
         <ul className="space-y-2">
           {theses.map((t) => (
-            <li key={t.id} className="border-l-2 border-slate-800 pl-3">
+            <li key={t.id} className="border-l-2 border-primary pl-3">
               <div className="flex items-center gap-2 text-sm flex-wrap">
                 <ThesisStatusSelect
                   thesis={t}
                   onUpdated={(updated) => setTheses((prev) => prev.map((x) => (x.id === updated.id ? updated : x)))}
                 />
-                <span className="text-xs text-slate-500">{t.confidence} confidence</span>
-                <span className="text-xs text-slate-600">{new Date(t.updated_at).toLocaleDateString()}</span>
-                <button onClick={() => checkInvalidation(t.id)} className="text-xs text-emerald-400 hover:underline ml-auto">
+                <span className="text-xs text-tertiary">{t.confidence} confidence</span>
+                <span className="text-xs text-disabled font-mono">{new Date(t.updated_at).toLocaleDateString()}</span>
+                <button onClick={() => checkInvalidation(t.id)} className="text-xs text-accent hover:underline ml-auto">
                   Check invalidation signal
                 </button>
               </div>
-              <p className="text-sm text-slate-300 mt-1">{t.thesis}</p>
+              <p className="text-sm text-secondary mt-1">{t.thesis}</p>
               {invalidation[t.id] && (
-                <p className={`text-xs mt-1 ${invalidation[t.id].has_signal ? "text-amber-400" : "text-slate-500"}`}>
+                <p className={`text-xs mt-1 ${invalidation[t.id].has_signal ? "text-warning" : "text-tertiary"}`}>
                   {invalidation[t.id].has_signal
                     ? `Invalidation signal: ${invalidation[t.id].reasons.join("; ")}`
                     : "No invalidation signal against the latest analysis."}
@@ -696,7 +695,7 @@ export default function HoldingDetailSection() {
 
       <div>
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-medium text-slate-300">Valuation scenarios</h3>
+          <h3 className="text-sm font-medium text-secondary">Valuation scenarios</h3>
           {holdingId && (
             <NewValuationCaseForm
               key={`valuation-${holdingId}`}
@@ -711,7 +710,7 @@ export default function HoldingDetailSection() {
             .filter((c): c is { case_type: string; calculated_value: number; currency: string } => c.calculated_value !== null)}
         />
         {cases.length === 0 ? (
-          <p className="text-sm text-slate-500 mt-2">No valuation cases recorded for this holding.</p>
+          <p className="text-sm text-tertiary mt-2">No valuation cases recorded for this holding.</p>
         ) : (
           <ul className="space-y-2 mt-3">
             {cases.map((c) => (

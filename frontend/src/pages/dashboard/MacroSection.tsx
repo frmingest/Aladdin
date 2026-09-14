@@ -79,32 +79,32 @@ export default function MacroSection() {
     .filter((o): o is MacroBarPoint => o.value !== null);
 
   return (
-    <section className="space-y-6">
+    <section className="terminal-card space-y-6">
       <div>
-        <div className="flex items-center gap-3 mb-3">
-          <h2 className="text-lg font-semibold">Macro dashboard</h2>
+        <div className="terminal-card-header">
+          <h2 className="terminal-card-title">Macro dashboard</h2>
           <button
             onClick={handleMacroRefresh}
             disabled={macroLoading}
-            className="bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 rounded px-3 py-1 text-xs font-medium"
+            className="btn-terminal btn-terminal-primary text-xs px-3 py-1"
           >
             {macroLoading ? "Refreshing…" : "Refresh macro data"}
           </button>
         </div>
-        {macroError && <p className="text-red-400 text-sm mb-2">{macroError}</p>}
-        {macro && !macro.available && <p className="text-sm text-slate-500">{macro.reason ?? "No macro data available."}</p>}
+        {macroError && <p className="text-negative text-sm mb-2">{macroError}</p>}
+        {macro && !macro.available && <p className="text-sm text-tertiary">{macro.reason ?? "No macro data available."}</p>}
         {macro?.available && (
           <>
-            {macro.as_of && <p className="text-xs text-slate-600 mb-2">as of {new Date(macro.as_of).toLocaleString()}</p>}
+            {macro.as_of && <p className="text-xs text-disabled mb-2 font-mono">as of {new Date(macro.as_of).toLocaleString()}</p>}
             <MacroBarChart data={macroBars} />
             {macro.narrative_items.length > 0 && (
               <ul className="mt-3 space-y-2">
                 {macro.narrative_items.slice(0, 5).map((item, i) => (
                   <li key={i} className="text-sm">
-                    <a href={item.source_url} target="_blank" rel="noreferrer" className="text-emerald-400 hover:underline">
+                    <a href={item.source_url} target="_blank" rel="noreferrer" className="text-accent hover:underline">
                       {item.title}
                     </a>
-                    <p className="text-xs text-slate-500">{item.summary}</p>
+                    <p className="text-xs text-tertiary">{item.summary}</p>
                   </li>
                 ))}
               </ul>
@@ -115,11 +115,11 @@ export default function MacroSection() {
 
       <div>
         <div className="flex flex-wrap items-center gap-3 mb-3">
-          <h3 className="text-sm font-medium text-slate-300">Sector research</h3>
+          <h3 className="text-sm font-medium text-secondary">Sector research</h3>
           <select
             value={selectedSector}
             onChange={(e) => setSelectedSector(e.target.value)}
-            className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs"
+            className="input-terminal w-auto text-xs py-1"
           >
             {sectors.length === 0 && <option value="">No sectors on record</option>}
             {sectors.map((s) => (
@@ -131,23 +131,23 @@ export default function MacroSection() {
           <button
             onClick={handleSectorRefresh}
             disabled={sectorLoading || !selectedSector}
-            className="bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 rounded px-3 py-1 text-xs font-medium"
+            className="btn-terminal btn-terminal-primary text-xs px-3 py-1"
           >
             {sectorLoading ? "Refreshing…" : "Refresh sector research"}
           </button>
         </div>
-        {sectorError && <p className="text-red-400 text-sm mb-2">{sectorError}</p>}
+        {sectorError && <p className="text-negative text-sm mb-2">{sectorError}</p>}
         {sectorResearch && !sectorResearch.available && (
-          <p className="text-sm text-slate-500">{sectorResearch.reason ?? "No sector research available."}</p>
+          <p className="text-sm text-tertiary">{sectorResearch.reason ?? "No sector research available."}</p>
         )}
         {sectorResearch?.available && (
           <ul className="space-y-2">
             {sectorResearch.items.map((item, i) => (
               <li key={i} className="text-sm">
-                <a href={item.source_url} target="_blank" rel="noreferrer" className="text-emerald-400 hover:underline">
+                <a href={item.source_url} target="_blank" rel="noreferrer" className="text-accent hover:underline">
                   {item.title}
                 </a>
-                <p className="text-xs text-slate-500">{item.summary}</p>
+                <p className="text-xs text-tertiary">{item.summary}</p>
               </li>
             ))}
           </ul>

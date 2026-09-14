@@ -1,5 +1,5 @@
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
-import { categoricalColor } from "./palette";
+import { categoricalColor, CHROME } from "./palette";
 import { tooltipContentStyle, tooltipLabelStyle } from "./tooltip";
 
 export type BreakdownSlice = { name: string; value: number };
@@ -21,7 +21,7 @@ export default function CompositionBreakdown({
   unit?: string;
 }) {
   if (data.length === 0) {
-    return <p className="text-sm text-slate-500">No data.</p>;
+    return <p className="text-sm text-tertiary">No data.</p>;
   }
   return (
     <div className="h-64">
@@ -37,7 +37,7 @@ export default function CompositionBreakdown({
             isAnimationActive={false}
           >
             {data.map((entry, i) => (
-              <Cell key={entry.name} fill={categoricalColor(i)} stroke="#0f172a" strokeWidth={2} />
+              <Cell key={entry.name} fill={categoricalColor(i)} stroke={CHROME.cellStroke} strokeWidth={2} />
             ))}
           </Pie>
           <Tooltip
@@ -49,7 +49,7 @@ export default function CompositionBreakdown({
             layout="vertical"
             verticalAlign="middle"
             align="right"
-            wrapperStyle={{ fontSize: 12, color: "#cbd5e1" }}
+            wrapperStyle={{ fontSize: 12, color: CHROME.legend }}
           />
         </PieChart>
       </ResponsiveContainer>

@@ -65,42 +65,38 @@ export default function RiskSection({ snapshotId }: { snapshotId: string }) {
   }
 
   return (
-    <section>
-      <div className="flex items-center gap-3 mb-3">
-        <h2 className="text-lg font-semibold">Portfolio risk</h2>
-        <button
-          onClick={handleCompute}
-          disabled={loading}
-          className="bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 rounded px-3 py-1 text-xs font-medium"
-        >
+    <section className="terminal-card">
+      <div className="terminal-card-header">
+        <h2 className="terminal-card-title">Portfolio risk</h2>
+        <button onClick={handleCompute} disabled={loading} className="btn-terminal btn-terminal-primary text-xs px-3 py-1">
           {loading ? "Computing…" : "Compute new risk snapshot"}
         </button>
       </div>
 
-      {error && <p className="text-red-400 text-sm mb-3">{error}</p>}
-      {!snapshot && !loading && <p className="text-sm text-slate-500">No risk snapshot yet for this portfolio.</p>}
+      {error && <p className="text-negative text-sm mb-3">{error}</p>}
+      {!snapshot && !loading && <p className="text-sm text-tertiary">No risk snapshot yet for this portfolio.</p>}
 
       {snapshot && (
         <div className="space-y-4">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <span
-              className="rounded px-3 py-1 text-sm font-semibold"
-              style={{ backgroundColor: `${bandColor(snapshot.risk_band)}26`, color: bandColor(snapshot.risk_band) }}
+              className="terminal-badge"
+              style={{ backgroundColor: `${bandColor(snapshot.risk_band)}26`, color: bandColor(snapshot.risk_band), border: `1px solid ${bandColor(snapshot.risk_band)}4D` }}
             >
               Overall: {snapshot.risk_band}
             </span>
             {snapshot.composite_risk_score !== null && (
-              <span className="text-xs text-slate-500">composite score {snapshot.composite_risk_score}/100</span>
+              <span className="text-xs text-tertiary font-mono">composite score {snapshot.composite_risk_score}/100</span>
             )}
-            <span className="text-xs text-slate-600">
+            <span className="text-xs text-disabled font-mono">
               as of {new Date(snapshot.created_at).toLocaleString()}
             </span>
           </div>
 
-          <p className="text-sm text-slate-300">{snapshot.narrative}</p>
+          <p className="text-sm text-secondary">{snapshot.narrative}</p>
 
           <div>
-            <h3 className="text-sm font-medium text-slate-300 mb-2">Risk dimensions</h3>
+            <h3 className="text-sm font-medium text-secondary mb-2">Risk dimensions</h3>
             <RiskHeatmap
               cells={buildHeatmapCells(snapshot)}
               footnote="Bands here are standard reference conventions (US DOJ/FTC HHI thresholds; common correlation-strength ranges) used only to shade this grid — not the app's own versioned risk-scoring thresholds. The overall band and composite score above are the authoritative assessment."
@@ -108,14 +104,14 @@ export default function RiskSection({ snapshotId }: { snapshotId: string }) {
           </div>
 
           <div>
-            <h3 className="text-sm font-medium text-slate-300 mb-2">Scenario impact</h3>
+            <h3 className="text-sm font-medium text-secondary mb-2">Scenario impact</h3>
             <ScenarioImpactChart data={buildScenarioImpacts(snapshot)} />
           </div>
 
           {snapshot.systemic_state_risk.wealth_tax_estimate && (
-            <div className="bg-slate-900 rounded p-3 text-sm">
-              <h3 className="text-xs uppercase text-slate-500 mb-1">Estimated Norwegian wealth tax</h3>
-              <p>
+            <div className="terminal-panel text-sm">
+              <h3 className="stat-label mb-1">Estimated Norwegian wealth tax</h3>
+              <p className="font-mono">
                 {snapshot.systemic_state_risk.wealth_tax_estimate.estimated_tax} NOK on a taxable base of{" "}
                 {snapshot.systemic_state_risk.wealth_tax_estimate.taxable_base} NOK (
                 {snapshot.systemic_state_risk.wealth_tax_estimate.rate_pct}%).
@@ -125,36 +121,38 @@ export default function RiskSection({ snapshotId }: { snapshotId: string }) {
 
           {snapshot.systemic_state_risk.deposit_exposures.length > 0 && (
             <div>
-              <h3 className="text-sm font-medium text-slate-300 mb-2">Deposit concentration by institution</h3>
-              <table className="text-sm w-full">
-                <thead className="text-xs uppercase text-slate-500">
-                  <tr>
-                    <th className="text-left font-medium py-1">Institution</th>
-                    <th className="text-right font-medium py-1">Value</th>
-                    <th className="text-right font-medium py-1">Over guarantee</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {snapshot.systemic_state_risk.deposit_exposures.map((d) => (
-                    <tr key={d.institution} className="border-t border-slate-900">
-                      <td className="py-1">{d.institution}</td>
-                      <td className="text-right py-1">{d.value_reporting_ccy}</td>
-                      <td className="text-right py-1">
-                        {Number(d.excess_over_guarantee) > 0 ? (
-                          <span className="text-amber-400">{d.excess_over_guarantee}</span>
-                        ) : (
-                          <span className="text-slate-500">0</span>
-                        )}
-                      </td>
+              <h3 className="text-sm font-medium text-secondary mb-2">Deposit concentration by institution</h3>
+              <div className="terminal-table-wrapper">
+                <table className="terminal-table">
+                  <thead>
+                    <tr>
+                      <th>Institution</th>
+                      <th className="numeric">Value</th>
+                      <th className="numeric">Over guarantee</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {snapshot.systemic_state_risk.deposit_exposures.map((d) => (
+                      <tr key={d.institution}>
+                        <td className="primary">{d.institution}</td>
+                        <td className="numeric">{d.value_reporting_ccy}</td>
+                        <td className="numeric">
+                          {Number(d.excess_over_guarantee) > 0 ? (
+                            <span className="text-warning">{d.excess_over_guarantee}</span>
+                          ) : (
+                            <span className="text-tertiary">0</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 
           {snapshot.systemic_state_risk.warnings.length > 0 && (
-            <ul className="text-xs text-amber-400 list-disc list-inside">
+            <ul className="text-xs text-warning list-disc list-inside">
               {snapshot.systemic_state_risk.warnings.map((w, i) => (
                 <li key={i}>{w}</li>
               ))}

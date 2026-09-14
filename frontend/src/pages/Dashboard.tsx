@@ -33,13 +33,13 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-end gap-3">
+      <div className="terminal-card flex items-end gap-3">
         <div>
-          <label className="block text-sm text-slate-400 mb-1">Portfolio snapshot</label>
+          <label className="label-terminal">Portfolio snapshot</label>
           <select
             value={snapshotId}
             onChange={(e) => setSnapshotId(e.target.value)}
-            className="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-sm min-w-[280px]"
+            className="input-terminal min-w-[280px]"
           >
             {snapshots.length === 0 && <option value="">No snapshots uploaded yet</option>}
             {snapshots.map((s) => (
@@ -62,7 +62,7 @@ export default function Dashboard() {
           <HoldingDetailSection />
         </>
       ) : (
-        <p className="text-sm text-slate-500">Upload a portfolio to see the dashboard.</p>
+        <p className="text-sm text-tertiary">Upload a portfolio to see the dashboard.</p>
       )}
     </div>
   );

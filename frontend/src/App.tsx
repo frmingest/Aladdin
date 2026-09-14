@@ -23,9 +23,14 @@ function BackendStatusBadge() {
   }, []);
 
   const label = ok === null ? "checking backend…" : ok ? "backend ok" : "backend unreachable";
-  const color = ok === null ? "bg-slate-700" : ok ? "bg-emerald-700" : "bg-red-700";
+  const badgeClass =
+    ok === null
+      ? "terminal-badge terminal-badge-neutral"
+      : ok
+        ? "terminal-badge terminal-badge-positive"
+        : "terminal-badge terminal-badge-negative";
 
-  return <span className={`text-xs px-2 py-0.5 rounded ${color}`}>{label}</span>;
+  return <span className={badgeClass}>{label}</span>;
 }
 
 /**
@@ -33,38 +38,63 @@ function BackendStatusBadge() {
  * (§26 Phase 3), and the visualization dashboard (§26 Phase 6). No router
  * dependency yet (§2.9: avoid premature complexity) — plain tab state is
  * enough for four pages.
+ *
+ * Visual design: the finance-terminal design system shared with the CWO app
+ * (src/styles/finance-terminal-design-system.css) — same tokens, same
+ * terminal-nav/terminal-card/terminal-table component classes.
  */
 export default function App() {
   const [tab, setTab] = useState<Tab>("dashboard");
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 p-8">
-      <div className="flex items-center gap-3 mb-1">
-        <h1 className="text-2xl font-semibold">Aladdin</h1>
-        <BackendStatusBadge />
-      </div>
-      <p className="text-slate-400 mb-6">Portfolio ingestion, document analysis, and AI-driven holding analysis.</p>
+    <div className="min-h-screen">
+      <nav className="terminal-nav">
+        <div className="terminal-nav-container">
+          <div className="flex items-center gap-4">
+            <span
+              className="font-mono font-bold text-[15px]"
+              style={{
+                letterSpacing: "2.5px",
+                background: "linear-gradient(135deg, #00D4FF 0%, #A78BFA 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+              }}
+            >
+              ALADDIN
+            </span>
+            <BackendStatusBadge />
+          </div>
 
-      <nav className="flex gap-2 mb-6 border-b border-slate-800">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className={`px-3 py-2 text-sm font-medium border-b-2 -mb-px ${
-              tab === t.id
-                ? "border-emerald-500 text-slate-100"
-                : "border-transparent text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
+          <div className="terminal-nav-links">
+            {TABS.map((t) => (
+              <a
+                key={t.id}
+                onClick={() => setTab(t.id)}
+                className={tab === t.id ? "active" : ""}
+                style={{ cursor: "pointer" }}
+              >
+                {t.label}
+              </a>
+            ))}
+          </div>
+        </div>
       </nav>
 
-      {tab === "dashboard" && <Dashboard />}
-      {tab === "portfolio" && <PortfolioUpload />}
-      {tab === "documents" && <DocumentUpload />}
-      {tab === "analysis" && <Analysis />}
+      <div className="terminal-page">
+        <div className="terminal-container">
+          <div className="terminal-page-header">
+            <p className="terminal-page-subtitle">
+              Portfolio ingestion, document analysis, and AI-driven holding analysis.
+            </p>
+          </div>
+
+          {tab === "dashboard" && <Dashboard />}
+          {tab === "portfolio" && <PortfolioUpload />}
+          {tab === "documents" && <DocumentUpload />}
+          {tab === "analysis" && <Analysis />}
+        </div>
+      </div>
     </div>
   );
 }

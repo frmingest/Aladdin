@@ -13,7 +13,7 @@ export type MacroBarPoint = { series: string; value: number; unit: string };
  */
 export default function MacroBarChart({ data }: { data: MacroBarPoint[] }) {
   if (data.length === 0) {
-    return <p className="text-sm text-slate-500">No macro data on record yet.</p>;
+    return <p className="text-sm text-tertiary">No macro data on record yet.</p>;
   }
   return (
     <div style={{ height: Math.max(180, data.length * 40) }}>

@@ -80,85 +80,87 @@ function AccountsSection({
   }
 
   return (
-    <section>
-      <h2 className="text-lg font-semibold mb-3">Accounts</h2>
-      <p className="text-xs text-slate-500 mb-3">
+    <section className="terminal-card">
+      <h2 className="terminal-card-title mb-2">Accounts</h2>
+      <p className="text-xs text-tertiary mb-3">
         The accounts your holdings are split across. Tag an upload with one below, then filter
         snapshots, positions, and the dashboard by account.
       </p>
 
       {accounts.length > 0 && (
-        <table className="w-full text-sm border-collapse mb-4">
-          <thead>
-            <tr className="text-left text-slate-400 border-b border-slate-800">
-              <th className="py-1 pr-4">Name</th>
-              <th className="py-1 pr-4">Account number</th>
-              <th className="py-1 pr-4">Institution</th>
-              <th className="py-1 pr-4" />
-            </tr>
-          </thead>
-          <tbody>
-            {accounts.map((a) => (
-              <tr key={a.id} className="border-b border-slate-900">
-                <td className="py-1 pr-4">{a.name}</td>
-                <td className="py-1 pr-4 text-slate-400">{a.account_number}</td>
-                <td className="py-1 pr-4 text-slate-400">{a.institution ?? "—"}</td>
-                <td className="py-1 pr-4 text-right">
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(a)}
-                    disabled={deletingId === a.id}
-                    className="text-red-400 hover:text-red-300 disabled:opacity-40 text-xs"
-                  >
-                    {deletingId === a.id ? "Removing…" : "Remove"}
-                  </button>
-                </td>
+        <div className="terminal-table-wrapper mb-4">
+          <table className="terminal-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Account number</th>
+                <th>Institution</th>
+                <th />
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {accounts.map((a) => (
+                <tr key={a.id}>
+                  <td className="primary">{a.name}</td>
+                  <td className="numeric" style={{ textAlign: "left" }}>{a.account_number}</td>
+                  <td>{a.institution ?? "—"}</td>
+                  <td style={{ textAlign: "right" }}>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(a)}
+                      disabled={deletingId === a.id}
+                      className="text-negative hover:opacity-80 disabled:opacity-40 text-xs"
+                    >
+                      {deletingId === a.id ? "Removing…" : "Remove"}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       <form onSubmit={handleAdd} className="flex flex-wrap items-end gap-3">
         <div>
-          <label className="block text-sm text-slate-400 mb-1">Name</label>
+          <label className="label-terminal">Name</label>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. Aksje & fonds konto"
-            className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm w-56"
+            className="input-terminal w-56"
           />
         </div>
         <div>
-          <label className="block text-sm text-slate-400 mb-1">Account number</label>
+          <label className="label-terminal">Account number</label>
           <input
             type="text"
             value={accountNumber}
             onChange={(e) => setAccountNumber(e.target.value)}
             placeholder="e.g. 70541644"
-            className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm w-40"
+            className="input-terminal w-40"
           />
         </div>
         <div>
-          <label className="block text-sm text-slate-400 mb-1">Institution (optional)</label>
+          <label className="label-terminal">Institution (optional)</label>
           <input
             type="text"
             value={institution}
             onChange={(e) => setInstitution(e.target.value)}
             placeholder="e.g. Nordnet"
-            className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm w-40"
+            className="input-terminal w-40"
           />
         </div>
         <button
           type="submit"
           disabled={!name.trim() || !accountNumber.trim() || adding}
-          className="bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed rounded px-4 py-1.5 text-sm font-medium"
+          className="btn-terminal btn-terminal-primary"
         >
           {adding ? "Adding…" : "Add account"}
         </button>
       </form>
-      {error && <p className="text-red-400 text-sm mt-2">{error}</p>}
+      {error && <p className="text-negative text-sm mt-2">{error}</p>}
     </section>
   );
 }
@@ -283,40 +285,40 @@ export default function PortfolioUpload() {
     <div className="space-y-8">
       <AccountsSection accounts={accounts} onChanged={refreshAccounts} />
 
-      <section>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-semibold">Upload portfolio (CSV/XLSX)</h2>
+      <section className="terminal-card">
+        <div className="terminal-card-header">
+          <h2 className="terminal-card-title">Upload portfolio (CSV/XLSX)</h2>
           <button
             type="button"
             onClick={handleResetAll}
             disabled={resetting || submitting}
-            className="text-red-400 hover:text-red-300 disabled:opacity-40 disabled:cursor-not-allowed border border-red-900 hover:border-red-700 rounded px-3 py-1 text-xs font-medium"
+            className="btn-terminal btn-terminal-danger text-xs px-3 py-1"
           >
             {resetting ? "Deleting…" : "Delete all data"}
           </button>
         </div>
-        <p className="text-xs text-slate-500 mb-3">
+        <p className="text-xs text-tertiary mb-3">
           Each upload adds to your current portfolio — a ticker in the new file replaces its old row
           within the same account, and any position not in the new file is kept as-is. Use
           "Delete all data" to start over from scratch.
         </p>
         <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-3">
           <div>
-            <label className="block text-sm text-slate-400 mb-1">Portfolio file</label>
+            <label className="label-terminal">Portfolio file</label>
             <input
               ref={fileInputRef}
               type="file"
               accept=".csv,.xlsx"
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-              className="text-sm"
+              className="text-sm text-secondary"
             />
           </div>
           <div>
-            <label className="block text-sm text-slate-400 mb-1">Account</label>
+            <label className="label-terminal">Account</label>
             <select
               value={accountId}
               onChange={(e) => setAccountId(e.target.value)}
-              className="bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-sm min-w-[200px]"
+              className="input-terminal min-w-[200px]"
             >
               <option value="">Unassigned</option>
               {accounts.map((a) => (
@@ -327,28 +329,28 @@ export default function PortfolioUpload() {
             </select>
           </div>
           <div>
-            <label className="block text-sm text-slate-400 mb-1">Reporting currency</label>
+            <label className="label-terminal">Reporting currency</label>
             <input
               type="text"
               value={reportingCurrency}
               onChange={(e) => setReportingCurrency(e.target.value.toUpperCase())}
               maxLength={3}
-              className="bg-slate-900 border border-slate-700 rounded px-2 py-1 w-20 text-sm"
+              className="input-terminal w-20"
             />
           </div>
           <button
             type="submit"
             disabled={!file || submitting}
-            className="bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed rounded px-4 py-1.5 text-sm font-medium"
+            className="btn-terminal btn-terminal-primary"
           >
             {submitting ? "Uploading…" : "Upload"}
           </button>
         </form>
 
-        {resetMessage && <p className="text-emerald-400 text-sm mt-3">{resetMessage}</p>}
-        {errorMessage && <p className="text-red-400 text-sm mt-3">{errorMessage}</p>}
+        {resetMessage && <p className="text-positive text-sm mt-3">{resetMessage}</p>}
+        {errorMessage && <p className="text-negative text-sm mt-3">{errorMessage}</p>}
         {rowErrors && (
-          <ul className="text-red-400 text-sm mt-2 list-disc list-inside">
+          <ul className="text-negative text-sm mt-2 list-disc list-inside">
             {rowErrors.map((e, i) => (
               <li key={i}>
                 Row {e.row}: {e.message}
@@ -357,7 +359,7 @@ export default function PortfolioUpload() {
           </ul>
         )}
         {warnings.length > 0 && (
-          <ul className="text-amber-400 text-sm mt-2 list-disc list-inside">
+          <ul className="text-warning text-sm mt-2 list-disc list-inside">
             {warnings.map((w, i) => (
               <li key={i}>{w}</li>
             ))}
@@ -366,7 +368,7 @@ export default function PortfolioUpload() {
 
         {result && (
           <div className="mt-4 overflow-x-auto">
-            <p className="text-sm text-slate-400 mb-2">
+            <p className="text-sm text-tertiary mb-2">
               Snapshot {result.id.slice(0, 8)} — {result.status} — {result.positions.length} position(s)
               {uploadStats && (
                 <>
@@ -376,47 +378,49 @@ export default function PortfolioUpload() {
                 </>
               )}
             </p>
-            <table className="w-full text-sm border-collapse">
-              <thead>
-                <tr className="text-left text-slate-400 border-b border-slate-800">
-                  <th className="py-1 pr-4">Ticker</th>
-                  <th className="py-1 pr-4">Name</th>
-                  <th className="py-1 pr-4">Account</th>
-                  <th className="py-1 pr-4">Asset class</th>
-                  <th className="py-1 pr-4">Weight %</th>
-                  <th className="py-1 pr-4">Quantity</th>
-                  <th className="py-1 pr-4">GAV</th>
-                  <th className="py-1 pr-4">Sector</th>
-                </tr>
-              </thead>
-              <tbody>
-                {result.positions.map((p) => (
-                  <tr key={`${p.account_id ?? "none"}-${p.holding_id}`} className="border-b border-slate-900">
-                    <td className="py-1 pr-4">{p.ticker}</td>
-                    <td className="py-1 pr-4">{p.name}</td>
-                    <td className="py-1 pr-4 text-slate-400">{p.account_name ?? "Unassigned"}</td>
-                    <td className="py-1 pr-4">{p.asset_class}</td>
-                    <td className="py-1 pr-4">{p.weight_pct ?? "—"}</td>
-                    <td className="py-1 pr-4">{p.quantity ?? "—"}</td>
-                    <td className="py-1 pr-4">
-                      {p.cost_basis ?? "—"} {p.cost_basis_currency ?? ""}
-                    </td>
-                    <td className="py-1 pr-4">{p.sector ?? "—"}</td>
+            <div className="terminal-table-wrapper">
+              <table className="terminal-table">
+                <thead>
+                  <tr>
+                    <th>Ticker</th>
+                    <th>Name</th>
+                    <th>Account</th>
+                    <th>Asset class</th>
+                    <th className="numeric">Weight %</th>
+                    <th className="numeric">Quantity</th>
+                    <th className="numeric">GAV</th>
+                    <th>Sector</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {result.positions.map((p) => (
+                    <tr key={`${p.account_id ?? "none"}-${p.holding_id}`}>
+                      <td className="primary">{p.ticker}</td>
+                      <td>{p.name}</td>
+                      <td>{p.account_name ?? "Unassigned"}</td>
+                      <td>{p.asset_class}</td>
+                      <td className="numeric">{p.weight_pct ?? "—"}</td>
+                      <td className="numeric">{p.quantity ?? "—"}</td>
+                      <td className="numeric">
+                        {p.cost_basis ?? "—"} {p.cost_basis_currency ?? ""}
+                      </td>
+                      <td>{p.sector ?? "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </section>
 
-      <section>
+      <section className="terminal-card">
         <div className="flex items-center gap-3 mb-3">
-          <h2 className="text-lg font-semibold">Past snapshots</h2>
+          <h2 className="terminal-card-title">Past snapshots</h2>
           <select
             value={snapshotFilterAccountId}
             onChange={(e) => handleSnapshotFilterChange(e.target.value)}
-            className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs"
+            className="input-terminal w-auto text-xs py-1"
           >
             <option value="">All accounts</option>
             {accounts.map((a) => (
@@ -427,30 +431,32 @@ export default function PortfolioUpload() {
           </select>
         </div>
         {snapshots.length === 0 ? (
-          <p className="text-slate-500 text-sm">No snapshots uploaded yet.</p>
+          <p className="text-tertiary text-sm">No snapshots uploaded yet.</p>
         ) : (
-          <table className="w-full text-sm border-collapse">
-            <thead>
-              <tr className="text-left text-slate-400 border-b border-slate-800">
-                <th className="py-1 pr-4">Uploaded</th>
-                <th className="py-1 pr-4">Account</th>
-                <th className="py-1 pr-4">Currency</th>
-                <th className="py-1 pr-4">Status</th>
-                <th className="py-1 pr-4">Positions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {snapshots.map((s) => (
-                <tr key={s.id} className="border-b border-slate-900">
-                  <td className="py-1 pr-4">{new Date(s.uploaded_at).toLocaleString()}</td>
-                  <td className="py-1 pr-4 text-slate-400">{s.account_name ?? "Unassigned"}</td>
-                  <td className="py-1 pr-4">{s.reporting_currency}</td>
-                  <td className="py-1 pr-4">{s.status}</td>
-                  <td className="py-1 pr-4">{s.position_count}</td>
+          <div className="terminal-table-wrapper">
+            <table className="terminal-table">
+              <thead>
+                <tr>
+                  <th>Uploaded</th>
+                  <th>Account</th>
+                  <th>Currency</th>
+                  <th>Status</th>
+                  <th className="numeric">Positions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {snapshots.map((s) => (
+                  <tr key={s.id}>
+                    <td className="primary">{new Date(s.uploaded_at).toLocaleString()}</td>
+                    <td>{s.account_name ?? "Unassigned"}</td>
+                    <td>{s.reporting_currency}</td>
+                    <td>{s.status}</td>
+                    <td className="numeric">{s.position_count}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
     </div>

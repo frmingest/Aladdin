@@ -65,10 +65,10 @@ export default function AllocationDriftSection() {
   const drift = snapshots ? buildDrift(snapshots) : null;
 
   return (
-    <section>
-      <h2 className="text-lg font-semibold mb-3">Allocation drift</h2>
-      {error && <p className="text-red-400 text-sm">{error}</p>}
-      {!error && !snapshots && <p className="text-sm text-slate-500">Loading…</p>}
+    <section className="terminal-card">
+      <h2 className="terminal-card-title mb-3">Allocation drift</h2>
+      {error && <p className="text-negative text-sm">{error}</p>}
+      {!error && !snapshots && <p className="text-sm text-tertiary">Loading…</p>}
       {drift && <AllocationDriftChart data={drift.points} tickers={drift.tickers} />}
     </section>
   );

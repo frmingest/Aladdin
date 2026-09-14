@@ -1,14 +1,17 @@
 /**
  * Chart color palette (architecture §19 Visualizations, §26 Phase 6).
  *
- * Categorical hues and status colors are the validated defaults from the
- * dataviz skill's reference palette (CVD-safe ordering, dark-surface steps —
- * this app is dark-only, matching App.tsx's bg-slate-950). Chrome (grid
- * lines, axis text, tooltip surface) instead reuses this codebase's own
- * Tailwind slate scale for visual consistency with the rest of the app,
- * rather than the skill's neutral gray ramp — the method is
- * design-system-agnostic by design; only the categorical/status hues need
- * the CVD validation, chrome does not.
+ * Categorical hues are the validated defaults from the dataviz skill's
+ * reference palette (CVD-safe ordering, dark-surface steps) — unchanged by
+ * the CWO visual-design adoption below, since CVD-safety is an independent
+ * accessibility property, not a design-system choice.
+ *
+ * Chrome (grid lines, axis text, tooltip surface) and status colors
+ * (good/warning/serious/critical) now reuse the finance-terminal design
+ * system's own tokens (src/styles/finance-terminal-design-system.css) —
+ * the same tokens the CWO app uses — instead of the old Tailwind slate
+ * scale, so charts read as part of the same visual system as every
+ * terminal-card/stat-panel around them.
  *
  * Categorical hues are assigned in this fixed order and never cycled or
  * reassigned by rank — a filter that changes which series are visible must
@@ -38,11 +41,13 @@ export const CATEGORICAL = [
   "#e66767", // 8 red
 ] as const;
 
+// Finance-terminal semantic tokens (--color-positive/warning/negative and a
+// serious/amber-orange midpoint for the risk heatmap's MODERATE-HIGH band).
 export const STATUS = {
-  good: "#0ca30c",
-  warning: "#fab219",
-  serious: "#ec835a",
-  critical: "#d03b3b",
+  good: "#00E5A0", // --color-positive
+  warning: "#FBBF24", // --color-warning
+  serious: "#FF8A3D", // between warning and negative, for MODERATE-HIGH
+  critical: "#FF4D6A", // --color-negative
 } as const;
 
 /** Risk/factor band -> status color. Bands come from
@@ -55,15 +60,17 @@ export const BAND_COLOR: Record<string, string> = {
   "MODERATE-HIGH": STATUS.serious,
   HIGH: STATUS.critical,
 };
-export const BAND_FALLBACK_COLOR = "#64748b"; // slate-500 — insufficient data
+export const BAND_FALLBACK_COLOR = "#3D6A96"; // --text-tertiary — insufficient data
 
 export const CHROME = {
-  grid: "#1e293b", // slate-800
-  axis: "#64748b", // slate-500
-  tooltipBg: "#0f172a", // slate-900
-  tooltipBorder: "#1e293b", // slate-800
-  text: "#e2e8f0", // slate-200
-};
+  grid: "#0D2845", // --border-primary
+  axis: "#3D6A96", // --text-tertiary
+  tooltipBg: "#071828", // --bg-secondary
+  tooltipBorder: "#0D2845", // --border-primary
+  text: "#E2EDFF", // --text-primary
+  legend: "#7FA8D4", // --text-secondary
+  cellStroke: "#030D1C", // --bg-primary — separates adjacent pie slices
+} as const;
 
 export function categoricalColor(index: number): string {
   return CATEGORICAL[index % CATEGORICAL.length];

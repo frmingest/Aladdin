@@ -60,7 +60,7 @@ export default function DocumentUpload() {
 
   if (holdings.length === 0) {
     return (
-      <p className="text-slate-500 text-sm">
+      <p className="text-tertiary text-sm">
         No holdings yet — upload a portfolio snapshot first so there's something to attach a
         report to.
       </p>
@@ -69,15 +69,15 @@ export default function DocumentUpload() {
 
   return (
     <div className="space-y-8">
-      <section>
-        <h2 className="text-lg font-semibold mb-3">Upload holding document (PDF/PPTX/XLSX)</h2>
+      <section className="terminal-card">
+        <h2 className="terminal-card-title mb-3">Upload holding document (PDF/PPTX/XLSX)</h2>
         <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-3">
           <div>
-            <label className="block text-sm text-slate-400 mb-1">Holding</label>
+            <label className="label-terminal">Holding</label>
             <select
               value={holdingId}
               onChange={(e) => setHoldingId(e.target.value)}
-              className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm"
+              className="input-terminal"
             >
               {holdings.map((h) => (
                 <option key={h.id} value={h.id}>
@@ -87,11 +87,11 @@ export default function DocumentUpload() {
             </select>
           </div>
           <div>
-            <label className="block text-sm text-slate-400 mb-1">Document type</label>
+            <label className="label-terminal">Document type</label>
             <select
               value={documentType}
               onChange={(e) => setDocumentType(e.target.value)}
-              className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm"
+              className="input-terminal"
             >
               {DOCUMENT_TYPES.map((t) => (
                 <option key={t} value={t}>
@@ -101,66 +101,68 @@ export default function DocumentUpload() {
             </select>
           </div>
           <div>
-            <label className="block text-sm text-slate-400 mb-1">Reporting period</label>
+            <label className="label-terminal">Reporting period</label>
             <input
               type="text"
               placeholder="FY2025"
               value={reportingPeriod}
               onChange={(e) => setReportingPeriod(e.target.value)}
-              className="bg-slate-900 border border-slate-700 rounded px-2 py-1 w-28 text-sm"
+              className="input-terminal w-28"
             />
           </div>
           <div>
-            <label className="block text-sm text-slate-400 mb-1">File</label>
+            <label className="label-terminal">File</label>
             <input
               type="file"
               accept=".pdf,.pptx,.xlsx"
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-              className="text-sm"
+              className="text-sm text-secondary"
             />
           </div>
           <button
             type="submit"
             disabled={!file || submitting}
-            className="bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed rounded px-4 py-1.5 text-sm font-medium"
+            className="btn-terminal btn-terminal-primary"
           >
             {submitting ? "Uploading…" : "Upload"}
           </button>
         </form>
-        {errorMessage && <p className="text-red-400 text-sm mt-3">{errorMessage}</p>}
+        {errorMessage && <p className="text-negative text-sm mt-3">{errorMessage}</p>}
       </section>
 
-      <section>
-        <h2 className="text-lg font-semibold mb-3">Documents for this holding</h2>
+      <section className="terminal-card">
+        <h2 className="terminal-card-title mb-3">Documents for this holding</h2>
         {documents.length === 0 ? (
-          <p className="text-slate-500 text-sm">No documents uploaded for this holding yet.</p>
+          <p className="text-tertiary text-sm">No documents uploaded for this holding yet.</p>
         ) : (
-          <table className="w-full text-sm border-collapse">
-            <thead>
-              <tr className="text-left text-slate-400 border-b border-slate-800">
-                <th className="py-1 pr-4">File</th>
-                <th className="py-1 pr-4">Type</th>
-                <th className="py-1 pr-4">Period</th>
-                <th className="py-1 pr-4">Status</th>
-                <th className="py-1 pr-4">Pages</th>
-                <th className="py-1 pr-4">Facts</th>
-                <th className="py-1 pr-4">Quality flags</th>
-              </tr>
-            </thead>
-            <tbody>
-              {documents.map((d) => (
-                <tr key={d.id} className="border-b border-slate-900">
-                  <td className="py-1 pr-4">{d.original_filename}</td>
-                  <td className="py-1 pr-4">{d.type}</td>
-                  <td className="py-1 pr-4">{d.reporting_period ?? "—"}</td>
-                  <td className="py-1 pr-4">{d.status}</td>
-                  <td className="py-1 pr-4">{d.page_count}</td>
-                  <td className="py-1 pr-4">{d.fact_count}</td>
-                  <td className="py-1 pr-4 text-amber-400">{d.quality_flags.join(", ") || "—"}</td>
+          <div className="terminal-table-wrapper">
+            <table className="terminal-table">
+              <thead>
+                <tr>
+                  <th>File</th>
+                  <th>Type</th>
+                  <th>Period</th>
+                  <th>Status</th>
+                  <th className="numeric">Pages</th>
+                  <th className="numeric">Facts</th>
+                  <th>Quality flags</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {documents.map((d) => (
+                  <tr key={d.id}>
+                    <td className="primary">{d.original_filename}</td>
+                    <td>{d.type}</td>
+                    <td>{d.reporting_period ?? "—"}</td>
+                    <td>{d.status}</td>
+                    <td className="numeric">{d.page_count}</td>
+                    <td className="numeric">{d.fact_count}</td>
+                    <td className="text-warning">{d.quality_flags.join(", ") || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
     </div>

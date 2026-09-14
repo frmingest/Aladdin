@@ -15,7 +15,7 @@ export type RiskCell = { dimension: string; band: string | null; detail?: string
  */
 export default function RiskHeatmap({ cells, footnote }: { cells: RiskCell[]; footnote?: string }) {
   if (cells.length === 0) {
-    return <p className="text-sm text-slate-500">No risk dimensions scored yet.</p>;
+    return <p className="text-sm text-tertiary">No risk dimensions scored yet.</p>;
   }
   return (
     <div>
@@ -23,18 +23,18 @@ export default function RiskHeatmap({ cells, footnote }: { cells: RiskCell[]; fo
         {cells.map((cell) => (
           <div
             key={cell.dimension}
-            className="rounded p-3 border border-slate-800"
-            style={{ backgroundColor: `${bandColor(cell.band)}26` }}
+            className="rounded-lg p-3 border border-primary"
+            style={{ backgroundColor: `${bandColor(cell.band)}1F` }}
           >
-            <p className="text-xs uppercase text-slate-400 mb-1">{cell.dimension.replace(/_/g, " ")}</p>
-            <p className="text-sm font-semibold" style={{ color: bandColor(cell.band) }}>
+            <p className="stat-label mb-1">{cell.dimension.replace(/_/g, " ")}</p>
+            <p className="text-sm font-semibold font-mono" style={{ color: bandColor(cell.band) }}>
               {cell.band ?? "INSUFFICIENT DATA"}
             </p>
-            {cell.detail && <p className="text-xs text-slate-500 mt-1">{cell.detail}</p>}
+            {cell.detail && <p className="text-xs text-tertiary mt-1 font-mono">{cell.detail}</p>}
           </div>
         ))}
       </div>
-      {footnote && <p className="text-xs text-slate-600 mt-2">{footnote}</p>}
+      {footnote && <p className="text-xs text-disabled mt-2">{footnote}</p>}
     </div>
   );
 }

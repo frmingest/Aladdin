@@ -14,7 +14,7 @@ export type DriftPoint = { label: string; [ticker: string]: string | number };
  */
 export default function AllocationDriftChart({ data, tickers }: { data: DriftPoint[]; tickers: string[] }) {
   if (data.length < 2) {
-    return <p className="text-sm text-slate-500">Need at least two portfolio snapshots to show drift.</p>;
+    return <p className="text-sm text-tertiary">Need at least two portfolio snapshots to show drift.</p>;
   }
   return (
     <div className="h-72">
@@ -24,7 +24,7 @@ export default function AllocationDriftChart({ data, tickers }: { data: DriftPoi
           <XAxis dataKey="label" stroke={CHROME.axis} tick={{ fontSize: 11 }} />
           <YAxis stroke={CHROME.axis} tick={{ fontSize: 11 }} unit="%" width={40} />
           <Tooltip contentStyle={tooltipContentStyle} labelStyle={tooltipLabelStyle} />
-          <Legend wrapperStyle={{ fontSize: 12, color: "#cbd5e1" }} />
+          <Legend wrapperStyle={{ fontSize: 12, color: CHROME.legend }} />
           {tickers.map((ticker, i) => (
             <Line
               key={ticker}

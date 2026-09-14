@@ -42,9 +42,9 @@ export default function FactorProfileSection() {
   }, []);
 
   return (
-    <section>
-      <h2 className="text-lg font-semibold mb-3">Factor profile</h2>
-      {points === null ? <p className="text-sm text-slate-500">Loading…</p> : <FactorProfileChart data={points} />}
+    <section className="terminal-card">
+      <h2 className="terminal-card-title mb-3">Factor profile</h2>
+      {points === null ? <p className="text-sm text-tertiary">Loading…</p> : <FactorProfileChart data={points} />}
     </section>
   );
 }
