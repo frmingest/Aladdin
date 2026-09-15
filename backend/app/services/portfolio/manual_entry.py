@@ -10,28 +10,47 @@ ADR 0011 designs for exactly that, scoped to AssetClass.COMMODITY and
 AssetClass.COLLECTIBLE so it never competes with the CSV/XLSX path for
 ordinary brokerage holdings.
 
-Every manual entry lands in one persistent "manual entries" PortfolioSnapshot
-(created lazily, reused thereafter) rather than a fresh snapshot per entry.
-This deliberately does NOT go through app.services.portfolio.ingestion's
-merge-by-(account, ticker) logic: a second lot of the same ticker is simply
-inserted as an additional PortfolioPosition row, so two purchases of the
-same coin at different dates/prices stay two distinct, individually-priced
-positions (ADR 0011) instead of one colliding on ticker the way a bare
-`{ticker: ...}` dict would. app.services.market_data.valuation already
-groups by ticker when summing market value for concentration (see
-_build_concentration's single_name_values), so multiple lots of the same
-ticker value and roll up correctly with no further changes needed there.
+Every manual add/edit carries forward the *current* snapshot (whichever
+PortfolioSnapshot is most recent by `uploaded_at` — the same "current
+portfolio" concept Dashboard.tsx and app.services.portfolio.ingestion both
+use) into a brand-new snapshot, then applies just this one change on top —
+the same "merge forward onto the latest snapshot" pattern ingestion.py uses
+for brokerage uploads (see its module docstring). This module used to
+instead keep one dedicated "manual entries" snapshot, created lazily and
+reused forever, entirely separate from the brokerage-upload chain. That
+made the Dashboard (which simply shows whichever snapshot is newest) go
+blind to every brokerage-sourced holding — Securities dropping to 0 in
+Portfolio composition — the moment any manual entry was added, since the
+newest snapshot became the manual-only one and no longer carried Securities
+positions at all. Carrying forward here keeps there being exactly one
+ever-growing "current" snapshot, matching what Dashboard.tsx's own
+docstring already promises ("uploads merge forward onto it... every
+account's present holdings"). See the project doc "Securities missing from
+Portfolio composition after a manual entry" for the full investigation.
+
+Positions are cloned 1:1 on carry-forward (not merged by ticker the way
+ingestion.py's brokerage merge does) so multiple manual lots of the same
+ticker are preserved exactly as they were — a second lot of the same coin
+ticker is simply inserted as an additional PortfolioPosition row, so two
+purchases of the same coin at different dates/prices stay two distinct,
+individually-priced positions (ADR 0011) instead of colliding. Both
+brokerage-sourced and manually-entered positions carry forward identically;
+app.services.market_data.valuation already groups by ticker when summing
+market value for concentration (see _build_concentration's
+single_name_values), so multiple lots of the same ticker value and roll up
+correctly with no further changes needed there.
 
 Known gap (documented, not fixed here — see docs/architecture "Known gaps"
-in docs/PROGRESS.md): if a brokerage CSV/XLSX is uploaded *after* two or
-more manual lots of the same ticker exist, app.services.portfolio.ingestion's
-own carry-forward step (keyed by (account_id, ticker), one entry per key)
-will collapse those lots down to one when building the next snapshot. This
-only affects re-uploading a CSV after holding multiple lots of literally the
-same manually-entered ticker — a normal brokerage export never mentions a
-commodity/collectible ticker at all, so this doesn't disturb the common
-case. A full fix would make the CSV merge key lot-aware system-wide, which
-is a larger cross-cutting change deferred until it's actually needed.
+in docs/PROGRESS.md): a brokerage CSV/XLSX upload merges by (account_id,
+ticker) — see app.services.portfolio.ingestion's module docstring — which
+is ticker-keyed, not lot-keyed. If two or more manual lots of literally the
+same ticker exist when a brokerage file is next uploaded, that merge step
+will still collapse them down to one. This only affects re-uploading a CSV
+after holding multiple lots of the same manually-entered ticker — a normal
+brokerage export never mentions a commodity/collectible ticker at all, so
+this doesn't disturb the common case. A full fix would make the CSV merge
+key lot-aware system-wide, which is a larger cross-cutting change deferred
+until it's actually needed.
 """
 
 import hashlib
@@ -55,12 +74,14 @@ from app.models.portfolio import PortfolioPosition, PortfolioSnapshot, SnapshotS
 # holding rather than two that could silently disagree.
 MANUAL_ENTRY_ASSET_CLASSES = frozenset({AssetClass.COMMODITY.value, AssetClass.COLLECTIBLE.value})
 
-# Sentinel Document standing in for "source file" on the manual-entries
-# snapshot (PortfolioSnapshot.source_file_id is NOT NULL, matching the "every
-# snapshot traces to a real Document" invariant everywhere else — see
-# app.models.document's module docstring). Content is deliberately empty;
-# this Document is never actually stored/retrieved as a file. A fixed sha256
-# means at most one such row ever exists (the column is unique).
+# Sentinel Document standing in for "source file" on every snapshot a manual
+# add/edit creates (PortfolioSnapshot.source_file_id is NOT NULL, matching
+# the "every snapshot traces to a real Document" invariant everywhere else —
+# see app.models.document's module docstring). Content is deliberately
+# empty; this Document is never actually stored/retrieved as a file. Reused
+# across every manual-entry snapshot (source_file_id isn't unique on the
+# model, so more than one snapshot pointing at it is fine) — a fixed sha256
+# means at most one such Document row ever exists.
 _MANUAL_ENTRY_DOCUMENT_FILENAME = "manual-entry-log"
 _MANUAL_ENTRY_SENTINEL_SHA256 = hashlib.sha256(b"aladdin-manual-entry-log-v1").hexdigest()
 
@@ -84,10 +105,17 @@ class ManualEntryResult:
     was_new_holding: bool
 
 
-def _get_or_create_manual_snapshot(db: Session) -> PortfolioSnapshot:
-    document = (
-        db.query(Document).filter(Document.sha256 == _MANUAL_ENTRY_SENTINEL_SHA256).one_or_none()
-    )
+def _latest_snapshot(db: Session) -> PortfolioSnapshot | None:
+    """The current "whole portfolio" snapshot — whichever is most recent by
+    upload time, brokerage-sourced or manual-entry-sourced alike. Same query
+    app.services.portfolio.ingestion uses to find what to carry forward
+    onto; kept in sync deliberately so both entry paths agree on what
+    "current" means."""
+    return db.query(PortfolioSnapshot).order_by(PortfolioSnapshot.uploaded_at.desc()).first()
+
+
+def _manual_entry_document(db: Session) -> Document:
+    document = db.query(Document).filter(Document.sha256 == _MANUAL_ENTRY_SENTINEL_SHA256).one_or_none()
     if document is None:
         document = Document(
             holding_id=None,
@@ -102,23 +130,51 @@ def _get_or_create_manual_snapshot(db: Session) -> PortfolioSnapshot:
         )
         db.add(document)
         db.flush()
+    return document
 
-    snapshot = (
-        db.query(PortfolioSnapshot)
-        .filter(PortfolioSnapshot.source_file_id == document.id)
-        .one_or_none()
+
+def _new_snapshot_carrying_forward(
+    db: Session, previous: PortfolioSnapshot | None
+) -> tuple[PortfolioSnapshot, list[PortfolioPosition]]:
+    """Creates a new snapshot that carries forward every position from
+    `previous` unchanged, cloned as new PortfolioPosition rows — the same
+    "merge forward onto the latest snapshot" idea
+    app.services.portfolio.ingestion uses for brokerage uploads (see module
+    docstring), so a manual entry/edit stays part of the one ever-growing
+    "current" portfolio the Dashboard shows (the latest snapshot) instead of
+    forking off into an isolated island. Unlike ingestion's brokerage merge,
+    positions are cloned 1:1 rather than merged by (account, ticker), so
+    multiple manual lots of the same ticker are preserved exactly as they
+    were. Returns the new snapshot plus the freshly-cloned positions (so a
+    caller can find and mutate one of them before committing, for an edit)."""
+    document = _manual_entry_document(db)
+    settings = get_settings()
+    snapshot = PortfolioSnapshot(
+        source_file_id=document.id,
+        reporting_currency=(previous.reporting_currency if previous is not None else settings.default_reporting_currency),
+        status=SnapshotStatus.VALIDATED.value,
+        account_id=None,
     )
-    if snapshot is None:
-        settings = get_settings()
-        snapshot = PortfolioSnapshot(
-            source_file_id=document.id,
-            reporting_currency=settings.default_reporting_currency,
-            status=SnapshotStatus.VALIDATED.value,
-            account_id=None,
-        )
-        db.add(snapshot)
-        db.flush()
-    return snapshot
+    db.add(snapshot)
+    db.flush()
+
+    cloned: list[PortfolioPosition] = []
+    if previous is not None:
+        for position in previous.positions:
+            clone = PortfolioPosition(
+                snapshot_id=snapshot.id,
+                holding_id=position.holding_id,
+                account_id=position.account_id,
+                weight_pct=position.weight_pct,
+                quantity=position.quantity,
+                cost_basis=position.cost_basis,
+                cost_basis_currency=position.cost_basis_currency,
+                notes=position.notes,
+                acquired_at=position.acquired_at,
+            )
+            db.add(clone)
+            cloned.append(clone)
+    return snapshot, cloned
 
 
 def add_manual_position(
@@ -186,7 +242,8 @@ def add_manual_position(
         if holding.custody_type is None and custody_type is not None:
             holding.custody_type = custody_type
 
-    snapshot = _get_or_create_manual_snapshot(db)
+    previous_snapshot = _latest_snapshot(db)
+    snapshot, _carried_forward = _new_snapshot_carrying_forward(db, previous_snapshot)
 
     position = PortfolioPosition(
         snapshot_id=snapshot.id,
@@ -208,25 +265,23 @@ def add_manual_position(
 
 
 def list_manual_positions(db: Session) -> list[PortfolioPosition]:
-    """Every manually-entered lot, newest-acquired first — backs `GET
-    /portfolio/holdings/manual` (the Portfolio tab's "Your manual entries"
-    table), which exists so a mistake made at entry time (the classic one:
-    "Holding currency" changed to NOK but "Buy price currency" left at its
-    default) can actually be seen and corrected, not just avoided going
-    forward."""
-    document = db.query(Document).filter(Document.sha256 == _MANUAL_ENTRY_SENTINEL_SHA256).one_or_none()
-    if document is None:
-        return []
-    snapshot = (
-        db.query(PortfolioSnapshot).filter(PortfolioSnapshot.source_file_id == document.id).one_or_none()
-    )
+    """Every manually-entered lot in the *current* portfolio, newest-acquired
+    first — backs `GET /portfolio/holdings/manual` (the Portfolio tab's
+    "Your manual entries" table), which exists so a mistake made at entry
+    time (the classic one: "Holding currency" changed to NOK but "Buy price
+    currency" left at its default) can actually be seen and corrected, not
+    just avoided going forward. "Current" here is the same latest-snapshot
+    definition every other read of the portfolio uses — a manual lot that
+    was since dropped by a brokerage re-upload no longer shows up here,
+    matching what the rest of the app would show for it too."""
+    snapshot = _latest_snapshot(db)
     if snapshot is None:
         return []
-    return (
-        db.query(PortfolioPosition)
-        .filter(PortfolioPosition.snapshot_id == snapshot.id)
-        .order_by(PortfolioPosition.acquired_at.desc())
-        .all()
+    positions = [p for p in snapshot.positions if p.holding.asset_class in MANUAL_ENTRY_ASSET_CLASSES]
+    return sorted(
+        positions,
+        key=lambda p: p.acquired_at or datetime.min.replace(tzinfo=timezone.utc),
+        reverse=True,
     )
 
 
@@ -249,28 +304,27 @@ def update_manual_position(
     Only keys present in `fields` are applied (the caller passes
     `ManualPositionUpdate.model_dump(exclude_unset=True)` — §21 partial
     update, not "every field must be resupplied"). Scoped to a holding with
-    exactly one manual lot: a multi-lot manual holding (two purchases of the
-    same coin at different times) is ambiguous about which lot to correct,
-    so it's rejected rather than guessed — add a new entry instead, or ask
-    for per-lot editing if this ever becomes a real need.
+    exactly one manual lot *in the current snapshot*: a multi-lot manual
+    holding (two purchases of the same coin at different times) is
+    ambiguous about which lot to correct, so it's rejected rather than
+    guessed — add a new entry instead, or ask for per-lot editing if this
+    ever becomes a real need.
     """
     holding = db.get(Holding, holding_id)
     if holding is None or holding.asset_class not in MANUAL_ENTRY_ASSET_CLASSES:
         raise ManualEntryNotFoundError(f"no manually-entered holding '{holding_id}' found")
 
-    snapshot = _get_or_create_manual_snapshot(db)
-    positions = (
-        db.query(PortfolioPosition)
-        .filter(PortfolioPosition.snapshot_id == snapshot.id, PortfolioPosition.holding_id == holding_id)
-        .all()
-    )
-    if len(positions) != 1:
+    previous_snapshot = _latest_snapshot(db)
+    existing = [p for p in (previous_snapshot.positions if previous_snapshot is not None else []) if p.holding_id == holding_id]
+    if len(existing) != 1:
         raise ManualEntryValidationError(
-            f"holding '{holding_id}' has {len(positions)} manual lot(s) — editing is only supported "
-            "for a holding with exactly one lot; add a separate new entry instead of trying to edit "
-            "an ambiguous multi-lot holding"
+            f"holding '{holding_id}' has {len(existing)} manual lot(s) in the current portfolio — "
+            "editing is only supported for a holding with exactly one lot; add a separate new entry "
+            "instead of trying to edit an ambiguous multi-lot holding"
         )
-    position = positions[0]
+
+    _snapshot, carried_forward = _new_snapshot_carrying_forward(db, previous_snapshot)
+    position = next(p for p in carried_forward if p.holding_id == holding_id)
 
     if fields.get("name") is not None:
         holding.name = fields["name"].strip()

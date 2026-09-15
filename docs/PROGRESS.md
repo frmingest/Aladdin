@@ -18,6 +18,35 @@ in full + two Phase 7 bug fixes, listed below) is sitting as an uncommitted work
 since `device_bash` can't run `git` from this session. **Faiz: please `git add`/`commit`/`push` the
 current working tree** — see "Manual to-do" for the exact file list.
 
+**2026-09-15 (Securities missing from Portfolio composition after a manual entry — fixed):** Faiz
+reported that after the Composition split shipped (entry just below), Coin collection and Whisky
+collection totals were correct but Securities had dropped to 0 / 0.0% of total portfolio.
+Root-caused to `app/services/portfolio/manual_entry.py`, not the Composition change itself: every
+manual coin/whisky add or edit landed in one dedicated "manual entries" `PortfolioSnapshot`, created
+once and reused forever, entirely separate from the ordinary chain of brokerage-upload snapshots
+that `app/services/portfolio/ingestion.py` merges forward each CSV/XLSX upload. The Dashboard (and
+`GET /portfolio/snapshots`) simply shows whichever snapshot is newest — so the moment any manual
+entry existed, that isolated manual-only snapshot became "current," and Composition/Risk/every other
+snapshot-scoped view lost every brokerage-sourced holding until the next CSV re-upload happened to
+merge them back together.
+- **Fix**: manual add/edit now carries forward the *actual* current snapshot (whichever is newest,
+  brokerage or manual) onto a new one — the same "merge forward" pattern `ingestion.py` already uses
+  for brokerage uploads — then applies just the one new/edited lot on top. There is no longer a
+  separate, isolated manual-entries snapshot; Securities, Coin collection, and Whisky collection all
+  stay part of the one ever-growing "current" portfolio the Dashboard reads.
+- **Scope**: `add_manual_position`, `update_manual_position`, and `list_manual_positions` in
+  `app/services/portfolio/manual_entry.py` — no change needed to `ingestion.py`,
+  `market_data/valuation.py`, or any frontend file; the Composition rewrite from the entry below was
+  already correct once given a snapshot that actually contains everything.
+- **Verified**: `pytest tests/unit/test_manual_entry.py tests/integration/test_portfolio_api.py
+  tests/integration/test_valuation_api.py` → 49/49 passing (2 existing unit tests updated to match
+  the new carry-forward behavior, plus 1 new regression test asserting a manual entry no longer
+  orphans existing brokerage positions); all 28 integration tests in `test_portfolio_api.py`,
+  including every manual-entry test, passed **unchanged**. `ruff check` clean on touched files.
+- **Not yet deployed** — needs a Railway redeploy; no migration involved.
+- Files changed: `backend/app/services/portfolio/manual_entry.py`, `backend/app/api/portfolio.py`
+  (docstring only), `backend/tests/unit/test_manual_entry.py`.
+
 **2026-09-15 (Composition: Securities/Coin/Whisky split, collection aggregation, filter):** Same-day
 follow-up to the Phase 8 pass just below — with real coin + Whiskybase data now in the portfolio,
 Faiz asked for an economic-logic check of the Dashboard's Portfolio composition section against a
@@ -241,6 +270,12 @@ deployment (browser + direct API calls), not just "keys are set":**
 
 ## Manual to-do for Faiz
 
+- **New this pass — redeploy needed.** Fixed the bug where Securities dropped out of Portfolio
+  composition as soon as a coin/whisky manual entry existed (root cause: manual entries lived in an
+  isolated snapshot, not the current merged one — see the dated entry above). No migration, code-only
+  fix in `backend/app/services/portfolio/manual_entry.py` — needs a Railway redeploy to take effect.
+  Your existing coin/whisky/securities data is untouched; this only changes how the next manual
+  add/edit is stored.
 - **New this pass — check the coin entries' buy prices.** The coin+whisky snapshot's Unrealized P&L
   (-653,688.51 NOK) is several times larger in magnitude than Total value (115,422.65 NOK) and
   negative — the arithmetic is correct, but this pattern usually means a cost basis was entered
@@ -336,6 +371,13 @@ deployment (browser + direct API calls), not just "keys are set":**
 
 ### Changelog
 
+- **2026-09-15 (Securities missing from Portfolio composition after a manual entry — fixed):** A
+  manual coin/whisky add used to land in one isolated, dedicated "manual entries" snapshot instead
+  of carrying forward the current brokerage-upload snapshot — so the moment one existed, the
+  Dashboard's "show whichever snapshot is newest" logic switched to that manual-only snapshot and
+  every Securities holding disappeared from Composition until the next CSV re-upload. Fixed by
+  making manual add/edit carry forward the current snapshot the same way brokerage uploads already
+  do. See the dated entry above for full detail.
 - **2026-09-15 (Composition: Securities/Coin/Whisky split, collection aggregation, filter):** Added
   `asset_class_values` (absolute per-asset-class value) to the valuation API's concentration output;
   rebuilt the Dashboard's Portfolio composition section to compute its numbers/charts from the

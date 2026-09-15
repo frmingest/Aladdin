@@ -236,12 +236,14 @@ def add_manual_holding(
     how a second lot of the same ticker is handled (a new position, not a
     merge).
 
-    Every manual entry lands in one persistent "manual entries" snapshot
-    (`GET /portfolio/snapshots` will show it once one exists) rather than a
-    new snapshot per call — it shows up in `GET /portfolio/holdings` and in
-    valuation/concentration exactly like any other holding once it has a
-    `market_ticker` (gold/silver route through the gold-api.com provider;
-    see app.providers.gold_metal_provider) or is refreshed manually."""
+    Every manual entry carries forward the current portfolio snapshot onto a
+    new one and adds this lot to it (see app.services.portfolio.manual_entry
+    for why — it's what keeps Securities/Coin/Whisky all showing up together
+    on the Dashboard, which just looks at whichever snapshot is newest) — it
+    shows up in `GET /portfolio/holdings` and in valuation/concentration
+    exactly like any other holding once it has a `market_ticker` (gold/
+    silver route through the gold-api.com provider; see
+    app.providers.gold_metal_provider) or is refreshed manually."""
     try:
         result = add_manual_position(
             db,

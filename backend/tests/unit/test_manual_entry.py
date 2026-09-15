@@ -99,20 +99,93 @@ def test_second_lot_of_same_ticker_creates_a_second_position_not_a_merge(db):
     assert first.holding.id == second.holding.id
     assert first.position.id != second.position.id
 
-    positions = db.query(PortfolioPosition).filter(PortfolioPosition.holding_id == first.holding.id).all()
-    assert len(positions) == 2
-    assert {p.cost_basis for p in positions} == {Decimal("2450.00"), Decimal("2500.00")}
+    # Each add carries the previous snapshot forward onto a new one (see
+    # module docstring), so the *first* lot's original row still lives in
+    # snapshot 1 — only the latest ("current") snapshot should show both
+    # lots side by side.
+    current_positions = (
+        db.query(PortfolioPosition)
+        .filter(
+            PortfolioPosition.holding_id == first.holding.id,
+            PortfolioPosition.snapshot_id == second.position.snapshot_id,
+        )
+        .all()
+    )
+    assert len(current_positions) == 2
+    assert {p.cost_basis for p in current_positions} == {Decimal("2450.00"), Decimal("2500.00")}
 
 
-def test_reuses_the_same_manual_entries_snapshot_and_sentinel_document(db):
-    _add_gold_coin(db, ticker="XAU-1", name="Coin 1")
-    _add_gold_coin(db, ticker="XAU-2", name="Coin 2")
+def test_reuses_the_sentinel_document_but_creates_a_new_snapshot_per_entry(db):
+    """The sentinel Document (standing in for "source file") is reused
+    across every manual add, but each add carries forward the current
+    snapshot onto a *new* one rather than reusing a single dedicated
+    snapshot forever — see the module docstring for why the old
+    reuse-one-snapshot design made Securities disappear from the Dashboard
+    the moment a coin/whisky lot was added."""
+    first = _add_gold_coin(db, ticker="XAU-1", name="Coin 1")
+    second = _add_gold_coin(db, ticker="XAU-2", name="Coin 2")
 
-    assert db.query(PortfolioSnapshot).count() == 1
+    assert db.query(PortfolioSnapshot).count() == 2
     assert db.query(Document).count() == 1
+    assert first.position.snapshot_id != second.position.snapshot_id
 
-    snapshot = db.query(PortfolioSnapshot).one()
-    assert len(snapshot.positions) == 2
+    latest_snapshot = db.query(PortfolioSnapshot).filter(PortfolioSnapshot.id == second.position.snapshot_id).one()
+    assert len(latest_snapshot.positions) == 2
+    assert {p.holding.ticker for p in latest_snapshot.positions} == {"XAU-1", "XAU-2"}
+
+
+def test_manual_entry_carries_forward_existing_brokerage_positions(db):
+    """Regression test for the bug this pass fixed: a manual coin/whisky
+    entry must not orphan whatever was already in the portfolio (e.g.
+    Nordnet securities) — it should show up alongside them in the new
+    'current' snapshot, not replace them."""
+    from app.models.holding import Holding
+
+    brokerage_document = Document(
+        holding_id=None,
+        type="OTHER",
+        original_filename="nordnet.csv",
+        mime_type="text/csv",
+        size_bytes=1,
+        storage_path="",
+        sha256="brokerage-sentinel",
+        status="VALIDATED",
+        quality_flags=[],
+    )
+    db.add(brokerage_document)
+    db.flush()
+    brokerage_snapshot = PortfolioSnapshot(
+        source_file_id=brokerage_document.id,
+        reporting_currency="NOK",
+        status="VALIDATED",
+        account_id=None,
+    )
+    db.add(brokerage_snapshot)
+    db.flush()
+    security_holding = Holding(
+        ticker="VAR.OL",
+        name="Vår Energi",
+        asset_class="EQUITY",
+        asset_class_raw="EQUITY",
+        sector=None,
+        trading_currency="NOK",
+    )
+    db.add(security_holding)
+    db.flush()
+    db.add(
+        PortfolioPosition(
+            snapshot_id=brokerage_snapshot.id,
+            holding_id=security_holding.id,
+            quantity=Decimal("100"),
+        )
+    )
+    db.commit()
+
+    result = _add_gold_coin(db)
+
+    latest_snapshot = db.query(PortfolioSnapshot).filter(PortfolioSnapshot.id == result.position.snapshot_id).one()
+    tickers = {p.holding.ticker for p in latest_snapshot.positions}
+    assert tickers == {"VAR.OL", "XAU-COIN-2026-09"}
 
 
 def test_existing_holding_market_ticker_is_not_overwritten(db):
