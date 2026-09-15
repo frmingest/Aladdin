@@ -143,14 +143,7 @@ def build_analysis_context(db: Session, holding_id: UUID, portfolio_snapshot_id:
     if holding is None:
         raise ValueError(f"holding '{holding_id}' not found")
 
-    position = (
-        db.query(PortfolioPosition)
-        .filter(
-            PortfolioPosition.snapshot_id == portfolio_snapshot_id,
-            PortfolioPosition.holding_id == holding_id,
-        )
-        .one_or_none()
-    )
+    position = _build_position_summary(db, portfolio_snapshot_id, holding_id)
 
     financial_metrics = _build_financial_metrics(db, holding_id)
     market = _build_market_snapshot(db, holding, portfolio_snapshot_id, settings.default_reporting_currency)
@@ -196,7 +189,71 @@ def build_analysis_context(db: Session, holding_id: UUID, portfolio_snapshot_id:
     )
 
 
-def _build_user_notes(db: Session, holding_id: UUID, position: PortfolioPosition | None) -> str | None:
+@dataclass
+class _PositionSummary:
+    """A holding can have more than one PortfolioPosition row within the
+    same snapshot — one per real-world account it's held in (the upload
+    merge key is `(account_id, ticker)`, not `ticker` alone; see
+    app.models.account.Account and app.models.portfolio.PortfolioPosition's
+    account_id comment). Analysis operates at the holding level, so this
+    collapses however many per-account rows exist for (snapshot, holding)
+    into one summary — the same "sum first" pattern already used to fix an
+    earlier, analogous bug in portfolio composition weights (see
+    app.services.market_data.valuation._build_concentration and
+    claude/portfolio-composition-false-values.md)."""
+
+    weight_pct: Decimal | None
+    quantity: Decimal | None
+    cost_basis: Decimal | None
+    cost_basis_currency: str | None
+    notes: str | None
+
+
+def _build_position_summary(
+    db: Session, portfolio_snapshot_id: UUID, holding_id: UUID
+) -> _PositionSummary | None:
+    positions = (
+        db.query(PortfolioPosition)
+        .filter(
+            PortfolioPosition.snapshot_id == portfolio_snapshot_id,
+            PortfolioPosition.holding_id == holding_id,
+        )
+        .all()
+    )
+    if not positions:
+        return None
+
+    def _sum_or_none(values: list[Decimal | None]) -> Decimal | None:
+        present = [v for v in values if v is not None]
+        return sum(present, start=Decimal("0")) if present else None
+
+    weight_pct = _sum_or_none([p.weight_pct for p in positions])
+    quantity = _sum_or_none([p.quantity for p in positions])
+
+    # cost_basis is currency-denominated. Every real case has all of a
+    # holding's per-account rows agreeing on currency (it's the same
+    # instrument); if they don't, don't silently mix currencies — fall
+    # back to the first position's own figures instead of summing.
+    currencies = {p.cost_basis_currency for p in positions if p.cost_basis_currency is not None}
+    if len(currencies) <= 1:
+        cost_basis = _sum_or_none([p.cost_basis for p in positions])
+        cost_basis_currency = next(iter(currencies), None)
+    else:
+        cost_basis = positions[0].cost_basis
+        cost_basis_currency = positions[0].cost_basis_currency
+
+    notes = next((p.notes for p in positions if p.notes), None)
+
+    return _PositionSummary(
+        weight_pct=weight_pct,
+        quantity=quantity,
+        cost_basis=cost_basis,
+        cost_basis_currency=cost_basis_currency,
+        notes=notes,
+    )
+
+
+def _build_user_notes(db: Session, holding_id: UUID, position: _PositionSummary | None) -> str | None:
     """§26 Phase 5 / decision 0008: the investment thesis ledger
     (app.models.thesis.InvestmentThesis) replaces PortfolioPosition.notes as
     the "existing thesis" the §11.3 reconciliation guardrail compares the

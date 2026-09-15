@@ -244,6 +244,64 @@ def test_context_surfaces_macro_and_sector_research_when_available(db):
     assert any("Energy sector research" in e.label for e in research_evidence)
 
 
+def test_holding_in_two_accounts_within_one_snapshot_does_not_crash(db):
+    """Reproduces a production crash: a holding split across two accounts
+    (see app.models.account.Account — the upload merge key is
+    (account_id, ticker), not ticker alone) gets one PortfolioPosition row
+    per account within the same snapshot. build_analysis_context used to
+    assume exactly one position per (snapshot, holding) and crashed with
+    sqlalchemy.exc.MultipleResultsFound the moment an analysis targeted a
+    holding held in more than one account — the same class of bug already
+    fixed once for portfolio composition (_build_concentration summing by
+    ticker instead of combining multi-account rows)."""
+    from app.models.account import Account
+
+    snapshot = _make_snapshot(db)
+    holding = _make_holding(db)
+
+    account_a = Account(name="Account A", account_number="AAA")
+    account_b = Account(name="Account B", account_number="BBB")
+    db.add_all([account_a, account_b])
+    db.flush()
+
+    db.add(
+        PortfolioPosition(
+            snapshot_id=snapshot.id,
+            holding_id=holding.id,
+            account_id=account_a.id,
+            weight_pct=Decimal("12.5"),
+            quantity=Decimal("100"),
+            cost_basis=Decimal("1000"),
+            cost_basis_currency="NOK",
+        )
+    )
+    db.add(
+        PortfolioPosition(
+            snapshot_id=snapshot.id,
+            holding_id=holding.id,
+            account_id=account_b.id,
+            weight_pct=Decimal("7.5"),
+            quantity=Decimal("50"),
+            cost_basis=Decimal("400"),
+            cost_basis_currency="NOK",
+        )
+    )
+    db.add(
+        MarketObservation(
+            holding_id=holding.id, observed_at=datetime.now(timezone.utc), price=Decimal("10.00"),
+            currency="NOK", provider="fake", data_status="delayed",
+        )
+    )
+    db.commit()
+
+    context = build_analysis_context(db, holding.id, snapshot.id)
+
+    assert context.weight_pct == Decimal("20.0")
+    assert context.quantity == Decimal("150")
+    assert context.cost_basis == Decimal("1400")
+    assert context.cost_basis_currency == "NOK"
+
+
 def test_excerpt_char_budget_truncates_and_flags(db, monkeypatch):
     from app.config import settings as settings_module
 
