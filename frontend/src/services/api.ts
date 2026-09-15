@@ -14,6 +14,8 @@ import type {
   AccountCreate,
   AccountUpdate,
   Holding,
+  ManualPositionCreate,
+  ManualPositionResponse,
   PortfolioResetResponse,
   PortfolioSnapshotDetail,
   PortfolioSnapshotSummary,
@@ -94,6 +96,20 @@ export function uploadPortfolio(
   if (reportingCurrency) form.append("reporting_currency", reportingCurrency);
   if (accountId) form.append("account_id", accountId);
   return apiFetch("/portfolio/upload", { method: "POST", body: form });
+}
+
+// One-off entry of a single holding with no CSV/XLSX upload — e.g. a single
+// gold or silver coin purchase (Phase 8, ADR 0011). Set market_ticker to
+// "XAU"/"XAG" for live gold/silver pricing; leave it unset for collectibles
+// (e.g. whisky bought outside a Whiskybase export), which are valued at
+// cost basis instead. See the "Add a holding manually" section of the
+// Portfolio tab.
+export function addManualHolding(body: ManualPositionCreate): Promise<ManualPositionResponse> {
+  return apiFetch("/portfolio/holdings/manual", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
 }
 
 // --- Accounts (§26 accounts feature) ----------------------------------------

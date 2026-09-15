@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   ApiError,
+  addManualHolding,
   createAccount,
   deleteAccount,
   listAccounts,
@@ -18,6 +19,247 @@ import type {
   PortfolioUploadResponse,
   RowError,
 } from "../types/portfolio";
+
+/**
+ * Preset "shapes" for the manual-entry form below — covers the coin types
+ * Faiz actually buys (1 oz Maple Leaf, Krugerrand, Kangaroo, in gold and
+ * silver) plus two open-ended fallbacks. Picking a preset sets the asset
+ * class and, for gold/silver, the market_ticker ("XAU"/"XAG") that routes
+ * pricing through the gold-api.com provider (backend/app/services/
+ * market_data/gold_api.py) so "Refresh valuation" on the Dashboard shows
+ * today's spot price. "Other collectible" has no live feed — see ADR 0011 —
+ * so it's carried at cost basis instead (app/services/market_data/
+ * valuation.py's "at_cost" path).
+ */
+const COIN_PRESETS = [
+  { key: "gold-maple", label: "1 oz Gold Maple Leaf", name: "1 oz Gold Maple Leaf", assetClass: "COMMODITY", marketTicker: "XAU" },
+  { key: "gold-krugerrand", label: "1 oz Gold Krugerrand", name: "1 oz Gold Krugerrand", assetClass: "COMMODITY", marketTicker: "XAU" },
+  { key: "gold-kangaroo", label: "1 oz Gold Kangaroo", name: "1 oz Gold Kangaroo", assetClass: "COMMODITY", marketTicker: "XAU" },
+  { key: "silver-maple", label: "1 oz Silver Maple Leaf", name: "1 oz Silver Maple Leaf", assetClass: "COMMODITY", marketTicker: "XAG" },
+  { key: "silver-krugerrand", label: "1 oz Silver Krugerrand", name: "1 oz Silver Krugerrand", assetClass: "COMMODITY", marketTicker: "XAG" },
+  { key: "silver-kangaroo", label: "1 oz Silver Kangaroo", name: "1 oz Silver Kangaroo", assetClass: "COMMODITY", marketTicker: "XAG" },
+  { key: "other-gold", label: "Other gold item", name: "", assetClass: "COMMODITY", marketTicker: "XAU" },
+  { key: "other-silver", label: "Other silver item", name: "", assetClass: "COMMODITY", marketTicker: "XAG" },
+  { key: "other-collectible", label: "Other collectible (e.g. a whisky bottle)", name: "", assetClass: "COLLECTIBLE", marketTicker: "" },
+] as const;
+
+type CoinPreset = (typeof COIN_PRESETS)[number];
+
+/**
+ * One-off entry for a purchase that doesn't come from a broker export — the
+ * gold/silver coins and other collectibles Faiz asked to add by hand. Wired
+ * to POST /portfolio/holdings/manual (backend/app/api/portfolio.py).
+ */
+function ManualEntrySection({
+  accounts,
+  onAdded,
+}: {
+  accounts: Account[];
+  onAdded: () => void;
+}) {
+  const [presetKey, setPresetKey] = useState<CoinPreset["key"]>(COIN_PRESETS[0].key);
+  const preset = COIN_PRESETS.find((p) => p.key === presetKey) ?? COIN_PRESETS[0];
+  const [name, setName] = useState<string>(preset.name);
+  const [quantity, setQuantity] = useState("1");
+  const [costBasis, setCostBasis] = useState("");
+  const [costBasisCurrency, setCostBasisCurrency] = useState("USD");
+  const [tradingCurrency, setTradingCurrency] = useState("USD");
+  const [custodyType, setCustodyType] = useState("");
+  const [acquiredAt, setAcquiredAt] = useState("");
+  const [notes, setNotes] = useState("");
+  const [accountId, setAccountId] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  function handlePresetChange(key: string) {
+    const next = COIN_PRESETS.find((p) => p.key === key) ?? COIN_PRESETS[0];
+    setPresetKey(next.key);
+    setName(next.name);
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!name.trim() || !quantity.trim()) return;
+    setSubmitting(true);
+    setSuccessMessage(null);
+    setErrorMessage(null);
+    try {
+      // Holding.ticker must be globally unique (see ingestion.py's lookup) —
+      // the user never has to pick one, so it's generated here from the
+      // preset and the current time.
+      const ticker = `${preset.key.toUpperCase()}-${Date.now()}`;
+      const added = await addManualHolding({
+        ticker,
+        name: name.trim(),
+        asset_class: preset.assetClass,
+        trading_currency: tradingCurrency.trim().toUpperCase(),
+        quantity,
+        cost_basis: costBasis.trim() || null,
+        cost_basis_currency: costBasis.trim() ? costBasisCurrency.trim().toUpperCase() : null,
+        market_ticker: preset.marketTicker || null,
+        custody_type: custodyType.trim() || null,
+        acquired_at: acquiredAt || null,
+        notes: notes.trim() || null,
+        account_id: accountId || null,
+      });
+      setSuccessMessage(
+        preset.marketTicker
+          ? `Added "${added.name}" — go to the Dashboard and click "Refresh valuation" to price it ` +
+            `at today's ${preset.marketTicker === "XAU" ? "gold" : "silver"} spot price.`
+          : `Added "${added.name}" — with no live price feed for it, it's carried at what you paid ` +
+            `until you update it.`,
+      );
+      setName(preset.name);
+      setQuantity("1");
+      setCostBasis("");
+      setCustodyType("");
+      setAcquiredAt("");
+      setNotes("");
+      onAdded();
+    } catch (err) {
+      setErrorMessage(
+        err instanceof ApiError ? String(err.detail ?? err.message) : "Could not add holding.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <section className="terminal-card">
+      <h2 className="terminal-card-title mb-2">Add a holding manually</h2>
+      <p className="text-xs text-tertiary mb-3">
+        For a one-off purchase that doesn't come from a broker export — a gold or silver coin, or
+        any other collectible (a whisky bottle bought outside your Whiskybase export, say). Gold
+        and silver are priced from today's spot price once you refresh valuation; anything else is
+        carried at what you paid.
+      </p>
+      <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-3">
+        <div>
+          <label className="label-terminal">Type</label>
+          <select
+            value={presetKey}
+            onChange={(e) => handlePresetChange(e.target.value)}
+            className="input-terminal min-w-[220px]"
+          >
+            {COIN_PRESETS.map((p) => (
+              <option key={p.key} value={p.key}>
+                {p.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="label-terminal">Name</label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g. 1 oz Gold Maple Leaf (2024)"
+            className="input-terminal w-56"
+          />
+        </div>
+        <div>
+          <label className="label-terminal">Quantity</label>
+          <input
+            type="number"
+            min="0"
+            step="any"
+            value={quantity}
+            onChange={(e) => setQuantity(e.target.value)}
+            className="input-terminal w-20"
+          />
+        </div>
+        <div>
+          <label className="label-terminal">Buy price (optional)</label>
+          <input
+            type="number"
+            min="0"
+            step="any"
+            value={costBasis}
+            onChange={(e) => setCostBasis(e.target.value)}
+            placeholder="e.g. 2450.00"
+            className="input-terminal w-32"
+          />
+        </div>
+        <div>
+          <label className="label-terminal">Buy price currency</label>
+          <input
+            type="text"
+            value={costBasisCurrency}
+            onChange={(e) => setCostBasisCurrency(e.target.value.toUpperCase())}
+            maxLength={3}
+            className="input-terminal w-20"
+          />
+        </div>
+        <div>
+          <label className="label-terminal">Holding currency</label>
+          <input
+            type="text"
+            value={tradingCurrency}
+            onChange={(e) => setTradingCurrency(e.target.value.toUpperCase())}
+            maxLength={3}
+            className="input-terminal w-20"
+          />
+        </div>
+        <div>
+          <label className="label-terminal">Custody (optional)</label>
+          <input
+            type="text"
+            value={custodyType}
+            onChange={(e) => setCustodyType(e.target.value)}
+            placeholder="e.g. home safe, vault"
+            className="input-terminal w-36"
+          />
+        </div>
+        <div>
+          <label className="label-terminal">Acquired on (optional)</label>
+          <input
+            type="date"
+            value={acquiredAt}
+            onChange={(e) => setAcquiredAt(e.target.value)}
+            className="input-terminal w-36"
+          />
+        </div>
+        <div>
+          <label className="label-terminal">Account (optional)</label>
+          <select
+            value={accountId}
+            onChange={(e) => setAccountId(e.target.value)}
+            className="input-terminal min-w-[160px]"
+          >
+            <option value="">Unassigned</option>
+            {accounts.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name} ({a.account_number})
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="w-full">
+          <label className="label-terminal">Notes (optional)</label>
+          <input
+            type="text"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="e.g. mint mark, condition, serial number"
+            className="input-terminal w-full"
+          />
+        </div>
+        <button
+          type="submit"
+          disabled={!name.trim() || !quantity.trim() || submitting}
+          className="btn-terminal btn-terminal-primary"
+        >
+          {submitting ? "Adding…" : "Add holding"}
+        </button>
+      </form>
+      {successMessage && <p className="text-positive text-sm mt-2">{successMessage}</p>}
+      {errorMessage && <p className="text-negative text-sm mt-2">{errorMessage}</p>}
+    </section>
+  );
+}
 
 /**
  * Which accounts are being watched/filtered — a small management table plus
@@ -178,7 +420,7 @@ function AccountsSection({
  * holding and lets you set the real Yahoo-Finance-resolvable symbol, so
  * "Refresh valuation" on the dashboard has something to price.
  */
-function MarketTickersSection() {
+function MarketTickersSection({ refreshSignal }: { refreshSignal: number }) {
   const [holdings, setHoldings] = useState<Holding[]>([]);
   const [loading, setLoading] = useState(true);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
@@ -198,7 +440,11 @@ function MarketTickersSection() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(refresh, []);
+  // Re-fetches whenever a holding is added via the manual-entry form below,
+  // so a newly-added coin shows up here too (relevant for anything without
+  // a preset market_ticker, e.g. a manually-entered collectible).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(refresh, [refreshSignal]);
 
   async function handleSave(holding: Holding) {
     const value = (drafts[holding.id] ?? "").trim();
@@ -326,6 +572,7 @@ export default function PortfolioUpload() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [resetting, setResetting] = useState(false);
   const [resetMessage, setResetMessage] = useState<string | null>(null);
+  const [manualEntryVersion, setManualEntryVersion] = useState(0);
 
   const refreshAccounts = () => {
     listAccounts()
@@ -427,7 +674,12 @@ export default function PortfolioUpload() {
     <div className="space-y-8">
       <AccountsSection accounts={accounts} onChanged={refreshAccounts} />
 
-      <MarketTickersSection />
+      <ManualEntrySection
+        accounts={accounts}
+        onAdded={() => setManualEntryVersion((v) => v + 1)}
+      />
+
+      <MarketTickersSection refreshSignal={manualEntryVersion} />
 
       <section className="terminal-card">
         <div className="terminal-card-header">

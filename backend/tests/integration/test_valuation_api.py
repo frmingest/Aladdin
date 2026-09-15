@@ -168,6 +168,71 @@ def test_valuation_flags_nordnet_holdings_with_no_market_ticker(client, fake_pro
         assert "no market_ticker set" in holding["data_warning"]
 
 
+_WHISKYBASE_HEADER = (
+    'ID,CollectionID,Brand,Name,"Bottling serie","Bottle Status","Stated Age",Size,'
+    'Strength,"Strength Unit","Cask Type",List,Rating,"My Rating","Price Paid",Currency,'
+    '"Average Shop Price","Currency Whisky",Distilleries,Vintage,"Added on",Photo'
+)
+
+
+def _whiskybase_csv(*rows: str) -> bytes:
+    return ("\n".join([_WHISKYBASE_HEADER, *rows]) + "\n").encode("utf-8")
+
+
+def test_collectible_with_no_market_ticker_is_valued_at_cost_not_excluded(client, fake_provider):
+    """Phase 8 (ADR 0011): a whisky bottle imported via the Whiskybase
+    format has no live pricing feed by design and never gets a
+    market_ticker — unlike the Nordnet no-market-ticker case above
+    (excluded from totals), a COLLECTIBLE should still count toward
+    Composition/Risk totals at cost basis, clearly tagged
+    price_status="at_cost" so it's never read as a live price."""
+    csv_bytes = _whiskybase_csv(
+        '195396,7642206,"Port Dundas","2000 DL",,closed,,700,51.50,%vol,,,82.82,,79.90,EUR,'
+        '79.9,EUR,"Port Dundas",,"2023-04-30 20:35:43",'
+    )
+    upload = client.post(
+        "/portfolio/upload",
+        data={"reporting_currency": "EUR"},
+        files={"file": ("whisky.csv", csv_bytes, "text/csv")},
+    )
+    snapshot_id = upload.json()["snapshot"]["id"]
+
+    response = client.post(f"/portfolio/snapshots/{snapshot_id}/valuation")
+    assert response.status_code == 200, response.text
+    body = response.json()
+    holding = body["holdings"][0]
+
+    assert holding["market_ticker"] is None
+    assert holding["price_status"] == "at_cost"
+    assert Decimal(holding["market_value_reporting_ccy"]) == Decimal("79.90")
+    assert Decimal(holding["unrealized_pnl"]) == Decimal("0")
+    assert "carried at cost basis" in holding["data_warning"]
+
+    # Counts toward totals/concentration rather than being excluded.
+    assert body["total_market_value"] != "0"
+    assert holding["ticker"] in body["concentration"]["single_name_weights"]
+    assert "Port Dundas" in body["concentration"]["sector_weights"]
+    assert holding["ticker"] not in body["concentration"]["holdings_excluded_from_concentration"]
+
+
+def test_collectible_with_no_market_ticker_and_no_cost_basis_is_still_excluded(client, fake_provider):
+    """No cost_basis at all (Price Paid and Average Shop Price both blank,
+    only a bare Currency present) — nothing to carry the holding at, so
+    it's excluded exactly like any other unpriceable holding, not
+    defaulted to zero (§21)."""
+    csv_bytes = _whiskybase_csv(
+        '999,1,"Mystery","Bottle",,closed,,700,40,%vol,,,,,,EUR,,,,,"2024-01-01 00:00:00",'
+    )
+    upload = _upload(client, content=csv_bytes, filename="whisky.csv")
+    snapshot_id = upload.json()["snapshot"]["id"]
+
+    response = client.post(f"/portfolio/snapshots/{snapshot_id}/valuation")
+    holding = response.json()["holdings"][0]
+
+    assert holding["price_status"] == "unavailable"
+    assert holding["market_value_reporting_ccy"] is None
+
+
 def test_unknown_snapshot_returns_404_for_valuation(client, fake_provider):
     response = client.post(
         "/portfolio/snapshots/00000000-0000-0000-0000-000000000000/valuation"

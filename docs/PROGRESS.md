@@ -6,15 +6,52 @@ tracks status — update it and the relevant ADR together when something changes
 
 **Status:** Phases 0–7 done and **deployed to Railway (production)** — backend + frontend both
 online, keys set, Faiz has smoke-tested the Portfolio flow (accounts, CSV/XLSX upload, snapshots)
-successfully. **Phase 8 (precious metals) built, not yet deployed** — see below. Phase 9 (document
-evidence quality) still just planned.
+successfully. **Phase 8 (precious metals + whisky collection) fully built, not yet deployed** — see
+below: coin manual-entry UI, real Whiskybase import, and collectible-at-cost valuation all landed
+2026-09-15, on top of the same day's earlier precious-metals groundwork. Phase 9 (document evidence
+quality) still just planned.
 
 **Git — resolved, no longer "unconfirmed":** commits have been happening normally throughout this
 project's history and are almost entirely pushed. As of this pass, local `main` is exactly 1 commit
 ahead of `origin/main` (`git push` needed) — **plus** everything this 2026-09-15 pass wrote (Phase 8
-+ two Phase 7 bug fixes, listed below) is sitting as an uncommitted working-tree change, since
-`device_bash` can't run `git` from this session. **Faiz: please `git add`/`commit`/`push` the
+in full + two Phase 7 bug fixes, listed below) is sitting as an uncommitted working-tree change,
+since `device_bash` can't run `git` from this session. **Faiz: please `git add`/`commit`/`push` the
 current working tree** — see "Manual to-do" for the exact file list.
+
+**2026-09-15 (Phase 8 completed — whisky import, at-cost valuation, coin manual-entry UI):** Same-day
+follow-up to the pass just below. Faiz asked for two concrete things: a usable way to add individual
+gold/silver coin purchases (1 oz Maple Leaf, Krugerrand, Kangaroo) with a buy price and today's
+pricing, and attached a real Whiskybase "my collection" CSV export (26 real bottles) — exactly the
+sample ADR 0011 said was required before the whisky importer could be built. Both done:
+- **Whiskybase CSV auto-import** — extended the existing signature-detection importer
+  (`app/services/portfolio/parser.py`, same pattern as the Nordnet importer) with a third format,
+  built and tested directly against Faiz's real 26-row export. Every bottle becomes a
+  `COLLECTIBLE` position with a stable `WB-{id}` ticker; purchase price is used when Whiskybase
+  recorded one and left unset (never guessed) when it didn't; cask/age/strength/vintage and
+  Whiskybase's own community average price land in notes, clearly labeled "reference only, not
+  cost." No new upload endpoint — the existing "Upload portfolio (CSV/XLSX)" section on the
+  Portfolio tab auto-detects it, same as it already does for Nordnet.
+- **Collectibles are now valued at cost basis instead of excluded from totals** — the
+  cost-basis-carrying fallback ADR 0011 originally specified for whisky/collectibles hadn't actually
+  been built when the precious-metals groundwork shipped earlier the same day. Added to
+  `app/services/market_data/valuation.py`: any `COLLECTIBLE` holding with a known cost basis and no
+  live-priceable `market_ticker` is now counted in Composition/Risk totals at what was paid, tagged
+  `price_status: "at_cost"` and clearly distinguished from a live price — never silently excluded,
+  never presented as a market value it doesn't have.
+- **Manual-entry UI, finally reachable from the app** — new "Add a holding manually" section on the
+  Portfolio tab (`frontend/src/pages/PortfolioUpload.tsx`), wired to the `POST
+  /portfolio/holdings/manual` endpoint that existed since the precious-metals groundwork but had no
+  frontend caller. A preset dropdown covers exactly the coin types Faiz named (1 oz Gold/Silver
+  Maple Leaf, Krugerrand, Kangaroo) plus open-ended gold/silver/other-collectible options; picking
+  gold or silver auto-sets the `XAU`/`XAG` market ticker so "Refresh valuation" prices it at today's
+  spot. Also fixed two stale frontend types (`Holding.custody_type`, `PortfolioPosition.acquired_at`)
+  that existed on the backend since Phase 5 but were never added to the TypeScript types.
+
+**Verified in the cloud mirror** before writing back to `E:\Aladdin` (`device_bash` still down this
+session, same Windows-update regression): backend 346/346 tests passing (was 332 — +14), `ruff
+check .` clean, `mypy app` unchanged baseline-only errors; frontend `npm ci` fresh, `tsc --noEmit`
+clean, `vite build` succeeds. **Not yet deployed** — needs a Railway redeploy; no new migration this
+pass. Full detail: ADR 0011's "Update (2026-09-15, part 2)" section.
 
 **2026-09-15 (Phase 7 loose ends + Phase 8 pass):** Closed out the three still-open Phase 7 items
 and built Phase 8's precious-metals groundwork. Two real, previously-undiscovered production bugs
@@ -133,6 +170,8 @@ deployment (browser + direct API calls), not just "keys are set":**
 - No calibration/track-record engine (§22.5) — needs weeks of real deployed history to be useful, so recommended *after* a live deploy exists.
 - Evidence-packet excerpt selection has no relevance ranking, just most-recent-first, and the excerpt budget is shared across all of a holding's documents rather than per-document (ADR 0006) — reviewed in detail 2026-09-14 against Vår Energi's real documents (a 208-page annual report likely gets truncated to near-zero content by a smaller, more-recently-uploaded quarterly report); concrete proposal in **ADR 0012 (Phase 9, proposed)**.
 - ~~`AssetClass` has no `COMMODITY`/`COLLECTIBLE` value yet~~ — resolved 2026-09-15, Phase 8 (ADR 0011).
+- ~~Collectibles with no live price feed get silently excluded from portfolio totals~~ — resolved 2026-09-15: a `COLLECTIBLE` holding with a known cost basis is now valued at cost (`price_status: "at_cost"`) instead of excluded. A collectible with neither a live ticker nor a recorded cost basis is still excluded — nothing to carry it at (ADR 0011).
+- ~~No way to add a single manual holding (a coin, a bottle) from the app itself~~ — resolved 2026-09-15: "Add a holding manually" section on the Portfolio tab (ADR 0011). The backend endpoint existed since the earlier same-day precious-metals pass but had no frontend caller until this one.
 - `recent_events` on `AnalysisContext` unbuilt — macro/sector research partially covers the need.
 - PDF/PPT-only holdings never get a structured `financial_metrics` snapshot (XLSX-only extraction, ADR 0002/0006) — `financial_metrics.insufficient_data` stays `True` for a holding like Vår Energi unless an XLSX with the same figures is also uploaded. Addressed as item 5 of ADR 0012.
 - No visibility, on the Documents tab itself, into whether an uploaded document's content actually reaches an analysis run (page/chunk usage, truncation) — a processed PDF with `FACTS: 0` currently looks identical whether it contributed 200 pages of evidence or zero. Addressed as item 2 of ADR 0012.
@@ -180,7 +219,14 @@ deployment (browser + direct API calls), not just "keys are set":**
   `backend/app/providers/composite_market_provider.py` (new), `backend/app/config/settings.py`,
   `backend/app/providers/factory.py`, `backend/Dockerfile` (**the discount_rate fix — without this
   redeploy, ECON-001 stays broken**), `backend/app/services/valuation/dcf.py` (the critique-crash
-  fix), plus this pass's new/extended test files.
+  fix), plus this pass's new/extended test files. **Same-day follow-up also needs a redeploy**:
+  `backend/app/services/portfolio/parser.py` (Whiskybase import), `backend/app/services/
+  market_data/valuation.py` (collectible-at-cost fallback), `backend/tests/fixtures/
+  whiskybase_collection.csv` (new), `backend/tests/unit/test_portfolio_parser_whiskybase.py` (new),
+  `backend/tests/integration/test_valuation_api.py`, `frontend/src/pages/PortfolioUpload.tsx`
+  (new "Add a holding manually" section), `frontend/src/services/api.ts` (new `addManualHolding`),
+  `frontend/src/types/portfolio.ts` (`custody_type`/`acquired_at` + manual-entry types) — no new
+  migration for any of this.
 - **Leftover test document, harmless but visible**: a `phase7-object-storage-verify.pdf` document
   was uploaded to the Alfred Berg Nordic High Yield holding on live production while verifying
   object storage this pass — real proof the upload/retrieve round trip works, safe to ignore or
@@ -217,8 +263,8 @@ deployment (browser + direct API calls), not just "keys are set":**
    area.
 3. **Track-record & calibration engine** (§22.5) — a real deploy now exists, but it still needs weeks of live analysis history to have anything to calibrate against.
 4. **Testing debt** — populate `golden_documents`/`regression`, add `black` + `eslint.config.js`.
-5. ~~**Precious metals** (Phase 8)~~ — **built 2026-09-15**: `COMMODITY` asset class, dated lots, manual single-holding entry, gold-api.com spot pricing. Just needs redeploy + a live gold-api.com smoke test. Design/status in ADR 0011.
-6. **Whisky collection** (Phase 8) — manual CSV import (Whiskybase export format), carried at cost basis since no live pricing feed exists. **Still needs a real sample export from Faiz first** — the generic manual-entry endpoint built for precious metals already covers one-bottle-at-a-time entry under `COLLECTIBLE` in the meantime. Design in ADR 0011.
+5. ~~**Precious metals** (Phase 8)~~ — **built 2026-09-15**: `COMMODITY` asset class, dated lots, manual single-holding entry (now with a frontend form), gold-api.com spot pricing. Just needs redeploy + a live gold-api.com smoke test. Design/status in ADR 0011.
+6. ~~**Whisky collection** (Phase 8)~~ — **built 2026-09-15**: real Whiskybase CSV import (built from Faiz's own 26-bottle export), carried at cost basis via the new collectible-at-cost valuation fallback since no live pricing feed exists. Just needs redeploy. Design/status in ADR 0011.
 
 ---
 
@@ -239,6 +285,23 @@ deployment (browser + direct API calls), not just "keys are set":**
 
 ### Changelog
 
+- **2026-09-15 (Phase 8 completed — whisky import, at-cost valuation, coin manual-entry UI, ADR
+  0011):** Same-day follow-up to the Phase 7/8 pass below. Faiz asked how to add individual
+  gold/silver coin purchases (1 oz Maple Leaf/Krugerrand/Kangaroo) with a buy price and live
+  pricing, and attached a real 26-bottle Whiskybase collection export. Built: a Whiskybase CSV
+  auto-importer (`parser.py`, same signature-detection pattern as Nordnet, built from the real
+  export — cost basis left unset rather than guessed where Whiskybase recorded none); a
+  collectible-at-cost valuation fallback (`valuation.py`) so a `COLLECTIBLE` holding with a cost
+  basis but no live price feed counts in Composition/Risk totals (`price_status: "at_cost"`)
+  instead of being silently excluded; and a new "Add a holding manually" section on the Portfolio
+  tab wired to the `POST /portfolio/holdings/manual` endpoint (built earlier the same day but never
+  callable from the app until now), with coin-type presets that auto-set `XAU`/`XAG` for
+  gold/silver. Also fixed two stale frontend types (`Holding.custody_type`,
+  `PortfolioPosition.acquired_at`) that existed on the backend since Phase 5 but were never added to
+  `frontend/src/types/portfolio.ts`. **Verified in the cloud mirror**: backend 346/346 tests (was
+  332), `ruff` clean, `mypy` unchanged baseline; frontend `npm ci` fresh, `tsc --noEmit` clean,
+  `vite build` succeeds. **Not yet deployed** — needs a Railway redeploy, no new migration. Full
+  detail: ADR 0011's "Update (2026-09-15, part 2)" section.
 - **2026-09-15 (Phase 7 loose ends + Phase 8 precious metals, ADR 0011):** Faiz asked to close out
   Phase 7's remaining open items and start Phase 8. **Phase 7 loose ends** — all three resolved by
   testing directly against the live Railway deployment (browser + direct API calls, same technique

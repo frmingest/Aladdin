@@ -52,7 +52,9 @@ class HoldingValuation:
     price: Decimal | None = None
     price_currency: str | None = None
     price_observed_at: datetime | None = None
-    price_status: str = "unavailable"  # current | delayed | stale | unavailable
+    # current | delayed | stale | unavailable | at_cost (Phase 8/ADR 0011 —
+    # a COLLECTIBLE with no live pricing feed, carried at cost basis).
+    price_status: str = "unavailable"
 
     market_value_trading_ccy: Decimal | None = None
     fx_rate_to_reporting: Decimal | None = None
@@ -211,6 +213,15 @@ def _value_one_holding(
     reporting_currency: str,
 ) -> None:
     if hv.market_ticker is None:
+        # Phase 8 (ADR 0011): a COLLECTIBLE (e.g. a whisky bottle) has no
+        # live pricing feed by design — "carrying value defaults to cost
+        # basis... always shown as explicitly self-reported rather than
+        # market-derived" (§21/§13.3). Falls back to cost basis rather than
+        # excluding the holding from totals entirely, but tagged
+        # price_status="at_cost" so it's never mistaken for a live price.
+        if hv.asset_class == "COLLECTIBLE" and position.cost_basis is not None and hv.quantity is not None:
+            _value_collectible_at_cost(fx_cache, hv, position, reporting_currency)
+            return
         hv.data_warning = (
             "no market_ticker set for this holding — set one via "
             "PATCH /portfolio/holdings/{holding_id} to include it in market-data refresh"
@@ -273,6 +284,42 @@ def _value_one_holding(
                 calc.unrealized_pnl_pct(hv.market_value_reporting_ccy, hv.cost_basis_value_reporting_ccy),
                 places=calc.PERCENT_PLACES,
             )
+
+
+def _value_collectible_at_cost(
+    fx_cache: _FxCache,
+    hv: HoldingValuation,
+    position,
+    reporting_currency: str,
+) -> None:
+    """Phase 8 (ADR 0011) fallback for a COLLECTIBLE with no market_ticker:
+    no free/reliable secondary-market pricing API exists for e.g. whisky, so
+    the position's own cost basis stands in for market value rather than
+    excluding the holding from Composition/Risk totals entirely — always
+    tagged price_status="at_cost" (never "current"/"delayed") so it reads as
+    self-reported, not mark-to-market. unrealized_pnl is trivially 0 by
+    construction (market value == cost basis value here), which is itself
+    an honest signal that this isn't a live-priced holding."""
+    cost_basis_currency = position.cost_basis_currency or hv.trading_currency
+    cost_value_native = hv.quantity * position.cost_basis
+    try:
+        fx_rate = fx_cache.get(cost_basis_currency, reporting_currency)
+    except MarketDataUnavailableError as exc:
+        hv.data_warning = f"carried at cost basis but FX conversion to {reporting_currency} failed: {exc}"
+        return
+
+    value_reporting = calc.quantize(calc.convert_currency(cost_value_native, fx_rate.rate))
+    hv.price_status = "at_cost"
+    hv.market_value_trading_ccy = calc.quantize(cost_value_native)
+    hv.fx_rate_to_reporting = fx_rate.rate
+    hv.market_value_reporting_ccy = value_reporting
+    hv.cost_basis_value_reporting_ccy = value_reporting
+    hv.unrealized_pnl = Decimal("0")
+    hv.unrealized_pnl_pct = Decimal("0")
+    hv.data_warning = (
+        "no live pricing feed for this asset class — carried at cost basis, not "
+        "mark-to-market (ADR 0011)"
+    )
 
 
 def _apply_computed_weights(valuations: list[HoldingValuation]) -> None:

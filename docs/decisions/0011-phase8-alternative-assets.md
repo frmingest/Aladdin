@@ -2,11 +2,12 @@
 
 ## Status
 
-**Precious metals: built, verified in a cloud mirror, not yet deployed** (2026-09-15). Collectibles:
-the generic pieces (asset class, manual entry, dated lots) are built alongside metals since they're
-the same underlying mechanism; the whisky-specific bulk CSV importer described below is still
-**not built** — still needs a real sample export from Faiz first, per this ADR's own Consequences
-section. See "Update (2026-09-15)" below for exactly what shipped vs. what's still open.
+**Both halves now built, verified in a cloud mirror, not yet deployed** (2026-09-15). Precious
+metals (asset class, manual entry, dated lots, gold-api.com pricing) shipped first; a same-day
+follow-up added the manual-entry frontend UI, a real Whiskybase collection import (built from
+Faiz's actual export — see "Update (2026-09-15, part 2)" below), and a cost-basis valuation
+fallback so collectibles with no live price feed still count in portfolio totals instead of being
+silently excluded. See both "Update" sections below for exactly what shipped vs. what's still open.
 
 Originally recorded 2026-09-14 as proposed/design-only, because Faiz asked for both of these during
 a status/planning review, and the reasoning for *how* each should fit the existing model was worth
@@ -158,7 +159,82 @@ gold-provider, and composite-provider coverage), `ruff check .` clean, `mypy app
 baseline-only errors (no new errors in any Phase 8 file). **Not yet deployed to Railway** — see
 PROGRESS.md's "Manual to-do".
 
-**Still not built** (per this ADR's original Consequences section, unchanged): the whisky-specific
-bulk CSV importer. Needs a real sample export from Faiz first (a Whiskybase export, a filled-in
-template, or a description of what he already tracks) — the generic manual-entry endpoint above
-covers one-bottle-at-a-time entry under `COLLECTIBLE` in the meantime.
+**Superseded by "Update (2026-09-15, part 2)" below**: the whisky-specific bulk CSV importer this
+section flagged as not-yet-built now is — Faiz provided a real Whiskybase export the same day.
+
+## Update (2026-09-15, part 2) — Whiskybase import, at-cost valuation, and the manual-entry UI
+
+Faiz asked two concrete things: (1) a usable way to add individual gold/silver coin purchases (1 oz
+Maple Leaf, Krugerrand, Kangaroo — by name) with a buy price and today's pricing, and (2) attached a
+real Whiskybase "my collection" CSV export (26 real bottles) — exactly the sample this ADR's
+Consequences section said was required before the whisky importer could be built. Both are now
+built:
+
+- **Whiskybase CSV auto-import.** Extended `app/services/portfolio/parser.py`'s existing
+  signature-detection dispatcher (the same pattern decision 0003 established for Nordnet) with a
+  third format: `_WHISKYBASE_SIGNATURE` (`collectionid`, `distilleries`, `bottling serie`),
+  `_is_whiskybase_format()`, and `_rows_from_whiskybase()`. No new upload endpoint or UI —
+  `POST /portfolio/upload` (the same "Upload portfolio (CSV/XLSX)" section already on the Portfolio
+  tab) auto-detects a Whiskybase export the same way it already auto-detects Nordnet. Mapping, built
+  and tested directly against Faiz's real 26-row file
+  (`backend/tests/fixtures/whiskybase_collection.csv`):
+  - Whiskybase's own numeric `ID` becomes `WB-{id}` — globally unique and stable across re-uploads
+    (`Holding.ticker` must be unique system-wide; re-importing the same export is idempotent).
+  - Every row is `AssetClass.COLLECTIBLE`, `quantity = 1`, no `market_ticker` (no live feed — see
+    below).
+  - Name = Brand + Name (+ " — " + Bottling serie when present, e.g. "Port Dundas 2000 DL — Old
+    Particular"); Distilleries → `sector`; "Added on" → `acquired_at`.
+  - `Price Paid` → `cost_basis` when present; **left unset, never fabricated (§21), when it's
+    blank** — true for several of Faiz's real rows, which have no recorded purchase price at all.
+    Currency falls back from `Currency` (Price Paid's own currency) to `Currency Whisky` (Average
+    Shop Price's own currency) only when both Price Paid and its currency are blank — still a real,
+    row-sourced value, never a hardcoded default.
+  - Cask type, stated age, strength, vintage, and Whiskybase's own community "Average Shop Price"
+    (explicitly labeled "reference only, not cost" — §13.3, never presented as what Faiz paid or as
+    a market value) go into `notes` as free text.
+  - 11 new unit tests against the real fixture (`backend/tests/unit/
+    test_portfolio_parser_whiskybase.py`), covering every rule above plus duplicate-ID rejection.
+- **Collectibles are now valued at cost basis instead of being silently excluded.** This ADR's
+  original design said carrying value should default to cost basis for an asset with no live price
+  feed — that fallback hadn't actually been built when precious-metals groundwork shipped earlier
+  the same day (only the manual-entry endpoint and gold-api.com's `COMMODITY` pricing path existed).
+  Added to `app/services/market_data/valuation.py`: a holding with `asset_class == COLLECTIBLE`,
+  `market_ticker is None`, and a known `cost_basis` is now converted to the reporting currency at
+  cost and tagged `price_status = "at_cost"` (a new status value, distinct from the existing
+  `"priced"`/`"unavailable"`), with an explicit `data_warning` and `unrealized_pnl` trivially `0` —
+  never conflated with a live market price (§13.3). A collectible with **no** `cost_basis` either
+  (an unpriced Whiskybase bottle with no Price Paid recorded) still falls through to the pre-existing
+  `"unavailable"`/excluded-from-totals path, since there's nothing to carry it at. Ordinary
+  no-`market_ticker` holdings that aren't collectibles (e.g. a Nordnet import with no ticker set yet)
+  are unaffected — that exclusion behavior is unchanged and still covered by its own pre-existing
+  test. 2 new integration tests in `backend/tests/integration/test_valuation_api.py`.
+- **Manual-entry UI, on the Portfolio tab.** New "Add a holding manually" section in
+  `frontend/src/pages/PortfolioUpload.tsx`, wired to the existing `POST /portfolio/holdings/manual`
+  endpoint (built with the rest of the precious-metals groundwork earlier the same day, but never
+  reachable from the app itself until now). A "Type" preset dropdown covers exactly the coin types
+  Faiz named — 1 oz Gold/Silver Maple Leaf, Krugerrand, and Kangaroo — plus "other gold item," "other
+  silver item," and "other collectible." Picking a gold/silver preset sets `market_ticker` to
+  `XAU`/`XAG` automatically, so clicking "Refresh valuation" on the Dashboard afterwards prices it at
+  gold-api.com's spot price; "other collectible" leaves `market_ticker` unset, so it's carried at
+  cost basis via the fallback above. Also takes quantity, buy price + currency, holding currency,
+  custody (free text — "home safe," "vault"), acquired-on date, account, and notes. `Holding.ticker`
+  must be globally unique, so the form generates one itself (`{preset}-{timestamp}`) — Faiz never
+  has to think about it. Added the missing `custody_type` (on `Holding`) and `acquired_at` (on
+  `PortfolioPosition`) fields to `frontend/src/types/portfolio.ts` — both existed on the backend
+  schemas since Phase 5/this ADR's earlier update but were never propagated to the frontend types —
+  plus new `ManualPositionCreate`/`ManualPositionResponse` types and an `addManualHolding()` function
+  in `frontend/src/services/api.ts`.
+
+**Verified in the cloud mirror before writing back to `E:\Aladdin`** (`device_bash` still can't
+mount it this session): backend 346/346 tests passing (was 332 — +14: 11 Whiskybase parser tests, 2
+at-cost valuation tests, 1 pre-existing test file untouched otherwise), `ruff check .` clean, `mypy
+app` unchanged baseline-only errors (no new errors in either file this part touched). Frontend:
+`npm ci` fresh, `tsc --noEmit` clean, `vite build` succeeds (637 kB / 178 kB gzip — the pre-existing
+single-bundle warning, unrelated to this change). `npm run lint` not run — known pre-existing gap
+(no `eslint.config.js`). **Not yet deployed** — needs a Railway redeploy; no new migration (this
+part added no new columns).
+
+**Still open, deliberately deferred, not discussed with Faiz yet**: an editable "current estimated
+value" field for collectibles (this ADR's original design mentioned it as optional). The Whiskybase
+importer captures "Average Shop Price" only as reference text inside `notes`, not as a structured,
+user-editable field — kept out of scope for this pass to keep it a reasonable size.

@@ -14,6 +14,11 @@ Two input shapes are recognized:
    exchange ticker or weight column at all. This is Faiz's actual data
    source, so it's a first-class supported shape, not a workaround — see
    docs/decisions/0003-nordnet-export-support.md.
+3. A real Whiskybase "my collection" CSV export (ID/CollectionID/Brand/
+   Name/Distilleries/"Bottling serie"/...), comma-delimited, one row per
+   bottle — Phase 8 (ADR 0011)'s whisky-collection support, built from
+   Faiz's own export rather than a guessed format, same precedent as the
+   Nordnet importer above (decision 0003's explicit lesson).
 """
 
 import csv
@@ -67,6 +72,32 @@ _NORDNET_ALIASES: dict[str, str] = {
     "verdi nok": "value_nok",
 }
 _NORDNET_SIGNATURE = {"handel", "verdi nok"}
+
+# Whiskybase "my collection" export headers -> internal field. Deliberately
+# not every column: "Photo", "List", "CollectionID", "My Rating", "Size"
+# aren't reflected in the canonical schema and carry no portfolio-relevant
+# information (a photo URL, Whiskybase's own list/collection bookkeeping,
+# bottle size in ml at a fixed 700/750ml for nearly every entry).
+_WHISKYBASE_ALIASES: dict[str, str] = {
+    "id": "id",
+    "brand": "brand",
+    "name": "name",
+    "bottling serie": "bottling_serie",
+    "bottle status": "bottle_status",
+    "cask type": "cask_type",
+    "stated age": "stated_age",
+    "strength": "strength",
+    "strength unit": "strength_unit",
+    "price paid": "price_paid",
+    "currency": "currency",
+    "average shop price": "avg_shop_price",
+    "currency whisky": "currency_whisky",
+    "distilleries": "distilleries",
+    "vintage": "vintage",
+    "added on": "added_on",
+    "rating": "rating",
+}
+_WHISKYBASE_SIGNATURE = {"collectionid", "distilleries", "bottling serie"}
 
 _REQUIRED_FIELDS = ("ticker", "name", "asset_class", "currency")
 
@@ -164,6 +195,10 @@ def _is_nordnet_format(normalized_headers: list[str]) -> bool:
     return _NORDNET_SIGNATURE.issubset(set(normalized_headers))
 
 
+def _is_whiskybase_format(normalized_headers: list[str]) -> bool:
+    return _WHISKYBASE_SIGNATURE.issubset(set(normalized_headers))
+
+
 def _rows_from_canonical(
     normalized_headers: list[str], data_rows: list[list[str]]
 ) -> list[dict[str, str]]:
@@ -238,6 +273,114 @@ def _rows_from_nordnet(
     return intermediate
 
 
+def _rows_from_whiskybase(
+    normalized_headers: list[str], data_rows: list[list[str]]
+) -> list[dict[str, str]]:
+    """Converts a Whiskybase "my collection" CSV export into canonical-shaped
+    rows — one PortfolioPosition per bottle. Built from a real export (Phase
+    8 / ADR 0011's explicit precondition before building this), same
+    precedent as the Nordnet importer above (decision 0003).
+
+    Mapping choices:
+    - ticker = "WB-{id}": Whiskybase's own catalog id is already a stable,
+      globally unique per-bottle identifier, so it doubles as the merge key
+      the same way an exchange ticker does for a brokerage holding — a later
+      re-export of the same collection updates the same positions instead of
+      duplicating them (ingestion.py's existing (account, ticker) merge).
+    - quantity = 1: this export is a bottle-level catalog (one row per
+      physical bottle), not a periodic multi-unit brokerage snapshot.
+    - currency = the Price Paid currency when present, else the Average Shop
+      Price currency — several real rows have no recorded purchase price at
+      all (Price Paid/Currency both blank) but do report a shop-price
+      currency; falling back to it picks the best *real* currency the row
+      itself reports rather than fabricating a default (§21).
+    - cost_basis = Price Paid, left unset (None) when blank — the parser
+      already treats cost_basis as optional for exactly this reason, rather
+      than guessing it from Average Shop Price.
+    - sector = Distilleries (falls back to Brand) — the natural grouping
+      axis for a whisky collection, same role "Sector/Theme" plays for
+      equities in concentration/composition views.
+    - acquired_at = the date portion of "Added on" — the closest real,
+      sourced proxy for purchase date this export has (Whiskybase doesn't
+      track purchase date separately); never a fabricated date.
+    - market_ticker is left unset — no live pricing feed exists for whisky
+      (ADR 0011); app.services.market_data.valuation falls back to cost
+      basis for a COLLECTIBLE with no market_ticker instead of excluding it
+      from totals.
+    - notes carries everything else this schema has no dedicated column for
+      (cask type, age, strength, vintage, bottle status, Whiskybase's own
+      community rating, and the Average Shop Price as an explicitly-labeled
+      reference value, never conflated with cost_basis).
+    """
+    header_map = {i: _WHISKYBASE_ALIASES[h] for i, h in enumerate(normalized_headers) if h in _WHISKYBASE_ALIASES}
+    idx_of = {v: k for k, v in header_map.items()}
+
+    def cell(raw_row: list[str], field_name: str) -> str:
+        i = idx_of.get(field_name)
+        return raw_row[i].strip() if i is not None and i < len(raw_row) else ""
+
+    rows: list[dict[str, str]] = []
+    for raw_row in data_rows:
+        wb_id = cell(raw_row, "id")
+        brand = cell(raw_row, "brand")
+        name = cell(raw_row, "name")
+        if not wb_id or not (brand or name):
+            continue
+
+        full_name = " ".join(p for p in (brand, name) if p).strip()
+        bottling_serie = cell(raw_row, "bottling_serie")
+        if bottling_serie:
+            full_name = f"{full_name} — {bottling_serie}"
+
+        price_paid = cell(raw_row, "price_paid")
+        currency = cell(raw_row, "currency") or cell(raw_row, "currency_whisky")
+
+        added_on = cell(raw_row, "added_on")
+        acquired_at = added_on.split(" ")[0] if added_on else ""
+
+        note_parts: list[str] = []
+        bottle_status = cell(raw_row, "bottle_status")
+        if bottle_status:
+            note_parts.append(f"status: {bottle_status}")
+        cask_type = cell(raw_row, "cask_type")
+        if cask_type:
+            note_parts.append(f"cask: {cask_type}")
+        stated_age = cell(raw_row, "stated_age")
+        if stated_age:
+            note_parts.append(f"age: {stated_age}y")
+        strength = cell(raw_row, "strength")
+        if strength:
+            note_parts.append(f"strength: {strength} {cell(raw_row, 'strength_unit')}".strip())
+        vintage = cell(raw_row, "vintage")
+        if vintage:
+            note_parts.append(f"vintage: {vintage}")
+        avg_price = cell(raw_row, "avg_shop_price")
+        if avg_price:
+            avg_currency = cell(raw_row, "currency_whisky")
+            note_parts.append(
+                f"Whiskybase community avg price: {avg_price} {avg_currency} (reference only, not cost)"
+            )
+        rating = cell(raw_row, "rating")
+        if rating:
+            note_parts.append(f"WB rating: {rating}")
+
+        rows.append(
+            {
+                "ticker": f"WB-{wb_id}",
+                "name": full_name,
+                "asset_class": "Collectible",
+                "currency": currency,
+                "quantity": "1",
+                "cost_basis": price_paid,
+                "sector": cell(raw_row, "distilleries") or brand,
+                "notes": "; ".join(note_parts),
+                "market_ticker": "",
+                "acquired_at": acquired_at,
+            }
+        )
+    return rows
+
+
 def load_rows(*, filename: str, content: bytes) -> tuple[list[dict[str, str]], list[str]]:
     """Reads a portfolio CSV/XLSX into a list of {canonical_field: raw_value}
     dicts, auto-detecting the canonical schema vs. a Nordnet export. Returns
@@ -260,6 +403,15 @@ def load_rows(*, filename: str, content: bytes) -> tuple[list[dict[str, str]], l
             "are used as holding keys since this export has no exchange ticker"
         ]
         return _rows_from_nordnet(normalized_headers, data_rows), notes
+
+    if _is_whiskybase_format(normalized_headers):
+        notes = [
+            "detected a Whiskybase collection export — each row is one bottle "
+            "(quantity fixed at 1), currency falls back to the Average Shop Price "
+            "currency when no purchase price was recorded, and cask/age/strength/"
+            "vintage/status/rating detail is carried in notes rather than dropped"
+        ]
+        return _rows_from_whiskybase(normalized_headers, data_rows), notes
 
     return _rows_from_canonical(normalized_headers, data_rows), []
 
