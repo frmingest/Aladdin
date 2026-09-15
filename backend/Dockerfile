@@ -4,8 +4,8 @@
 # docker/docker-compose.yml's Postgres — see README.
 #
 # Build context must be the REPOSITORY ROOT, not backend/ — prompts/,
-# schemas/, scoring/, research/, scenarios/ are versioned assets that live
-# as siblings of backend/ (see backend/app/config/paths.py's
+# schemas/, scoring/, research/, scenarios/, discount_rate/ are versioned
+# assets that live as siblings of backend/ (see backend/app/config/paths.py's
 # parents[3]-relative REPO_ROOT, which this image reproduces exactly), read
 # as plain files at runtime rather than packaged into the Python app. E.g.:
 #   docker build -f backend/Dockerfile -t aladdin-backend .
@@ -29,6 +29,7 @@ COPY schemas schemas
 COPY scoring scoring
 COPY research research
 COPY scenarios scenarios
+COPY discount_rate discount_rate
 
 RUN useradd --create-home --uid 1000 aladdin && chown -R aladdin:aladdin /app
 USER aladdin

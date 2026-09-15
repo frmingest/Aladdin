@@ -22,6 +22,7 @@ from app.schemas.market_data import PortfolioValuationOut
 from app.schemas.portfolio import (
     HoldingOut,
     HoldingUpdate,
+    ManualPositionCreate,
     PortfolioPositionOut,
     PortfolioResetResponse,
     PortfolioSnapshotDetail,
@@ -30,6 +31,7 @@ from app.schemas.portfolio import (
 )
 from app.services.market_data.valuation import refresh_and_value_snapshot
 from app.services.portfolio.ingestion import ingest_portfolio_upload
+from app.services.portfolio.manual_entry import ManualEntryValidationError, add_manual_position
 from app.services.portfolio.reset import reset_all_portfolio_data
 
 router = APIRouter(prefix="/portfolio", tags=["portfolio"])
@@ -51,6 +53,7 @@ def _position_to_out(position: PortfolioPosition) -> PortfolioPositionOut:
         notes=position.notes,
         account_id=position.account_id,
         account_name=position.account.name if position.account is not None else None,
+        acquired_at=position.acquired_at,
     )
 
 
@@ -212,6 +215,46 @@ def update_holding(
     db.commit()
     db.refresh(holding)
     return HoldingOut.model_validate(holding)
+
+
+@router.post("/holdings/manual", response_model=PortfolioPositionOut, status_code=201)
+def add_manual_holding(
+    body: ManualPositionCreate, db: Session = Depends(get_db)
+) -> PortfolioPositionOut:
+    """Hand-enters one lot of an alternative asset (§26 Phase 8, ADR 0011) —
+    a physical gold/silver coin bought on its own date, or an item added to
+    a collection — rather than through the bulk CSV/XLSX upload every other
+    holding goes through. Scoped to `asset_class in {COMMODITY,
+    COLLECTIBLE}`; see app.services.portfolio.manual_entry for why, and for
+    how a second lot of the same ticker is handled (a new position, not a
+    merge).
+
+    Every manual entry lands in one persistent "manual entries" snapshot
+    (`GET /portfolio/snapshots` will show it once one exists) rather than a
+    new snapshot per call — it shows up in `GET /portfolio/holdings` and in
+    valuation/concentration exactly like any other holding once it has a
+    `market_ticker` (gold/silver route through the gold-api.com provider;
+    see app.providers.gold_metal_provider) or is refreshed manually."""
+    try:
+        result = add_manual_position(
+            db,
+            ticker=body.ticker,
+            name=body.name,
+            asset_class=body.asset_class,
+            trading_currency=body.trading_currency,
+            quantity=body.quantity,
+            cost_basis=body.cost_basis,
+            cost_basis_currency=body.cost_basis_currency,
+            market_ticker=body.market_ticker,
+            custody_type=body.custody_type,
+            acquired_at=body.acquired_at,
+            notes=body.notes,
+            account_id=body.account_id,
+        )
+    except ManualEntryValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    return _position_to_out(result.position)
 
 
 @router.post("/snapshots/{snapshot_id}/valuation", response_model=PortfolioValuationOut)

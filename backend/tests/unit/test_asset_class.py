@@ -19,3 +19,20 @@ def test_unknown_label_maps_to_other_rather_than_raising():
 
 def test_none_maps_to_other():
     assert normalize_asset_class(None) == AssetClass.OTHER
+
+
+def test_recognizes_phase8_commodity_labels():
+    """ADR 0011 — physical precious metals get their own asset class rather
+    than falling into OTHER."""
+    assert normalize_asset_class("Commodity") == AssetClass.COMMODITY
+    assert normalize_asset_class("gold") == AssetClass.COMMODITY
+    assert normalize_asset_class("Silver") == AssetClass.COMMODITY
+    assert normalize_asset_class("precious metal") == AssetClass.COMMODITY
+
+
+def test_recognizes_phase8_collectible_labels():
+    """ADR 0011 — a whisky collection (or other collectible) gets its own
+    asset class rather than falling into OTHER."""
+    assert normalize_asset_class("Collectible") == AssetClass.COLLECTIBLE
+    assert normalize_asset_class("whisky") == AssetClass.COLLECTIBLE
+    assert normalize_asset_class("Whiskey") == AssetClass.COLLECTIBLE

@@ -2,9 +2,15 @@
 
 ## Status
 
-Proposed — design only, not built. Recorded now (2026-09-14) because Faiz asked for both of these
-during a status/planning review, and the reasoning for *how* each should fit the existing model is
-worth capturing before either is built, same as every other phase's ADR.
+**Precious metals: built, verified in a cloud mirror, not yet deployed** (2026-09-15). Collectibles:
+the generic pieces (asset class, manual entry, dated lots) are built alongside metals since they're
+the same underlying mechanism; the whisky-specific bulk CSV importer described below is still
+**not built** — still needs a real sample export from Faiz first, per this ADR's own Consequences
+section. See "Update (2026-09-15)" below for exactly what shipped vs. what's still open.
+
+Originally recorded 2026-09-14 as proposed/design-only, because Faiz asked for both of these during
+a status/planning review, and the reasoning for *how* each should fit the existing model was worth
+capturing before either was built, same as every other phase's ADR.
 
 ## Context
 
@@ -107,3 +113,52 @@ enter the system, and how (if at all) does it get priced.
   concentration/risk computation already switches on by iterating known values — worth checking
   those call sites don't assume the historical six-value set is exhaustive (e.g. an unguarded
   dict keyed by all `AssetClass` members) before shipping either.
+
+## Update (2026-09-15) — precious-metals groundwork implemented
+
+Built per the "Decisions" section above, largely as designed:
+
+- **`AssetClass.COMMODITY` / `AssetClass.COLLECTIBLE`** added to `app.domain.asset_class`, plus
+  alias entries. Checked (per this ADR's own Consequences warning): no call site iterates
+  `AssetClass` exhaustively assuming the historical six-value set — additive, confirmed by the full
+  test suite passing unchanged (333/333) with both new values present.
+- **`PortfolioPosition.acquired_at`** (nullable `DateTime(timezone=True)`) — new column, migration
+  `f1a2b3c4d5e6` (chained onto `d8f3a6b2c710`). Threaded through the CSV parser (new `Acquired at`
+  column, ISO-date, optional) and `ingestion.py`'s carry-forward path.
+- **Manual single-lot entry** — built as a proper `POST /portfolio/holdings/manual` endpoint rather
+  than the CSV-route fallback this ADR originally suggested starting with (the model needed
+  validating either way, and a dedicated endpoint was no more work once `acquired_at`/`custody_type`
+  needed their own validation). New `app/services/portfolio/manual_entry.py`: each call creates a
+  new `PortfolioPosition` row in one persistent, lazily-created "manual entries" snapshot rather than
+  going through `ingestion.py`'s merge-by-`(account_id, ticker)` logic — deliberate, since two coin
+  purchases of the same type at different dates must stay two distinct lots (exactly the scenario
+  this ADR called out). **Known gap, not fixed**: if 2+ manual lots of the same ticker exist and a
+  brokerage CSV is later uploaded, `ingestion.py`'s existing carry-forward step will still collapse
+  those lots to one — a pre-existing merge-key design limitation Phase 8 didn't touch, only
+  documents. Scoped to `COMMODITY`/`COLLECTIBLE` asset classes only.
+- **`GoldApiMarketDataProvider`** (`app/providers/gold_metal_provider.py`), composed behind
+  `MarketDataProvider` via a new `CompositeMarketDataProvider`
+  (`app/providers/composite_market_provider.py`) that routes `XAU`/`XAG` tickers to it and
+  everything else to the existing yfinance provider — mirrors `CompositeMacroDataProvider`'s
+  established pattern exactly, as this ADR recommended. **Could not be live-smoke-tested this
+  session either**: this cloud sandbox's egress proxy blocks `api.gold-api.com` outright (403),
+  same restriction this ADR's Consequences section already flagged for every other external
+  provider in this codebase. Built defensively from gold-api.com's documented response shape and
+  fully unit-tested against a mocked response; **still needs one real live request from an
+  unrestricted network before Faiz trusts it for actual pricing** — same outstanding caveat as
+  Norges Bank/FRED in ADRs 0004/0005/0007.
+- `custody_type` on `Holding`/`HoldingOut` — confirmed already present from Phase 5 as this ADR
+  expected; surfaced on the manual-entry schema and response (`allocated_physical` used in tests, no
+  fixed enum enforced yet — exact vocabulary still TBD as this ADR originally flagged).
+
+**Verified in the cloud mirror before writing back to `E:\Aladdin`** (`device_bash` still can't
+mount it this session — see PROGRESS.md's changelog for the recurring Windows-update regression):
+332/332 backend tests pass (was 297 — +35 across asset-class, holding-model, parser, manual-entry,
+gold-provider, and composite-provider coverage), `ruff check .` clean, `mypy app` unchanged
+baseline-only errors (no new errors in any Phase 8 file). **Not yet deployed to Railway** — see
+PROGRESS.md's "Manual to-do".
+
+**Still not built** (per this ADR's original Consequences section, unchanged): the whisky-specific
+bulk CSV importer. Needs a real sample export from Faiz first (a Whiskybase export, a filled-in
+template, or a description of what he already tracks) — the generic manual-entry endpoint above
+covers one-bottle-at-a-time entry under `COLLECTIBLE` in the meantime.

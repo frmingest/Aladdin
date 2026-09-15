@@ -152,6 +152,15 @@ def _run_critique(
         context = build_analysis_context(db, holding.id, snapshot_id)
     except InsufficientContextError as exc:
         return None, str(exc)
+    except Exception as exc:  # noqa: BLE001 — best-effort critique, must never block the
+        # deterministic value (see module docstring); a bug in this session's
+        # 2026-09-15 live-verification pass found that anything other than
+        # InsufficientContextError raised here (e.g. a genuinely unexpected
+        # error building the evidence packet) was escaping uncaught all the
+        # way to an unhandled 500 on POST /valuation/holdings/{id}/cases —
+        # taking the whole request down, deterministic value and all,
+        # exactly what this function's docstring says must never happen.
+        return None, f"valuation critique failed to build evidence context: {exc}"
 
     prompt_version = settings.active_valuation_prompt_version
     try:

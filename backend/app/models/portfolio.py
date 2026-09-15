@@ -78,6 +78,19 @@ class PortfolioPosition(Base):
     cost_basis: Mapped[Decimal | None] = mapped_column(Numeric(20, 6), nullable=True)
     cost_basis_currency: Mapped[str | None] = mapped_column(String(3), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Phase 8 (ADR 0011) — when this specific lot was acquired. Every
+    # brokerage-sourced position's "when" is implicitly the snapshot's
+    # uploaded_at, which is fine for a continuously-held position that
+    # merges forward across re-uploads; it's wrong for a coin (or other
+    # physical/manually-entered asset) bought on its own date and never
+    # re-priced by re-upload. Nullable and unset for brokerage-sourced
+    # positions; explicitly populated for manually-entered lots (see
+    # app.services.portfolio.manual_entry) or a canonical-schema CSV row
+    # that supplies an "Acquired at" column. Two purchases of the same
+    # instrument at different dates/prices are two distinct
+    # PortfolioPosition rows (each its own cost basis and date) rather than
+    # being collapsed into one.
+    acquired_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     snapshot: Mapped["PortfolioSnapshot"] = relationship(back_populates="positions")
     holding: Mapped["Holding"] = relationship("Holding")

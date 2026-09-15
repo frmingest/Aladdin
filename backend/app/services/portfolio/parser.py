@@ -19,6 +19,7 @@ Two input shapes are recognized:
 import csv
 import io
 from dataclasses import dataclass, field
+from datetime import date, datetime, timezone
 from decimal import Decimal, InvalidOperation
 
 import pandas as pd
@@ -44,6 +45,13 @@ _HEADER_ALIASES: dict[str, str] = {
     "sector": "sector",
     "theme": "sector",
     "notes": "notes",
+    # Phase 8 (ADR 0011) — optional per-lot acquisition date, e.g. for a
+    # coin bought on its own date rather than continuously held/re-uploaded.
+    # ISO 8601 (YYYY-MM-DD); absent for every pre-Phase-8 export, which is
+    # exactly why PortfolioPosition.acquired_at is nullable.
+    "acquired at": "acquired_at",
+    "acquired_at": "acquired_at",
+    "purchase date": "acquired_at",
 }
 
 # Nordnet "Beholdningstabell eksport" headers (Norwegian) -> internal field.
@@ -85,6 +93,9 @@ class ParsedPosition:
     # for canonical-schema uploads (same value as `ticker`), None for a
     # Nordnet export (no ticker column to derive it from).
     market_ticker: str | None
+    # Phase 8 (ADR 0011) — see PortfolioPosition.acquired_at. None unless a
+    # canonical-schema row supplies an "Acquired at" column.
+    acquired_at: datetime | None = None
 
 
 @dataclass
@@ -307,6 +318,18 @@ def parse_and_validate(*, filename: str, content: bytes) -> PortfolioParseResult
         except InvalidOperation:
             errors_for_row.append(f"cost_basis '{row.get('cost_basis')}' is not a valid number")
 
+        acquired_at: datetime | None = None
+        acquired_at_raw = (row.get("acquired_at") or "").strip()
+        if acquired_at_raw:
+            try:
+                acquired_at = datetime.combine(
+                    date.fromisoformat(acquired_at_raw), datetime.min.time(), tzinfo=timezone.utc
+                )
+            except ValueError:
+                errors_for_row.append(
+                    f"acquired_at '{acquired_at_raw}' is not a valid date (expected YYYY-MM-DD)"
+                )
+
         if errors_for_row:
             for message in errors_for_row:
                 result.row_errors.append({"row": idx, "message": message})
@@ -328,6 +351,7 @@ def parse_and_validate(*, filename: str, content: bytes) -> PortfolioParseResult
                 sector=sector,
                 notes=notes,
                 market_ticker=market_ticker,
+                acquired_at=acquired_at,
             )
         )
 

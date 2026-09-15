@@ -118,3 +118,51 @@ def test_unknown_asset_class_label_does_not_fail_the_row():
 
     assert result.is_valid, result.row_errors
     assert result.positions[0].asset_class_raw == "Crypto"
+
+
+_HEADER_WITH_ACQUIRED_AT = (
+    "Ticker,Name,Asset class,Quantity,Weight %,Cost basis,Currency,Sector/Theme,Notes,Acquired at"
+)
+
+
+def test_acquired_at_column_is_parsed_as_a_date():
+    """Phase 8 (ADR 0011) — the minimal one-row canonical-CSV path for a
+    physical coin bought on its own date."""
+    csv_bytes = make_portfolio_csv(
+        [
+            "XAU-COIN-2026-09,1oz Gold Coin,Commodity,1,,2450.00,USD,,,2026-09-10",
+        ],
+        header=_HEADER_WITH_ACQUIRED_AT,
+    )
+    result = parse_and_validate(filename="portfolio.csv", content=csv_bytes)
+
+    assert result.is_valid, result.row_errors
+    position = result.positions[0]
+    assert position.acquired_at is not None
+    assert position.acquired_at.date().isoformat() == "2026-09-10"
+
+
+def test_missing_acquired_at_is_none_not_an_error():
+    csv_bytes = make_portfolio_csv(
+        [
+            "XAU-COIN-2026-09,1oz Gold Coin,Commodity,1,,2450.00,USD,,,",
+        ],
+        header=_HEADER_WITH_ACQUIRED_AT,
+    )
+    result = parse_and_validate(filename="portfolio.csv", content=csv_bytes)
+
+    assert result.is_valid, result.row_errors
+    assert result.positions[0].acquired_at is None
+
+
+def test_invalid_acquired_at_is_rejected_with_a_row_error():
+    csv_bytes = make_portfolio_csv(
+        [
+            "XAU-COIN-2026-09,1oz Gold Coin,Commodity,1,,2450.00,USD,,,not-a-date",
+        ],
+        header=_HEADER_WITH_ACQUIRED_AT,
+    )
+    result = parse_and_validate(filename="portfolio.csv", content=csv_bytes)
+
+    assert not result.is_valid
+    assert any("acquired_at" in e["message"] for e in result.row_errors)

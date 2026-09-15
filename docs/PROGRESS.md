@@ -6,9 +6,46 @@ tracks status — update it and the relevant ADR together when something changes
 
 **Status:** Phases 0–7 done and **deployed to Railway (production)** — backend + frontend both
 online, keys set, Faiz has smoke-tested the Portfolio flow (accounts, CSV/XLSX upload, snapshots)
-successfully. Phase 8 (alternative assets) planned; Phase 9 (document evidence quality) planned.
-Whether the deployed code is committed to git is unconfirmed (see "Manual to-do" below — still not
-checkable from this environment; `device_bash` still can't mount `E:\Aladdin`).
+successfully. **Phase 8 (precious metals) built, not yet deployed** — see below. Phase 9 (document
+evidence quality) still just planned.
+
+**Git — resolved, no longer "unconfirmed":** commits have been happening normally throughout this
+project's history and are almost entirely pushed. As of this pass, local `main` is exactly 1 commit
+ahead of `origin/main` (`git push` needed) — **plus** everything this 2026-09-15 pass wrote (Phase 8
++ two Phase 7 bug fixes, listed below) is sitting as an uncommitted working-tree change, since
+`device_bash` can't run `git` from this session. **Faiz: please `git add`/`commit`/`push` the
+current working tree** — see "Manual to-do" for the exact file list.
+
+**2026-09-15 (Phase 7 loose ends + Phase 8 pass):** Closed out the three still-open Phase 7 items
+and built Phase 8's precious-metals groundwork. Two real, previously-undiscovered production bugs
+found and fixed along the way (both need a Railway redeploy to take effect):
+- **Object storage upload/retrieve — confirmed working, live.** Uploaded a real test PDF straight to
+  the live backend, got back `PROCESSED` with correct page count and extracted text, then re-fetched
+  it independently — full upload→store→read-back round trip confirmed on the actual Railway
+  deployment (see "Manual to-do" — a leftover test document is on Alfred Berg's holding, harmless).
+- **DCF valuation — confirmed working, live.** A real `POST /valuation/holdings/.../cases` call
+  against Vår Energi persisted correctly (`calculated_value: null` with a `calculation_note` — Vår
+  Energi is PDF-only with no XLSX facts, so there's no revenue to project from, which is the
+  correct, by-design §21 behavior, not a bug).
+- **Bug found — `/valuation/holdings/{id}/defaults` (ECON-001's discount-rate/FX suggestion
+  endpoint) was completely broken in production for every holding.** Root cause: `backend/
+  Dockerfile` copies `prompts/`, `schemas/`, `scoring/`, `research/`, `scenarios/` into the image but
+  was missing `discount_rate/` — so `discount_rate/versions/v1.yaml` didn't exist in the deployed
+  container, and every call crashed before any response (browser-visible only as a CORS/"failed to
+  fetch" error, masking the real 500). **Fixed**: added the missing `COPY discount_rate
+  discount_rate` line. Needs a Railway redeploy to take effect.
+- **Bug found — the DCF "AI critique" step could crash the entire valuation-case request instead of
+  degrading to `critique_error`.** `_run_critique()`'s own docstring promises a critique failure
+  "is caught and recorded... rather than raised" so a case is "never lost" — true for known failure
+  types, but any *other* exception from `build_analysis_context()` was escaping uncaught, crashing
+  the whole `POST .../cases` call (deterministic value and all) with the request. Confirmed live: a
+  critique-enabled request against Vår Energi failed; the identical request with
+  `run_critique: false` succeeded cleanly. **Fixed**: widened the exception handling around
+  `build_analysis_context()` to match the function's own documented contract, plus a new regression
+  test simulating an unexpected context-build error. Needs a Railway redeploy to take effect.
+- **Also confirmed, not a bug**: the Dashboard's macro chart already plots all 11 macro series
+  (including the 5 ECON-003/004 series a prior pass thought were still invisible) — that gap is
+  already resolved in production, PROGRESS.md just hadn't been corrected yet.
 
 **2026-09-14, status-alignment pass:** Faiz pointed out he's been redeploying continuously, so this
 session verified live production directly (browser + direct API calls to
@@ -67,9 +104,9 @@ deployment (browser + direct API calls), not just "keys are set":**
 - ✅ AI analysis (Gemini) — **confirmed live and working**: `gemini-3.6-flash` running, real completed analyses on record (e.g. Alfred Berg Nordic High Yield, `overall_score 5.00`, low confidence, evidence-cited). ~~attempted 2026-09-14, failed~~ / ~~not yet redeployed~~ — resolved.
 - ✅ Macro/sector research (FRED + Norges Bank) — confirmed live: forced refresh returns real FRED + Norges Bank data, `methodology_version: v2`, all 11 v2 series including Norway. Sector research (Gemini-grounded narrative) is wired up but **hit the Gemini free-tier daily quota (429) when tested this pass** — not a bug, just today's request budget spent; the usage ledger (ADR 0013) is what surfaces this ahead of time going forward.
 - ✅ Portfolio risk snapshots — confirmed live: real computed risk snapshot on record (composite 73.51/100, HIGH band, concentration/currency/sector dimensions populated, Norwegian formuesskatt estimate 103,644.21 NOK).
-- ⬜ DCF valuation + critique, document upload flow specifically — still not independently re-exercised this pass; no reason to think they're broken, just not re-clicked-through.
+- ✅ **DCF valuation + critique, document upload flow — confirmed live, 2026-09-15.** Both exercised directly against production: a real DCF case creation against Vår Energi persisted correctly, and a real document upload round-tripped through object storage correctly (see "Status" above for detail). Found and fixed two real bugs along the way (discount-rate defaults endpoint, critique-crash) — both need a redeploy.
 - ✅ **LLM usage ledger (ADR 0013)** — **confirmed live**: `/usage/summary` returns real data, Dashboard's "Gemini usage today" widget renders it (9/20 requests, 62,965 in / 9,011 out tokens). Migration applied, deployed. ~~Migration not yet applied/deployed~~ — resolved.
-- ✅ **Macro-economic fixes ECON-001/002 (ADR 0014)** — ECON-002 (regime-conditional scoring) **confirmed live** via `GET /health` → `active_scoring_version: v2`. ECON-001 (discount-rate/FX suggestion endpoint) not independently re-confirmed this pass (a direct check errored out on something unrelated to deployment status) — worth a 30-second manual click-through next time someone's on the Valuation tab. ~~Migration not yet applied/deployed~~ — resolved for ECON-002 at least.
+- ⚠️ **Macro-economic fixes ECON-001/002 (ADR 0014)** — ECON-002 (regime-conditional scoring) **confirmed live** via `GET /health` → `active_scoring_version: v2`. **ECON-001 (discount-rate/FX suggestion endpoint) — root-caused 2026-09-15: genuinely broken in production**, not the "errored out for unrelated reasons" this file guessed twice before. `discount_rate/versions/v1.yaml` was missing from the Docker image (Dockerfile gap), so every call 500'd. Fixed in code, **needs a Railway redeploy to actually take effect** — see "Status" above.
 - ✅ **Macro-economic fixes ECON-003/004/006 (ADR 0014)** — **confirmed live**: `/research/macro/snapshot` returns all 11 v2 series (adds `commodity_oil_wti`, `commodity_oil_brent`, `eurozone_policy_rate`, `eurozone_hicp_yoy`, `china_cpi_yoy`) and `GET /health` → `active_prompt_version: v2` (ECON-006). **New gap found this pass:** the Dashboard's macro chart widget still only plots the original 6 series — it was never updated to visualize the 5 new ones, so they're being fetched and used in analysis but aren't visible anywhere in the UI. Small Phase-9-adjacent frontend follow-up.
 - ✅ **ECON-005 (Norway policy rate)** — turns out this already works in production: live snapshot has a real `no_policy_rate` observation (4.25%, `norges_bank`, dated 2026-09-11). The earlier "unverifiable" note was about this cloud sandbox's own egress block, not about whether the deployed app can reach Norges Bank — it can. ~~remains open~~ — resolved.
 - ⬜ **ECON-007 (regime-aware risk bands)** — confirmed still genuinely open: `GET /health` → `active_risk_scoring_version: risk_v1`. Lowest severity of the seven ADR 0014 findings; untouched.
@@ -95,7 +132,7 @@ deployment (browser + direct API calls), not just "keys are set":**
 **Feature gaps:**
 - No calibration/track-record engine (§22.5) — needs weeks of real deployed history to be useful, so recommended *after* a live deploy exists.
 - Evidence-packet excerpt selection has no relevance ranking, just most-recent-first, and the excerpt budget is shared across all of a holding's documents rather than per-document (ADR 0006) — reviewed in detail 2026-09-14 against Vår Energi's real documents (a 208-page annual report likely gets truncated to near-zero content by a smaller, more-recently-uploaded quarterly report); concrete proposal in **ADR 0012 (Phase 9, proposed)**.
-- `AssetClass` has no `COMMODITY`/`COLLECTIBLE` value yet — needed for Phase 8 (ADR 0011).
+- ~~`AssetClass` has no `COMMODITY`/`COLLECTIBLE` value yet~~ — resolved 2026-09-15, Phase 8 (ADR 0011).
 - `recent_events` on `AnalysisContext` unbuilt — macro/sector research partially covers the need.
 - PDF/PPT-only holdings never get a structured `financial_metrics` snapshot (XLSX-only extraction, ADR 0002/0006) — `financial_metrics.insufficient_data` stays `True` for a holding like Vår Energi unless an XLSX with the same figures is also uploaded. Addressed as item 5 of ADR 0012.
 - No visibility, on the Documents tab itself, into whether an uploaded document's content actually reaches an analysis run (page/chunk usage, truncation) — a processed PDF with `FACTS: 0` currently looks identical whether it contributed 200 pages of evidence or zero. Addressed as item 2 of ADR 0012.
@@ -110,7 +147,7 @@ deployment (browser + direct API calls), not just "keys are set":**
 `DATABASE_URL`, `GOOGLE_AI_STUDIO_API_KEY`, `FRED_API_KEY`, `APP_AUTH_TOKEN`, and the full
 `OBJECT_STORAGE_*` set. Frontend shows "BACKEND OK."
 
-- [x] Object storage provider (`S3ObjectStorageProvider`, R2/Supabase) — env vars set on Railway; not yet confirmed with a real upload/retrieve on the live deploy.
+- [x] Object storage provider (`S3ObjectStorageProvider`, R2/Supabase) — **confirmed with a real upload/retrieve on the live deploy, 2026-09-15**: uploaded a test PDF, got back `PROCESSED` with correct extracted text, re-fetched it independently.
 - [x] CORS middleware.
 - [x] Backend + frontend Dockerfiles — these are presumably what Railway built from (Railway supports building from a Dockerfile directly, without a separate local `docker build`).
 - [x] Single-user auth (`APP_AUTH_TOKEN`/`X-API-Key`) on every router except `/health`.
@@ -118,7 +155,7 @@ deployment (browser + direct API calls), not just "keys are set":**
 - [x] Railway project + env vars set — confirmed via the Variables screen (13 service variables).
 - [x] `GOOGLE_AI_STUDIO_API_KEY` + `FRED_API_KEY` obtained and set on Railway.
 - [x] End-to-end smoke test — Portfolio flow tested and working ("good for an alpha," per Faiz 2026-09-14). Documents/Analysis/Dashboard not yet manually exercised on the live deploy — see "Open gaps" above.
-- [ ] Live check of Phase 5's DCF critique specifically — risk correlation confirmed live (2026-09-14 status pass), DCF critique itself not independently re-clicked.
+- [x] Live check of Phase 5's DCF critique specifically — **done 2026-09-15**: a real DCF case creation against Vår Energi persisted correctly. Found the critique step could crash the whole request instead of degrading gracefully — fixed, needs redeploy (see "Status" above).
 - [x] `alembic upgrade head` for `llm_usage_events` (`c7e2f9a1b8d3`) and `analysis_runs.macro_regime` (`d8f3a6b2c710`) — **confirmed applied**, 2026-09-14 status pass: `/usage/summary` returns real ledger data and `GET /health` reports `active_scoring_version: v2`, both of which require these migrations to be in.
 
 ## Manual to-do for Faiz
@@ -127,17 +164,31 @@ deployment (browser + direct API calls), not just "keys are set":**
   run against its two documents (analysis itself is confirmed working now — see status pass below —
   this is about checking the *evidence selection*, not whether the run succeeds) — worth doing
   before Phase 9 work starts.
-- **Git commit — status unclear, worth double-checking.** Railway's dashboard shows the services
-  connected to GitHub repos (icons for "exciting-gratitude" and "Aladdin" under a GitHub-style
-  connection). If Railway is set to auto-deploy from a GitHub repo, then yes — the running code was
-  pushed to GitHub to get there, and this item is effectively done (though it's worth confirming
-  today's `calculations.py` fix specifically made it in, since that was written directly to
-  `E:\Aladdin` afterward and may not be in whatever commit Railway last deployed). If instead
-  Railway was deployed via `railway up`/CLI from local files, that uploads whatever's on disk
-  regardless of git status, and this item is still open — a live deploy isn't itself proof of a git
-  commit. Quickest way to check: `git status`/`git log` in `E:\Aladdin`, or look at which commit
-  Railway's Deployments tab says it last built from. Committing matters regardless of deploy
-  method — it's your rollback point and history, independent of whether Railway has a copy.
+- **Git — resolved.** Read `.git` refs directly and cross-checked against a live `git ls-remote`:
+  commits have been happening normally throughout this project's history, almost entirely pushed.
+  As of this pass, local `main` was 1 commit ahead of `origin/main` — just needs `git push`. **New
+  as of this pass**: today's Phase 8 + Phase 7 bug-fix files (full list just below) are sitting as
+  uncommitted working-tree changes, since `device_bash` can't run `git` from this session — please
+  `git add`, commit, and push them (and check Railway is set to auto-deploy from GitHub, or trigger
+  a manual redeploy, since two of today's fixes need to actually reach production to matter).
+- **Redeploy needed** for everything this 2026-09-15 pass wrote — none of it is live yet:
+  `backend/app/domain/asset_class.py`, `backend/app/models/portfolio.py`, `backend/alembic/versions/
+  f1a2b3c4d5e6_portfolio_position_acquired_at.py` (**new migration — needs `alembic upgrade head`**),
+  `backend/app/services/portfolio/parser.py`, `backend/app/services/portfolio/ingestion.py`,
+  `backend/app/schemas/portfolio.py`, `backend/app/services/portfolio/manual_entry.py` (new),
+  `backend/app/api/portfolio.py`, `backend/app/providers/gold_metal_provider.py` (new),
+  `backend/app/providers/composite_market_provider.py` (new), `backend/app/config/settings.py`,
+  `backend/app/providers/factory.py`, `backend/Dockerfile` (**the discount_rate fix — without this
+  redeploy, ECON-001 stays broken**), `backend/app/services/valuation/dcf.py` (the critique-crash
+  fix), plus this pass's new/extended test files.
+- **Leftover test document, harmless but visible**: a `phase7-object-storage-verify.pdf` document
+  was uploaded to the Alfred Berg Nordic High Yield holding on live production while verifying
+  object storage this pass — real proof the upload/retrieve round trip works, safe to ignore or
+  delete from the Documents tab.
+- **Before trusting `gold-api.com` pricing for real**: it was built defensively from documented
+  behavior and fully unit-tested, but this cloud sandbox's egress blocks `api.gold-api.com` outright
+  — it still needs one real live request from an unrestricted network (same as Norges Bank/FRED
+  needed in earlier phases) before relying on it.
 - Optional: add `pandas-stubs`/`types-openpyxl` + a `mypy.ini` override for the untyped-import stub gaps above.
 - ~~Redeploy for market ticker UI / Gemini model fix / usage ledger migration / ECON-001-006~~ — **all confirmed live in production as of the 2026-09-14 status-alignment pass**, see the top "Status" section. Struck through rather than deleted so this history isn't lost.
 - **New this pass:** the Dashboard's macro chart only plots 6 of the 11 series the backend now
@@ -166,8 +217,8 @@ deployment (browser + direct API calls), not just "keys are set":**
    area.
 3. **Track-record & calibration engine** (§22.5) — a real deploy now exists, but it still needs weeks of live analysis history to have anything to calibrate against.
 4. **Testing debt** — populate `golden_documents`/`regression`, add `black` + `eslint.config.js`.
-5. **Precious metals** (Phase 8) — `COMMODITY` asset class, dated lots, manual single-holding entry, gold-api.com spot pricing. Design in ADR 0011.
-6. **Whisky collection** (Phase 8) — manual CSV import (Whiskybase export format), carried at cost basis since no live pricing feed exists. Needs a real sample export from Faiz first. Design in ADR 0011.
+5. ~~**Precious metals** (Phase 8)~~ — **built 2026-09-15**: `COMMODITY` asset class, dated lots, manual single-holding entry, gold-api.com spot pricing. Just needs redeploy + a live gold-api.com smoke test. Design/status in ADR 0011.
+6. **Whisky collection** (Phase 8) — manual CSV import (Whiskybase export format), carried at cost basis since no live pricing feed exists. **Still needs a real sample export from Faiz first** — the generic manual-entry endpoint built for precious metals already covers one-bottle-at-a-time entry under `COLLECTIBLE` in the meantime. Design in ADR 0011.
 
 ---
 
@@ -188,6 +239,42 @@ deployment (browser + direct API calls), not just "keys are set":**
 
 ### Changelog
 
+- **2026-09-15 (Phase 7 loose ends + Phase 8 precious metals, ADR 0011):** Faiz asked to close out
+  Phase 7's remaining open items and start Phase 8. **Phase 7 loose ends** — all three resolved by
+  testing directly against the live Railway deployment (browser + direct API calls, same technique
+  as the 2026-09-14 status-alignment pass): object storage upload/retrieve confirmed working with a
+  real test-document round trip; DCF valuation confirmed working with a real case creation against
+  Vår Energi; and the ECON-001 discount-rate/FX endpoint, previously dismissed twice as "errored out
+  for unrelated reasons," turned out to be a real, fully broken endpoint — root-caused to
+  `backend/Dockerfile` never copying `discount_rate/` into the deploy image (every sibling
+  versioned-config directory — `prompts/`, `schemas/`, `scoring/`, `research/`, `scenarios/` — was
+  copied except this one), fixed with one added `COPY` line. Also found, while exercising the DCF
+  critique flow live, that `_run_critique()` in `app/services/valuation/dcf.py` could let an
+  unexpected exception from `build_analysis_context()` escape uncaught and crash the entire
+  `POST .../cases` request — contradicting its own docstring's "a valuation case is never lost
+  because the LLM step failed" promise — fixed by widening the exception handling to match the
+  documented contract, with a new regression test. Both fixes need a Railway redeploy to take
+  effect. Also confirmed, not a bug: the Dashboard's macro chart already renders all 11 macro
+  series in production — a gap a prior pass thought was still open turned out to already be fixed.
+  **Phase 8** — built the precious-metals groundwork per ADR 0011: `AssetClass.COMMODITY`/
+  `COLLECTIBLE`, a new nullable `PortfolioPosition.acquired_at` column + migration (`f1a2b3c4d5e6`)
+  for dated lots, CSV-schema support for an `Acquired at` column, a new `POST
+  /portfolio/holdings/manual` endpoint for single-lot entry (scoped to `COMMODITY`/`COLLECTIBLE`,
+  deliberately never merging lots the way brokerage CSV ingestion does — two coin purchases at
+  different dates stay two distinct positions), and a new `GoldApiMarketDataProvider` composed
+  behind the existing `MarketDataProvider` abstraction via a new `CompositeMarketDataProvider`
+  (mirrors the established `CompositeMacroDataProvider` pattern exactly) — routes `XAU`/`XAG`
+  tickers to gold-api.com spot pricing, everything else still goes to yfinance. Whisky-specific bulk
+  CSV import remains explicitly deferred, unchanged from ADR 0011's original recommendation — still
+  needs a real sample export from Faiz first. **Verified in the cloud mirror** before writing back
+  to `E:\Aladdin` (`device_bash` still can't mount it this session, same Windows-update regression
+  tracked since 2026-09-08): 332/332 backend tests passing before the Phase 7 fixes, 333/333 after
+  (new critique-crash regression test), `ruff check .` clean, `mypy app` unchanged baseline-only
+  errors (no new errors in any file this pass touched). **Not yet deployed** — see "Manual to-do"
+  for the full file list and what still needs `git push` + a Railway redeploy + `alembic upgrade
+  head` (one new migration). `gold-api.com` pricing still needs one real live smoke test from an
+  unrestricted network before being trusted, same outstanding caveat every other external provider
+  in this codebase has carried at this stage. Full detail: ADR 0011's "Update (2026-09-15)" section.
 - **2026-09-14 (status-alignment pass):** Faiz pushed back on this file's "written but not yet
   deployed" framing — he's been redeploying continuously, so the file had drifted stale rather than
   reality being behind. Verified live production directly instead of trusting prior session notes:

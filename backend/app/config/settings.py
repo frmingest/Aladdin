@@ -100,6 +100,14 @@ class Settings(BaseSettings):
     # --- Market data provider (§29 resolved in Phase 2 — see
     # docs/decisions/0004-phase2-market-data-and-financial-metrics.md) ---
     market_data_provider: str = "yfinance"  # yfinance | stub
+    # Phase 8 (ADR 0011) — physical gold/silver pricing (XAU/XAG), composed
+    # behind market_data_provider (see app.providers.composite_market_provider)
+    # rather than a third market_data_provider value, since it only ever
+    # affects the two commodity tickers and leaves every other ticker's
+    # routing untouched. "none" disables it (a COMMODITY holding then simply
+    # has no market_ticker route, same as any other unpriced holding).
+    commodity_price_provider: str = "gold_api"  # gold_api | none
+    gold_api_base_url: str = "https://api.gold-api.com/price"
 
     # --- External research (§26 Phase 4 — see
     # docs/decisions/0007-phase4-external-research.md) ---

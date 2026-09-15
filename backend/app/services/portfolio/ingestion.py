@@ -22,6 +22,7 @@ position outright the moment the other account's file was uploaded next.
 """
 
 from dataclasses import dataclass
+from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
@@ -75,6 +76,8 @@ class _MergedPosition:
     market_ticker: str | None
     account_id: UUID | None
     carried_forward: bool
+    # Phase 8 (ADR 0011) — see PortfolioPosition.acquired_at.
+    acquired_at: datetime | None = None
 
 
 def _carried_forward_from(previous_snapshot: PortfolioSnapshot | None) -> dict[_MergeKey, _MergedPosition]:
@@ -97,6 +100,7 @@ def _carried_forward_from(previous_snapshot: PortfolioSnapshot | None) -> dict[_
             market_ticker=holding.market_ticker,
             account_id=position.account_id,
             carried_forward=True,
+            acquired_at=position.acquired_at,
         )
     return merged
 
@@ -116,6 +120,7 @@ def _from_parsed(position: ParsedPosition, account_id: UUID | None) -> _MergedPo
         market_ticker=position.market_ticker,
         account_id=account_id,
         carried_forward=False,
+        acquired_at=position.acquired_at,
     )
 
 
@@ -271,6 +276,7 @@ def ingest_portfolio_upload(
                 cost_basis=position.cost_basis,
                 cost_basis_currency=position.currency if position.cost_basis is not None else None,
                 notes=position.notes,
+                acquired_at=position.acquired_at,
             )
         )
 

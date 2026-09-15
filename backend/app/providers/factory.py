@@ -9,8 +9,11 @@ from app.config.settings import get_settings
 from app.domain.macro_series import load_macro_series_registry
 from app.providers.base import LLMProvider, MacroDataProvider, MarketDataProvider, ObjectStorageProvider, ResearchProvider
 from app.providers.composite_macro_provider import CompositeMacroDataProvider
+from app.providers.composite_market_provider import CompositeMarketDataProvider
 from app.providers.fred_provider import FredMacroDataProvider
 from app.providers.gemini_research_provider import GeminiResearchProvider
+from app.providers.gold_metal_provider import SUPPORTED_TICKERS as GOLD_API_SUPPORTED_TICKERS
+from app.providers.gold_metal_provider import GoldApiMarketDataProvider
 from app.providers.google_ai_studio_provider import GoogleAIStudioProvider
 from app.providers.norges_bank_provider import NorgesBankMacroDataProvider
 from app.providers.s3_storage_provider import S3ObjectStorageProvider
@@ -48,7 +51,18 @@ def get_object_storage() -> ObjectStorageProvider:
 def get_market_data_provider() -> MarketDataProvider:
     settings = get_settings()
     if settings.market_data_provider == "yfinance":
-        return YFinanceMarketDataProvider()
+        base: MarketDataProvider = YFinanceMarketDataProvider()
+        # Phase 8 (ADR 0011) — composes in gold-api.com for XAU/XAG spot
+        # pricing so a physical gold/silver holding's market_ticker resolves
+        # without touching yfinance or any calling code. Additive: every
+        # ticker other than XAU/XAG still routes to `base`, unchanged.
+        if settings.commodity_price_provider == "gold_api":
+            return CompositeMarketDataProvider(
+                default=base,
+                commodity=GoldApiMarketDataProvider(base_url=settings.gold_api_base_url),
+                commodity_tickers=GOLD_API_SUPPORTED_TICKERS,
+            )
+        return base
     if settings.market_data_provider == "stub":
         return StubMarketDataProvider()
     raise NotImplementedError(

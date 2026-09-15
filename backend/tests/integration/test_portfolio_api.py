@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from tests.support import make_portfolio_csv
 
 VALID_CSV = make_portfolio_csv(
@@ -302,3 +304,108 @@ def test_accounts_crud(client):
     deleted = client.delete(f"/accounts/{account_id}")
     assert deleted.status_code == 204
     assert client.get("/accounts").json() == []
+
+
+# --- Phase 8 (ADR 0011) — manual single-lot entry for alternative assets ---
+
+
+def test_manual_holding_creates_a_new_holding_and_position(client):
+    response = client.post(
+        "/portfolio/holdings/manual",
+        json={
+            "ticker": "XAU-COIN-2026-09",
+            "name": "1oz Gold Coin",
+            "asset_class": "COMMODITY",
+            "trading_currency": "USD",
+            "quantity": "1",
+            "cost_basis": "2450.00",
+            "cost_basis_currency": "USD",
+            "market_ticker": "XAU",
+            "custody_type": "allocated_physical",
+            "acquired_at": "2026-09-10T00:00:00Z",
+            "notes": "bought at the local dealer",
+        },
+    )
+
+    assert response.status_code == 201, response.text
+    body = response.json()
+    assert body["ticker"] == "XAU-COIN-2026-09"
+    assert body["asset_class"] == "COMMODITY"
+    assert Decimal(body["quantity"]) == Decimal("1")
+    assert Decimal(body["cost_basis"]) == Decimal("2450.00")
+    assert body["acquired_at"] is not None
+
+    holdings = client.get("/portfolio/holdings").json()
+    assert any(h["ticker"] == "XAU-COIN-2026-09" and h["market_ticker"] == "XAU" for h in holdings)
+
+
+def test_manual_holding_rejects_ordinary_brokerage_asset_classes(client):
+    response = client.post(
+        "/portfolio/holdings/manual",
+        json={
+            "ticker": "VAR.OL",
+            "name": "Vår Energi",
+            "asset_class": "EQUITY",
+            "trading_currency": "NOK",
+            "quantity": "100",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_manual_holding_second_lot_of_same_ticker_adds_a_second_position(client):
+    payload = {
+        "ticker": "XAU-COIN-2026-09",
+        "name": "1oz Gold Coin",
+        "asset_class": "COMMODITY",
+        "trading_currency": "USD",
+        "quantity": "1",
+        "cost_basis": "2450.00",
+        "market_ticker": "XAU",
+    }
+    client.post("/portfolio/holdings/manual", json=payload)
+    second = client.post(
+        "/portfolio/holdings/manual",
+        json={**payload, "quantity": "2", "cost_basis": "2500.00"},
+    )
+    assert second.status_code == 201
+
+    snapshots = client.get("/portfolio/snapshots").json()
+    manual_snapshots = [s for s in snapshots if s["position_count"] >= 2]
+    assert len(manual_snapshots) == 1
+    detail = client.get(f"/portfolio/snapshots/{manual_snapshots[0]['id']}").json()
+    assert len(detail["positions"]) == 2
+
+
+def test_manual_holding_with_unknown_account_is_rejected(client):
+    response = client.post(
+        "/portfolio/holdings/manual",
+        json={
+            "ticker": "XAU-COIN-2026-09",
+            "name": "1oz Gold Coin",
+            "asset_class": "COMMODITY",
+            "trading_currency": "USD",
+            "quantity": "1",
+            "account_id": "00000000-0000-0000-0000-000000000000",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_manual_holding_collectible_with_no_market_ticker(client):
+    response = client.post(
+        "/portfolio/holdings/manual",
+        json={
+            "ticker": "WHISKY-001",
+            "name": "Macallan 18",
+            "asset_class": "COLLECTIBLE",
+            "trading_currency": "GBP",
+            "quantity": "1",
+            "cost_basis": "150.00",
+        },
+    )
+
+    assert response.status_code == 201, response.text
+    assert response.json()["asset_class"] == "COLLECTIBLE"

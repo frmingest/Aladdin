@@ -139,6 +139,35 @@ def test_create_valuation_case_critique_failure_does_not_block_calculated_value(
     assert body["critique_error"] is not None
 
 
+def test_create_valuation_case_survives_unexpected_context_build_error(client, fake_llm, monkeypatch):
+    """Regression test (2026-09-15 live-verification pass): a live Railway
+    check found that when build_analysis_context raised anything other than
+    InsufficientContextError, it escaped _run_critique uncaught and crashed
+    the whole POST with an unhandled 500 — losing the deterministic
+    calculated_value along with it, exactly what this module's docstring
+    ("a valuation case is never lost because the LLM step failed") promises
+    never happens. Simulates that by making build_analysis_context raise a
+    plain RuntimeError instead of InsufficientContextError."""
+    import app.services.valuation.dcf as dcf_module
+
+    def _boom(db, holding_id, snapshot_id):
+        raise RuntimeError("simulated unexpected evidence-context bug")
+
+    monkeypatch.setattr(dcf_module, "build_analysis_context", _boom)
+
+    holding_id = _upload_holding_id(client)
+    _add_evidence_document(client, holding_id)
+    request = {**_BASE_ASSUMPTIONS, "base_revenue_override": "100000000"}
+
+    response = client.post(f"/valuation/holdings/{holding_id}/cases", json=request)
+    assert response.status_code == 201, response.text
+    body = response.json()
+    assert body["calculated_value"] is not None
+    assert body["critique"] is None
+    assert body["critique_error"] is not None
+    assert "unexpected evidence-context bug" in body["critique_error"]
+
+
 def test_create_valuation_case_invalid_case_type_returns_422(client, fake_llm):
     holding_id = _upload_holding_id(client)
     request = {**_BASE_ASSUMPTIONS, "case_type": "not-a-real-case", "run_critique": False}
