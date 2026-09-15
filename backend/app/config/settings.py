@@ -152,7 +152,13 @@ class Settings(BaseSettings):
     # it's present (ECON-006 fix, docs/decisions/0014) — v1 remains loadable
     # (and is what any pre-v2 analysis_runs row is still interpreted against)
     # for reproducibility (§2.4), it's just no longer the default.
-    active_prompt_version: str = "v2"
+    # v3 adds an explicit prompt-injection guardrail (hard rule 9): evidence
+    # `content` excerpts are untrusted document text, not instructions — see
+    # docs/decisions/0015-agentic-coding-and-ai-safety-guardrails.md. No
+    # change to what the model is asked to assess or the output schema, so
+    # this is a low-risk default bump; v1/v2 remain loadable for
+    # reproducibility of pre-v3 analysis_runs rows.
+    active_prompt_version: str = "v3"
     # v2 adds regime-conditional factor weights (ECON-002 fix, docs/
     # decisions/0014) — app.domain.scoring.classify_macro_regime picks the
     # profile per run from the latest macro snapshot; v1 remains loadable

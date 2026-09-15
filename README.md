@@ -131,6 +131,23 @@ alembic revision --autogenerate -m "description"
 alembic upgrade head
 ```
 
+## Guardrails
+
+This repo has three layers of automated guardrails (see `CLAUDE.md` and
+`docs/decisions/0015-agentic-coding-and-ai-safety-guardrails.md` for the full reasoning):
+Claude Code hooks (`.claude/`), pre-commit (`.pre-commit-config.yaml`), and CI
+(`.github/workflows/ci.yml`). One-time local setup for the pre-commit layer:
+
+```bash
+pip install pre-commit
+pre-commit install          # from the repo root
+pre-commit run --all-files  # optional: check everything once up front
+```
+
+`CLAUDE.md` is the operational rulebook any AI coding agent working in this repo (Claude Code,
+Cowork) should read first — architecture invariants, what "done" requires, git discipline, and
+the AI/LLM-specific guardrails around the uploaded-document → analysis pipeline.
+
 ## Deployment
 
 Both services are container images built from the repository root (see

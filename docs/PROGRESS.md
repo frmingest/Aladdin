@@ -19,6 +19,29 @@ as an uncommitted working-tree change, since `device_bash` can't run `git` from 
 please `git add`/`commit`/`push` the current working tree** — see "Manual to-do" for the exact file
 list.
 
+**2026-09-15 (Agentic coding & AI-safety guardrails):** Faiz asked for "state of the art agentic
+coding guardrails" so ongoing AI-agent-driven development on this repo doesn't keep running into
+the same class of problem it already has (uncommitted work piling up across sessions, "deployed"
+claims that weren't actually deployed yet, no CI/lint enforcement at all). Added three layers:
+Claude Code hooks (`.claude/settings.json` + `.claude/hooks/`) blocking a short list of
+high-confidence-dangerous actions (force-push, `git reset --hard`, `rm -rf` at home/drive root,
+piping a remote download into a shell, raw destructive SQL, writing a real `.env` or a
+hardcoded-looking secret) before they execute; `.pre-commit-config.yaml` (ruff, eslint, gitleaks
+secret scanning, generic hygiene checks); and `.github/workflows/ci.yml` (pytest/ruff/mypy,
+tsc/eslint/build, gitleaks, report-only dependency audit) plus `.github/dependabot.yml`. Root
+`CLAUDE.md` is the operational rulebook tying it together — architecture invariants, the "done"
+bar, git discipline, and an explicit rule that no session (including this one) should claim
+something is "deployed" or "committed" without having actually checked. Also fixed a real,
+previously-flagged gap while in there: `frontend/eslint.config.js` never existed (and its plugin
+deps weren't in `package.json` either), so `npm run lint` has been silently broken since Phase 0
+— added the standard Vite+React+TS flat config and dependencies, verified with a real
+`npm install` + `eslint` run in an isolated sandbox. One AI-safety change:
+`prompts/persona/v3.md` adds an explicit prompt-injection guardrail (evidence `content` excerpts
+are untrusted document text, never instructions) — additive only, same schema/rules 1-8, and now
+the default (`active_prompt_version` code default bumped v2→v3). Full reasoning:
+**ADR 0015**. Written to `E:\Aladdin` via the device bridge (`device_bash` still can't mount it
+this session) — **not yet committed to git by Faiz.**
+
 **2026-09-15 (Portfolio reset — `DELETE /portfolio/reset?confirm=true` 500'd with a ForeignKeyViolation — fixed):**
 Faiz tried "Delete all data" and got a 500 in production: `psycopg2.errors.ForeignKeyViolation` on
 `llm_usage_events_holding_analysis_id_fkey` — Postgres refused to delete a `holding_analyses` row
@@ -291,7 +314,10 @@ deployment (browser + direct API calls), not just "keys are set":**
 - Free-tier rate limits (`LLM_RATE_LIMIT_RPM/TPM/RPD`, ADR 0013) are entered by hand, not fetched from Google — no public API exposes a free-tier AI Studio key's quota/usage, so these drift if the account's tier or model changes and need updating manually when they do.
 
 **Tooling debt:**
-- No `eslint.config.js` — `npm run lint` fails outright (Phase 0 gap).
+- ~~No `eslint.config.js` — `npm run lint` fails outright (Phase 0 gap).~~ — **resolved
+  2026-09-15**: added `frontend/eslint.config.js` (flat config) plus the plugin deps it needs
+  (`@eslint/js`, `typescript-eslint`, `eslint-plugin-react-hooks`, `eslint-plugin-react-refresh`,
+  `globals`) — `npm install` in `frontend/` to pick them up. See ADR 0015.
 - No `black` config — codebase never run through it.
 - `mypy app`: 11 `import-untyped` errors (missing stubs for pandas/openpyxl/fitz/yfinance/boto3/apscheduler) — cosmetic, not fixed yet.
 - `tests/golden_documents/` and `tests/regression/` are empty scaffolds since Phase 0 (architecture §22.2/§22.3).
@@ -330,6 +356,17 @@ deployment (browser + direct API calls), not just "keys are set":**
 
 ## Manual to-do for Faiz
 
+- **New this pass — guardrails setup, no redeploy needed (this is all repo/local tooling, not
+  runtime code):**
+  - `pip install pre-commit && pre-commit install` from the repo root, once, to activate the
+    pre-commit layer (ADR 0015). Optionally `pre-commit run --all-files` once up front.
+  - `cd frontend && npm install` to pick up the new eslint plugin dependencies —
+    `npm run lint` should actually run clean-or-report now instead of failing outright.
+  - Once CI (`.github/workflows/ci.yml`) has run clean a few times on `main`: consider turning on
+    branch protection (GitHub → Settings → Branches) requiring it to pass before merge. This is a
+    GitHub repo setting, not something committable from here.
+  - Skim `CLAUDE.md` once — it's the rulebook future sessions (including this one, next time)
+    are expected to follow.
 - **New this pass — redeploy needed, and hold off on "Delete all data" until it's live.** Fixed the
   `ForeignKeyViolation` 500 on `DELETE /portfolio/reset?confirm=true` (root cause: `reset.py` never
   detached `llm_usage_events`'s FKs before deleting the tables it points to — see the dated entry
@@ -418,7 +455,13 @@ deployment (browser + direct API calls), not just "keys are set":**
    (document upload) deliver more of the value it was built for, rather than adding new surface
    area.
 3. **Track-record & calibration engine** (§22.5) — a real deploy now exists, but it still needs weeks of live analysis history to have anything to calibrate against.
-4. **Testing debt** — populate `golden_documents`/`regression`, add `black` + `eslint.config.js`.
+4. **Testing debt** — populate `golden_documents`/`regression`, add `black`. (`eslint.config.js`
+   resolved 2026-09-15, ADR 0015.)
+7. **From ADR 0015 (guardrails), not built this pass:** a pre-reset export/backup step for
+   `DELETE /portfolio/reset` (it's already confirm-gated and scoped, just no automatic
+   "save a copy before wiping" safety net); GitHub branch-protection on `main` (Faiz's own repo
+   setting — turn on once CI has run clean a few times); promoting the CI dependency-audit job
+   from report-only to blocking once any existing advisories are triaged.
 5. ~~**Precious metals** (Phase 8)~~ — **built 2026-09-15**: `COMMODITY` asset class, dated lots, manual single-holding entry (now with a frontend form), gold-api.com spot pricing. Just needs redeploy + a live gold-api.com smoke test. Design/status in ADR 0011.
 6. ~~**Whisky collection** (Phase 8)~~ — **built 2026-09-15**: real Whiskybase CSV import (built from Faiz's own 26-bottle export), carried at cost basis via the new collectible-at-cost valuation fallback since no live pricing feed exists. Just needs redeploy. Design/status in ADR 0011.
 
@@ -441,6 +484,13 @@ deployment (browser + direct API calls), not just "keys are set":**
 
 ### Changelog
 
+- **2026-09-15 (Agentic coding & AI-safety guardrails):** Added three enforcement layers —
+  Claude Code hooks (`.claude/`), `.pre-commit-config.yaml`, `.github/workflows/ci.yml` +
+  `dependabot.yml` — plus root `CLAUDE.md` as the operational rulebook, addressing the recurring
+  uncommitted-work and status-drift problems in this history. Fixed the long-standing missing
+  `frontend/eslint.config.js` (+ missing plugin deps) along the way. Added `prompts/persona/v3.md`
+  with an explicit prompt-injection guardrail for the uploaded-document evidence path and made it
+  the default. See ADR 0015.
 - **2026-09-15 (Portfolio reset — `ForeignKeyViolation` on `llm_usage_events` — fixed):** Faiz's
   "Delete all data" 500'd in production because `reset.py` predates the LLM usage ledger (ADR 0013)
   and never detached its three optional FKs (`holding_id`, `analysis_run_id`, `holding_analysis_id`)

@@ -1,0 +1,57 @@
+# Second guardrail layer (see CLAUDE.md / docs/decisions/0015): enforced at
+# commit time regardless of which tool or person is committing, unlike the
+# Claude-Code-only hooks in .claude/. One-time setup from the repo root:
+#
+#   pip install pre-commit
+#   pre-commit install
+#
+# Run against the whole repo once after installing (existing files may not
+# be clean yet): pre-commit run --all-files
+
+repos:
+  # --- Generic hygiene ---
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ["--maxkb=2000"]
+      - id: check-case-conflict
+      - id: mixed-line-ending
+      # Belt-and-suspenders on top of .gitignore — refuses to let a .env
+      # (real secrets) slip into a commit even if gitignore is bypassed
+      # with `git add -f`.
+      - id: forbid-new-submodules
+
+  # --- Secret scanning (backstop for .claude/hooks/guard_edit.py, and the
+  # one that also covers plain `git commit` from an editor/terminal with no
+  # Claude Code hook active at all) ---
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      - id: gitleaks
+
+  # --- Backend: Python lint + format check (mypy runs in CI only — it's
+  # slow enough, and needs the venv's installed deps, that it doesn't
+  # belong in the fast pre-commit path) ---
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9
+    hooks:
+      - id: ruff
+        args: ["--fix"]
+        files: ^backend/
+      - id: ruff-format
+        files: ^backend/
+
+  # --- Frontend: lint via the repo's own eslint config/deps, not a pinned
+  # mirror, so it always matches what `npm run lint` actually runs ---
+  - repo: local
+    hooks:
+      - id: frontend-eslint
+        name: frontend eslint
+        entry: bash -c 'cd frontend && npm run lint'
+        language: system
+        files: ^frontend/src/.*\.(ts|tsx|js|jsx)$
+        pass_filenames: false
