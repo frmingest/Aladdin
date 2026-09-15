@@ -20,9 +20,11 @@ import type {
   PortfolioSnapshotDetail,
   PortfolioSnapshotSummary,
   PortfolioUploadResponse,
+  ResetScope,
   RowError,
 } from "../types/portfolio";
 import { num } from "../lib/num";
+import { WHISKY_COLLECTION, collectionForAssetClass } from "../components/CollectionFilter";
 
 /**
  * Preset "shapes" for the manual-entry form below — covers the coin types
@@ -330,6 +332,10 @@ function ManualHoldingsSection({
   const [savedId, setSavedId] = useState<string | null>(null);
   const [errorId, setErrorId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  // Collapsed by default — this table only matters when something looks
+  // wrong on the Dashboard (a bad buy price), so it shouldn't take up
+  // permanent space on a page whose main job is uploading/resetting data.
+  const [expanded, setExpanded] = useState(false);
 
   const refresh = () => {
     setLoading(true);
@@ -396,18 +402,35 @@ function ManualHoldingsSection({
 
   return (
     <section className="terminal-card">
-      <h2 className="terminal-card-title mb-2">Your manual entries</h2>
-      <p className="text-xs text-tertiary mb-3">
-        Every coin and collectible added above. If a buy price ends up looking wrong on the
-        Dashboard (e.g. an implausible Unrealized P&amp;L), check here first — the usual cause is
-        "Buy price currency" not matching "Holding currency" by mistake (noted below; sometimes
-        intentional, e.g. a US-dealer coin held/reported in NOK). Edit and save to fix.
-      </p>
-      {loading ? (
-        <p className="text-tertiary text-sm">Loading…</p>
-      ) : positions.length === 0 ? (
-        <p className="text-tertiary text-sm">No manual entries yet — add one above.</p>
-      ) : (
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        aria-expanded={expanded}
+        className="flex w-full items-center justify-between gap-2 text-left"
+      >
+        <h2 className="terminal-card-title mb-0 flex items-center gap-2">
+          Your manual entries
+          {!loading && (
+            <span className="text-xs text-tertiary font-normal">
+              ({positions.length})
+            </span>
+          )}
+        </h2>
+        <span className="text-tertiary text-xs">{expanded ? "▾ Hide" : "▸ Show"}</span>
+      </button>
+      {expanded && (
+        <>
+          <p className="text-xs text-tertiary mt-2 mb-3">
+            Every coin and collectible added above. If a buy price ends up looking wrong on the
+            Dashboard (e.g. an implausible Unrealized P&amp;L), check here first — the usual cause is
+            "Buy price currency" not matching "Holding currency" by mistake (noted below; sometimes
+            intentional, e.g. a US-dealer coin held/reported in NOK). Edit and save to fix.
+          </p>
+          {loading ? (
+            <p className="text-tertiary text-sm">Loading…</p>
+          ) : positions.length === 0 ? (
+            <p className="text-tertiary text-sm">No manual entries yet — add one above.</p>
+          ) : (
         <div className="terminal-table-wrapper">
           <table className="terminal-table">
             <thead>
@@ -536,6 +559,8 @@ function ManualHoldingsSection({
             </tbody>
           </table>
         </div>
+          )}
+        </>
       )}
     </section>
   );
@@ -713,8 +738,15 @@ function MarketTickersSection({ refreshSignal }: { refreshSignal: number }) {
     setLoading(true);
     listHoldings()
       .then((hs) => {
-        setHoldings(hs);
-        setDrafts(Object.fromEntries(hs.map((h) => [h.id, h.market_ticker ?? ""])));
+        // Whisky bottles have no market/exchange ticker to set — there's no
+        // live price feed for a whisky collection at all (ADR 0011; it's
+        // carried at cost basis instead), so listing them here would just be
+        // rows that can never be filled in. Securities and coins (which
+        // route through gold-api.com once given "XAU"/"XAG", set from the
+        // manual-entry preset) both belong here.
+        const pricable = hs.filter((h) => collectionForAssetClass(h.asset_class) !== WHISKY_COLLECTION);
+        setHoldings(pricable);
+        setDrafts(Object.fromEntries(pricable.map((h) => [h.id, h.market_ticker ?? ""])));
       })
       .catch(() => undefined)
       .finally(() => setLoading(false));
@@ -833,6 +865,118 @@ function MarketTickersSection({ refreshSignal }: { refreshSignal: number }) {
   );
 }
 
+const RESET_OPTIONS: { scope: ResetScope; label: string; description: string }[] = [
+  {
+    scope: "all",
+    label: "Everything",
+    description:
+      "Every holding, snapshot, and uploaded file — securities, coins, and whisky. Your accounts " +
+      "list is kept. Full reset back to an empty portfolio.",
+  },
+  {
+    scope: "securities",
+    label: "Securities only",
+    description:
+      "Just your Nordnet/brokerage holdings. Coin and whisky collections, and your snapshot " +
+      "history, are kept.",
+  },
+  {
+    scope: "commodity",
+    label: "Coin collection only",
+    description: "Just your manually-entered gold/silver coins. Securities and whisky are kept.",
+  },
+  {
+    scope: "whisky",
+    label: "Whisky collection only",
+    description: "Just your whisky bottles. Securities and the coin collection are kept.",
+  },
+];
+
+/**
+ * Popup selector behind the Portfolio tab's "Delete data" button — lets
+ * Faiz pick which collection to wipe (securities / coins / whisky / all)
+ * instead of the old single "Delete all data" button, which had no way to
+ * clear out just one collection (e.g. re-entering the whisky collection from
+ * scratch) without also nuking Nordnet securities that had nothing wrong
+ * with them. See backend/app/services/portfolio/reset.py for what each
+ * scope does and doesn't touch.
+ */
+function ResetDataDialog({
+  busy,
+  onCancel,
+  onConfirm,
+}: {
+  busy: boolean;
+  onCancel: () => void;
+  onConfirm: (scope: ResetScope) => void;
+}) {
+  const [scope, setScope] = useState<ResetScope>("all");
+  const selected = RESET_OPTIONS.find((o) => o.scope === scope) ?? RESET_OPTIONS[0];
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+      onClick={onCancel}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Delete portfolio data"
+        className="terminal-card w-full max-w-md"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className="terminal-card-title mb-2">Delete portfolio data</h2>
+        <p className="text-xs text-tertiary mb-3">
+          Choose what to wipe. This cannot be undone.
+        </p>
+        <div className="space-y-2 mb-4">
+          {RESET_OPTIONS.map((o) => (
+            <label
+              key={o.scope}
+              className={`flex items-start gap-2 p-2 rounded border cursor-pointer ${
+                scope === o.scope ? "border-accent bg-tertiary" : "border-primary hover:bg-tertiary"
+              }`}
+            >
+              <input
+                type="radio"
+                name="reset-scope"
+                className="mt-1"
+                checked={scope === o.scope}
+                onChange={() => setScope(o.scope)}
+              />
+              <span>
+                <span className="block text-sm text-primary font-medium">{o.label}</span>
+                <span className="block text-xs text-tertiary">{o.description}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+        <p className="text-xs text-warning mb-4">
+          This permanently deletes {selected.label.toLowerCase()} — it cannot be undone.
+        </p>
+        <div className="flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={busy}
+            className="btn-terminal text-xs px-3 py-1.5"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => onConfirm(scope)}
+            disabled={busy}
+            className="btn-terminal btn-terminal-danger text-xs px-3 py-1.5"
+          >
+            {busy ? "Deleting…" : `Delete ${selected.label.toLowerCase()}`}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function PortfolioUpload() {
   const [file, setFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -852,6 +996,7 @@ export default function PortfolioUpload() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [resetting, setResetting] = useState(false);
   const [resetMessage, setResetMessage] = useState<string | null>(null);
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [manualEntryVersion, setManualEntryVersion] = useState(0);
 
   const refreshAccounts = () => {
@@ -919,30 +1064,29 @@ export default function PortfolioUpload() {
     }
   }
 
-  async function handleResetAll() {
-    const confirmed = window.confirm(
-      "Delete ALL portfolio data? This permanently removes every holding, snapshot, uploaded file, " +
-        "and any analysis/thesis/valuation data derived from them. Your accounts list is kept. " +
-        "This cannot be undone.",
-    );
-    if (!confirmed) return;
-
+  async function handleReset(scope: ResetScope) {
     setResetting(true);
     setResetMessage(null);
     setErrorMessage(null);
     try {
-      const response = await resetPortfolio();
+      const response = await resetPortfolio(scope);
       setResult(null);
       setUploadStats(null);
       setWarnings([]);
       setRowErrors(null);
       setFile(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
+      const scopeLabel = RESET_OPTIONS.find((o) => o.scope === scope)?.label ?? scope;
       setResetMessage(
-        `Deleted ${response.holdings_deleted} holding(s), ${response.snapshots_deleted} snapshot(s), ` +
-          `and ${response.documents_deleted} uploaded file(s).`,
+        `Deleted ${scopeLabel.toLowerCase()} — ${response.holdings_deleted} holding(s), ` +
+          `${response.snapshots_deleted} snapshot(s), and ${response.documents_deleted} uploaded file(s).`,
       );
+      setResetDialogOpen(false);
       refreshSnapshots();
+      // A scoped delete can remove manual coin/whisky entries and/or
+      // holdings with a market ticker set — refresh both of those sections
+      // too, same as after adding/editing a manual entry.
+      setManualEntryVersion((v) => v + 1);
     } catch {
       setErrorMessage("Reset failed — could not reach the backend.");
     } finally {
@@ -966,22 +1110,30 @@ export default function PortfolioUpload() {
 
       <MarketTickersSection refreshSignal={manualEntryVersion} />
 
+      {resetDialogOpen && (
+        <ResetDataDialog
+          busy={resetting}
+          onCancel={() => setResetDialogOpen(false)}
+          onConfirm={handleReset}
+        />
+      )}
+
       <section className="terminal-card">
         <div className="terminal-card-header">
           <h2 className="terminal-card-title">Upload portfolio (CSV/XLSX)</h2>
           <button
             type="button"
-            onClick={handleResetAll}
+            onClick={() => setResetDialogOpen(true)}
             disabled={resetting || submitting}
             className="btn-terminal btn-terminal-danger text-xs px-3 py-1"
           >
-            {resetting ? "Deleting…" : "Delete all data"}
+            {resetting ? "Deleting…" : "Delete data"}
           </button>
         </div>
         <p className="text-xs text-tertiary mb-3">
           Each upload adds to your current portfolio — a ticker in the new file replaces its old row
           within the same account, and any position not in the new file is kept as-is. Use
-          "Delete all data" to start over from scratch.
+          "Delete data" to start over — you'll be asked which collection to wipe.
         </p>
         <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-3">
           <div>

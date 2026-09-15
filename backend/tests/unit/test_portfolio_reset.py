@@ -173,3 +173,107 @@ def test_reset_preserves_llm_usage_ledger_history_with_detached_fks(db):
     # Everything else about the historical usage row is untouched.
     assert usage_event.input_tokens == 1000
     assert usage_event.output_tokens == 500
+
+
+def _seed_three_collections(db) -> dict[str, Holding]:
+    """One securities holding (EQUITY), one coin (COMMODITY), one whisky
+    bottle (COLLECTIBLE), all merged into the same current snapshot — the
+    normal shape once a manual coin/whisky entry has been added (see
+    app.services.portfolio.manual_entry). Used to prove a scoped reset
+    touches only the collection it was asked to wipe."""
+    document = Document(
+        holding_id=None,
+        type="OTHER",
+        original_filename="p.csv",
+        mime_type="text/csv",
+        size_bytes=1,
+        storage_path="",
+        sha256="scoped-reset-test-sentinel",
+        status="VALIDATED",
+        quality_flags=[],
+    )
+    db.add(document)
+    db.flush()
+
+    snapshot = PortfolioSnapshot(
+        source_file_id=document.id, reporting_currency="NOK", status="VALIDATED", account_id=None
+    )
+    db.add(snapshot)
+    db.flush()
+
+    holdings = {
+        "securities": Holding(
+            ticker="VAR.OL", name="Vår Energi", asset_class="EQUITY", asset_class_raw="EQUITY",
+            trading_currency="NOK",
+        ),
+        "commodity": Holding(
+            ticker="GOLD-COIN-1", name="1 oz Gold Maple Leaf", asset_class="COMMODITY",
+            asset_class_raw="COMMODITY", trading_currency="NOK",
+        ),
+        "whisky": Holding(
+            ticker="WHISKY-BOTTLE-1", name="Macallan 12", asset_class="COLLECTIBLE",
+            asset_class_raw="COLLECTIBLE", trading_currency="NOK",
+        ),
+    }
+    for holding in holdings.values():
+        db.add(holding)
+    db.flush()
+
+    for holding in holdings.values():
+        db.add(PortfolioPosition(snapshot_id=snapshot.id, holding_id=holding.id, quantity=Decimal("1")))
+    db.commit()
+
+    return holdings
+
+
+@pytest.mark.parametrize(
+    "scope,expected_deleted,expected_kept",
+    [
+        ("securities", "securities", ("commodity", "whisky")),
+        ("commodity", "commodity", ("securities", "whisky")),
+        ("whisky", "whisky", ("securities", "commodity")),
+    ],
+)
+def test_scoped_reset_deletes_only_the_chosen_collection(db, scope, expected_deleted, expected_kept):
+    holdings = _seed_three_collections(db)
+    # Capture ids up front — reset_all_portfolio_data commits, which expires
+    # every ORM instance in this session, and re-reading .id off a deleted
+    # Holding after that would raise ObjectDeletedError rather than tell us
+    # anything about scoping.
+    ids = {name: h.id for name, h in holdings.items()}
+
+    result = reset_all_portfolio_data(db, scope=scope)
+
+    assert result.holdings_deleted == 1
+    assert result.snapshots_deleted == 0  # a partial reset never deletes snapshots
+    assert db.query(Holding).filter(Holding.id == ids[expected_deleted]).count() == 0
+    for kept in expected_kept:
+        assert db.query(Holding).filter(Holding.id == ids[kept]).count() == 1
+
+
+def test_scoped_reset_leaves_the_snapshot_and_its_other_positions_in_place(db):
+    holdings = _seed_three_collections(db)
+    ids = {name: h.id for name, h in holdings.items()}
+    snapshot_id = db.query(PortfolioSnapshot).one().id
+
+    reset_all_portfolio_data(db, scope="whisky")
+
+    snapshot = db.get(PortfolioSnapshot, snapshot_id)
+    assert db.query(PortfolioSnapshot).count() == 1
+    remaining_holding_ids = {p.holding_id for p in snapshot.positions}
+    assert ids["whisky"] not in remaining_holding_ids
+    assert ids["securities"] in remaining_holding_ids
+    assert ids["commodity"] in remaining_holding_ids
+
+
+def test_scoped_reset_with_no_matching_holdings_is_a_no_op(db):
+    _seed_three_collections(db)
+
+    result = reset_all_portfolio_data(db, scope="whisky")
+    assert result.holdings_deleted == 1
+
+    # Whisky is already gone — resetting it again deletes nothing more.
+    second = reset_all_portfolio_data(db, scope="whisky")
+    assert second.holdings_deleted == 0
+    assert second.snapshots_deleted == 0
+    assert second.documents_deleted == 0

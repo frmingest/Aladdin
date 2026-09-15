@@ -39,7 +39,7 @@ from app.services.portfolio.manual_entry import (
     list_manual_positions,
     update_manual_position,
 )
-from app.services.portfolio.reset import reset_all_portfolio_data
+from app.services.portfolio.reset import RESET_SCOPES, ResetScope, reset_all_portfolio_data
 
 router = APIRouter(prefix="/portfolio", tags=["portfolio"])
 
@@ -133,18 +133,37 @@ async def upload_portfolio(
 
 
 @router.delete("/reset", response_model=PortfolioResetResponse)
-def reset_portfolio(confirm: bool = False, db: Session = Depends(get_db)) -> PortfolioResetResponse:
-    """Wipes every holding, snapshot, and uploaded portfolio file, plus every
-    document/financial-fact/market-observation/thesis/valuation-case/
-    analysis-run/risk-snapshot derived from them — a full, irreversible
-    reset back to an empty portfolio. Requires `?confirm=true` so this can
-    never fire from an accidental DELETE with no query string."""
+def reset_portfolio(
+    confirm: bool = False, scope: ResetScope = "all", db: Session = Depends(get_db)
+) -> PortfolioResetResponse:
+    """Wipes holdings and everything derived from them — irreversible.
+    Requires `?confirm=true` so this can never fire from an accidental
+    DELETE with no query string.
+
+    `scope` (default `"all"`) picks what the Portfolio tab's "Delete data"
+    popup lets Faiz choose between:
+    - `"all"` — every holding, snapshot, and uploaded portfolio file, plus
+      every document/financial-fact/market-observation/thesis/valuation-case/
+      analysis-run/risk-snapshot derived from them. A full reset back to an
+      empty portfolio.
+    - `"securities"` / `"commodity"` / `"whisky"` — only the holdings in that
+      collection (same three-way split as the dashboard's Collections filter:
+      COMMODITY = coin collection, COLLECTIBLE = whisky collection, every
+      other asset_class = securities) and everything derived from just those
+      holdings. Snapshots and other collections are left untouched — see
+      app.services.portfolio.reset's module docstring for exactly what a
+      partial reset does and doesn't touch."""
     if not confirm:
         raise HTTPException(
             status_code=400,
-            detail="pass ?confirm=true to confirm this irreversible full reset",
+            detail="pass ?confirm=true to confirm this irreversible reset",
         )
-    result = reset_all_portfolio_data(db)
+    if scope not in RESET_SCOPES:
+        raise HTTPException(
+            status_code=422,
+            detail=f"scope must be one of {list(RESET_SCOPES)}, got {scope!r}",
+        )
+    result = reset_all_portfolio_data(db, scope=scope)
     return PortfolioResetResponse(
         holdings_deleted=result.holdings_deleted,
         snapshots_deleted=result.snapshots_deleted,

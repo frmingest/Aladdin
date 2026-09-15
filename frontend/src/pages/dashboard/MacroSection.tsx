@@ -9,7 +9,6 @@ import {
 } from "../../services/api";
 import type { MacroSnapshotOut, SectorResearchOut } from "../../types/research";
 import { num } from "../../lib/num";
-import MacroBarChart, { type MacroBarPoint } from "../../charts/MacroBarChart";
 import InfoTooltip from "../../components/InfoTooltip";
 
 // Plain-language stand-ins for the raw series_key values app.domain
@@ -35,6 +34,44 @@ const MACRO_SERIES_LABELS: Record<string, string> = {
 
 function macroSeriesLabel(seriesKey: string): string {
   return MACRO_SERIES_LABELS[seriesKey] ?? seriesKey.replace(/_/g, " ");
+}
+
+// Which plain-language group each series belongs to, so related figures sit
+// together instead of all mixed into one list. A single shared-axis chart
+// across every series here used to be actively misleading (a ~5% policy
+// rate, a ~104 dollar-index level, and a ~$78/barrel oil price all plotted
+// as bars on the same numeric axis, as if their lengths were comparable —
+// they aren't: see research/versions/v1.yaml and v2.yaml's own `unit` field,
+// which is "percent", "index", and "USD/barrel" respectively). Grouped,
+// unit-labeled numbers are the honest version of the same information.
+const MACRO_SERIES_GROUP: Record<string, string> = {
+  us_policy_rate: "Interest rates",
+  no_policy_rate: "Interest rates",
+  eurozone_policy_rate: "Interest rates",
+  us_headline_cpi_yoy: "Inflation",
+  eurozone_hicp_yoy: "Inflation",
+  china_cpi_yoy: "Inflation",
+  us_breakeven_10y: "Inflation",
+  us_real_yield_10y: "Yields & dollar",
+  us_dollar_index_broad: "Yields & dollar",
+  commodity_oil_wti: "Commodities",
+  commodity_oil_brent: "Commodities",
+};
+const MACRO_GROUP_ORDER = ["Interest rates", "Inflation", "Yields & dollar", "Commodities", "Other"];
+
+function macroSeriesGroup(seriesKey: string): string {
+  return MACRO_SERIES_GROUP[seriesKey] ?? "Other";
+}
+
+/** A raw macro `unit` string (from research/versions/*.yaml) formatted next
+ * to its value the way a person would actually write it — "5.33%" rather
+ * than "5.33 percent", "$78.20" rather than "78.20 USD/barrel". */
+function formatMacroValue(value: number, unit: string): string {
+  const rounded = value.toFixed(2);
+  if (unit === "percent") return `${rounded}%`;
+  if (unit === "USD/barrel") return `$${rounded}`;
+  if (unit === "index") return rounded;
+  return `${rounded} ${unit}`;
 }
 
 const SECTION_EXPLANATION =
@@ -103,9 +140,17 @@ export default function MacroSection() {
     }
   }
 
-  const macroBars: MacroBarPoint[] = (macro?.observations ?? [])
-    .map((o) => ({ series: o.series_key, label: macroSeriesLabel(o.series_key), value: num(o.value), unit: o.unit }))
-    .filter((o): o is MacroBarPoint => o.value !== null);
+  // Grouped by MACRO_SERIES_GROUP, in MACRO_GROUP_ORDER — each group is a
+  // small row of stat tiles (same stat-panel/stat-label/stat-value pattern
+  // as Portfolio composition above) rather than one chart mixing units.
+  const macroGroups: { group: string; points: { series: string; label: string; value: number; unit: string }[] }[] =
+    MACRO_GROUP_ORDER.map((group) => ({
+      group,
+      points: (macro?.observations ?? [])
+        .filter((o) => macroSeriesGroup(o.series_key) === group)
+        .map((o) => ({ series: o.series_key, label: macroSeriesLabel(o.series_key), value: num(o.value), unit: o.unit }))
+        .filter((o): o is { series: string; label: string; value: number; unit: string } => o.value !== null),
+    })).filter((g) => g.points.length > 0);
 
   return (
     <section className="terminal-card space-y-6">
@@ -128,7 +173,25 @@ export default function MacroSection() {
         {macro?.available && (
           <>
             {macro.as_of && <p className="text-xs text-disabled mb-2 font-mono">as of {new Date(macro.as_of).toLocaleString()}</p>}
-            <MacroBarChart data={macroBars} />
+            {macroGroups.length === 0 ? (
+              <p className="text-sm text-tertiary">No macro data on record yet.</p>
+            ) : (
+              <div className="space-y-4">
+                {macroGroups.map(({ group, points }) => (
+                  <div key={group}>
+                    <h4 className="text-xs font-medium text-tertiary uppercase tracking-wide mb-2">{group}</h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {points.map((p) => (
+                        <div key={p.series} className="stat-panel">
+                          <div className="stat-label">{p.label}</div>
+                          <div className="stat-value text-lg">{formatMacroValue(p.value, p.unit)}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
             {macro.narrative_items.length > 0 && (
               <ul className="mt-3 space-y-2">
                 {macro.narrative_items.slice(0, 5).map((item, i) => (

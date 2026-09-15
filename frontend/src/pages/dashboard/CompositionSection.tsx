@@ -3,8 +3,30 @@ import { ApiError, refreshSnapshotValuation } from "../../services/api";
 import type { HoldingValuationOut, PortfolioValuationOut } from "../../types/market_valuation";
 import { num } from "../../lib/num";
 import CompositionBreakdown from "../../charts/CompositionBreakdown";
+import AllocationBarChart from "../../charts/AllocationBarChart";
 import InfoTooltip from "../../components/InfoTooltip";
 import { ALL_COLLECTIONS, SECURITIES, collectionForAssetClass } from "../../components/CollectionFilter";
+
+// Plain-language labels for app.domain.asset_class.AssetClass's raw values —
+// same convention as MacroSection's MACRO_SERIES_LABELS. Used for "By asset
+// class" below, which replaced "By sector": most holdings here come from a
+// Nordnet export with no sector data at all (everything lands in
+// "Unclassified"), while asset_class is always populated and is a genuinely
+// more useful split of "what do I actually own" than sector ever was.
+const ASSET_CLASS_LABELS: Record<string, string> = {
+  EQUITY: "Equity",
+  ETF: "ETF",
+  FUND: "Fund",
+  CASH: "Cash",
+  BOND: "Bond",
+  COMMODITY: "Commodity (coins)",
+  COLLECTIBLE: "Collectible (whisky)",
+  OTHER: "Other",
+};
+
+function assetClassLabel(assetClass: string): string {
+  return ASSET_CLASS_LABELS[assetClass] ?? assetClass;
+}
 
 /** Turns a {name: absolute value} map into pre-sorted, top-N chart slices
  * expressed as a percentage of `total` — the shared "collapse the long tail
@@ -50,7 +72,7 @@ type Breakdown = {
   largestSingleNamePct: number | null;
   byCollectionValues: Record<string, number>;
   byHoldingSlices: { name: string; value: number }[];
-  sectorSlices: { name: string; value: number }[];
+  assetClassSlices: { name: string; value: number }[];
   currencySlices: { name: string; value: number }[];
 };
 
@@ -110,7 +132,7 @@ function buildBreakdown(holdings: HoldingValuationOut[], includedCollections: st
     byHoldingValues[key] = (byHoldingValues[key] ?? 0) + v;
   }
 
-  const sectorValues = groupSum(included, (h) => h.sector || "Unclassified");
+  const assetClassValues = groupSum(included, (h) => assetClassLabel(h.asset_class));
   const currencyValues = groupSum(included, (h) => h.trading_currency);
   const byCollectionValues = groupSum(included, (h) => collectionForAssetClass(h.asset_class));
 
@@ -120,7 +142,7 @@ function buildBreakdown(holdings: HoldingValuationOut[], includedCollections: st
     largestSingleNamePct,
     byCollectionValues,
     byHoldingSlices: toSlices(byHoldingValues, totalMarketValue),
-    sectorSlices: toSlices(sectorValues, totalMarketValue),
+    assetClassSlices: toSlices(assetClassValues, totalMarketValue),
     currencySlices: toSlices(currencyValues, totalMarketValue),
   };
 }
@@ -168,6 +190,21 @@ export default function CompositionSection({
     setError(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snapshotId, accountIds.join(",")]);
+
+  // Auto-load once on page load, same manual-trigger cost (§2.7 — a live
+  // provider call) as the "Load valuation" button it replaces the click on —
+  // it's just fired automatically the first time this section mounts,
+  // instead of waiting for Faiz to click. Later account/snapshot changes
+  // still require the explicit button above (isFirstRun's effect just above
+  // this one clears the stale numbers instead of silently re-fetching them).
+  const hasAutoLoaded = useRef(false);
+
+  useEffect(() => {
+    if (hasAutoLoaded.current) return;
+    hasAutoLoaded.current = true;
+    handleRefresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function handleRefresh() {
     setLoading(true);
@@ -278,12 +315,12 @@ export default function CompositionSection({
               <CompositionBreakdown data={view.byHoldingSlices} />
             </div>
             <div>
-              <h3 className="text-sm font-medium text-secondary mb-1">By sector</h3>
-              <CompositionBreakdown data={view.sectorSlices} />
+              <h3 className="text-sm font-medium text-secondary mb-1">By asset class</h3>
+              <CompositionBreakdown data={view.assetClassSlices} />
             </div>
             <div>
               <h3 className="text-sm font-medium text-secondary mb-1">By currency</h3>
-              <CompositionBreakdown data={view.currencySlices} />
+              <AllocationBarChart data={view.currencySlices} />
             </div>
           </div>
         </>

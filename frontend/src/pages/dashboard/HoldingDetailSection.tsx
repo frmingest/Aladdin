@@ -13,6 +13,7 @@ import {
   updateThesis,
 } from "../../services/api";
 import type { Holding } from "../../types/portfolio";
+import { WHISKY_COLLECTION, collectionForAssetClass } from "../../components/CollectionFilter";
 import type { ConfidenceLevel, HoldingAnalysisDetail, HoldingAnalysisSummary } from "../../types/analysis";
 import type { InvalidationSignalOut, ThesisCreate, ThesisOut } from "../../types/thesis";
 import type { ValuationCaseCreate, ValuationCaseOut, ValuationDefaults } from "../../types/dcf";
@@ -622,11 +623,16 @@ export default function HoldingDetailSection({ accountIds }: { accountIds: strin
   useEffect(() => {
     listHoldings(accountIds)
       .then((list) => {
-        setHoldings(list);
+        // Whisky bottles have no AI analysis, thesis, or DCF valuation to
+        // drill into here (ADR 0011 — no financial statements exist for a
+        // bottle) — leaving them out of the picker avoids a selection that
+        // can only ever show empty "No analyses/thesis/cases" sections.
+        const analyzable = list.filter((h) => collectionForAssetClass(h.asset_class) !== WHISKY_COLLECTION);
+        setHoldings(analyzable);
         // Keep the current selection if it's still in the filtered list;
         // otherwise fall back to the first holding (or none).
         setHoldingId((current) =>
-          list.some((h) => h.id === current) ? current : (list[0]?.id ?? ""),
+          analyzable.some((h) => h.id === current) ? current : (analyzable[0]?.id ?? ""),
         );
       })
       .catch(() => undefined);

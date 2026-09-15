@@ -137,4 +137,11 @@ export type PortfolioResetResponse = {
   documents_deleted: number;
 };
 
+// What the Portfolio tab's "Delete data" popup lets Faiz choose between —
+// see backend/app/services/portfolio/reset.py. "all" is the original
+// irreversible full wipe; the other three delete only that one collection
+// (same three-way split as CollectionFilter's SECURITIES/COIN_COLLECTION/
+// WHISKY_COLLECTION) and leave snapshots and the other collections in place.
+export type ResetScope = "all" | "securities" | "commodity" | "whisky";
+
 export type RowError = { row: number; message: string };

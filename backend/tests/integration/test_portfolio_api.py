@@ -159,6 +159,43 @@ def test_reset_wipes_all_portfolio_data(client):
     assert fresh.json()["carried_forward_position_count"] == 0
 
 
+def test_reset_rejects_an_unknown_scope(client):
+    response = client.delete("/portfolio/reset?confirm=true&scope=bogus")
+    assert response.status_code == 422
+
+
+def test_scoped_reset_wipes_only_the_chosen_collection(client):
+    """The Portfolio tab's "Delete data" popup lets Faiz wipe just one
+    collection (securities/commodity/whisky) instead of everything — see
+    app.services.portfolio.reset."""
+    client.post("/portfolio/upload", files={"file": ("portfolio.csv", VALID_CSV, "text/csv")})
+    coin = client.post(
+        "/portfolio/holdings/manual",
+        json={
+            "ticker": "GOLD-COIN-TEST",
+            "name": "1 oz Gold Maple Leaf",
+            "asset_class": "COMMODITY",
+            "trading_currency": "NOK",
+            "quantity": "1",
+            "market_ticker": "XAU",
+        },
+    )
+    assert coin.status_code == 201, coin.text
+
+    response = client.delete("/portfolio/reset?confirm=true&scope=commodity")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["holdings_deleted"] == 1
+    assert body["snapshots_deleted"] == 0  # partial reset keeps the snapshot
+
+    remaining_tickers = {h["ticker"] for h in client.get("/portfolio/holdings").json()}
+    assert remaining_tickers == {"VAR.OL", "EQNR.OL"}
+    # Snapshots themselves are untouched by a partial reset — the manual add
+    # above already carried the upload snapshot forward onto a second one
+    # (see app.services.portfolio.manual_entry), and both are kept.
+    assert len(client.get("/portfolio/snapshots").json()) == 2
+
+
 # --- Regression: holdings.ticker used to be varchar(32) (Postgres-enforced,
 # not caught by SQLite tests) — a Nordnet export with a long fund name as its
 # instrument-name-as-ticker (see app.services.portfolio.parser) blew straight

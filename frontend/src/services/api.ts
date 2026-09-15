@@ -21,6 +21,7 @@ import type {
   PortfolioSnapshotDetail,
   PortfolioSnapshotSummary,
   PortfolioUploadResponse,
+  ResetScope,
 } from "../types/portfolio";
 import type { DocumentDetail, DocumentSummary, DocumentUploadResponse } from "../types/document";
 import type { AnalysisRunDetail, HoldingAnalysisDetail, HoldingAnalysisSummary } from "../types/analysis";
@@ -163,10 +164,13 @@ export function getSnapshot(id: string): Promise<PortfolioSnapshotDetail> {
   return apiFetch(`/portfolio/snapshots/${id}`);
 }
 
-// Irreversible: wipes every holding, snapshot, uploaded file, and everything
-// derived from them (see backend/app/services/portfolio/reset.py).
-export function resetPortfolio(): Promise<PortfolioResetResponse> {
-  return apiFetch("/portfolio/reset?confirm=true", { method: "DELETE" });
+// Irreversible: wipes holdings and everything derived from them (see
+// backend/app/services/portfolio/reset.py). `scope` (default "all") picks
+// what the "Delete data" popup lets Faiz choose between — "all" wipes every
+// holding/snapshot/uploaded file; "securities"/"commodity"/"whisky" wipes
+// only that collection and leaves snapshots/other collections in place.
+export function resetPortfolio(scope: ResetScope = "all"): Promise<PortfolioResetResponse> {
+  return apiFetch(`/portfolio/reset?confirm=true&scope=${scope}`, { method: "DELETE" });
 }
 
 export function listDocuments(holdingId?: string): Promise<DocumentSummary[]> {

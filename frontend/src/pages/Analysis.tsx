@@ -56,34 +56,39 @@ function HoldingAnalysisPanel({ summary }: { summary: HoldingAnalysisSummary }) 
 
 /**
  * Phase 3 — AI analysis (docs/architecture.md §26). Bare-bones ahead of the
- * real Phase 6 dashboard: pick a snapshot, run the two-pass Buffett/Munger
- * analysis over it, read the results and memo. No polling/background jobs —
+ * real Phase 6 dashboard: run the two-pass Buffett/Munger analysis over the
+ * current portfolio, read the results and memo. No polling/background jobs —
  * the run happens synchronously within the request (see
  * app.services.analysis.runner's docstring for why).
+ *
+ * Always runs against the latest snapshot — uploads/manual entries merge
+ * forward onto it (see PortfolioUpload/manual_entry), so it's always "what I
+ * currently own", the only thing Faiz actually wants analyzed. A snapshot
+ * picker here would let this drift from that and imply older uploads are a
+ * meaningful thing to re-analyze, which they aren't (see Dashboard.tsx's
+ * "Snapshot history" side-trip for the one place that distinction matters).
  */
 export default function Analysis() {
   const [snapshots, setSnapshots] = useState<PortfolioSnapshotSummary[]>([]);
-  const [snapshotId, setSnapshotId] = useState<string>("");
   const [running, setRunning] = useState(false);
   const [run, setRun] = useState<AnalysisRunDetail | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     listSnapshots()
-      .then((list) => {
-        setSnapshots(list);
-        if (list.length > 0) setSnapshotId(list[0].id);
-      })
+      .then(setSnapshots)
       .catch(() => undefined);
   }, []);
 
+  const latest = snapshots[0]; // listSnapshots is newest-first (backend order_by desc)
+
   async function handleRun() {
-    if (!snapshotId) return;
+    if (!latest) return;
     setRunning(true);
     setErrorMessage(null);
     setRun(null);
     try {
-      const result = await createAnalysisRun(snapshotId);
+      const result = await createAnalysisRun(latest.id);
       setRun(result);
     } catch (err) {
       setErrorMessage(err instanceof ApiError ? String(err.detail ?? err.message) : "Analysis run failed.");
@@ -98,32 +103,26 @@ export default function Analysis() {
         <h2 className="terminal-card-title mb-3">Run analysis</h2>
         <div className="flex flex-wrap items-end gap-3">
           <div>
-            <label className="label-terminal">Portfolio snapshot</label>
-            <select
-              value={snapshotId}
-              onChange={(e) => setSnapshotId(e.target.value)}
-              className="input-terminal min-w-[280px]"
-            >
-              {snapshots.length === 0 && <option value="">No snapshots uploaded yet</option>}
-              {snapshots.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {new Date(s.uploaded_at).toLocaleString()} — {s.position_count} position(s)
-                </option>
-              ))}
-            </select>
+            <div className="label-terminal">Portfolio snapshot</div>
+            <p className="text-sm text-primary font-mono">
+              {latest
+                ? `${new Date(latest.uploaded_at).toLocaleString()} — ${latest.position_count} position(s)`
+                : "No snapshots uploaded yet"}
+            </p>
           </div>
           <button
             onClick={handleRun}
-            disabled={!snapshotId || running}
+            disabled={!latest || running}
             className="btn-terminal btn-terminal-primary"
           >
             {running ? "Analyzing…" : "Run analysis"}
           </button>
         </div>
         <p className="text-xs text-tertiary mt-2">
-          Analyzes every holding in the snapshot that has at least one uploaded document or
-          financial fact on record. Each run is a two-pass Buffett/Munger assessment — an
-          independent blind read, then reconciliation against any notes on that holding's position.
+          Always runs against your current portfolio (the latest snapshot). Analyzes every holding
+          in it that has at least one uploaded document or financial fact on record. Each run is a
+          two-pass Buffett/Munger assessment — an independent blind read, then reconciliation
+          against any notes on that holding's position.
         </p>
 
         {errorMessage && <p className="text-negative text-sm mt-3">{errorMessage}</p>}

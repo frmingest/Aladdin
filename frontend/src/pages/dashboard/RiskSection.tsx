@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ApiError, createPortfolioRiskSnapshot, listPortfolioRiskSnapshots } from "../../services/api";
 import type { PortfolioRiskSnapshotOut } from "../../types/portfolio_risk";
 import { num } from "../../lib/num";
@@ -80,11 +80,26 @@ export default function RiskSection({
   const [snapshot, setSnapshot] = useState<PortfolioRiskSnapshotOut | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Reading the latest existing snapshot is free (§2.7), but computing a new
+  // one re-values the portfolio and pulls historical prices for correlation,
+  // so it's only auto-triggered once, the first time this section loads and
+  // finds nothing on record yet — same "load by default" ask as Portfolio
+  // composition's auto-refresh above. A later account/snapshot filter change
+  // still just reads whatever already exists for that scope rather than
+  // silently kicking off another paid computation.
+  const hasAutoComputed = useRef(false);
 
   useEffect(() => {
     setSnapshot(null);
     listPortfolioRiskSnapshots(snapshotId)
-      .then((rows) => setSnapshot(rows.find((r) => scopeMatches(r.account_ids, accountIds)) ?? null))
+      .then((rows) => {
+        const existing = rows.find((r) => scopeMatches(r.account_ids, accountIds)) ?? null;
+        setSnapshot(existing);
+        if (!existing && !hasAutoComputed.current) {
+          hasAutoComputed.current = true;
+          handleCompute();
+        }
+      })
       .catch(() => undefined);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snapshotId, accountIds.join(",")]);
