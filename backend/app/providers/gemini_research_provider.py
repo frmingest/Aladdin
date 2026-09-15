@@ -40,6 +40,13 @@ from the vendor's own `usage_metadata` right after a call returns — even
 when the call later turns out to have no usable grounding, since the token
 cost was still incurred — so app.services.research can persist a usage-
 ledger row without this interface's return type needing to carry it.
+
+Every call is paced and retried through app.providers.gemini_retry (added
+2026-09-15) — this provider shares the same Google AI Studio account/key
+(and therefore the same requests-per-minute budget) as
+app.providers.google_ai_studio_provider, so a research call now backs off
+on the same transient 503/429 and is throttled against the same process-
+wide pacing clock, not a separate one.
 """
 
 import time
@@ -51,6 +58,7 @@ from google.genai import types
 
 from app.config.paths import PROMPTS_DIR
 from app.providers.base import LLMUsageMetrics, ResearchItem, ResearchProvider, ResearchUnavailableError
+from app.providers.gemini_retry import call_with_retry
 
 _MACRO_SOURCE_TYPE = "macro_news"
 _SECTOR_SOURCE_TYPE = "sector_research"
@@ -64,6 +72,7 @@ class GeminiResearchProvider(ResearchProvider):
         prompt_version: str,
         max_output_tokens: int,
         temperature: float,
+        rpm: int = 0,
     ):
         if not api_key:
             raise ResearchUnavailableError(
@@ -74,6 +83,9 @@ class GeminiResearchProvider(ResearchProvider):
         self._prompt_version = prompt_version
         self._max_output_tokens = max_output_tokens
         self._temperature = temperature
+        # 0 (default) disables pacing — see GoogleAIStudioProvider's __init__
+        # for why; app.providers.factory passes the real rpm in production.
+        self._rpm = rpm
 
     def get_macro_snapshot(self) -> list[ResearchItem]:
         prompt = _load_research_prompt("macro", self._prompt_version)
@@ -89,16 +101,20 @@ class GeminiResearchProvider(ResearchProvider):
         self.last_usage = None
         started = time.monotonic()
         try:
-            response = self._client.models.generate_content(
-                model=self._model,
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    tools=[types.Tool(google_search=types.GoogleSearch())],
-                    max_output_tokens=self._max_output_tokens,
-                    temperature=self._temperature,
+            response = call_with_retry(
+                lambda: self._client.models.generate_content(
+                    model=self._model,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        tools=[types.Tool(google_search=types.GoogleSearch())],
+                        max_output_tokens=self._max_output_tokens,
+                        temperature=self._temperature,
+                    ),
                 ),
+                rpm=self._rpm,
             )
-        except Exception as exc:  # noqa: BLE001 — vendor-SDK failures never leak past this boundary (§28 rule 8)
+        except Exception as exc:  # noqa: BLE001 — vendor-SDK failures never leak past this boundary (§28 rule 8).
+            # call_with_retry already retried the transient cases (503/429).
             raise ResearchUnavailableError(f"Gemini grounded search call failed: {exc}") from exc
 
         latency_ms = (time.monotonic() - started) * 1000

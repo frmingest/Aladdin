@@ -79,6 +79,9 @@ def get_llm_provider() -> LLMProvider:
             model=settings.llm_model_name,
             max_output_tokens=settings.llm_max_output_tokens,
             temperature=settings.llm_temperature,
+            # Paces + retries every call against the free tier's RPM cap
+            # (app.providers.gemini_retry, 2026-09-15) — see settings.
+            rpm=settings.llm_rate_limit_rpm,
         )
     if settings.llm_provider == "stub":
         return StubLLMProvider()
@@ -110,6 +113,9 @@ def get_research_provider() -> ResearchProvider:
             prompt_version=settings.active_research_prompt_version,
             max_output_tokens=settings.llm_max_output_tokens,
             temperature=settings.llm_temperature,
+            # Shares the analysis provider's account/budget — same pacing
+            # clock, same rpm setting (app.providers.gemini_retry).
+            rpm=settings.llm_rate_limit_rpm,
         )
     if settings.research_provider == "stub":
         return StubResearchProvider()
