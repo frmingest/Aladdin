@@ -14,9 +14,69 @@ quality) still just planned.
 **Git — resolved, no longer "unconfirmed":** commits have been happening normally throughout this
 project's history and are almost entirely pushed. As of this pass, local `main` is exactly 1 commit
 ahead of `origin/main` (`git push` needed) — **plus** everything this 2026-09-15 pass wrote (Phase 8
-in full + two Phase 7 bug fixes, listed below) is sitting as an uncommitted working-tree change,
-since `device_bash` can't run `git` from this session. **Faiz: please `git add`/`commit`/`push` the
-current working tree** — see "Manual to-do" for the exact file list.
+in full + three bug fixes — two Phase 7, plus the reset FK fix just below — listed below) is sitting
+as an uncommitted working-tree change, since `device_bash` can't run `git` from this session. **Faiz:
+please `git add`/`commit`/`push` the current working tree** — see "Manual to-do" for the exact file
+list.
+
+**2026-09-15 (Portfolio reset — `DELETE /portfolio/reset?confirm=true` 500'd with a ForeignKeyViolation — fixed):**
+Faiz tried "Delete all data" and got a 500 in production: `psycopg2.errors.ForeignKeyViolation` on
+`llm_usage_events_holding_analysis_id_fkey` — Postgres refused to delete a `holding_analyses` row
+that an `llm_usage_events` row still pointed to.
+- **Root cause**: `app/services/portfolio/reset.py` predates the LLM usage ledger (ADR 0013). Every
+  other optional FK into the portfolio graph (`research_items.holding_id`) is detached — set to NULL
+  — before its target table is deleted; `llm_usage_events`'s three optional FKs (`holding_id`,
+  `analysis_run_id`, `holding_analysis_id`) never got the same treatment when the ledger was added,
+  so the moment any usage-ledger row referenced a holding/analysis/holding-analysis, a reset 500'd.
+- **Fix**: added the same "detach defensively" step for `llm_usage_events`'s three FKs, right before
+  `HoldingAnalysis`/`AnalysisRun`/`Holding` are deleted. The usage ledger rows themselves are kept,
+  not deleted — it's the free-tier quota/rate-limit history (ADR 0013), independent of which holdings
+  currently exist — only their now-dangling references are cleared.
+- **Verified**: new `tests/unit/test_portfolio_reset.py`, which — unlike the rest of the suite —
+  turns on real SQLite foreign-key enforcement (off by default) specifically to reproduce this as a
+  genuine FK-ordering bug instead of letting SQLite's default leniency hide it. Confirmed it fails
+  with the exact production error against the pre-fix code, and passes against the fix. Full relevant
+  suite: 51/51 passing, `ruff check` clean.
+- **Not yet deployed** — needs a Railway redeploy. **Faiz: don't retry "Delete all data" against
+  production until this redeploys** — it will keep 500ing (harmlessly — nothing partial gets
+  committed, Postgres rolls the whole transaction back) until then.
+- Files changed: `backend/app/services/portfolio/reset.py`,
+  `backend/tests/unit/test_portfolio_reset.py` (new).
+
+**2026-09-15 (Securities still showing 0 after the fix above was deployed — confirmed live, needs a
+data re-upload, not more code):** Faiz redeployed the fix just below and asked "still same?" —
+verified directly against the live Railway deployment (browser). Portfolio composition still showed
+Securities at 0 NOK / 0.0%, Coin collection and Whisky collection correct.
+
+The deployed fix is working exactly as intended — it just can't retroactively repair a snapshot
+that was *already* corrupted before it shipped. Checked the actual `GET /portfolio/snapshots`
+history on the Portfolio tab:
+
+| Uploaded | Positions | What it is |
+|---|---|---|
+| 9/15, 7:21:02 AM (**current**) | 29 | 3 coins + 26 whisky bottles — **zero Securities positions** |
+| 9/15, 7:14:59 AM | 3 | The old isolated "manual entries" snapshot (coins only — the original bug) |
+| 9/14, 6:54:37 AM | 7 | The last snapshot with all 7 Securities positions intact |
+
+What happened: the coin manual entries forked off the isolated 3-position snapshot (the original
+bug, above). The **Whiskybase CSV import then ran on top of that already-broken snapshot** —
+`ingestion.py` correctly carried forward "whichever snapshot was newest" at that moment, which by
+then was the broken 3-coin one, not the 7-Securities one — producing today's 29-position "current"
+snapshot with coins + whisky but genuinely zero Securities positions. That merge happened *before*
+today's fix was deployed, so there was nothing left for the fix to prevent going forward, but the
+damage to the current snapshot was already baked in by the time it shipped.
+
+**Not data loss** — all 7 Securities holdings (Alfred Berg, Heimdal Høyrente Pluss, L&G Gold Mining
+ETF, Salmon Evolution, Vår Energi, Xetra-Gold, Xtrackers Europe Defence Tech) still exist as
+`Holding` rows (visible on the Portfolio tab's Market data tickers table, all 36 holdings listed);
+they simply have no `PortfolioPosition` row in the current snapshot anymore.
+
+**The fix is a data step, not a code change**: re-upload the Nordnet brokerage export via the
+Portfolio tab's "Upload portfolio (CSV/XLSX)" section, same "Unassigned" account every previous
+upload used. Uploads merge forward by (account, ticker) (`ingestion.py`) — the 7 Securities tickers
+get fresh position rows added onto the current snapshot, while the 3 coins and 26 whisky bottles
+(absent from that file) simply carry forward untouched, exactly as designed. **Faiz: please
+re-upload your Nordnet export** — see "Manual to-do."
 
 **2026-09-15 (Securities missing from Portfolio composition after a manual entry — fixed):** Faiz
 reported that after the Composition split shipped (entry just below), Coin collection and Whisky
@@ -270,12 +330,22 @@ deployment (browser + direct API calls), not just "keys are set":**
 
 ## Manual to-do for Faiz
 
-- **New this pass — redeploy needed.** Fixed the bug where Securities dropped out of Portfolio
-  composition as soon as a coin/whisky manual entry existed (root cause: manual entries lived in an
-  isolated snapshot, not the current merged one — see the dated entry above). No migration, code-only
-  fix in `backend/app/services/portfolio/manual_entry.py` — needs a Railway redeploy to take effect.
-  Your existing coin/whisky/securities data is untouched; this only changes how the next manual
-  add/edit is stored.
+- **New this pass — redeploy needed, and hold off on "Delete all data" until it's live.** Fixed the
+  `ForeignKeyViolation` 500 on `DELETE /portfolio/reset?confirm=true` (root cause: `reset.py` never
+  detached `llm_usage_events`'s FKs before deleting the tables it points to — see the dated entry
+  above). Code-only fix, no migration, in `backend/app/services/portfolio/reset.py` — needs a Railway
+  redeploy to take effect. It will keep 500ing (harmlessly) if you retry "Delete all data" before
+  that redeploy lands.
+- **New this pass — re-upload your Nordnet export to get Securities back.** The Securities-missing
+  fix stops the bug from happening again, but the *current* snapshot was already damaged by it before
+  the fix shipped, so Securities are still showing 0 on the Dashboard even after redeploying. Your
+  Securities data isn't lost (all 36 holdings still exist) — just re-upload the Nordnet CSV/XLSX
+  export via the Portfolio tab and it will merge back in alongside the coin/whisky positions. See the
+  dated entry above for the full snapshot-history explanation.
+- ~~**Redeploy needed.** Fixed the bug where Securities dropped out of Portfolio composition as soon
+  as a coin/whisky manual entry existed~~ — **redeployed and confirmed live**; see the two dated
+  entries above for what the redeploy did and did not fix (code fixed, data needs the re-upload just
+  above).
 - **New this pass — check the coin entries' buy prices.** The coin+whisky snapshot's Unrealized P&L
   (-653,688.51 NOK) is several times larger in magnitude than Total value (115,422.65 NOK) and
   negative — the arithmetic is correct, but this pattern usually means a cost basis was entered
@@ -371,6 +441,21 @@ deployment (browser + direct API calls), not just "keys are set":**
 
 ### Changelog
 
+- **2026-09-15 (Portfolio reset — `ForeignKeyViolation` on `llm_usage_events` — fixed):** Faiz's
+  "Delete all data" 500'd in production because `reset.py` predates the LLM usage ledger (ADR 0013)
+  and never detached its three optional FKs (`holding_id`, `analysis_run_id`, `holding_analysis_id`)
+  before deleting the tables they point to. Fixed by nulling those FKs first, the same "detach
+  defensively" pattern already used for `research_items.holding_id`; the ledger rows themselves are
+  kept, not deleted. New `tests/unit/test_portfolio_reset.py` turns on real SQLite FK enforcement
+  (off by default in the rest of the suite) specifically to catch this class of bug — confirmed it
+  reproduces the exact production error pre-fix and passes post-fix. See the dated entry above for
+  full detail.
+- **2026-09-15 (Securities still showing 0 after the fix below was deployed — root-caused, needs a
+  data re-upload):** Follow-up check after the manual-entry fix (entry below) was redeployed —
+  confirmed the code fix is live and working, but the *current* snapshot was already corrupted by the
+  bug before the fix shipped (snapshot history: 29 → 3 → 7 positions), so Securities won't reappear
+  until Faiz re-uploads his Nordnet export to merge them back onto the now-fixed snapshot. Data
+  itself isn't lost — all 36 holdings still exist. See the dated entry above for full detail.
 - **2026-09-15 (Securities missing from Portfolio composition after a manual entry — fixed):** A
   manual coin/whisky add used to land in one isolated, dedicated "manual entries" snapshot instead
   of carrying forward the current brokerage-upload snapshot — so the moment one existed, the

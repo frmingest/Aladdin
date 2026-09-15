@@ -8,7 +8,17 @@ portfolio risk snapshots.
 Deliberately NOT touched: research_runs / research_items / macro_observations
 / fx_observations. Those are global macro/sector/FX data (§9), not scoped to
 a specific holding or upload — a portfolio reset shouldn't force re-fetching
-macro research that has nothing to do with which holdings you own.
+macro research that has nothing to do with which holdings you own. Same
+reasoning for llm_usage_events (ADR 0013) — it's the free-tier quota/rate-
+limit ledger, a record of API calls made *today* independent of which
+holdings currently exist, so a reset detaches it (nulls its optional
+holding_id/analysis_run_id/holding_analysis_id) rather than deleting it, the
+same "detach defensively" pattern already used for research_items.holding_id
+below. Without that detach, deleting Holding/AnalysisRun/HoldingAnalysis
+below hits a ForeignKeyViolation the moment any usage event references one
+of them (llm_usage_events.holding_analysis_id -> holding_analyses.id, etc.)
+— this was missed when the usage ledger was added and reset.py wasn't
+updated to know about it.
 
 This is bulk `Query.delete()`, which bypasses SQLAlchemy's ORM-relationship
 `cascade="all, delete-orphan"` (that only fires on `session.delete(obj)`
@@ -24,6 +34,7 @@ from app.models.analysis import AnalysisRun, EvidenceReference, FactorAssessment
 from app.models.document import Document, DocumentChunk, DocumentPage
 from app.models.financial_fact import FinancialLineItem
 from app.models.holding import Holding
+from app.models.llm_usage import LLMUsageEvent
 from app.models.market_data import MarketObservation
 from app.models.portfolio import PortfolioPosition, PortfolioSnapshot
 from app.models.portfolio_risk import PortfolioRiskSnapshot
@@ -52,6 +63,18 @@ def reset_all_portfolio_data(db: Session) -> PortfolioResetResult:
     # than assume that stays true and hit an FK violation on Holding below.
     db.query(ResearchItem).filter(ResearchItem.holding_id.isnot(None)).update(
         {ResearchItem.holding_id: None}, synchronize_session=False
+    )
+
+    # llm_usage_events (ADR 0013) is kept — see module docstring — but its
+    # three optional FKs must be detached first or deleting Holding/
+    # AnalysisRun/HoldingAnalysis below hits a ForeignKeyViolation.
+    db.query(LLMUsageEvent).update(
+        {
+            LLMUsageEvent.holding_id: None,
+            LLMUsageEvent.analysis_run_id: None,
+            LLMUsageEvent.holding_analysis_id: None,
+        },
+        synchronize_session=False,
     )
 
     # Leaves of the holding_analyses / holdings / documents / snapshots trees.
