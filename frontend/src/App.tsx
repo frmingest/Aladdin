@@ -39,9 +39,9 @@ function BackendStatusBadge() {
  * dependency yet (§2.9: avoid premature complexity) — plain tab state is
  * enough for four pages.
  *
- * Visual design: the finance-terminal design system shared with the CWO app
- * (src/styles/finance-terminal-design-system.css) — same tokens, same
- * terminal-nav/terminal-card/terminal-table component classes.
+ * Visual design: Aladdin's own Bloomberg-terminal design system
+ * (src/styles/bloomberg-terminal-design-system.css) — black/amber, sharp
+ * corners, terminal-nav/terminal-card/terminal-table component classes.
  */
 export default function App() {
   const [tab, setTab] = useState<Tab>("dashboard");
@@ -55,7 +55,7 @@ export default function App() {
               className="font-mono font-bold text-[15px]"
               style={{
                 letterSpacing: "2.5px",
-                background: "linear-gradient(135deg, #00D4FF 0%, #A78BFA 100%)",
+                background: "linear-gradient(135deg, #FF8C00 0%, #E8B84B 100%)",
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
                 backgroundClip: "text",

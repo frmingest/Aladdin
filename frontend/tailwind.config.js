@@ -4,9 +4,9 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        display: ["IBM Plex Sans", "-apple-system", "system-ui", "sans-serif"],
-        body: ["IBM Plex Sans", "-apple-system", "system-ui", "sans-serif"],
-        mono: ["IBM Plex Mono", "SF Mono", "Monaco", "Consolas", "monospace"],
+        display: ["Inter", "-apple-system", "system-ui", "sans-serif"],
+        body: ["Inter", "-apple-system", "system-ui", "sans-serif"],
+        mono: ["JetBrains Mono", "SF Mono", "Consolas", "Menlo", "monospace"],
       },
     },
   },

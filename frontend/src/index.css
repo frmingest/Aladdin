@@ -1,8 +1,8 @@
-/* Finance-terminal design system — shared visual language with the CWO app
-   (same tokens, same component classes). Imported before Tailwind so its
-   :root tokens, resets, and typography establish the base that Tailwind's
-   utility layer builds on top of. */
-@import "./styles/finance-terminal-design-system.css";
+/* Aladdin's Bloomberg-terminal design system — its own identity (black/amber,
+   sharp corners), distinct from the CWO app's navy/cyan theme. Imported
+   before Tailwind so its :root tokens, resets, and typography establish the
+   base that Tailwind's utility layer builds on top of. */
+@import "./styles/bloomberg-terminal-design-system.css";
 
 @tailwind base;
 @tailwind components;

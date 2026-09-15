@@ -7,11 +7,10 @@
  * accessibility property, not a design-system choice.
  *
  * Chrome (grid lines, axis text, tooltip surface) and status colors
- * (good/warning/serious/critical) now reuse the finance-terminal design
- * system's own tokens (src/styles/finance-terminal-design-system.css) —
- * the same tokens the CWO app uses — instead of the old Tailwind slate
- * scale, so charts read as part of the same visual system as every
- * terminal-card/stat-panel around them.
+ * (good/warning/serious/critical) reuse Aladdin's own Bloomberg-terminal
+ * design system tokens (src/styles/bloomberg-terminal-design-system.css)
+ * instead of the old Tailwind slate scale, so charts read as part of the
+ * same visual system as every terminal-card/stat-panel around them.
  *
  * Categorical hues are assigned in this fixed order and never cycled or
  * reassigned by rank — a filter that changes which series are visible must
@@ -44,10 +43,10 @@ export const CATEGORICAL = [
 // Finance-terminal semantic tokens (--color-positive/warning/negative and a
 // serious/amber-orange midpoint for the risk heatmap's MODERATE-HIGH band).
 export const STATUS = {
-  good: "#00E5A0", // --color-positive
-  warning: "#FBBF24", // --color-warning
-  serious: "#FF8A3D", // between warning and negative, for MODERATE-HIGH
-  critical: "#FF4D6A", // --color-negative
+  good: "#22C55E", // --color-positive
+  warning: "#FFCB47", // --color-warning
+  serious: "#FF8C00", // --accent-primary, between warning and negative, for MODERATE-HIGH
+  critical: "#EF4444", // --color-negative
 } as const;
 
 /** Risk/factor band -> status color. Bands come from
@@ -60,16 +59,16 @@ export const BAND_COLOR: Record<string, string> = {
   "MODERATE-HIGH": STATUS.serious,
   HIGH: STATUS.critical,
 };
-export const BAND_FALLBACK_COLOR = "#3D6A96"; // --text-tertiary — insufficient data
+export const BAND_FALLBACK_COLOR = "#786D58"; // --text-tertiary — insufficient data
 
 export const CHROME = {
-  grid: "#0D2845", // --border-primary
-  axis: "#3D6A96", // --text-tertiary
-  tooltipBg: "#071828", // --bg-secondary
-  tooltipBorder: "#0D2845", // --border-primary
-  text: "#E2EDFF", // --text-primary
-  legend: "#7FA8D4", // --text-secondary
-  cellStroke: "#030D1C", // --bg-primary — separates adjacent pie slices
+  grid: "#2A2620", // --border-primary
+  axis: "#786D58", // --text-tertiary
+  tooltipBg: "#16140F", // --bg-secondary
+  tooltipBorder: "#2A2620", // --border-primary
+  text: "#F5F1E8", // --text-primary
+  legend: "#B8AD98", // --text-secondary
+  cellStroke: "#0B0A08", // --bg-primary — separates adjacent pie slices
 } as const;
 
 export function categoricalColor(index: number): string {
