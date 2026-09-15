@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { listAccounts, listSnapshots } from "../services/api";
 import type { Account, PortfolioSnapshotSummary } from "../types/portfolio";
 import AccountFilter from "../components/AccountFilter";
+import CollectionFilter from "../components/CollectionFilter";
 import CompositionSection from "./dashboard/CompositionSection";
 import AllocationDriftSection from "./dashboard/AllocationDriftSection";
 import RiskSection from "./dashboard/RiskSection";
@@ -35,6 +36,10 @@ import UsageSection from "./dashboard/UsageSection";
 export default function Dashboard() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [accountIds, setAccountIds] = useState<string[]>([]);
+  // Which of Securities / Coin collection / Whisky collection to include —
+  // [] means all three (§26 Composition collections filter). Only
+  // Composition currently honors this; see CollectionFilter's docstring.
+  const [includedCollections, setIncludedCollections] = useState<string[]>([]);
 
   const [snapshots, setSnapshots] = useState<PortfolioSnapshotSummary[]>([]);
   const [snapshotId, setSnapshotId] = useState<string>("");
@@ -61,7 +66,10 @@ export default function Dashboard() {
 
       <div className="terminal-card space-y-3">
         <div className="flex items-end justify-between gap-3 flex-wrap">
-          <AccountFilter accounts={accounts} selected={accountIds} onChange={setAccountIds} />
+          <div className="flex items-end gap-3 flex-wrap">
+            <AccountFilter accounts={accounts} selected={accountIds} onChange={setAccountIds} />
+            <CollectionFilter selected={includedCollections} onChange={setIncludedCollections} />
+          </div>
           {snapshots.length > 1 && (
             <button
               type="button"
@@ -126,7 +134,11 @@ export default function Dashboard() {
 
       {snapshotId ? (
         <>
-          <CompositionSection snapshotId={snapshotId} accountIds={accountIds} />
+          <CompositionSection
+            snapshotId={snapshotId}
+            accountIds={accountIds}
+            includedCollections={includedCollections}
+          />
           <AllocationDriftSection accountIds={accountIds} />
           <RiskSection snapshotId={snapshotId} accountIds={accountIds} />
           <FactorProfileSection accountIds={accountIds} />

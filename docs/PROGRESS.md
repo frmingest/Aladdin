@@ -18,6 +18,48 @@ in full + two Phase 7 bug fixes, listed below) is sitting as an uncommitted work
 since `device_bash` can't run `git` from this session. **Faiz: please `git add`/`commit`/`push` the
 current working tree** — see "Manual to-do" for the exact file list.
 
+**2026-09-15 (Composition: Securities/Coin/Whisky split, collection aggregation, filter):** Same-day
+follow-up to the Phase 8 pass just below — with real coin + Whiskybase data now in the portfolio,
+Faiz asked for an economic-logic check of the Dashboard's Portfolio composition section against a
+screenshot showing the "By holding" donut with one slice per individual whisky bottle/coin, no
+visible split between Securities/Coin collection/Whisky collection totals, and no way to
+include/exclude a collection from the view.
+- **Backend** — added `asset_class_values` (absolute market value per asset class, reporting
+  currency) to `ConcentrationProfile`/`PortfolioValuationOut.concentration`
+  (`app/services/market_data/valuation.py`, `app/schemas/market_data.py`), the currency-amount
+  counterpart to the existing `asset_class_weights` percentage-only field. 2 new assertions in
+  `tests/integration/test_valuation_api.py`.
+- **Frontend** — new `CollectionFilter` component (`frontend/src/components/CollectionFilter.tsx`)
+  next to the existing account filter on the Dashboard: include/exclude Securities / Coin collection
+  / Whisky collection, applied instantly with no new network call (it re-aggregates the valuation
+  data already on hand, unlike the account filter which re-fetches). `CompositionSection.tsx`
+  rewritten to compute every number and chart straight from the per-holding list instead of the
+  backend's ticker-keyed weight maps: "By holding" now collapses every `COMMODITY` position into one
+  "Coin collection" slice and every `COLLECTIBLE` position into one "Whisky collection" slice instead
+  of a slice per coin/bottle; a new always-on "By collection" panel shows the real Securities/Coin
+  collection/Whisky collection totals (currency + % of portfolio) regardless of the filter, so a bad
+  entry is visible at a glance; Total value/Unrealized P&L/Largest position now respect the filter.
+- **Economic-logic finding, flagged not fixed (data, not code):** in the coin+whisky snapshot Faiz
+  shared, Unrealized P&L (-653,688.51 NOK) was several times larger in magnitude than Total value
+  (115,422.65 NOK) and negative. The arithmetic itself checks out (`total_market_value -
+  total_cost_basis_value`, the same formula validated in the 2026-09-14 composition-fix pass) — this
+  reads as a cost-basis data-entry mistake on one of the manually-entered coins (same class of issue
+  as the earlier `AUCP.L`→`AUCO.MI` ticker mistake), not a code bug. The new "By collection" panel
+  should make it obvious at a glance which of the three totals is off; **recommend Faiz check the buy
+  price entered for each coin on the Portfolio tab.**
+- **Not done this pass:** the Collections filter only threads through Portfolio composition — Risk,
+  Factor profile, Macro, and Holding detail still show every holding regardless of it. Scoping those
+  the same way would need backend query-param plumbing (like the account filter's `account_ids`),
+  not just client-side re-aggregation, since those sections compute server-side.
+- **Verified:** backend — the 33 valuation/portfolio integration tests pass, `ruff check` clean on
+  touched files. Frontend — fresh `npm ci`, `tsc --noEmit` clean, `vite build` succeeds (same
+  pre-existing single-bundle-size warning, unrelated). No new migration; needs a Railway redeploy
+  (additive, non-breaking schema change).
+- Files changed: `backend/app/services/market_data/valuation.py`, `backend/app/schemas/
+  market_data.py`, `backend/tests/integration/test_valuation_api.py`, `frontend/src/components/
+  CollectionFilter.tsx` (new), `frontend/src/pages/dashboard/CompositionSection.tsx`,
+  `frontend/src/pages/Dashboard.tsx`, `frontend/src/types/market_valuation.ts`.
+
 **2026-09-15 (Phase 8 completed — whisky import, at-cost valuation, coin manual-entry UI):** Same-day
 follow-up to the pass just below. Faiz asked for two concrete things: a usable way to add individual
 gold/silver coin purchases (1 oz Maple Leaf, Krugerrand, Kangaroo) with a buy price and today's
@@ -199,6 +241,15 @@ deployment (browser + direct API calls), not just "keys are set":**
 
 ## Manual to-do for Faiz
 
+- **New this pass — check the coin entries' buy prices.** The coin+whisky snapshot's Unrealized P&L
+  (-653,688.51 NOK) is several times larger in magnitude than Total value (115,422.65 NOK) and
+  negative — the arithmetic is correct, but this pattern usually means a cost basis was entered
+  wrong for one of the manually-entered coins (wrong currency, an extra digit, etc.), not a real
+  loss. Check each coin's buy price on the Portfolio tab; the new "By collection" panel on the
+  Dashboard should make it obvious which of Securities/Coin collection/Whisky collection the bad
+  number is in.
+- **Redeploy needed** for this pass's Composition change (Securities/Coin/Whisky split, collection
+  aggregation, filter) — additive backend schema field + frontend-only otherwise, no migration.
 - Confirm or correct ADR 0012's evidence-truncation estimate for Vår Energi with a real analysis
   run against its two documents (analysis itself is confirmed working now — see status pass below —
   this is about checking the *evidence selection*, not whether the run succeeds) — worth doing
@@ -285,6 +336,14 @@ deployment (browser + direct API calls), not just "keys are set":**
 
 ### Changelog
 
+- **2026-09-15 (Composition: Securities/Coin/Whisky split, collection aggregation, filter):** Added
+  `asset_class_values` (absolute per-asset-class value) to the valuation API's concentration output;
+  rebuilt the Dashboard's Portfolio composition section to compute its numbers/charts from the
+  per-holding list so "By holding" collapses coins/whisky into one slice each instead of one per
+  item, added an always-on "Securities / Coin collection / Whisky collection" totals panel, and
+  added a dashboard-wide Collections include/exclude filter. Flagged (not fixed — looks like a data
+  entry mistake, not a code bug) an implausible Unrealized P&L on the coin+whisky snapshot. See the
+  dated entry above for full detail.
 - **2026-09-15 (Phase 8 completed — whisky import, at-cost valuation, coin manual-entry UI, ADR
   0011):** Same-day follow-up to the Phase 7/8 pass below. Faiz asked how to add individual
   gold/silver coin purchases (1 oz Maple Leaf/Krugerrand/Kangaroo) with a buy price and live

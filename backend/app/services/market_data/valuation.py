@@ -77,6 +77,16 @@ class ConcentrationProfile:
     sector_weights: dict[str, Decimal]
     currency_weights: dict[str, Decimal]
     asset_class_weights: dict[str, Decimal]
+    # Absolute market value per asset class, in reporting currency — the
+    # counterpart to asset_class_weights above (which only carries the
+    # percentage). Added so a caller (the dashboard's "Securities / Coin
+    # collection / Whisky collection" split) can show a real currency figure
+    # per collection, not just a share of 100%, without recomputing the sum
+    # itself from the holdings list. Same denominator/exclusions as every
+    # other concentration figure here (valued holdings only — see `valued`
+    # above); holdings with no market value are already called out
+    # separately via holdings_excluded_from_concentration.
+    asset_class_values: dict[str, Decimal]
     holdings_excluded_from_concentration: list[str]
 
 
@@ -413,5 +423,6 @@ def _build_concentration(valuations: list[HoldingValuation], warnings: list[str]
         sector_weights=sector_weights,
         currency_weights=currency_weights,
         asset_class_weights=asset_class_weights,
+        asset_class_values={k: calc.quantize(v) for k, v in asset_class_values.items()},
         holdings_excluded_from_concentration=excluded,
     )

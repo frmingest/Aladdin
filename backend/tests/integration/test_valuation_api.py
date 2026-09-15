@@ -132,6 +132,10 @@ def test_valuation_computes_market_value_pnl_and_concentration(client, fake_prov
     assert set(concentration["single_name_weights"].keys()) == {"VAR.OL", "EQNR.OL"}
     assert concentration["single_name_hhi"] is not None
     assert Decimal(concentration["sector_weights"]["Energy"]) == Decimal("100")
+    # Both holdings are EQUITY (Nordnet's "Aksje") — asset_class_values is the
+    # absolute-currency counterpart to asset_class_weights, so it should carry
+    # the full portfolio total under the one asset class present.
+    assert Decimal(concentration["asset_class_values"]["EQUITY"]) == expected_total
 
 
 def test_valuation_marks_holding_unavailable_without_failing_whole_request(client, fake_provider):
@@ -213,6 +217,9 @@ def test_collectible_with_no_market_ticker_is_valued_at_cost_not_excluded(client
     assert holding["ticker"] in body["concentration"]["single_name_weights"]
     assert "Port Dundas" in body["concentration"]["sector_weights"]
     assert holding["ticker"] not in body["concentration"]["holdings_excluded_from_concentration"]
+    # At-cost collectibles count toward asset_class_values under COLLECTIBLE
+    # too (the dashboard's "Whisky collection" total), not just the weights.
+    assert Decimal(body["concentration"]["asset_class_values"]["COLLECTIBLE"]) == Decimal("79.90")
 
 
 def test_collectible_with_no_market_ticker_and_no_cost_basis_is_still_excluded(client, fake_provider):

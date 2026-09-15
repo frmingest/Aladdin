@@ -6,19 +6,23 @@ import {
   deleteAccount,
   listAccounts,
   listHoldings,
+  listManualHoldings,
   listSnapshots,
   resetPortfolio,
   updateHoldingMarketTicker,
+  updateManualHolding,
   uploadPortfolio,
 } from "../services/api";
 import type {
   Account,
   Holding,
+  ManualPositionResponse,
   PortfolioSnapshotDetail,
   PortfolioSnapshotSummary,
   PortfolioUploadResponse,
   RowError,
 } from "../types/portfolio";
+import { num } from "../lib/num";
 
 /**
  * Preset "shapes" for the manual-entry form below — covers the coin types
@@ -62,8 +66,30 @@ function ManualEntrySection({
   const [name, setName] = useState<string>(preset.name);
   const [quantity, setQuantity] = useState("1");
   const [costBasis, setCostBasis] = useState("");
-  const [costBasisCurrency, setCostBasisCurrency] = useState("USD");
-  const [tradingCurrency, setTradingCurrency] = useState("USD");
+  // Default to NOK — matching the reporting currency the rest of this app
+  // defaults to (see settings.default_reporting_currency and the upload
+  // form's own reportingCurrency default below) — not USD. Previously both
+  // currency fields independently defaulted to USD; changing "Holding
+  // currency" to NOK for a coin without also remembering to change "Buy
+  // price currency" silently stored (and FX-converted) the NOK amount paid
+  // as if it were USD, producing a cost basis many times too large. The
+  // sync effect below is the other half of that fix: as long as "Buy price
+  // currency" hasn't been hand-edited, it tracks "Holding currency"
+  // automatically instead of drifting from it.
+  const [costBasisCurrency, setCostBasisCurrency] = useState("NOK");
+  const [costBasisCurrencyTouched, setCostBasisCurrencyTouched] = useState(false);
+  const [tradingCurrency, setTradingCurrency] = useState("NOK");
+
+  function handleTradingCurrencyChange(value: string) {
+    const next = value.toUpperCase();
+    setTradingCurrency(next);
+    if (!costBasisCurrencyTouched) setCostBasisCurrency(next);
+  }
+
+  function handleCostBasisCurrencyChange(value: string) {
+    setCostBasisCurrencyTouched(true);
+    setCostBasisCurrency(value.toUpperCase());
+  }
   const [custodyType, setCustodyType] = useState("");
   const [acquiredAt, setAcquiredAt] = useState("");
   const [notes, setNotes] = useState("");
@@ -113,6 +139,7 @@ function ManualEntrySection({
       setName(preset.name);
       setQuantity("1");
       setCostBasis("");
+      setCostBasisCurrencyTouched(false);
       setCustodyType("");
       setAcquiredAt("");
       setNotes("");
@@ -184,23 +211,24 @@ function ManualEntrySection({
           />
         </div>
         <div>
-          <label className="label-terminal">Buy price currency</label>
+          <label className="label-terminal">Holding currency</label>
           <input
             type="text"
-            value={costBasisCurrency}
-            onChange={(e) => setCostBasisCurrency(e.target.value.toUpperCase())}
+            value={tradingCurrency}
+            onChange={(e) => handleTradingCurrencyChange(e.target.value)}
             maxLength={3}
             className="input-terminal w-20"
           />
         </div>
         <div>
-          <label className="label-terminal">Holding currency</label>
+          <label className="label-terminal">Buy price currency</label>
           <input
             type="text"
-            value={tradingCurrency}
-            onChange={(e) => setTradingCurrency(e.target.value.toUpperCase())}
+            value={costBasisCurrency}
+            onChange={(e) => handleCostBasisCurrencyChange(e.target.value)}
             maxLength={3}
             className="input-terminal w-20"
+            title="Follows Holding currency automatically unless you change it here"
           />
         </div>
         <div>
@@ -257,6 +285,258 @@ function ManualEntrySection({
       </form>
       {successMessage && <p className="text-positive text-sm mt-2">{successMessage}</p>}
       {errorMessage && <p className="text-negative text-sm mt-2">{errorMessage}</p>}
+    </section>
+  );
+}
+
+type ManualEditDraft = {
+  quantity: string;
+  costBasis: string;
+  costBasisCurrency: string;
+  tradingCurrency: string;
+  notes: string;
+};
+
+function draftFrom(p: ManualPositionResponse): ManualEditDraft {
+  return {
+    quantity: p.quantity ?? "",
+    costBasis: p.cost_basis ?? "",
+    costBasisCurrency: p.cost_basis_currency ?? "",
+    tradingCurrency: p.trading_currency,
+    notes: p.notes ?? "",
+  };
+}
+
+/**
+ * Every manually-entered coin/collectible, with inline editing — the
+ * correction path for the mistake ManualEntrySection above is designed to
+ * prevent going forward, but can't undo for something already entered
+ * wrong: a buy price stored in a currency that didn't match the holding's.
+ * Before this section existed, fixing that meant "Delete all data" and
+ * starting over. Wired to GET/PATCH /portfolio/holdings/manual.
+ */
+function ManualHoldingsSection({
+  refreshSignal,
+  onUpdated,
+}: {
+  refreshSignal: number;
+  onUpdated: () => void;
+}) {
+  const [positions, setPositions] = useState<ManualPositionResponse[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draft, setDraft] = useState<ManualEditDraft | null>(null);
+  const [savingId, setSavingId] = useState<string | null>(null);
+  const [savedId, setSavedId] = useState<string | null>(null);
+  const [errorId, setErrorId] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const refresh = () => {
+    setLoading(true);
+    listManualHoldings()
+      .then(setPositions)
+      .catch(() => undefined)
+      .finally(() => setLoading(false));
+  };
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(refresh, [refreshSignal]);
+
+  function startEdit(p: ManualPositionResponse) {
+    setEditingId(p.holding_id);
+    setDraft(draftFrom(p));
+    setErrorId(null);
+    setSavedId(null);
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setDraft(null);
+  }
+
+  async function handleSave(p: ManualPositionResponse) {
+    if (!draft) return;
+    setSavingId(p.holding_id);
+    setErrorId(null);
+    setErrorMessage(null);
+    try {
+      const updated = await updateManualHolding(p.holding_id, {
+        quantity: draft.quantity.trim(),
+        cost_basis: draft.costBasis.trim() || null,
+        cost_basis_currency: draft.costBasis.trim() ? draft.costBasisCurrency.trim().toUpperCase() : null,
+        trading_currency: draft.tradingCurrency.trim().toUpperCase(),
+        notes: draft.notes.trim() || null,
+      });
+      setPositions((prev) => prev.map((x) => (x.holding_id === p.holding_id ? updated : x)));
+      setEditingId(null);
+      setDraft(null);
+      setSavedId(p.holding_id);
+      window.setTimeout(() => setSavedId((cur) => (cur === p.holding_id ? null : cur)), 2000);
+      onUpdated();
+    } catch (err) {
+      setErrorId(p.holding_id);
+      setErrorMessage(
+        err instanceof ApiError ? String(err.detail ?? err.message) : "Could not save changes.",
+      );
+    } finally {
+      setSavingId(null);
+    }
+  }
+
+  // A different buy-price currency than holding currency is sometimes
+  // exactly right (a US-dealer coin held/reported in NOK, say) — so this is
+  // a neutral note, not an error. Still worth calling out inline, since it's
+  // also exactly the shape of the entry mistake this section exists to fix
+  // (both fields defaulted to the same currency, then only one got changed).
+  const differsFromHoldingCurrency = new Set(
+    positions
+      .filter((p) => p.cost_basis_currency && p.cost_basis_currency !== p.trading_currency)
+      .map((p) => p.holding_id),
+  );
+
+  return (
+    <section className="terminal-card">
+      <h2 className="terminal-card-title mb-2">Your manual entries</h2>
+      <p className="text-xs text-tertiary mb-3">
+        Every coin and collectible added above. If a buy price ends up looking wrong on the
+        Dashboard (e.g. an implausible Unrealized P&amp;L), check here first — the usual cause is
+        "Buy price currency" not matching "Holding currency" by mistake (noted below; sometimes
+        intentional, e.g. a US-dealer coin held/reported in NOK). Edit and save to fix.
+      </p>
+      {loading ? (
+        <p className="text-tertiary text-sm">Loading…</p>
+      ) : positions.length === 0 ? (
+        <p className="text-tertiary text-sm">No manual entries yet — add one above.</p>
+      ) : (
+        <div className="terminal-table-wrapper">
+          <table className="terminal-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Quantity</th>
+                <th>Buy price</th>
+                <th>Buy price currency</th>
+                <th>Holding currency</th>
+                <th>Notes</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {positions.map((p) => {
+                const isEditing = editingId === p.holding_id && draft;
+                const notesCurrencyDiffers = differsFromHoldingCurrency.has(p.holding_id);
+                return (
+                  <tr key={p.holding_id}>
+                    <td className="primary">
+                      {p.name}
+                      {notesCurrencyDiffers && !isEditing && (
+                        <span
+                          className="text-tertiary text-xs ml-2"
+                          title="Buy price currency is different from holding currency — worth double-checking this was intentional"
+                        >
+                          (≠ holding currency)
+                        </span>
+                      )}
+                    </td>
+                    {isEditing ? (
+                      <>
+                        <td>
+                          <input
+                            type="number"
+                            min="0"
+                            step="any"
+                            value={draft.quantity}
+                            onChange={(e) => setDraft({ ...draft, quantity: e.target.value })}
+                            className="input-terminal w-20"
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="number"
+                            min="0"
+                            step="any"
+                            value={draft.costBasis}
+                            onChange={(e) => setDraft({ ...draft, costBasis: e.target.value })}
+                            className="input-terminal w-28"
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="text"
+                            maxLength={3}
+                            value={draft.costBasisCurrency}
+                            onChange={(e) =>
+                              setDraft({ ...draft, costBasisCurrency: e.target.value.toUpperCase() })
+                            }
+                            className="input-terminal w-16"
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="text"
+                            maxLength={3}
+                            value={draft.tradingCurrency}
+                            onChange={(e) =>
+                              setDraft({ ...draft, tradingCurrency: e.target.value.toUpperCase() })
+                            }
+                            className="input-terminal w-16"
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="text"
+                            value={draft.notes}
+                            onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
+                            className="input-terminal w-40"
+                          />
+                        </td>
+                        <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                          <button
+                            type="button"
+                            onClick={() => handleSave(p)}
+                            disabled={savingId === p.holding_id}
+                            className="btn-terminal btn-terminal-primary text-xs px-3 py-1 mr-1"
+                          >
+                            {savingId === p.holding_id ? "Saving…" : "Save"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={cancelEdit}
+                            disabled={savingId === p.holding_id}
+                            className="text-tertiary hover:text-primary text-xs px-2"
+                          >
+                            Cancel
+                          </button>
+                          {errorId === p.holding_id && errorMessage && (
+                            <div className="text-negative text-xs mt-1">{errorMessage}</div>
+                          )}
+                        </td>
+                      </>
+                    ) : (
+                      <>
+                        <td className="numeric font-mono">{p.quantity ?? "—"}</td>
+                        <td className="numeric font-mono">{num(p.cost_basis)?.toLocaleString() ?? "—"}</td>
+                        <td>{p.cost_basis_currency ?? "—"}</td>
+                        <td>{p.trading_currency}</td>
+                        <td className="truncate max-w-[10rem]">{p.notes ?? "—"}</td>
+                        <td style={{ textAlign: "right" }}>
+                          <button
+                            type="button"
+                            onClick={() => startEdit(p)}
+                            className="btn-terminal text-xs px-3 py-1"
+                          >
+                            {savedId === p.holding_id ? "Saved ✓" : "Edit"}
+                          </button>
+                        </td>
+                      </>
+                    )}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </section>
   );
 }
@@ -677,6 +957,11 @@ export default function PortfolioUpload() {
       <ManualEntrySection
         accounts={accounts}
         onAdded={() => setManualEntryVersion((v) => v + 1)}
+      />
+
+      <ManualHoldingsSection
+        refreshSignal={manualEntryVersion}
+        onUpdated={() => setManualEntryVersion((v) => v + 1)}
       />
 
       <MarketTickersSection refreshSignal={manualEntryVersion} />

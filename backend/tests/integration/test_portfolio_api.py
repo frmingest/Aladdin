@@ -409,3 +409,127 @@ def test_manual_holding_collectible_with_no_market_ticker(client):
 
     assert response.status_code == 201, response.text
     assert response.json()["asset_class"] == "COLLECTIBLE"
+
+
+def test_list_manual_holdings_returns_only_manual_entries(client):
+    client.post(
+        "/portfolio/holdings/manual",
+        json={
+            "ticker": "XAU-COIN-LIST-1",
+            "name": "1oz Gold Coin",
+            "asset_class": "COMMODITY",
+            "trading_currency": "USD",
+            "quantity": "1",
+            "cost_basis": "2450.00",
+            "cost_basis_currency": "USD",
+            "market_ticker": "XAU",
+        },
+    )
+    # An ordinary brokerage upload should never show up in this list.
+    client.post("/portfolio/upload", files={"file": ("p.csv", VALID_CSV, "text/csv")})
+
+    listed = client.get("/portfolio/holdings/manual").json()
+    assert len(listed) == 1
+    assert listed[0]["ticker"] == "XAU-COIN-LIST-1"
+
+
+def test_update_manual_holding_fixes_a_wrong_currency(client):
+    """Faiz's real scenario: "Holding currency" was changed to NOK but "Buy
+    price currency" was left at its USD default, so the NOK amount he paid
+    got stored (and would be FX-converted) as if it were USD. This is the
+    correction path — PATCH .../holdings/manual/{id} fixing both after the
+    fact, with no way to do this before this endpoint existed short of
+    wiping all portfolio data."""
+    created = client.post(
+        "/portfolio/holdings/manual",
+        json={
+            "ticker": "XAU-COIN-FIX-1",
+            "name": "1oz Gold Krugerrand",
+            "asset_class": "COMMODITY",
+            "trading_currency": "NOK",
+            "quantity": "1",
+            "cost_basis": "31000.00",
+            "cost_basis_currency": "USD",  # the mistake: should have been NOK
+            "market_ticker": "XAU",
+        },
+    ).json()
+    holding_id = [h["id"] for h in client.get("/portfolio/holdings").json() if h["ticker"] == "XAU-COIN-FIX-1"][0]
+    assert created["cost_basis_currency"] == "USD"
+
+    fixed = client.patch(
+        f"/portfolio/holdings/manual/{holding_id}",
+        json={"cost_basis_currency": "NOK"},
+    )
+    assert fixed.status_code == 200, fixed.text
+    body = fixed.json()
+    assert body["cost_basis_currency"] == "NOK"
+    assert Decimal(body["cost_basis"]) == Decimal("31000.00")  # untouched — only currency was wrong
+    assert body["trading_currency"] == "NOK"  # untouched, wasn't part of this PATCH
+
+    # Persisted, not just echoed back.
+    listed = client.get("/portfolio/holdings/manual").json()
+    assert listed[0]["cost_basis_currency"] == "NOK"
+
+
+def test_update_manual_holding_partial_update_leaves_other_fields_alone(client):
+    created = client.post(
+        "/portfolio/holdings/manual",
+        json={
+            "ticker": "XAU-COIN-PARTIAL-1",
+            "name": "1oz Gold Maple Leaf",
+            "asset_class": "COMMODITY",
+            "trading_currency": "NOK",
+            "quantity": "1",
+            "cost_basis": "31000.00",
+            "cost_basis_currency": "NOK",
+            "market_ticker": "XAU",
+            "notes": "bought at the local dealer",
+        },
+    ).json()
+    holding_id = [
+        h["id"] for h in client.get("/portfolio/holdings").json() if h["ticker"] == "XAU-COIN-PARTIAL-1"
+    ][0]
+
+    updated = client.patch(f"/portfolio/holdings/manual/{holding_id}", json={"quantity": "2"})
+    assert updated.status_code == 200, updated.text
+    body = updated.json()
+    assert Decimal(body["quantity"]) == Decimal("2")
+    assert Decimal(body["cost_basis"]) == Decimal("31000.00")
+    assert body["notes"] == "bought at the local dealer"
+    assert created["ticker"] == body["ticker"]
+
+
+def test_update_manual_holding_404_for_unknown_or_non_manual_holding(client):
+    client.post("/portfolio/upload", files={"file": ("p.csv", VALID_CSV, "text/csv")})
+    ordinary_holding_id = client.get("/portfolio/holdings").json()[0]["id"]
+
+    unknown = client.patch(
+        "/portfolio/holdings/manual/00000000-0000-0000-0000-000000000000",
+        json={"quantity": "2"},
+    )
+    assert unknown.status_code == 404
+
+    not_manual = client.patch(f"/portfolio/holdings/manual/{ordinary_holding_id}", json={"quantity": "2"})
+    assert not_manual.status_code == 404
+
+
+def test_update_manual_holding_rejects_bad_currency_code(client):
+    created = client.post(
+        "/portfolio/holdings/manual",
+        json={
+            "ticker": "XAU-COIN-BADCCY-1",
+            "name": "1oz Gold Coin",
+            "asset_class": "COMMODITY",
+            "trading_currency": "USD",
+            "quantity": "1",
+        },
+    ).json()
+    holding_id = [
+        h["id"] for h in client.get("/portfolio/holdings").json() if h["ticker"] == "XAU-COIN-BADCCY-1"
+    ][0]
+    assert created["ticker"] == "XAU-COIN-BADCCY-1"
+
+    response = client.patch(
+        f"/portfolio/holdings/manual/{holding_id}", json={"trading_currency": "N"}
+    )
+    assert response.status_code == 422

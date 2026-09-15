@@ -85,6 +85,26 @@ export type ManualPositionCreate = {
 // same shape as the positions inside a PortfolioSnapshotDetail.
 export type ManualPositionResponse = PortfolioPosition;
 
+// Partial-update body for PATCH /portfolio/holdings/manual/{holding_id} —
+// corrects a manually-entered coin/collectible after the fact (e.g. a buy
+// price stored in the wrong currency because "Holding currency" and "Buy
+// price currency" were changed independently). Only include the fields
+// you're changing — everything here is optional, and an omitted key is left
+// untouched server-side (see backend/app/schemas/portfolio.py's
+// ManualPositionUpdate).
+export type ManualPositionUpdate = Partial<{
+  name: string;
+  trading_currency: string;
+  quantity: string;
+  cost_basis: string | null;
+  cost_basis_currency: string | null;
+  market_ticker: string | null;
+  custody_type: string | null;
+  acquired_at: string | null;
+  notes: string | null;
+  account_id: string | null;
+}>;
+
 export type PortfolioSnapshotSummary = {
   id: string;
   uploaded_at: string;

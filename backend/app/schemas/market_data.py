@@ -41,6 +41,9 @@ class ConcentrationProfileOut(BaseModel):
     sector_weights: dict[str, Decimal]
     currency_weights: dict[str, Decimal]
     asset_class_weights: dict[str, Decimal]
+    # Absolute market value per asset class, reporting currency — see
+    # ConcentrationProfile.asset_class_values (app.services.market_data.valuation).
+    asset_class_values: dict[str, Decimal]
     holdings_excluded_from_concentration: list[str]
 
 

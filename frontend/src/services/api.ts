@@ -16,6 +16,7 @@ import type {
   Holding,
   ManualPositionCreate,
   ManualPositionResponse,
+  ManualPositionUpdate,
   PortfolioResetResponse,
   PortfolioSnapshotDetail,
   PortfolioSnapshotSummary,
@@ -107,6 +108,26 @@ export function uploadPortfolio(
 export function addManualHolding(body: ManualPositionCreate): Promise<ManualPositionResponse> {
   return apiFetch("/portfolio/holdings/manual", {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+// Every manually-entered coin/collectible lot — backs the "Your manual
+// entries" table, which exists so a mistake made at entry (a buy price
+// stored in the wrong currency, most often) can be seen and corrected.
+export function listManualHoldings(): Promise<ManualPositionResponse[]> {
+  return apiFetch("/portfolio/holdings/manual");
+}
+
+// Corrects a manually-entered coin/collectible after the fact. Only the
+// fields present in `body` are changed server-side.
+export function updateManualHolding(
+  holdingId: string,
+  body: ManualPositionUpdate,
+): Promise<ManualPositionResponse> {
+  return apiFetch(`/portfolio/holdings/manual/${holdingId}`, {
+    method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });

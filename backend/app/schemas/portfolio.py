@@ -92,6 +92,27 @@ class ManualPositionCreate(BaseModel):
     account_id: UUID | None = None
 
 
+class ManualPositionUpdate(BaseModel):
+    """Partial-update body for PATCH /portfolio/holdings/manual/{holding_id}
+    — corrects a manually-entered coin/collectible lot after the fact (the
+    classic case: "Holding currency" was changed but "Buy price currency"
+    was left at its default, so the buy price got stored/converted in the
+    wrong currency). Only fields present in the request are changed — omit
+    everything else; see app.services.portfolio.manual_entry.update_manual_position.
+    """
+
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    trading_currency: str | None = Field(default=None, min_length=3, max_length=3)
+    quantity: Decimal | None = Field(default=None, gt=0)
+    cost_basis: Decimal | None = None
+    cost_basis_currency: str | None = Field(default=None, min_length=3, max_length=3)
+    market_ticker: str | None = None
+    custody_type: str | None = None
+    acquired_at: datetime | None = None
+    notes: str | None = None
+    account_id: UUID | None = None
+
+
 class PortfolioSnapshotSummary(BaseModel):
     id: UUID
     uploaded_at: datetime

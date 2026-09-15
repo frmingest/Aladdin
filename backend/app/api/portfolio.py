@@ -23,6 +23,7 @@ from app.schemas.portfolio import (
     HoldingOut,
     HoldingUpdate,
     ManualPositionCreate,
+    ManualPositionUpdate,
     PortfolioPositionOut,
     PortfolioResetResponse,
     PortfolioSnapshotDetail,
@@ -31,7 +32,13 @@ from app.schemas.portfolio import (
 )
 from app.services.market_data.valuation import refresh_and_value_snapshot
 from app.services.portfolio.ingestion import ingest_portfolio_upload
-from app.services.portfolio.manual_entry import ManualEntryValidationError, add_manual_position
+from app.services.portfolio.manual_entry import (
+    ManualEntryNotFoundError,
+    ManualEntryValidationError,
+    add_manual_position,
+    list_manual_positions,
+    update_manual_position,
+)
 from app.services.portfolio.reset import reset_all_portfolio_data
 
 router = APIRouter(prefix="/portfolio", tags=["portfolio"])
@@ -251,6 +258,34 @@ def add_manual_holding(
             notes=body.notes,
             account_id=body.account_id,
         )
+    except ManualEntryValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    return _position_to_out(result.position)
+
+
+@router.get("/holdings/manual", response_model=list[PortfolioPositionOut])
+def list_manual_holdings(db: Session = Depends(get_db)) -> list[PortfolioPositionOut]:
+    """Every manually-entered coin/collectible lot (§26 Phase 8, ADR 0011),
+    for the Portfolio tab's "Your manual entries" table — lets a mistake
+    made at entry time (buy price stored in the wrong currency, most often)
+    actually be seen and corrected via PATCH .../holdings/manual/{id}."""
+    return [_position_to_out(p) for p in list_manual_positions(db)]
+
+
+@router.patch("/holdings/manual/{holding_id}", response_model=PortfolioPositionOut)
+def update_manual_holding(
+    holding_id: UUID, body: ManualPositionUpdate, db: Session = Depends(get_db)
+) -> PortfolioPositionOut:
+    """Corrects a manually-entered coin/collectible after the fact. Only
+    fields present in the request body are changed (§21 partial update) —
+    see update_manual_position's docstring for the motivating case (a buy
+    price entered in the wrong currency because "Holding currency" and "Buy
+    price currency" were changed independently)."""
+    try:
+        result = update_manual_position(db, holding_id=holding_id, **body.model_dump(exclude_unset=True))
+    except ManualEntryNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ManualEntryValidationError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 

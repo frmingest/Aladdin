@@ -71,6 +71,12 @@ class ManualEntryValidationError(ValueError):
     visibly with a specific reason, not a generic 500)."""
 
 
+class ManualEntryNotFoundError(ValueError):
+    """Raised by update_manual_position when holding_id isn't a manually-
+    entered holding at all (never existed, or is an ordinary brokerage
+    holding) — a 404, distinct from ManualEntryValidationError's 422."""
+
+
 @dataclass
 class ManualEntryResult:
     position: PortfolioPosition
@@ -199,3 +205,119 @@ def add_manual_position(
     db.refresh(holding)
 
     return ManualEntryResult(position=position, holding=holding, was_new_holding=was_new_holding)
+
+
+def list_manual_positions(db: Session) -> list[PortfolioPosition]:
+    """Every manually-entered lot, newest-acquired first — backs `GET
+    /portfolio/holdings/manual` (the Portfolio tab's "Your manual entries"
+    table), which exists so a mistake made at entry time (the classic one:
+    "Holding currency" changed to NOK but "Buy price currency" left at its
+    default) can actually be seen and corrected, not just avoided going
+    forward."""
+    document = db.query(Document).filter(Document.sha256 == _MANUAL_ENTRY_SENTINEL_SHA256).one_or_none()
+    if document is None:
+        return []
+    snapshot = (
+        db.query(PortfolioSnapshot).filter(PortfolioSnapshot.source_file_id == document.id).one_or_none()
+    )
+    if snapshot is None:
+        return []
+    return (
+        db.query(PortfolioPosition)
+        .filter(PortfolioPosition.snapshot_id == snapshot.id)
+        .order_by(PortfolioPosition.acquired_at.desc())
+        .all()
+    )
+
+
+def update_manual_position(
+    db: Session,
+    *,
+    holding_id: UUID,
+    **fields,
+) -> ManualEntryResult:
+    """Corrects a manually-entered coin/collectible after the fact. Faiz's
+    real case: the "Holding currency" field was changed to NOK for a coin
+    (so the dashboard reports it in NOK) but the separate "Buy price
+    currency" field was left at its default — the NOK amount he actually
+    paid then got stored (and FX-converted) as if it were that other
+    currency, producing a cost basis many times too large and an
+    Unrealized P&L wildly out of proportion to the holding's real value.
+    There was previously no way to fix this short of deleting all portfolio
+    data — this is a targeted correction, not a new entry.
+
+    Only keys present in `fields` are applied (the caller passes
+    `ManualPositionUpdate.model_dump(exclude_unset=True)` — §21 partial
+    update, not "every field must be resupplied"). Scoped to a holding with
+    exactly one manual lot: a multi-lot manual holding (two purchases of the
+    same coin at different times) is ambiguous about which lot to correct,
+    so it's rejected rather than guessed — add a new entry instead, or ask
+    for per-lot editing if this ever becomes a real need.
+    """
+    holding = db.get(Holding, holding_id)
+    if holding is None or holding.asset_class not in MANUAL_ENTRY_ASSET_CLASSES:
+        raise ManualEntryNotFoundError(f"no manually-entered holding '{holding_id}' found")
+
+    snapshot = _get_or_create_manual_snapshot(db)
+    positions = (
+        db.query(PortfolioPosition)
+        .filter(PortfolioPosition.snapshot_id == snapshot.id, PortfolioPosition.holding_id == holding_id)
+        .all()
+    )
+    if len(positions) != 1:
+        raise ManualEntryValidationError(
+            f"holding '{holding_id}' has {len(positions)} manual lot(s) — editing is only supported "
+            "for a holding with exactly one lot; add a separate new entry instead of trying to edit "
+            "an ambiguous multi-lot holding"
+        )
+    position = positions[0]
+
+    if fields.get("name") is not None:
+        holding.name = fields["name"].strip()
+    if fields.get("trading_currency") is not None:
+        trading_currency = fields["trading_currency"].strip().upper()
+        if len(trading_currency) != 3 or not trading_currency.isalpha():
+            raise ManualEntryValidationError(
+                f"trading_currency '{trading_currency}' is not a 3-letter ISO code"
+            )
+        holding.trading_currency = trading_currency
+    if "market_ticker" in fields:
+        holding.market_ticker = (fields["market_ticker"] or "").strip().upper() or None
+    if "custody_type" in fields:
+        holding.custody_type = (fields["custody_type"] or "").strip() or None
+
+    if fields.get("quantity") is not None:
+        position.quantity = fields["quantity"]
+    if "cost_basis" in fields:
+        position.cost_basis = fields["cost_basis"]
+    if "cost_basis_currency" in fields:
+        cost_basis_currency = (fields["cost_basis_currency"] or "").strip().upper() or None
+        if cost_basis_currency is not None and (
+            len(cost_basis_currency) != 3 or not cost_basis_currency.isalpha()
+        ):
+            raise ManualEntryValidationError(
+                f"cost_basis_currency '{cost_basis_currency}' is not a 3-letter ISO code"
+            )
+        position.cost_basis_currency = cost_basis_currency
+    if "notes" in fields:
+        position.notes = (fields["notes"] or "").strip() or None
+    if fields.get("acquired_at") is not None:
+        position.acquired_at = fields["acquired_at"]
+    if "account_id" in fields:
+        account_id = fields["account_id"]
+        if account_id is not None and db.get(Account, account_id) is None:
+            raise ManualEntryValidationError(f"account '{account_id}' not found")
+        position.account_id = account_id
+
+    # Same fallback add_manual_position applies: cost_basis with no explicit
+    # cost_basis_currency defaults to the (possibly just-corrected) holding
+    # currency, rather than leaving it None — a set cost_basis with no
+    # currency to interpret it in would make the next valuation treat this
+    # holding as unpriceable-at-cost, silently undoing the correction.
+    if position.cost_basis is not None and position.cost_basis_currency is None:
+        position.cost_basis_currency = holding.trading_currency
+
+    db.commit()
+    db.refresh(position)
+    db.refresh(holding)
+    return ManualEntryResult(position=position, holding=holding, was_new_holding=False)

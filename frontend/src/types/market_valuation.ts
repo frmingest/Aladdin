@@ -42,6 +42,11 @@ export type ConcentrationProfileOut = {
   sector_weights: Record<string, string>;
   currency_weights: Record<string, string>;
   asset_class_weights: Record<string, string>;
+  // Absolute market value per asset class, reporting currency (parse with
+  // num()). Backs the dashboard's "Securities / Coin collection / Whisky
+  // collection" split so it can show a real currency figure per collection,
+  // not just a percentage share.
+  asset_class_values: Record<string, string>;
   holdings_excluded_from_concentration: string[];
 };
 
