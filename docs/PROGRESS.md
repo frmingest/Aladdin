@@ -9,7 +9,8 @@ online, keys set, Faiz has smoke-tested the Portfolio flow (accounts, CSV/XLSX u
 successfully. **Phase 8 (precious metals + whisky collection) fully built, not yet deployed** — see
 below: coin manual-entry UI, real Whiskybase import, and collectible-at-cost valuation all landed
 2026-09-15, on top of the same day's earlier precious-metals groundwork. Phase 9 (document evidence
-quality) still just planned.
+quality) still just planned. **Phase 10 (portfolio risk & regime rigor — a second economist-lens
+review, ADR 0016) proposed 2026-09-15** — see "Up next."
 
 **Git — resolved, no longer "unconfirmed":** commits have been happening normally throughout this
 project's history and are almost entirely pushed. As of this pass, local `main` is exactly 1 commit
@@ -447,14 +448,42 @@ deployment (browser + direct API calls), not just "keys are set":**
    2026-09-14 status-alignment pass (including ECON-005, which turned out to already work — see
    "Status" above); only ECON-007 remains: `scoring/versions/risk_v1.yaml`'s commodity/currency risk
    bands are still static percentages, not regime-aware. Lowest severity of the seven. Full
-   reasoning in **ADR 0014**.
+   reasoning in **ADR 0014**. Folded into Phase 10 (item 1a below), since it's the same regime
+   classifier ADR 0016 already reviews.
+1a. **Phase 10 — portfolio risk & regime rigor (ADR 0016, proposed 2026-09-15)** — a second
+   economist-lens review, this time of the risk/regime logic actually built since ADR 0014 (real
+   Pearson correlation from historical prices, the Norwegian wealth-tax estimator, DCF scenario
+   shocks) rather than re-covering ADR 0014's ground. Sequenced 10a → 10c by leverage vs. effort:
+   - **10a (cheap):** refresh the Norwegian wealth-tax constants — sourced from **2024** rules per
+     ADR 0008 and never re-verified; confirmed via web search this session that **2026** rules are
+     materially different (bunnfradrag 1.9M NOK single/3.8M married, a two-step 1.0%/1.1% combined
+     rate, 20% share discount) — plus a "rules current as of tax year 20XX" stamp in the UI so this
+     can't go silently stale again. Also: make `risk_v1.yaml`'s bands regime-aware (closes ECON-007),
+     and size DCF/scenario shocks off realized historical volatility (already computed for
+     correlation) instead of illustrative constants.
+   - **10b (medium):** broaden regime classification beyond two US-only series (add a Norway/Europe
+     indicator) and smooth discrete threshold crossings (persistence rule or a continuous regime
+     score) so factor weights/risk bands don't flip on one macro refresh; extend the real correlation
+     matrix with a synthetic NOK series and a commodity benchmark so the portfolio's actual
+     oil-equity/oil-currency covariance (Vår Energi + NOK) is quantified instead of left as two
+     separate risk-dimension line items; add a liquidity-risk tier for Phase 8's illiquid alternative
+     assets (whisky, physical metals).
+   - **10c (larger, deferred):** benchmark-relative and real (inflation-adjusted) return reporting;
+     define the track-record/calibration engine's protocol now that real analysis-run history has
+     started accumulating (see item 3 below).
+   Full findings table and reasoning in **ADR 0016**.
 2. **Document evidence quality (Phase 9)** — per-document evidence budget (fixes a
    large report getting truncated to near-zero by a smaller, more-recent upload), evidence-usage
    visibility on the Documents tab, section-aware chunk prioritization, and closing the PDF-only
    `financial_metrics` gap. Design in ADR 0012. Makes an already-built, already-in-use feature
    (document upload) deliver more of the value it was built for, rather than adding new surface
-   area.
-3. **Track-record & calibration engine** (§22.5) — a real deploy now exists, but it still needs weeks of live analysis history to have anything to calibrate against.
+   area. Recommended sequencing: Phase 9 and Phase 10's 10a items are both cheap and independent —
+   fine to do in either order or together.
+3. **Track-record & calibration engine** (§22.5) — a real deploy now exists, and real analysis-run
+   history has started accumulating (2026-09-14/15), so the clock the original note was waiting on
+   has started. ADR 0016 recommends defining the calibration protocol (outcome variable, horizon,
+   how a stated confidence tag gets scored) now, even before building the comparison engine itself,
+   so data collection follows a fixed schema from day one.
 4. **Testing debt** — populate `golden_documents`/`regression`, add `black`. (`eslint.config.js`
    resolved 2026-09-15, ADR 0015.)
 7. **From ADR 0015 (guardrails), not built this pass:** a pre-reset export/backup step for
@@ -484,6 +513,22 @@ deployment (browser + direct API calls), not just "keys are set":**
 
 ### Changelog
 
+- **2026-09-15 (Phase 10 planning — portfolio risk & regime rigor, ADR 0016):** A second
+  economist-lens review, following up on ADR 0014 (ECON-001–007) now that Phase 8 and Phase 5's real
+  correlation/systemic-risk machinery are live. Highest-severity finding: the Norwegian wealth-tax
+  constants (`bunnfradrag`/rate/`share_discount`, ADR 0008) were sourced from 2024 rules and never
+  re-verified — confirmed via web search that 2026 rules changed materially (this is the one figure
+  in the app that becomes a real tax-liability estimate someone could act on, unlike an illustrative
+  DCF shock). Also flagged: regime classification reads two US-only series with hard thresholds for
+  a NOK/Europe-tilted portfolio and no persistence/hysteresis; the real historical-price correlation
+  matrix (confirmed already built, not a gap) has no NOK or commodity-benchmark series so the
+  portfolio's actual oil-equity/oil-currency covariance (Vår Energi + NOK) is never quantified; no
+  liquidity-risk dimension for Phase 8's illiquid alternative assets; no benchmark-relative or
+  real-return reporting; DCF/scenario shocks still illustrative rather than fitted to realized
+  volatility the app already computes for correlation; and the track-record/calibration engine
+  (§22.5) should have its protocol defined now that real analysis-run history has started
+  accumulating. Proposed as Phase 10 (10a cheap → 10b medium → 10c larger/deferred), added to "Up
+  next" above Phase 9. Planning only, no application code touched. See ADR 0016.
 - **2026-09-15 (Agentic coding & AI-safety guardrails):** Added three enforcement layers —
   Claude Code hooks (`.claude/`), `.pre-commit-config.yaml`, `.github/workflows/ci.yml` +
   `dependabot.yml` — plus root `CLAUDE.md` as the operational rulebook, addressing the recurring
