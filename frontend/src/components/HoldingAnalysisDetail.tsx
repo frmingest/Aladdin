@@ -13,7 +13,21 @@ import type { HoldingAnalysisDetail as HoldingAnalysisDetailType } from "../type
  * run). Extracted so the same view can also be dropped into the Dashboard's
  * HoldingDetailSection (bottom section) against whatever analysis is already
  * on record, without duplicating the JSX or drifting the two copies apart.
+ *
+ * Redesigned (2026-09-16) to cut down the "wall of text" this view had
+ * become: the three factor write-ups (previously always-expanded paragraphs
+ * stacked one after another) are now collapsible scorecards — score and
+ * confidence stay visible, the written reasoning is a click away — and the
+ * executive summary, strengths/risks, and thesis-divergence sections each
+ * get their own visual treatment instead of reading as one undifferentiated
+ * stream of paragraphs.
  */
+
+const FACTOR_LABELS = {
+  business_quality: "Business Quality",
+  financial_strength: "Financial Strength",
+  valuation: "Valuation",
+} as const;
 
 export function ScorePill({ score }: { score: string | number | null }) {
   if (score === null) return <span className="text-tertiary">n/a</span>;
@@ -23,15 +37,25 @@ export function ScorePill({ score }: { score: string | number | null }) {
   return <span className={className}>{score}/10</span>;
 }
 
-export function FactorRow({ label, factor }: { label: string; factor: { score: number; confidence: string; reasoning: string } }) {
+/** One collapsible factor scorecard — label, score, and confidence are
+ * always visible; the model's written reasoning opens on click. Starts
+ * collapsed so three factors read as a compact scoreboard, not three
+ * paragraphs the eye has to wade through before reaching strengths/risks. */
+function FactorCard({ label, factor }: { label: string; factor: { score: number; confidence: string; reasoning: string } }) {
+  const [open, setOpen] = useState(false);
   return (
-    <div className="border-b border-secondary py-2">
-      <div className="flex items-center gap-2 mb-1">
+    <div className="factor-card">
+      <button type="button" className="factor-card-header" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
         <span className="text-sm font-medium text-primary">{label}</span>
         <ScorePill score={factor.score} />
-        <span className="text-xs text-tertiary">({factor.confidence} confidence)</span>
-      </div>
-      <p className="text-sm text-secondary">{factor.reasoning}</p>
+        <span className="text-xs text-tertiary">{factor.confidence} confidence</span>
+        <span className={`factor-card-chevron ${open ? "open" : ""}`}>▶</span>
+      </button>
+      {open && (
+        <div className="factor-card-body">
+          <p className="text-sm text-secondary">{factor.reasoning}</p>
+        </div>
+      )}
     </div>
   );
 }
@@ -40,57 +64,80 @@ export function FactorRow({ label, factor }: { label: string; factor: { score: n
  * insufficient-evidence flags. Pure/presentational: takes the detail object
  * a caller has already fetched. */
 export function HoldingAnalysisFullDetail({ detail }: { detail: HoldingAnalysisDetailType }) {
+  const output = detail.structured_output;
   return (
-    <div className="space-y-3">
-      <p className="text-sm text-secondary">{detail.structured_output.executive_summary}</p>
+    <div className="space-y-4">
+      <div className="callout-lead">
+        <p className="text-sm leading-relaxed">{output.executive_summary}</p>
+      </div>
 
       <div>
-        <FactorRow label="Business Quality" factor={detail.structured_output.business_quality} />
-        <FactorRow label="Financial Strength" factor={detail.structured_output.financial_strength} />
-        <FactorRow label="Valuation" factor={detail.structured_output.valuation} />
+        <h4 className="stat-label mb-2">Factor scores</h4>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <FactorCard label={FACTOR_LABELS.business_quality} factor={output.business_quality} />
+          <FactorCard label={FACTOR_LABELS.financial_strength} factor={output.financial_strength} />
+          <FactorCard label={FACTOR_LABELS.valuation} factor={output.valuation} />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <h4 className="stat-label mb-1">Key Strengths</h4>
-          <ul className="text-sm list-disc list-inside text-secondary">
-            {detail.structured_output.key_strengths.map((s, i) => (
-              <li key={i}>{s}</li>
-            ))}
-          </ul>
+        <div className="terminal-panel">
+          <h4 className="stat-label mb-2 text-positive">Key Strengths</h4>
+          {output.key_strengths.length === 0 ? (
+            <p className="text-sm text-tertiary">None noted.</p>
+          ) : (
+            <ul className="marker-list marker-positive text-sm text-secondary">
+              {output.key_strengths.map((s, i) => (
+                <li key={i}>{s}</li>
+              ))}
+            </ul>
+          )}
         </div>
-        <div>
-          <h4 className="stat-label mb-1">Key Risks</h4>
-          <ul className="text-sm list-disc list-inside text-secondary">
-            {detail.structured_output.key_risks.map((s, i) => (
-              <li key={i}>{s}</li>
-            ))}
-          </ul>
+        <div className="terminal-panel">
+          <h4 className="stat-label mb-2 text-negative">Key Risks</h4>
+          {output.key_risks.length === 0 ? (
+            <p className="text-sm text-tertiary">None noted.</p>
+          ) : (
+            <ul className="marker-list marker-negative text-sm text-secondary">
+              {output.key_risks.map((s, i) => (
+                <li key={i}>{s}</li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
 
-      <div className="bg-tertiary rounded-lg p-3">
-        <h4 className="stat-label mb-1">Thesis Divergence (blind vs. your notes)</h4>
-        <p className="text-sm text-secondary">
-          <span className="text-tertiary">Blind:</span> {detail.structured_output.thesis_divergence.blind_assessment_summary}
-        </p>
-        <p className="text-sm text-secondary">
-          <span className="text-tertiary">Your notes:</span> {detail.structured_output.thesis_divergence.user_thesis_summary}
-        </p>
-        <p className="text-sm mt-1">
-          <span className={detail.structured_output.thesis_divergence.material_disagreement ? "text-warning" : "text-positive"}>
-            {detail.structured_output.thesis_divergence.material_disagreement ? "Material disagreement" : "No material disagreement"}
+      <div className="terminal-panel">
+        <h4 className="stat-label mb-2">Thesis Divergence — blind read vs. your notes</h4>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+          <p className="text-secondary">
+            <span className="text-tertiary block mb-0.5">Blind assessment</span>
+            {output.thesis_divergence.blind_assessment_summary}
+          </p>
+          <p className="text-secondary">
+            <span className="text-tertiary block mb-0.5">Your notes</span>
+            {output.thesis_divergence.user_thesis_summary}
+          </p>
+        </div>
+        <p className="text-sm mt-3 pt-3 border-t border-secondary">
+          <span
+            className={
+              output.thesis_divergence.material_disagreement
+                ? "terminal-badge terminal-badge-warning"
+                : "terminal-badge terminal-badge-positive"
+            }
+          >
+            {output.thesis_divergence.material_disagreement ? "Material disagreement" : "No material disagreement"}
           </span>
-          {" — "}
-          <span className="text-secondary">{detail.structured_output.thesis_divergence.disagreement_notes}</span>
+          <span className="text-secondary ml-2">{output.thesis_divergence.disagreement_notes}</span>
         </p>
       </div>
 
-      {detail.structured_output.insufficient_evidence_areas.length > 0 && (
-        <div>
-          <h4 className="stat-label mb-1">Insufficient Evidence</h4>
-          <ul className="text-sm list-disc list-inside text-warning">
-            {detail.structured_output.insufficient_evidence_areas.map((s, i) => (
+      {output.insufficient_evidence_areas.length > 0 && (
+        <div className="terminal-panel terminal-panel-warning">
+          <h4 className="stat-label mb-2 text-warning">Insufficient Evidence</h4>
+          <ul className="marker-list marker-warning text-sm text-warning">
+            {output.insufficient_evidence_areas.map((s, i) => (
               <li key={i}>{s}</li>
             ))}
           </ul>

@@ -592,6 +592,16 @@ function ValuationCaseRow({ c }: { c: ValuationCaseOut }) {
   );
 }
 
+const DETAIL_TABS = ["overview", "analysis", "evidence", "thesis", "valuation"] as const;
+type DetailTab = (typeof DETAIL_TABS)[number];
+const DETAIL_TAB_LABELS: Record<DetailTab, string> = {
+  overview: "Overview",
+  analysis: "Full analysis",
+  evidence: "Evidence",
+  thesis: "Thesis",
+  valuation: "Valuation",
+};
+
 /**
  * Per-holding drill-down: analysis comparison (§19 "Analysis comparison —
  * why today's analysis differs from prior runs"), evidence panel (§19
@@ -606,10 +616,19 @@ function ValuationCaseRow({ c }: { c: ValuationCaseOut }) {
  * status moved forward from here, and a valuation case can be calculated
  * (with its AI critique surfaced) without leaving the dashboard. Reading
  * analyses/evidence stays exactly as it was.
+ *
+ * Redesigned (2026-09-16): the four sub-sections used to render one after
+ * another in a single long scroll — analysis comparison, the full analysis
+ * detail (itself a dense block), the evidence list, the thesis timeline, and
+ * the valuation scenarios, all always on screen at once. That's the "wall of
+ * text" this pass fixes: the sub-sections are now tabs, so only one dense
+ * pane is visible at a time, each with a count badge so you can see at a
+ * glance whether it has anything in it before opening it.
  */
 export default function HoldingDetailSection({ accountIds }: { accountIds: string[] }) {
   const [holdings, setHoldings] = useState<Holding[]>([]);
   const [holdingId, setHoldingId] = useState<string>("");
+  const [activeTab, setActiveTab] = useState<DetailTab>("overview");
 
   const [analyses, setAnalyses] = useState<HoldingAnalysisSummary[]>([]);
   const [latest, setLatest] = useState<HoldingAnalysisDetail | null>(null);
@@ -641,6 +660,7 @@ export default function HoldingDetailSection({ accountIds }: { accountIds: strin
 
   useEffect(() => {
     if (!holdingId) return;
+    setActiveTab("overview");
     setLatest(null);
     setPrevious(null);
     listHoldingAnalyses(holdingId)
@@ -664,7 +684,7 @@ export default function HoldingDetailSection({ accountIds }: { accountIds: strin
   }
 
   return (
-    <section className="terminal-card space-y-6">
+    <section className="terminal-card space-y-4">
       <div className="flex items-center gap-3 flex-wrap">
         <h2 className="terminal-card-title flex items-center gap-2">
           Holding detail
@@ -685,67 +705,96 @@ export default function HoldingDetailSection({ accountIds }: { accountIds: strin
         </select>
       </div>
 
-      <div>
-        <h3 className="text-sm font-medium text-secondary mb-2">Analysis comparison</h3>
-        {analyses.length === 0 && <p className="text-sm text-tertiary">No analyses on record for this holding.</p>}
-        {analyses.length > 0 && (
-          <div className="flex items-center gap-4">
-            <ScoreTrend analyses={analyses} />
-            <span className="text-xs text-tertiary">{analyses.length} run(s), oldest to newest</span>
-          </div>
-        )}
-        {latest && previous && (
-          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-            <div className="terminal-panel">
-              <p className="stat-label mb-1">
-                Previous ({new Date(previous.created_at).toLocaleDateString()})
-              </p>
-              <p className="text-secondary">Overall: <span className="font-mono text-primary">{previous.overall_score ?? "n/a"}/10</span> — {previous.structured_output.thesis_status}</p>
-            </div>
-            <div className="terminal-panel">
-              <p className="stat-label mb-1">
-                Latest ({new Date(latest.created_at).toLocaleDateString()})
-              </p>
-              <p className="text-secondary">Overall: <span className="font-mono text-primary">{latest.overall_score ?? "n/a"}/10</span> — {latest.structured_output.thesis_status}</p>
-            </div>
-            {latest.structured_output.new_information.length > 0 && (
-              <div className="sm:col-span-2">
-                <p className="stat-label mb-1">New information since previous run</p>
-                <ul className="list-disc list-inside text-secondary">
-                  {latest.structured_output.new_information.map((s, i) => (
-                    <li key={i}>{s}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-        )}
+      <div className="tab-bar">
+        {DETAIL_TABS.map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            onClick={() => setActiveTab(tab)}
+            className={`tab-button ${activeTab === tab ? "active" : ""}`}
+          >
+            {DETAIL_TAB_LABELS[tab]}
+            <span className="tab-count">{tabCount(tab)}</span>
+          </button>
+        ))}
       </div>
 
-      {latest && (
+      {activeTab === "overview" && (
         <div>
-          <h3 className="text-sm font-medium text-secondary mb-2">
-            Latest analysis — full detail
-          </h3>
-          <div className="terminal-panel">
-            <HoldingAnalysisFullDetailWithMemo detail={latest} />
-          </div>
+          <h3 className="text-sm font-medium text-secondary mb-2">Analysis comparison</h3>
+          {analyses.length === 0 && <p className="text-sm text-tertiary">No analyses on record for this holding.</p>}
+          {analyses.length > 0 && (
+            <div className="flex items-center gap-4">
+              <ScoreTrend analyses={analyses} />
+              <span className="text-xs text-tertiary">{analyses.length} run(s), oldest to newest</span>
+            </div>
+          )}
+          {latest && previous && (
+            <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+              <div className="terminal-panel">
+                <p className="stat-label mb-1">
+                  Previous ({new Date(previous.created_at).toLocaleDateString()})
+                </p>
+                <p className="text-secondary">Overall: <span className="font-mono text-primary">{previous.overall_score ?? "n/a"}/10</span> — {previous.structured_output.thesis_status}</p>
+              </div>
+              <div className="terminal-panel">
+                <p className="stat-label mb-1">
+                  Latest ({new Date(latest.created_at).toLocaleDateString()})
+                </p>
+                <p className="text-secondary">Overall: <span className="font-mono text-primary">{latest.overall_score ?? "n/a"}/10</span> — {latest.structured_output.thesis_status}</p>
+              </div>
+              {latest.structured_output.new_information.length > 0 && (
+                <div className="sm:col-span-2">
+                  <p className="stat-label mb-1">New information since previous run</p>
+                  <ul className="marker-list text-secondary">
+                    {latest.structured_output.new_information.map((s, i) => (
+                      <li key={i}>{s}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+          {!latest && analyses.length === 0 && (
+            <p className="text-xs text-tertiary mt-3">
+              Run an analysis on the Analysis tab to see a score trend and full breakdown here.
+            </p>
+          )}
         </div>
       )}
 
-      {latest && (
+      {activeTab === "analysis" && (
         <div>
-          <h3 className="text-sm font-medium text-secondary mb-2">Evidence panel</h3>
-          {latest.evidence_references.length === 0 ? (
+          {latest ? (
+            <div className="terminal-panel">
+              <HoldingAnalysisFullDetailWithMemo detail={latest} />
+            </div>
+          ) : (
+            <p className="text-sm text-tertiary">No analysis on record for this holding yet.</p>
+          )}
+        </div>
+      )}
+
+      {activeTab === "evidence" && (
+        <div>
+          {!latest || latest.evidence_references.length === 0 ? (
             <p className="text-sm text-tertiary">No evidence references on the latest analysis.</p>
           ) : (
-            <ul className="text-sm space-y-1">
+            <ul className="text-sm space-y-2">
               {latest.evidence_references.map((ref, i) => (
-                <li key={i} className="text-secondary">
-                  <span className="text-tertiary">[{ref.source_type}]</span> {ref.source_id}
-                  {ref.section && ` — ${ref.section}`}
-                  {ref.page_start && ` (p.${ref.page_start}${ref.page_end && ref.page_end !== ref.page_start ? `-${ref.page_end}` : ""})`}
-                  <span className="text-xs text-disabled"> · {ref.relevance}</span>
+                <li key={i} className="terminal-panel">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="terminal-badge terminal-badge-neutral">{ref.source_type}</span>
+                    <span className="text-primary font-medium">{ref.source_id}</span>
+                    {ref.section && <span className="text-tertiary">— {ref.section}</span>}
+                    {ref.page_start && (
+                      <span className="text-xs text-disabled font-mono">
+                        p.{ref.page_start}
+                        {ref.page_end && ref.page_end !== ref.page_start ? `-${ref.page_end}` : ""}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-tertiary mt-1">{ref.relevance}</p>
                 </li>
               ))}
             </ul>
@@ -753,71 +802,90 @@ export default function HoldingDetailSection({ accountIds }: { accountIds: strin
         </div>
       )}
 
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-medium text-secondary">Thesis timeline</h3>
-          {holdingId && (
-            <NewThesisForm
-              key={`thesis-${holdingId}`}
-              holdingId={holdingId}
-              onCreated={(t) => setTheses((prev) => [t, ...prev])}
-            />
-          )}
-        </div>
-        {theses.length === 0 && <p className="text-sm text-tertiary">No thesis recorded for this holding.</p>}
-        <ul className="space-y-2">
-          {theses.map((t) => (
-            <li key={t.id} className="border-l-2 border-primary pl-3">
-              <div className="flex items-center gap-2 text-sm flex-wrap">
-                <ThesisStatusSelect
-                  thesis={t}
-                  onUpdated={(updated) => setTheses((prev) => prev.map((x) => (x.id === updated.id ? updated : x)))}
-                />
-                <span className="text-xs text-tertiary">{t.confidence} confidence</span>
-                <span className="text-xs text-disabled font-mono">{new Date(t.updated_at).toLocaleDateString()}</span>
-                <button onClick={() => checkInvalidation(t.id)} className="text-xs text-accent hover:underline ml-auto">
-                  Check invalidation signal
-                </button>
-              </div>
-              <p className="text-sm text-secondary mt-1">{t.thesis}</p>
-              {invalidation[t.id] && (
-                <p className={`text-xs mt-1 ${invalidation[t.id].has_signal ? "text-warning" : "text-tertiary"}`}>
-                  {invalidation[t.id].has_signal
-                    ? `Invalidation signal: ${invalidation[t.id].reasons.join("; ")}`
-                    : "No invalidation signal against the latest analysis."}
-                </p>
-              )}
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-medium text-secondary">Valuation scenarios</h3>
-          {holdingId && (
-            <NewValuationCaseForm
-              key={`valuation-${holdingId}`}
-              holdingId={holdingId}
-              onCreated={(c) => setCases((prev) => [c, ...prev])}
-            />
-          )}
-        </div>
-        <ValuationScenarioChart
-          data={cases
-            .map((c) => ({ case_type: c.case_type, calculated_value: num(c.calculated_value), currency: c.currency }))
-            .filter((c): c is { case_type: string; calculated_value: number; currency: string } => c.calculated_value !== null)}
-        />
-        {cases.length === 0 ? (
-          <p className="text-sm text-tertiary mt-2">No valuation cases recorded for this holding.</p>
-        ) : (
-          <ul className="space-y-2 mt-3">
-            {cases.map((c) => (
-              <ValuationCaseRow key={c.id} c={c} />
+      {activeTab === "thesis" && (
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-medium text-secondary">Thesis timeline</h3>
+            {holdingId && (
+              <NewThesisForm
+                key={`thesis-${holdingId}`}
+                holdingId={holdingId}
+                onCreated={(t) => setTheses((prev) => [t, ...prev])}
+              />
+            )}
+          </div>
+          {theses.length === 0 && <p className="text-sm text-tertiary">No thesis recorded for this holding.</p>}
+          <ul className="space-y-2">
+            {theses.map((t) => (
+              <li key={t.id} className="terminal-panel">
+                <div className="flex items-center gap-2 text-sm flex-wrap">
+                  <ThesisStatusSelect
+                    thesis={t}
+                    onUpdated={(updated) => setTheses((prev) => prev.map((x) => (x.id === updated.id ? updated : x)))}
+                  />
+                  <span className="text-xs text-tertiary">{t.confidence} confidence</span>
+                  <span className="text-xs text-disabled font-mono">{new Date(t.updated_at).toLocaleDateString()}</span>
+                  <button onClick={() => checkInvalidation(t.id)} className="text-xs text-accent hover:underline ml-auto">
+                    Check invalidation signal
+                  </button>
+                </div>
+                <p className="text-sm text-secondary mt-2">{t.thesis}</p>
+                {invalidation[t.id] && (
+                  <p className={`text-xs mt-2 ${invalidation[t.id].has_signal ? "text-warning" : "text-tertiary"}`}>
+                    {invalidation[t.id].has_signal
+                      ? `Invalidation signal: ${invalidation[t.id].reasons.join("; ")}`
+                      : "No invalidation signal against the latest analysis."}
+                  </p>
+                )}
+              </li>
             ))}
           </ul>
-        )}
-      </div>
+        </div>
+      )}
+
+      {activeTab === "valuation" && (
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-medium text-secondary">Valuation scenarios</h3>
+            {holdingId && (
+              <NewValuationCaseForm
+                key={`valuation-${holdingId}`}
+                holdingId={holdingId}
+                onCreated={(c) => setCases((prev) => [c, ...prev])}
+              />
+            )}
+          </div>
+          <ValuationScenarioChart
+            data={cases
+              .map((c) => ({ case_type: c.case_type, calculated_value: num(c.calculated_value), currency: c.currency }))
+              .filter((c): c is { case_type: string; calculated_value: number; currency: string } => c.calculated_value !== null)}
+          />
+          {cases.length === 0 ? (
+            <p className="text-sm text-tertiary mt-2">No valuation cases recorded for this holding.</p>
+          ) : (
+            <ul className="space-y-2 mt-3">
+              {cases.map((c) => (
+                <ValuationCaseRow key={c.id} c={c} />
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
     </section>
   );
+
+  function tabCount(tab: DetailTab): number {
+    switch (tab) {
+      case "overview":
+        return analyses.length;
+      case "analysis":
+        return latest ? 1 : 0;
+      case "evidence":
+        return latest?.evidence_references.length ?? 0;
+      case "thesis":
+        return theses.length;
+      case "valuation":
+        return cases.length;
+    }
+  }
 }

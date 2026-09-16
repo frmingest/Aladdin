@@ -754,3 +754,164 @@ textarea.input-terminal {
     border-radius: var(--radius-md);
     padding: var(--space-4);
 }
+
+/* ============================================================================
+   TABS
+   ----------------------------------------------------------------------------
+   Segmented navigation for a card that would otherwise stack several dense
+   sub-sections one after another (e.g. Dashboard's Holding detail). Splits a
+   long scroll into on-demand panes instead of a permanent wall of text.
+   ============================================================================ */
+
+.tab-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+    border-bottom: 1px solid var(--border-primary);
+    margin-bottom: var(--space-4);
+}
+
+.tab-button {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    font-family: var(--font-body);
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    color: var(--text-tertiary);
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    cursor: pointer;
+    transition: color var(--transition-fast), border-color var(--transition-fast);
+    white-space: nowrap;
+}
+
+.tab-button:hover {
+    color: var(--text-primary);
+}
+
+.tab-button.active {
+    color: var(--accent-primary);
+    border-bottom-color: var(--accent-primary);
+}
+
+.tab-button .tab-count {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: inherit;
+    opacity: 0.7;
+}
+
+/* ============================================================================
+   FACTOR / SCORE CARDS
+   ----------------------------------------------------------------------------
+   A collapsible scorecard for one rated factor (business quality, financial
+   strength, valuation): score + confidence are always visible, the written
+   reasoning is a click away instead of always-on paragraph text.
+   ============================================================================ */
+
+.factor-card {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+.factor-card-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    width: 100%;
+    padding: var(--space-3);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    color: inherit;
+    font: inherit;
+}
+
+.factor-card-header:hover {
+    background: var(--bg-elevated);
+}
+
+.factor-card-chevron {
+    margin-left: auto;
+    color: var(--text-tertiary);
+    font-size: var(--text-xs);
+    transition: transform var(--transition-fast);
+    flex-shrink: 0;
+}
+
+.factor-card-chevron.open {
+    transform: rotate(90deg);
+}
+
+.factor-card-body {
+    padding: 0 var(--space-3) var(--space-3);
+    border-top: 1px solid var(--border-primary);
+    padding-top: var(--space-3);
+}
+
+/* Lead callout for an executive summary / key takeaway — a step up in
+   visual weight from a plain paragraph so it reads as the headline, not
+   just more body text in the stack. */
+.callout-lead {
+    background: var(--bg-tertiary);
+    border-left: 3px solid var(--accent-primary);
+    border-radius: var(--radius-sm);
+    padding: var(--space-3) var(--space-4);
+}
+
+.callout-lead p {
+    color: var(--text-primary);
+}
+
+/* Strength/risk list rows — a colored marker instead of a generic disc
+   bullet, so a strengths list and a risks list are visually distinct even
+   skimmed side by side. */
+.marker-list {
+    list-style: none;
+}
+
+.marker-list li {
+    position: relative;
+    padding-left: var(--space-4);
+}
+
+.marker-list li + li {
+    margin-top: var(--space-2);
+}
+
+.marker-list li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0.55em;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--text-tertiary);
+}
+
+.marker-list.marker-positive li::before {
+    background: var(--color-positive);
+}
+
+.marker-list.marker-negative li::before {
+    background: var(--color-negative);
+}
+
+.marker-list.marker-warning li::before {
+    background: var(--color-warning);
+}
+
+/* Warning-tinted variant of .terminal-panel, for a callout that needs to
+   read as "needs attention" (e.g. insufficient-evidence flags) without a
+   full alert-box treatment. */
+.terminal-panel-warning {
+    border-color: rgba(255, 203, 71, 0.4);
+}
