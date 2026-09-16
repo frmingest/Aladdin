@@ -31,6 +31,7 @@ import type { InvalidationSignalOut, ThesisCreate, ThesisOut, ThesisUpdate } fro
 import type { ValuationCaseCreate, ValuationCaseOut, ValuationDefaults } from "../types/dcf";
 import type { MacroSnapshotOut, ResearchRunOut, SectorResearchOut } from "../types/research";
 import type { UsageSummaryOut } from "../types/usage";
+import type { ExecutiveSummaryOut } from "../types/executive_summary";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "/api";
 // Paired with the backend's optional APP_AUTH_TOKEN (see
@@ -269,6 +270,16 @@ export function listPortfolioRiskSnapshots(snapshotId: string): Promise<Portfoli
 
 export function getPortfolioRiskSnapshot(id: string): Promise<PortfolioRiskSnapshotOut> {
   return apiFetch(`/portfolio/risk-snapshots/${id}`);
+}
+
+// Free — entirely a read-time aggregation over data Composition/Portfolio
+// risk/Factor profile/Macro dashboard already persisted (§2.7), so — like
+// getSnapshotValuation — this is safe to call on every mount/filter change.
+export function getExecutiveSummary(
+  snapshotId: string,
+  accountIds?: string[],
+): Promise<ExecutiveSummaryOut> {
+  return apiFetch(`/portfolio/snapshots/${snapshotId}/executive-summary${accountIdsQuery(accountIds)}`);
 }
 
 // --- Phase 5 — thesis ledger (§16) ------------------------------------------

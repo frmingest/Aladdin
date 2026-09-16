@@ -16,6 +16,7 @@ from app.api.accounts import router as accounts_router
 from app.api.analysis import router as analysis_router
 from app.api.auth import require_auth
 from app.api.documents import router as documents_router
+from app.api.executive_summary import router as executive_summary_router
 from app.api.portfolio import router as portfolio_router
 from app.api.portfolio_risk import router as portfolio_risk_router
 from app.api.research import router as research_router
@@ -77,6 +78,7 @@ app.include_router(research_router, dependencies=_auth)
 app.include_router(thesis_router, dependencies=_auth)
 app.include_router(valuation_router, dependencies=_auth)
 app.include_router(portfolio_risk_router, dependencies=_auth)
+app.include_router(executive_summary_router, dependencies=_auth)
 app.include_router(usage_router, dependencies=_auth)
 
 

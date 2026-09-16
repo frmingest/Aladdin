@@ -3,6 +3,7 @@ import { listAccounts, listSnapshots } from "../services/api";
 import type { Account, PortfolioSnapshotSummary } from "../types/portfolio";
 import AccountFilter from "../components/AccountFilter";
 import CollectionFilter from "../components/CollectionFilter";
+import ExecutiveSummarySection from "./dashboard/ExecutiveSummarySection";
 import CompositionSection from "./dashboard/CompositionSection";
 import AllocationDriftSection from "./dashboard/AllocationDriftSection";
 import RiskSection from "./dashboard/RiskSection";
@@ -20,6 +21,14 @@ import UsageSection from "./dashboard/UsageSection";
  * (valuation, risk snapshot, macro/sector refresh) are manual triggers,
  * matching the convention Analysis.tsx established for Phase 3; everything
  * else reads whatever's already on record.
+ *
+ * ExecutiveSummarySection leads the snapshot-scoped sections below — a
+ * portfolio-wide rollup of what every section after it computes (total
+ * value/P&L, risk band, factor-profile coverage, collection/currency mix,
+ * macro regime) plus a consolidated "needs attention" list, entirely from
+ * `GET .../executive-summary` (free, §2.7 — no live provider call of its
+ * own). Faiz asked whether the Dashboard had a portfolio-wide summary view;
+ * this is that view.
  *
  * UsageSection (§28 observability follow-up, ADR 0013) sits above the
  * snapshot-scoped sections deliberately — Gemini usage/quota is a portfolio-
@@ -134,6 +143,7 @@ export default function Dashboard() {
 
       {snapshotId ? (
         <>
+          <ExecutiveSummarySection snapshotId={snapshotId} accountIds={accountIds} />
           <CompositionSection
             snapshotId={snapshotId}
             accountIds={accountIds}
