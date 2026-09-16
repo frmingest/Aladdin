@@ -19,6 +19,21 @@ here. A failed holding records no usage row even though the call happened
 and cost tokens — LLMUnavailableError's own message is the only trace of
 that today (a real gap, but a pre-existing one this pass doesn't attempt to
 close — see ADR 0013's Consequences).
+
+Daily-budget guard (2026-09-16, Faiz's "many stored PDF documents" report):
+the free tier's binding constraint isn't the per-minute rate app.providers.
+gemini_retry already paces against — with `gemini-3.6-flash` it's
+`settings.llm_rate_limit_rpd`, 20 requests/day (ADR 0013), an order of
+magnitude tighter. Before this, a run requesting more holdings than the
+day's remaining budget would burn through gemini_retry's exponential
+backoff for every single one of them, each attempt guaranteed to 429,
+before finally recording the same "provider unavailable" failure a plain
+budget check could have produced instantly. `calls_remaining_today` below
+is seeded once from app.services.usage.get_usage_summary (the same ledger
+the `/usage/summary` endpoint reads, §2.7 "compute once, reuse") and then
+tracked locally for the rest of this run: a holding whose blind pass (plus
+reconciliation pass, when it has notes/thesis to reconcile against) would
+exceed what's left is skipped with a clear reason instead of attempted.
 """
 
 from dataclasses import dataclass
@@ -38,7 +53,7 @@ from app.services.analysis.context import InsufficientContextError, build_analys
 from app.services.analysis.llm_analysis import LLMAnalysisResult, run_two_pass_analysis
 from app.services.research.common import latest_completed_run
 from app.services.research.macro import get_latest_macro_snapshot
-from app.services.usage import record_llm_usage
+from app.services.usage import get_usage_summary, record_llm_usage
 
 _FACTOR_FIELDS = ("business_quality", "financial_strength", "valuation")
 
@@ -107,13 +122,50 @@ def run_analysis(
     holding_analyses: list[HoldingAnalysis] = []
     failures: list[HoldingAnalysisFailure] = []
 
+    # Seeded once per run from today's already-committed ledger rows, then
+    # tracked locally below — see this module's docstring. A fresh query per
+    # holding isn't needed: this process is the only writer of usage rows for
+    # a synchronous, single-user run (§2.9), so the local counter stays exact.
+    usage_summary = get_usage_summary(db, settings)
+    calls_remaining_today = max(settings.llm_rate_limit_rpd - usage_summary.today.requests, 0)
+
     for holding_id in holding_ids:
+        if calls_remaining_today <= 0:
+            failures.append(
+                HoldingAnalysisFailure(holding_id=holding_id, reason=_daily_budget_exhausted_reason(settings))
+            )
+            continue
+
         try:
             context = build_analysis_context(db, holding_id, snapshot_id)
-            result = run_two_pass_analysis(provider, context, settings.active_prompt_version)
-        except (InsufficientContextError, LLMUnavailableError, ValueError) as exc:
+        except (InsufficientContextError, ValueError) as exc:
             failures.append(HoldingAnalysisFailure(holding_id=holding_id, reason=str(exc)))
             continue
+
+        # Reconciliation only runs when this holding already has notes/thesis
+        # to reconcile against (app.services.analysis.llm_analysis) — known
+        # from context alone, no provider call needed to find out.
+        planned_calls = 2 if (context.user_notes and context.user_notes.strip()) else 1
+        if calls_remaining_today < planned_calls:
+            failures.append(
+                HoldingAnalysisFailure(holding_id=holding_id, reason=_daily_budget_exhausted_reason(settings))
+            )
+            continue
+
+        try:
+            result = run_two_pass_analysis(provider, context, settings.active_prompt_version)
+        except (LLMUnavailableError, ValueError) as exc:
+            # The Gemini call(s) still happened — and still cost real
+            # quota — even though the analysis itself failed (same gap
+            # ADR 0013's Consequences already flagged for the usage
+            # ledger). Assume the worst case (planned_calls) rather than
+            # under-counting and letting the next holding retry into a
+            # guaranteed 429 (§21: fail visibly, don't paper over).
+            calls_remaining_today = max(calls_remaining_today - planned_calls, 0)
+            failures.append(HoldingAnalysisFailure(holding_id=holding_id, reason=str(exc)))
+            continue
+
+        calls_remaining_today -= 2 if result.reconciliation_ran else 1
 
         factor_scores = {f: getattr(result.output, f).score for f in _FACTOR_FIELDS}
         confidences = [getattr(result.output, f).confidence.value for f in _FACTOR_FIELDS]
@@ -179,6 +231,19 @@ def run_analysis(
     db.refresh(run)
 
     return AnalysisRunOutcome(analysis_run=run, holding_analyses=holding_analyses, failures=failures)
+
+
+def _daily_budget_exhausted_reason(settings: Settings) -> str:
+    """§21 fail visibly: names the actual constraint (the free tier's
+    requests-per-day cap, not a generic "provider unavailable") and when it
+    resets, so this reads differently in the UI than a transient Gemini
+    outage would."""
+    return (
+        f"skipped — today's Gemini free-tier request budget is exhausted "
+        f"({settings.llm_rate_limit_rpd} requests/day for {settings.llm_model_name}); "
+        "resets at UTC midnight. Re-run this holding after the reset, spread a large "
+        "batch across multiple days, or raise llm_rate_limit_rpd once on a paid tier."
+    )
 
 
 def _record_analysis_usage(

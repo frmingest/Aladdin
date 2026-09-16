@@ -1,0 +1,229 @@
+"""
+Unit tests for the daily-budget guard in app.services.analysis.runner
+(2026-09-16 — Faiz's "many stored PDF documents hit the free tier's rate
+limit" report). Exercises `run_analysis` directly against a throwaway
+in-memory SQLite session (no HTTP layer, no real Gemini calls — a
+FakeLLMProvider stands in, same pattern as
+tests/integration/test_analysis_api.py), independent of external
+infrastructure (§22).
+
+The free tier's binding constraint for `gemini-3.6-flash` is
+`llm_rate_limit_rpd` (20 requests/day, ADR 0013) — an order of magnitude
+tighter than the per-minute pacing app.providers.gemini_retry already
+handles. These tests set that limit very low (1-3) so the guard's
+pre-flight skip is exercised deterministically, without needing to
+fabricate realistic-looking llm_usage_events timestamps.
+"""
+
+import json
+from decimal import Decimal
+
+import pytest
+
+import app.models  # noqa: F401 — populates Base.metadata before create_all
+from app.config.database import Base
+from app.config.settings import Settings
+from app.models.document import Document, DocumentChunk, DocumentStatus, DocumentType
+from app.models.holding import Holding
+from app.models.portfolio import PortfolioPosition, PortfolioSnapshot, SnapshotStatus
+from app.providers.base import LLMProvider, LLMResponse, LLMUnavailableError
+from app.services.analysis.runner import run_analysis
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+_BLIND_OUTPUT = {
+    "executive_summary": "Solid energy producer with growing volumes.",
+    "thesis_status": "new",
+    "business_quality": {"score": 7, "confidence": "medium", "reasoning": "Reasonable moat."},
+    "financial_strength": {"score": 6, "confidence": "medium", "reasoning": "Adequate balance sheet."},
+    "valuation": {"score": 5, "confidence": "low", "reasoning": "Limited multiples data."},
+    "key_strengths": ["Growing production volumes"],
+    "key_risks": ["Commodity price exposure"],
+    "new_information": [],
+    "invalidation_triggers": ["Sustained oil price collapse"],
+    "decision_considerations": ["Monitor next quarterly report"],
+    "source_references": [],
+    "insufficient_evidence_areas": [],
+}
+
+_RECONCILIATION_OUTPUT = {
+    "thesis_divergence": {
+        "blind_assessment_summary": "Cautiously positive.",
+        "user_thesis_summary": "Bullish on the energy transition angle.",
+        "material_disagreement": False,
+        "disagreement_notes": "Aligned.",
+    },
+    "additional_risks": [],
+    "additional_considerations": [],
+    "source_references": [],
+}
+
+
+class FakeLLMProvider(LLMProvider):
+    """Counts real calls made — the point of these tests is confirming the
+    guard skips a holding *before* any call, not just that it fails
+    afterwards."""
+
+    def __init__(self, always_fail: bool = False):
+        self.always_fail = always_fail
+        self.calls_made = 0
+
+    def generate_structured(self, *, system_prompt, user_content, response_schema, prompt_version):
+        self.calls_made += 1
+        if self.always_fail:
+            raise LLMUnavailableError("simulated provider outage")
+        payload = _BLIND_OUTPUT if "persona" in prompt_version else _RECONCILIATION_OUTPUT
+        return LLMResponse(content=json.dumps(payload), model="fake-model", input_tokens=10, output_tokens=5, latency_ms=1.0)
+
+
+@pytest.fixture()
+def db():
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    session_factory = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+    session = session_factory()
+    yield session
+    session.close()
+    engine.dispose()
+
+
+def _settings(rpd: int) -> Settings:
+    # active_prompt_version pinned to "v2": the repo's default ("v3") has no
+    # prompts/synthesis/v3.md on disk (a pre-existing, unrelated gap flagged
+    # in claude/progress.md — settings.active_prompt_version defaults ahead
+    # of what prompts/synthesis/ actually has). Irrelevant to what these
+    # tests exercise; "v2" just avoids tripping over it.
+    return Settings(llm_rate_limit_rpd=rpd, llm_provider="stub", active_prompt_version="v2")
+
+
+def _make_snapshot(db) -> PortfolioSnapshot:
+    source_doc = Document(
+        holding_id=None,
+        type=DocumentType.PORTFOLIO_SNAPSHOT.value,
+        original_filename="portfolio.csv",
+        mime_type="text/csv",
+        size_bytes=10,
+        storage_path="x",
+        sha256="a" * 64,
+        status=DocumentStatus.PROCESSED.value,
+    )
+    db.add(source_doc)
+    db.flush()
+    snapshot = PortfolioSnapshot(source_file_id=source_doc.id, reporting_currency="NOK", status=SnapshotStatus.VALIDATED.value)
+    db.add(snapshot)
+    db.flush()
+    return snapshot
+
+
+def _make_holding_with_evidence(db, snapshot, ticker: str, notes: str | None = None) -> Holding:
+    """A holding with just enough on record to clear InsufficientContextError
+    (one document + one chunk) — mirrors
+    tests/unit/test_analysis_context.py's fixture shape. `notes` set makes
+    the holding have an active thesis (context.user_notes non-empty), which
+    is what triggers the reconciliation pass — see
+    app.services.analysis.llm_analysis.run_two_pass_analysis."""
+    holding = Holding(
+        ticker=ticker, name=ticker, asset_class="EQUITY", asset_class_raw="Aksje", sector="Energy", trading_currency="NOK"
+    )
+    db.add(holding)
+    db.flush()
+    db.add(
+        PortfolioPosition(
+            snapshot_id=snapshot.id,
+            holding_id=holding.id,
+            weight_pct=Decimal("50"),
+            quantity=Decimal("100"),
+            notes=notes,
+        )
+    )
+    report = Document(
+        holding_id=holding.id,
+        type=DocumentType.ANNUAL_REPORT.value,
+        original_filename=f"{ticker}-report.pdf",
+        mime_type="application/pdf",
+        size_bytes=100,
+        storage_path="x",
+        sha256=f"{ticker.lower():0<64}"[:64],
+        status=DocumentStatus.PROCESSED.value,
+    )
+    db.add(report)
+    db.flush()
+    db.add(
+        DocumentChunk(
+            document_id=report.id,
+            page_start=1,
+            page_end=1,
+            section=None,
+            content="Revenue grew 12% year over year driven by higher production volumes.",
+            content_hash=f"{ticker}-chunk",
+        )
+    )
+    db.commit()
+    return holding
+
+
+def test_second_holding_skipped_once_daily_budget_exhausted(db):
+    snapshot = _make_snapshot(db)
+    holding_a = _make_holding_with_evidence(db, snapshot, "AAA.OL")
+    holding_b = _make_holding_with_evidence(db, snapshot, "BBB.OL")
+    provider = FakeLLMProvider()
+
+    outcome = run_analysis(db, provider, snapshot.id, [holding_a.id, holding_b.id], settings=_settings(rpd=1))
+
+    assert len(outcome.holding_analyses) == 1
+    assert len(outcome.failures) == 1
+    assert outcome.failures[0].holding_id == holding_b.id
+    assert "budget is exhausted" in outcome.failures[0].reason
+    assert "requests/day" in outcome.failures[0].reason
+    # The second holding must never have reached the provider at all.
+    assert provider.calls_made == 1
+
+
+def test_holding_needing_reconciliation_skipped_when_only_one_call_left(db):
+    snapshot = _make_snapshot(db)
+    holding = _make_holding_with_evidence(db, snapshot, "CCC.OL", notes="Long-term conviction — energy transition thesis.")
+    provider = FakeLLMProvider()
+
+    outcome = run_analysis(db, provider, snapshot.id, [holding.id], settings=_settings(rpd=1))
+
+    assert outcome.holding_analyses == []
+    assert len(outcome.failures) == 1
+    assert "budget is exhausted" in outcome.failures[0].reason
+    # Pre-flight: a holding that would need 2 calls is skipped before making
+    # even the first one when only 1 is left in the budget.
+    assert provider.calls_made == 0
+
+
+def test_budget_decrements_by_two_when_reconciliation_runs(db):
+    snapshot = _make_snapshot(db)
+    holding_with_notes = _make_holding_with_evidence(db, snapshot, "DDD.OL", notes="Bullish thesis on file.")
+    holding_without_notes = _make_holding_with_evidence(db, snapshot, "EEE.OL")
+    provider = FakeLLMProvider()
+
+    outcome = run_analysis(
+        db, provider, snapshot.id, [holding_with_notes.id, holding_without_notes.id], settings=_settings(rpd=3)
+    )
+
+    assert len(outcome.holding_analyses) == 2
+    assert outcome.failures == []
+    # 2 calls (blind + reconciliation) for the first holding, 1 (blind only)
+    # for the second — exactly exhausts the rpd=3 budget with none skipped.
+    assert provider.calls_made == 3
+
+
+def test_failed_call_still_consumes_budget_so_next_holding_is_skipped_not_retried(db):
+    snapshot = _make_snapshot(db)
+    holding_a = _make_holding_with_evidence(db, snapshot, "FFF.OL")
+    holding_b = _make_holding_with_evidence(db, snapshot, "GGG.OL")
+    provider = FakeLLMProvider(always_fail=True)
+
+    outcome = run_analysis(db, provider, snapshot.id, [holding_a.id, holding_b.id], settings=_settings(rpd=1))
+
+    assert outcome.holding_analyses == []
+    assert len(outcome.failures) == 2
+    assert "simulated provider outage" in outcome.failures[0].reason
+    assert "budget is exhausted" in outcome.failures[1].reason
+    # Only one real (failed) attempt was made — the second holding was
+    # skipped on the budget check rather than retried into a second
+    # guaranteed failure.
+    assert provider.calls_made == 1
