@@ -227,9 +227,17 @@ def _rows_from_nordnet(
       by hand (documented, not silently guessed at).
     - No weight column: weight_pct is derived from each row's share of
       total "Verdi NOK" across the upload.
-    Asset class isn't in this export either — "ETF" in the name maps to
-    ETF, everything else defaults to Aksje/EQUITY, since this report is a
-    brokerage stock/ETF holdings table, not a mixed fund platform export.
+    Asset class isn't in this export either — "Kontanter" (the account's
+    cash balance, a real row in this table, not a security) maps to Cash;
+    "ETF" in the name maps to ETF; everything else defaults to Aksje/EQUITY,
+    since this report is a brokerage stock/ETF holdings table, not a mixed
+    fund platform export. The Cash case matters more than it looks: this
+    row has no market_ticker (same as every Nordnet row) and, before this
+    classification existed, silently defaulted to Aksje/EQUITY — which
+    still left it excluded from every total for lack of a ticker, but for
+    the wrong reason, and with no path to fix it (see
+    app.services.market_data.valuation._value_cash, added alongside this to
+    actually value it, instead of just naming it correctly).
     """
     col = {i: _NORDNET_ALIASES[h] for i, h in enumerate(normalized_headers) if h in _NORDNET_ALIASES}
     idx_of = {v: k for k, v in col.items()}
@@ -237,6 +245,14 @@ def _rows_from_nordnet(
     def cell(raw_row: list[str], field_name: str) -> str:
         i = idx_of.get(field_name)
         return raw_row[i].strip() if i is not None and i < len(raw_row) else ""
+
+    def classify(name: str) -> str:
+        lname = name.lower()
+        if "kontanter" in lname or lname == "cash":
+            return "Kontanter"
+        if "etf" in lname:
+            return "ETF"
+        return "Aksje"
 
     intermediate: list[dict[str, str]] = []
     raw_values: list[Decimal] = []
@@ -248,7 +264,7 @@ def _rows_from_nordnet(
             {
                 "ticker": name,
                 "name": name,
-                "asset_class": "ETF" if "etf" in name.lower() else "Aksje",
+                "asset_class": classify(name),
                 "currency": cell(raw_row, "currency"),
                 "quantity": cell(raw_row, "quantity"),
                 "cost_basis": cell(raw_row, "avg_cost"),

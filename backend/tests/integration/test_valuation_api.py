@@ -240,6 +240,39 @@ def test_collectible_with_no_market_ticker_and_no_cost_basis_is_still_excluded(c
     assert holding["market_value_reporting_ccy"] is None
 
 
+def _nordnet_csv_with_cash(*rows: str) -> bytes:
+    header = "Handel\tValuta\tAntall\tGAV\tVerdi NOK"
+    return ("\n".join([header, *rows]) + "\n").encode("utf-16")
+
+
+def test_cash_holding_with_no_market_ticker_is_valued_at_par_not_excluded(client, fake_provider):
+    """A Nordnet "Kontanter" row has no market_ticker (same as every
+    Nordnet row) and no live price to look up — unlike an ordinary
+    no-ticker security (excluded from totals, see
+    test_valuation_flags_nordnet_holdings_with_no_market_ticker above), a
+    CASH holding should still count toward Composition/Risk totals at par
+    (quantity == balance in trading_currency), tagged price_status="cash"
+    so it's never mistaken for a live-priced security. Root cause of the
+    real portfolio's cash balance silently vanishing from every total."""
+    csv_bytes = _nordnet_csv_with_cash("Kontanter\tNOK\t51071\t1\t51071")
+    upload = _upload(client, content=csv_bytes, filename="beholdning.csv")
+    snapshot_id = upload.json()["snapshot"]["id"]
+
+    response = client.post(f"/portfolio/snapshots/{snapshot_id}/valuation")
+    assert response.status_code == 200, response.text
+    body = response.json()
+    holding = body["holdings"][0]
+
+    assert holding["market_ticker"] is None
+    assert holding["price_status"] == "cash"
+    assert Decimal(holding["market_value_reporting_ccy"]) == Decimal("51071.00")
+    assert Decimal(holding["unrealized_pnl"]) == Decimal("0")
+
+    assert Decimal(body["total_market_value"]) == Decimal("51071.00")
+    assert holding["ticker"] not in body["concentration"]["holdings_excluded_from_concentration"]
+    assert Decimal(body["concentration"]["asset_class_values"]["CASH"]) == Decimal("51071.00")
+
+
 def test_unknown_snapshot_returns_404_for_valuation(client, fake_provider):
     response = client.post(
         "/portfolio/snapshots/00000000-0000-0000-0000-000000000000/valuation"

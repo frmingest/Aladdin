@@ -53,7 +53,8 @@ class HoldingValuation:
     price_currency: str | None = None
     price_observed_at: datetime | None = None
     # current | delayed | stale | unavailable | at_cost (Phase 8/ADR 0011 —
-    # a COLLECTIBLE with no live pricing feed, carried at cost basis).
+    # a COLLECTIBLE with no live pricing feed, carried at cost basis) | cash
+    # (a CASH holding, valued at par — see _value_cash).
     price_status: str = "unavailable"
 
     market_value_trading_ccy: Decimal | None = None
@@ -232,6 +233,9 @@ def _value_one_holding(
         if hv.asset_class == "COLLECTIBLE" and position.cost_basis is not None and hv.quantity is not None:
             _value_collectible_at_cost(fx_cache, hv, position, reporting_currency)
             return
+        if hv.asset_class == "CASH" and hv.quantity is not None:
+            _value_cash(fx_cache, hv, reporting_currency)
+            return
         hv.data_warning = (
             "no market_ticker set for this holding — set one via "
             "PATCH /portfolio/holdings/{holding_id} to include it in market-data refresh"
@@ -330,6 +334,42 @@ def _value_collectible_at_cost(
         "no live pricing feed for this asset class — carried at cost basis, not "
         "mark-to-market (ADR 0011)"
     )
+
+
+def _value_cash(
+    fx_cache: _FxCache,
+    hv: HoldingValuation,
+    reporting_currency: str,
+) -> None:
+    """A CASH holding (e.g. a Nordnet "Kontanter" row) has no market_ticker
+    and needs none: a unit of a currency is, by definition, worth exactly
+    one unit of itself, so `quantity` already *is* the balance in
+    `trading_currency` — there's no price to look up. Before this existed,
+    a CASH holding fell through to the generic "no market_ticker" branch
+    above and was silently excluded from every Composition/Risk total, the
+    same as a security someone genuinely forgot to set a ticker for — but
+    for cash that's simply wrong, not a data-entry gap to flag. Modeled
+    after _value_collectible_at_cost's fallback-instead-of-exclude shape,
+    but simpler: no cost_basis/currency lookup needed, since cash can't
+    trade away from its own par value. unrealized_pnl is trivially 0 by
+    construction, which is itself the correct signal — cash doesn't gain or
+    lose value measured in its own currency."""
+    try:
+        fx_rate = fx_cache.get(hv.trading_currency, reporting_currency)
+    except MarketDataUnavailableError as exc:
+        hv.data_warning = f"cash balance but FX conversion to {reporting_currency} failed: {exc}"
+        return
+
+    value_reporting = calc.quantize(calc.convert_currency(hv.quantity, fx_rate.rate))
+    hv.price = Decimal("1")
+    hv.price_currency = hv.trading_currency
+    hv.price_status = "cash"
+    hv.market_value_trading_ccy = calc.quantize(hv.quantity)
+    hv.fx_rate_to_reporting = fx_rate.rate
+    hv.market_value_reporting_ccy = value_reporting
+    hv.cost_basis_value_reporting_ccy = value_reporting
+    hv.unrealized_pnl = Decimal("0")
+    hv.unrealized_pnl_pct = Decimal("0")
 
 
 def _apply_computed_weights(valuations: list[HoldingValuation]) -> None:
