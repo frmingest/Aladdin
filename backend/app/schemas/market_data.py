@@ -60,3 +60,8 @@ class PortfolioValuationOut(BaseModel):
     # filter this valuation was actually computed against (§26 accounts
     # feature dashboard filter), so a caller never has to guess.
     account_ids: list[UUID] | None = None
+    # Set only by the GET (cached) path — see PortfolioValuation.as_of
+    # (app.services.market_data.valuation) for exactly what this means.
+    # None from the POST (live refresh) path: those numbers are as fresh as
+    # the instant they were computed, by construction.
+    as_of: datetime | None = None

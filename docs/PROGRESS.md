@@ -10,7 +10,9 @@ successfully. **Phase 8 (precious metals + whisky collection) fully built, not y
 below: coin manual-entry UI, real Whiskybase import, and collectible-at-cost valuation all landed
 2026-09-15, on top of the same day's earlier precious-metals groundwork. Phase 9 (document evidence
 quality) still just planned. **Phase 10 (portfolio risk & regime rigor — a second economist-lens
-review, ADR 0016) proposed 2026-09-15** — see "Up next."
+review, ADR 0016) proposed 2026-09-15** — see "Up next." **2026-09-16: Dashboard valuation caching**
+— Composition now reads a free cached valuation on every page load/filter change instead of hitting
+yfinance live every time; see that dated entry below.
 
 **Git — resolved, no longer "unconfirmed":** commits have been happening normally throughout this
 project's history and are almost entirely pushed. As of this pass, local `main` is exactly 1 commit
@@ -19,6 +21,49 @@ in full + three bug fixes — two Phase 7, plus the reset FK fix just below — 
 as an uncommitted working-tree change, since `device_bash` can't run `git` from this session. **Faiz:
 please `git add`/`commit`/`push` the current working tree** — see "Manual to-do" for the exact file
 list.
+
+**2026-09-16 (Dashboard valuation caching — Composition no longer refetches live prices on every
+page load):** Faiz asked whether the Dashboard caches data or re-runs everything on every refresh,
+and whether a cache would help. Traced it end to end: `RiskSection`/`MacroSection` already followed
+a "compute once, persist, reading is free" convention (§2.7) — they read the latest persisted
+result on mount and only compute/refresh live on an explicit click. `CompositionSection` was the one
+section that hadn't caught up: it auto-fired a **live** `POST /portfolio/snapshots/{id}/valuation`
+(yfinance price + currency metadata + FX, per holding, zero caching in `yfinance_provider.py` itself)
+on *every* mount of the Dashboard — i.e. every full page load/refresh, not just the first.
+
+- **Fix**: added `GET /portfolio/snapshots/{id}/valuation` — a read-only counterpart that builds the
+  same `PortfolioValuationOut` shape entirely from the latest persisted `MarketObservation`/
+  `FxObservation` rows already in Postgres (`build_cached_valuation` in
+  `app/services/market_data/valuation.py`), no live provider call, no new observation written. Since
+  those tables are keyed by ticker/currency pair rather than account scope, one cache serves every
+  account-filter combination — switching the dashboard's account filter re-aggregates the same
+  underlying observations instead of needing a fetch per scope. The response carries a new `as_of`
+  field: the *oldest* observed_at among every observation actually used (an honest "at least this
+  fresh" bound, not the newest), or `null` when nothing has ever been fetched for this portfolio yet.
+- **Frontend**: `CompositionSection.tsx` now reads the cached GET on every snapshot/account filter
+  change (free) instead of clearing to a blank "click refresh" state; a live refresh (`POST`, via the
+  existing "Refresh valuation" button) only fires on an explicit click, or automatically exactly once
+  if `as_of` comes back `null` (a brand-new portfolio with nothing cached yet) — same one-time
+  bootstrap pattern `RiskSection` already used. A "Prices as of \<time\>" line now shows the cache's
+  age next to the button.
+- **Verified**: `tsc --noEmit`, `npm run lint` (both touched files), and `npm run build` (vite) all
+  clean in a full frontend mirror. Backend: `python -m py_compile` on all three changed files, plus a
+  standalone script (isolated in-memory SQLite, no fastapi/google-genai/boto3/yfinance/pymupdf
+  needed — `build_cached_valuation` only touches models + `app.domain.calculations`) exercising a
+  priced security, an unpriced one, cash, and a USD holding needing a real FX conversion: correct
+  per-holding values, correct total, correct exclusion warning, `as_of` correctly resolves to the
+  *older* of two observation timestamps (not the newer), and a different account-filter scope
+  correctly reuses the same cached prices. The full backend `pytest` suite (which needs the full
+  FastAPI app importable — every provider/router) was not run this session — `device_bash` still
+  can't mount `E:\Aladdin` (the September 8 Windows-update issue), so this went through the usual
+  stage → edit → verify → write-back path instead. **Faiz, please run the full suite once you have a
+  local shell** (see "Manual to-do").
+- No schema/migration changes — `market_observations`/`fx_observations` already existed with the
+  indexes this needed (`ix_market_observations_holding_observed`, `ix_fx_observations_pair_observed`).
+- Files changed: `backend/app/services/market_data/valuation.py`, `backend/app/schemas/market_data.py`,
+  `backend/app/api/portfolio.py`, `frontend/src/services/api.ts`,
+  `frontend/src/types/market_valuation.ts`, `frontend/src/pages/dashboard/CompositionSection.tsx`.
+  **Written to `E:\Aladdin`, not yet committed to git.**
 
 **2026-09-15 (Agentic coding & AI-safety guardrails):** Faiz asked for "state of the art agentic
 coding guardrails" so ongoing AI-agent-driven development on this repo doesn't keep running into

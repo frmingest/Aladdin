@@ -23,7 +23,7 @@ FxObservation rows if needed.
 
 from collections import defaultdict
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from uuid import UUID
 
@@ -108,6 +108,15 @@ class PortfolioValuation:
     # request, letting a caller confirm what a given valuation actually
     # covers.
     account_ids: frozenset[UUID] | None = None
+    # Set only by build_cached_valuation (the read-only GET path below) —
+    # the oldest observed_at among every persisted price/FX observation
+    # actually used to build this result, i.e. the honest "everything here
+    # is at least this fresh" bound. None from refresh_and_value_snapshot
+    # (a live refresh's numbers are as fresh as this instant, by
+    # construction) and also None from build_cached_valuation when nothing
+    # has ever been fetched yet, or when nothing time-varying was needed at
+    # all (e.g. an all-cash portfolio already in the reporting currency).
+    as_of: datetime | None = None
 
 
 class _FxCache:
@@ -141,6 +150,230 @@ class _FxCache:
                 )
             )
         return rate
+
+
+class _CachedFxLookup:
+    """Read-only counterpart to _FxCache, for build_cached_valuation below.
+    Same `.get()` interface — so _value_cash/_value_collectible_at_cost work
+    against it completely unchanged — but reads the latest persisted
+    FxObservation instead of calling the live provider, and never writes a
+    new one (§2.7: reading never costs a provider call). Records every
+    observation's observed_at it actually used so the caller can report how
+    fresh the overall result is (see PortfolioValuation.as_of)."""
+
+    def __init__(self, db: Session):
+        self._db = db
+        self._cache: dict[tuple[str, str], FxRate] = {}
+        self.observed_ats: list[datetime] = []
+
+    def get(self, from_currency: str, to_currency: str) -> FxRate:
+        key = (from_currency.upper(), to_currency.upper())
+
+        # Same trivial short-circuit as the live _FxCache/provider — a
+        # same-currency "conversion" carries no information and has no
+        # observation row to look up.
+        if key[0] == key[1]:
+            return FxRate(
+                from_currency=key[0], to_currency=key[1], rate=Decimal("1"),
+                observed_at=datetime.now(timezone.utc), provider="none",
+            )
+
+        if key in self._cache:
+            return self._cache[key]
+
+        row = (
+            self._db.query(FxObservation)
+            .filter(FxObservation.from_currency == key[0], FxObservation.to_currency == key[1])
+            .order_by(FxObservation.observed_at.desc())
+            .first()
+        )
+        if row is None:
+            raise MarketDataUnavailableError(
+                f"{key[0]}{key[1]}=X", "no cached FX rate on record yet"
+            )
+
+        rate = FxRate(
+            from_currency=row.from_currency, to_currency=row.to_currency,
+            rate=row.rate, observed_at=row.observed_at, provider=row.provider,
+        )
+        self._cache[key] = rate
+        self.observed_ats.append(row.observed_at)
+        return rate
+
+
+def _latest_market_observation(db: Session, holding_id: UUID) -> MarketObservation | None:
+    return (
+        db.query(MarketObservation)
+        .filter(MarketObservation.holding_id == holding_id)
+        .order_by(MarketObservation.observed_at.desc())
+        .first()
+    )
+
+
+def build_cached_valuation(
+    db: Session,
+    snapshot: PortfolioSnapshot,
+    account_ids: set[UUID] | None = None,
+) -> PortfolioValuation:
+    """Read-only counterpart to refresh_and_value_snapshot — builds the same
+    PortfolioValuation shape entirely from persisted MarketObservation/
+    FxObservation rows already on record, never calling the live
+    MarketDataProvider and never writing a new observation (§2.7: reading
+    never costs a provider call). Backs `GET
+    /portfolio/snapshots/{id}/valuation`, the free counterpart to the paid
+    `POST` of the same path — the same "compute once, persist, reading is
+    free" convention the dashboard's Portfolio risk and Macro dashboard
+    sections already use; Composition was the one section that hadn't
+    caught up (it auto-refreshed live on every page load — see the
+    frontend's CompositionSection.tsx for the caller-side half of this fix).
+
+    Since MarketObservation/FxObservation are keyed by ticker/currency pair,
+    not by account scope, one shared cache serves every account-filter
+    combination — switching the dashboard's account filter re-aggregates
+    the same underlying observations rather than needing a cached copy per
+    scope (unlike portfolio_risk_snapshots, which persist one row per scope
+    because the correlation/HHI computation itself is scope-dependent, not
+    just which observations feed it).
+
+    `PortfolioValuation.as_of` on the result is the oldest observed_at among
+    every observation actually used — see that field's docstring."""
+    reporting_currency = snapshot.reporting_currency
+    fx_lookup = _CachedFxLookup(db)
+    positions = (
+        snapshot.positions
+        if account_ids is None
+        else [p for p in snapshot.positions if p.account_id in account_ids]
+    )
+
+    valuations: list[HoldingValuation] = []
+    warnings: list[str] = []
+    price_observed_ats: list[datetime] = []
+
+    for position in positions:
+        holding = position.holding
+        hv = HoldingValuation(
+            holding_id=holding.id,
+            ticker=holding.ticker,
+            name=holding.name,
+            asset_class=holding.asset_class,
+            sector=holding.sector,
+            trading_currency=holding.trading_currency,
+            market_ticker=holding.market_ticker,
+            quantity=position.quantity,
+            uploaded_weight_pct=position.weight_pct,
+        )
+        _value_one_holding_from_cache(db, fx_lookup, hv, position, reporting_currency, price_observed_ats)
+        valuations.append(hv)
+
+    _apply_computed_weights(valuations)
+    concentration = _build_concentration(valuations, warnings)
+
+    total_market_value = sum(
+        (hv.market_value_reporting_ccy for hv in valuations if hv.market_value_reporting_ccy is not None),
+        Decimal("0"),
+    )
+    cost_values = [hv.cost_basis_value_reporting_ccy for hv in valuations if hv.cost_basis_value_reporting_ccy is not None]
+    total_cost_basis_value = sum(cost_values, Decimal("0")) if cost_values else None
+    total_unrealized_pnl = calc.unrealized_pnl(total_market_value, total_cost_basis_value)
+
+    unvalued = [hv.ticker for hv in valuations if hv.market_value_reporting_ccy is None]
+    if unvalued:
+        warnings.append(
+            f"{len(unvalued)} holding(s) excluded from totals/weights (no market value available): "
+            + ", ".join(unvalued)
+        )
+
+    all_observed_ats = price_observed_ats + fx_lookup.observed_ats
+    as_of = min(all_observed_ats) if all_observed_ats else None
+
+    return PortfolioValuation(
+        snapshot_id=snapshot.id,
+        reporting_currency=reporting_currency,
+        total_market_value=total_market_value,
+        total_cost_basis_value=total_cost_basis_value,
+        total_unrealized_pnl=total_unrealized_pnl,
+        holdings=valuations,
+        concentration=concentration,
+        warnings=warnings,
+        account_ids=frozenset(account_ids) if account_ids is not None else None,
+        as_of=as_of,
+    )
+
+
+def _value_one_holding_from_cache(
+    db: Session,
+    fx_lookup: _CachedFxLookup,
+    hv: HoldingValuation,
+    position,
+    reporting_currency: str,
+    price_observed_ats: list[datetime],
+) -> None:
+    """Read-only counterpart to _value_one_holding: identical logic, but a
+    priced security's price comes from the latest persisted
+    MarketObservation instead of a live provider call. A CASH or
+    COLLECTIBLE-at-cost holding needs no live price in the first place —
+    _value_cash/_value_collectible_at_cost are reused completely unchanged,
+    just handed this module's read-only fx_lookup instead of a live
+    _FxCache."""
+    if hv.market_ticker is None:
+        if hv.asset_class == "COLLECTIBLE" and position.cost_basis is not None and hv.quantity is not None:
+            _value_collectible_at_cost(fx_lookup, hv, position, reporting_currency)
+            return
+        if hv.asset_class == "CASH" and hv.quantity is not None:
+            _value_cash(fx_lookup, hv, reporting_currency)
+            return
+        hv.data_warning = (
+            "no market_ticker set for this holding — set one via "
+            "PATCH /portfolio/holdings/{holding_id} to include it in market-data refresh"
+        )
+        return
+
+    observation = _latest_market_observation(db, hv.holding_id)
+    if observation is None:
+        hv.data_warning = 'not yet priced — click "Refresh valuation" to fetch a live price'
+        return
+
+    price_observed_ats.append(observation.observed_at)
+    hv.price = observation.price
+    hv.price_currency = observation.currency
+    hv.price_observed_at = observation.observed_at
+    hv.price_status = observation.data_status
+
+    if hv.quantity is None:
+        hv.data_warning = "no quantity on this position — cannot compute an absolute market value"
+        return
+
+    hv.market_value_trading_ccy = calc.quantize(hv.quantity * observation.price)
+
+    try:
+        fx_to_reporting = fx_lookup.get(observation.currency, reporting_currency)
+    except MarketDataUnavailableError as exc:
+        hv.data_warning = f"price available but no cached FX rate yet: {exc}"
+        return
+
+    hv.fx_rate_to_reporting = fx_to_reporting.rate
+    hv.market_value_reporting_ccy = calc.quantize(
+        calc.convert_currency(hv.market_value_trading_ccy, fx_to_reporting.rate)
+    )
+
+    if position.cost_basis is not None and hv.quantity is not None:
+        cost_basis_currency = position.cost_basis_currency or hv.trading_currency
+        cost_value_native = hv.quantity * position.cost_basis
+        try:
+            fx_cost = fx_lookup.get(cost_basis_currency, reporting_currency)
+        except MarketDataUnavailableError:
+            fx_cost = None
+        if fx_cost is not None:
+            hv.cost_basis_value_reporting_ccy = calc.quantize(
+                calc.convert_currency(cost_value_native, fx_cost.rate)
+            )
+            hv.unrealized_pnl = calc.quantize(
+                calc.unrealized_pnl(hv.market_value_reporting_ccy, hv.cost_basis_value_reporting_ccy)
+            )
+            hv.unrealized_pnl_pct = calc.quantize(
+                calc.unrealized_pnl_pct(hv.market_value_reporting_ccy, hv.cost_basis_value_reporting_ccy),
+                places=calc.PERCENT_PLACES,
+            )
 
 
 def refresh_and_value_snapshot(

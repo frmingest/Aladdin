@@ -30,7 +30,7 @@ from app.schemas.portfolio import (
     PortfolioSnapshotSummary,
     PortfolioUploadResponse,
 )
-from app.services.market_data.valuation import refresh_and_value_snapshot
+from app.services.market_data.valuation import build_cached_valuation, refresh_and_value_snapshot
 from app.services.portfolio.ingestion import ingest_portfolio_upload
 from app.services.portfolio.manual_entry import (
     ManualEntryNotFoundError,
@@ -311,6 +311,40 @@ def update_manual_holding(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     return _position_to_out(result.position)
+
+
+@router.get("/snapshots/{snapshot_id}/valuation", response_model=PortfolioValuationOut)
+def get_cached_valuation(
+    snapshot_id: UUID,
+    account_id: list[UUID] = Query(default=[]),
+    db: Session = Depends(get_db),
+) -> PortfolioValuationOut:
+    """Reads whatever market value/P&L/concentration can be built from the
+    latest MarketObservation/FxObservation rows already on record — no live
+    provider call, so this is free to call on every dashboard page load
+    (§2.7), same convention as `GET .../risk-snapshots` and the macro
+    endpoints already use.
+
+    `account_id` (repeatable) works exactly like the POST below, and since
+    the underlying observations aren't scoped by account, changing the
+    filter re-aggregates the same cached data instead of needing a fresh
+    fetch per scope.
+
+    The response's `as_of` is null when nothing has ever been fetched for
+    this portfolio yet (a brand-new upload) — the frontend's
+    CompositionSection.tsx treats that as "no data yet" and falls back to
+    one automatic `POST` to bootstrap it, the same one-time-only pattern
+    Portfolio risk already uses. Otherwise `as_of` is the oldest observation
+    date behind these numbers, so the UI can show how stale they are and let
+    Faiz decide whether it's worth an explicit "Refresh valuation" click."""
+    snapshot = db.get(PortfolioSnapshot, snapshot_id)
+    if snapshot is None:
+        raise HTTPException(status_code=404, detail="snapshot not found")
+
+    valuation = build_cached_valuation(
+        db, snapshot, account_ids=set(account_id) if account_id else None
+    )
+    return PortfolioValuationOut.model_validate(valuation, from_attributes=True)
 
 
 @router.post("/snapshots/{snapshot_id}/valuation", response_model=PortfolioValuationOut)

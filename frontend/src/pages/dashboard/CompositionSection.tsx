@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ApiError, refreshSnapshotValuation } from "../../services/api";
+import { ApiError, getSnapshotValuation, refreshSnapshotValuation } from "../../services/api";
 import type { HoldingValuationOut, PortfolioValuationOut } from "../../types/market_valuation";
 import { num } from "../../lib/num";
 import CompositionBreakdown from "../../charts/CompositionBreakdown";
@@ -155,11 +155,16 @@ const COLLECTION_EXPLANATION =
 
 /**
  * Portfolio composition (architecture §19 "Portfolio composition — current
- * allocation"). Requires a live market-data valuation
- * (`POST /portfolio/snapshots/{id}/valuation`, §26 Phase 2), so it's a
- * manual "Refresh valuation" trigger rather than an automatic fetch — same
- * convention as Analysis.tsx's manual "Run analysis" for the network-
- * dependent Phase 3 endpoint.
+ * allocation"). Reading is free (§2.7) as of the dashboard-caching pass
+ * (2026-09-16, see the project doc "Dashboard valuation caching") — every
+ * mount/filter-change reads whatever's already cached from persisted price/
+ * FX observations via `GET /portfolio/snapshots/{id}/valuation`, same
+ * convention Portfolio risk and the Macro dashboard already followed.
+ * Fetching *live* prices (`POST` of the same path) only ever happens from
+ * an explicit "Refresh valuation" click, or automatically exactly once if
+ * the cached read comes back with `as_of: null` — meaning this portfolio
+ * has never been priced at all yet, the one case with no cached data to
+ * fall back to.
  */
 export default function CompositionSection({
   snapshotId,
@@ -171,40 +176,37 @@ export default function CompositionSection({
   includedCollections: string[];
 }) {
   const [valuation, setValuation] = useState<PortfolioValuationOut | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false); // live refresh (POST) in flight
   const [error, setError] = useState<string | null>(null);
-  // Tracks whether `valuation` above still reflects the current filter —
-  // a live valuation is a paid provider call (§2.7), so switching accounts
-  // clears the stale numbers and asks for an explicit re-refresh rather than
-  // silently re-fetching on every filter change. The Collections filter
-  // below does NOT do this — it re-aggregates data already on hand, no
-  // network call involved, so it can apply instantly.
-  const isFirstRun = useRef(true);
+  // Guards the one-time automatic live bootstrap below so it never re-fires
+  // just because a later filter change happens to land on a scope with no
+  // cached price yet for some holding — that's what the manual "Refresh
+  // valuation" button is for.
+  const hasBootstrapped = useRef(false);
 
+  // Reads whatever's cached for the current snapshot/account scope. Free —
+  // no live provider call — so, unlike the old behavior, this re-runs on
+  // every snapshot/account filter change instead of clearing to a blank
+  // "click refresh" state. The Collections filter still needs no fetch at
+  // all: it re-aggregates `valuation.holdings` already on hand (see
+  // buildBreakdown below).
   useEffect(() => {
-    if (isFirstRun.current) {
-      isFirstRun.current = false;
-      return;
-    }
-    setValuation(null);
-    setError(null);
+    let cancelled = false;
+    getSnapshotValuation(snapshotId, accountIds)
+      .then((result) => {
+        if (cancelled) return;
+        setValuation(result);
+        if (result.as_of === null && !hasBootstrapped.current) {
+          hasBootstrapped.current = true;
+          handleRefresh();
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snapshotId, accountIds.join(",")]);
-
-  // Auto-load once on page load, same manual-trigger cost (§2.7 — a live
-  // provider call) as the "Load valuation" button it replaces the click on —
-  // it's just fired automatically the first time this section mounts,
-  // instead of waiting for Faiz to click. Later account/snapshot changes
-  // still require the explicit button above (isFirstRun's effect just above
-  // this one clears the stale numbers instead of silently re-fetching them).
-  const hasAutoLoaded = useRef(false);
-
-  useEffect(() => {
-    if (hasAutoLoaded.current) return;
-    hasAutoLoaded.current = true;
-    handleRefresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   async function handleRefresh() {
     setLoading(true);
@@ -249,6 +251,12 @@ export default function CompositionSection({
 
       {valuation && view && full && (
         <>
+          {valuation.as_of && (
+            <p className="text-xs text-disabled font-mono mb-3">
+              Prices as of {new Date(valuation.as_of).toLocaleString()} — click Refresh valuation above for live prices.
+            </p>
+          )}
+
           <div className="grid-3 mb-4">
             <div className="stat-panel">
               <div className="stat-label">Total value{includedCollections.length > 0 ? " (filtered)" : ""}</div>

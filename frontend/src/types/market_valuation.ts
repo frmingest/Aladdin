@@ -63,4 +63,9 @@ export type PortfolioValuationOut = {
   // valuation was actually computed against (§26 accounts feature dashboard
   // filter).
   account_ids: string[] | null;
+  // Set only when this came from GET (the cached read) — the oldest
+  // observed_at behind these numbers, or null when nothing has ever been
+  // fetched yet. Always null from POST (a live refresh's numbers are as
+  // fresh as the instant they were computed).
+  as_of: string | null;
 };

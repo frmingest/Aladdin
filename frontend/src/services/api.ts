@@ -229,6 +229,22 @@ export async function getHoldingAnalysisMemo(id: string): Promise<string> {
 
 // --- Phase 2/5 — market valuation & portfolio risk (§26) -------------------
 
+// Free — reads whatever's already cached from persisted price/FX
+// observations, no live provider call (§2.7). `as_of` on the result is
+// null when nothing has ever been fetched for this portfolio yet; see
+// CompositionSection's use of this for the one-time bootstrap fallback.
+export function getSnapshotValuation(
+  snapshotId: string,
+  accountIds?: string[],
+): Promise<PortfolioValuationOut> {
+  return apiFetch(`/portfolio/snapshots/${snapshotId}/valuation${accountIdsQuery(accountIds)}`);
+}
+
+// Paid — fetches live prices/FX from the market-data provider for every
+// holding, persists the observations, and returns the freshly-computed
+// result. Only ever called from an explicit "Refresh valuation" click, or
+// once automatically the very first time a portfolio has no cached data at
+// all (see CompositionSection).
 export function refreshSnapshotValuation(
   snapshotId: string,
   accountIds?: string[],
