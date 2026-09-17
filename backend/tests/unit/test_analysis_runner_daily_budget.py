@@ -344,3 +344,104 @@ def test_no_fallback_configured_still_skips_outright(db):
     assert len(outcome.failures) == 1
     assert "budget is exhausted" in outcome.failures[0].reason
     assert primary.calls_made == 0
+
+
+# --- Live-failure fallback (2026-09-17b) ----------------------------------
+#
+# Faiz's Railway logs showed Gemini returning real, live 429s while
+# /usage/summary still had budget left for the day (2/20 used) — the
+# pre-flight check above only predicts exhaustion from the locally-tracked
+# daily count, so it kept sending holdings to Gemini, which kept failing
+# live, and the fallback (configured and reachable) never got a chance to
+# run. These tests cover the fix: a live failure from the primary, not just
+# a predicted one, now retries the same holding against the fallback.
+
+
+def test_live_primary_failure_retries_fallback_even_with_budget_available(db):
+    """Budget is nowhere near exhausted (rpd=5, one holding) — the primary
+    is still used first, per the pre-flight check — but when that live call
+    itself fails, the same holding is retried against the fallback instead
+    of being recorded as a failure outright."""
+    snapshot = _make_snapshot(db)
+    holding = _make_holding_with_evidence(db, snapshot, "HHH.OL")
+    primary = FakeLLMProvider(always_fail=True)
+    fallback = FakeLLMProvider()
+
+    outcome = run_analysis(
+        db,
+        primary,
+        snapshot.id,
+        [holding.id],
+        settings=_settings(rpd=5, fallback_provider="mistral"),
+        fallback_provider=fallback,
+    )
+
+    assert len(outcome.holding_analyses) == 1
+    assert outcome.failures == []
+    assert primary.calls_made == 1  # attempted first, per the pre-flight check
+    assert fallback.calls_made == 1  # retried immediately after the live failure
+
+    events_by_holding = {
+        e.holding_id: e for e in db.query(LLMUsageEvent).filter(LLMUsageEvent.holding_id == holding.id).all()
+    }
+    assert events_by_holding[holding.id].provider == "mistral"
+
+
+def test_live_failure_fallback_also_fails_reports_both_causes(db):
+    """When the live-retry fallback also fails, the reason names both
+    causes and reads distinctly from the pre-flight-exhausted message
+    (§21: fail visibly, name the real cause — and don't claim the budget
+    was exhausted when it wasn't)."""
+    snapshot = _make_snapshot(db)
+    holding = _make_holding_with_evidence(db, snapshot, "III.OL")
+    primary = FakeLLMProvider(always_fail=True)
+    fallback = FakeLLMProvider(always_fail=True)
+
+    outcome = run_analysis(
+        db,
+        primary,
+        snapshot.id,
+        [holding.id],
+        settings=_settings(rpd=5, fallback_provider="mistral"),
+        fallback_provider=fallback,
+    )
+
+    assert outcome.holding_analyses == []
+    assert len(outcome.failures) == 1
+    reason = outcome.failures[0].reason
+    assert "Primary provider 'stub' failed" in reason
+    assert "Fallback provider 'mistral' also failed" in reason
+    assert "simulated provider outage" in reason
+    assert "budget is exhausted" not in reason  # this wasn't a budget-exhaustion skip
+    assert primary.calls_made == 1
+    assert fallback.calls_made == 1
+
+
+def test_live_failure_still_charges_primary_budget_before_next_holding(db):
+    """The live-retry path doesn't give the primary's budget a free pass:
+    a failed live call still costs real quota (same accounting as the
+    no-fallback-configured case), so a second holding correctly falls
+    straight to the fallback via the pre-flight check afterwards, without
+    a second wasted attempt against the primary."""
+    snapshot = _make_snapshot(db)
+    holding_a = _make_holding_with_evidence(db, snapshot, "JJJ.OL")
+    holding_b = _make_holding_with_evidence(db, snapshot, "KKK.OL")
+    primary = FakeLLMProvider(always_fail=True)
+    fallback = FakeLLMProvider()
+
+    outcome = run_analysis(
+        db,
+        primary,
+        snapshot.id,
+        [holding_a.id, holding_b.id],
+        settings=_settings(rpd=1, fallback_provider="mistral"),
+        fallback_provider=fallback,
+    )
+
+    assert len(outcome.holding_analyses) == 2
+    assert outcome.failures == []
+    # holding_a: primary attempted (live failure, budget spent), retried on
+    # fallback. holding_b: budget already 0 — pre-flight sends it straight
+    # to the fallback, primary never touched again.
+    assert primary.calls_made == 1
+    assert fallback.calls_made == 2

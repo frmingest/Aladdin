@@ -50,6 +50,20 @@ holding even though `AnalysisRun.provider` records only the run's
 configured *primary* provider (§10/§28 rule 9 reproducibility field — a
 single run-level column can't hold a per-holding mix, so the per-call ledger
 is the source of truth for "who actually answered this one").
+
+Live-failure fallback (2026-09-17b, Faiz's Railway logs showed wall-to-wall
+Gemini 429s while `/usage/summary` still had budget left for the day — see
+claude/gemini-fallback-live-retry-2026-09-17.md): the pre-flight check above
+only predicts exhaustion from the locally-tracked daily count; it does not
+know about a live RPM burst or any other real-time 429 Gemini returns while
+the local estimate still says budget remains. So a holding that *was* sent
+to Gemini (use_primary was True) but got a live LLMUnavailableError/
+ValueError back is now retried immediately against `fallback_provider`
+(when configured) before being recorded as a failure — same fallback
+provider, same usage-ledger behavior as the pre-flight path, just triggered
+by an actual failure instead of a prediction. Gemini's budget counter is
+still charged for that failed attempt either way (the call really happened
+and really cost quota); only the *second*, fallback call is exempt from it.
 """
 
 from dataclasses import dataclass
@@ -186,16 +200,7 @@ def run_analysis(
         try:
             result = run_two_pass_analysis(active_provider, context, settings.active_prompt_version)
         except (LLMUnavailableError, ValueError) as exc:
-            if use_primary:
-                # The Gemini call(s) still happened — and still cost real
-                # quota — even though the analysis itself failed (same gap
-                # ADR 0013's Consequences already flagged for the usage
-                # ledger). Assume the worst case (planned_calls) rather than
-                # under-counting and letting the next holding retry into a
-                # guaranteed 429 (§21: fail visibly, don't paper over).
-                calls_remaining_today = max(calls_remaining_today - planned_calls, 0)
-                failures.append(HoldingAnalysisFailure(holding_id=holding_id, reason=str(exc)))
-            else:
+            if not use_primary:
                 # The fallback itself failed — say so plainly, and name both
                 # the exhausted primary budget and the fallback failure
                 # rather than just the latter, so this doesn't read like a
@@ -209,7 +214,55 @@ def run_analysis(
                         ),
                     )
                 )
-            continue
+                continue
+
+            # The Gemini call(s) still happened — and still cost real
+            # quota — even though the analysis itself failed (same gap
+            # ADR 0013's Consequences already flagged for the usage
+            # ledger). Assume the worst case (planned_calls) rather than
+            # under-counting and letting the next holding retry into a
+            # guaranteed 429 (§21: fail visibly, don't paper over).
+            calls_remaining_today = max(calls_remaining_today - planned_calls, 0)
+
+            if fallback_provider is None:
+                failures.append(HoldingAnalysisFailure(holding_id=holding_id, reason=str(exc)))
+                continue
+
+            # Live-failure fallback (2026-09-17b — Faiz observed Gemini
+            # returning real 429s on a day the pre-flight estimate above
+            # still showed budget remaining: Gemini's live limits, e.g. an
+            # RPM burst, or the locally-tracked RPD estimate drifting from
+            # Google's actual enforcement, can bite well before our own
+            # counter predicts exhaustion). A live failure from the primary
+            # is itself a reason to retry this same holding against the
+            # fallback right away — the pre-flight path above still matters
+            # on its own (it avoids burning a whole batch's retries into
+            # guaranteed 429s once the budget is genuinely spent), this just
+            # also covers Gemini failing live despite the estimate saying it
+            # shouldn't have.
+            primary_exc = exc
+            active_provider = fallback_provider
+            active_provider_name = settings.llm_fallback_provider
+            try:
+                result = run_two_pass_analysis(active_provider, context, settings.active_prompt_version)
+            except (LLMUnavailableError, ValueError) as fallback_exc:
+                failures.append(
+                    HoldingAnalysisFailure(
+                        holding_id=holding_id,
+                        reason=(
+                            f"Primary provider '{settings.llm_provider}' failed: {primary_exc}. "
+                            f"Fallback provider '{active_provider_name}' also failed: {fallback_exc}"
+                        ),
+                    )
+                )
+                continue
+            # Served by the fallback now — no further calls_remaining_today
+            # bookkeeping below (that counter tracks Gemini's budget only,
+            # already charged above), and _record_analysis_usage logs this
+            # row under the fallback's own provider name via
+            # active_provider_name, exactly like the pre-flight fallback
+            # path does (see this module's docstring).
+            use_primary = False
 
         if use_primary:
             calls_remaining_today -= 2 if result.reconciliation_ran else 1
