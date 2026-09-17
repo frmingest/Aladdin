@@ -7,14 +7,23 @@ from functools import lru_cache
 
 from app.config.settings import get_settings
 from app.domain.macro_series import load_macro_series_registry
-from app.providers.base import LLMProvider, MacroDataProvider, MarketDataProvider, ObjectStorageProvider, ResearchProvider
+from app.providers.base import (
+    LLMProvider,
+    MacroDataProvider,
+    MarketDataProvider,
+    ObjectStorageProvider,
+    ResearchProvider,
+)
 from app.providers.composite_macro_provider import CompositeMacroDataProvider
 from app.providers.composite_market_provider import CompositeMarketDataProvider
 from app.providers.fred_provider import FredMacroDataProvider
 from app.providers.gemini_research_provider import GeminiResearchProvider
-from app.providers.gold_metal_provider import SUPPORTED_TICKERS as GOLD_API_SUPPORTED_TICKERS
+from app.providers.gold_metal_provider import (
+    SUPPORTED_TICKERS as GOLD_API_SUPPORTED_TICKERS,
+)
 from app.providers.gold_metal_provider import GoldApiMarketDataProvider
 from app.providers.google_ai_studio_provider import GoogleAIStudioProvider
+from app.providers.mistral_provider import MistralProvider
 from app.providers.norges_bank_provider import NorgesBankMacroDataProvider
 from app.providers.s3_storage_provider import S3ObjectStorageProvider
 from app.providers.stubs import (
@@ -86,6 +95,30 @@ def get_llm_provider() -> LLMProvider:
     if settings.llm_provider == "stub":
         return StubLLMProvider()
     raise NotImplementedError(f"LLM provider '{settings.llm_provider}' not yet wired — see §29.")
+
+
+@lru_cache
+def get_llm_fallback_provider() -> LLMProvider | None:
+    """Only ever used by app.services.analysis.runner when the primary
+    provider's daily budget is exhausted mid-run (§29, 2026-09-17 — see
+    claude/llm-provider-alternatives-2026-09-17.md). None (the default,
+    settings.llm_fallback_provider == "none") preserves the original
+    skip-on-exhaustion behavior — the primary provider above is untouched
+    either way."""
+    settings = get_settings()
+    if settings.llm_fallback_provider == "none":
+        return None
+    if settings.llm_fallback_provider == "mistral":
+        return MistralProvider(
+            api_key=settings.mistral_api_key,
+            model=settings.mistral_model_name,
+            max_output_tokens=settings.llm_max_output_tokens,
+            temperature=settings.llm_temperature,
+            rpm=settings.mistral_rate_limit_rpm,
+        )
+    raise NotImplementedError(
+        f"LLM fallback provider '{settings.llm_fallback_provider}' not yet wired — see §29."
+    )
 
 
 @lru_cache

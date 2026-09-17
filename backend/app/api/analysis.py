@@ -13,7 +13,7 @@ from app.models.financial_fact import FinancialLineItem
 from app.models.holding import Holding
 from app.models.portfolio import PortfolioPosition, PortfolioSnapshot
 from app.providers.base import LLMProvider
-from app.providers.factory import get_llm_provider
+from app.providers.factory import get_llm_fallback_provider, get_llm_provider
 from app.schemas.analysis import (
     AnalysisRunDetail,
     AnalysisRunFailureOut,
@@ -106,10 +106,15 @@ def create_analysis_run(
     body: AnalysisRunRequest,
     db: Session = Depends(get_db),
     provider: LLMProvider = Depends(get_llm_provider),
+    fallback_provider: LLMProvider | None = Depends(get_llm_fallback_provider),
 ) -> AnalysisRunDetail:
     """Runs the Phase 3 two-pass Buffett/Munger analysis (§11) for every
     requested holding in the snapshot, synchronously. See
-    app.services.analysis.runner for why this isn't backgrounded yet."""
+    app.services.analysis.runner for why this isn't backgrounded yet.
+
+    `fallback_provider` is None unless settings.llm_fallback_provider is
+    configured (§29, 2026-09-17) — run_analysis only ever reaches for it once
+    the primary provider's daily budget is exhausted mid-run."""
     snapshot = db.get(PortfolioSnapshot, snapshot_id)
     if snapshot is None:
         raise HTTPException(status_code=404, detail="portfolio snapshot not found")
@@ -121,7 +126,7 @@ def create_analysis_run(
             detail="no holdings in this snapshot have any documents or financial facts to analyze",
         )
 
-    outcome = run_analysis(db, provider, snapshot_id, holding_ids)
+    outcome = run_analysis(db, provider, snapshot_id, holding_ids, fallback_provider=fallback_provider)
     return _outcome_to_detail(db, outcome)
 
 

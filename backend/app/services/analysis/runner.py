@@ -34,6 +34,22 @@ the `/usage/summary` endpoint reads, §2.7 "compute once, reuse") and then
 tracked locally for the rest of this run: a holding whose blind pass (plus
 reconciliation pass, when it has notes/thesis to reconcile against) would
 exceed what's left is skipped with a clear reason instead of attempted.
+
+Fallback provider (2026-09-17, Faiz asked to investigate free alternatives —
+see claude/llm-provider-alternatives-2026-09-17.md): once the daily budget
+above is exhausted, a holding is only skipped outright when no
+`fallback_provider` was passed in (app.providers.factory.
+get_llm_fallback_provider, settings.llm_fallback_provider == "none", the
+default). When one is configured (currently only "mistral"), that holding
+gets a real two-pass analysis from the fallback instead — Gemini's own
+budget is untouched by this (it was never going to be spent on this holding
+either way), and the fallback's own usage is still recorded to
+llm_usage_events under its own provider name (see _record_analysis_usage),
+so the ledger stays an honest record of which provider actually served each
+holding even though `AnalysisRun.provider` records only the run's
+configured *primary* provider (§10/§28 rule 9 reproducibility field — a
+single run-level column can't hold a per-holding mix, so the per-call ledger
+is the source of truth for "who actually answered this one").
 """
 
 from dataclasses import dataclass
@@ -44,12 +60,21 @@ from sqlalchemy.orm import Session
 
 from app.config.settings import Settings, get_settings
 from app.domain import scoring
-from app.models.analysis import AnalysisRun, AnalysisRunStatus, EvidenceReference, FactorAssessment, HoldingAnalysis
+from app.models.analysis import (
+    AnalysisRun,
+    AnalysisRunStatus,
+    EvidenceReference,
+    FactorAssessment,
+    HoldingAnalysis,
+)
 from app.models.llm_usage import LLMCallType
 from app.models.portfolio import PortfolioSnapshot
 from app.models.research import ResearchRunType
 from app.providers.base import LLMProvider, LLMUnavailableError
-from app.services.analysis.context import InsufficientContextError, build_analysis_context
+from app.services.analysis.context import (
+    InsufficientContextError,
+    build_analysis_context,
+)
 from app.services.analysis.llm_analysis import LLMAnalysisResult, run_two_pass_analysis
 from app.services.research.common import latest_completed_run
 from app.services.research.macro import get_latest_macro_snapshot
@@ -77,6 +102,7 @@ def run_analysis(
     snapshot_id: UUID,
     holding_ids: list[UUID],
     settings: Settings | None = None,
+    fallback_provider: LLMProvider | None = None,
 ) -> AnalysisRunOutcome:
     settings = settings or get_settings()
 
@@ -130,12 +156,6 @@ def run_analysis(
     calls_remaining_today = max(settings.llm_rate_limit_rpd - usage_summary.today.requests, 0)
 
     for holding_id in holding_ids:
-        if calls_remaining_today <= 0:
-            failures.append(
-                HoldingAnalysisFailure(holding_id=holding_id, reason=_daily_budget_exhausted_reason(settings))
-            )
-            continue
-
         try:
             context = build_analysis_context(db, holding_id, snapshot_id)
         except (InsufficientContextError, ValueError) as exc:
@@ -146,26 +166,53 @@ def run_analysis(
         # to reconcile against (app.services.analysis.llm_analysis) — known
         # from context alone, no provider call needed to find out.
         planned_calls = 2 if (context.user_notes and context.user_notes.strip()) else 1
-        if calls_remaining_today < planned_calls:
+        use_primary = calls_remaining_today >= planned_calls
+
+        if not use_primary and fallback_provider is None:
             failures.append(
                 HoldingAnalysisFailure(holding_id=holding_id, reason=_daily_budget_exhausted_reason(settings))
             )
             continue
 
+        if use_primary:
+            active_provider: LLMProvider = provider
+        else:
+            # Guaranteed non-None: the `not use_primary and fallback_provider
+            # is None` branch above already skipped/continued otherwise.
+            assert fallback_provider is not None
+            active_provider = fallback_provider
+        active_provider_name = settings.llm_provider if use_primary else settings.llm_fallback_provider
+
         try:
-            result = run_two_pass_analysis(provider, context, settings.active_prompt_version)
+            result = run_two_pass_analysis(active_provider, context, settings.active_prompt_version)
         except (LLMUnavailableError, ValueError) as exc:
-            # The Gemini call(s) still happened — and still cost real
-            # quota — even though the analysis itself failed (same gap
-            # ADR 0013's Consequences already flagged for the usage
-            # ledger). Assume the worst case (planned_calls) rather than
-            # under-counting and letting the next holding retry into a
-            # guaranteed 429 (§21: fail visibly, don't paper over).
-            calls_remaining_today = max(calls_remaining_today - planned_calls, 0)
-            failures.append(HoldingAnalysisFailure(holding_id=holding_id, reason=str(exc)))
+            if use_primary:
+                # The Gemini call(s) still happened — and still cost real
+                # quota — even though the analysis itself failed (same gap
+                # ADR 0013's Consequences already flagged for the usage
+                # ledger). Assume the worst case (planned_calls) rather than
+                # under-counting and letting the next holding retry into a
+                # guaranteed 429 (§21: fail visibly, don't paper over).
+                calls_remaining_today = max(calls_remaining_today - planned_calls, 0)
+                failures.append(HoldingAnalysisFailure(holding_id=holding_id, reason=str(exc)))
+            else:
+                # The fallback itself failed — say so plainly, and name both
+                # the exhausted primary budget and the fallback failure
+                # rather than just the latter, so this doesn't read like a
+                # generic outage (§21: fail visibly, name the real cause).
+                failures.append(
+                    HoldingAnalysisFailure(
+                        holding_id=holding_id,
+                        reason=(
+                            f"{_daily_budget_exhausted_reason(settings)} Fallback provider "
+                            f"'{active_provider_name}' also failed: {exc}"
+                        ),
+                    )
+                )
             continue
 
-        calls_remaining_today -= 2 if result.reconciliation_ran else 1
+        if use_primary:
+            calls_remaining_today -= 2 if result.reconciliation_ran else 1
 
         factor_scores = {f: getattr(result.output, f).score for f in _FACTOR_FIELDS}
         confidences = [getattr(result.output, f).confidence.value for f in _FACTOR_FIELDS]
@@ -182,7 +229,7 @@ def run_analysis(
         db.add(holding_analysis)
         db.flush()
 
-        _record_analysis_usage(db, settings, run.id, holding_id, holding_analysis.id, result)
+        _record_analysis_usage(db, active_provider_name, run.id, holding_id, holding_analysis.id, result)
 
         for factor in _FACTOR_FIELDS:
             assessment = getattr(result.output, factor)
@@ -248,19 +295,23 @@ def _daily_budget_exhausted_reason(settings: Settings) -> str:
 
 def _record_analysis_usage(
     db: Session,
-    settings: Settings,
+    provider_name: str,
     analysis_run_id: UUID,
     holding_id: UUID,
     holding_analysis_id: UUID,
     result: LLMAnalysisResult,
 ) -> None:
-    """One llm_usage_events row per Gemini call `result` actually represents
-    (§28 observability follow-up, ADR 0013) — added to `db` alongside the
-    rest of this holding's rows, committed together with them by the caller,
-    never a separate transaction."""
+    """One llm_usage_events row per call `result` actually represents (§28
+    observability follow-up, ADR 0013) — added to `db` alongside the rest of
+    this holding's rows, committed together with them by the caller, never a
+    separate transaction. `provider_name` is whichever provider actually
+    served this holding (settings.llm_provider, or settings.
+    llm_fallback_provider once the 2026-09-17 fallback path is taken — see
+    this module's docstring) — the ledger's per-row provider is always the
+    real one, independent of AnalysisRun.provider's single run-level value."""
     record_llm_usage(
         db,
-        provider=settings.llm_provider,
+        provider=provider_name,
         model_name=result.model_name,
         call_type=LLMCallType.ANALYSIS_BLIND,
         input_tokens=result.blind_input_tokens,
@@ -274,7 +325,7 @@ def _record_analysis_usage(
     if result.reconciliation_ran:
         record_llm_usage(
             db,
-            provider=settings.llm_provider,
+            provider=provider_name,
             model_name=result.model_name,
             call_type=LLMCallType.ANALYSIS_RECONCILIATION,
             input_tokens=result.reconciliation_input_tokens,

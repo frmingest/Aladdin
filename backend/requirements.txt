@@ -17,6 +17,11 @@ psycopg2-binary==2.9.9
 google-genai==2.23.0
 pyyaml==6.0.2  # scoring/versions/*.yaml (app.domain.scoring)
 
+# --- AI fallback provider (§29, 2026-09-17 — used only once Gemini's daily
+# free-tier budget is exhausted, see claude/llm-provider-alternatives-
+# 2026-09-17.md and app.providers.mistral_provider) ---
+mistralai==2.10.1
+
 # --- Document parsing ---
 pymupdf==1.24.10
 pdfplumber==0.11.4

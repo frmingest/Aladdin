@@ -97,6 +97,30 @@ class Settings(BaseSettings):
     llm_baseline_input_tokens: int = 5870
     llm_baseline_output_tokens: int = 1484
 
+    # --- Fallback LLM provider (§29, 2026-09-17 — see claude/llm-provider-
+    # alternatives-2026-09-17.md project doc for the full comparison against
+    # local Ollama and other alternatives). Used only by
+    # app.services.analysis.runner when Gemini's daily free-tier request
+    # budget (llm_rate_limit_rpd) is exhausted mid-run — a holding that would
+    # otherwise be skipped gets a real analysis from a second provider
+    # instead. "none" (the default) preserves the original skip-on-
+    # exhaustion behavior; nothing changes for the primary/normal case
+    # either way. Gemini remains the default *primary* provider (llm_provider
+    # above) — this never replaces it, only fills the gap once it's spent.
+    llm_fallback_provider: str = "none"  # none | mistral
+    mistral_api_key: str = ""
+    mistral_model_name: str = "mistral-small-latest"
+    # Assumed conservative default, NOT vendor-confirmed (Mistral doesn't
+    # publish a fixed free-tier RPM the way Google AI Studio's usage
+    # dashboard does — see the alternatives doc's Option 2 table). Faiz:
+    # check https://console.mistral.ai/ for your account's actual limit and
+    # adjust; 0 disables pacing entirely. Reuses llm_max_output_tokens/
+    # llm_temperature above rather than a second pair of knobs — both
+    # providers serve the same two-pass analysis prompts
+    # (app.services.analysis.llm_analysis), just with different vendors
+    # underneath.
+    mistral_rate_limit_rpm: int = 30
+
     # --- Market data provider (§29 resolved in Phase 2 — see
     # docs/decisions/0004-phase2-market-data-and-financial-metrics.md) ---
     market_data_provider: str = "yfinance"  # yfinance | stub
