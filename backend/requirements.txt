@@ -22,6 +22,12 @@ pyyaml==6.0.2  # scoring/versions/*.yaml (app.domain.scoring)
 # 2026-09-17.md and app.providers.mistral_provider) ---
 mistralai==2.10.1
 
+# --- Local LLM via Ollama (§29, 2026-09-17 — see docs/decisions/0017-
+# local-llm-migration-ollama.md and app.providers.ollama_provider). Only
+# used when LLM_PROVIDER=ollama; the client itself just talks HTTP to a
+# self-hosted Ollama server, no vendor account. ---
+ollama==0.6.2
+
 # --- Document parsing ---
 pymupdf==1.24.10
 pdfplumber==0.11.4

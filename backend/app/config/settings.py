@@ -57,7 +57,7 @@ class Settings(BaseSettings):
     # --- AI provider (§26 Phase 3 — switched from the architecture's original
     # Anthropic recommendation to Google AI Studio's free tier, see
     # docs/decisions/0005-phase3-google-ai-studio-llm-provider.md) ---
-    llm_provider: str = "google_ai_studio"  # google_ai_studio | stub
+    llm_provider: str = "google_ai_studio"  # google_ai_studio | ollama | stub
     google_ai_studio_api_key: str = ""
     # Was "gemini-2.5-flash" (ADR 0005's original pick) until 2026-09-14, when
     # it started 404ing for this account with "no longer available to new
@@ -120,6 +120,38 @@ class Settings(BaseSettings):
     # (app.services.analysis.llm_analysis), just with different vendors
     # underneath.
     mistral_rate_limit_rpm: int = 30
+
+    # --- Local LLM via Ollama (§29, 2026-09-17 — see docs/decisions/0017-
+    # local-llm-migration-ollama.md and claude/local-llm-migration-plan-
+    # 2026-09-17.md for the full plan this belongs to: replacing Gemini's/
+    # Mistral's free tiers, which proved unworkable for this workload, with
+    # a self-hosted model on Faiz's own RTX 3060 12GB). Only read when
+    # llm_provider == "ollama" above — inert otherwise, same as every other
+    # provider-specific settings block in this file. No API key: there's no
+    # vendor account, just a server Faiz runs himself.
+    #
+    # NOT YET THE DEFAULT PROVIDER. llm_provider stays "google_ai_studio"
+    # until Faiz has run the bake-off in the migration plan doc and decided
+    # quality is good enough — flipping LLM_PROVIDER=ollama in .env/Railway
+    # is what actually switches over.
+    ollama_base_url: str = "http://localhost:11434"
+    # Recommended starting point per the 2026-09-17 migration plan's model
+    # research: Qwen3 14B (pull with `ollama pull qwen3:14b`) — the best
+    # reasoning-per-VRAM fit confirmed for a 12GB card at research time.
+    # Revisit if a stronger model that still fits 12GB shows up later; the
+    # migration doc's bake-off methodology is how to compare a candidate
+    # against this default before switching.
+    ollama_model_name: str = "qwen3:14b"
+    # KV-cache size, not model size (app.providers.ollama_provider) — kept
+    # well above Aladdin's actual prompt sizes (persona/synthesis prompts
+    # plus llm_excerpt_char_budget's ~12K-char evidence excerpt) so it never
+    # constrains a real analysis, without claiming VRAM the model weights
+    # themselves need on a 12GB card.
+    ollama_context_window: int = 8192
+    # Minutes Ollama keeps the model resident in VRAM after a call before
+    # unloading it — avoids a multi-second reload between holdings in the
+    # same analysis run (see OllamaProvider's docstring).
+    ollama_keep_alive_minutes: int = 30
 
     # --- Market data provider (§29 resolved in Phase 2 — see
     # docs/decisions/0004-phase2-market-data-and-financial-metrics.md) ---

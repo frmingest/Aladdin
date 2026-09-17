@@ -25,6 +25,7 @@ from app.providers.gold_metal_provider import GoldApiMarketDataProvider
 from app.providers.google_ai_studio_provider import GoogleAIStudioProvider
 from app.providers.mistral_provider import MistralProvider
 from app.providers.norges_bank_provider import NorgesBankMacroDataProvider
+from app.providers.ollama_provider import OllamaProvider
 from app.providers.s3_storage_provider import S3ObjectStorageProvider
 from app.providers.stubs import (
     LocalObjectStorageProvider,
@@ -91,6 +92,15 @@ def get_llm_provider() -> LLMProvider:
             # Paces + retries every call against the free tier's RPM cap
             # (app.providers.gemini_retry, 2026-09-15) — see settings.
             rpm=settings.llm_rate_limit_rpm,
+        )
+    if settings.llm_provider == "ollama":
+        return OllamaProvider(
+            base_url=settings.ollama_base_url,
+            model=settings.ollama_model_name,
+            max_output_tokens=settings.llm_max_output_tokens,
+            temperature=settings.llm_temperature,
+            context_window=settings.ollama_context_window,
+            keep_alive_minutes=settings.ollama_keep_alive_minutes,
         )
     if settings.llm_provider == "stub":
         return StubLLMProvider()
