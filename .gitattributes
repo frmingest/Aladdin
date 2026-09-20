@@ -1,0 +1,11 @@
+# Normalize line endings to LF for everything text-based (this app deploys
+# to Linux/Docker on Railway; CRLF in a shell script or Dockerfile can break
+# the build). Without this, an editor/OS that writes CRLF makes every line
+# of a touched file show as changed even with no real content change (see
+# claude/ project doc for the 2026-09-20 session that diagnosed this across
+# 61 files with zero real content difference, confirmed via
+# `git diff --ignore-all-space`).
+* text=auto eol=lf
+
+# Binary-ish or intentionally-CRLF files, if any turn up later, get an
+# explicit override here rather than being silently renormalized.
