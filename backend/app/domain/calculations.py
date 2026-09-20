@@ -24,6 +24,9 @@ from typing import overload
 
 MONEY_PLACES = Decimal("0.01")
 PERCENT_PLACES = Decimal("0.0001")
+# For plain (non-percentage) ratios -- interest coverage, Net Debt/EBITDA,
+# Net Debt/FCF, D/E -- rendered as e.g. "3.45x", not a currency amount.
+RATIO_PLACES = Decimal("0.01")
 
 
 @overload

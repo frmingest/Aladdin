@@ -339,3 +339,114 @@ def test_excerpt_char_budget_truncates_and_flags(db, monkeypatch):
     assert context.excerpts_truncated is True
     doc_chunk_items = [e for e in context.evidence_items if e.source_type == "document_chunk"]
     assert len(doc_chunk_items[0].content) == 100
+
+
+def test_context_computes_balance_sheet_health_and_capital_efficiency(db):
+    """Buffett/Munger redesign, Sprint 1 (claude/buffett-munger-redesign-
+    sprint-plan-2026-09-20.md): interest coverage, Net Debt/EBITDA, Net
+    Debt/FCF, D/E, and the 3-5yr average ROE all derive from the four new
+    canonical metrics (total_debt, cash_and_equivalents,
+    capital_expenditures, interest_expense) plus existing ones -- purely
+    deterministic, computed in _build_financial_metrics, never by the LLM."""
+    snapshot = _make_snapshot(db)
+    holding = _make_holding(db, ticker="EQNR.OL", name="Equinor")
+    db.add(PortfolioPosition(snapshot_id=snapshot.id, holding_id=holding.id, weight_pct=Decimal("100")))
+
+    report = Document(
+        holding_id=holding.id,
+        type=DocumentType.ANNUAL_REPORT.value,
+        original_filename="annual-report-2025.pdf",
+        mime_type="application/pdf",
+        size_bytes=100,
+        storage_path="x",
+        sha256="f" * 64,
+        status=DocumentStatus.PROCESSED.value,
+    )
+    db.add(report)
+    db.flush()
+
+    def _fact(period, metric, value):
+        db.add(
+            FinancialLineItem(
+                document_id=report.id, holding_id=holding.id, metric=metric, value=Decimal(value),
+                unit="unit", currency="NOK", period=period, source_page=1, confidence=1.0,
+            )
+        )
+
+    # FY2024 (latest): the balance-sheet-health / interest-coverage inputs
+    # are only ever taken from the latest period.
+    _fact("FY2024", "total_debt", "1000000")
+    _fact("FY2024", "cash_and_equivalents", "200000")
+    _fact("FY2024", "ebitda", "300000")
+    _fact("FY2024", "ebit", "250000")
+    _fact("FY2024", "interest_expense", "50000")
+    _fact("FY2024", "operating_cash_flow", "400000")
+    _fact("FY2024", "capital_expenditures", "100000")
+    _fact("FY2024", "total_equity", "500000")
+    _fact("FY2024", "net_income", "150000")
+
+    # FY2023 and FY2022: only what the 3-5yr average ROE needs -- these
+    # predate when total_debt/cash_and_equivalents/capital_expenditures/
+    # interest_expense became extractable at all, exactly the "historical
+    # periods may lack the new labels" gap the implementation comment notes.
+    _fact("FY2023", "total_equity", "400000")
+    _fact("FY2023", "net_income", "120000")
+    _fact("FY2022", "total_equity", "500000")
+    _fact("FY2022", "net_income", "100000")
+
+    db.commit()
+
+    context = build_analysis_context(db, holding.id, snapshot.id)
+    m = context.financial_metrics
+
+    # net_debt = 1,000,000 - 200,000 = 800,000
+    # net_debt_to_ebitda = 800,000 / 300,000 = 2.6666... -> 2.67
+    assert m.net_debt_to_ebitda == Decimal("2.67")
+    # fcf = 400,000 - 100,000 = 300,000; net_debt_to_fcf = 800,000 / 300,000 -> 2.67
+    assert m.net_debt_to_fcf == Decimal("2.67")
+    # interest_coverage = ebit / interest_expense = 250,000 / 50,000 = 5.00
+    assert m.interest_coverage_ratio == Decimal("5.00")
+    # debt_to_equity = 1,000,000 / 500,000 = 2.00
+    assert m.debt_to_equity_ratio == Decimal("2.00")
+    # ROE per period: FY2024 30%, FY2023 30%, FY2022 20% -> average 26.6667%
+    assert m.return_on_equity_pct == Decimal("30.0000")
+    assert m.average_return_on_equity_pct == Decimal("26.6667")
+
+
+def test_context_balance_sheet_health_none_when_inputs_not_extracted(db):
+    """A holding with only the original canonical metrics (pre-dating this
+    session's four new labels) must render the new fields as None --
+    insufficient data, never a fabricated ratio (§13.3/§21) -- exactly like
+    every other calc.* function in this codebase."""
+    snapshot = _make_snapshot(db)
+    holding = _make_holding(db, ticker="TEL.OL", name="Telenor")
+    db.add(PortfolioPosition(snapshot_id=snapshot.id, holding_id=holding.id, weight_pct=Decimal("100")))
+
+    report = Document(
+        holding_id=holding.id,
+        type=DocumentType.ANNUAL_REPORT.value,
+        original_filename="annual-report-2025.pdf",
+        mime_type="application/pdf",
+        size_bytes=100,
+        storage_path="x",
+        sha256="g" * 64,
+        status=DocumentStatus.PROCESSED.value,
+    )
+    db.add(report)
+    db.flush()
+    db.add(
+        FinancialLineItem(
+            document_id=report.id, holding_id=holding.id, metric="revenue", value=Decimal("1000000"),
+            unit="unit", currency="NOK", period="FY2024", source_page=1, confidence=1.0,
+        )
+    )
+    db.commit()
+
+    context = build_analysis_context(db, holding.id, snapshot.id)
+    m = context.financial_metrics
+
+    assert m.interest_coverage_ratio is None
+    assert m.net_debt_to_ebitda is None
+    assert m.net_debt_to_fcf is None
+    assert m.debt_to_equity_ratio is None
+    assert m.average_return_on_equity_pct is None

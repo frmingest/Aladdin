@@ -71,6 +71,21 @@ class FinancialMetricsSnapshot:
     facts_considered: int
     insufficient_data: bool
 
+    # --- Buffett/Munger redesign (Step 1.3 capital efficiency, Step 2
+    # balance-sheet health) -- see
+    # claude/buffett-munger-redesign-sprint-plan-2026-09-20.md Sprint 1.
+    # Deterministic (app.domain.calculations), computed only from the
+    # canonical metrics app.domain.financial_metrics.CANONICAL_METRICS
+    # actually extracted for this holding -- None (never a guess) when an
+    # input hasn't been extracted for the relevant period(s). Defaulted so
+    # existing call sites building this dataclass directly (tests, and any
+    # future insufficient-data early return) don't have to change.
+    interest_coverage_ratio: Decimal | None = None
+    net_debt_to_ebitda: Decimal | None = None
+    net_debt_to_fcf: Decimal | None = None
+    debt_to_equity_ratio: Decimal | None = None
+    average_return_on_equity_pct: Decimal | None = None
+
 
 @dataclass
 class MarketSnapshot:
@@ -302,6 +317,41 @@ def _build_financial_metrics(db: Session, holding_id: UUID) -> FinancialMetricsS
     net_income_margin = calc.margin_pct(latest.get("net_income"), latest.get("revenue"))
     roe = calc.return_on_equity(latest.get("net_income"), latest.get("total_equity"))
 
+    # --- Buffett/Munger redesign additions (balance-sheet health, Step 2;
+    # capital-efficiency trend, Step 1.3) -- see
+    # claude/buffett-munger-redesign-sprint-plan-2026-09-20.md Sprint 1.
+    # Computed from the latest period's canonical metrics only
+    # (total_debt/cash_and_equivalents/capital_expenditures/interest_expense
+    # -- app.domain.financial_metrics.CANONICAL_METRICS) since those four
+    # labels only became extractable this session; historical periods
+    # extracted before then may simply lack them, in which case these
+    # render None (insufficient data) rather than a guess.
+    net_debt_latest = calc.net_debt(latest.get("total_debt"), latest.get("cash_and_equivalents"))
+    fcf_latest = calc.free_cash_flow(latest.get("operating_cash_flow"), latest.get("capital_expenditures"))
+    interest_coverage = calc.ratio(latest.get("ebit"), latest.get("interest_expense"))
+    net_debt_to_ebitda = calc.ratio(net_debt_latest, latest.get("ebitda"))
+    net_debt_to_fcf = calc.ratio(net_debt_latest, fcf_latest)
+    debt_to_equity = calc.ratio(latest.get("total_debt"), latest.get("total_equity"))
+
+    # 3-5yr average ROE (Brain Step 1.3): the mean of each of the most
+    # recent (up to) five periods' own single-period ROE, so a noisy/
+    # cyclical single year doesn't stand in for the multi-year trend the
+    # Brain asks for. average_over_periods skips periods missing either
+    # input rather than treating them as zero (app.domain.calculations).
+    #
+    # No average ROIC alongside it: return_on_invested_capital needs
+    # `invested_capital` (and NOPAT its own tax-rate input), and neither is
+    # an extractable canonical metric today -- approximating either from
+    # what *is* extracted would itself be an invented number presented as
+    # fact (§13.3/§21). Real gap, not silently faked -- see Sprint 6
+    # (evidence quality) in the sprint plan doc.
+    recent_periods = periods_sorted[-5:]
+    period_roe_values = [
+        calc.return_on_equity(by_period[p].get("net_income"), by_period[p].get("total_equity"))
+        for p in recent_periods
+    ]
+    average_roe = calc.average_over_periods(period_roe_values)
+
     return FinancialMetricsSnapshot(
         latest_period=latest_period,
         previous_period=previous_period,
@@ -311,6 +361,11 @@ def _build_financial_metrics(db: Session, holding_id: UUID) -> FinancialMetricsS
         return_on_equity_pct=calc.quantize(roe, places=calc.PERCENT_PLACES),
         facts_considered=len(facts),
         insufficient_data=False,
+        interest_coverage_ratio=calc.quantize(interest_coverage, places=calc.RATIO_PLACES),
+        net_debt_to_ebitda=calc.quantize(net_debt_to_ebitda, places=calc.RATIO_PLACES),
+        net_debt_to_fcf=calc.quantize(net_debt_to_fcf, places=calc.RATIO_PLACES),
+        debt_to_equity_ratio=calc.quantize(debt_to_equity, places=calc.RATIO_PLACES),
+        average_return_on_equity_pct=calc.quantize(average_roe, places=calc.PERCENT_PLACES),
     )
 
 

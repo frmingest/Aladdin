@@ -110,6 +110,15 @@ def render_blind_user_content(context: AnalysisContext) -> str:
             "return_on_equity_pct": context.financial_metrics.return_on_equity_pct,
             "facts_considered": context.financial_metrics.facts_considered,
             "insufficient_data": context.financial_metrics.insufficient_data,
+            # Buffett/Munger redesign additions (Sprint 1) -- balance-sheet
+            # health (Brain Step 2) and the capital-efficiency trend (Step
+            # 1.3). None means the underlying canonical metric hasn't been
+            # extracted for this holding yet, not zero.
+            "interest_coverage_ratio": context.financial_metrics.interest_coverage_ratio,
+            "net_debt_to_ebitda": context.financial_metrics.net_debt_to_ebitda,
+            "net_debt_to_fcf": context.financial_metrics.net_debt_to_fcf,
+            "debt_to_equity_ratio": context.financial_metrics.debt_to_equity_ratio,
+            "average_return_on_equity_pct": context.financial_metrics.average_return_on_equity_pct,
         },
         "market": {
             "price": context.market.price,

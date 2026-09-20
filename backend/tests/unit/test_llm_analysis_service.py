@@ -22,6 +22,7 @@ from app.services.analysis.context import (
     UnavailableSection,
 )
 from app.services.analysis.llm_analysis import run_two_pass_analysis
+from app.services.analysis.prompts import render_blind_user_content
 
 _BLIND_OUTPUT = {
     "executive_summary": "Solid energy producer with growing volumes.",
@@ -98,6 +99,29 @@ def _make_context(user_notes: str | None) -> AnalysisContext:
         previous_analysis=None,
         user_notes=user_notes,
     )
+
+
+def test_blind_pass_payload_surfaces_balance_sheet_health_fields():
+    """Buffett/Munger redesign, Sprint 1: render_blind_user_content must
+    forward the new interest-coverage/Net-Debt/D-E/average-ROE fields to
+    Pass 1 -- otherwise the deterministic work in
+    app.services.analysis.context._build_financial_metrics never actually
+    reaches the model."""
+    context = _make_context(user_notes=None)
+    context.financial_metrics.interest_coverage_ratio = Decimal("5.00")
+    context.financial_metrics.net_debt_to_ebitda = Decimal("2.67")
+    context.financial_metrics.net_debt_to_fcf = Decimal("2.67")
+    context.financial_metrics.debt_to_equity_ratio = Decimal("2.00")
+    context.financial_metrics.average_return_on_equity_pct = Decimal("26.6667")
+
+    payload = json.loads(render_blind_user_content(context))
+    fm = payload["financial_metrics"]
+
+    assert fm["interest_coverage_ratio"] == "5.00"
+    assert fm["net_debt_to_ebitda"] == "2.67"
+    assert fm["net_debt_to_fcf"] == "2.67"
+    assert fm["debt_to_equity_ratio"] == "2.00"
+    assert fm["average_return_on_equity_pct"] == "26.6667"
 
 
 def test_blind_pass_is_called_without_user_notes(monkeypatch):
