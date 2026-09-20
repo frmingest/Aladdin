@@ -64,6 +64,20 @@ provider, same usage-ledger behavior as the pre-flight path, just triggered
 by an actual failure instead of a prediction. Gemini's budget counter is
 still charged for that failed attempt either way (the call really happened
 and really cost quota); only the *second*, fallback call is exempt from it.
+
+Missing-prompt-version guard (2026-09-20, part of the Buffett/Munger redesign
+sprint -- see claude/buffett-munger-redesign-sprint-plan-2026-09-20.md): both
+except clauses above now also catch `UnknownPromptVersionError`
+(app.services.analysis.prompts). This was a live bug -- reconciliation for any
+holding with notes/thesis on file raised it uncaught the moment
+`active_prompt_version` moved to v3 without a matching
+`prompts/synthesis/v3.md` (see docs/decisions/0015 and
+claude/architecture-redundancy-review-2026-09-16.md Finding 1), which aborted
+the *entire* run_analysis() call rather than failing just that one holding
+(§21: one holding failing must not fail the whole run). The missing file is
+also added in this same change; this except-clause broadening is
+defense-in-depth so a future persona/synthesis version-lockstep miss
+degrades the same way every other per-holding failure already does.
 """
 
 from dataclasses import dataclass
@@ -90,6 +104,7 @@ from app.services.analysis.context import (
     build_analysis_context,
 )
 from app.services.analysis.llm_analysis import LLMAnalysisResult, run_two_pass_analysis
+from app.services.analysis.prompts import UnknownPromptVersionError
 from app.services.research.common import latest_completed_run
 from app.services.research.macro import get_latest_macro_snapshot
 from app.services.usage import get_usage_summary, record_llm_usage
@@ -199,7 +214,7 @@ def run_analysis(
 
         try:
             result = run_two_pass_analysis(active_provider, context, settings.active_prompt_version)
-        except (LLMUnavailableError, ValueError) as exc:
+        except (LLMUnavailableError, ValueError, UnknownPromptVersionError) as exc:
             if not use_primary:
                 # The fallback itself failed — say so plainly, and name both
                 # the exhausted primary budget and the fallback failure
@@ -245,7 +260,7 @@ def run_analysis(
             active_provider_name = settings.llm_fallback_provider
             try:
                 result = run_two_pass_analysis(active_provider, context, settings.active_prompt_version)
-            except (LLMUnavailableError, ValueError) as fallback_exc:
+            except (LLMUnavailableError, ValueError, UnknownPromptVersionError) as fallback_exc:
                 failures.append(
                     HoldingAnalysisFailure(
                         holding_id=holding_id,
