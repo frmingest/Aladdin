@@ -50,6 +50,33 @@ def test_dividend_yield_none_on_negative_dividend():
     assert calc.dividend_yield(D("-1"), D("100")) is None
 
 
+# --- owner earnings / cash generation --------------------------------------
+
+
+def test_free_cash_flow_basic():
+    assert calc.free_cash_flow(D("500"), D("120")) == D("380")
+
+
+def test_free_cash_flow_none_on_missing_input():
+    assert calc.free_cash_flow(None, D("120")) is None
+    assert calc.free_cash_flow(D("500"), None) is None
+
+
+def test_average_over_periods_basic():
+    assert calc.average_over_periods([D("10"), D("20"), D("30")]) == D("20")
+
+
+def test_average_over_periods_skips_none_rather_than_treating_as_zero():
+    # Two real periods (15, 25) averaging to 20 -- a missing third period
+    # must not silently drag this down to (15+25+0)/3.
+    assert calc.average_over_periods([D("15"), None, D("25")]) == D("20")
+
+
+def test_average_over_periods_none_when_nothing_usable():
+    assert calc.average_over_periods([None, None]) is None
+    assert calc.average_over_periods([]) is None
+
+
 # --- valuation multiples -----------------------------------------------
 
 

@@ -98,6 +98,50 @@ def dividend_yield(annual_dividend_per_share: Decimal | None, price: Decimal | N
     return annual_dividend_per_share / price * Decimal("100")
 
 
+# --- owner earnings / cash generation (Buffett/Munger redesign, §2.2) ------
+
+
+def free_cash_flow(operating_cash_flow: Decimal | None, capex: Decimal | None) -> Decimal | None:
+    """A standard "owner earnings" proxy: operating cash flow less capital
+    expenditure. Deliberately the plain textbook definition, not Buffett's
+    fuller "owner earnings" (which also adjusts for maintenance-vs-growth
+    capex and normalizes working-capital swings) -- that finer distinction
+    needs data this codebase doesn't extract yet (see
+    claude/buffett-munger-redesign-sprint-plan-2026-09-20.md's Phase 9/
+    evidence-quality follow-up) and would be false precision to fake here.
+
+    `capex` is expected as a positive figure (spend), matching how
+    app.domain.valuation.compute_dcf_value's `capex_pct_of_revenue`
+    assumption is applied. Returns None -- never a fabricated figure -- when
+    either input is missing, so a caller renders "insufficient data" rather
+    than a silent zero (§13.3/§21).
+    """
+    if operating_cash_flow is None or capex is None:
+        return None
+    return operating_cash_flow - capex
+
+
+def average_over_periods(values: list[Decimal | None]) -> Decimal | None:
+    """A plain arithmetic mean over however many periods actually have a
+    value -- the "3-to-5-year average ROIC/ROE/margin" style metric the
+    Buffett/Munger framework calls for (a single-period ratio can be
+    noisy/cyclical in a way a multi-year average is not).
+
+    Callers pass whatever periods they have (as few as one, as many as
+    five-plus) after computing each period's ratio with the existing
+    single-period functions above (e.g. `return_on_invested_capital` per
+    year) -- this function does not know or care what the values represent,
+    it only averages. `None` entries (a period with insufficient data for
+    that ratio) are skipped rather than treated as zero, which would
+    silently understate the average (§13.3). Returns None -- never a
+    fabricated 0 -- when no period has a usable value at all.
+    """
+    present = [v for v in values if v is not None]
+    if not present:
+        return None
+    return sum(present, Decimal("0")) / len(present)
+
+
 # --- valuation multiples ----------------------------------------------------
 
 

@@ -23,6 +23,17 @@ CANONICAL_METRICS = (
     "total_liabilities",
     "operating_cash_flow",
     "shares_outstanding",
+    # Added for the Buffett/Munger redesign (2026-09-20) -- Step 2 of the
+    # analysis framework (balance-sheet health, owner earnings) needs
+    # net_debt (app.domain.calculations.net_debt), free_cash_flow
+    # (app.domain.calculations.free_cash_flow), and interest-coverage-style
+    # ratios (app.domain.calculations.ratio), none of which were extractable
+    # from XLSX financial facts before these four labels existed. See
+    # claude/buffett-munger-redesign-sprint-plan-2026-09-20.md.
+    "total_debt",
+    "cash_and_equivalents",
+    "capital_expenditures",
+    "interest_expense",
 )
 
 # Exact-match (case-insensitive, whitespace-normalized) label -> canonical metric.
@@ -56,6 +67,20 @@ _LABEL_MAP: dict[str, str] = {
     "kontantstrøm fra drift": "operating_cash_flow",
     "shares outstanding": "shares_outstanding",
     "utestående aksjer": "shares_outstanding",
+    # Added for the Buffett/Munger redesign (2026-09-20) -- see
+    # CANONICAL_METRICS above for why.
+    "total debt": "total_debt",
+    "sum gjeld rentebærende": "total_debt",
+    "interest-bearing debt": "total_debt",
+    "cash and cash equivalents": "cash_and_equivalents",
+    "cash and equivalents": "cash_and_equivalents",
+    "kontanter og kontantekvivalenter": "cash_and_equivalents",
+    "capital expenditures": "capital_expenditures",
+    "capital expenditure": "capital_expenditures",
+    "capex": "capital_expenditures",
+    "investeringer i varige driftsmidler": "capital_expenditures",
+    "interest expense": "interest_expense",
+    "rentekostnader": "interest_expense",
 }
 
 
