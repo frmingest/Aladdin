@@ -19,6 +19,10 @@ pydantic models (GroundingMetadata/GroundingChunk/GroundingSupport/Segment),
 the same "introspect the real SDK, don't trust a docs fetch" discipline
 decision 0005 used for the Phase 3 provider.
 
+`get_company_research` (Phase 11 Sprint 2, per-holding research) reuses the
+exact same grounded-search mechanics as the two methods below it — only the
+prompt template and resulting `source_type` differ.
+
 One ResearchItem is built per (grounding_support, grounding_chunk) pair: each
 `grounding_support` names a `segment` of the model's text (with the segment's
 own `text`, not just character offsets — no re-slicing needed) and the
@@ -62,6 +66,7 @@ from app.providers.gemini_retry import call_with_retry
 
 _MACRO_SOURCE_TYPE = "macro_news"
 _SECTOR_SOURCE_TYPE = "sector_research"
+_COMPANY_SOURCE_TYPE = "company_research"
 
 
 class GeminiResearchProvider(ResearchProvider):
@@ -94,6 +99,14 @@ class GeminiResearchProvider(ResearchProvider):
     def get_sector_research(self, sector: str) -> list[ResearchItem]:
         prompt = _load_research_prompt("sector", self._prompt_version).format(sector=sector)
         return self._grounded_items(prompt, source_type=_SECTOR_SOURCE_TYPE)
+
+    def get_company_research(self, company_name: str, ticker: str, sector: str | None) -> list[ResearchItem]:
+        prompt = _load_research_prompt("company", self._prompt_version).format(
+            company_name=company_name,
+            ticker=ticker,
+            sector=sector or "unspecified",
+        )
+        return self._grounded_items(prompt, source_type=_COMPANY_SOURCE_TYPE)
 
     # --- internal helpers ---
 

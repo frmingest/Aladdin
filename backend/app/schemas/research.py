@@ -41,6 +41,15 @@ class SectorResearchOut(BaseModel):
     reason: str | None = None
 
 
+class CompanyResearchOut(BaseModel):
+    available: bool
+    holding_id: UUID | None
+    ticker: str
+    as_of: datetime | None
+    items: list[ResearchItemOut]
+    reason: str | None = None
+
+
 class ResearchRunOut(BaseModel):
     id: UUID
     type: str

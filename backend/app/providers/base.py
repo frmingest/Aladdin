@@ -184,12 +184,24 @@ class ResearchProvider(ABC):
     each item traceable to a real source (§9.4). Numeric central-bank/macro
     data (policy rates, real yields, breakevens, dollar index — §9.1) is
     MacroDataProvider's job, not this interface's — see that class's
-    docstring for why the split exists."""
+    docstring for why the split exists.
+
+    get_company_research (Phase 11/Buffett-Munger redesign Sprint 2, see
+    claude/buffett-munger-redesign-sprint-plan-2026-09-20.md) adds a third,
+    per-holding stream for the Brain's opening step: company-specific
+    industry/geography/competitive-environment risk (the Iran/energy
+    example) that neither portfolio-wide macro nor generic-by-sector
+    research covers. It takes plain strings, not a Holding ORM object, for
+    the same reason get_sector_research takes `sector: str` rather than a
+    Holding — this interface stays vendor-agnostic and decoupled from the
+    application's persistence layer (§28 rule 8); the caller
+    (app.services.research.company) is responsible for reading whatever it
+    needs off the Holding row first."""
 
     # Set by a concrete provider after each get_macro_snapshot/
-    # get_sector_research call, so app.services.research can persist a
-    # usage-ledger row (app.models.llm_usage) without widening this
-    # interface's return type (§28 rule 8 — the interface itself stays
+    # get_sector_research/get_company_research call, so app.services.research
+    # can persist a usage-ledger row (app.models.llm_usage) without widening
+    # this interface's return type (§28 rule 8 — the interface itself stays
     # vendor-agnostic; only a concrete provider knows what its vendor's SDK
     # reports). None for StubResearchProvider and for any call that raised
     # before a vendor response came back.
@@ -203,6 +215,15 @@ class ResearchProvider(ABC):
 
     @abstractmethod
     def get_sector_research(self, sector: str) -> list[ResearchItem]: ...
+
+    @abstractmethod
+    def get_company_research(self, company_name: str, ticker: str, sector: str | None) -> list[ResearchItem]:
+        """Company-specific research (§9's per-holding extension, Sprint 2)
+        — industry/geography/competitive-environment risk scoped to one
+        holding, not the portfolio or its sector generically. `sector` may
+        be None (a holding with no sector assigned still gets company-level
+        research)."""
+        ...
 
 
 @dataclass(frozen=True)

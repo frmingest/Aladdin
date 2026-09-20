@@ -194,6 +194,12 @@ class Settings(BaseSettings):
     # completed research_runs row is reused) until its age exceeds these.
     macro_refresh_interval_hours: int = 24
     sector_research_refresh_interval_days: int = 7
+    # Per-holding company research (Phase 11 Sprint 2) refreshes on a
+    # shorter cycle than sector research — it's the most specific, most
+    # decision-relevant of the three streams (the Brain's per-company
+    # geopolitical/industry risk step) and there are far fewer distinct
+    # holdings refreshed at once than there would be, say, macro series.
+    company_research_refresh_interval_days: int = 3
 
     # APScheduler background jobs (§4) driving the two intervals above.
     # Disabled in tests (see tests/__init__.py) so the test suite never opens

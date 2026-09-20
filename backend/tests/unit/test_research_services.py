@@ -16,6 +16,7 @@ from sqlalchemy.orm import sessionmaker
 import app.models  # noqa: F401 — populates Base.metadata before create_all
 from app.config.database import Base
 from app.config.settings import Settings
+from app.models.holding import Holding
 from app.models.research import ResearchRun, ResearchRunStatus, ResearchRunType
 from app.providers.base import (
     MacroDataProvider,
@@ -25,6 +26,7 @@ from app.providers.base import (
     ResearchProvider,
     ResearchUnavailableError,
 )
+from app.services.research.company import get_latest_company_research, refresh_company_research
 from app.services.research.macro import get_latest_macro_snapshot, refresh_macro_snapshot
 from app.services.research.sector import get_latest_sector_research, refresh_sector_research
 
@@ -44,12 +46,27 @@ def _settings(**overrides):
     defaults = dict(
         macro_refresh_interval_hours=24,
         sector_research_refresh_interval_days=7,
+        company_research_refresh_interval_days=3,
         research_max_grounded_items=8,
         active_macro_series_version="v1",
         active_research_prompt_version="v1",
     )
     defaults.update(overrides)
     return Settings(**defaults)
+
+
+def _make_holding(db, ticker="VAR.OL", name="Vår Energi", sector="Energy"):
+    holding = Holding(
+        ticker=ticker,
+        name=name,
+        asset_class="EQUITY",
+        asset_class_raw="Aksje",
+        sector=sector,
+        trading_currency="NOK",
+    )
+    db.add(holding)
+    db.commit()
+    return holding
 
 
 class _FakeMacroProvider(MacroDataProvider):
@@ -67,11 +84,21 @@ class _FakeMacroProvider(MacroDataProvider):
 
 
 class _FakeResearchProvider(ResearchProvider):
-    def __init__(self, macro_items=None, sector_items=None, fail_macro=False, fail_sector=False):
+    def __init__(
+        self,
+        macro_items=None,
+        sector_items=None,
+        company_items=None,
+        fail_macro=False,
+        fail_sector=False,
+        fail_company=False,
+    ):
         self._macro_items = macro_items or []
         self._sector_items = sector_items or []
+        self._company_items = company_items or []
         self._fail_macro = fail_macro
         self._fail_sector = fail_sector
+        self._fail_company = fail_company
 
     def get_macro_snapshot(self):
         if self._fail_macro:
@@ -82,6 +109,11 @@ class _FakeResearchProvider(ResearchProvider):
         if self._fail_sector:
             raise ResearchUnavailableError("fake sector research failure")
         return self._sector_items
+
+    def get_company_research(self, company_name, ticker, sector):
+        if self._fail_company:
+            raise ResearchUnavailableError("fake company research failure")
+        return self._company_items
 
 
 def _point(series_key="us_policy_rate", value="5.33", region="US", provider="fred"):
@@ -334,3 +366,135 @@ def test_is_stale_treats_completed_run_as_stale_after_max_age(db):
 
     assert is_stale(stale_run, timedelta(hours=24)) is True
     assert is_stale(None, timedelta(hours=24)) is True
+
+
+# --- company (Phase 11 Sprint 2) ---
+
+
+def test_refresh_company_research_completed(db):
+    holding = _make_holding(db)
+    research_provider = _FakeResearchProvider(company_items=[_item(source_type="company_research")])
+
+    run = refresh_company_research(db, research_provider, holding, force=True, settings=_settings())
+
+    assert run.status == ResearchRunStatus.COMPLETED.value
+    assert run.type == ResearchRunType.COMPANY.value
+    assert run.holding_id == holding.id
+    assert len(run.items) == 1
+
+
+def test_refresh_company_research_failed_when_provider_raises(db):
+    holding = _make_holding(db)
+    research_provider = _FakeResearchProvider(fail_company=True)
+
+    run = refresh_company_research(db, research_provider, holding, force=True, settings=_settings())
+
+    assert run.status == ResearchRunStatus.FAILED.value
+    assert run.error_message is not None
+
+
+def test_refresh_company_research_skips_when_recent_run_not_stale(db):
+    holding = _make_holding(db)
+    existing = ResearchRun(
+        type=ResearchRunType.COMPANY.value,
+        holding_id=holding.id,
+        status=ResearchRunStatus.COMPLETED.value,
+        methodology_version="v1",
+        completed_at=datetime.now(timezone.utc),
+    )
+    db.add(existing)
+    db.commit()
+
+    research_provider = _FakeResearchProvider()
+    research_provider.get_company_research = lambda company_name, ticker, sector: (_ for _ in ()).throw(  # noqa: E731
+        AssertionError("should not call the provider when the cache is fresh")
+    )
+
+    run = refresh_company_research(db, research_provider, holding, force=False, settings=_settings())
+
+    assert run.id == existing.id
+
+
+def test_refresh_company_research_force_bypasses_freshness(db):
+    holding = _make_holding(db)
+    existing = ResearchRun(
+        type=ResearchRunType.COMPANY.value,
+        holding_id=holding.id,
+        status=ResearchRunStatus.COMPLETED.value,
+        methodology_version="v1",
+        completed_at=datetime.now(timezone.utc),
+    )
+    db.add(existing)
+    db.commit()
+
+    research_provider = _FakeResearchProvider(company_items=[_item()])
+
+    run = refresh_company_research(db, research_provider, holding, force=True, settings=_settings())
+
+    assert run.id != existing.id
+
+
+def test_refresh_company_research_is_scoped_per_holding(db):
+    holding_a = _make_holding(db, ticker="VAR.OL", name="Vår Energi")
+    holding_b = _make_holding(db, ticker="EQNR.OL", name="Equinor")
+    research_provider = _FakeResearchProvider(company_items=[_item()])
+
+    refresh_company_research(db, research_provider, holding_a, force=True, settings=_settings())
+
+    # A stale-check for a *different* holding must not be satisfied by
+    # holding_a's fresh run.
+    run = refresh_company_research(db, research_provider, holding_b, force=False, settings=_settings())
+
+    assert run.holding_id == holding_b.id
+
+
+def test_get_latest_company_research_unavailable_when_nothing_on_record(db):
+    holding = _make_holding(db)
+
+    view = get_latest_company_research(db, holding.id, holding.ticker)
+
+    assert view.available is False
+    assert view.ticker == "VAR.OL"
+
+
+def test_get_latest_company_research_available_after_refresh(db):
+    holding = _make_holding(db)
+    research_provider = _FakeResearchProvider(company_items=[_item(source_type="company_research")])
+    refresh_company_research(db, research_provider, holding, force=True, settings=_settings())
+
+    view = get_latest_company_research(db, holding.id, holding.ticker)
+
+    assert view.available is True
+    assert len(view.items) == 1
+
+
+def test_company_items_are_capped_at_research_max_grounded_items(db):
+    holding = _make_holding(db)
+    many_items = [_item(url=f"https://example.com/{i}") for i in range(10)]
+    research_provider = _FakeResearchProvider(company_items=many_items)
+
+    run = refresh_company_research(
+        db, research_provider, holding, force=True, settings=_settings(research_max_grounded_items=4)
+    )
+
+    assert len(run.items) == 4
+
+
+def test_company_research_calls_provider_with_holding_fields(db):
+    holding = _make_holding(db, ticker="VAR.OL", name="Vår Energi", sector="Energy")
+    seen = {}
+
+    research_provider = _FakeResearchProvider(company_items=[_item()])
+
+    def _capture(company_name, ticker, sector):
+        seen["company_name"] = company_name
+        seen["ticker"] = ticker
+        seen["sector"] = sector
+        return [_item()]
+
+    research_provider.get_company_research = _capture
+
+    refresh_company_research(db, research_provider, holding, force=True, settings=_settings())
+
+    assert seen == {"company_name": "Vår Energi", "ticker": "VAR.OL", "sector": "Energy"}
+

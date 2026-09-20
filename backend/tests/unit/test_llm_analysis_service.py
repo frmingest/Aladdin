@@ -95,6 +95,7 @@ def _make_context(user_notes: str | None) -> AnalysisContext:
         excerpts_truncated=False,
         macro_snapshot=UnavailableSection(),
         sector_research=UnavailableSection(),
+        company_research=UnavailableSection(),
         recent_events=UnavailableSection(),
         previous_analysis=None,
         user_notes=user_notes,

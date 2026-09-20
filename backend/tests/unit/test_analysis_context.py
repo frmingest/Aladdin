@@ -161,6 +161,7 @@ def test_context_includes_financial_metrics_and_evidence(db):
 
     assert context.macro_snapshot.available is False
     assert context.sector_research.available is False
+    assert context.company_research.available is False
 
 
 def test_context_surfaces_macro_and_sector_research_when_available(db):
@@ -227,6 +228,29 @@ def test_context_surfaces_macro_and_sector_research_when_available(db):
             source_type="sector_research",
         )
     )
+
+    company_run = ResearchRun(
+        type=ResearchRunType.COMPANY.value,
+        holding_id=holding.id,
+        status=ResearchRunStatus.COMPLETED.value,
+        methodology_version="v1",
+        completed_at=datetime.now(timezone.utc),
+    )
+    db.add(company_run)
+    db.flush()
+    db.add(
+        ResearchItem(
+            research_run_id=company_run.id,
+            holding_id=holding.id,
+            source_url="https://example.com/company",
+            source_name="example.com",
+            published_at=None,
+            retrieved_at=datetime.now(timezone.utc),
+            title="Vår Energi announces new Gulf licence",
+            summary="Vår Energi specific development.",
+            source_type="company_research",
+        )
+    )
     db.commit()
 
     context = build_analysis_context(db, holding.id, snapshot.id)
@@ -235,13 +259,16 @@ def test_context_surfaces_macro_and_sector_research_when_available(db):
     assert context.macro_snapshot.observations[0].series_key == "us_policy_rate"
     assert context.sector_research.available is True
     assert context.sector_research.items[0].title == "Oil prices tick up"
+    assert context.company_research.available is True
+    assert context.company_research.items[0].title == "Vår Energi announces new Gulf licence"
 
     macro_evidence = [e for e in context.evidence_items if e.source_type == "macro_observation"]
     assert len(macro_evidence) == 1
     research_evidence = [e for e in context.evidence_items if e.source_type == "research_item"]
-    assert len(research_evidence) == 2
+    assert len(research_evidence) == 3
     assert any("macro news" in e.label for e in research_evidence)
     assert any("Energy sector research" in e.label for e in research_evidence)
+    assert any("VAR.OL company research" in e.label for e in research_evidence)
 
 
 def test_holding_in_two_accounts_within_one_snapshot_does_not_crash(db):

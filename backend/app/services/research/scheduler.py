@@ -14,6 +14,9 @@ outside any request, so they can't use the `get_db` FastAPI dependency):
 - sector research refresh, every `sector_research_refresh_interval_days`,
   once per distinct sector currently present on any holding (§9.3: routed
   by sector, not a fixed hardcoded list)
+- company research refresh, every `company_research_refresh_interval_days`,
+  once per holding currently on record (Phase 11 Sprint 2 — routed by
+  holding_id, the per-company counterpart to the sector job above)
 
 Both call the same `refresh_*` functions the manual API endpoints use
 (app.api.research) with `force=False` — the interval only decides how often
@@ -37,6 +40,7 @@ from app.config.logging import get_logger
 from app.config.settings import Settings, get_settings
 from app.models.holding import Holding
 from app.providers.factory import get_macro_data_provider, get_research_provider
+from app.services.research.company import refresh_company_research
 from app.services.research.macro import refresh_macro_snapshot
 from app.services.research.sector import refresh_sector_research
 
@@ -72,6 +76,26 @@ def _run_sector_refresh_job() -> None:
         db.close()
 
 
+def _run_company_refresh_job() -> None:
+    """Phase 11 Sprint 2 — one company-research refresh per holding
+    currently on record, mirroring _run_sector_refresh_job's per-sector
+    loop. Not filtered by asset class yet — Sprint 5 (non-equity removal)
+    is what narrows the app to equity holdings; until then this refreshes
+    every holding the same way sector refresh already does."""
+    db: Session = SessionLocal()
+    try:
+        holdings = db.query(Holding).all()
+        provider = get_research_provider()
+        for holding in holdings:
+            try:
+                run = refresh_company_research(db, provider, holding, force=False)
+                logger.info("scheduled_company_refresh_completed", ticker=holding.ticker, status=run.status)
+            except Exception:  # noqa: BLE001 — one holding failing must not skip the rest (§21)
+                logger.exception("scheduled_company_refresh_failed", ticker=holding.ticker)
+    finally:
+        db.close()
+
+
 def start_research_scheduler(settings: Settings | None = None) -> BackgroundScheduler | None:
     """Returns the started scheduler, or None if disabled — the caller
     (app.main's lifespan) holds onto it only to shut it down cleanly."""
@@ -98,10 +122,17 @@ def start_research_scheduler(settings: Settings | None = None) -> BackgroundSche
         id="sector_refresh",
         next_run_time=now,
     )
+    scheduler.add_job(
+        _run_company_refresh_job,
+        trigger=IntervalTrigger(days=settings.company_research_refresh_interval_days),
+        id="company_refresh",
+        next_run_time=now,
+    )
     scheduler.start()
     logger.info(
         "research_scheduler_started",
         macro_refresh_interval_hours=settings.macro_refresh_interval_hours,
         sector_research_refresh_interval_days=settings.sector_research_refresh_interval_days,
+        company_research_refresh_interval_days=settings.company_research_refresh_interval_days,
     )
     return scheduler

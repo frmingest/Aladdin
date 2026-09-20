@@ -32,6 +32,7 @@ class LLMCallType(str, enum.Enum):
     ANALYSIS_RECONCILIATION = "ANALYSIS_RECONCILIATION"
     RESEARCH_MACRO = "RESEARCH_MACRO"
     RESEARCH_SECTOR = "RESEARCH_SECTOR"
+    RESEARCH_COMPANY = "RESEARCH_COMPANY"
 
 
 class LLMUsageEvent(Base):
@@ -43,7 +44,7 @@ class LLMUsageEvent(Base):
     )
     provider: Mapped[str] = mapped_column(String(32), nullable=False)
     model_name: Mapped[str] = mapped_column(String(64), nullable=False)
-    # ANALYSIS_BLIND | ANALYSIS_RECONCILIATION | RESEARCH_MACRO | RESEARCH_SECTOR.
+    # ANALYSIS_BLIND | ANALYSIS_RECONCILIATION | RESEARCH_MACRO | RESEARCH_SECTOR | RESEARCH_COMPANY.
     call_type: Mapped[str] = mapped_column(String(32), nullable=False)
     prompt_version: Mapped[str | None] = mapped_column(String(16), nullable=True)
 

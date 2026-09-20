@@ -33,6 +33,15 @@ from app.models.types import GUID, new_uuid
 class ResearchRunType(str, enum.Enum):
     MACRO = "MACRO"
     SECTOR = "SECTOR"
+    # Per-holding company-specific research (Phase 11/Buffett-Munger redesign
+    # Sprint 2, claude/buffett-munger-redesign-sprint-plan-2026-09-20.md) —
+    # the Brain's opening step asks for company-specific industry/geography/
+    # competitive-environment research (the Iran/energy example), which
+    # neither portfolio-wide MACRO nor generic-by-sector SECTOR research
+    # covers. Routed by holding_id (see ResearchRun.holding_id below), not
+    # sector — one company's research is not shared with sibling holdings
+    # the way SECTOR research is.
+    COMPANY = "COMPANY"
 
 
 class ResearchRunStatus(str, enum.Enum):
@@ -46,15 +55,27 @@ class ResearchRun(Base):
     __tablename__ = "research_runs"
     __table_args__ = (
         # The query app.services.research runs constantly: "what's the most
-        # recent completed run of this type (and, for SECTOR, this sector)?"
+        # recent completed run of this type (and, for SECTOR, this sector /
+        # for COMPANY, this holding)?"
         Index("ix_research_runs_type_sector_completed", "type", "sector", "completed_at"),
+        Index("ix_research_runs_type_holding_completed", "type", "holding_id", "completed_at"),
     )
 
     id: Mapped["uuid.UUID"] = mapped_column(GUID, primary_key=True, default=new_uuid)
-    type: Mapped[str] = mapped_column(String(16), nullable=False)  # MACRO | SECTOR
+    type: Mapped[str] = mapped_column(String(16), nullable=False)  # MACRO | SECTOR | COMPANY
     # Only set for type=SECTOR — the sector string as it appears on
     # Holding.sector (§20), e.g. "Energy". NULL for a portfolio-wide MACRO run.
     sector: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
+    # Only set for type=COMPANY — the holding this per-company research run
+    # is scoped to (Sprint 2). NULL for MACRO/SECTOR runs. Deliberately a
+    # column on ResearchRun itself, not just on ResearchItem (which already
+    # had a nullable holding_id from Phase 4 but was never populated) —
+    # app.services.research.common.latest_completed_run needs to filter runs
+    # by holding for the same "is a refresh due" staleness check SECTOR
+    # already does by sector.
+    holding_id: Mapped["uuid.UUID | None"] = mapped_column(
+        GUID, ForeignKey("holdings.id"), nullable=True, index=True
+    )
     started_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )

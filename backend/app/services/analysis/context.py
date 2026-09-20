@@ -12,7 +12,9 @@ Macro snapshot and sector research (§9.1-§9.3) are now populated from
 whatever app.services.research has persisted (§26 Phase 4) — real data when
 a refresh has run, an explicit `available=False` `UnavailableSection`
 otherwise (§21: never present missing data as if it simply doesn't apply).
-Both are also added as citable EvidenceItems alongside document/financial/
+Company-specific research (Phase 11 Sprint 2 — per-holding industry/
+geography/competitive-environment risk) works the same way. All three are
+also added as citable EvidenceItems alongside document/financial/
 market evidence, reusing the existing generic evidence-citation mechanism
 (§28 rule 8 in spirit: no LLM-output-schema or prompt-version change needed
 for the model to be able to cite them — see docs/decisions/0007).
@@ -37,6 +39,7 @@ from app.models.financial_fact import FinancialLineItem
 from app.models.holding import Holding
 from app.models.market_data import FxObservation, MarketObservation
 from app.models.portfolio import PortfolioPosition, PortfolioSnapshot
+from app.services.research.company import CompanyResearchView, get_latest_company_research
 from app.services.research.macro import MacroSnapshotView, get_latest_macro_snapshot
 from app.services.research.sector import SectorResearchView, get_latest_sector_research
 from app.services.thesis.service import format_thesis_for_context, get_active_thesis
@@ -128,6 +131,7 @@ class AnalysisContext:
 
     macro_snapshot: MacroSnapshotView | UnavailableSection
     sector_research: SectorResearchView | UnavailableSection
+    company_research: CompanyResearchView | UnavailableSection
     recent_events: UnavailableSection
 
     previous_analysis: PreviousAnalysisSummary | None
@@ -173,7 +177,8 @@ def build_analysis_context(db: Session, holding_id: UUID, portfolio_snapshot_id:
         if holding.sector
         else SectorResearchView(available=False, sector="", as_of=None, reason="holding has no sector assigned")
     )
-    evidence_items = _add_research_evidence(evidence_items, macro_snapshot, sector_research)
+    company_research = get_latest_company_research(db, holding_id, holding.ticker)
+    evidence_items = _add_research_evidence(evidence_items, macro_snapshot, sector_research, company_research)
 
     previous_analysis = _build_previous_analysis(db, holding_id)
 
@@ -198,6 +203,7 @@ def build_analysis_context(db: Session, holding_id: UUID, portfolio_snapshot_id:
         excerpts_truncated=excerpts_truncated,
         macro_snapshot=macro_snapshot,
         sector_research=sector_research,
+        company_research=company_research,
         recent_events=UnavailableSection(reason="not built this phase — see docs/PROGRESS.md known gaps"),
         previous_analysis=previous_analysis,
         user_notes=_build_user_notes(db, holding_id, position),
@@ -523,13 +529,15 @@ def _add_research_evidence(
     items: list[EvidenceItem],
     macro_snapshot: MacroSnapshotView | UnavailableSection,
     sector_research: SectorResearchView | UnavailableSection,
+    company_research: CompanyResearchView | UnavailableSection,
 ) -> list[EvidenceItem]:
-    """Adds Phase 4 macro/sector research as citable evidence, exactly like
+    """Adds Phase 4 macro/sector research, plus Phase 11 Sprint 2's
+    per-holding company research, as citable evidence, exactly like
     _add_metric_evidence does for deterministic facts — same evidence_id
     numbering, same generic citation mechanism the persona prompt already
     describes ("a numbered list of evidence items"), so no prompt-version
-    bump is needed for the model to be able to reference these (decision
-    0007)."""
+    bump is needed for the model to be able to reference these (decisions
+    0007 and Sprint 2)."""
     counter = len(items) + 1
 
     if isinstance(macro_snapshot, MacroSnapshotView) and macro_snapshot.available:
@@ -576,6 +584,22 @@ def _add_research_evidence(
                     section=None,
                     label=f"[{sector_research.sector} sector research, {sector_item.source_name}] {sector_item.title}",
                     content=sector_item.summary,
+                )
+            )
+            counter += 1
+
+    if isinstance(company_research, CompanyResearchView) and company_research.available:
+        for company_item in company_research.items:
+            items.append(
+                EvidenceItem(
+                    evidence_id=f"E{counter}",
+                    source_type="research_item",
+                    source_id=company_item.source_url,
+                    page_start=None,
+                    page_end=None,
+                    section=None,
+                    label=f"[{company_research.ticker} company research, {company_item.source_name}] {company_item.title}",
+                    content=company_item.summary,
                 )
             )
             counter += 1

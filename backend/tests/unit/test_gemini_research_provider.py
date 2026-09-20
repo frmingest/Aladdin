@@ -54,6 +54,9 @@ def prompts_dir(tmp_path, monkeypatch):
     research_dir.mkdir()
     (research_dir / "macro_v1.md").write_text("What is happening in macro markets?")
     (research_dir / "sector_v1.md").write_text("What is happening in the {sector} sector?")
+    (research_dir / "company_v1.md").write_text(
+        "What is happening with {company_name} ({ticker}) in the {sector} sector?"
+    )
     monkeypatch.setattr(gemini_module, "PROMPTS_DIR", tmp_path)
     return tmp_path
 
@@ -180,3 +183,56 @@ def test_missing_prompt_file_raises_unavailable(tmp_path, monkeypatch):
 
     with pytest.raises(ResearchUnavailableError, match="no 'macro' research prompt"):
         provider.get_macro_snapshot()
+
+
+def test_company_research_formats_prompt_with_company_fields(monkeypatch, prompts_dir):
+    provider = gemini_module.GeminiResearchProvider(
+        api_key="k", model="gemini-2.5-flash", prompt_version="v1", max_output_tokens=100, temperature=0.2
+    )
+    fake_client = _FakeClient(_response(chunks=[], supports=[]))
+    monkeypatch.setattr(provider, "_client", fake_client)
+
+    provider.get_company_research("Vår Energi", "VAR.OL", "Energy")
+
+    prompt_sent = fake_client.models.calls[0]["contents"]
+    assert "Vår Energi" in prompt_sent
+    assert "VAR.OL" in prompt_sent
+    assert "Energy" in prompt_sent
+
+
+def test_company_research_defaults_sector_to_unspecified_when_none(monkeypatch, prompts_dir):
+    provider = gemini_module.GeminiResearchProvider(
+        api_key="k", model="gemini-2.5-flash", prompt_version="v1", max_output_tokens=100, temperature=0.2
+    )
+    fake_client = _FakeClient(_response(chunks=[], supports=[]))
+    monkeypatch.setattr(provider, "_client", fake_client)
+
+    provider.get_company_research("Vår Energi", "VAR.OL", None)
+
+    assert "unspecified" in fake_client.models.calls[0]["contents"]
+
+
+def test_company_research_builds_item_with_company_source_type(monkeypatch, prompts_dir):
+    provider = gemini_module.GeminiResearchProvider(
+        api_key="k", model="gemini-2.5-flash", prompt_version="v1", max_output_tokens=100, temperature=0.2
+    )
+    response = _response(
+        chunks=[_web_chunk("https://example.com/a", domain="example.com", title="A headline")],
+        supports=[_support("A specific development.", [0])],
+    )
+    monkeypatch.setattr(provider, "_client", _FakeClient(response))
+
+    items = provider.get_company_research("Vår Energi", "VAR.OL", "Energy")
+
+    assert len(items) == 1
+    assert items[0].source_type == "company_research"
+
+
+def test_missing_company_prompt_file_raises_unavailable(tmp_path, monkeypatch):
+    monkeypatch.setattr(gemini_module, "PROMPTS_DIR", tmp_path)  # empty dir — no research/ subfolder
+    provider = gemini_module.GeminiResearchProvider(
+        api_key="k", model="gemini-2.5-flash", prompt_version="v1", max_output_tokens=100, temperature=0.2
+    )
+
+    with pytest.raises(ResearchUnavailableError, match="no 'company' research prompt"):
+        provider.get_company_research("Vår Energi", "VAR.OL", "Energy")

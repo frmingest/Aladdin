@@ -55,6 +55,9 @@ class StubResearchProvider(ResearchProvider):
     def get_sector_research(self, sector: str) -> list[ResearchItem]:
         raise NotImplementedError("No research provider configured — see §29.")
 
+    def get_company_research(self, company_name: str, ticker: str, sector: str | None) -> list[ResearchItem]:
+        raise NotImplementedError("No research provider configured — see §29.")
+
 
 class StubMacroDataProvider(MacroDataProvider):
     """Deliberately unimplemented — used only when MACRO_DATA_PROVIDER=stub,

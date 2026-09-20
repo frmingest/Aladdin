@@ -20,7 +20,15 @@ from app.models.holding import Holding
 from app.models.research import ResearchRun
 from app.providers.base import MacroDataProvider, ResearchProvider
 from app.providers.factory import get_macro_data_provider, get_research_provider
-from app.schemas.research import MacroObservationOut, MacroSnapshotOut, ResearchItemOut, ResearchRunOut, SectorResearchOut
+from app.schemas.research import (
+    CompanyResearchOut,
+    MacroObservationOut,
+    MacroSnapshotOut,
+    ResearchItemOut,
+    ResearchRunOut,
+    SectorResearchOut,
+)
+from app.services.research.company import CompanyResearchView, get_latest_company_research, refresh_company_research
 from app.services.research.macro import MacroSnapshotView, get_latest_macro_snapshot, refresh_macro_snapshot
 from app.services.research.sector import SectorResearchView, get_latest_sector_research, refresh_sector_research
 
@@ -85,6 +93,24 @@ def _sector_research_to_out(view: SectorResearchView) -> SectorResearchOut:
     )
 
 
+def _company_research_to_out(view: CompanyResearchView) -> CompanyResearchOut:
+    return CompanyResearchOut(
+        available=view.available,
+        holding_id=view.holding_id,
+        ticker=view.ticker,
+        as_of=view.as_of,
+        items=_items_to_out(view.items),
+        reason=view.reason,
+    )
+
+
+def _get_holding_or_404(db: Session, holding_id: UUID) -> Holding:
+    holding = db.get(Holding, holding_id)
+    if holding is None:
+        raise HTTPException(status_code=404, detail="holding not found")
+    return holding
+
+
 @router.get("/macro/snapshot", response_model=MacroSnapshotOut)
 def get_macro_snapshot(db: Session = Depends(get_db)) -> MacroSnapshotOut:
     """Reads the latest persisted macro data/narrative — never calls a
@@ -126,6 +152,28 @@ def trigger_sector_refresh(
     research_provider: ResearchProvider = Depends(get_research_provider),
 ) -> ResearchRunOut:
     run = refresh_sector_research(db, research_provider, sector, force=force)
+    return _run_to_out(run)
+
+
+@router.get("/holdings/{holding_id}/company/items", response_model=CompanyResearchOut)
+def get_company_research(holding_id: UUID, db: Session = Depends(get_db)) -> CompanyResearchOut:
+    """Phase 11 Sprint 2 — per-holding company research (industry/geography/
+    competitive-environment risk specific to this holding, not its sector
+    generically). Reads only the latest persisted run, same §2.7 "reading is
+    free of network cost" rule as every other research read endpoint."""
+    holding = _get_holding_or_404(db, holding_id)
+    return _company_research_to_out(get_latest_company_research(db, holding.id, holding.ticker))
+
+
+@router.post("/holdings/{holding_id}/company/refresh", response_model=ResearchRunOut, status_code=201)
+def trigger_company_refresh(
+    holding_id: UUID,
+    force: bool = False,
+    db: Session = Depends(get_db),
+    research_provider: ResearchProvider = Depends(get_research_provider),
+) -> ResearchRunOut:
+    holding = _get_holding_or_404(db, holding_id)
+    run = refresh_company_research(db, research_provider, holding, force=force)
     return _run_to_out(run)
 
 

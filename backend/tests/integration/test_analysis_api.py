@@ -103,6 +103,9 @@ class _EmptyResearchProvider(ResearchProvider):
     def get_sector_research(self, sector):
         return []
 
+    def get_company_research(self, company_name, ticker, sector):
+        return []
+
 
 @pytest.fixture()
 def stagflation_macro():
