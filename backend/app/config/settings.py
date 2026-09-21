@@ -86,6 +86,14 @@ class Settings(BaseSettings):
     # ERP / terminal growth / scenario offsets — app/domain/valuation_assumptions/.
     active_valuation_assumptions_version: str = "v1"
 
+    # --- Analysis engine (Sprint 4, see app/services/analysis/) ---
+    # Two-pass Buffett/Munger analysis: a blind pass (evidence only, no
+    # user notes — CLAUDE.md Rule 4) followed by a reconciliation pass
+    # (blind output + the holding's own notes, if any).
+    active_analysis_schema_version: str = "v1"  # app/domain/analysis_schema/
+    active_analysis_prompt_version: str = "v1"  # prompts/analysis/{blind,reconciliation}_vN.md
+    active_analysis_assumptions_version: str = "v1"  # app/domain/analysis_assumptions/
+
 
 @lru_cache
 def get_settings() -> Settings:

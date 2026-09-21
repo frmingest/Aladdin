@@ -3,54 +3,53 @@
 **Supersedes** [buffett-munger-redesign-sprint-plan-2026-09-20.md](buffett-munger-redesign-sprint-plan-2026-09-20.md).
 That doc planned an *incremental* redesign (ADR 0019/0020: "continue & consolidate, no rebuild").
 On 2026-09-21 Faiz overrode that decision and had the repo wiped to a clean slate. This doc plans
-the rebuild from that clean slate. **Sprint 0, Sprint 1, Sprint 2, and Sprint 3 are all closed** —
-DCF/reverse-DCF/multiples are built, wired into a `/valuation` API against live market data, and
-now have a frontend on `HoldingDetailPage` too. Numeric macro data and a background scheduler
-remain **deliberately deferred** out of Sprint 2 — see the Backlog section below for where that
-work now sits. Separately, portfolio CSV import + delete UI (originally slated for Sprint 4) was
-pulled forward and is done. **Sprint 4 (the Buffett/Munger persona & output schema) is next**, not
-yet started — needs Faiz's scope decisions before building (see that sprint's section below).
+the rebuild from that clean slate. **Sprint 0, 1, 2, and 3 are all closed.** **Sprint 4 (the
+Buffett/Munger persona & two-pass analysis engine) has its backend built this session** — evidence
+packet, versioned schema/prompts, blind pass, reconciliation pass, orchestration, per-holding notes,
+and the `/analysis` API are all done and tested against fakes; the frontend is deliberately deferred
+to a follow-up session, same split as Sprint 3.
 
-## Where things actually stand right now (audited 2026-09-21, tenth session pass)
+## Where things actually stand right now (audited 2026-09-21, eleventh session pass)
 
 | | |
 |---|---|
-| Repo | `main`, commit `ddeade1` ("Add frontend valuation UI (Sprint 3 close): DCF, reverse DCF, multiples") — **1 commit this session, not pushed** — `git push` fails from this session's shell with `could not read Username for 'https://github.com'`, confirmed by an actual attempt this session, same limitation every prior session hit. Everything through `d4edc2f` has been confirmed pushed (this session corrected a stale claim in the prior session's own docs that those 6 commits were still local — they were not). |
-| **Sprint 3 fully closed this session — frontend valuation UI built.** | `ValuationPanel.tsx` on `HoldingDetailPage`: assumption stat tiles (price, CAPM discount rate, base growth, reverse-DCF implied growth), DCF bull/base/bear scenario cards (intrinsic value + margin of safety, colored by sign), and multiples-over-time as four small-multiple `recharts` line charts (P/E, P/B, P/S, EV/EBITDA — never combined onto shared axes, since each sits on a different scale). No backend changes needed — `/valuation/*` was already built and tested in the prior session. |
-| `frontend/src/components/ValuationPanel.tsx` | **New this session.** Mirrors `ResearchPanel`'s load/refresh/error shape. A per-period skip reason surfaces when a multiple has no computed value yet; an `unavailable_reasons` banner surfaces when any part of a holding's valuation degraded — both follow this app's "fail visibly, never silently" convention from the Metrics and Research panels. |
-| `frontend/src/lib/types.ts`, `lib/api.ts` | **New this session.** `DCFScenario`/`DCF`/`PeriodMultiples`/`HoldingValuation` types mirroring `app/schemas/valuation.py` exactly (Decimal-as-string wire format, same convention as every other type in this file); `getHoldingValuation`/`refreshHoldingValuation` API methods mirroring the research API's GET-serves-fresh-or-refreshes / POST-`.../refresh`-forces-it shape. |
-| Verification before building | Fresh venv, 286/286 backend tests passing (matching the docs exactly), `ruff check` clean (only the same pre-existing `EXE002` noise), fresh frontend `tsc --noEmit`/`eslint .`/`vite build` all clean before *and* after this session's change. |
-| Deployment | **Not deployed to Railway.** Still "written, not yet deployed" per the status-honesty rule — no Railway CLI session or config found in the repo this session either. |
-| Real data | **Still untouched.** Portfolio CSV import still not yet run against Faiz's real 5 account CSVs or the real Supabase DB; needs his go-ahead first. |
-| Test environment | Backend: same fresh-Linux-venv-per-session limitation as always — **286 tests, all passing**, unchanged this session (no backend changes). `ruff check` on `backend/`: pre-existing `EXE002` (file-permission artifact, confirmed every session, 86 currently on `app/` alone) + pre-existing `I001` in `alembic/versions/*.py` migration files — neither touches this session's changes. Frontend: `tsc --noEmit`, `eslint .`, and `vite build` all clean. Bundle grew from ~197KB to ~587KB (gzipped: 61KB → 169KB) now that `recharts` (already a dependency, previously unused) is in the main chunk — vite flags this as a chunk-size warning; worth a code-split later (dynamic `import()` on chart-heavy pages), not blocking for a personal single-user app. |
-| **Discovered this session, not fixed** | The real (gitignored) `backend/.env` still has `MARKET_DATA_PROVIDER=stub` and `RESEARCH_PROVIDER=stub` — neither is an implemented provider in `app/providers/factory.py`. Running the backend right now would immediately break both `/valuation/*` and `/research/*` with an "Unknown ... provider" error. Left untouched (real config only ever lives in `backend/.env`, never edited by an agent session per CLAUDE.md) — still flagged to Faiz in `progress.md`'s "Needs from Faiz" table, unfixed across two sessions now. |
-| Known gap | Numeric macro data (FRED/Norges Bank → `macro_observations`) and a background scheduler are both still deliberately deferred — see "Backlog" below. **Sprint 4 (the analysis engine itself) is the immediate next step** — it's the centerpiece of this whole rebuild and needs Faiz's scope decisions before building, same as every prior sprint start. |
+| Repo | `main`, verified clean and fully pushed at the start of this session (`f0d71b4`) — this session's own commit(s) for Sprint 4's backend are local only until Faiz pushes, same recurring `could not read Username for 'https://github.com'` credential gap every session has hit. |
+| **Sprint 4 backend built this session.** | New tables `equity_analysis_runs`/`equity_holding_notes` (migration `b5e1a9c3d7f2`, a fresh schema per CLAUDE.md Rule 3, not an extension of the legacy Phase-3 tables); versioned output schema (`app/domain/analysis_schema/v1.py`) and assumptions (`app/domain/analysis_assumptions/v1.py`); versioned prompts (`prompts/analysis/{blind,reconciliation}_v1.md`); the evidence-packet builder (`app/services/analysis/evidence_packet.py`, reusing Sprint 1's calculations, Sprint 2's research, and Sprint 3's valuation unchanged); the blind pass and reconciliation pass (`app/services/analysis/{blind_pass,reconciliation_pass}.py`); the orchestration pipeline (`app/services/analysis/pipeline.py`); per-holding notes CRUD (`app/services/analysis/notes.py`); and the `/analysis` API (`app/api/analysis.py`). |
+| Scope decisions Faiz made before this session's build (all "Recommended", via clarifying questions) | Build the full evidence packet + two-pass pipeline this session, backend only (frontend deferred — Decision 15 below); build both passes now with notes optional rather than shipping the blind pass alone first (Decision 16); don't touch document-extraction quality this session (Decision 17). |
+| Verification before/after building | Fresh Linux venv (this session's own — the repo's checked-in `.venv/` is a Windows venv, incompatible here, same limitation every session hits), 288/288 pre-existing backend tests passing before starting, 307/307 after (19 new), ruff clean on every new/changed file (only the same pre-existing `EXE002` file-permission noise elsewhere). Migration verified both directions via `alembic upgrade/downgrade --sql` against the Postgres dialect offline (no live DB reachable from this session). |
+| **Discovered this session, not fixed** | A holding created through the plain `POST /holdings` endpoint (rather than the CSV-import path) defaults `Holding.asset_class_raw` to `"equity"` — which is **not** in `EQUITY_ANALYZABLE_TYPES` (`stock`, `equity_etf`; see `app/domain/instrument_types.py`). Sprint 4 is the first place that gate is actually enforced (`POST /analysis/holdings/{id}/run` returns 422 for a non-analyzable holding), so a manually-added holding would be rejected until re-tagged. Faiz's real 124 imported positions already carry correct tags via the CSV importer's own classifier, so this doesn't affect existing data — it's a gap for the not-yet-built "add a holding by hand" flow. Left as-is (a Sprint 1 model-default decision, out of this session's scope). |
+| **Also still discovered, still not fixed (three sessions running now)** | The real (gitignored) `backend/.env` still has `MARKET_DATA_PROVIDER=stub` and `RESEARCH_PROVIDER=stub`. This now blocks more than before: Sprint 4's evidence packet calls both the valuation engine and all three research kinds, so the analysis pipeline cannot produce a real result until these are set to real providers (`yfinance`, `gemini_search`) — flagged in `progress.md`'s "Needs from Faiz" table, now with more urgency. |
+| Deployment | Not touched this session — no Railway deploy attempted. Per the prior session's evidence (real screenshots/logs), the app was already confirmed deployed and running against real data before this session started. |
+| Real data | This session's entire Sprint 4 build was tested against fakes only (in-memory SQLite, fake LLM/market-data/risk-free-rate/research providers) — **no real Gemini/Mistral call, no real market data, and no run against any of Faiz's actual 124 real holdings** has happened yet. That's the natural next check once the stub-provider config above is fixed. |
 
 ## The Brain's 5 steps — what the rebuild has to deliver
 
-| Step | What it asks for |
-|---|---|
-| Opening | Live macro/geopolitical research (rates, inflation, conflicts, currencies, regulation, sector trends — the Iran/energy example), per portfolio and per holding |
-| 1. Business Quality & Moat | Circle of competence summary, moat rating (Wide/Narrow/None across brand, pricing power, switching costs, network effects, cost advantage, IP, distribution), 3-5yr avg ROIC/ROE/margins vs. a hurdle (~15%) |
-| 2. Financial Fortress | Net Debt/FCF, Net Debt/EBITDA, interest coverage, D/E; owner earnings/FCF trend vs. net income; earnings quality (one-offs, SBC, cyclical distortion) |
-| 3. Macro & Industry Stress Test | Rate sensitivity, inflation/demand/pricing-power sensitivity, geopolitical/regulatory/commodity/FX/supply-chain risk, cyclical positioning vs. normalized earnings |
-| 4. Valuation & Margin of Safety | Multiples vs. history/peers, DCF (base/bull/bear), reverse DCF (implied growth from price), margin of safety |
-| 5. Verdict | Strong Buy/Buy/Hold/Sell/Avoid, 3-bullet thesis, top-2 downside risks, price target range, 3-5 metrics to monitor, what would change the thesis |
+| Step | What it asks for | Where it now lives |
+|---|---|---|
+| Opening | Live macro/geopolitical research (rates, inflation, conflicts, currencies, regulation, sector trends), per portfolio and per holding | Sprint 2 (`/research/*`), folded into Sprint 4's evidence packet as `macro_research`/`sector_research`/`company_research` items |
+| 1. Business Quality & Moat | Circle of competence summary, moat rating (Wide/Narrow/None across 7 sources), 3-5yr avg ROIC/ROE/margins vs. a hurdle (~15%) | Sprint 4: `MoatAssessment` (LLM judgment, evidence-cited) over a deterministic ROE-history + hurdle comparison the evidence packet computes in Python (ROIC stays flagged not-computable — see below) |
+| 2. Financial Fortress | Net Debt/FCF, Net Debt/EBITDA, interest coverage, D/E; owner earnings/FCF trend vs. net income; earnings quality | Sprint 4: deterministic ratios from `app/services/calculations.py`, narrated by `financial_fortress` |
+| 3. Macro & Industry Stress Test | Rate sensitivity, inflation/demand/pricing-power sensitivity, geopolitical/regulatory/commodity/FX/supply-chain risk, cyclical positioning | Sprint 4: `macro_stress_test`, synthesizing the Sprint 2 research items in the packet |
+| 4. Valuation & Margin of Safety | Multiples vs. history/peers, DCF (base/bull/bear), reverse DCF, margin of safety | Sprint 3 computes all of it; Sprint 4's `valuation_synthesis` narrates the already-computed numbers, never recomputes them |
+| 5. Verdict | Strong Buy/Buy/Hold/Sell/Avoid, 3-bullet thesis, top-2 downside risks, price target range, 3-5 metrics to monitor, what would change the thesis | Sprint 4: `VerdictContent` — except the price target range, which `app/services/analysis/pipeline.py` sets deterministically from the Sprint 3 DCF bear/bull scenarios, never generated by the LLM (CLAUDE.md Rule 1) |
 
-Sprint 2 covers the Opening step's macro/geopolitical and per-company research, plus the
-sector-level input Step 3.3 needs. **Sprint 3 (backend + frontend, both now closed) covers Step
-4** — multiples, DCF, reverse DCF and margin-of-safety are all now computed against live data and
-visible on `HoldingDetailPage`, per holding. None of this is yet wired into an
-`AnalysisContext`/evidence-packet, since the analysis engine itself is Sprint 4. Sprint 4's analysis
-engine is expected to run only against holdings tagged `stock`/`equity_etf`
-(`app/domain/instrument_types.EQUITY_ANALYZABLE_TYPES`) — the portfolio-import work done in a prior
-session tags every holding's real instrument type precisely so that filter is possible then.
+ROIC is honestly reported as not-computable in the evidence packet (needs NOPAT/invested capital,
+neither derived from extracted facts today — same gap `app/services/metrics.py` already documented
+for Sprint 1's `/holdings/{id}/metrics`) rather than estimated. ROE *is* computed directly via
+`app/services/calculations.roe()` (net_income/total_equity are both extracted facts) even though
+`app/services/metrics.py` itself deliberately always skips ROE alongside ROIC for that endpoint's own
+reasons — Sprint 4 doesn't go through that module for ROE, to avoid inheriting a skip that doesn't
+apply to it.
 
 ## Non-negotiable design rules
 
 The repo's `CLAUDE.md` — 5 rules (deterministic arithmetic, evidence-first citations, versioned
 prompts/schemas, blind-pass confirmation-bias guard, untrusted document text) plus git/status-honesty/
-secrets discipline.
+secrets discipline. Sprint 4 is the sprint where all 5 actually get exercised at once for the first
+time: Rule 1 (price target from Python, not the LLM), Rule 2 (every schema section carries
+`evidence_ids`, checked against the real packet), Rule 3 (schema/assumptions/prompts are all
+versioned files), Rule 4 (a dedicated test proves the blind pass's prompt text never contains a
+holding's notes), Rule 5 (both prompts explicitly frame evidence/notes as data, never instructions).
 
 ## Open checkpoints — all resolved
 
@@ -58,317 +57,165 @@ secrets discipline.
 |---|---|---|
 | 1 | DB schema strategy | **Leave the existing Supabase schema and data exactly as-is.** No migration to strip non-equity tables/columns now. |
 | 2 | LLM provider | **Reuse Google AI Studio (Gemini) + Mistral** via keys in `backend/.env`/Railway. Rate-limit resilience built in from day one — done. |
-| 3 | Leftover GitHub branches | **Deleted** — confirmed gone from `origin` (`git ls-remote --heads origin` shows only `main`). |
-| 4 | Portfolio position entry: require a real document, or allow manual entry? | **Require a real uploaded document** (`source_file_id`, `NOT NULL`) for every portfolio snapshot — asked Faiz directly, he chose traceability over convenience. |
-| 5 | Sprint 2 research vendor | **Gemini + Google Search grounding**, reusing the Google AI Studio key/infra rather than a second vendor account — mirrors the pre-reset build's own Phase 4 decision, ported forward rather than re-litigated. |
-| 6 | Portfolio CSV import: skip non-equity rows (bond funds, gold ETC) or import everything? | **Import every row, tagged with its real instrument type** (`asset_class_raw`) — asked Faiz directly (his real exports mix equities with bond/money-market funds and a physical gold ETC); he chose accurate portfolio composition over silently narrowing to equities. |
-| 7 | Same upload batch included a whisky/collectibles CSV — support it too? | **No — skipped**, out of scope for this equity-only rebuild, consistent with Decision 1. |
-| 8 | Portfolio delete UI: granular only, or add a bulk "delete everything"? | **Granular only** — expose the existing per-account/per-snapshot confirm-gated deletes in the UI; no new bulk-wipe endpoint. **Superseded 2026-09-21** — Faiz asked for a bulk "delete all portfolio data" button after all, once he'd used the app for real; see the new session section below. |
-| 9 | Sprint 2 next-phase scope | Faiz chose **"finish Sprint 2: research UI"** over also building the deferred numeric-macro/scheduler items, or skipping ahead to Sprint 3. |
-| 10 | Sprint 3 market/FX/beta data source | **yfinance** (Recommended option) — free, no separate account setup needed for a personal single-user app. |
-| 11 | Sprint 3 discount-rate methodology | **Live risk-free rate + a versioned equity-risk-premium assumption** (CAPM) (Recommended option) — not a single hardcoded discount rate. |
-| 12 | Sprint 3 session scope | **Backend only that session** (Recommended option) — frontend valuation UI deferred to a follow-up session, which has now happened. |
-| 13 | Snapshot delete FK violation: block, cascade, or two-step force? | **Cascade-delete the legacy analysis_runs chain** — asked Faiz directly, 2026-09-21; see the new session section below. |
-| 14 | Bulk portfolio wipe scope: everything, or accounts+snapshots+positions only? | **Accounts + snapshots + positions only** — Holdings and Documents stay untouched; asked Faiz directly, 2026-09-21. |
+| 3 | Leftover GitHub branches | **Deleted** — confirmed gone from `origin`. |
+| 4 | Portfolio position entry: require a real document, or allow manual entry? | **Require a real uploaded document.** |
+| 5 | Sprint 2 research vendor | **Gemini + Google Search grounding**, reusing the Google AI Studio key/infra. |
+| 6 | Portfolio CSV import: skip non-equity rows or import everything? | **Import every row, tagged with its real instrument type.** |
+| 7 | Whisky/collectibles CSV in the same batch — support it too? | **No — skipped**, out of scope. |
+| 8 | Portfolio delete UI: granular only, or add a bulk "delete everything"? | **Granular only**, superseded later — Faiz asked for a bulk wipe after real-world use; built. |
+| 9 | Sprint 2 next-phase scope | **Finish Sprint 2: research UI.** |
+| 10 | Sprint 3 market/FX/beta data source | **yfinance.** |
+| 11 | Sprint 3 discount-rate methodology | **Live risk-free rate + a versioned equity-risk-premium assumption (CAPM).** |
+| 12 | Sprint 3 session scope | **Backend only that session**, frontend as a follow-up (done). |
+| 13 | Snapshot delete FK violation: block, cascade, or two-step force? | **Cascade-delete the legacy analysis_runs chain.** |
+| 14 | Bulk portfolio wipe scope | **Accounts + snapshots + positions only** — Holdings/Documents untouched. |
+| 15 | Sprint 4 session scope | **Full evidence packet + two-pass engine, backend only** (Recommended) — frontend deferred to a follow-up session, mirroring Sprint 3's split. |
+| 16 | Sprint 4 user-notes input: build now or ship blind pass alone first? | **Build both passes now, notes optional** (Recommended) — an empty-notes holding still gets a reconciliation pass, just with less to weigh against the blind evidence-based view. |
+| 17 | Sprint 4 document-extraction quality: fix now or defer? | **Defer** (Recommended) — ship the analysis engine against what Sprint 1's ingestion already extracts; revisit only if real runs show it's actually the bottleneck. |
 
-## Actual current Supabase schema (read from `backend/alembic/versions/`, 21 tables + 1 new this session, no live DB connection needed)
+## Actual current Supabase schema
 
-No non-equity table exists — the old multi-asset design used a discriminator, not separate tables:
-`holdings.asset_class` (string column) and `portfolio_positions.acquired_at` (nullable, added for
-collectibles) are the only non-equity-specific fields, both on otherwise-shared, otherwise-equity
-tables. Nothing to route around structurally — just don't populate/query those for non-equity rows.
-(`holdings.asset_class_raw` is the *other* legacy column — always-writable, not NOT-NULL-constrained
-to "equity" — now used by the portfolio-import feature to carry the real instrument type; see
-Decision 6 above.)
+No non-equity table exists — the old multi-asset design used a discriminator, not separate tables.
+`holdings.asset_class`/`asset_class_raw` are the only non-equity-specific fields, both on otherwise-
+shared tables.
 
 | Table | From phase |
 |---|---|
-| `accounts`, `holdings`, `portfolio_positions`, `portfolio_snapshots`, `documents`, `document_pages`, `document_chunks`, `financial_line_items` | Phase 1 (portfolio + document ingestion) + accounts migration — **ORM models, document ingestion, full CRUD, the first frontend pages, and CSV import all done this rebuild** |
-| `market_observations`, `fx_observations` | Phase 2 (market data & FX) — **ORM models + staleness-cached live services built in Sprint 3**, used by the valuation engine's price/FX lookups |
-| `risk_free_rate_observations` | **New table + migration in Sprint 3** — not part of the original pre-reset schema; needed for the CAPM discount-rate methodology (Decision 11 above) |
-| `analysis_runs`, `holding_analyses`, `factor_assessments`, `evidence_references` | Phase 3 (AI analysis engine) — not yet built this rebuild, but now **mapped read/delete-only** (`app/models/legacy_analysis.py`) so a snapshot delete can cascade-purge the legacy rows referencing it — see the new session section below. Sprint 4 will still redesign these from scratch when the real analysis engine gets built. |
-| `research_runs`, `research_items` | Phase 4 (external research) — **ORM models, provider, caching service, API, and frontend UI all done this rebuild (Sprint 2, now closed)** |
-| `macro_observations` | Phase 4 (numeric central-bank/macro data) — **deliberately deferred**, see Backlog |
-| `investment_theses`, `valuation_cases`, `portfolio_risk_snapshots` | Phase 5 (thesis & portfolio intelligence) |
-| `llm_usage_events` | LLM usage ledger — not yet re-created this rebuild; `app/providers/budget.py`'s in-memory guard is a placeholder until this exists. Now mapped (`app/models/legacy_analysis.py`) so the snapshot-delete cascade can unlink (never delete) rows that reference a purged `analysis_runs`/`holding_analyses` row, preserving real spend history. |
+| `accounts`, `holdings`, `portfolio_positions`, `portfolio_snapshots`, `documents`, `document_pages`, `document_chunks`, `financial_line_items` | Phase 1 — fully built this rebuild |
+| `market_observations`, `fx_observations` | Phase 2 — built in Sprint 3 |
+| `risk_free_rate_observations` | New table + migration in Sprint 3 |
+| `analysis_runs`, `holding_analyses`, `factor_assessments`, `evidence_references` | Phase 3 — legacy, mapped read/delete-only (`app/models/legacy_analysis.py`) so a snapshot delete can cascade-purge them. **Sprint 4 built its own fresh schema instead** (`equity_analysis_runs`, `equity_holding_notes`) rather than extending these, per CLAUDE.md Rule 3. |
+| `research_runs`, `research_items` | Phase 4 — built in Sprint 2 |
+| `macro_observations` | Phase 4 (numeric central-bank/macro data) — deliberately deferred, see Backlog |
+| `investment_theses`, `valuation_cases`, `portfolio_risk_snapshots` | Phase 5 — still unused; `investment_theses`/`valuation_cases` are natural homes for a future "persist the reconciliation verdict over time" feature, not built this session |
+| `llm_usage_events` | Not yet re-created this rebuild; `app/providers/budget.py`'s in-memory guard is still the placeholder. Sprint 4's LLM calls are not yet logged here either — a natural pairing with the Backlog's "LLM usage ledger" item |
+| `equity_analysis_runs`, `equity_holding_notes` | **New this session (Sprint 4)** — see migration `b5e1a9c3d7f2` |
 
 ## Design & UX direction (researched 2026-09-21; tokens implemented in `frontend/tailwind.config.js`)
 
-Faiz asked for a deliberate look this time: *"a simple philosophy... what investment-grade
-financial webpage has a clean, simple and beautiful UI that is popular."*
-
-**What "investment-grade, clean, simple, beautiful" actually looks like in practice** (from a
-survey of fintech dashboards actually praised for this — Mercury, Stripe's own dashboard, Ramp,
-Wealthfront, plus wider 2026 fintech UI roundups):
-
-| Principle | What it means concretely |
-|---|---|
-| **Color means state, nothing else** | Green/red reserved strictly for gain/loss and pass/fail signals (moat rating, verdict, thesis status). No decorative gradients or brand color inside data areas. One quiet accent color for interactive elements only. |
-| **Numbers are typeset, not just printed** | Tabular figures (fixed-width digits so columns of numbers align), consistent decimal places, currency symbols set lighter/smaller than the value itself. |
-| **Editorial calm over data density** | Generous whitespace, one clear focal number per section, routine detail collapsed by default. |
-| **Progressive disclosure** | Summary first (portfolio verdict, moat, valuation at a glance), detail on demand (drill into a holding for the full 5-step Brain analysis, evidence citations, DCF assumptions). |
-| **Left-nav information architecture** | Scales to many domains (portfolio, holdings, thesis, macro, valuation) without the top-nav running out of room. |
-| **Light-first, not dark-terminal** | Every example above is light/near-white with near-black text. Dropping the terminal aesthetic for good this time. |
-
-**Tokens (implemented in `frontend/tailwind.config.js` — `background`, `surface`,
-`border`/`border-subtle`, `ink`/`ink-muted`/`ink-faint`, `accent`/`accent-hover`/`accent-subtle`,
-`positive`/`negative`/`caution` each with a `-subtle` background variant, plus `.tabular` for
-`font-variant-numeric: tabular-nums`):**
-
-- Background near-white (`#FAFAF9`), surfaces (cards) pure white.
-- Text near-black (`#111111`), muted warm gray for secondary text — not pure `#000`.
-- One accent (`#2563EB`, a calm blue — Faiz hasn't specified a preference beyond "one quiet accent
-  color," so this is a reasonable, unconfirmed default; easy to swap in one file if he wants
-  something else).
-- Green/red/amber only for state (document status badges, gains/losses once those exist, pass/fail
-  once the moat rating exists).
-- System font stack (no external font request); `Inter` is named first for whenever it's actually
-  loaded.
-- Fixed left nav, holding list/detail built as cards over the near-white background. The Portfolio,
-  Macro/Sector, and now the valuation section on `HoldingDetailPage` all follow the same
-  card/table/chart conventions — including the valuation multiples charts, which use only the one
-  accent color for their single-series lines, never a decorative palette. The Portfolio page's new
-  composition-by-instrument-type chart (2026-09-21) follows the same rule: single accent color,
-  direct-labeled bars, no categorical palette.
-
-Sprint 5's dashboard is the next place this direction gets exercised across a new surface (the
-portfolio-wide roll-up).
+Unchanged this session (no frontend work) — see the Sprint 3 section below for the last time this
+direction was exercised. Sprint 4's frontend, whenever it's built, is the next place it applies: a
+holding's analysis view (moat/verdict/price-target cards) should follow the same card/table/chart,
+one-quiet-accent-color conventions already established.
 
 ## Sprints
 
-### Sprint 0 — Foundation — ✅ closed 2026-09-21
+### Sprint 0 — Foundation — ✅ closed
 
-All items done — see prior session detail in the project's `progress.md`.
+All items done — see `progress.md`.
 
-### Sprint 1 — Equity data model & deterministic calculations — ✅ closed 2026-09-21
+### Sprint 1 — Equity data model & deterministic calculations — ✅ closed
 
-| Deliverable | Detail | Status |
-|---|---|---|
-| SQLAlchemy models | `Account`, `Holding`, `PortfolioPosition`, `PortfolioSnapshot`, `Document`, `DocumentPage`, `DocumentChunk`, `FinancialLineItem` | ✅ Done |
-| Deterministic calculations module | ROIC, ROE, margins, FCF, owner earnings, leverage ratios, HHI, multiples | ✅ Done |
-| Document ingestion | PDF/PPTX/XLSX text + structured line-item extraction, sha256 dedup, swappable object storage, `POST /documents/upload` + `GET /documents` + `GET /documents/{id}` | ✅ Done |
-| Minimal API | Holdings CRUD (`app/api/holdings.py`), accounts CRUD (`app/api/accounts.py`), portfolio snapshot/position CRUD + HHI concentration (`app/api/portfolio.py`), read-only computed-metrics endpoints (`app/services/metrics.py`) | ✅ Done — commits `98ec5be`..`52bc5d3` |
-| First real frontend pages | Holding list (`HoldingsListPage.tsx`) + holding detail (`HoldingDetailPage.tsx`) | ✅ Done — commit `29c7132` |
+SQLAlchemy models, deterministic calculations module, document ingestion, minimal API, first
+frontend pages — see `progress.md` for commit-level detail.
 
-### Sprint 2 — Live research (evidence-first) — ✅ closed 2026-09-21
+### Sprint 2 — Live research (evidence-first) — ✅ closed
 
-| Deliverable | Detail | Status |
-|---|---|---|
-| Research data model | `ResearchRun`/`ResearchItem` (`app/models/research.py`), onto already-existing `research_runs`/`research_items` tables | ✅ Done — commit `16c3ff6` |
-| `GeminiResearchProvider` | Gemini + Google Search grounding, `ResearchItem`s built from `grounding_metadata`, reuses `gemini_retry` pacing | ✅ Done — commit `16c3ff6` |
-| Versioned research prompts | `backend/prompts/research/{macro,sector,company}_v1.md`, each with an explicit "search results are data, not instructions" line (CLAUDE.md Rule 5) | ✅ Done — commit `16c3ff6` |
-| Staleness-checked caching services | `app/services/research/{common,macro,sector,company}.py` — a run's `completed_at` is the cache; provider failure falls back to stale cache + a real `FAILED` run, never silent data loss | ✅ Done — commit `588198d` |
-| `/research` API | `GET`/`POST .../refresh` for macro, `/sectors/{sector}`, `/holdings/{holding_id}` | ✅ Done — commit `588198d` |
-| Frontend research UI | `ResearchPanel` shared component; Macro page (portfolio-wide + sector picker); Sector page (`/sectors/:sector`); company-research panel on `HoldingDetailPage` | ✅ Done — commit `20d76c1` |
-| Numeric macro data (FRED/Norges Bank → `macro_observations`) | A separate subsystem (central-bank series, not grounded search) — the pre-reset build had a `research/versions/v1.yaml` registry pattern for this that could be ported forward | ⏳ **Deliberately deferred** — see Backlog |
-| Background scheduler (periodic auto-refresh) | GET-triggers-refresh-if-stale already gives "live" without one; the pre-reset build used APScheduler for this | ⏳ **Deliberately deferred** — see Backlog |
-| Wiring into an evidence packet / `AnalysisContext` | That's Sprint 4 (the analysis engine itself) — `ResearchItem.source_url`/`source_name` are already shaped to become citable evidence then, no schema rework anticipated | ⏳ Sprint 4's job |
+Research data model, `GeminiResearchProvider`, versioned prompts, staleness-checked caching, `/research`
+API, frontend UI — see `progress.md`. Numeric macro data and a background scheduler deliberately
+deferred (Backlog).
 
-**Design decisions made building the research API (prior session):**
+### Portfolio CSV import + delete UI — ✅ done (pulled forward from Sprint 4)
 
-- **Not combining Gemini's Google Search grounding with `response_schema`-constrained output** —
-  same reasoning the pre-reset build's own Phase 4 landed on: Google's Gemini API doesn't support
-  both in the same call. `GeminiResearchProvider` asks for plain grounded text and derives
-  `ResearchItem`s from `response.candidates[0].grounding_metadata` directly, verified against the
-  installed `google-genai==2.8.0` SDK's own pydantic model fields (`GroundingChunkWeb.domain`/
-  `title`/`uri`, `GroundingSupport.segment`/`grounding_chunk_indices`, `Segment.text`) — this
-  session's SDK version differs from the pre-reset build's (`2.23.0`), so the field set was
-  re-verified from scratch rather than assumed to match.
-- **A `ResearchRun`'s own `completed_at` is the cache** (no separate cache layer, no scheduler) —
-  simpler than the pre-reset build's APScheduler approach and sufficient for a single-user,
-  not-always-running dev app; a scheduler can be added later without changing this.
-- **A provider failure never loses working data.** `get_or_refresh()` always persists a real
-  `FAILED` `ResearchRun` (fail visibly, CLAUDE.md), but if a prior `COMPLETED` run exists it still
-  returns those (now-stale) items with an explicit `reason` — a temporary Gemini outage shouldn't
-  blank a page that had real data on it a moment ago. The frontend `ResearchPanel` surfaces this
-  `reason` directly rather than hiding it.
-- **Numeric macro data (FRED/Norges Bank) and the scheduler were explicitly scoped out** of the
-  research-API session, rather than attempted partially — the numeric-series subsystem is a distinct
-  enough piece of work (a new registry file family, two more vendor integrations,
-  `MacroDataProvider` as a *separate* interface from `ResearchProvider`) that it deserves its own
-  session rather than a rushed partial port from the pre-reset build's
-  `archive/main-before-wipe-2026-09-20` branch.
+Broker-CSV parser, instrument-type classifier, ingestion service, `POST /portfolio/import-csv`,
+frontend Portfolio page — see `progress.md`.
 
-**Frontend UI decisions made building the research UI:**
+### Portfolio delete fixes, page-load speed, first portfolio-level chart, whisky grouping — ✅ done (out-of-sequence)
 
-- **Sector research has no dedicated top-level nav item.** There's no "all sectors" endpoint — only
-  per-sector research scoped to a sector actually held — so a standalone nav entry would either need
-  its own sector-enumeration logic duplicated from the Macro page or list sectors nobody holds.
-  Reached instead from Macro's sector chips and from a holding's own sector link on
-  `HoldingDetailPage`.
-- **Company research got its own section on `HoldingDetailPage`** (next to Metrics and Documents)
-  rather than a separate route — it's holding-scoped the same way those two already are, and this
-  keeps everything about one holding on one page rather than splitting research out across another
-  click.
+Cascade-safe deletes, bulk wipe, 2N+1 query fixes, first chart, whisky grouping — see `progress.md`.
 
-### Portfolio CSV import + delete UI — ✅ done 2026-09-21 (pulled forward from Sprint 4)
+### Sprint 3 — Valuation engine — ✅ fully closed (backend + frontend)
+
+Live market-data/risk-free-rate providers, staleness-cached services, versioned assumptions,
+deterministic DCF/reverse-DCF/CAPM engine, multiples-over-time, orchestration with currency handling,
+`/valuation` API, frontend `ValuationPanel` — see `progress.md` for full detail.
+
+### Sprint 4 — The Buffett/Munger persona & output schema (the centerpiece) — 🚧 backend built this session
 
 | Deliverable | Detail | Status |
 |---|---|---|
-| Broker-CSV parser | `app/services/portfolio_import/csv_parser.py` — BOM-sniffed UTF-16/utf-8-sig decode, tab-delimited, header-name column matching, Norwegian decimal comma, account number parsed from the filename | ✅ Done |
-| Instrument-type classifier | `app/domain/instrument_types.py` — name-based heuristic (stock / equity_etf / bond_fund / money_market_fund / commodity_etc), tags `Holding.asset_class_raw` | ✅ Done |
-| CSV import ingestion service | `app/services/portfolio_import/ingestion.py` — traceable `Document` + find-or-create `Account`/`Holding`s (deduped by name) + `PortfolioSnapshot`/`PortfolioPosition`s, all in one transaction | ✅ Done |
-| `POST /portfolio/import-csv` API | `app/api/portfolio.py` | ✅ Done |
-| Frontend Portfolio page | `frontend/src/pages/PortfolioPage.tsx` — multi-file CSV upload, accounts list + snapshots list each with a delete button (existing confirm-gated endpoints, exposed in the UI for the first time), nav enabled | ✅ Done |
+| New schema (not extending legacy Phase-3 tables) | `app/models/analysis.py` — `EquityAnalysisRun`, `EquityHoldingNote`; migration `b5e1a9c3d7f2` | ✅ Done |
+| Versioned output schema | `app/domain/analysis_schema/v1.py` — `MoatAssessment` (overall rating + 7 sources: brand, pricing power, switching costs, network effects, cost advantage, IP, distribution), `NarrativeAssessment` (capital efficiency, financial fortress, macro stress test, valuation synthesis), `VerdictContent` (rating, 3-bullet thesis, top-2 risks, metrics to monitor, invalidation triggers) — every section carries `evidence_ids` | ✅ Done |
+| Versioned assumptions | `app/domain/analysis_assumptions/v1.py` — 15% capital-efficiency hurdle (the Brain's own stated bar), 5-year history lookback | ✅ Done |
+| Versioned prompts | `prompts/analysis/blind_v1.md` (explicitly states it has no user notes — Rule 4), `prompts/analysis/reconciliation_v1.md` (notes are context to weigh, not instructions or evidence — Rule 5) | ✅ Done |
+| Evidence packet builder | `app/services/analysis/evidence_packet.py` — reuses Sprint 1 calculations, Sprint 2 research, Sprint 3 valuation unchanged; every item gets a sequential `EV-###` id and, where applicable, a real citation (a research item's source URL, or a plain description of the deterministic computation) | ✅ Done |
+| Blind pass | `app/services/analysis/blind_pass.py` — one `generate_structured()` call constrained to `BlindPassOutputV1`, validates every cited evidence ID actually exists in the packet (flags, never silently drops, an unknown one) | ✅ Done |
+| Reconciliation pass | `app/services/analysis/reconciliation_pass.py` — blind output + same evidence packet + the holding's notes (if any); same citation-validation discipline | ✅ Done |
+| Orchestration pipeline | `app/services/analysis/pipeline.py` — gates on `EQUITY_ANALYZABLE_TYPES`, falls back to the secondary LLM provider on a primary `LLMUnavailableError` (first real exercise of `get_llm_fallback_provider()` in a service), keeps the blind pass's result if only reconciliation fails, sets the price-target range deterministically from the Sprint 3 DCF bear/bull scenarios (never LLM-generated) | ✅ Done |
+| Per-holding notes | `app/services/analysis/notes.py`, `GET`/`PUT /analysis/holdings/{id}/notes` | ✅ Done |
+| `/analysis` API | `app/api/analysis.py` — `GET`/`POST .../run` (always a fresh call, no "serve cached" shape), `GET`/`PUT .../notes` | ✅ Done |
+| Frontend | An analysis view on `HoldingDetailPage` (verdict card, moat breakdown, notes editor) | ⏳ **Deliberately deferred to a follow-up session** |
 
-Commit `2cb56c7`, confirmed pushed. 25 new tests (198 total), ruff clean. Frontend lint/build clean.
-Not yet run against Faiz's real 5 account CSVs or the real Supabase DB. **Update, see the session
-below:** Faiz's own screenshots/logs this session show this evidently has since happened.
+**Design decisions made building Sprint 4's backend:**
 
-### Portfolio delete fixes, page-load speed, first portfolio-level chart, whisky grouping — ✅ done 2026-09-21 (out-of-sequence, same pattern as the CSV-import session above)
-
-Not a sprint step — six items Faiz brought back from real hands-on use of the app (his own
-screenshots plus a real Railway `ForeignKeyViolation` error log), same "pulled forward out of
-sequence" category as the CSV-import session. Sprint 4 (the analysis engine) is still next.
-
-| Deliverable | Detail | Status |
-|---|---|---|
-| Legacy analysis-table mapping | `app/models/legacy_analysis.py` — `AnalysisRun`/`HoldingAnalysis`/`FactorAssessment`/`EvidenceReference`/`LlmUsageEvent`, mapped onto the pre-existing Phase 3 tables (no new migration), read/delete-only | ✅ Done |
-| Snapshot-delete FK fix | `DELETE /portfolio/snapshots/{id}` now cascade-purges the legacy analysis chain referencing it instead of 500ing with a raw `ForeignKeyViolation`; `llm_usage_events` rows are unlinked, never deleted (real spend history). Returns a JSON body (what got purged) instead of a bare 204 | ✅ Done — `app/api/portfolio.py` |
-| Bulk portfolio wipe | New `DELETE /portfolio/all` — accounts + snapshots + positions only, Holdings/Documents untouched, same `confirm=true` guardrail, reuses the legacy-purge helper | ✅ Done — `app/api/portfolio.py` + a danger-styled button on `PortfolioPage.tsx` |
-| Page-load-speed fix | `GET /holdings`, `GET /accounts`, `GET /portfolio/snapshots` each batched from 2N+1 (or N+1) per-row COUNT queries down to a fixed 2 (or 1) aggregate `GROUP BY` queries regardless of row count | ✅ Done — `app/api/holdings.py`, `app/api/accounts.py`, `app/api/portfolio.py` |
-| First portfolio-level chart | Composition-by-instrument-type bar chart on `PortfolioPage.tsx` — counts, not $ value (no portfolio-wide $ aggregation exists yet; that's Sprint 5's job); single accent color, direct-labeled, matching `ValuationPanel`'s existing chart conventions | ✅ Done — `frontend/src/pages/PortfolioPage.tsx` |
-| Whisky holdings grouping | Legacy whisky/distillery holdings (individual rows, one per bottle) now collapse into one expandable "Whisky (N bottles)" row on `HoldingsListPage.tsx`; gold/silver left as individual rows per Faiz's explicit choice. Matched against the real distillery names visible in his own Sector Research screenshot (`WHISKY_SECTORS` in `lib/types.ts`), since these legacy rows carry no other distinguishing tag | ✅ Done — `frontend/src/pages/HoldingsListPage.tsx`, `frontend/src/lib/types.ts` |
-
-**Status-honesty finding:** Faiz's own screenshots this session included a live Railway container
-log and a working Portfolio page with real data (5 accounts, 124 positions, 7 snapshots) —
-contradicting this doc's and `progress.md`'s prior "not yet deployed to Railway" status in several
-places (now updated inline with a note in each). Not independently re-verified against the live URL
-this session (not shared) — see `progress.md`'s "Needs from Faiz" table.
-
-2 new backend tests (cascade-delete regression test with a real legacy `AnalysisRun` row; bulk-wipe
-scope test) + 1 existing test updated for the snapshot-delete 204→200 response shape change.
-288/288 backend tests passing, ruff clean. Frontend `tsc --noEmit`, `eslint .`, `vite build` all
-clean. 3 commits (`e9a0eca`, `1eb2c0b`, `3193828`), local only — `git push` still fails in this
-session's shell with the same credential error every prior session has hit.
-
-### Sprint 3 — Valuation engine — ✅ fully closed 2026-09-21 (backend + frontend)
-
-| Deliverable | Detail | Status |
-|---|---|---|
-| Live market-data providers | `app/providers/yfinance_provider.py` — current price, price history, FX rate, beta; defensive 3-path fallback (`fast_info` → `.info` → `.history()`) given yfinance's own history of breaking attribute shapes across releases | ✅ Done — commit `9571fe8` |
-| Live risk-free-rate provider | `app/providers/fred_risk_free_rate_provider.py` — FRED's own republished OECD long-term government bond yield series covers every currency needed (USD/EUR/GBP/NOK), avoiding a second Norges-Bank-specific integration | ✅ Done — commit `9571fe8` |
-| New models + migration | `MarketObservation`, `FxObservation` (onto the already-existing Phase 2 tables), `RiskFreeRateObservation` (new table, new migration `a4c9f7e2b6d1`) | ✅ Done — commit `9571fe8` |
-| Staleness-cached market-data services | `app/services/market_data/{common,price,fx,risk_free_rate}.py` — generalizes Sprint 2's `get_or_refresh()` pattern; a provider failure falls back to the latest cached observation with a `reason`, never a bare crash | ✅ Done — commit `1058b39` |
-| Versioned valuation assumptions | `app/domain/valuation_assumptions/v1.py` — 4.5% ERP (USD/EUR/GBP/NOK), 5.5% default ERP, 2.5% terminal growth, ±3% bull/bear growth offsets, default beta 1.0 | ✅ Done — commit `64ebf2d` |
-| Deterministic DCF / reverse-DCF / CAPM engine | `app/services/valuation/{dcf,discount_rate,growth}.py` — discounts *owner earnings* (net income + D&A − capex − ΔWC), Gordon Growth terminal value, reverse DCF via bisection search (no closed form once terminal value is in the mix) | ✅ Done — commit `2e65408` |
-| Multiples-over-time | `app/services/valuation/multiples.py` — P/E, P/B, P/S, EV/EBITDA per period, matched against the nearest price observation | ✅ Done — commit `0fd795d` |
-| Orchestration + currency handling | `app/services/valuation/holding_valuation.py` — ties live data + assumptions + the calc modules together for one holding; converts the live price into the filing's currency via live FX when a holding trades in a different currency than it reports in (e.g. a Norway-listed company reporting in USD) | ✅ Done — commit `816127b` |
-| `/valuation` API | `app/api/valuation.py` — `GET`/`POST .../refresh` on `/valuation/holdings/{id}`, mirrors `/research/*`'s shape exactly | ✅ Done — commit `816127b` |
-| **Frontend valuation UI** | `frontend/src/components/ValuationPanel.tsx` on `HoldingDetailPage` — assumption stat tiles, DCF bull/base/bear scenario cards (intrinsic value + margin of safety, colored by sign), reverse-DCF implied growth, multiples-over-time as four small-multiple `recharts` line charts (one axis per metric) | ✅ Done — commit `ddeade1` |
-
-**Design decisions made building the valuation engine's backend:**
-
-- **Owner earnings, not FCFF/WACC.** The DCF discounts Buffett's "owner earnings" concept (net
-  income + D&A − maintenance capex − ΔWC), consistent with this app's whole Buffett/Munger framing,
-  rather than a textbook FCFF/WACC model.
-- **CAPM cost of equity, not a single hardcoded discount rate.** `risk_free_rate + beta ×
-  equity_risk_premium`, with the risk-free rate live (FRED) and beta live (yfinance, falling back to
-  a versioned default when the provider can't supply one) — Decision 11 above.
-- **FRED alone covers every currency needed**, rather than a second Norges-Bank integration for NOK
-  — verified via FRED's own official series pages that it republishes OECD long-term government bond
-  yield data for Norway/Euro area/UK under the `IRLTLT01<CC>M156N` series pattern.
-- **Reverse DCF has no closed-form solution** once a multi-year projection plus a Gordon Growth
-  terminal value are both in play, so `reverse_dcf_implied_growth()` solves for the growth rate that
-  reproduces the current price via bisection search instead.
-- **Currency consistency is handled explicitly, not assumed away.** A holding's filing currency
-  (`FinancialLineItem.currency`) and its trading currency (`Holding.trading_currency`) can differ —
-  the orchestration layer fetches the risk-free rate for the *filing* currency and converts the live
-  price into it via a live FX rate before computing margin of safety or the reverse DCF, rather than
-  silently mixing currencies.
-- **Every live-data failure degrades only the affected part of the result**, per CLAUDE.md's
-  fail-visibly discipline: no risk-free rate → DCF unavailable entirely (recorded in
-  `unavailable_reasons`); no FX rate → margin-of-safety/reverse-DCF skipped but DCF scenarios are
-  still computed without a price; fewer than two periods of complete owner-earnings inputs → DCF
-  unavailable but multiples-over-time (which doesn't depend on DCF) still computes. Nothing 500s on a
-  live-data hiccup.
-
-**Bug caught by testing, fixed in the backend session:** the orchestration layer computed
-`current_price_per_share` for internal use (feeding it into the DCF/reverse-DCF calls) but never
-actually attached it to the result object returned to the API — caught by a unit test asserting the
-field directly, not by the integration test alone. Fixed before committing; both the 7 new unit
-tests and the 5 new integration tests pass.
-
-**Design decisions made building the valuation engine's frontend:**
-
-- **Multiples-over-time is four small-multiple charts, never one combined chart.** P/E (~10-30),
-  P/B (~1-5), P/S (~1-10), and EV/EBITDA (~5-20) sit on incompatible scales — a shared axis would
-  either flatten three of the four lines or require a dual/multi-axis chart, which reads
-  misleadingly (the #1 chart-design mistake). Each metric gets its own chart, own axis, single
-  accent-colored line.
-- **`recharts` (already a frontend dependency, unused until now)** rather than a new charting
-  library or hand-rolled SVG — keeps the dependency surface unchanged.
-- **Per-period skip reasons and the holding-level `unavailable_reasons` are both surfaced in the
-  UI**, not swallowed — matches the "fail visibly, never silently" pattern the Metrics panel and
-  `ResearchPanel` already established, rather than introducing a different convention for this one
-  panel.
-
-### Sprint 4 — The Buffett/Munger persona & output schema (the centerpiece)
-
-- Output schema: moat rating + sub-dimensions, capital efficiency vs. hurdle, balance-sheet health,
-  cyclicality, reverse DCF, verdict, price target range, key metrics to monitor, invalidation
-  triggers
-- Two-pass pipeline: blind pass (no user notes, evidence-cited) → reconciliation pass
-- Covers Step 5 and closes every remaining schema gap from Steps 1-4
-- This is also where PDF/PPTX table-parsing or an LLM extraction pass (to get structured facts out
-  of those formats, not just XLSX) most naturally belongs, if Faiz wants that filled in before then
-- Wires Sprint 2's research items and Sprint 3's valuation output into the evidence packet as
-  citable `EvidenceItem`s
-- The analysis engine itself should only ever run against holdings where
-  `asset_class_raw in EQUITY_ANALYZABLE_TYPES` (stock, equity_etf) — a bond fund or a physical gold
-  ETC has no moat/ROIC/owner-earnings to assess
-
-**Real broker-export parsing — ✅ done ahead of schedule, 2026-09-21** (see the Sprints section's
-own "Portfolio CSV import + delete UI" entry above). This was originally planned as part of
-Sprint 4; Faiz asked for it pulled forward on its own, independent of the rest of Sprint 4's scope
-(the analysis engine itself is still not started — this is now the actual next phase).
+- **A fresh schema, not an extension of the legacy Phase-3 tables** — CLAUDE.md Rule 3 and the
+  sprint plan's own prior note both called for this; `app/models/legacy_analysis.py` stays exactly
+  what it was (read/delete-only, for cascade-purge purposes).
+- **ROE computed directly via `calculations.roe()`, bypassing `app/services/metrics.py`'s own
+  always-skip-ROE behavior for that endpoint.** `metrics.py`'s skip is a deliberate, already-tested
+  decision for `GET /holdings/{id}/metrics` specifically (left untouched); Sprint 4 needs 3-5yr
+  average ROE for the Brain's Step 1.3 and it's directly computable from extracted facts (unlike
+  ROIC, which genuinely needs undeliverable NOPAT/invested-capital inputs and stays flagged
+  not-computable).
+- **The price-target range is Python, not the LLM** — set from the already-computed Sprint 3 DCF
+  bear/bull intrinsic values in `pipeline.py`, never a number the model is asked to produce (the
+  prompts say so explicitly).
+- **No normalized `EvidenceItem` table.** The full evidence packet actually used by a run is stored
+  as one JSON blob per run (`equity_analysis_runs.evidence_packet_json`) rather than one row per
+  item — still fully auditable (CLAUDE.md Rule 2), simpler than Sprint 2's normalized `ResearchItem`
+  table, and appropriate since a packet is rebuilt fresh per run rather than being a shared,
+  independently-queried resource the way research items are.
+- **`POST /analysis/holdings/{id}/run` always executes fresh** — unlike `/research/*`/`/valuation/*`'s
+  GET-serves-cached-or-refreshes shape, there's no staleness concept for an LLM analysis verdict;
+  every run is an explicit, real, cost-bearing call the caller asked for.
 
 ### Sprint 5 — Portfolio roll-up & dashboard
 
-- Aggregate verdict/moat/valuation view across all holdings
-- Single-purpose dashboard (equity only), built out fully against the Design & UX direction above
-- Deterministic executive summary
+Aggregate verdict/moat/valuation view across all holdings, single-purpose dashboard, deterministic
+executive summary. Sprint 4's verdict schema now exists for this to aggregate over.
 
 ### Sprint 6 — Evidence quality
 
-- Per-document evidence budget, section-aware chunking (current ingestion is 1 page = 1 chunk)
+Per-document evidence budget, section-aware chunking (current ingestion is 1 page = 1 chunk).
 
 ### Sprint 7 — Guardrail tooling
 
-- Pre-commit hooks, CI workflow, secret-scanning
-- Also a natural place for a frontend test framework (Vitest/RTL) if one still doesn't exist by then
+Pre-commit hooks, CI workflow, secret-scanning; also a natural place for a frontend test framework
+if one still doesn't exist by then.
 
 ## Backlog — candidate future phases (beyond Sprint 7)
 
-Not yet scheduled or asked for — flagged here so they're visible when planning what comes after
-Sprint 7, rather than getting lost. Ordered roughly by what naturally unblocks what, not by
-priority — that's Faiz's call.
-
 | Candidate | What it would deliver | Why it's not scheduled yet |
 |---|---|---|
-| **Numeric macro data & scheduler** | FRED/Norges Bank central-bank series ingestion into `macro_observations`, a `MacroDataProvider` interface (separate from `ResearchProvider`), and optionally a background scheduler for periodic auto-refresh across all three research kinds | Explicitly deferred out of Sprint 2 twice now as its own distinct subsystem (new registry file family, two more vendor integrations) — ready to pick up whenever Faiz wants it, doesn't block anything else |
-| **Portfolio risk & regime intelligence** | Correlation/factor exposure across holdings, drawdown scenarios, rebalancing flags, populating `portfolio_risk_snapshots` (Phase 5 table already exists, unused) | Most naturally builds on Sprint 5's dashboard and Sprint 3's valuation numbers existing first — Sprint 3 (backend + frontend) is now fully done, so this is closer to ready |
-| **Investment thesis tracking** | Persist a written thesis per holding (`investment_theses`, `valuation_cases` — Phase 5 tables already exist, unused); track the Step 5 "what would change the thesis" triggers and flag when new research/financials suggest one fired | Depends on Sprint 4's verdict/thesis output schema existing first |
-| **Historical price/FX & performance tracking** | Daily P&L, benchmark comparison, position-level return, now that `market_observations`/`fx_observations` are actively populated by Sprint 3's live-price/FX lookups | Sprint 3 built the ingestion path for current snapshots; historical backfill/performance tracking on top of it is still unscheduled |
-| **LLM usage ledger & cost observability** | Persist real `llm_usage_events` rows (table exists, unused) instead of `app/providers/budget.py`'s in-memory placeholder guard; a simple spend view | Low-risk, could be pulled forward any time Faiz wants real budget visibility rather than the in-memory placeholder |
-| **Alerts & notifications** | Notify (email/push) when a thesis-invalidation trigger fires, a material new research item lands, or research goes stale past a threshold | Needs thesis tracking built first as the thing being watched |
-| **Reporting & export** | One-holding or whole-portfolio PDF/print view of an analysis run; tax-lot-aware export | Natural once Sprint 4's analysis output actually exists to export |
-| **Fix GitHub push credentials** (ops, not a feature) | A PAT or credential-helper set up on Faiz's side so sessions (cloud and linked device alike) can push directly, instead of every session's commits sitting local until he pushes them by hand | Not a build task for an agent session — needs a decision/action from Faiz outside the repo; flagged because it's hit identically in every session's history above |
+| **Sprint 4 frontend** | A holding's analysis view (verdict card, moat breakdown, evidence citations, notes editor) on `HoldingDetailPage` | Deliberately deferred this session, mirroring Sprint 3's backend/frontend split |
+| **Numeric macro data & scheduler** | FRED/Norges Bank central-bank series ingestion, a `MacroDataProvider` interface, optional background scheduler | Explicitly deferred out of Sprint 2 twice — ready to pick up any time |
+| **Portfolio risk & regime intelligence** | Correlation/factor exposure, drawdown scenarios, rebalancing flags, populating `portfolio_risk_snapshots` | Builds naturally on Sprint 3's valuation numbers, now also Sprint 4's verdicts |
+| **Investment thesis tracking over time** | Persist reconciliation verdicts into `investment_theses`/`valuation_cases` (currently unused tables) and flag when new research/financials suggest an invalidation trigger fired | Sprint 4's verdict schema now exists to build this on top of — the natural next step once real runs validate the schema |
+| **Historical price/FX & performance tracking** | Daily P&L, benchmark comparison, position-level return | Sprint 3 built the ingestion path; historical backfill is still unscheduled |
+| **LLM usage ledger & cost observability** | Persist real `llm_usage_events` rows (including Sprint 4's own blind/reconciliation calls, which aren't logged there yet) instead of the in-memory placeholder guard | Low-risk, pullable any time; now slightly more valuable since Sprint 4 adds real LLM spend |
+| **Alerts & notifications** | Notify when a thesis-invalidation trigger fires or research goes stale | Needs thesis tracking built first |
+| **Reporting & export** | One-holding or whole-portfolio PDF/print view of an analysis run | Sprint 4's analysis output now exists to export |
+| **Fix GitHub push credentials** (ops, not a feature) | A PAT/credential-helper so sessions can push directly | Needs a decision/action from Faiz outside the repo — hit identically in every session |
 
 ## Changes / history
 
 | Date | Summary |
 |---|---|
-| 2026-09-21 | **Portfolio delete fixes, page-load speed, first portfolio-level chart, whisky grouping** (out-of-sequence). Fixed `DELETE /portfolio/snapshots/{id}` 500ing on a legacy `analysis_runs` FK (now cascade-purges it), added `DELETE /portfolio/all` (accounts+snapshots+positions only) + a UI button, fixed 2N+1 query patterns on `GET /holdings`/`GET /accounts`, added the first portfolio-level chart (composition by instrument type), and collapsed legacy whisky holdings into one row on the Holdings page. Also flagged a status-honesty finding: Faiz's screenshots show the app is in fact deployed to Railway against real data, contradicting this doc's prior "not yet deployed" status (updated inline). 2 new tests + 1 updated (288/288 passing), ruff clean. Frontend checks clean. 3 commits (`e9a0eca`, `1eb2c0b`, `3193828`), local only — `git push` still fails in this shell. **Sprint 4 (the analysis engine) is still next.** |
-| 2026-09-21 | **Sprint 3 fully closed: frontend valuation UI.** Re-verified repo state first (286/286 backend tests, ruff clean, fresh frontend build) — corrected a stale "6 commits, local only" claim in the prior session's own docs, since those were in fact all confirmed pushed. Built `ValuationPanel.tsx`: assumption stat tiles, DCF bull/base/bear scenario cards (margin-of-safety colored by sign), reverse-DCF implied growth, and multiples-over-time as four small-multiple `recharts` line charts (never combined onto shared axes, since P/E/P/B/P/S/EV-EBITDA sit on different scales). Wired into `HoldingDetailPage`. No backend changes. Frontend `tsc`/`eslint`/`vite build` all clean. 1 commit (`ddeade1`), local only — `git push` still fails in this shell. |
-| 2026-09-21 | **Sprint 3 backend closed: valuation engine.** Built live market-data providers (yfinance) and a live risk-free-rate provider (FRED, all currencies), staleness-cached market-data services, versioned valuation assumptions, the deterministic DCF/reverse-DCF/CAPM discount-rate engine, multiples-over-time, and the orchestration layer (with live-FX currency-consistency handling) tying it all together for one holding — wired into a new `/valuation` API mirroring `/research/*`'s shape. 88 new tests (286 total), ruff clean apart from pre-existing noise. 6 commits (`9571fe8`..`816127b`), since confirmed pushed. Discovered (not fixed): real `.env` has `MARKET_DATA_PROVIDER=stub`/`RESEARCH_PROVIDER=stub`, flagged to Faiz, still unfixed. Frontend valuation UI deferred to a follow-up session — closed above. |
-| 2026-09-21 | **Sprint 2 closed: frontend research UI.** Built the frontend for the `/research/*` API: a shared `ResearchPanel` component, a Macro page (portfolio-wide research + a sector picker), a Sector page (`/sectors/:sector`), and a company-research panel added to `HoldingDetailPage`. "Macro" is now a live nav item. No backend changes — 198 backend tests unaffected/still passing; frontend `tsc`/`eslint`/`vite build` all clean. 1 commit (`20d76c1`), since confirmed pushed. |
-| 2026-09-21 | **Portfolio CSV import + delete UI, pulled forward from Sprint 4.** Built the broker-export CSV parser, an instrument-type classifier for the mixed equity/bond/ETC rows these exports contain, the CSV→Account/Document/Snapshot/Position ingestion service, `POST /portfolio/import-csv`, and a new frontend Portfolio page (multi-file upload + account/snapshot lists with delete buttons). Faiz chose to import every row (tagged, not skipped), skip a whisky/collectibles CSV in the same upload batch entirely, and keep deletes granular rather than add a bulk wipe. 25 new tests (198 total), ruff clean. 1 commit (`2cb56c7`), since confirmed pushed. |
-| 2026-09-21 | **Sprint 2 started.** Built the macro/sector/per-company live research vertical slice: `ResearchRun`/`ResearchItem` models, `GeminiResearchProvider` (Google Search grounding), versioned prompts, staleness-checked caching services, `/research` API. 26 new tests (173 total), ruff clean. 2 commits (`16c3ff6`, `588198d`), both since confirmed pushed. |
-| 2026-09-21 | **Sprint 1 closed.** Minimal API (4 commits: holdings CRUD, accounts CRUD, computed-metrics endpoints, portfolio snapshot/position CRUD — the last requiring `POST /documents/upload` to accept portfolio-wide files with no single holding, per Faiz's explicit traceability-over-convenience decision) + first real frontend pages (1 commit: holding list + holding detail, `react-router-dom`, tokens from the Design & UX direction actually implemented in `tailwind.config.js`). 47 new tests this session (147 backend total), ruff clean; frontend lint/type-check/build all clean. 6 commits, since confirmed pushed by Faiz. |
-| 2026-09-21 | Document ingestion built (Sprint 1's 3rd deliverable). Built `app/services/documents/`, swappable object storage, `app/config/database.py` (fixing a broken `alembic/env.py` import), and `app/api/documents.py`. 32 new tests, 109 total, ruff clean. Committed (`3ca7b68`), since confirmed pushed. |
-| 2026-09-21 | Sprint 0 closed, Sprint 1 started. Built `app/providers/` (Gemini + Mistral), `app/models/`, `app/services/calculations.py`. 77 tests. Two commits, since confirmed pushed. |
-| 2026-09-21 | Status audit + Sprint 1/next-phase planning + UX research. Set the Design & UX direction (now implemented). |
-| 2026-09-21 | Sprint 0 skeletons built: legacy frontend removed, skeleton FastAPI backend + React frontend. 3 commits, since confirmed pushed. |
-| 2026-09-21 | Sprint 0 started: guardrail doc + real schema mapped. |
-| 2026-09-21 | Full repo reset + rebuild plan written. Committed and pushed as `8ad0221`. |
+| 2026-09-21 | **Sprint 4 backend: the two-pass Buffett/Munger analysis engine.** Built the evidence packet (reusing Sprints 1-3 unchanged), versioned output schema/assumptions/prompts, the blind pass, the reconciliation pass (notes-aware, notes optional), the orchestration pipeline (equity-type gating, LLM fallback, deterministic DCF-derived price target, blind-result preserved if only reconciliation fails), per-holding notes CRUD, and the `/analysis` API. New tables via migration `b5e1a9c3d7f2` — a fresh schema, not an extension of the legacy Phase-3 tables. 19 new tests (307 total), ruff clean. Discovered: manually-created holdings default to a non-analyzable `asset_class_raw` (flagged, not fixed); `MARKET_DATA_PROVIDER`/`RESEARCH_PROVIDER` are still `stub` in `backend/.env`, now blocking the analysis engine specifically. Frontend deliberately deferred. Not run against a real LLM call, real market data, or real holdings this session. |
+| 2026-09-21 | Portfolio delete fixes, page-load speed, first portfolio-level chart, whisky grouping (out-of-sequence). See `progress.md`. |
+| 2026-09-21 | Sprint 3 fully closed: frontend valuation UI. See `progress.md`. |
+| 2026-09-21 | Sprint 3 backend closed: valuation engine. See `progress.md`. |
+| 2026-09-21 | Sprint 2 closed: frontend research UI. See `progress.md`. |
+| 2026-09-21 | Portfolio CSV import + delete UI, pulled forward from Sprint 4. See `progress.md`. |
+| 2026-09-21 | Sprint 2 started. See `progress.md`. |
+| 2026-09-21 | Sprint 1 closed. See `progress.md`. |
+| 2026-09-21 | Document ingestion built (Sprint 1's 3rd deliverable). See `progress.md`. |
+| 2026-09-21 | Sprint 0 closed, Sprint 1 started. See `progress.md`. |
+| 2026-09-21 | Status audit + Sprint 1/next-phase planning + UX research. See `progress.md`. |
+| 2026-09-21 | Sprint 0 skeletons built. See `progress.md`. |
+| 2026-09-21 | Sprint 0 started: guardrail doc + real schema mapped. See `progress.md`. |
+| 2026-09-21 | Full repo reset + rebuild plan written. See `progress.md`. |
+
+*Earlier entries in this table were condensed 2026-09-21 (this session) to keep this doc's own
+history section from growing unbounded — `progress.md`'s "Changes / history" table retains the same
+level of condensation; the original full-detail entries remain in this doc's git history.*

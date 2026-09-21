@@ -6,13 +6,14 @@ claude/buffett-munger-rebuild-sprint-plan-2026-09-21.md) added document
 ingestion, holdings/accounts/portfolio CRUD, and read-only computed-metrics
 endpoints. Sprint 2 added live, evidence-first research (macro/sector/
 company). Sprint 3 adds the deterministic valuation engine (DCF, reverse
-DCF, multiples-over-time). The analysis engine itself (the Buffett/Munger
-persona) lands in Sprint 4.
+DCF, multiples-over-time). Sprint 4 adds the two-pass Buffett/Munger
+analysis engine itself (app/services/analysis/).
 """
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.accounts import router as accounts_router
+from app.api.analysis import router as analysis_router
 from app.api.documents import router as documents_router
 from app.api.holdings import router as holdings_router
 from app.api.portfolio import router as portfolio_router
@@ -39,6 +40,7 @@ app.include_router(accounts_router)
 app.include_router(portfolio_router)
 app.include_router(research_router)
 app.include_router(valuation_router)
+app.include_router(analysis_router)
 
 
 @app.get("/health")
