@@ -76,7 +76,11 @@ so multiples-over-time renders as four separate small-multiple line charts (one 
 than one combined chart — avoids a dual-axis chart, which reads misleadingly. Uses `recharts`
 (already a frontend dependency, first put to use here).
 
-**Not yet done:** deployed to Railway; run against Faiz's real holdings/documents.
+**Not yet done:** deployed to Railway; run against Faiz's real holdings/documents. **Update, see the
+session below:** Faiz's own screenshots this session show a live Railway container log and a working
+Portfolio page with real data (5 accounts, 124 positions, 7 snapshots) — strong evidence this *is*
+now deployed and running against the real DB, contradicting this line. Not independently
+re-confirmed against the live URL this session (not shared) — flagged below and in "Needs from Faiz".
 
 ## Out-of-sequence: Portfolio CSV import + delete UI — ✅ done 2026-09-21
 
@@ -104,11 +108,85 @@ Sprint 4's other deliverables.
   legacy non-equity data alone.
 - Delete scope: the backend already had confirm-gated deletes for individual accounts, holdings,
   snapshots and positions (built in Sprint 1, never exposed in the UI). Faiz chose to **just expose
-  those in the new Portfolio page**, not add a new bulk "delete everything" endpoint.
+  those in the new Portfolio page**, not add a new bulk "delete everything" endpoint (**superseded
+  this session** — see below, he asked for the bulk wipe after all once he'd used the app for real).
 
 **Not yet done:** run this import against Faiz's real 5 account CSVs / the real Supabase DB (built
 and tested against in-memory SQLite only, per the tests) — needs his go-ahead first (see "Needs
-from Faiz" below). Not yet deployed to Railway either.
+from Faiz" below). Not yet deployed to Railway either. **Update, see the session below:** Faiz's own
+screenshots/logs this session show this evidently has since happened — 5 real accounts, 124
+positions, 7 snapshots, running against a live Railway container.
+
+## Session: Portfolio delete fixes, page-load speed, first portfolio-level chart, whisky grouping (2026-09-21)
+
+Faiz came back with six items from real hands-on use of the app (screenshots + a real Railway error
+log), not a planned sprint step — Sprint 4 (the analysis engine) is still next per the sprint plan;
+this was an out-of-sequence fix/polish session, same pattern as the CSV-import session above.
+
+**Status-honesty finding, before anything else:** Faiz's screenshots included a live Railway
+container log ("Starting Container… Uvicorn running…") and a working Portfolio page showing 5 real
+accounts / 124 real positions / 7 snapshots. That directly contradicts this doc's prior "not yet
+deployed to Railway" / "not yet run against the real DB" status on Sprints 0 and 3 and the CSV-import
+entry above (now struck through with an update note in each place). This session did not
+independently re-verify the live Railway URL itself (it wasn't shared) — treat "deployed and running
+against real data" as strongly evidenced, not re-confirmed firsthand. Worth Faiz sharing the live
+URL so a future session can check it directly instead of trusting docs that turned out stale here.
+
+**1) Snapshot delete was 500ing (Faiz's own error log).** `DELETE /portfolio/snapshots/{id}` was
+raising a raw psycopg2 `ForeignKeyViolation` on a real snapshot — a pre-2026-09-21 `analysis_runs`
+row (Phase 3's old AI-analysis engine, superseded by this rebuild but never dropped per CLAUDE.md)
+still referenced it, and `analysis_runs.portfolio_snapshot_id` has no `ON DELETE CASCADE`. Asked
+Faiz directly how to handle it; he chose **cascade-delete the legacy analysis chain** over blocking
+the delete or a two-step "force delete" reveal. Mapped the legacy tables for the first time
+(`app/models/legacy_analysis.py` — `analysis_runs`, `holding_analyses`, `factor_assessments`,
+`evidence_references`, `llm_usage_events`, onto pre-existing tables, no new migration) and made the
+delete cascade-purge everything except `llm_usage_events` (real spend/usage history — those rows are
+unlinked, never deleted). The endpoint now returns a small JSON body (what got purged) instead of a
+bare 204.
+
+**2) Bulk "delete all portfolio" button.** Didn't exist — the CSV-import session had deliberately
+chosen granular-only deletes. Faiz asked for it after all, once he'd actually used the app and had to
+delete 5 accounts/7 snapshots one by one. New `DELETE /portfolio/all` (accounts + snapshots +
+positions only — Faiz's explicit choice; Holdings and Documents are out of scope, reusing the same
+legacy-purge helper from #1), wired to a danger-styled button on the Portfolio page with a confirm
+dialog naming the exact counts.
+
+**3) Holdings/Portfolio/Macro page-load speed.** `GET /holdings` and `GET /accounts` were each
+running 2 COUNT queries *per row* instead of one aggregate query for the whole list — 2N+1 round
+trips to Postgres. `list_holdings` returns every row in the `holdings` table, including the legacy
+pre-reset non-equity ones (see #6 below), so this was the likely main cause of the Holdings-page and
+Macro-page slowness (Macro's sector picker also calls `listHoldings()`). Fixed to 2 aggregate
+`GROUP BY` queries total regardless of row count, on both endpoints — same output values, existing
+tests unaffected.
+
+**4) No charts anywhere except Holding-detail valuation.** True — `ValuationPanel`'s DCF/multiples
+charts (Sprint 3) were the only visuals in the app. Added a composition-by-instrument-type bar chart
+to the Portfolio page: counts, not portfolio dollar value, since no $ aggregation exists yet across
+accounts/currencies/live prices — that's genuinely Sprint 5's job ("Portfolio roll-up & dashboard"),
+not something to fake here. Single accent-colored, direct-labeled bars, matching `ValuationPanel`'s
+existing chart conventions rather than introducing a categorical palette (the Design & UX direction's
+"color means state, one quiet accent color" principle).
+
+**5 & 6) Whisky/gold/silver grouping under Holdings.** The legacy pre-reset whisky bottles are
+individual rows in the `holdings` table (one per bottle, `sector` set to the distillery name — that
+old app's own categorization hack) and were listing one-by-one, which is also why Faiz was seeing
+individual distillery names as "Sector Research" chips on the Macro page. Faiz clarified: group
+whisky into one row; leave gold and silver as individual holdings (no change needed there). Holdings
+page now collapses every holding whose `sector` matches one of the 24 real distillery names visible
+in Faiz's own screenshot (`WHISKY_SECTORS` in `frontend/src/lib/types.ts`) into a single expandable
+"Whisky (N bottles)" row — there's no instrument-type tag marking these rows another way, since they
+predate this rebuild's tagging.
+
+**Testing:** 2 new backend tests (a cascade-delete regression test that inserts a real legacy
+`AnalysisRun` row and confirms it gets purged; a bulk-wipe scope test confirming Holdings survive) +
+1 existing test updated for the snapshot-delete 204→200 response shape change. 288/288 backend tests
+passing, ruff clean (only the same pre-existing `EXE002` noise). Frontend `tsc --noEmit`, `eslint .`,
+and `vite build` all clean. 3 commits (`e9a0eca`, `1eb2c0b`, `3193828`) — **local only**, `git push`
+fails in this session's shell with the same credential error every prior session has hit
+(`could not read Username for 'https://github.com'`), confirmed by an actual attempt this session.
+
+**Not done this session:** git push (see above — needs Faiz, same as every prior session); Sprint 4
+itself (this was an out-of-sequence fix session, same as the CSV-import one).
 
 ## Session: Sprint 3 closed with the frontend valuation UI
 
@@ -169,18 +247,19 @@ above).
 so running the backend for real right now would immediately break both the new valuation feature
 and the already-shipped Sprint 2 research feature with an "Unknown ... provider" error. Left
 untouched deliberately (real config only ever lives in `backend/.env`, never edited by an agent
-session per CLAUDE.md) — still flagged to Faiz below, still unfixed as of this session.
+session per CLAUDE.md) — still flagged to Faiz below, still unfixed as of this session. **Update, see
+the session above:** Faiz's real deployment evidently works now, so this was presumably fixed on his
+end since — worth confirming rather than assuming.
 
 ## Needs from Faiz right now
 
 | Item | Why |
 |---|---|
-| **Fix `backend/.env`: `MARKET_DATA_PROVIDER=stub` and `RESEARCH_PROVIDER=stub`** | Neither is a real provider — set them to `yfinance` and `google_ai_studio` (or whatever you intend) or the app raises immediately when either feature is used |
-| **Push `main`** (1 commit this session, `ddeade1`) | No GitHub push credentials in this session's shell either — confirmed by an actual failed `git push` attempt this session, not just assumed |
-| **OK to run the portfolio CSV import against your real 5 account exports / the real Supabase DB** | Built and tested against in-memory SQLite only so far — nothing has touched your real data yet |
-| Set a real `GOOGLE_AI_STUDIO_API_KEY` before trying `/research/*` for real | `GeminiResearchProvider` raises immediately without one — reuses the same key Sprint 0's analysis provider already needs |
-| Set a `FRED_API_KEY` before trying `/valuation/*` for real | `FredRiskFreeRateProvider` needs one; free to obtain from FRED |
-| Redeploy to Railway once pushed, with the LLM/object-storage env vars from prior sprints set | Still **not deployed to Railway** — status-honesty rule applies here same as every prior sprint |
+| **Push `main`** (3 commits this session: `e9a0eca`, `1eb2c0b`, `3193828`) | No GitHub push credentials in this session's shell either — confirmed by an actual failed `git push` attempt this session, not just assumed |
+| **Confirm the live Railway URL / that the app is in fact deployed** | Your own screenshots/logs this session show it running against real data, contradicting this doc's prior "not yet deployed" status — worth confirming directly so future sessions can check the live state instead of relying on docs |
+| **Fix `backend/.env`: `MARKET_DATA_PROVIDER=stub` and `RESEARCH_PROVIDER=stub`**, if not already | Neither is a real provider — set them to `yfinance` and `google_ai_studio` (or whatever you intend) or the app raises immediately when either feature is used. Your real deployment working suggests this may already be fixed — flagging in case it isn't |
+| Set a real `GOOGLE_AI_STUDIO_API_KEY` before trying `/research/*` for real, if not already | `GeminiResearchProvider` raises immediately without one |
+| Set a `FRED_API_KEY` before trying `/valuation/*` for real, if not already | `FredRiskFreeRateProvider` needs one; free to obtain from FRED |
 | Decide Sprint 4 scope + priority among the Backlog candidates | Sprint 4 (the Buffett/Munger persona & output schema) is next per the sprint plan; the Backlog section covers candidate phases beyond Sprint 7 — none of these are scheduled yet |
 | Fix GitHub push credentials for good, at some point | Every session (cloud and device-linked alike) has hit the identical `could not read Username for 'https://github.com'` error — a one-time PAT/credential-helper setup would stop this being a recurring manual step |
 
@@ -189,13 +268,14 @@ session per CLAUDE.md) — still flagged to Faiz below, still unfixed as of this
 No session's shell — cloud or the one on Faiz's linked device — has had GitHub push credentials
 configured (`git push` fails with `could not read Username for 'https://github.com'`). Commits so
 far in the repo were pushed by Faiz himself from his own terminal/GitHub Desktop between sessions;
-this session's 1 commit (`ddeade1`) is sitting local, waiting on the same thing. (The prior
-session's 6 commits, previously reported as "local only," were confirmed pushed this session.)
+this session's 3 commits (`e9a0eca`, `1eb2c0b`, `3193828`) are sitting local, waiting on the same
+thing.
 
 ## Changes / history
 
 | Date | Session | Summary | Detail |
 |---|---|---|---|
+| 2026-09-21 | Portfolio delete fixes, page-load speed, first portfolio-level chart, whisky grouping | Six items from Faiz's real hands-on use (screenshots + a real Railway error log): (1) fixed `DELETE /portfolio/snapshots/{id}` 500ing on a legacy `analysis_runs` FK — now cascade-purges the pre-reset analysis chain; (2) added `DELETE /portfolio/all` (accounts+snapshots+positions only) + a UI button; (3) fixed 2N+1 query patterns on `GET /holdings`/`GET /accounts` (likely cause of Holdings/Macro slowness); (4) added the first portfolio-level chart (composition by instrument type); (5)/(6) legacy whisky holdings now collapse into one row on the Holdings page, gold/silver left as-is. Also surfaced a status-honesty finding: Faiz's screenshots show the app is in fact deployed to Railway and running against real data, contradicting this doc's prior "not yet deployed" status in several places (updated inline, not independently re-verified against the live URL). 2 new tests + 1 updated (288/288 passing), ruff clean. Frontend `tsc`/`eslint`/`vite build` clean. 3 commits (`e9a0eca`, `1eb2c0b`, `3193828`), local only — `git push` still fails in this shell. | [rebuild sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
 | 2026-09-21 | Sprint 3 closed: frontend valuation UI | Re-verified repo state first (286/286 backend tests, ruff clean, fresh frontend build) — corrected a stale "local only" claim in the prior session's docs, since all those commits were in fact already pushed. Built `ValuationPanel.tsx` (assumption stat tiles, DCF bull/base/bear scenario cards with margin-of-safety coloring, reverse-DCF implied growth, multiples-over-time as small-multiple `recharts` line charts) and wired it into `HoldingDetailPage.tsx`. No backend changes — `/valuation/*` was already built and tested. Frontend `tsc`/`eslint`/`vite build` all clean. 1 commit (`ddeade1`), local only — `git push` still fails in this shell. Sprint 3 is now fully closed; Sprint 4 (the analysis engine) is next. | [rebuild sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
 | 2026-09-21 | Sprint 3 backend: valuation engine | Built the full backend valuation engine: yfinance/FRED providers + models (new migration), staleness-cached market-data services, versioned valuation assumptions, deterministic DCF/reverse-DCF/CAPM engine, multiples-over-time, the orchestration layer (with live-FX currency handling) and the `/valuation` API. Every live-data failure mode degrades only the affected part of the result, never the whole response. 88 new tests (286 total), ruff clean apart from pre-existing noise. 6 commits (`9571fe8`..`816127b`), since confirmed pushed. Discovered (not fixed): real `.env` has `MARKET_DATA_PROVIDER=stub`/`RESEARCH_PROVIDER=stub`, which would break both this feature and Sprint 2's research feature if run as-is — flagged to Faiz above, still unfixed. Frontend valuation UI deliberately deferred to a follow-up session (Faiz's choice) — closed above. | [rebuild sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
 | 2026-09-21 | Sprint 2 closed: frontend research UI | Verified the repo's actual state (fresh venv, 198/198 backend tests, ruff, fresh frontend build) before starting, per the status-honesty rule — confirmed the prior session's CSV-import commit had already been pushed. Built the frontend for `/research/*`: a shared `ResearchPanel` component, a Macro page (+ sector picker), a Sector page, and a company-research panel on `HoldingDetailPage`; "Macro" is now a live nav item. No backend changes. Frontend lint/type-check/build all clean. 1 commit (`20d76c1`), since confirmed pushed. Also drafted a Backlog section in the sprint plan doc covering candidate phases beyond Sprint 7 (numeric macro data & scheduler, portfolio risk intelligence, thesis tracking, market-data/performance tracking, LLM usage ledger, alerts, reporting/export). | [rebuild sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |

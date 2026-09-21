@@ -63,11 +63,13 @@ secrets discipline.
 | 5 | Sprint 2 research vendor | **Gemini + Google Search grounding**, reusing the Google AI Studio key/infra rather than a second vendor account — mirrors the pre-reset build's own Phase 4 decision, ported forward rather than re-litigated. |
 | 6 | Portfolio CSV import: skip non-equity rows (bond funds, gold ETC) or import everything? | **Import every row, tagged with its real instrument type** (`asset_class_raw`) — asked Faiz directly (his real exports mix equities with bond/money-market funds and a physical gold ETC); he chose accurate portfolio composition over silently narrowing to equities. |
 | 7 | Same upload batch included a whisky/collectibles CSV — support it too? | **No — skipped**, out of scope for this equity-only rebuild, consistent with Decision 1. |
-| 8 | Portfolio delete UI: granular only, or add a bulk "delete everything"? | **Granular only** — expose the existing per-account/per-snapshot confirm-gated deletes in the UI; no new bulk-wipe endpoint. |
+| 8 | Portfolio delete UI: granular only, or add a bulk "delete everything"? | **Granular only** — expose the existing per-account/per-snapshot confirm-gated deletes in the UI; no new bulk-wipe endpoint. **Superseded 2026-09-21** — Faiz asked for a bulk "delete all portfolio data" button after all, once he'd used the app for real; see the new session section below. |
 | 9 | Sprint 2 next-phase scope | Faiz chose **"finish Sprint 2: research UI"** over also building the deferred numeric-macro/scheduler items, or skipping ahead to Sprint 3. |
 | 10 | Sprint 3 market/FX/beta data source | **yfinance** (Recommended option) — free, no separate account setup needed for a personal single-user app. |
 | 11 | Sprint 3 discount-rate methodology | **Live risk-free rate + a versioned equity-risk-premium assumption** (CAPM) (Recommended option) — not a single hardcoded discount rate. |
 | 12 | Sprint 3 session scope | **Backend only that session** (Recommended option) — frontend valuation UI deferred to a follow-up session, which has now happened. |
+| 13 | Snapshot delete FK violation: block, cascade, or two-step force? | **Cascade-delete the legacy analysis_runs chain** — asked Faiz directly, 2026-09-21; see the new session section below. |
+| 14 | Bulk portfolio wipe scope: everything, or accounts+snapshots+positions only? | **Accounts + snapshots + positions only** — Holdings and Documents stay untouched; asked Faiz directly, 2026-09-21. |
 
 ## Actual current Supabase schema (read from `backend/alembic/versions/`, 21 tables + 1 new this session, no live DB connection needed)
 
@@ -84,11 +86,11 @@ Decision 6 above.)
 | `accounts`, `holdings`, `portfolio_positions`, `portfolio_snapshots`, `documents`, `document_pages`, `document_chunks`, `financial_line_items` | Phase 1 (portfolio + document ingestion) + accounts migration — **ORM models, document ingestion, full CRUD, the first frontend pages, and CSV import all done this rebuild** |
 | `market_observations`, `fx_observations` | Phase 2 (market data & FX) — **ORM models + staleness-cached live services built in Sprint 3**, used by the valuation engine's price/FX lookups |
 | `risk_free_rate_observations` | **New table + migration in Sprint 3** — not part of the original pre-reset schema; needed for the CAPM discount-rate methodology (Decision 11 above) |
-| `analysis_runs`, `holding_analyses`, `factor_assessments`, `evidence_references` | Phase 3 (AI analysis engine) — not yet built this rebuild |
+| `analysis_runs`, `holding_analyses`, `factor_assessments`, `evidence_references` | Phase 3 (AI analysis engine) — not yet built this rebuild, but now **mapped read/delete-only** (`app/models/legacy_analysis.py`) so a snapshot delete can cascade-purge the legacy rows referencing it — see the new session section below. Sprint 4 will still redesign these from scratch when the real analysis engine gets built. |
 | `research_runs`, `research_items` | Phase 4 (external research) — **ORM models, provider, caching service, API, and frontend UI all done this rebuild (Sprint 2, now closed)** |
 | `macro_observations` | Phase 4 (numeric central-bank/macro data) — **deliberately deferred**, see Backlog |
 | `investment_theses`, `valuation_cases`, `portfolio_risk_snapshots` | Phase 5 (thesis & portfolio intelligence) |
-| `llm_usage_events` | LLM usage ledger — not yet re-created this rebuild; `app/providers/budget.py`'s in-memory guard is a placeholder until this exists |
+| `llm_usage_events` | LLM usage ledger — not yet re-created this rebuild; `app/providers/budget.py`'s in-memory guard is a placeholder until this exists. Now mapped (`app/models/legacy_analysis.py`) so the snapshot-delete cascade can unlink (never delete) rows that reference a purged `analysis_runs`/`holding_analyses` row, preserving real spend history. |
 
 ## Design & UX direction (researched 2026-09-21; tokens implemented in `frontend/tailwind.config.js`)
 
@@ -125,7 +127,9 @@ Wealthfront, plus wider 2026 fintech UI roundups):
 - Fixed left nav, holding list/detail built as cards over the near-white background. The Portfolio,
   Macro/Sector, and now the valuation section on `HoldingDetailPage` all follow the same
   card/table/chart conventions — including the valuation multiples charts, which use only the one
-  accent color for their single-series lines, never a decorative palette.
+  accent color for their single-series lines, never a decorative palette. The Portfolio page's new
+  composition-by-instrument-type chart (2026-09-21) follows the same rule: single accent color,
+  direct-labeled bars, no categorical palette.
 
 Sprint 5's dashboard is the next place this direction gets exercised across a new surface (the
 portfolio-wide roll-up).
@@ -208,7 +212,35 @@ All items done — see prior session detail in the project's `progress.md`.
 | Frontend Portfolio page | `frontend/src/pages/PortfolioPage.tsx` — multi-file CSV upload, accounts list + snapshots list each with a delete button (existing confirm-gated endpoints, exposed in the UI for the first time), nav enabled | ✅ Done |
 
 Commit `2cb56c7`, confirmed pushed. 25 new tests (198 total), ruff clean. Frontend lint/build clean.
-Not yet run against Faiz's real 5 account CSVs or the real Supabase DB.
+Not yet run against Faiz's real 5 account CSVs or the real Supabase DB. **Update, see the session
+below:** Faiz's own screenshots/logs this session show this evidently has since happened.
+
+### Portfolio delete fixes, page-load speed, first portfolio-level chart, whisky grouping — ✅ done 2026-09-21 (out-of-sequence, same pattern as the CSV-import session above)
+
+Not a sprint step — six items Faiz brought back from real hands-on use of the app (his own
+screenshots plus a real Railway `ForeignKeyViolation` error log), same "pulled forward out of
+sequence" category as the CSV-import session. Sprint 4 (the analysis engine) is still next.
+
+| Deliverable | Detail | Status |
+|---|---|---|
+| Legacy analysis-table mapping | `app/models/legacy_analysis.py` — `AnalysisRun`/`HoldingAnalysis`/`FactorAssessment`/`EvidenceReference`/`LlmUsageEvent`, mapped onto the pre-existing Phase 3 tables (no new migration), read/delete-only | ✅ Done |
+| Snapshot-delete FK fix | `DELETE /portfolio/snapshots/{id}` now cascade-purges the legacy analysis chain referencing it instead of 500ing with a raw `ForeignKeyViolation`; `llm_usage_events` rows are unlinked, never deleted (real spend history). Returns a JSON body (what got purged) instead of a bare 204 | ✅ Done — `app/api/portfolio.py` |
+| Bulk portfolio wipe | New `DELETE /portfolio/all` — accounts + snapshots + positions only, Holdings/Documents untouched, same `confirm=true` guardrail, reuses the legacy-purge helper | ✅ Done — `app/api/portfolio.py` + a danger-styled button on `PortfolioPage.tsx` |
+| Page-load-speed fix | `GET /holdings`, `GET /accounts`, `GET /portfolio/snapshots` each batched from 2N+1 (or N+1) per-row COUNT queries down to a fixed 2 (or 1) aggregate `GROUP BY` queries regardless of row count | ✅ Done — `app/api/holdings.py`, `app/api/accounts.py`, `app/api/portfolio.py` |
+| First portfolio-level chart | Composition-by-instrument-type bar chart on `PortfolioPage.tsx` — counts, not $ value (no portfolio-wide $ aggregation exists yet; that's Sprint 5's job); single accent color, direct-labeled, matching `ValuationPanel`'s existing chart conventions | ✅ Done — `frontend/src/pages/PortfolioPage.tsx` |
+| Whisky holdings grouping | Legacy whisky/distillery holdings (individual rows, one per bottle) now collapse into one expandable "Whisky (N bottles)" row on `HoldingsListPage.tsx`; gold/silver left as individual rows per Faiz's explicit choice. Matched against the real distillery names visible in his own Sector Research screenshot (`WHISKY_SECTORS` in `lib/types.ts`), since these legacy rows carry no other distinguishing tag | ✅ Done — `frontend/src/pages/HoldingsListPage.tsx`, `frontend/src/lib/types.ts` |
+
+**Status-honesty finding:** Faiz's own screenshots this session included a live Railway container
+log and a working Portfolio page with real data (5 accounts, 124 positions, 7 snapshots) —
+contradicting this doc's and `progress.md`'s prior "not yet deployed to Railway" status in several
+places (now updated inline with a note in each). Not independently re-verified against the live URL
+this session (not shared) — see `progress.md`'s "Needs from Faiz" table.
+
+2 new backend tests (cascade-delete regression test with a real legacy `AnalysisRun` row; bulk-wipe
+scope test) + 1 existing test updated for the snapshot-delete 204→200 response shape change.
+288/288 backend tests passing, ruff clean. Frontend `tsc --noEmit`, `eslint .`, `vite build` all
+clean. 3 commits (`e9a0eca`, `1eb2c0b`, `3193828`), local only — `git push` still fails in this
+session's shell with the same credential error every prior session has hit.
 
 ### Sprint 3 — Valuation engine — ✅ fully closed 2026-09-21 (backend + frontend)
 
@@ -327,7 +359,8 @@ priority — that's Faiz's call.
 
 | Date | Summary |
 |---|---|
-| 2026-09-21 | **Sprint 3 fully closed: frontend valuation UI.** Re-verified repo state first (286/286 backend tests, ruff clean, fresh frontend build) — corrected a stale "6 commits, local only" claim in the prior session's own docs, since those were in fact all confirmed pushed. Built `ValuationPanel.tsx`: assumption stat tiles, DCF bull/base/bear scenario cards (margin-of-safety colored by sign), reverse-DCF implied growth, and multiples-over-time as four small-multiple `recharts` line charts (never combined onto shared axes, since P/E/P/B/P/S/EV-EBITDA sit on different scales). Wired into `HoldingDetailPage`. No backend changes. Frontend `tsc`/`eslint`/`vite build` all clean. 1 commit (`ddeade1`), local only — `git push` still fails in this shell. **Sprint 4 (the analysis engine) is next.** |
+| 2026-09-21 | **Portfolio delete fixes, page-load speed, first portfolio-level chart, whisky grouping** (out-of-sequence). Fixed `DELETE /portfolio/snapshots/{id}` 500ing on a legacy `analysis_runs` FK (now cascade-purges it), added `DELETE /portfolio/all` (accounts+snapshots+positions only) + a UI button, fixed 2N+1 query patterns on `GET /holdings`/`GET /accounts`, added the first portfolio-level chart (composition by instrument type), and collapsed legacy whisky holdings into one row on the Holdings page. Also flagged a status-honesty finding: Faiz's screenshots show the app is in fact deployed to Railway against real data, contradicting this doc's prior "not yet deployed" status (updated inline). 2 new tests + 1 updated (288/288 passing), ruff clean. Frontend checks clean. 3 commits (`e9a0eca`, `1eb2c0b`, `3193828`), local only — `git push` still fails in this shell. **Sprint 4 (the analysis engine) is still next.** |
+| 2026-09-21 | **Sprint 3 fully closed: frontend valuation UI.** Re-verified repo state first (286/286 backend tests, ruff clean, fresh frontend build) — corrected a stale "6 commits, local only" claim in the prior session's own docs, since those were in fact all confirmed pushed. Built `ValuationPanel.tsx`: assumption stat tiles, DCF bull/base/bear scenario cards (margin-of-safety colored by sign), reverse-DCF implied growth, and multiples-over-time as four small-multiple `recharts` line charts (never combined onto shared axes, since P/E/P/B/P/S/EV-EBITDA sit on different scales). Wired into `HoldingDetailPage`. No backend changes. Frontend `tsc`/`eslint`/`vite build` all clean. 1 commit (`ddeade1`), local only — `git push` still fails in this shell. |
 | 2026-09-21 | **Sprint 3 backend closed: valuation engine.** Built live market-data providers (yfinance) and a live risk-free-rate provider (FRED, all currencies), staleness-cached market-data services, versioned valuation assumptions, the deterministic DCF/reverse-DCF/CAPM discount-rate engine, multiples-over-time, and the orchestration layer (with live-FX currency-consistency handling) tying it all together for one holding — wired into a new `/valuation` API mirroring `/research/*`'s shape. 88 new tests (286 total), ruff clean apart from pre-existing noise. 6 commits (`9571fe8`..`816127b`), since confirmed pushed. Discovered (not fixed): real `.env` has `MARKET_DATA_PROVIDER=stub`/`RESEARCH_PROVIDER=stub`, flagged to Faiz, still unfixed. Frontend valuation UI deferred to a follow-up session — closed above. |
 | 2026-09-21 | **Sprint 2 closed: frontend research UI.** Built the frontend for the `/research/*` API: a shared `ResearchPanel` component, a Macro page (portfolio-wide research + a sector picker), a Sector page (`/sectors/:sector`), and a company-research panel added to `HoldingDetailPage`. "Macro" is now a live nav item. No backend changes — 198 backend tests unaffected/still passing; frontend `tsc`/`eslint`/`vite build` all clean. 1 commit (`20d76c1`), since confirmed pushed. |
 | 2026-09-21 | **Portfolio CSV import + delete UI, pulled forward from Sprint 4.** Built the broker-export CSV parser, an instrument-type classifier for the mixed equity/bond/ETC rows these exports contain, the CSV→Account/Document/Snapshot/Position ingestion service, `POST /portfolio/import-csv`, and a new frontend Portfolio page (multi-file upload + account/snapshot lists with delete buttons). Faiz chose to import every row (tagged, not skipped), skip a whisky/collectibles CSV in the same upload batch entirely, and keep deletes granular rather than add a bulk wipe. 25 new tests (198 total), ruff clean. 1 commit (`2cb56c7`), since confirmed pushed. |
