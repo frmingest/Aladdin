@@ -4,23 +4,26 @@
 That doc planned an *incremental* redesign (ADR 0019/0020: "continue & consolidate, no rebuild").
 On 2026-09-21 Faiz overrode that decision and had the repo wiped to a clean slate. This doc plans
 the rebuild from that clean slate. **Sprint 0 is closed. Sprint 1 (equity data model & deterministic
-calculations) is underway — models and the calculations module are done; document ingestion, the API,
-and the first frontend pages are not.**
+calculations) is underway — models, the calculations module, and document ingestion are done; the
+minimal API and the first frontend pages are not.**
 
-## Where things actually stand right now (audited 2026-09-21, second session pass)
+## Where things actually stand right now (audited 2026-09-21, third session pass)
 
 | | |
 |---|---|
-| Repo | `main`, 2 commits ahead of `origin/main` this session (`72d3c03` LLM providers, `ff5ee54` models+calculations) — **not yet pushed**, no GitHub push credentials in this session's shell. |
-| `backend/app/providers/` | **New this session.** Vendor-agnostic `LLMProvider` interface; `GoogleAIStudioProvider` (Gemini, `gemini-3.6-flash`) and `MistralProvider` (fallback) with retry/backoff on transient errors only, shared RPM pacing, and an in-memory `DailyBudgetGuard`. 44 unit tests, all against mocked SDK clients. |
-| `backend/app/models/` | **New this session.** 8 SQLAlchemy models (Account, Holding, Document, DocumentPage, DocumentChunk, PortfolioSnapshot, PortfolioPosition, FinancialLineItem) built directly against the real, already-migrated schema (read from `alembic/versions/`, not guessed) — including the widened `holdings.ticker`, the `accounts` table/FKs, and the legacy `asset_class`/`acquired_at` columns (mapped but unused, per this doc's DB-strategy decision). |
-| `backend/app/services/calculations.py` | **New this session.** 15 deterministic functions (margins, ROIC/ROE, FCF, owner earnings, Net Debt/EBITDA, Net Debt/FCF, interest coverage, D/E, P/E, P/B, P/S, EV/EBITDA, HHI) — Decimal throughout, raises on undefined (zero-denominator) results rather than guessing. |
-| `backend/app/` (rest) | `main.py` (`/health`), `config/settings.py` now also carries LLM provider/rate-limit/fallback settings. |
+| Repo | `main`, commit `3ca7b68` ("Add holding-document ingestion: extraction, storage, and API") — **still not pushed**, no GitHub push credentials in this session's shell either. The 2 commits from the previous session (`72d3c03`, `ff5ee54`) *have* since been pushed by Faiz (confirmed: `main` and `origin/main` matched at the start of this session, before this session's own commit). |
+| `backend/app/services/documents/` | **New this session.** Holding-document ingestion pipeline: validate → hash/dedup (sha256) → store → extract → persist. PDF (PyMuPDF) and PPTX (python-pptx) extraction capture full page/slide text but yield no structured facts by design — table-parsing or an LLM pass would be needed for that, out of scope for a deterministic-only stage. XLSX (openpyxl) is the one format that also promotes rows into structured `FinancialLineItem` facts, via an exact-match English/Norwegian label map (`app/domain/financial_metrics.py`, carried over and extended from the pre-reset app's Phase 1 design). |
+| `backend/app/providers/object_storage.py` + `object_storage_s3.py` | **New this session.** Swappable object storage: local filesystem for dev (`OBJECT_STORAGE_PROVIDER=local`, the default), or any S3-compatible bucket — Cloudflare R2 or Supabase Storage's own S3-compatible API (`OBJECT_STORAGE_PROVIDER=s3`) — for a real deployment. Config-driven, wired through `providers/factory.get_object_storage()`. |
+| `backend/app/config/database.py` | **New this session** — didn't exist yet. SQLAlchemy engine/session + FastAPI `get_db` dependency. Building it surfaced that `alembic/env.py` still imported the old, no-longer-existing `app.config.database.Base` left over from before the reset — **`alembic upgrade`/autogenerate has been broken since the reset** until this session's fix (now imports `Base` from `app.models`). |
+| `backend/app/api/documents.py` | **New this session.** `POST /documents/upload`, `GET /documents`, `GET /documents/{id}` — the app's first real domain router; `main.py` previously only exposed `/health`. |
+| `backend/pyproject.toml` | **New this session.** Didn't exist before (ruff was running on pure defaults). Allowlists FastAPI's `Depends`/`Form`/`File` idiom for ruff's flake8-bugbear B008 rule, which otherwise flags every endpoint using them as a false positive. |
+| `backend/app/models/` | Unchanged this session. 8 SQLAlchemy models against the real, already-migrated schema (from the prior session). |
+| `backend/app/services/calculations.py` | Unchanged this session. 15 deterministic financial functions (from the prior session). |
 | `frontend/src/` | Unchanged this session: skeleton only (`App.tsx` health badge). |
-| Deployment | **Not deployed to Railway.** Still "written, not yet deployed" per the status-honesty rule — this session had no network path to check a live URL either. |
-| `backend/.env` | **Fixed this session**: `LLM_PROVIDER` now `google_ai_studio` (Faiz's explicit call), leftover `ANTHROPIC_API_KEY`/`ANTHROPIC_MODEL` lines removed, and the LLM tuning/rate-limit/fallback-model keys `.env.example` already documented (but `.env` was missing) added. |
+| Deployment | **Not deployed to Railway.** Still "written, not yet deployed" per the status-honesty rule. If/when document upload is deployed for real, `OBJECT_STORAGE_PROVIDER` must be set to `s3` with real R2/Supabase credentials in Railway's env vars — the `local` default writes to the container's own ephemeral disk and silently loses every uploaded filing on redeploy. |
 | Real data | **Untouched, and staying that way** (Decision 1 below). Supabase still holds the real portfolio/holdings/analysis history, including legacy non-equity rows/columns. |
-| Test environment | The repo's own `backend/.venv` is a **Windows** venv (`Scripts/python.exe`) — can't run from `device_bash`'s Linux shell. This session created a separate Linux venv to install `requirements.txt` + test tooling and actually run the suite (77 tests, all passing) rather than skipping verification. |
+| Test environment | Same as last session: the repo's own `backend/.venv` is a **Windows** venv, can't run from `device_bash`'s Linux shell — a separate Linux venv was (re-)created this session in the VM's home directory to install `requirements.txt` + new document-ingestion dependencies (PyMuPDF, python-pptx, openpyxl, boto3, python-multipart, httpx) and run the suite: **109 tests, all passing** (up from 77), ruff clean aside from the same pre-existing `EXE002` mount-permission artifact on every file (unrelated to any session's changes). |
+| Known gap | **Holdings have no CRUD API yet** — a document can currently only be attached to a `holding_id` that already exists in the DB (created directly, not through the app). This is the "Minimal API" deliverable below, not yet started. |
 
 ## The Brain's 5 steps — what the rebuild has to deliver
 
@@ -44,7 +47,7 @@ secrets discipline.
 | # | Question | Decision |
 |---|---|---|
 | 1 | DB schema strategy | **Leave the existing Supabase schema and data exactly as-is.** No migration to strip non-equity tables/columns now. |
-| 2 | LLM provider | **Reuse Google AI Studio (Gemini) + Mistral** via keys in `backend/.env`/Railway. Rate-limit resilience (budget guard, retry/backoff, RPM pacing) built in from day one this time — **done, this session.** |
+| 2 | LLM provider | **Reuse Google AI Studio (Gemini) + Mistral** via keys in `backend/.env`/Railway. Rate-limit resilience (budget guard, retry/backoff, RPM pacing) built in from day one — done. |
 | 3 | Leftover GitHub branches | **Delete all 6** — commands handed to Faiz to run himself. Still pending. |
 
 ## Actual current Supabase schema (read from `backend/alembic/versions/`, 21 tables, no live DB connection needed)
@@ -53,27 +56,20 @@ No non-equity table exists — the old multi-asset design used a discriminator, 
 `holdings.asset_class` (string column) and `portfolio_positions.acquired_at` (nullable, added for
 collectibles) are the only non-equity-specific fields, both on otherwise-shared, otherwise-equity
 tables. Nothing to route around structurally — just don't populate/query those for non-equity rows.
-**Now reflected in `app/models/` — see above.**
 
 | Table | From phase |
 |---|---|
-| `accounts`, `holdings`, `portfolio_positions`, `portfolio_snapshots`, `documents`, `document_pages`, `document_chunks`, `financial_line_items` | Phase 1 (portfolio + document ingestion) + accounts migration — **ORM models done this session** |
+| `accounts`, `holdings`, `portfolio_positions`, `portfolio_snapshots`, `documents`, `document_pages`, `document_chunks`, `financial_line_items` | Phase 1 (portfolio + document ingestion) + accounts migration — **ORM models + document ingestion done this rebuild** |
 | `market_observations`, `fx_observations` | Phase 2 (market data & FX) |
 | `analysis_runs`, `holding_analyses`, `factor_assessments`, `evidence_references` | Phase 3 (AI analysis engine) |
 | `research_runs`, `research_items`, `macro_observations` | Phase 4 (external research) |
 | `investment_theses`, `valuation_cases`, `portfolio_risk_snapshots` | Phase 5 (thesis & portfolio intelligence) |
 | `llm_usage_events` | LLM usage ledger — not yet re-created this rebuild; `app/providers/budget.py`'s in-memory guard is a placeholder until this exists |
 
-## Design & UX direction (researched 2026-09-21)
+## Design & UX direction (researched 2026-09-21, unchanged this session)
 
 Faiz asked for a deliberate look this time: *"a simple philosophy... what investment-grade
-financial webpage has a clean, simple and beautiful UI that is popular."* Worth naming plainly why
-this needs deciding once, now: Aladdin's UI has already changed identity three times pre-reset —
-copied wholesale from the CWO app's navy/cyan terminal look, then redone as its own amber
-Bloomberg-terminal identity, then (per a later UX-review pass) actually living as an ad hoc Tailwind
-`slate-950` dark theme with no real token system at all. None of it stuck, and none of it was
-chosen for *this* app's job (a single-user equity research and conviction tool), which is why it
-kept getting redone.
+financial webpage has a clean, simple and beautiful UI that is popular."*
 
 **What "investment-grade, clean, simple, beautiful" actually looks like in practice** (from a
 survey of fintech dashboards actually praised for this — Mercury, Stripe's own dashboard, Ramp,
@@ -82,54 +78,40 @@ Wealthfront, plus wider 2026 fintech UI roundups):
 | Principle | What it means concretely |
 |---|---|
 | **Color means state, nothing else** | Green/red reserved strictly for gain/loss and pass/fail signals (moat rating, verdict, thesis status). No decorative gradients or brand color inside data areas. One quiet accent color for interactive elements only. |
-| **Numbers are typeset, not just printed** | Tabular figures (fixed-width digits so columns of numbers align), consistent decimal places, currency symbols set lighter/smaller than the value itself. This is what makes a page of numbers feel trustworthy rather than sloppy. |
-| **Editorial calm over data density** | Mercury's whole reputation is "made a bank account feel like a designed product" — generous whitespace, one clear focal number per section, routine detail collapsed by default. The opposite of a terminal's wall-of-numbers instinct. |
-| **Progressive disclosure** | Summary first (portfolio verdict, moat, valuation at a glance), detail on demand (drill into a holding for the full 5-step Brain analysis, evidence citations, DCF assumptions). Prevents the "everything visible at once" overload a dense terminal UI creates. |
-| **Left-nav information architecture** | Stripe Dashboard's pattern for scaling to many domains (portfolio, holdings, thesis, macro, valuation) without the top-nav running out of room, and without forcing a rebuild when a new section (Sprint 2-7 add several) shows up. |
-| **Light-first, not dark-terminal** | Every example above (Mercury, Stripe, Wealthfront) is light/near-white with near-black text — not a Bloomberg-style dark terminal. This is the actual reversal from Aladdin's design history: dense/dark/monospace-forward reads as a trading terminal, not as a considered, trustworthy advisor. Recommend dropping the terminal aesthetic for good this time, in favor of a quiet light theme (a dark-mode toggle can come later, as a real second theme built on the same tokens — not a replacement for deciding the primary one). |
+| **Numbers are typeset, not just printed** | Tabular figures (fixed-width digits so columns of numbers align), consistent decimal places, currency symbols set lighter/smaller than the value itself. |
+| **Editorial calm over data density** | Generous whitespace, one clear focal number per section, routine detail collapsed by default. |
+| **Progressive disclosure** | Summary first (portfolio verdict, moat, valuation at a glance), detail on demand (drill into a holding for the full 5-step Brain analysis, evidence citations, DCF assumptions). |
+| **Left-nav information architecture** | Scales to many domains (portfolio, holdings, thesis, macro, valuation) without the top-nav running out of room. |
+| **Light-first, not dark-terminal** | Every example above is light/near-white with near-black text. Dropping the terminal aesthetic for good this time. |
 
-**Concrete starting tokens** (proposal, still not yet built — for Faiz to confirm before Sprint 1's
-frontend pages are styled against them, so it's chosen once):
+**Concrete starting tokens** (still not yet built — for Faiz to confirm before Sprint 1's frontend
+pages are styled against them):
 
-- Background: near-white (`#FAFAF9`/`#FFFFFF`), elevated surfaces (cards) a hair off that, not stark white-on-white.
+- Background: near-white (`#FAFAF9`/`#FFFFFF`), elevated surfaces (cards) a hair off that.
 - Text: near-black (`#111111`-ish primary, warm gray secondary/muted) — not pure `#000`.
-- One accent color for links/primary actions/focus states — a single considered color, not a gradient.
-- Data semantics: one green (gain/pass), one red (loss/fail), one amber (caution/hold) — used only for state, never decoration.
-- Typography: one quiet sans-serif for everything (Inter or similar) + tabular figures (`font-variant-numeric: tabular-nums`) specifically for financial values — no separate "terminal mono" font family.
-- Layout: fixed left nav (portfolio / holdings / thesis / macro as sprints add them) + a content area built around cards with real whitespace, not edge-to-edge tables.
+- One accent color for links/primary actions/focus states.
+- Data semantics: one green (gain/pass), one red (loss/fail), one amber (caution/hold) — state only.
+- Typography: one quiet sans-serif (Inter or similar) + tabular figures (`font-variant-numeric: tabular-nums`) for financial values.
+- Layout: fixed left nav (portfolio / holdings / thesis / macro as sprints add them) + a content area built around cards with real whitespace.
 
-This becomes real in Sprint 5 (the dashboard), but Sprint 1's first pages (holding list, holding
-detail forms — not yet built) should be styled against these tokens from the start — the whole point
-is not re-deciding this a fourth time once the dashboard sprint arrives.
+This becomes real in Sprint 5 (the dashboard), but Sprint 1's remaining frontend pages (holding
+list, holding detail — not yet built) should be styled against these tokens from the start.
 
 ## Sprints
 
 ### Sprint 0 — Foundation — ✅ closed 2026-09-21
 
-| Item | Status |
-|---|---|
-| Recreate a lean guardrail doc | ✅ Done — `CLAUDE.md` |
-| Map the real Supabase schema | ✅ Done — see table above |
-| DB strategy decision | ✅ Decided |
-| LLM provider decision | ✅ Decided |
-| Remove leftover legacy multi-asset frontend (reset had missed it) | ✅ Done 2026-09-21 — commit `622ad08` |
-| Skeleton FastAPI app (`/health`) | ✅ Done 2026-09-21 — commit `ec4c0de`. **Not deployed to Railway yet.** |
-| Skeleton React/Vite app (health badge) | ✅ Done 2026-09-21 — commit `d1e9e36`. **Not deployed to Railway yet.** |
-| Deploy both skeletons through the existing Dockerfiles to a real Railway URL | Not started |
-| `MISTRAL_API_KEY` present in `backend/.env` | ✅ Done |
-| Resolve `LLM_PROVIDER` mismatch (`anthropic` vs. `google_ai_studio`) | ✅ **Done this session** — Faiz confirmed `google_ai_studio`, `.env` fixed |
-| Wire Gemini + Mistral providers with budget guard, retry/backoff and RPM pacing | ✅ **Done this session** — commit `72d3c03`, 44 tests passing |
+All items done — see prior session detail in the project's `progress.md`.
 
 ### Sprint 1 — Equity data model & deterministic calculations — 🚧 in progress
 
 | Deliverable | Detail | Status |
 |---|---|---|
-| SQLAlchemy models | `Account`, `Holding`, `PortfolioPosition`, `PortfolioSnapshot`, `Document`, `DocumentPage`, `DocumentChunk`, `FinancialLineItem` — equity-relevant fields only, built fresh against the real tables; `holdings.asset_class`/`portfolio_positions.acquired_at` simply never populated or queried for these paths | ✅ **Done this session** — commit `ff5ee54` |
-| Document ingestion | PDF/PPTX/XLSX text + structured line-item extraction into `DocumentChunk`/`FinancialLineItem`, ready to feed the evidence packet Sprint 4 builds on | ⬜ Not started |
-| Deterministic calculations module | A single, unit-tested module (no LLM involvement — Rule 1): ROIC, ROE, gross/operating/net margin, FCF, owner earnings, Net Debt/EBITDA, Net Debt/FCF, interest coverage, D/E, HHI (portfolio concentration), and trailing P/E, P/B, P/S, EV/EBITDA multiples | ✅ **Done this session** — commit `ff5ee54`, 33 tests, covers Brain Steps 1.3 and 2.1-2.2's arithmetic |
-| Tests | The calculations module reaches solid unit-test coverage *before* anything (a prompt, an endpoint) is allowed to call it — covers Brain Steps 1.3 and 2.1-2.2's arithmetic | ✅ Done alongside the module above |
-| Minimal API | Read/write for holdings & portfolio, read-only endpoints exposing the computed metrics above | ⬜ Not started |
-| First real frontend pages | Holding list + holding detail, styled against the [Design & UX direction](#design--ux-direction-researched-2026-09-21) tokens from the start, not the old terminal classes | ⬜ Not started |
+| SQLAlchemy models | `Account`, `Holding`, `PortfolioPosition`, `PortfolioSnapshot`, `Document`, `DocumentPage`, `DocumentChunk`, `FinancialLineItem` | ✅ Done |
+| Deterministic calculations module | ROIC, ROE, margins, FCF, owner earnings, leverage ratios, HHI, multiples | ✅ Done |
+| **Document ingestion** | PDF/PPTX/XLSX text + structured line-item extraction into `DocumentChunk`/`FinancialLineItem`, sha256 dedup, swappable object storage (local/S3), `POST /documents/upload` + `GET /documents` + `GET /documents/{id}` | ✅ **Done this session** — commit `3ca7b68`, 32 new tests (109 total) |
+| Minimal API | Read/write for holdings & portfolio, read-only endpoints exposing the computed metrics above | ⬜ Not started — **blocks real document upload** (no way to create a holding through the app yet) |
+| First real frontend pages | Holding list + holding detail, styled against the Design & UX direction tokens | ⬜ Not started |
 
 ### Sprint 2 — Live research (evidence-first)
 
@@ -149,17 +131,18 @@ is not re-deciding this a fourth time once the dashboard sprint arrives.
   triggers
 - Two-pass pipeline: blind pass (no user notes, evidence-cited) → reconciliation pass
 - Covers Step 5 and closes every remaining schema gap from Steps 1-4
+- This is also where PDF/PPTX table-parsing or an LLM extraction pass (to get structured facts out
+  of those formats, not just XLSX) most naturally belongs, if Faiz wants that filled in before then
 
 ### Sprint 5 — Portfolio roll-up & dashboard
 
 - Aggregate verdict/moat/valuation view across all holdings
 - Single-purpose dashboard (equity only), built out fully against the Design & UX direction above
-  (left nav, progressive disclosure, tabular figures, state-only color)
 - Deterministic executive summary
 
 ### Sprint 6 — Evidence quality
 
-- Per-document evidence budget, section-aware chunking
+- Per-document evidence budget, section-aware chunking (current ingestion is 1 page = 1 chunk)
 
 ### Sprint 7 — Guardrail tooling
 
@@ -182,8 +165,9 @@ git push origin --delete fix/s3-path-style-addressing
 
 | Date | Summary |
 |---|---|
-| 2026-09-21 | **Sprint 0 closed, Sprint 1 started.** Faiz confirmed `LLM_PROVIDER=google_ai_studio` and the plan to finish Sprint 0 before starting Sprint 1. Built and tested `app/providers/` (Gemini primary + Mistral fallback, retry/backoff, RPM pacing, in-memory daily budget guard) — 44 tests. Then built `app/models/` (8 SQLAlchemy models against the real schema) and `app/services/calculations.py` (15 deterministic financial functions, Decimal-based) — 33 more tests. 77/77 backend tests passing this session; ruff clean aside from a confirmed pre-existing mount-permission artifact. Two commits made (`72d3c03`, `ff5ee54`), not yet pushed — no GitHub credentials in this session's shell. |
-| 2026-09-21 | Status audit + planning pass: confirmed the repo (not the docs) had the real up-to-date state — docs/ mirror and the 3 skeleton commits were already pushed. Added the missing `MISTRAL_API_KEY` to `backend/.env` directly (was typed but unsaved), clearing Sprint 0's last blocker. Flagged an `LLM_PROVIDER` mismatch for Faiz to resolve. Researched clean/minimal investment-grade fintech UI (Mercury, Stripe Dashboard, Wealthfront) and wrote up a concrete Design & UX direction — light, editorial, state-only color, tabular figures, progressive disclosure — replacing the never-finalized terminal aesthetic. Expanded Sprint 1 into concrete deliverables. |
+| 2026-09-21 | **Document ingestion built (Sprint 1's 3rd deliverable).** Confirmed the prior session's 2 commits were pushed by Faiz in between sessions. Built `app/services/documents/` (intake/dedup/extraction for PDF/PPTX/XLSX, XLSX-only structured fact extraction via a deterministic label map), swappable object storage (`app/providers/object_storage*.py`, local/S3), `app/config/database.py` (new — and fixed a broken `alembic/env.py` import that's been silently broken since the reset), and the app's first real API router (`app/api/documents.py`). Added `backend/pyproject.toml` to fix a ruff false-positive on FastAPI's `Depends`/`Form`/`File` idiom. 32 new tests, 109 total passing, ruff clean. Committed (`3ca7b68`), not yet pushed. |
+| 2026-09-21 | Sprint 0 closed, Sprint 1 started. Faiz confirmed `LLM_PROVIDER=google_ai_studio` and the plan to finish Sprint 0 before starting Sprint 1. Built and tested `app/providers/` (Gemini primary + Mistral fallback, retry/backoff, RPM pacing, in-memory daily budget guard) — 44 tests. Then built `app/models/` (8 SQLAlchemy models against the real schema) and `app/services/calculations.py` (15 deterministic financial functions, Decimal-based) — 33 more tests. 77/77 backend tests passing this session; ruff clean aside from a confirmed pre-existing mount-permission artifact. Two commits made (`72d3c03`, `ff5ee54`). |
+| 2026-09-21 | Status audit + planning pass: confirmed the repo (not the docs) had the real up-to-date state — docs/ mirror and the 3 skeleton commits were already pushed. Added the missing `MISTRAL_API_KEY` to `backend/.env` directly (was typed but unsaved), clearing Sprint 0's last blocker. Flagged an `LLM_PROVIDER` mismatch for Faiz to resolve. Researched clean/minimal investment-grade fintech UI (Mercury, Stripe Dashboard, Wealthfront) and wrote up a concrete Design & UX direction. Expanded Sprint 1 into concrete deliverables. |
 | 2026-09-21 | Sprint 0 skeletons built: found and removed the legacy multi-asset frontend the original reset had missed (49 files, commit `622ad08`); built and locally tested a skeleton FastAPI backend with `/health` (commit `ec4c0de`, also fixed a Dockerfile that still referenced deleted top-level asset dirs); built and locally tested a skeleton React frontend with a health badge (commit `d1e9e36`). Since confirmed pushed and docs synced. Gemini+Mistral wiring was blocked on `MISTRAL_API_KEY`. |
 | 2026-09-21 | Repo wiped except Railway/Supabase/GitHub config, committed and pushed as `8ad0221` ("reset") with full history preserved. Real Supabase data untouched. |
 | 2026-09-21 | 3 open checkpoints decided: keep DB as-is, reuse Gemini+Mistral with resilience built in from day one, delete 6 leftover branches. |
