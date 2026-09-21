@@ -9,40 +9,62 @@ page stays a scan-able table, not a narrative.
 
 | Phase | What it is | Status |
 |---|---|---|
-| 0–10 | Everything built before the 2026-09-21 reset | 🗑️ **Deleted from the repo** — design knowledge preserved in the rebuild plan and the superseded doc |
+| 0–10 | Everything built before the 2026-09-21 reset | 🗑️ Deleted — design knowledge preserved in the rebuild plan and the superseded doc |
 | **11** | **Buffett/Munger single-focus rebuild** — from a clean-slate repo | 🚧 **Sprint 0 in progress** — [rebuild sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
 
-## Current status by area
+## Sprint 0 checklist
 
-| Area | Status | Detail |
-|---|---|---|
-| **Repo state** | `main` locally at `d01e601` (guardrail doc added), on top of `8ad0221` ("reset"). **Not yet pushed** — Faiz needs to push from a terminal with GitHub access. | [rebuild sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
-| **Real data** | Untouched. Supabase still holds all real portfolio/holdings/analysis history plus legacy non-equity rows/columns (kept deliberately, not migrated away). | — |
-| **Sprint 0 (foundation)** | Guardrail doc (`CLAUDE.md`) recreated and committed locally. Real Supabase schema mapped from the kept Alembic migrations (21 tables, no separate non-equity tables — just a discriminator column). DB strategy and LLM provider both decided. Still to do: skeleton FastAPI/React apps deployed through Railway, and wiring Gemini+Mistral with rate-limit resilience built in from day one. | [rebuild sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
-| Everything previously tracked here (Ollama migration, Gemini/Mistral 429s, dashboard caching, Bloomberg redesign, etc.) | Moot — code deleted in the reset, not being carried forward. | [superseded doc](buffett-munger-redesign-sprint-plan-2026-09-20.md) (Claude project doc) |
+| Item | Status |
+|---|---|
+| Guardrail doc (`CLAUDE.md`) | ✅ Done, committed |
+| Map real Supabase schema | ✅ Done (21 tables, from Alembic migrations) |
+| DB strategy decision | ✅ Decided — leave schema/data as-is |
+| LLM provider decision | ✅ Decided — Gemini + Mistral |
+| Legacy frontend cleanup | ✅ Done — see "Found" below |
+| Skeleton FastAPI backend (`/health`) | ✅ Built + tested locally. **Not deployed to Railway.** |
+| Skeleton React frontend (health badge) | ✅ Built + tested locally. **Not deployed to Railway.** |
+| Wire Gemini + Mistral (budget guard, retry/backoff, RPM pacing) | ⏸️ **Blocked** — waiting on Faiz to add `MISTRAL_API_KEY` to `backend/.env` |
+
+## Found while working Sprint 0
+
+The reset was supposed to wipe all application code, but it only wiped `backend/app/` —
+`frontend/src/` still had the entire pre-rebuild multi-asset UI (Dashboard, PortfolioUpload,
+Analysis pages, old chart components, the Bloomberg-terminal CSS, and types for the old schema).
+Faiz confirmed: wipe it now, true clean slate. Done — commit `622ad08`.
+
+## What got built (Sprint 0 skeletons)
+
+| Commit | What |
+|---|---|
+| `622ad08` | Removed the leftover legacy frontend (49 files) |
+| `ec4c0de` | Skeleton FastAPI backend: `app/main.py` (`/health`), `app/config/settings.py`, `requirements.txt`. Fixed `backend/Dockerfile` (it still referenced now-deleted top-level `prompts/`/`schemas/`/etc. dirs — would have failed to build) |
+| `d1e9e36` | Skeleton React frontend: `index.html`, `main.tsx`, `App.tsx` (polls `/health`, shows a status badge), restored `eslint.config.js` |
+
+Both skeletons were tested locally before committing: backend via `uvicorn` + `curl /health` (200
+OK), frontend via `npm run lint` and `npm run build` (both clean). Neither has been deployed to
+Railway — that hasn't been checked, so per the status-honesty rule this stays "written, not yet
+deployed" until a live Railway URL is checked or Faiz confirms he redeployed.
 
 ## Needs from Faiz right now
 
 | Item | Why |
 |---|---|
-| **Push local commits to GitHub**: `git push origin main` (currently 2 commits ahead: `8ad0221` reset, `d01e601` guardrail doc) | This session's shell has no GitHub push access |
-| **Delete the 6 leftover branches** on GitHub — commands in the sprint plan doc | Cleanup, not blocking |
-| **Add `MISTRAL_API_KEY` to `backend/.env`** | Currently missing locally (only `GOOGLE_AI_STUDIO_API_KEY` is set) — blocks local testing of the Mistral fallback even though Railway may have it configured for production |
-| Confirm go-ahead to start building Sprint 0's skeleton apps (FastAPI + React, deployed via the existing Dockerfiles) | Next concrete build step |
+| **Add `MISTRAL_API_KEY` to `backend/.env`** | Blocks starting the Gemini+Mistral provider wiring — Faiz said he'd add it himself |
+| Delete the 6 leftover branches on GitHub — commands in the sprint plan doc | Cleanup, not blocking |
 
 ## Known ongoing issue
 
-`device_bash` (the sandboxed shell used by Claude sessions on this machine) has no GitHub
-credentials and no raw-TCP network access (HTTP(S)-via-proxy only, so it can't reach Supabase's
-Postgres port directly either — schema was read from the local Alembic migration files instead,
-which worked fine and needed no network at all).
+Neither the cloud session shell nor the shell on Faiz's linked device has GitHub push credentials
+or raw-TCP network access — commits get pushed by Faiz from his own terminal, and any DB schema
+work reads the local Alembic migration files rather than connecting to Supabase directly.
 
 ## Changes / history
 
 | Date | Session | Summary | Detail |
 |---|---|---|---|
-| 2026-09-21 | Sprint 0 started: guardrail doc + real schema mapped | Recreated a lean `CLAUDE.md` (5 non-negotiable rules + git/status-honesty/secrets discipline), committed locally as `d01e601` (not yet pushed — no GitHub access from this session). Mapped the real, current Supabase schema from the 12 kept Alembic migration files (no live DB connection possible or needed) — 21 tables, confirmed no separate non-equity tables exist, just a `holdings.asset_class` discriminator column and a nullable `portfolio_positions.acquired_at`. Found `MISTRAL_API_KEY` missing from local `.env`. All 3 prior open checkpoints (DB strategy, LLM provider, branch cleanup) decided by Faiz. | [rebuild sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
-| 2026-09-21 | Full repo reset + rebuild plan written | Faiz overrode the prior day's "continue & consolidate" decision and had the repo wiped except Railway/Supabase/GitHub config, as a clean-slate restart. Committed and pushed as `8ad0221` ("reset") with full git history preserved. Real Supabase data untouched. | [rebuild sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
+| 2026-09-21 | Sprint 0 skeletons built | Found and removed leftover legacy frontend (49 files) the reset had missed. Built and locally tested the skeleton FastAPI backend (`/health`) and skeleton React frontend (health badge), fixed a stale Dockerfile. Pushed to `main`. Gemini+Mistral wiring still blocked on `MISTRAL_API_KEY`. | [rebuild sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
+| 2026-09-21 | Sprint 0 started: guardrail doc + real schema mapped | Recreated a lean `CLAUDE.md`, committed. Mapped the real Supabase schema from Alembic migrations (21 tables, no separate non-equity tables). Found `MISTRAL_API_KEY` missing from local `.env`. All 3 prior open checkpoints decided by Faiz. | [rebuild sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
+| 2026-09-21 | Full repo reset + rebuild plan written | Faiz had the repo wiped except Railway/Supabase/GitHub config, as a clean-slate restart. Committed and pushed as `8ad0221` ("reset") with full git history preserved. Real Supabase data untouched. | [rebuild sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
 
 *Full pre-reset history (Phases 0–10 and the incremental Sprint 0-2 redesign work) is preserved in
-this project's other docs and in git history.*
+the Claude project's other docs and in git history.*

@@ -3,15 +3,15 @@
 **Supersedes** the pre-wipe incremental redesign plan (ADR 0019/0020: "continue & consolidate, no
 rebuild" — deleted from this repo in the 2026-09-21 reset, still readable as a Claude project doc).
 On 2026-09-21 Faiz overrode that decision and had the repo wiped to a clean slate. This doc plans
-the rebuild from that clean slate. **All 3 open checkpoints are resolved and Sprint 0 is underway.**
+the rebuild from that clean slate. **Sprint 0 is underway — skeleton apps are up and tested locally.**
 
 ## Where things actually stand right now
 
 | | |
 |---|---|
-| Repo | `main` at commit `d01e601` ("docs: recreate lean guardrail doc..."), on top of `8ad0221` ("reset"). Full git history preserved — nothing force-pushed or squashed. |
-| Kept on disk | `backend/Dockerfile`, `frontend/Dockerfile`, `docker/` (compose + entrypoint), `.dockerignore`, `frontend/nginx.conf` (Railway deploy) · `backend/alembic/` + `alembic.ini` (Supabase migration history) · `backend/.env` + both `.env.example` files · `.gitignore`, `.gitattributes` · `CLAUDE.md` (recreated guardrail doc) |
-| Deleted | All application code, `README.md`, old `CLAUDE.md`, `docs/`, `prompts/`, `research/`, `scenarios/`, `schemas/`, `scoring/`, `discount_rate/`, `Claude outputs/` |
+| Repo | `main`, pushed through commit `d1e9e36` (see Sprint 0 table for what that includes). Full git history preserved — nothing force-pushed or squashed. |
+| Kept on disk | `backend/Dockerfile`, `frontend/Dockerfile`, `docker/` (compose + entrypoint), `.dockerignore`, `frontend/nginx.conf` (Railway deploy) · `backend/alembic/` + `alembic.ini` (Supabase migration history) · `backend/.env` + both `.env.example` files · `.gitignore`, `.gitattributes` · `CLAUDE.md` |
+| Corrected 2026-09-21 | The original reset only wiped `backend/app/`. `frontend/src/` still held the entire pre-rebuild multi-asset UI until this session — see Sprint 0 table. Now removed. |
 | Real data | **Untouched, and staying that way** (Decision 1 below). Supabase still holds the real portfolio/holdings/analysis history, including legacy non-equity rows/columns. |
 
 ## The Brain's 5 steps — what the rebuild has to deliver
@@ -27,9 +27,9 @@ the rebuild from that clean slate. **All 3 open checkpoints are resolved and Spr
 
 ## Non-negotiable design rules
 
-Recreated as this repo's `CLAUDE.md` (commit `d01e601`) — the 5 rules (deterministic arithmetic,
-evidence-first citations, versioned prompts/schemas, blind-pass confirmation-bias guard, untrusted
-document text) plus git/status-honesty/secrets discipline carried forward from the pre-wipe version.
+This repo's `CLAUDE.md` — 5 rules (deterministic arithmetic, evidence-first citations, versioned
+prompts/schemas, blind-pass confirmation-bias guard, untrusted document text) plus git/status-honesty/
+secrets discipline, plus a docs-sync rule (see "Changes / history" below).
 
 ## 3 open checkpoints — resolved (2026-09-21)
 
@@ -37,7 +37,7 @@ document text) plus git/status-honesty/secrets discipline carried forward from t
 |---|---|---|
 | 1 | DB schema strategy | **Leave the existing Supabase schema and data exactly as-is.** No migration to strip non-equity tables/columns now. |
 | 2 | LLM provider | **Reuse Google AI Studio (Gemini) + Mistral** via keys in `backend/.env`/Railway. Rate-limit resilience (budget guard, retry/backoff, RPM pacing) built in from day one this time. |
-| 3 | Leftover GitHub branches | **Delete all 6** — commands below. |
+| 3 | Leftover GitHub branches | **Delete all 6** — commands below. Still pending. |
 
 ## Actual current Supabase schema (read from `backend/alembic/versions/`, 21 tables, no live DB connection needed)
 
@@ -55,12 +55,12 @@ tables. Nothing to route around structurally — just don't populate/query those
 | `investment_theses`, `valuation_cases`, `portfolio_risk_snapshots` | Phase 5 (thesis & portfolio intelligence) |
 | `llm_usage_events` | LLM usage ledger |
 
-## ⚠️ Found while checking Sprint 0: local `.env` is missing `MISTRAL_API_KEY`
+## ⚠️ Still open: local `.env` is missing `MISTRAL_API_KEY`
 
-`backend/.env` has `GOOGLE_AI_STUDIO_API_KEY` populated but **no `MISTRAL_API_KEY` line at all**
-(only present as a commented template in `.env.example`). Railway may well have it configured
-separately for production, but local dev/testing of the Mistral fallback won't work until it's added
-to `backend/.env` too.
+`backend/.env` has `GOOGLE_AI_STUDIO_API_KEY` populated but still **no `MISTRAL_API_KEY` line**
+(only a commented template in `.env.example`) as of 2026-09-21. Faiz is adding it himself; the
+Gemini+Mistral provider wiring (budget guard, retry/backoff, RPM pacing) is written only once that's
+confirmed in place, so a real key never has to pass through chat/session docs.
 
 ## Sprints
 
@@ -68,12 +68,15 @@ to `backend/.env` too.
 
 | Item | Status |
 |---|---|
-| Recreate a lean guardrail doc | ✅ Done — `CLAUDE.md`, commit `d01e601` |
+| Recreate a lean guardrail doc | ✅ Done — `CLAUDE.md` |
 | Map the real Supabase schema | ✅ Done — see table above |
 | DB strategy decision | ✅ Decided |
-| LLM provider decision | ✅ Decided — ⚠️ blocked on adding `MISTRAL_API_KEY` locally |
-| Skeleton FastAPI app + skeleton React/Vite app, deployed through the existing Dockerfiles to a real Railway URL with just a healthcheck | Not started |
-| Wire Gemini + Mistral providers with budget guard, retry/backoff and RPM pacing from the start | Not started |
+| LLM provider decision | ✅ Decided |
+| Remove leftover legacy multi-asset frontend (reset had missed it) | ✅ Done 2026-09-21 — commit `622ad08` |
+| Skeleton FastAPI app (`/health`) | ✅ Done 2026-09-21 — commit `ec4c0de`. Tested locally (`uvicorn` + `curl /health` → 200 OK). **Not deployed to Railway yet.** |
+| Skeleton React/Vite app (health badge) | ✅ Done 2026-09-21 — commit `d1e9e36`. Tested locally (`npm run lint` + `npm run build` clean). **Not deployed to Railway yet.** |
+| Deploy both skeletons through the existing Dockerfiles to a real Railway URL | Not started |
+| Wire Gemini + Mistral providers with budget guard, retry/backoff and RPM pacing | ⏸️ Blocked on `MISTRAL_API_KEY` being added to `backend/.env` |
 
 ### Sprint 1 — Equity data model & deterministic calculations
 
@@ -135,7 +138,8 @@ git push origin --delete fix/s3-path-style-addressing
 
 | Date | Summary |
 |---|---|
+| 2026-09-21 | Sprint 0 skeletons built: found and removed the legacy multi-asset frontend the original reset had missed (49 files, commit `622ad08`); built and locally tested a skeleton FastAPI backend with `/health` (commit `ec4c0de`, also fixed a Dockerfile that still referenced deleted top-level asset dirs); built and locally tested a skeleton React frontend with a health badge (commit `d1e9e36`). Pushed to `main`. Gemini+Mistral wiring still blocked on `MISTRAL_API_KEY`. Added a docs-sync rule to `CLAUDE.md`: every update to the Claude project's `progress.md`/sprint plan now also syncs `docs/PROGRESS.md` and this file in the same change, so GitHub reflects current state too. |
 | 2026-09-21 | Repo wiped except Railway/Supabase/GitHub config, committed and pushed as `8ad0221` ("reset") with full history preserved. Real Supabase data untouched. |
 | 2026-09-21 | 3 open checkpoints decided: keep DB as-is, reuse Gemini+Mistral with resilience built in from day one, delete 6 leftover branches. |
-| 2026-09-21 | Sprint 0 partially done: mapped the real 21-table Supabase schema from the kept Alembic migrations; recreated a lean `CLAUDE.md` guardrail doc (commit `d01e601`); found `MISTRAL_API_KEY` missing from local `.env`. Skeleton apps + provider wiring still to do. |
+| 2026-09-21 | Sprint 0 partially done: mapped the real 21-table Supabase schema from the kept Alembic migrations; recreated a lean `CLAUDE.md` guardrail doc; found `MISTRAL_API_KEY` missing from local `.env`. |
 | 2026-09-21 | This plan and `docs/PROGRESS.md` added to the repo itself (previously only in the Claude project). |
