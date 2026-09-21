@@ -24,7 +24,9 @@ import type {
   MacroResearch,
   PortfolioImportResponse,
   PortfolioSnapshotSummary,
+  PortfolioWipeResult,
   SectorResearch,
+  SnapshotDeleteResult,
 } from "./types";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL as string | undefined;
@@ -132,7 +134,15 @@ export const api = {
       query: accountId ? { account_id: accountId } : undefined,
     }),
   deleteSnapshot: (id: string) =>
-    request<void>(`/portfolio/snapshots/${id}`, { method: "DELETE", query: { confirm: true } }),
+    request<SnapshotDeleteResult>(`/portfolio/snapshots/${id}`, {
+      method: "DELETE",
+      query: { confirm: true },
+    }),
+  /** Wipes every account, snapshot, and position — Holdings and Documents
+   * are out of scope (see backend/app/api/portfolio.py's
+   * delete_all_portfolio_data). Added 2026-09-21. */
+  deleteAllPortfolioData: () =>
+    request<PortfolioWipeResult>("/portfolio/all", { method: "DELETE", query: { confirm: true } }),
 
   /** Imports one broker-export CSV (see backend/app/api/portfolio.py's
    * POST /portfolio/import-csv). `accountNumber` is optional — the real

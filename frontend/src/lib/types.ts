@@ -40,6 +40,48 @@ export const INSTRUMENT_TYPE_LABELS: Record<string, string> = {
 
 export const EQUITY_ANALYZABLE_TYPES = new Set(["stock", "equity_etf"]);
 
+/** Legacy pre-2026-09-21 whisky/collectibles holdings weren't reset along
+ * with the rest of the DB (CLAUDE.md — "the DB is not being reset"), and
+ * `GET /holdings` returns every row in the table, so they still show up
+ * here individually — one row per bottle/distillery, each with `sector`
+ * set to the distillery name (that old app's own categorization hack).
+ * There's no instrument-type tag that marks them (`asset_class_raw` is
+ * hardcoded to "equity" for everything this rebuild writes, and these
+ * predate that column's real use) — the distillery name in `sector` is
+ * the only signal available, so this is the exact, real set of distillery
+ * names that show up as "Sector Research" chips today. Used by
+ * HoldingsListPage to fold these into one "Whisky" group instead of
+ * listing each bottle separately (Faiz's request, 2026-09-21) — gold and
+ * silver holdings are left as individual rows, per his explicit choice.
+ * If a new distillery name shows up that isn't in this list, it'll just
+ * list as its own row rather than being silently miscategorized. */
+export const WHISKY_SECTORS = new Set([
+  "Aberfeldy",
+  "Auchroisk",
+  "Berentsens Brygghus",
+  "Bowmore",
+  "Buffalo Trace Distillery",
+  "Caol Ila",
+  "Cardhu",
+  "Craigellachie",
+  "Dumbarton",
+  "Glenfarclas",
+  "Glenfiddich",
+  "Glenlivet",
+  "Glenmorangie",
+  "Johnnie Walker",
+  "Lagavulin",
+  "Loch Lomond",
+  "Longmorn",
+  "Midleton (1975-)",
+  "Port Dundas",
+  "Pulteney",
+  "Tamdhu",
+  "Tomatin",
+  "Wild Turkey Distillery",
+  "Woodford Reserve",
+]);
+
 export interface HoldingCreateInput {
   ticker: string;
   name: string;
@@ -180,6 +222,26 @@ export interface PortfolioImportResponse {
   holdings_created: number;
   holdings_matched: number;
   was_duplicate_file: boolean;
+}
+
+export interface LegacyAnalysisPurgeCounts {
+  analysis_runs: number;
+  holding_analyses: number;
+  factor_assessments: number;
+  evidence_references: number;
+}
+
+export interface SnapshotDeleteResult {
+  deleted_snapshot_id: string;
+  positions_deleted: number;
+  legacy_analysis_purged: LegacyAnalysisPurgeCounts;
+}
+
+export interface PortfolioWipeResult {
+  accounts_deleted: number;
+  snapshots_deleted: number;
+  positions_deleted: number;
+  legacy_analysis_purged: LegacyAnalysisPurgeCounts;
 }
 
 /** Mirrors backend/app/schemas/research.py (Sprint 2 — live, evidence-first

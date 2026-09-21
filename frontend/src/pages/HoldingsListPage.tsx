@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, ApiError } from "../lib/api";
 import type { Holding, HoldingCreateInput } from "../lib/types";
-import { INSTRUMENT_TYPE_LABELS } from "../lib/types";
+import { INSTRUMENT_TYPE_LABELS, WHISKY_SECTORS } from "../lib/types";
 import { Button, Card, EmptyState, PageHeader } from "../components/ui";
 
 const CURRENCIES = ["NOK", "USD", "EUR", "GBP", "SEK", "DKK"];
@@ -100,6 +100,74 @@ function NewHoldingForm({
   );
 }
 
+/** One row in the table: either a plain holding, or the collapsed whisky
+ * group (see lib/types.ts's WHISKY_SECTORS — Faiz's request, 2026-09-21:
+ * these legacy pre-reset bottles/distilleries should fold into one row
+ * instead of listing individually; gold/silver stay as individual rows,
+ * his explicit choice). */
+type HoldingsRow =
+  | { kind: "holding"; holding: Holding }
+  | { kind: "whisky-group"; holdings: Holding[] };
+
+function groupHoldings(holdings: Holding[]): HoldingsRow[] {
+  const whisky: Holding[] = [];
+  const rows: HoldingsRow[] = [];
+  for (const h of holdings) {
+    if (h.sector && WHISKY_SECTORS.has(h.sector)) {
+      whisky.push(h);
+    } else {
+      rows.push({ kind: "holding", holding: h });
+    }
+  }
+  if (whisky.length > 0) {
+    rows.push({ kind: "whisky-group", holdings: whisky });
+  }
+  return rows;
+}
+
+function WhiskyGroupRow({ holdings }: { holdings: Holding[] }) {
+  const [expanded, setExpanded] = useState(false);
+  const distilleries = new Set(holdings.map((h) => h.sector)).size;
+  const documentCount = holdings.reduce((sum, h) => sum + h.document_count, 0);
+
+  return (
+    <>
+      <tr
+        className="cursor-pointer border-b border-border-subtle bg-border-subtle/40 last:border-0 hover:bg-border-subtle"
+        onClick={() => setExpanded((v) => !v)}
+      >
+        <td className="px-4 py-3 font-medium text-ink" colSpan={2}>
+          {expanded ? "▾" : "▸"} Whisky ({holdings.length} bottle{holdings.length === 1 ? "" : "s"})
+        </td>
+        <td className="px-4 py-3 text-ink-muted">Commodity (collectible)</td>
+        <td className="px-4 py-3 text-ink-muted">{distilleries} distiller{distilleries === 1 ? "y" : "ies"}</td>
+        <td className="px-4 py-3 tabular text-ink-muted">—</td>
+        <td className="px-4 py-3 text-right tabular text-ink-muted">{documentCount}</td>
+      </tr>
+      {expanded &&
+        holdings.map((h) => (
+          <tr key={h.id} className="border-b border-border-subtle bg-border-subtle/20 last:border-0">
+            <td className="px-4 py-3 pl-8">
+              <Link
+                to={`/holdings/${h.id}`}
+                className="font-medium text-accent hover:text-accent-hover"
+              >
+                {h.ticker}
+              </Link>
+            </td>
+            <td className="px-4 py-3 text-ink">{h.name}</td>
+            <td className="px-4 py-3 text-ink-muted">
+              {INSTRUMENT_TYPE_LABELS[h.asset_class_raw] ?? h.asset_class_raw}
+            </td>
+            <td className="px-4 py-3 text-ink-muted">{h.sector ?? "—"}</td>
+            <td className="px-4 py-3 tabular text-ink-muted">{h.trading_currency}</td>
+            <td className="px-4 py-3 text-right tabular text-ink-muted">{h.document_count}</td>
+          </tr>
+        ))}
+    </>
+  );
+}
+
 export default function HoldingsListPage() {
   const [holdings, setHoldings] = useState<Holding[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -159,27 +227,31 @@ export default function HoldingsListPage() {
               </tr>
             </thead>
             <tbody>
-              {holdings.map((h) => (
-                <tr key={h.id} className="border-b border-border-subtle last:border-0">
-                  <td className="px-4 py-3">
-                    <Link
-                      to={`/holdings/${h.id}`}
-                      className="font-medium text-accent hover:text-accent-hover"
-                    >
-                      {h.ticker}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3 text-ink">{h.name}</td>
-                  <td className="px-4 py-3 text-ink-muted">
-                    {INSTRUMENT_TYPE_LABELS[h.asset_class_raw] ?? h.asset_class_raw}
-                  </td>
-                  <td className="px-4 py-3 text-ink-muted">{h.sector ?? "—"}</td>
-                  <td className="px-4 py-3 tabular text-ink-muted">{h.trading_currency}</td>
-                  <td className="px-4 py-3 text-right tabular text-ink-muted">
-                    {h.document_count}
-                  </td>
-                </tr>
-              ))}
+              {groupHoldings(holdings).map((row) =>
+                row.kind === "whisky-group" ? (
+                  <WhiskyGroupRow key="whisky-group" holdings={row.holdings} />
+                ) : (
+                  <tr key={row.holding.id} className="border-b border-border-subtle last:border-0">
+                    <td className="px-4 py-3">
+                      <Link
+                        to={`/holdings/${row.holding.id}`}
+                        className="font-medium text-accent hover:text-accent-hover"
+                      >
+                        {row.holding.ticker}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3 text-ink">{row.holding.name}</td>
+                    <td className="px-4 py-3 text-ink-muted">
+                      {INSTRUMENT_TYPE_LABELS[row.holding.asset_class_raw] ?? row.holding.asset_class_raw}
+                    </td>
+                    <td className="px-4 py-3 text-ink-muted">{row.holding.sector ?? "—"}</td>
+                    <td className="px-4 py-3 tabular text-ink-muted">{row.holding.trading_currency}</td>
+                    <td className="px-4 py-3 text-right tabular text-ink-muted">
+                      {row.holding.document_count}
+                    </td>
+                  </tr>
+                ),
+              )}
             </tbody>
           </table>
         </Card>

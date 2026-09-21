@@ -1,6 +1,17 @@
 import { useEffect, useState } from "react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  LabelList,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { api, ApiError } from "../lib/api";
-import type { Account, PortfolioSnapshotSummary } from "../lib/types";
+import type { Account, Holding, PortfolioSnapshotSummary } from "../lib/types";
+import { INSTRUMENT_TYPE_LABELS } from "../lib/types";
 import { formatDate } from "../lib/format";
 import { Button, Card, EmptyState, PageHeader, StatusBadge } from "../components/ui";
 
@@ -90,6 +101,77 @@ function UploadPanel({ onImported }: { onImported: () => void }) {
   );
 }
 
+/** Portfolio composition by instrument type (app/domain/instrument_types.py)
+ * — counts of holdings, not dollar value (no portfolio-wide $ aggregation
+ * exists yet across accounts/currencies; that's Sprint 5's dashboard).
+ * A single accent-colored horizontal bar chart, direct-labeled, matching
+ * ValuationPanel's chart conventions (one quiet accent color, no
+ * decorative categorical palette — see the Design & UX direction in the
+ * sprint plan doc). Answers "are there any graphs yet?" for this page
+ * without pretending to have real position values before Sprint 5 builds
+ * that properly. */
+function CompositionChart({ holdings }: { holdings: Holding[] | null }) {
+  if (holdings === null) return null;
+  if (holdings.length === 0) return null;
+
+  const counts = new Map<string, number>();
+  for (const h of holdings) {
+    counts.set(h.asset_class_raw, (counts.get(h.asset_class_raw) ?? 0) + 1);
+  }
+  const data = Array.from(counts.entries())
+    .map(([type, count]) => ({
+      label: INSTRUMENT_TYPE_LABELS[type] ?? type,
+      count,
+    }))
+    .sort((a, b) => b.count - a.count);
+
+  return (
+    <Card className="mb-8">
+      <h2 className="mb-1 text-sm font-semibold text-ink">Composition by instrument type</h2>
+      <p className="mb-4 text-sm text-ink-muted">
+        Every holding tracked (including legacy non-equity ones), by count — not yet by
+        portfolio value.
+      </p>
+      <div style={{ height: Math.max(120, data.length * 36) }} className="w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={data}
+            layout="vertical"
+            margin={{ top: 4, right: 24, bottom: 0, left: 0 }}
+          >
+            <CartesianGrid stroke="#F0EFED" horizontal={false} />
+            <XAxis type="number" hide />
+            <YAxis
+              type="category"
+              dataKey="label"
+              tick={{ fontSize: 12, fill: "#111111" }}
+              axisLine={false}
+              tickLine={false}
+              width={120}
+            />
+            <Tooltip
+              formatter={(value: number) => [value, "Holdings"]}
+              contentStyle={{
+                fontSize: 12,
+                borderRadius: 8,
+                border: "1px solid #E5E7EB",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+              }}
+            />
+            <Bar dataKey="count" fill="#2563EB" radius={[0, 4, 4, 0]} barSize={16}>
+              <LabelList
+                dataKey="count"
+                position="right"
+                style={{ fontSize: 12, fill: "#6B7280" }}
+              />
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </Card>
+  );
+}
+
 function AccountsPanel({
   accounts,
   onChanged,
@@ -174,6 +256,7 @@ function SnapshotsPanel({
   onChanged: () => void;
 }) {
   const [error, setError] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   async function handleDelete(snapshot: PortfolioSnapshotSummary) {
@@ -186,9 +269,18 @@ function SnapshotsPanel({
     )
       return;
     setError(null);
+    setNote(null);
     setDeletingId(snapshot.id);
     try {
-      await api.deleteSnapshot(snapshot.id);
+      const result = await api.deleteSnapshot(snapshot.id);
+      const purgedRuns = result.legacy_analysis_purged.analysis_runs;
+      if (purgedRuns > 0) {
+        setNote(
+          `Deleted — this snapshot also had ${purgedRuns} old analysis record${
+            purgedRuns === 1 ? "" : "s"
+          } from before the rebuild still pointing at it; those were removed too.`,
+        );
+      }
       onChanged();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not delete this snapshot.");
@@ -201,6 +293,7 @@ function SnapshotsPanel({
     <Card className="overflow-hidden !p-0">
       <h2 className="px-5 pt-5 text-sm font-semibold text-ink">Snapshots</h2>
       {error && <p className="px-5 pt-2 text-sm text-negative">{error}</p>}
+      {note && <p className="px-5 pt-2 text-sm text-ink-muted">{note}</p>}
       {snapshots === null && <p className="px-5 py-5 text-sm text-ink-muted">Loading…</p>}
       {snapshots !== null && snapshots.length === 0 && (
         <div className="px-5 pb-5 pt-3">
@@ -251,17 +344,80 @@ function SnapshotsPanel({
   );
 }
 
+function DeleteAllPanel({
+  accounts,
+  snapshots,
+  onChanged,
+}: {
+  accounts: Account[] | null;
+  snapshots: PortfolioSnapshotSummary[] | null;
+  onChanged: () => void;
+}) {
+  const [error, setError] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const accountCount = accounts?.length ?? 0;
+  const snapshotCount = snapshots?.length ?? 0;
+  const nothingToDelete = accountCount === 0 && snapshotCount === 0;
+
+  async function handleDeleteAll() {
+    if (
+      !window.confirm(
+        `Delete ALL portfolio data — ${accountCount} account${accountCount === 1 ? "" : "s"} and ` +
+          `${snapshotCount} snapshot${snapshotCount === 1 ? "" : "s"} (and every position in them)? ` +
+          `Holdings (ticker records) and their documents are kept. This cannot be undone.`,
+      )
+    )
+      return;
+    setError(null);
+    setNote(null);
+    setDeleting(true);
+    try {
+      const result = await api.deleteAllPortfolioData();
+      const purgedRuns = result.legacy_analysis_purged.analysis_runs;
+      setNote(
+        `Wiped ${result.accounts_deleted} account(s), ${result.snapshots_deleted} snapshot(s), ` +
+          `${result.positions_deleted} position(s)` +
+          (purgedRuns > 0 ? `, plus ${purgedRuns} old pre-rebuild analysis record(s).` : "."),
+      );
+      onChanged();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not wipe portfolio data.");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  return (
+    <Card className="mb-8 border-negative/30">
+      <h2 className="mb-1 text-sm font-semibold text-ink">Delete all portfolio data</h2>
+      <p className="mb-4 text-sm text-ink-muted">
+        Wipes every account, snapshot, and position in one go — faster than deleting them one by
+        one. Holdings (your ticker records) and their documents are not touched.
+      </p>
+      {error && <p className="mb-3 text-sm text-negative">{error}</p>}
+      {note && <p className="mb-3 text-sm text-ink-muted">{note}</p>}
+      <Button variant="danger" disabled={deleting || nothingToDelete} onClick={handleDeleteAll}>
+        {deleting ? "Deleting…" : "Delete all portfolio data"}
+      </Button>
+    </Card>
+  );
+}
+
 export default function PortfolioPage() {
   const [accounts, setAccounts] = useState<Account[] | null>(null);
   const [snapshots, setSnapshots] = useState<PortfolioSnapshotSummary[] | null>(null);
+  const [holdings, setHoldings] = useState<Holding[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   function reload() {
     setError(null);
-    Promise.all([api.listAccounts(), api.listSnapshots()])
-      .then(([a, s]) => {
+    Promise.all([api.listAccounts(), api.listSnapshots(), api.listHoldings()])
+      .then(([a, s, h]) => {
         setAccounts(a);
         setSnapshots(s);
+        setHoldings(h);
       })
       .catch((err) =>
         setError(err instanceof ApiError ? err.message : "Could not load portfolio data."),
@@ -289,13 +445,16 @@ export default function PortfolioPage() {
       {error && <p className="mb-4 text-sm text-negative">{error}</p>}
 
       <UploadPanel onImported={reload} />
+      <CompositionChart holdings={holdings} />
       <AccountsPanel accounts={accounts} onChanged={reload} />
       <SnapshotsPanel snapshots={snapshots} accountsById={accountsById} onChanged={reload} />
 
-      <p className="mt-4 text-xs text-ink-muted">
+      <p className="my-4 text-xs text-ink-muted">
         Deleting an account or snapshot is permanent — the backend refuses it while positions
         still reference it, so remove the snapshot before the account.
       </p>
+
+      <DeleteAllPanel accounts={accounts} snapshots={snapshots} onChanged={reload} />
     </div>
   );
 }
