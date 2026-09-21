@@ -46,3 +46,20 @@ def client(tmp_path):
         yield test_client
 
     app.dependency_overrides.clear()
+
+
+@pytest.fixture()
+def db_session(client):
+    """A direct DB session against the same in-memory SQLite DB `client`
+    talks to (StaticPool keeps every connection on one shared SQLite
+    connection, so writes made here are visible to the API and vice
+    versa) — for tests that need to insert rows no API endpoint creates,
+    like the legacy analysis_runs fixture rows in
+    test_portfolio_api.py's cascade-delete tests.
+    """
+    override = app.dependency_overrides[get_db]
+    session = next(override())
+    try:
+        yield session
+    finally:
+        session.close()

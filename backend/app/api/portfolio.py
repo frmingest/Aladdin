@@ -27,18 +27,28 @@ from app.models.account import Account
 from app.models.document import Document, DocumentPage
 from app.models.financial_line_item import FinancialLineItem
 from app.models.holding import Holding
+from app.models.legacy_analysis import (
+    AnalysisRun,
+    EvidenceReference,
+    FactorAssessment,
+    HoldingAnalysis,
+    LlmUsageEvent,
+)
 from app.models.portfolio import PortfolioPosition, PortfolioSnapshot
 from app.providers.factory import get_object_storage
 from app.schemas.account import AccountOut
 from app.schemas.document import DocumentOut
 from app.schemas.portfolio import (
     ConcentrationOut,
+    LegacyAnalysisPurgeCounts,
     PortfolioImportResponse,
     PortfolioPositionIn,
     PortfolioPositionOut,
     PortfolioSnapshotCreate,
     PortfolioSnapshotOut,
     PortfolioSnapshotSummary,
+    PortfolioWipeResult,
+    SnapshotDeleteResult,
 )
 from app.services.calculations import herfindahl_hirschman_index
 from app.services.portfolio_import.csv_parser import CsvParseError
@@ -47,6 +57,76 @@ from app.services.portfolio_import.ingestion import import_portfolio_csv
 router = APIRouter(prefix="/portfolio", tags=["portfolio"])
 
 SNAPSHOT_STATUS_PROCESSED = "processed"
+
+
+def _purge_legacy_analysis(db: Session, snapshot_ids: list[UUID]) -> LegacyAnalysisPurgeCounts:
+    """Cascade-removes legacy Phase-3 analysis rows (see
+    app/models/legacy_analysis.py) that reference the given portfolio
+    snapshots — the pre-2026-09-21 app's `analysis_runs` and its children.
+
+    Deleting a snapshot used to 500 with a raw psycopg2 ForeignKeyViolation
+    once a real snapshot had one of these attached (`analysis_runs`
+    references `portfolio_snapshot_id` with no ON DELETE CASCADE). Faiz's
+    explicit choice, 2026-09-21: cascade-delete the whole legacy analysis
+    chain rather than block the snapshot delete or silently orphan rows.
+    `llm_usage_events` is real spend/usage history, not disposable analysis
+    output, so those rows are only unlinked (their FKs here are nullable),
+    never deleted.
+
+    Uses plain SQLAlchemy queries (not raw SQL) so this also works against
+    the test suite's in-memory SQLite, not just Postgres.
+    """
+    empty = LegacyAnalysisPurgeCounts(
+        analysis_runs=0, holding_analyses=0, factor_assessments=0, evidence_references=0
+    )
+    if not snapshot_ids:
+        return empty
+
+    run_ids = list(
+        db.scalars(
+            select(AnalysisRun.id).where(AnalysisRun.portfolio_snapshot_id.in_(snapshot_ids))
+        )
+    )
+    if not run_ids:
+        return empty
+
+    ha_ids = list(
+        db.scalars(select(HoldingAnalysis.id).where(HoldingAnalysis.analysis_run_id.in_(run_ids)))
+    )
+
+    evidence_deleted = 0
+    factor_deleted = 0
+    if ha_ids:
+        evidence_deleted = (
+            db.query(EvidenceReference)
+            .filter(EvidenceReference.holding_analysis_id.in_(ha_ids))
+            .delete(synchronize_session=False)
+        )
+        factor_deleted = (
+            db.query(FactorAssessment)
+            .filter(FactorAssessment.holding_analysis_id.in_(ha_ids))
+            .delete(synchronize_session=False)
+        )
+        db.query(LlmUsageEvent).filter(LlmUsageEvent.holding_analysis_id.in_(ha_ids)).update(
+            {"holding_analysis_id": None}, synchronize_session=False
+        )
+        db.query(HoldingAnalysis).filter(HoldingAnalysis.id.in_(ha_ids)).delete(
+            synchronize_session=False
+        )
+
+    db.query(LlmUsageEvent).filter(LlmUsageEvent.analysis_run_id.in_(run_ids)).update(
+        {"analysis_run_id": None}, synchronize_session=False
+    )
+    analysis_runs_deleted = (
+        db.query(AnalysisRun).filter(AnalysisRun.id.in_(run_ids)).delete(synchronize_session=False)
+    )
+
+    return LegacyAnalysisPurgeCounts(
+        analysis_runs=analysis_runs_deleted,
+        holding_analyses=len(ha_ids),
+        factor_assessments=factor_deleted,
+        evidence_references=evidence_deleted,
+    )
 
 
 def _position_to_out(position: PortfolioPosition) -> PortfolioPositionOut:
@@ -231,23 +311,32 @@ def list_snapshots(
     if account_id is not None:
         query = query.where(PortfolioSnapshot.account_id == account_id)
     snapshots = db.scalars(query).all()
+    if not snapshots:
+        return []
+
+    # One aggregate query for every snapshot's position count, not one
+    # query per snapshot — the page-load-speed fix (2026-09-21): with N
+    # snapshots this used to be N round trips to Postgres, now it's 1.
+    snapshot_ids = [snap.id for snap in snapshots]
+    position_counts = dict(
+        db.execute(
+            select(PortfolioPosition.snapshot_id, func.count())
+            .where(PortfolioPosition.snapshot_id.in_(snapshot_ids))
+            .group_by(PortfolioPosition.snapshot_id)
+        ).all()
+    )
 
     return [
         PortfolioSnapshotSummary(
-            id=s.id,
-            uploaded_at=s.uploaded_at,
-            source_file_id=s.source_file_id,
-            reporting_currency=s.reporting_currency,
-            status=s.status,
-            account_id=s.account_id,
-            position_count=db.scalar(
-                select(func.count())
-                .select_from(PortfolioPosition)
-                .where(PortfolioPosition.snapshot_id == s.id)
-            )
-            or 0,
+            id=snap.id,
+            uploaded_at=snap.uploaded_at,
+            source_file_id=snap.source_file_id,
+            reporting_currency=snap.reporting_currency,
+            status=snap.status,
+            account_id=snap.account_id,
+            position_count=position_counts.get(snap.id, 0),
         )
-        for s in snapshots
+        for snap in snapshots
     ]
 
 
@@ -259,10 +348,10 @@ def get_snapshot(snapshot_id: UUID, db: Session = Depends(get_db)) -> PortfolioS
     return _snapshot_to_out(snapshot)
 
 
-@router.delete("/snapshots/{snapshot_id}", status_code=204, response_model=None)
+@router.delete("/snapshots/{snapshot_id}", response_model=SnapshotDeleteResult)
 def delete_snapshot(
     snapshot_id: UUID, confirm: bool = False, db: Session = Depends(get_db)
-) -> None:
+) -> SnapshotDeleteResult:
     if not confirm:
         raise HTTPException(
             status_code=400,
@@ -271,10 +360,64 @@ def delete_snapshot(
     snapshot = db.get(PortfolioSnapshot, snapshot_id)
     if snapshot is None:
         raise HTTPException(status_code=404, detail="portfolio snapshot not found")
+
+    positions_deleted = len(snapshot.positions)
+    # Cascade-purge any legacy Phase-3 analysis rows referencing this
+    # snapshot *before* deleting it — otherwise Postgres 500s with a raw
+    # ForeignKeyViolation (analysis_runs.portfolio_snapshot_id has no ON
+    # DELETE CASCADE). See _purge_legacy_analysis's docstring.
+    purge_counts = _purge_legacy_analysis(db, [snapshot_id])
+
     # cascade="all, delete-orphan" on PortfolioSnapshot.positions (see
     # app/models/portfolio.py) — its positions go with it, by design.
     db.delete(snapshot)
     db.commit()
+
+    return SnapshotDeleteResult(
+        deleted_snapshot_id=snapshot_id,
+        positions_deleted=positions_deleted,
+        legacy_analysis_purged=purge_counts,
+    )
+
+
+@router.delete("/all", response_model=PortfolioWipeResult)
+def delete_all_portfolio_data(
+    confirm: bool = False, db: Session = Depends(get_db)
+) -> PortfolioWipeResult:
+    """Wipes every account, portfolio snapshot, and position in one call —
+    added 2026-09-21 at Faiz's request, as a faster reset path than
+    deleting snapshots/accounts one by one in the UI.
+
+    Scope is deliberately narrower than "everything": Holdings (ticker
+    records) and any Documents/extracted financial facts attached to them
+    are left untouched — Faiz's explicit choice, since those aren't
+    "portfolio" data in the same sense and are often worth keeping even
+    after a portfolio reset. This supersedes the CSV-import session's
+    earlier "granular deletes only, no bulk wipe" decision, at his
+    explicit ask this session — same destructive-operation guardrail
+    still applies (CLAUDE.md): `confirm=true` required, same as every
+    other delete here.
+    """
+    if not confirm:
+        raise HTTPException(
+            status_code=400,
+            detail="wiping all portfolio data is destructive — pass confirm=true to proceed",
+        )
+
+    snapshot_ids = list(db.scalars(select(PortfolioSnapshot.id)))
+    purge_counts = _purge_legacy_analysis(db, snapshot_ids)
+
+    positions_deleted = db.query(PortfolioPosition).delete(synchronize_session=False)
+    snapshots_deleted = db.query(PortfolioSnapshot).delete(synchronize_session=False)
+    accounts_deleted = db.query(Account).delete(synchronize_session=False)
+    db.commit()
+
+    return PortfolioWipeResult(
+        accounts_deleted=accounts_deleted,
+        snapshots_deleted=snapshots_deleted,
+        positions_deleted=positions_deleted,
+        legacy_analysis_purged=purge_counts,
+    )
 
 
 @router.post(

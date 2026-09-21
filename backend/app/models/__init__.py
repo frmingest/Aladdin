@@ -11,19 +11,31 @@ from app.models.base import Base
 from app.models.document import Document, DocumentChunk, DocumentPage
 from app.models.financial_line_item import FinancialLineItem
 from app.models.holding import Holding
+from app.models.legacy_analysis import (
+    AnalysisRun,
+    EvidenceReference,
+    FactorAssessment,
+    HoldingAnalysis,
+    LlmUsageEvent,
+)
 from app.models.market import FxObservation, MarketObservation, RiskFreeRateObservation
 from app.models.portfolio import PortfolioPosition, PortfolioSnapshot
 from app.models.research import ResearchItem, ResearchRun
 
 __all__ = [
     "Account",
+    "AnalysisRun",
     "Base",
     "Document",
     "DocumentChunk",
     "DocumentPage",
+    "EvidenceReference",
+    "FactorAssessment",
     "FinancialLineItem",
     "FxObservation",
     "Holding",
+    "HoldingAnalysis",
+    "LlmUsageEvent",
     "MarketObservation",
     "PortfolioPosition",
     "PortfolioSnapshot",

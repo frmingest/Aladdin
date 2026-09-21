@@ -86,3 +86,40 @@ class PortfolioImportResponse(BaseModel):
     holdings_created: int
     holdings_matched: int
     was_duplicate_file: bool
+
+
+class LegacyAnalysisPurgeCounts(BaseModel):
+    """How many pre-2026-09-21 Phase-3 analysis rows a snapshot delete (or
+    the bulk portfolio wipe) cascade-removed — see app/api/portfolio.py's
+    `_purge_legacy_analysis`. `llm_usage_events` rows are never counted
+    here because they're never deleted, only unlinked (real spend history).
+    """
+
+    analysis_runs: int
+    holding_analyses: int
+    factor_assessments: int
+    evidence_references: int
+
+
+class SnapshotDeleteResult(BaseModel):
+    """DELETE /portfolio/snapshots/{id}'s response. Changed from a bare 204
+    (2026-09-21) so the frontend can tell the person when deleting their
+    snapshot also cleaned up legacy analysis records left over from the
+    pre-reset app — it previously 500'd outright in that case."""
+
+    deleted_snapshot_id: UUID
+    positions_deleted: int
+    legacy_analysis_purged: LegacyAnalysisPurgeCounts
+
+
+class PortfolioWipeResult(BaseModel):
+    """DELETE /portfolio/all's response — every account, snapshot, and
+    position that was removed. Added 2026-09-21 at Faiz's request, as a
+    faster reset path than deleting snapshots/accounts one by one.
+    Holdings (ticker records) and their documents are deliberately out of
+    scope — his explicit choice."""
+
+    accounts_deleted: int
+    snapshots_deleted: int
+    positions_deleted: int
+    legacy_analysis_purged: LegacyAnalysisPurgeCounts

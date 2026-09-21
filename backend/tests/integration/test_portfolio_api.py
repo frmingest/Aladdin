@@ -3,8 +3,12 @@
 from __future__ import annotations
 
 import io
+import uuid
+from datetime import datetime, timezone
 
 import openpyxl
+
+from app.models.legacy_analysis import AnalysisRun
 
 
 def _create_holding(client, ticker="EQNR.OL", name="Equinor ASA"):
@@ -180,8 +184,93 @@ def test_delete_snapshot_requires_confirm_and_cascades_positions(client):
     response = client.delete(
         f"/portfolio/snapshots/{snapshot_id}", params={"confirm": "true"}
     )
-    assert response.status_code == 204
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["deleted_snapshot_id"] == snapshot_id
+    assert body["positions_deleted"] == 1
+    assert body["legacy_analysis_purged"] == {
+        "analysis_runs": 0,
+        "holding_analyses": 0,
+        "factor_assessments": 0,
+        "evidence_references": 0,
+    }
     assert client.get(f"/portfolio/snapshots/{snapshot_id}").status_code == 404
+
+
+def test_delete_snapshot_cascades_legacy_analysis_runs(client, db_session):
+    """Regression test for the real ForeignKeyViolation Faiz hit deleting a
+    real snapshot: a pre-2026-09-21 analysis_runs row referencing the
+    snapshot used to make this 500 instead of deleting. Faiz's explicit
+    choice (2026-09-21): cascade-purge the legacy row rather than block or
+    orphan it.
+    """
+    holding_id = _create_holding(client)
+    document_id = _upload_portfolio_export(client)
+    snapshot_id = client.post(
+        "/portfolio/snapshots",
+        json={
+            "source_file_id": document_id,
+            "reporting_currency": "NOK",
+            "positions": [{"holding_id": holding_id}],
+        },
+    ).json()["id"]
+
+    legacy_run = AnalysisRun(
+        id=uuid.uuid4(),
+        portfolio_snapshot_id=uuid.UUID(snapshot_id),
+        started_at=datetime.now(timezone.utc),
+        completed_at=datetime.now(timezone.utc),
+        status="completed",
+        provider="google_ai_studio",
+        model_name="gemini-legacy",
+        prompt_version="v1",
+        scoring_version="v1",
+        extraction_schema_version="v1",
+        application_version="pre-reset",
+        requested_holding_ids=[holding_id],
+        macro_regime="baseline",
+    )
+    db_session.add(legacy_run)
+    db_session.commit()
+
+    response = client.delete(
+        f"/portfolio/snapshots/{snapshot_id}", params={"confirm": "true"}
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["legacy_analysis_purged"]["analysis_runs"] == 1
+    assert client.get(f"/portfolio/snapshots/{snapshot_id}").status_code == 404
+    assert db_session.query(AnalysisRun).count() == 0
+
+
+def test_delete_all_portfolio_data_requires_confirm_and_wipes_scope(client):
+    holding_id = _create_holding(client)
+    account_id = _create_account(client)
+    document_id = _upload_portfolio_export(client)
+    client.post(
+        "/portfolio/snapshots",
+        json={
+            "source_file_id": document_id,
+            "reporting_currency": "NOK",
+            "account_id": account_id,
+            "positions": [{"holding_id": holding_id, "account_id": account_id}],
+        },
+    )
+
+    assert client.delete("/portfolio/all").status_code == 400
+
+    response = client.delete("/portfolio/all", params={"confirm": "true"})
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["accounts_deleted"] == 1
+    assert body["snapshots_deleted"] == 1
+    assert body["positions_deleted"] == 1
+
+    assert client.get("/accounts").json() == []
+    assert client.get("/portfolio/snapshots").json() == []
+    # Holdings and their documents are out of scope for the bulk wipe —
+    # Faiz's explicit choice, 2026-09-21.
+    holdings = client.get("/holdings").json()
+    assert any(h["id"] == holding_id for h in holdings)
 
 
 def test_concentration(client):
