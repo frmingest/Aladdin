@@ -1,6 +1,4 @@
-# Sprint 0 skeleton dependencies. LLM SDKs (google-generativeai, mistralai)
-# are added once Gemini+Mistral provider wiring starts (blocked on
-# MISTRAL_API_KEY being added to backend/.env — see progress.md).
+# Sprint 0 dependencies.
 fastapi==0.115.0
 uvicorn[standard]==0.30.6
 pydantic==2.9.2
@@ -9,3 +7,11 @@ python-dotenv==1.0.1
 sqlalchemy==2.0.35
 psycopg2-binary==2.9.9
 alembic==1.13.2
+
+# LLM providers (see app/providers/) — Gemini primary, Mistral fallback.
+google-genai==2.8.0
+mistralai==1.5.2
+
+# Test tooling.
+pytest==8.3.3
+pytest-mock==3.14.0
