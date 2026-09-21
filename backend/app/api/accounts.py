@@ -25,26 +25,45 @@ router = APIRouter(prefix="/accounts", tags=["accounts"])
 
 
 def _to_out(db: Session, account: Account) -> AccountOut:
-    position_count = db.scalar(
-        select(func.count())
-        .select_from(PortfolioPosition)
-        .where(PortfolioPosition.account_id == account.id)
+    return _to_out_many(db, [account])[0]
+
+
+def _to_out_many(db: Session, accounts: list[Account]) -> list[AccountOut]:
+    """Batches the position/snapshot counts for every account into two
+    aggregate queries total, not two per account — the page-load-speed fix
+    (2026-09-21), mirroring the same fix in app/api/holdings.py."""
+    if not accounts:
+        return []
+
+    ids = [a.id for a in accounts]
+    position_counts = dict(
+        db.execute(
+            select(PortfolioPosition.account_id, func.count())
+            .where(PortfolioPosition.account_id.in_(ids))
+            .group_by(PortfolioPosition.account_id)
+        ).all()
     )
-    snapshot_count = db.scalar(
-        select(func.count())
-        .select_from(PortfolioSnapshot)
-        .where(PortfolioSnapshot.account_id == account.id)
+    snapshot_counts = dict(
+        db.execute(
+            select(PortfolioSnapshot.account_id, func.count())
+            .where(PortfolioSnapshot.account_id.in_(ids))
+            .group_by(PortfolioSnapshot.account_id)
+        ).all()
     )
-    return AccountOut(
-        id=account.id,
-        name=account.name,
-        account_number=account.account_number,
-        institution=account.institution,
-        created_at=account.created_at,
-        updated_at=account.updated_at,
-        position_count=position_count or 0,
-        snapshot_count=snapshot_count or 0,
-    )
+
+    return [
+        AccountOut(
+            id=a.id,
+            name=a.name,
+            account_number=a.account_number,
+            institution=a.institution,
+            created_at=a.created_at,
+            updated_at=a.updated_at,
+            position_count=position_counts.get(a.id, 0),
+            snapshot_count=snapshot_counts.get(a.id, 0),
+        )
+        for a in accounts
+    ]
 
 
 @router.post("", response_model=AccountOut, status_code=201)
@@ -70,7 +89,7 @@ def create_account(payload: AccountCreate, db: Session = Depends(get_db)) -> Acc
 @router.get("", response_model=list[AccountOut])
 def list_accounts(db: Session = Depends(get_db)) -> list[AccountOut]:
     accounts = db.scalars(select(Account).order_by(Account.name)).all()
-    return [_to_out(db, a) for a in accounts]
+    return _to_out_many(db, list(accounts))
 
 
 @router.get("/{account_id}", response_model=AccountOut)

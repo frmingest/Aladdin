@@ -32,28 +32,54 @@ router = APIRouter(prefix="/holdings", tags=["holdings"])
 
 
 def _to_out(db: Session, holding: Holding) -> HoldingOut:
-    document_count = db.scalar(
-        select(func.count()).select_from(Document).where(Document.holding_id == holding.id)
+    return _to_out_many(db, [holding])[0]
+
+
+def _to_out_many(db: Session, holdings: list[Holding]) -> list[HoldingOut]:
+    """Batches the document/position counts for every holding into two
+    aggregate queries total, not two queries per holding — the page-load-
+    speed fix (2026-09-21). `list_holdings` returns every row in the
+    `holdings` table, including the legacy pre-reset ones (individual
+    whisky/precious-metals entries — see CLAUDE.md), so on the real DB this
+    was previously 2N+1 round trips to Postgres for a page load; now it's
+    3 regardless of N.
+    """
+    if not holdings:
+        return []
+
+    ids = [h.id for h in holdings]
+    document_counts = dict(
+        db.execute(
+            select(Document.holding_id, func.count())
+            .where(Document.holding_id.in_(ids))
+            .group_by(Document.holding_id)
+        ).all()
     )
-    position_count = db.scalar(
-        select(func.count())
-        .select_from(PortfolioPosition)
-        .where(PortfolioPosition.holding_id == holding.id)
+    position_counts = dict(
+        db.execute(
+            select(PortfolioPosition.holding_id, func.count())
+            .where(PortfolioPosition.holding_id.in_(ids))
+            .group_by(PortfolioPosition.holding_id)
+        ).all()
     )
-    return HoldingOut(
-        id=holding.id,
-        ticker=holding.ticker,
-        name=holding.name,
-        sector=holding.sector,
-        trading_currency=holding.trading_currency,
-        institution=holding.institution,
-        custody_type=holding.custody_type,
-        asset_class_raw=holding.asset_class_raw,
-        created_at=holding.created_at,
-        updated_at=holding.updated_at,
-        document_count=document_count or 0,
-        position_count=position_count or 0,
-    )
+
+    return [
+        HoldingOut(
+            id=h.id,
+            ticker=h.ticker,
+            name=h.name,
+            sector=h.sector,
+            trading_currency=h.trading_currency,
+            institution=h.institution,
+            custody_type=h.custody_type,
+            asset_class_raw=h.asset_class_raw,
+            created_at=h.created_at,
+            updated_at=h.updated_at,
+            document_count=document_counts.get(h.id, 0),
+            position_count=position_counts.get(h.id, 0),
+        )
+        for h in holdings
+    ]
 
 
 @router.post("", response_model=HoldingOut, status_code=201)
@@ -81,7 +107,7 @@ def create_holding(payload: HoldingCreate, db: Session = Depends(get_db)) -> Hol
 @router.get("", response_model=list[HoldingOut])
 def list_holdings(db: Session = Depends(get_db)) -> list[HoldingOut]:
     holdings = db.scalars(select(Holding).order_by(Holding.ticker)).all()
-    return [_to_out(db, h) for h in holdings]
+    return _to_out_many(db, list(holdings))
 
 
 @router.get("/{holding_id}", response_model=HoldingOut)
