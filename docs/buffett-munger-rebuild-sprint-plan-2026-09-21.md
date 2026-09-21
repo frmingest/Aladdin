@@ -3,27 +3,25 @@
 **Supersedes** [buffett-munger-redesign-sprint-plan-2026-09-20.md](buffett-munger-redesign-sprint-plan-2026-09-20.md).
 That doc planned an *incremental* redesign (ADR 0019/0020: "continue & consolidate, no rebuild").
 On 2026-09-21 Faiz overrode that decision and had the repo wiped to a clean slate. This doc plans
-the rebuild from that clean slate. **Sprint 0 is closed. Sprint 1 (equity data model & deterministic
-calculations) is underway — models, calculations, document ingestion, and the Minimal API are done;
-only the first real frontend pages remain.**
+the rebuild from that clean slate. **Sprint 0 and Sprint 1 are both closed — equity data model,
+deterministic calculations, document ingestion, the Minimal API, and the first real frontend pages
+are all done. Sprint 2 (live research) is next.**
 
-## Where things actually stand right now (audited 2026-09-21, fourth session pass)
+## Where things actually stand right now (audited 2026-09-21, fifth session pass)
 
 | | |
 |---|---|
-| Repo | `main`, commit `52bc5d3` ("Add portfolio snapshot/position CRUD API (Sprint 1 Minimal API, part 4)") — **5 commits this session, none pushed yet** — no GitHub push credentials in this session's shell either, same limitation every session has hit. The document-ingestion commit (`3ca7b68`) and its docs-sync commit (`50fb2ef`) from the previous session *have* been pushed (confirmed: `main` and `origin/main` matched at the start of this session). |
-| **Minimal API — done this session** | `app/api/holdings.py` (CRUD), `app/api/accounts.py` (CRUD), `app/api/portfolio.py` (snapshot/position CRUD + HHI concentration), `app/services/metrics.py` + `GET /holdings/{id}/metrics` (deterministic ratios from extracted facts). See "Sprints" below for the full breakdown. |
-| **Design decision (asked Faiz directly this session)** | Portfolio snapshots must point at a real uploaded document (`source_file_id`) — no manual-entry shortcut. Faiz chose traceability over convenience: every position stays linked to real evidence, same standard as document-derived facts. This required making `POST /documents/upload`'s `holding_id` optional (new `document_type="portfolio_export"` for a brokerage export covering many holdings) — see `app/domain/document_types.py`. |
-| `backend/app/services/documents/` | Unchanged this session except one correctness fix: `financial_line_items.holding_id` is `NOT NULL`, so a holding-less (portfolio-export) document now explicitly discards any candidate extracted facts (flagged `facts_skipped_no_holding`) rather than risking an `IntegrityError` on a null FK. |
-| `backend/app/providers/object_storage.py` + `object_storage_s3.py` | Unchanged this session. Swappable object storage: local filesystem for dev, or any S3-compatible bucket (Cloudflare R2 / Supabase Storage) for real deployment. |
-| `backend/app/config/database.py` | Unchanged this session. |
-| `backend/app/models/` | Unchanged this session. 8 SQLAlchemy models against the real, already-migrated schema. |
-| `backend/app/services/calculations.py` | Unchanged this session (still 15 deterministic functions) — now actually exercised end-to-end via `app/services/metrics.py` (per-holding ratios) and `app/api/portfolio.py` (HHI concentration). |
-| `frontend/src/` | Unchanged this session: skeleton only (`App.tsx` health badge). **Sprint 1's last open item.** |
+| Repo | `main`, commit `29c7132` ("Add first real frontend pages: holding list + holding detail (Sprint 1)") — **6 commits this session, none pushed yet** — no GitHub push credentials in this session's shell either, same limitation every session has hit. Everything through commit `50fb2ef` (the previous session's docs sync) has been confirmed pushed. |
+| **Sprint 1 — fully closed this session.** | Backend: holdings/accounts/portfolio CRUD, portfolio-wide document uploads, computed-metrics endpoints (see the 4-commit Minimal API breakdown in "Sprints" below). Frontend: a holding-list page and a holding-detail page (profile, deterministic-metrics panel, filings table + upload), built against that API and the Design & UX direction's tokens. |
+| **Design decision (asked Faiz directly this session)** | Portfolio snapshots must point at a real uploaded document (`source_file_id`) — no manual-entry shortcut. Faiz chose traceability over convenience. |
+| `frontend/src/` | **New this session:** `lib/api.ts` (fetch wrapper — `/api/*` in dev via the existing vite proxy, `VITE_API_BASE_URL` directly in production), `lib/types.ts` (hand-written to mirror the backend's Pydantic schemas — no shared generator yet; every Decimal arrives as a JSON string), `lib/format.ts`, `components/Layout.tsx` (fixed left nav, Holdings live / Portfolio-Thesis-Macro disabled placeholders), `components/ui.tsx`, `pages/HoldingsListPage.tsx`, `pages/HoldingDetailPage.tsx`. Added `react-router-dom`. `npm run lint` / `npx tsc --noEmit` / `npm run build` all clean. |
+| Frontend — what's *not* verified | No live dev-server smoke test against a running backend this session — deliberately skipped to avoid any risk of a local backend run picking up real `DATABASE_URL`/Supabase credentials from `backend/.env` (this app handles Faiz's real brokerage data — CLAUDE.md). Worth doing from Faiz's own machine, ideally against a disposable dev DB. |
+| `backend/app/services/documents/` | Unchanged this session except one correctness fix (previous session): a holding-less (portfolio-export) document discards candidate facts (flagged `facts_skipped_no_holding`) instead of risking a null-FK `IntegrityError`. |
+| `backend/app/models/`, `calculations.py`, `object_storage*.py`, `database.py` | Unchanged this session. |
 | Deployment | **Not deployed to Railway.** Still "written, not yet deployed" per the status-honesty rule. |
-| Real data | **Untouched, and staying that way** (Decision 1 below). Supabase still holds the real portfolio/holdings/analysis history, including legacy non-equity rows/columns. |
-| Test environment | Same limitation as every session: the repo's own `backend/.venv` is a **Windows** venv, can't run from the Linux shell this session works in — a fresh Linux venv was created this session (not persisted anywhere durable — expect to recreate it again next session) to install `requirements.txt` and run the suite: **147 tests, all passing** (up from 109), ruff clean aside from the same pre-existing `EXE002` mount-permission artifact on every file (unrelated to any session's changes). |
-| Known gap | None blocking Sprint 1's remaining item — the Minimal API the frontend needs is now complete. |
+| Real data | **Untouched, and staying that way** (Decision 1 below). |
+| Test environment | Backend: same fresh-Linux-venv-per-session limitation as always — **147 tests, all passing**, ruff clean (aside from the confirmed pre-existing `EXE002` artifact). Frontend: no test framework installed yet (Vitest/RTL would be Sprint 7-adjacent guardrail work, or added whenever the first component gets complex enough to need one) — verified via lint + strict type-check + a successful production build instead. |
+| Known gap | None blocking Sprint 2. |
 
 ## The Brain's 5 steps — what the rebuild has to deliver
 
@@ -42,19 +40,14 @@ The repo's `CLAUDE.md` — 5 rules (deterministic arithmetic, evidence-first cit
 prompts/schemas, blind-pass confirmation-bias guard, untrusted document text) plus git/status-honesty/
 secrets discipline.
 
-## 3 open checkpoints — resolved (2026-09-21)
+## Open checkpoints — all resolved
 
 | # | Question | Decision |
 |---|---|---|
 | 1 | DB schema strategy | **Leave the existing Supabase schema and data exactly as-is.** No migration to strip non-equity tables/columns now. |
-| 2 | LLM provider | **Reuse Google AI Studio (Gemini) + Mistral** via keys in `backend/.env`/Railway. Rate-limit resilience (budget guard, retry/backoff, RPM pacing) built in from day one — done. |
-| 3 | Leftover GitHub branches | **Deleted** — confirmed gone from `origin` this session (`git ls-remote --heads origin` shows only `main`). |
-
-## 4th open checkpoint — resolved (2026-09-21, this session)
-
-| # | Question | Decision |
-|---|---|---|
-| 4 | Portfolio position entry: require a real document, or allow manual entry? | **Require a real uploaded document** (`source_file_id`, `NOT NULL`) for every portfolio snapshot — asked Faiz directly, he chose traceability over convenience. No synthetic "manual entry" document, no relaxing the FK. A portfolio-wide export uploads via `POST /documents/upload` with `document_type="portfolio_export"` and no `holding_id`. |
+| 2 | LLM provider | **Reuse Google AI Studio (Gemini) + Mistral** via keys in `backend/.env`/Railway. Rate-limit resilience built in from day one — done. |
+| 3 | Leftover GitHub branches | **Deleted** — confirmed gone from `origin` (`git ls-remote --heads origin` shows only `main`). |
+| 4 | Portfolio position entry: require a real document, or allow manual entry? | **Require a real uploaded document** (`source_file_id`, `NOT NULL`) for every portfolio snapshot — asked Faiz directly, he chose traceability over convenience. |
 
 ## Actual current Supabase schema (read from `backend/alembic/versions/`, 21 tables, no live DB connection needed)
 
@@ -65,14 +58,14 @@ tables. Nothing to route around structurally — just don't populate/query those
 
 | Table | From phase |
 |---|---|
-| `accounts`, `holdings`, `portfolio_positions`, `portfolio_snapshots`, `documents`, `document_pages`, `document_chunks`, `financial_line_items` | Phase 1 (portfolio + document ingestion) + accounts migration — **ORM models, document ingestion, and full CRUD done this rebuild** |
+| `accounts`, `holdings`, `portfolio_positions`, `portfolio_snapshots`, `documents`, `document_pages`, `document_chunks`, `financial_line_items` | Phase 1 (portfolio + document ingestion) + accounts migration — **ORM models, document ingestion, full CRUD, and the first frontend pages all done this rebuild** |
 | `market_observations`, `fx_observations` | Phase 2 (market data & FX) |
 | `analysis_runs`, `holding_analyses`, `factor_assessments`, `evidence_references` | Phase 3 (AI analysis engine) |
 | `research_runs`, `research_items`, `macro_observations` | Phase 4 (external research) |
 | `investment_theses`, `valuation_cases`, `portfolio_risk_snapshots` | Phase 5 (thesis & portfolio intelligence) |
 | `llm_usage_events` | LLM usage ledger — not yet re-created this rebuild; `app/providers/budget.py`'s in-memory guard is a placeholder until this exists |
 
-## Design & UX direction (researched 2026-09-21, unchanged this session)
+## Design & UX direction (researched 2026-09-21; tokens now implemented in `frontend/tailwind.config.js`)
 
 Faiz asked for a deliberate look this time: *"a simple philosophy... what investment-grade
 financial webpage has a clean, simple and beautiful UI that is popular."*
@@ -90,18 +83,26 @@ Wealthfront, plus wider 2026 fintech UI roundups):
 | **Left-nav information architecture** | Scales to many domains (portfolio, holdings, thesis, macro, valuation) without the top-nav running out of room. |
 | **Light-first, not dark-terminal** | Every example above is light/near-white with near-black text. Dropping the terminal aesthetic for good this time. |
 
-**Concrete starting tokens** (still not yet built — for Faiz to confirm before Sprint 1's frontend
-pages are styled against them):
+**Tokens (implemented in `frontend/tailwind.config.js` this session — `background`, `surface`,
+`border`/`border-subtle`, `ink`/`ink-muted`/`ink-faint`, `accent`/`accent-hover`/`accent-subtle`,
+`positive`/`negative`/`caution` each with a `-subtle` background variant, plus `.tabular` for
+`font-variant-numeric: tabular-nums`):**
 
-- Background: near-white (`#FAFAF9`/`#FFFFFF`), elevated surfaces (cards) a hair off that.
-- Text: near-black (`#111111`-ish primary, warm gray secondary/muted) — not pure `#000`.
-- One accent color for links/primary actions/focus states.
-- Data semantics: one green (gain/pass), one red (loss/fail), one amber (caution/hold) — state only.
-- Typography: one quiet sans-serif (Inter or similar) + tabular figures (`font-variant-numeric: tabular-nums`) for financial values.
-- Layout: fixed left nav (portfolio / holdings / thesis / macro as sprints add them) + a content area built around cards with real whitespace.
+- Background near-white (`#FAFAF9`), surfaces (cards) pure white.
+- Text near-black (`#111111`), muted warm gray for secondary text — not pure `#000`.
+- One accent (`#2563EB`, a calm blue — Faiz hasn't specified a preference beyond "one quiet accent
+  color," so this is a reasonable, unconfirmed default; easy to swap in one file if he wants
+  something else).
+- Green/red/amber only for state (document status badges, gains/losses once those exist, pass/fail
+  once the moat rating exists).
+- System font stack (no external font request — the fallback in `fontFamily.display`/`.body` reads
+  fine and avoids a production dependency on a font CDN); `Inter` is named first for whenever it's
+  actually loaded.
+- Fixed left nav, holding list/detail built as cards over the near-white background.
 
-This becomes real in Sprint 5 (the dashboard), but Sprint 1's remaining frontend pages (holding
-list, holding detail — not yet built) should be styled against these tokens from the start.
+Sprint 5 (the dashboard) is where this direction gets exercised fully across every domain; the
+holding list/detail pages built this session are the first proof it holds up in a real page, not
+just a spec.
 
 ## Sprints
 
@@ -109,17 +110,17 @@ list, holding detail — not yet built) should be styled against these tokens fr
 
 All items done — see prior session detail in the project's `progress.md`.
 
-### Sprint 1 — Equity data model & deterministic calculations — 🚧 in progress
+### Sprint 1 — Equity data model & deterministic calculations — ✅ closed 2026-09-21
 
 | Deliverable | Detail | Status |
 |---|---|---|
 | SQLAlchemy models | `Account`, `Holding`, `PortfolioPosition`, `PortfolioSnapshot`, `Document`, `DocumentPage`, `DocumentChunk`, `FinancialLineItem` | ✅ Done |
 | Deterministic calculations module | ROIC, ROE, margins, FCF, owner earnings, leverage ratios, HHI, multiples | ✅ Done |
-| Document ingestion | PDF/PPTX/XLSX text + structured line-item extraction into `DocumentChunk`/`FinancialLineItem`, sha256 dedup, swappable object storage (local/S3), `POST /documents/upload` + `GET /documents` + `GET /documents/{id}` | ✅ Done |
-| **Minimal API** | Holdings CRUD, accounts CRUD, portfolio snapshot/position CRUD + HHI concentration, read-only computed-metrics endpoints (`GET /holdings/{id}/metrics`) | ✅ **Done this session** — commits `98ec5be`..`52bc5d3`, 38 new tests (147 total) |
-| First real frontend pages | Holding list + holding detail, styled against the Design & UX direction tokens | ⬜ Not started — **the only Sprint 1 item left** |
+| Document ingestion | PDF/PPTX/XLSX text + structured line-item extraction, sha256 dedup, swappable object storage, `POST /documents/upload` + `GET /documents` + `GET /documents/{id}` | ✅ Done |
+| Minimal API | Holdings CRUD (`app/api/holdings.py`), accounts CRUD (`app/api/accounts.py`), portfolio snapshot/position CRUD + HHI concentration (`app/api/portfolio.py`), read-only computed-metrics endpoints (`app/services/metrics.py`) | ✅ Done — commits `98ec5be`..`52bc5d3` |
+| **First real frontend pages** | Holding list (`HoldingsListPage.tsx`) + holding detail (`HoldingDetailPage.tsx`: profile, metrics panel, filings + upload), styled against the Design & UX direction tokens | ✅ **Done this session** — commit `29c7132` |
 
-### Sprint 2 — Live research (evidence-first)
+### Sprint 2 — Live research (evidence-first) — next up
 
 - Macro/geopolitical, sector, and per-company research (the Iran/energy example) — grounded,
   cached, cited as evidence
@@ -140,10 +141,7 @@ All items done — see prior session detail in the project's `progress.md`.
 - This is also where PDF/PPTX table-parsing or an LLM extraction pass (to get structured facts out
   of those formats, not just XLSX) most naturally belongs, if Faiz wants that filled in before then
 - Also where real broker-export parsing (auto-populating a portfolio snapshot's positions from an
-  uploaded file, rather than the caller supplying them in the API call) most naturally belongs —
-  today's `POST /portfolio/snapshots` takes positions as explicit structured input, matching how
-  document ingestion works everywhere else in this rebuild (facts only become structured when
-  something deterministic promotes them, never guessed)
+  uploaded file, rather than the caller supplying them in the API call) most naturally belongs
 
 ### Sprint 5 — Portfolio roll-up & dashboard
 
@@ -158,15 +156,16 @@ All items done — see prior session detail in the project's `progress.md`.
 ### Sprint 7 — Guardrail tooling
 
 - Pre-commit hooks, CI workflow, secret-scanning
+- Also a natural place for a frontend test framework (Vitest/RTL) if one still doesn't exist by then
 
 ## Changes / history
 
 | Date | Summary |
 |---|---|
-| 2026-09-21 | **Minimal API built (Sprint 1's 4th deliverable, closing it out).** Built holdings CRUD (`app/api/holdings.py`), accounts CRUD (`app/api/accounts.py`), portfolio-wide document uploads (holding_id now optional, new `portfolio_export` type), portfolio snapshot/position CRUD with HHI concentration (`app/api/portfolio.py`), and read-only computed-metrics endpoints (`app/services/metrics.py`). Asked Faiz directly how portfolio positions should be entered; he chose requiring a real uploaded source document over a manual-entry shortcut. Confirmed the 6 leftover GitHub branches are already deleted. 38 new tests (147 total), ruff clean. 5 commits, all still unpushed. |
-| 2026-09-21 | Document ingestion built (Sprint 1's 3rd deliverable). Confirmed the prior session's 2 commits were pushed by Faiz in between sessions. Built `app/services/documents/` (intake/dedup/extraction for PDF/PPTX/XLSX, XLSX-only structured fact extraction via a deterministic label map), swappable object storage (`app/providers/object_storage*.py`, local/S3), `app/config/database.py` (new — and fixed a broken `alembic/env.py` import that's been silently broken since the reset), and the app's first real API router (`app/api/documents.py`). Added `backend/pyproject.toml` to fix a ruff false-positive on FastAPI's `Depends`/`Form`/`File` idiom. 32 new tests, 109 total passing, ruff clean. Committed (`3ca7b68`), since confirmed pushed. |
-| 2026-09-21 | Sprint 0 closed, Sprint 1 started. Faiz confirmed `LLM_PROVIDER=google_ai_studio` and the plan to finish Sprint 0 before starting Sprint 1. Built and tested `app/providers/` (Gemini primary + Mistral fallback, retry/backoff, RPM pacing, in-memory daily budget guard) — 44 tests. Then built `app/models/` (8 SQLAlchemy models against the real schema) and `app/services/calculations.py` (15 deterministic financial functions, Decimal-based) — 33 more tests. 77/77 backend tests passing this session; ruff clean aside from a confirmed pre-existing mount-permission artifact. Two commits made (`72d3c03`, `ff5ee54`). |
-| 2026-09-21 | Status audit + planning pass: confirmed the repo (not the docs) had the real up-to-date state — docs/ mirror and the 3 skeleton commits were already pushed. Added the missing `MISTRAL_API_KEY` to `backend/.env` directly (was typed but unsaved), clearing Sprint 0's last blocker. Re-verified the frontend build is still clean. Researched clean/minimal investment-grade fintech UI (Mercury, Stripe Dashboard, Wealthfront) and wrote up a concrete Design & UX direction. Expanded Sprint 1 into concrete deliverables. |
-| 2026-09-21 | Sprint 0 skeletons built: found and removed the legacy multi-asset frontend the original reset had missed (49 files, commit `622ad08`); built and locally tested a skeleton FastAPI backend with `/health` (commit `ec4c0de`, also fixed a Dockerfile that still referenced deleted top-level asset dirs); built and locally tested a skeleton React frontend with a health badge (commit `d1e9e36`). Since confirmed pushed and docs synced. Gemini+Mistral wiring was blocked on `MISTRAL_API_KEY`. |
-| 2026-09-21 | Repo wiped except Railway/Supabase/GitHub config, committed and pushed as `8ad0221` ("reset") with full history preserved. Real Supabase data untouched. |
-| 2026-09-21 | 3 open checkpoints decided: keep DB as-is, reuse Gemini+Mistral with resilience built in from day one, delete 6 leftover branches. |
+| 2026-09-21 | **Sprint 1 closed.** Minimal API (4 commits: holdings CRUD, accounts CRUD, computed-metrics endpoints, portfolio snapshot/position CRUD — the last requiring `POST /documents/upload` to accept portfolio-wide files with no single holding, per Faiz's explicit traceability-over-convenience decision) + first real frontend pages (1 commit: holding list + holding detail, `react-router-dom`, tokens from the Design & UX direction actually implemented in `tailwind.config.js`). 47 new tests this session (147 backend total), ruff clean; frontend lint/type-check/build all clean. 6 commits, all still unpushed. |
+| 2026-09-21 | Document ingestion built (Sprint 1's 3rd deliverable). Built `app/services/documents/`, swappable object storage, `app/config/database.py` (fixing a broken `alembic/env.py` import), and `app/api/documents.py`. 32 new tests, 109 total, ruff clean. Committed (`3ca7b68`), since confirmed pushed. |
+| 2026-09-21 | Sprint 0 closed, Sprint 1 started. Built `app/providers/` (Gemini + Mistral), `app/models/`, `app/services/calculations.py`. 77 tests. Two commits, since confirmed pushed. |
+| 2026-09-21 | Status audit + Sprint 1/next-phase planning + UX research. Set the Design & UX direction (now implemented). |
+| 2026-09-21 | Sprint 0 skeletons built: legacy frontend removed, skeleton FastAPI backend + React frontend. 3 commits, since confirmed pushed. |
+| 2026-09-21 | Sprint 0 started: guardrail doc + real schema mapped. |
+| 2026-09-21 | Full repo reset + rebuild plan written. Committed and pushed as `8ad0221`. |
