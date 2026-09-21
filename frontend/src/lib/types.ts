@@ -40,6 +40,18 @@ export const INSTRUMENT_TYPE_LABELS: Record<string, string> = {
 
 export const EQUITY_ANALYZABLE_TYPES = new Set(["stock", "equity_etf"]);
 
+/** Mirrors backend/app/schemas/holding.py's `HoldingFieldOptions` — backs
+ * the manual-edit dropdowns for Sector and Instrument Type on
+ * HoldingsListPage (Faiz's request, 2026-09-21: garbage/duplicate tickers
+ * and instrument types from the CSV importer need a manual fix path).
+ * Fetched from `GET /holdings/field-options` rather than hardcoded here,
+ * so the dropdown can never offer a value the backend would then reject —
+ * see app/domain/sectors.py / app/domain/instrument_types.py. */
+export interface HoldingFieldOptions {
+  sectors: string[];
+  instrument_types: string[];
+}
+
 /** Legacy pre-2026-09-21 whisky/collectibles holdings weren't reset along
  * with the rest of the DB (CLAUDE.md — "the DB is not being reset"), and
  * `GET /holdings` returns every row in the table, so they still show up
@@ -92,11 +104,18 @@ export interface HoldingCreateInput {
 }
 
 export interface HoldingUpdateInput {
+  /** Editable as of 2026-09-21 — see HoldingUpdate's docstring in
+   * backend/app/schemas/holding.py for why renaming it in place is safe
+   * (nothing FKs on it, only on the holding's id). */
+  ticker?: string;
   name?: string;
   trading_currency?: string;
   sector?: string | null;
   institution?: string | null;
   custody_type?: string | null;
+  /** The dropdown-restricted instrument type — see
+   * INSTRUMENT_TYPE_LABELS above and HoldingFieldOptions.instrument_types. */
+  asset_class_raw?: string;
 }
 
 export interface DocumentSummary {

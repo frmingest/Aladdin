@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   Bar,
   BarChart,
@@ -85,17 +86,29 @@ function UploadPanel({ onImported }: { onImported: () => void }) {
       </label>
       {uploading && <p className="mt-3 text-sm text-ink-muted">Importing…</p>}
       {outcomes.length > 0 && !uploading && (
-        <ul className="mt-4 divide-y divide-border-subtle border-t border-border-subtle">
-          {outcomes.map((o) => (
-            <li key={o.filename} className="flex items-start gap-2 py-2 text-sm">
-              <span className={o.ok ? "text-positive" : "text-negative"}>{o.ok ? "✓" : "✕"}</span>
-              <div>
-                <div className="font-medium text-ink">{o.filename}</div>
-                <div className={o.ok ? "text-ink-muted" : "text-negative"}>{o.message}</div>
-              </div>
-            </li>
-          ))}
-        </ul>
+        <>
+          <ul className="mt-4 divide-y divide-border-subtle border-t border-border-subtle">
+            {outcomes.map((o) => (
+              <li key={o.filename} className="flex items-start gap-2 py-2 text-sm">
+                <span className={o.ok ? "text-positive" : "text-negative"}>{o.ok ? "✓" : "✕"}</span>
+                <div>
+                  <div className="font-medium text-ink">{o.filename}</div>
+                  <div className={o.ok ? "text-ink-muted" : "text-negative"}>{o.message}</div>
+                </div>
+              </li>
+            ))}
+          </ul>
+          {outcomes.some((o) => o.ok) && (
+            <p className="mt-3 text-sm text-ink-muted">
+              New holdings only get a placeholder ticker and no sector/type yet — review and
+              assign the real ones on the{" "}
+              <Link to="/holdings" className="font-medium text-accent hover:text-accent-hover">
+                Holdings page
+              </Link>
+              .
+            </p>
+          )}
+        </>
       )}
     </Card>
   );

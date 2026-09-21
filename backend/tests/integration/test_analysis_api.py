@@ -124,7 +124,7 @@ def _clear_overrides():
 
 
 def _create_stock_holding(client, db_session, ticker="AAPL") -> str:
-    response = client.post("/holdings", json={"ticker": ticker, "name": "Apple Inc.", "trading_currency": "USD", "sector": "Technology"})
+    response = client.post("/holdings", json={"ticker": ticker, "name": "Apple Inc.", "trading_currency": "USD", "sector": "Information Technology"})
     assert response.status_code == 201, response.text
     holding_id = response.json()["id"]
     holding = db_session.get(Holding, holding_id)

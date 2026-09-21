@@ -20,11 +20,13 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.config.database import get_db
+from app.domain.instrument_types import INSTRUMENT_TYPES
+from app.domain.sectors import SECTORS
 from app.models.document import Document
 from app.models.financial_line_item import FinancialLineItem
 from app.models.holding import Holding
 from app.models.portfolio import PortfolioPosition
-from app.schemas.holding import HoldingCreate, HoldingOut, HoldingUpdate
+from app.schemas.holding import HoldingCreate, HoldingFieldOptions, HoldingOut, HoldingUpdate
 from app.schemas.metrics import HoldingMetricsOut
 from app.services.metrics import compute_holding_metrics
 
@@ -110,6 +112,17 @@ def list_holdings(db: Session = Depends(get_db)) -> list[HoldingOut]:
     return _to_out_many(db, list(holdings))
 
 
+@router.get("/field-options", response_model=HoldingFieldOptions)
+def get_field_options() -> HoldingFieldOptions:
+    """Backs the frontend's Sector / Instrument Type dropdowns in the
+    manual-edit UI (Faiz's request, 2026-09-21) — single source of truth
+    so those dropdowns can never offer a value `update_holding` would then
+    reject. Must stay registered before `GET /{holding_id}` below, or
+    FastAPI will try to parse "field-options" as a holding UUID.
+    """
+    return HoldingFieldOptions(sectors=list(SECTORS), instrument_types=list(INSTRUMENT_TYPES))
+
+
 @router.get("/{holding_id}", response_model=HoldingOut)
 def get_holding(holding_id: UUID, db: Session = Depends(get_db)) -> HoldingOut:
     holding = db.get(Holding, holding_id)
@@ -129,10 +142,31 @@ def update_holding(
     updates = payload.model_dump(exclude_unset=True)
     if "trading_currency" in updates and updates["trading_currency"] is not None:
         updates["trading_currency"] = updates["trading_currency"].upper()
+
+    # ticker is now editable (see HoldingUpdate's docstring) but the column
+    # is still UNIQUE NOT NULL — check-then-set here, same shape as
+    # create_holding's own check, rather than letting a collision fall
+    # through to a raw IntegrityError 500.
+    if "ticker" in updates and updates["ticker"] != holding.ticker:
+        new_ticker = updates["ticker"]
+        collision = db.scalar(
+            select(Holding).where(Holding.ticker == new_ticker, Holding.id != holding_id)
+        )
+        if collision is not None:
+            raise HTTPException(
+                status_code=409, detail=f"a holding with ticker '{new_ticker}' already exists"
+            )
+
     for field, value in updates.items():
         setattr(holding, field, value)
 
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError as exc:  # belt-and-braces — the check above should catch this first
+        db.rollback()
+        raise HTTPException(
+            status_code=409, detail="cannot update holding: ticker already in use"
+        ) from exc
     db.refresh(holding)
     return _to_out(db, holding)
 

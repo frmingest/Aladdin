@@ -54,11 +54,68 @@ def test_get_missing_holding_returns_404(client):
 
 def test_update_holding(client):
     created = _create(client).json()
-    response = client.patch(f"/holdings/{created['id']}", json={"sector": "Renewables"})
+    response = client.patch(f"/holdings/{created['id']}", json={"sector": "Utilities"})
     assert response.status_code == 200
-    assert response.json()["sector"] == "Renewables"
+    assert response.json()["sector"] == "Utilities"
     # Unset fields are left alone.
     assert response.json()["ticker"] == "EQNR.OL"
+
+
+def test_update_holding_rejects_non_canonical_sector(client):
+    """Sector is a dropdown backed by app/domain/sectors.py (Faiz's request,
+    2026-09-21) — free text that isn't one of the canonical GICS-11 values
+    is rejected rather than silently accepted, the same way a stray
+    "Renewables"/"Tech"/"Energy " would have quietly drifted before."""
+    created = _create(client).json()
+    response = client.patch(f"/holdings/{created['id']}", json={"sector": "Renewables"})
+    assert response.status_code == 422
+
+
+def test_update_holding_ticker(client):
+    """ticker is editable (2026-09-21) — nothing FKs on it, only on the
+    row's id, so renaming it in place is safe. See HoldingUpdate's
+    docstring in app/schemas/holding.py."""
+    created = _create(client).json()
+    response = client.patch(f"/holdings/{created['id']}", json={"ticker": "EQNR"})
+    assert response.status_code == 200, response.text
+    assert response.json()["ticker"] == "EQNR"
+    # The old ticker is free again, not left dangling.
+    assert client.get(f"/holdings/{created['id']}").json()["ticker"] == "EQNR"
+
+
+def test_update_holding_ticker_collision_is_rejected(client):
+    _create(client, ticker="EQNR.OL")
+    other = _create(client, ticker="AAPL").json()
+    response = client.patch(f"/holdings/{other['id']}", json={"ticker": "EQNR.OL"})
+    assert response.status_code == 409
+    # Not actually renamed.
+    assert client.get(f"/holdings/{other['id']}").json()["ticker"] == "AAPL"
+
+
+def test_update_holding_instrument_type(client):
+    created = _create(client).json()
+    response = client.patch(f"/holdings/{created['id']}", json={"asset_class_raw": "equity_etf"})
+    assert response.status_code == 200, response.text
+    assert response.json()["asset_class_raw"] == "equity_etf"
+
+
+def test_update_holding_rejects_unknown_instrument_type(client):
+    created = _create(client).json()
+    response = client.patch(f"/holdings/{created['id']}", json={"asset_class_raw": "crypto"})
+    assert response.status_code == 422
+
+
+def test_holding_field_options(client):
+    """Backs the frontend's Sector / Instrument Type dropdowns — single
+    source of truth so they can never offer a value the backend would
+    then reject."""
+    response = client.get("/holdings/field-options")
+    assert response.status_code == 200
+    body = response.json()
+    assert "Energy" in body["sectors"]
+    assert "Information Technology" in body["sectors"]
+    assert "stock" in body["instrument_types"]
+    assert "equity_etf" in body["instrument_types"]
 
 
 def test_update_holding_normalizes_currency(client):

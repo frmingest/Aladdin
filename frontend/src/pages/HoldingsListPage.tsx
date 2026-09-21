@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, ApiError } from "../lib/api";
-import type { Holding, HoldingCreateInput } from "../lib/types";
+import type { Holding, HoldingCreateInput, HoldingFieldOptions, HoldingUpdateInput } from "../lib/types";
 import { INSTRUMENT_TYPE_LABELS, WHISKY_SECTORS } from "../lib/types";
 import { Button, Card, EmptyState, PageHeader } from "../components/ui";
 
@@ -143,6 +143,7 @@ function WhiskyGroupRow({ holdings }: { holdings: Holding[] }) {
         <td className="px-4 py-3 text-ink-muted">{distilleries} distiller{distilleries === 1 ? "y" : "ies"}</td>
         <td className="px-4 py-3 tabular text-ink-muted">—</td>
         <td className="px-4 py-3 text-right tabular text-ink-muted">{documentCount}</td>
+        <td className="px-2 py-3"></td>
       </tr>
       {expanded &&
         holdings.map((h) => (
@@ -162,14 +163,146 @@ function WhiskyGroupRow({ holdings }: { holdings: Holding[] }) {
             <td className="px-4 py-3 text-ink-muted">{h.sector ?? "—"}</td>
             <td className="px-4 py-3 tabular text-ink-muted">{h.trading_currency}</td>
             <td className="px-4 py-3 text-right tabular text-ink-muted">{h.document_count}</td>
+            <td className="px-2 py-3"></td>
           </tr>
         ))}
     </>
   );
 }
 
+/** Ticker / Type / Sector are editable in place (Faiz's request,
+ * 2026-09-21 — the CSV importer can only ever guess at both: a slugified
+ * placeholder ticker, and a name-based instrument-type/sector guess).
+ * One "Edit" toggle per row rather than per-cell — the three fields are
+ * usually fixed together in one pass after a CSV import. */
+function HoldingRow({
+  holding,
+  fieldOptions,
+  onSaved,
+}: {
+  holding: Holding;
+  fieldOptions: HoldingFieldOptions | null;
+  onSaved: (updated: Holding) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [ticker, setTicker] = useState(holding.ticker);
+  const [sector, setSector] = useState(holding.sector ?? "");
+  const [assetClassRaw, setAssetClassRaw] = useState(holding.asset_class_raw);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  function startEditing() {
+    setTicker(holding.ticker);
+    setSector(holding.sector ?? "");
+    setAssetClassRaw(holding.asset_class_raw);
+    setError(null);
+    setEditing(true);
+  }
+
+  async function handleSave() {
+    setError(null);
+    setSaving(true);
+    const input: HoldingUpdateInput = {
+      ticker: ticker.trim(),
+      sector: sector || null,
+      asset_class_raw: assetClassRaw,
+    };
+    try {
+      const updated = await api.updateHolding(holding.id, input);
+      onSaved(updated);
+      setEditing(false);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not save changes.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!editing) {
+    return (
+      <tr className="group border-b border-border-subtle last:border-0">
+        <td className="px-4 py-3">
+          <Link to={`/holdings/${holding.id}`} className="font-medium text-accent hover:text-accent-hover">
+            {holding.ticker}
+          </Link>
+        </td>
+        <td className="px-4 py-3 text-ink">{holding.name}</td>
+        <td className="px-4 py-3 text-ink-muted">
+          {INSTRUMENT_TYPE_LABELS[holding.asset_class_raw] ?? holding.asset_class_raw}
+        </td>
+        <td className="px-4 py-3 text-ink-muted">{holding.sector ?? "—"}</td>
+        <td className="px-4 py-3 tabular text-ink-muted">{holding.trading_currency}</td>
+        <td className="px-4 py-3 text-right tabular text-ink-muted">{holding.document_count}</td>
+        <td className="px-2 py-3 text-right">
+          <button
+            type="button"
+            onClick={startEditing}
+            className="rounded px-2 py-1 text-xs font-medium text-ink-muted opacity-0 transition-opacity hover:bg-border-subtle hover:text-ink group-hover:opacity-100"
+          >
+            Edit
+          </button>
+        </td>
+      </tr>
+    );
+  }
+
+  return (
+    <tr className="border-b border-border-subtle bg-accent/5 last:border-0">
+      <td className="px-4 py-2">
+        <input
+          value={ticker}
+          onChange={(e) => setTicker(e.target.value)}
+          className="w-28 rounded-md border border-border px-2 py-1 text-sm focus:border-accent focus:outline-none"
+        />
+      </td>
+      <td className="px-4 py-2 text-ink">{holding.name}</td>
+      <td className="px-4 py-2">
+        <select
+          value={assetClassRaw}
+          onChange={(e) => setAssetClassRaw(e.target.value)}
+          className="rounded-md border border-border px-2 py-1 text-sm focus:border-accent focus:outline-none"
+        >
+          {(fieldOptions?.instrument_types ?? [assetClassRaw]).map((t) => (
+            <option key={t} value={t}>
+              {INSTRUMENT_TYPE_LABELS[t] ?? t}
+            </option>
+          ))}
+        </select>
+      </td>
+      <td className="px-4 py-2">
+        <select
+          value={sector}
+          onChange={(e) => setSector(e.target.value)}
+          className="rounded-md border border-border px-2 py-1 text-sm focus:border-accent focus:outline-none"
+        >
+          <option value="">—</option>
+          {(fieldOptions?.sectors ?? []).map((s) => (
+            <option key={s} value={s}>
+              {s}
+            </option>
+          ))}
+        </select>
+      </td>
+      <td className="px-4 py-2 tabular text-ink-muted">{holding.trading_currency}</td>
+      <td className="px-4 py-2 text-right tabular text-ink-muted">{holding.document_count}</td>
+      <td className="px-2 py-2">
+        <div className="flex justify-end gap-1.5">
+          <Button type="button" onClick={handleSave} disabled={saving}>
+            {saving ? "Saving…" : "Save"}
+          </Button>
+          <Button type="button" variant="secondary" onClick={() => setEditing(false)} disabled={saving}>
+            Cancel
+          </Button>
+        </div>
+        {error && <p className="mt-1.5 max-w-[14rem] text-right text-xs text-negative">{error}</p>}
+      </td>
+    </tr>
+  );
+}
+
 export default function HoldingsListPage() {
   const [holdings, setHoldings] = useState<Holding[] | null>(null);
+  const [fieldOptions, setFieldOptions] = useState<HoldingFieldOptions | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
 
@@ -184,12 +317,19 @@ export default function HoldingsListPage() {
   }
 
   useEffect(reload, []);
+  useEffect(() => {
+    api.getHoldingFieldOptions().then(setFieldOptions).catch(() => setFieldOptions(null));
+  }, []);
+
+  function handleRowSaved(updated: Holding) {
+    setHoldings((prev) => (prev ? prev.map((h) => (h.id === updated.id ? updated : h)) : prev));
+  }
 
   return (
     <div className="mx-auto max-w-5xl px-8 py-8">
       <PageHeader
         title="Holdings"
-        subtitle="Every equity being tracked for the Buffett/Munger analysis."
+        subtitle="Every equity being tracked for the Buffett/Munger analysis. Hover a row and click Edit to fix its ticker, type, or sector."
         actions={
           !showForm && <Button onClick={() => setShowForm(true)}>Add holding</Button>
         }
@@ -224,6 +364,7 @@ export default function HoldingsListPage() {
                 <th className="px-4 py-3 font-medium">Sector</th>
                 <th className="px-4 py-3 font-medium">Currency</th>
                 <th className="px-4 py-3 text-right font-medium">Documents</th>
+                <th className="px-2 py-3"></th>
               </tr>
             </thead>
             <tbody>
@@ -231,25 +372,12 @@ export default function HoldingsListPage() {
                 row.kind === "whisky-group" ? (
                   <WhiskyGroupRow key="whisky-group" holdings={row.holdings} />
                 ) : (
-                  <tr key={row.holding.id} className="border-b border-border-subtle last:border-0">
-                    <td className="px-4 py-3">
-                      <Link
-                        to={`/holdings/${row.holding.id}`}
-                        className="font-medium text-accent hover:text-accent-hover"
-                      >
-                        {row.holding.ticker}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3 text-ink">{row.holding.name}</td>
-                    <td className="px-4 py-3 text-ink-muted">
-                      {INSTRUMENT_TYPE_LABELS[row.holding.asset_class_raw] ?? row.holding.asset_class_raw}
-                    </td>
-                    <td className="px-4 py-3 text-ink-muted">{row.holding.sector ?? "—"}</td>
-                    <td className="px-4 py-3 tabular text-ink-muted">{row.holding.trading_currency}</td>
-                    <td className="px-4 py-3 text-right tabular text-ink-muted">
-                      {row.holding.document_count}
-                    </td>
-                  </tr>
+                  <HoldingRow
+                    key={row.holding.id}
+                    holding={row.holding}
+                    fieldOptions={fieldOptions}
+                    onSaved={handleRowSaved}
+                  />
                 ),
               )}
             </tbody>

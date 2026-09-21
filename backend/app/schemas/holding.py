@@ -4,7 +4,10 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+from app.domain.instrument_types import INSTRUMENT_TYPES
+from app.domain.sectors import SECTORS, is_valid_sector
 
 
 class HoldingCreate(BaseModel):
@@ -15,20 +18,57 @@ class HoldingCreate(BaseModel):
     institution: str | None = None
     custody_type: str | None = None
 
+    @field_validator("sector")
+    @classmethod
+    def _validate_sector(cls, value: str | None) -> str | None:
+        if value is not None and not is_valid_sector(value):
+            raise ValueError(f"sector must be one of {sorted(SECTORS)} (or null)")
+        return value
+
 
 class HoldingUpdate(BaseModel):
     """Every field optional — only what's supplied is changed.
 
-    `ticker` is deliberately excluded: it's the unique identifier documents
-    and positions are keyed against, so changing it is a delete+recreate,
-    not an update.
+    `ticker` is editable (Faiz's explicit request, 2026-09-21 — see
+    app/api/holdings.py's `update_holding`): nothing in this app keys off
+    it as a foreign key anywhere — Document/PortfolioPosition/
+    FinancialLineItem all FK on `holding_id`, the row's UUID, never on
+    `ticker` — so renaming it in place is a plain UPDATE, not a
+    delete+recreate; the note that used to be here calling it unsafe was
+    wrong about that. `update_holding` still enforces the column's own
+    DB-level uniqueness (a 409, matching `create_holding`'s own check,
+    instead of a raw `IntegrityError` 500).
+
+    `asset_class_raw` is also editable here — the CSV importer's
+    name-based classifier (app/domain/instrument_types.py) is a
+    best-effort guess ("Xetra-Gold" has been seen mis-tagged), and this is
+    the fix for a wrong guess. Restricted to `INSTRUMENT_TYPES`, same as
+    `sector` is restricted to the canonical list in app/domain/sectors.py
+    — both are dropdowns in the frontend for the same reason: free text
+    drifts.
     """
 
+    ticker: str | None = Field(default=None, min_length=1, max_length=255)
     name: str | None = Field(default=None, min_length=1, max_length=255)
     trading_currency: str | None = Field(default=None, min_length=3, max_length=3)
     sector: str | None = None
     institution: str | None = None
     custody_type: str | None = None
+    asset_class_raw: str | None = None
+
+    @field_validator("sector")
+    @classmethod
+    def _validate_sector(cls, value: str | None) -> str | None:
+        if value is not None and not is_valid_sector(value):
+            raise ValueError(f"sector must be one of {sorted(SECTORS)} (or null)")
+        return value
+
+    @field_validator("asset_class_raw")
+    @classmethod
+    def _validate_instrument_type(cls, value: str | None) -> str | None:
+        if value is not None and value not in INSTRUMENT_TYPES:
+            raise ValueError(f"asset_class_raw must be one of {sorted(INSTRUMENT_TYPES)}")
+        return value
 
 
 class HoldingOut(BaseModel):
@@ -49,3 +89,13 @@ class HoldingOut(BaseModel):
     updated_at: datetime
     document_count: int
     position_count: int
+
+
+class HoldingFieldOptions(BaseModel):
+    """Backs the frontend's manual-edit dropdowns for Sector and Instrument
+    Type (`GET /holdings/field-options`) — single source of truth so the
+    dropdown can never offer a value the backend would then reject.
+    """
+
+    sectors: list[str]
+    instrument_types: list[str]

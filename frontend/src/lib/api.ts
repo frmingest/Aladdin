@@ -18,6 +18,7 @@ import type {
   DocumentSummary,
   Holding,
   HoldingCreateInput,
+  HoldingFieldOptions,
   HoldingMetrics,
   HoldingUpdateInput,
   HoldingValuation,
@@ -100,6 +101,9 @@ export const api = {
     request<Holding>(`/holdings/${id}`, { method: "PATCH", body: JSON.stringify(input) }),
   deleteHolding: (id: string) =>
     request<void>(`/holdings/${id}`, { method: "DELETE", query: { confirm: true } }),
+  /** Sector / Instrument Type dropdown options for the manual-edit UI —
+   * see backend/app/api/holdings.py's `GET /holdings/field-options`. */
+  getHoldingFieldOptions: () => request<HoldingFieldOptions>("/holdings/field-options"),
 
   listHoldingPeriods: (holdingId: string) =>
     request<string[]>(`/holdings/${holdingId}/periods`),

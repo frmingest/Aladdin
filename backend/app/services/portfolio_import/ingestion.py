@@ -19,6 +19,20 @@ type via app/domain/instrument_types.py, rather than silently dropping the
 non-equity rows. CLAUDE.md Rule 1 (deterministic arithmetic) applies: every
 figure below is either a raw broker-reported value or a simple
 weight/cost-basis computation from those raw values, never LLM output.
+
+Holding-matching bug fixed 2026-09-21 (Faiz's report: garbage tickers,
+duplicate holdings — see claude/csv-import-ticker-sector-fixes-and-db-wipe-
+2026-09-21.md): the dedup key used to be an exact match on
+`_slugify_ticker(name) == Holding.ticker`, so a holding that already
+existed under any other ticker (a real market ticker Faiz assigned by hand,
+or — before the 2026-09-21 full data wipe — a legacy row whose "ticker"
+was literally its raw display name) was never found, and every re-import
+quietly spawned a fresh duplicate Holding instead of matching the real
+one. Matching is now by normalized security *name* (see `_normalize_name`)
+against every existing holding, independent of whatever's in `ticker` —
+the slug is only ever a same-import fallback ticker for a holding that's
+genuinely new, meant to be overwritten with the real market ticker via
+`PATCH /holdings/{id}` (see app/api/holdings.py).
 """
 from __future__ import annotations
 
@@ -51,6 +65,13 @@ SNAPSHOT_STATUS_PROCESSED = "processed"
 _WEIGHT_QUANTIZE = Decimal("0.0001")  # matches portfolio_positions.weight_pct Numeric(9, 4)
 _COST_QUANTIZE = Decimal("0.000001")  # matches portfolio_positions.cost_basis Numeric(20, 6)
 
+# Norwegian letters that show up in these real exports ("Vår Energi",
+# "Høyrente") and would otherwise just get silently dropped by the
+# alnum-only slug/normalize regexes below (neither is NFKD-decomposable
+# the way "å" -> "a" + combining ring is — æ/ø are their own letters, not
+# accented forms). Spelled out rather than guessed at.
+_TRANSLITERATE = str.maketrans({"æ": "ae", "Æ": "AE", "ø": "o", "Ø": "O", "å": "a", "Å": "A"})
+
 
 @dataclass
 class PortfolioImportResult:
@@ -62,9 +83,37 @@ class PortfolioImportResult:
     was_duplicate_file: bool
 
 
-def _slugify_ticker(name: str) -> str:
-    slug = re.sub(r"[^A-Za-z0-9]+", "-", name).strip("-").upper()
-    return slug[:250] or "HOLDING"
+def _slugify_ticker(name: str, *, taken: set[str]) -> str:
+    """Best-effort *placeholder* ticker for a brand-new holding — never a
+    real market symbol (see this module's docstring). Transliterated first
+    so "Vår Energi" produces the readable "VAR-ENERGI" instead of the
+    broken "V-R-ENERGI" a plain alnum-strip gives (å isn't ASCII, so it
+    used to just vanish, splitting the word). Disambiguated against
+    `taken` (existing tickers plus any already assigned earlier in this
+    same import) with a numeric suffix, since two differently-named
+    securities can collide once non-alnum characters are stripped (e.g.
+    "L&G Gold Mining ETF" and a hypothetical "L G Gold Mining ETF" both
+    slug to "L-G-GOLD-MINING-ETF") — the unique-ticker constraint would
+    otherwise turn that into a 500 instead of two distinct holdings.
+    """
+    slug = re.sub(r"[^A-Za-z0-9]+", "-", name.translate(_TRANSLITERATE)).strip("-").upper()
+    slug = slug[:250] or "HOLDING"
+    candidate = slug
+    suffix = 2
+    while candidate in taken:
+        candidate = f"{slug[:245]}-{suffix}"
+        suffix += 1
+    return candidate
+
+
+def _normalize_name(name: str) -> str:
+    """Case/diacritic/punctuation-insensitive dedup key for a security
+    name — matches "Vår Energi" against "VAR ENERGI", "vår-energi", etc.
+    so re-importing the same broker export (or a second account holding
+    the same security) finds the existing Holding instead of creating a
+    duplicate. See this module's docstring for the bug this replaced.
+    """
+    return re.sub(r"[^a-z0-9]+", "", name.translate(_TRANSLITERATE).lower())
 
 
 def _find_or_create_account(db: Session, *, account_number: str, name_hint: str | None) -> Account:
@@ -77,18 +126,28 @@ def _find_or_create_account(db: Session, *, account_number: str, name_hint: str 
     return account
 
 
-def _find_or_create_holding(db: Session, *, name: str, currency: str) -> tuple[Holding, bool]:
+def _find_or_create_holding(
+    db: Session,
+    *,
+    name: str,
+    currency: str,
+    holdings_by_name: dict[str, Holding],
+    tickers_taken: set[str],
+) -> tuple[Holding, bool]:
     """Returns (holding, was_created).
 
-    Dedup key is a ticker slugified from the security name — the only
-    stable identifier these exports give us (no ISIN/ticker column) — so
-    "Alfred Berg Nordic High Yield II R (NOK)" appearing in two different
-    accounts' exports resolves to the same Holding both times.
+    `holdings_by_name`/`tickers_taken` are built once per import (see
+    `import_portfolio_csv`) and mutated as new holdings are created within
+    the same file, so two rows in the same CSV that normalize to the same
+    name (shouldn't happen, but a broker export is untrusted input) still
+    resolve to one Holding rather than two.
     """
-    ticker = _slugify_ticker(name)
-    holding = db.query(Holding).filter(Holding.ticker == ticker).one_or_none()
+    normalized = _normalize_name(name)
+    holding = holdings_by_name.get(normalized)
     if holding is not None:
         return holding, False
+
+    ticker = _slugify_ticker(name, taken=tickers_taken)
     holding = Holding(
         ticker=ticker,
         name=name,
@@ -97,6 +156,8 @@ def _find_or_create_holding(db: Session, *, name: str, currency: str) -> tuple[H
     )
     db.add(holding)
     db.flush()
+    holdings_by_name[normalized] = holding
+    tickers_taken.add(ticker)
     return holding, True
 
 
@@ -165,10 +226,23 @@ def import_portfolio_csv(
     db.add(snapshot)
     db.flush()
 
+    # Built once per import, not re-queried per row (see
+    # _find_or_create_holding) — both the matching bug fix and a
+    # page-load-speed-style batching win over the old per-row query.
+    existing_holdings = db.query(Holding).all()
+    holdings_by_name = {_normalize_name(h.name): h for h in existing_holdings}
+    tickers_taken = {h.ticker for h in existing_holdings}
+
     holdings_created = 0
     holdings_matched = 0
     for p in positions:
-        holding, created = _find_or_create_holding(db, name=p.name, currency=p.currency)
+        holding, created = _find_or_create_holding(
+            db,
+            name=p.name,
+            currency=p.currency,
+            holdings_by_name=holdings_by_name,
+            tickers_taken=tickers_taken,
+        )
         holdings_created += 1 if created else 0
         holdings_matched += 0 if created else 1
 

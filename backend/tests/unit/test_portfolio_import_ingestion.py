@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.domain.errors import UnsupportedFileTypeError
 from app.domain.instrument_types import BOND_FUND, MONEY_MARKET_FUND, STOCK
 from app.models import Account, Base, Holding, PortfolioPosition, PortfolioSnapshot
+from app.models.holding import EQUITY_ASSET_CLASS
 from app.providers.object_storage import LocalObjectStorageProvider
 from app.services.portfolio_import.csv_parser import CsvParseError
 from app.services.portfolio_import.ingestion import import_portfolio_csv
@@ -150,3 +151,81 @@ def test_explicit_account_name_used_for_new_account(db, storage):
         account_name="My ASK",
     )
     assert result.account.name == "My ASK"
+
+
+def _var_energi_bytes() -> bytes:
+    rows = [
+        HEADER,
+        "Vår Energi\tNOK\t1456\t35,5\t-1,3153087\t54,02\t55057,184\t78653,12\t52,17\t26965,15",
+    ]
+    return _utf16("\n".join(rows))
+
+
+def test_matches_existing_holding_with_different_ticker_by_normalized_name(db, storage):
+    """Reproduces Faiz's real bug (2026-09-21): a holding that already
+    exists under a real/manually-assigned ticker used to be invisible to
+    the CSV importer's old dedup key (an exact match on
+    _slugify_ticker(name) == Holding.ticker), so re-importing the same
+    security spawned a garbage-tickered duplicate instead of matching it.
+    Matching is now by normalized name, independent of what's in `ticker`.
+    """
+    existing = Holding(
+        ticker="VAR.OL",  # a real market ticker Faiz assigned by hand
+        name="Vår Energi",
+        trading_currency="NOK",
+        asset_class_raw=STOCK,
+        asset_class=EQUITY_ASSET_CLASS,
+    )
+    db.add(existing)
+    db.commit()
+
+    result = import_portfolio_csv(
+        db, storage, filename="export.csv", content=_var_energi_bytes(), account_number="123"
+    )
+
+    assert result.holdings_created == 0
+    assert result.holdings_matched == 1
+    holdings = db.query(Holding).filter(Holding.name == "Vår Energi").all()
+    assert len(holdings) == 1
+    # The real ticker Faiz assigned is preserved, not clobbered or duplicated.
+    assert holdings[0].ticker == "VAR.OL"
+
+
+def test_new_holding_gets_a_readable_transliterated_ticker(db, storage):
+    """Norwegian letters (æøå) used to just vanish from the slug (not
+    ASCII, not NFKD-decomposable to an ASCII base letter), turning "Vår
+    Energi" into the broken "V-R-ENERGI" instead of a readable
+    placeholder. This is still just a placeholder ticker, not a real
+    market symbol — Faiz assigns the real one via PATCH /holdings/{id}."""
+    result = import_portfolio_csv(
+        db, storage, filename="export.csv", content=_var_energi_bytes(), account_number="123"
+    )
+    assert result.holdings_created == 1
+    holding = db.query(Holding).filter(Holding.name == "Vår Energi").one()
+    assert holding.ticker == "VAR-ENERGI"
+
+
+def test_slug_ticker_collision_with_unrelated_existing_ticker_is_disambiguated(db, storage):
+    """A brand-new security's auto-generated placeholder ticker can still
+    collide with an unrelated holding's ticker (e.g. one Faiz assigned by
+    hand via the Add Holding form) even though the two are obviously
+    different securities — must get a disambiguating suffix, not a
+    UNIQUE-constraint 500."""
+    unrelated = Holding(
+        ticker="TEST",  # coincidentally what "Test AS" below would also slug to
+        name="Some Unrelated Company",
+        trading_currency="NOK",
+        asset_class_raw=STOCK,
+        asset_class=EQUITY_ASSET_CLASS,
+    )
+    db.add(unrelated)
+    db.commit()
+
+    rows = [HEADER, "Test\tNOK\t10\t100\t0\t100\t1000\t1000\t0\t0"]
+    content = _utf16("\n".join(rows))
+    result = import_portfolio_csv(
+        db, storage, filename="export.csv", content=content, account_number="123"
+    )
+    assert result.holdings_created == 1
+    new_holding = db.query(Holding).filter(Holding.name == "Test").one()
+    assert new_holding.ticker == "TEST-2"
