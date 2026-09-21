@@ -2,14 +2,15 @@
 
 Sprint 0 built the skeleton (health check, deployable through the existing
 Dockerfile/Railway setup). Sprint 1 (see
-claude/buffett-munger-rebuild-sprint-plan-2026-09-21.md) adds the first real
-domain router: document ingestion. Portfolio/analysis routers land as those
-domains are rebuilt in later sprints.
+claude/buffett-munger-rebuild-sprint-plan-2026-09-21.md) adds document
+ingestion, holdings/accounts/portfolio CRUD, and read-only computed-metrics
+endpoints. Analysis/valuation routers land in later sprints.
 """
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.documents import router as documents_router
+from app.api.holdings import router as holdings_router
 from app.config.settings import get_settings
 
 settings = get_settings()
@@ -26,6 +27,7 @@ app.add_middleware(
 )
 
 app.include_router(documents_router)
+app.include_router(holdings_router)
 
 
 @app.get("/health")
