@@ -1,3 +1,17 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-background text-ink font-body antialiased;
+  }
+}
+
+@layer utilities {
+  /* Financial figures line up in columns — Design & UX direction's
+     "numbers are typeset, not just printed" principle. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
