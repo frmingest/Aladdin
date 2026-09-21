@@ -22,7 +22,6 @@ silently dropped.
 """
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from decimal import Decimal
@@ -30,12 +29,11 @@ from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.domain.period_dates import extract_year, period_end_date
 from app.models.financial_line_item import FinancialLineItem
 from app.models.holding import Holding
 from app.models.market import MarketObservation
 from app.services import calculations
-
-_YEAR_PATTERN = re.compile(r"(\d{4})")
 
 
 @dataclass
@@ -44,15 +42,6 @@ class PeriodMultiples:
     matched_price_observed_at: datetime | None = None
     computed: dict[str, Decimal] = field(default_factory=dict)
     skipped: dict[str, str] = field(default_factory=dict)
-
-
-def _extract_year(period: str) -> int | None:
-    match = _YEAR_PATTERN.search(period)
-    return int(match.group(1)) if match else None
-
-
-def _period_end_date(year: int) -> datetime:
-    return datetime(year, 12, 31, tzinfo=timezone.utc)
 
 
 def _nearest_observation(
@@ -166,13 +155,13 @@ def multiples_over_time(db: Session, holding: Holding) -> list[PeriodMultiples]:
     for period, facts in sorted(_facts_by_period(line_items).items()):
         result = PeriodMultiples(period=period)
 
-        year = _extract_year(period)
+        year = extract_year(period)
         if year is None:
             result.skipped["_period"] = f"could not parse a year out of period label {period!r}"
             results.append(result)
             continue
 
-        observation = _nearest_observation(observations, _period_end_date(year))
+        observation = _nearest_observation(observations, period_end_date(year))
         if observation is None:
             result.skipped["_period"] = "no market price observation available for this holding"
             results.append(result)
