@@ -5,9 +5,11 @@ import { NavLink } from "react-router-dom";
  * Fixed left nav + content area — Design & UX direction's "left-nav
  * information architecture" principle
  * (claude/buffett-munger-rebuild-sprint-plan-2026-09-21.md), sized to grow
- * as later sprints add portfolio/thesis/macro sections. Only "Holdings" is
- * live today; the rest are visible-but-disabled so the intended shape of
- * the app is legible even before those sprints land.
+ * as later sprints add thesis/valuation sections. "Thesis" is still
+ * visible-but-disabled so the intended shape of the app stays legible
+ * before Sprint 4 lands; Macro is live as of Sprint 2's research UI
+ * (Sector research is reached from within Macro / a holding's sector
+ * link rather than getting its own top-level nav item).
  */
 
 type HealthState = "checking" | "ok" | "unreachable";
@@ -37,8 +39,8 @@ function useBackendHealth(): HealthState {
 const NAV_ITEMS: { label: string; to: string; disabled?: boolean }[] = [
   { label: "Holdings", to: "/" },
   { label: "Portfolio", to: "/portfolio" },
+  { label: "Macro", to: "/macro" },
   { label: "Thesis", to: "/thesis", disabled: true },
-  { label: "Macro", to: "/macro", disabled: true },
 ];
 
 function HealthBadge() {

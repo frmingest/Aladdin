@@ -181,3 +181,48 @@ export interface PortfolioImportResponse {
   holdings_matched: number;
   was_duplicate_file: boolean;
 }
+
+/** Mirrors backend/app/schemas/research.py (Sprint 2 — live, evidence-first
+ * research: CLAUDE.md Rule 2 requires every item to carry a real, citable
+ * source_url/source_name, which is why this shape has no "content" field
+ * without one). */
+export interface ResearchItem {
+  title: string;
+  summary: string;
+  source_name: string;
+  source_url: string;
+  /** macro_news | sector_research | company_research (see
+   * app/providers/gemini_research_provider.py) — a plain string, not an
+   * enforced enum. */
+  source_type: string;
+  published_at: string | null;
+  retrieved_at: string;
+}
+
+/** Shared by macro/sector/company research responses. `available: false`
+ * with a `reason` covers both "never run yet" and "provider just failed,
+ * here's the (possibly stale) cache" — see backend/app/api/research.py's
+ * header comment. */
+export interface ResearchSnapshotBase {
+  available: boolean;
+  as_of: string | null;
+  items: ResearchItem[];
+  reason: string | null;
+}
+
+export type MacroResearch = ResearchSnapshotBase;
+
+export interface SectorResearch extends ResearchSnapshotBase {
+  sector: string;
+}
+
+export interface CompanyResearch extends ResearchSnapshotBase {
+  holding_id: string;
+  ticker: string;
+}
+
+export const RESEARCH_SOURCE_TYPE_LABELS: Record<string, string> = {
+  macro_news: "Macro",
+  sector_research: "Sector",
+  company_research: "Company",
+};

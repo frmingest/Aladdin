@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, ApiError } from "../lib/api";
-import type { DocumentSummary, Holding, HoldingMetrics } from "../lib/types";
+import type { CompanyResearch, DocumentSummary, Holding, HoldingMetrics } from "../lib/types";
 import { METRIC_LABELS, METRIC_ORDER, PERCENT_METRICS } from "../lib/types";
 import { formatBytes, formatDate, formatDecimal, formatPercent } from "../lib/format";
 import { Button, Card, EmptyState, PageHeader, StatusBadge } from "../components/ui";
+import { ResearchPanel } from "../components/ResearchPanel";
 
 function MetricsPanel({ holdingId }: { holdingId: string }) {
   const [periods, setPeriods] = useState<string[] | null>(null);
@@ -243,6 +244,44 @@ function DocumentsPanel({
   );
 }
 
+function CompanyResearchSection({ holdingId, ticker }: { holdingId: string; ticker: string }) {
+  const [snapshot, setSnapshot] = useState<CompanyResearch | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    api
+      .getCompanyResearch(holdingId)
+      .then(setSnapshot)
+      .catch((err) =>
+        setError(err instanceof ApiError ? err.message : "Could not load company research."),
+      );
+  }, [holdingId]);
+
+  async function handleRefresh() {
+    setError(null);
+    setRefreshing(true);
+    try {
+      setSnapshot(await api.refreshCompanyResearch(holdingId));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Refresh failed.");
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
+  return (
+    <ResearchPanel
+      title={`${ticker} — company research`}
+      snapshot={snapshot}
+      error={error}
+      refreshing={refreshing}
+      onRefresh={handleRefresh}
+      emptyHint="Needs a real GOOGLE_AI_STUDIO_API_KEY set on the backend."
+    />
+  );
+}
+
 export default function HoldingDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -315,6 +354,15 @@ export default function HoldingDetailPage() {
         }
       />
 
+      {holding.sector && (
+        <Link
+          to={`/sectors/${encodeURIComponent(holding.sector)}`}
+          className="mb-6 inline-block text-sm text-accent hover:text-accent-hover"
+        >
+          {holding.sector} sector research →
+        </Link>
+      )}
+
       {error && <p className="mb-4 text-sm text-negative">{error}</p>}
 
       <div className="mb-8">
@@ -324,11 +372,18 @@ export default function HoldingDetailPage() {
         <MetricsPanel key={metricsKey} holdingId={id} />
       </div>
 
-      <div>
+      <div className="mb-8">
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-muted">
           Documents
         </h2>
         <DocumentsPanel holdingId={id} onUploaded={() => setMetricsKey((k) => k + 1)} />
+      </div>
+
+      <div>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-muted">
+          Research
+        </h2>
+        <CompanyResearchSection holdingId={id} ticker={holding.ticker} />
       </div>
     </div>
   );

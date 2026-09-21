@@ -14,13 +14,16 @@
 
 import type {
   Account,
+  CompanyResearch,
   DocumentSummary,
   Holding,
   HoldingCreateInput,
   HoldingMetrics,
   HoldingUpdateInput,
+  MacroResearch,
   PortfolioImportResponse,
   PortfolioSnapshotSummary,
+  SectorResearch,
 } from "./types";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL as string | undefined;
@@ -144,4 +147,23 @@ export const api = {
       body: form,
     });
   },
+
+  // Live research (Sprint 2) — see backend/app/api/research.py. GET serves
+  // cache-or-refresh-if-stale; the /refresh POSTs force a real provider
+  // call regardless of freshness ("I want this now", no scheduler exists).
+  getMacroResearch: () => request<MacroResearch>("/research/macro"),
+  refreshMacroResearch: () =>
+    request<MacroResearch>("/research/macro/refresh", { method: "POST" }),
+
+  getSectorResearch: (sector: string) =>
+    request<SectorResearch>(`/research/sectors/${encodeURIComponent(sector)}`),
+  refreshSectorResearch: (sector: string) =>
+    request<SectorResearch>(`/research/sectors/${encodeURIComponent(sector)}/refresh`, {
+      method: "POST",
+    }),
+
+  getCompanyResearch: (holdingId: string) =>
+    request<CompanyResearch>(`/research/holdings/${holdingId}`),
+  refreshCompanyResearch: (holdingId: string) =>
+    request<CompanyResearch>(`/research/holdings/${holdingId}/refresh`, { method: "POST" }),
 };
