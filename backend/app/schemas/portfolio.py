@@ -89,8 +89,8 @@ class PortfolioImportResponse(BaseModel):
 
 
 class LegacyAnalysisPurgeCounts(BaseModel):
-    """How many pre-2026-09-21 Phase-3 analysis rows a snapshot delete (or
-    the bulk portfolio wipe) cascade-removed — see app/api/portfolio.py's
+    """How many pre-2026-09-21 Phase-3/5 rows a snapshot delete (or the bulk
+    portfolio wipe) cascade-removed — see app/api/portfolio.py's
     `_purge_legacy_analysis`. `llm_usage_events` rows are never counted
     here because they're never deleted, only unlinked (real spend history).
     """
@@ -99,6 +99,7 @@ class LegacyAnalysisPurgeCounts(BaseModel):
     holding_analyses: int
     factor_assessments: int
     evidence_references: int
+    portfolio_risk_snapshots: int
 
 
 class SnapshotDeleteResult(BaseModel):

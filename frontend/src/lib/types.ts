@@ -229,6 +229,7 @@ export interface LegacyAnalysisPurgeCounts {
   holding_analyses: number;
   factor_assessments: number;
   evidence_references: number;
+  portfolio_risk_snapshots: number;
 }
 
 export interface SnapshotDeleteResult {

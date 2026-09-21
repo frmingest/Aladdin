@@ -273,11 +273,12 @@ function SnapshotsPanel({
     setDeletingId(snapshot.id);
     try {
       const result = await api.deleteSnapshot(snapshot.id);
-      const purgedRuns = result.legacy_analysis_purged.analysis_runs;
-      if (purgedRuns > 0) {
+      const purged = result.legacy_analysis_purged;
+      const purgedCount = purged.analysis_runs + purged.portfolio_risk_snapshots;
+      if (purgedCount > 0) {
         setNote(
-          `Deleted — this snapshot also had ${purgedRuns} old analysis record${
-            purgedRuns === 1 ? "" : "s"
+          `Deleted — this snapshot also had ${purgedCount} old analysis/risk record${
+            purgedCount === 1 ? "" : "s"
           } from before the rebuild still pointing at it; those were removed too.`,
         );
       }
@@ -375,11 +376,12 @@ function DeleteAllPanel({
     setDeleting(true);
     try {
       const result = await api.deleteAllPortfolioData();
-      const purgedRuns = result.legacy_analysis_purged.analysis_runs;
+      const purged = result.legacy_analysis_purged;
+      const purgedCount = purged.analysis_runs + purged.portfolio_risk_snapshots;
       setNote(
         `Wiped ${result.accounts_deleted} account(s), ${result.snapshots_deleted} snapshot(s), ` +
           `${result.positions_deleted} position(s)` +
-          (purgedRuns > 0 ? `, plus ${purgedRuns} old pre-rebuild analysis record(s).` : "."),
+          (purgedCount > 0 ? `, plus ${purgedCount} old pre-rebuild analysis/risk record(s).` : "."),
       );
       onChanged();
     } catch (err) {

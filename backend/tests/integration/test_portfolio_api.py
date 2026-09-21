@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 
 import openpyxl
 
-from app.models.legacy_analysis import AnalysisRun
+from app.models.legacy_analysis import AnalysisRun, PortfolioRiskSnapshot
 
 
 def _create_holding(client, ticker="EQNR.OL", name="Equinor ASA"):
@@ -193,6 +193,7 @@ def test_delete_snapshot_requires_confirm_and_cascades_positions(client):
         "holding_analyses": 0,
         "factor_assessments": 0,
         "evidence_references": 0,
+        "portfolio_risk_snapshots": 0,
     }
     assert client.get(f"/portfolio/snapshots/{snapshot_id}").status_code == 404
 
@@ -240,6 +241,89 @@ def test_delete_snapshot_cascades_legacy_analysis_runs(client, db_session):
     assert response.json()["legacy_analysis_purged"]["analysis_runs"] == 1
     assert client.get(f"/portfolio/snapshots/{snapshot_id}").status_code == 404
     assert db_session.query(AnalysisRun).count() == 0
+
+
+def test_delete_snapshot_cascades_legacy_risk_snapshots(client, db_session):
+    """Regression test for the real ForeignKeyViolation Faiz hit deleting a
+    real snapshot: a pre-2026-09-21 portfolio_risk_snapshots row referencing
+    the snapshot (`portfolio_snapshot_id` has no ON DELETE CASCADE) used to
+    make this 500 instead of deleting — the same class of bug as
+    `analysis_runs` above, just missed for this table. Faiz's explicit
+    choice, 2026-09-21: cascade-purge it rather than block or orphan it.
+    """
+    holding_id = _create_holding(client)
+    document_id = _upload_portfolio_export(client)
+    snapshot_id = client.post(
+        "/portfolio/snapshots",
+        json={
+            "source_file_id": document_id,
+            "reporting_currency": "NOK",
+            "positions": [{"holding_id": holding_id}],
+        },
+    ).json()["id"]
+
+    legacy_risk_snapshot = PortfolioRiskSnapshot(
+        id=uuid.uuid4(),
+        portfolio_snapshot_id=uuid.UUID(snapshot_id),
+        concentration_json={},
+        correlation_json={},
+        exposure_json={},
+        scenario_json={},
+        systemic_state_risk_json={},
+        risk_band="moderate",
+        narrative="pre-rebuild risk snapshot",
+        risk_scoring_version="v1",
+        scenario_version="v1",
+        created_at=datetime.now(timezone.utc),
+    )
+    db_session.add(legacy_risk_snapshot)
+    db_session.commit()
+
+    response = client.delete(
+        f"/portfolio/snapshots/{snapshot_id}", params={"confirm": "true"}
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["legacy_analysis_purged"]["portfolio_risk_snapshots"] == 1
+    assert client.get(f"/portfolio/snapshots/{snapshot_id}").status_code == 404
+    assert db_session.query(PortfolioRiskSnapshot).count() == 0
+
+
+def test_delete_all_portfolio_data_cascades_legacy_risk_snapshots(client, db_session):
+    """Same regression as above, but through the bulk `/portfolio/all` wipe
+    — the actual endpoint Faiz hit the 500 on, 2026-09-21."""
+    holding_id = _create_holding(client)
+    document_id = _upload_portfolio_export(client)
+    snapshot_id = client.post(
+        "/portfolio/snapshots",
+        json={
+            "source_file_id": document_id,
+            "reporting_currency": "NOK",
+            "positions": [{"holding_id": holding_id}],
+        },
+    ).json()["id"]
+
+    db_session.add(
+        PortfolioRiskSnapshot(
+            id=uuid.uuid4(),
+            portfolio_snapshot_id=uuid.UUID(snapshot_id),
+            concentration_json={},
+            correlation_json={},
+            exposure_json={},
+            scenario_json={},
+            systemic_state_risk_json={},
+            risk_band="moderate",
+            narrative="pre-rebuild risk snapshot",
+            risk_scoring_version="v1",
+            scenario_version="v1",
+            created_at=datetime.now(timezone.utc),
+        )
+    )
+    db_session.commit()
+
+    response = client.delete("/portfolio/all", params={"confirm": "true"})
+    assert response.status_code == 200, response.text
+    assert response.json()["legacy_analysis_purged"]["portfolio_risk_snapshots"] == 1
+    assert db_session.query(PortfolioRiskSnapshot).count() == 0
 
 
 def test_delete_all_portfolio_data_requires_confirm_and_wipes_scope(client):

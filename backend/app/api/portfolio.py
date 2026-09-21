@@ -33,6 +33,7 @@ from app.models.legacy_analysis import (
     FactorAssessment,
     HoldingAnalysis,
     LlmUsageEvent,
+    PortfolioRiskSnapshot,
 )
 from app.models.portfolio import PortfolioPosition, PortfolioSnapshot
 from app.providers.factory import get_object_storage
@@ -60,27 +61,43 @@ SNAPSHOT_STATUS_PROCESSED = "processed"
 
 
 def _purge_legacy_analysis(db: Session, snapshot_ids: list[UUID]) -> LegacyAnalysisPurgeCounts:
-    """Cascade-removes legacy Phase-3 analysis rows (see
-    app/models/legacy_analysis.py) that reference the given portfolio
-    snapshots — the pre-2026-09-21 app's `analysis_runs` and its children.
+    """Cascade-removes legacy Phase-3/5 rows (see app/models/legacy_analysis.py)
+    that reference the given portfolio snapshots — the pre-2026-09-21 app's
+    `analysis_runs` and its children, plus `portfolio_risk_snapshots`.
 
     Deleting a snapshot used to 500 with a raw psycopg2 ForeignKeyViolation
-    once a real snapshot had one of these attached (`analysis_runs`
-    references `portfolio_snapshot_id` with no ON DELETE CASCADE). Faiz's
-    explicit choice, 2026-09-21: cascade-delete the whole legacy analysis
-    chain rather than block the snapshot delete or silently orphan rows.
-    `llm_usage_events` is real spend/usage history, not disposable analysis
-    output, so those rows are only unlinked (their FKs here are nullable),
-    never deleted.
+    once a real snapshot had one of these attached (`analysis_runs` and
+    `portfolio_risk_snapshots` both reference `portfolio_snapshot_id` with no
+    ON DELETE CASCADE — the latter is what Faiz hit doing a `/portfolio/all`
+    wipe, 2026-09-21, since it was missed when this function was first
+    written for `analysis_runs`). Faiz's explicit choice, 2026-09-21:
+    cascade-delete the whole legacy chain rather than block the snapshot
+    delete or silently orphan rows. `llm_usage_events` is real spend/usage
+    history, not disposable analysis output, so those rows are only
+    unlinked (their FKs here are nullable), never deleted.
 
     Uses plain SQLAlchemy queries (not raw SQL) so this also works against
     the test suite's in-memory SQLite, not just Postgres.
     """
     empty = LegacyAnalysisPurgeCounts(
-        analysis_runs=0, holding_analyses=0, factor_assessments=0, evidence_references=0
+        analysis_runs=0,
+        holding_analyses=0,
+        factor_assessments=0,
+        evidence_references=0,
+        portfolio_risk_snapshots=0,
     )
     if not snapshot_ids:
         return empty
+
+    # portfolio_risk_snapshots hangs directly off portfolio_snapshot_id
+    # (not through analysis_runs — its analysis_run_id FK is nullable), so
+    # purge it unconditionally rather than only when an analysis_runs row
+    # exists too.
+    risk_snapshots_deleted = (
+        db.query(PortfolioRiskSnapshot)
+        .filter(PortfolioRiskSnapshot.portfolio_snapshot_id.in_(snapshot_ids))
+        .delete(synchronize_session=False)
+    )
 
     run_ids = list(
         db.scalars(
@@ -88,7 +105,13 @@ def _purge_legacy_analysis(db: Session, snapshot_ids: list[UUID]) -> LegacyAnaly
         )
     )
     if not run_ids:
-        return empty
+        return LegacyAnalysisPurgeCounts(
+            analysis_runs=0,
+            holding_analyses=0,
+            factor_assessments=0,
+            evidence_references=0,
+            portfolio_risk_snapshots=risk_snapshots_deleted,
+        )
 
     ha_ids = list(
         db.scalars(select(HoldingAnalysis.id).where(HoldingAnalysis.analysis_run_id.in_(run_ids)))
@@ -126,6 +149,7 @@ def _purge_legacy_analysis(db: Session, snapshot_ids: list[UUID]) -> LegacyAnaly
         holding_analyses=len(ha_ids),
         factor_assessments=factor_deleted,
         evidence_references=evidence_deleted,
+        portfolio_risk_snapshots=risk_snapshots_deleted,
     )
 
 
