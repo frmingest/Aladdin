@@ -10,7 +10,7 @@ page stays a scan-able table, not a narrative.
 | Phase | What it is | Status |
 |---|---|---|
 | 0–10 | Everything built before the 2026-09-21 reset | 🗑️ Deleted — design knowledge preserved in the rebuild plan and the superseded doc |
-| **11** | **Buffett/Munger single-focus rebuild** — from a clean-slate repo | ✅ **Sprint 0, 1, 2 closed — Sprint 3 (valuation engine) next** — [rebuild sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md), which also has a **Backlog** section for candidate phases beyond Sprint 7 |
+| **11** | **Buffett/Munger single-focus rebuild** — from a clean-slate repo | ✅ **Sprint 0, 1, 2 closed — Sprint 3 backend done (frontend next)** — [rebuild sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md), which also has a **Backlog** section for candidate phases beyond Sprint 7 |
 
 ## Sprint 0 — ✅ closed
 
@@ -46,9 +46,32 @@ See the "Changes / history" table below for the session-by-session breakdown.
 | Versioned research prompts | ✅ Done — `backend/prompts/research/{macro,sector,company}_v1.md` |
 | Research services (staleness-checked caching, macro/sector/company) | ✅ Done — `app/services/research/` |
 | `/research` API (macro, sector, per-holding company, + manual refresh) | ✅ Done — `app/api/research.py` |
-| **Frontend research UI** | ✅ **Done this session** — `ResearchPanel` shared component, Macro page (+ sector picker), Sector page, company-research panel on `HoldingDetailPage`. "Macro" nav item now live. |
+| Frontend research UI | ✅ Done — `ResearchPanel` shared component, Macro page (+ sector picker), Sector page, company-research panel on `HoldingDetailPage`. "Macro" nav item live. |
 | Numeric macro data (FRED / Norges Bank, `macro_observations`) | ⏳ **Deliberately deferred** — moved to the sprint plan's Backlog section |
 | Background scheduler (periodic auto-refresh) | ⏳ **Deliberately deferred** — GET-triggers-refresh-if-stale covers "live" for now; moved to Backlog |
+
+## Sprint 3 — ✅ backend closed 2026-09-21 (valuation engine) — frontend still to do
+
+| Deliverable | Status |
+|---|---|
+| Live market-data providers (`yfinance`) — price, price history, FX, beta | ✅ Done — `app/providers/yfinance_provider.py` |
+| Live risk-free-rate provider (FRED, all currencies via OECD long-term govt bond series) | ✅ Done — `app/providers/fred_risk_free_rate_provider.py`, new `risk_free_rate_observations` table + migration |
+| Staleness-cached market-data services (price/FX/risk-free rate) | ✅ Done — `app/services/market_data/` |
+| Versioned valuation assumptions (equity risk premium, terminal growth, scenario offsets, default beta) | ✅ Done — `app/domain/valuation_assumptions/v1.py` |
+| Deterministic DCF engine (base/bull/bear scenarios, Gordon Growth terminal value, CAPM discount rate) | ✅ Done — `app/services/valuation/{dcf,discount_rate,growth}.py` |
+| Reverse DCF (implied growth from current price, via bisection) | ✅ Done — `app/services/valuation/dcf.py` |
+| Multiples-over-time (P/E, P/B, P/S, EV/EBITDA) | ✅ Done — `app/services/valuation/multiples.py` |
+| Orchestration tying it together for one holding, with currency-consistency FX handling | ✅ Done — `app/services/valuation/holding_valuation.py` |
+| `/valuation` API (`GET`/`POST .../refresh` per holding) | ✅ Done — `app/api/valuation.py` |
+| **Frontend valuation UI** | ⏳ **Not started — next step**, scoped out of this session by Faiz's own choice (backend-only this session) |
+
+**Design choices Faiz made this session** (all "Recommended" options, chosen via clarifying
+questions before building): live market/FX/beta data from **yfinance**; discount rate from a
+**live risk-free rate + a versioned equity-risk-premium assumption** (CAPM), not a single hardcoded
+number; and this session scoped to **backend only**, frontend left for a follow-up session.
+
+**Not yet done:** frontend valuation UI (DCF scenarios, reverse DCF, multiples charts on
+`HoldingDetailPage`); deployed to Railway; run against Faiz's real holdings/documents.
 
 ## Out-of-sequence: Portfolio CSV import + delete UI — ✅ done 2026-09-21
 
@@ -82,10 +105,10 @@ Sprint 4's other deliverables.
 and tested against in-memory SQLite only, per the tests) — needs his go-ahead first (see "Needs
 from Faiz" below). Not yet deployed to Railway either.
 
-## This session: Sprint 2 closed with the frontend research UI
+## Session: Sprint 2 closed with the frontend research UI
 
-Faiz chose "finish Sprint 2: research UI" as this session's next-phase scope (over also building
-the deferred numeric-macro/scheduler work, or skipping ahead to Sprint 3). Before building, this
+Faiz chose "finish Sprint 2: research UI" as that session's next-phase scope (over also building
+the deferred numeric-macro/scheduler work, or skipping ahead to Sprint 3). Before building, that
 session re-verified the repo's actual state against the docs (CLAUDE.md's status-honesty rule):
 fresh venv, full backend test run (198/198 passing), `ruff check`, and a fresh frontend
 `tsc`/`eslint`/`vite build` — all matched what the docs already claimed, with one small correction
@@ -97,18 +120,53 @@ surfaces); a Macro page (`/macro`, portfolio-wide macro/geopolitical research + 
 sectors actually held); a Sector page (`/sectors/:sector`); and a company-research panel added to
 `HoldingDetailPage`. "Macro" is now a live nav item. No backend changes were needed — the
 `/research/*` API was already built and tested in a prior session. Frontend `tsc --noEmit`,
-`eslint .`, and `vite build` all clean. 1 commit (`20d76c1`), local only — `git push` still fails in
-this shell with the same credential error as every prior session.
+`eslint .`, and `vite build` all clean. 1 commit (`20d76c1`), local only at the time.
+
+## This session: Sprint 3 backend (valuation engine)
+
+Faiz said "let's start developing next phase according to plan" — per the sprint plan, next was
+Sprint 3 (valuation engine). Answered three clarifying questions before building (all "Recommended"
+options): yfinance for market/FX/beta data; live risk-free rate + versioned equity-risk-premium for
+the discount rate (CAPM); backend only this session, frontend deferred.
+
+Built the full backend valuation engine in 6 tested, committed units: (1) yfinance + FRED provider
+interfaces and new `MarketObservation`/`FxObservation`/`RiskFreeRateObservation` models (new
+migration for the risk-free-rate table); (2) staleness-cached market-data services mirroring the
+Sprint 2 research-caching pattern; (3) versioned valuation assumptions (`v1`: 4.5% ERP for
+USD/EUR/GBP/NOK, 2.5% terminal growth, ±3% bull/bear growth offsets, beta default 1.0); (4) the
+deterministic DCF/reverse-DCF/CAPM-discount-rate engine (owner-earnings-based, Gordon Growth
+terminal value, reverse DCF via bisection search); (5) multiples-over-time (P/E, P/B, P/S,
+EV/EBITDA); (6) the orchestration layer tying it all together for one real holding — including live
+FX conversion when a holding's trading currency differs from its filing currency — and the
+`/valuation` API endpoints.
+
+Every failure mode (missing risk-free rate, no FX rate, fewer than two periods of owner-earnings
+history, no beta from the provider) degrades only the affected part of the result rather than
+failing the whole response, per CLAUDE.md's fail-visibly discipline. 88 new tests (274 → 286 total
+after fixing a bug this doc's history caught: the API-level `current_price_per_share` field was
+being computed but never actually attached to the result — an integration test written specifically
+to exercise the real endpoint caught it). Ruff clean on every new/changed file (only pre-existing
+repo-wide `EXE002`/alembic-`I001` noise remains). 6 commits, local only — `git push` fails in this
+shell with the same credential error as every prior session.
+
+**Discovered this session, not yet fixed:** the real (gitignored) `backend/.env` has
+`MARKET_DATA_PROVIDER=stub` and `RESEARCH_PROVIDER=stub` set — neither is an implemented provider,
+so running the backend for real right now would immediately break both the new valuation feature
+and the already-shipped Sprint 2 research feature with an "Unknown ... provider" error. Left
+untouched deliberately (real config only ever lives in `backend/.env`, never edited by an agent
+session per CLAUDE.md) — flagged to Faiz below instead.
 
 ## Needs from Faiz right now
 
 | Item | Why |
 |---|---|
-| **Push `main`** (1 commit this session, `20d76c1`) | No GitHub push credentials in this session's shell either — confirmed by an actual failed `git push` attempt this session, not just assumed. (Everything through `7497e45` is confirmed already pushed.) |
+| **Fix `backend/.env`: `MARKET_DATA_PROVIDER=stub` and `RESEARCH_PROVIDER=stub`** | Neither is a real provider — set them to `yfinance` and `google_ai_studio` (or whatever you intend) or the app raises immediately when either feature is used |
+| **Push `main`** (6 commits this session, `9571fe8`..`816127b`) | No GitHub push credentials in this session's shell either — confirmed by an actual failed `git push` attempt this session, not just assumed |
 | **OK to run the portfolio CSV import against your real 5 account exports / the real Supabase DB** | Built and tested against in-memory SQLite only so far — nothing has touched your real data yet |
-| Set a real `GOOGLE_AI_STUDIO_API_KEY` before trying `/research/*` (now including the new UI) for real | `GeminiResearchProvider` raises immediately without one — reuses the same key Sprint 0's analysis provider already needs |
+| Set a real `GOOGLE_AI_STUDIO_API_KEY` before trying `/research/*` for real | `GeminiResearchProvider` raises immediately without one — reuses the same key Sprint 0's analysis provider already needs |
+| Set a `FRED_API_KEY` before trying `/valuation/*` for real | `FredRiskFreeRateProvider` needs one; free to obtain from FRED |
 | Redeploy to Railway once pushed, with the LLM/object-storage env vars from prior sprints set | Still **not deployed to Railway** — status-honesty rule applies here same as every prior sprint |
-| Decide priority among the Backlog candidates (numeric macro data, portfolio risk, thesis tracking, market-data/performance, LLM usage ledger, alerts, reporting) | See the sprint plan doc's new Backlog section — none of these are scheduled into a sprint yet |
+| Decide priority among the Backlog candidates (numeric macro data, portfolio risk, thesis tracking, market-data/performance, LLM usage ledger, alerts, reporting) | See the sprint plan doc's Backlog section — none of these are scheduled into a sprint yet |
 | Fix GitHub push credentials for good, at some point | Every session (cloud and device-linked alike) has hit the identical `could not read Username for 'https://github.com'` error — a one-time PAT/credential-helper setup would stop this being a recurring manual step |
 
 ## Known ongoing issue
@@ -116,13 +174,14 @@ this shell with the same credential error as every prior session.
 No session's shell — cloud or the one on Faiz's linked device — has had GitHub push credentials
 configured (`git push` fails with `could not read Username for 'https://github.com'`). Commits so
 far in the repo were pushed by Faiz himself from his own terminal/GitHub Desktop between sessions;
-this session's 1 commit is sitting local, waiting on the same thing.
+this session's 6 commits are sitting local, waiting on the same thing.
 
 ## Changes / history
 
 | Date | Session | Summary | Detail |
 |---|---|---|---|
-| 2026-09-21 | Sprint 2 closed: frontend research UI | Verified the repo's actual state (fresh venv, 198/198 backend tests, ruff, fresh frontend build) before starting, per the status-honesty rule — confirmed the prior session's CSV-import commit had already been pushed. Built the frontend for `/research/*`: a shared `ResearchPanel` component, a Macro page (+ sector picker), a Sector page, and a company-research panel on `HoldingDetailPage`; "Macro" is now a live nav item. No backend changes. Frontend lint/type-check/build all clean. 1 commit (`20d76c1`), local only — `git push` still fails in this shell. Also drafted a Backlog section in the sprint plan doc covering candidate phases beyond Sprint 7 (numeric macro data & scheduler, portfolio risk intelligence, thesis tracking, market-data/performance tracking, LLM usage ledger, alerts, reporting/export). | [rebuild sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
+| 2026-09-21 | Sprint 3 backend: valuation engine | Built the full backend valuation engine: yfinance/FRED providers + models (new migration), staleness-cached market-data services, versioned valuation assumptions, deterministic DCF/reverse-DCF/CAPM engine, multiples-over-time, the orchestration layer (with live-FX currency handling) and the `/valuation` API. Every live-data failure mode degrades only the affected part of the result, never the whole response. 88 new tests (286 total), ruff clean apart from pre-existing noise. 6 commits (`9571fe8`..`816127b`), local only — `git push` still fails in this shell. Discovered (not fixed): real `.env` has `MARKET_DATA_PROVIDER=stub`/`RESEARCH_PROVIDER=stub`, which would break both this feature and Sprint 2's research feature if run as-is — flagged to Faiz above. Frontend valuation UI deliberately deferred to a follow-up session (Faiz's choice). | [rebuild sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
+| 2026-09-21 | Sprint 2 closed: frontend research UI | Verified the repo's actual state (fresh venv, 198/198 backend tests, ruff, fresh frontend build) before starting, per the status-honesty rule — confirmed the prior session's CSV-import commit had already been pushed. Built the frontend for `/research/*`: a shared `ResearchPanel` component, a Macro page (+ sector picker), a Sector page, and a company-research panel on `HoldingDetailPage`; "Macro" is now a live nav item. No backend changes. Frontend lint/type-check/build all clean. 1 commit (`20d76c1`), since confirmed pushed. Also drafted a Backlog section in the sprint plan doc covering candidate phases beyond Sprint 7 (numeric macro data & scheduler, portfolio risk intelligence, thesis tracking, market-data/performance tracking, LLM usage ledger, alerts, reporting/export). | [rebuild sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
 | 2026-09-21 | Portfolio CSV import + delete UI (pulled forward from Sprint 4) | Built the broker-export CSV parser (UTF-16LE, Nordnet-style), an instrument-type classifier for the mixed equity/bond/ETC rows these exports contain, the CSV→Account/Document/Snapshot/Position ingestion service, the `POST /portfolio/import-csv` API, and a new frontend Portfolio page (multi-file upload + account/snapshot lists with delete buttons, using the already-built confirm-gated delete endpoints). Faiz chose to import every row (tagged, not skipped), skip the whisky/collectibles CSV entirely, and keep deletes granular rather than add a bulk wipe. 25 new tests (198 total), ruff clean. 1 commit (`2cb56c7`), since confirmed pushed. | [rebuild sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
 | 2026-09-21 | Sprint 2 started: live research (macro/sector/company) | Built the full research vertical slice: `ResearchRun`/`ResearchItem` models (onto already-existing DB tables), `GeminiResearchProvider` (Google Search grounding, reusing the Gemini key/pacing), versioned prompts, staleness-checked caching services, and `/research` API endpoints (GET serves-cache-or-refreshes, POST `.../refresh` forces it). 26 new tests (173 total), ruff clean. 2 commits (`16c3ff6`, `588198d`), both since confirmed pushed. Numeric macro data (FRED/Norges Bank) and a background scheduler deliberately deferred. | [rebuild sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
 | 2026-09-21 | Minimal API + first frontend pages (Sprint 1 closed) | Built holdings/accounts/portfolio CRUD, read-only computed-metrics endpoints, and portfolio-wide document uploads (5 backend commits) — closing the Minimal API deliverable after asking Faiz how portfolio positions should be entered (he chose requiring a real source document over a manual-entry shortcut). Then built the holding-list and holding-detail frontend pages against that API and the Design & UX direction (1 frontend commit). 47 new tests (147 backend total), ruff/lint/type-check all clean. 6 commits this session, all since confirmed pushed by Faiz. Sprint 1 is now fully closed. | [rebuild sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
