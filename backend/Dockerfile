@@ -1,20 +1,23 @@
-# Production image for the FastAPI backend (architecture §26 "Deployment &
-# production hardening" phase — see docs/decisions/0010). Not used by local
+# Production image for the FastAPI backend (Sprint 0 skeleton — see
+# claude/buffett-munger-rebuild-sprint-plan-2026-09-21.md). Not used by local
 # dev, which runs `uvicorn app.main:app --reload` directly against
 # docker/docker-compose.yml's Postgres — see README.
 #
-# Build context must be the REPOSITORY ROOT, not backend/ — prompts/,
-# schemas/, scoring/, research/, scenarios/, discount_rate/ are versioned
-# assets that live as siblings of backend/ (see backend/app/config/paths.py's
-# parents[3]-relative REPO_ROOT, which this image reproduces exactly), read
-# as plain files at runtime rather than packaged into the Python app. E.g.:
+# Build context must be the REPOSITORY ROOT, not backend/:
 #   docker build -f backend/Dockerfile -t aladdin-backend .
 # Railway: set the service's Root Directory to the repo root and its
 # Dockerfile Path to backend/Dockerfile.
+#
+# NOTE: the pre-rebuild image also COPY'd top-level prompts/, schemas/,
+# scoring/, research/, scenarios/, discount_rate/ directories (versioned
+# prompt/schema assets read as plain files at runtime). Those directories
+# were deleted in the 2026-09-21 clean-slate reset and are recreated
+# per-sprint as their domains are rebuilt (prompts/schemas first appear in
+# Sprint 4). Add their COPY lines back here when they exist again.
 
 FROM python:3.12-slim AS base
 
-# psycopg2-binary and pymupdf ship prebuilt wheels for this base image, so no
+# psycopg2-binary ships a prebuilt wheel for this base image, so no
 # build-essential/libpq-dev is needed here.
 WORKDIR /app
 
@@ -24,12 +27,6 @@ RUN pip install --no-cache-dir -r backend/requirements.txt
 COPY backend/app backend/app
 COPY backend/alembic backend/alembic
 COPY backend/alembic.ini backend/alembic.ini
-COPY prompts prompts
-COPY schemas schemas
-COPY scoring scoring
-COPY research research
-COPY scenarios scenarios
-COPY discount_rate discount_rate
 
 RUN useradd --create-home --uid 1000 aladdin && chown -R aladdin:aladdin /app
 USER aladdin
