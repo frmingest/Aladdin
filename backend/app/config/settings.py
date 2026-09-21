@@ -82,6 +82,7 @@ class Settings(BaseSettings):
     risk_free_rate_provider: str = "fred"  # "fred" is the only option so far
     fred_api_key: str | None = None
     active_risk_free_rate_series_version: str = "v1"
+    risk_free_rate_stale_after_hours: int = 24
     # ERP / terminal growth / scenario offsets — app/domain/valuation_assumptions/.
     active_valuation_assumptions_version: str = "v1"
 
