@@ -3,30 +3,28 @@
 **Supersedes** [buffett-munger-redesign-sprint-plan-2026-09-20.md](buffett-munger-redesign-sprint-plan-2026-09-20.md).
 That doc planned an *incremental* redesign (ADR 0019/0020: "continue & consolidate, no rebuild").
 On 2026-09-21 Faiz overrode that decision and had the repo wiped to a clean slate. This doc plans
-the rebuild from that clean slate. **Sprint 0, Sprint 1, and Sprint 2 are all closed.** **Sprint 3's
-backend (the valuation engine) is now also closed** — DCF/reverse-DCF/multiples all built and wired
-into a `/valuation` API against live market data; its **frontend is deferred to a follow-up
-session** by Faiz's own choice. Numeric macro data and a background scheduler remain **deliberately
-deferred** out of Sprint 2 — see the Backlog section below for where that work now sits.
-Separately, portfolio CSV import + delete UI (originally slated for Sprint 4) was pulled forward and
-is done.
+the rebuild from that clean slate. **Sprint 0, Sprint 1, Sprint 2, and Sprint 3 are all closed** —
+DCF/reverse-DCF/multiples are built, wired into a `/valuation` API against live market data, and
+now have a frontend on `HoldingDetailPage` too. Numeric macro data and a background scheduler
+remain **deliberately deferred** out of Sprint 2 — see the Backlog section below for where that
+work now sits. Separately, portfolio CSV import + delete UI (originally slated for Sprint 4) was
+pulled forward and is done. **Sprint 4 (the Buffett/Munger persona & output schema) is next**, not
+yet started — needs Faiz's scope decisions before building (see that sprint's section below).
 
-## Where things actually stand right now (audited 2026-09-21, ninth session pass)
+## Where things actually stand right now (audited 2026-09-21, tenth session pass)
 
 | | |
 |---|---|
-| Repo | `main`, commit `816127b` ("Add valuation API endpoints tying DCF/multiples to live market data") — **6 commits this session, not pushed** — `git push` fails from this session's shell with `could not read Username for 'https://github.com'`, confirmed by an actual attempt this session, same limitation every prior session hit. Everything through `20d76c1` has been confirmed pushed. |
-| **Sprint 3 backend closed this session — valuation engine built and wired to a live-data API.** | Live market data (yfinance: price, price history, FX, beta), a live risk-free rate for any currency (FRED, OECD long-term govt bond series), versioned valuation assumptions, the deterministic DCF/reverse-DCF/CAPM engine, multiples-over-time, and the orchestration layer that ties them together for one real holding (including live FX conversion for holdings that trade in a different currency than they report in) — all wired into `GET`/`POST .../refresh` on `/valuation/holdings/{id}`. |
-| `app/providers/yfinance_provider.py`, `fred_risk_free_rate_provider.py` | **New this session.** Defensive 3-path price/currency fallback for yfinance (`fast_info` → `.info` → `.history()` with a currency hint) given yfinance's own history of breaking `fast_info` across releases; FRED covers risk-free rates for every currency needed (USD/NOK/EUR/GBP) via its own republished OECD series, avoiding a second Norges-Bank-specific integration. |
-| `app/services/market_data/` | **New this session.** Staleness-cached price/FX/risk-free-rate services, generalized from Sprint 2's research-caching pattern (`app/services/research/common.py`) via a shared `get_or_refresh()` — a provider failure never loses a working (now-stale) cached value. |
-| `app/domain/valuation_assumptions/v1.py` | **New this session.** Versioned, not hardcoded: 4.5% equity risk premium for USD/EUR/GBP/NOK (5.5% default for anything else), 2.5% terminal growth, ±3% bull/bear growth offsets off the base CAGR, default beta 1.0 when a provider can't supply one. |
-| `app/services/valuation/{dcf,discount_rate,growth,multiples}.py`, `holding_valuation.py` | **New this session.** DCF discounts *owner earnings* (Buffett's concept — net income + D&A − capex − ΔWC), not FCFF/WACC; reverse DCF solves for implied growth via bisection (no closed form once terminal value is in the mix); the orchestration layer degrades only the affected part of a result (missing risk-free rate → DCF unavailable; missing FX → margin-of-safety/reverse-DCF skipped but DCF scenarios still computed; <2 periods of owner-earnings history → DCF unavailable) rather than failing the whole response, per CLAUDE.md's fail-visibly discipline. |
-| `app/api/valuation.py`, `app/schemas/valuation.py` | **New this session.** Mirrors `/research/*`'s shape exactly: `GET` serves fresh-or-refreshed, `POST .../refresh` forces a live re-pull. |
+| Repo | `main`, commit `ddeade1` ("Add frontend valuation UI (Sprint 3 close): DCF, reverse DCF, multiples") — **1 commit this session, not pushed** — `git push` fails from this session's shell with `could not read Username for 'https://github.com'`, confirmed by an actual attempt this session, same limitation every prior session hit. Everything through `d4edc2f` has been confirmed pushed (this session corrected a stale claim in the prior session's own docs that those 6 commits were still local — they were not). |
+| **Sprint 3 fully closed this session — frontend valuation UI built.** | `ValuationPanel.tsx` on `HoldingDetailPage`: assumption stat tiles (price, CAPM discount rate, base growth, reverse-DCF implied growth), DCF bull/base/bear scenario cards (intrinsic value + margin of safety, colored by sign), and multiples-over-time as four small-multiple `recharts` line charts (P/E, P/B, P/S, EV/EBITDA — never combined onto shared axes, since each sits on a different scale). No backend changes needed — `/valuation/*` was already built and tested in the prior session. |
+| `frontend/src/components/ValuationPanel.tsx` | **New this session.** Mirrors `ResearchPanel`'s load/refresh/error shape. A per-period skip reason surfaces when a multiple has no computed value yet; an `unavailable_reasons` banner surfaces when any part of a holding's valuation degraded — both follow this app's "fail visibly, never silently" convention from the Metrics and Research panels. |
+| `frontend/src/lib/types.ts`, `lib/api.ts` | **New this session.** `DCFScenario`/`DCF`/`PeriodMultiples`/`HoldingValuation` types mirroring `app/schemas/valuation.py` exactly (Decimal-as-string wire format, same convention as every other type in this file); `getHoldingValuation`/`refreshHoldingValuation` API methods mirroring the research API's GET-serves-fresh-or-refreshes / POST-`.../refresh`-forces-it shape. |
+| Verification before building | Fresh venv, 286/286 backend tests passing (matching the docs exactly), `ruff check` clean (only the same pre-existing `EXE002` noise), fresh frontend `tsc --noEmit`/`eslint .`/`vite build` all clean before *and* after this session's change. |
 | Deployment | **Not deployed to Railway.** Still "written, not yet deployed" per the status-honesty rule — no Railway CLI session or config found in the repo this session either. |
-| Real data | **Still untouched.** Portfolio CSV import (prior session) still not yet run against Faiz's real 5 account CSVs or the real Supabase DB; needs his go-ahead first. |
-| Test environment | Backend: same fresh-Linux-venv-per-session limitation as always — **286 tests, all passing** (274 before this session's own +12 across the last unit of work; 88 new tests total across all 6 of this session's commits). `ruff check` on `backend/`: pre-existing `EXE002` (file-permission artifact, confirmed every session, 143 currently) + pre-existing `I001` in `alembic/versions/*.py` migration files (13 currently, including this session's own new migration, consistent with the other 12 predating this rebuild) — neither touches app code, both unrelated to this session's changes. Frontend: unchanged this session (backend-only, by Faiz's choice). |
-| **Discovered this session, not fixed** | The real (gitignored) `backend/.env` has `MARKET_DATA_PROVIDER=stub` and `RESEARCH_PROVIDER=stub` — neither is an implemented provider in `app/providers/factory.py`. Running the backend right now would immediately break both the new `/valuation/*` feature and the already-shipped `/research/*` feature with an "Unknown ... provider" error. Left untouched (real config only ever lives in `backend/.env`, never edited by an agent session per CLAUDE.md) — flagged to Faiz in `progress.md`'s "Needs from Faiz" table. |
-| Known gap | Numeric macro data (FRED/Norges Bank → `macro_observations`) and a background scheduler are both still deliberately deferred — see "Backlog" below. Frontend valuation UI (DCF/reverse-DCF/multiples on `HoldingDetailPage`) is the immediate next step, deferred out of this session by Faiz's own choice. |
+| Real data | **Still untouched.** Portfolio CSV import still not yet run against Faiz's real 5 account CSVs or the real Supabase DB; needs his go-ahead first. |
+| Test environment | Backend: same fresh-Linux-venv-per-session limitation as always — **286 tests, all passing**, unchanged this session (no backend changes). `ruff check` on `backend/`: pre-existing `EXE002` (file-permission artifact, confirmed every session, 86 currently on `app/` alone) + pre-existing `I001` in `alembic/versions/*.py` migration files — neither touches this session's changes. Frontend: `tsc --noEmit`, `eslint .`, and `vite build` all clean. Bundle grew from ~197KB to ~587KB (gzipped: 61KB → 169KB) now that `recharts` (already a dependency, previously unused) is in the main chunk — vite flags this as a chunk-size warning; worth a code-split later (dynamic `import()` on chart-heavy pages), not blocking for a personal single-user app. |
+| **Discovered this session, not fixed** | The real (gitignored) `backend/.env` still has `MARKET_DATA_PROVIDER=stub` and `RESEARCH_PROVIDER=stub` — neither is an implemented provider in `app/providers/factory.py`. Running the backend right now would immediately break both `/valuation/*` and `/research/*` with an "Unknown ... provider" error. Left untouched (real config only ever lives in `backend/.env`, never edited by an agent session per CLAUDE.md) — still flagged to Faiz in `progress.md`'s "Needs from Faiz" table, unfixed across two sessions now. |
+| Known gap | Numeric macro data (FRED/Norges Bank → `macro_observations`) and a background scheduler are both still deliberately deferred — see "Backlog" below. **Sprint 4 (the analysis engine itself) is the immediate next step** — it's the centerpiece of this whole rebuild and needs Faiz's scope decisions before building, same as every prior sprint start. |
 
 ## The Brain's 5 steps — what the rebuild has to deliver
 
@@ -40,13 +38,13 @@ is done.
 | 5. Verdict | Strong Buy/Buy/Hold/Sell/Avoid, 3-bullet thesis, top-2 downside risks, price target range, 3-5 metrics to monitor, what would change the thesis |
 
 Sprint 2 covers the Opening step's macro/geopolitical and per-company research, plus the
-sector-level input Step 3.3 needs. **Sprint 3's backend (this session) covers Step 4** — multiples,
-DCF, reverse DCF and margin-of-safety are all now computed against live data, per holding. None of
-this is yet wired into an `AnalysisContext`/evidence-packet, since the analysis engine itself is
-Sprint 4. Sprint 4's analysis engine is expected to run only against holdings tagged
-`stock`/`equity_etf` (`app/domain/instrument_types.EQUITY_ANALYZABLE_TYPES`) — the portfolio-import
-work done in a prior session tags every holding's real instrument type precisely so that filter is
-possible then.
+sector-level input Step 3.3 needs. **Sprint 3 (backend + frontend, both now closed) covers Step
+4** — multiples, DCF, reverse DCF and margin-of-safety are all now computed against live data and
+visible on `HoldingDetailPage`, per holding. None of this is yet wired into an
+`AnalysisContext`/evidence-packet, since the analysis engine itself is Sprint 4. Sprint 4's analysis
+engine is expected to run only against holdings tagged `stock`/`equity_etf`
+(`app/domain/instrument_types.EQUITY_ANALYZABLE_TYPES`) — the portfolio-import work done in a prior
+session tags every holding's real instrument type precisely so that filter is possible then.
 
 ## Non-negotiable design rules
 
@@ -69,7 +67,7 @@ secrets discipline.
 | 9 | Sprint 2 next-phase scope | Faiz chose **"finish Sprint 2: research UI"** over also building the deferred numeric-macro/scheduler items, or skipping ahead to Sprint 3. |
 | 10 | Sprint 3 market/FX/beta data source | **yfinance** (Recommended option) — free, no separate account setup needed for a personal single-user app. |
 | 11 | Sprint 3 discount-rate methodology | **Live risk-free rate + a versioned equity-risk-premium assumption** (CAPM) (Recommended option) — not a single hardcoded discount rate. |
-| 12 | Sprint 3 session scope | **Backend only this session** (Recommended option) — frontend valuation UI deferred to a follow-up session. |
+| 12 | Sprint 3 session scope | **Backend only that session** (Recommended option) — frontend valuation UI deferred to a follow-up session, which has now happened. |
 
 ## Actual current Supabase schema (read from `backend/alembic/versions/`, 21 tables + 1 new this session, no live DB connection needed)
 
@@ -84,8 +82,8 @@ Decision 6 above.)
 | Table | From phase |
 |---|---|
 | `accounts`, `holdings`, `portfolio_positions`, `portfolio_snapshots`, `documents`, `document_pages`, `document_chunks`, `financial_line_items` | Phase 1 (portfolio + document ingestion) + accounts migration — **ORM models, document ingestion, full CRUD, the first frontend pages, and CSV import all done this rebuild** |
-| `market_observations`, `fx_observations` | Phase 2 (market data & FX) — **ORM models + staleness-cached live services built this session (Sprint 3)**, used by the valuation engine's price/FX lookups |
-| `risk_free_rate_observations` | **New table + migration this session (Sprint 3)** — not part of the original pre-reset schema; needed for the CAPM discount-rate methodology (Decision 11 above) |
+| `market_observations`, `fx_observations` | Phase 2 (market data & FX) — **ORM models + staleness-cached live services built in Sprint 3**, used by the valuation engine's price/FX lookups |
+| `risk_free_rate_observations` | **New table + migration in Sprint 3** — not part of the original pre-reset schema; needed for the CAPM discount-rate methodology (Decision 11 above) |
 | `analysis_runs`, `holding_analyses`, `factor_assessments`, `evidence_references` | Phase 3 (AI analysis engine) — not yet built this rebuild |
 | `research_runs`, `research_items` | Phase 4 (external research) — **ORM models, provider, caching service, API, and frontend UI all done this rebuild (Sprint 2, now closed)** |
 | `macro_observations` | Phase 4 (numeric central-bank/macro data) — **deliberately deferred**, see Backlog |
@@ -124,11 +122,13 @@ Wealthfront, plus wider 2026 fintech UI roundups):
   once the moat rating exists).
 - System font stack (no external font request); `Inter` is named first for whenever it's actually
   loaded.
-- Fixed left nav, holding list/detail built as cards over the near-white background. The Portfolio
-  and Macro/Sector pages follow the same card/table conventions.
+- Fixed left nav, holding list/detail built as cards over the near-white background. The Portfolio,
+  Macro/Sector, and now the valuation section on `HoldingDetailPage` all follow the same
+  card/table/chart conventions — including the valuation multiples charts, which use only the one
+  accent color for their single-series lines, never a decorative palette.
 
-Sprint 3's valuation UI (next step) and Sprint 5's dashboard are where this direction gets exercised
-across the remaining domains.
+Sprint 5's dashboard is the next place this direction gets exercised across a new surface (the
+portfolio-wide roll-up).
 
 ## Sprints
 
@@ -210,7 +210,7 @@ All items done — see prior session detail in the project's `progress.md`.
 Commit `2cb56c7`, confirmed pushed. 25 new tests (198 total), ruff clean. Frontend lint/build clean.
 Not yet run against Faiz's real 5 account CSVs or the real Supabase DB.
 
-### Sprint 3 — Valuation engine — ✅ backend closed 2026-09-21, frontend next
+### Sprint 3 — Valuation engine — ✅ fully closed 2026-09-21 (backend + frontend)
 
 | Deliverable | Detail | Status |
 |---|---|---|
@@ -223,9 +223,9 @@ Not yet run against Faiz's real 5 account CSVs or the real Supabase DB.
 | Multiples-over-time | `app/services/valuation/multiples.py` — P/E, P/B, P/S, EV/EBITDA per period, matched against the nearest price observation | ✅ Done — commit `0fd795d` |
 | Orchestration + currency handling | `app/services/valuation/holding_valuation.py` — ties live data + assumptions + the calc modules together for one holding; converts the live price into the filing's currency via live FX when a holding trades in a different currency than it reports in (e.g. a Norway-listed company reporting in USD) | ✅ Done — commit `816127b` |
 | `/valuation` API | `app/api/valuation.py` — `GET`/`POST .../refresh` on `/valuation/holdings/{id}`, mirrors `/research/*`'s shape exactly | ✅ Done — commit `816127b` |
-| **Frontend valuation UI** | DCF scenarios, reverse DCF, margin of safety, multiples-over-time chart on `HoldingDetailPage` | ⏳ **Not started — next step** (Faiz's own choice: backend only this session) |
+| **Frontend valuation UI** | `frontend/src/components/ValuationPanel.tsx` on `HoldingDetailPage` — assumption stat tiles, DCF bull/base/bear scenario cards (intrinsic value + margin of safety, colored by sign), reverse-DCF implied growth, multiples-over-time as four small-multiple `recharts` line charts (one axis per metric) | ✅ Done — commit `ddeade1` |
 
-**Design decisions made building the valuation engine this session:**
+**Design decisions made building the valuation engine's backend:**
 
 - **Owner earnings, not FCFF/WACC.** The DCF discounts Buffett's "owner earnings" concept (net
   income + D&A − maintenance capex − ΔWC), consistent with this app's whole Buffett/Munger framing,
@@ -251,11 +251,25 @@ Not yet run against Faiz's real 5 account CSVs or the real Supabase DB.
   unavailable but multiples-over-time (which doesn't depend on DCF) still computes. Nothing 500s on a
   live-data hiccup.
 
-**Bug caught by testing, fixed this session:** the orchestration layer computed
+**Bug caught by testing, fixed in the backend session:** the orchestration layer computed
 `current_price_per_share` for internal use (feeding it into the DCF/reverse-DCF calls) but never
 actually attached it to the result object returned to the API — caught by a unit test asserting the
 field directly, not by the integration test alone. Fixed before committing; both the 7 new unit
 tests and the 5 new integration tests pass.
+
+**Design decisions made building the valuation engine's frontend:**
+
+- **Multiples-over-time is four small-multiple charts, never one combined chart.** P/E (~10-30),
+  P/B (~1-5), P/S (~1-10), and EV/EBITDA (~5-20) sit on incompatible scales — a shared axis would
+  either flatten three of the four lines or require a dual/multi-axis chart, which reads
+  misleadingly (the #1 chart-design mistake). Each metric gets its own chart, own axis, single
+  accent-colored line.
+- **`recharts` (already a frontend dependency, unused until now)** rather than a new charting
+  library or hand-rolled SVG — keeps the dependency surface unchanged.
+- **Per-period skip reasons and the holding-level `unavailable_reasons` are both surfaced in the
+  UI**, not swallowed — matches the "fail visibly, never silently" pattern the Metrics panel and
+  `ResearchPanel` already established, rather than introducing a different convention for this one
+  panel.
 
 ### Sprint 4 — The Buffett/Munger persona & output schema (the centerpiece)
 
@@ -275,7 +289,7 @@ tests and the 5 new integration tests pass.
 **Real broker-export parsing — ✅ done ahead of schedule, 2026-09-21** (see the Sprints section's
 own "Portfolio CSV import + delete UI" entry above). This was originally planned as part of
 Sprint 4; Faiz asked for it pulled forward on its own, independent of the rest of Sprint 4's scope
-(the analysis engine itself is still not started).
+(the analysis engine itself is still not started — this is now the actual next phase).
 
 ### Sprint 5 — Portfolio roll-up & dashboard
 
@@ -301,7 +315,7 @@ priority — that's Faiz's call.
 | Candidate | What it would deliver | Why it's not scheduled yet |
 |---|---|---|
 | **Numeric macro data & scheduler** | FRED/Norges Bank central-bank series ingestion into `macro_observations`, a `MacroDataProvider` interface (separate from `ResearchProvider`), and optionally a background scheduler for periodic auto-refresh across all three research kinds | Explicitly deferred out of Sprint 2 twice now as its own distinct subsystem (new registry file family, two more vendor integrations) — ready to pick up whenever Faiz wants it, doesn't block anything else |
-| **Portfolio risk & regime intelligence** | Correlation/factor exposure across holdings, drawdown scenarios, rebalancing flags, populating `portfolio_risk_snapshots` (Phase 5 table already exists, unused) | Most naturally builds on Sprint 5's dashboard and Sprint 3's valuation numbers existing first — Sprint 3's backend is now done, so this is closer to ready |
+| **Portfolio risk & regime intelligence** | Correlation/factor exposure across holdings, drawdown scenarios, rebalancing flags, populating `portfolio_risk_snapshots` (Phase 5 table already exists, unused) | Most naturally builds on Sprint 5's dashboard and Sprint 3's valuation numbers existing first — Sprint 3 (backend + frontend) is now fully done, so this is closer to ready |
 | **Investment thesis tracking** | Persist a written thesis per holding (`investment_theses`, `valuation_cases` — Phase 5 tables already exist, unused); track the Step 5 "what would change the thesis" triggers and flag when new research/financials suggest one fired | Depends on Sprint 4's verdict/thesis output schema existing first |
 | **Historical price/FX & performance tracking** | Daily P&L, benchmark comparison, position-level return, now that `market_observations`/`fx_observations` are actively populated by Sprint 3's live-price/FX lookups | Sprint 3 built the ingestion path for current snapshots; historical backfill/performance tracking on top of it is still unscheduled |
 | **LLM usage ledger & cost observability** | Persist real `llm_usage_events` rows (table exists, unused) instead of `app/providers/budget.py`'s in-memory placeholder guard; a simple spend view | Low-risk, could be pulled forward any time Faiz wants real budget visibility rather than the in-memory placeholder |
@@ -313,7 +327,8 @@ priority — that's Faiz's call.
 
 | Date | Summary |
 |---|---|
-| 2026-09-21 | **Sprint 3 backend closed: valuation engine.** Built live market-data providers (yfinance) and a live risk-free-rate provider (FRED, all currencies), staleness-cached market-data services, versioned valuation assumptions, the deterministic DCF/reverse-DCF/CAPM discount-rate engine, multiples-over-time, and the orchestration layer (with live-FX currency-consistency handling) tying it all together for one holding — wired into a new `/valuation` API mirroring `/research/*`'s shape. 88 new tests (286 total), ruff clean apart from pre-existing noise. 6 commits (`9571fe8`..`816127b`), local only — `git push` still fails in this shell. Discovered (not fixed): real `.env` has `MARKET_DATA_PROVIDER=stub`/`RESEARCH_PROVIDER=stub`, flagged to Faiz. Frontend valuation UI deliberately deferred to a follow-up session (Faiz's choice, made via clarifying questions before building). |
+| 2026-09-21 | **Sprint 3 fully closed: frontend valuation UI.** Re-verified repo state first (286/286 backend tests, ruff clean, fresh frontend build) — corrected a stale "6 commits, local only" claim in the prior session's own docs, since those were in fact all confirmed pushed. Built `ValuationPanel.tsx`: assumption stat tiles, DCF bull/base/bear scenario cards (margin-of-safety colored by sign), reverse-DCF implied growth, and multiples-over-time as four small-multiple `recharts` line charts (never combined onto shared axes, since P/E/P/B/P/S/EV-EBITDA sit on different scales). Wired into `HoldingDetailPage`. No backend changes. Frontend `tsc`/`eslint`/`vite build` all clean. 1 commit (`ddeade1`), local only — `git push` still fails in this shell. **Sprint 4 (the analysis engine) is next.** |
+| 2026-09-21 | **Sprint 3 backend closed: valuation engine.** Built live market-data providers (yfinance) and a live risk-free-rate provider (FRED, all currencies), staleness-cached market-data services, versioned valuation assumptions, the deterministic DCF/reverse-DCF/CAPM discount-rate engine, multiples-over-time, and the orchestration layer (with live-FX currency-consistency handling) tying it all together for one holding — wired into a new `/valuation` API mirroring `/research/*`'s shape. 88 new tests (286 total), ruff clean apart from pre-existing noise. 6 commits (`9571fe8`..`816127b`), since confirmed pushed. Discovered (not fixed): real `.env` has `MARKET_DATA_PROVIDER=stub`/`RESEARCH_PROVIDER=stub`, flagged to Faiz, still unfixed. Frontend valuation UI deferred to a follow-up session — closed above. |
 | 2026-09-21 | **Sprint 2 closed: frontend research UI.** Built the frontend for the `/research/*` API: a shared `ResearchPanel` component, a Macro page (portfolio-wide research + a sector picker), a Sector page (`/sectors/:sector`), and a company-research panel added to `HoldingDetailPage`. "Macro" is now a live nav item. No backend changes — 198 backend tests unaffected/still passing; frontend `tsc`/`eslint`/`vite build` all clean. 1 commit (`20d76c1`), since confirmed pushed. |
 | 2026-09-21 | **Portfolio CSV import + delete UI, pulled forward from Sprint 4.** Built the broker-export CSV parser, an instrument-type classifier for the mixed equity/bond/ETC rows these exports contain, the CSV→Account/Document/Snapshot/Position ingestion service, `POST /portfolio/import-csv`, and a new frontend Portfolio page (multi-file upload + account/snapshot lists with delete buttons). Faiz chose to import every row (tagged, not skipped), skip a whisky/collectibles CSV in the same upload batch entirely, and keep deletes granular rather than add a bulk wipe. 25 new tests (198 total), ruff clean. 1 commit (`2cb56c7`), since confirmed pushed. |
 | 2026-09-21 | **Sprint 2 started.** Built the macro/sector/per-company live research vertical slice: `ResearchRun`/`ResearchItem` models, `GeminiResearchProvider` (Google Search grounding), versioned prompts, staleness-checked caching services, `/research` API. 26 new tests (173 total), ruff clean. 2 commits (`16c3ff6`, `588198d`), both since confirmed pushed. |
