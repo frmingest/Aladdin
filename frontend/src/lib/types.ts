@@ -226,3 +226,63 @@ export const RESEARCH_SOURCE_TYPE_LABELS: Record<string, string> = {
   sector_research: "Sector",
   company_research: "Company",
 };
+
+/**
+ * Mirrors backend/app/schemas/valuation.py (Sprint 3 — Brain Step 4: DCF,
+ * reverse DCF, and multiples-over-time for one holding). Same
+ * Decimal-as-string wire format as everywhere else in this file — see the
+ * header comment above.
+ */
+export interface DCFScenario {
+  label: string;
+  growth_rate: string;
+  intrinsic_value_per_share: string;
+  /** (intrinsic - price) / intrinsic. null when no live price was
+   * available to compare against. Positive = undervalued. */
+  margin_of_safety: string | null;
+}
+
+export interface DCF {
+  discount_rate: string;
+  terminal_growth_rate: string;
+  scenarios: DCFScenario[];
+}
+
+export interface PeriodMultiples {
+  period: string;
+  matched_price_observed_at: string | null;
+  computed: Record<string, string>;
+  skipped: Record<string, string>;
+}
+
+export interface HoldingValuation {
+  holding_id: string;
+  ticker: string;
+  valuation_currency: string | null;
+  as_of: string | null;
+  base_growth_rate: string | null;
+  discount_rate: string | null;
+  risk_free_rate_pct: string | null;
+  beta: string | null;
+  equity_risk_premium: string | null;
+  current_price_per_share: string | null;
+  dcf: DCF | null;
+  reverse_dcf_implied_growth: string | null;
+  multiples: PeriodMultiples[];
+  assumptions_version: string;
+  unavailable_reasons: string[];
+}
+
+/** Order + display label for every multiple
+ * app/services/valuation/multiples.py can compute — mirrors this file's
+ * own METRIC_LABELS convention above. enterprise_value is deliberately
+ * excluded here: it's an intermediate figure (feeds ev_to_ebitda), not a
+ * multiple to chart on its own. */
+export const MULTIPLE_LABELS: Record<string, string> = {
+  price_to_earnings: "P/E",
+  price_to_book: "P/B",
+  price_to_sales: "P/S",
+  ev_to_ebitda: "EV / EBITDA",
+};
+
+export const MULTIPLE_ORDER = Object.keys(MULTIPLE_LABELS);

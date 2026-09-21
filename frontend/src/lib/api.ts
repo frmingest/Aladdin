@@ -20,6 +20,7 @@ import type {
   HoldingCreateInput,
   HoldingMetrics,
   HoldingUpdateInput,
+  HoldingValuation,
   MacroResearch,
   PortfolioImportResponse,
   PortfolioSnapshotSummary,
@@ -166,4 +167,12 @@ export const api = {
     request<CompanyResearch>(`/research/holdings/${holdingId}`),
   refreshCompanyResearch: (holdingId: string) =>
     request<CompanyResearch>(`/research/holdings/${holdingId}/refresh`, { method: "POST" }),
+
+  // Valuation (Sprint 3) — see backend/app/api/valuation.py. Same
+  // GET-serves-fresh-or-refreshes / POST-.../refresh-forces-it shape as
+  // the research endpoints above.
+  getHoldingValuation: (holdingId: string) =>
+    request<HoldingValuation>(`/valuation/holdings/${holdingId}`),
+  refreshHoldingValuation: (holdingId: string) =>
+    request<HoldingValuation>(`/valuation/holdings/${holdingId}/refresh`, { method: "POST" }),
 };
