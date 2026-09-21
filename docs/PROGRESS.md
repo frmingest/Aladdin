@@ -10,78 +10,72 @@ page stays a scan-able table, not a narrative.
 | Phase | What it is | Status |
 |---|---|---|
 | 0–10 | Everything built before the 2026-09-21 reset | 🗑️ Deleted — design knowledge preserved in the rebuild plan and the superseded doc |
-| **11** | **Buffett/Munger single-focus rebuild** — from a clean-slate repo | 🚧 **Sprint 0 nearly closed** — [rebuild sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
+| **11** | **Buffett/Munger single-focus rebuild** — from a clean-slate repo | 🚧 **Sprint 0 closed, Sprint 1 in progress** — [rebuild sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
 
-## Sprint 0 checklist
+## Sprint 0 — ✅ closed this session
 
 | Item | Status |
 |---|---|
 | Guardrail doc (`CLAUDE.md`) | ✅ Done, committed |
 | Map real Supabase schema | ✅ Done (13 Alembic migration files → 21 tables) |
 | DB strategy decision | ✅ Decided — leave schema/data as-is |
-| LLM provider decision | ✅ Decided — Gemini + Mistral |
+| LLM provider decision | ✅ Decided — Gemini (`google_ai_studio`) primary, Mistral fallback |
 | Legacy frontend cleanup | ✅ Done, committed and pushed |
-| Skeleton FastAPI backend (`/health`) | ✅ Built. Code unchanged since it was last locally tested (`uvicorn` + `curl /health` → 200 OK). **Not deployed to Railway** — no network path exists from either session shell to check a live URL. |
-| Skeleton React frontend (health badge) | ✅ Built, **re-verified this session** (`npm run build` clean). **Not deployed to Railway.** |
-| `MISTRAL_API_KEY` in `backend/.env` | ✅ **Added this session** — see "Found today" below |
-| Wire Gemini + Mistral (budget guard, retry/backoff, RPM pacing) | 🟢 Unblocked, **not started** — the only thing left open in Sprint 0 |
+| Skeleton FastAPI backend (`/health`) | ✅ Built and re-verified. **Not deployed to Railway.** |
+| Skeleton React frontend (health badge) | ✅ Built and re-verified. **Not deployed to Railway.** |
+| `MISTRAL_API_KEY` in `backend/.env` | ✅ Done |
+| `LLM_PROVIDER` mismatch resolved (Faiz confirmed `google_ai_studio`) | ✅ Done this session — `backend/.env` fixed, leftover `ANTHROPIC_*` lines removed |
+| Wire Gemini + Mistral (budget guard, retry/backoff, RPM pacing) | ✅ **Done this session** — see below |
 
-## Found today (2026-09-21, this audit)
+**What was built:** `app/providers/` — a vendor-agnostic `LLMProvider` interface, `GoogleAIStudioProvider`
+(Gemini, `gemini-3.6-flash`) and `MistralProvider` (fallback, native strict JSON-schema structured
+output), each with its own retry-with-backoff module (transient errors only: Gemini 429/503, Mistral
+429/500/502/503/504) sharing a `RateLimiter` pacer, a `DailyBudgetGuard` (in-memory daily request cap —
+not DB-backed yet, since no models existed at the point this was built), and `factory.py` wiring it
+all to settings. 44 unit tests, all against mocked SDK clients (no real API calls, no quota spent).
 
-1. **The project docs were stale, not the repo.** `main` had 2 commits this project's docs didn't
-   know about (`cc48e2f`, `015a39c`) — a prior pass had already pushed the 3 skeleton commits *and*
-   mirrored `progress.md`/the sprint plan into `docs/` for GitHub. `git status` shows `main` clean
-   and up to date with `origin/main`. The "3 commits not yet pushed" line from the last update was
-   already wrong by the time this session started — corrected here.
-2. **`MISTRAL_API_KEY` had been typed into `backend/.env` in the editor but never saved to disk.**
-   The file's on-disk timestamp was still 2026-09-13 (a week before this rebuild started), with no
-   `LLM_FALLBACK_PROVIDER`/`MISTRAL_API_KEY` lines. Added both directly on Faiz's machine this
-   session (values confirmed from the screenshot he shared) — Sprint 0's last blocker is now
-   cleared.
-3. **Config mismatch to resolve before the provider-wiring code is written:** `backend/.env` still
-   has `LLM_PROVIDER=anthropic` with `ANTHROPIC_API_KEY` empty — inconsistent with the decided
-   Gemini-primary/Mistral-fallback setup and with `.env.example`'s own default
-   (`google_ai_studio`). **Needs a call from Faiz**: switch it to `google_ai_studio`, or is
-   Anthropic meant to be a real third option?
-4. **Minor doc-hygiene debt, not urgent:** both `.env.example` files still reference
-   `docs/decisions/000x-*.md` ADR files that no longer exist post-reset (only `PROGRESS.md` and the
-   sprint plan were kept in `docs/`). Comments only, harmless — worth cleaning up once Sprint 1
-   starts touching those files anyway.
-5. Cleared a stale `.git/index.lock` and a stray `frontend/vite.config.ts.timestamp-*.mjs` left on
-   disk by earlier tooling — housekeeping only, nothing was broken by them.
+## Sprint 1 — 🚧 in progress (equity data model & deterministic calculations)
 
-## Design & UX direction — set 2026-09-21
+| Deliverable | Status |
+|---|---|
+| SQLAlchemy models (Account, Holding, PortfolioPosition, PortfolioSnapshot, Document, DocumentPage, DocumentChunk, FinancialLineItem) | ✅ **Done this session** — `app/models/`, built directly against the real (already-migrated) schema |
+| Deterministic calculations module (margins, ROIC/ROE, FCF, owner earnings, Net Debt/EBITDA, Net Debt/FCF, interest coverage, D/E, HHI, multiples) | ✅ **Done this session** — `app/services/calculations.py`, Decimal throughout, unit-tested before anything is allowed to call it |
+| Document ingestion (PDF/PPTX/XLSX text + structured line-item extraction) | ⬜ Not started |
+| Minimal API (read/write holdings & portfolio, read-only computed-metrics endpoints) | ⬜ Not started |
+| First real frontend pages (holding list + holding detail, styled against the Design & UX direction) | ⬜ Not started |
 
-Aladdin's UI has changed identity three times pre-reset (a CWO-clone terminal look → its own amber
-Bloomberg-terminal redesign → an ad hoc Tailwind slate dark theme), without ever locking one in.
-Faiz asked for a deliberate, research-backed direction this time — "clean, simple, beautiful,
-investment-grade," not a data-dense terminal. Full research and the concrete tokens/patterns are in
-the [rebuild sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md#design--ux-direction-researched-2026-09-21).
+## Found/decided this session (2026-09-21, second pass)
 
-Short version: **light, editorial, restrained — closer to Mercury and the Stripe Dashboard than to
-a Bloomberg terminal.** This is what Sprint 5 (dashboard) builds toward; Sprint 1's forms and
-skeleton pages should already follow the same tokens so the UI isn't re-decided a fourth time.
+1. Faiz confirmed `LLM_PROVIDER=google_ai_studio` (not the leftover `anthropic` setting) and confirmed
+   the plan to finish Sprint 0 before starting Sprint 1.
+2. `device_bash` could mount `E:\Aladdin` directly this session (several prior sessions logged this as
+   broken/unavailable) — all work this session was done and tested directly against the real repo, no
+   clone-based workaround needed.
+3. The repo's own `backend/.venv` is a **Windows** virtualenv (`Scripts/python.exe`) and can't run from
+   `device_bash`'s Linux shell — a separate Linux venv was created for this session's test runs
+   (not part of the repo).
+4. `mypy` (2.3.1) crashes with an internal error in this environment, unrelated to this session's
+   changes — not investigated further; worth retrying with a different mypy version.
 
 ## Needs from Faiz right now
 
 | Item | Why |
 |---|---|
-| Confirm this session's docs commit reached GitHub (`git push origin main` if not) | No GitHub push credentials in either session shell |
-| Decide `LLM_PROVIDER`: `google_ai_studio` vs. keep `anthropic` | Blocks writing the provider-wiring code cleanly |
-| Confirm the design direction below (or push back on it) | Sprint 1/5 build against it once confirmed |
+| **Push `main`** (2 commits this session: LLM providers, models+calculations) | No GitHub push credentials in this session's shell — same limitation prior sessions hit |
+| Redeploy to Railway once pushed, with `GOOGLE_AI_STUDIO_API_KEY`/`LLM_PROVIDER=google_ai_studio`/`MISTRAL_API_KEY`/rate-limit vars set as Railway env vars | Railway's env vars are separate from `backend/.env` and unverified this session |
+| Confirm the design direction (light/editorial/Mercury-Stripe-style) if not already reviewed | Sprint 1's frontend pages build against it once confirmed |
 | Delete the 6 leftover branches on GitHub — commands in the sprint plan doc | Still pending, not blocking |
 
 ## Known ongoing issue
 
-Neither this session's cloud shell nor the shell on Faiz's linked device has GitHub push
-credentials or raw-TCP network access — commits have to be pushed by Faiz from his own terminal,
-and any DB schema work reads the local Alembic migration files rather than connecting to Supabase
-directly.
+Neither this session's cloud shell nor (historically) the shell on Faiz's linked device has had GitHub
+push credentials — commits still need to be pushed by Faiz from his own terminal/GitHub Desktop.
 
 ## Changes / history
 
 | Date | Session | Summary | Detail |
 |---|---|---|---|
+| 2026-09-21 | Sprint 0 close + Sprint 1 start | Faiz confirmed `LLM_PROVIDER=google_ai_studio` and to finish Sprint 0 before Sprint 1. Built and tested `app/providers/` (Gemini primary + Mistral fallback, retry/backoff, RPM pacing, daily budget guard) — Sprint 0 fully closed. Then built `app/models/` (8 SQLAlchemy models against the real schema) and `app/services/calculations.py` (15 deterministic financial functions) — first two of five Sprint 1 deliverables. 77 backend unit tests, all passing; ruff clean (aside from a confirmed pre-existing mount artifact). Two commits made, not yet pushed (no push credentials in this session). | [rebuild sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
 | 2026-09-21 | Status audit + Sprint 1/next-phase planning + UX research | Verified actual repo state against the docs (found the docs, not the repo, were stale — 2 commits already pushed that the docs didn't reflect). Saved the Mistral fallback key to `backend/.env` on Faiz's machine (was typed but unsaved), clearing Sprint 0's last blocker. Re-verified the frontend build is still clean. Researched clean/minimal investment-grade fintech UI (Mercury, Stripe Dashboard, Wealthfront) and set a concrete design direction. Expanded Sprint 1 with concrete deliverables. Flagged an `LLM_PROVIDER` config mismatch and minor dangling-doc-reference cleanup for Faiz to weigh in on. | [rebuild sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
 | 2026-09-21 | Sprint 0 skeletons built | Found and removed leftover legacy frontend (49 files) the reset had missed. Built and locally tested the skeleton FastAPI backend (`/health`) and skeleton React frontend (health badge), fixed a stale Dockerfile. 3 commits made; since confirmed pushed. Gemini+Mistral wiring was blocked on `MISTRAL_API_KEY`. | [rebuild sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
 | 2026-09-21 | Sprint 0 started: guardrail doc + real schema mapped | Recreated a lean `CLAUDE.md`, committed. Mapped the real Supabase schema from Alembic migrations (21 tables, no separate non-equity tables). Found `MISTRAL_API_KEY` missing from local `.env`. All 3 prior open checkpoints decided by Faiz. | [rebuild sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
