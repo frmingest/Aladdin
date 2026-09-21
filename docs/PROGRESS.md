@@ -153,12 +153,31 @@ names, no key, evidence-grade citations) and **Oslo Børs Newsweb** (Norwegian n
 announcements) — both fit the existing "new provider = new file behind the factory" pattern.
 Suggested as a backlog item, not started.
 
+## CSV import ticker/duplicate-holding fixes, manual-edit UI, and full data wipe — ✅ done 2026-09-21
+
+Faiz uploaded 5 real CSVs, hit a 500 on every one, and separately noticed garbage tickers and
+duplicate holdings. Full write-up:
+[csv-import-ticker-sector-fixes-and-db-wipe-2026-09-21.md](csv-import-ticker-sector-fixes-and-db-wipe-2026-09-21.md).
+
+Three real bugs fixed, one new UI, one irreversible action taken at Faiz's explicit request:
+
+| What | Detail |
+|---|---|
+| `POST /portfolio/import-csv` 500 | The CSV always imported successfully (account/document/snapshot/positions all committed) — only the *response* crashed, because `DocumentOut.quality_flags` rejected a matched Document row whose `quality_flags` was a `list` instead of a `dict`. `DocumentOut` now coerces any shape into a dict rather than crashing. |
+| Garbage tickers + duplicate holdings | The CSV importer's dedup key was an exact match on a slugified-name-as-ticker, so any holding that already existed under a *different* ticker (hand-assigned or legacy) was invisible to it and got duplicated on every import — with a broken, non-market-real ticker that was then passed straight to the market-data/valuation/analysis pipeline. Matching is now by normalized security name, independent of `ticker`; the placeholder ticker for a genuinely new holding is transliterated (æøå) and collision-safe. |
+| Manual-edit UI | Ticker, Sector (canonical GICS-11 dropdown, `app/domain/sectors.py`), and Instrument Type (dropdown) are all now editable per holding, inline, on the Holdings page (`PATCH /holdings/{id}`, `GET /holdings/field-options`). Ticker was previously excluded from `HoldingUpdate` on a "changing it is unsafe" rationale that turned out to be wrong — nothing FKs on it, only on the holding's `id`. |
+| **Full Supabase data wipe** | Faiz explicitly asked for this, after being told exactly what it costs (15 uploaded documents across 6 holdings, whisky/gold/silver legacy holdings, 5 accounts / 7 snapshots / 124 positions, the untested Sprint 4 analysis tables). New migration `e5f6a7b8c9d0` (new head) `TRUNCATE`s every table in `public` except `alembic_version`. **Written and committed, not yet run** — it executes the next time this is pushed and Railway redeploys (`alembic upgrade head` runs automatically on container startup). Not verified against a live Postgres connection from this session (no network path to Supabase here) — see the full doc for exactly how it was validated instead. |
+
+Testing: 326/326 backend tests passing (17 new), ruff clean, frontend `tsc`/`eslint`/`vite build` all
+clean. Not run against the live Railway deployment.
+
 ## Needs from Faiz right now
 
 | Item | Why |
 |---|---|
-| **Push `main`** (now 1 local commit: CSV-import object-storage fix `72e7ed9`) | This session's commit is local-only in this session's shell — same recurring credential gap as every prior session (see "Known ongoing issue" below) |
-| **Redeploy on Railway** once pushed | The CSV-import fix above only takes effect on the next deploy — nothing is "live" until Faiz confirms a redeploy or this is checked against the live URL |
+| **Push `main`** (this session pushed its own commits once tests were green — confirm `git log`/GitHub before trusting this, per CLAUDE.md status honesty) | Railway only picks up a change once it's pushed and redeployed |
+| **Redeploy on Railway** once pushed — this is the moment the full data wipe (migration `e5f6a7b8c9d0`) actually runs, not before | Nothing in this session's changes is "live" until Faiz confirms a redeploy or this is checked against the live URL. After redeploy, the Holdings/Portfolio pages will be empty — that's the wipe, not a new bug. |
+| **Re-upload the 5 CSVs** once redeployed, then use the new inline Ticker/Sector/Type edit UI on the Holdings page to assign real tickers | Placeholder tickers (e.g. `VAR-ENERGI`) aren't real market symbols — the market-data/valuation/research/analysis pipeline needs the real one per holding |
 | **Set `MARKET_DATA_PROVIDER` and `RESEARCH_PROVIDER` for real** (flagged for 3 sessions running now) | Both are still `stub` in this session's `backend/.env` — Sprint 4's analysis engine directly depends on both (the evidence packet calls the valuation engine and all three research kinds), so this now blocks Sprint 4 working at all, not just `/research/*`/`/valuation/*` individually |
 | Confirm `GOOGLE_AI_STUDIO_API_KEY`, `FRED_API_KEY` are set for real | Needed for research, valuation, and now the analysis engine's own LLM calls (Sprint 4 reuses the same Gemini key/infra, no new key needed — but it does need it to actually be a working key) |
 | **Try a real `POST /analysis/holdings/{id}/run` against one of your real equity holdings** once the above is set, and share what comes back | This session verified the pipeline end-to-end against fakes only — a real run is the first real signal on prompt/schema quality, LLM cost per run, and whether the two-pass output is actually useful |
@@ -176,6 +195,7 @@ far in the repo were pushed by Faiz himself from his own terminal/GitHub Desktop
 
 | Date | Session | Summary | Detail |
 |---|---|---|---|
+| 2026-09-21 | CSV import ticker/duplicate-holding fixes, manual-edit UI, full data wipe | Fixed the CSV-import 500 (quality_flags shape coercion), the duplicate-holding/garbage-ticker bug (name-normalized matching, transliterated/collision-safe placeholder tickers), added inline Ticker/Sector/Instrument-Type editing (`PATCH /holdings/{id}`, `GET /holdings/field-options`, canonical sector list). At Faiz's explicit request after being told the cost, wrote (not yet run) a migration that fully wipes Supabase on next deploy. 326/326 backend tests passing (17 new), ruff/tsc/eslint/vite build all clean. | [csv-import-ticker-sector-fixes-and-db-wipe-2026-09-21.md](csv-import-ticker-sector-fixes-and-db-wipe-2026-09-21.md) |
 | 2026-09-21 | CSV import 500 fixed: object-storage provider alias | `POST /portfolio/import-csv` was 500ing on every request (`get_object_storage()` dependency raising `NotImplementedError` for `OBJECT_STORAGE_PROVIDER=supabase`, before the route ever ran). Made `"s3"`, `"r2"`, and `"supabase"` all build the same `S3ObjectStorageProvider` (they're all S3-compatible), matching what `.env.example` already implied was valid. Clarified 3 stale comments, added 5 regression tests (249/249 unit tests pass). Committed (`72e7ed9`), not pushed, not deployed — Railway's env var needs no change, just a push + redeploy. | — |
 | 2026-09-21 | Portfolio delete: second cascade bug + free-provider research | Fixed `DELETE /portfolio/all` / `DELETE /portfolio/snapshots/{id}` 500ing when a legacy `portfolio_risk_snapshots` row was attached (missed by the original cascade-delete fix) — new purge-only model, updated `_purge_legacy_analysis`, schema/frontend count surfaced, 2 new regression tests (309 total passing). Also wrote up a free market-data/research provider proposal doc (SEC EDGAR + Oslo Børs Newsweb as top picks) — research only, no code. | [free-market-data-research-providers-2026-09-21.md](free-market-data-research-providers-2026-09-21.md) |
 | 2026-09-21 | **Sprint 4 backend: the two-pass Buffett/Munger analysis engine** | Built the evidence packet (reusing Sprint 2 research + Sprint 3 valuation + Sprint 1 calculations unchanged), the versioned output schema and prompts, the blind pass, the reconciliation pass (notes-aware, optional notes), the orchestration pipeline (equity-type gating, LLM fallback, deterministic DCF-derived price target), per-holding notes CRUD, and the `/analysis` API. New tables `equity_analysis_runs`/`equity_holding_notes` (migration `b5e1a9c3d7f2`) — a fresh schema, not an extension of the legacy Phase-3 analysis tables. 19 new tests (307 total), ruff clean. Discovered: manually-created holdings default to a non-analyzable `asset_class_raw`, flagged above. Frontend deliberately deferred. Not yet run against a real LLM call or real data. | [rebuild sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
