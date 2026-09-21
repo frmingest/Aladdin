@@ -25,6 +25,8 @@ from app.models.financial_line_item import FinancialLineItem
 from app.models.holding import Holding
 from app.models.portfolio import PortfolioPosition
 from app.schemas.holding import HoldingCreate, HoldingOut, HoldingUpdate
+from app.schemas.metrics import HoldingMetricsOut
+from app.services.metrics import compute_holding_metrics
 
 router = APIRouter(prefix="/holdings", tags=["holdings"])
 
@@ -160,3 +162,55 @@ def delete_holding(
         raise HTTPException(
             status_code=409, detail="cannot delete holding: still referenced elsewhere"
         ) from exc
+
+
+@router.get("/{holding_id}/periods", response_model=list[str])
+def list_holding_periods(holding_id: UUID, db: Session = Depends(get_db)) -> list[str]:
+    holding = db.get(Holding, holding_id)
+    if holding is None:
+        raise HTTPException(status_code=404, detail="holding not found")
+
+    periods = db.scalars(
+        select(FinancialLineItem.period)
+        .where(FinancialLineItem.holding_id == holding_id)
+        .distinct()
+        .order_by(FinancialLineItem.period)
+    ).all()
+    return list(periods)
+
+
+@router.get("/{holding_id}/metrics", response_model=HoldingMetricsOut)
+def get_holding_metrics(
+    holding_id: UUID, period: str, db: Session = Depends(get_db)
+) -> HoldingMetricsOut:
+    """Deterministic ratios computed from this holding's extracted filing
+    facts for one period — CLAUDE.md Rule 1, never LLM arithmetic. See
+    app/services/metrics.py for which ratios are computable from facts
+    alone and why the rest (ROIC/ROE, every valuation multiple) are
+    reported as skipped rather than guessed at.
+    """
+    holding = db.get(Holding, holding_id)
+    if holding is None:
+        raise HTTPException(status_code=404, detail="holding not found")
+
+    line_items = db.scalars(
+        select(FinancialLineItem).where(
+            FinancialLineItem.holding_id == holding_id, FinancialLineItem.period == period
+        )
+    ).all()
+    if not line_items:
+        raise HTTPException(
+            status_code=404,
+            detail=f"no extracted facts for holding '{holding.ticker}' in period '{period}'",
+        )
+
+    facts = {item.metric: item.value for item in line_items}
+    result = compute_holding_metrics(facts)
+
+    return HoldingMetricsOut(
+        holding_id=holding_id,
+        period=period,
+        facts=facts,
+        computed=result.computed,
+        skipped=result.skipped,
+    )
