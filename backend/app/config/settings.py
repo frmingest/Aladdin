@@ -51,8 +51,10 @@ class Settings(BaseSettings):
 
     # --- Object storage (see app/providers/object_storage.py) ---
     # "local" (default, dev only — Railway's disk is ephemeral, not a real
-    # deployment option) | "s3" (any S3-compatible bucket: Cloudflare R2,
-    # or Supabase Storage's own S3-compatible API).
+    # deployment option) | "s3" / "r2" / "supabase" — all three build the
+    # same S3-compatible client (Cloudflare R2 or Supabase Storage's own
+    # S3-compatible API); "r2"/"supabase" are accepted as aliases so naming
+    # the actual vendor here doesn't 500 (see app/providers/factory.py).
     object_storage_provider: str = "local"
     object_storage_bucket: str = "aladdin-documents"
     object_storage_local_path: str = "./storage"

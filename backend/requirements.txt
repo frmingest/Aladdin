@@ -18,8 +18,9 @@ python-pptx==1.0.2
 openpyxl==3.1.5
 python-multipart==0.0.32
 # S3-compatible object storage (Cloudflare R2 / Supabase Storage) — only
-# exercised when OBJECT_STORAGE_PROVIDER=s3; local dev defaults to
-# LocalObjectStorageProvider (no boto3 call at all).
+# exercised when OBJECT_STORAGE_PROVIDER is "s3", "r2", or "supabase"
+# (app/providers/factory.py); local dev defaults to LocalObjectStorageProvider
+# (no boto3 call at all).
 boto3==1.43.98
 
 # Valuation engine (see app/providers/, app/services/valuation/) — Sprint 3.

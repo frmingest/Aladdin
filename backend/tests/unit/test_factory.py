@@ -12,6 +12,8 @@ from app.providers.base import (
 from app.providers.fred_risk_free_rate_provider import FredRiskFreeRateProvider
 from app.providers.google_ai_studio_provider import GoogleAIStudioProvider
 from app.providers.mistral_provider import MistralProvider
+from app.providers.object_storage import LocalObjectStorageProvider
+from app.providers.object_storage_s3 import S3ObjectStorageProvider
 from app.providers.yfinance_provider import YFinanceMarketDataProvider
 
 
@@ -26,12 +28,14 @@ def _clear_caches(monkeypatch):
     monkeypatch.delenv("MISTRAL_API_KEY", raising=False)
     monkeypatch.delenv("MARKET_DATA_PROVIDER", raising=False)
     monkeypatch.delenv("RISK_FREE_RATE_PROVIDER", raising=False)
+    monkeypatch.delenv("OBJECT_STORAGE_PROVIDER", raising=False)
     get_settings.cache_clear()
     factory.get_llm_provider.cache_clear()
     factory.get_llm_fallback_provider.cache_clear()
     factory.get_primary_budget_guard.cache_clear()
     factory.get_market_data_provider.cache_clear()
     factory.get_risk_free_rate_provider.cache_clear()
+    factory.get_object_storage.cache_clear()
     yield
     get_settings.cache_clear()
     factory.get_llm_provider.cache_clear()
@@ -39,6 +43,7 @@ def _clear_caches(monkeypatch):
     factory.get_primary_budget_guard.cache_clear()
     factory.get_market_data_provider.cache_clear()
     factory.get_risk_free_rate_provider.cache_clear()
+    factory.get_object_storage.cache_clear()
 
 
 def test_default_primary_provider_is_google_ai_studio(monkeypatch):
@@ -111,3 +116,29 @@ def test_unknown_risk_free_rate_provider_raises(monkeypatch):
     monkeypatch.setenv("RISK_FREE_RATE_PROVIDER", "norges_bank")
     with pytest.raises(RiskFreeRateUnavailableError):
         factory.get_risk_free_rate_provider()
+def test_default_object_storage_provider_is_local(monkeypatch):
+    monkeypatch.setenv("OBJECT_STORAGE_PROVIDER", "local")
+    storage = factory.get_object_storage()
+    assert isinstance(storage, LocalObjectStorageProvider)
+
+
+@pytest.mark.parametrize("provider_name", ["s3", "r2", "supabase"])
+def test_s3_compatible_object_storage_aliases_all_build_s3_provider(monkeypatch, provider_name):
+    # Regression test for the 2026-09-21 CSV-import outage: Railway had
+    # OBJECT_STORAGE_PROVIDER=supabase set (matching backend/.env.example's
+    # own wording at the time) but the factory only recognized "s3", so
+    # every /portfolio/import-csv request 500'd on the get_object_storage
+    # dependency before it ever looked at the uploaded file. "s3", "r2",
+    # and "supabase" must all build the same S3ObjectStorageProvider.
+    monkeypatch.setenv("OBJECT_STORAGE_PROVIDER", provider_name)
+    monkeypatch.setenv("OBJECT_STORAGE_ENDPOINT_URL", "https://example.invalid")
+    monkeypatch.setenv("OBJECT_STORAGE_ACCESS_KEY_ID", "test-key-id")
+    monkeypatch.setenv("OBJECT_STORAGE_SECRET_ACCESS_KEY", "test-secret")
+    storage = factory.get_object_storage()
+    assert isinstance(storage, S3ObjectStorageProvider)
+
+
+def test_unknown_object_storage_provider_raises(monkeypatch):
+    monkeypatch.setenv("OBJECT_STORAGE_PROVIDER", "dropbox")
+    with pytest.raises(NotImplementedError):
+        factory.get_object_storage()

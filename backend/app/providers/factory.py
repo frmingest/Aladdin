@@ -80,11 +80,22 @@ def get_primary_budget_guard() -> DailyBudgetGuard:
 def get_object_storage() -> ObjectStorageProvider:
     """The configured object storage backend (OBJECT_STORAGE_PROVIDER,
     default "local"). See app.providers.object_storage for what each
-    implementation is for."""
+    implementation is for.
+
+    "s3", "r2", and "supabase" are all accepted and all build the same
+    S3ObjectStorageProvider — R2 and Supabase Storage both expose an
+    S3-compatible API, so the vendor is a config choice (endpoint_url/
+    region/keys), never a code branch. Accepting the vendor names directly
+    avoids the exact misconfiguration that broke CSV import on 2026-09-21:
+    OBJECT_STORAGE_PROVIDER=supabase (a reasonable reading of
+    backend/.env.example's old wording) previously fell through to the
+    NotImplementedError below instead of working.
+    """
     settings = get_settings()
-    if settings.object_storage_provider == "local":
+    provider = settings.object_storage_provider
+    if provider == "local":
         return LocalObjectStorageProvider(settings.object_storage_local_path)
-    if settings.object_storage_provider == "s3":
+    if provider in ("s3", "r2", "supabase"):
         return S3ObjectStorageProvider(
             bucket=settings.object_storage_bucket,
             endpoint_url=settings.object_storage_endpoint_url,
@@ -93,8 +104,8 @@ def get_object_storage() -> ObjectStorageProvider:
             secret_access_key=settings.object_storage_secret_access_key,
         )
     raise NotImplementedError(
-        f"Object storage provider '{settings.object_storage_provider}' not supported "
-        "— use 'local' or 's3'."
+        f"Object storage provider '{provider}' not supported — use 'local', "
+        "'s3', 'r2', or 'supabase'."
     )
 
 
