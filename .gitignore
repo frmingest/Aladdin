@@ -15,6 +15,7 @@ env/
 node_modules/
 dist/
 .vite/
+vite.config.ts.timestamp-*.mjs
 .env
 .env.local
 
