@@ -13,10 +13,15 @@ from app.config.settings import Settings, get_settings
 from app.providers.base import (
     LLMProvider,
     LLMUnavailableError,
+    MarketDataProvider,
+    MarketDataUnavailableError,
     ResearchProvider,
     ResearchUnavailableError,
+    RiskFreeRateProvider,
+    RiskFreeRateUnavailableError,
 )
 from app.providers.budget import DailyBudgetGuard
+from app.providers.fred_risk_free_rate_provider import FredRiskFreeRateProvider
 from app.providers.gemini_research_provider import GeminiResearchProvider
 from app.providers.google_ai_studio_provider import GoogleAIStudioProvider
 from app.providers.mistral_provider import MistralProvider
@@ -25,6 +30,7 @@ from app.providers.object_storage import (
     ObjectStorageProvider,
 )
 from app.providers.object_storage_s3 import S3ObjectStorageProvider
+from app.providers.yfinance_provider import YFinanceMarketDataProvider
 
 
 def _build_provider(name: str, settings: Settings) -> LLMProvider:
@@ -110,4 +116,31 @@ def get_research_provider() -> ResearchProvider:
         )
     raise ResearchUnavailableError(
         f"Unknown research provider: {settings.research_provider!r}"
+    )
+
+@lru_cache
+def get_market_data_provider() -> MarketDataProvider:
+    """The configured live market-data provider (MARKET_DATA_PROVIDER,
+    default "yfinance") — current/historical price, FX, beta for the
+    valuation engine (Sprint 3, app/services/valuation/)."""
+    settings = get_settings()
+    if settings.market_data_provider == "yfinance":
+        return YFinanceMarketDataProvider()
+    raise MarketDataUnavailableError(
+        f"Unknown market data provider: {settings.market_data_provider!r}"
+    )
+
+
+@lru_cache
+def get_risk_free_rate_provider() -> RiskFreeRateProvider:
+    """The configured risk-free-rate provider (RISK_FREE_RATE_PROVIDER,
+    default "fred") — the DCF discount rate's risk-free-rate term."""
+    settings = get_settings()
+    if settings.risk_free_rate_provider == "fred":
+        return FredRiskFreeRateProvider(
+            api_key=settings.fred_api_key or "",
+            series_version=settings.active_risk_free_rate_series_version,
+        )
+    raise RiskFreeRateUnavailableError(
+        f"Unknown risk-free-rate provider: {settings.risk_free_rate_provider!r}"
     )

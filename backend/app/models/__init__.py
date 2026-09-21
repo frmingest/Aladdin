@@ -11,6 +11,7 @@ from app.models.base import Base
 from app.models.document import Document, DocumentChunk, DocumentPage
 from app.models.financial_line_item import FinancialLineItem
 from app.models.holding import Holding
+from app.models.market import FxObservation, MarketObservation, RiskFreeRateObservation
 from app.models.portfolio import PortfolioPosition, PortfolioSnapshot
 from app.models.research import ResearchItem, ResearchRun
 
@@ -21,9 +22,12 @@ __all__ = [
     "DocumentChunk",
     "DocumentPage",
     "FinancialLineItem",
+    "FxObservation",
     "Holding",
+    "MarketObservation",
     "PortfolioPosition",
     "PortfolioSnapshot",
     "ResearchItem",
     "ResearchRun",
+    "RiskFreeRateObservation",
 ]

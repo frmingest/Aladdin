@@ -2,6 +2,7 @@
 Base.metadata and confirm the equity-relevant tables round-trip real rows
 with their actual relationships, including the legacy columns
 (asset_class, acquired_at) CLAUDE.md says stay in the schema but unused."""
+from datetime import datetime, timezone
 from decimal import Decimal
 
 from sqlalchemy import create_engine
@@ -12,9 +13,12 @@ from app.models import (
     Base,
     Document,
     FinancialLineItem,
+    FxObservation,
     Holding,
+    MarketObservation,
     PortfolioPosition,
     PortfolioSnapshot,
+    RiskFreeRateObservation,
 )
 from app.models.holding import EQUITY_ASSET_CLASS
 
@@ -109,3 +113,56 @@ def test_portfolio_snapshot_and_position_with_account_and_legacy_acquired_at():
         assert fetched_account.positions[0].weight_pct == Decimal("12.3456")
         assert fetched_account.positions[0].acquired_at is None
         assert fetched_account.snapshots[0].reporting_currency == "NOK"
+
+
+def test_market_observation_round_trip_via_holding_relationship():
+    with _session() as db:
+        holding = Holding(ticker="AAPL", name="Apple Inc.", trading_currency="USD")
+        observation = MarketObservation(
+            holding=holding,
+            observed_at=datetime.now(timezone.utc),
+            price=Decimal("225.50"),
+            currency="USD",
+            provider="yfinance",
+        )
+        db.add_all([holding, observation])
+        db.commit()
+
+        fetched = db.query(Holding).one()
+        assert fetched.market_observations[0].price == Decimal("225.50")
+        assert fetched.market_observations[0].data_status == "ok"
+
+
+def test_fx_observation_round_trip():
+    with _session() as db:
+        fx = FxObservation(
+            from_currency="USD",
+            to_currency="NOK",
+            rate=Decimal("10.55000000"),
+            observed_at=datetime.now(timezone.utc),
+            provider="yfinance",
+        )
+        db.add(fx)
+        db.commit()
+
+        fetched = db.query(FxObservation).one()
+        assert fetched.from_currency == "USD"
+        assert fetched.to_currency == "NOK"
+        assert fetched.rate == Decimal("10.55000000")
+
+
+def test_risk_free_rate_observation_round_trip():
+    with _session() as db:
+        rate = RiskFreeRateObservation(
+            currency="USD",
+            rate=Decimal("4.250000"),
+            observed_at=datetime.now(timezone.utc),
+            provider="fred",
+            source_series_id="DGS10",
+        )
+        db.add(rate)
+        db.commit()
+
+        fetched = db.query(RiskFreeRateObservation).one()
+        assert fetched.currency == "USD"
+        assert fetched.source_series_id == "DGS10"

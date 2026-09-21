@@ -6,7 +6,9 @@ limit and budget defaults are carried over from the pre-reset app's own
 tuning against Google/Mistral's real free tiers, not fresh guesses — see
 claude/gemini-daily-budget-guard-2026-09-16.md,
 claude/mistral-fallback-provider-2026-09-17.md, and
-claude/llm-usage-ledger-and-rate-limit-estimation.md.
+claude/llm-usage-ledger-and-rate-limit-estimation.md. Sprint 3 adds the
+valuation engine's market-data/risk-free-rate provider config (see
+app/providers/yfinance_provider.py, app/providers/fred_risk_free_rate_provider.py).
 """
 from functools import lru_cache
 
@@ -72,6 +74,16 @@ class Settings(BaseSettings):
     # served as-is (the run record itself is the cache — see
     # app/services/research/common.py).
     research_stale_after_hours: int = 24
+
+    # --- Valuation engine (Sprint 3, see app/providers/yfinance_provider.py,
+    # app/providers/fred_risk_free_rate_provider.py) ---
+    market_data_provider: str = "yfinance"  # "yfinance" is the only option so far
+    market_data_stale_after_hours: int = 24
+    risk_free_rate_provider: str = "fred"  # "fred" is the only option so far
+    fred_api_key: str | None = None
+    active_risk_free_rate_series_version: str = "v1"
+    # ERP / terminal growth / scenario offsets — app/domain/valuation_assumptions/.
+    active_valuation_assumptions_version: str = "v1"
 
 
 @lru_cache

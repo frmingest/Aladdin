@@ -24,6 +24,7 @@ from app.models.types import GUID
 if TYPE_CHECKING:
     from app.models.document import Document
     from app.models.financial_line_item import FinancialLineItem
+    from app.models.market import MarketObservation
     from app.models.portfolio import PortfolioPosition
 
 # This rebuild is equity-only; every Holding created here writes this value
@@ -58,5 +59,8 @@ class Holding(Base):
     documents: Mapped[list[Document]] = relationship(back_populates="holding")
     positions: Mapped[list[PortfolioPosition]] = relationship(back_populates="holding")
     financial_line_items: Mapped[list[FinancialLineItem]] = relationship(
+        back_populates="holding"
+    )
+    market_observations: Mapped[list[MarketObservation]] = relationship(
         back_populates="holding"
     )

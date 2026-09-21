@@ -12,6 +12,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
+from decimal import Decimal
 
 from pydantic import BaseModel
 
@@ -133,4 +134,130 @@ class ResearchProvider(ABC):
     ) -> list[ResearchItem]:
         """Research scoped to one company — industry/geography/competitive
         environment specific to that holding (the Iran/energy example)."""
+        raise NotImplementedError
+
+
+# --- Market data provider interface (Sprint 3 — valuation engine) ---
+#
+# A third, deliberately separate interface: unlike ResearchProvider (goes
+# out and finds new qualitative evidence) or LLMProvider (reasons over
+# evidence it's handed), a MarketDataProvider's job is narrow and purely
+# numeric — the live share price, FX rate, and beta a DCF/multiple needs
+# that isn't in a filing (app/models/financial_line_item.py already covers
+# everything document-sourced; CLAUDE.md Rule 1 still applies — this layer
+# hands back raw market facts, the arithmetic lives in
+# app/services/valuation/ and app/services/calculations.py).
+
+
+class MarketDataUnavailableError(Exception):
+    """Raised when a MarketDataProvider cannot produce a usable result — a
+    bad/delisted ticker, a vendor outage, or an unrecognized currency pair.
+    Mirrors ResearchUnavailableError's role: callers persist a real failure
+    (CLAUDE.md: fail visibly) rather than silently substituting a guess."""
+
+
+@dataclass(frozen=True)
+class PricePoint:
+    """One point-in-time share price, as app/models/market.py's
+    MarketObservation persists it."""
+
+    price: Decimal
+    currency: str
+    observed_at: datetime
+    provider: str
+
+
+@dataclass(frozen=True)
+class FxRate:
+    """One point-in-time FX rate, as app/models/market.py's FxObservation
+    persists it."""
+
+    from_currency: str
+    to_currency: str
+    rate: Decimal
+    observed_at: datetime
+    provider: str
+
+
+class MarketDataProvider(ABC):
+    """A vendor-agnostic live market-data provider (current/historical
+    share price, FX, beta)."""
+
+    name: str
+
+    @abstractmethod
+    def get_current_price(self, ticker: str, *, currency_hint: str | None = None) -> PricePoint:
+        """The latest traded price for `ticker`.
+
+        `currency_hint` is the holding's own `trading_currency` (already
+        known, real data — app/models/holding.py) — used only as a last
+        resort if the vendor's own history-only fallback path can't
+        determine a currency itself; never overrides a currency the vendor
+        *did* report, so a real vendor/our-data mismatch stays visible
+        rather than getting silently papered over.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_price_history(
+        self, ticker: str, *, years: int = 5, currency_hint: str | None = None
+    ) -> list[PricePoint]:
+        """Historical closing prices for `ticker`, oldest first — feeds
+        multiples-over-time (app/services/valuation/multiples.py)."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_fx_rate(self, from_currency: str, to_currency: str) -> FxRate:
+        """The latest from_currency -> to_currency rate. Implementations
+        should return rate=1 immediately (no vendor call) when the two
+        currencies are identical."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_beta(self, ticker: str) -> Decimal | None:
+        """5-year monthly beta vs. the ticker's home index, if the vendor
+        publishes one. None (not an error) when unavailable — callers fall
+        back to a versioned default (see
+        app/domain/valuation_assumptions/)."""
+        raise NotImplementedError
+
+
+# --- Risk-free-rate provider interface (Sprint 3 — DCF discount rate) ---
+
+
+class RiskFreeRateUnavailableError(Exception):
+    """Raised when a RiskFreeRateProvider cannot produce a usable rate — an
+    unmapped currency (app/domain/risk_free_rate_series.py has no series
+    for it) or a vendor/API failure."""
+
+
+@dataclass(frozen=True)
+class RiskFreeRate:
+    """One point-in-time government-bond-yield observation, as
+    app/models/market.py's RiskFreeRateObservation persists it.
+
+    `rate` is a PERCENTAGE, e.g. Decimal("4.25") for 4.25% — matching how
+    FRED itself publishes these series. app/services/valuation/discount_rate.py
+    is the one place this gets divided by 100 into a fraction before use in
+    CAPM; every other value in app/domain/valuation_assumptions/ (ERP,
+    terminal growth) is already stored as a fraction (e.g. 0.045) precisely
+    so the two never get mixed up unconverted.
+    """
+
+    currency: str
+    rate: Decimal
+    observed_at: datetime
+    provider: str
+    source_series_id: str
+
+
+class RiskFreeRateProvider(ABC):
+    """A vendor-agnostic live risk-free-rate provider, one rate per
+    currency (the long end of that currency's own government bond curve —
+    10-year, matching standard cost-of-equity practice)."""
+
+    name: str
+
+    @abstractmethod
+    def get_risk_free_rate(self, currency: str) -> RiskFreeRate:
         raise NotImplementedError

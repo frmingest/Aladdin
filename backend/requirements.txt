@@ -22,7 +22,15 @@ python-multipart==0.0.32
 # LocalObjectStorageProvider (no boto3 call at all).
 boto3==1.43.98
 
+# Valuation engine (see app/providers/, app/services/valuation/) — Sprint 3.
+# yfinance: current/historical price, FX, beta — no API key, unofficial
+# Yahoo Finance wrapper (pulls in pandas as its own dependency).
+yfinance==1.7.0
+# httpx: also used at runtime by app/providers/fred_risk_free_rate_provider.py
+# (FRED's REST API for the DCF discount rate's risk-free-rate term), not
+# just by the test suite below.
+httpx==0.28.1
+
 # Test tooling.
 pytest==8.3.3
 pytest-mock==3.14.0
-httpx==0.28.1
