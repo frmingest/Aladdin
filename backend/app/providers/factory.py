@@ -10,8 +10,14 @@ from __future__ import annotations
 from functools import lru_cache
 
 from app.config.settings import Settings, get_settings
-from app.providers.base import LLMProvider, LLMUnavailableError
+from app.providers.base import (
+    LLMProvider,
+    LLMUnavailableError,
+    ResearchProvider,
+    ResearchUnavailableError,
+)
 from app.providers.budget import DailyBudgetGuard
+from app.providers.gemini_research_provider import GeminiResearchProvider
 from app.providers.google_ai_studio_provider import GoogleAIStudioProvider
 from app.providers.mistral_provider import MistralProvider
 from app.providers.object_storage import (
@@ -83,4 +89,25 @@ def get_object_storage() -> ObjectStorageProvider:
     raise NotImplementedError(
         f"Object storage provider '{settings.object_storage_provider}' not supported "
         "— use 'local' or 's3'."
+    )
+
+
+@lru_cache
+def get_research_provider() -> ResearchProvider:
+    """The configured live-research provider (RESEARCH_PROVIDER, default
+    "gemini_search"). Reuses the same Google AI Studio key and RPM budget
+    as get_llm_provider() — see app/providers/gemini_research_provider.py.
+    """
+    settings = get_settings()
+    if settings.research_provider == "gemini_search":
+        return GeminiResearchProvider(
+            api_key=settings.google_ai_studio_api_key or "",
+            model=settings.llm_model_name,
+            prompt_version=settings.active_research_prompt_version,
+            temperature=settings.llm_temperature,
+            max_output_tokens=settings.llm_max_output_tokens,
+            rpm=settings.llm_rate_limit_rpm,
+        )
+    raise ResearchUnavailableError(
+        f"Unknown research provider: {settings.research_provider!r}"
     )

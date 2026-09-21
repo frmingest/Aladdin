@@ -61,6 +61,18 @@ class Settings(BaseSettings):
 
     max_upload_size_mb: int = 25
 
+    # --- Live research (Sprint 2, see app/providers/gemini_research_provider.py) ---
+    # Qualitative macro/sector/company research via Gemini + Google Search
+    # grounding — reuses google_ai_studio_api_key above, no separate key.
+    # "none" disables the feature outright (get_research_provider() raises).
+    research_provider: str = "gemini_search"  # "gemini_search" | "none"
+    active_research_prompt_version: str = "v1"
+    # A COMPLETED run older than this triggers a fresh grounded-search call
+    # on the next GET; younger than this, the cached research_items are
+    # served as-is (the run record itself is the cache — see
+    # app/services/research/common.py).
+    research_stale_after_hours: int = 24
+
 
 @lru_cache
 def get_settings() -> Settings:

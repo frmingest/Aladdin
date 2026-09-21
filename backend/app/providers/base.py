@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from datetime import datetime
 
 from pydantic import BaseModel
 
@@ -69,4 +70,67 @@ class LLMProvider(ABC):
         partial response — callers validate `.content` directly against
         `response_schema.model_validate_json(...)` and expect it to succeed.
         """
+        raise NotImplementedError
+
+
+# --- Research provider interface (Sprint 2 — live, evidence-first research) ---
+#
+# A second, deliberately separate interface from LLMProvider above: an
+# LLMProvider's job is structured JSON reasoning over evidence it's handed
+# (CLAUDE.md Rule 1 — never arithmetic); a ResearchProvider's job is going
+# OUT to find new, source-attributed evidence in the first place (macro/
+# geopolitical, sector, or per-company). Keeping them separate means a
+# caller is never tempted to blur "reason over given evidence" with
+# "go find evidence" behind one interface.
+
+
+class ResearchUnavailableError(Exception):
+    """Raised when a ResearchProvider cannot produce a usable result — a
+    non-retryable vendor error, retries exhausted, missing config, or a
+    response with no grounding at all. Mirrors LLMUnavailableError's role
+    for LLMProvider: callers don't need to distinguish the cause, only that
+    there's no result to persist."""
+
+
+@dataclass(frozen=True)
+class ResearchItem:
+    """One source-attributed finding a ResearchProvider returned.
+
+    CLAUDE.md Rule 2 (evidence-first, always traceable): every field here
+    exists so app/services/research can persist a real, citable source —
+    never a paraphrase with the citation dropped.
+    """
+
+    source_url: str
+    source_name: str
+    title: str
+    summary: str
+    source_type: str
+    retrieved_at: datetime
+    published_at: datetime | None = None
+
+
+class ResearchProvider(ABC):
+    """A vendor-agnostic, grounded/search-backed research provider."""
+
+    name: str
+
+    @abstractmethod
+    def get_macro_research(self) -> list[ResearchItem]:
+        """Portfolio-wide macro/geopolitical research (rates, inflation,
+        conflicts, currencies, regulation, sector trends) — the Brain's
+        Opening step."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_sector_research(self, sector: str) -> list[ResearchItem]:
+        """Research scoped to one sector, shared by every holding in it."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_company_research(
+        self, *, company_name: str, ticker: str, sector: str | None
+    ) -> list[ResearchItem]:
+        """Research scoped to one company — industry/geography/competitive
+        environment specific to that holding (the Iran/energy example)."""
         raise NotImplementedError

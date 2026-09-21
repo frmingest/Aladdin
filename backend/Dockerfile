@@ -8,12 +8,12 @@
 # Railway: set the service's Root Directory to the repo root and its
 # Dockerfile Path to backend/Dockerfile.
 #
-# NOTE: the pre-rebuild image also COPY'd top-level prompts/, schemas/,
-# scoring/, research/, scenarios/, discount_rate/ directories (versioned
-# prompt/schema assets read as plain files at runtime). Those directories
-# were deleted in the 2026-09-21 clean-slate reset and are recreated
-# per-sprint as their domains are rebuilt (prompts/schemas first appear in
-# Sprint 4). Add their COPY lines back here when they exist again.
+# NOTE: the pre-rebuild image also COPY'd top-level schemas/, scoring/,
+# scenarios/, discount_rate/ directories (versioned prompt/schema assets
+# read as plain files at runtime). Those were deleted in the 2026-09-21
+# clean-slate reset and are recreated per-sprint as their domains are
+# rebuilt. backend/prompts/ came back in Sprint 2 (live research) — see
+# its COPY line below. Add the rest back here when they exist again.
 
 FROM python:3.12-slim AS base
 
@@ -27,6 +27,7 @@ RUN pip install --no-cache-dir -r backend/requirements.txt
 COPY backend/app backend/app
 COPY backend/alembic backend/alembic
 COPY backend/alembic.ini backend/alembic.ini
+COPY backend/prompts backend/prompts
 
 RUN useradd --create-home --uid 1000 aladdin && chown -R aladdin:aladdin /app
 USER aladdin
