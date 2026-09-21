@@ -9,6 +9,7 @@ endpoints. Analysis/valuation routers land in later sprints.
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.accounts import router as accounts_router
 from app.api.documents import router as documents_router
 from app.api.holdings import router as holdings_router
 from app.config.settings import get_settings
@@ -28,6 +29,7 @@ app.add_middleware(
 
 app.include_router(documents_router)
 app.include_router(holdings_router)
+app.include_router(accounts_router)
 
 
 @app.get("/health")
