@@ -39,6 +39,12 @@ class HoldingOut(BaseModel):
     trading_currency: str
     institution: str | None
     custody_type: str | None
+    # The instrument type tagged on import (app/domain/instrument_types.py)
+    # — "stock"/"equity_etf"/"bond_fund"/"money_market_fund"/
+    # "commodity_etc". Stored on the legacy `asset_class_raw` column (see
+    # app/models/holding.py); NOT the same as `asset_class`, which this
+    # rebuild always hardcodes to "equity" and never exposes here.
+    asset_class_raw: str
     created_at: datetime
     updated_at: datetime
     document_count: int

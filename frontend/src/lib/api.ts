@@ -13,11 +13,14 @@
  */
 
 import type {
+  Account,
   DocumentSummary,
   Holding,
   HoldingCreateInput,
   HoldingMetrics,
   HoldingUpdateInput,
+  PortfolioImportResponse,
+  PortfolioSnapshotSummary,
 } from "./types";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL as string | undefined;
@@ -114,5 +117,31 @@ export const api = {
       "/documents/upload",
       { method: "POST", body: form },
     );
+  },
+
+  listAccounts: () => request<Account[]>("/accounts"),
+  deleteAccount: (id: string) =>
+    request<void>(`/accounts/${id}`, { method: "DELETE", query: { confirm: true } }),
+
+  listSnapshots: (accountId?: string) =>
+    request<PortfolioSnapshotSummary[]>("/portfolio/snapshots", {
+      query: accountId ? { account_id: accountId } : undefined,
+    }),
+  deleteSnapshot: (id: string) =>
+    request<void>(`/portfolio/snapshots/${id}`, { method: "DELETE", query: { confirm: true } }),
+
+  /** Imports one broker-export CSV (see backend/app/api/portfolio.py's
+   * POST /portfolio/import-csv). `accountNumber` is optional — the real
+   * Nordnet-style exports embed it in the filename
+   * ("...kontono._12345678_..."), so it's only needed as an override. */
+  importPortfolioCsv: (params: { file: File; accountNumber?: string; accountName?: string }) => {
+    const form = new FormData();
+    form.set("file", params.file);
+    if (params.accountNumber) form.set("account_number", params.accountNumber);
+    if (params.accountName) form.set("account_name", params.accountName);
+    return request<PortfolioImportResponse>("/portfolio/import-csv", {
+      method: "POST",
+      body: form,
+    });
   },
 };

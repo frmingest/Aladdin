@@ -17,17 +17,23 @@ from __future__ import annotations
 from decimal import Decimal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.config.database import get_db
+from app.domain.errors import FileTooLargeError, UnsupportedFileTypeError
 from app.models.account import Account
-from app.models.document import Document
+from app.models.document import Document, DocumentPage
+from app.models.financial_line_item import FinancialLineItem
 from app.models.holding import Holding
 from app.models.portfolio import PortfolioPosition, PortfolioSnapshot
+from app.providers.factory import get_object_storage
+from app.schemas.account import AccountOut
+from app.schemas.document import DocumentOut
 from app.schemas.portfolio import (
     ConcentrationOut,
+    PortfolioImportResponse,
     PortfolioPositionIn,
     PortfolioPositionOut,
     PortfolioSnapshotCreate,
@@ -35,6 +41,8 @@ from app.schemas.portfolio import (
     PortfolioSnapshotSummary,
 )
 from app.services.calculations import herfindahl_hirschman_index
+from app.services.portfolio_import.csv_parser import CsvParseError
+from app.services.portfolio_import.ingestion import import_portfolio_csv
 
 router = APIRouter(prefix="/portfolio", tags=["portfolio"])
 
@@ -65,6 +73,100 @@ def _snapshot_to_out(snapshot: PortfolioSnapshot) -> PortfolioSnapshotOut:
         status=snapshot.status,
         account_id=snapshot.account_id,
         positions=[_position_to_out(p) for p in snapshot.positions],
+    )
+
+
+def _account_to_out(db: Session, account: Account) -> AccountOut:
+    position_count = db.scalar(
+        select(func.count())
+        .select_from(PortfolioPosition)
+        .where(PortfolioPosition.account_id == account.id)
+    )
+    snapshot_count = db.scalar(
+        select(func.count())
+        .select_from(PortfolioSnapshot)
+        .where(PortfolioSnapshot.account_id == account.id)
+    )
+    return AccountOut(
+        id=account.id,
+        name=account.name,
+        account_number=account.account_number,
+        institution=account.institution,
+        created_at=account.created_at,
+        updated_at=account.updated_at,
+        position_count=position_count or 0,
+        snapshot_count=snapshot_count or 0,
+    )
+
+
+def _document_to_out(db: Session, document: Document) -> DocumentOut:
+    page_count = db.scalar(
+        select(func.count()).select_from(DocumentPage).where(DocumentPage.document_id == document.id)
+    )
+    fact_count = db.scalar(
+        select(func.count())
+        .select_from(FinancialLineItem)
+        .where(FinancialLineItem.document_id == document.id)
+    )
+    return DocumentOut(
+        id=document.id,
+        holding_id=document.holding_id,
+        type=document.type,
+        original_filename=document.original_filename,
+        mime_type=document.mime_type,
+        size_bytes=document.size_bytes,
+        uploaded_at=document.uploaded_at,
+        reporting_period=document.reporting_period,
+        sha256=document.sha256,
+        status=document.status,
+        quality_flags=document.quality_flags,
+        page_count=page_count or 0,
+        fact_count=fact_count or 0,
+    )
+
+
+@router.post("/import-csv", response_model=PortfolioImportResponse, status_code=201)
+async def import_csv(
+    file: UploadFile = File(...),
+    account_number: str | None = Form(default=None),
+    account_name: str | None = Form(default=None),
+    db: Session = Depends(get_db),
+    storage=Depends(get_object_storage),
+) -> PortfolioImportResponse:
+    """Imports a broker-export CSV (Nordnet-style "Beholdningstabell", one
+    per real-world account) straight into an Account + traceable Document +
+    PortfolioSnapshot + PortfolioPositions — see
+    app/services/portfolio_import/. `account_number` is optional: if
+    omitted, it's parsed from the filename (the real exports embed it as
+    "...kontono._12345678_..."). Every row is imported and tagged with its
+    real instrument type (app/domain/instrument_types.py) — Faiz's explicit
+    choice (2026-09-21) over silently skipping non-equity rows (bond funds,
+    a physical gold ETC) found in these exports.
+    """
+    content = await file.read()
+    try:
+        result = import_portfolio_csv(
+            db,
+            storage,
+            filename=file.filename or "upload.csv",
+            content=content,
+            account_number=account_number,
+            account_name=account_name,
+        )
+    except UnsupportedFileTypeError as exc:
+        raise HTTPException(status_code=415, detail=str(exc)) from exc
+    except FileTooLargeError as exc:
+        raise HTTPException(status_code=413, detail=str(exc)) from exc
+    except CsvParseError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    return PortfolioImportResponse(
+        document=_document_to_out(db, result.document),
+        account=_account_to_out(db, result.account),
+        snapshot=_snapshot_to_out(result.snapshot),
+        holdings_created=result.holdings_created,
+        holdings_matched=result.holdings_matched,
+        was_duplicate_file=result.was_duplicate_file,
     )
 
 

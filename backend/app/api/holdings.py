@@ -48,6 +48,7 @@ def _to_out(db: Session, holding: Holding) -> HoldingOut:
         trading_currency=holding.trading_currency,
         institution=holding.institution,
         custody_type=holding.custody_type,
+        asset_class_raw=holding.asset_class_raw,
         created_at=holding.created_at,
         updated_at=holding.updated_at,
         document_count=document_count or 0,

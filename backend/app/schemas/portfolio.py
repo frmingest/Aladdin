@@ -9,6 +9,9 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+from app.schemas.account import AccountOut
+from app.schemas.document import DocumentOut
+
 
 class PortfolioPositionIn(BaseModel):
     holding_id: UUID
@@ -68,3 +71,18 @@ class ConcentrationOut(BaseModel):
     snapshot_id: UUID
     hhi: Decimal
     position_count: int
+
+
+class PortfolioImportResponse(BaseModel):
+    """POST /portfolio/import-csv's response — a broker-export CSV parsed
+    straight into an Account, a Document (the traceable source file), and
+    a PortfolioSnapshot with its positions in one call. See
+    app/services/portfolio_import/ingestion.py.
+    """
+
+    document: DocumentOut
+    account: AccountOut
+    snapshot: PortfolioSnapshotOut
+    holdings_created: int
+    holdings_matched: int
+    was_duplicate_file: bool

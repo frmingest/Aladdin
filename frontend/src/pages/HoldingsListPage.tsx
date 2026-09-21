@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, ApiError } from "../lib/api";
 import type { Holding, HoldingCreateInput } from "../lib/types";
+import { INSTRUMENT_TYPE_LABELS } from "../lib/types";
 import { Button, Card, EmptyState, PageHeader } from "../components/ui";
 
 const CURRENCIES = ["NOK", "USD", "EUR", "GBP", "SEK", "DKK"];
@@ -151,6 +152,7 @@ export default function HoldingsListPage() {
               <tr className="border-b border-border bg-border-subtle text-left text-xs uppercase tracking-wide text-ink-muted">
                 <th className="px-4 py-3 font-medium">Ticker</th>
                 <th className="px-4 py-3 font-medium">Name</th>
+                <th className="px-4 py-3 font-medium">Type</th>
                 <th className="px-4 py-3 font-medium">Sector</th>
                 <th className="px-4 py-3 font-medium">Currency</th>
                 <th className="px-4 py-3 text-right font-medium">Documents</th>
@@ -168,6 +170,9 @@ export default function HoldingsListPage() {
                     </Link>
                   </td>
                   <td className="px-4 py-3 text-ink">{h.name}</td>
+                  <td className="px-4 py-3 text-ink-muted">
+                    {INSTRUMENT_TYPE_LABELS[h.asset_class_raw] ?? h.asset_class_raw}
+                  </td>
                   <td className="px-4 py-3 text-ink-muted">{h.sector ?? "—"}</td>
                   <td className="px-4 py-3 tabular text-ink-muted">{h.trading_currency}</td>
                   <td className="px-4 py-3 text-right tabular text-ink-muted">
