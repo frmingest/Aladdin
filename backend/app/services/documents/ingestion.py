@@ -1,0 +1,189 @@
+"""Holding-document ingestion: validate -> hash/dedup -> store -> extract.
+
+CLAUDE.md Rule 5: the text captured here (DocumentPage.extracted_text,
+DocumentChunk.content) is untrusted input to the LLM, not instructions —
+whatever later builds the evidence packet from these rows (a later sprint)
+must frame this content to the model as data to analyze and cite, never as
+directives to follow.
+"""
+from __future__ import annotations
+
+import uuid
+from dataclasses import dataclass
+
+from sqlalchemy.orm import Session
+
+from app.config.settings import get_settings
+from app.domain.document_types import (
+    DOCUMENT_STATUS_FAILED,
+    DOCUMENT_STATUS_PROCESSED,
+    DOCUMENT_STATUS_PROCESSING,
+    DOCUMENT_STATUS_UPLOADED,
+)
+from app.domain.errors import FileTooLargeError, UnsupportedFileTypeError
+from app.models.document import Document, DocumentChunk, DocumentPage
+from app.models.financial_line_item import FinancialLineItem
+from app.providers.object_storage import ObjectStorageProvider
+from app.services.documents.extraction import extract
+from app.services.documents.hashing import (
+    HOLDING_DOCUMENT_EXTENSIONS,
+    check_basic_readability,
+    extension_of,
+    sha256_hex,
+)
+from app.services.documents.quality import evaluate_quality
+
+
+@dataclass
+class IntakeResult:
+    document: Document
+    was_duplicate: bool
+
+
+def intake_raw_file(
+    db: Session,
+    storage: ObjectStorageProvider,
+    *,
+    content: bytes,
+    filename: str,
+    mime_type: str,
+    document_type: str,
+    holding_id: uuid.UUID,
+    reporting_period: str | None = None,
+) -> IntakeResult:
+    """Validates, hashes/dedups, stores, and persists a Document row.
+
+    Raises UnsupportedFileTypeError / FileTooLargeError / UnreadableFileError
+    (see app.domain.errors) rather than silently accepting a bad upload.
+    """
+    ext = extension_of(filename)
+    if ext not in HOLDING_DOCUMENT_EXTENSIONS:
+        raise UnsupportedFileTypeError(filename, HOLDING_DOCUMENT_EXTENSIONS)
+
+    settings = get_settings()
+    max_bytes = settings.max_upload_size_mb * 1024 * 1024
+    if len(content) > max_bytes:
+        raise FileTooLargeError(filename, len(content), max_bytes)
+
+    check_basic_readability(filename, content)
+
+    digest = sha256_hex(content)
+    existing = db.query(Document).filter(Document.sha256 == digest).one_or_none()
+    if existing is not None:
+        return IntakeResult(document=existing, was_duplicate=True)
+
+    storage_key = f"{digest}/{filename}"
+    storage_path = storage.store(storage_key, content)
+
+    document = Document(
+        holding_id=holding_id,
+        type=document_type,
+        original_filename=filename,
+        mime_type=mime_type,
+        size_bytes=len(content),
+        storage_path=storage_path,
+        reporting_period=reporting_period,
+        sha256=digest,
+        status=DOCUMENT_STATUS_UPLOADED,
+        quality_flags={},
+    )
+    db.add(document)
+    db.flush()
+    return IntakeResult(document=document, was_duplicate=False)
+
+
+def process_document(db: Session, document: Document, content: bytes) -> None:
+    """Runs type-specific extraction and persists pages/chunks/facts.
+
+    Extraction failures mark the Document FAILED with a quality flag rather
+    than raising — the file is already safely stored, so a badly-formed
+    filing shouldn't 500 the request.
+    """
+    document.status = DOCUMENT_STATUS_PROCESSING
+    db.flush()
+
+    ext = extension_of(document.original_filename)
+    try:
+        result = extract(ext, content)
+    except Exception as exc:  # noqa: BLE001 — any extractor failure is a FAILED document, not a 500
+        document.status = DOCUMENT_STATUS_FAILED
+        document.quality_flags = {"extraction_failed": True, "extraction_error": str(exc)}
+        db.commit()
+        return
+
+    for page in result.pages:
+        db.add(
+            DocumentPage(
+                document_id=document.id,
+                page_number=page.page_number,
+                extracted_text=page.text,
+                extraction_quality=page.quality,
+            )
+        )
+        # 1 page = 1 chunk for now; finer section-aware chunking is a later
+        # sprint (see the rebuild sprint plan's Sprint 6) — good enough to
+        # keep raw text out of reasoning calls once the analysis pipeline
+        # (Sprint 4) exists.
+        db.add(
+            DocumentChunk(
+                document_id=document.id,
+                page_start=page.page_number,
+                page_end=page.page_number,
+                section=None,
+                content=page.text,
+                content_hash=sha256_hex(page.text.encode("utf-8")),
+            )
+        )
+
+    for fact in result.facts:
+        db.add(
+            FinancialLineItem(
+                document_id=document.id,
+                holding_id=document.holding_id,
+                metric=fact.metric,
+                value=fact.value,
+                unit=fact.unit,
+                currency=fact.currency,
+                period=fact.period,
+                source_page=fact.source_page,
+                confidence=fact.confidence,
+            )
+        )
+
+    flags = evaluate_quality(result.pages)
+    for flag in result.quality_flags:
+        flags[flag] = True
+    document.quality_flags = flags
+    document.status = (
+        DOCUMENT_STATUS_FAILED if flags.get("no_pages_extracted") else DOCUMENT_STATUS_PROCESSED
+    )
+    db.commit()
+
+
+def ingest_holding_document(
+    db: Session,
+    storage: ObjectStorageProvider,
+    *,
+    holding_id: uuid.UUID,
+    filename: str,
+    content: bytes,
+    mime_type: str,
+    document_type: str,
+    reporting_period: str | None = None,
+) -> IntakeResult:
+    """Full holding-document pipeline: intake + extraction."""
+    intake = intake_raw_file(
+        db,
+        storage,
+        content=content,
+        filename=filename,
+        mime_type=mime_type,
+        document_type=document_type,
+        holding_id=holding_id,
+        reporting_period=reporting_period,
+    )
+    # Only (re)process a genuinely new upload — a duplicate hash pointing at
+    # an already-processed document should not re-extract or duplicate pages.
+    if not intake.was_duplicate or intake.document.status == DOCUMENT_STATUS_UPLOADED:
+        process_document(db, intake.document, content)
+    return intake

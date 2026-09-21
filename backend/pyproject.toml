@@ -1,0 +1,17 @@
+# Ruff project config. Without this file ruff falls back to its own
+# (very broad) defaults, which include flake8-bugbear's B008 — a rule
+# that flags `Depends(...)`/`Form(...)`/`File(...)` as "function calls in
+# argument defaults". That's FastAPI's own required idiom for declaring
+# dependencies and request parts (see app/api/documents.py), not a bug, so
+# it's allowlisted here rather than suppressed per-line with `# noqa`.
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.Form",
+    "fastapi.File",
+    "fastapi.Query",
+    "fastapi.Path",
+    "fastapi.Body",
+    "fastapi.Header",
+    "fastapi.Cookie",
+]

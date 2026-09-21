@@ -14,6 +14,11 @@ from app.providers.base import LLMProvider, LLMUnavailableError
 from app.providers.budget import DailyBudgetGuard
 from app.providers.google_ai_studio_provider import GoogleAIStudioProvider
 from app.providers.mistral_provider import MistralProvider
+from app.providers.object_storage import (
+    LocalObjectStorageProvider,
+    ObjectStorageProvider,
+)
+from app.providers.object_storage_s3 import S3ObjectStorageProvider
 
 
 def _build_provider(name: str, settings: Settings) -> LLMProvider:
@@ -57,3 +62,25 @@ def get_primary_budget_guard() -> DailyBudgetGuard:
     """The primary provider's daily request-budget guard (see budget.py)."""
     settings = get_settings()
     return DailyBudgetGuard(daily_limit=settings.llm_rate_limit_rpd)
+
+
+@lru_cache
+def get_object_storage() -> ObjectStorageProvider:
+    """The configured object storage backend (OBJECT_STORAGE_PROVIDER,
+    default "local"). See app.providers.object_storage for what each
+    implementation is for."""
+    settings = get_settings()
+    if settings.object_storage_provider == "local":
+        return LocalObjectStorageProvider(settings.object_storage_local_path)
+    if settings.object_storage_provider == "s3":
+        return S3ObjectStorageProvider(
+            bucket=settings.object_storage_bucket,
+            endpoint_url=settings.object_storage_endpoint_url,
+            region=settings.object_storage_region,
+            access_key_id=settings.object_storage_access_key_id,
+            secret_access_key=settings.object_storage_secret_access_key,
+        )
+    raise NotImplementedError(
+        f"Object storage provider '{settings.object_storage_provider}' not supported "
+        "— use 'local' or 's3'."
+    )

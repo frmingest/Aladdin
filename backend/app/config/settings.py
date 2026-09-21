@@ -47,6 +47,20 @@ class Settings(BaseSettings):
     mistral_model_name: str = "mistral-small-latest"
     mistral_rate_limit_rpm: int = 30  # conservative default, not vendor-confirmed
 
+    # --- Object storage (see app/providers/object_storage.py) ---
+    # "local" (default, dev only — Railway's disk is ephemeral, not a real
+    # deployment option) | "s3" (any S3-compatible bucket: Cloudflare R2,
+    # or Supabase Storage's own S3-compatible API).
+    object_storage_provider: str = "local"
+    object_storage_bucket: str = "aladdin-documents"
+    object_storage_local_path: str = "./storage"
+    object_storage_endpoint_url: str | None = None
+    object_storage_region: str = "auto"
+    object_storage_access_key_id: str | None = None
+    object_storage_secret_access_key: str | None = None
+
+    max_upload_size_mb: int = 25
+
 
 @lru_cache
 def get_settings() -> Settings:
