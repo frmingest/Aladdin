@@ -118,3 +118,37 @@ def test_get_missing_document_returns_404(client):
     test_client, _ = client
     response = test_client.get("/documents/00000000-0000-0000-0000-000000000000")
     assert response.status_code == 404
+
+def test_upload_without_holding_id_for_portfolio_export(client):
+    test_client, _ = client
+    content = _xlsx_bytes()
+
+    response = test_client.post(
+        "/documents/upload",
+        data={"document_type": "portfolio_export"},
+        files={
+            "file": (
+                "positions.xlsx",
+                content,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        },
+    )
+    assert response.status_code == 201, response.text
+    document = response.json()["document"]
+    assert document["holding_id"] is None
+    # The one row in _xlsx_bytes() ("Revenue") would normally become a
+    # structured fact, but with no holding to attribute it to it's
+    # discarded and flagged instead of inserted with a null FK.
+    assert document["fact_count"] == 0
+    assert document["quality_flags"].get("facts_skipped_no_holding") is True
+
+
+def test_upload_rejects_unknown_document_type(client):
+    test_client, holding_id = client
+    response = test_client.post(
+        "/documents/upload",
+        data={"holding_id": holding_id, "document_type": "not_a_real_type"},
+        files={"file": ("q4.xlsx", _xlsx_bytes(), "application/octet-stream")},
+    )
+    assert response.status_code == 422

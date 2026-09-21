@@ -89,7 +89,7 @@ def _doc_to_detail(db: Session, document: Document) -> DocumentDetail:
 @router.post("/upload", response_model=DocumentUploadResponse, status_code=201)
 async def upload_document(
     file: UploadFile = File(...),
-    holding_id: UUID = Form(...),
+    holding_id: UUID | None = Form(default=None),
     document_type: str = Form(default="other"),
     reporting_period: str | None = Form(default=None),
     db: Session = Depends(get_db),
@@ -101,9 +101,14 @@ async def upload_document(
             detail=f"document_type must be one of {sorted(DOCUMENT_TYPES)}",
         )
 
-    holding = db.get(Holding, holding_id)
-    if holding is None:
-        raise HTTPException(status_code=404, detail=f"holding '{holding_id}' not found")
+    # holding_id is optional: a portfolio-wide export (document_type
+    # "portfolio_export") isn't about a single holding — see
+    # app/domain/document_types.py. Every other type is still expected to
+    # name a real holding, so validate it when one is given either way.
+    if holding_id is not None:
+        holding = db.get(Holding, holding_id)
+        if holding is None:
+            raise HTTPException(status_code=404, detail=f"holding '{holding_id}' not found")
 
     content = await file.read()
 

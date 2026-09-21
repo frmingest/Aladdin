@@ -48,7 +48,7 @@ def intake_raw_file(
     filename: str,
     mime_type: str,
     document_type: str,
-    holding_id: uuid.UUID,
+    holding_id: uuid.UUID | None,
     reporting_period: str | None = None,
 ) -> IntakeResult:
     """Validates, hashes/dedups, stores, and persists a Document row.
@@ -135,7 +135,20 @@ def process_document(db: Session, document: Document, content: bytes) -> None:
             )
         )
 
+    # financial_line_items.holding_id is NOT NULL (see
+    # app/models/financial_line_item.py) — a portfolio-wide document
+    # (document.holding_id is None, e.g. document_type="portfolio_export")
+    # has no single holding to attribute a fact to, so any candidate facts
+    # are discarded rather than inserted with a null FK. This only matters
+    # for XLSX today (the one extractor that promotes facts at all) and in
+    # practice a portfolio export's rows won't match the financial-metrics
+    # label map anyway — still handled explicitly, not left to an
+    # IntegrityError, per CLAUDE.md's "fail visibly" rule.
+    facts_skipped_no_holding = False
     for fact in result.facts:
+        if document.holding_id is None:
+            facts_skipped_no_holding = True
+            continue
         db.add(
             FinancialLineItem(
                 document_id=document.id,
@@ -153,6 +166,8 @@ def process_document(db: Session, document: Document, content: bytes) -> None:
     flags = evaluate_quality(result.pages)
     for flag in result.quality_flags:
         flags[flag] = True
+    if facts_skipped_no_holding:
+        flags["facts_skipped_no_holding"] = True
     document.quality_flags = flags
     document.status = (
         DOCUMENT_STATUS_FAILED if flags.get("no_pages_extracted") else DOCUMENT_STATUS_PROCESSED
@@ -164,14 +179,18 @@ def ingest_holding_document(
     db: Session,
     storage: ObjectStorageProvider,
     *,
-    holding_id: uuid.UUID,
+    holding_id: uuid.UUID | None,
     filename: str,
     content: bytes,
     mime_type: str,
     document_type: str,
     reporting_period: str | None = None,
 ) -> IntakeResult:
-    """Full holding-document pipeline: intake + extraction."""
+    """Full document-ingestion pipeline: intake + extraction.
+
+    `holding_id` is None for a portfolio-wide document (document_type
+    "portfolio_export") — see app/domain/document_types.py.
+    """
     intake = intake_raw_file(
         db,
         storage,

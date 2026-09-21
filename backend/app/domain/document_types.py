@@ -6,6 +6,13 @@ alembic/versions/a0f4172c5989_phase1_portfolio_and_document_ingestion.py),
 so validation happens here in application code rather than by widening the
 schema (CLAUDE.md: don't alter the legacy/already-migrated tables without
 an explicit ask).
+
+"portfolio_export" is a document with no single `holding_id` (a brokerage
+export covering many holdings at once) — see app/api/documents.py, where
+`holding_id` is optional for exactly this reason, and app/api/portfolio.py,
+which requires a snapshot's source_file_id to point at a real uploaded
+document (Faiz's explicit choice, 2026-09-21: portfolio positions stay
+traceable to real evidence, no manual-entry shortcut).
 """
 
 DOCUMENT_TYPES: tuple[str, ...] = (
@@ -14,6 +21,7 @@ DOCUMENT_TYPES: tuple[str, ...] = (
     "presentation",
     "prospectus",
     "transcript",
+    "portfolio_export",
     "other",
 )
 
