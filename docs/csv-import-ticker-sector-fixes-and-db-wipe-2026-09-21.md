@@ -112,9 +112,12 @@ this ran cleanly will be the Railway deploy logs and an empty Holdings page afte
 
 ## Needs from Faiz
 
-- Push to `main` and redeploy on Railway — this is when the CSV-import fixes take effect **and**
-  when the full data wipe actually runs. (Faiz confirmed "yes, push when ready" — this session pushed
-  once tests were green; confirm the actual `git log`/GitHub state before trusting this is live.)
+- **Push `main`** (2 new local commits: `ac56228` CSV-import/ticker fixes, `42b8ee5` the data-wipe
+  migration) — this session hit the same `could not read Username for 'https://github.com'` credential
+  gap every prior session has hit (see "Known ongoing issue"), so `git push` failed and both commits
+  are local-only on the device's working tree. Faiz confirmed "yes, push when ready" — the intent
+  stands, only the credentials are missing. Redeploying on Railway after the push is what actually runs
+  the CSV-import fixes **and** the full data wipe — neither has happened yet.
 - After redeploy: re-upload the 5 CSVs clean (Holdings will be empty), then use the new inline-edit
   UI to assign real tickers/sectors as they come in, rather than leaving placeholder tickers in
   place — the market-data/valuation/research/analysis pipeline depends on `Holding.ticker` being a

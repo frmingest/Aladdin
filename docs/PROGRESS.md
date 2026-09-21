@@ -175,7 +175,7 @@ clean. Not run against the live Railway deployment.
 
 | Item | Why |
 |---|---|
-| **Push `main`** (this session pushed its own commits once tests were green — confirm `git log`/GitHub before trusting this, per CLAUDE.md status honesty) | Railway only picks up a change once it's pushed and redeployed |
+| **Push `main`** (2 new local commits — `ac56228`, `42b8ee5` — could NOT be pushed this session: same `could not read Username for 'https://github.com'` credential gap as every prior session, see "Known ongoing issue" below) | Railway only picks up a change once it's pushed and redeployed — neither the CSV-import fixes nor the data wipe have happened yet |
 | **Redeploy on Railway** once pushed — this is the moment the full data wipe (migration `e5f6a7b8c9d0`) actually runs, not before | Nothing in this session's changes is "live" until Faiz confirms a redeploy or this is checked against the live URL. After redeploy, the Holdings/Portfolio pages will be empty — that's the wipe, not a new bug. |
 | **Re-upload the 5 CSVs** once redeployed, then use the new inline Ticker/Sector/Type edit UI on the Holdings page to assign real tickers | Placeholder tickers (e.g. `VAR-ENERGI`) aren't real market symbols — the market-data/valuation/research/analysis pipeline needs the real one per holding |
 | **Set `MARKET_DATA_PROVIDER` and `RESEARCH_PROVIDER` for real** (flagged for 3 sessions running now) | Both are still `stub` in this session's `backend/.env` — Sprint 4's analysis engine directly depends on both (the evidence packet calls the valuation engine and all three research kinds), so this now blocks Sprint 4 working at all, not just `/research/*`/`/valuation/*` individually |
