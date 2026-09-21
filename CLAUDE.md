@@ -57,6 +57,16 @@ When picking up a task, verify against the actual repo/deployment state rather t
 session's summary — this app's history includes real cases of stale assumptions costing Faiz real
 time.
 
+## Documentation sync
+
+Every real change to this project's state (a decision, a sprint milestone, a discovered
+discrepancy, a "what's actually true now") gets written to the Claude project docs
+(`claude/progress.md` and the active sprint plan doc) **and** mirrored into this repo's `docs/`
+folder (`docs/PROGRESS.md` and the matching sprint plan file) in the same change, so GitHub always
+shows current state too — not just claude.ai. Don't update one and skip the other. If `docs/`
+doesn't have a file the project doc list does, that's a signal to add it, not a reason to skip the
+repo copy.
+
 ## Git discipline
 
 - Commit each completed, tested unit of work before moving to the next one.
