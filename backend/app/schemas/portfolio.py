@@ -19,6 +19,11 @@ class PortfolioPositionIn(BaseModel):
     quantity: Decimal | None = None
     cost_basis: Decimal | None = None
     cost_basis_currency: str | None = Field(default=None, min_length=3, max_length=3)
+    # Both added 2026-09-22 (migration a2b4c6d8e0f1) — see
+    # app/models/portfolio.py's PortfolioPosition docstrings for what
+    # currency each is in.
+    last_price: Decimal | None = None
+    market_value_nok: Decimal | None = None
     notes: str | None = None
     account_id: UUID | None = None
 
@@ -32,6 +37,8 @@ class PortfolioPositionOut(BaseModel):
     quantity: Decimal | None
     cost_basis: Decimal | None
     cost_basis_currency: str | None
+    last_price: Decimal | None
+    market_value_nok: Decimal | None
     notes: str | None
     account_id: UUID | None
 

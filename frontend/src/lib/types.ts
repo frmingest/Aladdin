@@ -200,6 +200,14 @@ export interface Account {
   snapshot_count: number;
 }
 
+/** Mirrors backend/app/schemas/account.py's AccountUpdate — every field
+ * optional, only what's supplied is changed. account_number is
+ * deliberately excluded (see the backend schema's own docstring). */
+export interface AccountUpdateInput {
+  name?: string;
+  institution?: string | null;
+}
+
 /** Mirrors backend/app/schemas/portfolio.py. */
 export interface PortfolioPosition {
   id: string;
@@ -210,6 +218,14 @@ export interface PortfolioPosition {
   quantity: string | null;
   cost_basis: string | null;
   cost_basis_currency: string | null;
+  /** Added 2026-09-22 (migration a2b4c6d8e0f1) — last traded price at
+   * import time, in cost_basis_currency (not necessarily NOK). Can be
+   * null: "siste kurs" isn't a required CSV column (see
+   * backend/app/services/portfolio_import/csv_parser.py). */
+  last_price: string | null;
+  /** Added 2026-09-22 (migration a2b4c6d8e0f1) — total market value of
+   * this position at import time, always in NOK. */
+  market_value_nok: string | null;
   notes: string | null;
   account_id: string | null;
 }

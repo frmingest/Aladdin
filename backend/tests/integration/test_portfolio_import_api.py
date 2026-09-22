@@ -40,6 +40,15 @@ def test_import_csv_creates_account_document_and_snapshot(client):
     assert body["holdings_matched"] == 0
     assert body["was_duplicate_file"] is False
 
+    # Regression check (2026-09-22): last_price/market_value_nok now round-
+    # trip through the API, not just quantity/cost_basis.
+    gold_mining = next(
+        p for p in body["snapshot"]["positions"] if p["ticker"] == "L-G-GOLD-MINING-ETF"
+    )
+    assert gold_mining["last_price"] == "102.460000"
+    assert gold_mining["market_value_nok"] == "158986.080000"
+    assert gold_mining["quantity"] == "144.000000"
+
     # Both imported holdings are tagged as equity ETFs, not plain "equity"
     # guesswork — confirms the instrument-type tagging round-trips through
     # the API (schemas/holding.py's asset_class_raw).

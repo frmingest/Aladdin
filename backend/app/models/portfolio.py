@@ -68,6 +68,18 @@ class PortfolioPosition(Base):
     quantity: Mapped[Decimal | None] = mapped_column(Numeric(20, 6), nullable=True)
     cost_basis: Mapped[Decimal | None] = mapped_column(Numeric(20, 6), nullable=True)
     cost_basis_currency: Mapped[str | None] = mapped_column(String(3), nullable=True)
+    # Both added in migration a2b4c6d8e0f1 (2026-09-22) — the CSV importer
+    # always parsed these out of the broker export ("siste kurs" /
+    # "Verdi NOK") but neither was ever persisted; see that migration's
+    # docstring.
+    last_price: Mapped[Decimal | None] = mapped_column(Numeric(20, 6), nullable=True)
+    """Last traded price at import time, in the same currency as
+    cost_basis_currency (the security's own trading currency) — not
+    necessarily NOK."""
+    market_value_nok: Mapped[Decimal | None] = mapped_column(Numeric(20, 6), nullable=True)
+    """Total market value of this position at import time, in NOK (the
+    snapshot's reporting_currency, always NOK for CSV-imported snapshots —
+    see PortfolioSnapshot.reporting_currency)."""
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     account_id: Mapped[uuid.UUID | None] = mapped_column(
         GUID(), ForeignKey("accounts.id"), nullable=True

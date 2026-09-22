@@ -6,7 +6,8 @@ HTTP status, ClientError is 4xx, ServerError is 5xx.
 import pytest
 from google.genai import errors as genai_errors
 
-from app.providers.gemini_retry import call_with_retry
+from app.providers.budget import DailyBudgetGuard
+from app.providers.gemini_retry import DailyBudgetExceededError, call_with_retry
 
 
 def _client_error(code: int) -> genai_errors.ClientError:
@@ -84,6 +85,53 @@ def test_non_retryable_generic_exception_fails_immediately():
     with pytest.raises(RuntimeError):
         call_with_retry(broken, rpm=0, _sleep=lambda _: None)
     assert attempts["n"] == 1
+
+
+def test_exhausted_budget_guard_fails_immediately_no_pacing_no_call():
+    """2026-09-22 fix: previously a DailyBudgetGuard was built
+    (app/providers/factory.py's get_primary_budget_guard) but never
+    consulted anywhere, so an exhausted daily quota still paid the full
+    pacing wait + a real (doomed) network call + the full retry/backoff
+    ladder before failing — this is what made pages like Macro feel like
+    they hung. Now it fails before any of that."""
+    guard = DailyBudgetGuard(daily_limit=1)
+    guard.record_usage(1)  # budget already spent
+
+    calls = {"n": 0}
+    sleeps = []
+
+    def fn():
+        calls["n"] += 1
+        return "should never run"
+
+    with pytest.raises(DailyBudgetExceededError):
+        call_with_retry(fn, rpm=5, budget_guard=guard, _sleep=sleeps.append)
+
+    assert calls["n"] == 0
+    assert sleeps == []  # no RPM pacing wait either
+
+
+def test_budget_guard_records_usage_on_success():
+    guard = DailyBudgetGuard(daily_limit=5)
+    call_with_retry(lambda: "ok", rpm=0, budget_guard=guard, _sleep=lambda _: None)
+    assert guard.remaining_today() == 4
+
+
+def test_budget_guard_records_usage_per_attempt_on_retries():
+    guard = DailyBudgetGuard(daily_limit=5)
+    attempts = {"n": 0}
+
+    def flaky():
+        attempts["n"] += 1
+        if attempts["n"] < 3:
+            raise genai_errors.ServerError(code=503, response_json={"error": {"message": "busy"}})
+        return "ok"
+
+    call_with_retry(
+        flaky, rpm=0, budget_guard=guard, _sleep=lambda _: None, _random=lambda: 0.0
+    )
+    assert attempts["n"] == 3
+    assert guard.remaining_today() == 2  # 5 - 3 real attempts, each debited
 
 
 def test_pacing_invoked_before_every_attempt(monkeypatch):

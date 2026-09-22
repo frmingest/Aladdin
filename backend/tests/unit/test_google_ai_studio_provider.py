@@ -7,6 +7,7 @@ from google.genai import errors as genai_errors
 from pydantic import BaseModel
 
 from app.providers.base import LLMUnavailableError
+from app.providers.budget import DailyBudgetGuard
 from app.providers.google_ai_studio_provider import GoogleAIStudioProvider
 
 
@@ -95,3 +96,18 @@ def test_non_retryable_error_fails_without_retrying():
 def test_rpm_is_passed_through_to_pacing():
     provider = _make_provider(rpm=5)
     assert provider._rpm == 5
+
+
+def test_exhausted_budget_guard_fails_fast_without_touching_the_client():
+    """2026-09-22 fix — see test_gemini_retry.py's matching test for the
+    full incident this addresses."""
+    guard = DailyBudgetGuard(daily_limit=1)
+    guard.record_usage(1)
+    provider = _make_provider(budget_guard=guard)
+
+    with patch.object(provider, "_client") as mock_client:
+        with pytest.raises(LLMUnavailableError, match="budget"):
+            provider.generate_structured(
+                system_prompt="sys", user_prompt="user", response_schema=_EchoSchema
+            )
+        mock_client.models.generate_content.assert_not_called()

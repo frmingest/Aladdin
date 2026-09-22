@@ -163,6 +163,8 @@ def _position_to_out(position: PortfolioPosition) -> PortfolioPositionOut:
         quantity=position.quantity,
         cost_basis=position.cost_basis,
         cost_basis_currency=position.cost_basis_currency,
+        last_price=position.last_price,
+        market_value_nok=position.market_value_nok,
         notes=position.notes,
         account_id=position.account_id,
     )
@@ -317,6 +319,8 @@ def create_snapshot(
                 quantity=position.quantity,
                 cost_basis=position.cost_basis,
                 cost_basis_currency=position.cost_basis_currency,
+                last_price=position.last_price,
+                market_value_nok=position.market_value_nok,
                 notes=position.notes,
                 account_id=position.account_id,
             )
@@ -462,6 +466,8 @@ def add_position(
         quantity=payload.quantity,
         cost_basis=payload.cost_basis,
         cost_basis_currency=payload.cost_basis_currency,
+        last_price=payload.last_price,
+        market_value_nok=payload.market_value_nok,
         notes=payload.notes,
         account_id=payload.account_id,
     )

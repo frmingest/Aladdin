@@ -29,6 +29,7 @@ def _clear_caches(monkeypatch):
     monkeypatch.delenv("MARKET_DATA_PROVIDER", raising=False)
     monkeypatch.delenv("RISK_FREE_RATE_PROVIDER", raising=False)
     monkeypatch.delenv("OBJECT_STORAGE_PROVIDER", raising=False)
+    monkeypatch.delenv("RESEARCH_PROVIDER", raising=False)
     get_settings.cache_clear()
     factory.get_llm_provider.cache_clear()
     factory.get_llm_fallback_provider.cache_clear()
@@ -36,6 +37,7 @@ def _clear_caches(monkeypatch):
     factory.get_market_data_provider.cache_clear()
     factory.get_risk_free_rate_provider.cache_clear()
     factory.get_object_storage.cache_clear()
+    factory.get_research_provider.cache_clear()
     yield
     get_settings.cache_clear()
     factory.get_llm_provider.cache_clear()
@@ -44,6 +46,7 @@ def _clear_caches(monkeypatch):
     factory.get_market_data_provider.cache_clear()
     factory.get_risk_free_rate_provider.cache_clear()
     factory.get_object_storage.cache_clear()
+    factory.get_research_provider.cache_clear()
 
 
 def test_default_primary_provider_is_google_ai_studio(monkeypatch):
@@ -87,6 +90,21 @@ def test_primary_budget_guard_uses_configured_daily_limit(monkeypatch):
     monkeypatch.setenv("LLM_RATE_LIMIT_RPD", "7")
     guard = factory.get_primary_budget_guard()
     assert guard.remaining_today() == 7
+
+
+def test_llm_provider_shares_the_primary_budget_guard_instance(monkeypatch):
+    """Regression test (2026-09-22): get_primary_budget_guard() used to be
+    built but never actually wired into either Gemini-calling provider —
+    see gemini_retry.py's module docstring for the slow-page incident this
+    caused. Both get_llm_provider() and get_research_provider() must share
+    the exact same guard instance (they hit the same Google AI Studio
+    account/quota), not one each."""
+    monkeypatch.setenv("GOOGLE_AI_STUDIO_API_KEY", "test-key")
+    monkeypatch.setenv("RESEARCH_PROVIDER", "gemini_search")
+    llm_provider = factory.get_llm_provider()
+    research_provider = factory.get_research_provider()
+    assert llm_provider._budget_guard is factory.get_primary_budget_guard()
+    assert research_provider._budget_guard is factory.get_primary_budget_guard()
 
 
 def test_default_market_data_provider_is_yfinance(monkeypatch):

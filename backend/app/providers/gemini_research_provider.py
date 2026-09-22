@@ -45,7 +45,8 @@ from google.genai import types as genai_types
 
 from app.config.paths import PROMPTS_DIR
 from app.providers.base import ResearchItem, ResearchProvider, ResearchUnavailableError
-from app.providers.gemini_retry import call_with_retry
+from app.providers.budget import DailyBudgetGuard
+from app.providers.gemini_retry import DailyBudgetExceededError, call_with_retry
 
 MACRO_SOURCE_TYPE = "macro_news"
 SECTOR_SOURCE_TYPE = "sector_research"
@@ -64,6 +65,7 @@ class GeminiResearchProvider(ResearchProvider):
         temperature: float = 0.2,
         max_output_tokens: int = 8192,
         rpm: int = 0,
+        budget_guard: DailyBudgetGuard | None = None,
     ) -> None:
         if not api_key:
             raise ResearchUnavailableError(
@@ -75,6 +77,10 @@ class GeminiResearchProvider(ResearchProvider):
         self._temperature = temperature
         self._max_output_tokens = max_output_tokens
         self._rpm = rpm
+        # Shared with GoogleAIStudioProvider — same Google AI Studio
+        # account, same daily cap (see gemini_retry.py's module
+        # docstring and app/providers/factory.py's get_primary_budget_guard).
+        self._budget_guard = budget_guard
 
     def get_macro_research(self) -> list[ResearchItem]:
         prompt = _load_prompt("macro", self._prompt_version)
@@ -111,7 +117,11 @@ class GeminiResearchProvider(ResearchProvider):
             )
 
         try:
-            response = call_with_retry(_call, rpm=self._rpm)
+            response = call_with_retry(_call, rpm=self._rpm, budget_guard=self._budget_guard)
+        except DailyBudgetExceededError as exc:
+            raise ResearchUnavailableError(
+                f"Gemini daily request budget exhausted (model={self._model}): {exc}"
+            ) from exc
         except genai_errors.APIError as exc:
             raise ResearchUnavailableError(
                 f"Gemini grounded search call failed (model={self._model}): {exc}"

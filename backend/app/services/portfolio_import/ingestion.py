@@ -64,6 +64,9 @@ SNAPSHOT_STATUS_PROCESSED = "processed"
 
 _WEIGHT_QUANTIZE = Decimal("0.0001")  # matches portfolio_positions.weight_pct Numeric(9, 4)
 _COST_QUANTIZE = Decimal("0.000001")  # matches portfolio_positions.cost_basis Numeric(20, 6)
+# Same Numeric(20, 6) precision as cost_basis — matches
+# portfolio_positions.last_price / .market_value_nok.
+_PRICE_QUANTIZE = Decimal("0.000001")
 
 # Norwegian letters that show up in these real exports ("Vår Energi",
 # "Høyrente") and would otherwise just get silently dropped by the
@@ -252,6 +255,13 @@ def import_portfolio_csv(
             else None
         )
         cost_basis = (p.avg_cost * p.quantity).quantize(_COST_QUANTIZE)
+        # Both raw broker-reported figures (CLAUDE.md Rule 1 — not derived
+        # here), previously parsed and then discarded — see migration
+        # a2b4c6d8e0f1's docstring. "siste kurs" is genuinely absent from
+        # some real exports (see csv_parser.py's REQUIRED_FIELDS, which
+        # doesn't include it), so last_price can legitimately be None.
+        last_price = p.last_price.quantize(_PRICE_QUANTIZE) if p.last_price is not None else None
+        market_value_nok = p.value_nok.quantize(_PRICE_QUANTIZE)
 
         db.add(
             PortfolioPosition(
@@ -261,6 +271,8 @@ def import_portfolio_csv(
                 quantity=p.quantity,
                 cost_basis=cost_basis,
                 cost_basis_currency=p.currency,
+                last_price=last_price,
+                market_value_nok=market_value_nok,
                 account_id=account.id,
             )
         )

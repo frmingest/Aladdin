@@ -3,7 +3,7 @@
 Quick-glance tracker. Full technical detail for each item lives in its own doc (linked below); this
 page stays a scan-able table, not a narrative.
 
-**Last updated:** 2026-09-21
+**Last updated:** 2026-09-22
 
 ## Build phases
 
@@ -171,11 +171,29 @@ Three real bugs fixed, one new UI, one irreversible action taken at Faiz's expli
 Testing: 326/326 backend tests passing (17 new), ruff clean, frontend `tsc`/`eslint`/`vite build` all
 clean. Not run against the live Railway deployment.
 
+## Account rename, lost position data, and Macro page slowness — ✅ done 2026-09-22
+
+Faiz raised three issues in one message. Full write-up:
+[account-name-position-data-macro-speed-2026-09-22.md](account-name-position-data-macro-speed-2026-09-22.md).
+
+| What | Detail |
+|---|---|
+| Account name field | Backend already fully supported `Account.name` (model/schema/`PATCH /accounts/{id}`) — the gap was 100% frontend. Added an optional account-name field on CSV upload and inline rename (click "Rename") on every row of the Accounts table. No backend change needed. |
+| CSV upload "losing" quantity/price/GAV | Two different things: `quantity`/`cost_basis` (GAV × quantity) were already being saved correctly, just never shown anywhere in the frontend (fixed: new expandable positions table on the Portfolio page). `last_price` ("siste kurs") and total market value ("Verdi NOK") were a real bug — parsed out of every CSV row and then genuinely discarded, never persisted. New columns `last_price`/`market_value_nok` on `portfolio_positions` (migration `a2b4c6d8e0f1`), populated on every import from here on. Existing imported positions have `NULL` for both until re-uploaded. |
+| Macro page loading slowly | Root cause: `app/providers/budget.py`'s `DailyBudgetGuard` was built (`factory.get_primary_budget_guard()`) but never actually consulted anywhere — confirmed by grep, no call site anywhere used `.would_exceed()`/`.record_usage()`. Once the real 20/day Google AI Studio quota (shared across macro + every sector + every company research + every analysis run) was spent, every further call still paid the full RPM-pacing wait + a real network call + the full retry/backoff ladder before failing — 45-60+ seconds of hanging, which is exactly what "loading really slow" looks like. Now wired in: both Gemini-calling providers share the one budget-guard instance and fail immediately (no wait, no call, no retries) once it's exhausted. Doesn't make a real Gemini call faster — makes a doomed one fail in milliseconds instead of about a minute. |
+
+**Testing:** 333/333 backend tests passing (7 new), ruff clean on every file touched. Migration
+verified upgrade+downgrade against the Postgres dialect offline (no live DB reachable from this
+session). Frontend `tsc --noEmit`/`eslint`/`vite build` all clean. **Not run against a live Gemini
+call, real market data, or Faiz's real 124 holdings.**
+
+**Status: committed locally, not pushed, not deployed.** See "Needs from Faiz right now" below.
+
 ## Needs from Faiz right now
 
 | Item | Why |
 |---|---|
-| **Push `main`** (2 new local commits — `ac56228`, `42b8ee5` — could NOT be pushed this session: same `could not read Username for 'https://github.com'` credential gap as every prior session, see "Known ongoing issue" below) | Railway only picks up a change once it's pushed and redeployed — neither the CSV-import fixes nor the data wipe have happened yet |
+| **Push `main`** — this session's new commit (account rename, `last_price`/`market_value_nok` persistence, Gemini budget-guard fast-fail) is local only so far; git push wasn't attempted without an explicit ask this session. The prior session's commits (`ac56228`, `42b8ee5` — CSV-import fixes, full data wipe) are now confirmed pushed: `git status` at the start of this session showed `up to date with origin/main`, so the credential gap in "Known ongoing issue" below is evidently resolved on Faiz's own machine/GitHub Desktop, not a live blocker anymore. | Railway only picks up a change once it's pushed and redeployed — none of today's fixes are live until that happens, including migration `a2b4c6d8e0f1` (additive, safe — two new nullable columns, no backfill needed) |
 | **Redeploy on Railway** once pushed — this is the moment the full data wipe (migration `e5f6a7b8c9d0`) actually runs, not before | Nothing in this session's changes is "live" until Faiz confirms a redeploy or this is checked against the live URL. After redeploy, the Holdings/Portfolio pages will be empty — that's the wipe, not a new bug. |
 | **Re-upload the 5 CSVs** once redeployed, then use the new inline Ticker/Sector/Type edit UI on the Holdings page to assign real tickers | Placeholder tickers (e.g. `VAR-ENERGI`) aren't real market symbols — the market-data/valuation/research/analysis pipeline needs the real one per holding |
 | **Set `MARKET_DATA_PROVIDER` and `RESEARCH_PROVIDER` for real** (flagged for 3 sessions running now) | Both are still `stub` in this session's `backend/.env` — Sprint 4's analysis engine directly depends on both (the evidence packet calls the valuation engine and all three research kinds), so this now blocks Sprint 4 working at all, not just `/research/*`/`/valuation/*` individually |
@@ -195,6 +213,7 @@ far in the repo were pushed by Faiz himself from his own terminal/GitHub Desktop
 
 | Date | Session | Summary | Detail |
 |---|---|---|---|
+| 2026-09-22 | Account rename, lost position data (`last_price`/`market_value_nok`), Macro page slowness | Frontend: account rename UI + optional name-on-upload field; new expandable positions table on the Portfolio page (quantity, GAV, cost basis, last price, market value, weight — previously shown nowhere). Backend: migration `a2b4c6d8e0f1` adds `last_price`/`market_value_nok` to `portfolio_positions` (parsed from every CSV row since day one, never persisted until now); wired the previously-dead `DailyBudgetGuard` into both Gemini-calling providers so an exhausted daily quota fails in milliseconds instead of 45-60+ seconds of pacing+retry. 333/333 backend tests passing (7 new), ruff/tsc/eslint/vite build all clean. Committed locally, not pushed, not deployed. | [account-name-position-data-macro-speed-2026-09-22.md](account-name-position-data-macro-speed-2026-09-22.md) |
 | 2026-09-21 | CSV import ticker/duplicate-holding fixes, manual-edit UI, full data wipe | Fixed the CSV-import 500 (quality_flags shape coercion), the duplicate-holding/garbage-ticker bug (name-normalized matching, transliterated/collision-safe placeholder tickers), added inline Ticker/Sector/Instrument-Type editing (`PATCH /holdings/{id}`, `GET /holdings/field-options`, canonical sector list). At Faiz's explicit request after being told the cost, wrote (not yet run) a migration that fully wipes Supabase on next deploy. 326/326 backend tests passing (17 new), ruff/tsc/eslint/vite build all clean. | [csv-import-ticker-sector-fixes-and-db-wipe-2026-09-21.md](csv-import-ticker-sector-fixes-and-db-wipe-2026-09-21.md) |
 | 2026-09-21 | CSV import 500 fixed: object-storage provider alias | `POST /portfolio/import-csv` was 500ing on every request (`get_object_storage()` dependency raising `NotImplementedError` for `OBJECT_STORAGE_PROVIDER=supabase`, before the route ever ran). Made `"s3"`, `"r2"`, and `"supabase"` all build the same `S3ObjectStorageProvider` (they're all S3-compatible), matching what `.env.example` already implied was valid. Clarified 3 stale comments, added 5 regression tests (249/249 unit tests pass). Committed (`72e7ed9`), not pushed, not deployed — Railway's env var needs no change, just a push + redeploy. | — |
 | 2026-09-21 | Portfolio delete: second cascade bug + free-provider research | Fixed `DELETE /portfolio/all` / `DELETE /portfolio/snapshots/{id}` 500ing when a legacy `portfolio_risk_snapshots` row was attached (missed by the original cascade-delete fix) — new purge-only model, updated `_purge_legacy_analysis`, schema/frontend count surfaced, 2 new regression tests (309 total passing). Also wrote up a free market-data/research provider proposal doc (SEC EDGAR + Oslo Børs Newsweb as top picks) — research only, no code. | [free-market-data-research-providers-2026-09-21.md](free-market-data-research-providers-2026-09-21.md) |
@@ -207,7 +226,7 @@ far in the repo were pushed by Faiz himself from his own terminal/GitHub Desktop
 | 2026-09-21 | Sprint 2 started: live research (macro/sector/company) | See the sprint plan doc for full detail. | [rebuild sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
 | 2026-09-21 | Minimal API + first frontend pages (Sprint 1 closed) | See the sprint plan doc for full detail. | [rebuild sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
 | 2026-09-21 | Document ingestion (Sprint 1) | See the sprint plan doc for full detail. | [rebuild sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
-| 2026-09-21 | Sprint 0 close + Sprint 1 start | See the sprint plan doc for full detail. | [rebuild sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
+| 2026-09-21 | Sprint 0 closed + Sprint 1 start | See the sprint plan doc for full detail. | [rebuild sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
 | 2026-09-21 | Status audit + Sprint 1/next-phase planning + UX research | See the sprint plan doc for full detail. | [rebuild sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
 | 2026-09-21 | Sprint 0 skeletons built | See the sprint plan doc for full detail. | [rebuild sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
 | 2026-09-21 | Sprint 0 started: guardrail doc + real schema mapped | See the sprint plan doc for full detail. | [rebuild sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |

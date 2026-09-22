@@ -7,6 +7,7 @@ import pytest
 from google.genai import errors as genai_errors
 
 from app.providers.base import ResearchUnavailableError
+from app.providers.budget import DailyBudgetGuard
 from app.providers.gemini_research_provider import GeminiResearchProvider
 
 
@@ -35,6 +36,23 @@ def test_unknown_prompt_version_raises_before_any_call():
     provider = _make_provider(prompt_version="v999-does-not-exist")
     with patch.object(provider, "_client") as mock_client:
         with pytest.raises(ResearchUnavailableError, match="no 'macro' research prompt"):
+            provider.get_macro_research()
+        mock_client.models.generate_content.assert_not_called()
+
+
+def test_exhausted_budget_guard_fails_fast_without_touching_the_client():
+    """2026-09-22 fix (Faiz's report: the Macro page loading really slow)
+    — the shared Google AI Studio daily budget was being spent by macro +
+    every sector + every company research + every analysis run, and once
+    gone, every further call still paid the full RPM pacing wait, made a
+    real (doomed) network call, and ran the full retry/backoff ladder
+    before failing. See test_gemini_retry.py's matching test."""
+    guard = DailyBudgetGuard(daily_limit=1)
+    guard.record_usage(1)
+    provider = _make_provider(budget_guard=guard)
+
+    with patch.object(provider, "_client") as mock_client:
+        with pytest.raises(ResearchUnavailableError, match="budget"):
             provider.get_macro_research()
         mock_client.models.generate_content.assert_not_called()
 

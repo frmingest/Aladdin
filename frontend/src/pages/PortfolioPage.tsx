@@ -11,9 +11,9 @@ import {
   YAxis,
 } from "recharts";
 import { api, ApiError } from "../lib/api";
-import type { Account, Holding, PortfolioSnapshotSummary } from "../lib/types";
+import type { Account, Holding, PortfolioSnapshot, PortfolioSnapshotSummary } from "../lib/types";
 import { INSTRUMENT_TYPE_LABELS } from "../lib/types";
-import { formatDate } from "../lib/format";
+import { formatDate, formatDecimal } from "../lib/format";
 import { Button, Card, EmptyState, PageHeader, StatusBadge } from "../components/ui";
 
 interface ImportOutcome {
@@ -25,17 +25,22 @@ interface ImportOutcome {
 function UploadPanel({ onImported }: { onImported: () => void }) {
   const [uploading, setUploading] = useState(false);
   const [outcomes, setOutcomes] = useState<ImportOutcome[]>([]);
+  // Only meaningful for a single-file selection — see the hint text below
+  // the input. Cleared after each upload so it doesn't silently linger
+  // and get applied to the next, unrelated file.
+  const [accountName, setAccountName] = useState("");
 
   async function handleFiles(files: FileList) {
     setUploading(true);
     const results: ImportOutcome[] = [];
+    const nameForThisBatch = files.length === 1 ? accountName.trim() || undefined : undefined;
     // Uploaded one at a time (not in parallel) — each account's export is
     // its own snapshot, and sequential calls keep the results list in the
     // same order the person picked the files, which matters when several
     // fail and they need to tell which is which.
     for (const file of Array.from(files)) {
       try {
-        const response = await api.importPortfolioCsv({ file });
+        const response = await api.importPortfolioCsv({ file, accountName: nameForThisBatch });
         const positionCount = response.snapshot.positions.length;
         results.push({
           filename: file.name,
@@ -58,6 +63,7 @@ function UploadPanel({ onImported }: { onImported: () => void }) {
     }
     setOutcomes(results);
     setUploading(false);
+    setAccountName("");
     onImported();
   }
 
@@ -69,6 +75,22 @@ function UploadPanel({ onImported }: { onImported: () => void }) {
         export). The account number is read from the filename automatically. Select
         several files at once to import all your accounts in one go.
       </p>
+      <label className="mb-3 flex flex-col gap-1 text-sm">
+        <span className="text-ink-muted">Account name (optional)</span>
+        <input
+          value={accountName}
+          onChange={(e) => setAccountName(e.target.value)}
+          disabled={uploading}
+          placeholder="e.g. Aksjesparekonto"
+          className="w-64 rounded-md border border-border px-2.5 py-1.5 text-sm focus:border-accent focus:outline-none disabled:opacity-50"
+        />
+        <span className="text-xs text-ink-muted">
+          Only used for a brand-new account, and only when uploading a single file — with
+          several files selected, each keeps its own auto-generated name (rename it
+          afterward on the table below). An account that already exists keeps its current
+          name either way.
+        </span>
+      </label>
       <label>
         <span className="sr-only">Choose CSV files</span>
         <input
@@ -185,12 +207,114 @@ function CompositionChart({ holdings }: { holdings: Holding[] | null }) {
   );
 }
 
+/** One row in the Accounts table — click "Rename" to edit the account's
+ * name in place (PATCH /accounts/{id}). Nothing else on an account is
+ * editable here today (account_number is the real-world identifier and
+ * deliberately not editable — see AccountUpdate's backend docstring). */
+function AccountRow({
+  account,
+  onSaved,
+  onDelete,
+  deleting,
+}: {
+  account: Account;
+  onSaved: (updated: Account) => void;
+  onDelete: (account: Account) => void;
+  deleting: boolean;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(account.name);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  function startEditing() {
+    setName(account.name);
+    setError(null);
+    setEditing(true);
+  }
+
+  async function handleSave() {
+    const trimmed = name.trim();
+    if (!trimmed) {
+      setError("Name can't be empty.");
+      return;
+    }
+    setError(null);
+    setSaving(true);
+    try {
+      const updated = await api.updateAccount(account.id, { name: trimmed });
+      onSaved(updated);
+      setEditing(false);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not save the name.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (editing) {
+    return (
+      <tr className="border-b border-border-subtle bg-accent/5 last:border-0">
+        <td className="px-5 py-2">
+          <input
+            autoFocus
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void handleSave();
+              if (e.key === "Escape") setEditing(false);
+            }}
+            className="w-full rounded-md border border-border px-2 py-1 text-sm focus:border-accent focus:outline-none"
+          />
+          {error && <p className="mt-1 text-xs text-negative">{error}</p>}
+        </td>
+        <td className="px-5 py-2 tabular text-ink-muted">{account.account_number}</td>
+        <td className="px-5 py-2 text-right tabular text-ink-muted">{account.snapshot_count}</td>
+        <td className="px-5 py-2 text-right tabular text-ink-muted">{account.position_count}</td>
+        <td className="px-5 py-2">
+          <div className="flex justify-end gap-1.5">
+            <Button type="button" onClick={handleSave} disabled={saving}>
+              {saving ? "Saving…" : "Save"}
+            </Button>
+            <Button type="button" variant="secondary" onClick={() => setEditing(false)} disabled={saving}>
+              Cancel
+            </Button>
+          </div>
+        </td>
+      </tr>
+    );
+  }
+
+  return (
+    <tr className="group border-b border-border-subtle last:border-0">
+      <td className="px-5 py-3 text-ink">{account.name}</td>
+      <td className="px-5 py-3 tabular text-ink-muted">{account.account_number}</td>
+      <td className="px-5 py-3 text-right tabular text-ink-muted">{account.snapshot_count}</td>
+      <td className="px-5 py-3 text-right tabular text-ink-muted">{account.position_count}</td>
+      <td className="px-5 py-3 text-right">
+        <div className="flex justify-end gap-1.5">
+          <button
+            type="button"
+            onClick={startEditing}
+            className="rounded px-2 py-1 text-xs font-medium text-ink-muted opacity-0 transition-opacity hover:bg-border-subtle hover:text-ink group-hover:opacity-100"
+          >
+            Rename
+          </button>
+          <Button variant="danger" disabled={deleting} onClick={() => onDelete(account)}>
+            Delete
+          </Button>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
 function AccountsPanel({
   accounts,
   onChanged,
 }: {
   accounts: Account[] | null;
-  onChanged: () => void;
+  onChanged: (updated?: Account) => void;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -232,30 +356,160 @@ function AccountsPanel({
           </thead>
           <tbody>
             {accounts.map((a) => (
-              <tr key={a.id} className="border-b border-border-subtle last:border-0">
-                <td className="px-5 py-3 text-ink">{a.name}</td>
-                <td className="px-5 py-3 tabular text-ink-muted">{a.account_number}</td>
-                <td className="px-5 py-3 text-right tabular text-ink-muted">
-                  {a.snapshot_count}
-                </td>
-                <td className="px-5 py-3 text-right tabular text-ink-muted">
-                  {a.position_count}
-                </td>
-                <td className="px-5 py-3 text-right">
-                  <Button
-                    variant="danger"
-                    disabled={deletingId === a.id}
-                    onClick={() => handleDelete(a)}
-                  >
-                    Delete
-                  </Button>
-                </td>
-              </tr>
+              <AccountRow
+                key={a.id}
+                account={a}
+                onSaved={(updated) => onChanged(updated)}
+                onDelete={handleDelete}
+                deleting={deletingId === a.id}
+              />
             ))}
           </tbody>
         </table>
       )}
     </Card>
+  );
+}
+
+/** Positions table shown when a snapshot row is expanded — quantity, GAV
+ * (average cost), last traded price, and market value, none of which were
+ * shown anywhere in the frontend before (Faiz's report, 2026-09-22: "the
+ * upload function is avoiding to save a lot of valuable information about
+ * amount of stocks, price, GAV" — quantity/cost_basis were actually being
+ * saved already, just never displayed; last_price/market_value_nok were
+ * genuinely not being saved at all until this same session's backend fix,
+ * migration a2b4c6d8e0f1). */
+function PositionsTable({ positions }: { positions: PortfolioSnapshot["positions"] }) {
+  if (positions.length === 0) {
+    return <p className="px-5 pb-4 text-sm text-ink-muted">No positions in this snapshot.</p>;
+  }
+  return (
+    <table className="w-full text-sm">
+      <thead>
+        <tr className="text-left text-xs uppercase tracking-wide text-ink-muted">
+          <th className="px-5 py-2 font-medium">Holding</th>
+          <th className="px-5 py-2 text-right font-medium">Quantity</th>
+          <th className="px-5 py-2 text-right font-medium">Avg. cost (GAV)</th>
+          <th className="px-5 py-2 text-right font-medium">Cost basis</th>
+          <th className="px-5 py-2 text-right font-medium">Last price</th>
+          <th className="px-5 py-2 text-right font-medium">Market value (NOK)</th>
+          <th className="px-5 py-2 text-right font-medium">Weight</th>
+        </tr>
+      </thead>
+      <tbody>
+        {positions.map((p) => {
+          const avgCost =
+            p.cost_basis && p.quantity && Number(p.quantity) !== 0
+              ? String(Number(p.cost_basis) / Number(p.quantity))
+              : null;
+          return (
+            <tr key={p.id} className="border-t border-border-subtle">
+              <td className="px-5 py-2 text-ink">
+                <span className="font-medium">{p.ticker}</span>{" "}
+                <span className="text-ink-muted">{p.holding_name}</span>
+              </td>
+              <td className="px-5 py-2 text-right tabular text-ink-muted">
+                {p.quantity ? formatDecimal(p.quantity, 4) : "—"}
+              </td>
+              <td className="px-5 py-2 text-right tabular text-ink-muted">
+                {avgCost ? `${formatDecimal(avgCost)} ${p.cost_basis_currency ?? ""}` : "—"}
+              </td>
+              <td className="px-5 py-2 text-right tabular text-ink-muted">
+                {p.cost_basis ? `${formatDecimal(p.cost_basis)} ${p.cost_basis_currency ?? ""}` : "—"}
+              </td>
+              <td className="px-5 py-2 text-right tabular text-ink-muted">
+                {p.last_price ? `${formatDecimal(p.last_price)} ${p.cost_basis_currency ?? ""}` : "—"}
+              </td>
+              <td className="px-5 py-2 text-right tabular text-ink-muted">
+                {p.market_value_nok ? formatDecimal(p.market_value_nok) : "—"}
+              </td>
+              <td className="px-5 py-2 text-right tabular text-ink-muted">
+                {p.weight_pct ? `${formatDecimal(p.weight_pct)}%` : "—"}
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+}
+
+function SnapshotRow({
+  snapshot,
+  accountsById,
+  onDelete,
+  deleting,
+}: {
+  snapshot: PortfolioSnapshotSummary;
+  accountsById: Map<string, Account>;
+  onDelete: (snapshot: PortfolioSnapshotSummary) => void;
+  deleting: boolean;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [detail, setDetail] = useState<PortfolioSnapshot | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function toggle() {
+    if (expanded) {
+      setExpanded(false);
+      return;
+    }
+    setExpanded(true);
+    if (detail || loading) return;
+    setLoading(true);
+    setLoadError(null);
+    try {
+      setDetail(await api.getSnapshot(snapshot.id));
+    } catch (err) {
+      setLoadError(err instanceof ApiError ? err.message : "Could not load positions.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <>
+      <tr
+        className="cursor-pointer border-b border-border-subtle last:border-0 hover:bg-border-subtle/40"
+        onClick={toggle}
+      >
+        <td className="px-5 py-3 tabular text-ink-muted">
+          {expanded ? "▾" : "▸"} {formatDate(snapshot.uploaded_at)}
+        </td>
+        <td className="px-5 py-3 text-ink">
+          {snapshot.account_id ? (accountsById.get(snapshot.account_id)?.name ?? "—") : "—"}
+        </td>
+        <td className="px-5 py-3 tabular text-ink-muted">{snapshot.reporting_currency}</td>
+        <td className="px-5 py-3">
+          <StatusBadge status={snapshot.status} />
+        </td>
+        <td className="px-5 py-3 text-right tabular text-ink-muted">
+          {snapshot.position_count}
+        </td>
+        <td className="px-5 py-3 text-right">
+          <Button
+            variant="danger"
+            disabled={deleting}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(snapshot);
+            }}
+          >
+            Delete
+          </Button>
+        </td>
+      </tr>
+      {expanded && (
+        <tr className="border-b border-border-subtle bg-border-subtle/20 last:border-0">
+          <td colSpan={6} className="p-0">
+            {loading && <p className="px-5 py-4 text-sm text-ink-muted">Loading positions…</p>}
+            {loadError && <p className="px-5 py-4 text-sm text-negative">{loadError}</p>}
+            {detail && <PositionsTable positions={detail.positions} />}
+          </td>
+        </tr>
+      )}
+    </>
   );
 }
 
@@ -306,6 +560,9 @@ function SnapshotsPanel({
   return (
     <Card className="overflow-hidden !p-0">
       <h2 className="px-5 pt-5 text-sm font-semibold text-ink">Snapshots</h2>
+      <p className="px-5 pb-1 pt-1 text-xs text-ink-muted">
+        Click a row to see its positions (quantity, cost basis, last price, market value).
+      </p>
       {error && <p className="px-5 pt-2 text-sm text-negative">{error}</p>}
       {note && <p className="px-5 pt-2 text-sm text-ink-muted">{note}</p>}
       {snapshots === null && <p className="px-5 py-5 text-sm text-ink-muted">Loading…</p>}
@@ -328,28 +585,13 @@ function SnapshotsPanel({
           </thead>
           <tbody>
             {snapshots.map((s) => (
-              <tr key={s.id} className="border-b border-border-subtle last:border-0">
-                <td className="px-5 py-3 tabular text-ink-muted">{formatDate(s.uploaded_at)}</td>
-                <td className="px-5 py-3 text-ink">
-                  {s.account_id ? (accountsById.get(s.account_id)?.name ?? "—") : "—"}
-                </td>
-                <td className="px-5 py-3 tabular text-ink-muted">{s.reporting_currency}</td>
-                <td className="px-5 py-3">
-                  <StatusBadge status={s.status} />
-                </td>
-                <td className="px-5 py-3 text-right tabular text-ink-muted">
-                  {s.position_count}
-                </td>
-                <td className="px-5 py-3 text-right">
-                  <Button
-                    variant="danger"
-                    disabled={deletingId === s.id}
-                    onClick={() => handleDelete(s)}
-                  >
-                    Delete
-                  </Button>
-                </td>
-              </tr>
+              <SnapshotRow
+                key={s.id}
+                snapshot={s}
+                accountsById={accountsById}
+                onDelete={handleDelete}
+                deleting={deletingId === s.id}
+              />
             ))}
           </tbody>
         </table>

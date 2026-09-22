@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
@@ -81,6 +83,32 @@ def test_import_creates_account_holdings_snapshot_and_tags_instrument_types(db, 
 
     stock = db.query(Holding).filter(Holding.name == "Salmon Evolution").one()
     assert stock.asset_class_raw == STOCK
+
+
+def test_last_price_and_market_value_are_persisted(db, storage):
+    """Regression test for 2026-09-22: both were parsed out of the CSV
+    ("siste kurs" / "Verdi NOK") but silently discarded — last_price was
+    never read after parsing, and value_nok was only used transiently to
+    compute weight_pct. See migration a2b4c6d8e0f1's docstring."""
+    import_portfolio_csv(
+        db,
+        storage,
+        filename="Beholdningstabell_eksport_kontono._73898074_15.9.2026.csv",
+        content=_account_74_bytes(),
+    )
+
+    salmon = (
+        db.query(PortfolioPosition)
+        .join(Holding)
+        .filter(Holding.name == "Salmon Evolution")
+        .one()
+    )
+    assert salmon.last_price == Decimal("3.075000")
+    assert salmon.market_value_nok == Decimal("642.675000")
+    # quantity/cost_basis were already being saved correctly before this
+    # fix — only last_price/market_value_nok were the actual data gap.
+    assert salmon.quantity == Decimal(209)
+    assert salmon.cost_basis == Decimal("827.389200")
 
 
 def test_second_account_reuses_matching_holding_by_name(db, storage):

@@ -19,7 +19,8 @@ from app.providers.base import (
     LLMUnavailableError,
     LLMUsageMetrics,
 )
-from app.providers.gemini_retry import call_with_retry
+from app.providers.budget import DailyBudgetGuard
+from app.providers.gemini_retry import DailyBudgetExceededError, call_with_retry
 
 
 class GoogleAIStudioProvider(LLMProvider):
@@ -33,6 +34,7 @@ class GoogleAIStudioProvider(LLMProvider):
         temperature: float = 0.2,
         max_output_tokens: int = 8192,
         rpm: int = 0,
+        budget_guard: DailyBudgetGuard | None = None,
     ) -> None:
         if not api_key:
             raise LLMUnavailableError(
@@ -43,6 +45,7 @@ class GoogleAIStudioProvider(LLMProvider):
         self._temperature = temperature
         self._max_output_tokens = max_output_tokens
         self._rpm = rpm
+        self._budget_guard = budget_guard
 
     def generate_structured(
         self,
@@ -67,7 +70,11 @@ class GoogleAIStudioProvider(LLMProvider):
             )
 
         try:
-            response = call_with_retry(_call, rpm=self._rpm)
+            response = call_with_retry(_call, rpm=self._rpm, budget_guard=self._budget_guard)
+        except DailyBudgetExceededError as exc:
+            raise LLMUnavailableError(
+                f"Gemini daily request budget exhausted (model={self._model}): {exc}"
+            ) from exc
         except genai_errors.APIError as exc:
             raise LLMUnavailableError(
                 f"Gemini API call failed (model={self._model}): {exc}"

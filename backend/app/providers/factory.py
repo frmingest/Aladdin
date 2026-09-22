@@ -41,6 +41,12 @@ def _build_provider(name: str, settings: Settings) -> LLMProvider:
             temperature=settings.llm_temperature,
             max_output_tokens=settings.llm_max_output_tokens,
             rpm=settings.llm_rate_limit_rpm,
+            # Same account/quota as get_research_provider()'s
+            # GeminiResearchProvider — get_primary_budget_guard() is
+            # @lru_cache'd, so both share the exact same guard instance
+            # (2026-09-22: previously built but never wired in anywhere —
+            # see gemini_retry.py's module docstring).
+            budget_guard=get_primary_budget_guard(),
         )
     if name == "mistral":
         return MistralProvider(
@@ -124,6 +130,7 @@ def get_research_provider() -> ResearchProvider:
             temperature=settings.llm_temperature,
             max_output_tokens=settings.llm_max_output_tokens,
             rpm=settings.llm_rate_limit_rpm,
+            budget_guard=get_primary_budget_guard(),
         )
     raise ResearchUnavailableError(
         f"Unknown research provider: {settings.research_provider!r}"

@@ -14,6 +14,7 @@
 
 import type {
   Account,
+  AccountUpdateInput,
   CompanyResearch,
   DocumentSummary,
   Holding,
@@ -24,6 +25,7 @@ import type {
   HoldingValuation,
   MacroResearch,
   PortfolioImportResponse,
+  PortfolioSnapshot,
   PortfolioSnapshotSummary,
   PortfolioWipeResult,
   SectorResearch,
@@ -130,6 +132,12 @@ export const api = {
   },
 
   listAccounts: () => request<Account[]>("/accounts"),
+  /** PATCH /accounts/{id} — currently only used to give an account a
+   * human-readable name (Faiz's request, 2026-09-21: CSV import
+   * auto-names an account "Account <number>" when no name is given at
+   * upload time; this is how it gets renamed afterward). */
+  updateAccount: (id: string, input: AccountUpdateInput) =>
+    request<Account>(`/accounts/${id}`, { method: "PATCH", body: JSON.stringify(input) }),
   deleteAccount: (id: string) =>
     request<void>(`/accounts/${id}`, { method: "DELETE", query: { confirm: true } }),
 
@@ -137,6 +145,11 @@ export const api = {
     request<PortfolioSnapshotSummary[]>("/portfolio/snapshots", {
       query: accountId ? { account_id: accountId } : undefined,
     }),
+  /** Full detail for one snapshot, including every position (quantity,
+   * cost basis / GAV, last price, market value) — see
+   * backend/app/api/portfolio.py's GET /portfolio/snapshots/{id}. Used by
+   * the Portfolio page's expandable snapshot rows. */
+  getSnapshot: (id: string) => request<PortfolioSnapshot>(`/portfolio/snapshots/${id}`),
   deleteSnapshot: (id: string) =>
     request<SnapshotDeleteResult>(`/portfolio/snapshots/${id}`, {
       method: "DELETE",
