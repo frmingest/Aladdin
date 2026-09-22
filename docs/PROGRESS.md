@@ -121,9 +121,7 @@ still-rejected unknown-provider case) — 249/249 backend unit tests pass.
 **Faiz's Railway `OBJECT_STORAGE_PROVIDER=supabase` env var needs no change** — this was a code fix,
 not a config fix.
 
-**Status: committed locally (`72e7ed9`), not pushed, not deployed.** Same recurring credential gap as
-every prior session — see "Known ongoing issue" below. Faiz needs to `git push` (or pull this commit
-via his own machine) and redeploy on Railway before this fixes his real CSV imports.
+**Status: ✅ pushed and deployed** (Faiz confirmed redeploy 2026-09-22).
 
 ## Portfolio delete: second cascade bug fixed — ✅ done 2026-09-21
 
@@ -166,7 +164,7 @@ Three real bugs fixed, one new UI, one irreversible action taken at Faiz's expli
 | `POST /portfolio/import-csv` 500 | The CSV always imported successfully (account/document/snapshot/positions all committed) — only the *response* crashed, because `DocumentOut.quality_flags` rejected a matched Document row whose `quality_flags` was a `list` instead of a `dict`. `DocumentOut` now coerces any shape into a dict rather than crashing. |
 | Garbage tickers + duplicate holdings | The CSV importer's dedup key was an exact match on a slugified-name-as-ticker, so any holding that already existed under a *different* ticker (hand-assigned or legacy) was invisible to it and got duplicated on every import — with a broken, non-market-real ticker that was then passed straight to the market-data/valuation/analysis pipeline. Matching is now by normalized security name, independent of `ticker`; the placeholder ticker for a genuinely new holding is transliterated (æøå) and collision-safe. |
 | Manual-edit UI | Ticker, Sector (canonical GICS-11 dropdown, `app/domain/sectors.py`), and Instrument Type (dropdown) are all now editable per holding, inline, on the Holdings page (`PATCH /holdings/{id}`, `GET /holdings/field-options`). Ticker was previously excluded from `HoldingUpdate` on a "changing it is unsafe" rationale that turned out to be wrong — nothing FKs on it, only on the holding's `id`. |
-| **Full Supabase data wipe** | Faiz explicitly asked for this, after being told exactly what it costs (15 uploaded documents across 6 holdings, whisky/gold/silver legacy holdings, 5 accounts / 7 snapshots / 124 positions, the untested Sprint 4 analysis tables). New migration `e5f6a7b8c9d0` (new head) `TRUNCATE`s every table in `public` except `alembic_version`. **Written and committed, not yet run** — it executes the next time this is pushed and Railway redeploys (`alembic upgrade head` runs automatically on container startup). Not verified against a live Postgres connection from this session (no network path to Supabase here) — see the full doc for exactly how it was validated instead. |
+| **Full Supabase data wipe** | Faiz explicitly asked for this, after being told exactly what it costs (15 uploaded documents across 6 holdings, whisky/gold/silver legacy holdings, 5 accounts / 7 snapshots / 124 positions, the untested Sprint 4 analysis tables). New migration `e5f6a7b8c9d0` (new head) `TRUNCATE`s every table in `public` except `alembic_version`. **✅ Ran** — Faiz confirmed (2026-09-22) the push + Railway redeploy is done, which is when `alembic upgrade head` executes it on container startup. Faiz has since re-uploaded his CSVs. |
 
 Testing: 326/326 backend tests passing (17 new), ruff clean, frontend `tsc`/`eslint`/`vite build` all
 clean. Not run against the live Railway deployment.
@@ -187,21 +185,40 @@ verified upgrade+downgrade against the Postgres dialect offline (no live DB reac
 session). Frontend `tsc --noEmit`/`eslint`/`vite build` all clean. **Not run against a live Gemini
 call, real market data, or Faiz's real 124 holdings.**
 
-**Status: committed locally (`caf2986`), not pushed, not deployed.** `git push` was attempted this session and failed with the same recurring credential gap as every prior session — see "Needs from Faiz right now" below.
+**Status: ✅ pushed and deployed** — `git status` shows `main` up to date with `origin/main`; Faiz confirmed the Railway redeploy on 2026-09-22.
+
+## Setup checklist — confirmed by Faiz 2026-09-22
+
+| Item | Status |
+|---|---|
+| Push `main` + redeploy on Railway (runs the full data wipe, migration `e5f6a7b8c9d0`, plus `a2b4c6d8e0f1`) | ✅ Done — Faiz confirmed; `git status` shows `main` up to date with `origin/main` |
+| Re-upload the 5 CSVs + assign real tickers via the inline Ticker/Sector/Type edit UI | ✅ Done — Faiz confirmed real yfinance-compatible tickers are set |
+| `GOOGLE_AI_STUDIO_API_KEY`, `FRED_API_KEY` set for real | ✅ Done — Faiz confirmed, in both `backend/.env` and Railway config |
+| `MARKET_DATA_PROVIDER` / `RESEARCH_PROVIDER` set for real | ⏳ Open — see below |
 
 ## Needs from Faiz right now
 
 | Item | Why |
 |---|---|
-| **Push `main`** — this session's new commit (`caf2986` — account rename, `last_price`/`market_value_nok` persistence, Gemini budget-guard fast-fail) is local only: `git push origin main` was attempted this session and failed with the exact same `could not read Username for 'https://github.com'` error as every prior session. The prior session's commits (`ac56228`, `42b8ee5` — CSV-import fixes, full data wipe) are now confirmed pushed: `git status` at the start of this session showed `up to date with origin/main`, so the credential gap in "Known ongoing issue" below is evidently resolved on Faiz's own machine/GitHub Desktop, not a live blocker anymore. | Railway only picks up a change once it's pushed and redeployed — none of today's fixes are live until that happens, including migration `a2b4c6d8e0f1` (additive, safe — two new nullable columns, no backfill needed) |
-| **Redeploy on Railway** once pushed — this is the moment the full data wipe (migration `e5f6a7b8c9d0`) actually runs, not before | Nothing in this session's changes is "live" until Faiz confirms a redeploy or this is checked against the live URL. After redeploy, the Holdings/Portfolio pages will be empty — that's the wipe, not a new bug. |
-| **Re-upload the 5 CSVs** once redeployed, then use the new inline Ticker/Sector/Type edit UI on the Holdings page to assign real tickers | Placeholder tickers (e.g. `VAR-ENERGI`) aren't real market symbols — the market-data/valuation/research/analysis pipeline needs the real one per holding |
-| **Set `MARKET_DATA_PROVIDER` and `RESEARCH_PROVIDER` for real** (flagged for 3 sessions running now) | Both are still `stub` in this session's `backend/.env` — Sprint 4's analysis engine directly depends on both (the evidence packet calls the valuation engine and all three research kinds), so this now blocks Sprint 4 working at all, not just `/research/*`/`/valuation/*` individually |
-| Confirm `GOOGLE_AI_STUDIO_API_KEY`, `FRED_API_KEY` are set for real | Needed for research, valuation, and now the analysis engine's own LLM calls (Sprint 4 reuses the same Gemini key/infra, no new key needed — but it does need it to actually be a working key) |
-| **Try a real `POST /analysis/holdings/{id}/run` against one of your real equity holdings** once the above is set, and share what comes back | This session verified the pipeline end-to-end against fakes only — a real run is the first real signal on prompt/schema quality, LLM cost per run, and whether the two-pass output is actually useful |
-| Decide when the Sprint 4 frontend follow-up happens, and review the analysis output schema/prompts (`app/domain/analysis_schema/v1.py`, `prompts/analysis/*.md`) — are the moat sub-dimensions, verdict shape, and hurdle (15%) what you want before a real run uses them? | CLAUDE.md Rule 3: once a real analysis run uses v1, changing it means a new version file, not an edit — worth a look now while it's still free to change |
-| Review the [free provider proposal](free-market-data-research-providers-2026-09-21.md) and say if SEC EDGAR / Newsweb is worth scheduling as a real sprint | Pure research doc right now — needs a decision to become a build item |
-| Fix GitHub push credentials for good, at some point | Every session (cloud and device-linked alike) has hit the identical `could not read Username for 'https://github.com'` error |
+| **Set `MARKET_DATA_PROVIDER=yfinance` and `RESEARCH_PROVIDER=gemini_search`** in Railway (and in local `backend/.env`, which still has both as `stub`) | These are the **only** values the code accepts today (`app/providers/factory.py`). No new key needed: yfinance is keyless; `gemini_search` reuses `GOOGLE_AI_STUDIO_API_KEY`. Sprint 4's analysis engine depends on both. |
+| **Try a real `POST /analysis/holdings/{id}/run`** against one real equity holding once the above is set, and share what comes back | Pipeline so far verified against fakes only — first real signal on prompt/schema quality, LLM cost per run, and usefulness |
+| Decide when the Sprint 4 frontend follow-up happens, and review `app/domain/analysis_schema/v1.py` + `prompts/analysis/*.md` (moat sub-dimensions, verdict shape, 15% hurdle) | CLAUDE.md Rule 3: once a real run uses v1, changes need a new version file |
+| Decide whether to schedule the free-source providers below as a real sprint | Research only today — see next table |
+
+### Free data sources from the 2026-09-21 research (backlog, not built)
+
+These are **not** values for the env vars above — each would need a new provider file behind the
+factory first. Full detail: [free-market-data-research-providers-2026-09-21.md](free-market-data-research-providers-2026-09-21.md).
+
+| Source | Covers | Cost / key | Priority |
+|---|---|---|---|
+| **SEC EDGAR** company-facts XBRL + full-text search | Financials for US/SEC-registered names, citation-grade | Free, no key (10 req/s, User-Agent required) | ⭐ Top pick |
+| **Oslo Børs Newsweb** | Regulated announcements for Oslo Børs names (quarterlies, insider trades) | Free, no key (web feed, not JSON API) | ⭐ Top pick |
+| Brønnøysundregistrene (Enhetsregisteret / Regnskapsregisteret) | Norwegian entity data, annual-accounts figures | Free, no key — verify accounts API still live | Nice to have |
+| World Bank / OECD / IMF SDMX | Broader global macro beyond FRED + Norges Bank | Free, no key | Low |
+| GDELT | Global news volume/sentiment signal | Free, no key | Low |
+| VFF (vff.no) | Norwegian mutual-fund NAVs (Alfred Berg, Heimdal — unpriced today) | Unverified | Needs a look |
+| FMP / Finnhub free tiers | US-only / fundamentals mostly paywalled | Free tier limited | Not recommended |
 
 ## Known ongoing issue
 
@@ -213,6 +230,7 @@ far in the repo were pushed by Faiz himself from his own terminal/GitHub Desktop
 
 | Date | Session | Summary | Detail |
 |---|---|---|---|
+| 2026-09-22 | Setup checklist confirmed | Faiz confirmed: pushed + Railway redeploy done (full data wipe ran), 5 CSVs re-uploaded with real yfinance tickers, `GOOGLE_AI_STUDIO_API_KEY`/`FRED_API_KEY` set in `.env` and Railway. Clarified the only valid provider values (`MARKET_DATA_PROVIDER=yfinance`, `RESEARCH_PROVIDER=gemini_search`) — still open. Added a free-data-source backlog table. Docs only, no code. | [free-market-data-research-providers-2026-09-21.md](free-market-data-research-providers-2026-09-21.md) |
 | 2026-09-22 | Account rename, lost position data (`last_price`/`market_value_nok`), Macro page slowness | Frontend: account rename UI + optional name-on-upload field; new expandable positions table on the Portfolio page (quantity, GAV, cost basis, last price, market value, weight — previously shown nowhere). Backend: migration `a2b4c6d8e0f1` adds `last_price`/`market_value_nok` to `portfolio_positions` (parsed from every CSV row since day one, never persisted until now); wired the previously-dead `DailyBudgetGuard` into both Gemini-calling providers so an exhausted daily quota fails in milliseconds instead of 45-60+ seconds of pacing+retry. 333/333 backend tests passing (7 new), ruff/tsc/eslint/vite build all clean. Committed locally, not pushed, not deployed. | [account-name-position-data-macro-speed-2026-09-22.md](account-name-position-data-macro-speed-2026-09-22.md) |
 | 2026-09-21 | CSV import ticker/duplicate-holding fixes, manual-edit UI, full data wipe | Fixed the CSV-import 500 (quality_flags shape coercion), the duplicate-holding/garbage-ticker bug (name-normalized matching, transliterated/collision-safe placeholder tickers), added inline Ticker/Sector/Instrument-Type editing (`PATCH /holdings/{id}`, `GET /holdings/field-options`, canonical sector list). At Faiz's explicit request after being told the cost, wrote (not yet run) a migration that fully wipes Supabase on next deploy. 326/326 backend tests passing (17 new), ruff/tsc/eslint/vite build all clean. | [csv-import-ticker-sector-fixes-and-db-wipe-2026-09-21.md](csv-import-ticker-sector-fixes-and-db-wipe-2026-09-21.md) |
 | 2026-09-21 | CSV import 500 fixed: object-storage provider alias | `POST /portfolio/import-csv` was 500ing on every request (`get_object_storage()` dependency raising `NotImplementedError` for `OBJECT_STORAGE_PROVIDER=supabase`, before the route ever ran). Made `"s3"`, `"r2"`, and `"supabase"` all build the same `S3ObjectStorageProvider` (they're all S3-compatible), matching what `.env.example` already implied was valid. Clarified 3 stale comments, added 5 regression tests (249/249 unit tests pass). Committed (`72e7ed9`), not pushed, not deployed — Railway's env var needs no change, just a push + redeploy. | — |
