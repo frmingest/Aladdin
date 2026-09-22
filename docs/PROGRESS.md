@@ -187,6 +187,21 @@ call, real market data, or Faiz's real 124 holdings.**
 
 **Status: ✅ pushed and deployed** — `git status` shows `main` up to date with `origin/main`; Faiz confirmed the Railway redeploy on 2026-09-22.
 
+## Primary sources: SEC EDGAR + Oslo Børs Newsweb — ✅ built 2026-09-22 (not yet deployed)
+
+Full write-up: [primary-sources-sec-edgar-newsweb-2026-09-22.md](primary-sources-sec-edgar-newsweb-2026-09-22.md).
+
+| What | Detail |
+|---|---|
+| SEC EDGAR | "Import from SEC EDGAR" on a holding → annual 10-K/20-F figures saved as financial facts, each traceable to its filing. Feeds metrics, valuation and analysis automatically. Never overwrites years you uploaded yourself. |
+| Oslo Børs Newsweb | Regulated announcements (last 12 months) for `.OL`/NOK holdings, cached 24h, shown on the holding page. |
+| Analysis | Evidence packet **v2** — cites the EDGAR filings and the latest 15 announcements. |
+| Safety | An Oslo ticker that collides with an unrelated US filer (e.g. `VAR` → Varian) is refused, not imported. |
+| Migration | **None** — reuses `documents`/`financial_line_items` and the research tables. |
+| Tests | 364/364 backend (31 new), tsc/eslint/vite build clean. **Not run against live SEC/Newsweb** (no network path from this session). |
+
+**Status: committed locally, not pushed, not deployed.**
+
 ## Setup checklist — confirmed by Faiz 2026-09-22
 
 | Item | Status |
@@ -200,20 +215,21 @@ call, real market data, or Faiz's real 124 holdings.**
 
 | Item | Why |
 |---|---|
+| **Add `SEC_EDGAR_USER_AGENT`** to Railway (and `backend/.env`), e.g. `Aladdin portfolio app <your email>` — then push + redeploy | SEC requires a contact email in the User-Agent; EDGAR import shows an explicit error until it's set. Newsweb needs nothing. |
+| **Try it**: click "Import from SEC EDGAR" on a US holding, and open an Oslo holding to see its Newsweb announcements — share what comes back | First real test against the live SEC/Newsweb hosts |
 | **Set `MARKET_DATA_PROVIDER=yfinance` and `RESEARCH_PROVIDER=gemini_search`** in Railway (and in local `backend/.env`, which still has both as `stub`) | These are the **only** values the code accepts today (`app/providers/factory.py`). No new key needed: yfinance is keyless; `gemini_search` reuses `GOOGLE_AI_STUDIO_API_KEY`. Sprint 4's analysis engine depends on both. |
 | **Try a real `POST /analysis/holdings/{id}/run`** against one real equity holding once the above is set, and share what comes back | Pipeline so far verified against fakes only — first real signal on prompt/schema quality, LLM cost per run, and usefulness |
 | Decide when the Sprint 4 frontend follow-up happens, and review `app/domain/analysis_schema/v1.py` + `prompts/analysis/*.md` (moat sub-dimensions, verdict shape, 15% hurdle) | CLAUDE.md Rule 3: once a real run uses v1, changes need a new version file |
-| Decide whether to schedule the free-source providers below as a real sprint | Research only today — see next table |
+| Decide whether to schedule the remaining free sources below (Brønnøysund, VFF, …) | SEC EDGAR + Newsweb are now built |
 
-### Free data sources from the 2026-09-21 research (backlog, not built)
+### Free data sources from the 2026-09-21 research
 
-These are **not** values for the env vars above — each would need a new provider file behind the
-factory first. Full detail: [free-market-data-research-providers-2026-09-21.md](free-market-data-research-providers-2026-09-21.md).
+Not built items would each need a new provider file behind the factory first. Full detail: [free-market-data-research-providers-2026-09-21.md](free-market-data-research-providers-2026-09-21.md).
 
 | Source | Covers | Cost / key | Priority |
 |---|---|---|---|
-| **SEC EDGAR** company-facts XBRL + full-text search | Financials for US/SEC-registered names, citation-grade | Free, no key (10 req/s, User-Agent required) | ⭐ Top pick |
-| **Oslo Børs Newsweb** | Regulated announcements for Oslo Børs names (quarterlies, insider trades) | Free, no key (web feed, not JSON API) | ⭐ Top pick |
+| **SEC EDGAR** company-facts XBRL + full-text search | Financials for US/SEC-registered names, citation-grade | Free, no key (10 req/s, User-Agent required) | ✅ Built 2026-09-22 |
+| **Oslo Børs Newsweb** | Regulated announcements for Oslo Børs names (quarterlies, insider trades) | Free, no key | ✅ Built 2026-09-22 |
 | Brønnøysundregistrene (Enhetsregisteret / Regnskapsregisteret) | Norwegian entity data, annual-accounts figures | Free, no key — verify accounts API still live | Nice to have |
 | World Bank / OECD / IMF SDMX | Broader global macro beyond FRED + Norges Bank | Free, no key | Low |
 | GDELT | Global news volume/sentiment signal | Free, no key | Low |
@@ -230,6 +246,7 @@ far in the repo were pushed by Faiz himself from his own terminal/GitHub Desktop
 
 | Date | Session | Summary | Detail |
 |---|---|---|---|
+| 2026-09-22 | **Primary sources: SEC EDGAR + Oslo Børs Newsweb** | New EDGAR fundamentals provider + import (XBRL annual facts → financial facts with filing provenance, name-match guard, never overwrites uploaded years), Newsweb announcements provider (cached via research tables, no migration), evidence packet v2, `/sources/*` API, Primary sources UI on the holding page. New env var `SEC_EDGAR_USER_AGENT`. 364/364 tests (31 new), tsc/eslint/build clean. Committed locally, not pushed/deployed. | [primary-sources-sec-edgar-newsweb-2026-09-22.md](primary-sources-sec-edgar-newsweb-2026-09-22.md) |
 | 2026-09-22 | Setup checklist confirmed | Faiz confirmed: pushed + Railway redeploy done (full data wipe ran), 5 CSVs re-uploaded with real yfinance tickers, `GOOGLE_AI_STUDIO_API_KEY`/`FRED_API_KEY` set in `.env` and Railway. Clarified the only valid provider values (`MARKET_DATA_PROVIDER=yfinance`, `RESEARCH_PROVIDER=gemini_search`) — still open. Added a free-data-source backlog table. Docs only, no code. | [free-market-data-research-providers-2026-09-21.md](free-market-data-research-providers-2026-09-21.md) |
 | 2026-09-22 | Account rename, lost position data (`last_price`/`market_value_nok`), Macro page slowness | Frontend: account rename UI + optional name-on-upload field; new expandable positions table on the Portfolio page (quantity, GAV, cost basis, last price, market value, weight — previously shown nowhere). Backend: migration `a2b4c6d8e0f1` adds `last_price`/`market_value_nok` to `portfolio_positions` (parsed from every CSV row since day one, never persisted until now); wired the previously-dead `DailyBudgetGuard` into both Gemini-calling providers so an exhausted daily quota fails in milliseconds instead of 45-60+ seconds of pacing+retry. 333/333 backend tests passing (7 new), ruff/tsc/eslint/vite build all clean. Committed locally, not pushed, not deployed. | [account-name-position-data-macro-speed-2026-09-22.md](account-name-position-data-macro-speed-2026-09-22.md) |
 | 2026-09-21 | CSV import ticker/duplicate-holding fixes, manual-edit UI, full data wipe | Fixed the CSV-import 500 (quality_flags shape coercion), the duplicate-holding/garbage-ticker bug (name-normalized matching, transliterated/collision-safe placeholder tickers), added inline Ticker/Sector/Instrument-Type editing (`PATCH /holdings/{id}`, `GET /holdings/field-options`, canonical sector list). At Faiz's explicit request after being told the cost, wrote (not yet run) a migration that fully wipes Supabase on next deploy. 326/326 backend tests passing (17 new), ruff/tsc/eslint/vite build all clean. | [csv-import-ticker-sector-fixes-and-db-wipe-2026-09-21.md](csv-import-ticker-sector-fixes-and-db-wipe-2026-09-21.md) |

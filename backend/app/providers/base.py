@@ -261,3 +261,64 @@ class RiskFreeRateProvider(ABC):
     @abstractmethod
     def get_risk_free_rate(self, currency: str) -> RiskFreeRate:
         raise NotImplementedError
+
+
+# --- Primary-source filings providers (2026-09-22 — SEC EDGAR + Oslo Børs
+# Newsweb, claude/free-market-data-research-providers-2026-09-21.md) ---
+#
+# FundamentalsProvider: structured, filer-reported financial facts (today:
+# SEC EDGAR XBRL company facts). Hands back the *raw* reported values plus
+# their filing provenance — never a derived ratio (CLAUDE.md Rule 1; the
+# arithmetic stays in app/services/calculations.py).
+#
+# Regulatory announcements (Newsweb) reuse ResearchItem/ResearchUnavailableError
+# above: an announcement is a citable, source-attributed item exactly like a
+# grounded research finding, so it persists through the same
+# research_runs/research_items tables (no new migration).
+
+
+class FundamentalsUnavailableError(Exception):
+    """Raised when a FundamentalsProvider cannot produce a usable result —
+    unknown ticker/company, network failure, missing config, or a response
+    with no usable annual facts."""
+
+
+@dataclass(frozen=True)
+class ReportedFact:
+    """One filer-reported annual value for one canonical metric
+    (app/domain/financial_metrics.py's CANONICAL_METRICS)."""
+
+    metric: str
+    value: Decimal
+    unit: str
+    currency: str | None
+    period: str  # "FY2025" — the same free-text convention uploaded filings use
+    period_end: str  # ISO date the value is reported for
+    concept: str  # e.g. "us-gaap:Revenues" — which XBRL tag it came from
+    form: str  # e.g. "10-K", "20-F"
+    accession_number: str
+    filed: str  # ISO date
+
+
+@dataclass(frozen=True)
+class CompanyFundamentals:
+    source_name: str  # e.g. "SEC EDGAR"
+    source_url: str  # human-readable filing index for the company
+    company_id: str  # e.g. zero-padded CIK
+    entity_name: str
+    facts: list[ReportedFact]
+    raw_payload: bytes  # stored verbatim as the Document for audit/traceability
+    retrieved_at: datetime
+
+
+class FundamentalsProvider(ABC):
+    name: str
+
+    @abstractmethod
+    def resolve_company(self, ticker: str) -> tuple[str, str] | None:
+        """(company_id, entity_name) for a ticker, or None if unknown."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_annual_fundamentals(self, company_id: str) -> CompanyFundamentals:
+        raise NotImplementedError

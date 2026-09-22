@@ -40,7 +40,11 @@ from app.providers.base import (
     ResearchProvider,
     RiskFreeRateProvider,
 )
+from app.providers.newsweb_provider import NewswebAnnouncementsProvider
 from app.services import calculations
+from app.services.filings.announcements import get_holding_announcements
+from app.services.filings.eligibility import newsweb_applies
+from app.services.filings.sec_edgar import latest_edgar_document
 from app.services.metrics import MetricsResult, compute_holding_metrics
 from app.services.research.common import ResearchSnapshot
 from app.services.research.company import get_company_research
@@ -51,7 +55,10 @@ from app.services.valuation.holding_valuation import (
     compute_holding_valuation,
 )
 
-EVIDENCE_PACKET_VERSION = "v1"
+# v2 (2026-09-22): adds SEC EDGAR filing provenance ("financial_sources")
+# and Oslo Børs Newsweb announcements ("regulatory_announcements"). v1 runs
+# stay traceable via equity_analysis_runs.evidence_packet_version.
+EVIDENCE_PACKET_VERSION = "v2"
 
 
 @dataclass(frozen=True)
@@ -141,6 +148,7 @@ def build_evidence_packet(
     market_data_provider: MarketDataProvider,
     risk_free_rate_provider: RiskFreeRateProvider,
     research_provider: ResearchProvider,
+    announcements_provider: NewswebAnnouncementsProvider | None = None,
 ) -> EvidencePacket:
     settings = get_settings()
     assumptions = get_analysis_assumptions(settings.active_analysis_assumptions_version)
@@ -162,6 +170,7 @@ def build_evidence_packet(
     )
 
     _add_financial_history_evidence(db, holding, assumptions, add)
+    _add_financial_source_evidence(db, holding, add)
 
     valuation = compute_holding_valuation(db, holding, market_data_provider, risk_free_rate_provider)
     packet.valuation = valuation
@@ -185,7 +194,53 @@ def build_evidence_packet(
     _add_research_evidence(company_snapshot, "company_research", "Company-specific research", add)
     _note_research_gap(packet, company_snapshot, "company research")
 
+    if newsweb_applies(holding):
+        announcements = get_holding_announcements(db, announcements_provider, holding=holding)
+        _add_announcement_evidence(announcements, settings.announcements_in_evidence_packet, add)
+        _note_research_gap(packet, announcements, "Newsweb announcements")
+
     return packet
+
+
+def _add_financial_source_evidence(db: Session, holding: Holding, add: Callable) -> None:
+    """Where the financial-history numbers came from, when they came from
+    SEC EDGAR — so the model can cite the actual filings."""
+    document = latest_edgar_document(db, holding)
+    if document is None:
+        return
+    flags = document.quality_flags or {}
+    filings = flags.get("filings") or []
+    if not filings:
+        return
+    listing = "; ".join(
+        f"{f.get('form')} filed {f.get('filed')} (accession {f.get('accession_number')})" for f in filings[:8]
+    )
+    add(
+        "financial_sources",
+        "Financial history source: SEC EDGAR XBRL filings",
+        f"Annual figures above for {flags.get('entity_name', holding.name)} (CIK {flags.get('cik')}) are "
+        f"filer-reported XBRL values from: {listing}.",
+        citation=f"SEC EDGAR — {flags.get('source_url', '')}",
+    )
+
+
+def _add_announcement_evidence(snapshot: ResearchSnapshot, limit: int, add: Callable) -> None:
+    # Titles are issuer-written text (CLAUDE.md Rule 5): passed through as
+    # data inside the packet, which the prompts frame as evidence to cite.
+    if not snapshot.items:
+        add(
+            "regulatory_announcements",
+            "Oslo Børs regulated announcements",
+            "No regulated announcements found in the lookback window.",
+        )
+        return
+    for item in snapshot.items[:limit]:
+        add(
+            "regulatory_announcements",
+            f"Newsweb announcement: {item.title}",
+            item.summary,
+            citation=f"{item.source_name} — {item.source_url}",
+        )
 
 
 def _note_research_gap(packet: EvidencePacket, snapshot: ResearchSnapshot, label: str) -> None:

@@ -6,6 +6,7 @@ import { METRIC_LABELS, METRIC_ORDER, PERCENT_METRICS } from "../lib/types";
 import { formatBytes, formatDate, formatDecimal, formatPercent } from "../lib/format";
 import { Button, Card, EmptyState, PageHeader, StatusBadge } from "../components/ui";
 import { ResearchPanel } from "../components/ResearchPanel";
+import { SourcesPanel } from "../components/SourcesPanel";
 import { ValuationPanel } from "../components/ValuationPanel";
 
 function MetricsPanel({ holdingId }: { holdingId: string }) {
@@ -378,6 +379,13 @@ export default function HoldingDetailPage() {
           Documents
         </h2>
         <DocumentsPanel holdingId={id} onUploaded={() => setMetricsKey((k) => k + 1)} />
+      </div>
+
+      <div className="mb-8">
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-muted">
+          Primary sources
+        </h2>
+        <SourcesPanel holdingId={id} onFinancialsChanged={() => setMetricsKey((k) => k + 1)} />
       </div>
 
       <div className="mb-8">

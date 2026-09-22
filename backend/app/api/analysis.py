@@ -29,12 +29,14 @@ from app.providers.base import (
     RiskFreeRateProvider,
 )
 from app.providers.factory import (
+    get_announcements_provider_or_none,
     get_llm_fallback_provider,
     get_llm_provider,
     get_market_data_provider,
     get_research_provider,
     get_risk_free_rate_provider,
 )
+from app.providers.newsweb_provider import NewswebAnnouncementsProvider
 from app.schemas.analysis import (
     EquityAnalysisRunOut,
     EquityHoldingNoteIn,
@@ -111,6 +113,9 @@ def run_analysis(
     market_data_provider: MarketDataProvider = Depends(get_market_data_provider),
     risk_free_rate_provider: RiskFreeRateProvider = Depends(get_risk_free_rate_provider),
     research_provider: ResearchProvider = Depends(get_research_provider),
+    announcements_provider: NewswebAnnouncementsProvider | None = Depends(
+        get_announcements_provider_or_none
+    ),
 ) -> EquityAnalysisRunOut:
     holding = _get_holding_or_404(db, holding_id)
     try:
@@ -122,6 +127,7 @@ def run_analysis(
             market_data_provider=market_data_provider,
             risk_free_rate_provider=risk_free_rate_provider,
             research_provider=research_provider,
+            announcements_provider=announcements_provider,
         )
     except NotEquityAnalyzableError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

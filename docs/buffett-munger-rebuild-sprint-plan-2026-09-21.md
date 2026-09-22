@@ -195,12 +195,14 @@ if one still doesn't exist by then.
 | **LLM usage ledger & cost observability** | Persist real `llm_usage_events` rows (including Sprint 4's own blind/reconciliation calls, which aren't logged there yet) instead of the in-memory placeholder guard | Low-risk, pullable any time; now slightly more valuable since Sprint 4 adds real LLM spend |
 | **Alerts & notifications** | Notify when a thesis-invalidation trigger fires or research goes stale | Needs thesis tracking built first |
 | **Reporting & export** | One-holding or whole-portfolio PDF/print view of an analysis run | Sprint 4's analysis output now exists to export |
+| **More primary sources** | Brønnøysund accounts register (Norwegian financials), VFF fund NAVs, Newsweb announcement body text | SEC EDGAR + Newsweb built 2026-09-22 (see `primary-sources-sec-edgar-newsweb-2026-09-22.md`); these are the next-cheapest gaps |
 | **Fix GitHub push credentials** (ops, not a feature) | A PAT/credential-helper so sessions can push directly | Needs a decision/action from Faiz outside the repo — hit identically in every session |
 
 ## Changes / history
 
 | Date | Summary |
 |---|---|
+| 2026-09-22 | **Primary sources: SEC EDGAR + Oslo Børs Newsweb.** EDGAR XBRL annual facts → `financial_line_items` (traceable to accession numbers, never overwrites uploaded periods); Newsweb announcements cached via the research tables (no migration); evidence packet v2 cites both; new `/sources/*` API and a Primary sources section on the holding page. 364/364 tests. Not yet run against the live SEC/Newsweb hosts. See `primary-sources-sec-edgar-newsweb-2026-09-22.md`. |
 | 2026-09-21 | **Sprint 4 backend: the two-pass Buffett/Munger analysis engine.** Built the evidence packet (reusing Sprints 1-3 unchanged), versioned output schema/assumptions/prompts, the blind pass, the reconciliation pass (notes-aware, notes optional), the orchestration pipeline (equity-type gating, LLM fallback, deterministic DCF-derived price target, blind-result preserved if only reconciliation fails), per-holding notes CRUD, and the `/analysis` API. New tables via migration `b5e1a9c3d7f2` — a fresh schema, not an extension of the legacy Phase-3 tables. 19 new tests (307 total), ruff clean. Discovered: manually-created holdings default to a non-analyzable `asset_class_raw` (flagged, not fixed); `MARKET_DATA_PROVIDER`/`RESEARCH_PROVIDER` are still `stub` in `backend/.env`, now blocking the analysis engine specifically. Frontend deliberately deferred. Not run against a real LLM call, real market data, or real holdings this session. |
 | 2026-09-21 | Portfolio delete fixes, page-load speed, first portfolio-level chart, whisky grouping (out-of-sequence). See `progress.md`. |
 | 2026-09-21 | Sprint 3 fully closed: frontend valuation UI. See `progress.md`. |

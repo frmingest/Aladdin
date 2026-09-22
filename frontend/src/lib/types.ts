@@ -323,7 +323,48 @@ export const RESEARCH_SOURCE_TYPE_LABELS: Record<string, string> = {
   macro_news: "Macro",
   sector_research: "Sector",
   company_research: "Company",
+  regulatory_announcement: "Announcement",
 };
+
+/** Mirrors backend/app/schemas/sources.py (2026-09-22 — SEC EDGAR + Oslo
+ * Børs Newsweb primary sources). */
+export interface SourceEligibility {
+  holding_id: string;
+  ticker: string;
+  sec_edgar: boolean;
+  sec_edgar_reason: string | null;
+  newsweb: boolean;
+  newsweb_reason: string | null;
+}
+
+export interface EdgarFiling {
+  accession_number: string;
+  form: string;
+  filed: string;
+  url: string;
+}
+
+export interface EdgarImport {
+  holding_id: string;
+  imported: boolean;
+  cik: string | null;
+  entity_name: string | null;
+  source_url: string | null;
+  document_id: string | null;
+  was_duplicate: boolean;
+  periods_imported: string[];
+  periods_skipped_manual: string[];
+  facts_imported: number;
+  metrics_by_period: Record<string, string[]>;
+  filings: EdgarFiling[];
+  retrieved_at: string | null;
+  warnings: string[];
+}
+
+export interface HoldingAnnouncements extends ResearchSnapshotBase {
+  holding_id: string;
+  ticker: string;
+}
 
 /**
  * Mirrors backend/app/schemas/valuation.py (Sprint 3 — Brain Step 4: DCF,

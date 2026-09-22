@@ -17,7 +17,9 @@ import type {
   AccountUpdateInput,
   CompanyResearch,
   DocumentSummary,
+  EdgarImport,
   Holding,
+  HoldingAnnouncements,
   HoldingCreateInput,
   HoldingFieldOptions,
   HoldingMetrics,
@@ -30,6 +32,7 @@ import type {
   PortfolioWipeResult,
   SectorResearch,
   SnapshotDeleteResult,
+  SourceEligibility,
 } from "./types";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL as string | undefined;
@@ -202,4 +205,18 @@ export const api = {
     request<HoldingValuation>(`/valuation/holdings/${holdingId}`),
   refreshHoldingValuation: (holdingId: string) =>
     request<HoldingValuation>(`/valuation/holdings/${holdingId}/refresh`, { method: "POST" }),
+
+  // Primary sources (2026-09-22) — see backend/app/api/sources.py.
+  getSourceEligibility: (holdingId: string) =>
+    request<SourceEligibility>(`/sources/holdings/${holdingId}`),
+  getEdgarImport: (holdingId: string) =>
+    request<EdgarImport>(`/sources/holdings/${holdingId}/sec-edgar`),
+  importFromEdgar: (holdingId: string) =>
+    request<EdgarImport>(`/sources/holdings/${holdingId}/sec-edgar/import`, { method: "POST" }),
+  getAnnouncements: (holdingId: string) =>
+    request<HoldingAnnouncements>(`/sources/holdings/${holdingId}/announcements`),
+  refreshAnnouncements: (holdingId: string) =>
+    request<HoldingAnnouncements>(`/sources/holdings/${holdingId}/announcements/refresh`, {
+      method: "POST",
+    }),
 };

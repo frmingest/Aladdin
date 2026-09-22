@@ -88,6 +88,20 @@ class Settings(BaseSettings):
     # ERP / terminal growth / scenario offsets — app/domain/valuation_assumptions/.
     active_valuation_assumptions_version: str = "v1"
 
+    # --- Primary-source filings (2026-09-22, app/providers/sec_edgar_provider.py,
+    # app/providers/newsweb_provider.py) — both keyless and free. ---
+    fundamentals_provider: str = "sec_edgar"  # "sec_edgar" | "none"
+    # SEC fair-access policy requires a descriptive User-Agent with a contact
+    # email, e.g. "Aladdin portfolio app you@example.com". Unset = EDGAR
+    # imports fail visibly with a message saying so.
+    sec_edgar_user_agent: str | None = None
+    sec_edgar_max_years: int = 10
+    announcements_provider: str = "newsweb"  # "newsweb" | "none"
+    announcements_lookback_days: int = 365
+    # How many of the most recent announcements go into the analysis
+    # evidence packet (all are still stored and shown in the UI).
+    announcements_in_evidence_packet: int = 15
+
     # --- Analysis engine (Sprint 4, see app/services/analysis/) ---
     # Two-pass Buffett/Munger analysis: a blind pass (evidence only, no
     # user notes — CLAUDE.md Rule 4) followed by a reconciliation pass

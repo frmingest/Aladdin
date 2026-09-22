@@ -31,3 +31,11 @@ DOCUMENT_STATUS_PROCESSED = "processed"
 DOCUMENT_STATUS_FAILED = "failed"
 
 ALLOWED_UPLOAD_EXTENSIONS: tuple[str, ...] = (".pdf", ".pptx", ".xlsx")
+
+# System-created (never user-uploadable, so deliberately not in
+# DOCUMENT_TYPES): the verbatim SEC EDGAR company-facts JSON an EDGAR import
+# was built from — app/services/filings/sec_edgar.py. Every
+# FinancialLineItem it produces FKs to this row, so an imported number is
+# always traceable to the exact payload (and, via quality_flags["provenance"],
+# the exact filing accession number) it came from.
+DOCUMENT_TYPE_SEC_XBRL = "sec_xbrl_facts"

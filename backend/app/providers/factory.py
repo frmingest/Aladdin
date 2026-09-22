@@ -11,6 +11,8 @@ from functools import lru_cache
 
 from app.config.settings import Settings, get_settings
 from app.providers.base import (
+    FundamentalsProvider,
+    FundamentalsUnavailableError,
     LLMProvider,
     LLMUnavailableError,
     MarketDataProvider,
@@ -25,11 +27,13 @@ from app.providers.fred_risk_free_rate_provider import FredRiskFreeRateProvider
 from app.providers.gemini_research_provider import GeminiResearchProvider
 from app.providers.google_ai_studio_provider import GoogleAIStudioProvider
 from app.providers.mistral_provider import MistralProvider
+from app.providers.newsweb_provider import NewswebAnnouncementsProvider
 from app.providers.object_storage import (
     LocalObjectStorageProvider,
     ObjectStorageProvider,
 )
 from app.providers.object_storage_s3 import S3ObjectStorageProvider
+from app.providers.sec_edgar_provider import SecEdgarFundamentalsProvider
 from app.providers.yfinance_provider import YFinanceMarketDataProvider
 
 
@@ -162,3 +166,47 @@ def get_risk_free_rate_provider() -> RiskFreeRateProvider:
     raise RiskFreeRateUnavailableError(
         f"Unknown risk-free-rate provider: {settings.risk_free_rate_provider!r}"
     )
+
+
+@lru_cache
+def get_fundamentals_provider() -> FundamentalsProvider:
+    """The configured filer-reported fundamentals provider
+    (FUNDAMENTALS_PROVIDER, default "sec_edgar"). Cached so SEC's ticker->CIK
+    map is fetched once per process per day, not once per request."""
+    settings = get_settings()
+    if settings.fundamentals_provider == "sec_edgar":
+        return SecEdgarFundamentalsProvider(
+            user_agent=settings.sec_edgar_user_agent,
+            max_years=settings.sec_edgar_max_years,
+        )
+    raise FundamentalsUnavailableError(
+        f"Unknown or disabled fundamentals provider: {settings.fundamentals_provider!r}"
+    )
+
+
+@lru_cache
+def get_announcements_provider() -> NewswebAnnouncementsProvider:
+    """The configured regulated-announcements provider
+    (ANNOUNCEMENTS_PROVIDER, default "newsweb")."""
+    settings = get_settings()
+    if settings.announcements_provider == "newsweb":
+        return NewswebAnnouncementsProvider(lookback_days=settings.announcements_lookback_days)
+    raise ResearchUnavailableError(
+        f"Unknown or disabled announcements provider: {settings.announcements_provider!r}"
+    )
+
+
+def get_announcements_provider_or_none() -> NewswebAnnouncementsProvider | None:
+    """FastAPI-dependency-friendly variant: a disabled provider is None
+    (callers report it as unavailable) instead of a 500."""
+    try:
+        return get_announcements_provider()
+    except ResearchUnavailableError:
+        return None
+
+
+def get_fundamentals_provider_or_none() -> FundamentalsProvider | None:
+    try:
+        return get_fundamentals_provider()
+    except FundamentalsUnavailableError:
+        return None

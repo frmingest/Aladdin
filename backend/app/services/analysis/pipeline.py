@@ -32,8 +32,12 @@ from app.providers.base import (
     ResearchProvider,
     RiskFreeRateProvider,
 )
+from app.providers.newsweb_provider import NewswebAnnouncementsProvider
 from app.services.analysis.blind_pass import run_blind_pass
-from app.services.analysis.evidence_packet import build_evidence_packet
+from app.services.analysis.evidence_packet import (
+    EVIDENCE_PACKET_VERSION,
+    build_evidence_packet,
+)
 from app.services.analysis.notes import get_holding_note
 from app.services.analysis.reconciliation_pass import run_reconciliation_pass
 
@@ -71,6 +75,7 @@ def run_full_analysis(
     market_data_provider: MarketDataProvider,
     risk_free_rate_provider: RiskFreeRateProvider,
     research_provider: ResearchProvider,
+    announcements_provider: NewswebAnnouncementsProvider | None = None,
 ) -> EquityAnalysisRun:
     if holding.asset_class_raw not in EQUITY_ANALYZABLE_TYPES:
         raise NotEquityAnalyzableError(
@@ -87,7 +92,7 @@ def run_full_analysis(
         status=EquityAnalysisRunStatus.RUNNING.value,
         schema_version=schema_version,
         blind_prompt_version=prompt_version,
-        evidence_packet_version="v1",
+        evidence_packet_version=EVIDENCE_PACKET_VERSION,
         evidence_packet_json={},
         evidence_unavailable_reasons=[],
     )
@@ -100,6 +105,7 @@ def run_full_analysis(
         market_data_provider=market_data_provider,
         risk_free_rate_provider=risk_free_rate_provider,
         research_provider=research_provider,
+        announcements_provider=announcements_provider,
     )
     run.evidence_packet_json = packet.as_dict()
     run.evidence_unavailable_reasons = packet.unavailable_reasons
