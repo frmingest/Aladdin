@@ -65,7 +65,7 @@ research, and every analysis run all draw from that same 20/day. Once it's spent
 124 real holdings), **every further call still paid the full cost of finding that out the hard
 way**: the shared RPM pacer's wait (12s at the configured `RPM=5`), a real network call, and — on
 the 429 that call gets back — three more retries with exponential backoff, each preceded by another
-12s pacing wait. That's on the order of 45-60+ seconds of hanging for a call that was actually
+12s pacing wait. That's on the order of 45–60+ seconds of hanging for a call that was actually
 knowable-in-advance to fail, and it's exactly what "Macro page loading really slow" looks like from
 the browser: `GET /research/macro` just sits there.
 
@@ -106,7 +106,8 @@ an offline Postgres-dialect check available.
 
 ## Status
 
-**Committed locally, not pushed, not deployed.** Railway only picks this up once it's pushed and
+**Committed locally (`caf2986`), not pushed, not deployed.** `git push origin main` was attempted this session and failed with the same `could not read Username for 'https://github.com'` error every prior session has hit — the credential gap is still unresolved from this environment.
+Railway only picks this up once it's pushed and
 redeployed — none of today's fixes (account rename, last_price/market_value_nok persistence, or the
 budget-guard fast-fail) are live until that happens. After a redeploy, migration `a2b4c6d8e0f1` runs
 automatically (`alembic upgrade head` on container startup) — it's additive (two new nullable
