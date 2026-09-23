@@ -98,8 +98,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             ),
           )}
         </ul>
-        <div className="mt-auto px-2 pt-6">
-          <HealthBadge />
+        <div className="mt-auto pt-6">
+          <NavLink
+            to="/status"
+            title="System status"
+            className={({ isActive }) =>
+              `block rounded-md px-2 py-1.5 transition-colors ${isActive ? "bg-accent-subtle" : "hover:bg-border-subtle"}`
+            }
+          >
+            <HealthBadge />
+            <span className="mt-0.5 block text-[11px] text-ink-faint">System status →</span>
+          </NavLink>
         </div>
       </nav>
       <main className="min-w-0 flex-1 overflow-y-auto">{children}</main>

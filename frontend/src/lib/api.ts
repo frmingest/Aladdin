@@ -39,6 +39,7 @@ import type {
   SectorResearch,
   SnapshotDeleteResult,
   SourceEligibility,
+  SystemStatus,
 } from "./types";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL as string | undefined;
@@ -230,6 +231,9 @@ export const api = {
 
   /** Sprint 5 dashboard — database-only roll-up (no market data, no LLM). */
   getPortfolioOverview: () => request<PortfolioOverview>("/portfolio/overview"),
+
+  /** F4 — configuration, data freshness and failures. Never calls a provider. */
+  getSystemStatus: () => request<SystemStatus>("/system/status"),
 
   /** F3 — every owned equity ranked by margin of safety. */
   getMarginOfSafetyBoard: () => request<MarginOfSafetyBoard>("/valuation/board"),

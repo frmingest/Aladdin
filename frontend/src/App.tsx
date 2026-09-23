@@ -7,6 +7,7 @@ import PortfolioPage from "./pages/PortfolioPage";
 import MacroPage from "./pages/MacroPage";
 import MarginOfSafetyPage from "./pages/MarginOfSafetyPage";
 import SectorPage from "./pages/SectorPage";
+import SystemStatusPage from "./pages/SystemStatusPage";
 
 /**
  * Sprint 1 built the first real frontend pages (see
@@ -31,6 +32,7 @@ export default function App() {
         <Route path="/margin-of-safety" element={<MarginOfSafetyPage />} />
         <Route path="/macro" element={<MacroPage />} />
         <Route path="/sectors/:sector" element={<SectorPage />} />
+        <Route path="/status" element={<SystemStatusPage />} />
       </Routes>
     </Layout>
   );

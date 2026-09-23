@@ -719,3 +719,41 @@ export interface PortfolioOverview {
   positions: OverviewPosition[];
   summary: SummaryPoint[];
 }
+
+// --- System status (F4) — backend/app/schemas/system.py
+
+export type StatusLevel = "ok" | "warn" | "error" | "off";
+
+export interface StatusItem {
+  key: string;
+  label: string;
+  status: StatusLevel;
+  value: string;
+  detail: string;
+}
+
+export interface FreshnessItem {
+  key: string;
+  label: string;
+  last_at: string | null;
+  status: StatusLevel;
+  detail: string;
+}
+
+export interface SystemStatus {
+  generated_at: string;
+  version: string;
+  environment: string;
+  commit: string | null;
+  database_ok: boolean;
+  database_dialect: string | null;
+  migration_current: string | null;
+  migration_head: string | null;
+  providers: StatusItem[];
+  llm_daily_limit: number;
+  llm_calls_remaining_today: number;
+  freshness: FreshnessItem[];
+  analysis: StatusItem[];
+  counts: Record<string, number>;
+  issues: string[];
+}

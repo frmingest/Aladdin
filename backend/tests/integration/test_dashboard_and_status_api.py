@@ -24,8 +24,8 @@ def test_overview_with_positions(client, db_session):
     snap = PortfolioSnapshot(source_file=doc, reporting_currency="NOK", status="processed", account=account)
     db_session.add_all([account, doc, h1, h2, snap])
     db_session.add_all([
-        PortfolioPosition(snapshot=snap, holding=h1, market_value_nok=Decimal("750")),
-        PortfolioPosition(snapshot=snap, holding=h2, market_value_nok=Decimal("250")),
+        PortfolioPosition(snapshot=snap, holding=h1, market_value_nok=Decimal(750)),
+        PortfolioPosition(snapshot=snap, holding=h2, market_value_nok=Decimal(250)),
     ])
     db_session.commit()
 
@@ -38,3 +38,10 @@ def test_overview_with_positions(client, db_session):
     assert {s["key"] for s in body["by_currency"]} == {"NOK", "USD"}
     assert body["verdicts"][0]["rating"] == "Not analyzed"
     assert any(p["tone"] == "warn" for p in body["summary"])
+
+
+def test_system_status_endpoint(client):
+    body = client.get("/system/status").json()
+    assert body["database_ok"] is True
+    assert {p["key"] for p in body["providers"]} >= {"llm", "market_data", "edgar", "storage"}
+    assert body["counts"]["holdings"] == 0

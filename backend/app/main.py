@@ -19,6 +19,7 @@ from app.api.holdings import router as holdings_router
 from app.api.portfolio import router as portfolio_router
 from app.api.research import router as research_router
 from app.api.sources import router as sources_router
+from app.api.system import router as system_router
 from app.api.valuation import router as valuation_router
 from app.config.settings import get_settings
 
@@ -43,6 +44,7 @@ app.include_router(research_router)
 app.include_router(valuation_router)
 app.include_router(analysis_router)
 app.include_router(sources_router)
+app.include_router(system_router)
 
 
 @app.get("/health")
