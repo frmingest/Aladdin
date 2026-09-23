@@ -184,7 +184,7 @@ hard-gates on instrument type; the UI disables Run on any readiness blocker.
   fresh price, research cached, analyzable type) shown before a Gemini call is spent. Also fixes the
   `asset_class_raw="equity"` default for manually created holdings.
 
-### Sprint 5 — Portfolio roll-up & dashboard
+### Sprint 5 — Portfolio roll-up & dashboard — ✅ closed 2026-09-23
 
 Aggregate verdict/moat/valuation view across all holdings, single-purpose dashboard, deterministic
 executive summary. Sprint 4's verdict schema now exists for this to aggregate over.
@@ -193,6 +193,22 @@ bear/base/bull range. **✅ Built 2026-09-22** (`2c415b8` backend, `ba3b71b` fro
 `GET /valuation/board` + `/margin-of-safety` page. "Owned" = latest snapshot per account; only
 stock/equity ETF rows; Sprint 3 valuation reused unchanged. Still open in Sprint 5: the aggregate
 moat/verdict roll-up dashboard and the deterministic executive summary.
+**✅ Closed 2026-09-23** (`bc4de0c`): `GET /portfolio/overview` (database-only: value, allocation by
+sector/instrument/currency/account, HHI + effective holdings + top-1/5/10 share, value-weighted
+verdict and moat roll-up, and a rule-based executive summary with named thresholds) and a new
+**Dashboard** home page (`/`; Holdings moved to `/holdings`). Detail:
+[dashboard-status-watchlist-journal-2026-09-23.md](dashboard-status-watchlist-journal-2026-09-23.md).
+
+### Shipped alongside Sprint 5 (2026-09-23): F4 status page, F6 journal, F7 watchlist — ✅
+
+| Feature | Commit | What |
+|---|---|---|
+| F4 System status (page only) | `4abaf3d` | `GET /system/status` + `/status` page. Configuration and DB only, no provider calls, secrets shown only as set/missing. The Playwright smoke test half stays in Sprint 7 |
+| F7 Watchlist | `ebe4a49` | `watchlist_items` table (migration `c4d5e6f7a8b9`). An entry points at a Holding, so a watched company gets the full holding page. Buy-below price, status, DCF and margin of safety |
+| F6 Decision journal | `bc28502` | `decision_journal_entries` table (migration `d5e6f7a8b9c0`). Action, price, why, what would prove it wrong, confidence, and the verdict at the time; outcomes from stored prices; 6/12-month reviews. Entries survive a holding delete (unlinked) |
+
+Also fixed: a failed run hid an older verdict on the board; provider "unavailable" errors now return
+503 with the reason instead of 500; a yfinance `KeyError` on an unreachable quote no longer 500s.
 
 ### Sprint 5B — Local LLM from Railway + overnight queue (F8 + F5) — ⏳ planned 2026-09-23
 
@@ -221,8 +237,8 @@ Per-document evidence budget, section-aware chunking (current ingestion is 1 pag
 
 Pre-commit hooks, CI workflow, secret-scanning; also a natural place for a frontend test framework
 if one still doesn't exist by then.
-**+ F4 System status page + post-deploy Playwright smoke test against Railway** (agreed 2026-09-22;
-the status page can ship earlier).
+**+ F4 post-deploy Playwright smoke test against Railway** (agreed 2026-09-22). The F4 status page
+shipped early, on 2026-09-23 (`4abaf3d`).
 
 ## Backlog — candidate future phases (beyond Sprint 7)
 
@@ -238,14 +254,15 @@ the status page can ship earlier).
 | **Reporting & export** | One-holding or whole-portfolio PDF/print view of an analysis run | Sprint 4's analysis output now exists to export |
 | **More primary sources** | Brønnøysund accounts register (Norwegian financials), VFF fund NAVs, Newsweb announcement body text | SEC EDGAR + Newsweb built 2026-09-22 (see `primary-sources-sec-edgar-newsweb-2026-09-22.md`); these are the next-cheapest gaps |
 | **F5 Overnight analysis queue** (agreed 2026-09-22) | Queue holdings and run them within the daily Gemini budget, resuming the next day | **Scheduled 2026-09-23 in Sprint 5B**, together with F8 (the local worker is the queue runner) |
-| **F6 Decision journal** (agreed 2026-09-22) | Record buy/sell reasoning, price and "what would prove me wrong"; show the outcome after 6/12 months | Pairs with thesis tracking |
-| **F7 Watchlist** (agreed 2026-09-22) | Analyze non-held companies; flag when the price drops below a buy-below level | Reuses the Sprint 3/4 engines unchanged |
+| **F6 Decision journal** (agreed 2026-09-22) | Record buy/sell reasoning, price and "what would prove me wrong"; show the outcome after 6/12 months | **✅ Built 2026-09-23** (`bc28502`), see Sprint 5 |
+| **F7 Watchlist** (agreed 2026-09-22) | Analyze non-held companies; flag when the price drops below a buy-below level | **✅ Built 2026-09-23** (`ebe4a49`), see Sprint 5 |
 | **Fix GitHub push credentials** (ops, not a feature) | A PAT/credential-helper so sessions can push directly | Needs a decision/action from Faiz outside the repo — hit identically in every session |
 
 ## Changes / history
 
 | Date | Summary |
 |---|---|
+| 2026-09-23 | **Sprint 5 closed; F4 status page, F6 journal, F7 watchlist shipped.** Dashboard with `GET /portfolio/overview` (database-only roll-up and a rule-based executive summary); `/system/status`; `watchlist_items` + `decision_journal_entries` (additive migrations `c4d5e6f7a8b9`, `d5e6f7a8b9c0`). Fixes: a failed run hid an older verdict on the board; provider errors now return 503 instead of 500; yfinance `KeyError`. 557 tests (41 new). Not pushed. See [dashboard-status-watchlist-journal-2026-09-23.md](dashboard-status-watchlist-journal-2026-09-23.md). |
 | 2026-09-23 | **Owner's-view metric definitions (decision 19) + Sprint 5B planned (decision 20).** Hybrid capital as debt; FCF and owner earnings net of decommissioning, leases, financing-classified interest and hybrid coupons; EBIT/EBITDA without biological fair value; *n/m* for negative denominators; the DCF uses the same owner earnings; evidence packet v3. 5 new extracted facts, 12 new tests (514/516, 2 pre-existing local-only). Sprint 5B: local worker pulls queued runs from the shared DB (F8 + F5). See [owner-view-metrics-and-local-worker-plan-2026-09-23.md](owner-view-metrics-and-local-worker-plan-2026-09-23.md). |
 | 2026-09-23 | **Upload validation + deletes.** Vår Energi's FY2025 ESEF filing was checked figure by figure: every tag was read correctly, but net income, revenue, capex, EBIT/EBITDA and interest are now mapped the way a shareholder needs them. Statement integrity checks, a hybrid-equity warning, a mixed-currency guard and per-figure provenance were added. New document/holding delete endpoints and UI (decision 18). `be4b7e7`, not pushed. See [upload-validation-var-energi-and-deletes-2026-09-23.md](upload-validation-var-energi-and-deletes-2026-09-23.md). |
 | 2026-09-23 | **Reverted LLM-assisted PDF figure extraction** (`8e1c1fb` reverts `9a0db96`) — Faiz decided against it. PDFs stay text-only; ESEF `.xhtml`/CSV uploads are the figure sources for non-US holdings. |

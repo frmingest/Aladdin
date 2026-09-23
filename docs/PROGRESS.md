@@ -11,11 +11,11 @@ Quick-glance tracker. Detail for each item lives in its own linked doc; this pag
 | | |
 |---|---|
 | **Current phase** | Phase 11: the Buffett/Munger single-focus rebuild ([sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md)) |
-| **Sprints closed** | 0, 1, 2, 3, 4 |
-| **In progress** | Sprint 5: F3 board ✅ done; portfolio roll-up dashboard + executive summary left. **Next planned: Sprint 5B**, the local LLM from Railway (F8 + F5) |
-| **Latest build** | Owner's-view metric definitions (`34beec7`), committed locally, **not pushed, not deployed**. Everything up to `5e6c3eb` is on GitHub; deploy not verified. |
-| **Tests** | 514/516 backend (2 `test_factory` failures are local-only: `.env` selects Ollama), tsc/eslint/vite build clean |
-| **Live-verified?** | ❌ The analysis engine, EDGAR and Newsweb have only been tested against fakes. The new UI was checked with mocked API data only. |
+| **Sprints closed** | 0, 1, 2, 3, 4, 5 |
+| **In progress** | Nothing open. Sprint 5 closed with the Dashboard; F4 (status page), F6 and F7 also shipped. **Next planned: Sprint 5B**, the local LLM from Railway (F8 + F5) |
+| **Latest build** | Dashboard, System status, Watchlist, Decision journal (`bc4de0c` → `bc28502`), committed locally, **not pushed, not deployed**. Everything up to `9d23723` is on GitHub; deploy not verified. |
+| **Tests** | 557 backend (on a clean env; locally the 2 `test_factory` tests still fail while `.env` selects Ollama), tsc/eslint/vite build clean, new migrations checked up/down on Postgres 16 |
+| **Live-verified?** | ❌ The analysis engine, EDGAR and Newsweb have only been tested against fakes. The new pages were checked against a local demo DB with made-up data, not Railway. |
 
 ---
 
@@ -27,15 +27,18 @@ Quick-glance tracker. Detail for each item lives in its own linked doc; this pag
 | ★ | Railway Variables: `LLM_PROVIDER=google_ai_studio` (or unset), `LLM_FALLBACK_PROVIDER=none` | Railway can't reach Ollama on your PC |
 | ★ | Fix the 1 remaining readiness blocker on the first holding, then run the first local analysis | First real run on the local LLM |
 | ★ | Change Vår Energi's ticker `VARRY` → **`VAR.OL`**; fix sectors: Xetra-Gold + L&G Gold Mining → Materials, Salmon Evolution → Consumer Staples | [ticker decision](local-llm-tickers-ui-2026-09-23.md#2-ticker-convention--decision) |
-| ★ | Push `main` (`34beec7`) and redeploy, then **delete and re-upload** the Vår Energi and Salmon Evolution `.xhtml` files | The new owner's-view facts (hybrid capital, decommissioning, leases…) are only created on extraction — [doc](owner-view-metrics-and-local-worker-plan-2026-09-23.md) |
+| ★ | **Push `main` (`bc28502`) and redeploy.** Railway runs `alembic upgrade head` on start, which creates 2 new tables (`watchlist_items`, `decision_journal_entries`) | New Dashboard, Status, Watchlist and Journal pages — [doc](dashboard-status-watchlist-journal-2026-09-23.md) |
+| ★ | After the deploy, open **System status** (the "backend ok" badge at the bottom of the nav) and fix anything under *Needs attention* | It shows missing keys, `stub` providers and the migration version in one place, which replaces items 1–3 below |
+| ★ | **Delete and re-upload** the Vår Energi and Salmon Evolution `.xhtml` files (if not done since `34beec7` was deployed) | The new owner's-view facts (hybrid capital, decommissioning, leases…) are only created on extraction — [doc](owner-view-metrics-and-local-worker-plan-2026-09-23.md) |
 | ★ | Upload the **ESEF annual report `.xhtml`** for each Oslo holding (2 years each gives 3 years of history) | Most reliable source of figures — [upload doc](financial-statement-uploads-xhtml-csv-2026-09-23.md) |
 | 1 | Set `MARKET_DATA_PROVIDER=yfinance` and `RESEARCH_PROVIDER=gemini_search` in Railway and `backend/.env` | The analysis engine can't produce real output while these are `stub`. No new key is needed. |
 | 2 | Add `SEC_EDGAR_USER_AGENT` (e.g. `Aladdin portfolio app <email>`) in Railway and `backend/.env` | SEC requires a contact email. EDGAR import errors until this is set. |
-| 3 | Confirm Railway is running `1a31b79` (F1–F3) | Pushed to GitHub; deploy not verified this session |
+| 3 | Confirm Railway is running the latest commit | System status shows the commit (from `RAILWAY_GIT_COMMIT_SHA`) and the DB migration |
 | 4 | Try "Import from SEC EDGAR" on a US holding, and open an Oslo holding's announcements | First live test of both sources |
 | 5 | Open an equity holding, check the Readiness card, then click **Run analysis** | First real signal on prompt quality, cost and usefulness. The readiness card shows what's missing first. |
 | 6 | Open **Margin of safety** in the nav | First real ranking; the "Can't be ranked yet" list shows which holdings still need financials |
-| 7 | Review `analysis_schema/v1.py` and `prompts/analysis/*.md` | Once a real run uses v1, any change needs a new version file (CLAUDE.md Rule 3) |
+| 7 | Try the new pages: **Dashboard**, **Watchlist** (add 2–3 companies you'd like to own, with a buy-below price) and **Journal** (record your last buy or sell) | First real use; say what's missing or wrong |
+| 8 | Review `analysis_schema/v1.py` and `prompts/analysis/*.md` | Once a real run uses v1, any change needs a new version file (CLAUDE.md Rule 3) |
 
 ---
 
@@ -48,11 +51,11 @@ Quick-glance tracker. Detail for each item lives in its own linked doc; this pag
 | F1 | **Analysis view** | Frontend | Verdict card, moat breakdown, clickable evidence citations and notes editor on the holding page | Sprint 4 frontend | ✅ Done 2026-09-22 |
 | F2 | **Analysis readiness check** | Backend + UI | Per-holding checklist before spending a Gemini call: ticker resolves, ≥3 yrs of financials, fresh price, research cached, analyzable type. Also fixes the `asset_class_raw="equity"` default bug. | Sprint 4 frontend | ✅ Done 2026-09-22 |
 | F3 | **Margin-of-safety board** | Both | Every owned equity ranked by price vs. its DCF bear/base/bull range | Sprint 5 | ✅ Done 2026-09-22 |
-| F4 | **System status page + post-deploy smoke test** | Both | Quota left today, `stub` providers, stale caches, last EDGAR/Newsweb success; a Playwright smoke suite run against Railway | Sprint 7 (status page can ship earlier) | ⏳ Planned |
+| F4 | **System status page + post-deploy smoke test** | Both | Quota left today, `stub` providers, stale caches, last EDGAR/Newsweb success; a Playwright smoke suite run against Railway | Status page: Sprint 5 · smoke test: Sprint 7 | ✅ Status page done 2026-09-23 · ⏳ smoke test planned |
 | F5 | **Overnight analysis queue** | Both | Queue holdings and run them within the daily budget, resuming the next day. Built with the LLM usage ledger. With a local LLM the budget limit mostly goes away — the queue becomes "run all holdings on my PC overnight". | New | ⏳ Planned |
 | F8 | **Local LLM from Railway** | Both | A worker on your PC picks up analysis runs queued from the Railway site and runs them on Ollama. No tunnel, no open port; runs wait while the PC is off. | Sprint 5B (with F5) | ⏳ Planned — [plan](owner-view-metrics-and-local-worker-plan-2026-09-23.md) §3 |
-| F6 | **Decision journal** | Both | Record why you bought or sold, at what price, and what would prove you wrong; see the outcome after 6/12 months | New | ⏳ Planned |
-| F7 | **Watchlist** | Both | Analyze companies you don't own; flag when the price drops below a buy-below level | New | ⏳ Planned |
+| F6 | **Decision journal** | Both | Record why you bought or sold, at what price, and what would prove you wrong; see the outcome after 6/12 months | New | ✅ Done 2026-09-23 |
+| F7 | **Watchlist** | Both | Analyze companies you don't own; flag when the price drops below a buy-below level | New | ✅ Done 2026-09-23 |
 
 ### 3b. Sprint status
 
@@ -63,10 +66,11 @@ Quick-glance tracker. Detail for each item lives in its own linked doc; this pag
 | 2 | Live evidence-first research (macro, sector, company) | ✅ Closed |
 | 3 | Valuation engine: DCF, reverse DCF, multiples + UI | ✅ Closed |
 | 4 | Two-pass Buffett/Munger analysis engine + analysis view (F1) + readiness (F2) | ✅ Closed |
-| 5 | Portfolio roll-up and dashboard (+ F3) | 🚧 F3 done; roll-up dashboard + executive summary next |
+| 5 | Portfolio roll-up and dashboard (+ F3) | ✅ Closed 2026-09-23 (Dashboard + executive summary) |
 | 5B | Local LLM from Railway + overnight queue (F8 + F5) | ⏳ Planned 2026-09-23 |
 | 6 | Evidence quality (section-aware chunking, evidence budget) | ⏳ Not started |
 | 7 | Guardrail tooling: pre-commit, CI, secret scanning (+ F4 smoke test) | ⏳ Not started |
+| — | Unplanned, shipped 2026-09-23: F4 status page, F6 decision journal, F7 watchlist | ✅ Done |
 
 ### 3c. Backlog (unscheduled)
 
@@ -99,6 +103,7 @@ Detail: [free-market-data-research-providers-2026-09-21.md](free-market-data-res
 
 | Issue | Impact | Fix |
 |---|---|---|
+| Valuation panel and Margin of safety show no price for a holding without a DCF | Holdings with under 2 years of financials show "No price" (the watchlist works around it) | Fetch the price before the DCF check — [doc](dashboard-status-watchlist-journal-2026-09-23.md) §5 |
 | Railway can't use the local LLM | An analysis started from the Railway site still uses Gemini | **Sprint 5B / F8**: local worker pulls queued runs — [plan](owner-view-metrics-and-local-worker-plan-2026-09-23.md) §3 |
 | Gemini quota counter is in-memory | Resets on every server restart, so "left today" can be optimistic | LLM usage ledger (built with F5) |
 | No GitHub push credentials in any session shell | Faiz pushes manually | Needs a PAT or credential helper from Faiz |
@@ -111,6 +116,7 @@ Detail: [free-market-data-research-providers-2026-09-21.md](free-market-data-res
 
 | Date | Change | Summary | Detail |
 |---|---|---|---|
+| 2026-09-23 | **Dashboard, System status, Watchlist, Decision journal** | New home **Dashboard** (value, allocation, HHI/top-5, value-weighted verdict and moat roll-up, rule-based executive summary): Sprint 5 closed. **System status** page (F4): provider settings, migration vs. code, quota, data freshness, stuck runs; no network calls. **Watchlist** (F7): buy-below price, DCF and margin of safety, ☆ Watch on every holding. **Decision journal** (F6): why/what would prove me wrong/confidence, return since the decision, 6/12-month reviews. 2 new tables (additive migrations). Fixes: a failed run no longer hides an older verdict; provider errors return 503 with the reason instead of 500; a yfinance `KeyError` no longer 500s. 557 tests (41 new). Committed `bc4de0c`…`bc28502`, not pushed. | [doc](dashboard-status-watchlist-journal-2026-09-23.md) |
 | 2026-09-23 | **Known issues reviewed with Faiz** | Closed without code: hand-made `equity` tags (fixable from the Holdings page), sidebar not responsive (mobile out of scope), old `NULL` positions (re-upload works). Railway ↔ local LLM planned as **Sprint 5B / F8** (local worker pulls queued runs from the shared DB, built with F5). Docs only. | [plan](owner-view-metrics-and-local-worker-plan-2026-09-23.md) §1, §3 |
 | 2026-09-23 | **Owner's-view metric definitions** | Buffett/Munger definitions for known issues 5–9: hybrid capital counted as debt (D/E and ROE on ordinary equity); FCF net of decommissioning, financing-classified interest, leases and hybrid coupons; owner earnings net of decommissioning + leases (the DCF uses the same helper); EBIT/EBITDA without biological fair value; *n/m* instead of ratios over a denominator ≤ 0. Vår FCF 1,787 → 1,116m (below the 1,170m dividend), net debt 5,242 → 6,042m; Salmon EBITDA −63 → −79m. Evidence packet v3. 12 new tests (514/516). Committed `34beec7`, not pushed. | [doc](owner-view-metrics-and-local-worker-plan-2026-09-23.md) §2 |
 | 2026-09-23 | **LLM & technology overview** | New doc: the 3 places an LLM is used (research = Gemini API; blind + reconciliation passes = Gemini API or local Ollama, with Mistral fallback), what the evidence packet does and doesn't contain, all non-LLM tech, and why each was chosen. Docs only. | [doc](llm-and-technology-overview.md) |
