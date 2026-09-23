@@ -32,6 +32,7 @@ import type {
   MacroResearch,
   MarginOfSafetyBoard,
   PortfolioImportResponse,
+  PortfolioOverview,
   PortfolioSnapshot,
   PortfolioSnapshotSummary,
   PortfolioWipeResult,
@@ -226,6 +227,9 @@ export const api = {
     request<HoldingValuation>(`/valuation/holdings/${holdingId}`),
   refreshHoldingValuation: (holdingId: string) =>
     request<HoldingValuation>(`/valuation/holdings/${holdingId}/refresh`, { method: "POST" }),
+
+  /** Sprint 5 dashboard — database-only roll-up (no market data, no LLM). */
+  getPortfolioOverview: () => request<PortfolioOverview>("/portfolio/overview"),
 
   /** F3 — every owned equity ranked by margin of safety. */
   getMarginOfSafetyBoard: () => request<MarginOfSafetyBoard>("/valuation/board"),

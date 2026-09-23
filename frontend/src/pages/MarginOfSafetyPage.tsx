@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, ApiError } from "../lib/api";
-import { formatDate, formatDecimal, formatPercent } from "../lib/format";
-import type { BoardRow, BoardZone, MarginOfSafetyBoard, VerdictRating } from "../lib/types";
-import { Card, EmptyState, PageHeader } from "../components/ui";
+import { formatDate, formatDecimal, formatNok, formatPercent } from "../lib/format";
+import type { BoardRow, BoardZone, MarginOfSafetyBoard } from "../lib/types";
+import { Card, EmptyState, PageHeader, VerdictBadge } from "../components/ui";
 
 /** Feature F3 — every stock you own, ranked by how far its price sits below
  * the DCF value (backend/app/services/valuation/board.py). All numbers are
@@ -24,21 +24,6 @@ const ZONE_DOT: Record<BoardZone, string> = {
   above_bull: "bg-negative",
   unavailable: "bg-ink-faint",
 };
-
-const VERDICT_STYLES: Record<VerdictRating, string> = {
-  "Strong Buy": "bg-positive text-white",
-  Buy: "bg-positive-subtle text-positive",
-  Hold: "bg-border-subtle text-ink",
-  Sell: "bg-negative-subtle text-negative",
-  Avoid: "bg-negative text-white",
-};
-
-function formatNok(value: string | null): string {
-  if (value === null) return "—";
-  const n = Number(value);
-  if (!Number.isFinite(n)) return value;
-  return `${Math.round(n).toLocaleString("nb-NO")} kr`;
-}
 
 /** Each row gets its own scale (prices and currencies differ per holding):
  * the bear–bull band, a tick at base, and a dot for today's price. */
@@ -101,16 +86,10 @@ function RankedTable({ rows }: { rows: BoardRow[] }) {
                   <p className="text-xs text-ink-faint">{row.ticker}</p>
                 </td>
                 <td className="py-3 pr-4">
-                  {row.verdict_rating ? (
-                    <span
-                      className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${VERDICT_STYLES[row.verdict_rating]}`}
-                      title={row.analyzed_at ? `Analyzed ${formatDate(row.analyzed_at)}` : undefined}
-                    >
-                      {row.verdict_rating}
-                    </span>
-                  ) : (
-                    <span className="text-xs text-ink-faint">Not analyzed</span>
-                  )}
+                  <VerdictBadge
+                    rating={row.verdict_rating}
+                    title={row.analyzed_at ? `Analyzed ${formatDate(row.analyzed_at)}` : undefined}
+                  />
                 </td>
                 <td className="w-56 py-3 pr-4">
                   {row.zone !== "unavailable" ? (

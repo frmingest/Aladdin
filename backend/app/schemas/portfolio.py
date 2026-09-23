@@ -131,3 +131,84 @@ class PortfolioWipeResult(BaseModel):
     snapshots_deleted: int
     positions_deleted: int
     legacy_analysis_purged: LegacyAnalysisPurgeCounts
+
+
+# --- Portfolio overview (Sprint 5 dashboard) --------------------------------
+
+
+class AllocationSliceOut(BaseModel):
+    key: str
+    label: str
+    value_nok: Decimal
+    weight_pct: Decimal
+    holding_count: int
+
+
+class RatingSliceOut(BaseModel):
+    rating: str
+    holding_count: int
+    value_nok: Decimal
+    weight_pct: Decimal
+
+
+class OverviewPositionOut(BaseModel):
+    holding_id: UUID
+    ticker: str
+    name: str
+    instrument_type: str
+    sector: str | None
+    trading_currency: str
+    value_nok: Decimal | None
+    weight_pct: Decimal | None
+    account_count: int
+    verdict_rating: str | None
+    moat_rating: str | None
+    analyzed_at: datetime | None
+    analysis_stale: bool
+
+
+class OverviewAccountOut(BaseModel):
+    account_id: UUID | None
+    name: str
+    value_nok: Decimal
+    position_count: int
+    snapshot_at: datetime
+    stale: bool
+
+
+class OverviewConcentrationOut(BaseModel):
+    hhi: Decimal | None
+    effective_holdings: Decimal | None
+    top1_pct: Decimal | None
+    top5_pct: Decimal | None
+    top10_pct: Decimal | None
+
+
+class SummaryPointOut(BaseModel):
+    tone: str
+    text: str
+
+
+class PortfolioOverviewOut(BaseModel):
+    """GET /portfolio/overview. Database-only, no market-data or LLM call.
+    Percentages are 0-100."""
+
+    as_of: datetime | None
+    total_value_nok: Decimal
+    equity_value_nok: Decimal
+    holding_count: int
+    position_count: int
+    positions_missing_value: int
+    accounts: list[OverviewAccountOut]
+    by_instrument_type: list[AllocationSliceOut]
+    by_sector: list[AllocationSliceOut]
+    by_currency: list[AllocationSliceOut]
+    concentration: OverviewConcentrationOut
+    verdicts: list[RatingSliceOut]
+    moats: list[RatingSliceOut]
+    analyzed_equity_count: int
+    equity_count: int
+    analyzed_equity_value_pct: Decimal | None
+    stale_analysis_count: int
+    positions: list[OverviewPositionOut]
+    summary: list[SummaryPointOut]

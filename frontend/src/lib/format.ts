@@ -61,3 +61,22 @@ export function formatMultiple(value: string): string {
   if (!Number.isFinite(n)) return value;
   return `${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}×`;
 }
+
+/** A NOK amount rounded to whole kroner, Norwegian grouping: "1 234 567 kr". */
+export function formatNok(value: string | number | null): string {
+  if (value === null) return "—";
+  const n = Number(value);
+  if (!Number.isFinite(n)) return String(value);
+  return `${Math.round(n).toLocaleString("nb-NO")} kr`;
+}
+
+/** A 0-100 percentage (the portfolio overview's convention): "12.3%". */
+export function formatPct100(value: string | number | null, fractionDigits = 1): string {
+  if (value === null) return "—";
+  const n = Number(value);
+  if (!Number.isFinite(n)) return String(value);
+  return `${n.toLocaleString("en-US", {
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
+  })}%`;
+}

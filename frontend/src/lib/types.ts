@@ -643,3 +643,79 @@ export interface MarginOfSafetyBoard {
   total_equity_value_nok: string;
   zone_counts: Record<BoardZone, number>;
 }
+
+// --- Portfolio overview (Sprint 5 dashboard) — backend/app/schemas/portfolio.py
+// Percentages in this block are 0-100, not fractions.
+
+export interface AllocationSlice {
+  key: string;
+  label: string;
+  value_nok: string;
+  weight_pct: string;
+  holding_count: number;
+}
+
+export interface RatingSlice {
+  rating: VerdictRating | MoatRating | "Not analyzed";
+  holding_count: number;
+  value_nok: string;
+  weight_pct: string;
+}
+
+export interface OverviewPosition {
+  holding_id: string;
+  ticker: string;
+  name: string;
+  instrument_type: string;
+  sector: string | null;
+  trading_currency: string;
+  value_nok: string | null;
+  weight_pct: string | null;
+  account_count: number;
+  verdict_rating: VerdictRating | null;
+  moat_rating: MoatRating | null;
+  analyzed_at: string | null;
+  analysis_stale: boolean;
+}
+
+export interface OverviewAccount {
+  account_id: string | null;
+  name: string;
+  value_nok: string;
+  position_count: number;
+  snapshot_at: string;
+  stale: boolean;
+}
+
+export interface SummaryPoint {
+  tone: "good" | "info" | "warn";
+  text: string;
+}
+
+export interface PortfolioOverview {
+  as_of: string | null;
+  total_value_nok: string;
+  equity_value_nok: string;
+  holding_count: number;
+  position_count: number;
+  positions_missing_value: number;
+  accounts: OverviewAccount[];
+  by_instrument_type: AllocationSlice[];
+  by_sector: AllocationSlice[];
+  by_currency: AllocationSlice[];
+  concentration: {
+    hhi: string | null;
+    effective_holdings: string | null;
+    top1_pct: string | null;
+    top5_pct: string | null;
+    top10_pct: string | null;
+  };
+  verdicts: RatingSlice[];
+  moats: RatingSlice[];
+  analyzed_equity_count: number;
+  equity_count: number;
+  analyzed_equity_value_pct: string | null;
+  stale_analysis_count: number;
+  positions: OverviewPosition[];
+  summary: SummaryPoint[];
+}

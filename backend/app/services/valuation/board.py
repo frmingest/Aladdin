@@ -31,6 +31,7 @@ from app.models.analysis import EquityAnalysisRun
 from app.models.holding import Holding
 from app.models.portfolio import PortfolioPosition, PortfolioSnapshot
 from app.providers.base import MarketDataProvider, RiskFreeRateProvider
+from app.services.analysis.latest import latest_runs_by_holding, run_ratings
 from app.services.valuation.holding_valuation import compute_holding_valuation
 
 # Where the current price sits relative to the bear/base/bull values.
@@ -93,20 +94,6 @@ def current_positions(db: Session) -> list[PortfolioPosition]:
     )
 
 
-def _latest_runs(db: Session, holding_ids: list[uuid.UUID]) -> dict[uuid.UUID, EquityAnalysisRun]:
-    if not holding_ids:
-        return {}
-    runs = db.scalars(
-        select(EquityAnalysisRun)
-        .where(EquityAnalysisRun.holding_id.in_(holding_ids))
-        .order_by(EquityAnalysisRun.started_at.desc())
-    ).all()
-    latest: dict[uuid.UUID, EquityAnalysisRun] = {}
-    for run in runs:
-        latest.setdefault(run.holding_id, run)
-    return latest
-
-
 def _zone(price: Decimal, bear: Decimal, base: Decimal, bull: Decimal) -> str:
     low, high = min(bear, bull), max(bear, bull)
     if price < low:
@@ -121,13 +108,7 @@ def _zone(price: Decimal, bear: Decimal, base: Decimal, bull: Decimal) -> str:
 def _attach_verdict(row: BoardRow, run: EquityAnalysisRun | None) -> None:
     if run is None:
         return
-    verdict = (run.reconciliation_json or {}).get("verdict") or (run.blind_pass_json or {}).get("verdict")
-    if verdict:
-        row.verdict_rating = verdict.get("rating")
-    moat = (run.blind_pass_json or {}).get("moat")
-    if moat:
-        row.moat_rating = moat.get("overall_rating")
-    row.analyzed_at = run.completed_at or run.blind_completed_at or run.started_at
+    row.verdict_rating, row.moat_rating, row.analyzed_at = run_ratings(run)
 
 
 def _sort_key(row: BoardRow) -> tuple:
@@ -164,7 +145,7 @@ def build_board(
     board.total_equity_value_nok = sum(
         (value_by_holding[h.id] or Decimal(0) for h in equities), Decimal(0)
     )
-    runs = _latest_runs(db, [h.id for h in equities])
+    runs = latest_runs_by_holding(db, [h.id for h in equities])
 
     for holding in equities:
         value = value_by_holding[holding.id]

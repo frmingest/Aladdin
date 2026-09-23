@@ -37,3 +37,4 @@ uploads/
 *.pptx
 *.xlsx
 !docs/**/*.pdf
+*.tsbuildinfo

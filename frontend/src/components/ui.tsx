@@ -120,3 +120,58 @@ export function Button({
     </button>
   );
 }
+
+const VERDICT_STYLES: Record<string, string> = {
+  "Strong Buy": "bg-positive text-white",
+  Buy: "bg-positive-subtle text-positive",
+  Hold: "bg-border-subtle text-ink",
+  Sell: "bg-negative-subtle text-negative",
+  Avoid: "bg-negative text-white",
+};
+
+/** The analysis verdict as a pill. Colour follows the verdict's meaning
+ * and the text always names it, so it's never colour-alone. */
+export function VerdictBadge({ rating, title }: { rating: string | null; title?: string }) {
+  if (!rating) return <span className="text-xs text-ink-faint">Not analyzed</span>;
+  return (
+    <span
+      className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${
+        VERDICT_STYLES[rating] ?? "bg-border-subtle text-ink-muted"
+      }`}
+      title={title}
+    >
+      {rating}
+    </span>
+  );
+}
+
+/** Small uppercase label, used for card headings on the dashboard pages. */
+export function SectionTitle({ children, hint }: { children: React.ReactNode; hint?: string }) {
+  return (
+    <div className="mb-3">
+      <h2 className="text-sm font-semibold text-ink">{children}</h2>
+      {hint && <p className="mt-0.5 text-xs text-ink-faint">{hint}</p>}
+    </div>
+  );
+}
+
+/** One headline number. */
+export function StatTile({
+  label,
+  value,
+  hint,
+  tone = "text-ink",
+}: {
+  label: string;
+  value: React.ReactNode;
+  hint?: React.ReactNode;
+  tone?: string;
+}) {
+  return (
+    <Card>
+      <p className="text-xs text-ink-muted">{label}</p>
+      <p className={`tabular mt-1 text-2xl font-semibold ${tone}`}>{value}</p>
+      {hint && <p className="mt-0.5 text-xs text-ink-faint">{hint}</p>}
+    </Card>
+  );
+}

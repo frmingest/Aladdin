@@ -43,6 +43,7 @@ from app.schemas.portfolio import (
     ConcentrationOut,
     LegacyAnalysisPurgeCounts,
     PortfolioImportResponse,
+    PortfolioOverviewOut,
     PortfolioPositionIn,
     PortfolioPositionOut,
     PortfolioSnapshotCreate,
@@ -54,6 +55,7 @@ from app.schemas.portfolio import (
 from app.services.calculations import herfindahl_hirschman_index
 from app.services.portfolio_import.csv_parser import CsvParseError
 from app.services.portfolio_import.ingestion import import_portfolio_csv
+from app.services.portfolio_overview import build_overview
 
 router = APIRouter(prefix="/portfolio", tags=["portfolio"])
 
@@ -514,3 +516,13 @@ def get_concentration(snapshot_id: UUID, db: Session = Depends(get_db)) -> Conce
 
     hhi = herfindahl_hirschman_index(weights)
     return ConcentrationOut(snapshot_id=snapshot_id, hhi=hhi, position_count=len(weights))
+
+
+@router.get("/overview", response_model=PortfolioOverviewOut)
+def get_portfolio_overview(db: Session = Depends(get_db)) -> PortfolioOverviewOut:
+    """Sprint 5 dashboard roll-up: value, allocation, concentration,
+    verdict/moat roll-up and a deterministic executive summary over the
+    latest snapshot of each account (app/services/portfolio_overview.py).
+    Database-only; never calls market data or an LLM."""
+    overview = build_overview(db)
+    return PortfolioOverviewOut.model_validate(overview, from_attributes=True)

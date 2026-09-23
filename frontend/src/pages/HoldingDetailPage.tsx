@@ -517,7 +517,7 @@ export default function HoldingDetailPage() {
     }
     try {
       await api.deleteHolding(id, true);
-      navigate("/");
+      navigate("/holdings");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not delete this holding.");
     }
@@ -529,7 +529,7 @@ export default function HoldingDetailPage() {
     return (
       <div className="mx-auto max-w-5xl px-8 py-8">
         <p className="text-sm text-negative">{error}</p>
-        <Link to="/" className="mt-4 inline-block text-sm text-accent hover:text-accent-hover">
+        <Link to="/holdings" className="mt-4 inline-block text-sm text-accent hover:text-accent-hover">
           ← Back to holdings
         </Link>
       </div>
@@ -546,7 +546,7 @@ export default function HoldingDetailPage() {
 
   return (
     <div className="mx-auto max-w-5xl px-8 py-8">
-      <Link to="/" className="mb-4 inline-block text-sm text-ink-muted hover:text-ink">
+      <Link to="/holdings" className="mb-4 inline-block text-sm text-ink-muted hover:text-ink">
         ← Holdings
       </Link>
       <PageHeader

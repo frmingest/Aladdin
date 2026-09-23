@@ -1,5 +1,6 @@
 import { Route, Routes } from "react-router-dom";
 import Layout from "./components/Layout";
+import DashboardPage from "./pages/DashboardPage";
 import HoldingsListPage from "./pages/HoldingsListPage";
 import HoldingDetailPage from "./pages/HoldingDetailPage";
 import PortfolioPage from "./pages/PortfolioPage";
@@ -23,7 +24,8 @@ export default function App() {
   return (
     <Layout>
       <Routes>
-        <Route path="/" element={<HoldingsListPage />} />
+        <Route path="/" element={<DashboardPage />} />
+        <Route path="/holdings" element={<HoldingsListPage />} />
         <Route path="/holdings/:id" element={<HoldingDetailPage />} />
         <Route path="/portfolio" element={<PortfolioPage />} />
         <Route path="/margin-of-safety" element={<MarginOfSafetyPage />} />
