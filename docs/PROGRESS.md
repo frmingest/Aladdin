@@ -13,8 +13,8 @@ Quick-glance tracker. Detail for each item lives in its own linked doc; this pag
 | **Current phase** | Phase 11: the Buffett/Munger single-focus rebuild ([sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md)) |
 | **Sprints closed** | 0, 1, 2, 3, 4 |
 | **In progress** | Sprint 5: F3 board ✅ done; portfolio roll-up dashboard + executive summary left |
-| **Latest build** | Revert of the LLM PDF-extraction commit (`8e1c1fb`) — committed locally, **not pushed**. ESEF `.xhtml` + CSV uploads (`2e49de7`) are on GitHub; **deploy not verified**. Before it: local LLM engine (Ollama, verified locally, not pushed). F1–F3 are on GitHub (`1a31b79`); deploy not verified this session. |
-| **Tests** | 486/486 backend, tsc/eslint/vite build clean |
+| **Latest build** | Vår Energi upload validation + document/holding deletes (`be4b7e7`) — committed locally, **not pushed, not deployed**. Everything up to `70c0b04` is on GitHub per `origin/main`; deploy not verified. |
+| **Tests** | 502/504 backend (2 `test_factory` failures are local-only: `.env` selects Ollama), tsc/eslint/vite build clean |
 | **Live-verified?** | ❌ The analysis engine, EDGAR and Newsweb have only been tested against fakes. The new UI was checked with mocked API data only. |
 
 ---
@@ -27,7 +27,7 @@ Quick-glance tracker. Detail for each item lives in its own linked doc; this pag
 | ★ | Railway Variables: `LLM_PROVIDER=google_ai_studio` (or unset), `LLM_FALLBACK_PROVIDER=none` | Railway can't reach Ollama on your PC |
 | ★ | Fix the 1 remaining readiness blocker on the first holding, then run the first local analysis | First real run on the local LLM |
 | ★ | Change Vår Energi's ticker `VARRY` → **`VAR.OL`**; fix sectors: Xetra-Gold + L&G Gold Mining → Materials, Salmon Evolution → Consumer Staples | [ticker decision](local-llm-tickers-ui-2026-09-23.md#2-ticker-convention--decision) |
-| ★ | Push `main` (revert `8e1c1fb`) and redeploy | Removes the unwanted PDF-extraction feature from GitHub/Railway; ships the `.xhtml`/`.csv` uploads |
+| ★ | Push `main` (`be4b7e7`) and redeploy, then on Vår Energi **Delete** the `.xhtml` and **re-upload** it | Old facts were extracted with the old mapping; the fix only applies on re-extraction — [doc](upload-validation-var-energi-and-deletes-2026-09-23.md) |
 | ★ | Upload the **ESEF annual report `.xhtml`** for each Oslo holding (2 years each gives 3 years of history) | Most reliable source of figures — [upload doc](financial-statement-uploads-xhtml-csv-2026-09-23.md) |
 | 1 | Set `MARKET_DATA_PROVIDER=yfinance` and `RESEARCH_PROVIDER=gemini_search` in Railway and `backend/.env` | The analysis engine can't produce real output while these are `stub`. No new key is needed. |
 | 2 | Add `SEC_EDGAR_USER_AGENT` (e.g. `Aladdin portfolio app <email>`) in Railway and `backend/.env` | SEC requires a contact email. EDGAR import errors until this is set. |
@@ -103,6 +103,8 @@ Detail: [free-market-data-research-providers-2026-09-21.md](free-market-data-res
 | App sidebar isn't responsive | On a phone the fixed sidebar squeezes every page | Not scheduled — app-wide layout fix |
 | Positions imported before migration `a2b4c6d8e0f1` have `NULL` `last_price`/`market_value_nok` | Re-uploading the CSV fills them in | Faiz re-upload (done 2026-09-22) |
 | No GitHub push credentials in any session shell | Faiz pushes manually | Needs a PAT or credential helper from Faiz |
+| Hybrid capital counted in equity (Vår: equity 560m incl. 799.5m hybrid; ordinary equity −239.5m) | D/E understated; shown with a warning | Decide: add an "ordinary equity" fact — [doc](upload-validation-var-energi-and-deletes-2026-09-23.md) §4 |
+| IFRS FCF is before interest paid + lease payments when they're classified in financing | Vår FCF 1,787m vs ~1,293m US-GAAP-comparable | Needs a decision — same doc §4 |
 | ESEF notes are only block-tagged; shares outstanding rarely tagged | Note tables arrive as text, not figures; no per-share value from ESEF alone | [upload doc](financial-statement-uploads-xhtml-csv-2026-09-23.md) §3 |
 
 ---
@@ -111,6 +113,7 @@ Detail: [free-market-data-research-providers-2026-09-21.md](free-market-data-res
 
 | Date | Change | Summary | Detail |
 |---|---|---|---|
+| 2026-09-23 | **Upload validation (Vår Energi) + deletes** | All 296 tagged numbers in Vår's FY2025 `.xhtml` were read correctly, but 5 mapping choices were wrong for a shareholder: net income (now to ordinary holders, 785.2m), revenue (excl. other income), capex (+ exploration), and EBIT/EBITDA plus interest proxy (new). Result: FCF 2,150→1,787m, net margin 10.5→9.9%; ND/EBITDA and interest coverage now computed. Also: statement integrity checks, hybrid-equity warning, mixed-currency guard, per-figure source table, currency on the panel. New deletes (all `confirm=true`): one document, all of a holding's data, cascade holding delete, and holdings clean slate + UI. 504 tests (18 new). Committed `be4b7e7`, not pushed. | [doc](upload-validation-var-energi-and-deletes-2026-09-23.md) |
 | 2026-09-23 | **Reverted: LLM PDF figure extraction** | Faiz decided against it. `8e1c1fb` reverts `9a0db96` (propose/approve endpoints, extraction service/schema/prompt, `FinancialsExtractPanel`, tests). ESEF/CSV uploads unaffected; tree identical to `ffe5a1e` (486 tests, build clean). Not pushed. | — |
 | 2026-09-23 | **Uploads: ESEF `.xhtml` + CSV statements** | New inline-XBRL parser (tagged annual facts → metrics, readable page text, tagged-facts evidence page, XXE-safe, 80 MB limit). New statement-table parser for IR CSV/Excel (scale/currency, annual columns only, segment tables ignored, conflicts reported). Later documents never overwrite a year on file. Fixed a latent `GET /documents` 500 on detail flags. Tested on Vår Energi + Orkla files. 486 tests (63 new). Committed `2e49de7`, not pushed. | [doc](financial-statement-uploads-xhtml-csv-2026-09-23.md) |
 | 2026-09-23 | **Ollama set up on Faiz's PC — verified** | Recreated a broken backend venv, started local backend + frontend; readiness shows "Ollama reachable, model 'qwen3:14b' available". Setup guide gained a "what must be running" table and 5 troubleshooting rows from this session. Docs only. | [guide](local-llm-ollama-setup.md) |

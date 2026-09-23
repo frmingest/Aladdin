@@ -72,6 +72,7 @@ holding's notes), Rule 5 (both prompts explicitly frame evidence/notes as data, 
 | 15 | Sprint 4 session scope | **Full evidence packet + two-pass engine, backend only** (Recommended) — frontend deferred to a follow-up session, mirroring Sprint 3's split. |
 | 16 | Sprint 4 user-notes input: build now or ship blind pass alone first? | **Build both passes now, notes optional** (Recommended) — an empty-notes holding still gets a reconciliation pass, just with less to weigh against the blind evidence-based view. |
 | 17 | Sprint 4 document-extraction quality: fix now or defer? | **Defer** (Recommended) — ship the analysis engine against what Sprint 1's ingestion already extracts; revisit only if real runs show it's actually the bottleneck. |
+| 18 | Deleting documents/holdings (2026-09-23, supersedes #14's "Documents untouched") | **Allowed, always `confirm=true`:** one document, all of a holding's data, cascade holding delete, and a holdings clean slate that requires the portfolio wiped first. Stored files removed after the DB commit. Spend history (`llm_usage_events`) and FX/rate reference data are never deleted. |
 
 ## Actual current Supabase schema
 
@@ -224,6 +225,7 @@ the status page can ship earlier).
 
 | Date | Summary |
 |---|---|
+| 2026-09-23 | **Upload validation + deletes.** Vår Energi's FY2025 ESEF filing was checked figure by figure: every tag was read correctly, but net income, revenue, capex, EBIT/EBITDA and interest are now mapped the way a shareholder needs them. Statement integrity checks, a hybrid-equity warning, a mixed-currency guard and per-figure provenance were added. New document/holding delete endpoints and UI (decision 18). `be4b7e7`, not pushed. See [upload-validation-var-energi-and-deletes-2026-09-23.md](upload-validation-var-energi-and-deletes-2026-09-23.md). |
 | 2026-09-23 | **Reverted LLM-assisted PDF figure extraction** (`8e1c1fb` reverts `9a0db96`) — Faiz decided against it. PDFs stay text-only; ESEF `.xhtml`/CSV uploads are the figure sources for non-US holdings. |
 | 2026-09-23 | **Financial-statement uploads: ESEF `.xhtml` + CSV.** Inline-XBRL parser (tagged annual facts → canonical metrics via the EDGAR concept map, readable pages, tagged-facts evidence page) and a shared statement-table parser for IR CSV/Excel (annual columns only, scale/currency from the unit line). First source wins per metric/year; differences reported. Fixes a latent `GET /documents` 500. 486 tests (63 new). See [financial-statement-uploads-xhtml-csv-2026-09-23.md](financial-statement-uploads-xhtml-csv-2026-09-23.md). |
 | 2026-09-23 | **Local LLM engine (Ollama) + ticker convention + UI tweaks.** `OllamaProvider` behind the factory (`LLM_PROVIDER=ollama`): analysis passes on the local RTX 3060, research stays on Gemini. Readiness gains a "Local LLM" check. Ticker rule: home-exchange Yahoo symbol (`VAR.OL`), never an unsponsored OTC ADR. Primary sources collapsible at the bottom; darker palette (Design & UX tokens updated). 423 tests (20 new). See [local-llm-tickers-ui-2026-09-23.md](local-llm-tickers-ui-2026-09-23.md). |
