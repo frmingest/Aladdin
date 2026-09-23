@@ -37,9 +37,6 @@ import type {
   SectorResearch,
   SnapshotDeleteResult,
   SourceEligibility,
-  FinancialsApproveResult,
-  FinancialsProposal,
-  StatementFact,
 } from "./types";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL as string | undefined;
@@ -121,23 +118,6 @@ export const api = {
     request<string[]>(`/holdings/${holdingId}/periods`),
   getHoldingMetrics: (holdingId: string, period: string) =>
     request<HoldingMetrics>(`/holdings/${holdingId}/metrics`, { query: { period } }),
-
-  /** LLM reads the statement pages and proposes figures; nothing is saved. */
-  proposeFinancials: (documentId: string, pages?: number[]) =>
-    request<FinancialsProposal>(`/documents/${documentId}/financials/propose`, {
-      method: "POST",
-      body: JSON.stringify(pages && pages.length ? { pages } : {}),
-    }),
-  /** Saves approved figures (the server re-checks each against its page). */
-  approveFinancials: (
-    documentId: string,
-    facts: StatementFact[],
-    meta: { provider: string; model: string },
-  ) =>
-    request<FinancialsApproveResult>(`/documents/${documentId}/financials/approve`, {
-      method: "POST",
-      body: JSON.stringify({ facts, ...meta }),
-    }),
 
   listDocuments: (holdingId: string) =>
     request<DocumentSummary[]>("/documents", { query: { holding_id: holdingId } }),

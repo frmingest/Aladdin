@@ -7,7 +7,6 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from app.config.database import get_db
-from app.config.settings import get_settings
 from app.domain.document_types import DOCUMENT_TYPES
 from app.domain.errors import (
     FileTooLargeError,
@@ -17,12 +16,7 @@ from app.domain.errors import (
 from app.models.document import Document, DocumentPage
 from app.models.financial_line_item import FinancialLineItem
 from app.models.holding import Holding
-from app.providers.base import LLMProvider, LLMUnavailableError
-from app.providers.factory import (
-    get_llm_fallback_provider,
-    get_llm_provider,
-    get_object_storage,
-)
+from app.providers.factory import get_object_storage
 from app.schemas.document import (
     PREVIEW_CHARS,
     DocumentDetail,
@@ -30,19 +24,6 @@ from app.schemas.document import (
     DocumentPageOut,
     DocumentUploadResponse,
     FinancialLineItemOut,
-)
-from app.schemas.financial_extraction import (
-    ApproveFinancialsIn,
-    ApproveFinancialsOut,
-    FinancialsProposalOut,
-    ProposedFactOut,
-    ProposeFinancialsIn,
-)
-from app.services.documents.financial_extraction import (
-    FinancialExtractionError,
-    ProposedFact,
-    propose_financials,
-    save_approved_financials,
 )
 from app.services.documents.ingestion import ingest_holding_document
 
@@ -171,92 +152,3 @@ def get_document(document_id: UUID, db: Session = Depends(get_db)) -> DocumentDe
     if document is None:
         raise HTTPException(status_code=404, detail="document not found")
     return _doc_to_detail(db, document)
-
-
-# --- LLM-assisted financial extraction from PDF filings (2026-09-23) ---------
-
-
-def _fact_out(f: ProposedFact) -> ProposedFactOut:
-    return ProposedFactOut(
-        metric=f.metric,
-        fiscal_year=f.fiscal_year,
-        period=f.period,
-        value_as_printed=f.value_as_printed,
-        scale=f.scale,
-        currency=f.currency,
-        source_page=f.source_page,
-        label_as_printed=f.label_as_printed,
-        status=f.status,
-        reasons=f.reasons,
-        warnings=f.warnings,
-        stored_value=f.stored_value,
-        stored_unit=f.stored_unit,
-        existing_value=f.existing_value,
-    )
-
-
-def _get_document_or_404(db: Session, document_id: UUID) -> Document:
-    document = db.get(Document, document_id)
-    if document is None:
-        raise HTTPException(status_code=404, detail="document not found")
-    return document
-
-
-@router.post("/{document_id}/financials/propose", response_model=FinancialsProposalOut)
-def propose_document_financials(
-    document_id: UUID,
-    payload: ProposeFinancialsIn | None = None,
-    db: Session = Depends(get_db),
-    llm_provider: LLMProvider = Depends(get_llm_provider),
-    llm_fallback_provider: LLMProvider | None = Depends(get_llm_fallback_provider),
-) -> FinancialsProposalOut:
-    """LLM transcribes statement lines; code verifies each number is on its
-    page. Nothing is saved — the user approves via .../financials/approve."""
-    document = _get_document_or_404(db, document_id)
-    try:
-        proposal = propose_financials(
-            db,
-            document,
-            llm_provider=llm_provider,
-            llm_fallback_provider=llm_fallback_provider,
-            version=get_settings().active_financials_extraction_version,
-            pages=payload.pages if payload else None,
-        )
-    except FinancialExtractionError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-    except LLMUnavailableError as exc:
-        raise HTTPException(status_code=503, detail=f"LLM unavailable: {exc}") from exc
-    return FinancialsProposalOut(
-        document_id=proposal.document_id,
-        pages_sent=proposal.pages_sent,
-        auto_selected=proposal.auto_selected,
-        provider=proposal.provider,
-        model=proposal.model,
-        prompt_version=proposal.prompt_version,
-        input_tokens=proposal.input_tokens,
-        output_tokens=proposal.output_tokens,
-        facts=[_fact_out(f) for f in proposal.facts],
-    )
-
-
-@router.post("/{document_id}/financials/approve", response_model=ApproveFinancialsOut)
-def approve_document_financials(
-    document_id: UUID, payload: ApproveFinancialsIn, db: Session = Depends(get_db)
-) -> ApproveFinancialsOut:
-    """Saves the approved facts after re-verifying each against the stored
-    page text. Replaces this document's earlier extracted facts."""
-    document = _get_document_or_404(db, document_id)
-    try:
-        result = save_approved_financials(
-            db,
-            document,
-            payload.facts,
-            provider=payload.provider,
-            model=payload.model,
-            version=get_settings().active_financials_extraction_version,
-        )
-    except FinancialExtractionError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-    return ApproveFinancialsOut(
-        saved=[_fact_out(f) for f in result.saved], refused=[_fact_out(f) for f in result.refused]
-    )
