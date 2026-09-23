@@ -258,3 +258,61 @@ def test_hybrid_capital_inside_equity_is_flagged_not_silently_reclassified():
     assert "ACME:HybridCapital" in note and "-239 500 000" in note
     # The coupon (a duration fact) is not mistaken for an equity instrument.
     assert len(result.details["equity_includes_hybrid_capital"]) == 1
+
+
+# --- owner's-view facts added 2026-09-23 (Buffett/Munger definitions, see
+# claude/fy2025-uploads-external-validation-2026-09-23.md) ------------------
+
+OWNER_CASH_FLOW = (
+    f"<tr><td>Decommissioning</td><td>{_nf('ACME:PaymentsForRemovalAndDecommissioningOfOilAndGasFieldsClassifiedAsInvestingActivities', 'fy25', '116.4')}</td></tr>"
+    f"<tr><td>Lease payments</td><td>{_nf('ifrs-full:PaymentsOfLeaseLiabilitiesClassifiedAsFinancingActivities', 'fy25', '125.6')}</td></tr>"
+    f"<tr><td>Hybrid coupon paid</td><td>{_nf('ACME:DividendsPaidToHybridCapitalOwnersClassifiedAsFinancingActivities', 'fy25', '61.3')}</td></tr>"
+    f"<tr><td>Hybrid issued</td><td>{_nf('ACME:ProceedsFromIssueOfHybridCapitalClassifiedAsFinancingActivities', 'fy25', '500.0')}</td></tr>"
+)
+
+
+def test_owner_view_cash_outflows_are_extracted_as_positive_facts():
+    result = extract_ixbrl(_filing(VAR_INCOME + OWNER_CASH_FLOW, VAR_BALANCE))
+    facts = _facts(result)
+    assert facts[("decommissioning_payments", "FY2025")].value == Decimal(116400000)
+    assert facts[("lease_payments_financing", "FY2025")].value == Decimal(125600000)
+    assert facts[("interest_paid_financing", "FY2025")].value == Decimal(368600000)
+    # Only the coupon; the issue proceeds are not a distribution.
+    assert facts[("hybrid_distributions", "FY2025")].value == Decimal(61300000)
+    sources = result.details["ixbrl"]["fact_sources"]
+    assert sources["FY2025 decommissioning_payments"].startswith("derived:")
+
+
+def test_hybrid_capital_is_extracted_as_its_own_fact():
+    fact = _facts(_var())[("hybrid_capital", "FY2025")]
+    assert fact.value == Decimal(799500000)
+
+
+def test_interest_paid_extension_lines_are_summed():
+    # Salmon Evolution 2025 tags finance costs paid and lease interest as
+    # two company-extension lines of the financing section.
+    rows = (
+        f"<tr><td>Finance costs paid</td><td>{_nf('ACME:FinanceCostsPaidClassifiedAsFinancingActivities', 'fy25', '92.078')}</td></tr>"
+        f"<tr><td>Lease interest</td><td>{_nf('ACME:InterestPaidOnLeaseLiabilitiesClassifiedAsFinancingActivities', 'fy25', '2.503')}</td></tr>"
+    )
+    fact = _facts(extract_ixbrl(_filing(INCOME + rows, BALANCE)))[("interest_paid_financing", "FY2025")]
+    assert fact.value == Decimal(94581000)
+    assert fact.confidence < 1.0
+
+
+def test_biological_asset_fair_value_is_taken_out_of_ebit_and_ebitda():
+    # Salmon Evolution 2025 (NOK thousand): operating profit -143 276 includes
+    # a +15 630 unrealised fair-value gain on the fish; operational EBIT is
+    # -158 906 and operational EBITDA -78 685.
+    rows = (
+        f"<tr><td>D&amp;A</td><td>{_nf('ifrs-full:DepreciationAmortisationAndImpairmentLossReversalOfImpairmentLossRecognisedInProfitOrLoss', 'fy25', '80 221', scale='3')}</td></tr>"
+        f"<tr><td>Fair value</td><td>{_nf('ifrs-full:GainsLossesOnFairValueAdjustmentBiologicalAssets', 'fy25', '15 630', scale='3')}</td></tr>"
+        f"<tr><td>Operating profit</td><td>{_nf('ifrs-full:ProfitLossFromOperatingActivities', 'fy25', '143 276', scale='3', sign='-')}</td></tr>"
+    )
+    result = extract_ixbrl(_filing(rows, BALANCE))
+    facts = _facts(result)
+    assert facts[("ebit", "FY2025")].value == Decimal(-158906000)
+    assert facts[("ebitda", "FY2025")].value == Decimal(-78685000)
+    # The reported operating profit (used for the operating margin) is unchanged.
+    assert facts[("operating_income", "FY2025")].value == Decimal(-143276000)
+    assert "BiologicalAssets" in result.details["ixbrl"]["fact_sources"]["FY2025 ebitda"]

@@ -30,6 +30,14 @@ CANONICAL_METRICS = (
     "cash_and_equivalents",
     "capital_expenditures",
     "interest_expense",
+    # Owner's-view inputs (2026-09-23): hybrid capital inside equity, and
+    # cash outflows IFRS lets a company classify outside operating
+    # activities. See app/services/metrics.py.
+    "hybrid_capital",
+    "decommissioning_payments",
+    "interest_paid_financing",
+    "lease_payments_financing",
+    "hybrid_distributions",
 )
 
 # Exact-match (case-insensitive, whitespace-normalized) label -> canonical
@@ -163,6 +171,11 @@ POSITIVE_MAGNITUDE_METRICS: frozenset[str] = frozenset(
         "depreciation_and_amortization",
         "capital_expenditures",
         "interest_expense",
+        "hybrid_capital",
+        "decommissioning_payments",
+        "interest_paid_financing",
+        "lease_payments_financing",
+        "hybrid_distributions",
     }
 )
 

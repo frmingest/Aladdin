@@ -242,6 +242,11 @@ export const FACT_LABELS: Record<string, string> = {
   cash_and_equivalents: "Cash & equivalents",
   interest_expense: "Interest expense",
   shares_outstanding: "Shares outstanding",
+  hybrid_capital: "Hybrid capital (in equity)",
+  decommissioning_payments: "Decommissioning payments",
+  interest_paid_financing: "Interest paid (financing)",
+  lease_payments_financing: "Lease payments",
+  hybrid_distributions: "Hybrid capital coupons",
 };
 
 export const PERCENT_METRICS = new Set([

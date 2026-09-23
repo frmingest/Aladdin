@@ -66,8 +66,16 @@ function MetricsPanel({ holdingId }: { holdingId: string }) {
     );
   }
 
-  const computedKeys = METRIC_ORDER.filter((k) => metrics?.computed[k] !== undefined);
-  const skippedKeys = METRIC_ORDER.filter((k) => metrics?.skipped[k] !== undefined);
+  // "not meaningful" (e.g. net debt / EBITDA when EBITDA is negative) is a
+  // result, not a gap — shown with the computed ratios as "n/m" + reason.
+  const isNotMeaningful = (k: string) =>
+    metrics?.skipped[k]?.startsWith("not meaningful") ?? false;
+  const computedKeys = METRIC_ORDER.filter(
+    (k) => metrics?.computed[k] !== undefined || isNotMeaningful(k),
+  );
+  const skippedKeys = METRIC_ORDER.filter(
+    (k) => metrics?.skipped[k] !== undefined && !isNotMeaningful(k),
+  );
 
   function renderValue(key: string, value: string) {
     if (PERCENT_METRICS.has(key)) return formatPercent(value);
@@ -127,9 +135,16 @@ function MetricsPanel({ holdingId }: { holdingId: string }) {
                       <div className="flex justify-between gap-4">
                         <dt className="text-ink-muted">{METRIC_LABELS[key]}</dt>
                         <dd className="tabular font-medium text-ink">
-                          {renderValue(key, metrics.computed[key])}
+                          {metrics.computed[key] !== undefined
+                            ? renderValue(key, metrics.computed[key])
+                            : "n/m"}
                         </dd>
                       </div>
+                      {metrics.computed[key] === undefined && (
+                        <p className="mt-0.5 text-xs text-ink-muted">
+                          {metrics.skipped[key].replace(/^not meaningful: /, "")}
+                        </p>
+                      )}
                       {metrics.notes[key] && (
                         <p className="mt-0.5 text-xs text-ink-muted">{metrics.notes[key]}</p>
                       )}

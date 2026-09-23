@@ -134,6 +134,46 @@ _IMPAIRMENT = "ifrs-full:ImpairmentLossReversalOfImpairmentLossRecognisedInProfi
 _OTHER_EQUITY_CONCEPTS = ("ifrs-full:OtherEquityInterest",)
 _OTHER_EQUITY_NAME = re.compile(r"(Hybrid|Perpetual)", re.IGNORECASE)
 
+# Fair-value changes on living stock (salmon, livestock, crops) are
+# unrealised, non-cash gains/losses. Taken out of EBIT and EBITDA the way the
+# industry reports "operational EBIT" (Salmon Evolution 2025: +15.6 NOKm).
+_BIOLOGICAL_FAIR_VALUE = (
+    "ifrs-full:GainsLossesOnFairValueAdjustmentBiologicalAssets",
+    "ifrs-full:GainLossArisingFromChangesInFairValueLessCostsToSellOfBiologicalAssets",
+)
+
+# Owner's-view cash outflows (decided 2026-09-23, see
+# claude/fy2025-uploads-external-validation-2026-09-23.md). IFRS lets a
+# company put these outside operating activities, so operating cash flow
+# minus capex overstates what is left for the ordinary shareholder. Each is
+# extracted as its own positive fact; app/services/metrics.py subtracts it.
+# Standard concept first; otherwise every matching company-extension line of
+# the cash-flow statement is summed (cash-flow lines are additive).
+_OWNER_VIEW_STANDARD: dict[str, tuple[str, ...]] = {
+    "interest_paid_financing": ("ifrs-full:InterestPaidClassifiedAsFinancingActivities",),
+    "lease_payments_financing": ("ifrs-full:PaymentsOfLeaseLiabilitiesClassifiedAsFinancingActivities",),
+    "decommissioning_payments": (),
+    "hybrid_distributions": (),
+}
+_OWNER_VIEW_EXTENSION: dict[str, re.Pattern] = {
+    # Salmon Evolution: FinanceCostsPaid... + InterestPaidOnLeaseLiabilities...
+    "interest_paid_financing": re.compile(
+        r"(InterestPaid|FinanceCostsPaid)\w*ClassifiedAsFinancingActivities$"
+    ),
+    "lease_payments_financing": re.compile(
+        r"^PaymentsOfLeaseLiabilities\w*ClassifiedAsFinancingActivities$"
+    ),
+    # Vår Energi: PaymentsForRemovalAndDecommissioningOfOilAndGasFields...
+    "decommissioning_payments": re.compile(
+        r"(Decommissioning|Abandonment)\w*ClassifiedAs(Investing|Financing)Activities$"
+    ),
+    # Vår Energi: DividendsPaidToHybridCapitalOwnersClassifiedAsFinancingActivities
+    "hybrid_distributions": re.compile(
+        r"(Dividend|Distribution|Coupon|Interest)\w*(Hybrid|Perpetual)\w*ClassifiedAsFinancingActivities$"
+    ),
+}
+OWNER_VIEW_METRICS = ("hybrid_capital", *_OWNER_VIEW_STANDARD)
+
 # Arithmetic identities every IFRS statement must satisfy. A failure means
 # the filing, or our reading of it, is wrong — flagged, never hidden.
 # (lhs, rhs terms as (concept, +1/-1))
@@ -405,6 +445,28 @@ def _resolve_metric(
             )
         # fall through to the generic concept list
 
+    biological = next((get(c) for c in _BIOLOGICAL_FAIR_VALUE if get(c) is not None), None)
+    if biological is not None and biological.value == 0:
+        biological = None
+
+    if metric == "ebit":
+        operating = get(_OPERATING_PROFIT)
+        if operating is not None and biological is not None and biological.unit == operating.unit:
+            return (
+                operating.value - biological.value,
+                DERIVED_CONFIDENCE,
+                f"derived: {operating.concept} - {biological.concept}",
+                operating.unit,
+                operating.page or None,
+            )
+        # fall through to the concept list
+
+    if metric == "hybrid_capital":
+        return _hybrid_capital(fy, resolved)
+
+    if metric in _OWNER_VIEW_STANDARD:
+        return _owner_view_outflow(metric, fy, resolved)
+
     if metric == "ebitda":
         operating = get(_OPERATING_PROFIT)
         if operating is None:
@@ -427,13 +489,11 @@ def _resolve_metric(
             return None
         if len({operating.unit, *(a.unit for a in addbacks)}) != 1:
             return None
-        return (
-            value,
-            DERIVED_CONFIDENCE,
-            "derived: " + " + ".join([operating.concept, *(a.concept for a in addbacks)]),
-            operating.unit,
-            operating.page or None,
-        )
+        source = "derived: " + " + ".join([operating.concept, *(a.concept for a in addbacks)])
+        if biological is not None and biological.unit == operating.unit:
+            value -= biological.value
+            source += f" - {biological.concept}"
+        return (value, DERIVED_CONFIDENCE, source, operating.unit, operating.page or None)
 
     concepts = CONCEPT_MAP.get(metric, ())
     chosen = next((get(c) for c in concepts if get(c) is not None), None)
@@ -455,6 +515,52 @@ def _resolve_metric(
     if proxy is not None:
         return proxy.value, PROXY_CONFIDENCE, f"proxy: {proxy.concept}", proxy.unit, proxy.page or None
     return None
+
+
+def _hybrid_capital(
+    fy: str, resolved: dict[tuple[str, str], TaggedFact]
+) -> tuple[Decimal, float, str, str | None, int | None] | None:
+    """Hybrid/perpetual capital inside total equity (same balance-sheet
+    context), summed. Treated as debt by app/services/metrics.py."""
+    parts = _other_equity_facts(fy, resolved)
+    if not parts:
+        return None
+    total = sum((_positive(f) for f in parts), Decimal(0))
+    confidence = IXBRL_CONFIDENCE if len(parts) == 1 else DERIVED_CONFIDENCE
+    source = " + ".join(f.concept for f in parts)
+    return total, confidence, source if len(parts) == 1 else f"derived: {source}", parts[0].unit, parts[0].page or None
+
+
+def _owner_view_outflow(
+    metric: str, fy: str, resolved: dict[tuple[str, str], TaggedFact]
+) -> tuple[Decimal, float, str, str | None, int | None] | None:
+    standard = next(
+        (resolved[(c, fy)] for c in _OWNER_VIEW_STANDARD[metric] if (c, fy) in resolved), None
+    )
+    if standard is not None:
+        return _positive(standard), IXBRL_CONFIDENCE, standard.concept, standard.unit, standard.page or None
+    pattern = _OWNER_VIEW_EXTENSION[metric]
+    parts = sorted(
+        (
+            fact
+            for (concept, year), fact in resolved.items()
+            if year == fy
+            and not concept.startswith("ifrs-full:")
+            and pattern.search(concept.split(":", 1)[-1])
+            and not re.search(r"(Proceeds|Repayment|Redemption|Issue)", concept.split(":", 1)[-1])
+            and (
+                metric == "hybrid_distributions"
+                or not _OTHER_EQUITY_NAME.search(concept.split(":", 1)[-1])
+            )
+            and fact.value != 0
+        ),
+        key=lambda f: f.concept,
+    )
+    if not parts or len({p.unit for p in parts}) != 1:
+        return None
+    total = sum((_positive(p) for p in parts), Decimal(0))
+    source = " + ".join(p.concept for p in parts)
+    return total, DERIVED_CONFIDENCE, f"derived: {source}", parts[0].unit, parts[0].page or None
 
 
 def _decimals_tolerance(facts: list[TaggedFact]) -> Decimal:
@@ -491,34 +597,41 @@ def _integrity_checks(
     return {"passed": passed, "failed": failed}
 
 
+def _other_equity_facts(fy: str, resolved: dict[tuple[str, str], TaggedFact]) -> list[TaggedFact]:
+    equity = resolved.get(("ifrs-full:Equity", fy))
+    if equity is None:
+        return []
+    found: list[TaggedFact] = []
+    for (concept, year), fact in sorted(resolved.items(), key=lambda item: item[0]):
+        # Same balance-sheet context as total equity (an instant at the
+        # year end, no dimensions) — never a duration fact like a coupon.
+        if year != fy or fact.value == 0 or fact.context_id != equity.context_id:
+            continue
+        local = concept.split(":", 1)[-1]
+        is_other_equity = concept in _OTHER_EQUITY_CONCEPTS or (
+            not concept.startswith("ifrs-full:")
+            and _OTHER_EQUITY_NAME.search(local)
+            and "Dividend" not in local
+            and "Paid" not in local
+            and "Proceeds" not in local
+        )
+        if is_other_equity and fact.unit == equity.unit:
+            found.append(fact)
+    return found
+
+
 def _other_equity_instruments(
     resolved: dict[tuple[str, str], TaggedFact], years: list[str]
 ) -> list[str]:
     notes: list[str] = []
     for fy in years:
         equity = resolved.get(("ifrs-full:Equity", fy))
-        if equity is None:
-            continue
-        for (concept, year), fact in resolved.items():
-            # Same balance-sheet context as total equity (an instant at the
-            # year end, no dimensions) — never a duration fact like a coupon.
-            if year != fy or fact.value == 0 or fact.context_id != equity.context_id:
-                continue
-            local = concept.split(":", 1)[-1]
-            if concept in _OTHER_EQUITY_CONCEPTS or (
-                not concept.startswith("ifrs-full:")
-                and _OTHER_EQUITY_NAME.search(local)
-                and "Dividend" not in local
-                and "Paid" not in local
-                and "Proceeds" not in local
-            ):
-                if fact.unit != equity.unit:
-                    continue
-                notes.append(
-                    f"{fy}: total equity {_fmt(equity.value)} {equity.unit} includes "
-                    f"{concept} {_fmt(fact.value)} — equity attributable to ordinary "
-                    f"shareholders is {_fmt(equity.value - fact.value)}"
-                )
+        for fact in _other_equity_facts(fy, resolved):
+            notes.append(
+                f"{fy}: total equity {_fmt(equity.value)} {equity.unit} includes "
+                f"{fact.concept} {_fmt(fact.value)} — equity attributable to ordinary "
+                f"shareholders is {_fmt(equity.value - fact.value)}"
+            )
     return notes
 
 
@@ -622,7 +735,7 @@ def extract_ixbrl(content: bytes) -> ExtractionResult:
     facts_out: list[ExtractedFact] = []
     mapping_lines: list[str] = []
     fact_sources: dict[str, str] = {}
-    for metric in (*CONCEPT_MAP, "ebitda"):
+    for metric in (*CONCEPT_MAP, "ebitda", *OWNER_VIEW_METRICS):
         for fy in years:
             picked = _resolve_metric(metric, fy, resolved)
             if picked is None:

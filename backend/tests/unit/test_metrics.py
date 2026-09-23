@@ -101,3 +101,76 @@ def test_ebit_falls_back_to_operating_income_and_says_so():
 def test_explicit_ebit_and_ebitda_are_never_overridden():
     result = compute_holding_metrics(FULL_FACTS)
     assert result.notes == {}
+
+
+# --- owner's-view definitions (2026-09-23) --------------------------------
+
+
+def test_fcf_deducts_every_extracted_outflow_classified_outside_operations():
+    facts = {
+        **FULL_FACTS,
+        "decommissioning_payments": Decimal(10),
+        "interest_paid_financing": Decimal(15),
+        "lease_payments_financing": Decimal(5),
+        "hybrid_distributions": Decimal(3),
+    }
+    result = compute_holding_metrics(facts)
+    assert result.computed["free_cash_flow"] == Decimal(220 - 70 - 10 - 15 - 5 - 3)
+    note = result.notes["free_cash_flow"]
+    for word in ("decommissioning", "interest paid", "lease", "hybrid"):
+        assert word in note
+
+
+def test_owner_earnings_deduct_decommissioning_and_leases_but_not_interest():
+    facts = {
+        **FULL_FACTS,
+        "decommissioning_payments": Decimal(10),
+        "interest_paid_financing": Decimal(15),  # already in net income
+        "lease_payments_financing": Decimal(5),
+    }
+    result = compute_holding_metrics(facts)
+    assert result.computed["owner_earnings"] == Decimal(150 + 50 - 70 - 10 - 5)
+
+
+def test_growth_capex_is_called_out_in_the_owner_earnings_note():
+    result = compute_holding_metrics({**FULL_FACTS, "capital_expenditures": Decimal(500)})
+    assert "10.0x D&A" in result.notes["owner_earnings"]
+
+
+def test_hybrid_capital_is_debt_for_net_debt_and_debt_to_equity():
+    result = compute_holding_metrics({**FULL_FACTS, "hybrid_capital": Decimal(200)})
+    assert result.computed["net_debt"] == Decimal(400 + 200 - 100)
+    assert result.computed["debt_to_equity"] == Decimal(600) / Decimal(600)
+    assert "hybrid capital" in result.notes["debt_to_equity"]
+
+
+def test_negative_ordinary_equity_makes_debt_to_equity_not_meaningful():
+    # Vår Energi FY2025: equity 560.0 includes 799.5 hybrid capital.
+    facts = {**FULL_FACTS, "total_equity": Decimal(560), "hybrid_capital": Decimal("799.5")}
+    result = compute_holding_metrics(facts)
+    assert "debt_to_equity" not in result.computed
+    assert result.skipped["debt_to_equity"].startswith("not meaningful: ordinary shareholders' equity is negative")
+
+
+def test_ratios_over_a_negative_denominator_are_not_meaningful():
+    facts = {
+        **FULL_FACTS,
+        "ebitda": Decimal(-79),
+        "ebit": Decimal(-159),
+        "operating_cash_flow": Decimal(-59),
+    }
+    result = compute_holding_metrics(facts)
+    for metric in ("net_debt_to_ebitda", "net_debt_to_fcf", "interest_coverage"):
+        assert metric not in result.computed
+        assert result.skipped[metric].startswith("not meaningful:")
+    assert "don't cover interest" in result.skipped["interest_coverage"]
+
+
+def test_net_cash_over_positive_ebitda_is_still_a_real_ratio():
+    result = compute_holding_metrics({**FULL_FACTS, "cash_and_equivalents": Decimal(700)})
+    assert result.computed["net_debt_to_ebitda"] == Decimal(-300) / Decimal(300)
+
+
+def test_zero_revenue_margins_are_not_meaningful():
+    result = compute_holding_metrics({**FULL_FACTS, "revenue": Decimal(0)})
+    assert result.skipped["gross_margin"].startswith("not meaningful: revenue is zero")

@@ -45,7 +45,7 @@ from app.services import calculations
 from app.services.filings.announcements import get_holding_announcements
 from app.services.filings.eligibility import newsweb_applies
 from app.services.filings.sec_edgar import latest_edgar_document
-from app.services.metrics import MetricsResult, compute_holding_metrics
+from app.services.metrics import MetricsResult, compute_holding_metrics, ordinary_equity
 from app.services.research.common import ResearchSnapshot
 from app.services.research.company import get_company_research
 from app.services.research.macro import get_macro_research
@@ -58,7 +58,11 @@ from app.services.valuation.holding_valuation import (
 # v2 (2026-09-22): adds SEC EDGAR filing provenance ("financial_sources")
 # and Oslo Børs Newsweb announcements ("regulatory_announcements"). v1 runs
 # stay traceable via equity_analysis_runs.evidence_packet_version.
-EVIDENCE_PACKET_VERSION = "v2"
+# v3 (2026-09-23): owner's-view definitions from app/services/metrics.py —
+# FCF/owner earnings net of decommissioning, lease, financing-classified
+# interest and hybrid coupons; hybrid capital as debt; ROE on ordinary
+# equity; "not meaningful" instead of ratios over a negative denominator.
+EVIDENCE_PACKET_VERSION = "v3"
 
 
 @dataclass(frozen=True)
@@ -325,9 +329,10 @@ def _add_financial_history_evidence(
     for year, period, facts in history:
         metrics_result = compute_holding_metrics(facts)
         roe_value: Decimal | None = None
-        if "net_income" in facts and "total_equity" in facts:
+        equity = ordinary_equity(facts)
+        if "net_income" in facts and equity is not None and equity > 0:
             try:
-                roe_value = calculations.roe(facts["net_income"], facts["total_equity"])
+                roe_value = calculations.roe(facts["net_income"], equity)
             except ValueError:
                 roe_value = None
         per_period.append((year, period, metrics_result, roe_value))
@@ -349,7 +354,8 @@ def _add_financial_history_evidence(
         add(
             "financial_history",
             "ROE (return on equity) history",
-            "Not computable for any available period (missing net_income and/or total_equity).",
+            "Not computable for any available period (missing net_income/total_equity, "
+            "or ordinary shareholders' equity is zero or negative).",
         )
     add(
         "financial_history",
@@ -405,7 +411,7 @@ def _add_financial_history_evidence(
     if oe_series:
         add(
             "financial_history",
-            "Owner earnings trend (net income + D&A - capex)",
+            "Owner earnings trend (net income + D&A - capex - decommissioning/lease payments where reported)",
             ", ".join(f"{y}: {_fmt_num(v)}" for y, v in oe_series),
         )
     else:

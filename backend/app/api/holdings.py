@@ -384,14 +384,20 @@ def get_holding_metrics(
     if capex and capex.source and capex.source.startswith("derived:"):
         parts = capex.source.removeprefix("derived:").strip().split(" + ")
         text = "capex = " + " + ".join(p.split(":", 1)[-1] for p in parts)
-        notes["free_cash_flow"] = text
-        notes["owner_earnings"] = text
+        for key in ("free_cash_flow", "owner_earnings"):
+            notes[key] = "; ".join(filter(None, [notes.get(key), text]))
 
     warnings = list(result.warnings)
+    hybrid_label = (
+        "Hybrid capital counted as debt (net debt, debt / equity)"
+        if "hybrid_capital" in facts
+        # an upload extracted before hybrid_capital existed: re-upload to fix
+        else "Debt / equity uses equity as reported — re-upload the file to treat hybrid capital as debt"
+    )
     for document in documents.values():
         flags = document.quality_flags or {}
         for key, label in (
-            ("equity_includes_hybrid_capital", "Debt / equity uses equity as reported"),
+            ("equity_includes_hybrid_capital", hybrid_label),
             ("facts_differ_from_existing", "Kept an earlier file's value"),
             ("fact_conflicts", "Conflicting tags, not imported"),
         ):

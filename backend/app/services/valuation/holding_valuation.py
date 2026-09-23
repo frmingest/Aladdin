@@ -36,10 +36,10 @@ from app.domain.valuation_assumptions import get_valuation_assumptions
 from app.models.financial_line_item import FinancialLineItem
 from app.models.holding import Holding
 from app.providers.base import MarketDataProvider, RiskFreeRateProvider
-from app.services import calculations
 from app.services.market_data.fx import get_or_refresh_fx
 from app.services.market_data.price import get_or_refresh_price
 from app.services.market_data.risk_free_rate import get_or_refresh_risk_free_rate
+from app.services.metrics import owner_earnings_from_facts
 from app.services.valuation.dcf import (
     DCFScenarioResult,
     dcf_scenarios,
@@ -48,8 +48,6 @@ from app.services.valuation.dcf import (
 from app.services.valuation.discount_rate import cost_of_equity
 from app.services.valuation.growth import historical_cagr
 from app.services.valuation.multiples import PeriodMultiples, multiples_over_time
-
-_OWNER_EARNINGS_INPUTS = ("net_income", "depreciation_and_amortization", "capital_expenditures")
 
 
 @dataclass
@@ -87,15 +85,15 @@ def _owner_earnings_history(db: Session, holding: Holding) -> list[tuple[int, st
     history: list[tuple[int, str, Decimal]] = []
     for period, facts in by_period.items():
         year = extract_year(period)
-        if year is None or any(name not in facts for name in _OWNER_EARNINGS_INPUTS):
+        if year is None:
             continue
-        owner_earnings = calculations.owner_earnings(
-            facts["net_income"],
-            facts["depreciation_and_amortization"],
-            facts["capital_expenditures"],
-            Decimal(0),
-        )
-        history.append((year, period, owner_earnings))
+        # Same owner's-view definition as GET /holdings/{id}/metrics and the
+        # evidence packet (decommissioning and lease payments deducted when
+        # extracted) — app/services/metrics.py owns it.
+        owner = owner_earnings_from_facts(facts)
+        if owner is None:
+            continue
+        history.append((year, period, owner[0]))
     history.sort(key=lambda row: row[0])
     return history
 
