@@ -14,6 +14,7 @@ from app.providers.google_ai_studio_provider import GoogleAIStudioProvider
 from app.providers.mistral_provider import MistralProvider
 from app.providers.object_storage import LocalObjectStorageProvider
 from app.providers.object_storage_s3 import S3ObjectStorageProvider
+from app.providers.ollama_provider import OllamaProvider
 from app.providers.yfinance_provider import YFinanceMarketDataProvider
 
 
@@ -160,3 +161,20 @@ def test_unknown_object_storage_provider_raises(monkeypatch):
     monkeypatch.setenv("OBJECT_STORAGE_PROVIDER", "dropbox")
     with pytest.raises(NotImplementedError):
         factory.get_object_storage()
+
+
+def test_primary_provider_can_be_switched_to_ollama(monkeypatch):
+    monkeypatch.setenv("LLM_PROVIDER", "ollama")
+    monkeypatch.setenv("OLLAMA_BASE_URL", "http://localhost:11434")
+    monkeypatch.setenv("OLLAMA_MODEL_NAME", "qwen3:14b")
+    provider = factory.get_llm_provider()
+    assert isinstance(provider, OllamaProvider)
+    assert provider.name == "ollama"
+
+
+def test_ollama_primary_can_fall_back_to_gemini(monkeypatch):
+    monkeypatch.setenv("LLM_PROVIDER", "ollama")
+    monkeypatch.setenv("LLM_FALLBACK_PROVIDER", "google_ai_studio")
+    monkeypatch.setenv("GOOGLE_AI_STUDIO_API_KEY", "test-key")
+    assert isinstance(factory.get_llm_provider(), OllamaProvider)
+    assert isinstance(factory.get_llm_fallback_provider(), GoogleAIStudioProvider)

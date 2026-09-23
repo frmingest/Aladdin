@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 /** Small shared building blocks used by both holding pages — kept here
  * rather than duplicated once a second page needed the same card/badge
  * shapes. */
@@ -32,6 +34,47 @@ export function PageHeader({
         {subtitle && <p className="mt-1 text-sm text-ink-muted">{subtitle}</p>}
       </div>
       {actions}
+    </div>
+  );
+}
+
+/** A section with the same uppercase heading style as the holding page's
+ * other sections, but whose body can be collapsed. The body is only
+ * mounted while open, so a collapsed panel makes no API calls. */
+export function CollapsibleSection({
+  title,
+  hint,
+  defaultOpen = false,
+  children,
+}: {
+  title: string;
+  hint?: string;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="mb-3 flex w-full items-center gap-2 text-left text-sm font-semibold uppercase tracking-wide text-ink-muted hover:text-ink"
+      >
+        <span
+          aria-hidden
+          className={`inline-block text-xs transition-transform ${open ? "rotate-90" : ""}`}
+        >
+          ▶
+        </span>
+        {title}
+        {!open && hint && (
+          <span className="ml-1 text-xs font-normal normal-case tracking-normal text-ink-faint">
+            {hint}
+          </span>
+        )}
+      </button>
+      {open && children}
     </div>
   );
 }

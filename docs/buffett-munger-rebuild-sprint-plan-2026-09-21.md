@@ -224,6 +224,7 @@ the status page can ship earlier).
 
 | Date | Summary |
 |---|---|
+| 2026-09-23 | **Local LLM engine (Ollama) + ticker convention + UI tweaks.** `OllamaProvider` behind the factory (`LLM_PROVIDER=ollama`): analysis passes on the local RTX 3060, research stays on Gemini. Readiness gains a "Local LLM" check. Ticker rule: home-exchange Yahoo symbol (`VAR.OL`), never an unsponsored OTC ADR. Primary sources collapsible at the bottom; darker palette (Design & UX tokens updated). 423 tests (20 new). See [local-llm-tickers-ui-2026-09-23.md](local-llm-tickers-ui-2026-09-23.md). |
 | 2026-09-22 | **F3 Margin-of-safety board built.** `GET /valuation/board` ranks owned equities by base-case margin of safety with zone, value, weight and latest verdict; `/margin-of-safety` page. yfinance beta cached 24h. 403 tests (11 new). Sprint 5 otherwise still open. |
 | 2026-09-22 | **Sprint 4 closed: F1 Analysis view + F2 Readiness check.** `GET /analysis/holdings/{id}/readiness` (instrument type, provider config, ticker/price, financial history, sector, research cache, Gemini quota; no side effects). Run output gains `evidence_items` + `user_notes_snapshot`. Manual holdings now classified by name instead of `equity`. `AnalysisPanel` on the holding page. 392 tests (28 new). Not yet run against a real LLM. |
 | 2026-09-22 | **Feature plan F1–F7 agreed.** F1/F2 attached to the Sprint 4 follow-up, F3 to Sprint 5, F4 to Sprint 7, F5–F7 added to the Backlog. Docs only. |

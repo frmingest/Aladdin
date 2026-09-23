@@ -4,7 +4,7 @@ import { api, ApiError } from "../lib/api";
 import type { CompanyResearch, DocumentSummary, Holding, HoldingMetrics } from "../lib/types";
 import { METRIC_LABELS, METRIC_ORDER, PERCENT_METRICS } from "../lib/types";
 import { formatBytes, formatDate, formatDecimal, formatPercent } from "../lib/format";
-import { Button, Card, EmptyState, PageHeader, StatusBadge } from "../components/ui";
+import { Button, Card, CollapsibleSection, EmptyState, PageHeader, StatusBadge } from "../components/ui";
 import { AnalysisPanel } from "../components/AnalysisPanel";
 import { ResearchPanel } from "../components/ResearchPanel";
 import { SourcesPanel } from "../components/SourcesPanel";
@@ -393,24 +393,21 @@ export default function HoldingDetailPage() {
 
       <div className="mb-8">
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-muted">
-          Primary sources
-        </h2>
-        <SourcesPanel holdingId={id} onFinancialsChanged={() => setMetricsKey((k) => k + 1)} />
-      </div>
-
-      <div className="mb-8">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-muted">
           Valuation
         </h2>
         <ValuationPanel holdingId={id} ticker={holding.ticker} />
       </div>
 
-      <div>
+      <div className="mb-8">
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-muted">
           Research
         </h2>
         <CompanyResearchSection holdingId={id} ticker={holding.ticker} />
       </div>
+
+      <CollapsibleSection title="Primary sources" hint="SEC EDGAR filings · Oslo Børs announcements">
+        <SourcesPanel holdingId={id} onFinancialsChanged={() => setMetricsKey((k) => k + 1)} />
+      </CollapsibleSection>
     </div>
   );
 }

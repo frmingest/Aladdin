@@ -12,22 +12,26 @@ export default {
         // Design & UX direction — claude/buffett-munger-rebuild-sprint-plan-2026-09-21.md
         // "investment-grade, clean, simple, beautiful" (Mercury/Stripe/Wealthfront
         // survey): light-first, near-white/near-black, color reserved for state.
-        background: "#FAFAF9",
-        surface: "#FFFFFF",
+        // 2026-09-23: toned down from near-white (#FAFAF9 page / #FFFFFF
+        // cards), which Faiz found too bright. Warm-gray page, off-white
+        // cards — still light-first, just easier on the eyes; text shades
+        // darkened slightly to keep contrast on the darker surfaces.
+        background: "#E4E2DD",
+        surface: "#F2F1ED",
         border: {
-          DEFAULT: "#E5E7EB",
-          subtle: "#F0EFED",
+          DEFAULT: "#D2CFC8",
+          subtle: "#E8E6E1",
         },
         ink: {
           // primary / secondary text — never pure black/gray.
           DEFAULT: "#111111",
-          muted: "#6B7280",
-          faint: "#9CA3AF",
+          muted: "#5B616B",
+          faint: "#858B95",
         },
         accent: {
           DEFAULT: "#2563EB",
           hover: "#1D4ED8",
-          subtle: "#EFF4FF",
+          subtle: "#E2E9FA",
         },
         // Data semantics — state only, never decorative.
         positive: { DEFAULT: "#16A34A", subtle: "#F0FDF4" },

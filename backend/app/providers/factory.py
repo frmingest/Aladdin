@@ -33,6 +33,7 @@ from app.providers.object_storage import (
     ObjectStorageProvider,
 )
 from app.providers.object_storage_s3 import S3ObjectStorageProvider
+from app.providers.ollama_provider import OllamaProvider
 from app.providers.sec_edgar_provider import SecEdgarFundamentalsProvider
 from app.providers.yfinance_provider import YFinanceMarketDataProvider
 
@@ -59,6 +60,18 @@ def _build_provider(name: str, settings: Settings) -> LLMProvider:
             temperature=settings.llm_temperature,
             max_output_tokens=settings.llm_max_output_tokens,
             rpm=settings.mistral_rate_limit_rpm,
+        )
+    if name == "ollama":
+        return OllamaProvider(
+            base_url=settings.ollama_base_url,
+            model=settings.ollama_model_name,
+            temperature=settings.llm_temperature,
+            max_output_tokens=settings.llm_max_output_tokens,
+            num_ctx=settings.ollama_num_ctx,
+            keep_alive=settings.ollama_keep_alive,
+            timeout_seconds=settings.ollama_timeout_seconds,
+            think=settings.ollama_think,
+            api_key=settings.ollama_api_key,
         )
     raise LLMUnavailableError(f"Unknown LLM provider: {name!r}")
 

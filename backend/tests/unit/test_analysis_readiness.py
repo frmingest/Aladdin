@@ -257,6 +257,43 @@ def test_mistral_primary_does_not_count_passes_against_gemini():
     assert report.estimated_gemini_calls == 0
 
 
+def test_gemini_primary_has_no_local_llm_check():
+    db = _session()
+    holding = _holding(db)
+    report = check_analysis_readiness(db, holding, settings=_settings(), budget_guard=None)
+    assert all(c.key != "local_llm" for c in report.checks)
+
+
+def test_ollama_primary_reachable_is_ok_and_costs_no_gemini_passes(monkeypatch):
+    from app.providers.ollama_provider import OllamaHealth
+    from app.services.analysis import readiness
+
+    monkeypatch.setattr(readiness, "check_ollama_health", lambda **_: OllamaHealth(True, "up"))
+    db = _session()
+    holding = _holding(db)
+    _all_fresh_research(db, holding)
+    report = check_analysis_readiness(db, holding, settings=_settings(llm_provider="ollama"), budget_guard=None)
+    assert _check(report, "local_llm").status == "ok"
+    assert report.estimated_gemini_calls == 0
+
+
+def test_ollama_down_blocks_without_fallback_and_warns_with_one(monkeypatch):
+    from app.providers.ollama_provider import OllamaHealth
+    from app.services.analysis import readiness
+
+    monkeypatch.setattr(readiness, "check_ollama_health", lambda **_: OllamaHealth(False, "down"))
+    db = _session()
+    holding = _holding(db)
+    blocked = check_analysis_readiness(db, holding, settings=_settings(llm_provider="ollama"), budget_guard=None)
+    assert _check(blocked, "local_llm").status == "block"
+    warned = check_analysis_readiness(
+        db, holding,
+        settings=_settings(llm_provider="ollama", llm_fallback_provider="google_ai_studio"),
+        budget_guard=None,
+    )
+    assert _check(warned, "local_llm").status == "warn"
+
+
 @pytest.mark.parametrize(
     ("ticker", "name", "expected"),
     [

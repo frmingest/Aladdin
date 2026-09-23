@@ -42,6 +42,7 @@ from app.models.holding import Holding
 from app.models.market import MarketObservation
 from app.models.research import ResearchRunType
 from app.providers.budget import DailyBudgetGuard
+from app.providers.ollama_provider import check_ollama_health
 from app.services.portfolio_import.ingestion import looks_like_placeholder_ticker
 from app.services.research.common import is_stale, latest_completed_run
 
@@ -135,6 +136,30 @@ def _check_providers(settings: Settings) -> ReadinessCheck:
             "FRED_API_KEY is not set, so the DCF has no risk-free rate and the valuation will be thin.",
         )
     return ReadinessCheck("providers", "Server configuration", "ok", "Market data, research and LLM configured.")
+
+
+def _check_local_llm(settings: Settings) -> ReadinessCheck | None:
+    """Only when the analysis passes run on a local Ollama server: is it up
+    and is the model pulled? A stopped Ollama is the most likely failure of
+    that setup, so surface it before a run rather than as a failed run."""
+    if settings.llm_provider != "ollama":
+        return None
+    health = check_ollama_health(
+        base_url=settings.ollama_base_url,
+        model=settings.ollama_model_name,
+        api_key=settings.ollama_api_key,
+    )
+    if health.ok:
+        return ReadinessCheck("local_llm", "Local LLM (Ollama)", "ok", health.detail)
+    fallback = settings.llm_fallback_provider
+    if fallback != "none":
+        return ReadinessCheck(
+            "local_llm",
+            "Local LLM (Ollama)",
+            "warn",
+            f"{health.detail} The run would fall back to '{fallback}'.",
+        )
+    return ReadinessCheck("local_llm", "Local LLM (Ollama)", "block", health.detail)
 
 
 def _check_ticker_and_price(db: Session, holding: Holding, settings: Settings) -> list[ReadinessCheck]:
@@ -312,6 +337,9 @@ def check_analysis_readiness(
     report = ReadinessReport(holding_id=holding.id)
     report.checks.append(_check_instrument_type(holding))
     report.checks.append(_check_providers(settings))
+    local_llm_check = _check_local_llm(settings)
+    if local_llm_check is not None:
+        report.checks.append(local_llm_check)
     report.checks.extend(_check_ticker_and_price(db, holding, settings))
     report.checks.append(_check_financial_history(db, holding))
     report.checks.append(_check_sector(holding))

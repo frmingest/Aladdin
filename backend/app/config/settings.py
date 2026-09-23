@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     app_version: str = "0.1.0"
 
     # --- LLM provider (see app/providers/) ---
-    llm_provider: str = "google_ai_studio"  # "google_ai_studio" | "mistral"
+    llm_provider: str = "google_ai_studio"  # "google_ai_studio" | "mistral" | "ollama"
     google_ai_studio_api_key: str | None = None
     llm_model_name: str = "gemini-3.6-flash"
     llm_max_output_tokens: int = 8192
@@ -44,10 +44,28 @@ class Settings(BaseSettings):
     # (see claude/llm-provider-alternatives-2026-09-17.md and
     # claude/mistral-fallback-provider-2026-09-17.md). "none" is fully inert
     # — the default, so nothing changes until this is explicitly set.
-    llm_fallback_provider: str = "none"  # "none" | "mistral"
+    llm_fallback_provider: str = "none"  # "none" | "mistral" | "google_ai_studio" | "ollama"
     mistral_api_key: str | None = None
     mistral_model_name: str = "mistral-small-latest"
     mistral_rate_limit_rpm: int = 30  # conservative default, not vendor-confirmed
+
+    # --- Local LLM via Ollama (2026-09-23, app/providers/ollama_provider.py,
+    # docs/local-llm-ollama-setup.md). Used when LLM_PROVIDER=ollama: the
+    # heavy analysis passes run on your own GPU; Gemini keeps the light,
+    # search-grounded research. Defaults are sized for a 12GB card
+    # (RTX 3060 12GB) running qwen3:14b with OLLAMA_KV_CACHE_TYPE=q8_0.
+    ollama_base_url: str = "http://localhost:11434"
+    ollama_model_name: str = "qwen3:14b"
+    ollama_num_ctx: int = 16384
+    ollama_keep_alive: str = "30m"
+    ollama_timeout_seconds: float = 900.0
+    # False = ask thinking models (Qwen3) to skip the <think> phase, which
+    # is much faster and doesn't help schema-constrained JSON. None = don't
+    # send the field at all.
+    ollama_think: bool | None = False
+    # Only when Ollama sits behind an authenticating proxy/tunnel. Plain
+    # Ollama has no auth — never expose port 11434 to the internet.
+    ollama_api_key: str | None = None
 
     # --- Object storage (see app/providers/object_storage.py) ---
     # "local" (default, dev only — Railway's disk is ephemeral, not a real
