@@ -1,6 +1,6 @@
 # Financial-statement uploads: ESEF .xhtml + CSV/Excel (2026-09-23)
 
-**Status:** committed locally (`2e49de7`), not pushed, not deployed. 486 backend tests (63 new), tsc/eslint/build clean.
+**Status:** on GitHub (`2e49de7`); deploy not verified. 486 backend tests (63 new), tsc/eslint/build clean.
 
 ---
 
@@ -34,7 +34,7 @@
 |---|---|---|
 | **ESEF `.xhtml`** | ⭐⭐⭐ High | Every statement number is tagged with concept, period, unit, scale and sign — nothing is guessed from layout |
 | **IR CSV / Excel** | ⭐⭐ Medium | No standard layout. Works when labels match the label table and a unit line ("NOK million") exists; otherwise rows stay text-only |
-| PDF | ⭐ (text only) | Numbers need the separate LLM "Extract figures" step |
+| PDF | ⭐ (text only) | Page text only — no figure extraction (an LLM-based PDF extractor was built and reverted 2026-09-23 by decision) |
 
 ### Known gaps (by design or not yet built)
 

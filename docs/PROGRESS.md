@@ -13,7 +13,7 @@ Quick-glance tracker. Detail for each item lives in its own linked doc; this pag
 | **Current phase** | Phase 11: the Buffett/Munger single-focus rebuild ([sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md)) |
 | **Sprints closed** | 0, 1, 2, 3, 4 |
 | **In progress** | Sprint 5: F3 board ✅ done; portfolio roll-up dashboard + executive summary left |
-| **Latest build** | ESEF `.xhtml` + CSV statement uploads (`2e49de7`) — committed locally, **not pushed, not deployed**. Before it: local LLM engine (Ollama, verified locally, not pushed). F1–F3 are on GitHub (`1a31b79`); deploy not verified this session. |
+| **Latest build** | Revert of the LLM PDF-extraction commit (`8e1c1fb`) — committed locally, **not pushed**. ESEF `.xhtml` + CSV uploads (`2e49de7`) are on GitHub; **deploy not verified**. Before it: local LLM engine (Ollama, verified locally, not pushed). F1–F3 are on GitHub (`1a31b79`); deploy not verified this session. |
 | **Tests** | 486/486 backend, tsc/eslint/vite build clean |
 | **Live-verified?** | ❌ The analysis engine, EDGAR and Newsweb have only been tested against fakes. The new UI was checked with mocked API data only. |
 
@@ -27,9 +27,8 @@ Quick-glance tracker. Detail for each item lives in its own linked doc; this pag
 | ★ | Railway Variables: `LLM_PROVIDER=google_ai_studio` (or unset), `LLM_FALLBACK_PROVIDER=none` | Railway can't reach Ollama on your PC |
 | ★ | Fix the 1 remaining readiness blocker on the first holding, then run the first local analysis | First real run on the local LLM |
 | ★ | Change Vår Energi's ticker `VARRY` → **`VAR.OL`**; fix sectors: Xetra-Gold + L&G Gold Mining → Materials, Salmon Evolution → Consumer Staples | [ticker decision](local-llm-tickers-ui-2026-09-23.md#2-ticker-convention--decision) |
-| ★ | Push `main` and redeploy | Ships the palette, collapsible Primary sources and the new `.xhtml`/`.csv` uploads; Ollama code is inert on Railway |
+| ★ | Push `main` (revert `8e1c1fb`) and redeploy | Removes the unwanted PDF-extraction feature from GitHub/Railway; ships the `.xhtml`/`.csv` uploads |
 | ★ | Upload the **ESEF annual report `.xhtml`** for each Oslo holding (2 years each gives 3 years of history) | Most reliable source of figures — [upload doc](financial-statement-uploads-xhtml-csv-2026-09-23.md) |
-| ★ | Decide on the **uncommitted LLM PDF-extraction work** in the working tree (`financial_extraction.py`, `FinancialsExtractPanel.tsx`, …, written 2026-09-23 ~07:40, not in this tracker) | Left untouched and uncommitted; tests pass with it |
 | 1 | Set `MARKET_DATA_PROVIDER=yfinance` and `RESEARCH_PROVIDER=gemini_search` in Railway and `backend/.env` | The analysis engine can't produce real output while these are `stub`. No new key is needed. |
 | 2 | Add `SEC_EDGAR_USER_AGENT` (e.g. `Aladdin portfolio app <email>`) in Railway and `backend/.env` | SEC requires a contact email. EDGAR import errors until this is set. |
 | 3 | Confirm Railway is running `1a31b79` (F1–F3) | Pushed to GitHub; deploy not verified this session |
@@ -112,6 +111,7 @@ Detail: [free-market-data-research-providers-2026-09-21.md](free-market-data-res
 
 | Date | Change | Summary | Detail |
 |---|---|---|---|
+| 2026-09-23 | **Reverted: LLM PDF figure extraction** | Faiz decided against it. `8e1c1fb` reverts `9a0db96` (propose/approve endpoints, extraction service/schema/prompt, `FinancialsExtractPanel`, tests). ESEF/CSV uploads unaffected; tree identical to `ffe5a1e` (486 tests, build clean). Not pushed. | — |
 | 2026-09-23 | **Uploads: ESEF `.xhtml` + CSV statements** | New inline-XBRL parser (tagged annual facts → metrics, readable page text, tagged-facts evidence page, XXE-safe, 80 MB limit). New statement-table parser for IR CSV/Excel (scale/currency, annual columns only, segment tables ignored, conflicts reported). Later documents never overwrite a year on file. Fixed a latent `GET /documents` 500 on detail flags. Tested on Vår Energi + Orkla files. 486 tests (63 new). Committed `2e49de7`, not pushed. | [doc](financial-statement-uploads-xhtml-csv-2026-09-23.md) |
 | 2026-09-23 | **Ollama set up on Faiz's PC — verified** | Recreated a broken backend venv, started local backend + frontend; readiness shows "Ollama reachable, model 'qwen3:14b' available". Setup guide gained a "what must be running" table and 5 troubleshooting rows from this session. Docs only. | [guide](local-llm-ollama-setup.md) |
 | 2026-09-23 | **Local LLM engine + ticker decision + UI tweaks** | New `OllamaProvider` (`LLM_PROVIDER=ollama`, default `qwen3:14b`) runs the analysis passes on the local GPU; Gemini keeps research. Context-overflow/truncation guards, "Local LLM" readiness check, Gemini fallback option. Step-by-step Windows setup guide. Ticker rule decided: home-exchange Yahoo symbol (`VAR.OL`, not the unsponsored ADR `VARRY`). Primary sources moved to the bottom, collapsed. Darker warm-gray palette. 423 tests (20 new). Committed locally, not pushed. | [doc](local-llm-tickers-ui-2026-09-23.md) · [guide](local-llm-ollama-setup.md) |
