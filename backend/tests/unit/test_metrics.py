@@ -75,3 +75,29 @@ def test_net_debt_to_ebitda_skipped_when_ebitda_zero():
 
     assert "net_debt_to_ebitda" in result.skipped
     assert "net_debt" in result.computed  # net_debt itself still computes fine
+
+
+def test_mixed_currencies_in_one_period_compute_nothing():
+    currencies = {name: "USD" for name in FULL_FACTS}
+    currencies["revenue"] = "NOK"
+    result = compute_holding_metrics(FULL_FACTS, currencies)
+
+    assert result.computed == {}
+    assert "mixed currencies (NOK, USD)" in result.warnings[0]
+    assert result.skipped["gross_margin"] == "not computed: mixed currencies"
+
+
+def test_ebit_falls_back_to_operating_income_and_says_so():
+    facts = {k: v for k, v in FULL_FACTS.items() if k not in ("ebit", "ebitda")}
+    result = compute_holding_metrics(facts)
+
+    assert result.computed["interest_coverage"] == Decimal(250) / Decimal(20)
+    assert result.notes["interest_coverage"] == "EBIT = operating income"
+    # EBITDA derived as EBIT + D&A = 300
+    assert result.computed["net_debt_to_ebitda"] == Decimal(300) / Decimal(300)
+    assert "EBIT + D&A" in result.notes["net_debt_to_ebitda"]
+
+
+def test_explicit_ebit_and_ebitda_are_never_overridden():
+    result = compute_holding_metrics(FULL_FACTS)
+    assert result.notes == {}

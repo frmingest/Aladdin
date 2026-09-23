@@ -139,12 +139,48 @@ export interface DocumentSummary {
   fact_count: number;
 }
 
+/** One extracted input behind the ratios — mirrors
+ * backend/app/schemas/metrics.py's MetricFactOut. */
+export interface MetricFact {
+  metric: string;
+  value: string;
+  currency: string | null;
+  document_id: string;
+  original_filename: string;
+  source_page: number | null;
+  confidence: number;
+  /** "ifrs-full:CostOfSales", "derived: A + B", "proxy: …"; null if unknown. */
+  source: string | null;
+}
+
 export interface HoldingMetrics {
   holding_id: string;
   period: string;
   facts: Record<string, string>;
   computed: Record<string, string>;
   skipped: Record<string, string>;
+  /** Currency of every monetary figure (the filing's, not the trading currency). */
+  currency: string | null;
+  notes: Record<string, string>;
+  warnings: string[];
+  fact_details: MetricFact[];
+}
+
+/** Mirrors backend/app/schemas/document.py's DeletionResult. */
+export interface DeletionResult {
+  documents: number;
+  pages: number;
+  chunks: number;
+  facts: number;
+  analysis_runs: number;
+  notes: number;
+  market_observations: number;
+  research_runs: number;
+  research_items: number;
+  legacy_holding_analyses: number;
+  holdings: number;
+  storage_files_deleted: number;
+  storage_files_failed: string[];
 }
 
 export const DOCUMENT_TYPES = [
@@ -184,6 +220,30 @@ export const METRIC_ORDER = Object.keys(METRIC_LABELS);
 /** Ratios expressed as a fraction (0.4 = 40%) vs. an absolute figure or a
  * multiple — decides whether the metrics table renders "40.0%" or a plain
  * tabular number. Matches app/services/calculations.py's own doc comments. */
+/** Absolute money amounts (rendered "USD 1,787.4m"); every other
+ * non-percent metric is a multiple (rendered "2.93×"). */
+export const MONEY_METRICS = new Set(["free_cash_flow", "owner_earnings", "net_debt"]);
+
+/** Labels for the extracted inputs (canonical facts) in the provenance table. */
+export const FACT_LABELS: Record<string, string> = {
+  revenue: "Revenue",
+  cost_of_goods_sold: "Cost of sales",
+  operating_income: "Operating income",
+  ebit: "EBIT",
+  ebitda: "EBITDA",
+  net_income: "Net income",
+  depreciation_and_amortization: "Depreciation & amortisation",
+  total_assets: "Total assets",
+  total_equity: "Total equity",
+  total_liabilities: "Total liabilities",
+  operating_cash_flow: "Operating cash flow",
+  capital_expenditures: "Capital expenditure",
+  total_debt: "Total debt",
+  cash_and_equivalents: "Cash & equivalents",
+  interest_expense: "Interest expense",
+  shares_outstanding: "Shares outstanding",
+};
+
 export const PERCENT_METRICS = new Set([
   "gross_margin",
   "operating_margin",

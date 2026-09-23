@@ -34,6 +34,15 @@ class ObjectStorageProvider(ABC):
     def retrieve(self, key: str) -> bytes:
         raise NotImplementedError
 
+    def delete(self, storage_path: str) -> None:
+        """Removes the object saved as `storage_path` (the value store()
+        returned). Deleting something already gone is not an error. Not
+        abstract so a test double without it still constructs; a backend
+        that can't delete says so loudly instead of pretending."""
+        raise ObjectStorageUnavailableError(
+            f"{type(self).__name__} does not support deleting objects"
+        )
+
 
 class LocalObjectStorageProvider(ObjectStorageProvider):
     """Filesystem-backed storage for local development only.
@@ -61,3 +70,22 @@ class LocalObjectStorageProvider(ObjectStorageProvider):
                 return f.read()
         except FileNotFoundError as exc:
             raise ObjectStorageUnavailableError(f"No object at '{key}'") from exc
+
+    def delete(self, storage_path: str) -> None:
+        # store() returns the joined path; accept that or a bare key, and
+        # never touch anything outside base_path.
+        base = os.path.realpath(self.base_path)
+        candidate = storage_path if os.path.isabs(storage_path) else os.path.join(self.base_path, storage_path)
+        path = os.path.realpath(candidate)
+        if os.path.commonpath([base, path]) != base:
+            raise ObjectStorageUnavailableError(f"Refusing to delete outside storage: '{storage_path}'")
+        try:
+            os.remove(path)
+        except FileNotFoundError:
+            return
+        parent = os.path.dirname(path)
+        if parent != base:
+            try:
+                os.rmdir(parent)  # the per-file sha256 folder, only if now empty
+            except OSError:
+                pass

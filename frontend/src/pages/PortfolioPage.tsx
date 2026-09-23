@@ -622,7 +622,8 @@ function DeleteAllPanel({
       !window.confirm(
         `Delete ALL portfolio data — ${accountCount} account${accountCount === 1 ? "" : "s"} and ` +
           `${snapshotCount} snapshot${snapshotCount === 1 ? "" : "s"} (and every position in them)? ` +
-          `Holdings (ticker records) and their documents are kept. This cannot be undone.`,
+          `Holdings (ticker records) and their documents are kept — use "Clean slate" below to ` +
+          `delete those too. This cannot be undone.`,
       )
     )
       return;
@@ -657,6 +658,69 @@ function DeleteAllPanel({
       {note && <p className="mb-3 text-sm text-ink-muted">{note}</p>}
       <Button variant="danger" disabled={deleting || nothingToDelete} onClick={handleDeleteAll}>
         {deleting ? "Deleting…" : "Delete all portfolio data"}
+      </Button>
+    </Card>
+  );
+}
+
+/** Full clean slate (added 2026-09-23): the portfolio wipe above, then
+ * every holding with its documents, stored files, extracted facts,
+ * analyses, notes, prices and research. Two explicit backend calls, one
+ * typed confirmation. */
+function CleanSlatePanel({
+  holdings,
+  onChanged,
+}: {
+  holdings: Holding[] | null;
+  onChanged: () => void;
+}) {
+  const [error, setError] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const holdingCount = holdings?.length ?? 0;
+
+  async function handleCleanSlate() {
+    const typed = window.prompt(
+      `This deletes EVERYTHING: all accounts, snapshots and positions, all ${holdingCount} ` +
+        `holding(s), every uploaded document and its stored file, extracted figures, analyses, ` +
+        `notes, prices and company research. It cannot be undone.\n\nType DELETE EVERYTHING to confirm.`,
+    );
+    if (typed !== "DELETE EVERYTHING") return;
+    setError(null);
+    setNote(null);
+    setDeleting(true);
+    try {
+      const portfolio = await api.deleteAllPortfolioData();
+      const result = await api.wipeAllHoldings();
+      setNote(
+        `Deleted ${portfolio.accounts_deleted} account(s), ${portfolio.snapshots_deleted} snapshot(s), ` +
+          `${result.holdings} holding(s), ${result.documents} document(s), ${result.facts} extracted ` +
+          `figure(s), ${result.analysis_runs} analysis run(s) and ${result.storage_files_deleted} stored file(s).` +
+          (result.storage_files_failed.length > 0
+            ? ` ${result.storage_files_failed.length} stored file(s) could not be removed from storage: ` +
+              result.storage_files_failed.join(", ")
+            : ""),
+      );
+      onChanged();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Clean slate failed.");
+      onChanged();
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  return (
+    <Card className="mb-8 border-negative/30">
+      <h2 className="mb-1 text-sm font-semibold text-ink">Clean slate — delete everything</h2>
+      <p className="mb-4 text-sm text-ink-muted">
+        Portfolio data plus every holding, uploaded document (and its stored file), extracted figure,
+        analysis, note and research item. FX and interest-rate reference data is kept.
+      </p>
+      {error && <p className="mb-3 text-sm text-negative">{error}</p>}
+      {note && <p className="mb-3 text-sm text-ink-muted">{note}</p>}
+      <Button variant="danger" disabled={deleting} onClick={handleCleanSlate}>
+        {deleting ? "Deleting…" : "Delete everything"}
       </Button>
     </Card>
   );
@@ -712,6 +776,7 @@ export default function PortfolioPage() {
       </p>
 
       <DeleteAllPanel accounts={accounts} snapshots={snapshots} onChanged={reload} />
+      <CleanSlatePanel holdings={holdings} onChanged={reload} />
     </div>
   );
 }

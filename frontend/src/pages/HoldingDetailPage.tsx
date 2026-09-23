@@ -1,9 +1,22 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, ApiError } from "../lib/api";
-import type { CompanyResearch, DocumentSummary, Holding, HoldingMetrics } from "../lib/types";
-import { METRIC_LABELS, METRIC_ORDER, PERCENT_METRICS } from "../lib/types";
-import { formatBytes, formatDate, formatDecimal, formatPercent } from "../lib/format";
+import type {
+  CompanyResearch,
+  DeletionResult,
+  DocumentSummary,
+  Holding,
+  HoldingMetrics,
+} from "../lib/types";
+import { FACT_LABELS, METRIC_LABELS, METRIC_ORDER, MONEY_METRICS, PERCENT_METRICS } from "../lib/types";
+import {
+  formatBytes,
+  formatDate,
+  formatDecimal,
+  formatMoney,
+  formatMultiple,
+  formatPercent,
+} from "../lib/format";
 import { Button, Card, CollapsibleSection, EmptyState, PageHeader, StatusBadge } from "../components/ui";
 import { AnalysisPanel } from "../components/AnalysisPanel";
 import { DocumentFlagsNote } from "../components/DocumentFlagsNote";
@@ -47,8 +60,8 @@ function MetricsPanel({ holdingId }: { holdingId: string }) {
   if (periods.length === 0) {
     return (
       <EmptyState>
-        No extracted facts yet. Upload a filing below (XLSX gets structured facts
-        extracted automatically) to see deterministic ratios here.
+        No extracted facts yet. Upload a filing below (the ESEF annual report .xhtml is the
+        most reliable source) to see deterministic ratios here.
       </EmptyState>
     );
   }
@@ -56,9 +69,15 @@ function MetricsPanel({ holdingId }: { holdingId: string }) {
   const computedKeys = METRIC_ORDER.filter((k) => metrics?.computed[k] !== undefined);
   const skippedKeys = METRIC_ORDER.filter((k) => metrics?.skipped[k] !== undefined);
 
+  function renderValue(key: string, value: string) {
+    if (PERCENT_METRICS.has(key)) return formatPercent(value);
+    if (MONEY_METRICS.has(key)) return formatMoney(value, metrics?.currency ?? null);
+    return formatMultiple(value);
+  }
+
   return (
     <div>
-      <div className="mb-4 flex items-center gap-2">
+      <div className="mb-4 flex flex-wrap items-center gap-2">
         <span className="text-sm text-ink-muted">Period</span>
         <select
           value={period ?? ""}
@@ -71,45 +90,126 @@ function MetricsPanel({ holdingId }: { holdingId: string }) {
             </option>
           ))}
         </select>
+        {metrics?.currency && (
+          <span className="text-sm text-ink-muted">
+            Figures in <span className="font-medium text-ink">{metrics.currency}</span> (the
+            filing&apos;s reporting currency)
+          </span>
+        )}
       </div>
+
+      {metrics && metrics.warnings.length > 0 && (
+        <div className="mb-4 rounded-md border border-negative/30 bg-negative/5 px-4 py-3">
+          <p className="mb-1 text-sm font-semibold text-ink">Check before relying on these figures</p>
+          <ul className="list-disc space-y-1 pl-5 text-xs text-ink-muted">
+            {metrics.warnings.map((w) => (
+              <li key={w}>{w}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {!metrics ? (
         <p className="text-sm text-ink-muted">Loading…</p>
       ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <Card>
-            <h3 className="mb-3 text-sm font-semibold text-ink">Computed</h3>
-            {computedKeys.length === 0 ? (
-              <p className="text-sm text-ink-muted">
-                Nothing computable from this period's extracted facts yet.
-              </p>
-            ) : (
+        <>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <Card>
+              <h3 className="mb-3 text-sm font-semibold text-ink">Computed</h3>
+              {computedKeys.length === 0 ? (
+                <p className="text-sm text-ink-muted">
+                  Nothing computable from this period&apos;s extracted facts yet.
+                </p>
+              ) : (
+                <dl className="divide-y divide-border-subtle">
+                  {computedKeys.map((key) => (
+                    <div key={key} className="py-2 text-sm">
+                      <div className="flex justify-between gap-4">
+                        <dt className="text-ink-muted">{METRIC_LABELS[key]}</dt>
+                        <dd className="tabular font-medium text-ink">
+                          {renderValue(key, metrics.computed[key])}
+                        </dd>
+                      </div>
+                      {metrics.notes[key] && (
+                        <p className="mt-0.5 text-xs text-ink-muted">{metrics.notes[key]}</p>
+                      )}
+                    </div>
+                  ))}
+                </dl>
+              )}
+            </Card>
+            <Card>
+              <h3 className="mb-3 text-sm font-semibold text-ink">Not available</h3>
               <dl className="divide-y divide-border-subtle">
-                {computedKeys.map((key) => (
-                  <div key={key} className="flex justify-between py-2 text-sm">
-                    <dt className="text-ink-muted">{METRIC_LABELS[key]}</dt>
-                    <dd className="tabular font-medium text-ink">
-                      {PERCENT_METRICS.has(key)
-                        ? formatPercent(metrics.computed[key])
-                        : formatDecimal(metrics.computed[key])}
-                    </dd>
+                {skippedKeys.map((key) => (
+                  <div key={key} className="py-2 text-sm">
+                    <dt className="text-ink">{METRIC_LABELS[key]}</dt>
+                    <dd className="mt-0.5 text-xs text-ink-muted">{metrics.skipped[key]}</dd>
                   </div>
                 ))}
               </dl>
-            )}
-          </Card>
-          <Card>
-            <h3 className="mb-3 text-sm font-semibold text-ink">Not available</h3>
-            <dl className="divide-y divide-border-subtle">
-              {skippedKeys.map((key) => (
-                <div key={key} className="py-2 text-sm">
-                  <dt className="text-ink">{METRIC_LABELS[key]}</dt>
-                  <dd className="mt-0.5 text-xs text-ink-muted">{metrics.skipped[key]}</dd>
-                </div>
+            </Card>
+          </div>
+          <FactSourcesTable metrics={metrics} />
+        </>
+      )}
+    </div>
+  );
+}
+
+/** Every extracted input behind the ratios, with the file, page and XBRL
+ * tag it came from — so any number above can be checked against the
+ * filing by hand. */
+function FactSourcesTable({ metrics }: { metrics: HoldingMetrics }) {
+  const [open, setOpen] = useState(false);
+  if (metrics.fact_details.length === 0) return null;
+  return (
+    <div className="mt-4">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="text-sm text-accent hover:text-accent-hover"
+      >
+        {open ? "Hide" : "Show"} the {metrics.fact_details.length} extracted figures behind these
+        ratios
+      </button>
+      {open && (
+        <Card className="mt-2 overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-xs uppercase tracking-wide text-ink-muted">
+                <th className="py-2 font-medium">Figure</th>
+                <th className="py-2 text-right font-medium">Value</th>
+                <th className="py-2 pl-4 font-medium">Source</th>
+                <th className="py-2 font-medium">File / page</th>
+              </tr>
+            </thead>
+            <tbody>
+              {metrics.fact_details.map((f) => (
+                <tr key={f.metric} className="border-t border-border-subtle align-top">
+                  <td className="py-2 text-ink">{FACT_LABELS[f.metric] ?? f.metric}</td>
+                  <td className="py-2 text-right tabular text-ink">
+                    {f.metric === "shares_outstanding"
+                      ? formatDecimal(f.value, 0)
+                      : formatMoney(f.value, f.currency)}
+                  </td>
+                  <td className="break-all py-2 pl-4 text-xs text-ink-muted">
+                    {f.source ?? "—"}
+                    {f.confidence < 1 && (
+                      <span className="ml-1 whitespace-nowrap text-ink">
+                        ({f.source?.startsWith("proxy") ? "proxy" : "derived"})
+                      </span>
+                    )}
+                  </td>
+                  <td className="py-2 text-xs text-ink-muted">
+                    {f.original_filename}
+                    {f.source_page ? ` · p${f.source_page}` : ""}
+                  </td>
+                </tr>
               ))}
-            </dl>
-          </Card>
-        </div>
+            </tbody>
+          </table>
+        </Card>
       )}
     </div>
   );
@@ -127,6 +227,63 @@ function DocumentsPanel({
   const [uploading, setUploading] = useState(false);
   const [documentType, setDocumentType] = useState("annual_report");
   const [reportingPeriod, setReportingPeriod] = useState("");
+  const [note, setNote] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  function describe(result: DeletionResult): string {
+    const failed = result.storage_files_failed.length;
+    return (
+      `Deleted ${result.documents} document(s), ${result.facts} extracted figure(s)` +
+      (result.analysis_runs ? `, ${result.analysis_runs} analysis run(s)` : "") +
+      ` and ${result.storage_files_deleted} stored file(s).` +
+      (failed ? ` ${failed} stored file(s) could not be removed: ${result.storage_files_failed.join(", ")}` : "")
+    );
+  }
+
+  async function handleDeleteDocument(doc: DocumentSummary) {
+    if (
+      !window.confirm(
+        `Delete "${doc.original_filename}"? Its ${doc.fact_count} extracted figure(s), page text and the ` +
+          `stored file are removed. You can upload it again afterwards. This cannot be undone.`,
+      )
+    )
+      return;
+    setError(null);
+    setNote(null);
+    setDeletingId(doc.id);
+    try {
+      setNote(describe(await api.deleteDocument(doc.id)));
+      reload();
+      onUploaded();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not delete the document.");
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
+  async function handleDeleteAll() {
+    if (
+      !window.confirm(
+        "Delete ALL documents and data for this holding — every uploaded file, SEC EDGAR import, " +
+          "extracted figure, analysis run, your notes, price history and company research? " +
+          "The holding itself and its portfolio positions are kept. This cannot be undone.",
+      )
+    )
+      return;
+    setError(null);
+    setNote(null);
+    setDeletingId("all");
+    try {
+      setNote(describe(await api.deleteHoldingData(holdingId)));
+      reload();
+      onUploaded();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not delete this holding's data.");
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   function reload() {
     api
@@ -209,6 +366,7 @@ function DocumentsPanel({
       </div>
 
       {error && <p className="mb-3 text-sm text-negative">{error}</p>}
+      {note && <p className="mb-3 text-sm text-ink-muted">{note}</p>}
 
       {documents === null && <p className="text-sm text-ink-muted">Loading…</p>}
 
@@ -227,6 +385,7 @@ function DocumentsPanel({
               <th className="py-2 font-medium">Status</th>
               <th className="py-2 text-right font-medium">Facts</th>
               <th className="py-2 text-right font-medium">Size</th>
+              <th className="py-2" />
             </tr>
           </thead>
           <tbody>
@@ -246,11 +405,31 @@ function DocumentsPanel({
                 <td className="py-2 text-right tabular text-ink-muted">
                   {formatBytes(d.size_bytes)}
                 </td>
+                <td className="py-2 pl-3 text-right">
+                  <button
+                    type="button"
+                    disabled={deletingId !== null}
+                    onClick={() => void handleDeleteDocument(d)}
+                    className="text-xs text-negative hover:underline disabled:opacity-50"
+                  >
+                    {deletingId === d.id ? "Deleting…" : "Delete"}
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       )}
+
+      <div className="mt-4 flex items-center justify-between gap-4 border-t border-border-subtle pt-4">
+        <p className="text-xs text-ink-muted">
+          Deleting a document also removes its extracted figures and stored file. Re-upload it
+          to extract it again with the latest rules.
+        </p>
+        <Button variant="danger" disabled={deletingId !== null} onClick={() => void handleDeleteAll()}>
+          {deletingId === "all" ? "Deleting…" : "Delete all documents & data"}
+        </Button>
+      </div>
     </Card>
   );
 }
@@ -314,13 +493,15 @@ export default function HoldingDetailPage() {
     if (!id || !holding) return;
     if (
       !window.confirm(
-        `Delete ${holding.ticker}? This only works while it has no documents, positions, or extracted facts.`,
+        `Delete ${holding.ticker} and everything attached to it — documents and stored files, ` +
+          `extracted figures, analyses, notes, prices and research? Refused while it is still in a ` +
+          `portfolio snapshot. This cannot be undone.`,
       )
     ) {
       return;
     }
     try {
-      await api.deleteHolding(id);
+      await api.deleteHolding(id, true);
       navigate("/");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not delete this holding.");

@@ -18,6 +18,7 @@ import type {
   AnalysisRun,
   AccountUpdateInput,
   CompanyResearch,
+  DeletionResult,
   DocumentSummary,
   EdgarImport,
   Holding,
@@ -108,8 +109,22 @@ export const api = {
     request<Holding>("/holdings", { method: "POST", body: JSON.stringify(input) }),
   updateHolding: (id: string, input: HoldingUpdateInput) =>
     request<Holding>(`/holdings/${id}`, { method: "PATCH", body: JSON.stringify(input) }),
-  deleteHolding: (id: string) =>
-    request<void>(`/holdings/${id}`, { method: "DELETE", query: { confirm: true } }),
+  deleteHolding: (id: string, cascade = false) =>
+    request<void>(`/holdings/${id}`, {
+      method: "DELETE",
+      query: { confirm: true, cascade: cascade || undefined },
+    }),
+  /** Every document, fact, analysis, note, price and research item for one
+   * holding — the holding itself stays. */
+  deleteHoldingData: (id: string) =>
+    request<DeletionResult>(`/holdings/${id}/documents`, {
+      method: "DELETE",
+      query: { confirm: true },
+    }),
+  /** Clean slate: every holding and document. Backend refuses (409) while
+   * portfolio snapshots exist — call wipeAllPortfolioData first. */
+  wipeAllHoldings: () =>
+    request<DeletionResult>("/holdings/all", { method: "DELETE", query: { confirm: true } }),
   /** Sector / Instrument Type dropdown options for the manual-edit UI —
    * see backend/app/api/holdings.py's `GET /holdings/field-options`. */
   getHoldingFieldOptions: () => request<HoldingFieldOptions>("/holdings/field-options"),
@@ -119,6 +134,8 @@ export const api = {
   getHoldingMetrics: (holdingId: string, period: string) =>
     request<HoldingMetrics>(`/holdings/${holdingId}/metrics`, { query: { period } }),
 
+  deleteDocument: (id: string) =>
+    request<DeletionResult>(`/documents/${id}`, { method: "DELETE", query: { confirm: true } }),
   listDocuments: (holdingId: string) =>
     request<DocumentSummary[]>("/documents", { query: { holding_id: holdingId } }),
   uploadDocument: (params: {

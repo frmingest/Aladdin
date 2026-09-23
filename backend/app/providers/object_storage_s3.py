@@ -68,6 +68,15 @@ class S3ObjectStorageProvider(ObjectStorageProvider):
             ) from exc
         return buffer.getvalue()
 
+    def delete(self, storage_path: str) -> None:
+        # S3 DeleteObject is idempotent: a missing key is a success.
+        try:
+            self._client.delete_object(Bucket=self.bucket, Key=storage_path)
+        except ClientError as exc:
+            raise ObjectStorageUnavailableError(
+                f"Failed to delete object '{storage_path}': {_describe(exc)}"
+            ) from exc
+
 
 def _describe(exc: ClientError) -> str:
     # R2/Supabase sometimes answer with a body botocore can't parse as S3's

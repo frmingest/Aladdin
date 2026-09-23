@@ -19,12 +19,14 @@ from app.models.holding import Holding
 from app.providers.factory import get_object_storage
 from app.schemas.document import (
     PREVIEW_CHARS,
+    DeletionResult,
     DocumentDetail,
     DocumentOut,
     DocumentPageOut,
     DocumentUploadResponse,
     FinancialLineItemOut,
 )
+from app.services.deletion import DeletionBlockedError, delete_documents
 from app.services.documents.ingestion import ingest_holding_document
 
 router = APIRouter(prefix="/documents", tags=["documents"])
@@ -152,3 +154,29 @@ def get_document(document_id: UUID, db: Session = Depends(get_db)) -> DocumentDe
     if document is None:
         raise HTTPException(status_code=404, detail="document not found")
     return _doc_to_detail(db, document)
+
+
+@router.delete("/{document_id}", response_model=DeletionResult)
+def delete_document(
+    document_id: UUID,
+    confirm: bool = False,
+    db: Session = Depends(get_db),
+    storage=Depends(get_object_storage),
+) -> DeletionResult:
+    """Deletes one uploaded document: its extracted facts, pages, chunks,
+    and the original file in object storage. Destructive (CLAUDE.md):
+    `confirm=true` required. Also the way to re-extract a file after an
+    extraction fix — the sha256 duplicate check otherwise returns the old
+    document unchanged on re-upload."""
+    if not confirm:
+        raise HTTPException(
+            status_code=400,
+            detail="deleting a document is destructive — pass confirm=true to proceed",
+        )
+    if db.get(Document, document_id) is None:
+        raise HTTPException(status_code=404, detail="document not found")
+    try:
+        counts = delete_documents(db, storage, [document_id])
+    except DeletionBlockedError as exc:
+        raise HTTPException(status_code=409, detail=f"cannot delete document: {exc}") from exc
+    return DeletionResult(**vars(counts))

@@ -88,32 +88,32 @@ def test_tagged_facts_become_annual_metrics_in_full_units():
     result = extract_ixbrl(_filing(INCOME, BALANCE))
     facts = _facts(result)
 
-    assert facts[("revenue", "FY2025")].value == Decimal("8095600000")
+    assert facts[("revenue", "FY2025")].value == Decimal(8095600000)
     assert facts[("revenue", "FY2025")].unit == "USD"
     assert facts[("revenue", "FY2025")].currency == "USD"
-    assert facts[("revenue", "FY2024")].value == Decimal("7450100000")
-    assert facts[("net_income", "FY2025")].value == Decimal("846400000")
+    assert facts[("revenue", "FY2024")].value == Decimal(7450100000)
+    assert facts[("net_income", "FY2025")].value == Decimal(846400000)
     # sign="-" is how iXBRL marks a negative value (a loss).
-    assert facts[("net_income", "FY2024")].value == Decimal("-327100000")
+    assert facts[("net_income", "FY2024")].value == Decimal(-327100000)
     # An expense concept is already a positive magnitude.
-    assert facts[("depreciation_and_amortization", "FY2025")].value == Decimal("2710100000")
-    assert facts[("total_assets", "FY2024")].value == Decimal("21868200000")
+    assert facts[("depreciation_and_amortization", "FY2025")].value == Decimal(2710100000)
+    assert facts[("total_assets", "FY2024")].value == Decimal(21868200000)
     # Comma-decimal format.
-    assert facts[("cash_and_equivalents", "FY2025")].value == Decimal("699900000")
+    assert facts[("cash_and_equivalents", "FY2025")].value == Decimal(699900000)
     assert all(f.confidence == 1.0 for f in result.facts if f.metric != "total_debt")
 
 
 def test_dimensional_and_quarterly_facts_are_not_promoted():
     facts = _facts(extract_ixbrl(_filing(INCOME, BALANCE)))
     # The RetainedEarningsMember row (-280) must not replace group equity.
-    assert facts[("total_equity", "FY2025")].value == Decimal("560000000")
+    assert facts[("total_equity", "FY2025")].value == Decimal(560000000)
     # The Q4-only context isn't annual.
     assert {f.period for f in facts.values()} == {"FY2024", "FY2025"}
 
 
 def test_total_debt_is_derived_from_borrowing_lines_when_no_total_is_tagged():
     fact = _facts(extract_ixbrl(_filing(INCOME, BALANCE)))[("total_debt", "FY2025")]
-    assert fact.value == Decimal("5941900000")
+    assert fact.value == Decimal(5941900000)
     assert fact.confidence < 1.0
 
 
@@ -152,7 +152,7 @@ def test_same_concept_and_year_tagged_with_two_values_is_a_conflict():
 def test_esef_fallback_concept_is_used_only_without_a_revenue_tag():
     income = INCOME.replace("ifrs-full:Revenue\"", "ifrs-full:RevenueAndOperatingIncome\"")
     facts = _facts(extract_ixbrl(_filing(income, BALANCE)))
-    assert facts[("revenue", "FY2025")].value == Decimal("8095600000")
+    assert facts[("revenue", "FY2025")].value == Decimal(8095600000)
 
 
 def test_plain_html_without_tags_is_text_only():
@@ -172,3 +172,89 @@ def test_external_entities_are_not_resolved(tmp_path):
     ).encode()
     result = extract_ixbrl(content)
     assert "TOP-SECRET" not in "".join(p.text for p in result.pages)
+
+
+# --- mapping rules added 2026-09-23 after validating Vår Energi's real
+# FY2025 ESEF filing line by line (values below mirror that filing) -------
+
+VAR_INCOME = (
+    f"<tr><td>Petroleum revenues</td><td>{_nf('ifrs-full:RevenueFromSaleOfPetroleumAndPetrochemicalProducts', 'fy25', '7 965.7')}</td></tr>"
+    f"<tr><td>Total income</td><td>{_nf('ifrs-full:RevenueAndOperatingIncome', 'fy25', '8 095.6')}</td></tr>"
+    f"<tr><td>D&amp;A</td><td>{_nf('ifrs-full:DepreciationAndAmortisationExpense', 'fy25', '2 710.1')}</td></tr>"
+    f"<tr><td>Impairment</td><td>{_nf('ifrs-full:ImpairmentLossReversalOfImpairmentLossRecognisedInProfitOrLoss', 'fy25', '550.6', sign='-')}</td></tr>"
+    f"<tr><td>Operating profit</td><td>{_nf('ifrs-full:ProfitLossFromOperatingActivities', 'fy25', '4 184.7')}</td></tr>"
+    f"<tr><td>Net finance</td><td>{_nf('ifrs-full:FinanceIncomeCost', 'fy25', '310.0', sign='-')}</td></tr>"
+    f"<tr><td>Profit before tax</td><td>{_nf('ifrs-full:ProfitLossBeforeTax', 'fy25', '4 306.5')}</td></tr>"
+    f"<tr><td>Tax</td><td>{_nf('ifrs-full:IncomeTaxExpenseContinuingOperations', 'fy25', '3 460.1')}</td></tr>"
+    f"<tr><td>Profit</td><td>{_nf('ifrs-full:ProfitLoss', 'fy25', '846.4')}</td></tr>"
+    f"<tr><td>To ordinary holders</td><td>{_nf('ifrs-full:ProfitLossAttributableToOrdinaryEquityHoldersOfParentEntity', 'fy25', '785.2')}</td></tr>"
+    f"<tr><td>Hybrid coupon</td><td>{_nf('ACME:DividendsToHybridCapitalOwners', 'fy25', '61.3')}</td></tr>"
+    f"<tr><td>PP&amp;E capex</td><td>{_nf('ifrs-full:PurchaseOfPropertyPlantAndEquipmentClassifiedAsInvestingActivities', 'fy25', '2 456.6')}</td></tr>"
+    f"<tr><td>E&amp;E capex</td><td>{_nf('ifrs-full:PurchaseOfExplorationAndEvaluationAssets', 'fy25', '363.1')}</td></tr>"
+    f"<tr><td>Interest paid</td><td>{_nf('ifrs-full:InterestPaidClassifiedAsFinancingActivities', 'fy25', '368.6')}</td></tr>"
+)
+VAR_BALANCE = (
+    f"<tr><td>Total assets</td><td>{_nf('ifrs-full:Assets', 'i25', '26 145.3')}</td></tr>"
+    f"<tr><td>Hybrid capital</td><td>{_nf('ACME:HybridCapital', 'i25', '799.5')}</td></tr>"
+    f"<tr><td>Total equity</td><td>{_nf('ifrs-full:Equity', 'i25', '560.0')}</td></tr>"
+    f"<tr><td>Total liabilities</td><td>{_nf('ifrs-full:Liabilities', 'i25', '25 585.4')}</td></tr>"
+    f"<tr><td>Total E&amp;L</td><td>{_nf('ifrs-full:EquityAndLiabilities', 'i25', '26 145.3')}</td></tr>"
+)
+
+
+def _var():
+    return extract_ixbrl(_filing(VAR_INCOME, VAR_BALANCE))
+
+
+def test_net_income_is_profit_attributable_to_ordinary_shareholders():
+    fact = _facts(_var())[("net_income", "FY2025")]
+    assert fact.value == Decimal(785200000)  # not ProfitLoss 846.4 (incl. hybrid coupon)
+
+
+def test_sector_revenue_line_beats_total_income_with_other_income():
+    assert _facts(_var())[("revenue", "FY2025")].value == Decimal(7965700000)
+
+
+def test_capex_sums_ppe_and_exploration_spend_and_is_marked_derived():
+    result = _var()
+    fact = _facts(result)[("capital_expenditures", "FY2025")]
+    assert fact.value == Decimal(2819700000)
+    assert fact.confidence < 1.0
+    assert result.details["ixbrl"]["fact_sources"]["FY2025 capital_expenditures"].startswith("derived:")
+
+
+def test_ebit_is_operating_profit_and_ebitda_excludes_impairment_reversal():
+    facts = _facts(_var())
+    assert facts[("ebit", "FY2025")].value == Decimal(4184700000)
+    # 4 184.7 + 2 710.1 D&A - 550.6 impairment reversal (a non-cash gain)
+    assert facts[("ebitda", "FY2025")].value == Decimal(6344200000)
+    assert facts[("ebitda", "FY2025")].confidence < 1.0
+
+
+def test_interest_paid_is_only_a_labelled_proxy_for_interest_expense():
+    result = _var()
+    fact = _facts(result)[("interest_expense", "FY2025")]
+    assert fact.value == Decimal(368600000)
+    assert fact.confidence < 0.95
+    assert result.details["ixbrl"]["fact_sources"]["FY2025 interest_expense"].startswith("proxy:")
+
+
+def test_statement_identities_are_checked():
+    result = _var()
+    checks = result.details["ixbrl"]["integrity_checks"]
+    assert checks["failed"] == [] and checks["passed"] >= 3
+    broken = VAR_BALANCE.replace("25 585.4", "25 000.0")
+    result = extract_ixbrl(_filing(VAR_INCOME, broken))
+    assert "integrity_check_failed" in result.quality_flags
+    assert any("assets = equity + liabilities" in f for f in result.details["ixbrl"]["integrity_checks"]["failed"])
+
+
+def test_hybrid_capital_inside_equity_is_flagged_not_silently_reclassified():
+    result = _var()
+    facts = _facts(result)
+    assert facts[("total_equity", "FY2025")].value == Decimal(560000000)  # as reported
+    assert "equity_includes_hybrid_capital" in result.quality_flags
+    note = result.details["equity_includes_hybrid_capital"][0]
+    assert "ACME:HybridCapital" in note and "-239 500 000" in note
+    # The coupon (a duration fact) is not mistaken for an equity instrument.
+    assert len(result.details["equity_includes_hybrid_capital"]) == 1

@@ -5,10 +5,15 @@ only be attached to a `holding_id` that already existed in the DB, created
 directly (not through the app). This router is how a holding gets created
 in the first place.
 
-Deletion is destructive (CLAUDE.md "Destructive operations"): it requires
-`confirm=true` and is refused outright if the holding still has documents,
-positions, or extracted facts pointing at it — no cascade, no silent
-orphaning. Delete those first.
+Deletion is destructive (CLAUDE.md "Destructive operations"): every delete
+requires `confirm=true`. A plain holding delete is refused while documents,
+positions or extracted facts point at it. Since 2026-09-23 (Faiz's ask:
+make a real clean slate possible) `cascade=true` removes the holding with
+its documents, facts, analyses, notes, prices and research in one go;
+`DELETE /holdings/{id}/documents` does the same but keeps the holding; and
+`DELETE /holdings/all` wipes every holding once the portfolio is empty.
+Portfolio positions are never cascade-deleted from here — see
+app/services/deletion.py.
 """
 from __future__ import annotations
 
@@ -26,13 +31,16 @@ from app.models.document import Document
 from app.models.financial_line_item import FinancialLineItem
 from app.models.holding import Holding
 from app.models.portfolio import PortfolioPosition
+from app.providers.factory import get_object_storage
+from app.schemas.document import DeletionResult
 from app.schemas.holding import (
     HoldingCreate,
     HoldingFieldOptions,
     HoldingOut,
     HoldingUpdate,
 )
-from app.schemas.metrics import HoldingMetricsOut
+from app.schemas.metrics import HoldingMetricsOut, MetricFactOut
+from app.services.deletion import DeletionBlockedError, purge_holding, wipe_all_holdings
 from app.services.metrics import compute_holding_metrics
 
 router = APIRouter(prefix="/holdings", tags=["holdings"])
@@ -177,10 +185,69 @@ def update_holding(
     return _to_out(db, holding)
 
 
+@router.delete("/all", response_model=DeletionResult)
+def delete_all_holdings(
+    confirm: bool = False,
+    db: Session = Depends(get_db),
+    storage=Depends(get_object_storage),
+) -> DeletionResult:
+    """Clean slate for holdings — added 2026-09-23 at Faiz's request (the
+    2026-09-21 portfolio wipe deliberately left holdings and documents
+    alone). Deletes every holding with all its documents (+ stored files),
+    facts, analysis runs, notes, price observations and company research,
+    plus any document not tied to a holding. Refused (409) while portfolio
+    snapshots exist: wipe the portfolio first, so each destructive step
+    stays explicit. Destructive (CLAUDE.md): `confirm=true` required."""
+    if not confirm:
+        raise HTTPException(
+            status_code=400,
+            detail="wiping all holdings and documents is destructive — pass confirm=true to proceed",
+        )
+    try:
+        counts = wipe_all_holdings(db, storage)
+    except DeletionBlockedError as exc:
+        raise HTTPException(status_code=409, detail=f"cannot wipe holdings: {exc}") from exc
+    return DeletionResult(**vars(counts))
+
+
+@router.delete("/{holding_id}/documents", response_model=DeletionResult)
+def delete_holding_documents(
+    holding_id: UUID,
+    confirm: bool = False,
+    db: Session = Depends(get_db),
+    storage=Depends(get_object_storage),
+) -> DeletionResult:
+    """Deletes everything uploaded, imported or generated for one holding —
+    documents (+ stored files), extracted facts (incl. SEC EDGAR imports),
+    analysis runs, notes, price observations and company research — but
+    keeps the holding itself and its portfolio positions. Destructive
+    (CLAUDE.md): `confirm=true` required."""
+    if not confirm:
+        raise HTTPException(
+            status_code=400,
+            detail="deleting a holding's documents and data is destructive — pass confirm=true to proceed",
+        )
+    holding = db.get(Holding, holding_id)
+    if holding is None:
+        raise HTTPException(status_code=404, detail="holding not found")
+    try:
+        counts = purge_holding(db, storage, holding, keep_holding=True)
+    except DeletionBlockedError as exc:
+        raise HTTPException(status_code=409, detail=f"cannot delete: {exc}") from exc
+    return DeletionResult(**vars(counts))
+
+
 @router.delete("/{holding_id}", status_code=204, response_model=None)
 def delete_holding(
-    holding_id: UUID, confirm: bool = False, db: Session = Depends(get_db)
+    holding_id: UUID,
+    confirm: bool = False,
+    cascade: bool = False,
+    db: Session = Depends(get_db),
+    storage=Depends(get_object_storage),
 ) -> None:
+    """Without `cascade`: refused while anything references the holding.
+    With `cascade=true`: its documents, facts, analyses, notes, prices and
+    research go too (still refused while it's in a portfolio snapshot)."""
     if not confirm:
         raise HTTPException(
             status_code=400,
@@ -190,6 +257,13 @@ def delete_holding(
     holding = db.get(Holding, holding_id)
     if holding is None:
         raise HTTPException(status_code=404, detail="holding not found")
+
+    if cascade:
+        try:
+            purge_holding(db, storage, holding, keep_holding=False)
+        except DeletionBlockedError as exc:
+            raise HTTPException(status_code=409, detail=f"cannot delete holding: {exc}") from exc
+        return
 
     blockers = []
     document_count = db.scalar(
@@ -272,12 +346,73 @@ def get_holding_metrics(
         )
 
     facts = {item.metric: item.value for item in line_items}
-    result = compute_holding_metrics(facts)
+    currencies = {item.metric: item.currency for item in line_items}
+    result = compute_holding_metrics(facts, currencies)
 
+    documents = {
+        d.id: d
+        for d in db.scalars(
+            select(Document).where(Document.id.in_({item.document_id for item in line_items}))
+        )
+    }
+    fact_details: list[MetricFactOut] = []
+    for item in sorted(line_items, key=lambda i: i.metric):
+        document = documents.get(item.document_id)
+        flags = (document.quality_flags if document else None) or {}
+        sources = (flags.get("ixbrl") or {}).get("fact_sources") or {}
+        fact_details.append(
+            MetricFactOut(
+                metric=item.metric,
+                value=item.value,
+                currency=item.currency,
+                document_id=item.document_id,
+                original_filename=document.original_filename if document else "?",
+                source_page=item.source_page,
+                confidence=item.confidence,
+                source=sources.get(f"{period} {item.metric}"),
+            )
+        )
+
+    notes = dict(result.notes)
+    by_metric = {f.metric: f for f in fact_details}
+    interest = by_metric.get("interest_expense")
+    if interest and interest.source and interest.source.startswith("proxy:"):
+        notes["interest_coverage"] = "; ".join(
+            filter(None, [notes.get("interest_coverage"), "interest = cash interest paid (proxy)"])
+        )
+    capex = by_metric.get("capital_expenditures")
+    if capex and capex.source and capex.source.startswith("derived:"):
+        parts = capex.source.removeprefix("derived:").strip().split(" + ")
+        text = "capex = " + " + ".join(p.split(":", 1)[-1] for p in parts)
+        notes["free_cash_flow"] = text
+        notes["owner_earnings"] = text
+
+    warnings = list(result.warnings)
+    for document in documents.values():
+        flags = document.quality_flags or {}
+        for key, label in (
+            ("equity_includes_hybrid_capital", "Debt / equity uses equity as reported"),
+            ("facts_differ_from_existing", "Kept an earlier file's value"),
+            ("fact_conflicts", "Conflicting tags, not imported"),
+        ):
+            for entry in flags.get(key) or []:
+                if isinstance(entry, str) and entry.startswith(period):
+                    warnings.append(f"{label} ({document.original_filename}): {entry}")
+        for entry in ((flags.get("ixbrl") or {}).get("integrity_checks") or {}).get("failed") or []:
+            if isinstance(entry, str) and entry.startswith(period):
+                warnings.append(
+                    f"Statement check failed ({document.original_filename}): {entry}"
+                )
+
+    monetary = {c for m, c in currencies.items() if c and m != "shares_outstanding"}
     return HoldingMetricsOut(
         holding_id=holding_id,
         period=period,
         facts=facts,
         computed=result.computed,
         skipped=result.skipped,
+        currency=next(iter(monetary)) if len(monetary) == 1 else None,
+        notes=notes,
+        warnings=warnings,
+        fact_details=fact_details,
     )

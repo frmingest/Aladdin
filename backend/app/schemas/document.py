@@ -82,3 +82,24 @@ class DocumentDetail(DocumentOut):
 class DocumentUploadResponse(BaseModel):
     document: DocumentDetail
     was_duplicate_file: bool
+
+
+class DeletionResult(BaseModel):
+    """What a destructive document/holding delete removed — mirrors
+    app/services/deletion.py's DeletionCounts. `storage_files_failed`
+    lists original files the DB no longer references but object storage
+    refused to delete (orphans to clean by hand), never silently dropped."""
+
+    documents: int
+    pages: int
+    chunks: int
+    facts: int
+    analysis_runs: int
+    notes: int
+    market_observations: int
+    research_runs: int
+    research_items: int
+    legacy_holding_analyses: int
+    holdings: int
+    storage_files_deleted: int
+    storage_files_failed: list[str]

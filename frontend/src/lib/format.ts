@@ -39,3 +39,25 @@ export function formatBytes(bytes: number): string {
   }
   return `${value.toFixed(1)} ${units[unitIndex]}`;
 }
+
+/** A filing-scale money amount: "USD 1,787.4m" (millions, one decimal —
+ * the precision ESEF statements are tagged at), or plain units below 1m. */
+export function formatMoney(value: string, currency: string | null): string {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return value;
+  const prefix = currency ? `${currency} ` : "";
+  if (Math.abs(n) >= 1_000_000) {
+    return `${prefix}${(n / 1_000_000).toLocaleString("en-US", {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    })}m`;
+  }
+  return `${prefix}${n.toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
+}
+
+/** A ratio expressed as a multiple: "2.93×". */
+export function formatMultiple(value: string): string {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return value;
+  return `${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}×`;
+}

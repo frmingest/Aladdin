@@ -53,11 +53,46 @@ DERIVED_CONFIDENCE = 0.95
 # than the ones SEC EDGAR's map lists. Appended AFTER the EDGAR priority
 # list, so they're used only when none of those is tagged.
 _ESEF_FALLBACK_CONCEPTS: dict[str, tuple[str, ...]] = {
-    # "Total income" = revenue + other operating income (e.g. Vår Energi).
-    "revenue": ("ifrs-full:RevenueAndOperatingIncome",),
+    # Oil & gas producers tag their revenue line with the sector concept
+    # (Vår Energi 2025: 7 965.7) — preferred over "Total income" below,
+    # which also contains other operating income (130.0).
+    # "Total income" = revenue + other operating income — last resort.
+    "revenue": (
+        "ifrs-full:RevenueFromSaleOfPetroleumAndPetrochemicalProducts",
+        "ifrs-full:RevenueAndOperatingIncome",
+    ),
     "interest_expense": ("ifrs-full:InterestExpenseOnBorrowings",),
     "shares_outstanding": ("ifrs-full:NumberOfSharesIssuedAndFullyPaid",),
 }
+
+# Inserted BEFORE the generic ifrs-full concepts of the EDGAR list (after
+# the us-gaap ones): a stricter concept that, when tagged, is the right one.
+_ESEF_PREFERRED_CONCEPTS: dict[str, tuple[str, ...]] = {
+    # Profit attributable to ORDINARY shareholders — excludes the coupon
+    # owed to holders of hybrid/perpetual capital classified as equity
+    # (Vår Energi 2025: 785.2 vs ProfitLoss 846.4). This is the figure EPS
+    # is computed from, so it's what an owner of the shares earns.
+    "net_income": ("ifrs-full:ProfitLossAttributableToOrdinaryEquityHoldersOfParentEntity",),
+    # Operating profit is EBIT on an IFRS income statement (finance items
+    # and tax come below it). A mapping, not a computation.
+    "ebit": ("ifrs-full:ProfitLossFromOperatingActivities",),
+}
+
+# Last-resort stand-ins for a metric the filing doesn't tag on the face of
+# the statements. Stored with PROXY_CONFIDENCE and labelled "proxy" in the
+# mapping, so nothing downstream mistakes them for the accrual figure.
+# Interest paid (cash) — used when only net finance income/cost is tagged
+# (net of interest income and decommissioning accretion, so not interest
+# expense). Cash interest includes capitalised interest, i.e. it is the
+# conservative (larger) choice for interest coverage.
+_PROXY_CONCEPTS: dict[str, tuple[str, ...]] = {
+    "interest_expense": (
+        "ifrs-full:InterestPaidClassifiedAsOperatingActivities",
+        "ifrs-full:InterestPaidClassifiedAsFinancingActivities",
+        "ifrs-full:InterestPaid",
+    ),
+}
+PROXY_CONFIDENCE = 0.9
 
 # total_debt fallback when no single borrowings total is tagged: the sum of
 # the long- and short-term borrowings lines (leases excluded, matching
@@ -70,6 +105,62 @@ _DEBT_COMPONENTS = (
     "ifrs-full:CurrentBorrowingsAndCurrentPortionOfNoncurrentBorrowings",
 )
 
+# Capital expenditure = every investing outflow that buys productive
+# assets, not only PP&E. For an E&P company capitalised exploration
+# (E&E assets) is capex like any other (Vår Energi 2025: PP&E 2 456.6 +
+# E&E 363.1). A filer that tags one combined line is taken as-is.
+_CAPEX_COMBINED = (
+    "ifrs-full:PurchaseOfPropertyPlantAndEquipmentIntangibleAssetsOtherThanGoodwillInvestmentPropertyAndOtherNoncurrentAssets",
+)
+_CAPEX_COMPONENTS = (
+    "ifrs-full:PurchaseOfPropertyPlantAndEquipmentClassifiedAsInvestingActivities",
+    "ifrs-full:PurchaseOfExplorationAndEvaluationAssets",
+    "ifrs-full:PurchaseOfIntangibleAssetsClassifiedAsInvestingActivities",
+)
+
+# EBITDA inputs (derived in code, never read from a company's own
+# "EBITDA" extension tag, whose definition varies by company).
+_OPERATING_PROFIT = "ifrs-full:ProfitLossFromOperatingActivities"
+_PURE_DA = "ifrs-full:DepreciationAndAmortisationExpense"
+_DA_WITH_IMPAIRMENT = (
+    "ifrs-full:DepreciationAmortisationAndImpairmentLossReversalOfImpairmentLossRecognisedInProfitOrLoss"
+)
+_IMPAIRMENT = "ifrs-full:ImpairmentLossReversalOfImpairmentLossRecognisedInProfitOrLoss"
+
+# Equity instruments that are not ordinary shares (hybrid bonds, perpetual
+# notes, AT1) — IFRS classifies them as equity, a shareholder's view says
+# they are closer to debt. Detected so the metrics can warn; total_equity
+# itself stays the reported figure.
+_OTHER_EQUITY_CONCEPTS = ("ifrs-full:OtherEquityInterest",)
+_OTHER_EQUITY_NAME = re.compile(r"(Hybrid|Perpetual)", re.IGNORECASE)
+
+# Arithmetic identities every IFRS statement must satisfy. A failure means
+# the filing, or our reading of it, is wrong — flagged, never hidden.
+# (lhs, rhs terms as (concept, +1/-1))
+_INTEGRITY_CHECKS: tuple[tuple[str, str, tuple[tuple[str, int], ...]], ...] = (
+    ("balance sheet balances", "ifrs-full:Assets", (("ifrs-full:EquityAndLiabilities", 1),)),
+    (
+        "assets = equity + liabilities",
+        "ifrs-full:Assets",
+        (("ifrs-full:Equity", 1), ("ifrs-full:Liabilities", 1)),
+    ),
+    (
+        "assets = current + non-current",
+        "ifrs-full:Assets",
+        (("ifrs-full:CurrentAssets", 1), ("ifrs-full:NoncurrentAssets", 1)),
+    ),
+    (
+        "liabilities = current + non-current",
+        "ifrs-full:Liabilities",
+        (("ifrs-full:CurrentLiabilities", 1), ("ifrs-full:NoncurrentLiabilities", 1)),
+    ),
+    (
+        "profit = pre-tax profit - tax",
+        "ifrs-full:ProfitLoss",
+        (("ifrs-full:ProfitLossBeforeTax", 1), ("ifrs-full:IncomeTaxExpenseContinuingOperations", -1)),
+    ),
+)
+
 _SKIP_TEXT_TAGS = {"style", "script", "head", "title", "header", "hidden", "resources", "references"}
 _BREAK = "\ue000"  # private-use char: not whitespace, so it survives collapsing
 _BLOCK_TAGS = {"div", "p", "tr", "li", "h1", "h2", "h3", "h4", "h5", "h6", "table", "br", "section"}
@@ -77,8 +168,19 @@ _BLOCK_TAGS = {"div", "p", "tr", "li", "h1", "h2", "h3", "h4", "h5", "h6", "tabl
 
 def _concept_map() -> dict[str, tuple[str, ...]]:
     merged: dict[str, tuple[str, ...]] = {}
-    for metric, concepts in EDGAR_CONCEPT_MAP.items():
-        merged[metric] = tuple(concepts) + _ESEF_FALLBACK_CONCEPTS.get(metric, ())
+    metrics = list(EDGAR_CONCEPT_MAP) + [
+        m for m in (*_ESEF_PREFERRED_CONCEPTS, *_ESEF_FALLBACK_CONCEPTS) if m not in EDGAR_CONCEPT_MAP
+    ]
+    for metric in metrics:
+        concepts = tuple(EDGAR_CONCEPT_MAP.get(metric, ()))
+        us_gaap = tuple(c for c in concepts if not c.startswith("ifrs-full:"))
+        ifrs = tuple(c for c in concepts if c.startswith("ifrs-full:"))
+        merged[metric] = (
+            us_gaap
+            + _ESEF_PREFERRED_CONCEPTS.get(metric, ())
+            + ifrs
+            + _ESEF_FALLBACK_CONCEPTS.get(metric, ())
+        )
     return merged
 
 
@@ -270,6 +372,156 @@ def _fmt(value: Decimal) -> str:
     return f"{value.normalize():,f}".replace(",", " ")
 
 
+def _positive(fact: TaggedFact) -> Decimal:
+    return abs(fact.value)
+
+
+def _resolve_metric(
+    metric: str, fy: str, resolved: dict[tuple[str, str], TaggedFact]
+) -> tuple[Decimal, float, str, str | None, int | None] | None:
+    """(value, confidence, source description, unit, page) for one metric
+    and fiscal year, or None. Direct tags win; derived sums/proxies are
+    clearly labelled and carry a lower confidence."""
+
+    def get(concept: str) -> TaggedFact | None:
+        return resolved.get((concept, fy))
+
+    if metric == "capital_expenditures":
+        combined = next((get(c) for c in _CAPEX_COMBINED if get(c) is not None), None)
+        if combined is not None:
+            return _positive(combined), IXBRL_CONFIDENCE, combined.concept, combined.unit, combined.page or None
+        parts = [get(c) for c in _CAPEX_COMPONENTS if get(c) is not None]
+        if parts and len({p.unit for p in parts}) == 1:
+            if len(parts) == 1:
+                only = parts[0]
+                return _positive(only), IXBRL_CONFIDENCE, only.concept, only.unit, only.page or None
+            total = sum((_positive(p) for p in parts), Decimal(0))
+            return (
+                total,
+                DERIVED_CONFIDENCE,
+                "derived: " + " + ".join(p.concept for p in parts),
+                parts[0].unit,
+                parts[0].page or None,
+            )
+        # fall through to the generic concept list
+
+    if metric == "ebitda":
+        operating = get(_OPERATING_PROFIT)
+        if operating is None:
+            return None
+        combined_da = get(_DA_WITH_IMPAIRMENT)
+        pure_da = get(_PURE_DA)
+        if combined_da is not None:
+            addbacks = [combined_da]
+            value = operating.value + _positive(combined_da)
+        elif pure_da is not None:
+            addbacks = [pure_da]
+            value = operating.value + _positive(pure_da)
+            impairment = get(_IMPAIRMENT)
+            if impairment is not None:
+                # Signed as tagged: positive = impairment loss (added back),
+                # negative = reversal (a non-cash gain, taken out).
+                addbacks.append(impairment)
+                value += impairment.value
+        else:
+            return None
+        if len({operating.unit, *(a.unit for a in addbacks)}) != 1:
+            return None
+        return (
+            value,
+            DERIVED_CONFIDENCE,
+            "derived: " + " + ".join([operating.concept, *(a.concept for a in addbacks)]),
+            operating.unit,
+            operating.page or None,
+        )
+
+    concepts = CONCEPT_MAP.get(metric, ())
+    chosen = next((get(c) for c in concepts if get(c) is not None), None)
+    if chosen is not None:
+        return chosen.value, IXBRL_CONFIDENCE, chosen.concept, chosen.unit, chosen.page or None
+
+    if metric == "total_debt":
+        parts = [get(c) for c in _DEBT_COMPONENTS if get(c) is not None]
+        if parts and len({p.unit for p in parts}) == 1:
+            return (
+                sum((p.value for p in parts), Decimal(0)),
+                DERIVED_CONFIDENCE,
+                " + ".join(p.concept for p in parts),
+                parts[0].unit,
+                parts[0].page or None,
+            )
+
+    proxy = next((get(c) for c in _PROXY_CONCEPTS.get(metric, ()) if get(c) is not None), None)
+    if proxy is not None:
+        return proxy.value, PROXY_CONFIDENCE, f"proxy: {proxy.concept}", proxy.unit, proxy.page or None
+    return None
+
+
+def _decimals_tolerance(facts: list[TaggedFact]) -> Decimal:
+    """Rounding slack for an identity check: half a unit of the least
+    precise term's @decimals, per term (0 when every term is exact)."""
+    slack = Decimal(0)
+    for fact in facts:
+        try:
+            decimals = int(fact.decimals) if fact.decimals not in (None, "INF") else None
+        except ValueError:
+            decimals = None
+        if decimals is not None:
+            slack += Decimal(10) ** (-decimals) / 2
+    return slack
+
+
+def _integrity_checks(
+    resolved: dict[tuple[str, str], TaggedFact], years: list[str]
+) -> dict[str, object]:
+    passed = 0
+    failed: list[str] = []
+    for fy in years:
+        for label, lhs_concept, terms in _INTEGRITY_CHECKS:
+            lhs = resolved.get((lhs_concept, fy))
+            rhs = [(resolved.get((c, fy)), sign) for c, sign in terms]
+            if lhs is None or any(f is None for f, _ in rhs):
+                continue
+            total = sum((f.value * sign for f, sign in rhs), Decimal(0))
+            used = [lhs, *(f for f, _ in rhs)]
+            if abs(lhs.value - total) <= _decimals_tolerance(used):
+                passed += 1
+            else:
+                failed.append(f"{fy} {label}: {_fmt(lhs.value)} vs {_fmt(total)}")
+    return {"passed": passed, "failed": failed}
+
+
+def _other_equity_instruments(
+    resolved: dict[tuple[str, str], TaggedFact], years: list[str]
+) -> list[str]:
+    notes: list[str] = []
+    for fy in years:
+        equity = resolved.get(("ifrs-full:Equity", fy))
+        if equity is None:
+            continue
+        for (concept, year), fact in resolved.items():
+            # Same balance-sheet context as total equity (an instant at the
+            # year end, no dimensions) — never a duration fact like a coupon.
+            if year != fy or fact.value == 0 or fact.context_id != equity.context_id:
+                continue
+            local = concept.split(":", 1)[-1]
+            if concept in _OTHER_EQUITY_CONCEPTS or (
+                not concept.startswith("ifrs-full:")
+                and _OTHER_EQUITY_NAME.search(local)
+                and "Dividend" not in local
+                and "Paid" not in local
+                and "Proceeds" not in local
+            ):
+                if fact.unit != equity.unit:
+                    continue
+                notes.append(
+                    f"{fy}: total equity {_fmt(equity.value)} {equity.unit} includes "
+                    f"{concept} {_fmt(fact.value)} — equity attributable to ordinary "
+                    f"shareholders is {_fmt(equity.value - fact.value)}"
+                )
+    return notes
+
+
 def parse_ixbrl(content: bytes):
     from lxml import etree
 
@@ -369,31 +621,13 @@ def extract_ixbrl(content: bytes) -> ExtractionResult:
     years = sorted({fy for (_, fy) in resolved}, reverse=True)
     facts_out: list[ExtractedFact] = []
     mapping_lines: list[str] = []
-    for metric, concepts in CONCEPT_MAP.items():
+    fact_sources: dict[str, str] = {}
+    for metric in (*CONCEPT_MAP, "ebitda"):
         for fy in years:
-            chosen: TaggedFact | None = next(
-                (resolved[(c, fy)] for c in concepts if (c, fy) in resolved), None
-            )
-            value: Decimal | None = None
-            confidence = IXBRL_CONFIDENCE
-            source = ""
-            unit_raw: str | None = None
-            page: int | None = None
-            if chosen is not None:
-                value = chosen.value
-                source = chosen.concept
-                unit_raw = chosen.unit
-                page = chosen.page or None
-            elif metric == "total_debt":
-                parts = [resolved[(c, fy)] for c in _DEBT_COMPONENTS if (c, fy) in resolved]
-                if parts and len({p.unit for p in parts}) == 1:
-                    value = sum((p.value for p in parts), Decimal(0))
-                    confidence = DERIVED_CONFIDENCE
-                    source = " + ".join(p.concept for p in parts)
-                    unit_raw = parts[0].unit
-                    page = parts[0].page or None
-            if value is None:
+            picked = _resolve_metric(metric, fy, resolved)
+            if picked is None:
                 continue
+            value, confidence, source, unit_raw, page = picked
             if metric == "shares_outstanding":
                 unit, currency = "shares", None
             else:
@@ -414,6 +648,10 @@ def extract_ixbrl(content: bytes) -> ExtractionResult:
                 )
             )
             mapping_lines.append(f"{fy} {metric} = {_fmt(value)} {unit} <- {source}")
+            fact_sources[f"{fy} {metric}"] = source
+
+    integrity = _integrity_checks(resolved, years)
+    other_equity = _other_equity_instruments(resolved, years)
 
     # --- the "Tagged XBRL facts" evidence page -------------------------------
     if tagged:
@@ -455,7 +693,14 @@ def extract_ixbrl(content: bytes) -> ExtractionResult:
             "fiscal_years": years,
             "facts_mapped": len(facts_out),
             "unreadable_numbers": unreadable,
+            "fact_sources": fact_sources,
+            "integrity_checks": integrity,
         }
+        if integrity["failed"]:
+            flags.append("integrity_check_failed")
+        if other_equity:
+            flags.append("equity_includes_hybrid_capital")
+            details["equity_includes_hybrid_capital"] = other_equity
     if conflicts:
         flags.append("fact_conflicts")
         details["fact_conflicts"] = conflicts[:20]

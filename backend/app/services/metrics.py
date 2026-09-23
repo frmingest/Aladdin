@@ -29,6 +29,27 @@ ZERO = Decimal(0)
 class MetricsResult:
     computed: dict[str, Decimal] = field(default_factory=dict)
     skipped: dict[str, str] = field(default_factory=dict)
+    # metric -> how an input was stood in for (e.g. "EBIT = operating
+    # income"), shown next to the number so a substitution is never silent.
+    notes: dict[str, str] = field(default_factory=dict)
+    # Whole-period problems (mixed currencies, ...).
+    warnings: list[str] = field(default_factory=list)
+
+
+# Every name this module can put in `computed` from facts alone.
+FACT_RATIOS = (
+    "gross_margin",
+    "operating_margin",
+    "net_margin",
+    "free_cash_flow",
+    "owner_earnings",
+    "net_debt",
+    "net_debt_to_ebitda",
+    "net_debt_to_fcf",
+    "interest_coverage",
+    "debt_to_equity",
+)
+NON_MONETARY_FACTS = frozenset({"shares_outstanding"})
 
 
 def _get(facts: dict[str, Decimal], *names: str) -> list[Decimal] | None:
@@ -42,10 +63,43 @@ def _get(facts: dict[str, Decimal], *names: str) -> list[Decimal] | None:
     return None if missing else values
 
 
-def compute_holding_metrics(facts: dict[str, Decimal]) -> MetricsResult:
+def compute_holding_metrics(
+    facts: dict[str, Decimal], currencies: dict[str, str | None] | None = None
+) -> MetricsResult:
     """`facts` maps canonical metric name (app/domain/financial_metrics.py's
-    CANONICAL_METRICS) -> value, for a single holding and a single period."""
+    CANONICAL_METRICS) -> value, for a single holding and a single period.
+    `currencies` (optional) maps the same names -> ISO currency; when the
+    monetary facts of one period come in more than one currency (e.g. a
+    NOK factsheet and a USD annual report), nothing is computed — a ratio
+    across currencies is wrong, not approximately right."""
     result = MetricsResult()
+
+    mixed = sorted(
+        {c for m, c in (currencies or {}).items() if c and m in facts and m not in NON_MONETARY_FACTS}
+    )
+    if len(mixed) > 1:
+        message = (
+            f"facts for this period are in mixed currencies ({', '.join(mixed)}) — "
+            "delete the document with the wrong currency and re-upload"
+        )
+        result.warnings.append(message)
+        for name in FACT_RATIOS:
+            result.skipped[name] = "not computed: mixed currencies"
+        _always_skipped(result)
+        return result
+
+    facts = dict(facts)
+    # EBIT: an IFRS/GAAP operating profit IS EBIT (finance items and tax sit
+    # below it). Used only when no explicit EBIT fact exists, and said so.
+    if "ebit" not in facts and "operating_income" in facts:
+        facts["ebit"] = facts["operating_income"]
+        result.notes["interest_coverage"] = "EBIT = operating income"
+    # EBITDA: derived only when not extracted directly. Impairments are not
+    # separated from operating income here (an iXBRL upload derives EBITDA
+    # properly, net of impairments, at extraction time).
+    if "ebitda" not in facts and "ebit" in facts and "depreciation_and_amortization" in facts:
+        facts["ebitda"] = facts["ebit"] + facts["depreciation_and_amortization"]
+        result.notes["net_debt_to_ebitda"] = "EBITDA = EBIT + D&A (impairments not separated)"
 
     def attempt(metric_name: str, *inputs: str, fn) -> None:
         values = _get(facts, *inputs)
@@ -121,6 +175,11 @@ def compute_holding_metrics(facts: dict[str, Decimal]) -> MetricsResult:
     )
     attempt("debt_to_equity", "total_debt", "total_equity", fn=calculations.debt_to_equity)
 
+    _always_skipped(result)
+    return result
+
+
+def _always_skipped(result: MetricsResult) -> None:
     for metric_name in ("roic", "roe"):
         result.skipped[metric_name] = (
             "not computable from extracted filing facts alone "
@@ -134,5 +193,3 @@ def compute_holding_metrics(facts: dict[str, Decimal]) -> MetricsResult:
         "enterprise_value",
     ):
         result.skipped[metric_name] = "requires live market data (Phase 2, not yet available)"
-
-    return result
