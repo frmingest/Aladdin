@@ -20,6 +20,8 @@ Finance symbol format, not invented here.
 """
 from __future__ import annotations
 
+import threading
+import time
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 
@@ -31,6 +33,14 @@ from app.providers.base import (
 )
 
 _PROVIDER_NAME = "yfinance"
+
+# Beta moves slowly and, unlike price/FX/risk-free rate, has no DB-backed
+# staleness cache (app/services/market_data/) — so every valuation used to
+# re-fetch it live. That's fine for one holding and slow for the
+# margin-of-safety board (F3), which values every holding at once. The
+# provider is an lru_cache'd singleton (app/providers/factory.py), so an
+# in-process cache here is shared across requests.
+BETA_CACHE_TTL_SECONDS = 24 * 3600
 
 
 def _to_decimal(value: object) -> Decimal | None:
@@ -67,6 +77,8 @@ class YFinanceMarketDataProvider(MarketDataProvider):
             raise MarketDataUnavailableError(
                 "yfinance is not installed — add it to backend/requirements.txt"
             ) from exc
+        self._beta_cache: dict[str, tuple[float, Decimal | None]] = {}
+        self._beta_lock = threading.Lock()
 
     def _ticker(self, symbol: str):
         import yfinance as yf
@@ -179,10 +191,20 @@ class YFinanceMarketDataProvider(MarketDataProvider):
         )
 
     def get_beta(self, ticker: str) -> Decimal | None:
+        key = ticker.upper()
+        now = time.monotonic()
+        with self._beta_lock:
+            cached = self._beta_cache.get(key)
+        if cached is not None and now - cached[0] < BETA_CACHE_TTL_SECONDS:
+            return cached[1]
+
         yf_ticker = self._ticker(ticker)
         try:
             info = yf_ticker.info
             beta = info.get("beta") if info else None
         except Exception:  # noqa: BLE001 - beta is best-effort, never fatal to the caller
-            return None
-        return _to_decimal(beta)
+            return None  # a failed lookup is not cached, so the next call retries
+        value = _to_decimal(beta)
+        with self._beta_lock:
+            self._beta_cache[key] = (now, value)
+        return value

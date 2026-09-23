@@ -169,10 +169,27 @@ deterministic DCF/reverse-DCF/CAPM engine, multiples-over-time, orchestration wi
   GET-serves-cached-or-refreshes shape, there's no staleness concept for an LLM analysis verdict;
   every run is an explicit, real, cost-bearing call the caller asked for.
 
+### Sprint 4 follow-up — agreed 2026-09-22 — ✅ built 2026-09-22
+
+Both items below are built (commits `d646e06` backend, `3942745` frontend),
+which closes Sprint 4. Readiness is advisory: `POST .../run` still only
+hard-gates on instrument type; the UI disables Run on any readiness blocker.
+
+- **F1 Analysis view** (the deferred Sprint 4 frontend): verdict card, moat breakdown, clickable
+  evidence citations and notes editor on `HoldingDetailPage`.
+- **F2 Analysis readiness check**: a per-holding checklist (ticker resolves, ≥3 yrs of financials,
+  fresh price, research cached, analyzable type) shown before a Gemini call is spent. Also fixes the
+  `asset_class_raw="equity"` default for manually created holdings.
+
 ### Sprint 5 — Portfolio roll-up & dashboard
 
 Aggregate verdict/moat/valuation view across all holdings, single-purpose dashboard, deterministic
 executive summary. Sprint 4's verdict schema now exists for this to aggregate over.
+**+ F3 Margin-of-safety board** (agreed 2026-09-22): every holding ranked by price vs. its DCF
+bear/base/bull range. **✅ Built 2026-09-22** (`2c415b8` backend, `ba3b71b` frontend):
+`GET /valuation/board` + `/margin-of-safety` page. "Owned" = latest snapshot per account; only
+stock/equity ETF rows; Sprint 3 valuation reused unchanged. Still open in Sprint 5: the aggregate
+moat/verdict roll-up dashboard and the deterministic executive summary.
 
 ### Sprint 6 — Evidence quality
 
@@ -182,6 +199,8 @@ Per-document evidence budget, section-aware chunking (current ingestion is 1 pag
 
 Pre-commit hooks, CI workflow, secret-scanning; also a natural place for a frontend test framework
 if one still doesn't exist by then.
+**+ F4 System status page + post-deploy Playwright smoke test against Railway** (agreed 2026-09-22;
+the status page can ship earlier).
 
 ## Backlog — candidate future phases (beyond Sprint 7)
 
@@ -196,12 +215,18 @@ if one still doesn't exist by then.
 | **Alerts & notifications** | Notify when a thesis-invalidation trigger fires or research goes stale | Needs thesis tracking built first |
 | **Reporting & export** | One-holding or whole-portfolio PDF/print view of an analysis run | Sprint 4's analysis output now exists to export |
 | **More primary sources** | Brønnøysund accounts register (Norwegian financials), VFF fund NAVs, Newsweb announcement body text | SEC EDGAR + Newsweb built 2026-09-22 (see `primary-sources-sec-edgar-newsweb-2026-09-22.md`); these are the next-cheapest gaps |
+| **F5 Overnight analysis queue** (agreed 2026-09-22) | Queue holdings and run them within the daily Gemini budget, resuming the next day | Build together with the LLM usage ledger |
+| **F6 Decision journal** (agreed 2026-09-22) | Record buy/sell reasoning, price and "what would prove me wrong"; show the outcome after 6/12 months | Pairs with thesis tracking |
+| **F7 Watchlist** (agreed 2026-09-22) | Analyze non-held companies; flag when the price drops below a buy-below level | Reuses the Sprint 3/4 engines unchanged |
 | **Fix GitHub push credentials** (ops, not a feature) | A PAT/credential-helper so sessions can push directly | Needs a decision/action from Faiz outside the repo — hit identically in every session |
 
 ## Changes / history
 
 | Date | Summary |
 |---|---|
+| 2026-09-22 | **F3 Margin-of-safety board built.** `GET /valuation/board` ranks owned equities by base-case margin of safety with zone, value, weight and latest verdict; `/margin-of-safety` page. yfinance beta cached 24h. 403 tests (11 new). Sprint 5 otherwise still open. |
+| 2026-09-22 | **Sprint 4 closed: F1 Analysis view + F2 Readiness check.** `GET /analysis/holdings/{id}/readiness` (instrument type, provider config, ticker/price, financial history, sector, research cache, Gemini quota; no side effects). Run output gains `evidence_items` + `user_notes_snapshot`. Manual holdings now classified by name instead of `equity`. `AnalysisPanel` on the holding page. 392 tests (28 new). Not yet run against a real LLM. |
+| 2026-09-22 | **Feature plan F1–F7 agreed.** F1/F2 attached to the Sprint 4 follow-up, F3 to Sprint 5, F4 to Sprint 7, F5–F7 added to the Backlog. Docs only. |
 | 2026-09-22 | **Primary sources: SEC EDGAR + Oslo Børs Newsweb.** EDGAR XBRL annual facts → `financial_line_items` (traceable to accession numbers, never overwrites uploaded periods); Newsweb announcements cached via the research tables (no migration); evidence packet v2 cites both; new `/sources/*` API and a Primary sources section on the holding page. 364/364 tests. Not yet run against the live SEC/Newsweb hosts. See `primary-sources-sec-edgar-newsweb-2026-09-22.md`. |
 | 2026-09-21 | **Sprint 4 backend: the two-pass Buffett/Munger analysis engine.** Built the evidence packet (reusing Sprints 1-3 unchanged), versioned output schema/assumptions/prompts, the blind pass, the reconciliation pass (notes-aware, notes optional), the orchestration pipeline (equity-type gating, LLM fallback, deterministic DCF-derived price target, blind-result preserved if only reconciliation fails), per-holding notes CRUD, and the `/analysis` API. New tables via migration `b5e1a9c3d7f2` — a fresh schema, not an extension of the legacy Phase-3 tables. 19 new tests (307 total), ruff clean. Discovered: manually-created holdings default to a non-analyzable `asset_class_raw` (flagged, not fixed); `MARKET_DATA_PROVIDER`/`RESEARCH_PROVIDER` are still `stub` in `backend/.env`, now blocking the analysis engine specifically. Frontend deliberately deferred. Not run against a real LLM call, real market data, or real holdings this session. |
 | 2026-09-21 | Portfolio delete fixes, page-load speed, first portfolio-level chart, whisky grouping (out-of-sequence). See `progress.md`. |

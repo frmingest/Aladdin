@@ -19,6 +19,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config.database import get_db
+from app.config.settings import get_settings
 from app.domain.analysis_schema import BlindPassOutputV1, ReconciliationOutputV1
 from app.models.analysis import EquityAnalysisRun
 from app.models.holding import Holding
@@ -28,22 +29,28 @@ from app.providers.base import (
     ResearchProvider,
     RiskFreeRateProvider,
 )
+from app.providers.budget import DailyBudgetGuard
 from app.providers.factory import (
     get_announcements_provider_or_none,
     get_llm_fallback_provider,
     get_llm_provider,
     get_market_data_provider,
+    get_primary_budget_guard,
     get_research_provider,
     get_risk_free_rate_provider,
 )
 from app.providers.newsweb_provider import NewswebAnnouncementsProvider
 from app.schemas.analysis import (
+    AnalysisReadinessCheckOut,
+    AnalysisReadinessOut,
     EquityAnalysisRunOut,
     EquityHoldingNoteIn,
     EquityHoldingNoteOut,
+    EvidenceItemOut,
 )
 from app.services.analysis.notes import get_holding_note, set_holding_note
 from app.services.analysis.pipeline import NotEquityAnalyzableError, run_full_analysis
+from app.services.analysis.readiness import check_analysis_readiness
 
 router = APIRouter(prefix="/analysis", tags=["analysis"])
 
@@ -92,7 +99,20 @@ def _to_out(run: EquityAnalysisRun) -> EquityAnalysisRunOut:
         price_target_low=run.price_target_low,
         price_target_high=run.price_target_high,
         price_target_currency=run.price_target_currency,
+        evidence_items=_evidence_items(run),
+        user_notes_snapshot=run.user_notes_snapshot,
     )
+
+
+def _evidence_items(run: EquityAnalysisRun) -> list[EvidenceItemOut]:
+    packet = run.evidence_packet_json or {}
+    items: list[EvidenceItemOut] = []
+    for raw in packet.get("items") or []:
+        try:
+            items.append(EvidenceItemOut.model_validate(raw))
+        except ValueError:
+            continue  # a malformed stored item must not take the whole run off the page
+    return items
 
 
 @router.get("/holdings/{holding_id}", response_model=EquityAnalysisRunOut)
@@ -102,6 +122,34 @@ def get_latest_analysis(holding_id: UUID, db: Session = Depends(get_db)) -> Equi
     if run is None:
         raise HTTPException(status_code=404, detail="no analysis run yet for this holding")
     return _to_out(run)
+
+
+@router.get("/holdings/{holding_id}/readiness", response_model=AnalysisReadinessOut)
+def get_readiness(
+    holding_id: UUID,
+    db: Session = Depends(get_db),
+    budget_guard: DailyBudgetGuard = Depends(get_primary_budget_guard),
+) -> AnalysisReadinessOut:
+    """Feature F2: what a run on this holding would cost and whether it's
+    worth it — without spending anything. Deliberately depends on no live
+    provider (those factories raise on a misconfigured provider name,
+    which is exactly what this endpoint must be able to report)."""
+    holding = _get_holding_or_404(db, holding_id)
+    report = check_analysis_readiness(
+        db, holding, settings=get_settings(), budget_guard=budget_guard
+    )
+    return AnalysisReadinessOut(
+        holding_id=report.holding_id,
+        ready=report.ready,
+        blockers=report.blockers,
+        warnings=report.warnings,
+        estimated_gemini_calls=report.estimated_gemini_calls,
+        gemini_calls_remaining_today=report.gemini_calls_remaining_today,
+        checks=[
+            AnalysisReadinessCheckOut(key=c.key, label=c.label, status=c.status, detail=c.detail)
+            for c in report.checks
+        ],
+    )
 
 
 @router.post("/holdings/{holding_id}/run", response_model=EquityAnalysisRunOut, status_code=201)

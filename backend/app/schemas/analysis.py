@@ -9,11 +9,26 @@ from __future__ import annotations
 
 from datetime import datetime
 from decimal import Decimal
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel
 
 from app.domain.analysis_schema import BlindPassOutputV1, ReconciliationOutputV1
+
+
+class EvidenceItemOut(BaseModel):
+    """One item from the evidence packet a run was built on — lets the
+    frontend resolve every `evidence_ids` citation in the output to what it
+    actually points at (CLAUDE.md Rule 2: traceable). Read back from the
+    run's stored `evidence_packet_json`, so it always shows exactly what the
+    model was given for that run, not today's data."""
+
+    id: str
+    category: str
+    label: str
+    content: str
+    citation: str | None = None
 
 
 class EquityAnalysisRunOut(BaseModel):
@@ -40,6 +55,8 @@ class EquityAnalysisRunOut(BaseModel):
     price_target_low: Decimal | None
     price_target_high: Decimal | None
     price_target_currency: str | None
+    evidence_items: list[EvidenceItemOut] = []
+    user_notes_snapshot: str | None = None
 
 
 class EquityHoldingNoteOut(BaseModel):
@@ -50,3 +67,24 @@ class EquityHoldingNoteOut(BaseModel):
 
 class EquityHoldingNoteIn(BaseModel):
     content: str
+
+
+class AnalysisReadinessCheckOut(BaseModel):
+    key: str
+    label: str
+    status: Literal["ok", "warn", "block"]
+    detail: str
+
+
+class AnalysisReadinessOut(BaseModel):
+    """GET /analysis/holdings/{id}/readiness — see
+    app/services/analysis/readiness.py. Side-effect free: no LLM, market-data
+    or research call is made to produce it."""
+
+    holding_id: UUID
+    ready: bool
+    blockers: int
+    warnings: int
+    estimated_gemini_calls: int
+    gemini_calls_remaining_today: int | None
+    checks: list[AnalysisReadinessCheckOut]

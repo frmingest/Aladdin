@@ -20,13 +20,18 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.config.database import get_db
-from app.domain.instrument_types import INSTRUMENT_TYPES
+from app.domain.instrument_types import INSTRUMENT_TYPES, classify_instrument
 from app.domain.sectors import SECTORS
 from app.models.document import Document
 from app.models.financial_line_item import FinancialLineItem
 from app.models.holding import Holding
 from app.models.portfolio import PortfolioPosition
-from app.schemas.holding import HoldingCreate, HoldingFieldOptions, HoldingOut, HoldingUpdate
+from app.schemas.holding import (
+    HoldingCreate,
+    HoldingFieldOptions,
+    HoldingOut,
+    HoldingUpdate,
+)
 from app.schemas.metrics import HoldingMetricsOut
 from app.services.metrics import compute_holding_metrics
 
@@ -99,6 +104,7 @@ def create_holding(payload: HoldingCreate, db: Session = Depends(get_db)) -> Hol
         sector=payload.sector,
         institution=payload.institution,
         custody_type=payload.custody_type,
+        asset_class_raw=payload.asset_class_raw or classify_instrument(payload.name),
     )
     db.add(holding)
     db.commit()

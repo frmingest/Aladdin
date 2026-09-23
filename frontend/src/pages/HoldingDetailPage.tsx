@@ -5,6 +5,7 @@ import type { CompanyResearch, DocumentSummary, Holding, HoldingMetrics } from "
 import { METRIC_LABELS, METRIC_ORDER, PERCENT_METRICS } from "../lib/types";
 import { formatBytes, formatDate, formatDecimal, formatPercent } from "../lib/format";
 import { Button, Card, EmptyState, PageHeader, StatusBadge } from "../components/ui";
+import { AnalysisPanel } from "../components/AnalysisPanel";
 import { ResearchPanel } from "../components/ResearchPanel";
 import { SourcesPanel } from "../components/SourcesPanel";
 import { ValuationPanel } from "../components/ValuationPanel";
@@ -366,6 +367,15 @@ export default function HoldingDetailPage() {
       )}
 
       {error && <p className="mb-4 text-sm text-negative">{error}</p>}
+
+      <div className="mb-8">
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-muted">
+          Buffett/Munger analysis
+        </h2>
+        {/* Keyed on metricsKey so readiness re-checks after an upload or
+            EDGAR import adds financial history. */}
+        <AnalysisPanel key={metricsKey} holdingId={id} />
+      </div>
 
       <div className="mb-8">
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-muted">

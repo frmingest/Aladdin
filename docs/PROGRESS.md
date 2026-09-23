@@ -1,273 +1,124 @@
 # Aladdin — Progress
 
-Quick-glance tracker. Full technical detail for each item lives in its own doc (linked below); this
-page stays a scan-able table, not a narrative.
+Quick-glance tracker. Detail for each item lives in its own linked doc; this page stays short tables only.
 
 **Last updated:** 2026-09-22
 
-## Build phases
+---
 
-| Phase | What it is | Status |
+## 1. Where we are right now
+
+| | |
+|---|---|
+| **Current phase** | Phase 11: the Buffett/Munger single-focus rebuild ([sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md)) |
+| **Sprints closed** | 0, 1, 2, 3, 4 |
+| **In progress** | Sprint 5: F3 board ✅ done; portfolio roll-up dashboard + executive summary left |
+| **Latest build** | F1 + F2 + F3. 6 commits (`d646e06` → `ba3b71b`) committed locally, **not pushed or deployed** |
+| **Tests** | 403/403 backend, tsc/eslint/vite build clean |
+| **Live-verified?** | ❌ The analysis engine, EDGAR and Newsweb have only been tested against fakes. The new UI was checked with mocked API data only. |
+
+---
+
+## 2. Needs from Faiz
+
+| # | Action | Why |
 |---|---|---|
-| 0–10 | Everything built before the 2026-09-21 reset | 🗑️ Deleted — design knowledge preserved in the rebuild plan and the superseded doc |
-| **11** | **Buffett/Munger single-focus rebuild** — from a clean-slate repo | Sprint 0, 1, 2, 3 **closed**. **Sprint 4 (the analysis engine) backend is built this session — frontend deferred.** See the [rebuild sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md), which also has a **Backlog** section for candidate phases beyond Sprint 7. |
+| 1 | Set `MARKET_DATA_PROVIDER=yfinance` and `RESEARCH_PROVIDER=gemini_search` in Railway and `backend/.env` | The analysis engine can't produce real output while these are `stub`. No new key is needed. |
+| 2 | Add `SEC_EDGAR_USER_AGENT` (e.g. `Aladdin portfolio app <email>`) in Railway and `backend/.env` | SEC requires a contact email. EDGAR import errors until this is set. |
+| 3 | `git am aladdin-f1-f3.patch`, push `main`, redeploy | Ships F1 + F2 + F3. Primary sources (`0dc6dde`) is already on GitHub; confirm it's deployed. |
+| 4 | Try "Import from SEC EDGAR" on a US holding, and open an Oslo holding's announcements | First live test of both sources |
+| 5 | Open an equity holding, check the Readiness card, then click **Run analysis** | First real signal on prompt quality, cost and usefulness. The readiness card shows what's missing first. |
+| 6 | Open **Margin of safety** in the nav | First real ranking; the "Can't be ranked yet" list shows which holdings still need financials |
+| 7 | Review `analysis_schema/v1.py` and `prompts/analysis/*.md` | Once a real run uses v1, any change needs a new version file (CLAUDE.md Rule 3) |
 
-## Sprint 0 — ✅ closed
+---
 
-| Item | Status |
+## 3. Roadmap
+
+### 3a. Agreed feature plan (2026-09-22, in build order)
+
+| # | Feature | Layer | What it delivers | Fits into | Status |
+|---|---|---|---|---|---|
+| F1 | **Analysis view** | Frontend | Verdict card, moat breakdown, clickable evidence citations and notes editor on the holding page | Sprint 4 frontend | ✅ Done 2026-09-22 |
+| F2 | **Analysis readiness check** | Backend + UI | Per-holding checklist before spending a Gemini call: ticker resolves, ≥3 yrs of financials, fresh price, research cached, analyzable type. Also fixes the `asset_class_raw="equity"` default bug. | Sprint 4 frontend | ✅ Done 2026-09-22 |
+| F3 | **Margin-of-safety board** | Both | Every owned equity ranked by price vs. its DCF bear/base/bull range | Sprint 5 | ✅ Done 2026-09-22 |
+| F4 | **System status page + post-deploy smoke test** | Both | Quota left today, `stub` providers, stale caches, last EDGAR/Newsweb success; a Playwright smoke suite run against Railway | Sprint 7 (status page can ship earlier) | ⏳ Planned |
+| F5 | **Overnight analysis queue** | Backend | Queue holdings and run them within the daily budget, resuming the next day. Built with the LLM usage ledger. | New | ⏳ Planned |
+| F6 | **Decision journal** | Both | Record why you bought or sold, at what price, and what would prove you wrong; see the outcome after 6/12 months | New | ⏳ Planned |
+| F7 | **Watchlist** | Both | Analyze companies you don't own; flag when the price drops below a buy-below level | New | ⏳ Planned |
+
+### 3b. Sprint status
+
+| Sprint | Scope | Status |
+|---|---|---|
+| 0 | Guardrails, schema mapping, skeleton backend/frontend, Gemini + Mistral wiring | ✅ Closed |
+| 1 | Equity data model, deterministic calculations, document ingestion, first pages | ✅ Closed |
+| 2 | Live evidence-first research (macro, sector, company) | ✅ Closed |
+| 3 | Valuation engine: DCF, reverse DCF, multiples + UI | ✅ Closed |
+| 4 | Two-pass Buffett/Munger analysis engine + analysis view (F1) + readiness (F2) | ✅ Closed |
+| 5 | Portfolio roll-up and dashboard (+ F3) | 🚧 F3 done; roll-up dashboard + executive summary next |
+| 6 | Evidence quality (section-aware chunking, evidence budget) | ⏳ Not started |
+| 7 | Guardrail tooling: pre-commit, CI, secret scanning (+ F4 smoke test) | ⏳ Not started |
+
+### 3c. Backlog (unscheduled)
+
+| Candidate | Note |
 |---|---|
-| Guardrail doc (`CLAUDE.md`) | ✅ Done, committed |
-| Map real Supabase schema | ✅ Done (13 Alembic migration files → 21 tables) |
-| DB strategy decision | ✅ Decided — leave schema/data as-is |
-| LLM provider decision | ✅ Decided — Gemini (`google_ai_studio`) primary, Mistral fallback |
-| Legacy frontend cleanup | ✅ Done |
-| Skeleton FastAPI backend (`/health`) | ✅ Built and (per real screenshots) now confirmed deployed to Railway |
-| Skeleton React frontend (health badge) | ✅ Built and deployed |
-| Wire Gemini + Mistral (budget guard, retry/backoff, RPM pacing) | ✅ Done |
+| Numeric macro data (FRED / Norges Bank) + scheduler | Deferred twice out of Sprint 2 |
+| Portfolio risk and regime intelligence | Correlation, drawdown scenarios, rebalancing flags |
+| Thesis tracking over time | Persist verdicts; flag fired invalidation triggers |
+| Historical price/FX and performance | Daily P&L, benchmark comparison |
+| Alerts and notifications | Needs thesis tracking first |
+| Reporting and export | PDF or print view of an analysis run |
+| More primary sources | See table 3d |
 
-## Sprint 1 — ✅ closed (equity data model & deterministic calculations)
+### 3d. Free data sources
 
-| Deliverable | Status |
-|---|---|
-| SQLAlchemy models | ✅ Done — `app/models/`, built directly against the real (already-migrated) schema |
-| Deterministic calculations module | ✅ Done — `app/services/calculations.py` |
-| Document ingestion | ✅ Done — `app/services/documents/`, `POST /documents/upload` |
-| Minimal API (holdings/accounts/portfolio CRUD, computed-metrics endpoints) | ✅ Done — `app/api/holdings.py`, `accounts.py`, `portfolio.py`, `app/services/metrics.py` |
-| First real frontend pages (holding list + holding detail) | ✅ Done — `HoldingsListPage.tsx`, `HoldingDetailPage.tsx` |
+| Source | Covers | Status |
+|---|---|---|
+| SEC EDGAR (XBRL company facts) | US financials, citation-grade | ✅ Built 2026-09-22 |
+| Oslo Børs Newsweb | Oslo regulated announcements | ✅ Built 2026-09-22 |
+| Brønnøysundregistrene | Norwegian entity data and annual accounts | Nice to have |
+| VFF (vff.no) | Norwegian fund NAVs (Alfred Berg, Heimdal) | Needs a look |
+| World Bank / OECD / IMF, GDELT | Global macro, news sentiment | Low |
+| FMP / Finnhub free tiers | Mostly paywalled | Not recommended |
 
-## Sprint 2 — ✅ closed (live, evidence-first research)
+Detail: [free-market-data-research-providers-2026-09-21.md](free-market-data-research-providers-2026-09-21.md)
 
-| Deliverable | Status |
-|---|---|
-| Research data model, `GeminiResearchProvider`, versioned prompts, caching services, `/research` API, frontend UI | ✅ All done — see the sprint plan doc for detail |
-| Numeric macro data (FRED / Norges Bank) + background scheduler | ⏳ Deliberately deferred — see the sprint plan's Backlog section |
+---
 
-## Sprint 3 — ✅ closed (valuation engine, backend + frontend)
+## 4. Known issues
 
-| Deliverable | Status |
-|---|---|
-| Live market-data/risk-free-rate providers, staleness-cached services, versioned assumptions, deterministic DCF/reverse-DCF/multiples engine, `/valuation` API, frontend `ValuationPanel` | ✅ All done — see the sprint plan doc for detail |
+| Issue | Impact | Fix |
+|---|---|---|
+| Holdings created by hand *before* 2026-09-22 may still be tagged `equity` | Readiness shows it as blocking, with the fix | Change Instrument Type on the Holdings page (new holdings are classified automatically) |
+| Gemini quota counter is in-memory | Resets on every server restart, so "left today" can be optimistic | LLM usage ledger (built with F5) |
+| App sidebar isn't responsive | On a phone the fixed sidebar squeezes every page | Not scheduled — app-wide layout fix |
+| Positions imported before migration `a2b4c6d8e0f1` have `NULL` `last_price`/`market_value_nok` | Re-uploading the CSV fills them in | Faiz re-upload (done 2026-09-22) |
+| No GitHub push credentials in any session shell | Faiz pushes manually | Needs a PAT or credential helper from Faiz |
 
-## Portfolio CSV import + delete UI, page-load fixes, whisky grouping — ✅ done (pulled forward / out-of-sequence)
+---
 
-Real broker-CSV import, cascade-safe deletes (including a bulk portfolio wipe), 2N+1 query fixes on
-the Holdings/Accounts list endpoints, the first portfolio-level chart, and whisky-holdings grouping.
-See the sprint plan doc's own entries for full detail. **Faiz's own screenshots confirm the app is
-deployed to Railway and running against his real data** (5 accounts, 124 positions, 7 snapshots) —
-not independently re-verified against the live URL by any session, including this one.
+## 5. Changes / history
 
-**Follow-up bugs fixed 2026-09-21:** the "cascade-safe" delete above still missed one legacy table
-(see "Portfolio delete: second cascade bug fixed" below), and separately CSV import itself started
-500ing for an unrelated reason (see "CSV import 500 fixed" below).
-
-## Sprint 4 — 🚧 backend built this session (the Buffett/Munger analysis engine)
-
-Faiz confirmed the scope before building (three clarifying questions, all "Recommended" answered):
-build the full evidence packet + two-pass pipeline this session, backend only (frontend deferred,
-same split as Sprint 3); build both the blind pass and the reconciliation pass now, with a per-holding
-notes field that's optional (empty notes still runs reconciliation); don't touch document-extraction
-quality this session — use what Sprint 1's ingestion already extracts.
-
-| Deliverable | Status |
-|---|---|
-| New tables `equity_analysis_runs`, `equity_holding_notes` | ✅ Done — migration `b5e1a9c3d7f2`, deliberately a fresh schema, not an extension of the legacy Phase-3 `analysis_runs`/`holding_analyses` tables (CLAUDE.md Rule 3) |
-| Versioned output schema (`app/domain/analysis_schema/v1.py`) | ✅ Done — moat rating + 7 sub-dimensions, capital efficiency/financial fortress/macro-stress narrative sections, valuation synthesis, verdict (rating, thesis, risks, metrics to monitor, invalidation triggers) — every section carries `evidence_ids` |
-| Versioned analysis assumptions (`app/domain/analysis_assumptions/v1.py`) | ✅ Done — 15% capital-efficiency hurdle, 5-year history lookback, mirrors the valuation-assumptions pattern |
-| Versioned prompts (`prompts/analysis/{blind,reconciliation}_v1.md`) | ✅ Done — the blind prompt explicitly states it has been given no user notes; both frame evidence (and, for reconciliation, the owner's notes) as data to reason over, never instructions to follow (CLAUDE.md Rule 5) |
-| Evidence packet builder | ✅ Done — `app/services/analysis/evidence_packet.py`. Pulls in: 3-5yr ROE history + the hurdle comparison (computed in Python, not by the LLM), margins, leverage ratios, owner-earnings trend (all via `app/services/calculations.py`/`metrics.py`), the full Sprint 3 valuation (DCF scenarios, reverse DCF, multiples), and Sprint 2's macro/sector/company research — reusing all of it unchanged |
-| Blind pass + reconciliation pass | ✅ Done — `app/services/analysis/{blind_pass,reconciliation_pass}.py`. Each validates the LLM's JSON against the versioned schema and flags (never silently drops) any cited evidence ID that isn't actually in the packet |
-| Two-pass pipeline orchestration | ✅ Done — `app/services/analysis/pipeline.py`. Gates on `EQUITY_ANALYZABLE_TYPES` (stock/equity_etf only), falls back to the secondary LLM provider on a primary outage, keeps the blind pass's result if only the reconciliation call fails, and sets the price-target range deterministically from the Sprint 3 DCF bear/bull scenarios — **never LLM-generated** (CLAUDE.md Rule 1) |
-| Per-holding notes | ✅ Done — `app/services/analysis/notes.py`, `GET`/`PUT /analysis/holdings/{id}/notes`. Read only by the reconciliation pass — a dedicated test proves the blind pass's own prompt text never contains the notes (CLAUDE.md Rule 4) |
-| `/analysis` API | ✅ Done — `app/api/analysis.py`: `GET`/`POST .../run` (always a fresh, explicit, LLM-cost-bearing call — no "serve cached" shape, unlike `/research/*`/`/valuation/*`), `GET`/`PUT .../notes` |
-| Frontend | ⏳ **Deliberately deferred to a follow-up session** — Faiz's explicit choice, same split as Sprint 3 |
-
-**Discovered this session, not fixed:** a holding created through the plain `POST /holdings` endpoint
-(as opposed to the CSV-import path) defaults `asset_class_raw` to `"equity"` — which is **not** in
-`EQUITY_ANALYZABLE_TYPES` (`stock`, `equity_etf`). Sprint 4 is the first place that gate is actually
-enforced, so a manually-added holding would be rejected from analysis until re-tagged. Faiz's real
-124 imported positions already carry correct tags via the CSV importer's classifier, so this doesn't
-affect his existing data — but it will bite the first time a holding is added by hand rather than via
-CSV import. Left as-is this session (a Sprint 1 model-default decision, out of this session's scope)
-— flagged below.
-
-**Testing:** 19 new tests (evidence packet, the pipeline's equity-gating/fallback/notes-isolation
-behavior, notes CRUD, and the `/analysis/*` API against fakes for every live dependency — LLM, market
-data, risk-free rate, research). 307/307 backend tests passing, ruff clean (only the same
-pre-existing `EXE002` file-permission noise). Migration verified in both directions via
-`alembic upgrade/downgrade --sql` against the Postgres dialect (no live DB connection available from
-this session). **Not run against a real Gemini/Mistral call, real market data, or Faiz's real
-holdings** — every test uses fakes; this is genuinely untested against the live stack.
-
-## CSV import 500 fixed: object-storage provider alias — ✅ done 2026-09-21
-
-Faiz reported `POST /portfolio/import-csv` 500ing on every CSV, no exceptions. Railway logs showed
-`NotImplementedError: Object storage provider 'supabase' not supported — use 'local' or 's3'.` raised
-from `get_object_storage()`, a FastAPI dependency on that route — meaning it failed before the route
-ever looked at the uploaded file, matching "failing on all my csv files" exactly.
-
-**Root cause:** Railway has `OBJECT_STORAGE_PROVIDER=supabase` set. `backend/.env.example`'s own
-wording ("Only used when `OBJECT_STORAGE_PROVIDER` is r2 or supabase") reads as if `supabase` were a
-valid value, but `app/providers/factory.py` only ever matched the literal string `"s3"`. So the env
-var was set following the doc's own wording, and the factory rejected it anyway.
-
-**Fix:** since R2 and Supabase Storage both expose the same S3-compatible API and the app already
-treats the vendor as pure config (`endpoint_url`/`region`/keys, never a code branch —
-`app/providers/object_storage_s3.py`'s own docstring says as much), `"s3"`, `"r2"`, and `"supabase"`
-now all build `S3ObjectStorageProvider`. Clarified the matching comments in `settings.py`,
-`.env.example`, and `requirements.txt` so they no longer imply a literal value the code didn't accept.
-5 new regression tests in `test_factory.py` (all three aliases, the `local` default, and the
-still-rejected unknown-provider case) — 249/249 backend unit tests pass.
-
-**Faiz's Railway `OBJECT_STORAGE_PROVIDER=supabase` env var needs no change** — this was a code fix,
-not a config fix.
-
-**Status: ✅ pushed and deployed** (Faiz confirmed redeploy 2026-09-22).
-
-## Portfolio delete: second cascade bug fixed — ✅ done 2026-09-21
-
-Faiz hit a 500 on `DELETE /portfolio/all?confirm=true` in production. Root cause: `portfolio_risk_snapshots`
-(a pre-2026-09-21 Phase-5 table, `portfolio_snapshot_id` with no `ON DELETE CASCADE`) was never added
-to `_purge_legacy_analysis` when that function was first written — it only covered `analysis_runs`
-and its children. Same class of bug as the original cascade-delete fix, just one table missed.
-
-| Change | Detail |
-|---|---|
-| New model | `PortfolioRiskSnapshot` mapped in `app/models/legacy_analysis.py` (purge-only, matches the Phase 5 migration's columns) |
-| Purge logic | `_purge_legacy_analysis` (`app/api/portfolio.py`) now also bulk-deletes `portfolio_risk_snapshots` rows for the snapshot(s) being deleted, unconditionally (it hangs off `portfolio_snapshot_id` directly, not through `analysis_runs`) |
-| API response | `LegacyAnalysisPurgeCounts` schema gained a `portfolio_risk_snapshots` count field, surfaced in both `DELETE /portfolio/snapshots/{id}` and `DELETE /portfolio/all` responses |
-| Frontend | `PortfolioPage.tsx`'s delete-confirmation notes now fold this count into the "old analysis/risk record(s) removed" message |
-| Tests | 2 new regression tests (one per delete endpoint), mirroring the existing `analysis_runs` cascade test. 309/309 backend tests passing; `tsc --noEmit` clean |
-
-Pushed to `main` since this row was written (confirmed by `git status` showing only 1 commit ahead
-before this session's own new commit).
-
-## Free market-data & research provider proposal — 📋 research doc only, 2026-09-21
-
-Faiz asked for good free-to-use market-data/research sources. Full write-up:
-[free-market-data-research-providers-2026-09-21.md](free-market-data-research-providers-2026-09-21.md).
-No code changed. Headline finding: company **financials are 100% manual** right now (upload → LLM
-extraction); the two highest-value free additions would be **SEC EDGAR** company-facts XBRL (US
-names, no key, evidence-grade citations) and **Oslo Børs Newsweb** (Norwegian names' regulated
-announcements) — both fit the existing "new provider = new file behind the factory" pattern.
-Suggested as a backlog item, not started.
-
-## CSV import ticker/duplicate-holding fixes, manual-edit UI, and full data wipe — ✅ done 2026-09-21
-
-Faiz uploaded 5 real CSVs, hit a 500 on every one, and separately noticed garbage tickers and
-duplicate holdings. Full write-up:
-[csv-import-ticker-sector-fixes-and-db-wipe-2026-09-21.md](csv-import-ticker-sector-fixes-and-db-wipe-2026-09-21.md).
-
-Three real bugs fixed, one new UI, one irreversible action taken at Faiz's explicit request:
-
-| What | Detail |
-|---|---|
-| `POST /portfolio/import-csv` 500 | The CSV always imported successfully (account/document/snapshot/positions all committed) — only the *response* crashed, because `DocumentOut.quality_flags` rejected a matched Document row whose `quality_flags` was a `list` instead of a `dict`. `DocumentOut` now coerces any shape into a dict rather than crashing. |
-| Garbage tickers + duplicate holdings | The CSV importer's dedup key was an exact match on a slugified-name-as-ticker, so any holding that already existed under a *different* ticker (hand-assigned or legacy) was invisible to it and got duplicated on every import — with a broken, non-market-real ticker that was then passed straight to the market-data/valuation/analysis pipeline. Matching is now by normalized security name, independent of `ticker`; the placeholder ticker for a genuinely new holding is transliterated (æøå) and collision-safe. |
-| Manual-edit UI | Ticker, Sector (canonical GICS-11 dropdown, `app/domain/sectors.py`), and Instrument Type (dropdown) are all now editable per holding, inline, on the Holdings page (`PATCH /holdings/{id}`, `GET /holdings/field-options`). Ticker was previously excluded from `HoldingUpdate` on a "changing it is unsafe" rationale that turned out to be wrong — nothing FKs on it, only on the holding's `id`. |
-| **Full Supabase data wipe** | Faiz explicitly asked for this, after being told exactly what it costs (15 uploaded documents across 6 holdings, whisky/gold/silver legacy holdings, 5 accounts / 7 snapshots / 124 positions, the untested Sprint 4 analysis tables). New migration `e5f6a7b8c9d0` (new head) `TRUNCATE`s every table in `public` except `alembic_version`. **✅ Ran** — Faiz confirmed (2026-09-22) the push + Railway redeploy is done, which is when `alembic upgrade head` executes it on container startup. Faiz has since re-uploaded his CSVs. |
-
-Testing: 326/326 backend tests passing (17 new), ruff clean, frontend `tsc`/`eslint`/`vite build` all
-clean. Not run against the live Railway deployment.
-
-## Account rename, lost position data, and Macro page slowness — ✅ done 2026-09-22
-
-Faiz raised three issues in one message. Full write-up:
-[account-name-position-data-macro-speed-2026-09-22.md](account-name-position-data-macro-speed-2026-09-22.md).
-
-| What | Detail |
-|---|---|
-| Account name field | Backend already fully supported `Account.name` (model/schema/`PATCH /accounts/{id}`) — the gap was 100% frontend. Added an optional account-name field on CSV upload and inline rename (click "Rename") on every row of the Accounts table. No backend change needed. |
-| CSV upload "losing" quantity/price/GAV | Two different things: `quantity`/`cost_basis` (GAV × quantity) were already being saved correctly, just never shown anywhere in the frontend (fixed: new expandable positions table on the Portfolio page). `last_price` ("siste kurs") and total market value ("Verdi NOK") were a real bug — parsed out of every CSV row and then genuinely discarded, never persisted. New columns `last_price`/`market_value_nok` on `portfolio_positions` (migration `a2b4c6d8e0f1`), populated on every import from here on. Existing imported positions have `NULL` for both until re-uploaded. |
-| Macro page loading slowly | Root cause: `app/providers/budget.py`'s `DailyBudgetGuard` was built (`factory.get_primary_budget_guard()`) but never actually consulted anywhere — confirmed by grep, no call site anywhere used `.would_exceed()`/`.record_usage()`. Once the real 20/day Google AI Studio quota (shared across macro + every sector + every company research + every analysis run) was spent, every further call still paid the full RPM-pacing wait + a real network call + the full retry/backoff ladder before failing — 45-60+ seconds of hanging, which is exactly what "loading really slow" looks like. Now wired in: both Gemini-calling providers share the one budget-guard instance and fail immediately (no wait, no call, no retries) once it's exhausted. Doesn't make a real Gemini call faster — makes a doomed one fail in milliseconds instead of about a minute. |
-
-**Testing:** 333/333 backend tests passing (7 new), ruff clean on every file touched. Migration
-verified upgrade+downgrade against the Postgres dialect offline (no live DB reachable from this
-session). Frontend `tsc --noEmit`/`eslint`/`vite build` all clean. **Not run against a live Gemini
-call, real market data, or Faiz's real 124 holdings.**
-
-**Status: ✅ pushed and deployed** — `git status` shows `main` up to date with `origin/main`; Faiz confirmed the Railway redeploy on 2026-09-22.
-
-## Primary sources: SEC EDGAR + Oslo Børs Newsweb — ✅ built 2026-09-22 (not yet deployed)
-
-Full write-up: [primary-sources-sec-edgar-newsweb-2026-09-22.md](primary-sources-sec-edgar-newsweb-2026-09-22.md).
-
-| What | Detail |
-|---|---|
-| SEC EDGAR | "Import from SEC EDGAR" on a holding → annual 10-K/20-F figures saved as financial facts, each traceable to its filing. Feeds metrics, valuation and analysis automatically. Never overwrites years you uploaded yourself. |
-| Oslo Børs Newsweb | Regulated announcements (last 12 months) for `.OL`/NOK holdings, cached 24h, shown on the holding page. |
-| Analysis | Evidence packet **v2** — cites the EDGAR filings and the latest 15 announcements. |
-| Safety | An Oslo ticker that collides with an unrelated US filer (e.g. `VAR` → Varian) is refused, not imported. |
-| Migration | **None** — reuses `documents`/`financial_line_items` and the research tables. |
-| Tests | 364/364 backend (31 new), tsc/eslint/vite build clean. **Not run against live SEC/Newsweb** (no network path from this session). |
-
-**Status: committed locally, not pushed, not deployed.**
-
-## Setup checklist — confirmed by Faiz 2026-09-22
-
-| Item | Status |
-|---|---|
-| Push `main` + redeploy on Railway (runs the full data wipe, migration `e5f6a7b8c9d0`, plus `a2b4c6d8e0f1`) | ✅ Done — Faiz confirmed; `git status` shows `main` up to date with `origin/main` |
-| Re-upload the 5 CSVs + assign real tickers via the inline Ticker/Sector/Type edit UI | ✅ Done — Faiz confirmed real yfinance-compatible tickers are set |
-| `GOOGLE_AI_STUDIO_API_KEY`, `FRED_API_KEY` set for real | ✅ Done — Faiz confirmed, in both `backend/.env` and Railway config |
-| `MARKET_DATA_PROVIDER` / `RESEARCH_PROVIDER` set for real | ⏳ Open — see below |
-
-## Needs from Faiz right now
-
-| Item | Why |
-|---|---|
-| **Add `SEC_EDGAR_USER_AGENT`** to Railway (and `backend/.env`), e.g. `Aladdin portfolio app <your email>` — then push + redeploy | SEC requires a contact email in the User-Agent; EDGAR import shows an explicit error until it's set. Newsweb needs nothing. |
-| **Try it**: click "Import from SEC EDGAR" on a US holding, and open an Oslo holding to see its Newsweb announcements — share what comes back | First real test against the live SEC/Newsweb hosts |
-| **Set `MARKET_DATA_PROVIDER=yfinance` and `RESEARCH_PROVIDER=gemini_search`** in Railway (and in local `backend/.env`, which still has both as `stub`) | These are the **only** values the code accepts today (`app/providers/factory.py`). No new key needed: yfinance is keyless; `gemini_search` reuses `GOOGLE_AI_STUDIO_API_KEY`. Sprint 4's analysis engine depends on both. |
-| **Try a real `POST /analysis/holdings/{id}/run`** against one real equity holding once the above is set, and share what comes back | Pipeline so far verified against fakes only — first real signal on prompt/schema quality, LLM cost per run, and usefulness |
-| Decide when the Sprint 4 frontend follow-up happens, and review `app/domain/analysis_schema/v1.py` + `prompts/analysis/*.md` (moat sub-dimensions, verdict shape, 15% hurdle) | CLAUDE.md Rule 3: once a real run uses v1, changes need a new version file |
-| Decide whether to schedule the remaining free sources below (Brønnøysund, VFF, …) | SEC EDGAR + Newsweb are now built |
-
-### Free data sources from the 2026-09-21 research
-
-Not built items would each need a new provider file behind the factory first. Full detail: [free-market-data-research-providers-2026-09-21.md](free-market-data-research-providers-2026-09-21.md).
-
-| Source | Covers | Cost / key | Priority |
+| Date | Change | Summary | Detail |
 |---|---|---|---|
-| **SEC EDGAR** company-facts XBRL + full-text search | Financials for US/SEC-registered names, citation-grade | Free, no key (10 req/s, User-Agent required) | ✅ Built 2026-09-22 |
-| **Oslo Børs Newsweb** | Regulated announcements for Oslo Børs names (quarterlies, insider trades) | Free, no key | ✅ Built 2026-09-22 |
-| Brønnøysundregistrene (Enhetsregisteret / Regnskapsregisteret) | Norwegian entity data, annual-accounts figures | Free, no key — verify accounts API still live | Nice to have |
-| World Bank / OECD / IMF SDMX | Broader global macro beyond FRED + Norges Bank | Free, no key | Low |
-| GDELT | Global news volume/sentiment signal | Free, no key | Low |
-| VFF (vff.no) | Norwegian mutual-fund NAVs (Alfred Berg, Heimdal — unpriced today) | Unverified | Needs a look |
-| FMP / Finnhub free tiers | US-only / fundamentals mostly paywalled | Free tier limited | Not recommended |
+| 2026-09-22 | **F3 Margin-of-safety board** | New `GET /valuation/board`: every owned stock/equity ETF (latest snapshot per account) with bear/base/bull, price, margin of safety, zone, NOK value, weight and latest verdict, ranked by margin of safety. New **Margin of safety** page with range bars and a "can't be ranked yet" list. Beta now cached 24h in the yfinance provider. 403 tests (11 new). Committed locally, not pushed. | [sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
+| 2026-09-22 | **F1 Analysis view + F2 Readiness check (Sprint 4 closed)** | New `GET /analysis/holdings/{id}/readiness` (8 checks, estimated Gemini calls, no side effects). Run output now includes its evidence items and notes snapshot. `POST /holdings` classifies the instrument type instead of defaulting to `equity`. New Analysis section on the holding page: readiness card, verdict, DCF price range, moat, narratives, clickable citations, notes editor, run details. 392 tests (28 new). Committed locally, not pushed. | [sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
+| 2026-09-22 | **Feature plan + progress.md restructure** | Agreed features F1–F7 added to the roadmap and sprint plan. This page restructured into numbered sections with tables only; finished narrative sections moved into this table. Docs only, no code. | [sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
+| 2026-09-22 | **Primary sources: SEC EDGAR + Newsweb** | EDGAR annual facts saved as financial facts with filing provenance (never overwrites uploaded years, with a name-match guard). Newsweb announcements cached 24h. Evidence packet v2, `/sources/*` API, Primary sources UI. New env var `SEC_EDGAR_USER_AGENT`. 364 tests (31 new). Not pushed. | [doc](primary-sources-sec-edgar-newsweb-2026-09-22.md) |
+| 2026-09-22 | Setup checklist confirmed | Pushed and redeployed (data wipe ran), 5 CSVs re-uploaded with real tickers, Gemini and FRED keys set. Docs only. | [doc](free-market-data-research-providers-2026-09-21.md) |
+| 2026-09-22 | Account rename, position data, Macro speed | Account rename UI and name-on-upload. New positions table. `last_price`/`market_value_nok` now persisted (migration `a2b4c6d8e0f1`). Daily budget guard wired in, so an exhausted quota fails instantly instead of after 45–60s. 333 tests. Deployed. | [doc](account-name-position-data-macro-speed-2026-09-22.md) |
+| 2026-09-21 | CSV import fixes + full data wipe | Fixed the `quality_flags` 500 and the duplicate-holding/garbage-ticker bug. Inline Ticker/Sector/Type editing. Wipe migration `e5f6a7b8c9d0` (ran on deploy). 326 tests. | [doc](csv-import-ticker-sector-fixes-and-db-wipe-2026-09-21.md) |
+| 2026-09-21 | CSV import 500: storage alias | `supabase`/`r2`/`s3` all map to the S3 provider. 5 regression tests. Deployed. | — |
+| 2026-09-21 | Portfolio delete: second cascade bug | `portfolio_risk_snapshots` added to the legacy purge. Counts shown in the UI. 2 regression tests. Also wrote the free-provider research doc. | [doc](free-market-data-research-providers-2026-09-21.md) |
+| 2026-09-21 | **Sprint 4 backend: analysis engine** | Evidence packet, versioned schema, prompts and assumptions, blind and reconciliation passes, pipeline with LLM fallback and a deterministic DCF price target, notes CRUD, `/analysis` API. Migration `b5e1a9c3d7f2`. 307 tests. | [sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
+| 2026-09-21 | Portfolio delete, page speed, first chart, whisky grouping | Cascade-safe deletes, 2N+1 query fixes, first portfolio chart | [sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
+| 2026-09-21 | Sprint 3 closed | Valuation engine backend and frontend | [sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
+| 2026-09-21 | Sprint 2 closed | Live research backend and frontend | [sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
+| 2026-09-21 | Portfolio CSV import + delete UI | Pulled forward from Sprint 4 | [sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
+| 2026-09-21 | Sprint 1 closed | Models, calculations, ingestion, minimal API, first pages | [sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
+| 2026-09-21 | Sprint 0 closed | Guardrails, schema map, skeletons, LLM wiring | [sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
+| 2026-09-21 | Full repo reset | Clean-slate rebuild plan written | [sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
 
-## Known ongoing issue
-
-No session's shell — cloud or the one on Faiz's linked device — has had GitHub push credentials
-configured (`git push` fails with `could not read Username for 'https://github.com'`). Commits so
-far in the repo were pushed by Faiz himself from his own terminal/GitHub Desktop between sessions.
-
-## Changes / history
-
-| Date | Session | Summary | Detail |
-|---|---|---|---|
-| 2026-09-22 | **Primary sources: SEC EDGAR + Oslo Børs Newsweb** | New EDGAR fundamentals provider + import (XBRL annual facts → financial facts with filing provenance, name-match guard, never overwrites uploaded years), Newsweb announcements provider (cached via research tables, no migration), evidence packet v2, `/sources/*` API, Primary sources UI on the holding page. New env var `SEC_EDGAR_USER_AGENT`. 364/364 tests (31 new), tsc/eslint/build clean. Committed locally, not pushed/deployed. | [primary-sources-sec-edgar-newsweb-2026-09-22.md](primary-sources-sec-edgar-newsweb-2026-09-22.md) |
-| 2026-09-22 | Setup checklist confirmed | Faiz confirmed: pushed + Railway redeploy done (full data wipe ran), 5 CSVs re-uploaded with real yfinance tickers, `GOOGLE_AI_STUDIO_API_KEY`/`FRED_API_KEY` set in `.env` and Railway. Clarified the only valid provider values (`MARKET_DATA_PROVIDER=yfinance`, `RESEARCH_PROVIDER=gemini_search`) — still open. Added a free-data-source backlog table. Docs only, no code. | [free-market-data-research-providers-2026-09-21.md](free-market-data-research-providers-2026-09-21.md) |
-| 2026-09-22 | Account rename, lost position data (`last_price`/`market_value_nok`), Macro page slowness | Frontend: account rename UI + optional name-on-upload field; new expandable positions table on the Portfolio page (quantity, GAV, cost basis, last price, market value, weight — previously shown nowhere). Backend: migration `a2b4c6d8e0f1` adds `last_price`/`market_value_nok` to `portfolio_positions` (parsed from every CSV row since day one, never persisted until now); wired the previously-dead `DailyBudgetGuard` into both Gemini-calling providers so an exhausted daily quota fails in milliseconds instead of 45-60+ seconds of pacing+retry. 333/333 backend tests passing (7 new), ruff/tsc/eslint/vite build all clean. Committed locally, not pushed, not deployed. | [account-name-position-data-macro-speed-2026-09-22.md](account-name-position-data-macro-speed-2026-09-22.md) |
-| 2026-09-21 | CSV import ticker/duplicate-holding fixes, manual-edit UI, full data wipe | Fixed the CSV-import 500 (quality_flags shape coercion), the duplicate-holding/garbage-ticker bug (name-normalized matching, transliterated/collision-safe placeholder tickers), added inline Ticker/Sector/Instrument-Type editing (`PATCH /holdings/{id}`, `GET /holdings/field-options`, canonical sector list). At Faiz's explicit request after being told the cost, wrote (not yet run) a migration that fully wipes Supabase on next deploy. 326/326 backend tests passing (17 new), ruff/tsc/eslint/vite build all clean. | [csv-import-ticker-sector-fixes-and-db-wipe-2026-09-21.md](csv-import-ticker-sector-fixes-and-db-wipe-2026-09-21.md) |
-| 2026-09-21 | CSV import 500 fixed: object-storage provider alias | `POST /portfolio/import-csv` was 500ing on every request (`get_object_storage()` dependency raising `NotImplementedError` for `OBJECT_STORAGE_PROVIDER=supabase`, before the route ever ran). Made `"s3"`, `"r2"`, and `"supabase"` all build the same `S3ObjectStorageProvider` (they're all S3-compatible), matching what `.env.example` already implied was valid. Clarified 3 stale comments, added 5 regression tests (249/249 unit tests pass). Committed (`72e7ed9`), not pushed, not deployed — Railway's env var needs no change, just a push + redeploy. | — |
-| 2026-09-21 | Portfolio delete: second cascade bug + free-provider research | Fixed `DELETE /portfolio/all` / `DELETE /portfolio/snapshots/{id}` 500ing when a legacy `portfolio_risk_snapshots` row was attached (missed by the original cascade-delete fix) — new purge-only model, updated `_purge_legacy_analysis`, schema/frontend count surfaced, 2 new regression tests (309 total passing). Also wrote up a free market-data/research provider proposal doc (SEC EDGAR + Oslo Børs Newsweb as top picks) — research only, no code. | [free-market-data-research-providers-2026-09-21.md](free-market-data-research-providers-2026-09-21.md) |
-| 2026-09-21 | **Sprint 4 backend: the two-pass Buffett/Munger analysis engine** | Built the evidence packet (reusing Sprint 2 research + Sprint 3 valuation + Sprint 1 calculations unchanged), the versioned output schema and prompts, the blind pass, the reconciliation pass (notes-aware, optional notes), the orchestration pipeline (equity-type gating, LLM fallback, deterministic DCF-derived price target), per-holding notes CRUD, and the `/analysis` API. New tables `equity_analysis_runs`/`equity_holding_notes` (migration `b5e1a9c3d7f2`) — a fresh schema, not an extension of the legacy Phase-3 analysis tables. 19 new tests (307 total), ruff clean. Discovered: manually-created holdings default to a non-analyzable `asset_class_raw`, flagged above. Frontend deliberately deferred. Not yet run against a real LLM call or real data. | [rebuild sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
-| 2026-09-21 | Portfolio delete fixes, page-load speed, first portfolio-level chart, whisky grouping | See the sprint plan doc for full detail. | [rebuild sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
-| 2026-09-21 | Sprint 3 closed: frontend valuation UI | See the sprint plan doc for full detail. | [rebuild sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
-| 2026-09-21 | Sprint 3 backend: valuation engine | See the sprint plan doc for full detail. | [rebuild sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
-| 2026-09-21 | Sprint 2 closed: frontend research UI | See the sprint plan doc for full detail. | [rebuild sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
-| 2026-09-21 | Portfolio CSV import + delete UI (pulled forward from Sprint 4) | See the sprint plan doc for full detail. | [rebuild sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
-| 2026-09-21 | Sprint 2 started: live research (macro/sector/company) | See the sprint plan doc for full detail. | [rebuild sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
-| 2026-09-21 | Minimal API + first frontend pages (Sprint 1 closed) | See the sprint plan doc for full detail. | [rebuild sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
-| 2026-09-21 | Document ingestion (Sprint 1) | See the sprint plan doc for full detail. | [rebuild sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
-| 2026-09-21 | Sprint 0 closed + Sprint 1 start | See the sprint plan doc for full detail. | [rebuild sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
-| 2026-09-21 | Status audit + Sprint 1/next-phase planning + UX research | See the sprint plan doc for full detail. | [rebuild sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
-| 2026-09-21 | Sprint 0 skeletons built | See the sprint plan doc for full detail. | [rebuild sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
-| 2026-09-21 | Sprint 0 started: guardrail doc + real schema mapped | See the sprint plan doc for full detail. | [rebuild sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
-| 2026-09-21 | Full repo reset + rebuild plan written | See the sprint plan doc for full detail. | [rebuild sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
-
-*Full pre-reset history (Phases 0–10 and the incremental Sprint 0-2 redesign work) is preserved in
-this project's other docs and in git history. Earlier session summaries in this table were condensed
-2026-09-21 to keep this page scan-able — full detail for each remains in the sprint plan doc's own
-"Changes / history" table, which is not condensed.*
+*Pre-reset history (Phases 0–10) is kept in the project's other docs and in git history.*

@@ -184,3 +184,52 @@ def test_refresh_endpoint_forces_a_new_provider_call(client):
     assert first.status_code == 200
     assert refreshed.status_code == 200
     assert Decimal(refreshed.json()["current_price_per_share"]) == D("200")
+
+
+def test_margin_of_safety_board_empty_portfolio(client):
+    _override(_FakeMarketDataProvider(price=_price_point()), _FakeRiskFreeRateProvider(rate=_risk_free_rate()))
+    try:
+        response = client.get("/valuation/board")
+    finally:
+        _clear_overrides()
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["rows"] == []
+    assert body["zone_counts"]["unavailable"] == 0
+
+
+def test_margin_of_safety_board_ranks_owned_holding_with_dcf(client, db_session):
+    from app.models.document import Document
+    from app.models.holding import Holding
+    from app.models.portfolio import PortfolioPosition, PortfolioSnapshot
+
+    holding_id = _create_holding(client)
+    for period, ni in (("FY2023", "100"), ("FY2024", "110"), ("FY2025", "121")):
+        _upload_filing(client, holding_id, period, net_income=ni, d_and_a="10", capex="5", shares="10")
+
+    holding = db_session.get(Holding, holding_id)
+    document = Document(
+        type="portfolio_export", original_filename="p.csv", mime_type="text/csv", size_bytes=1,
+        storage_path="p/p.csv", sha256="f" * 64, status="processed", quality_flags={},
+    )
+    db_session.add(document)
+    db_session.flush()
+    snapshot = PortfolioSnapshot(source_file=document, reporting_currency="NOK", status="processed")
+    db_session.add(snapshot)
+    db_session.flush()
+    db_session.add(PortfolioPosition(snapshot=snapshot, holding=holding, market_value_nok=Decimal(10000)))
+    db_session.commit()
+
+    _override(_FakeMarketDataProvider(price=_price_point()), _FakeRiskFreeRateProvider(rate=_risk_free_rate()))
+    try:
+        response = client.get("/valuation/board")
+    finally:
+        _clear_overrides()
+    assert response.status_code == 200, response.text
+    rows = response.json()["rows"]
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["ticker"] == "AAPL"
+    assert row["base"] is not None and row["margin_of_safety_base"] is not None
+    assert row["zone"] in {"below_bear", "bear_to_base", "base_to_bull", "above_bull"}
+    assert Decimal(row["weight_pct"]) == Decimal(1)

@@ -146,3 +146,24 @@ def test_beta_returns_none_when_info_raises():
     type(mock_ticker).info = property(lambda self: (_ for _ in ()).throw(RuntimeError("boom")))
     with patch.object(provider, "_ticker", return_value=mock_ticker):
         assert provider.get_beta("AAPL") is None
+
+
+def test_beta_is_cached_per_ticker():
+    provider = _provider()
+    mock_ticker = MagicMock()
+    mock_ticker.info = {"beta": 0.9}
+    with patch.object(provider, "_ticker", return_value=mock_ticker) as ticker_fn:
+        assert provider.get_beta("EQNR.OL") == Decimal("0.9")
+        assert provider.get_beta("eqnr.ol") == Decimal("0.9")
+    assert ticker_fn.call_count == 1
+
+
+def test_failed_beta_lookup_is_not_cached():
+    provider = _provider()
+    failing = MagicMock()
+    type(failing).info = property(lambda self: (_ for _ in ()).throw(RuntimeError("boom")))
+    working = MagicMock()
+    working.info = {"beta": 1.1}
+    with patch.object(provider, "_ticker", side_effect=[failing, working]):
+        assert provider.get_beta("AAPL") is None
+        assert provider.get_beta("AAPL") == Decimal("1.1")

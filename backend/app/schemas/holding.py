@@ -17,12 +17,25 @@ class HoldingCreate(BaseModel):
     sector: str | None = None
     institution: str | None = None
     custody_type: str | None = None
+    # Instrument type (app/domain/instrument_types.py). Optional: when
+    # omitted, create_holding classifies it from `name` exactly like the CSV
+    # importer does. Before 2026-09-22 this fell through to the model's
+    # legacy default "equity", which isn't an analyzable type, so every
+    # hand-created holding was rejected by POST /analysis/.../run.
+    asset_class_raw: str | None = None
 
     @field_validator("sector")
     @classmethod
     def _validate_sector(cls, value: str | None) -> str | None:
         if value is not None and not is_valid_sector(value):
             raise ValueError(f"sector must be one of {sorted(SECTORS)} (or null)")
+        return value
+
+    @field_validator("asset_class_raw")
+    @classmethod
+    def _validate_instrument_type(cls, value: str | None) -> str | None:
+        if value is not None and value not in INSTRUMENT_TYPES:
+            raise ValueError(f"asset_class_raw must be one of {sorted(INSTRUMENT_TYPES)}")
         return value
 
 

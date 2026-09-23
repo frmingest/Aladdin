@@ -22,11 +22,14 @@ from app.models.holding import Holding
 from app.providers.base import MarketDataProvider, RiskFreeRateProvider
 from app.providers.factory import get_market_data_provider, get_risk_free_rate_provider
 from app.schemas.valuation import (
+    BoardRowOut,
     DCFOut,
     DCFScenarioOut,
     HoldingValuationOut,
+    MarginOfSafetyBoardOut,
     PeriodMultiplesOut,
 )
+from app.services.valuation.board import build_board
 from app.services.valuation.holding_valuation import (
     HoldingValuationResult,
     compute_holding_valuation,
@@ -110,3 +113,22 @@ def refresh_holding_valuation(
         db, holding, market_data_provider, risk_free_rate_provider, force_refresh=True
     )
     return _to_out(result)
+
+
+@router.get("/board", response_model=MarginOfSafetyBoardOut)
+def get_margin_of_safety_board(
+    db: Session = Depends(get_db),
+    market_data_provider: MarketDataProvider = Depends(get_market_data_provider),
+    risk_free_rate_provider: RiskFreeRateProvider = Depends(get_risk_free_rate_provider),
+) -> MarginOfSafetyBoardOut:
+    """Feature F3: every currently owned equity ranked by margin of safety.
+    Uses the same cached price/FX/rate data as GET /valuation/holdings/{id};
+    no LLM call is ever made."""
+    board = build_board(
+        db, market_data_provider=market_data_provider, risk_free_rate_provider=risk_free_rate_provider
+    )
+    return MarginOfSafetyBoardOut(
+        rows=[BoardRowOut(**row.__dict__) for row in board.rows],
+        total_equity_value_nok=board.total_equity_value_nok,
+        zone_counts=board.zone_counts(),
+    )

@@ -109,6 +109,25 @@ def _slugify_ticker(name: str, *, taken: set[str]) -> str:
     return candidate
 
 
+def looks_like_placeholder_ticker(ticker: str, name: str) -> bool:
+    """True when `ticker` is (very likely) the auto-generated placeholder
+    `_slugify_ticker` produced for `name`, rather than a real market symbol.
+
+    Used by the analysis readiness check (app/services/analysis/readiness.py)
+    to warn before an LLM run is spent on a holding whose ticker can't be
+    priced. Short single-word slugs are *not* treated as placeholders, because
+    a company called "Meta" legitimately slugs to its real ticker "META" —
+    real symbols are short, while placeholders are either multi-word
+    ("VAR-ENERGI") or long ("EQUINOR").
+    """
+    slug = re.sub(r"[^A-Za-z0-9]+", "-", name.translate(_TRANSLITERATE)).strip("-").upper()[:250]
+    if not slug:
+        return False
+    upper = ticker.upper()
+    matches = upper == slug or re.fullmatch(re.escape(slug[:245]) + r"-\d+", upper) is not None
+    return matches and ("-" in slug or len(slug) > 6)
+
+
 def _normalize_name(name: str) -> str:
     """Case/diacritic/punctuation-insensitive dedup key for a security
     name — matches "Vår Energi" against "VAR ENERGI", "vår-energi", etc.

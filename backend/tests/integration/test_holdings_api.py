@@ -169,3 +169,29 @@ def test_delete_holding_blocked_by_documents(client):
     response = client.delete(f"/holdings/{created['id']}", params={"confirm": "true"})
     assert response.status_code == 409
     assert "document" in response.json()["detail"]
+
+
+def test_create_holding_classifies_instrument_type_from_name(client):
+    """Regression (2026-09-22): hand-created holdings used to default to the
+    legacy, non-analyzable 'equity' tag."""
+    stock = client.post("/holdings", json={"ticker": "MSFT", "name": "Microsoft Corp", "trading_currency": "USD"})
+    assert stock.status_code == 201, stock.text
+    assert stock.json()["asset_class_raw"] == "stock"
+
+    etf = client.post("/holdings", json={"ticker": "SPY", "name": "SPDR S&P 500 ETF", "trading_currency": "USD"})
+    assert etf.json()["asset_class_raw"] == "equity_etf"
+
+
+def test_create_holding_accepts_explicit_instrument_type(client):
+    response = client.post(
+        "/holdings",
+        json={"ticker": "XGLD", "name": "Gold thing", "trading_currency": "EUR", "asset_class_raw": "commodity_etc"},
+    )
+    assert response.status_code == 201
+    assert response.json()["asset_class_raw"] == "commodity_etc"
+
+    bad = client.post(
+        "/holdings",
+        json={"ticker": "BAD", "name": "Bad", "trading_currency": "EUR", "asset_class_raw": "crypto"},
+    )
+    assert bad.status_code == 422

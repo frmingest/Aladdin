@@ -14,6 +14,8 @@
 
 import type {
   Account,
+  AnalysisReadiness,
+  AnalysisRun,
   AccountUpdateInput,
   CompanyResearch,
   DocumentSummary,
@@ -23,9 +25,11 @@ import type {
   HoldingCreateInput,
   HoldingFieldOptions,
   HoldingMetrics,
+  HoldingNote,
   HoldingUpdateInput,
   HoldingValuation,
   MacroResearch,
+  MarginOfSafetyBoard,
   PortfolioImportResponse,
   PortfolioSnapshot,
   PortfolioSnapshotSummary,
@@ -206,6 +210,9 @@ export const api = {
   refreshHoldingValuation: (holdingId: string) =>
     request<HoldingValuation>(`/valuation/holdings/${holdingId}/refresh`, { method: "POST" }),
 
+  /** F3 — every owned equity ranked by margin of safety. */
+  getMarginOfSafetyBoard: () => request<MarginOfSafetyBoard>("/valuation/board"),
+
   // Primary sources (2026-09-22) — see backend/app/api/sources.py.
   getSourceEligibility: (holdingId: string) =>
     request<SourceEligibility>(`/sources/holdings/${holdingId}`),
@@ -218,5 +225,22 @@ export const api = {
   refreshAnnouncements: (holdingId: string) =>
     request<HoldingAnnouncements>(`/sources/holdings/${holdingId}/announcements/refresh`, {
       method: "POST",
+    }),
+
+  // Analysis (Sprint 4 + F2) — see backend/app/api/analysis.py. GET returns
+  // the latest stored run (404 before the first one); POST .../run always
+  // spends real LLM quota; readiness never does.
+  getLatestAnalysis: (holdingId: string) =>
+    request<AnalysisRun>(`/analysis/holdings/${holdingId}`),
+  runAnalysis: (holdingId: string) =>
+    request<AnalysisRun>(`/analysis/holdings/${holdingId}/run`, { method: "POST" }),
+  getAnalysisReadiness: (holdingId: string) =>
+    request<AnalysisReadiness>(`/analysis/holdings/${holdingId}/readiness`),
+  getAnalysisNotes: (holdingId: string) =>
+    request<HoldingNote>(`/analysis/holdings/${holdingId}/notes`),
+  saveAnalysisNotes: (holdingId: string, content: string) =>
+    request<HoldingNote>(`/analysis/holdings/${holdingId}/notes`, {
+      method: "PUT",
+      body: JSON.stringify({ content }),
     }),
 };

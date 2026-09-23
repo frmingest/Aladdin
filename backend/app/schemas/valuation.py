@@ -44,3 +44,34 @@ class HoldingValuationOut(BaseModel):
     multiples: list[PeriodMultiplesOut]
     assumptions_version: str
     unavailable_reasons: list[str]
+
+
+class BoardRowOut(BaseModel):
+    holding_id: UUID
+    ticker: str
+    name: str
+    sector: str | None
+    market_value_nok: Decimal | None
+    weight_pct: Decimal | None
+    valuation_currency: str | None
+    price: Decimal | None
+    price_as_of: datetime | None
+    bear: Decimal | None
+    base: Decimal | None
+    bull: Decimal | None
+    margin_of_safety_base: Decimal | None
+    margin_of_safety_bear: Decimal | None
+    zone: str
+    unavailable_reason: str | None
+    verdict_rating: str | None
+    moat_rating: str | None
+    analyzed_at: datetime | None
+
+
+class MarginOfSafetyBoardOut(BaseModel):
+    """GET /valuation/board — feature F3. Rows are ranked by base-case
+    margin of safety, highest first; holdings without a DCF come last."""
+
+    rows: list[BoardRowOut]
+    total_equity_value_nok: Decimal
+    zone_counts: dict[str, int]

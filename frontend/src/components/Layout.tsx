@@ -39,6 +39,7 @@ function useBackendHealth(): HealthState {
 const NAV_ITEMS: { label: string; to: string; disabled?: boolean }[] = [
   { label: "Holdings", to: "/" },
   { label: "Portfolio", to: "/portfolio" },
+  { label: "Margin of safety", to: "/margin-of-safety" },
   { label: "Macro", to: "/macro" },
   { label: "Thesis", to: "/thesis", disabled: true },
 ];

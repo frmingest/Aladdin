@@ -221,3 +221,36 @@ def test_run_analysis_with_no_fallback_returns_failed_run_not_a_500(client, db_s
         assert response.json()["status"] == "FAILED"
     finally:
         _clear_overrides()
+
+
+def test_run_output_includes_evidence_items_for_citations(client, db_session):
+    holding_id = _create_stock_holding(client, db_session)
+    _add_two_periods(db_session, holding_id)
+    _override_providers()
+    try:
+        body = client.post(f"/analysis/holdings/{holding_id}/run").json()
+    finally:
+        _clear_overrides()
+    ids = {item["id"] for item in body["evidence_items"]}
+    assert "EV-001" in ids  # the fake verdict cites EV-001; the UI must be able to resolve it
+    first = next(item for item in body["evidence_items"] if item["id"] == "EV-001")
+    assert first["label"] and first["content"]
+
+
+def test_readiness_endpoint_reports_without_any_provider(client, db_session):
+    """No provider overrides at all: readiness must never touch a live
+    provider, so it works even when those are misconfigured."""
+    holding_id = _create_stock_holding(client, db_session)
+    response = client.get(f"/analysis/holdings/{holding_id}/readiness")
+    assert response.status_code == 200, response.text
+    body = response.json()
+    keys = {check["key"] for check in body["checks"]}
+    assert {"instrument_type", "providers", "ticker", "price", "financials", "sector", "research", "quota"} <= keys
+    assert body["ready"] is False  # no financials yet
+    assert body["blockers"] >= 1
+    assert body["estimated_gemini_calls"] >= 2
+
+
+def test_readiness_404_for_unknown_holding(client):
+    response = client.get("/analysis/holdings/00000000-0000-0000-0000-000000000000/readiness")
+    assert response.status_code == 404

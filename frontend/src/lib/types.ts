@@ -101,6 +101,9 @@ export interface HoldingCreateInput {
   sector?: string | null;
   institution?: string | null;
   custody_type?: string | null;
+  /** Optional since 2026-09-22 — the backend classifies it from `name`
+   * when omitted (previously defaulted to the non-analyzable "equity"). */
+  asset_class_raw?: string | null;
 }
 
 export interface HoldingUpdateInput {
@@ -425,3 +428,151 @@ export const MULTIPLE_LABELS: Record<string, string> = {
 };
 
 export const MULTIPLE_ORDER = Object.keys(MULTIPLE_LABELS);
+
+/**
+ * Mirrors backend/app/schemas/analysis.py and
+ * app/domain/analysis_schema/v1.py (Sprint 4 — the two-pass Buffett/Munger
+ * analysis). Every section carries `evidence_ids` that resolve against the
+ * run's own `evidence_items` (CLAUDE.md Rule 2).
+ */
+export type MoatRating = "Wide" | "Narrow" | "None";
+export type VerdictRating = "Strong Buy" | "Buy" | "Hold" | "Sell" | "Avoid";
+
+export interface MoatSourceRating {
+  source: string;
+  rating: MoatRating;
+  reasoning: string;
+  evidence_ids: string[];
+}
+
+export interface MoatAssessment {
+  circle_of_competence_summary: string;
+  overall_rating: MoatRating;
+  sources: MoatSourceRating[];
+  evidence_ids: string[];
+}
+
+export interface NarrativeAssessment {
+  summary: string;
+  evidence_ids: string[];
+}
+
+export interface VerdictContent {
+  rating: VerdictRating;
+  thesis_bullets: string[];
+  top_risks: string[];
+  metrics_to_monitor: string[];
+  invalidation_triggers: string[];
+  evidence_ids: string[];
+}
+
+export interface BlindPassOutput {
+  moat: MoatAssessment;
+  capital_efficiency: NarrativeAssessment;
+  financial_fortress: NarrativeAssessment;
+  macro_stress_test: NarrativeAssessment;
+  valuation_synthesis: NarrativeAssessment;
+  verdict: VerdictContent;
+}
+
+export interface ReconciliationOutput {
+  verdict: VerdictContent;
+  reconciliation_narrative: string;
+  changed_from_blind: boolean;
+  evidence_ids: string[];
+}
+
+export interface EvidenceItem {
+  id: string;
+  category: string;
+  label: string;
+  content: string;
+  citation: string | null;
+}
+
+export type AnalysisRunStatus = "RUNNING" | "BLIND_ONLY" | "COMPLETED" | "FAILED";
+
+export interface AnalysisRun {
+  id: string;
+  holding_id: string;
+  status: AnalysisRunStatus;
+  schema_version: string;
+  blind_prompt_version: string;
+  reconciliation_prompt_version: string | null;
+  evidence_packet_version: string;
+  provider: string | null;
+  model_name: string | null;
+  started_at: string;
+  blind_completed_at: string | null;
+  completed_at: string | null;
+  error_message: string | null;
+  evidence_unavailable_reasons: string[];
+  blind_pass: BlindPassOutput | null;
+  blind_pass_citation_warnings: string[] | null;
+  reconciliation: ReconciliationOutput | null;
+  reconciliation_citation_warnings: string[] | null;
+  /** Deterministic, from the DCF bear/bull scenarios — never LLM output. */
+  price_target_low: string | null;
+  price_target_high: string | null;
+  price_target_currency: string | null;
+  evidence_items: EvidenceItem[];
+  user_notes_snapshot: string | null;
+}
+
+export interface HoldingNote {
+  holding_id: string;
+  content: string;
+  updated_at: string | null;
+}
+
+export type ReadinessStatus = "ok" | "warn" | "block";
+
+export interface ReadinessCheck {
+  key: string;
+  label: string;
+  status: ReadinessStatus;
+  detail: string;
+}
+
+/** GET /analysis/holdings/{id}/readiness — feature F2. Side-effect free. */
+export interface AnalysisReadiness {
+  holding_id: string;
+  ready: boolean;
+  blockers: number;
+  warnings: number;
+  estimated_gemini_calls: number;
+  gemini_calls_remaining_today: number | null;
+  checks: ReadinessCheck[];
+}
+
+/** GET /valuation/board — feature F3 (backend/app/services/valuation/board.py). */
+export type BoardZone = "below_bear" | "bear_to_base" | "base_to_bull" | "above_bull" | "unavailable";
+
+export interface BoardRow {
+  holding_id: string;
+  ticker: string;
+  name: string;
+  sector: string | null;
+  market_value_nok: string | null;
+  /** Fraction of total equity value (0..1), not a percentage. */
+  weight_pct: string | null;
+  valuation_currency: string | null;
+  price: string | null;
+  price_as_of: string | null;
+  bear: string | null;
+  base: string | null;
+  bull: string | null;
+  margin_of_safety_base: string | null;
+  margin_of_safety_bear: string | null;
+  zone: BoardZone;
+  unavailable_reason: string | null;
+  verdict_rating: VerdictRating | null;
+  moat_rating: MoatRating | null;
+  analyzed_at: string | null;
+}
+
+export interface MarginOfSafetyBoard {
+  rows: BoardRow[];
+  total_equity_value_nok: string;
+  zone_counts: Record<BoardZone, number>;
+}
