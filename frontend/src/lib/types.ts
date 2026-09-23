@@ -132,7 +132,9 @@ export interface DocumentSummary {
   reporting_period: string | null;
   sha256: string;
   status: string;
-  quality_flags: Record<string, boolean>;
+  // Booleans plus detail entries (lists/objects), e.g. "fact_conflicts",
+  // "facts_differ_from_existing", "ixbrl", SEC EDGAR "provenance".
+  quality_flags: Record<string, unknown>;
   page_count: number;
   fact_count: number;
 }

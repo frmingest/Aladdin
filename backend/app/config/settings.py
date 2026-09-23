@@ -82,6 +82,9 @@ class Settings(BaseSettings):
     object_storage_secret_access_key: str | None = None
 
     max_upload_size_mb: int = 25
+    # ESEF annual reports (.xhtml) embed their fonts and images as base64,
+    # so a full-year report is typically 20-60 MB (Vår Energi 2025: 36 MB).
+    max_ixbrl_upload_size_mb: int = 80
 
     # --- Live research (Sprint 2, see app/providers/gemini_research_provider.py) ---
     # Qualitative macro/sector/company research via Gemini + Google Search

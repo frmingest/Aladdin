@@ -43,3 +43,17 @@ def test_quality_flags_list_is_coerced_to_dict():
 def test_quality_flags_unexpected_shape_falls_back_to_empty_dict():
     doc = DocumentOut(quality_flags=None, **_BASE_KWARGS)  # type: ignore[arg-type]
     assert doc.quality_flags == {}
+
+
+def test_quality_flags_with_detail_values_validate():
+    # SEC EDGAR provenance, iXBRL stats and fact conflicts are nested values;
+    # as dict[str, bool] these made GET /documents 500 (fixed 2026-09-23).
+    flags = {
+        "source": "sec_edgar",
+        "provenance": {"FY2024": {"accession": "0000"}},
+        "ixbrl": {"tagged_numbers": 296, "fiscal_years": ["FY2025"]},
+        "fact_conflicts": ["FY2025 revenue: 1 vs 2"],
+        "low_text_pages": True,
+    }
+    out = DocumentOut(quality_flags=flags, **_BASE_KWARGS)
+    assert out.quality_flags == flags

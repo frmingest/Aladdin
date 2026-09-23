@@ -12,7 +12,18 @@ import io
 
 from app.domain.errors import UnreadableFileError
 
-HOLDING_DOCUMENT_EXTENSIONS: tuple[str, ...] = (".pdf", ".pptx", ".xlsx")
+HOLDING_DOCUMENT_EXTENSIONS: tuple[str, ...] = (
+    ".pdf",
+    ".pptx",
+    ".xlsx",
+    # 2026-09-23: statement tables from IR pages, and inline-XBRL filings
+    # (ESEF annual reports .xhtml; SEC 10-K/20-F .htm).
+    ".csv",
+    ".xhtml",
+    ".html",
+    ".htm",
+)
+IXBRL_EXTENSIONS: tuple[str, ...] = (".xhtml", ".html", ".htm")
 
 
 def sha256_hex(content: bytes) -> str:
@@ -45,6 +56,15 @@ def check_basic_readability(filename: str, content: bytes) -> None:
             from pptx import Presentation
 
             Presentation(io.BytesIO(content))
+        elif ext == ".csv":
+            from app.services.documents.extraction.csv_statement import decode_csv_bytes
+
+            if not decode_csv_bytes(content).strip():
+                raise ValueError("CSV is empty")
+        elif ext in IXBRL_EXTENSIONS:
+            head = content[:8192].decode("utf-8", errors="ignore").lower()
+            if "<html" not in head and "<?xml" not in head:
+                raise ValueError("not an (X)HTML document")
         else:
             raise ValueError(f"no readability check defined for extension '{ext}'")
     except Exception as exc:

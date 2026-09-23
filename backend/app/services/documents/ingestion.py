@@ -10,7 +10,9 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
+from decimal import Decimal
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config.settings import get_settings
@@ -21,17 +23,45 @@ from app.domain.document_types import (
     DOCUMENT_STATUS_UPLOADED,
 )
 from app.domain.errors import FileTooLargeError, UnsupportedFileTypeError
+from app.domain.period_dates import extract_year
 from app.models.document import Document, DocumentChunk, DocumentPage
 from app.models.financial_line_item import FinancialLineItem
 from app.providers.object_storage import ObjectStorageProvider
 from app.services.documents.extraction import extract
 from app.services.documents.hashing import (
     HOLDING_DOCUMENT_EXTENSIONS,
+    IXBRL_EXTENSIONS,
     check_basic_readability,
     extension_of,
     sha256_hex,
 )
 from app.services.documents.quality import evaluate_quality
+
+
+# A factsheet rounded to whole millions vs the annual report's 0.1 million
+# is not a disagreement worth reporting; a restatement usually is bigger.
+ROUNDING_TOLERANCE = Decimal("0.005")
+
+
+def _differs_beyond_rounding(a: Decimal, b: Decimal) -> bool:
+    scale = max(abs(a), abs(b))
+    return scale != 0 and abs(a - b) > scale * ROUNDING_TOLERANCE
+
+
+def _existing_facts_by_year(
+    db: Session, document: Document
+) -> dict[tuple[str, int | None], tuple[Decimal, str]]:
+    """(metric, fiscal year) -> (value, source file name) already stored for
+    this holding from other documents."""
+    rows = db.execute(
+        select(FinancialLineItem.metric, FinancialLineItem.period, FinancialLineItem.value, Document.original_filename)
+        .join(Document, Document.id == FinancialLineItem.document_id)
+        .where(FinancialLineItem.holding_id == document.holding_id, FinancialLineItem.document_id != document.id)
+    ).all()
+    found: dict[tuple[str, int | None], tuple[Decimal, str]] = {}
+    for metric, period, value, filename in rows:
+        found.setdefault((metric, extract_year(period)), (value, filename))
+    return found
 
 
 @dataclass
@@ -61,7 +91,10 @@ def intake_raw_file(
         raise UnsupportedFileTypeError(filename, HOLDING_DOCUMENT_EXTENSIONS)
 
     settings = get_settings()
-    max_bytes = settings.max_upload_size_mb * 1024 * 1024
+    max_mb = settings.max_upload_size_mb
+    if ext in IXBRL_EXTENSIONS:
+        max_mb = max(max_mb, settings.max_ixbrl_upload_size_mb)
+    max_bytes = max_mb * 1024 * 1024
     if len(content) > max_bytes:
         raise FileTooLargeError(filename, len(content), max_bytes)
 
@@ -104,7 +137,7 @@ def process_document(db: Session, document: Document, content: bytes) -> None:
 
     ext = extension_of(document.original_filename)
     try:
-        result = extract(ext, content)
+        result = extract(ext, content, filename=document.original_filename)
     except Exception as exc:  # noqa: BLE001 — any extractor failure is a FAILED document, not a 500
         document.status = DOCUMENT_STATUS_FAILED
         document.quality_flags = {"extraction_failed": True, "extraction_error": str(exc)}
@@ -145,10 +178,27 @@ def process_document(db: Session, document: Document, content: bytes) -> None:
     # label map anyway — still handled explicitly, not left to an
     # IntegrityError, per CLAUDE.md's "fail visibly" rule.
     facts_skipped_no_holding = False
+    existing = _existing_facts_by_year(db, document) if document.holding_id is not None else {}
+    skipped_existing: list[str] = []
     for fact in result.facts:
         if document.holding_id is None:
             facts_skipped_no_holding = True
             continue
+        year = extract_year(fact.period)
+        prior = existing.get((fact.metric, year)) if year is not None else None
+        if prior is not None:
+            # First source wins (the same rule SEC EDGAR imports follow): a
+            # second upload never silently replaces a year already on file.
+            # A differing value (a restatement, or a different line chosen)
+            # is reported so it can be checked by hand.
+            prior_value, prior_file = prior
+            if _differs_beyond_rounding(prior_value, fact.value):
+                skipped_existing.append(
+                    f"{fact.period} {fact.metric}: this file {fact.value.normalize():f} vs "
+                    f"{prior_value.normalize():f} from '{prior_file}' (kept)"
+                )
+            continue
+        existing[(fact.metric, year)] = (fact.value, document.original_filename)
         db.add(
             FinancialLineItem(
                 document_id=document.id,
@@ -168,6 +218,9 @@ def process_document(db: Session, document: Document, content: bytes) -> None:
         flags[flag] = True
     if facts_skipped_no_holding:
         flags["facts_skipped_no_holding"] = True
+    flags.update(result.details)
+    if skipped_existing:
+        flags["facts_differ_from_existing"] = skipped_existing[:20]
     document.quality_flags = flags
     document.status = (
         DOCUMENT_STATUS_FAILED if flags.get("no_pages_extracted") else DOCUMENT_STATUS_PROCESSED

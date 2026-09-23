@@ -37,13 +37,18 @@ class DocumentOut(BaseModel):
     reporting_period: str | None
     sha256: str
     status: str
-    quality_flags: dict[str, bool]
+    # Flags are booleans, but some entries carry detail: the SEC EDGAR import
+    # ("provenance", "filings"), iXBRL/CSV extraction ("ixbrl",
+    # "fact_conflicts", "facts_differ_from_existing") and LLM extraction
+    # ("financials_extraction"). Typed as Any since 2026-09-23 — as
+    # dict[str, bool] any such document 500'd GET /documents.
+    quality_flags: dict[str, Any]
     page_count: int
     fact_count: int
 
     @field_validator("quality_flags", mode="before")
     @classmethod
-    def _coerce_quality_flags(cls, value: Any) -> dict[str, bool]:
+    def _coerce_quality_flags(cls, value: Any) -> dict[str, Any]:
         """Defensively normalizes `Document.quality_flags` into the dict
         shape this schema expects, regardless of what's actually stored.
 

@@ -84,12 +84,106 @@ _LABEL_MAP: dict[str, str] = {
     "investeringer i varige driftsmidler": "capital_expenditures",
     "interest expense": "interest_expense",
     "rentekostnader": "interest_expense",
+    # --- 2026-09-23: labels seen in real Oslo Børs IR downloads (Vår Energi
+    # factsheet CSV, Orkla quarterly/accounting-figures CSV) and common IFRS
+    # statement wording. Still exact matches only.
+    "operating revenues": "revenue",
+    "total operating revenues": "revenue",
+    "revenues": "revenue",
+    "total revenues": "revenue",
+    "sales revenue": "revenue",
+    "salgsinntekter": "revenue",
+    "total income": "revenue",
+    "operating profit/(loss)": "operating_income",
+    "operating profit/(loss) (ebit)": "operating_income",
+    "operating profit (ebit)": "operating_income",
+    "operating profit (loss)": "operating_income",
+    "profit from operations": "operating_income",
+    "profit for the period": "net_income",
+    "profit/(loss) for the period": "net_income",
+    "profit/(loss) for the year": "net_income",
+    "profit (loss) for the period": "net_income",
+    "profit (loss) for the year": "net_income",
+    "net profit for the year": "net_income",
+    "net income for the year": "net_income",
+    "profit attributable to owners of the parent": "net_income",
+    "profit for the period attributable to owners of the parent": "net_income",
+    "profit attributable to equity holders of the parent": "net_income",
+    "depreciation and amortisation": "depreciation_and_amortization",
+    "depreciation & amortisation": "depreciation_and_amortization",
+    "depreciation": "depreciation_and_amortization",
+    "equity attributable to owners of the parent": "total_equity",
+    "net cash flow from operating activities": "operating_cash_flow",
+    "net cash from operating activities": "operating_cash_flow",
+    "net cash flows from operating activities": "operating_cash_flow",
+    "net cash provided by operating activities": "operating_cash_flow",
+    "cash flow from operating activities": "operating_cash_flow",
+    "cash flows from operating activities": "operating_cash_flow",
+    "purchase of property, plant and equipment": "capital_expenditures",
+    "purchases of property, plant and equipment": "capital_expenditures",
+    "expenditures on property, plant and equipment": "capital_expenditures",
+    "investments in property, plant and equipment": "capital_expenditures",
+    "interest expenses": "interest_expense",
+    "finance costs": "interest_expense",
 }
+
+# When two different labels in the same statement map to the same metric
+# (e.g. "Profit for the period" and "Profit attributable to owners of the
+# parent"), the label NOT listed here wins. The order mirrors the SEC
+# EDGAR concept priority (app/providers/sec_edgar_provider.py CONCEPT_MAP):
+# parent-attributable profit/equity over group totals, revenue over
+# "total income" (which includes other operating income), D&A over bare
+# depreciation. Two same-priority labels with different values are a
+# conflict and neither is imported.
+LOW_PRIORITY_LABELS: frozenset[str] = frozenset(
+    {
+        "total income",
+        "profit for the period",
+        "profit/(loss) for the period",
+        "profit/(loss) for the year",
+        "profit (loss) for the period",
+        "profit (loss) for the year",
+        "profit for the year",
+        "net profit for the year",
+        "net income for the year",
+        "total equity",
+        "sum egenkapital",
+        "depreciation",
+        "finance costs",
+    }
+)
+
+# Stored as positive magnitudes whatever sign the source prints them with
+# ("(858)", "-656") — the same convention SEC EDGAR facts use, which
+# app/services/calculations.py relies on (free_cash_flow = OCF - capex,
+# owner earnings = NI + D&A - capex).
+POSITIVE_MAGNITUDE_METRICS: frozenset[str] = frozenset(
+    {
+        "cost_of_goods_sold",
+        "depreciation_and_amortization",
+        "capital_expenditures",
+        "interest_expense",
+    }
+)
+
+
+def normalize_label(raw_label: str) -> str:
+    """Lower-cases, collapses whitespace, and strips list markers ("- ",
+    "• ") and trailing colons/footnote asterisks that statement tables
+    print around otherwise-standard labels (" - Depreciation and
+    amortisation" in a cash-flow reconciliation)."""
+    key = " ".join(raw_label.strip().lower().split())
+    key = key.lstrip("-–—•* ").rstrip(":* ").strip()
+    return key
 
 
 def match_metric(raw_label: str) -> str | None:
     """Returns a canonical metric key for an exact known label, else None."""
     if not raw_label:
         return None
-    key = " ".join(raw_label.strip().lower().split())
-    return _LABEL_MAP.get(key)
+    return _LABEL_MAP.get(normalize_label(raw_label))
+
+
+def label_priority(raw_label: str) -> int:
+    """0 = preferred label for its metric, 1 = fallback (LOW_PRIORITY_LABELS)."""
+    return 1 if normalize_label(raw_label) in LOW_PRIORITY_LABELS else 0

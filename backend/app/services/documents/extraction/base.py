@@ -37,3 +37,7 @@ class ExtractionResult:
     facts: list[ExtractedFact] = field(default_factory=list)
     # Document-level flags beyond per-page quality, e.g. "no_pages_extracted".
     quality_flags: list[str] = field(default_factory=list)
+    # Structured detail stored alongside the flags in Document.quality_flags
+    # (e.g. "fact_conflicts": [...], "ixbrl": {...}) — shown to the user so a
+    # skipped number is visible, never silently dropped.
+    details: dict[str, object] = field(default_factory=dict)

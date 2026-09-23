@@ -30,7 +30,7 @@ DOCUMENT_STATUS_PROCESSING = "processing"
 DOCUMENT_STATUS_PROCESSED = "processed"
 DOCUMENT_STATUS_FAILED = "failed"
 
-ALLOWED_UPLOAD_EXTENSIONS: tuple[str, ...] = (".pdf", ".pptx", ".xlsx")
+ALLOWED_UPLOAD_EXTENSIONS: tuple[str, ...] = (".pdf", ".pptx", ".xlsx", ".csv", ".xhtml", ".html", ".htm")
 
 # System-created (never user-uploadable, so deliberately not in
 # DOCUMENT_TYPES): the verbatim SEC EDGAR company-facts JSON an EDGAR import

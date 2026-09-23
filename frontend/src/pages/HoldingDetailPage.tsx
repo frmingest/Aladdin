@@ -6,6 +6,7 @@ import { METRIC_LABELS, METRIC_ORDER, PERCENT_METRICS } from "../lib/types";
 import { formatBytes, formatDate, formatDecimal, formatPercent } from "../lib/format";
 import { Button, Card, CollapsibleSection, EmptyState, PageHeader, StatusBadge } from "../components/ui";
 import { AnalysisPanel } from "../components/AnalysisPanel";
+import { DocumentFlagsNote } from "../components/DocumentFlagsNote";
 import { ResearchPanel } from "../components/ResearchPanel";
 import { SourcesPanel } from "../components/SourcesPanel";
 import { ValuationPanel } from "../components/ValuationPanel";
@@ -190,7 +191,7 @@ function DocumentsPanel({
           <span className="sr-only">Choose file</span>
           <input
             type="file"
-            accept=".pdf,.pptx,.xlsx"
+            accept=".pdf,.pptx,.xlsx,.csv,.xhtml,.html,.htm"
             disabled={uploading}
             onChange={(e) => {
               const file = e.target.files?.[0];
@@ -201,6 +202,10 @@ function DocumentsPanel({
           />
         </label>
         {uploading && <span className="text-sm text-ink-muted">Uploading…</span>}
+        <p className="basis-full text-xs text-ink-muted">
+          Best source for figures: the ESEF annual report (.xhtml) — every number is tagged. CSV/Excel
+          downloads from the company&apos;s IR page also work; only full-year columns become figures.
+        </p>
       </div>
 
       {error && <p className="mb-3 text-sm text-negative">{error}</p>}
@@ -227,7 +232,10 @@ function DocumentsPanel({
           <tbody>
             {documents.map((d) => (
               <tr key={d.id} className="border-t border-border-subtle">
-                <td className="py-2 text-ink">{d.original_filename}</td>
+                <td className="py-2 text-ink">
+                  {d.original_filename}
+                  <DocumentFlagsNote document={d} />
+                </td>
                 <td className="py-2 text-ink-muted">{d.type.replace(/_/g, " ")}</td>
                 <td className="py-2 tabular text-ink-muted">{d.reporting_period ?? "—"}</td>
                 <td className="py-2 tabular text-ink-muted">{formatDate(d.uploaded_at)}</td>
