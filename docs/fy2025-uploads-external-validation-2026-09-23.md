@@ -90,7 +90,9 @@ The question here is whether the panel would mislead an owner. It is not an inve
 
 ---
 
-## 5. Recommended fixes (not built yet, needs Faiz's go-ahead)
+## 5. Recommended fixes
+
+> **Update 2026-09-23:** Faiz approved fixes 1–3 plus a wider owner's-view definition (hybrid capital as debt; FCF also net of interest, leases and hybrid coupons). They were built in `34beec7`, see [owner-view-metrics-and-local-worker-plan-2026-09-23.md](owner-view-metrics-and-local-worker-plan-2026-09-23.md). Fixes 4 and 5 remain open.
 
 | # | Fix | Where | Effect |
 |---|---|---|---|

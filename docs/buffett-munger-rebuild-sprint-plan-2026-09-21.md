@@ -73,6 +73,8 @@ holding's notes), Rule 5 (both prompts explicitly frame evidence/notes as data, 
 | 16 | Sprint 4 user-notes input: build now or ship blind pass alone first? | **Build both passes now, notes optional** (Recommended) — an empty-notes holding still gets a reconciliation pass, just with less to weigh against the blind evidence-based view. |
 | 17 | Sprint 4 document-extraction quality: fix now or defer? | **Defer** (Recommended) — ship the analysis engine against what Sprint 1's ingestion already extracts; revisit only if real runs show it's actually the bottleneck. |
 | 18 | Deleting documents/holdings (2026-09-23, supersedes #14's "Documents untouched") | **Allowed, always `confirm=true`:** one document, all of a holding's data, cascade holding delete, and a holdings clean slate that requires the portfolio wiped first. Stored files removed after the DB commit. Spend history (`llm_usage_events`) and FX/rate reference data are never deleted. |
+| 19 | Metric definitions (2026-09-23) | **Owner's view (Buffett/Munger):** hybrid capital is debt (net debt, D/E on ordinary equity); FCF = CFO − capex − decommissioning − financing-classified interest − lease payments − hybrid coupons; owner earnings also deduct decommissioning + lease payments (shared by panel, evidence packet and DCF); EBIT/EBITDA exclude biological fair-value changes; a ratio over a denominator ≤ 0 is *n/m*. See [owner-view-metrics-and-local-worker-plan-2026-09-23.md](owner-view-metrics-and-local-worker-plan-2026-09-23.md). |
+| 20 | Using the local LLM from Railway (2026-09-23) | **Recommended: a worker on Faiz's PC pulls queued runs from the shared database** (no tunnel, no inbound port). Planned as Sprint 5B (F8, with F5). Open at sprint start: research step on the PC (recommended) or on Railway. |
 
 ## Actual current Supabase schema
 
@@ -192,6 +194,25 @@ bear/base/bull range. **✅ Built 2026-09-22** (`2c415b8` backend, `ba3b71b` fro
 stock/equity ETF rows; Sprint 3 valuation reused unchanged. Still open in Sprint 5: the aggregate
 moat/verdict roll-up dashboard and the deterministic executive summary.
 
+### Sprint 5B — Local LLM from Railway + overnight queue (F8 + F5) — ⏳ planned 2026-09-23
+
+Goal: start an analysis from the Railway site and have it run on the PC's GPU (Ollama). No tunnel
+and no port opened on the PC. If the PC is off, the run waits in a queue.
+
+| # | Story | Detail |
+|---|---|---|
+| 1 | Queue columns | Migration: run status `QUEUED`/`RUNNING`, plus `engine` (`cloud`/`local`), `claimed_by`, `claimed_at`, `heartbeat_at`, `attempts`. New `worker_heartbeats` table. |
+| 2 | Queue from the UI | `POST /analysis/holdings/{id}/run?engine=local` → 202 + QUEUED run. **Queue all ready holdings** (F5). |
+| 3 | Worker on the PC | `python -m app.worker`: polls the shared Supabase DB every 30 s, claims one run (`FOR UPDATE SKIP LOCKED`), runs the existing pipeline on `OllamaProvider`, heartbeats. A run is released after 30 min without a heartbeat, max 2 attempts. Windows start-up script. |
+| 4 | Status in UI | Queued/running badge, queue list, "Local worker online" readiness check, optional **Run in cloud instead** |
+| 5 | Safety | The worker writes only to the analysis tables. Nothing on the PC accepts inbound connections, and Railway never holds the Ollama URL. |
+| 6 | Tests + guide | Claim/lease/expiry tests, fake-LLM end-to-end, `local-llm-ollama-setup.md` update |
+
+Options rejected: a Cloudflare/Tailscale tunnel to Ollama (exposes the GPU endpoint, long blocking
+calls, fails when the PC sleeps), and a worker API on Railway (a new authenticated surface for no
+extra benefit). Detail:
+[owner-view-metrics-and-local-worker-plan-2026-09-23.md](owner-view-metrics-and-local-worker-plan-2026-09-23.md) §3.
+
 ### Sprint 6 — Evidence quality
 
 Per-document evidence budget, section-aware chunking (current ingestion is 1 page = 1 chunk).
@@ -216,7 +237,7 @@ the status page can ship earlier).
 | **Alerts & notifications** | Notify when a thesis-invalidation trigger fires or research goes stale | Needs thesis tracking built first |
 | **Reporting & export** | One-holding or whole-portfolio PDF/print view of an analysis run | Sprint 4's analysis output now exists to export |
 | **More primary sources** | Brønnøysund accounts register (Norwegian financials), VFF fund NAVs, Newsweb announcement body text | SEC EDGAR + Newsweb built 2026-09-22 (see `primary-sources-sec-edgar-newsweb-2026-09-22.md`); these are the next-cheapest gaps |
-| **F5 Overnight analysis queue** (agreed 2026-09-22) | Queue holdings and run them within the daily Gemini budget, resuming the next day | Build together with the LLM usage ledger |
+| **F5 Overnight analysis queue** (agreed 2026-09-22) | Queue holdings and run them within the daily Gemini budget, resuming the next day | **Scheduled 2026-09-23 in Sprint 5B**, together with F8 (the local worker is the queue runner) |
 | **F6 Decision journal** (agreed 2026-09-22) | Record buy/sell reasoning, price and "what would prove me wrong"; show the outcome after 6/12 months | Pairs with thesis tracking |
 | **F7 Watchlist** (agreed 2026-09-22) | Analyze non-held companies; flag when the price drops below a buy-below level | Reuses the Sprint 3/4 engines unchanged |
 | **Fix GitHub push credentials** (ops, not a feature) | A PAT/credential-helper so sessions can push directly | Needs a decision/action from Faiz outside the repo — hit identically in every session |
@@ -225,6 +246,7 @@ the status page can ship earlier).
 
 | Date | Summary |
 |---|---|
+| 2026-09-23 | **Owner's-view metric definitions (decision 19) + Sprint 5B planned (decision 20).** Hybrid capital as debt; FCF and owner earnings net of decommissioning, leases, financing-classified interest and hybrid coupons; EBIT/EBITDA without biological fair value; *n/m* for negative denominators; the DCF uses the same owner earnings; evidence packet v3. 5 new extracted facts, 12 new tests (514/516, 2 pre-existing local-only). Sprint 5B: local worker pulls queued runs from the shared DB (F8 + F5). See [owner-view-metrics-and-local-worker-plan-2026-09-23.md](owner-view-metrics-and-local-worker-plan-2026-09-23.md). |
 | 2026-09-23 | **Upload validation + deletes.** Vår Energi's FY2025 ESEF filing was checked figure by figure: every tag was read correctly, but net income, revenue, capex, EBIT/EBITDA and interest are now mapped the way a shareholder needs them. Statement integrity checks, a hybrid-equity warning, a mixed-currency guard and per-figure provenance were added. New document/holding delete endpoints and UI (decision 18). `be4b7e7`, not pushed. See [upload-validation-var-energi-and-deletes-2026-09-23.md](upload-validation-var-energi-and-deletes-2026-09-23.md). |
 | 2026-09-23 | **Reverted LLM-assisted PDF figure extraction** (`8e1c1fb` reverts `9a0db96`) — Faiz decided against it. PDFs stay text-only; ESEF `.xhtml`/CSV uploads are the figure sources for non-US holdings. |
 | 2026-09-23 | **Financial-statement uploads: ESEF `.xhtml` + CSV.** Inline-XBRL parser (tagged annual facts → canonical metrics via the EDGAR concept map, readable pages, tagged-facts evidence page) and a shared statement-table parser for IR CSV/Excel (annual columns only, scale/currency from the unit line). First source wins per metric/year; differences reported. Fixes a latent `GET /documents` 500. 486 tests (63 new). See [financial-statement-uploads-xhtml-csv-2026-09-23.md](financial-statement-uploads-xhtml-csv-2026-09-23.md). |
