@@ -808,3 +808,75 @@ export interface WatchlistUpdateInput {
   buy_below_price?: string | null;
   notes?: string | null;
 }
+
+// --- Decision journal (F6) — backend/app/schemas/journal.py
+
+export type JournalAction = "buy" | "add" | "trim" | "sell" | "hold" | "pass";
+
+export interface JournalOutcome {
+  days_since: number;
+  latest_price: string | null;
+  latest_price_at: string | null;
+  /** 0-100 scale. */
+  return_pct: string | null;
+  in_favour: boolean | null;
+  price_6m: string | null;
+  return_6m_pct: string | null;
+  price_12m: string | null;
+  return_12m_pct: string | null;
+  review_6m_due: boolean;
+  review_12m_due: boolean;
+  note: string | null;
+}
+
+export interface JournalEntry {
+  id: string;
+  holding_id: string | null;
+  ticker: string;
+  company_name: string;
+  action: JournalAction;
+  decided_on: string;
+  price: string | null;
+  currency: string | null;
+  quantity: string | null;
+  thesis: string;
+  invalidation: string | null;
+  confidence: number | null;
+  verdict_at_decision: VerdictRating | null;
+  review_6m: string | null;
+  review_12m: string | null;
+  created_at: string;
+  updated_at: string;
+  outcome: JournalOutcome;
+}
+
+export interface Journal {
+  entries: JournalEntry[];
+  reviews_due: number;
+}
+
+export interface JournalEntryInput {
+  holding_id: string;
+  action: JournalAction;
+  decided_on: string;
+  price?: string | null;
+  currency?: string | null;
+  quantity?: string | null;
+  thesis: string;
+  invalidation?: string | null;
+  confidence?: number | null;
+}
+
+export type JournalEntryUpdate = Partial<Omit<JournalEntryInput, "holding_id">> & {
+  review_6m?: string | null;
+  review_12m?: string | null;
+};
+
+export const JOURNAL_ACTIONS: { key: JournalAction; label: string }[] = [
+  { key: "buy", label: "Buy" },
+  { key: "add", label: "Add" },
+  { key: "trim", label: "Trim" },
+  { key: "sell", label: "Sell" },
+  { key: "hold", label: "Hold" },
+  { key: "pass", label: "Pass" },
+];

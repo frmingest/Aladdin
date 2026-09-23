@@ -29,6 +29,10 @@ import type {
   HoldingNote,
   HoldingUpdateInput,
   HoldingValuation,
+  Journal,
+  JournalEntry,
+  JournalEntryInput,
+  JournalEntryUpdate,
   MacroResearch,
   MarginOfSafetyBoard,
   PortfolioImportResponse,
@@ -246,6 +250,16 @@ export const api = {
     request<WatchlistRow>(`/watchlist/${id}`, { method: "PATCH", body: JSON.stringify(input) }),
   removeFromWatchlist: (id: string) =>
     request<void>(`/watchlist/${id}`, { method: "DELETE", query: { confirm: true } }),
+
+  // Decision journal (F6) — backend/app/api/journal.py. Database-only.
+  getJournal: (holdingId?: string) =>
+    request<Journal>("/journal", { query: holdingId ? { holding_id: holdingId } : undefined }),
+  createJournalEntry: (input: JournalEntryInput) =>
+    request<JournalEntry>("/journal", { method: "POST", body: JSON.stringify(input) }),
+  updateJournalEntry: (id: string, input: JournalEntryUpdate) =>
+    request<JournalEntry>(`/journal/${id}`, { method: "PATCH", body: JSON.stringify(input) }),
+  deleteJournalEntry: (id: string) =>
+    request<void>(`/journal/${id}`, { method: "DELETE", query: { confirm: true } }),
 
   /** F4 — configuration, data freshness and failures. Never calls a provider. */
   getSystemStatus: () => request<SystemStatus>("/system/status"),

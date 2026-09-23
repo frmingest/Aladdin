@@ -167,3 +167,16 @@ def test_failed_beta_lookup_is_not_cached():
     with patch.object(provider, "_ticker", side_effect=[failing, working]):
         assert provider.get_beta("AAPL") is None
         assert provider.get_beta("AAPL") == Decimal("1.1")
+
+
+def test_fast_info_property_raising_keyerror_is_treated_as_missing():
+    """yfinance's lazy fast_info properties raise KeyError when Yahoo is
+    unreachable; that must mean "no value", not an unhandled exception."""
+    from app.providers.yfinance_provider import _get
+
+    class _Lazy:
+        @property
+        def currency(self):
+            raise KeyError("currency")
+
+    assert _get(_Lazy(), "currency") is None

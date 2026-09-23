@@ -64,7 +64,14 @@ def _get(obj: object, key: str) -> object:
             # depending on yfinance version (see module docstring); either access style
             # failing just means "try the next fallback", never a real error to surface.
             pass
-    return getattr(obj, key, None)
+    try:
+        return getattr(obj, key, None)
+    except Exception:  # noqa: BLE001 - fast_info's lazy properties fetch on access
+        # and raise KeyError (not AttributeError) when Yahoo is unreachable or
+        # returns no data, which getattr's default does not catch. Found
+        # 2026-09-23: this surfaced as a 500 on GET /watchlist instead of
+        # "price unavailable".
+        return None
 
 
 class YFinanceMarketDataProvider(MarketDataProvider):

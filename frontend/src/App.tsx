@@ -4,6 +4,7 @@ import DashboardPage from "./pages/DashboardPage";
 import HoldingsListPage from "./pages/HoldingsListPage";
 import HoldingDetailPage from "./pages/HoldingDetailPage";
 import PortfolioPage from "./pages/PortfolioPage";
+import JournalPage from "./pages/JournalPage";
 import MacroPage from "./pages/MacroPage";
 import MarginOfSafetyPage from "./pages/MarginOfSafetyPage";
 import SectorPage from "./pages/SectorPage";
@@ -34,6 +35,7 @@ export default function App() {
         <Route path="/macro" element={<MacroPage />} />
         <Route path="/sectors/:sector" element={<SectorPage />} />
         <Route path="/watchlist" element={<WatchlistPage />} />
+        <Route path="/journal" element={<JournalPage />} />
         <Route path="/status" element={<SystemStatusPage />} />
       </Routes>
     </Layout>

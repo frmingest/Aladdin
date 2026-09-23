@@ -24,6 +24,7 @@ import { ResearchPanel } from "../components/ResearchPanel";
 import { SourcesPanel } from "../components/SourcesPanel";
 import { ValuationPanel } from "../components/ValuationPanel";
 import WatchButton from "../components/WatchButton";
+import JournalPanel from "../components/JournalPanel";
 
 function MetricsPanel({ holdingId }: { holdingId: string }) {
   const [periods, setPeriods] = useState<string[] | null>(null);
@@ -611,6 +612,12 @@ export default function HoldingDetailPage() {
           Research
         </h2>
         <CompanyResearchSection holdingId={id} ticker={holding.ticker} />
+      </div>
+
+      <div className="mb-8">
+        <CollapsibleSection title="Decision journal" hint="Why you bought or sold, and how it turned out">
+          <JournalPanel holding={holding} />
+        </CollapsibleSection>
       </div>
 
       <CollapsibleSection title="Primary sources" hint="SEC EDGAR filings · Oslo Børs announcements">
