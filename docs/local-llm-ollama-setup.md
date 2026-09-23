@@ -153,6 +153,43 @@ frontend would talk to Railway instead.)
 
 Then use **http://localhost:5173** (not the Railway URL) for analysis runs.
 
+## Run analyses queued from Railway (Sprint 5B)
+
+The Railway site can't reach your PC, so it doesn't try. **Run on my PC** on a holding (or **Queue all
+ready holdings** on the *Analysis queue* page) only puts the run in the shared database. A small worker
+on your PC picks it up, does the research (Gemini) and both passes (Ollama) here, and writes the result
+back. Nothing on the PC listens for connections; if the PC is off, the run waits.
+
+**One-time setup**
+
+1. `backend\.env` on the PC must have the **same `DATABASE_URL` as Railway** (plus the Gemini, FRED
+   keys and `MARKET_DATA_PROVIDER=yfinance`, `RESEARCH_PROVIDER=gemini_search`). `LLM_PROVIDER` doesn't
+   matter to the worker: it always uses `WORKER_LLM_PROVIDER` (default `ollama`).
+2. Railway must be on the migration that adds the queue (`e6f7a8b9c0d1`) — it runs on deploy.
+
+**Start it**
+
+```powershell
+cd E:\Aladdin\backend
+.\.venv\Scripts\Activate.ps1
+python -m app.worker
+```
+
+Or `powershell -ExecutionPolicy Bypass -File E:\Aladdin\backend\scripts\start-worker.ps1`, which
+restarts the worker if it crashes. To start it at log-on: Task Scheduler → *Create Task* → trigger
+*At log on* → action *Start a program* `powershell.exe`, arguments
+`-ExecutionPolicy Bypass -WindowStyle Minimized -File E:\Aladdin\backend\scripts\start-worker.ps1`.
+
+**What it does, every 30 s**
+
+| Step | Detail |
+|---|---|
+| Heartbeat | Tells the site it's online (model, what it's doing). Shown on *Analysis queue*, *System status* and the readiness card. |
+| Checks Ollama | If Ollama is stopped, it waits — the run stays queued, nothing is spent. |
+| Checks Gemini budget | If today's research budget can't cover the next run, it waits until 00:00 UTC (the overnight queue). |
+| Runs the oldest queued run | Research → evidence packet → blind pass → reconciliation. A few minutes per holding. |
+| Recovers | A run whose worker went silent for 30 min is re-queued; after 2 tries it's marked failed. Ctrl+C mid-run puts the run back in the queue. |
+
 ## Troubleshooting
 
 | Message | Fix |
@@ -166,11 +203,11 @@ Then use **http://localhost:5173** (not the Railway URL) for analysis runs.
 | `No module named pip` | The venv is broken — delete and recreate it: `Remove-Item -Recurse -Force .venv`, `py -3.11 -m venv .venv`, activate, `python -m pip install -r requirements.txt`. |
 | Readiness says "Can't reach Ollama … would fall back to 'mistral'" but `curl.exe http://localhost:11434` works | You're on the **Railway** site, not the local one. Railway can never reach your PC. Use http://localhost:5173, and keep Railway on `LLM_PROVIDER=google_ai_studio`. |
 | `localhost:5173` refuses to connect | The frontend dev server isn't running — Step 7 (`npm run dev`, keep the window open). |
+| A run stays **Queued** on the Railway site | The worker isn't running, or is waiting. Open *Analysis queue*: it shows the worker's state (offline, *LLM unavailable*, *waiting for quota*) and the reason. |
+| Worker log: `DATABASE_URL is not set` | Put Railway's `DATABASE_URL` in `backend\.env` on the PC. |
 | A `.env` change has no effect | Restart uvicorn (it reads `.env` only at start), and check no Windows environment variable of the same name overrides it (`echo $env:LLM_PROVIDER`). Also make sure a key isn't listed twice in `.env`. |
 
 ## Later, if needed
 
-Running analyses from the Railway site (e.g. from your phone) would need Railway to reach your PC —
-e.g. a Cloudflare Tunnel with Cloudflare Access in front of Ollama (`OLLAMA_API_KEY` is already
-supported for an authenticating proxy). Deliberately not set up now: extra moving parts and a new
-attack surface for an occasional action.
+A tunnel from Railway to Ollama is no longer needed: runs started on the Railway site reach the PC
+through the queue above (Sprint 5B).

@@ -76,7 +76,15 @@ def run_full_analysis(
     risk_free_rate_provider: RiskFreeRateProvider,
     research_provider: ResearchProvider,
     announcements_provider: NewswebAnnouncementsProvider | None = None,
+    run: EquityAnalysisRun | None = None,
 ) -> EquityAnalysisRun:
+    """Runs the full pipeline for `holding`.
+
+    `run`: an existing, already-claimed run row to execute (Sprint 5B: the
+    local worker passes the QUEUED run it claimed, so the row the UI has
+    been polling is the one that gets the result). None = create a new row
+    (the synchronous cloud path, unchanged).
+    """
     if holding.asset_class_raw not in EQUITY_ANALYZABLE_TYPES:
         raise NotEquityAnalyzableError(
             f"holding {holding.ticker!r} is tagged {holding.asset_class_raw!r}, not analyzable as "
@@ -87,16 +95,27 @@ def run_full_analysis(
     schema_version = settings.active_analysis_schema_version
     prompt_version = settings.active_analysis_prompt_version
 
-    run = EquityAnalysisRun(
-        holding_id=holding.id,
-        status=EquityAnalysisRunStatus.RUNNING.value,
-        schema_version=schema_version,
-        blind_prompt_version=prompt_version,
-        evidence_packet_version=EVIDENCE_PACKET_VERSION,
-        evidence_packet_json={},
-        evidence_unavailable_reasons=[],
-    )
-    db.add(run)
+    if run is None:
+        run = EquityAnalysisRun(
+            holding_id=holding.id,
+            status=EquityAnalysisRunStatus.RUNNING.value,
+            schema_version=schema_version,
+            blind_prompt_version=prompt_version,
+            evidence_packet_version=EVIDENCE_PACKET_VERSION,
+            evidence_packet_json={},
+            evidence_unavailable_reasons=[],
+        )
+        db.add(run)
+    else:
+        if run.holding_id != holding.id:
+            raise ValueError("run belongs to a different holding")
+        # Versions are those of the code that actually executes the run
+        # (the worker's), not of the server that queued it.
+        run.status = EquityAnalysisRunStatus.RUNNING.value
+        run.schema_version = schema_version
+        run.blind_prompt_version = prompt_version
+        run.evidence_packet_version = EVIDENCE_PACKET_VERSION
+        run.error_message = None
     db.flush()
 
     packet = build_evidence_packet(

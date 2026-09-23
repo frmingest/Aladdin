@@ -1,13 +1,16 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { api, ApiError } from "../lib/api";
-import { formatDate, formatDecimal } from "../lib/format";
+import { formatDate, formatDecimal, formatRelative } from "../lib/format";
 import type {
+  AnalysisQueue,
   AnalysisReadiness,
   AnalysisRun,
   EvidenceItem,
   HoldingNote,
   MoatRating,
   NarrativeAssessment,
+  QueuedRun,
   ReadinessStatus,
   VerdictContent,
   VerdictRating,
@@ -23,7 +26,16 @@ import { Button, Card, EmptyState } from "./ui";
  *   (exactly what the model was given), so a claim can always be traced.
  * - LLM text and issuer-sourced evidence are rendered as plain text only,
  *   never as HTML (CLAUDE.md Rule 5).
- * - The price-target range is deterministic DCF output, labelled as such. */
+ * - The price-target range is deterministic DCF output, labelled as such.
+ * - Sprint 5B: "Run on my PC" queues the run for the local worker instead of
+ *   running it in this request; the pending run is polled until it finishes,
+ *   while the previous result stays on screen. */
+
+// Readiness checks that matter for a run on the PC. Provider/quota/Ollama
+// checks describe this server's configuration, not the worker's (mirrors
+// QUEUE_BLOCKING_CHECKS in backend/app/services/analysis/queue.py).
+const LOCAL_BLOCKING_CHECKS = new Set(["instrument_type", "ticker", "financials"]);
+const QUEUE_POLL_MS = 15000;
 
 function errorText(err: unknown): string {
   return err instanceof ApiError || err instanceof Error ? err.message : "Request failed.";
@@ -66,6 +78,8 @@ const CHECK_TEXT: Record<ReadinessStatus, string> = {
 };
 
 const RUN_STATUS_TEXT: Record<AnalysisRun["status"], { text: string; style: string }> = {
+  QUEUED: { text: "Queued for your PC", style: "bg-accent-subtle text-accent" },
+  CANCELLED: { text: "Cancelled", style: "bg-border-subtle text-ink-muted" },
   COMPLETED: { text: "Completed", style: "bg-positive-subtle text-positive" },
   BLIND_ONLY: { text: "Blind pass only", style: "bg-caution-subtle text-caution" },
   RUNNING: { text: "Running", style: "bg-caution-subtle text-caution" },
@@ -132,18 +146,28 @@ function Citations({ ids, evidence }: { ids: string[]; evidence: Map<string, Evi
 // ---------------------------------------------------------------------------
 // Readiness (F2)
 
+function canQueueLocally(readiness: AnalysisReadiness): boolean {
+  return !readiness.checks.some((c) => c.status === "block" && LOCAL_BLOCKING_CHECKS.has(c.key));
+}
+
 function ReadinessCard({
   readiness,
   error,
   running,
   onRun,
   hasRun,
+  onQueue,
+  queueing,
+  pending,
 }: {
   readiness: AnalysisReadiness | null;
   error: string | null;
   running: boolean;
   onRun: () => void;
   hasRun: boolean;
+  onQueue: () => void;
+  queueing: boolean;
+  pending: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
   const problems = readiness?.checks.filter((c) => c.status !== "ok") ?? [];
@@ -170,8 +194,16 @@ function ReadinessCard({
             </p>
           )}
         </div>
-        <div className="shrink-0">
-          <Button onClick={onRun} disabled={running || !readiness || !readiness.ready}>
+        <div className="flex shrink-0 flex-wrap gap-2">
+          <Button
+            variant="secondary"
+            onClick={onQueue}
+            disabled={queueing || pending || running || !readiness || !canQueueLocally(readiness)}
+            title="Queue it for the worker on your PC (Ollama). The page doesn't need to stay open."
+          >
+            {queueing ? "Queueing…" : pending ? "Queued on PC" : "Run on my PC"}
+          </Button>
+          <Button onClick={onRun} disabled={running || pending || !readiness || !readiness.ready}>
             {running ? "Analyzing…" : hasRun ? "Run again" : "Run analysis"}
           </Button>
         </div>
@@ -216,6 +248,68 @@ function ReadinessCard({
           {expanded ? "Hide passed checks" : `Show all ${readiness.checks.length} checks`}
         </button>
       )}
+    </Card>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Pending local run (Sprint 5B)
+
+function PendingRunCard({
+  run,
+  queue,
+  busy,
+  onCancel,
+  onRunInCloud,
+  cloudReady,
+}: {
+  run: QueuedRun;
+  queue: AnalysisQueue;
+  busy: boolean;
+  onCancel: () => void;
+  onRunInCloud: () => void;
+  cloudReady: boolean;
+}) {
+  const worker =
+    queue.workers.find((w) => w.worker_id === run.claimed_by) ??
+    queue.workers.find((w) => w.online) ??
+    queue.workers[0];
+  const position = queue.pending.filter((r) => r.status === "QUEUED").findIndex((r) => r.id === run.id);
+
+  let workerLine: string;
+  if (!worker) workerLine = "No worker has ever checked in. Start `python -m app.worker` on your PC.";
+  else if (!worker.online) workerLine = `Worker '${worker.worker_id}' is offline (last seen ${formatRelative(worker.last_seen_at)}). The run waits until it's started.`;
+  else if (worker.state === "llm_unavailable") workerLine = `Worker '${worker.worker_id}' is online, but its LLM is unavailable: ${worker.detail ?? "unknown"}.`;
+  else if (worker.state === "waiting_quota") workerLine = worker.detail ?? "Waiting for Gemini quota.";
+  else workerLine = `Worker '${worker.worker_id}'${worker.model_name ? ` (${worker.model_name})` : ""} online, seen ${formatRelative(worker.last_seen_at)}.`;
+
+  return (
+    <Card className="border-accent/30">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-ink">
+            {run.status === "RUNNING"
+              ? `Running on ${run.claimed_by ?? "your PC"} since ${formatRelative(run.claimed_at)}`
+              : `Queued for your PC ${formatRelative(run.queued_at)}${position > 0 ? ` · ${position} ahead in the queue` : ""}`}
+          </p>
+          <p className="mt-1 text-xs text-ink-muted">{workerLine}</p>
+          {run.error_message && <p className="mt-1 text-xs text-caution">{run.error_message}</p>}
+          <p className="mt-1 text-xs text-ink-faint">
+            The previous result below stays until this run finishes. This page checks every 15 s;
+            you can also close it. <Link to="/analysis-queue" className="text-accent hover:text-accent-hover">Analysis queue</Link>
+          </p>
+        </div>
+        {run.status === "QUEUED" && (
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <Button variant="secondary" onClick={onCancel} disabled={busy}>
+              Cancel
+            </Button>
+            <Button onClick={onRunInCloud} disabled={busy || !cloudReady} title="Cancel the queued run and run it now on the server's LLM">
+              Run in cloud instead
+            </Button>
+          </div>
+        )}
+      </div>
     </Card>
   );
 }
@@ -552,6 +646,30 @@ export function AnalysisPanel({ holdingId }: { holdingId: string }) {
   const [readiness, setReadiness] = useState<AnalysisReadiness | null>(null);
   const [readinessError, setReadinessError] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
+  const [queue, setQueue] = useState<AnalysisQueue | null>(null);
+  const [queueing, setQueueing] = useState(false);
+
+  const pending = queue?.pending.find((r) => r.holding_id === holdingId) ?? null;
+
+  const loadLatest = useCallback(() => {
+    return api
+      .getLatestAnalysis(holdingId)
+      .then(setRun)
+      .catch((e) => {
+        if (e instanceof ApiError && e.status === 404) setRun(null);
+        else {
+          setRun(null);
+          setRunError(errorText(e));
+        }
+      });
+  }, [holdingId]);
+
+  const loadQueue = useCallback(() => {
+    return api
+      .getAnalysisQueue()
+      .then(setQueue)
+      .catch(() => setQueue(null)); // an older backend without /analysis/queue: no local runs
+  }, []);
 
   function loadReadiness() {
     setReadinessError(null);
@@ -563,25 +681,80 @@ export function AnalysisPanel({ holdingId }: { holdingId: string }) {
 
   useEffect(() => {
     setRun(undefined);
-    api
-      .getLatestAnalysis(holdingId)
-      .then(setRun)
-      .catch((e) => {
-        if (e instanceof ApiError && e.status === 404) setRun(null);
-        else {
-          setRun(null);
-          setRunError(errorText(e));
-        }
-      });
+    loadLatest();
+    loadQueue();
     loadReadiness();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [holdingId]);
 
-  async function handleRun() {
-    const cost = readiness?.estimated_gemini_calls ?? 2;
-    if (!window.confirm(`Run the analysis? This spends about ${cost} Gemini call${cost === 1 ? "" : "s"} of today's quota.`)) {
-      return;
+  // While a local run is pending, poll the queue; when it leaves the queue,
+  // fetch the finished result.
+  const pendingId = pending?.id ?? null;
+  useEffect(() => {
+    if (!pendingId) return;
+    const timer = window.setInterval(() => {
+      api
+        .getAnalysisQueue()
+        .then((q) => {
+          setQueue(q);
+          if (!q.pending.some((r) => r.id === pendingId)) {
+            loadLatest();
+            loadReadiness();
+          }
+        })
+        .catch(() => undefined);
+    }, QUEUE_POLL_MS);
+    return () => window.clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingId, loadLatest]);
+
+  async function handleQueue() {
+    setQueueing(true);
+    setRunError(null);
+    try {
+      await api.queueAnalysis(holdingId);
+      await loadQueue();
+    } catch (e) {
+      setRunError(errorText(e));
+    } finally {
+      setQueueing(false);
     }
+  }
+
+  async function handleCancel(): Promise<boolean> {
+    if (!pending) return true;
+    setQueueing(true);
+    setRunError(null);
+    try {
+      await api.cancelAnalysisRun(pending.id);
+      return true;
+    } catch (e) {
+      setRunError(errorText(e));
+      return false;
+    } finally {
+      await loadQueue();
+      setQueueing(false);
+    }
+  }
+
+  function confirmCloudRun(): boolean {
+    const cost = readiness?.estimated_gemini_calls ?? 2;
+    return window.confirm(
+      `Run the analysis? This spends about ${cost} Gemini call${cost === 1 ? "" : "s"} of today's quota.`,
+    );
+  }
+
+  async function handleRunInCloud() {
+    if (!confirmCloudRun()) return;
+    if (await handleCancel()) await runInCloud();
+  }
+
+  async function handleRun() {
+    if (!confirmCloudRun()) return;
+    await runInCloud();
+  }
+
+  async function runInCloud() {
     setRunning(true);
     setRunError(null);
     try {
@@ -605,9 +778,23 @@ export function AnalysisPanel({ holdingId }: { holdingId: string }) {
         readiness={readiness}
         error={readinessError}
         running={running}
-        onRun={handleRun}
+        onRun={() => void handleRun()}
         hasRun={Boolean(run)}
+        onQueue={handleQueue}
+        queueing={queueing}
+        pending={Boolean(pending)}
       />
+
+      {pending && queue && (
+        <PendingRunCard
+          run={pending}
+          queue={queue}
+          busy={queueing || running}
+          onCancel={() => void handleCancel()}
+          onRunInCloud={() => void handleRunInCloud()}
+          cloudReady={Boolean(readiness?.ready)}
+        />
+      )}
 
       {runError && <p className="text-sm text-negative">{runError}</p>}
 
@@ -624,6 +811,7 @@ export function AnalysisPanel({ holdingId }: { holdingId: string }) {
         <p className="flex flex-wrap items-center gap-2 text-xs text-ink-muted">
           <span className={`rounded-full px-2 py-0.5 font-medium ${status.style}`}>{status.text}</span>
           <span>Latest run {formatDate(run.started_at)}</span>
+          {run.engine === "local" && <span>· on {run.claimed_by ?? "your PC"}</span>}
         </p>
       )}
 

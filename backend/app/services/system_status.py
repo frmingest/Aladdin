@@ -21,7 +21,7 @@ from app.config.paths import BACKEND_DIR
 from app.config.settings import Settings
 from app.domain.document_types import DOCUMENT_TYPE_SEC_XBRL
 from app.models.account import Account
-from app.models.analysis import EquityAnalysisRun, EquityAnalysisRunStatus
+from app.models.analysis import AnalysisWorkerHeartbeat, EquityAnalysisRun, EquityAnalysisRunStatus
 from app.models.document import Document
 from app.models.holding import Holding
 from app.models.market import FxObservation, MarketObservation, RiskFreeRateObservation
@@ -264,9 +264,16 @@ def build_system_status(
         EquityAnalysisRun.status == EquityAnalysisRunStatus.FAILED.value,
         EquityAnalysisRun.started_at >= now - FAILED_RUN_WINDOW,
     )) or 0
+    # Local-worker runs are covered by the worker lease (app/services/analysis/queue.py)
+    # and reported separately below.
     running = db.scalars(select(EquityAnalysisRun).where(
-        EquityAnalysisRun.status == EquityAnalysisRunStatus.RUNNING.value)).all()
+        EquityAnalysisRun.status == EquityAnalysisRunStatus.RUNNING.value,
+        EquityAnalysisRun.engine != "local")).all()
     stuck = [r for r in running if now - _aware(r.started_at) > STUCK_RUN_AFTER]
+    queued_local = db.scalar(select(func.count(EquityAnalysisRun.id)).where(
+        EquityAnalysisRun.status == EquityAnalysisRunStatus.QUEUED.value,
+        EquityAnalysisRun.engine == "local")) or 0
+    beat = db.scalar(select(AnalysisWorkerHeartbeat).order_by(AnalysisWorkerHeartbeat.last_seen_at.desc()).limit(1))
 
     status.analysis = [
         StatusItem("runs_total", "Analysis runs", OK, str(total_runs)),
@@ -281,6 +288,21 @@ def build_system_status(
         StatusItem("stuck", "Stuck (running > 1 h)", ERROR if stuck else OK, str(len(stuck)),
                    "Probably interrupted by a restart; re-run the holding." if stuck else ""),
     ]
+    if beat is None:
+        status.analysis.append(StatusItem(
+            "local_worker", "Local worker (your PC)", WARN if queued_local else OFF, "never started",
+            "Runs queued for the PC wait until `python -m app.worker` runs there." if queued_local else ""))
+    else:
+        seen = _aware(beat.last_seen_at)
+        online = beat.state != "stopped" and now - seen <= timedelta(seconds=settings.worker_online_seconds)
+        worker_state = beat.state if online else "offline"
+        status.analysis.append(StatusItem(
+            "local_worker", "Local worker (your PC)",
+            (WARN if beat.state in ("llm_unavailable", "waiting_quota") else OK) if online else (WARN if queued_local else OFF),
+            f"{beat.worker_id}: {worker_state}",
+            " · ".join(p for p in (beat.model_name, f"last seen {seen.isoformat()}", beat.detail or "") if p)))
+    status.analysis.append(StatusItem(
+        "queued_local", "Queued for your PC", OK, str(queued_local)))
 
     status.counts = {
         "holdings": db.scalar(select(func.count(Holding.id))) or 0,

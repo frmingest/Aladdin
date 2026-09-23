@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 from app.config.database import get_db
 from app.config.settings import get_settings
 from app.domain.analysis_schema import BlindPassOutputV1, ReconciliationOutputV1
-from app.models.analysis import EquityAnalysisRun
+from app.models.analysis import PENDING_RUN_STATUSES, EquityAnalysisRun, EquityAnalysisRunStatus
 from app.models.holding import Holding
 from app.providers.base import (
     LLMProvider,
@@ -41,13 +41,20 @@ from app.providers.factory import (
 )
 from app.providers.newsweb_provider import NewswebAnnouncementsProvider
 from app.schemas.analysis import (
+    AnalysisQueueOut,
     AnalysisReadinessCheckOut,
     AnalysisReadinessOut,
+    AnalysisWorkerOut,
+    QueuedRunOut,
+    QueueReadyHoldingsOut,
+    QueueSkippedOut,
     EquityAnalysisRunOut,
     EquityHoldingNoteIn,
     EquityHoldingNoteOut,
     EvidenceItemOut,
 )
+from app.services.analysis import queue as analysis_queue
+from app.services.analysis.latest import run_ratings
 from app.services.analysis.notes import get_holding_note, set_holding_note
 from app.services.analysis.pipeline import NotEquityAnalyzableError, run_full_analysis
 from app.services.analysis.readiness import check_analysis_readiness
@@ -62,10 +69,16 @@ def _get_holding_or_404(db: Session, holding_id: UUID) -> Holding:
     return holding
 
 
+# Queued / running (local worker) and cancelled runs aren't "the latest
+# analysis": showing them would hide the holding's previous verdict while a
+# new run waits on the PC. They're served by GET /analysis/queue instead.
+_NOT_A_RESULT = (*PENDING_RUN_STATUSES, EquityAnalysisRunStatus.CANCELLED.value)
+
+
 def _latest_run(db: Session, holding_id: UUID) -> EquityAnalysisRun | None:
     stmt = (
         select(EquityAnalysisRun)
-        .where(EquityAnalysisRun.holding_id == holding_id)
+        .where(EquityAnalysisRun.holding_id == holding_id, EquityAnalysisRun.status.notin_(_NOT_A_RESULT))
         .order_by(EquityAnalysisRun.started_at.desc())
         .limit(1)
     )
@@ -101,6 +114,33 @@ def _to_out(run: EquityAnalysisRun) -> EquityAnalysisRunOut:
         price_target_currency=run.price_target_currency,
         evidence_items=_evidence_items(run),
         user_notes_snapshot=run.user_notes_snapshot,
+        engine=run.engine or "cloud",
+        queued_at=run.queued_at,
+        claimed_by=run.claimed_by,
+        attempts=run.attempts or 0,
+    )
+
+
+def _queued_out(db: Session, run: EquityAnalysisRun) -> QueuedRunOut:
+    holding = db.get(Holding, run.holding_id)
+    verdict = run_ratings(run)[0] if run.blind_pass_json else None
+    return QueuedRunOut(
+        id=run.id,
+        holding_id=run.holding_id,
+        ticker=holding.ticker if holding else None,
+        holding_name=holding.name if holding else None,
+        status=run.status,
+        engine=run.engine or "cloud",
+        queued_at=run.queued_at,
+        claimed_by=run.claimed_by,
+        claimed_at=run.claimed_at,
+        started_at=run.started_at,
+        completed_at=run.completed_at,
+        attempts=run.attempts or 0,
+        error_message=run.error_message,
+        provider=run.provider,
+        model_name=run.model_name,
+        verdict=verdict,
     )
 
 
@@ -180,6 +220,61 @@ def run_analysis(
     except NotEquityAnalyzableError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return _to_out(run)
+
+
+@router.post("/holdings/{holding_id}/queue", response_model=QueuedRunOut, status_code=202)
+def queue_local_analysis(holding_id: UUID, db: Session = Depends(get_db)) -> QueuedRunOut:
+    """Sprint 5B / F8: "Run on my PC". Only inserts a QUEUED run; the local
+    worker (`python -m app.worker`) picks it up. Deliberately depends on no
+    LLM/research/market provider: nothing runs on this server. A holding
+    that already has a queued or running local run gets that run back."""
+    holding = _get_holding_or_404(db, holding_id)
+    try:
+        run, _created = analysis_queue.enqueue_local_run(db, holding, settings=get_settings())
+    except NotEquityAnalyzableError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return _queued_out(db, run)
+
+
+@router.get("/queue", response_model=AnalysisQueueOut)
+def get_queue(db: Session = Depends(get_db)) -> AnalysisQueueOut:
+    """Local workers, the pending local runs and the last finished ones."""
+    workers = analysis_queue.worker_statuses(db, settings=get_settings())
+    return AnalysisQueueOut(
+        workers=[AnalysisWorkerOut(**w.__dict__) for w in workers],
+        any_worker_online=any(w.online for w in workers),
+        pending=[_queued_out(db, r) for r in analysis_queue.list_queue(db)],
+        recent=[_queued_out(db, r) for r in analysis_queue.recent_local_runs(db)],
+    )
+
+
+@router.post("/queue/ready-holdings", response_model=QueueReadyHoldingsOut)
+def queue_ready_holdings(db: Session = Depends(get_db)) -> QueueReadyHoldingsOut:
+    """F5: queue every owned stock / equity ETF that isn't blocked on its
+    instrument type, ticker or financial history."""
+    result = analysis_queue.queue_ready_holdings(db, settings=get_settings())
+    return QueueReadyHoldingsOut(
+        queued=[_queued_out(db, r) for r in result.queued],
+        already_queued=[_queued_out(db, r) for r in result.already_queued],
+        skipped=[
+            QueueSkippedOut(holding_id=h.id, ticker=h.ticker, holding_name=h.name, reason=reason)
+            for h, reason in result.skipped
+        ],
+    )
+
+
+@router.post("/runs/{run_id}/cancel", response_model=QueuedRunOut)
+def cancel_queued_run(run_id: UUID, db: Session = Depends(get_db)) -> QueuedRunOut:
+    """Removes a queued run no worker has started (e.g. before choosing
+    "Run in cloud instead"). A running run can't be cancelled from here."""
+    run = db.get(EquityAnalysisRun, run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="run not found")
+    try:
+        run = analysis_queue.cancel_run(db, run)
+    except analysis_queue.RunNotCancellableError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return _queued_out(db, run)
 
 
 @router.get("/holdings/{holding_id}/notes", response_model=EquityHoldingNoteOut)

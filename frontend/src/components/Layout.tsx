@@ -41,6 +41,7 @@ const NAV_ITEMS: { label: string; to: string; disabled?: boolean }[] = [
   { label: "Holdings", to: "/holdings" },
   { label: "Portfolio", to: "/portfolio" },
   { label: "Margin of safety", to: "/margin-of-safety" },
+  { label: "Analysis queue", to: "/analysis-queue" },
   { label: "Watchlist", to: "/watchlist" },
   { label: "Journal", to: "/journal" },
   { label: "Macro", to: "/macro" },

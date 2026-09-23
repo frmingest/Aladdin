@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import JSON, DateTime, ForeignKey, Index, Numeric, String, Text
+from sqlalchemy import JSON, DateTime, ForeignKey, Index, Integer, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
@@ -24,10 +24,29 @@ if TYPE_CHECKING:
 
 
 class EquityAnalysisRunStatus(str, enum.Enum):
+    QUEUED = "QUEUED"  # waiting for the local worker (engine="local", Sprint 5B)
     RUNNING = "RUNNING"
     BLIND_ONLY = "BLIND_ONLY"  # blind pass completed, reconciliation not (yet) run
     COMPLETED = "COMPLETED"  # both passes completed
     FAILED = "FAILED"
+    CANCELLED = "CANCELLED"  # a queued run removed before a worker claimed it
+
+
+class EquityAnalysisEngine(str, enum.Enum):
+    """Where the two analysis passes run (Sprint 5B / F8).
+
+    cloud: synchronously inside the request on the server's configured
+           LLM (Railway: Gemini).
+    local: queued in the shared database; the worker on Faiz's PC
+           (`python -m app.worker`) claims it and runs research, blind and
+           reconciliation passes there, on Ollama.
+    """
+
+    CLOUD = "cloud"
+    LOCAL = "local"
+
+
+PENDING_RUN_STATUSES = (EquityAnalysisRunStatus.QUEUED.value, EquityAnalysisRunStatus.RUNNING.value)
 
 
 class EquityAnalysisRun(Base):
@@ -42,6 +61,7 @@ class EquityAnalysisRun(Base):
     __tablename__ = "equity_analysis_runs"
     __table_args__ = (
         Index("ix_equity_analysis_runs_holding_completed", "holding_id", "completed_at"),
+        Index("ix_equity_analysis_runs_status_queued", "status", "queued_at"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(GUID(), primary_key=True, default=uuid.uuid4)
@@ -91,6 +111,20 @@ class EquityAnalysisRun(Base):
     price_target_high: Mapped[Decimal | None] = mapped_column(Numeric(18, 4), nullable=True)
     price_target_currency: Mapped[str | None] = mapped_column(String(3), nullable=True)
 
+    # --- Sprint 5B queue (F8 + F5) ---
+    # engine: see EquityAnalysisEngine. queued_at is NULL for a cloud run.
+    # claimed_by/claimed_at: which worker picked a local run up and when.
+    # attempts: how many times a worker has claimed it; a run whose worker
+    # disappears is re-queued until attempts reaches the configured maximum,
+    # then marked FAILED (app/services/analysis/queue.py).
+    engine: Mapped[str] = mapped_column(
+        String(16), nullable=False, default=EquityAnalysisEngine.CLOUD.value, server_default="cloud"
+    )
+    queued_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    claimed_by: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    claimed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+
     holding: Mapped[Holding] = relationship()
 
     def __repr__(self) -> str:  # pragma: no cover
@@ -122,3 +156,33 @@ class EquityHoldingNote(Base):
 
     def __repr__(self) -> str:  # pragma: no cover
         return f"<EquityHoldingNote holding_id={self.holding_id}>"
+
+
+class AnalysisWorkerHeartbeat(Base):
+    """One row per local analysis worker (Sprint 5B / F8), upserted every
+    ~30 s by `python -m app.worker`. The server never contacts the worker:
+    this row is the only way Railway knows whether a PC is online, which
+    model it runs and what it's doing. It is also the worker's lease: a
+    RUNNING run whose worker hasn't been seen for the lease period is
+    released (app/services/analysis/queue.py).
+    """
+
+    __tablename__ = "analysis_worker_heartbeats"
+
+    worker_id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    hostname: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    llm_provider: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    model_name: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # idle | running | waiting_quota | llm_unavailable | stopped
+    state: Mapped[str] = mapped_column(String(32), nullable=False, default="idle")
+    detail: Mapped[str | None] = mapped_column(Text, nullable=True)
+    current_run_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), nullable=True)
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc)
+    )
+    last_seen_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc)
+    )
+
+    def __repr__(self) -> str:  # pragma: no cover
+        return f"<AnalysisWorkerHeartbeat {self.worker_id} ({self.state})>"

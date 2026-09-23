@@ -57,6 +57,10 @@ class EquityAnalysisRunOut(BaseModel):
     price_target_currency: str | None
     evidence_items: list[EvidenceItemOut] = []
     user_notes_snapshot: str | None = None
+    engine: str = "cloud"
+    queued_at: datetime | None = None
+    claimed_by: str | None = None
+    attempts: int = 0
 
 
 class EquityHoldingNoteOut(BaseModel):
@@ -88,3 +92,64 @@ class AnalysisReadinessOut(BaseModel):
     estimated_gemini_calls: int
     gemini_calls_remaining_today: int | None
     checks: list[AnalysisReadinessCheckOut]
+
+
+# --- Sprint 5B: local worker queue (F8 + F5) ---
+
+
+class QueuedRunOut(BaseModel):
+    """A run as the queue list shows it: no analysis payload, just where it is."""
+
+    model_config = {"protected_namespaces": ()}
+
+    id: UUID
+    holding_id: UUID
+    ticker: str | None
+    holding_name: str | None
+    status: str
+    engine: str
+    queued_at: datetime | None
+    claimed_by: str | None
+    claimed_at: datetime | None
+    started_at: datetime
+    completed_at: datetime | None
+    attempts: int
+    error_message: str | None
+    provider: str | None
+    model_name: str | None
+    verdict: str | None = None
+
+
+class AnalysisWorkerOut(BaseModel):
+    model_config = {"protected_namespaces": ()}
+
+    worker_id: str
+    hostname: str | None
+    llm_provider: str | None
+    model_name: str | None
+    state: str
+    detail: str | None
+    current_run_id: UUID | None
+    started_at: datetime
+    last_seen_at: datetime
+    online: bool
+
+
+class AnalysisQueueOut(BaseModel):
+    workers: list[AnalysisWorkerOut]
+    any_worker_online: bool
+    pending: list[QueuedRunOut]
+    recent: list[QueuedRunOut]
+
+
+class QueueSkippedOut(BaseModel):
+    holding_id: UUID
+    ticker: str | None
+    holding_name: str | None
+    reason: str
+
+
+class QueueReadyHoldingsOut(BaseModel):
+    queued: list[QueuedRunOut]
+    already_queued: list[QueuedRunOut]
+    skipped: list[QueueSkippedOut]

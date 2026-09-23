@@ -97,3 +97,25 @@ def test_migration_mismatch_is_an_issue(db, monkeypatch):
 
 def test_migration_head_reads_the_code():
     assert migration_head()  # a real revision id from alembic/versions
+
+
+def test_local_worker_and_queue_are_reported(db):
+    from app.services.analysis import queue
+
+    holding = Holding(ticker="AAPL", name="Apple", trading_currency="USD", asset_class_raw="stock")
+    db.add(holding)
+    db.commit()
+    queue.enqueue_local_run(db, holding, settings=_settings(), now=NOW)
+
+    status = build_system_status(db, _settings(), DailyBudgetGuard(daily_limit=20), now=NOW)
+    items = _by_key(status.analysis)
+    assert items["queued_local"].value == "1"
+    assert items["local_worker"].value == "never started" and items["local_worker"].status == "warn"
+
+    queue.record_heartbeat(db, "pc-1", state="idle", model_name="qwen3:14b", now=NOW - timedelta(seconds=20))
+    items = _by_key(build_system_status(db, _settings(), DailyBudgetGuard(daily_limit=20), now=NOW).analysis)
+    assert items["local_worker"].status == "ok" and items["local_worker"].value == "pc-1: idle"
+
+    items = _by_key(build_system_status(
+        db, _settings(), DailyBudgetGuard(daily_limit=20), now=NOW + timedelta(hours=1)).analysis)
+    assert items["local_worker"].value == "pc-1: offline" and items["local_worker"].status == "warn"

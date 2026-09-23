@@ -557,7 +557,17 @@ export interface EvidenceItem {
   citation: string | null;
 }
 
-export type AnalysisRunStatus = "RUNNING" | "BLIND_ONLY" | "COMPLETED" | "FAILED";
+export type AnalysisRunStatus =
+  | "QUEUED"
+  | "RUNNING"
+  | "BLIND_ONLY"
+  | "COMPLETED"
+  | "FAILED"
+  | "CANCELLED";
+
+/** Where the analysis passes ran: "cloud" = on the server's LLM during the
+ * request; "local" = queued and run by the worker on Faiz's PC (Sprint 5B). */
+export type AnalysisEngine = "cloud" | "local";
 
 export interface AnalysisRun {
   id: string;
@@ -584,6 +594,59 @@ export interface AnalysisRun {
   price_target_currency: string | null;
   evidence_items: EvidenceItem[];
   user_notes_snapshot: string | null;
+  engine: AnalysisEngine;
+  queued_at: string | null;
+  claimed_by: string | null;
+  attempts: number;
+}
+
+// --- Sprint 5B: local worker queue (backend/app/api/analysis.py /queue) ---
+
+export interface QueuedRun {
+  id: string;
+  holding_id: string;
+  ticker: string | null;
+  holding_name: string | null;
+  status: AnalysisRunStatus;
+  engine: AnalysisEngine;
+  queued_at: string | null;
+  claimed_by: string | null;
+  claimed_at: string | null;
+  started_at: string;
+  completed_at: string | null;
+  attempts: number;
+  error_message: string | null;
+  provider: string | null;
+  model_name: string | null;
+  verdict: VerdictRating | null;
+}
+
+export type WorkerState = "idle" | "running" | "waiting_quota" | "llm_unavailable" | "stopped";
+
+export interface AnalysisWorker {
+  worker_id: string;
+  hostname: string | null;
+  llm_provider: string | null;
+  model_name: string | null;
+  state: WorkerState | string;
+  detail: string | null;
+  current_run_id: string | null;
+  started_at: string;
+  last_seen_at: string;
+  online: boolean;
+}
+
+export interface AnalysisQueue {
+  workers: AnalysisWorker[];
+  any_worker_online: boolean;
+  pending: QueuedRun[];
+  recent: QueuedRun[];
+}
+
+export interface QueueReadyHoldingsResult {
+  queued: QueuedRun[];
+  already_queued: QueuedRun[];
+  skipped: { holding_id: string; ticker: string | null; holding_name: string | null; reason: string }[];
 }
 
 export interface HoldingNote {

@@ -37,6 +37,7 @@ from sqlalchemy.orm import Session
 from app.config.settings import Settings
 from app.domain.instrument_types import EQUITY_ANALYZABLE_TYPES, display_label
 from app.domain.period_dates import extract_year
+from app.models.analysis import AnalysisWorkerHeartbeat
 from app.models.financial_line_item import FinancialLineItem
 from app.models.holding import Holding
 from app.models.market import MarketObservation
@@ -160,6 +161,47 @@ def _check_local_llm(settings: Settings) -> ReadinessCheck | None:
             f"{health.detail} The run would fall back to '{fallback}'.",
         )
     return ReadinessCheck("local_llm", "Local LLM (Ollama)", "block", health.detail)
+
+
+def _check_local_worker(db: Session, settings: Settings) -> ReadinessCheck | None:
+    """Sprint 5B: is a local worker (the PC) online to pick up a run queued
+    with "Run on my PC"? Only shown once a worker has ever checked in, and
+    never a blocker: a cloud run doesn't need it, and a queued run simply
+    waits until the PC is back."""
+    beat = db.scalar(
+        select(AnalysisWorkerHeartbeat).order_by(AnalysisWorkerHeartbeat.last_seen_at.desc()).limit(1)
+    )
+    if beat is None:
+        return None
+    model = f" ({beat.model_name})" if beat.model_name else ""
+    age = (datetime.now(timezone.utc) - _as_utc(beat.last_seen_at)).total_seconds()
+    if age < 120:
+        seen = f"{max(int(age), 0)} s ago"
+    elif age < 3600:
+        seen = f"{int(age // 60)} min ago"
+    else:
+        seen = _age_text(beat.last_seen_at)
+    if beat.state != "stopped" and age <= settings.worker_online_seconds:
+        if beat.state == "llm_unavailable":
+            return ReadinessCheck(
+                "local_worker",
+                "Local worker (your PC)",
+                "warn",
+                f"'{beat.worker_id}' is online but its LLM is unavailable: {beat.detail or 'unknown error'}. "
+                "Runs queued for the PC will wait.",
+            )
+        return ReadinessCheck(
+            "local_worker",
+            "Local worker (your PC)",
+            "ok",
+            f"'{beat.worker_id}'{model} online, seen {seen}. \"Run on my PC\" starts within ~30 s.",
+        )
+    return ReadinessCheck(
+        "local_worker",
+        "Local worker (your PC)",
+        "warn",
+        f"Offline — '{beat.worker_id}' last seen {seen}. A run queued for the PC waits until the worker is started.",
+    )
 
 
 def _check_ticker_and_price(db: Session, holding: Holding, settings: Settings) -> list[ReadinessCheck]:
@@ -289,6 +331,13 @@ def _check_research(db: Session, holding: Holding) -> tuple[ReadinessCheck, int]
     )
 
 
+def research_refreshes_needed(db: Session, holding: Holding) -> int:
+    """How many Gemini research calls a run on `holding` would make right
+    now (stale macro / sector / company research). Used by the local worker
+    to decide whether today's budget can cover the next queued run."""
+    return _check_research(db, holding)[1]
+
+
 def _check_quota(
     settings: Settings, budget_guard: DailyBudgetGuard | None, estimated: int
 ) -> tuple[ReadinessCheck, int | None]:
@@ -340,6 +389,9 @@ def check_analysis_readiness(
     local_llm_check = _check_local_llm(settings)
     if local_llm_check is not None:
         report.checks.append(local_llm_check)
+    local_worker_check = _check_local_worker(db, settings)
+    if local_worker_check is not None:
+        report.checks.append(local_worker_check)
     report.checks.extend(_check_ticker_and_price(db, holding, settings))
     report.checks.append(_check_financial_history(db, holding))
     report.checks.append(_check_sector(holding))

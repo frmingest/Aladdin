@@ -76,6 +76,14 @@ def _build_provider(name: str, settings: Settings) -> LLMProvider:
     raise LLMUnavailableError(f"Unknown LLM provider: {name!r}")
 
 
+def build_llm_provider(name: str) -> LLMProvider:
+    """A provider by name, regardless of LLM_PROVIDER — for the local
+    worker (app/worker/), which always runs the passes on
+    WORKER_LLM_PROVIDER (default ollama) whatever the shared .env selects
+    for the web server."""
+    return _build_provider(name, get_settings())
+
+
 @lru_cache
 def get_llm_provider() -> LLMProvider:
     """The configured primary provider (LLM_PROVIDER, default google_ai_studio)."""

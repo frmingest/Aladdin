@@ -67,6 +67,22 @@ class Settings(BaseSettings):
     # Ollama has no auth — never expose port 11434 to the internet.
     ollama_api_key: str | None = None
 
+    # --- Local analysis worker (Sprint 5B / F8 + F5, app/worker/) ---
+    # `python -m app.worker` on the PC claims runs queued with engine=local
+    # from the shared database and runs them here. Nothing listens for
+    # inbound connections; Railway never learns the Ollama URL.
+    worker_id: str | None = None  # default: the machine's hostname
+    worker_llm_provider: str = "ollama"  # the LLM the worker runs the passes on
+    worker_poll_seconds: int = 30  # how often an idle worker looks for work
+    worker_heartbeat_seconds: int = 30
+    # A RUNNING local run whose worker hasn't been seen for this long is
+    # released: re-queued, or FAILED once it has been claimed
+    # worker_max_attempts times.
+    worker_lease_minutes: int = 30
+    worker_max_attempts: int = 2
+    # A worker counts as "online" in the UI if seen within this window.
+    worker_online_seconds: int = 120
+
     # --- Object storage (see app/providers/object_storage.py) ---
     # "local" (default, dev only — Railway's disk is ephemeral, not a real
     # deployment option) | "s3" / "r2" / "supabase" — all three build the

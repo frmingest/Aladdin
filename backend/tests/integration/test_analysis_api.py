@@ -254,3 +254,76 @@ def test_readiness_endpoint_reports_without_any_provider(client, db_session):
 def test_readiness_404_for_unknown_holding(client):
     response = client.get("/analysis/holdings/00000000-0000-0000-0000-000000000000/readiness")
     assert response.status_code == 404
+
+
+# --- Sprint 5B: local worker queue (F8 + F5) ---
+
+
+def test_queue_endpoint_needs_no_provider_and_hides_pending_from_latest(client, db_session):
+    """No provider overrides: queueing must never touch an LLM/research/market
+    provider on the server."""
+    holding_id = _create_stock_holding(client, db_session)
+    response = client.post(f"/analysis/holdings/{holding_id}/queue")
+    assert response.status_code == 202, response.text
+    body = response.json()
+    assert body["status"] == "QUEUED" and body["engine"] == "local" and body["ticker"] == "AAPL"
+
+    # a second click returns the same run
+    again = client.post(f"/analysis/holdings/{holding_id}/queue")
+    assert again.json()["id"] == body["id"]
+
+    # a queued run is not "the latest analysis"
+    assert client.get(f"/analysis/holdings/{holding_id}").status_code == 404
+
+    queue_body = client.get("/analysis/queue").json()
+    assert [r["id"] for r in queue_body["pending"]] == [body["id"]]
+    assert queue_body["workers"] == [] and queue_body["any_worker_online"] is False
+
+
+def test_pending_local_run_does_not_hide_previous_verdict(client, db_session):
+    holding_id = _create_stock_holding(client, db_session)
+    _add_two_periods(db_session, holding_id)
+    _override_providers()
+    try:
+        done = client.post(f"/analysis/holdings/{holding_id}/run").json()
+    finally:
+        _clear_overrides()
+    client.post(f"/analysis/holdings/{holding_id}/queue")
+    latest = client.get(f"/analysis/holdings/{holding_id}").json()
+    assert latest["id"] == done["id"] and latest["engine"] == "cloud"
+
+
+def test_queue_rejects_non_equity(client, db_session):
+    holding_id = _create_stock_holding(client, db_session)
+    holding = db_session.get(Holding, holding_id)
+    holding.asset_class_raw = "bond_fund"
+    db_session.commit()
+    assert client.post(f"/analysis/holdings/{holding_id}/queue").status_code == 422
+
+
+def test_cancel_queued_run_then_conflict(client, db_session):
+    holding_id = _create_stock_holding(client, db_session)
+    run_id = client.post(f"/analysis/holdings/{holding_id}/queue").json()["id"]
+    cancelled = client.post(f"/analysis/runs/{run_id}/cancel")
+    assert cancelled.status_code == 200 and cancelled.json()["status"] == "CANCELLED"
+    assert client.post(f"/analysis/runs/{run_id}/cancel").status_code == 409
+    assert client.get("/analysis/queue").json()["pending"] == []
+    assert client.post("/analysis/runs/00000000-0000-0000-0000-000000000000/cancel").status_code == 404
+
+
+def test_queue_shows_online_worker_and_readiness_check(client, db_session):
+    from app.services.analysis import queue as analysis_queue
+
+    holding_id = _create_stock_holding(client, db_session)
+    analysis_queue.record_heartbeat(db_session, "DESKTOP-1", state="idle", model_name="qwen3:14b")
+    body = client.get("/analysis/queue").json()
+    assert body["any_worker_online"] is True
+    assert body["workers"][0]["worker_id"] == "DESKTOP-1"
+
+    checks = {c["key"]: c for c in client.get(f"/analysis/holdings/{holding_id}/readiness").json()["checks"]}
+    assert checks["local_worker"]["status"] == "ok"
+
+
+def test_queue_ready_holdings_endpoint_with_nothing_owned(client):
+    body = client.post("/analysis/queue/ready-holdings").json()
+    assert body == {"queued": [], "already_queued": [], "skipped": []}

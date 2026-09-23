@@ -1,5 +1,6 @@
 import { Route, Routes } from "react-router-dom";
 import Layout from "./components/Layout";
+import AnalysisQueuePage from "./pages/AnalysisQueuePage";
 import DashboardPage from "./pages/DashboardPage";
 import HoldingsListPage from "./pages/HoldingsListPage";
 import HoldingDetailPage from "./pages/HoldingDetailPage";
@@ -36,6 +37,7 @@ export default function App() {
         <Route path="/sectors/:sector" element={<SectorPage />} />
         <Route path="/watchlist" element={<WatchlistPage />} />
         <Route path="/journal" element={<JournalPage />} />
+        <Route path="/analysis-queue" element={<AnalysisQueuePage />} />
         <Route path="/status" element={<SystemStatusPage />} />
       </Routes>
     </Layout>

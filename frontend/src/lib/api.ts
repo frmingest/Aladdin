@@ -14,6 +14,7 @@
 
 import type {
   Account,
+  AnalysisQueue,
   AnalysisReadiness,
   AnalysisRun,
   AccountUpdateInput,
@@ -48,6 +49,8 @@ import type {
   WatchlistCreateInput,
   WatchlistRow,
   WatchlistUpdateInput,
+  QueuedRun,
+  QueueReadyHoldingsResult,
 } from "./types";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL as string | undefined;
@@ -288,6 +291,14 @@ export const api = {
     request<AnalysisRun>(`/analysis/holdings/${holdingId}`),
   runAnalysis: (holdingId: string) =>
     request<AnalysisRun>(`/analysis/holdings/${holdingId}/run`, { method: "POST" }),
+  // Sprint 5B: "Run on my PC" only queues; the local worker runs it.
+  queueAnalysis: (holdingId: string) =>
+    request<QueuedRun>(`/analysis/holdings/${holdingId}/queue`, { method: "POST" }),
+  getAnalysisQueue: () => request<AnalysisQueue>("/analysis/queue"),
+  queueReadyHoldings: () =>
+    request<QueueReadyHoldingsResult>("/analysis/queue/ready-holdings", { method: "POST" }),
+  cancelAnalysisRun: (runId: string) =>
+    request<QueuedRun>(`/analysis/runs/${runId}/cancel`, { method: "POST" }),
   getAnalysisReadiness: (holdingId: string) =>
     request<AnalysisReadiness>(`/analysis/holdings/${holdingId}/readiness`),
   getAnalysisNotes: (holdingId: string) =>

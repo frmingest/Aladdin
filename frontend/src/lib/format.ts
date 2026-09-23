@@ -80,3 +80,18 @@ export function formatPct100(value: string | number | null, fractionDigits = 1):
     maximumFractionDigits: fractionDigits,
   })}%`;
 }
+
+/** "just now", "12 min ago", "3 h ago", "4 days ago" — for timestamps
+ * like a worker's last heartbeat. */
+export function formatRelative(iso: string | null): string {
+  if (!iso) return "—";
+  const ms = Date.now() - new Date(iso).getTime();
+  if (!Number.isFinite(ms)) return iso;
+  const seconds = Math.round(ms / 1000);
+  if (seconds < 60) return seconds < 5 ? "just now" : `${seconds} s ago`;
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 48) return `${hours} h ago`;
+  return `${Math.round(hours / 24)} days ago`;
+}
