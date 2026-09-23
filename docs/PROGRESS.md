@@ -13,7 +13,7 @@ Quick-glance tracker. Detail for each item lives in its own linked doc; this pag
 | **Current phase** | Phase 11: the Buffett/Munger single-focus rebuild ([sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md)) |
 | **Sprints closed** | 0, 1, 2, 3, 4 |
 | **In progress** | Sprint 5: F3 board ✅ done; portfolio roll-up dashboard + executive summary left |
-| **Latest build** | Local LLM engine (Ollama) + ticker decision + UI tweaks — committed locally, **not pushed or deployed**. F1–F3 are on GitHub (`1a31b79`); deploy not verified this session. |
+| **Latest build** | Local LLM engine (Ollama) + ticker decision + UI tweaks — ✅ **Ollama verified running locally**; commits not pushed or deployed. F1–F3 are on GitHub (`1a31b79`); deploy not verified this session. |
 | **Tests** | 423/423 backend, tsc/eslint/vite build clean |
 | **Live-verified?** | ❌ The analysis engine, EDGAR and Newsweb have only been tested against fakes. The new UI was checked with mocked API data only. |
 
@@ -23,8 +23,9 @@ Quick-glance tracker. Detail for each item lives in its own linked doc; this pag
 
 | # | Action | Why |
 |---|---|---|
-| ★ | **Set up Ollama locally** — follow [local-llm-ollama-setup.md](local-llm-ollama-setup.md) (8 steps) | Moves the heavy analysis passes to your RTX 3060; Gemini keeps research only |
-| ★ | In `backend/.env`: replace `LLM_PROVIDER=anthropic` (not a valid value) with `LLM_PROVIDER=ollama` | Step 5 of the guide |
+| ★ | **Rotate credentials** pasted into chat on 2026-09-23: Supabase DB password + storage S3 keys, Google AI Studio, Mistral, FRED keys — then update `backend/.env` and Railway | They're in a chat transcript |
+| ★ | Railway Variables: `LLM_PROVIDER=google_ai_studio` (or unset), `LLM_FALLBACK_PROVIDER=none` | Railway can't reach Ollama on your PC |
+| ★ | Fix the 1 remaining readiness blocker on the first holding, then run the first local analysis | First real run on the local LLM |
 | ★ | Change Vår Energi's ticker `VARRY` → **`VAR.OL`**; fix sectors: Xetra-Gold + L&G Gold Mining → Materials, Salmon Evolution → Consumer Staples | [ticker decision](local-llm-tickers-ui-2026-09-23.md#2-ticker-convention--decision) |
 | ★ | Push `main` (this session's commit) and redeploy | Ships the palette + collapsible Primary sources; Ollama code is inert on Railway |
 | 1 | Set `MARKET_DATA_PROVIDER=yfinance` and `RESEARCH_PROVIDER=gemini_search` in Railway and `backend/.env` | The analysis engine can't produce real output while these are `stub`. No new key is needed. |
@@ -108,6 +109,7 @@ Detail: [free-market-data-research-providers-2026-09-21.md](free-market-data-res
 
 | Date | Change | Summary | Detail |
 |---|---|---|---|
+| 2026-09-23 | **Ollama set up on Faiz's PC — verified** | Recreated a broken backend venv, started local backend + frontend; readiness shows "Ollama reachable, model 'qwen3:14b' available". Setup guide gained a "what must be running" table and 5 troubleshooting rows from this session. Docs only. | [guide](local-llm-ollama-setup.md) |
 | 2026-09-23 | **Local LLM engine + ticker decision + UI tweaks** | New `OllamaProvider` (`LLM_PROVIDER=ollama`, default `qwen3:14b`) runs the analysis passes on the local GPU; Gemini keeps research. Context-overflow/truncation guards, "Local LLM" readiness check, Gemini fallback option. Step-by-step Windows setup guide. Ticker rule decided: home-exchange Yahoo symbol (`VAR.OL`, not the unsponsored ADR `VARRY`). Primary sources moved to the bottom, collapsed. Darker warm-gray palette. 423 tests (20 new). Committed locally, not pushed. | [doc](local-llm-tickers-ui-2026-09-23.md) · [guide](local-llm-ollama-setup.md) |
 | 2026-09-22 | **F3 Margin-of-safety board** | New `GET /valuation/board`: every owned stock/equity ETF (latest snapshot per account) with bear/base/bull, price, margin of safety, zone, NOK value, weight and latest verdict, ranked by margin of safety. New **Margin of safety** page with range bars and a "can't be ranked yet" list. Beta now cached 24h in the yfinance provider. 403 tests (11 new). Committed locally, not pushed. | [sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
 | 2026-09-22 | **F1 Analysis view + F2 Readiness check (Sprint 4 closed)** | New `GET /analysis/holdings/{id}/readiness` (8 checks, estimated Gemini calls, no side effects). Run output now includes its evidence items and notes snapshot. `POST /holdings` classifies the instrument type instead of defaulting to `equity`. New Analysis section on the holding page: readiness card, verdict, DCF price range, moat, narratives, clickable citations, notes editor, run details. 392 tests (28 new). Committed locally, not pushed. | [sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |

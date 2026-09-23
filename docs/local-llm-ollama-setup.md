@@ -1,6 +1,6 @@
 # Local LLM setup — Ollama on the RTX 3060 12GB
 
-**Date:** 2026-09-23 · **Status:** code written, not yet deployed
+**Date:** 2026-09-23 · **Status:** ✅ verified on Faiz's PC — readiness shows "Ollama reachable, model 'qwen3:14b' available"
 
 ## How the work is split
 
@@ -143,6 +143,16 @@ frontend would talk to Railway instead.)
    touch the 20/day budget.
 4. Run it. Expect **a few minutes** per holding (two passes). Watch `ollama ps` if curious.
 
+## Day-to-day: what must be running
+
+| Window | Command | Keep open |
+|---|---|---|
+| Ollama | Tray app | ✅ |
+| PowerShell 1 | `cd E:\Aladdin\backend`, `.\.venv\Scripts\Activate.ps1`, `uvicorn app.main:app --port 8000` | ✅ |
+| PowerShell 2 | `cd E:\Aladdin\frontend`, `npm run dev` | ✅ |
+
+Then use **http://localhost:5173** (not the Railway URL) for analysis runs.
+
 ## Troubleshooting
 
 | Message | Fix |
@@ -152,6 +162,11 @@ frontend would talk to Railway instead.)
 | "timed out generating" | Raise `OLLAMA_TIMEOUT_SECONDS`, or switch to `qwen3:8b`. |
 | Very slow, `ollama ps` shows CPU | Model spilling to RAM — see Step 4. |
 | Output quality looks weak | Try `gemma3:12b` on the same holding and compare side by side. |
+| `No module named 'click'` (or any module) when starting uvicorn | The venv is incomplete. `python -m pip install -r requirements.txt` inside the venv. |
+| `No module named pip` | The venv is broken — delete and recreate it: `Remove-Item -Recurse -Force .venv`, `py -3.11 -m venv .venv`, activate, `python -m pip install -r requirements.txt`. |
+| Readiness says "Can't reach Ollama … would fall back to 'mistral'" but `curl.exe http://localhost:11434` works | You're on the **Railway** site, not the local one. Railway can never reach your PC. Use http://localhost:5173, and keep Railway on `LLM_PROVIDER=google_ai_studio`. |
+| `localhost:5173` refuses to connect | The frontend dev server isn't running — Step 7 (`npm run dev`, keep the window open). |
+| A `.env` change has no effect | Restart uvicorn (it reads `.env` only at start), and check no Windows environment variable of the same name overrides it (`echo $env:LLM_PROVIDER`). Also make sure a key isn't listed twice in `.env`. |
 
 ## Later, if needed
 
