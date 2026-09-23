@@ -9,8 +9,9 @@ company). Sprint 3 adds the deterministic valuation engine (DCF, reverse
 DCF, multiples-over-time). Sprint 4 adds the two-pass Buffett/Munger
 analysis engine itself (app/services/analysis/).
 """
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.api.accounts import router as accounts_router
 from app.api.analysis import router as analysis_router
@@ -21,7 +22,15 @@ from app.api.research import router as research_router
 from app.api.sources import router as sources_router
 from app.api.system import router as system_router
 from app.api.valuation import router as valuation_router
+from app.api.watchlist import router as watchlist_router
 from app.config.settings import get_settings
+from app.providers.base import (
+    FundamentalsUnavailableError,
+    LLMUnavailableError,
+    MarketDataUnavailableError,
+    ResearchUnavailableError,
+    RiskFreeRateUnavailableError,
+)
 
 settings = get_settings()
 
@@ -36,6 +45,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.exception_handler(LLMUnavailableError)
+@app.exception_handler(ResearchUnavailableError)
+@app.exception_handler(MarketDataUnavailableError)
+@app.exception_handler(RiskFreeRateUnavailableError)
+@app.exception_handler(FundamentalsUnavailableError)
+async def provider_unavailable(_request: Request, exc: Exception) -> JSONResponse:
+    """A provider that can't be built or reached (missing API key, unknown
+    provider name) is a 503 with the reason, not an unhandled 500. Before
+    2026-09-23, opening a holding with no Gemini key 500'd the research
+    panel with no message. Errors only; nothing here contains a secret."""
+    return JSONResponse(status_code=503, content={"detail": str(exc)})
+
+
 app.include_router(documents_router)
 app.include_router(holdings_router)
 app.include_router(accounts_router)
@@ -45,6 +68,7 @@ app.include_router(valuation_router)
 app.include_router(analysis_router)
 app.include_router(sources_router)
 app.include_router(system_router)
+app.include_router(watchlist_router)
 
 
 @app.get("/health")

@@ -45,3 +45,20 @@ def test_system_status_endpoint(client):
     assert body["database_ok"] is True
     assert {p["key"] for p in body["providers"]} >= {"llm", "market_data", "edgar", "storage"}
     assert body["counts"]["holdings"] == 0
+
+
+def test_missing_research_key_is_503_with_reason(client, monkeypatch):
+    from app.main import app
+    from app.providers.base import ResearchUnavailableError
+    from app.providers.factory import get_research_provider
+
+    def _unavailable():
+        raise ResearchUnavailableError("GOOGLE_AI_STUDIO_API_KEY is not set")
+
+    app.dependency_overrides[get_research_provider] = _unavailable
+    try:
+        r = client.get("/research/macro")
+    finally:
+        app.dependency_overrides.pop(get_research_provider, None)
+    assert r.status_code == 503
+    assert "GOOGLE_AI_STUDIO_API_KEY" in r.json()["detail"]

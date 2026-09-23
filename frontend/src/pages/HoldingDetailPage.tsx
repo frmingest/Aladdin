@@ -23,6 +23,7 @@ import { DocumentFlagsNote } from "../components/DocumentFlagsNote";
 import { ResearchPanel } from "../components/ResearchPanel";
 import { SourcesPanel } from "../components/SourcesPanel";
 import { ValuationPanel } from "../components/ValuationPanel";
+import WatchButton from "../components/WatchButton";
 
 function MetricsPanel({ holdingId }: { holdingId: string }) {
   const [periods, setPeriods] = useState<string[] | null>(null);
@@ -555,9 +556,12 @@ export default function HoldingDetailPage() {
           .filter(Boolean)
           .join(" · ")}
         actions={
-          <Button variant="danger" onClick={handleDelete}>
-            Delete holding
-          </Button>
+          <div className="flex shrink-0 items-start gap-2">
+            <WatchButton holdingId={id} />
+            <Button variant="danger" onClick={handleDelete}>
+              Delete holding
+            </Button>
+          </div>
         }
       />
 

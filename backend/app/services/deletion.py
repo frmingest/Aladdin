@@ -29,6 +29,7 @@ from app.models.analysis import EquityAnalysisRun, EquityHoldingNote
 from app.models.document import Document, DocumentChunk, DocumentPage
 from app.models.financial_line_item import FinancialLineItem
 from app.models.holding import Holding
+from app.models.journal import DecisionJournalEntry
 from app.models.legacy_analysis import (
     EvidenceReference,
     FactorAssessment,
@@ -38,6 +39,7 @@ from app.models.legacy_analysis import (
 from app.models.market import MarketObservation
 from app.models.portfolio import PortfolioPosition, PortfolioSnapshot
 from app.models.research import ResearchItem, ResearchRun
+from app.models.watchlist import WatchlistItem
 from app.providers.object_storage import ObjectStorageProvider
 
 logger = logging.getLogger(__name__)
@@ -62,6 +64,8 @@ class DeletionCounts:
     research_items: int = 0
     legacy_holding_analyses: int = 0
     holdings: int = 0
+    watchlist_items: int = 0
+    journal_entries_unlinked: int = 0
     storage_files_deleted: int = 0
     storage_files_failed: list[str] = field(default_factory=list)
 
@@ -204,6 +208,20 @@ def _purge_holding_rows(db: Session, holding_ids: list[uuid.UUID], counts: Delet
     return paths
 
 
+def detach_holding_rows(db: Session, holding_ids: list[uuid.UUID], counts: DeletionCounts) -> None:
+    """Only when the holding row itself goes: its watchlist entry is
+    removed, and its decision-journal entries are unlinked (holding_id ->
+    NULL) but kept, since they are your own record. No commit."""
+    counts.watchlist_items += (
+        db.query(WatchlistItem).filter(WatchlistItem.holding_id.in_(holding_ids)).delete(synchronize_session=False)
+    )
+    counts.journal_entries_unlinked += (
+        db.query(DecisionJournalEntry)
+        .filter(DecisionJournalEntry.holding_id.in_(holding_ids))
+        .update({"holding_id": None}, synchronize_session=False)
+    )
+
+
 def purge_holding(
     db: Session, storage: ObjectStorageProvider, holding: Holding, *, keep_holding: bool
 ) -> DeletionCounts:
@@ -223,6 +241,7 @@ def purge_holding(
             )
     paths = _purge_holding_rows(db, [holding.id], counts)
     if not keep_holding:
+        detach_holding_rows(db, [holding.id], counts)
         db.query(Holding).filter(Holding.id == holding.id).delete(synchronize_session=False)
         counts.holdings = 1
     db.commit()
@@ -249,6 +268,7 @@ def wipe_all_holdings(db: Session, storage: ObjectStorageProvider) -> DeletionCo
     remaining = list(db.scalars(select(Document.id)))
     paths += _delete_document_rows(db, remaining, counts)
     if holding_ids:
+        detach_holding_rows(db, holding_ids, counts)
         counts.holdings = (
             db.query(Holding).filter(Holding.id.in_(holding_ids)).delete(synchronize_session=False)
         )

@@ -12,6 +12,7 @@ from app.models.base import Base
 from app.models.document import Document, DocumentChunk, DocumentPage
 from app.models.financial_line_item import FinancialLineItem
 from app.models.holding import Holding
+from app.models.journal import DecisionJournalEntry
 from app.models.legacy_analysis import (
     AnalysisRun,
     EvidenceReference,
@@ -22,11 +23,13 @@ from app.models.legacy_analysis import (
 from app.models.market import FxObservation, MarketObservation, RiskFreeRateObservation
 from app.models.portfolio import PortfolioPosition, PortfolioSnapshot
 from app.models.research import ResearchItem, ResearchRun
+from app.models.watchlist import WatchlistItem
 
 __all__ = [
     "Account",
     "AnalysisRun",
     "Base",
+    "DecisionJournalEntry",
     "Document",
     "DocumentChunk",
     "DocumentPage",
@@ -45,4 +48,5 @@ __all__ = [
     "ResearchItem",
     "ResearchRun",
     "RiskFreeRateObservation",
+    "WatchlistItem",
 ]

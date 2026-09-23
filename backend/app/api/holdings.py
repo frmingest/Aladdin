@@ -40,7 +40,13 @@ from app.schemas.holding import (
     HoldingUpdate,
 )
 from app.schemas.metrics import HoldingMetricsOut, MetricFactOut
-from app.services.deletion import DeletionBlockedError, purge_holding, wipe_all_holdings
+from app.services.deletion import (
+    DeletionBlockedError,
+    DeletionCounts,
+    detach_holding_rows,
+    purge_holding,
+    wipe_all_holdings,
+)
 from app.services.metrics import compute_holding_metrics
 
 router = APIRouter(prefix="/holdings", tags=["holdings"])
@@ -296,6 +302,9 @@ def delete_holding(
         )
 
     try:
+        # A watchlist entry goes with the holding; journal entries are kept
+        # and unlinked (app/services/deletion.py).
+        detach_holding_rows(db, [holding.id], DeletionCounts())
         db.delete(holding)
         db.commit()
     except IntegrityError as exc:  # belt-and-braces — the checks above should catch this first

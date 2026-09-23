@@ -757,3 +757,54 @@ export interface SystemStatus {
   counts: Record<string, number>;
   issues: string[];
 }
+
+// --- Watchlist (F7) — backend/app/schemas/watchlist.py
+
+export type WatchlistStatus = "buy_zone" | "near" | "above" | "no_target" | "no_price" | "currency_mismatch";
+
+export interface WatchlistRow {
+  id: string;
+  holding_id: string;
+  ticker: string;
+  name: string;
+  sector: string | null;
+  instrument_type: string;
+  owned: boolean;
+  buy_below_price: string | null;
+  buy_below_currency: string | null;
+  notes: string | null;
+  added_at: string;
+  price: string | null;
+  price_currency: string | null;
+  price_as_of: string | null;
+  /** 0-100 scale; negative = price is below your buy-below price. */
+  distance_to_buy_pct: string | null;
+  status: WatchlistStatus;
+  dcf_base: string | null;
+  /** Fraction (0.25 = 25%), same as the margin-of-safety board. */
+  margin_of_safety_base: string | null;
+  verdict_rating: VerdictRating | null;
+  moat_rating: MoatRating | null;
+  analyzed_at: string | null;
+  unavailable_reason: string | null;
+}
+
+export interface Watchlist {
+  rows: WatchlistRow[];
+  buy_zone_count: number;
+}
+
+export interface WatchlistCreateInput {
+  holding_id?: string;
+  ticker?: string;
+  name?: string;
+  trading_currency?: string;
+  sector?: string | null;
+  buy_below_price?: string | null;
+  notes?: string | null;
+}
+
+export interface WatchlistUpdateInput {
+  buy_below_price?: string | null;
+  notes?: string | null;
+}

@@ -40,6 +40,10 @@ import type {
   SnapshotDeleteResult,
   SourceEligibility,
   SystemStatus,
+  Watchlist,
+  WatchlistCreateInput,
+  WatchlistRow,
+  WatchlistUpdateInput,
 } from "./types";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL as string | undefined;
@@ -231,6 +235,17 @@ export const api = {
 
   /** Sprint 5 dashboard — database-only roll-up (no market data, no LLM). */
   getPortfolioOverview: () => request<PortfolioOverview>("/portfolio/overview"),
+
+  // Watchlist (F7) — backend/app/api/watchlist.py. GET values each entry
+  // like the margin-of-safety board (cached prices); never calls an LLM.
+  getWatchlist: () => request<Watchlist>("/watchlist"),
+  getWatchlistEntry: (holdingId: string) => request<WatchlistRow | null>(`/watchlist/holdings/${holdingId}`),
+  addToWatchlist: (input: WatchlistCreateInput) =>
+    request<WatchlistRow>("/watchlist", { method: "POST", body: JSON.stringify(input) }),
+  updateWatchlistEntry: (id: string, input: WatchlistUpdateInput) =>
+    request<WatchlistRow>(`/watchlist/${id}`, { method: "PATCH", body: JSON.stringify(input) }),
+  removeFromWatchlist: (id: string) =>
+    request<void>(`/watchlist/${id}`, { method: "DELETE", query: { confirm: true } }),
 
   /** F4 — configuration, data freshness and failures. Never calls a provider. */
   getSystemStatus: () => request<SystemStatus>("/system/status"),
