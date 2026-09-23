@@ -7,6 +7,7 @@ import { formatBytes, formatDate, formatDecimal, formatPercent } from "../lib/fo
 import { Button, Card, CollapsibleSection, EmptyState, PageHeader, StatusBadge } from "../components/ui";
 import { AnalysisPanel } from "../components/AnalysisPanel";
 import { DocumentFlagsNote } from "../components/DocumentFlagsNote";
+import { FinancialsExtractPanel } from "../components/FinancialsExtractPanel";
 import { ResearchPanel } from "../components/ResearchPanel";
 import { SourcesPanel } from "../components/SourcesPanel";
 import { ValuationPanel } from "../components/ValuationPanel";
@@ -115,6 +116,10 @@ function MetricsPanel({ holdingId }: { holdingId: string }) {
   );
 }
 
+// Must match EXTRACTABLE_DOCUMENT_TYPES in
+// backend/app/services/documents/financial_extraction.py.
+const EXTRACTABLE_TYPES = ["annual_report", "prospectus", "other"];
+
 function DocumentsPanel({
   holdingId,
   onUploaded,
@@ -127,6 +132,7 @@ function DocumentsPanel({
   const [uploading, setUploading] = useState(false);
   const [documentType, setDocumentType] = useState("annual_report");
   const [reportingPeriod, setReportingPeriod] = useState("");
+  const [extracting, setExtracting] = useState<DocumentSummary | null>(null);
 
   function reload() {
     api
@@ -227,6 +233,7 @@ function DocumentsPanel({
               <th className="py-2 font-medium">Status</th>
               <th className="py-2 text-right font-medium">Facts</th>
               <th className="py-2 text-right font-medium">Size</th>
+              <th className="py-2" />
             </tr>
           </thead>
           <tbody>
@@ -246,10 +253,35 @@ function DocumentsPanel({
                 <td className="py-2 text-right tabular text-ink-muted">
                   {formatBytes(d.size_bytes)}
                 </td>
+                <td className="py-2 pl-3 text-right">
+                  {EXTRACTABLE_TYPES.includes(d.type) &&
+                    d.status === "processed" &&
+                    d.original_filename.toLowerCase().endsWith(".pdf") && (
+                      <button
+                        onClick={() => setExtracting(d)}
+                        className="whitespace-nowrap text-xs font-medium text-accent hover:text-accent-hover"
+                        title="Read the financial statements into figures with the LLM"
+                      >
+                        {d.fact_count > 0 ? "Re-extract" : "Extract figures"}
+                      </button>
+                    )}
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
+      )}
+
+      {extracting && (
+        <FinancialsExtractPanel
+          key={extracting.id}
+          document={extracting}
+          onClose={() => setExtracting(null)}
+          onSaved={() => {
+            reload();
+            onUploaded();
+          }}
+        />
       )}
     </Card>
   );

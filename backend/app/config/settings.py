@@ -130,6 +130,9 @@ class Settings(BaseSettings):
     active_analysis_schema_version: str = "v1"  # app/domain/analysis_schema/
     active_analysis_prompt_version: str = "v1"  # prompts/analysis/{blind,reconciliation}_vN.md
     active_analysis_assumptions_version: str = "v1"  # app/domain/analysis_assumptions/
+    # LLM-assisted financial-statement extraction from PDF filings
+    # (2026-09-23): app/domain/extraction_schema/vN.py + prompts/extraction/financials_vN.md.
+    active_financials_extraction_version: str = "v1"
 
 
 @lru_cache
