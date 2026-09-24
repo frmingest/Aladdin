@@ -2,8 +2,8 @@
 
 CLAUDE.md Rule 5: the text captured here (DocumentPage.extracted_text,
 DocumentChunk.content) is untrusted input to the LLM, not instructions —
-whatever later builds the evidence packet from these rows (a later sprint)
-must frame this content to the model as data to analyze and cite, never as
+whatever builds the evidence packet from these rows
+(app/services/analysis/document_excerpts.py, Sprint 6) must frame this content to the model as data to analyze and cite, never as
 directives to follow.
 """
 from __future__ import annotations
@@ -36,6 +36,7 @@ from app.services.documents.hashing import (
     sha256_hex,
 )
 from app.services.documents.quality import evaluate_quality
+from app.services.documents.sectioning import split_into_section_chunks
 
 
 # A factsheet rounded to whole millions vs the annual report's 0.1 million
@@ -153,18 +154,18 @@ def process_document(db: Session, document: Document, content: bytes) -> None:
                 extraction_quality=page.quality,
             )
         )
-        # 1 page = 1 chunk for now; finer section-aware chunking is a later
-        # sprint (see the rebuild sprint plan's Sprint 6) — good enough to
-        # keep raw text out of reasoning calls once the analysis pipeline
-        # (Sprint 4) exists.
+    # Sprint 6: section-aware chunks (headings carried across pages, each
+    # chunk a citable passage of at most SECTION_CHUNK_CHARS) replace the
+    # earlier 1 page = 1 chunk. Every new chunk has a non-null section.
+    for chunk in split_into_section_chunks([(p.page_number, p.text) for p in result.pages]):
         db.add(
             DocumentChunk(
                 document_id=document.id,
-                page_start=page.page_number,
-                page_end=page.page_number,
-                section=None,
-                content=page.text,
-                content_hash=sha256_hex(page.text.encode("utf-8")),
+                page_start=chunk.page_start,
+                page_end=chunk.page_end,
+                section=chunk.section[:255],
+                content=chunk.content,
+                content_hash=sha256_hex(chunk.content.encode("utf-8")),
             )
         )
 

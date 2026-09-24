@@ -144,8 +144,14 @@ class Settings(BaseSettings):
     # user notes — CLAUDE.md Rule 4) followed by a reconciliation pass
     # (blind output + the holding's own notes, if any).
     active_analysis_schema_version: str = "v1"  # app/domain/analysis_schema/
-    active_analysis_prompt_version: str = "v1"  # prompts/analysis/{blind,reconciliation}_vN.md
+    active_analysis_prompt_version: str = "v2"  # prompts/analysis/{blind,reconciliation}_vN.md (v2: document excerpts)
     active_analysis_assumptions_version: str = "v1"  # app/domain/analysis_assumptions/
+    # Sprint 6: uploaded-document passages in the evidence packet
+    # (app/services/analysis/document_excerpts.py). ~4,000 tokens fits the
+    # local qwen3:14b 16k window next to figures and research (decision 22).
+    evidence_document_token_budget: int = 4000
+    evidence_document_max_excerpt_chars: int = 1600
+    evidence_documents_max: int = 4
 
 
 @lru_cache

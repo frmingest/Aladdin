@@ -271,7 +271,7 @@ def test_oslo_holding_gets_newsweb_announcements_as_cited_data():
     ann = [i for i in packet.items if i.category == "regulatory_announcements"]
     assert len(ann) == 1
     assert ann[0].citation.endswith("https://newsweb.oslobors.no/message/7")
-    assert packet.version == "v3"
+    assert packet.version == "v4"
 
 
 def test_us_holding_skips_newsweb_and_cites_edgar_filings():
@@ -299,3 +299,43 @@ def test_us_holding_skips_newsweb_and_cites_edgar_filings():
     assert "regulatory_announcements" not in categories
     src = next(i for i in packet.items if i.category == "financial_sources")
     assert "0000320193-24-000123" in src.content
+
+
+def test_uploaded_annual_report_passages_become_cited_document_excerpts():
+    """Sprint 6: uploaded document text reaches the packet as quoted,
+    cited evidence; without a document the gap is stated."""
+    from app.models.document import DocumentChunk
+
+    db = _session()
+    holding = _holding()
+    db.add(holding)
+    db.commit()
+    no_docs = build_evidence_packet(
+        db, holding, market_data_provider=_FakeMarket(), risk_free_rate_provider=_FakeRate(),
+        research_provider=_FakeResearch(),
+    )
+    assert not [i for i in no_docs.items if i.category == "document_excerpt"]
+    assert any(r.startswith("document excerpts: no uploaded narrative documents") for r in no_docs.unavailable_reasons)
+
+    document = Document(
+        holding=holding, type="annual_report", original_filename="apple-ar-2025.pdf", mime_type="application/pdf",
+        size_bytes=1, storage_path="x", sha256="d" * 64, status="processed", quality_flags={},
+        reporting_period="FY2025",
+    )
+    db.add(document)
+    db.add(DocumentChunk(
+        document=document, page_start=12, page_end=13, section="Competition", content_hash="h",
+        content=("Our ecosystem creates high switching costs and pricing power; market share in premium "
+                 "smartphones keeps growing while competitors compete on price. ") * 4,
+    ))
+    db.commit()
+    packet = build_evidence_packet(
+        db, holding, market_data_provider=_FakeMarket(), risk_free_rate_provider=_FakeRate(),
+        research_provider=_FakeResearch(),
+    )
+    excerpts = [i for i in packet.items if i.category == "document_excerpt"]
+    assert len(excerpts) == 1
+    assert excerpts[0].citation == "Uploaded document 'apple-ar-2025.pdf', FY2025, pp. 12–13"
+    assert excerpts[0].id in packet.known_ids()
+    assert "(document_excerpt)" in packet.render_for_prompt()
+    assert not any(r.startswith("document excerpts") for r in packet.unavailable_reasons)

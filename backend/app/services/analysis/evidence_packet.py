@@ -42,6 +42,10 @@ from app.providers.base import (
 )
 from app.providers.newsweb_provider import NewswebAnnouncementsProvider
 from app.services import calculations
+from app.services.analysis.document_excerpts import (
+    add_document_excerpt_evidence,
+    select_document_excerpts,
+)
 from app.services.filings.announcements import get_holding_announcements
 from app.services.filings.eligibility import newsweb_applies
 from app.services.filings.sec_edgar import latest_edgar_document
@@ -62,7 +66,10 @@ from app.services.valuation.holding_valuation import (
 # FCF/owner earnings net of decommissioning, lease, financing-classified
 # interest and hybrid coupons; hybrid capital as debt; ROE on ordinary
 # equity; "not meaningful" instead of ratios over a negative denominator.
-EVIDENCE_PACKET_VERSION = "v3"
+# v4 (2026-09-23, Sprint 6): adds "document_excerpt" items — passages from
+# the holding's uploaded annual reports/presentations, chosen by
+# app/services/analysis/document_excerpts.py within a token budget.
+EVIDENCE_PACKET_VERSION = "v4"
 
 
 @dataclass(frozen=True)
@@ -197,6 +204,17 @@ def build_evidence_packet(
     company_snapshot = get_company_research(db, research_provider, holding=holding)
     _add_research_evidence(company_snapshot, "company_research", "Company-specific research", add)
     _note_research_gap(packet, company_snapshot, "company research")
+
+    excerpts = select_document_excerpts(
+        db,
+        holding,
+        token_budget=settings.evidence_document_token_budget,
+        max_excerpt_chars=settings.evidence_document_max_excerpt_chars,
+        max_documents=settings.evidence_documents_max,
+    )
+    add_document_excerpt_evidence(excerpts, add)
+    if excerpts.reason:
+        packet.unavailable_reasons.append(f"document excerpts: {excerpts.reason}")
 
     if newsweb_applies(holding):
         announcements = get_holding_announcements(db, announcements_provider, holding=holding)
