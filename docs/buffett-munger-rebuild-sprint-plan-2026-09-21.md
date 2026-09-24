@@ -76,6 +76,7 @@ holding's notes), Rule 5 (both prompts explicitly frame evidence/notes as data, 
 | 19 | Metric definitions (2026-09-23) | **Owner's view (Buffett/Munger):** hybrid capital is debt (net debt, D/E on ordinary equity); FCF = CFO − capex − decommissioning − financing-classified interest − lease payments − hybrid coupons; owner earnings also deduct decommissioning + lease payments (shared by panel, evidence packet and DCF); EBIT/EBITDA exclude biological fair-value changes; a ratio over a denominator ≤ 0 is *n/m*. See [owner-view-metrics-and-local-worker-plan-2026-09-23.md](owner-view-metrics-and-local-worker-plan-2026-09-23.md). |
 | 20 | Using the local LLM from Railway (2026-09-23) | **Recommended: a worker on Faiz's PC pulls queued runs from the shared database** (no tunnel, no inbound port). Built in Sprint 5B (F8, with F5), `18e8a4e`. |
 | 21 | Where research runs for a local run (2026-09-23) | **On the PC.** The worker does research (Gemini), the evidence packet and both passes (Ollama) in one place, so a run is never half-done across two machines. |
+| 23 | Fund / ETF figures (2026-09-24) | **Typed in on a Fund facts form, each row citing an uploaded document (+ page), plus a deterministic holdings-file (CSV/XLSX) import** — no LLM reads a fund figure out of a PDF. First look-through: weights + holdings linked to the app's companies (with coverage %). Built in Sprint 8, `8847311`. See [fund-etf-analysis-sprint8-2026-09-24.md](fund-etf-analysis-sprint8-2026-09-24.md). |
 | 22 | Sprint 6 evidence selection (2026-09-24) | **Deterministic keyword + section rules, ~4,000-token budget** (no embeddings). Uploaded document passages enter the evidence packet (v4) as quoted, cited `document_excerpt` items; prompts v2. Built `71ec23b`. See [evidence-quality-sprint6-2026-09-24.md](evidence-quality-sprint6-2026-09-24.md). |
 
 ## Actual current Supabase schema
@@ -243,6 +244,24 @@ Found at sprint start: uploaded document **text** never reached the evidence pac
 
 Decision 22. Detail: [evidence-quality-sprint6-2026-09-24.md](evidence-quality-sprint6-2026-09-24.md).
 
+### Sprint 8 — Fund & ETF analysis (F9) — ✅ built 2026-09-24 (`8847311`, not deployed)
+
+Built before Sprint 7 at Faiz's request. A fund has no statements, so it gets its own path: the
+businesses underneath (look-through), the steward and its cost, how the basket is built, and its
+role in the portfolio. Decision 23.
+
+| # | Item | Result |
+|---|---|---|
+| 1 | Types | `equity_fund` instrument type; `equity_etf` + `equity_fund` take the fund path; 5 fund document types |
+| 2 | Fund facts | Migration `f8a9b0c1d2e3`: `fund_profiles`, `fund_return_periods`, `fund_exposures`, every row citing a document of the fund; `/funds/*` API |
+| 3 | Holdings import | Deterministic CSV/XLSX parser, derived splits, auto-link by ticker / name, manual links kept |
+| 4 | Metrics | Fee drag, excess return / tracking difference, concentration, splits, look-through, overlap (all Python) |
+| 5 | Analysis | Evidence packet `fund-v1`, schema + prompts `fund_v1`, fund excerpt topics + umbrella filter, fund readiness |
+| 6 | UI | Fund facts section, fund analysis view |
+| 7 | Tests | 30 new (649), migration checked on Postgres 16 |
+
+Detail: [fund-etf-analysis-sprint8-2026-09-24.md](fund-etf-analysis-sprint8-2026-09-24.md).
+
 ### Sprint 7 — Guardrail tooling
 
 Pre-commit hooks, CI workflow, secret-scanning; also a natural place for a frontend test framework
@@ -266,12 +285,15 @@ shipped early, on 2026-09-23 (`4abaf3d`).
 | **F5 Overnight analysis queue** (agreed 2026-09-22) | Queue holdings and run them within the daily Gemini budget, resuming the next day | **✅ Built 2026-09-23 in Sprint 5B** (`18e8a4e`), together with F8 |
 | **F6 Decision journal** (agreed 2026-09-22) | Record buy/sell reasoning, price and "what would prove me wrong"; show the outcome after 6/12 months | **✅ Built 2026-09-23** (`bc28502`), see Sprint 5 |
 | **F7 Watchlist** (agreed 2026-09-22) | Analyze non-held companies; flag when the price drops below a buy-below level | **✅ Built 2026-09-23** (`ebe4a49`), see Sprint 5 |
+| **Fund annual-report holdings parser** | Deterministic parser for the schedule of investments in a fund report PDF | Gives the full holdings list for funds with no CSV download (Sprint 8 follow-up) |
+| **Fund look-through valuation** | Weighted P/E / earnings yield over linked holdings | Needs a price per linked holding (Sprint 8 follow-up) |
 | **Fix GitHub push credentials** (ops, not a feature) | A PAT/credential-helper so sessions can push directly | Needs a decision/action from Faiz outside the repo — hit identically in every session |
 
 ## Changes / history
 
 | Date | Summary |
 |---|---|
+| 2026-09-24 | **Sprint 8 built (decision 23): fund & ETF analysis (F9).** `equity_fund` type; Fund facts typed in with citations or imported from a holdings file; deterministic fee drag, benchmark gap, concentration, look-through and overlap; evidence packet `fund-v1`, schema + prompts `fund_v1`. Migration `f8a9b0c1d2e3` (additive). 649 tests (30 new). `8847311`, not pushed. See [fund-etf-analysis-sprint8-2026-09-24.md](fund-etf-analysis-sprint8-2026-09-24.md). |
 | 2026-09-24 | **Sprint 6 built (decision 22).** Uploaded document text now reaches the analysis: section-aware chunking, deterministic topic scoring within a ~4,000-token budget, evidence packet v4 (`document_excerpt`), prompts v2. No migration. 619 tests (33 new). `71ec23b`, not pushed. See [evidence-quality-sprint6-2026-09-24.md](evidence-quality-sprint6-2026-09-24.md). |
 | 2026-09-23 | **Sprint 5B built (F8 + F5), decision 21: research runs on the PC.** "Run on my PC" queues a run in the shared DB; `python -m app.worker` claims it and runs research + both passes on Ollama. Migration `e6f7a8b9c0d1` (additive), 4 new endpoints, Analysis queue page. 586 tests (29 new). `18e8a4e`, not pushed. See [local-worker-queue-sprint5b-2026-09-23.md](local-worker-queue-sprint5b-2026-09-23.md). |
 | 2026-09-23 | **Sprint 5 closed; F4 status page, F6 journal, F7 watchlist shipped.** Dashboard with `GET /portfolio/overview` (database-only roll-up and a rule-based executive summary); `/system/status`; `watchlist_items` + `decision_journal_entries` (additive migrations `c4d5e6f7a8b9`, `d5e6f7a8b9c0`). Fixes: a failed run hid an older verdict on the board; provider errors now return 503 instead of 500; yfinance `KeyError`. 557 tests (41 new). Not pushed. See [dashboard-status-watchlist-journal-2026-09-23.md](dashboard-status-watchlist-journal-2026-09-23.md). |

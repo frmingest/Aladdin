@@ -11,10 +11,10 @@ Quick-glance tracker. Detail for each item lives in its own linked doc; this pag
 | | |
 |---|---|
 | **Current phase** | Phase 11: the Buffett/Munger single-focus rebuild ([sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md)) |
-| **Sprints closed** | 0, 1, 2, 3, 4, 5, 5B, **6** |
-| **In progress** | Nothing open. **Sprint 6 built**: uploaded annual-report text now reaches the analysis as cited excerpts. **Next planned: Sprint 7** (guardrail tooling + smoke test) |
-| **Latest build** | Sprint 6 `71ec23b`: committed locally, **not pushed, not deployed**. Everything up to `96ed33f` (Sprint 5B + docs) is on GitHub (`origin/main` = `96ed33f` as of this session); deploy not verified. |
-| **Tests** | 619 backend (33 new in Sprint 6; locally the 2 `test_factory` tests still fail while `.env` selects Ollama), tsc/eslint/vite build clean, migration `e6f7a8b9c0d1` checked up/down on Postgres 16 |
+| **Sprints closed** | 0, 1, 2, 3, 4, 5, 5B, 6, **8** |
+| **In progress** | Nothing open. **Sprint 8 built**: funds and ETFs get their own Buffett/Munger analysis (look-through, cost, track record). **Next planned: Sprint 7** (guardrail tooling + smoke test) |
+| **Latest build** | Sprint 8 `8847311` (+ docs): committed locally, **not pushed, not deployed**. Sprint 6 and its docs are on GitHub (`origin/main` = `b03f74f`); deploy not verified. |
+| **Tests** | 649 backend (30 new in Sprint 8; locally the 2 `test_factory` tests still fail while `.env` selects Ollama), tsc/eslint/vite build clean, migration `f8a9b0c1d2e3` checked up/down on Postgres 16 |
 | **Live-verified?** | ❌ The analysis engine, EDGAR, Newsweb and the new worker have only been tested against fakes and a local Postgres, not Supabase/Railway/real Ollama. |
 
 ---
@@ -27,7 +27,8 @@ Quick-glance tracker. Detail for each item lives in its own linked doc; this pag
 | ★ | Railway Variables: `LLM_PROVIDER=google_ai_studio` (or unset), `LLM_FALLBACK_PROVIDER=none` | Railway can't reach Ollama on your PC |
 | ★ | Fix the 1 remaining readiness blocker on the first holding, then run the first local analysis | First real run on the local LLM |
 | ★ | Change Vår Energi's ticker `VARRY` → **`VAR.OL`**; fix sectors: Xetra-Gold + L&G Gold Mining → Materials, Salmon Evolution → Consumer Staples | [ticker decision](local-llm-tickers-ui-2026-09-23.md#2-ticker-convention--decision) |
-| ★ | **Push `main` (`71ec23b` + docs) and redeploy.** Sprint 6 has no migration; if Railway sets `ACTIVE_ANALYSIS_PROMPT_VERSION=v1`, remove it. Earlier: Railway runs `alembic upgrade head` on start: 3 new tables (`watchlist_items`, `decision_journal_entries`, `analysis_worker_heartbeats`) + 5 queue columns on `equity_analysis_runs` | New Dashboard, Status, Watchlist, Journal and Analysis queue pages — [doc](dashboard-status-watchlist-journal-2026-09-23.md) · [5B doc](local-worker-queue-sprint5b-2026-09-23.md) |
+| ★ | **Push `main` (`8847311` + docs) and redeploy.** Railway runs `alembic upgrade head` on start: migration `f8a9b0c1d2e3` adds 3 fund tables (additive). If Railway sets `ACTIVE_ANALYSIS_PROMPT_VERSION=v1`, remove it. Also restart the worker on the PC so it has the fund path | Fund facts + fund analysis — [doc](fund-etf-analysis-sprint8-2026-09-24.md) |
+| ★ | **Set up your funds:** tag Heimdal Utbytte A as **Equity fund** (Holdings page — its name has no fund marker); upload each fund's fact sheet; fill in Fund facts (profile, returns, holdings); run the analysis | First real fund analysis — [doc](fund-etf-analysis-sprint8-2026-09-24.md) §7 |
 | ★ | **Start the worker on the PC**: `backend\.env` needs Railway's `DATABASE_URL`, then `python -m app.worker` (or `scripts\start-worker.ps1`). Then **Run on my PC** on a holding from the Railway site | First real local run started from Railway — [guide](local-llm-ollama-setup.md) "Run analyses queued from Railway" |
 | ★ | After the deploy, open **System status** (the "backend ok" badge at the bottom of the nav) and fix anything under *Needs attention* | It shows missing keys, `stub` providers and the migration version in one place, which replaces items 1–3 below |
 | ★ | **Delete and re-upload** the Vår Energi and Salmon Evolution `.xhtml` files (if not done since `34beec7` was deployed) | The new owner's-view facts (hybrid capital, decommissioning, leases…) are only created on extraction — [doc](owner-view-metrics-and-local-worker-plan-2026-09-23.md) |
@@ -58,6 +59,7 @@ Quick-glance tracker. Detail for each item lives in its own linked doc; this pag
 | F8 | **Local LLM from Railway** | Both | A worker on your PC picks up analysis runs queued from the Railway site and runs them on Ollama. No tunnel, no open port; runs wait while the PC is off. | Sprint 5B (with F5) | ✅ Done 2026-09-23 — [doc](local-worker-queue-sprint5b-2026-09-23.md) |
 | F6 | **Decision journal** | Both | Record why you bought or sold, at what price, and what would prove you wrong; see the outcome after 6/12 months | New | ✅ Done 2026-09-23 |
 | F7 | **Watchlist** | Both | Analyze companies you don't own; flag when the price drops below a buy-below level | New | ✅ Done 2026-09-23 |
+| F9 | **Fund & ETF analysis** | Both | Fund facts (typed in with citations, or a holdings file), look-through, fee drag, excess return / tracking difference, fund version of the two-pass analysis | Sprint 8 | ✅ Done 2026-09-24 — [doc](fund-etf-analysis-sprint8-2026-09-24.md) |
 
 ### 3b. Sprint status
 
@@ -72,6 +74,7 @@ Quick-glance tracker. Detail for each item lives in its own linked doc; this pag
 | 5B | Local LLM from Railway + overnight queue (F8 + F5) | ✅ Built 2026-09-23 (`18e8a4e`, not deployed) |
 | 6 | Evidence quality (section-aware chunking, evidence budget) | ✅ Built 2026-09-24 (`71ec23b`, not deployed) |
 | 7 | Guardrail tooling: pre-commit, CI, secret scanning (+ F4 smoke test) | ⏳ Not started |
+| 8 | Fund & ETF analysis (F9, decision 23) | ✅ Built 2026-09-24 (`8847311`, not deployed) |
 | — | Unplanned, shipped 2026-09-23: F4 status page, F6 decision journal, F7 watchlist | ✅ Done |
 
 ### 3c. Backlog (unscheduled)
@@ -85,6 +88,8 @@ Quick-glance tracker. Detail for each item lives in its own linked doc; this pag
 | Alerts and notifications | Needs thesis tracking first |
 | Reporting and export | PDF or print view of an analysis run |
 | More primary sources | See table 3d |
+| Fund annual-report holdings parser | Deterministic parser for the "schedule of investments" in a fund report PDF (full holdings without a CSV) — [doc](fund-etf-analysis-sprint8-2026-09-24.md) §6 |
+| Fund look-through valuation | Weighted P/E / earnings yield over linked holdings; needs their prices |
 
 ### 3d. Free data sources
 
@@ -93,7 +98,7 @@ Quick-glance tracker. Detail for each item lives in its own linked doc; this pag
 | SEC EDGAR (XBRL company facts) | US financials, citation-grade | ✅ Built 2026-09-22 |
 | Oslo Børs Newsweb | Oslo regulated announcements | ✅ Built 2026-09-22 |
 | Brønnøysundregistrene | Norwegian entity data and annual accounts | Nice to have |
-| VFF (vff.no) | Norwegian fund NAVs (Alfred Berg, Heimdal) | Needs a look |
+| VFF (vff.no) | Norwegian fund NAVs (Alfred Berg, Heimdal) | Needs a look — would replace typed-in fund returns |
 | World Bank / OECD / IMF, GDELT | Global macro, news sentiment | Low |
 | FMP / Finnhub free tiers | Mostly paywalled | Not recommended |
 
@@ -110,6 +115,7 @@ Detail: [free-market-data-research-providers-2026-09-21.md](free-market-data-res
 | No GitHub push credentials in any session shell | Faiz pushes manually | Needs a PAT or credential helper from Faiz |
 | Interest coverage ignores capitalised interest | Understates interest during a build-out (Salmon: 36m capitalised) | Not scheduled — [doc](owner-view-metrics-and-local-worker-plan-2026-09-23.md) §2 "Not changed" |
 | ESEF notes are only block-tagged; shares outstanding rarely tagged | Note tables arrive as text, not figures; no per-share value from ESEF alone | [upload doc](financial-statement-uploads-xhtml-csv-2026-09-23.md) §3 |
+| An umbrella fund report (e.g. L&G, 1,266 pp) adds little excerpt text | Its Gold Mining passages are mostly number tables; the useful part is the holdings schedule | Holdings parser (backlog) — [doc](fund-etf-analysis-sprint8-2026-09-24.md) §4 |
 
 ---
 
@@ -117,6 +123,7 @@ Detail: [free-market-data-research-providers-2026-09-21.md](free-market-data-res
 
 | Date | Change | Summary | Detail |
 |---|---|---|---|
+| 2026-09-24 | **Sprint 8: fund & ETF analysis (F9)** | Funds and ETFs get their own Buffett/Munger analysis. New type `equity_fund`; **Fund facts** (profile & cost, returns vs benchmark, holdings / sector / country / currency) typed in with a cited document + page, or imported from a holdings CSV/XLSX — never read by an LLM (decision 23). Deterministic fee drag, excess return / tracking difference, concentration, look-through ROE/margins with coverage, overlap with direct stocks. Evidence packet `fund-v1`, schema + prompts `fund_v1`, umbrella-report filter for excerpts, fund readiness checks. Migration `f8a9b0c1d2e3` (additive). 649 tests (30 new). Committed `8847311`, not pushed. | [doc](fund-etf-analysis-sprint8-2026-09-24.md) |
 | 2026-09-24 | **Sprint 6: uploaded document text in the analysis** | Found: annual-report text never reached the evidence packet, only its figures. Now: section-aware chunking (headings carried across pages, EN + NO); deterministic scoring on 5 topics (moat, capital allocation, risks, outlook, management) within a ~4,000-token budget (decision 22); boilerplate and number tables skipped; evidence packet **v4** with quoted, cited `document_excerpt` items (EV-ID look-alikes neutralised); prompts **v2** (v1 kept). Old uploads re-sectioned in memory, no re-upload needed. No migration. 619 tests (33 new). Also removed a stale `.git/index.lock`. Committed `71ec23b`, not pushed. | [doc](evidence-quality-sprint6-2026-09-24.md) |
 | 2026-09-23 | **Sprint 5B: local LLM from Railway (F8) + overnight queue (F5)** | **Run on my PC** queues a run in the shared DB; `python -m app.worker` on the PC claims it and runs research + both passes on Ollama (decision: research on the PC). Lease via worker heartbeats (30 min, 2 attempts), restart recovery, waits when Ollama is down or the Gemini budget is used. New **Analysis queue** page, **Queue all ready holdings**, Cancel / Run in cloud instead, readiness + System status rows. A pending run no longer hides the previous verdict. Migration `e6f7a8b9c0d1` (additive). 586 tests (29 new). Also: removed a stale `.git/index.lock` left by a failed `git stash`. Committed `18e8a4e`, not pushed. | [doc](local-worker-queue-sprint5b-2026-09-23.md) |
 | 2026-09-23 | **Dashboard, System status, Watchlist, Decision journal** | New home **Dashboard** (value, allocation, HHI/top-5, value-weighted verdict and moat roll-up, rule-based executive summary): Sprint 5 closed. **System status** page (F4): provider settings, migration vs. code, quota, data freshness, stuck runs; no network calls. **Watchlist** (F7): buy-below price, DCF and margin of safety, ☆ Watch on every holding. **Decision journal** (F6): why/what would prove me wrong/confidence, return since the decision, 6/12-month reviews. 2 new tables (additive migrations). Fixes: a failed run no longer hides an older verdict; provider errors return 503 with the reason instead of 500; a yfinance `KeyError` no longer 500s. 557 tests (41 new). Committed `bc4de0c`…`bc28502`, not pushed. | [doc](dashboard-status-watchlist-journal-2026-09-23.md) |
