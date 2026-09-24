@@ -22,7 +22,7 @@ from typing import TypeVar
 from sqlalchemy.orm import Session
 
 from app.config.settings import get_settings
-from app.domain.instrument_types import EQUITY_ANALYZABLE_TYPES
+from app.domain.instrument_types import EQUITY_ANALYZABLE_TYPES, is_fund_type
 from app.models.analysis import EquityAnalysisRun, EquityAnalysisRunStatus
 from app.models.holding import Holding
 from app.providers.base import (
@@ -40,6 +40,10 @@ from app.services.analysis.evidence_packet import (
 )
 from app.services.analysis.notes import get_holding_note
 from app.services.analysis.reconciliation_pass import run_reconciliation_pass
+from app.services.funds.evidence import (
+    FUND_EVIDENCE_PACKET_VERSION,
+    build_fund_evidence_packet,
+)
 
 T = TypeVar("T")
 
@@ -92,8 +96,19 @@ def run_full_analysis(
         )
 
     settings = get_settings()
-    schema_version = settings.active_analysis_schema_version
-    prompt_version = settings.active_analysis_prompt_version
+    # Sprint 8 (F9): an equity ETF / fund takes the fund path — its own
+    # evidence packet (look-through, cost, track record), schema and
+    # prompts. Everything else below (passes, fallback, notes, statuses) is
+    # shared.
+    is_fund = is_fund_type(holding.asset_class_raw)
+    if is_fund:
+        schema_version = settings.active_fund_analysis_schema_version
+        prompt_version = settings.active_fund_analysis_prompt_version
+        packet_version = FUND_EVIDENCE_PACKET_VERSION
+    else:
+        schema_version = settings.active_analysis_schema_version
+        prompt_version = settings.active_analysis_prompt_version
+        packet_version = EVIDENCE_PACKET_VERSION
 
     if run is None:
         run = EquityAnalysisRun(
@@ -101,7 +116,7 @@ def run_full_analysis(
             status=EquityAnalysisRunStatus.RUNNING.value,
             schema_version=schema_version,
             blind_prompt_version=prompt_version,
-            evidence_packet_version=EVIDENCE_PACKET_VERSION,
+            evidence_packet_version=packet_version,
             evidence_packet_json={},
             evidence_unavailable_reasons=[],
         )
@@ -114,18 +129,21 @@ def run_full_analysis(
         run.status = EquityAnalysisRunStatus.RUNNING.value
         run.schema_version = schema_version
         run.blind_prompt_version = prompt_version
-        run.evidence_packet_version = EVIDENCE_PACKET_VERSION
+        run.evidence_packet_version = packet_version
         run.error_message = None
     db.flush()
 
-    packet = build_evidence_packet(
-        db,
-        holding,
-        market_data_provider=market_data_provider,
-        risk_free_rate_provider=risk_free_rate_provider,
-        research_provider=research_provider,
-        announcements_provider=announcements_provider,
-    )
+    if is_fund:
+        packet = build_fund_evidence_packet(db, holding, research_provider=research_provider)
+    else:
+        packet = build_evidence_packet(
+            db,
+            holding,
+            market_data_provider=market_data_provider,
+            risk_free_rate_provider=risk_free_rate_provider,
+            research_provider=research_provider,
+            announcements_provider=announcements_provider,
+        )
     run.evidence_packet_json = packet.as_dict()
     run.evidence_unavailable_reasons = packet.unavailable_reasons
 
@@ -180,7 +198,8 @@ def run_full_analysis(
     run.completed_at = datetime.now(timezone.utc)
     run.status = EquityAnalysisRunStatus.COMPLETED.value
 
-    _attach_price_target(run, packet)
+    if not is_fund:  # a fund has no DCF, so no price-target range
+        _attach_price_target(run, packet)
 
     db.commit()
     db.refresh(run)

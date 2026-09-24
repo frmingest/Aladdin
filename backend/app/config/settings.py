@@ -152,6 +152,11 @@ class Settings(BaseSettings):
     evidence_document_token_budget: int = 4000
     evidence_document_max_excerpt_chars: int = 1600
     evidence_documents_max: int = 4
+    # Sprint 8 (F9): the fund / ETF analysis path (app/services/funds/).
+    # Separate versions so a fund run never picks up the single-company
+    # schema/prompts or vice versa.
+    active_fund_analysis_schema_version: str = "fund_v1"  # app/domain/analysis_schema/fund_v1.py
+    active_fund_analysis_prompt_version: str = "fund_v1"  # prompts/analysis/{blind,reconciliation}_fund_v1.md
 
 
 @lru_cache

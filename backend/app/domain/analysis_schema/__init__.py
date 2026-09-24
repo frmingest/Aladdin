@@ -8,6 +8,11 @@ from __future__ import annotations
 
 from pydantic import BaseModel
 
+from app.domain.analysis_schema.fund_v1 import (
+    FundBlindPassOutputV1,
+    LookThroughMoat,
+    cited_evidence_ids_fund_blind,
+)
 from app.domain.analysis_schema.v1 import (
     MOAT_SOURCES,
     BlindPassOutputV1,
@@ -20,8 +25,29 @@ from app.domain.analysis_schema.v1 import (
     cited_evidence_ids_reconciliation,
 )
 
-_BLIND_SCHEMAS: dict[str, type[BaseModel]] = {"v1": BlindPassOutputV1}
-_RECONCILIATION_SCHEMAS: dict[str, type[BaseModel]] = {"v1": ReconciliationOutputV1}
+# "fund_v1" (Sprint 8): the fund / ETF analysis. Its reconciliation output
+# has the same shape as v1's, so it reuses that class.
+_BLIND_SCHEMAS: dict[str, type[BaseModel]] = {
+    "v1": BlindPassOutputV1,
+    "fund_v1": FundBlindPassOutputV1,
+}
+_RECONCILIATION_SCHEMAS: dict[str, type[BaseModel]] = {
+    "v1": ReconciliationOutputV1,
+    "fund_v1": ReconciliationOutputV1,
+}
+
+
+def is_fund_schema(version: str) -> bool:
+    return version.startswith("fund_")
+
+
+def cited_evidence_ids_any_blind(output: BaseModel) -> set[str]:
+    """Every evidence_id cited in a blind-pass output of any schema."""
+    if isinstance(output, FundBlindPassOutputV1):
+        return cited_evidence_ids_fund_blind(output)
+    if isinstance(output, BlindPassOutputV1):
+        return cited_evidence_ids_blind(output)
+    raise TypeError(f"unknown blind-pass output type: {type(output).__name__}")
 
 
 def get_blind_pass_schema(version: str) -> type[BaseModel]:
@@ -41,13 +67,18 @@ def get_reconciliation_schema(version: str) -> type[BaseModel]:
 __all__ = [
     "MOAT_SOURCES",
     "BlindPassOutputV1",
+    "FundBlindPassOutputV1",
+    "LookThroughMoat",
     "MoatAssessment",
     "MoatSourceRating",
     "NarrativeAssessment",
     "ReconciliationOutputV1",
     "VerdictContent",
+    "cited_evidence_ids_any_blind",
     "cited_evidence_ids_blind",
+    "cited_evidence_ids_fund_blind",
     "cited_evidence_ids_reconciliation",
     "get_blind_pass_schema",
     "get_reconciliation_schema",
+    "is_fund_schema",
 ]

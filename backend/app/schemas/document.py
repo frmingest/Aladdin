@@ -103,5 +103,7 @@ class DeletionResult(BaseModel):
     holdings: int
     watchlist_items: int = 0
     journal_entries_unlinked: int = 0
+    fund_rows: int = 0
+    fund_links_removed: int = 0
     storage_files_deleted: int
     storage_files_failed: list[str]

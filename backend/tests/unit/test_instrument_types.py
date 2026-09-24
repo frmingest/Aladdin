@@ -28,3 +28,14 @@ def test_classifies_commodity_etc():
 def test_classifies_plain_company_name_as_stock():
     assert classify_instrument("Salmon Evolution") == STOCK
     assert classify_instrument("Vår Energi") == STOCK
+
+
+def test_classifies_equity_fund_sprint8():
+    from app.domain.instrument_types import EQUITY_FUND, FUND_ANALYSIS_TYPES, is_fund_type
+
+    assert classify_instrument("DNB Norden Indeks A") == EQUITY_FUND
+    assert classify_instrument("Storebrand Global Fund") == EQUITY_FUND
+    # A fund name with no marker stays a stock until re-tagged by hand.
+    assert classify_instrument("Heimdal Utbytte A") == "stock"
+    assert is_fund_type("equity_etf") and is_fund_type("equity_fund")
+    assert not is_fund_type("stock") and "bond_fund" not in FUND_ANALYSIS_TYPES

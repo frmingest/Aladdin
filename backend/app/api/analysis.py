@@ -20,7 +20,7 @@ from sqlalchemy.orm import Session
 
 from app.config.database import get_db
 from app.config.settings import get_settings
-from app.domain.analysis_schema import BlindPassOutputV1, ReconciliationOutputV1
+from app.domain.analysis_schema import get_blind_pass_schema, get_reconciliation_schema
 from app.models.analysis import PENDING_RUN_STATUSES, EquityAnalysisRun, EquityAnalysisRunStatus
 from app.models.holding import Holding
 from app.providers.base import (
@@ -101,10 +101,14 @@ def _to_out(run: EquityAnalysisRun) -> EquityAnalysisRunOut:
         completed_at=run.completed_at,
         error_message=run.error_message,
         evidence_unavailable_reasons=run.evidence_unavailable_reasons or [],
-        blind_pass=BlindPassOutputV1.model_validate(run.blind_pass_json) if run.blind_pass_json else None,
+        blind_pass=(
+            get_blind_pass_schema(run.schema_version).model_validate(run.blind_pass_json)
+            if run.blind_pass_json
+            else None
+        ),
         blind_pass_citation_warnings=run.blind_pass_citation_warnings,
         reconciliation=(
-            ReconciliationOutputV1.model_validate(run.reconciliation_json)
+            get_reconciliation_schema(run.schema_version).model_validate(run.reconciliation_json)
             if run.reconciliation_json
             else None
         ),

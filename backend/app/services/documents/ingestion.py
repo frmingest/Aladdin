@@ -21,6 +21,7 @@ from app.domain.document_types import (
     DOCUMENT_STATUS_PROCESSED,
     DOCUMENT_STATUS_PROCESSING,
     DOCUMENT_STATUS_UPLOADED,
+    FUND_DOCUMENT_TYPES,
 )
 from app.domain.errors import FileTooLargeError, UnsupportedFileTypeError
 from app.domain.period_dates import extract_year
@@ -37,7 +38,6 @@ from app.services.documents.hashing import (
 )
 from app.services.documents.quality import evaluate_quality
 from app.services.documents.sectioning import split_into_section_chunks
-
 
 # A factsheet rounded to whole millions vs the annual report's 0.1 million
 # is not a disagreement worth reporting; a restatement usually is bigger.
@@ -179,6 +179,12 @@ def process_document(db: Session, document: Document, content: bytes) -> None:
     # label map anyway — still handled explicitly, not left to an
     # IntegrityError, per CLAUDE.md's "fail visibly" rule.
     facts_skipped_no_holding = False
+    # Sprint 8: a fund document (fact sheet, KID, holdings file…) is never a
+    # company's financial statement. A holdings file's weights or a fact
+    # sheet table must not become "revenue" or "net_income" for the fund.
+    facts_skipped_fund_document = bool(result.facts) and document.type in FUND_DOCUMENT_TYPES
+    if facts_skipped_fund_document:
+        result.facts = []
     existing = _existing_facts_by_year(db, document) if document.holding_id is not None else {}
     skipped_existing: list[str] = []
     for fact in result.facts:
@@ -219,6 +225,8 @@ def process_document(db: Session, document: Document, content: bytes) -> None:
         flags[flag] = True
     if facts_skipped_no_holding:
         flags["facts_skipped_no_holding"] = True
+    if facts_skipped_fund_document:
+        flags["facts_skipped_fund_document"] = True
     flags.update(result.details)
     if skipped_existing:
         flags["facts_differ_from_existing"] = skipped_existing[:20]

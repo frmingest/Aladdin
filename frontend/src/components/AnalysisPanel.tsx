@@ -7,6 +7,7 @@ import type {
   AnalysisReadiness,
   AnalysisRun,
   EvidenceItem,
+  FundBlindPassOutput,
   HoldingNote,
   MoatRating,
   NarrativeAssessment,
@@ -15,6 +16,7 @@ import type {
   VerdictContent,
   VerdictRating,
 } from "../lib/types";
+import { isFundBlindPass } from "../lib/types";
 import { Button, Card, EmptyState } from "./ui";
 
 /** The Buffett/Munger analysis for one holding (Sprint 4 frontend = F1,
@@ -34,7 +36,7 @@ import { Button, Card, EmptyState } from "./ui";
 // Readiness checks that matter for a run on the PC. Provider/quota/Ollama
 // checks describe this server's configuration, not the worker's (mirrors
 // QUEUE_BLOCKING_CHECKS in backend/app/services/analysis/queue.py).
-const LOCAL_BLOCKING_CHECKS = new Set(["instrument_type", "ticker", "financials"]);
+const LOCAL_BLOCKING_CHECKS = new Set(["instrument_type", "ticker", "financials", "fund_profile"]);
 const QUEUE_POLL_MS = 15000;
 
 function errorText(err: unknown): string {
@@ -373,7 +375,9 @@ function VerdictCard({
         </div>
         <div className="md:text-right">
           <p className="text-xs text-ink-muted">Price target range</p>
-          {run.price_target_low && run.price_target_high ? (
+          {run.schema_version.startsWith("fund") ? (
+            <p className="mt-1 text-sm text-ink-faint">Not applicable to a fund (no DCF)</p>
+          ) : run.price_target_low && run.price_target_high ? (
             <>
               <p className="tabular mt-1 text-xl font-semibold text-ink">
                 {formatDecimal(run.price_target_low)} – {formatDecimal(run.price_target_high)}
@@ -413,9 +417,35 @@ function VerdictCard({
 // ---------------------------------------------------------------------------
 // Moat and narrative sections
 
+/** Sprint 8: a fund's moat is the look-through moat of what it owns, with
+ * a caveat saying how much of the fund the judgement rests on. */
+function FundMoatCard({
+  blind,
+  evidence,
+}: {
+  blind: FundBlindPassOutput;
+  evidence: Map<string, EvidenceItem>;
+}) {
+  const moat = blind.moat;
+  return (
+    <Card>
+      <div className="flex items-center justify-between gap-4">
+        <h3 className="text-sm font-semibold text-ink">The businesses underneath (look-through moat)</h3>
+        <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${MOAT_STYLES[moat.overall_rating]}`}>
+          {moat.overall_rating === "None" ? "No moat" : `${moat.overall_rating} moat`}
+        </span>
+      </div>
+      <p className="mt-2 text-sm text-ink">{moat.circle_of_competence_summary}</p>
+      <p className="mt-2 text-xs text-caution">Coverage: {moat.coverage_caveat}</p>
+      <Citations ids={moat.evidence_ids} evidence={evidence} />
+    </Card>
+  );
+}
+
 function MoatCard({ run, evidence }: { run: AnalysisRun; evidence: Map<string, EvidenceItem> }) {
-  const moat = run.blind_pass?.moat;
-  if (!moat) return null;
+  const blind = run.blind_pass;
+  if (!blind || isFundBlindPass(blind)) return null;
+  const moat = blind.moat;
   return (
     <Card>
       <div className="flex items-center justify-between gap-4">
@@ -828,7 +858,20 @@ export function AnalysisPanel({ holdingId }: { holdingId: string }) {
 
       {run && verdict && <VerdictCard run={run} verdict={verdict} evidence={evidence} />}
 
-      {run && blind && (
+      {run && blind && isFundBlindPass(blind) && (
+        <>
+          <FundMoatCard blind={blind} evidence={evidence} />
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <NarrativeCard title="Steward & costs" section={blind.steward_and_costs} evidence={evidence} />
+            <NarrativeCard title="Portfolio construction" section={blind.portfolio_construction} evidence={evidence} />
+            <NarrativeCard title="Macro & industry stress test" section={blind.macro_stress_test} evidence={evidence} />
+            <NarrativeCard title="Valuation" section={blind.valuation_synthesis} evidence={evidence} />
+          </div>
+          <NarrativeCard title="Role in your portfolio" section={blind.role_in_portfolio} evidence={evidence} />
+        </>
+      )}
+
+      {run && blind && !isFundBlindPass(blind) && (
         <>
           <MoatCard run={run} evidence={evidence} />
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

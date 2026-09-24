@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { api, ApiError } from "../lib/api";
 import { formatDate, formatNok, formatPct100 } from "../lib/format";
 import type { AllocationSlice, PortfolioOverview, RatingSlice, SummaryPoint } from "../lib/types";
-import { INSTRUMENT_TYPE_LABELS } from "../lib/types";
+import { EQUITY_ANALYZABLE_TYPES, INSTRUMENT_TYPE_LABELS } from "../lib/types";
 import { Card, EmptyState, PageHeader, SectionTitle, StatTile, VerdictBadge } from "../components/ui";
 
 /** Sprint 5 dashboard, the app's home page. Everything comes from
@@ -195,7 +195,7 @@ function PositionsCard({ overview }: { overview: PortfolioOverview }) {
                   {p.sector && <> · {p.sector}</>}
                 </td>
                 <td className="py-2.5 pr-4">
-                  {p.instrument_type === "stock" || p.instrument_type === "equity_etf" ? (
+                  {EQUITY_ANALYZABLE_TYPES.has(p.instrument_type) ? (
                     <span className="inline-flex items-center gap-1.5">
                       <VerdictBadge
                         rating={p.verdict_rating}

@@ -19,10 +19,10 @@ export interface Holding {
   institution: string | null;
   custody_type: string | null;
   /** Instrument type tagged on import (app/domain/instrument_types.py) —
-   * "stock" | "equity_etf" | "bond_fund" | "money_market_fund" |
-   * "commodity_etc". Only "stock"/"equity_etf" are in scope for the
-   * Buffett/Munger analysis engine; the rest are tracked for portfolio
-   * composition only. */
+   * "stock" | "equity_etf" | "equity_fund" | "bond_fund" |
+   * "money_market_fund" | "commodity_etc". "stock" gets the single-company
+   * analysis; "equity_etf"/"equity_fund" the fund analysis (Sprint 8); the
+   * rest are tracked for portfolio composition only. */
   asset_class_raw: string;
   created_at: string;
   updated_at: string;
@@ -33,12 +33,15 @@ export interface Holding {
 export const INSTRUMENT_TYPE_LABELS: Record<string, string> = {
   stock: "Stock",
   equity_etf: "Equity ETF",
+  equity_fund: "Equity fund",
   bond_fund: "Bond fund",
   money_market_fund: "Money-market fund",
   commodity_etc: "Commodity ETC",
 };
 
-export const EQUITY_ANALYZABLE_TYPES = new Set(["stock", "equity_etf"]);
+export const EQUITY_ANALYZABLE_TYPES = new Set(["stock", "equity_etf", "equity_fund"]);
+/** Analysed as a fund (look-through, cost, track record) — Sprint 8. */
+export const FUND_TYPES = new Set(["equity_etf", "equity_fund"]);
 
 /** Mirrors backend/app/schemas/holding.py's `HoldingFieldOptions` — backs
  * the manual-edit dropdowns for Sector and Instrument Type on
@@ -542,6 +545,30 @@ export interface BlindPassOutput {
   verdict: VerdictContent;
 }
 
+/** Sprint 8: the fund / ETF blind pass (backend schema "fund_v1"). */
+export interface LookThroughMoat {
+  circle_of_competence_summary: string;
+  overall_rating: MoatRating;
+  coverage_caveat: string;
+  evidence_ids: string[];
+}
+
+export interface FundBlindPassOutput {
+  moat: LookThroughMoat;
+  steward_and_costs: NarrativeAssessment;
+  portfolio_construction: NarrativeAssessment;
+  macro_stress_test: NarrativeAssessment;
+  valuation_synthesis: NarrativeAssessment;
+  role_in_portfolio: NarrativeAssessment;
+  verdict: VerdictContent;
+}
+
+export function isFundBlindPass(
+  output: BlindPassOutput | FundBlindPassOutput,
+): output is FundBlindPassOutput {
+  return "role_in_portfolio" in output;
+}
+
 export interface ReconciliationOutput {
   verdict: VerdictContent;
   reconciliation_narrative: string;
@@ -584,7 +611,8 @@ export interface AnalysisRun {
   completed_at: string | null;
   error_message: string | null;
   evidence_unavailable_reasons: string[];
-  blind_pass: BlindPassOutput | null;
+  /** Shape depends on schema_version: "v1" (a company) or "fund_v1". */
+  blind_pass: BlindPassOutput | FundBlindPassOutput | null;
   blind_pass_citation_warnings: string[] | null;
   reconciliation: ReconciliationOutput | null;
   reconciliation_citation_warnings: string[] | null;
@@ -943,3 +971,180 @@ export const JOURNAL_ACTIONS: { key: JournalAction; label: string }[] = [
   { key: "hold", label: "Hold" },
   { key: "pass", label: "Pass" },
 ];
+
+// --- Sprint 8: fund / ETF facts (backend/app/api/funds.py) ---
+
+export type FundDimension = "holding" | "sector" | "country" | "currency";
+
+export interface FundProfile {
+  id: string;
+  holding_id: string;
+  management_style: "active" | "index";
+  benchmark_name: string | null;
+  ongoing_charge_pct: string | null;
+  performance_fee: string | null;
+  domicile: string | null;
+  base_currency: string | null;
+  replication: "physical" | "synthetic" | "sampling" | null;
+  distribution: "accumulating" | "distributing" | null;
+  fund_size: string | null;
+  fund_size_currency: string | null;
+  inception_date: string | null;
+  risk_class: number | null;
+  holdings_count: number | null;
+  strategy_summary: string | null;
+  report_name_filter: string | null;
+  as_of_date: string | null;
+  source_document_id: string;
+  source_page: number | null;
+  updated_at: string;
+}
+
+export type FundProfileInput = Omit<FundProfile, "id" | "holding_id" | "updated_at">;
+
+export interface FundReturn {
+  id?: string;
+  period_kind: "calendar_year" | "rolling_12m" | "trailing" | "since_inception";
+  period_label: string;
+  years: string | null;
+  annualised: boolean;
+  fund_return_pct: string;
+  benchmark_return_pct: string | null;
+  benchmark_name: string | null;
+  end_date: string | null;
+  source_document_id: string;
+  source_page: number | null;
+}
+
+export interface FundExposure {
+  id: string;
+  dimension: FundDimension;
+  label: string;
+  weight_pct: string;
+  ticker: string | null;
+  isin: string | null;
+  linked_holding_id: string | null;
+  link_method: "ticker" | "name" | "manual" | null;
+  as_of_date: string;
+  source_document_id: string;
+  source_page: number | null;
+}
+
+export interface FundExposureRowInput {
+  label: string;
+  weight_pct: string;
+  ticker?: string | null;
+  isin?: string | null;
+  source_page?: number | null;
+}
+
+export interface FundDocument {
+  id: string;
+  original_filename: string;
+  type: string;
+  reporting_period: string | null;
+}
+
+export interface FundReturnRow {
+  id: string;
+  period_kind: string;
+  period_label: string;
+  fund_return_pct: string;
+  benchmark_return_pct: string | null;
+  benchmark_name: string | null;
+  difference_pp: string | null;
+  fund_annualised_pct: string | null;
+  benchmark_annualised_pct: string | null;
+  annualised_difference_pp: string | null;
+}
+
+export interface FundLookThroughHolding {
+  exposure_id: string;
+  label: string;
+  weight_pct: string;
+  linked_holding_id: string | null;
+  linked_ticker: string | null;
+  link_method: string | null;
+  latest_period: string | null;
+  roe_pct: string | null;
+  operating_margin_pct: string | null;
+  net_debt_to_ebitda: string | null;
+  moat_rating: string | null;
+  verdict_rating: string | null;
+  direct_value_nok: string | null;
+  through_fund_value_nok: string | null;
+}
+
+export interface FundMetrics {
+  cost: {
+    ongoing_charge_pct: string | null;
+    fee_drag_pct: Record<string, string>;
+    yearly_fee_nok: string | null;
+  };
+  track_record: {
+    gap_label: string;
+    rows: FundReturnRow[];
+    one_year_periods_compared: number;
+    one_year_periods_beaten: number;
+    average_one_year_difference_pp: string | null;
+    longest_period_label: string | null;
+    longest_period_annualised_difference_pp: string | null;
+  };
+  concentration: {
+    as_of_date: string | null;
+    rows_known: number;
+    stated_holdings_count: number | null;
+    coverage_pct: string | null;
+    complete: boolean;
+    top10_pct: string | null;
+    largest: { label: string; weight_pct: string } | null;
+    hhi: string | null;
+    effective_holdings: string | null;
+  };
+  exposures: {
+    dimension: string;
+    as_of_date: string | null;
+    rows: { label: string; weight_pct: string }[];
+    total_pct: string;
+  }[];
+  foreign_currency_pct: string | null;
+  look_through: {
+    holdings: FundLookThroughHolding[];
+    linked_weight_pct: string;
+    with_financials_weight_pct: string;
+    metrics: { key: string; label: string; value: string | null; coverage_pct: string; holdings_used: number }[];
+    moat_mix: Record<string, string>;
+    verdict_mix: Record<string, string>;
+  };
+  overlap: {
+    fund_value_nok: string | null;
+    rows: FundLookThroughHolding[];
+    total_through_fund_nok: string | null;
+  };
+  gaps: string[];
+}
+
+export interface FundFacts {
+  holding_id: string;
+  instrument_type: string;
+  profile: FundProfile | null;
+  returns: FundReturn[];
+  exposures: Record<FundDimension, FundExposure[]>;
+  documents: FundDocument[];
+  metrics: FundMetrics;
+}
+
+export interface HoldingsImportResult {
+  document_id: string;
+  was_duplicate_file: boolean;
+  as_of_date: string;
+  rows_imported: number;
+  weight_sum_pct: string;
+  linked: number;
+  derived_dimensions: string[];
+  sheet: string;
+  header_row: number;
+  columns: Record<string, string>;
+  weights_were_fractions: boolean;
+  warnings: string[];
+}

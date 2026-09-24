@@ -14,7 +14,7 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
-from app.domain.analysis_schema import BlindPassOutputV1, ReconciliationOutputV1
+from app.domain.analysis_schema import BlindPassOutputV1, FundBlindPassOutputV1, ReconciliationOutputV1
 
 
 class EvidenceItemOut(BaseModel):
@@ -48,7 +48,8 @@ class EquityAnalysisRunOut(BaseModel):
     completed_at: datetime | None
     error_message: str | None
     evidence_unavailable_reasons: list[str]
-    blind_pass: BlindPassOutputV1 | None
+    # Which one is decided by `schema_version` ("v1" vs "fund_v1", Sprint 8).
+    blind_pass: BlindPassOutputV1 | FundBlindPassOutputV1 | None
     blind_pass_citation_warnings: list[str] | None
     reconciliation: ReconciliationOutputV1 | None
     reconciliation_citation_warnings: list[str] | None

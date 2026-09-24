@@ -218,12 +218,17 @@ def _passages_for(db: Session, document: Document) -> list[Passage]:
     ]
 
 
-def _is_boilerplate(passage: Passage) -> bool:
+def _is_boilerplate(passage: Passage, extra_text_markers: tuple[str, ...] = ()) -> bool:
     section = passage.section.lower()
     if any(marker in section for marker in BOILERPLATE_SECTIONS):
         return True
     lowered = passage.text.lower()
-    return any(marker in lowered for marker in BOILERPLATE_TEXT)
+    return any(marker in lowered for marker in (*BOILERPLATE_TEXT, *extra_text_markers))
+
+
+def _mentions_any(passage: Passage, terms: tuple[str, ...]) -> bool:
+    haystack = f"{passage.section}\n{passage.text}".lower()
+    return any(term in haystack for term in terms)
 
 
 def _digit_share(text: str) -> float:
@@ -233,7 +238,9 @@ def _digit_share(text: str) -> float:
     return sum(c.isdigit() for c in visible) / len(visible)
 
 
-def score_passage(passage: Passage) -> dict[str, float]:
+def score_passage(
+    passage: Passage, keywords: dict[str, tuple[tuple[str, float], ...]] | None = None
+) -> dict[str, float]:
     """Topic -> score. Keyword hits (capped at 3 per phrase) are scaled by
     passage length so a long passage doesn't win on length alone; a topic
     phrase in the section heading adds a fixed bonus."""
@@ -241,9 +248,9 @@ def score_passage(passage: Passage) -> dict[str, float]:
     heading = passage.section.lower()
     length_factor = math.sqrt(max(len(text), 400) / 1000)
     scores: dict[str, float] = {}
-    for topic, keywords in TOPIC_KEYWORDS.items():
-        raw = sum(weight * min(text.count(phrase), 3) for phrase, weight in keywords)
-        heading_bonus = sum(weight * 2 for phrase, weight in keywords if phrase in heading)
+    for topic, topic_keywords in (keywords or TOPIC_KEYWORDS).items():
+        raw = sum(weight * min(text.count(phrase), 3) for phrase, weight in topic_keywords)
+        heading_bonus = sum(weight * 2 for phrase, weight in topic_keywords if phrase in heading)
         scores[topic] = raw / length_factor + heading_bonus
     return scores
 
@@ -269,7 +276,19 @@ def select_document_excerpts(
     token_budget: int,
     max_excerpt_chars: int,
     max_documents: int,
+    topic_labels: dict[str, str] | None = None,
+    topic_keywords: dict[str, tuple[tuple[str, float], ...]] | None = None,
+    required_terms: tuple[str, ...] = (),
+    extra_boilerplate_text: tuple[str, ...] = (),
 ) -> ExcerptSelection:
+    """Defaults = the single-company topics. The fund path (Sprint 8,
+    app/services/funds/evidence.py) passes its own topics, fund disclaimers
+    as extra boilerplate, and `required_terms`: only passages whose heading
+    or text mentions one of them are used — how one sub-fund is picked out
+    of an umbrella report covering dozens."""
+    labels = topic_labels or TOPIC_LABELS
+    keywords = topic_keywords or TOPIC_KEYWORDS
+    terms = tuple(t.lower() for t in required_terms if t.strip())
     selection = ExcerptSelection()
     documents = _narrative_documents(db, holding)[:max_documents]
     if not documents:
@@ -283,32 +302,36 @@ def select_document_excerpts(
     for rank, document in enumerate(documents):
         recency = RECENCY_WEIGHTS[min(rank, len(RECENCY_WEIGHTS) - 1)]
         for passage in _passages_for(db, document):
-            if len(passage.text) < MIN_PASSAGE_CHARS or _is_boilerplate(passage):
+            if len(passage.text) < MIN_PASSAGE_CHARS or _is_boilerplate(passage, extra_boilerplate_text):
+                continue
+            if terms and not _mentions_any(passage, terms):
                 continue
             if _digit_share(passage.text) > MAX_DIGIT_SHARE:
                 continue
-            scores = score_passage(passage)
+            scores = score_passage(passage, keywords)
             topic = max(scores, key=lambda t: scores[t])
             score = scores[topic] * recency
             if score >= MIN_SCORE:
                 candidates.append(ScoredPassage(passage=passage, topic=topic, score=score))
 
     if not candidates:
-        selection.reason = "the uploaded documents had no passages on moat, capital allocation, risks, outlook or management"
+        topics = ", ".join(label.lower() for label in labels.values())
+        scope = f" mentioning {' / '.join(repr(t) for t in terms)}" if terms else ""
+        selection.reason = f"the uploaded documents had no passages{scope} on {topics}"
         return selection
 
-    by_topic: dict[str, list[ScoredPassage]] = {topic: [] for topic in TOPIC_LABELS}
+    by_topic: dict[str, list[ScoredPassage]] = {topic: [] for topic in labels}
     for candidate in sorted(candidates, key=lambda c: c.score, reverse=True):
         by_topic[candidate.topic].append(candidate)
 
     per_document_cap = token_budget * MAX_DOCUMENT_SHARE if len(documents) > 1 else token_budget
     used_by_document: dict[str, int] = {}
-    taken_per_topic: dict[str, int] = {topic: 0 for topic in TOPIC_LABELS}
+    taken_per_topic: dict[str, int] = {topic: 0 for topic in labels}
     seen_text: set[str] = set()
     progress = True
     while progress:
         progress = False
-        for topic in TOPIC_LABELS:
+        for topic in labels:
             queue = by_topic[topic]
             while queue and taken_per_topic[topic] < MAX_PER_TOPIC:
                 candidate = queue.pop(0)
@@ -339,14 +362,23 @@ def _pages(passage: Passage) -> str:
     return f"pp. {passage.page_start}–{passage.page_end}"
 
 
-def add_document_excerpt_evidence(selection: ExcerptSelection, add: Callable) -> None:
+ISSUER_TEXT_PREFIX = "Issuer-written text, quoted as data (management's own claims, not verified facts): "
+
+
+def add_document_excerpt_evidence(
+    selection: ExcerptSelection,
+    add: Callable,
+    *,
+    topic_labels: dict[str, str] | None = None,
+    prefix: str = ISSUER_TEXT_PREFIX,
+) -> None:
+    labels = topic_labels or TOPIC_LABELS
     for excerpt in selection.excerpts:
         passage = excerpt.passage
         period = f", {passage.reporting_period}" if passage.reporting_period else ""
         add(
             "document_excerpt",
-            f"{TOPIC_LABELS[excerpt.topic]}: '{passage.section}' ({passage.filename}, {_pages(passage)})",
-            f"Issuer-written text, quoted as data (management's own claims, not verified facts): "
-            f"«{passage.text}»",
+            f"{labels[excerpt.topic]}: '{passage.section}' ({passage.filename}, {_pages(passage)})",
+            f"{prefix}«{passage.text}»",
             citation=f"Uploaded document '{passage.filename}'{period}, {_pages(passage)}",
         )

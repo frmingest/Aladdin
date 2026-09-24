@@ -28,6 +28,7 @@ from sqlalchemy.orm import Session
 from app.models.analysis import EquityAnalysisRun, EquityHoldingNote
 from app.models.document import Document, DocumentChunk, DocumentPage
 from app.models.financial_line_item import FinancialLineItem
+from app.models.fund import FundExposure, FundProfile, FundReturnPeriod
 from app.models.holding import Holding
 from app.models.journal import DecisionJournalEntry
 from app.models.legacy_analysis import (
@@ -66,6 +67,8 @@ class DeletionCounts:
     holdings: int = 0
     watchlist_items: int = 0
     journal_entries_unlinked: int = 0
+    fund_rows: int = 0
+    fund_links_removed: int = 0
     storage_files_deleted: int = 0
     storage_files_failed: list[str] = field(default_factory=list)
 
@@ -95,6 +98,12 @@ def _delete_document_rows(
         .filter(FinancialLineItem.document_id.in_(document_ids))
         .delete(synchronize_session=False)
     )
+    # Sprint 8: fund figures cite the document they were read from; they
+    # go with it (the same as a document's extracted facts).
+    for model in (FundExposure, FundReturnPeriod, FundProfile):
+        counts.fund_rows += (
+            db.query(model).filter(model.source_document_id.in_(document_ids)).delete(synchronize_session=False)
+        )
     counts.pages += (
         db.query(DocumentPage)
         .filter(DocumentPage.document_id.in_(document_ids))
@@ -160,6 +169,10 @@ def _purge_holding_rows(db: Session, holding_ids: list[uuid.UUID], counts: Delet
         .filter(FinancialLineItem.holding_id.in_(holding_ids))
         .delete(synchronize_session=False)
     )
+    for model in (FundExposure, FundReturnPeriod, FundProfile):
+        counts.fund_rows += (
+            db.query(model).filter(model.holding_id.in_(holding_ids)).delete(synchronize_session=False)
+        )
     counts.analysis_runs += (
         db.query(EquityAnalysisRun)
         .filter(EquityAnalysisRun.holding_id.in_(holding_ids))
@@ -212,6 +225,13 @@ def detach_holding_rows(db: Session, holding_ids: list[uuid.UUID], counts: Delet
     """Only when the holding row itself goes: its watchlist entry is
     removed, and its decision-journal entries are unlinked (holding_id ->
     NULL) but kept, since they are your own record. No commit."""
+    # Another fund's holding row pointing at this company keeps its row
+    # (it is that fund's figure) but loses the link.
+    counts.fund_links_removed += (
+        db.query(FundExposure)
+        .filter(FundExposure.linked_holding_id.in_(holding_ids))
+        .update({"linked_holding_id": None, "link_method": None}, synchronize_session=False)
+    )
     counts.watchlist_items += (
         db.query(WatchlistItem).filter(WatchlistItem.holding_id.in_(holding_ids)).delete(synchronize_session=False)
     )

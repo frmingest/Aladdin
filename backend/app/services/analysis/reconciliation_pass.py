@@ -5,11 +5,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
 from app.config.paths import PROMPTS_DIR
 from app.domain.analysis_schema import (
-    BlindPassOutputV1,
     ReconciliationOutputV1,
     cited_evidence_ids_reconciliation,
     get_reconciliation_schema,
@@ -39,7 +38,7 @@ class ReconciliationPassResult:
 def run_reconciliation_pass(
     llm_provider: LLMProvider,
     packet: EvidencePacket,
-    blind_output: BlindPassOutputV1,
+    blind_output: BaseModel,
     *,
     user_notes: str | None,
     schema_version: str,

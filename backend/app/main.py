@@ -16,6 +16,7 @@ from fastapi.responses import JSONResponse
 from app.api.accounts import router as accounts_router
 from app.api.analysis import router as analysis_router
 from app.api.documents import router as documents_router
+from app.api.funds import router as funds_router
 from app.api.holdings import router as holdings_router
 from app.api.journal import router as journal_router
 from app.api.portfolio import router as portfolio_router
@@ -71,6 +72,7 @@ app.include_router(sources_router)
 app.include_router(system_router)
 app.include_router(watchlist_router)
 app.include_router(journal_router)
+app.include_router(funds_router)
 
 
 @app.get("/health")

@@ -33,7 +33,7 @@ from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app.config.settings import Settings
-from app.domain.instrument_types import EQUITY_ANALYZABLE_TYPES
+from app.domain.instrument_types import EQUITY_ANALYZABLE_TYPES, is_fund_type
 from app.models.analysis import (
     PENDING_RUN_STATUSES,
     AnalysisWorkerHeartbeat,
@@ -45,6 +45,7 @@ from app.models.holding import Holding
 from app.services.analysis.evidence_packet import EVIDENCE_PACKET_VERSION
 from app.services.analysis.pipeline import NotEquityAnalyzableError
 from app.services.analysis.readiness import check_analysis_readiness
+from app.services.funds.evidence import FUND_EVIDENCE_PACKET_VERSION
 
 QUEUED = EquityAnalysisRunStatus.QUEUED.value
 RUNNING = EquityAnalysisRunStatus.RUNNING.value
@@ -56,7 +57,7 @@ LOCAL = EquityAnalysisEngine.LOCAL.value
 # holding. Provider, quota and local-LLM checks describe *this server's*
 # configuration (Railway's), not the worker's, so they're ignored here; the
 # worker checks its own LLM before claiming anything.
-QUEUE_BLOCKING_CHECKS = frozenset({"instrument_type", "ticker", "financials"})
+QUEUE_BLOCKING_CHECKS = frozenset({"instrument_type", "ticker", "financials", "fund_profile"})
 
 
 class RunNotCancellableError(Exception):
@@ -108,6 +109,7 @@ def enqueue_local_run(
         return existing, False
 
     now = now or _now()
+    fund = is_fund_type(holding.asset_class_raw)
     run = EquityAnalysisRun(
         holding_id=holding.id,
         status=QUEUED,
@@ -116,9 +118,13 @@ def enqueue_local_run(
         started_at=now,  # replaced with the claim time when a worker starts it
         # Placeholders: the worker overwrites these with its own code's
         # versions when it executes the run.
-        schema_version=settings.active_analysis_schema_version,
-        blind_prompt_version=settings.active_analysis_prompt_version,
-        evidence_packet_version=EVIDENCE_PACKET_VERSION,
+        schema_version=(
+            settings.active_fund_analysis_schema_version if fund else settings.active_analysis_schema_version
+        ),
+        blind_prompt_version=(
+            settings.active_fund_analysis_prompt_version if fund else settings.active_analysis_prompt_version
+        ),
+        evidence_packet_version=FUND_EVIDENCE_PACKET_VERSION if fund else EVIDENCE_PACKET_VERSION,
         evidence_packet_json={},
         evidence_unavailable_reasons=[],
         attempts=0,

@@ -22,6 +22,7 @@ import re
 
 STOCK = "stock"
 EQUITY_ETF = "equity_etf"
+EQUITY_FUND = "equity_fund"
 BOND_FUND = "bond_fund"
 MONEY_MARKET_FUND = "money_market_fund"
 COMMODITY_ETC = "commodity_etc"
@@ -29,21 +30,33 @@ COMMODITY_ETC = "commodity_etc"
 INSTRUMENT_TYPES: tuple[str, ...] = (
     STOCK,
     EQUITY_ETF,
+    EQUITY_FUND,
     BOND_FUND,
     MONEY_MARKET_FUND,
     COMMODITY_ETC,
 )
 
-# What the Buffett/Munger analysis engine (Sprint 4) is expected to ever
-# run against — a bond fund, money-market fund or physical-gold ETC has no
-# moat/ROIC/owner-earnings to assess. Not enforced anywhere yet; documented
-# here so Sprint 4 has a single place to read this from rather than
-# re-deriving it.
-EQUITY_ANALYZABLE_TYPES = frozenset({STOCK, EQUITY_ETF})
+# Sprint 8 (F9): the analysis engine has two paths.
+# - STOCK_ANALYSIS_TYPES: the single-company path (financial statements,
+#   DCF, moat of one business).
+# - FUND_ANALYSIS_TYPES: the fund path (look-through to the businesses the
+#   fund owns, plus cost, track record and construction of the wrapper) —
+#   app/services/funds/. An equity ETF went through the single-company
+#   path before Sprint 8, where it could never get financials or a DCF.
+# A bond fund, money-market fund or physical-gold ETC has no businesses
+# underneath to assess and stays out of both.
+STOCK_ANALYSIS_TYPES = frozenset({STOCK})
+FUND_ANALYSIS_TYPES = frozenset({EQUITY_ETF, EQUITY_FUND})
+EQUITY_ANALYZABLE_TYPES = STOCK_ANALYSIS_TYPES | FUND_ANALYSIS_TYPES
+
+
+def is_fund_type(instrument_type: str) -> bool:
+    return instrument_type in FUND_ANALYSIS_TYPES
 
 _LABELS: dict[str, str] = {
     STOCK: "Stock",
     EQUITY_ETF: "Equity ETF",
+    EQUITY_FUND: "Equity fund",
     BOND_FUND: "Bond fund",
     MONEY_MARKET_FUND: "Money-market fund",
     COMMODITY_ETC: "Commodity ETC",
@@ -64,6 +77,10 @@ _MONEY_MARKET_PATTERN = re.compile(r"h[øo]yrente", re.IGNORECASE)
 _BOND_PATTERN = re.compile(r"\b(high yield|obligasjon|bond|rente)\b", re.IGNORECASE)
 _ETC_PATTERN = re.compile(r"\b(etc|xetra-gold|physical gold)\b", re.IGNORECASE)
 _ETF_PATTERN = re.compile(r"\betf\b", re.IGNORECASE)
+# Mutual funds (UCITS verdipapirfond). Many Norwegian fund names carry no
+# marker at all ("Heimdal Utbytte A") — those fall through to STOCK and are
+# re-tagged by hand on the Holdings page.
+_FUND_PATTERN = re.compile(r"\b(fund|fond|aksjefond|indeksfond|indeks|index)\b", re.IGNORECASE)
 
 
 def classify_instrument(name: str) -> str:
@@ -81,4 +98,6 @@ def classify_instrument(name: str) -> str:
         return BOND_FUND
     if _ETF_PATTERN.search(name):
         return EQUITY_ETF
+    if _FUND_PATTERN.search(name):
+        return EQUITY_FUND
     return STOCK

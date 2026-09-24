@@ -22,8 +22,30 @@ DOCUMENT_TYPES: tuple[str, ...] = (
     "prospectus",
     "transcript",
     "portfolio_export",
+    "fund_factsheet",
+    "fund_kid",
+    "fund_report",
+    "fund_commentary",
+    "fund_holdings",
     "other",
 )
+
+# Sprint 8 (F9): fund / ETF documents. A fund has no financial statements
+# of its own; these carry its facts instead. fund_factsheet, fund_kid,
+# fund_report (annual/semi-annual report of the fund or its umbrella) and
+# fund_commentary (the manager's monthly letter — marketing material, the
+# weakest evidence tier) are text sources for excerpts and the documents
+# typed fund figures cite. fund_holdings is a provider holdings file
+# (CSV/XLSX) imported by app/services/funds/holdings_import.py: never
+# promoted to financial facts, never used as excerpt text.
+FUND_DOCUMENT_TYPES: tuple[str, ...] = (
+    "fund_factsheet",
+    "fund_kid",
+    "fund_report",
+    "fund_commentary",
+    "fund_holdings",
+)
+DOCUMENT_TYPE_FUND_HOLDINGS = "fund_holdings"
 
 DOCUMENT_STATUS_UPLOADED = "uploaded"
 DOCUMENT_STATUS_PROCESSING = "processing"

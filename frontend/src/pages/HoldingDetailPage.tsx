@@ -8,7 +8,14 @@ import type {
   Holding,
   HoldingMetrics,
 } from "../lib/types";
-import { FACT_LABELS, METRIC_LABELS, METRIC_ORDER, MONEY_METRICS, PERCENT_METRICS } from "../lib/types";
+import {
+  FACT_LABELS,
+  FUND_TYPES,
+  METRIC_LABELS,
+  METRIC_ORDER,
+  MONEY_METRICS,
+  PERCENT_METRICS,
+} from "../lib/types";
 import {
   formatBytes,
   formatDate,
@@ -19,6 +26,7 @@ import {
 } from "../lib/format";
 import { Button, Card, CollapsibleSection, EmptyState, PageHeader, StatusBadge } from "../components/ui";
 import { AnalysisPanel } from "../components/AnalysisPanel";
+import { FundFactsPanel } from "../components/FundFactsPanel";
 import { DocumentFlagsNote } from "../components/DocumentFlagsNote";
 import { ResearchPanel } from "../components/ResearchPanel";
 import { SourcesPanel } from "../components/SourcesPanel";
@@ -235,14 +243,16 @@ function FactSourcesTable({ metrics }: { metrics: HoldingMetrics }) {
 function DocumentsPanel({
   holdingId,
   onUploaded,
+  isFund = false,
 }: {
   holdingId: string;
   onUploaded: () => void;
+  isFund?: boolean;
 }) {
   const [documents, setDocuments] = useState<DocumentSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [documentType, setDocumentType] = useState("annual_report");
+  const [documentType, setDocumentType] = useState(isFund ? "fund_factsheet" : "annual_report");
   const [reportingPeriod, setReportingPeriod] = useState("");
   const [note, setNote] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -344,12 +354,25 @@ function DocumentsPanel({
             onChange={(e) => setDocumentType(e.target.value)}
             className="rounded-md border border-border px-2.5 py-1.5 text-sm focus:border-accent focus:outline-none"
           >
-            <option value="annual_report">Annual report</option>
-            <option value="quarterly_report">Quarterly report</option>
-            <option value="presentation">Presentation</option>
-            <option value="prospectus">Prospectus</option>
-            <option value="transcript">Transcript</option>
-            <option value="other">Other</option>
+            {isFund ? (
+              <>
+                <option value="fund_factsheet">Fact sheet</option>
+                <option value="fund_kid">KID / KIID</option>
+                <option value="fund_report">Fund annual / semi-annual report</option>
+                <option value="fund_commentary">Monthly report / manager commentary</option>
+                <option value="prospectus">Prospectus</option>
+                <option value="other">Other</option>
+              </>
+            ) : (
+              <>
+                <option value="annual_report">Annual report</option>
+                <option value="quarterly_report">Quarterly report</option>
+                <option value="presentation">Presentation</option>
+                <option value="prospectus">Prospectus</option>
+                <option value="transcript">Transcript</option>
+                <option value="other">Other</option>
+              </>
+            )}
           </select>
         </label>
         <label className="flex flex-col gap-1 text-sm">
@@ -376,10 +399,17 @@ function DocumentsPanel({
           />
         </label>
         {uploading && <span className="text-sm text-ink-muted">Uploading…</span>}
-        <p className="basis-full text-xs text-ink-muted">
-          Best source for figures: the ESEF annual report (.xhtml) — every number is tagged. CSV/Excel
-          downloads from the company&apos;s IR page also work; only full-year columns become figures.
-        </p>
+        {isFund ? (
+          <p className="basis-full text-xs text-ink-muted">
+            Fund documents are read as text only: passages become cited excerpts, and the figures you type
+            under Fund facts cite them. A holdings list (CSV/Excel) is imported under Fund facts.
+          </p>
+        ) : (
+          <p className="basis-full text-xs text-ink-muted">
+            Best source for figures: the ESEF annual report (.xhtml) — every number is tagged. CSV/Excel
+            downloads from the company&apos;s IR page also work; only full-year columns become figures.
+          </p>
+        )}
       </div>
 
       {error && <p className="mb-3 text-sm text-negative">{error}</p>}
@@ -546,6 +576,10 @@ export default function HoldingDetailPage() {
     );
   }
 
+  // Sprint 8: an equity ETF / fund is analysed as a fund — Fund facts
+  // replace the company metrics, valuation (DCF) and company research.
+  const isFund = FUND_TYPES.has(holding.asset_class_raw);
+
   return (
     <div className="mx-auto max-w-5xl px-8 py-8">
       <Link to="/holdings" className="mb-4 inline-block text-sm text-ink-muted hover:text-ink">
@@ -586,33 +620,46 @@ export default function HoldingDetailPage() {
         <AnalysisPanel key={metricsKey} holdingId={id} />
       </div>
 
-      <div className="mb-8">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-muted">
-          Deterministic metrics
-        </h2>
-        <MetricsPanel key={metricsKey} holdingId={id} />
-      </div>
+      {isFund ? (
+        <div className="mb-8">
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-muted">
+            Fund facts
+          </h2>
+          <FundFactsPanel key={metricsKey} holdingId={id} />
+        </div>
+      ) : (
+        <div className="mb-8">
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-muted">
+            Deterministic metrics
+          </h2>
+          <MetricsPanel key={metricsKey} holdingId={id} />
+        </div>
+      )}
 
       <div className="mb-8">
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-muted">
           Documents
         </h2>
-        <DocumentsPanel holdingId={id} onUploaded={() => setMetricsKey((k) => k + 1)} />
+        <DocumentsPanel holdingId={id} isFund={isFund} onUploaded={() => setMetricsKey((k) => k + 1)} />
       </div>
 
-      <div className="mb-8">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-muted">
-          Valuation
-        </h2>
-        <ValuationPanel holdingId={id} ticker={holding.ticker} />
-      </div>
+      {!isFund && (
+        <>
+          <div className="mb-8">
+            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-muted">
+              Valuation
+            </h2>
+            <ValuationPanel holdingId={id} ticker={holding.ticker} />
+          </div>
 
-      <div className="mb-8">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-muted">
-          Research
-        </h2>
-        <CompanyResearchSection holdingId={id} ticker={holding.ticker} />
-      </div>
+          <div className="mb-8">
+            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-muted">
+              Research
+            </h2>
+            <CompanyResearchSection holdingId={id} ticker={holding.ticker} />
+          </div>
+        </>
+      )}
 
       <div className="mb-8">
         <CollapsibleSection title="Decision journal" hint="Why you bought or sold, and how it turned out">

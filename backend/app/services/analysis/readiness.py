@@ -29,21 +29,28 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from decimal import Decimal
 from typing import Literal
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config.settings import Settings
-from app.domain.instrument_types import EQUITY_ANALYZABLE_TYPES, display_label
+from app.domain.instrument_types import (
+    EQUITY_ANALYZABLE_TYPES,
+    display_label,
+    is_fund_type,
+)
 from app.domain.period_dates import extract_year
 from app.models.analysis import AnalysisWorkerHeartbeat
+from app.models.document import Document
 from app.models.financial_line_item import FinancialLineItem
 from app.models.holding import Holding
 from app.models.market import MarketObservation
 from app.models.research import ResearchRunType
 from app.providers.budget import DailyBudgetGuard
 from app.providers.ollama_provider import check_ollama_health
+from app.services.funds.facts import get_profile, latest_exposures, list_returns
 from app.services.portfolio_import.ingestion import looks_like_placeholder_ticker
 from app.services.research.common import is_stale, latest_completed_run
 
@@ -105,20 +112,28 @@ def _age_text(value: datetime) -> str:
 
 def _check_instrument_type(holding: Holding) -> ReadinessCheck:
     label = display_label(holding.asset_class_raw)
+    if is_fund_type(holding.asset_class_raw):
+        return ReadinessCheck(
+            "instrument_type",
+            "Instrument type",
+            "ok",
+            f"{label} — analyzed as a fund: look-through to its holdings, cost and track record.",
+        )
     if holding.asset_class_raw in EQUITY_ANALYZABLE_TYPES:
         return ReadinessCheck("instrument_type", "Instrument type", "ok", f"{label} — analyzable.")
     return ReadinessCheck(
         "instrument_type",
         "Instrument type",
         "block",
-        f"Tagged '{label}'. Only Stock and Equity ETF can be analyzed. "
+        f"Tagged '{label}'. Only Stock, Equity ETF and Equity fund can be analyzed. "
         "If the tag is wrong, change Instrument Type on the Holdings page.",
     )
 
 
-def _check_providers(settings: Settings) -> ReadinessCheck:
+def _check_providers(settings: Settings, *, fund: bool = False) -> ReadinessCheck:
+    """`fund`: the fund path needs no market data or risk-free rate (no DCF)."""
     problems: list[str] = []
-    if settings.market_data_provider not in _VALID_MARKET_DATA:
+    if not fund and settings.market_data_provider not in _VALID_MARKET_DATA:
         problems.append(f"MARKET_DATA_PROVIDER is '{settings.market_data_provider}' (needs 'yfinance')")
     if settings.research_provider not in _VALID_RESEARCH:
         problems.append(f"RESEARCH_PROVIDER is '{settings.research_provider}' (needs 'gemini_search')")
@@ -129,7 +144,7 @@ def _check_providers(settings: Settings) -> ReadinessCheck:
     if problems:
         return ReadinessCheck("providers", "Server configuration", "block", "; ".join(problems) + ".")
 
-    if not settings.fred_api_key:
+    if not fund and not settings.fred_api_key:
         return ReadinessCheck(
             "providers",
             "Server configuration",
@@ -304,8 +319,12 @@ def _check_research(db: Session, holding: Holding) -> tuple[ReadinessCheck, int]
     each) the run will trigger."""
     scopes: list[tuple[str, object]] = [
         ("macro", latest_completed_run(db, type_=ResearchRunType.MACRO.value)),
-        ("company", latest_completed_run(db, type_=ResearchRunType.COMPANY.value, holding_id=holding.id)),
     ]
+    # A fund run does no company research (app/services/funds/evidence.py).
+    if not is_fund_type(holding.asset_class_raw):
+        scopes.append(
+            ("company", latest_completed_run(db, type_=ResearchRunType.COMPANY.value, holding_id=holding.id))
+        )
     if holding.sector:
         scopes.insert(
             1,
@@ -376,6 +395,75 @@ def _check_quota(
     )
 
 
+def _check_fund_facts(db: Session, holding: Holding) -> list[ReadinessCheck]:
+    """Sprint 8: what a fund analysis needs instead of financial statements."""
+    checks: list[ReadinessCheck] = []
+    documents = db.scalar(select(Document.id).where(Document.holding_id == holding.id).limit(1))
+    profile = get_profile(db, holding.id)
+    if profile is None:
+        hint = (
+            "Fill in Fund facts → Profile (style, benchmark, ongoing charge), citing the fact sheet or KID."
+            if documents
+            else "Upload the fund's fact sheet or KID (Documents), then fill in Fund facts → Profile."
+        )
+        checks.append(ReadinessCheck("fund_profile", "Fund profile", "block", f"Missing. {hint}"))
+    elif profile.ongoing_charge_pct is None:
+        checks.append(
+            ReadinessCheck(
+                "fund_profile", "Fund profile", "warn",
+                f"{profile.management_style.capitalize()} fund, but no ongoing charge entered — cost can't be judged.",
+            )
+        )
+    else:
+        checks.append(
+            ReadinessCheck(
+                "fund_profile", "Fund profile", "ok",
+                f"{profile.management_style.capitalize()}, ongoing charge {profile.ongoing_charge_pct:.2f}%, "
+                f"benchmark: {profile.benchmark_name or 'none stated'}.",
+            )
+        )
+
+    returns = list_returns(db, holding.id)
+    compared = [r for r in returns if r.benchmark_return_pct is not None]
+    if not returns:
+        checks.append(
+            ReadinessCheck("fund_returns", "Track record", "warn", "No reported returns entered (Fund facts → Returns).")
+        )
+    elif not compared:
+        checks.append(
+            ReadinessCheck(
+                "fund_returns", "Track record", "warn",
+                f"{len(returns)} period(s), none with a benchmark return — excess return / tracking difference unknown.",
+            )
+        )
+    else:
+        checks.append(
+            ReadinessCheck(
+                "fund_returns", "Track record", "ok", f"{len(returns)} period(s), {len(compared)} with a benchmark."
+            )
+        )
+
+    _as_of, rows = latest_exposures(db, holding.id, "holding")
+    if not rows:
+        checks.append(
+            ReadinessCheck(
+                "fund_holdings", "Holdings (look-through)", "warn",
+                "No holdings — the verdict would rest on cost and track record only. Import the provider's "
+                "holdings file or type in the top 10 from the fact sheet.",
+            )
+        )
+    else:
+        coverage = sum((r.weight_pct for r in rows), Decimal(0))
+        linked = sum(1 for r in rows if r.linked_holding_id is not None)
+        checks.append(
+            ReadinessCheck(
+                "fund_holdings", "Holdings (look-through)", "ok",
+                f"{len(rows)} holdings covering {coverage:.1f}% of the fund; {linked} linked to companies in the app.",
+            )
+        )
+    return checks
+
+
 def check_analysis_readiness(
     db: Session,
     holding: Holding,
@@ -384,16 +472,20 @@ def check_analysis_readiness(
     budget_guard: DailyBudgetGuard | None,
 ) -> ReadinessReport:
     report = ReadinessReport(holding_id=holding.id)
+    fund = is_fund_type(holding.asset_class_raw)
     report.checks.append(_check_instrument_type(holding))
-    report.checks.append(_check_providers(settings))
+    report.checks.append(_check_providers(settings, fund=fund))
     local_llm_check = _check_local_llm(settings)
     if local_llm_check is not None:
         report.checks.append(local_llm_check)
     local_worker_check = _check_local_worker(db, settings)
     if local_worker_check is not None:
         report.checks.append(local_worker_check)
-    report.checks.extend(_check_ticker_and_price(db, holding, settings))
-    report.checks.append(_check_financial_history(db, holding))
+    if fund:
+        report.checks.extend(_check_fund_facts(db, holding))
+    else:
+        report.checks.extend(_check_ticker_and_price(db, holding, settings))
+        report.checks.append(_check_financial_history(db, holding))
     report.checks.append(_check_sector(holding))
 
     research_check, research_calls = _check_research(db, holding)

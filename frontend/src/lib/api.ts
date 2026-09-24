@@ -22,6 +22,11 @@ import type {
   DeletionResult,
   DocumentSummary,
   EdgarImport,
+  FundDimension,
+  FundExposureRowInput,
+  FundFacts,
+  FundProfileInput,
+  FundReturn,
   Holding,
   HoldingAnnouncements,
   HoldingCreateInput,
@@ -30,6 +35,7 @@ import type {
   HoldingNote,
   HoldingUpdateInput,
   HoldingValuation,
+  HoldingsImportResult,
   Journal,
   JournalEntry,
   JournalEntryInput,
@@ -301,6 +307,34 @@ export const api = {
     request<QueuedRun>(`/analysis/runs/${runId}/cancel`, { method: "POST" }),
   getAnalysisReadiness: (holdingId: string) =>
     request<AnalysisReadiness>(`/analysis/holdings/${holdingId}/readiness`),
+  // Sprint 8: fund / ETF facts — see backend/app/api/funds.py. Figures are
+  // typed in (each citing an uploaded document) or imported from a holdings
+  // file; never read out of a PDF by an LLM.
+  getFundFacts: (holdingId: string) => request<FundFacts>(`/funds/${holdingId}`),
+  saveFundProfile: (holdingId: string, input: FundProfileInput) =>
+    request<FundFacts>(`/funds/${holdingId}/profile`, { method: "PUT", body: JSON.stringify(input) }),
+  saveFundReturns: (holdingId: string, rows: FundReturn[]) =>
+    request<FundFacts>(`/funds/${holdingId}/returns`, { method: "PUT", body: JSON.stringify(rows) }),
+  saveFundExposures: (
+    holdingId: string,
+    dimension: FundDimension,
+    input: { as_of_date: string; source_document_id: string; rows: FundExposureRowInput[] },
+  ) =>
+    request<FundFacts>(`/funds/${holdingId}/exposures/${dimension}`, {
+      method: "PUT",
+      body: JSON.stringify(input),
+    }),
+  setFundHoldingLink: (holdingId: string, exposureId: string, linkedHoldingId: string | null) =>
+    request<FundFacts>(`/funds/${holdingId}/exposures/${exposureId}/link`, {
+      method: "PATCH",
+      body: JSON.stringify({ linked_holding_id: linkedHoldingId }),
+    }),
+  importFundHoldings: (holdingId: string, file: File, asOfDate?: string) => {
+    const form = new FormData();
+    form.set("file", file);
+    if (asOfDate) form.set("as_of_date", asOfDate);
+    return request<HoldingsImportResult>(`/funds/${holdingId}/holdings/import`, { method: "POST", body: form });
+  },
   getAnalysisNotes: (holdingId: string) =>
     request<HoldingNote>(`/analysis/holdings/${holdingId}/notes`),
   saveAnalysisNotes: (holdingId: string, content: string) =>

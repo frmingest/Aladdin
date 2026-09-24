@@ -11,6 +11,7 @@ from app.models.analysis import AnalysisWorkerHeartbeat, EquityAnalysisRun, Equi
 from app.models.base import Base
 from app.models.document import Document, DocumentChunk, DocumentPage
 from app.models.financial_line_item import FinancialLineItem
+from app.models.fund import FundExposure, FundProfile, FundReturnPeriod
 from app.models.holding import Holding
 from app.models.journal import DecisionJournalEntry
 from app.models.legacy_analysis import (
@@ -39,6 +40,9 @@ __all__ = [
     "EvidenceReference",
     "FactorAssessment",
     "FinancialLineItem",
+    "FundExposure",
+    "FundProfile",
+    "FundReturnPeriod",
     "FxObservation",
     "Holding",
     "HoldingAnalysis",
