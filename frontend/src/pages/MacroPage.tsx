@@ -4,6 +4,7 @@ import { api, ApiError } from "../lib/api";
 import type { Holding, MacroResearch } from "../lib/types";
 import { PageHeader } from "../components/ui";
 import { ResearchPanel } from "../components/ResearchPanel";
+import { MacroIndicatorsPanel } from "../components/MacroIndicatorsPanel";
 
 /**
  * Portfolio-wide macro/geopolitical research (Sprint 2 — the Brain's
@@ -49,8 +50,12 @@ export default function MacroPage() {
     <div className="mx-auto max-w-5xl px-8 py-8">
       <PageHeader
         title="Macro"
-        subtitle="Live, evidence-first macro & geopolitical research — Gemini + Google Search grounding."
+        subtitle="Official rates, inflation and currency data, plus evidence-first macro & geopolitical research."
       />
+
+      <div className="mb-6">
+        <MacroIndicatorsPanel />
+      </div>
 
       <div className="mb-6">
         <ResearchPanel

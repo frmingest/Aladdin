@@ -36,6 +36,7 @@ def main(argv: list[str] | None = None) -> int:
     from app.providers.factory import (
         build_llm_provider,
         get_announcements_provider_or_none,
+    get_macro_data_provider_or_none,
         get_market_data_provider,
         get_primary_budget_guard,
         get_research_provider,
@@ -68,6 +69,7 @@ def main(argv: list[str] | None = None) -> int:
         research=get_research_provider(),
         announcements=get_announcements_provider_or_none(),
         budget_guard=get_primary_budget_guard(),
+        macro_data=get_macro_data_provider_or_none(),
     )
     hostname = socket.gethostname()
     worker_id = settings.worker_id or hostname

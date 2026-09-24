@@ -1,0 +1,131 @@
+# Sprint 7 guardrail tooling: every push to main and every pull request is
+# linted, tested, built, migrated on a real Postgres and scanned for secrets.
+# Nothing here deploys; Railway still deploys from main on its own.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend (ruff + pytest)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12" # matches backend/Dockerfile
+          cache: pip
+          cache-dependency-path: |
+            backend/requirements.txt
+            backend/requirements-dev.txt
+      - run: pip install -r requirements-dev.txt
+      - name: Ruff
+        run: ruff check .
+      - name: Pytest
+        # The suite uses in-memory SQLite and fakes for every provider:
+        # no API key, no network, no real data.
+        env:
+          LLM_PROVIDER: google_ai_studio
+          MACRO_DATA_PROVIDER: none
+        run: pytest -q
+
+  migrations:
+    name: Migrations (Postgres 16, up / down / up)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: aladdin
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/aladdin
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - run: pip install -r requirements.txt
+      - run: alembic upgrade head
+      - name: Newest migration reverses cleanly
+        run: alembic downgrade -1 && alembic upgrade head
+      - name: Exactly one head
+        run: test "$(alembic heads | wc -l)" -eq 1
+
+  frontend:
+    name: Frontend (tsc + eslint + vitest + build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "20" # matches frontend/Dockerfile
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npx tsc --noEmit -p .
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+
+  secrets:
+    name: Secret scan (gitleaks, full history)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Install gitleaks 8.30.1
+        run: |
+          curl -sSfL -o /tmp/gitleaks.tgz \
+            https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz
+          tar -xzf /tmp/gitleaks.tgz -C /tmp gitleaks
+      - name: Scan
+        run: /tmp/gitleaks git . --redact --no-banner --config .gitleaks.toml
+
+  dependency-audit:
+    name: Dependency audit (report only)
+    runs-on: ubuntu-latest
+    # Report-only for now: a new advisory against a pinned dependency should
+    # be looked at, not block an unrelated change. Make it blocking once it
+    # has run clean for a while (see docs/PROGRESS.md).
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: pip install pip-audit==2.9.0
+      - name: Python (backend/requirements.txt)
+        run: pip-audit -r backend/requirements.txt --progress-spinner off
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "20"
+      - name: npm (frontend, production deps)
+        working-directory: frontend
+        run: npm audit --omit=dev --audit-level=high

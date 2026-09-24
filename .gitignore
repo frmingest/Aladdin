@@ -38,3 +38,7 @@ uploads/
 *.xlsx
 !docs/**/*.pdf
 *.tsbuildinfo
+
+# --- Playwright smoke test output ---
+frontend/playwright-report/
+frontend/test-results/

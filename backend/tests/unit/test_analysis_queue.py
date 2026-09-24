@@ -209,7 +209,7 @@ def _own(db: Session, holdings: list[Holding]) -> None:
     db.add(snap)
     db.flush()
     for holding in holdings:
-        db.add(PortfolioPosition(snapshot_id=snap.id, holding_id=holding.id, quantity=Decimal("1")))
+        db.add(PortfolioPosition(snapshot_id=snap.id, holding_id=holding.id, quantity=Decimal(1)))
     db.commit()
 
 
@@ -221,7 +221,7 @@ def _three_years(db: Session, holding: Holding) -> None:
     db.flush()
     for period in ("FY2023", "FY2024", "FY2025"):
         for metric in ("net_income", "total_equity"):
-            db.add(FinancialLineItem(document=doc, holding=holding, metric=metric, value=Decimal("1"),
+            db.add(FinancialLineItem(document=doc, holding=holding, metric=metric, value=Decimal(1),
                                      unit="USD", currency="USD", period=period, confidence=0.9))
     db.commit()
 

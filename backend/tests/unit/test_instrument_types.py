@@ -31,7 +31,11 @@ def test_classifies_plain_company_name_as_stock():
 
 
 def test_classifies_equity_fund_sprint8():
-    from app.domain.instrument_types import EQUITY_FUND, FUND_ANALYSIS_TYPES, is_fund_type
+    from app.domain.instrument_types import (
+        EQUITY_FUND,
+        FUND_ANALYSIS_TYPES,
+        is_fund_type,
+    )
 
     assert classify_instrument("DNB Norden Indeks A") == EQUITY_FUND
     assert classify_instrument("Storebrand Global Fund") == EQUITY_FUND

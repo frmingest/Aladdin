@@ -40,6 +40,8 @@ import type {
   JournalEntry,
   JournalEntryInput,
   JournalEntryUpdate,
+  MacroIndicators,
+  MacroRefreshResult,
   MacroResearch,
   MarginOfSafetyBoard,
   PortfolioImportResponse,
@@ -223,6 +225,9 @@ export const api = {
   // cache-or-refresh-if-stale; the /refresh POSTs force a real provider
   // call regardless of freshness ("I want this now", no scheduler exists).
   getMacroResearch: () => request<MacroResearch>("/research/macro"),
+  getMacroIndicators: () => request<MacroIndicators>("/macro/indicators"),
+  refreshMacroIndicators: () =>
+    request<MacroRefreshResult>("/macro/indicators/refresh", { method: "POST" }),
   refreshMacroResearch: () =>
     request<MacroResearch>("/research/macro/refresh", { method: "POST" }),
 

@@ -14,7 +14,11 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
-from app.domain.analysis_schema import BlindPassOutputV1, FundBlindPassOutputV1, ReconciliationOutputV1
+from app.domain.analysis_schema import (
+    BlindPassOutputV1,
+    FundBlindPassOutputV1,
+    ReconciliationOutputV1,
+)
 
 
 class EvidenceItemOut(BaseModel):

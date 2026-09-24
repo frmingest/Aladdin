@@ -76,6 +76,17 @@ repo copy.
   first.
 - Never commit `.env`, real API keys, real portfolio data, or real uploaded documents.
 
+## Guardrail tooling (Sprint 7)
+
+- `.github/workflows/ci.yml` runs on every push/PR: ruff + pytest, migrations up/down/up on
+  Postgres 16, tsc + eslint + vitest + build, gitleaks over full history, dependency audit
+  (report-only). Keep it green; don't weaken a check to get a change through.
+- `.pre-commit-config.yaml` runs the same ruff/gitleaks plus blocks `.env` files and document
+  uploads (`.pdf`/`.xlsx`/`.xhtml`/…) outside `docs/`. Ruff is pinned in
+  `backend/requirements-dev.txt`; bump it there and in the pre-commit `rev` together.
+- `frontend/e2e/smoke.spec.ts` (`npm run smoke`, workflow `smoke.yml`) is the post-deploy check.
+  It must stay read-only: no non-GET requests, no endpoint that can spend LLM quota.
+
 ## Destructive operations
 
 Any destructive endpoint (deleting portfolio data, resetting the database, etc.) must keep

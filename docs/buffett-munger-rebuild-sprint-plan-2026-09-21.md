@@ -77,6 +77,7 @@ holding's notes), Rule 5 (both prompts explicitly frame evidence/notes as data, 
 | 20 | Using the local LLM from Railway (2026-09-23) | **Recommended: a worker on Faiz's PC pulls queued runs from the shared database** (no tunnel, no inbound port). Built in Sprint 5B (F8, with F5), `18e8a4e`. |
 | 21 | Where research runs for a local run (2026-09-23) | **On the PC.** The worker does research (Gemini), the evidence packet and both passes (Ollama) in one place, so a run is never half-done across two machines. |
 | 23 | Fund / ETF figures (2026-09-24) | **Typed in on a Fund facts form, each row citing an uploaded document (+ page), plus a deterministic holdings-file (CSV/XLSX) import** — no LLM reads a fund figure out of a PDF. First look-through: weights + holdings linked to the app's companies (with coverage %). Built in Sprint 8, `8847311`. See [fund-etf-analysis-sprint8-2026-09-24.md](fund-etf-analysis-sprint8-2026-09-24.md). |
+| 24 | Numeric macro data (2026-09-24) | **Core set of 13 series (Norges Bank, SSB, FRED) + 3 derived, used on the Macro page, the dashboard and in the analysis** (evidence packet v5 / fund-v2, cited `macro_indicator` items). No prompt or schema change. Built `c4b2ed2`, `551a141`. See [macro-data-and-guardrails-sprint7-2026-09-24.md](macro-data-and-guardrails-sprint7-2026-09-24.md). |
 | 22 | Sprint 6 evidence selection (2026-09-24) | **Deterministic keyword + section rules, ~4,000-token budget** (no embeddings). Uploaded document passages enter the evidence packet (v4) as quoted, cited `document_excerpt` items; prompts v2. Built `71ec23b`. See [evidence-quality-sprint6-2026-09-24.md](evidence-quality-sprint6-2026-09-24.md). |
 
 ## Actual current Supabase schema
@@ -92,7 +93,7 @@ shared tables.
 | `risk_free_rate_observations` | New table + migration in Sprint 3 |
 | `analysis_runs`, `holding_analyses`, `factor_assessments`, `evidence_references` | Phase 3 — legacy, mapped read/delete-only (`app/models/legacy_analysis.py`) so a snapshot delete can cascade-purge them. **Sprint 4 built its own fresh schema instead** (`equity_analysis_runs`, `equity_holding_notes`) rather than extending these, per CLAUDE.md Rule 3. |
 | `research_runs`, `research_items` | Phase 4 — built in Sprint 2 |
-| `macro_observations` | Phase 4 (numeric central-bank/macro data) — deliberately deferred, see Backlog |
+| `macro_observations` | Phase 4 table, **used since 2026-09-24** for Norges Bank / SSB / FRED series (+ `source_series_id`, migration `a9b0c1d2e3f4`); new `macro_series_status` alongside |
 | `investment_theses`, `valuation_cases`, `portfolio_risk_snapshots` | Phase 5 — still unused; `investment_theses`/`valuation_cases` are natural homes for a future "persist the reconciliation verdict over time" feature, not built this session |
 | `llm_usage_events` | Not yet re-created this rebuild; `app/providers/budget.py`'s in-memory guard is still the placeholder. Sprint 4's LLM calls are not yet logged here either — a natural pairing with the Backlog's "LLM usage ledger" item |
 | `equity_analysis_runs`, `equity_holding_notes` | **New this session (Sprint 4)** — see migration `b5e1a9c3d7f2` |
@@ -262,19 +263,32 @@ role in the portfolio. Decision 23.
 
 Detail: [fund-etf-analysis-sprint8-2026-09-24.md](fund-etf-analysis-sprint8-2026-09-24.md).
 
-### Sprint 7 — Guardrail tooling
+### Sprint 7 — Guardrail tooling — ✅ built 2026-09-24 (`f81a824`, not pushed)
 
-Pre-commit hooks, CI workflow, secret-scanning; also a natural place for a frontend test framework
-if one still doesn't exist by then.
-**+ F4 post-deploy Playwright smoke test against Railway** (agreed 2026-09-22). The F4 status page
-shipped early, on 2026-09-23 (`4abaf3d`).
+| # | Item | Result |
+|---|---|---|
+| 1 | CI (`.github/workflows/ci.yml`) | Backend ruff + pytest; migrations up/down/up on Postgres 16; frontend tsc + eslint + vitest + build; gitleaks full history; dependency audit (report-only) |
+| 2 | Pre-commit | File checks, ruff `--fix`, gitleaks, blocks `.env` files and document uploads |
+| 3 | Secret scanning | `.gitleaks.toml`; 141 commits scanned, no leaks |
+| 4 | Frontend test framework | vitest, first formatter tests |
+| 5 | F4 smoke test | Read-only Playwright suite (16 checks) + `smoke.yml` after each Railway deploy, daily, on demand |
 
-## Backlog — candidate future phases (beyond Sprint 7)
+Detail: [macro-data-and-guardrails-sprint7-2026-09-24.md](macro-data-and-guardrails-sprint7-2026-09-24.md) §5.
+
+### Numeric macro data (F10) — ✅ built 2026-09-24 (`c4b2ed2`, `551a141`, not pushed)
+
+Pulled from the Backlog at Faiz's request (decision 24). Norges Bank policy rate, NOWA, 3m T-bill,
+10y, USD/NOK, EUR/NOK; SSB CPI; FRED fed funds, 10y, 10y−2y, CPI, unemployment, HY spread; derived
+real policy rates and NO−US 10y. Background refresh + refresh before each run; evidence packet v5 /
+fund-v2; Macro page card and dashboard strip. Detail:
+[macro-data-and-guardrails-sprint7-2026-09-24.md](macro-data-and-guardrails-sprint7-2026-09-24.md).
+
+## Backlog — candidate future phases (all planned sprints now built)
 
 | Candidate | What it would deliver | Why it's not scheduled yet |
 |---|---|---|
 | **Sprint 4 frontend** | A holding's analysis view (verdict card, moat breakdown, evidence citations, notes editor) on `HoldingDetailPage` | Deliberately deferred this session, mirroring Sprint 3's backend/frontend split |
-| **Numeric macro data & scheduler** | FRED/Norges Bank central-bank series ingestion, a `MacroDataProvider` interface, optional background scheduler | Explicitly deferred out of Sprint 2 twice — ready to pick up any time |
+| **Numeric macro data & scheduler** | FRED/Norges Bank central-bank series ingestion, a `MacroDataProvider` interface, optional background scheduler | **✅ Built 2026-09-24** (F10, decision 24) |
 | **Portfolio risk & regime intelligence** | Correlation/factor exposure, drawdown scenarios, rebalancing flags, populating `portfolio_risk_snapshots` | Builds naturally on Sprint 3's valuation numbers, now also Sprint 4's verdicts |
 | **Investment thesis tracking over time** | Persist reconciliation verdicts into `investment_theses`/`valuation_cases` (currently unused tables) and flag when new research/financials suggest an invalidation trigger fired | Sprint 4's verdict schema now exists to build this on top of — the natural next step once real runs validate the schema |
 | **Historical price/FX & performance tracking** | Daily P&L, benchmark comparison, position-level return | Sprint 3 built the ingestion path; historical backfill is still unscheduled |
@@ -293,6 +307,8 @@ shipped early, on 2026-09-23 (`4abaf3d`).
 
 | Date | Summary |
 |---|---|
+| 2026-09-24 | **Sprint 7 built: guardrail tooling + F4 smoke test.** CI (ruff, pytest, migrations on Postgres 16, tsc/eslint/vitest/build, gitleaks, dependency audit), pre-commit hooks, `.gitleaks.toml`, read-only Playwright smoke test + `smoke.yml`. `f81a824`, not pushed. See [macro-data-and-guardrails-sprint7-2026-09-24.md](macro-data-and-guardrails-sprint7-2026-09-24.md). |
+| 2026-09-24 | **Numeric macro data built (F10, decision 24).** 13 Norges Bank / SSB / FRED series + 3 derived; migration `a9b0c1d2e3f4` (additive); evidence packet v5 / fund-v2; Macro page + dashboard. 678 tests (29 new). `c4b2ed2`, `551a141`, not pushed. |
 | 2026-09-24 | **Sprint 8 built (decision 23): fund & ETF analysis (F9).** `equity_fund` type; Fund facts typed in with citations or imported from a holdings file; deterministic fee drag, benchmark gap, concentration, look-through and overlap; evidence packet `fund-v1`, schema + prompts `fund_v1`. Migration `f8a9b0c1d2e3` (additive). 649 tests (30 new). `8847311`, not pushed. See [fund-etf-analysis-sprint8-2026-09-24.md](fund-etf-analysis-sprint8-2026-09-24.md). |
 | 2026-09-24 | **Sprint 6 built (decision 22).** Uploaded document text now reaches the analysis: section-aware chunking, deterministic topic scoring within a ~4,000-token budget, evidence packet v4 (`document_excerpt`), prompts v2. No migration. 619 tests (33 new). `71ec23b`, not pushed. See [evidence-quality-sprint6-2026-09-24.md](evidence-quality-sprint6-2026-09-24.md). |
 | 2026-09-23 | **Sprint 5B built (F8 + F5), decision 21: research runs on the PC.** "Run on my PC" queues a run in the shared DB; `python -m app.worker` claims it and runs research + both passes on Ollama. Migration `e6f7a8b9c0d1` (additive), 4 new endpoints, Analysis queue page. 586 tests (29 new). `18e8a4e`, not pushed. See [local-worker-queue-sprint5b-2026-09-23.md](local-worker-queue-sprint5b-2026-09-23.md). |

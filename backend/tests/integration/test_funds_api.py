@@ -337,7 +337,7 @@ def test_fund_readiness_and_analysis_run(client, db_session):
         _clear()
     assert body["status"] == "COMPLETED"
     assert body["schema_version"] == "fund_v1"
-    assert body["evidence_packet_version"] == "fund-v1"
+    assert body["evidence_packet_version"] == "fund-v2"
     assert body["blind_prompt_version"] == "fund_v1"
     assert body["price_target_low"] is None
     assert body["blind_pass"]["moat"]["coverage_caveat"].startswith("Rests on")

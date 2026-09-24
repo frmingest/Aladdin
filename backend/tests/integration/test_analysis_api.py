@@ -327,3 +327,35 @@ def test_queue_shows_online_worker_and_readiness_check(client, db_session):
 def test_queue_ready_holdings_endpoint_with_nothing_owned(client):
     body = client.post("/analysis/queue/ready-holdings").json()
     assert body == {"queued": [], "already_queued": [], "skipped": []}
+
+
+def test_run_refreshes_stale_macro_data_and_cites_it(client, db_session):
+    """2026-09-24: stale macro series are fetched before the run (not
+    during it) and land in the packet as macro_indicator items (v5)."""
+    from datetime import datetime, timedelta, timezone
+
+    from app.providers.factory import get_macro_data_provider_or_none
+    from app.providers.macro_data_providers import MacroDataProvider, MacroPoint
+
+    class _Macro(MacroDataProvider):
+        name = "fake"
+        calls = 0
+
+        def fetch(self, spec, start):
+            _Macro.calls += 1
+            return [MacroPoint(datetime.now(timezone.utc).date() - timedelta(days=1), D("4.25"))]
+
+    holding_id = _create_stock_holding(client, db_session)
+    _add_two_periods(db_session, holding_id)
+    _override_providers()
+    app.dependency_overrides[get_macro_data_provider_or_none] = lambda: _Macro()
+    try:
+        body = client.post(f"/analysis/holdings/{holding_id}/run").json()
+    finally:
+        _clear_overrides()
+    assert body["status"] == "COMPLETED"
+    assert body["evidence_packet_version"] == "v5"
+    assert _Macro.calls == 13
+    macro_items = [i for i in body["evidence_items"] if i["category"] == "macro_indicator"]
+    policy = next(i for i in macro_items if i["label"] == "Norges Bank policy rate (NO)")
+    assert "4.25%" in policy["content"] and "IR/B.KPRA.SD.R" in policy["citation"]

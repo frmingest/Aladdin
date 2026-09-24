@@ -49,6 +49,7 @@ from app.services.analysis.document_excerpts import (
 from app.services.filings.announcements import get_holding_announcements
 from app.services.filings.eligibility import newsweb_applies
 from app.services.filings.sec_edgar import latest_edgar_document
+from app.services.macro.evidence import add_macro_indicator_evidence
 from app.services.metrics import MetricsResult, compute_holding_metrics, ordinary_equity
 from app.services.research.common import ResearchSnapshot
 from app.services.research.company import get_company_research
@@ -69,7 +70,10 @@ from app.services.valuation.holding_valuation import (
 # v4 (2026-09-23, Sprint 6): adds "document_excerpt" items — passages from
 # the holding's uploaded annual reports/presentations, chosen by
 # app/services/analysis/document_excerpts.py within a token budget.
-EVIDENCE_PACKET_VERSION = "v4"
+# v5 (2026-09-24): adds "macro_indicator" items — policy rates, yields,
+# CPI, FX and credit spread from Norges Bank / FRED / SSB, with 3- and
+# 12-month changes and derived real rates (app/services/macro/).
+EVIDENCE_PACKET_VERSION = "v5"
 
 
 @dataclass(frozen=True)
@@ -191,6 +195,7 @@ def build_evidence_packet(
     macro_snapshot = get_macro_research(db, research_provider)
     _add_research_evidence(macro_snapshot, "macro_research", "Macro/geopolitical research", add)
     _note_research_gap(packet, macro_snapshot, "macro research")
+    add_macro_indicator_evidence(db, add, packet.unavailable_reasons)
 
     if holding.sector:
         sector_snapshot = get_sector_research(db, research_provider, sector=holding.sector)

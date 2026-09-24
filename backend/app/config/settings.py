@@ -125,6 +125,18 @@ class Settings(BaseSettings):
     # ERP / terminal growth / scenario offsets — app/domain/valuation_assumptions/.
     active_valuation_assumptions_version: str = "v1"
 
+    # --- Numeric macro data (2026-09-24, app/services/macro/) ---
+    # Norges Bank + SSB are keyless; FRED reuses fred_api_key above.
+    # "live" | "none" ("none" = no fetching; stored values are still shown).
+    macro_data_provider: str = "live"
+    active_macro_series_version: str = "v1"  # app/domain/macro_series.py
+    # A series whose last successful fetch is older than this is refreshed
+    # before an analysis builds its evidence packet (best effort).
+    macro_stale_after_hours: int = 20
+    # In-process refresh loop in the API server; 0 turns it off.
+    macro_refresh_interval_hours: int = 12
+    macro_history_years: int = 3
+
     # --- Primary-source filings (2026-09-22, app/providers/sec_edgar_provider.py,
     # app/providers/newsweb_provider.py) — both keyless and free. ---
     fundamentals_provider: str = "sec_edgar"  # "sec_edgar" | "none"

@@ -108,6 +108,7 @@ def test_fully_prepared_holding_is_ready_and_only_costs_the_two_passes():
     _add_years(db, holding, [2021, 2022, 2023, 2024, 2025])
     _add_price(db, holding, age_hours=2)
     _all_fresh_research(db, holding)
+    _all_fresh_macro(db)
 
     report = check_analysis_readiness(db, holding, settings=_settings(), budget_guard=DailyBudgetGuard(daily_limit=20))
 
@@ -115,6 +116,44 @@ def test_fully_prepared_holding_is_ready_and_only_costs_the_two_passes():
     assert report.blockers == 0 and report.warnings == 0
     assert report.estimated_gemini_calls == 2
     assert report.gemini_calls_remaining_today == 20
+
+
+def _all_fresh_macro(db):
+    """One current value per catalogue series (13 monthly index points for
+    the y/y series, so their 12-month change exists)."""
+    from app.domain.macro_series import get_macro_series
+    from app.models.macro import MacroObservation
+
+    now = datetime.now(timezone.utc)
+    for spec in get_macro_series("v1"):
+        months = 13 if spec.transform == "yoy_pct" else 1
+        for back in range(months):
+            month_index = now.year * 12 + now.month - 1 - back
+            observed = datetime(month_index // 12, month_index % 12 + 1, 1, tzinfo=timezone.utc)
+            if spec.frequency == "daily":
+                observed = now - timedelta(days=1)
+            db.add(MacroObservation(
+                series_key=spec.key, provider=spec.source, region=spec.region,
+                value=Decimal(100 + back), unit=spec.unit, observed_at=observed, retrieved_at=now,
+            ))
+    db.commit()
+
+
+def test_macro_data_missing_only_warns():
+    db = _session()
+    holding = _holding(db)
+    report = check_analysis_readiness(db, holding, settings=_settings(), budget_guard=None)
+    check = _check(report, "macro_data")
+    assert check.status == "warn"
+    assert "No policy-rate" in check.detail
+
+
+def test_macro_data_current_is_ok():
+    db = _session()
+    holding = _holding(db)
+    _all_fresh_macro(db)
+    report = check_analysis_readiness(db, holding, settings=_settings(), budget_guard=None)
+    assert _check(report, "macro_data").status == "ok"
 
 
 def test_non_equity_instrument_blocks():

@@ -30,7 +30,7 @@ from pathlib import PurePath
 from app.services.documents.extraction.csv_statement import read_csv_rows
 
 HEADER_SCAN_ROWS = 40
-MAX_WEIGHT_SUM = Decimal("101")  # rounding in provider files; more means a bad parse
+MAX_WEIGHT_SUM = Decimal(101)  # rounding in provider files; more means a bad parse
 FRACTION_SUM_MAX = Decimal("1.05")
 
 _COLUMN_ALIASES: dict[str, tuple[str, ...]] = {
@@ -133,7 +133,7 @@ def _match_columns(row: list[object]) -> dict[str, int]:
                 found[field_name] = idx
                 break
             if field_name == "weight" and (
-                header.startswith("weight") or header.startswith("% of") or header.startswith("vekt")
+                header.startswith(("weight", "% of", "vekt"))
             ):
                 found[field_name] = idx
                 break
@@ -224,7 +224,7 @@ def _read_sheets(filename: str, content: bytes) -> list[tuple[str, list[list[obj
 
         try:
             workbook = openpyxl.load_workbook(io.BytesIO(content), data_only=True, read_only=True)
-        except Exception as exc:  # noqa: BLE001 — any openpyxl failure is an unreadable file
+        except Exception as exc:
             raise HoldingsFileError(f"could not open the Excel file: {exc}") from exc
         sheets = [(ws.title, [list(r) for r in ws.iter_rows(values_only=True)]) for ws in workbook.worksheets]
         workbook.close()

@@ -32,7 +32,7 @@ MANAGEMENT_STYLES: tuple[str, ...] = ("active", "index")
 PERIOD_KINDS: tuple[str, ...] = ("calendar_year", "rolling_12m", "trailing", "since_inception")
 REPLICATIONS: tuple[str, ...] = ("physical", "synthetic", "sampling")
 DISTRIBUTIONS: tuple[str, ...] = ("accumulating", "distributing")
-MAX_DIMENSION_SUM = Decimal("101")
+MAX_DIMENSION_SUM = Decimal(101)
 
 LINK_TICKER = "ticker"
 LINK_NAME = "name"

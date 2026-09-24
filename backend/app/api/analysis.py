@@ -21,7 +21,11 @@ from sqlalchemy.orm import Session
 from app.config.database import get_db
 from app.config.settings import get_settings
 from app.domain.analysis_schema import get_blind_pass_schema, get_reconciliation_schema
-from app.models.analysis import PENDING_RUN_STATUSES, EquityAnalysisRun, EquityAnalysisRunStatus
+from app.models.analysis import (
+    PENDING_RUN_STATUSES,
+    EquityAnalysisRun,
+    EquityAnalysisRunStatus,
+)
 from app.models.holding import Holding
 from app.providers.base import (
     LLMProvider,
@@ -34,24 +38,26 @@ from app.providers.factory import (
     get_announcements_provider_or_none,
     get_llm_fallback_provider,
     get_llm_provider,
+    get_macro_data_provider_or_none,
     get_market_data_provider,
     get_primary_budget_guard,
     get_research_provider,
     get_risk_free_rate_provider,
 )
+from app.providers.macro_data_providers import MacroDataProvider
 from app.providers.newsweb_provider import NewswebAnnouncementsProvider
 from app.schemas.analysis import (
     AnalysisQueueOut,
     AnalysisReadinessCheckOut,
     AnalysisReadinessOut,
     AnalysisWorkerOut,
-    QueuedRunOut,
-    QueueReadyHoldingsOut,
-    QueueSkippedOut,
     EquityAnalysisRunOut,
     EquityHoldingNoteIn,
     EquityHoldingNoteOut,
     EvidenceItemOut,
+    QueuedRunOut,
+    QueueReadyHoldingsOut,
+    QueueSkippedOut,
 )
 from app.services.analysis import queue as analysis_queue
 from app.services.analysis.latest import run_ratings
@@ -208,6 +214,7 @@ def run_analysis(
     announcements_provider: NewswebAnnouncementsProvider | None = Depends(
         get_announcements_provider_or_none
     ),
+    macro_data_provider: MacroDataProvider | None = Depends(get_macro_data_provider_or_none),
 ) -> EquityAnalysisRunOut:
     holding = _get_holding_or_404(db, holding_id)
     try:
@@ -220,6 +227,7 @@ def run_analysis(
             risk_free_rate_provider=risk_free_rate_provider,
             research_provider=research_provider,
             announcements_provider=announcements_provider,
+            macro_data_provider=macro_data_provider,
         )
     except NotEquityAnalyzableError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

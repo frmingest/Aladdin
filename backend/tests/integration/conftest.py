@@ -17,7 +17,7 @@ from sqlalchemy.pool import StaticPool
 from app.config.database import get_db
 from app.main import app
 from app.models import Base
-from app.providers.factory import get_object_storage
+from app.providers.factory import get_macro_data_provider_or_none, get_object_storage
 from app.providers.object_storage import LocalObjectStorageProvider
 
 
@@ -41,6 +41,9 @@ def client(tmp_path):
     storage = LocalObjectStorageProvider(str(tmp_path))
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_object_storage] = lambda: storage
+    # Never reach Norges Bank / FRED / SSB from the test suite; tests that
+    # exercise macro fetching override this with a fake.
+    app.dependency_overrides[get_macro_data_provider_or_none] = lambda: None
 
     with TestClient(app) as test_client:
         yield test_client

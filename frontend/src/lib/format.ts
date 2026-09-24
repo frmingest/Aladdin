@@ -95,3 +95,22 @@ export function formatRelative(iso: string | null): string {
   if (hours < 48) return `${hours} h ago`;
   return `${Math.round(hours / 24)} days ago`;
 }
+
+/** Macro indicator value: "4.25%", "9.3466" (NOK per unit), "+1.25 pp". */
+export function formatIndicatorValue(ind: { value: string | null; display_unit: string }): string {
+  if (ind.value === null) return "—";
+  const n = Number(ind.value);
+  if (!Number.isFinite(n)) return ind.value;
+  if (ind.display_unit === "NOK") return n.toFixed(4);
+  if (ind.display_unit === "pp") return `${n > 0 ? "+" : ""}${n.toFixed(2)} pp`;
+  const digits = ind.value.includes(".") ? Math.min(ind.value.split(".")[1].length, 2) : 0;
+  return `${n.toFixed(digits)}%`;
+}
+
+export function formatIndicatorChange(change: string | null, kind: "pp" | "pct"): string {
+  if (change === null) return "—";
+  const n = Number(change);
+  if (!Number.isFinite(n)) return change;
+  const sign = n > 0 ? "+" : n < 0 ? "−" : "±";
+  return `${sign}${Math.abs(n).toFixed(2)}${kind === "pp" ? " pp" : "%"}`;
+}

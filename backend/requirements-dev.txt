@@ -1,0 +1,9 @@
+# Development and CI tooling (Sprint 7). Runtime deps stay in requirements.txt.
+-r requirements.txt
+
+# Pinned: CI, pre-commit (.pre-commit-config.yaml, rev v0.16.8) and your
+# machine run the same ruff, so a new ruff release can't break CI by itself.
+ruff==0.16.8
+pre-commit==4.6.2
+# Reports known-vulnerable dependencies (CI job "dependency audit", report-only).
+pip-audit==2.9.0

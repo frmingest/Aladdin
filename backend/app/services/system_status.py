@@ -21,9 +21,14 @@ from app.config.paths import BACKEND_DIR
 from app.config.settings import Settings
 from app.domain.document_types import DOCUMENT_TYPE_SEC_XBRL
 from app.models.account import Account
-from app.models.analysis import AnalysisWorkerHeartbeat, EquityAnalysisRun, EquityAnalysisRunStatus
+from app.models.analysis import (
+    AnalysisWorkerHeartbeat,
+    EquityAnalysisRun,
+    EquityAnalysisRunStatus,
+)
 from app.models.document import Document
 from app.models.holding import Holding
+from app.models.macro import MacroSeriesStatus
 from app.models.market import FxObservation, MarketObservation, RiskFreeRateObservation
 from app.models.portfolio import PortfolioSnapshot
 from app.models.research import ResearchRun, ResearchRunStatus
@@ -40,6 +45,7 @@ _KNOWN = {
     "risk_free_rate_provider": {"fred"},
     "fundamentals_provider": {"sec_edgar", "none"},
     "announcements_provider": {"newsweb", "none"},
+    "macro_data_provider": {"live", "none"},
     "object_storage_provider": {"local", "s3", "r2", "supabase"},
 }
 
@@ -168,6 +174,18 @@ def _providers(settings: Settings) -> list[StatusItem]:
         items.append(StatusItem("risk_free", "Risk-free rate", OK if settings.fred_api_key else WARN, "FRED",
                                 f"API key {_key(settings.fred_api_key)}"))
 
+    mp = settings.macro_data_provider
+    if mp == "none":
+        items.append(StatusItem("macro_data", "Macro data (rates, CPI, FX)", OFF, "none", "Stored values only; nothing fetched"))
+    else:
+        items.append(StatusItem(
+            "macro_data", "Macro data (rates, CPI, FX)", OK if settings.fred_api_key else WARN,
+            "Norges Bank + SSB + FRED",
+            ("FRED key set" if settings.fred_api_key else "FRED_API_KEY missing; the 6 US series will not update")
+            + (f" · refresh every {settings.macro_refresh_interval_hours} h" if settings.macro_refresh_interval_hours
+               else " · background refresh off"),
+        ))
+
     fp = settings.fundamentals_provider
     if fp == "none":
         items.append(StatusItem("edgar", "SEC EDGAR", OFF, "none", "US fundamentals import disabled"))
@@ -236,6 +254,10 @@ def build_system_status(
         _fresh("fx", "Latest FX rate", db.scalar(select(func.max(FxObservation.observed_at))), market_window, now),
         _fresh("risk_free", "Latest risk-free rate",
                db.scalar(select(func.max(RiskFreeRateObservation.observed_at))), timedelta(days=7), now),
+        _fresh("macro_data", "Macro data (last successful fetch)",
+               db.scalar(select(func.max(MacroSeriesStatus.last_success_at))),
+               timedelta(hours=max(settings.macro_refresh_interval_hours, settings.macro_stale_after_hours) * 2),
+               now, never="Never fetched"),
         _fresh("macro", "Macro research", latest_research("MACRO", ResearchRunStatus.COMPLETED.value), research_window, now),
         _fresh("company", "Company research (any)",
                latest_research("COMPANY", ResearchRunStatus.COMPLETED.value), None, now),
@@ -247,6 +269,16 @@ def build_system_status(
         _fresh("snapshot", "Latest portfolio import", db.scalar(select(func.max(PortfolioSnapshot.uploaded_at))),
                timedelta(days=31), now, never="No portfolio imported", detail=""),
     ]
+    macro_failures = db.scalars(
+        select(MacroSeriesStatus).where(MacroSeriesStatus.last_error.is_not(None))
+        .order_by(MacroSeriesStatus.series_key)
+    ).all()
+    if macro_failures:
+        status.freshness.append(FreshnessItem(
+            "macro_data_failures", f"Macro series failing ({len(macro_failures)})",
+            _aware(max(f.last_attempt_at for f in macro_failures)), WARN,
+            "; ".join(f"{f.series_key}: {f.last_error}" for f in macro_failures)[:400],
+        ))
     last_failure = db.scalar(
         select(ResearchRun).where(ResearchRun.status == ResearchRunStatus.FAILED.value)
         .order_by(ResearchRun.started_at.desc()).limit(1)

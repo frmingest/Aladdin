@@ -32,6 +32,7 @@ from app.providers.base import (
     ResearchProvider,
     RiskFreeRateProvider,
 )
+from app.providers.macro_data_providers import MacroDataProvider
 from app.providers.newsweb_provider import NewswebAnnouncementsProvider
 from app.services.analysis.blind_pass import run_blind_pass
 from app.services.analysis.evidence_packet import (
@@ -44,6 +45,7 @@ from app.services.funds.evidence import (
     FUND_EVIDENCE_PACKET_VERSION,
     build_fund_evidence_packet,
 )
+from app.services.macro.evidence import ensure_macro_fresh
 
 T = TypeVar("T")
 
@@ -80,6 +82,7 @@ def run_full_analysis(
     risk_free_rate_provider: RiskFreeRateProvider,
     research_provider: ResearchProvider,
     announcements_provider: NewswebAnnouncementsProvider | None = None,
+    macro_data_provider: MacroDataProvider | None = None,
     run: EquityAnalysisRun | None = None,
 ) -> EquityAnalysisRun:
     """Runs the full pipeline for `holding`.
@@ -109,6 +112,11 @@ def run_full_analysis(
         schema_version = settings.active_analysis_schema_version
         prompt_version = settings.active_analysis_prompt_version
         packet_version = EVIDENCE_PACKET_VERSION
+
+    # Best effort, before the run row exists so nothing of the run is
+    # committed or rolled back by it: stale Norges Bank / FRED / SSB series
+    # are re-fetched; a failure keeps the stored values (flagged stale).
+    ensure_macro_fresh(db, macro_data_provider)
 
     if run is None:
         run = EquityAnalysisRun(

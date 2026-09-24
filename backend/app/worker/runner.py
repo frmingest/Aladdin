@@ -32,8 +32,14 @@ from sqlalchemy.orm import Session
 
 from app.config.settings import Settings
 from app.models.holding import Holding
-from app.providers.base import LLMProvider, MarketDataProvider, ResearchProvider, RiskFreeRateProvider
+from app.providers.base import (
+    LLMProvider,
+    MarketDataProvider,
+    ResearchProvider,
+    RiskFreeRateProvider,
+)
 from app.providers.budget import DailyBudgetGuard
+from app.providers.macro_data_providers import MacroDataProvider
 from app.providers.newsweb_provider import NewswebAnnouncementsProvider
 from app.services.analysis import queue
 from app.services.analysis.pipeline import NotEquityAnalyzableError, run_full_analysis
@@ -63,6 +69,9 @@ class WorkerProviders:
     research: ResearchProvider
     announcements: NewswebAnnouncementsProvider | None
     budget_guard: DailyBudgetGuard | None
+    # Numeric macro data (2026-09-24): stale series are re-fetched on the
+    # PC before a run. Default None keeps older call sites/tests working.
+    macro_data: MacroDataProvider | None = None
 
 
 class AnalysisWorker:
@@ -178,6 +187,7 @@ class AnalysisWorker:
                     risk_free_rate_provider=self.providers.risk_free_rate,
                     research_provider=self.providers.research,
                     announcements_provider=self.providers.announcements,
+                    macro_data_provider=self.providers.macro_data,
                     run=run,
                 )
                 log.info("run %s finished: %s", run_id, finished.status)

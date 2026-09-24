@@ -35,11 +35,15 @@ from app.services.analysis.document_excerpts import (
 from app.services.analysis.evidence_packet import EvidenceItem, EvidencePacket
 from app.services.funds.facts import get_profile, latest_exposures, list_returns
 from app.services.funds.metrics import FundMetrics, compute_fund_metrics
+from app.services.macro.evidence import add_macro_indicator_evidence
 from app.services.research.macro import get_macro_research
 from app.services.research.sector import get_sector_research
 
 # fund-v1 (2026-09-24, Sprint 8): first fund / ETF packet.
-FUND_EVIDENCE_PACKET_VERSION = "fund-v1"
+# fund-v2 (2026-09-24): adds "macro_indicator" items — policy rates, yields,
+# CPI, FX and credit spread from Norges Bank / FRED / SSB
+# (app/services/macro/evidence.py).
+FUND_EVIDENCE_PACKET_VERSION = "fund-v2"
 TOP_HOLDINGS_IN_PACKET = 15
 
 FUND_TOPIC_LABELS: dict[str, str] = {
@@ -168,6 +172,7 @@ def build_fund_evidence_packet(
     macro = get_macro_research(db, research_provider)
     _add_research(macro.items, "macro_research", "Macro/geopolitical research", add)
     _note_gap(packet, macro, "macro research")
+    add_macro_indicator_evidence(db, add, packet.unavailable_reasons)
     if holding.sector:
         sector = get_sector_research(db, research_provider, sector=holding.sector)
         _add_research(sector.items, "sector_research", f"Sector research ({holding.sector})", add)

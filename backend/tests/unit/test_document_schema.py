@@ -11,20 +11,20 @@ from uuid import uuid4
 
 from app.schemas.document import DocumentOut
 
-_BASE_KWARGS = dict(
-    id=uuid4(),
-    holding_id=None,
-    type="portfolio_export",
-    original_filename="export.csv",
-    mime_type="text/csv",
-    size_bytes=123,
-    uploaded_at=datetime.now(timezone.utc),
-    reporting_period=None,
-    sha256="a" * 64,
-    status="processed",
-    page_count=0,
-    fact_count=0,
-)
+_BASE_KWARGS = {
+    "id": uuid4(),
+    "holding_id": None,
+    "type": "portfolio_export",
+    "original_filename": "export.csv",
+    "mime_type": "text/csv",
+    "size_bytes": 123,
+    "uploaded_at": datetime.now(timezone.utc),
+    "reporting_period": None,
+    "sha256": "a" * 64,
+    "status": "processed",
+    "page_count": 0,
+    "fact_count": 0,
+}
 
 
 def test_quality_flags_dict_passes_through_unchanged():

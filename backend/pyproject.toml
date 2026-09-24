@@ -1,3 +1,9 @@
+[tool.ruff]
+# Ruff is pinned in requirements-dev.txt (CI and pre-commit use the same
+# version, so a new ruff release can't start failing CI on its own).
+# Migrations are frozen history: never reformatted after they've run.
+extend-exclude = ["alembic/versions"]
+
 # Ruff project config. Without this file ruff falls back to its own
 # (very broad) defaults, which include flake8-bugbear's B008 — a rule
 # that flags `Depends(...)`/`Form(...)`/`File(...)` as "function calls in

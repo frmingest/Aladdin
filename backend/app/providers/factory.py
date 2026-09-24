@@ -26,6 +26,12 @@ from app.providers.budget import DailyBudgetGuard
 from app.providers.fred_risk_free_rate_provider import FredRiskFreeRateProvider
 from app.providers.gemini_research_provider import GeminiResearchProvider
 from app.providers.google_ai_studio_provider import GoogleAIStudioProvider
+from app.providers.macro_data_providers import (
+    CompositeMacroDataProvider,
+    FredMacroProvider,
+    NorgesBankMacroProvider,
+    SsbMacroProvider,
+)
 from app.providers.mistral_provider import MistralProvider
 from app.providers.newsweb_provider import NewswebAnnouncementsProvider
 from app.providers.object_storage import (
@@ -231,3 +237,20 @@ def get_fundamentals_provider_or_none() -> FundamentalsProvider | None:
         return get_fundamentals_provider()
     except FundamentalsUnavailableError:
         return None
+
+
+def get_macro_data_provider_or_none() -> CompositeMacroDataProvider | None:
+    """Norges Bank + FRED + SSB behind one router (MACRO_DATA_PROVIDER,
+    default "live"). None when switched off: stored values are still
+    served, nothing is fetched. FRED without a key is kept — its series
+    then fail individually with a message saying so."""
+    settings = get_settings()
+    if settings.macro_data_provider != "live":
+        return None
+    return CompositeMacroDataProvider(
+        {
+            "norges_bank": NorgesBankMacroProvider(),
+            "fred": FredMacroProvider(api_key=settings.fred_api_key or ""),
+            "ssb": SsbMacroProvider(),
+        }
+    )

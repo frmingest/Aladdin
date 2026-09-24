@@ -1148,3 +1148,59 @@ export interface HoldingsImportResult {
   weights_were_fractions: boolean;
   warnings: string[];
 }
+
+// --- Numeric macro data (2026-09-24, backend/app/api/macro.py) -----------
+
+export interface MacroHistoryPoint {
+  date: string;
+  value: string;
+}
+
+export interface MacroIndicator {
+  key: string;
+  label: string;
+  region: string; // "NO" | "US"
+  group: string; // rates | inflation | fx | labour | credit | derived
+  display_unit: string; // "%" | "NOK" | "pp"
+  frequency: string; // daily | monthly | computed
+  change_kind: "pp" | "pct";
+  description: string;
+  source_name: string;
+  source_series_id: string;
+  source_url: string;
+  derived: boolean;
+  value: string | null;
+  observed_on: string | null;
+  value_3m_ago: string | null;
+  change_3m: string | null;
+  value_12m_ago: string | null;
+  change_12m: string | null;
+  stale: boolean;
+  age_days: number | null;
+  formula: string | null;
+  last_success_at: string | null;
+  last_error: string | null;
+  history: MacroHistoryPoint[];
+}
+
+export interface MacroIndicators {
+  series_version: string;
+  fetching_enabled: boolean;
+  last_success_at: string | null;
+  indicators: MacroIndicator[];
+  derived: MacroIndicator[];
+}
+
+export interface MacroSeriesRefresh {
+  key: string;
+  label: string;
+  status: "updated" | "unchanged" | "failed" | "fresh";
+  inserted: number;
+  latest_observed: string | null;
+  error: string | null;
+}
+
+export interface MacroRefreshResult {
+  results: MacroSeriesRefresh[];
+  indicators: MacroIndicators;
+}

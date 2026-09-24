@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, ApiError } from "../lib/api";
 import { formatDate, formatNok, formatPct100 } from "../lib/format";
-import type { AllocationSlice, PortfolioOverview, RatingSlice, SummaryPoint } from "../lib/types";
+import type { AllocationSlice, MacroIndicators, PortfolioOverview, RatingSlice, SummaryPoint } from "../lib/types";
+import { MacroHeadlineStrip } from "../components/MacroIndicatorsPanel";
 import { EQUITY_ANALYZABLE_TYPES, INSTRUMENT_TYPE_LABELS } from "../lib/types";
 import { Card, EmptyState, PageHeader, SectionTitle, StatTile, VerdictBadge } from "../components/ui";
 
@@ -244,12 +245,15 @@ function PositionsCard({ overview }: { overview: PortfolioOverview }) {
 export default function DashboardPage() {
   const [overview, setOverview] = useState<PortfolioOverview | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [macro, setMacro] = useState<MacroIndicators | null>(null);
 
   useEffect(() => {
     api
       .getPortfolioOverview()
       .then(setOverview)
       .catch((e) => setError(e instanceof ApiError ? e.message : "Could not load the overview."));
+    // Optional strip: a failure here just hides it.
+    api.getMacroIndicators().then(setMacro).catch(() => setMacro(null));
   }, []);
 
   const c = overview?.concentration;
@@ -312,6 +316,18 @@ export default function DashboardPage() {
           </div>
 
           {overview.summary.length > 0 && <SummaryCard points={overview.summary} />}
+
+          {macro && macro.indicators.some((i) => i.value !== null) && (
+            <Card>
+              <div className="mb-3 flex items-baseline justify-between gap-3">
+                <SectionTitle hint="Norges Bank, SSB and FRED. Change over 12 months.">Rates &amp; inflation</SectionTitle>
+                <Link to="/macro" className="text-xs font-medium text-accent hover:text-accent-hover">
+                  All series →
+                </Link>
+              </div>
+              <MacroHeadlineStrip data={macro} />
+            </Card>
+          )}
 
           <div className="grid gap-6 lg:grid-cols-2">
             <AllocationCard overview={overview} />

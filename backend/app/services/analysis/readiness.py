@@ -51,6 +51,7 @@ from app.models.research import ResearchRunType
 from app.providers.budget import DailyBudgetGuard
 from app.providers.ollama_provider import check_ollama_health
 from app.services.funds.facts import get_profile, latest_exposures, list_returns
+from app.services.macro.indicators import get_macro_indicators
 from app.services.portfolio_import.ingestion import looks_like_placeholder_ticker
 from app.services.research.common import is_stale, latest_completed_run
 
@@ -108,6 +109,36 @@ def _age_text(value: datetime) -> str:
     if hours < 48:
         return f"{int(hours)} h ago"
     return f"{int(hours // 24)} days ago"
+
+
+def _check_macro_data(db: Session, settings: Settings) -> ReadinessCheck:
+    """Numeric macro data (2026-09-24). Never blocks: missing or stale
+    series only thin out the macro stress test, and stale ones are
+    re-fetched just before the run."""
+    label = "Macro data (rates, CPI, FX)"
+    indicators = get_macro_indicators(db).indicators
+    have = [i for i in indicators if i.value is not None]
+    fetching = settings.macro_data_provider == "live"
+    if not have:
+        detail = "No policy-rate, yield, CPI or FX data captured yet. "
+        detail += (
+            "It is fetched before the run; or open Macro -> Refresh data."
+            if fetching
+            else "MACRO_DATA_PROVIDER is 'none', so none will be fetched."
+        )
+        return ReadinessCheck("macro_data", label, "warn", detail)
+    stale = [i.label for i in have if i.stale]
+    missing = [i.label for i in indicators if i.value is None]
+    if missing or stale:
+        parts = []
+        if missing:
+            parts.append(f"missing: {', '.join(missing)}")
+        if stale:
+            parts.append(f"stale: {', '.join(stale)}")
+        return ReadinessCheck(
+            "macro_data", label, "warn", f"{len(have)} of {len(indicators)} series available; " + "; ".join(parts) + "."
+        )
+    return ReadinessCheck("macro_data", label, "ok", f"All {len(indicators)} series current.")
 
 
 def _check_instrument_type(holding: Holding) -> ReadinessCheck:
@@ -487,6 +518,7 @@ def check_analysis_readiness(
         report.checks.extend(_check_ticker_and_price(db, holding, settings))
         report.checks.append(_check_financial_history(db, holding))
     report.checks.append(_check_sector(holding))
+    report.checks.append(_check_macro_data(db, settings))
 
     research_check, research_calls = _check_research(db, holding)
     report.checks.append(research_check)

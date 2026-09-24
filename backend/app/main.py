@@ -9,6 +9,9 @@ company). Sprint 3 adds the deterministic valuation engine (DCF, reverse
 DCF, multiples-over-time). Sprint 4 adds the two-pass Buffett/Munger
 analysis engine itself (app/services/analysis/).
 """
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -19,6 +22,7 @@ from app.api.documents import router as documents_router
 from app.api.funds import router as funds_router
 from app.api.holdings import router as holdings_router
 from app.api.journal import router as journal_router
+from app.api.macro import router as macro_router
 from app.api.portfolio import router as portfolio_router
 from app.api.research import router as research_router
 from app.api.sources import router as sources_router
@@ -33,10 +37,26 @@ from app.providers.base import (
     ResearchUnavailableError,
     RiskFreeRateUnavailableError,
 )
+from app.services.macro.scheduler import MacroRefreshScheduler
 
 settings = get_settings()
 
-app = FastAPI(title=settings.app_name, version=settings.app_version)
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    # Numeric macro data (2026-09-24): background refresh of the Norges
+    # Bank / FRED / SSB series. Off when MACRO_REFRESH_INTERVAL_HOURS=0,
+    # MACRO_DATA_PROVIDER=none or no DATABASE_URL.
+    scheduler = MacroRefreshScheduler(settings)
+    scheduler.start()
+    try:
+        yield
+    finally:
+        scheduler.stop()
+
+
+app = FastAPI(title=settings.app_name, version=settings.app_version, lifespan=lifespan)
 
 # Permissive for now (Sprint 0, no real frontend origin decided yet beyond
 # local dev). Tighten once the frontend has a fixed deployed origin.
@@ -73,6 +93,7 @@ app.include_router(system_router)
 app.include_router(watchlist_router)
 app.include_router(journal_router)
 app.include_router(funds_router)
+app.include_router(macro_router)
 
 
 @app.get("/health")

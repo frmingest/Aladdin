@@ -1,0 +1,14 @@
+# Secret scanning (Sprint 7). Used by the CI "secrets" job and the
+# pre-commit hook. Starts from gitleaks' built-in rules; the allowlist only
+# covers files that are meant to hold placeholder values.
+title = "Aladdin gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Placeholder-only files"
+paths = [
+  '''backend/\.env\.example$''',
+  '''frontend/package-lock\.json$''',
+]

@@ -1,0 +1,46 @@
+# Sprint 7 guardrails, run on every `git commit` once installed:
+#   pip install -r backend/requirements-dev.txt
+#   pre-commit install
+# GitHub Desktop runs these hooks too. A failed hook blocks the commit and
+# says why; fix and commit again (ruff fixes most findings itself).
+# CI (.github/workflows/ci.yml) runs the same checks, so a skipped hook is
+# still caught on push.
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-added-large-files
+        args: ["--maxkb=1024"]
+      - id: detect-private-key
+      - id: check-merge-conflict
+      - id: check-yaml
+      - id: check-json
+        exclude: ^frontend/tsconfig\.json$
+      - id: check-toml
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.8 # same as backend/requirements-dev.txt
+    hooks:
+      - id: ruff-check
+        args: ["--fix"]
+        files: ^backend/
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks
+
+  - repo: local
+    hooks:
+      - id: no-env-files
+        name: never commit .env files (real keys live in backend/.env and Railway)
+        entry: .env files must not be committed; only .env.example is allowed
+        language: fail
+        files: (^|/)\.env($|\.)
+        exclude: \.env\.example$
+      - id: no-real-documents
+        name: never commit portfolio exports or uploaded documents
+        entry: Real portfolio data and uploaded documents stay out of git (CLAUDE.md)
+        language: fail
+        files: \.(pdf|pptx|xlsx|xhtml|xbrl|zip)$
+        exclude: ^docs/
