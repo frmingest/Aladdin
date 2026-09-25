@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 from app.config.database import get_db
 from app.domain.document_types import (
     DOCUMENT_TYPE_FUND_HOLDINGS,
-    DOCUMENT_TYPE_SEC_XBRL,
+    SYSTEM_IMPORT_DOCUMENT_TYPES,
 )
 from app.domain.errors import (
     FileTooLargeError,
@@ -78,7 +78,7 @@ def _facts_out(db: Session, holding: Holding) -> FundFactsOut:
         )
         for d in db.scalars(
             select(Document)
-            .where(Document.holding_id == holding.id, Document.type != DOCUMENT_TYPE_SEC_XBRL)
+            .where(Document.holding_id == holding.id, Document.type.not_in(SYSTEM_IMPORT_DOCUMENT_TYPES))
             .order_by(Document.uploaded_at.desc())
         )
     ]

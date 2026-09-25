@@ -27,7 +27,8 @@ class FileTooLargeError(IngestionError):
         self.size_bytes = size_bytes
         self.max_bytes = max_bytes
         super().__init__(
-            f"'{filename}' is {size_bytes} bytes, exceeding the {max_bytes}-byte limit"
+            f"'{filename}' is {size_bytes / 1_048_576:.1f} MB, over the "
+            f"{max_bytes / 1_048_576:.0f} MB limit for this file type"
         )
 
 

@@ -273,7 +273,7 @@ def test_oslo_holding_gets_newsweb_announcements_as_cited_data():
     ann = [i for i in packet.items if i.category == "regulatory_announcements"]
     assert len(ann) == 1
     assert ann[0].citation.endswith("https://newsweb.oslobors.no/message/7")
-    assert packet.version == "v6"
+    assert packet.version == "v7"
 
 
 def test_us_holding_skips_newsweb_and_cites_edgar_filings():

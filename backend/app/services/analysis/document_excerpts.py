@@ -36,7 +36,10 @@ from pathlib import PurePath
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.domain.document_types import DOCUMENT_STATUS_PROCESSED, DOCUMENT_TYPE_SEC_XBRL
+from app.domain.document_types import (
+    DOCUMENT_STATUS_PROCESSED,
+    SYSTEM_IMPORT_DOCUMENT_TYPES,
+)
 from app.domain.period_dates import extract_year
 from app.models.document import Document, DocumentChunk, DocumentPage
 from app.models.holding import Holding
@@ -57,7 +60,7 @@ MAX_DOCUMENT_SHARE = 0.6
 RECENCY_WEIGHTS = (1.0, 0.8, 0.65, 0.5)
 
 _TEXT_EXTENSIONS = {".pdf", ".pptx", ".xhtml", ".html", ".htm"}
-_EXCLUDED_TYPES = {DOCUMENT_TYPE_SEC_XBRL, "portfolio_export"}
+_EXCLUDED_TYPES = {*SYSTEM_IMPORT_DOCUMENT_TYPES, "portfolio_export"}
 
 TOPIC_LABELS: dict[str, str] = {
     "moat": "Moat & competitive position",

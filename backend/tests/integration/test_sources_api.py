@@ -207,3 +207,47 @@ def test_eligibility_hint(client):
     body = client.get(f"/sources/holdings/{hid}").json()
     assert body["newsweb"] is True
     assert body["sec_edgar"] is True and "Oslo ticker" in body["sec_edgar_reason"]
+
+
+# --- ESEF history import (Sprint 10) -------------------------------------------------
+
+
+def test_esef_index_import_endpoint(client):
+    from app.providers.factory import get_esef_index_provider_or_none
+    from tests.unit.test_esef_index import LEI, FakeIndex, _three_years
+
+    holding = client.post(
+        "/holdings", json={"ticker": "ACME.OL", "name": "ACME ASA", "trading_currency": "NOK"}
+    ).json()
+    hid = holding["id"]
+
+    before = client.get(f"/sources/holdings/{hid}/esef-index").json()
+    assert before["imported"] is False and before["suggested_lei"] is None
+
+    # Switched off -> 422 with a reason.
+    off = client.post(f"/sources/holdings/{hid}/esef-index/import", json={"lei": LEI})
+    assert off.status_code == 422 and "switched off" in off.json()["detail"]
+
+    app.dependency_overrides[get_esef_index_provider_or_none] = lambda: FakeIndex(_three_years())
+    no_lei = client.post(f"/sources/holdings/{hid}/esef-index/import")
+    assert no_lei.status_code == 422 and "No LEI found" in no_lei.json()["detail"]
+
+    resp = client.post(f"/sources/holdings/{hid}/esef-index/import", json={"lei": LEI.lower()})
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["imported"] and body["lei"] == LEI
+    assert body["periods_imported"] == ["FY2024", "FY2023", "FY2022", "FY2021"]
+    assert body["latest_period_in_index"] == "FY2024"
+    assert len(body["filings"]) == 3
+
+    again = client.get(f"/sources/holdings/{hid}/esef-index").json()
+    assert again["imported"] and again["facts_imported"] == body["facts_imported"]
+    assert again["suggested_lei"] == LEI  # from the previous import
+
+    # The imported years feed the metrics panel like uploaded ones: ROE on
+    # average equity needs the prior year, which the import supplies.
+    metrics = client.get(f"/holdings/{hid}/metrics", params={"period": "FY2023"})
+    assert metrics.status_code == 200, metrics.text
+    assert "roe" in metrics.json()["computed"]
+    eligibility = client.get(f"/sources/holdings/{hid}").json()
+    assert eligibility["esef_index"] is True

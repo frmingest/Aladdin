@@ -63,8 +63,8 @@ __all__ = [
     "PortfolioPosition",
     "PortfolioSnapshot",
     "ResearchItem",
-    "ShareCountObservation",
     "ResearchRun",
     "RiskFreeRateObservation",
+    "ShareCountObservation",
     "WatchlistItem",
 ]

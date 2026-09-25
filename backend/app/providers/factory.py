@@ -23,6 +23,7 @@ from app.providers.base import (
     RiskFreeRateUnavailableError,
 )
 from app.providers.budget import DailyBudgetGuard
+from app.providers.esef_index_provider import FilingsXbrlOrgProvider
 from app.providers.fred_risk_free_rate_provider import FredRiskFreeRateProvider
 from app.providers.gemini_research_provider import GeminiResearchProvider
 from app.providers.google_ai_studio_provider import GoogleAIStudioProvider
@@ -221,6 +222,15 @@ def get_fundamentals_provider() -> FundamentalsProvider:
     raise FundamentalsUnavailableError(
         f"Unknown or disabled fundamentals provider: {settings.fundamentals_provider!r}"
     )
+
+
+def get_esef_index_provider_or_none() -> FilingsXbrlOrgProvider | None:
+    """filings.xbrl.org history import (ESEF_INDEX_PROVIDER, default
+    "filings_xbrl_org"); None when switched off."""
+    settings = get_settings()
+    if settings.esef_index_provider != "filings_xbrl_org":
+        return None
+    return FilingsXbrlOrgProvider(timeout_seconds=settings.esef_index_timeout_seconds)
 
 
 @lru_cache

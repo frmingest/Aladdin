@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 
 from app.config.paths import BACKEND_DIR
 from app.config.settings import Settings
-from app.domain.document_types import DOCUMENT_TYPE_SEC_XBRL
+from app.domain.document_types import DOCUMENT_TYPE_ESEF_INDEX, DOCUMENT_TYPE_SEC_XBRL
 from app.models.account import Account
 from app.models.analysis import (
     AnalysisWorkerHeartbeat,
@@ -284,6 +284,9 @@ def build_system_status(
                latest_research("ANNOUNCEMENTS", ResearchRunStatus.COMPLETED.value), None, now),
         _fresh("edgar", "SEC EDGAR import",
                db.scalar(select(func.max(Document.uploaded_at)).where(Document.type == DOCUMENT_TYPE_SEC_XBRL)),
+               None, now, never="Never imported"),
+        _fresh("esef_index", "ESEF history import (filings.xbrl.org)",
+               db.scalar(select(func.max(Document.uploaded_at)).where(Document.type == DOCUMENT_TYPE_ESEF_INDEX)),
                None, now, never="Never imported"),
         _fresh("share_counts", "Latest share count (Yahoo)",
                db.scalar(select(func.max(ShareCountObservation.observed_at))

@@ -3,6 +3,10 @@
 - SEC EDGAR: ``POST /sources/holdings/{id}/sec-edgar/import`` pulls the
   company's XBRL facts and stores them as FinancialLineItems (read by
   metrics/valuation/analysis unchanged); ``GET`` returns the last import.
+- ESEF history (Sprint 10): ``POST /sources/holdings/{id}/esef-index/import``
+  fetches the company's earlier ESEF filings from filings.xbrl.org by LEI
+  and stores them as FinancialLineItems; ``GET`` returns the last import
+  and the LEI found on file.
 - Newsweb: ``GET /sources/holdings/{id}/announcements`` serves cached Oslo
   Børs announcements (refreshing when stale, like /research/*),
   ``POST .../refresh`` forces a fetch.
@@ -19,10 +23,13 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.config.database import get_db
+from app.config.settings import get_settings
 from app.models.holding import Holding
 from app.providers.base import FundamentalsProvider
+from app.providers.esef_index_provider import FilingsXbrlOrgProvider
 from app.providers.factory import (
     get_announcements_provider_or_none,
+    get_esef_index_provider_or_none,
     get_fundamentals_provider_or_none,
     get_object_storage,
 )
@@ -32,10 +39,20 @@ from app.schemas.sources import (
     AnnouncementsOut,
     EdgarFilingOut,
     EdgarImportOut,
+    EsefFilingOut,
+    EsefImportIn,
+    EsefImportOut,
     SourceEligibilityOut,
 )
 from app.services.filings.announcements import get_holding_announcements
 from app.services.filings.eligibility import newsweb_applies
+from app.services.filings.esef_index import (
+    EsefImportError,
+    EsefImportResult,
+    find_lei,
+    import_esef_history,
+    latest_import_summary,
+)
 from app.services.filings.sec_edgar import (
     EdgarImportError,
     EdgarImportResult,
@@ -113,7 +130,70 @@ def get_eligibility(holding_id: UUID, db: Session = Depends(get_db)) -> SourceEl
         ),
         newsweb=nw,
         newsweb_reason=None if nw else "Newsweb covers Oslo Børs issuers only (.OL ticker or NOK)",
+        esef_index=nw,
+        esef_index_reason=(
+            None if nw else "The ESEF index is for EU/EEA-listed companies; this holding looks non-European"
+        ),
     )
+
+
+def _esef_out(db: Session, holding: Holding, result: EsefImportResult | None) -> EsefImportOut:
+    suggested, suggested_source = find_lei(db, holding)
+    if result is None:
+        return EsefImportOut(
+            holding_id=holding.id,
+            imported=False,
+            suggested_lei=suggested,
+            suggested_lei_source=suggested_source or None,
+        )
+    return EsefImportOut(
+        holding_id=holding.id,
+        imported=True,
+        suggested_lei=suggested,
+        suggested_lei_source=suggested_source or None,
+        lei=result.lei,
+        lei_source=result.lei_source,
+        imported_at=result.imported_at,
+        periods_imported=result.periods_imported,
+        periods_skipped_existing=result.periods_skipped_existing,
+        facts_imported=result.facts_imported,
+        metrics_by_period=result.metrics_by_period,
+        filings=[EsefFilingOut(**f.__dict__) for f in result.filings],
+        latest_period_in_index=result.latest_period_in_index,
+        warnings=result.warnings,
+    )
+
+
+@router.get("/holdings/{holding_id}/esef-index", response_model=EsefImportOut)
+def get_esef_index(holding_id: UUID, db: Session = Depends(get_db)) -> EsefImportOut:
+    holding = _get_holding_or_404(db, holding_id)
+    return _esef_out(db, holding, latest_import_summary(db, holding))
+
+
+@router.post("/holdings/{holding_id}/esef-index/import", response_model=EsefImportOut)
+def import_esef_index(
+    holding_id: UUID,
+    body: EsefImportIn | None = None,
+    db: Session = Depends(get_db),
+    provider: FilingsXbrlOrgProvider | None = Depends(get_esef_index_provider_or_none),
+    storage=Depends(get_object_storage),
+) -> EsefImportOut:
+    holding = _get_holding_or_404(db, holding_id)
+    if provider is None:
+        raise HTTPException(status_code=422, detail="the ESEF history import is switched off (ESEF_INDEX_PROVIDER)")
+    try:
+        result = import_esef_history(
+            db,
+            holding,
+            provider,
+            storage,
+            lei=(body.lei if body else None) or None,
+            max_filings=get_settings().esef_index_max_filings,
+        )
+    except EsefImportError as exc:
+        db.rollback()
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return _esef_out(db, holding, result)
 
 
 @router.get("/holdings/{holding_id}/sec-edgar", response_model=EdgarImportOut)

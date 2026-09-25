@@ -12,7 +12,7 @@
 | `.xhtml` / `.htm` | New inline-XBRL parser (ESEF annual reports, SEC 10-K/20-F) |
 | `.csv` + `.xlsx` | New shared statement-table parser for IR "factsheet" downloads |
 | Duplicates | A 2nd document never overwrites a metric/year already on file; differences > 0.5 % are reported |
-| Size limit | iXBRL files: 80 MB (`MAX_IXBRL_UPLOAD_SIZE_MB`); others stay 25 MB |
+| Size limit | iXBRL files: 250 MB since Sprint 10 (was 80 MB; embedded images are stripped on upload, see [Sprint 10](esef-history-import-large-uploads-sprint10-2026-09-25.md)); others stay 25 MB |
 | Bug fix | `GET /documents` could 500 for any document with detail flags (e.g. after an SEC EDGAR import) — `quality_flags` is now `dict[str, Any]` |
 | UI | New file types, a hint under the upload row, and a note per document for skipped/conflicting figures |
 

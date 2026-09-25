@@ -655,74 +655,25 @@ def _other_equity_instruments(
     return notes
 
 
-def parse_ixbrl(content: bytes):
-    from lxml import etree
+@dataclass
+class MappedFacts:
+    """Canonical metrics mapped from a filing's tagged facts — the result is
+    the same whether the facts came from the .xhtml (ix: tags) or from the
+    filing's xBRL-JSON (app/services/filings/esef_index.py)."""
 
-    parser = etree.XMLParser(
-        huge_tree=True, resolve_entities=False, no_network=True, load_dtd=False, recover=False
-    )
-    try:
-        return etree.fromstring(content, parser)
-    except etree.XMLSyntaxError:
-        # A .htm/.html 10-K is sometimes not well-formed XML; the HTML
-        # parser is lenient and still keeps the ix: elements by name.
-        from lxml import html as lxml_html
-
-        return lxml_html.fromstring(content)
+    facts: list[ExtractedFact]
+    mapping_lines: list[str]
+    fact_sources: dict[str, str]
+    years: list[str]
+    integrity: dict[str, object]
+    other_equity: list[str]
+    conflicts: list[str]
 
 
-def extract_ixbrl(content: bytes) -> ExtractionResult:
-    root = parse_ixbrl(content)
-    body = next((el for el in root.iter() if isinstance(el.tag, str) and _local(el.tag) == "body"), root)
-
-    # --- pages ---------------------------------------------------------------
-    containers = _page_containers(body)
-    page_texts: list[str] = []
-    # (element, page) for every ix:nonFraction; page 0 = not inside a page
-    # container (or the document isn't paged).
-    numeric_elements: list[tuple[object, int]] = []
-    in_pages: set[str] = set()
-    tree = root.getroottree()
-    if containers:
-        for container in containers:
-            page_texts.append(_element_text(container))
-            number = len(page_texts)
-            for el in container.iter():
-                if isinstance(el.tag, str) and _local(el.tag) == "nonFraction":
-                    numeric_elements.append((el, number))
-                    in_pages.add(tree.getpath(el))
-    else:
-        page_texts = _chunk(_element_text(body))
-    for el in root.iter():
-        if isinstance(el.tag, str) and _local(el.tag) == "nonFraction" and tree.getpath(el) not in in_pages:
-            numeric_elements.append((el, 0))
-
-    # --- tagged facts -----------------------------------------------------------
-    contexts = _parse_contexts(root)
-    units = _parse_units(root)
-    is_ixbrl = bool(contexts)
-    tagged: list[TaggedFact] = []
-    unreadable = 0
-    for el, page_number in numeric_elements:
-        concept = el.get("name")
-        context_id = el.get("contextRef")
-        if not concept or context_id not in contexts:
-            continue
-        value = _ix_number(el)
-        if value is None:
-            unreadable += 1
-            continue
-        tagged.append(
-            TaggedFact(
-                concept=concept,
-                context_id=context_id,
-                value=value,
-                unit=units.get(el.get("unitRef") or ""),
-                page=page_number,
-                decimals=el.get("decimals"),
-            )
-        )
-
+def map_tagged_facts(tagged: list[TaggedFact], contexts: dict[str, _Context]) -> MappedFacts:
+    """Group totals on annual periods -> canonical metrics (CLAUDE.md Rule 1:
+    deterministic, no inference). Shared by the upload parser and the
+    ESEF-index history import."""
     fiscal_year_ends = {
         (c.end.month, c.end.day)
         for c in contexts.values()
@@ -791,6 +742,103 @@ def extract_ixbrl(content: bytes) -> ExtractionResult:
     integrity = _integrity_checks(resolved, years)
     other_equity = _other_equity_instruments(resolved, years)
 
+    return MappedFacts(
+        facts=facts_out,
+        mapping_lines=mapping_lines,
+        fact_sources=fact_sources,
+        years=years,
+        integrity=integrity,
+        other_equity=other_equity,
+        conflicts=conflicts,
+    )
+
+
+_LEI = re.compile(r"^[A-Z0-9]{18}[0-9]{2}$")
+
+
+def entity_lei(root) -> str | None:
+    """The reporting entity's LEI from the filing's contexts (ESEF requires
+    the ISO 17442 scheme), or None."""
+    for identifier in root.iter(f"{{{XBRLI_NS}}}identifier"):
+        value = (identifier.text or "").strip().upper()
+        if _LEI.match(value):
+            return value
+    return None
+
+
+def parse_ixbrl(content: bytes):
+    from lxml import etree
+
+    parser = etree.XMLParser(
+        huge_tree=True, resolve_entities=False, no_network=True, load_dtd=False, recover=False
+    )
+    try:
+        return etree.fromstring(content, parser)
+    except etree.XMLSyntaxError:
+        # A .htm/.html 10-K is sometimes not well-formed XML; the HTML
+        # parser is lenient and still keeps the ix: elements by name.
+        from lxml import html as lxml_html
+
+        return lxml_html.fromstring(content)
+
+
+def extract_ixbrl(content: bytes) -> ExtractionResult:
+    root = parse_ixbrl(content)
+    body = next((el for el in root.iter() if isinstance(el.tag, str) and _local(el.tag) == "body"), root)
+
+    # --- pages ---------------------------------------------------------------
+    containers = _page_containers(body)
+    page_texts: list[str] = []
+    # (element, page) for every ix:nonFraction; page 0 = not inside a page
+    # container (or the document isn't paged).
+    numeric_elements: list[tuple[object, int]] = []
+    in_pages: set[str] = set()
+    tree = root.getroottree()
+    if containers:
+        for container in containers:
+            page_texts.append(_element_text(container))
+            number = len(page_texts)
+            for el in container.iter():
+                if isinstance(el.tag, str) and _local(el.tag) == "nonFraction":
+                    numeric_elements.append((el, number))
+                    in_pages.add(tree.getpath(el))
+    else:
+        page_texts = _chunk(_element_text(body))
+    for el in root.iter():
+        if isinstance(el.tag, str) and _local(el.tag) == "nonFraction" and tree.getpath(el) not in in_pages:
+            numeric_elements.append((el, 0))
+
+    # --- tagged facts -----------------------------------------------------------
+    contexts = _parse_contexts(root)
+    units = _parse_units(root)
+    is_ixbrl = bool(contexts)
+    tagged: list[TaggedFact] = []
+    unreadable = 0
+    for el, page_number in numeric_elements:
+        concept = el.get("name")
+        context_id = el.get("contextRef")
+        if not concept or context_id not in contexts:
+            continue
+        value = _ix_number(el)
+        if value is None:
+            unreadable += 1
+            continue
+        tagged.append(
+            TaggedFact(
+                concept=concept,
+                context_id=context_id,
+                value=value,
+                unit=units.get(el.get("unitRef") or ""),
+                page=page_number,
+                decimals=el.get("decimals"),
+            )
+        )
+
+    mapped = map_tagged_facts(tagged, contexts)
+    facts_out, mapping_lines, fact_sources = mapped.facts, mapped.mapping_lines, mapped.fact_sources
+    years, integrity, other_equity, conflicts = mapped.years, mapped.integrity, mapped.other_equity, mapped.conflicts
+    lei = entity_lei(root)
+
     # --- the "Tagged XBRL facts" evidence page -------------------------------
     if tagged:
         lines = [
@@ -827,6 +875,7 @@ def extract_ixbrl(content: bytes) -> ExtractionResult:
         flags.append("no_ixbrl_tags")  # plain HTML page: text only, no facts
     else:
         details["ixbrl"] = {
+            "entity_lei": lei,
             "tagged_numbers": len(tagged),
             "fiscal_years": years,
             "facts_mapped": len(facts_out),

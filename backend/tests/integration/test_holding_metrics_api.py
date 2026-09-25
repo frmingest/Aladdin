@@ -112,7 +112,7 @@ class _FakeYahoo:
         from app.providers.base import PricePoint
 
         return PricePoint(
-            price=Decimal("30"), currency="NOK", observed_at=datetime.now(timezone.utc), provider="yfinance"
+            price=Decimal(30), currency="NOK", observed_at=datetime.now(timezone.utc), provider="yfinance"
         )
 
     def get_fx_rate(self, from_currency, to_currency):
@@ -122,7 +122,7 @@ class _FakeYahoo:
         from app.providers.base import FxRate
 
         return FxRate(
-            from_currency=from_currency, to_currency=to_currency, rate=Decimal("1"),
+            from_currency=from_currency, to_currency=to_currency, rate=Decimal(1),
             observed_at=datetime.now(timezone.utc), provider="yfinance",
         )
 

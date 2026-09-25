@@ -11,10 +11,10 @@ Quick-glance tracker. Detail for each item lives in its own linked doc; this pag
 | | |
 |---|---|
 | **Current phase** | Phase 11: the Buffett/Munger single-focus rebuild ([sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md)) |
-| **Sprints closed** | 0, 1, 2, 3, 4, 5, 5B, 6, 7, 8, **9** |
-| **In progress** | Nothing open. **Built today:** Sprint 9 — ROIC / ROE / ROCE and market multiples with share counts ([doc](roic-roe-multiples-sprint9-2026-09-25.md)). Next: pick from the backlog (3c); the filings.xbrl.org history import (layer D) is the natural follow-up |
-| **Latest build** | Sprint 9: committed in `E:\Aladdin`, **not pushed, not deployed**. `787cf53` (Ollama streaming + dark theme) is on GitHub: `origin/main` = `c222904` (checked 2026-09-25) |
-| **Tests** | 725 backend (40 new), 16 frontend vitest (3 new), 16 smoke checks; ruff, tsc, eslint, build clean; migration `b1c2d3e4f5a6` checked up/down/up on Postgres 16. Locally the 2 `test_factory` tests still fail while `.env` selects Ollama |
+| **Sprints closed** | 0, 1, 2, 3, 4, 5, 5B, 6, 7, 8, 9, **10** |
+| **In progress** | Nothing open. **Built today:** Sprint 10 — ESEF history import from filings.xbrl.org + large `.xhtml` uploads (fixes the Orkla 98.6 MB rejection) ([doc](esef-history-import-large-uploads-sprint10-2026-09-25.md)). Next: pick from the backlog (3c) |
+| **Latest build** | Sprint 10: written in `E:\Aladdin` as **uncommitted changes** (commit from GitHub Desktop), not deployed. Sprint 9 `0b05364` is on GitHub (`origin/main` = `0b05364`, checked 2026-09-25), not deployed |
+| **Tests** | 744 backend (19 new), 19 frontend vitest (3 new), 16 smoke checks; ruff, tsc, eslint, build clean; no migration. filings.xbrl.org tested against a fake index only (unreachable from the session) |
 | **Live-verified?** | ❌ Nothing checked live this session: the Railway URLs in the docs (`aladdin-backend.up.railway.app`, `aladdin-frontend…`) answer Railway's *"not provisioned"* 404 — see §2. Everything since Sprint 5B is tested against fakes and a local Postgres only |
 
 ---
@@ -24,7 +24,9 @@ Quick-glance tracker. Detail for each item lives in its own linked doc; this pag
 | # | Action | Why |
 |---|---|---|
 | ★ | **Which Railway URL is live?** `https://aladdin-backend.up.railway.app` returns Railway's "domain not provisioned" 404 (checked 2026-09-25). Check the service's domain in Railway → Settings → Networking, and fix `VITE_API_BASE_URL` / the smoke-test variables if it changed | Nothing can be live-verified until the URL is known |
-| ★ | **Push the Sprint 9 commit and redeploy** (migration `b1c2d3e4f5a6` runs on deploy, additive) | ROIC, ROCE, ROE and the market multiples — [doc](roic-roe-multiples-sprint9-2026-09-25.md) |
+| ★ | **Commit + push Sprint 10 (GitHub Desktop) and redeploy.** Then upload `Orklaasa-2025-12-31-1-no.xhtml` again: expect a note *"… embedded images/fonts removed on upload"* | Large ESEF uploads — [doc](esef-history-import-large-uploads-sprint10-2026-09-25.md) §1 |
+| ★ | On Vår Energi, Salmon Evolution and Orkla: **Primary sources → Earlier annual reports → Import history** (LEI is filled in from the uploaded `.xhtml`). Tell me the years imported and any warnings | First real run of the ESEF history import — [doc](esef-history-import-large-uploads-sprint10-2026-09-25.md) §5 |
+| ★ | **Redeploy Sprint 9** (pushed; migration `b1c2d3e4f5a6` runs on deploy, additive) (migration `b1c2d3e4f5a6` runs on deploy, additive) | ROIC, ROCE, ROE and the market multiples — [doc](roic-roe-multiples-sprint9-2026-09-25.md) |
 | ★ | After the deploy: **delete and re-upload** the Vår Energi and Salmon Evolution `.xhtml` files (also covers the older owner's-view item below), then open each holding's **Market multiples** card and check the share count. Vår's IR page says **2,496,406,246** shares (24 Sep 2026); if Yahoo differs, use **Enter share count** | Tax, leases and EPS are only stored on extraction; the share count feeds the DCF too |
 | ★ | Restart the local backend and the PC worker (new Ollama timeouts load on start). Set Windows user variable `OLLAMA_NUM_PARALLEL=1` (PowerShell: `setx OLLAMA_NUM_PARALLEL 1`) and restart Ollama. During a pass, `ollama ps` should say `100% GPU` | Fixes the "blind pass failed: Ollama timed out" runs — [doc](ollama-streaming-dark-theme-2026-09-25.md) §1 |
 | ★ | Look through the app in the **dark theme** (switch at the bottom of the nav) and say what still reads badly | [doc](ollama-streaming-dark-theme-2026-09-25.md) §2–3 |
@@ -85,14 +87,14 @@ Quick-glance tracker. Detail for each item lives in its own linked doc; this pag
 | 7 | Guardrail tooling: pre-commit, CI, secret scanning (+ F4 smoke test) | ✅ Built 2026-09-24 (`f81a824`, not pushed) |
 | 8 | Fund & ETF analysis (F9, decision 23) | ✅ Built 2026-09-24 (`8847311`, pushed, not deployed) |
 | — | Numeric macro data (F10, decision 24) | ✅ Built 2026-09-24 (`c4b2ed2`, `551a141`, not pushed) |
-| 9 | ROIC / ROE / ROCE + market multiples with share counts (layers A–C) | ✅ Built 2026-09-25 (not pushed, not deployed) — [doc](roic-roe-multiples-sprint9-2026-09-25.md) |
+| 9 | ROIC / ROE / ROCE + market multiples with share counts (layers A–C) | ✅ Built 2026-09-25 (`0b05364`, pushed, not deployed) — [doc](roic-roe-multiples-sprint9-2026-09-25.md) |
+| 10 | ESEF history import (layer D) + large `.xhtml` uploads | ✅ Built 2026-09-25 (uncommitted, not deployed) — [doc](esef-history-import-large-uploads-sprint10-2026-09-25.md) |
 | — | Unplanned, shipped 2026-09-23: F4 status page, F6 decision journal, F7 watchlist | ✅ Done |
 
 ### 3c. Backlog (unscheduled)
 
 | Candidate | Note |
 |---|---|
-| **filings.xbrl.org history import** (Sprint 9 layer D) | Free FY2021–FY2024 ESEF for Oslo holdings by LEI (no FY2025 yet): 5 years of ROIC and a DCF history with only the latest year uploaded — [doc](gap-closing-roic-roe-multiples-2026-09-25.md) §4D |
 | Share-count refresh from the PC worker | Yahoo may block Railway's datacenter IP; the worker (home IP) could refresh prices and share counts |
 | Operating margin from EBIT | When a filing tags EBIT but not operating income, operating margin stays empty |
 | Portfolio risk and regime intelligence | Correlation, drawdown scenarios, rebalancing flags |
@@ -112,7 +114,7 @@ Quick-glance tracker. Detail for each item lives in its own linked doc; this pag
 |---|---|---|
 | SEC EDGAR (XBRL company facts) | US financials, citation-grade | ✅ Built 2026-09-22 |
 | Oslo Børs Newsweb | Oslo regulated announcements | ✅ Built 2026-09-22 |
-| filings.xbrl.org (ESEF index) | Oslo filing history FY2021–FY2024, xBRL-JSON | Proposed 2026-09-25 |
+| filings.xbrl.org (ESEF index) | Oslo filing history FY2020–FY2024, xBRL-JSON | ✅ Built 2026-09-25 (Sprint 10) |
 | yfinance share count · SEC `dei` shares | Shares outstanding for multiples + DCF | ✅ Built 2026-09-25 (Sprint 9) |
 | Brønnøysundregistrene | Norwegian entity data and annual accounts | Nice to have |
 | VFF (vff.no) | Norwegian fund NAVs (Alfred Berg, Heimdal) | Needs a look — would replace typed-in fund returns |
@@ -134,6 +136,7 @@ Detail: [free-market-data-research-providers-2026-09-21.md](free-market-data-res
 | Uploads from before Sprint 9 lack tax, leases and EPS | ROIC shows "missing: income_tax_expense" until the file is re-uploaded | Delete + re-upload (see §2) |
 | Multiples history uses today's FX rate when none is stored near a year end | Older years' P/E for Vår carry today's NOK/USD, labelled under the charts | Historical FX backfill (backlog: historical price/FX) |
 | Metrics panel in the screenshots still shows pre-`34beec7` figures (Vår D/E 10.61×, FCF 1,787m) | Owner's-view numbers not applied on that instance | Delete + re-upload the `.xhtml` files (see §2) |
+| Railway may cap request size | A `.xhtml` over ~100 MB could be refused by Railway's proxy before reaching the app (not confirmed) | Upload that file via the local backend; tell me the exact error |
 | Interest coverage ignores capitalised interest | Understates interest during a build-out (Salmon: 36m capitalised) | Not scheduled — [doc](owner-view-metrics-and-local-worker-plan-2026-09-23.md) §2 "Not changed" |
 | ESEF notes are only block-tagged; shares outstanding rarely tagged | Note tables arrive as text, not figures; no per-share value from ESEF alone | [upload doc](financial-statement-uploads-xhtml-csv-2026-09-23.md) §3 |
 | An umbrella fund report (e.g. L&G, 1,266 pp) adds little excerpt text | Its Gold Mining passages are mostly number tables; the useful part is the holdings schedule | Holdings parser (backlog) — [doc](fund-etf-analysis-sprint8-2026-09-24.md) §4 |
@@ -144,6 +147,7 @@ Detail: [free-market-data-research-providers-2026-09-21.md](free-market-data-res
 
 | Date | Change | Summary | Detail |
 |---|---|---|---|
+| 2026-09-25 | **Sprint 10: ESEF history import + large `.xhtml` uploads** | **Uploads:** base64 images/fonts stripped before storing and parsing (facts + text identical, tested); duplicate check on the original hash; iXBRL limit 80 → 250 MB; size errors in MB; note on the document. Fixes Orkla 2025 (98.6 MB). **History:** earlier ESEF reports imported by LEI from filings.xbrl.org as xBRL-JSON, mapped by the same code as uploads (`map_tagged_facts`); one filing per year + the comparative year before the first filing; years on file skipped; re-import replaces; other-LEI filings refused; LEI read from uploaded `.xhtml`. `GET/POST /sources/holdings/{id}/esef-index`, Primary sources card, System status row, evidence packet **v7**. No migration. Also fixed 3 ruff errors from Sprint 9. 744 tests (19 new), 19 vitest (3 new). Uncommitted | [doc](esef-history-import-large-uploads-sprint10-2026-09-25.md) |
 | 2026-09-25 | **Sprint 9: ROIC / ROE / ROCE + market multiples** | Stores pre-tax profit, tax, leases, minorities, basic EPS and raw materials from ESEF/SEC. ROE on average ordinary equity (*n/m* when book equity < 5% of assets — Vår), ROIC on the filing's effective tax rate (Vår ~90%), ROCE, materials margin. Share-count service: manual > SEC cover page > Yahoo (24 h) > filing, with a net income ÷ EPS cross-check; new table (migration `b1c2d3e4f5a6`, additive) + `GET/PUT/DELETE /holdings/{id}/share-count`. Market cap, owner's-view EV, P/E, P/B, P/S, EV/EBITDA, FCF yield on the metrics panel; DCF now uses the current share count (fixes "DCF unavailable" for Oslo); multiples history converts the price into the filing currency (fixes the ~10× Vår error). Evidence packet v6. Market multiples card with a share-count form; System status row. 725 tests (40 new), 16 vitest (3 new). Committed, not pushed | [doc](roic-roe-multiples-sprint9-2026-09-25.md) |
 | 2026-09-25 | **Open items checked** | `787cf53` is pushed (`origin/main` = `c222904`); `backend/.env` already has yfinance, Gemini research, `SEC_EDGAR_USER_AGENT` and the Supabase `DATABASE_URL`, so only Railway's side remains. The documented Railway URLs answer "not provisioned". Docs only | §2 |
 | 2026-09-25 | **Research: closing the ROIC / ROE / multiples gaps** | The 7 "Not available" metrics need 3 inputs: tax + pre-tax profit (in ESEF, dropped after the integrity check), ordinary-equity averages (already stored), shares outstanding (not tagged in Oslo ESEF). Found: Vår effective tax 90% (ROIC must use it), Vår ordinary equity ≈ 0 (ROE/P-B n/m), FX bug in `multiples.py`, filings.xbrl.org has Vår/Salmon FY2021–24 free but no FY2025. Proposed a 6-step sprint. Docs only. | [doc](gap-closing-roic-roe-multiples-2026-09-25.md) |

@@ -61,3 +61,13 @@ ALLOWED_UPLOAD_EXTENSIONS: tuple[str, ...] = (".pdf", ".pptx", ".xlsx", ".csv", 
 # always traceable to the exact payload (and, via quality_flags["provenance"],
 # the exact filing accession number) it came from.
 DOCUMENT_TYPE_SEC_XBRL = "sec_xbrl_facts"
+
+# System-created, like DOCUMENT_TYPE_SEC_XBRL: one ESEF filing fetched as
+# xBRL-JSON from filings.xbrl.org by the history import (Sprint 10,
+# app/services/filings/esef_index.py). Its FinancialLineItems are the
+# imported years; quality_flags hold the LEI, filing id and report URL.
+DOCUMENT_TYPE_ESEF_INDEX = "esef_index_facts"
+
+# Documents a system import created (not uploaded by Faiz): never excerpt
+# text, never listed as a citable upload for fund facts.
+SYSTEM_IMPORT_DOCUMENT_TYPES: tuple[str, ...] = (DOCUMENT_TYPE_SEC_XBRL, DOCUMENT_TYPE_ESEF_INDEX)

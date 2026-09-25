@@ -103,8 +103,12 @@ class Settings(BaseSettings):
 
     max_upload_size_mb: int = 25
     # ESEF annual reports (.xhtml) embed their fonts and images as base64,
-    # so a full-year report is typically 20-60 MB (Vår Energi 2025: 36 MB).
-    max_ixbrl_upload_size_mb: int = 80
+    # so a full-year report is typically 20-100 MB (Vår Energi 2025: 36 MB,
+    # Orkla 2025: 99 MB). The limit is on the file as uploaded; intake then
+    # strips the embedded images/fonts before storing and parsing it
+    # (app/services/documents/extraction/ixbrl_slim.py), so what is stored
+    # and parsed is usually a few MB.
+    max_ixbrl_upload_size_mb: int = 250
 
     # --- Live research (Sprint 2, see app/providers/gemini_research_provider.py) ---
     # Qualitative macro/sector/company research via Gemini + Google Search
@@ -149,6 +153,11 @@ class Settings(BaseSettings):
     # imports fail visibly with a message saying so.
     sec_edgar_user_agent: str | None = None
     sec_edgar_max_years: int = 10
+    # ESEF history import (Sprint 10, app/providers/esef_index_provider.py):
+    # XBRL International's free filings.xbrl.org index, by LEI, no key.
+    esef_index_provider: str = "filings_xbrl_org"  # "filings_xbrl_org" | "none"
+    esef_index_max_filings: int = 5  # newest N filings per import (+1 comparative year)
+    esef_index_timeout_seconds: float = 60.0
     announcements_provider: str = "newsweb"  # "newsweb" | "none"
     announcements_lookback_days: int = 365
     # How many of the most recent announcements go into the analysis

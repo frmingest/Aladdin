@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../lib/api";
 import { formatDate } from "../lib/format";
-import type { EdgarImport, HoldingAnnouncements, SourceEligibility } from "../lib/types";
+import { isValidLei, normalizeLei } from "../lib/lei";
+import type { EdgarImport, EsefImport, HoldingAnnouncements, SourceEligibility } from "../lib/types";
 import { Button, Card, EmptyState } from "./ui";
 import { ResearchPanel } from "./ResearchPanel";
 
 /** Primary-source data for one holding (backend/app/api/sources.py):
- * SEC EDGAR annual financials (stored as financial facts, so metrics,
- * valuation and analysis use them) and Oslo Børs Newsweb announcements.
+ * SEC EDGAR annual financials and earlier ESEF annual reports from
+ * filings.xbrl.org (both stored as financial facts, so metrics, valuation
+ * and analysis use them) and Oslo Børs Newsweb announcements.
  * All issuer text is rendered as plain text (CLAUDE.md Rule 5). */
 
 function errorText(err: unknown): string {
@@ -111,6 +113,133 @@ function EdgarCard({ holdingId, hint, onImported }: { holdingId: string; hint: s
   );
 }
 
+function EsefHistoryCard({ holdingId, onImported }: { holdingId: string; onImported: () => void }) {
+  const [data, setData] = useState<EsefImport | null>(null);
+  const [lei, setLei] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    api
+      .getEsefImport(holdingId)
+      .then((d) => {
+        setData(d);
+        setLei(d.lei ?? d.suggested_lei ?? "");
+      })
+      .catch((e) => setError(errorText(e)));
+  }, [holdingId]);
+
+  const cleanLei = normalizeLei(lei);
+  const leiInvalid = cleanLei !== "" && !isValidLei(cleanLei);
+
+  async function runImport() {
+    setBusy(true);
+    setError(null);
+    try {
+      const result = await api.importFromEsefIndex(holdingId, cleanLei || null);
+      setData(result);
+      onImported();
+    } catch (e) {
+      setError(errorText(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card>
+      <div className="mb-3 flex items-start justify-between gap-4">
+        <div>
+          <h3 className="text-sm font-semibold text-ink">Earlier annual reports (ESEF index)</h3>
+          <p className="mt-0.5 text-xs text-ink-faint">
+            Tagged figures from the company&apos;s earlier ESEF annual reports on filings.xbrl.org, by LEI. Free,
+            no key. The index runs about a year behind, so upload the latest report yourself.
+          </p>
+        </div>
+        <Button variant="secondary" onClick={runImport} disabled={busy || leiInvalid}>
+          {busy ? "Importing…" : data?.imported ? "Re-import" : "Import history"}
+        </Button>
+      </div>
+
+      <label className="mb-3 block text-xs text-ink-muted">
+        LEI
+        <input
+          value={lei}
+          onChange={(e) => setLei(e.target.value)}
+          placeholder="20 characters — found in the uploaded .xhtml, or search.gleif.org"
+          spellCheck={false}
+          className="mt-1 w-full rounded-md border border-border bg-surface px-2.5 py-1.5 font-mono text-sm text-ink"
+        />
+        {leiInvalid && <span className="mt-1 block text-negative">Not a valid LEI (20 letters and digits; check for a typo).</span>}
+        {!leiInvalid && data?.suggested_lei && cleanLei === data.suggested_lei && data.suggested_lei_source && (
+          <span className="mt-1 block text-ink-faint">From {data.suggested_lei_source}</span>
+        )}
+      </label>
+
+      {error && <p className="mb-3 text-sm text-negative">{error}</p>}
+      {data === null && !error && <p className="text-sm text-ink-muted">Loading…</p>}
+
+      {data && !data.imported && !error && (
+        <EmptyState>
+          Nothing imported yet.
+          {!data.suggested_lei && (
+            <span className="mt-1 block text-xs">
+              Upload the company&apos;s ESEF annual report (.xhtml) and its LEI is filled in here.
+            </span>
+          )}
+        </EmptyState>
+      )}
+
+      {data?.imported && (
+        <div className="space-y-3 text-sm">
+          <p className="text-ink-muted">
+            {data.facts_imported} figures across {data.periods_imported.length} years (
+            {data.periods_imported.join(", ") || "none"})
+            {data.imported_at && <span className="text-ink-faint"> · imported {formatDate(data.imported_at)}</span>}
+          </p>
+          {data.latest_period_in_index && (
+            <p className="text-xs text-ink-faint">Newest filing in the index: {data.latest_period_in_index}</p>
+          )}
+          {data.periods_skipped_existing.length > 0 && (
+            <p className="text-xs text-caution">
+              Skipped {data.periods_skipped_existing.join(", ")} — figures for these years are already on file from
+              an upload or SEC EDGAR.
+            </p>
+          )}
+          {data.warnings.map((w) => (
+            <p key={w} className="text-xs text-caution">
+              {w}
+            </p>
+          ))}
+          {data.filings.length > 0 && (
+            <div>
+              <p className="mb-1 text-xs font-medium uppercase tracking-wide text-ink-faint">Source filings</p>
+              <ul className="flex flex-wrap gap-x-3 gap-y-1 text-xs">
+                {data.filings.map((f) => (
+                  <li key={f.fxo_id}>
+                    <a
+                      href={f.viewer_url || f.report_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-accent hover:text-accent-hover"
+                    >
+                      {f.period_end}
+                    </a>
+                    <span className="text-ink-faint">
+                      {" "}
+                      → {f.years_used.length > 0 ? f.years_used.join(", ") : "not used"}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+    </Card>
+  );
+}
+
 function NewswebCard({ holdingId }: { holdingId: string }) {
   const [snapshot, setSnapshot] = useState<HoldingAnnouncements | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -158,6 +287,7 @@ export function SourcesPanel({ holdingId, onFinancialsChanged }: { holdingId: st
   return (
     <div className="space-y-4">
       {eligibility.newsweb && <NewswebCard holdingId={holdingId} />}
+      {eligibility.esef_index && <EsefHistoryCard holdingId={holdingId} onImported={onFinancialsChanged} />}
       <EdgarCard holdingId={holdingId} hint={eligibility.sec_edgar_reason} onImported={onFinancialsChanged} />
     </div>
   );

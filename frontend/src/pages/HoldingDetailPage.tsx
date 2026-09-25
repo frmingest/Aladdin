@@ -423,8 +423,9 @@ function DocumentsPanel({
           </p>
         ) : (
           <p className="basis-full text-xs text-ink-muted">
-            Best source for figures: the ESEF annual report (.xhtml) — every number is tagged. CSV/Excel
-            downloads from the company&apos;s IR page also work; only full-year columns become figures.
+            Best source for figures: the ESEF annual report (.xhtml, up to 250 MB — embedded images are
+            dropped on upload) — every number is tagged. CSV/Excel downloads from the company&apos;s IR page
+            also work; only full-year columns become figures.
           </p>
         )}
       </div>

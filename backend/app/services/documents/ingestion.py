@@ -29,6 +29,7 @@ from app.models.document import Document, DocumentChunk, DocumentPage
 from app.models.financial_line_item import FinancialLineItem
 from app.providers.object_storage import ObjectStorageProvider
 from app.services.documents.extraction import extract
+from app.services.documents.extraction.ixbrl_slim import strip_embedded_media
 from app.services.documents.hashing import (
     HOLDING_DOCUMENT_EXTENSIONS,
     IXBRL_EXTENSIONS,
@@ -65,10 +66,19 @@ def _existing_facts_by_year(
     return found
 
 
+# quality_flags key recording what intake removed from an ESEF file; kept
+# when extraction later rewrites the flags.
+EMBEDDED_MEDIA_FLAG = "embedded_media_removed"
+
+
 @dataclass
 class IntakeResult:
     document: Document
     was_duplicate: bool
+    # The bytes that were stored and are to be extracted. Equal to the
+    # upload, except for an iXBRL file with embedded images/fonts, whose
+    # base64 payloads are removed (see extraction/ixbrl_slim.py).
+    content: bytes = b""
 
 
 def intake_raw_file(
@@ -101,29 +111,39 @@ def intake_raw_file(
 
     check_basic_readability(filename, content)
 
+    # The hash is always of the file as uploaded, so uploading the same
+    # report again is recognised as a duplicate however it was stored.
     digest = sha256_hex(content)
+    stored = content
+    quality_flags: dict[str, object] = {}
+    if ext in IXBRL_EXTENSIONS:
+        slim = strip_embedded_media(content)
+        if slim.removed_count:
+            stored = slim.content
+            quality_flags[EMBEDDED_MEDIA_FLAG] = slim.as_flag()
+
     existing = db.query(Document).filter(Document.sha256 == digest).one_or_none()
     if existing is not None:
-        return IntakeResult(document=existing, was_duplicate=True)
+        return IntakeResult(document=existing, was_duplicate=True, content=stored)
 
     storage_key = f"{digest}/{filename}"
-    storage_path = storage.store(storage_key, content)
+    storage_path = storage.store(storage_key, stored)
 
     document = Document(
         holding_id=holding_id,
         type=document_type,
         original_filename=filename,
         mime_type=mime_type,
-        size_bytes=len(content),
+        size_bytes=len(stored),
         storage_path=storage_path,
         reporting_period=reporting_period,
         sha256=digest,
         status=DOCUMENT_STATUS_UPLOADED,
-        quality_flags={},
+        quality_flags=quality_flags,
     )
     db.add(document)
     db.flush()
-    return IntakeResult(document=document, was_duplicate=False)
+    return IntakeResult(document=document, was_duplicate=False, content=stored)
 
 
 def process_document(db: Session, document: Document, content: bytes) -> None:
@@ -135,13 +155,16 @@ def process_document(db: Session, document: Document, content: bytes) -> None:
     """
     document.status = DOCUMENT_STATUS_PROCESSING
     db.flush()
+    kept_flags = {
+        k: v for k, v in (document.quality_flags or {}).items() if k == EMBEDDED_MEDIA_FLAG
+    }
 
     ext = extension_of(document.original_filename)
     try:
         result = extract(ext, content, filename=document.original_filename)
     except Exception as exc:  # noqa: BLE001 — any extractor failure is a FAILED document, not a 500
         document.status = DOCUMENT_STATUS_FAILED
-        document.quality_flags = {"extraction_failed": True, "extraction_error": str(exc)}
+        document.quality_flags = {**kept_flags, "extraction_failed": True, "extraction_error": str(exc)}
         db.commit()
         return
 
@@ -221,6 +244,7 @@ def process_document(db: Session, document: Document, content: bytes) -> None:
         )
 
     flags = evaluate_quality(result.pages)
+    flags.update(kept_flags)
     for flag in result.quality_flags:
         flags[flag] = True
     if facts_skipped_no_holding:
@@ -266,5 +290,5 @@ def ingest_holding_document(
     # Only (re)process a genuinely new upload — a duplicate hash pointing at
     # an already-processed document should not re-extract or duplicate pages.
     if not intake.was_duplicate or intake.document.status == DOCUMENT_STATUS_UPLOADED:
-        process_document(db, intake.document, content)
+        process_document(db, intake.document, intake.content or content)
     return intake

@@ -45,6 +45,25 @@ export function DocumentFlagsNote({ document }: { document: DocumentSummary }) {
       detail: [],
     });
   }
+  const media = flags.embedded_media_removed as
+    | { items?: number; original_size_bytes?: number; stored_size_bytes?: number }
+    | undefined;
+  if (media && typeof media === "object" && media.original_size_bytes) {
+    const mb = (n: number | undefined) => `${((n ?? 0) / 1_048_576).toFixed(1)} MB`;
+    notes.push({
+      text: `${media.items ?? 0} embedded images/fonts removed on upload (${mb(media.original_size_bytes)} → ${mb(media.stored_size_bytes)}); figures and text unchanged`,
+      tone: "info",
+      detail: [],
+    });
+  }
+  const index = flags.esef_index as { fiscal_years?: string[] } | undefined;
+  if (index && typeof index === "object") {
+    notes.push({
+      text: `ESEF filing from filings.xbrl.org, years ${(index.fiscal_years ?? []).join(", ") || "—"}`,
+      tone: "info",
+      detail: [],
+    });
+  }
   if (flags.no_ixbrl_tags === true) {
     notes.push({ text: "No XBRL tags found — text only, no figures", tone: "info", detail: [] });
   }

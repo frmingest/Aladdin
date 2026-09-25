@@ -22,6 +22,7 @@ import type {
   DeletionResult,
   DocumentSummary,
   EdgarImport,
+  EsefImport,
   FundDimension,
   FundExposureRowInput,
   FundFacts,
@@ -304,6 +305,13 @@ export const api = {
     request<EdgarImport>(`/sources/holdings/${holdingId}/sec-edgar`),
   importFromEdgar: (holdingId: string) =>
     request<EdgarImport>(`/sources/holdings/${holdingId}/sec-edgar/import`, { method: "POST" }),
+  getEsefImport: (holdingId: string) =>
+    request<EsefImport>(`/sources/holdings/${holdingId}/esef-index`),
+  importFromEsefIndex: (holdingId: string, lei: string | null) =>
+    request<EsefImport>(`/sources/holdings/${holdingId}/esef-index/import`, {
+      method: "POST",
+      body: JSON.stringify({ lei: lei || null }),
+    }),
   getAnnouncements: (holdingId: string) =>
     request<HoldingAnnouncements>(`/sources/holdings/${holdingId}/announcements`),
   refreshAnnouncements: (holdingId: string) =>

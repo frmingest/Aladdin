@@ -18,6 +18,7 @@ from app.config.database import get_db
 from app.main import app
 from app.models import Base
 from app.providers.factory import (
+    get_esef_index_provider_or_none,
     get_macro_data_provider_or_none,
     get_market_data_provider_or_none,
     get_object_storage,
@@ -50,6 +51,8 @@ def client(tmp_path):
     app.dependency_overrides[get_macro_data_provider_or_none] = lambda: None
     # Same for Yahoo (share price / share count on the metrics panel).
     app.dependency_overrides[get_market_data_provider_or_none] = lambda: None
+    # Nor filings.xbrl.org (ESEF history import).
+    app.dependency_overrides[get_esef_index_provider_or_none] = lambda: None
 
     with TestClient(app) as test_client:
         yield test_client

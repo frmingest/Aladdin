@@ -471,6 +471,37 @@ export interface SourceEligibility {
   sec_edgar_reason: string | null;
   newsweb: boolean;
   newsweb_reason: string | null;
+  esef_index: boolean;
+  esef_index_reason: string | null;
+}
+
+/** Mirrors backend EsefImportOut (Sprint 10 — ESEF history from
+ * filings.xbrl.org, by LEI). */
+export interface EsefFiling {
+  period_end: string;
+  fxo_id: string;
+  report_url: string;
+  viewer_url: string;
+  error_count: number;
+  years_used: string[];
+  integrity_failed: string[];
+}
+
+export interface EsefImport {
+  holding_id: string;
+  imported: boolean;
+  suggested_lei: string | null;
+  suggested_lei_source: string | null;
+  lei: string | null;
+  lei_source: string | null;
+  imported_at: string | null;
+  periods_imported: string[];
+  periods_skipped_existing: string[];
+  facts_imported: number;
+  metrics_by_period: Record<string, string[]>;
+  filings: EsefFiling[];
+  latest_period_in_index: string | null;
+  warnings: string[];
 }
 
 export interface EdgarFiling {

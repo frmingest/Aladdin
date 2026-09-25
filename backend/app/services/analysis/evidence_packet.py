@@ -42,9 +42,10 @@ from app.services.analysis.document_excerpts import (
 )
 from app.services.filings.announcements import get_holding_announcements
 from app.services.filings.eligibility import newsweb_applies
+from app.services.filings.esef_index import latest_import_summary
 from app.services.filings.sec_edgar import latest_edgar_document
-from app.services.macro.evidence import add_macro_indicator_evidence
 from app.services.holding_facts import facts_by_period, latest_period
+from app.services.macro.evidence import add_macro_indicator_evidence
 from app.services.market_inputs import build_market_context
 from app.services.metrics import MetricsResult, compute_holding_metrics
 from app.services.research.common import ResearchSnapshot
@@ -74,7 +75,10 @@ from app.services.valuation.holding_valuation import (
 # "current market multiples" (today's price in the filing currency x the
 # current share count on the latest year's figures). Historical multiples
 # now convert the price into the filing currency.
-EVIDENCE_PACKET_VERSION = "v6"
+# v7 (2026-09-25, Sprint 10): a "financial_sources" item for years imported
+# from the filings.xbrl.org ESEF index (filing ids and report URLs), next
+# to the SEC EDGAR one.
+EVIDENCE_PACKET_VERSION = "v7"
 
 
 @dataclass(frozen=True)
@@ -324,7 +328,8 @@ def _add_market_multiples_evidence(
 
 def _add_financial_source_evidence(db: Session, holding: Holding, add: Callable) -> None:
     """Where the financial-history numbers came from, when they came from
-    SEC EDGAR — so the model can cite the actual filings."""
+    SEC EDGAR or the ESEF index — so the model can cite the actual filings."""
+    _add_esef_index_source_evidence(db, holding, add)
     document = latest_edgar_document(db, holding)
     if document is None:
         return
@@ -341,6 +346,25 @@ def _add_financial_source_evidence(db: Session, holding: Holding, add: Callable)
         f"Annual figures above for {flags.get('entity_name', holding.name)} (CIK {flags.get('cik')}) are "
         f"filer-reported XBRL values from: {listing}.",
         citation=f"SEC EDGAR — {flags.get('source_url', '')}",
+    )
+
+
+def _add_esef_index_source_evidence(db: Session, holding: Holding, add: Callable) -> None:
+    summary = latest_import_summary(db, holding)
+    if summary is None:
+        return
+    used = [f for f in summary.filings if f.years_used]
+    if not used:
+        return
+    listing = "; ".join(
+        f"{', '.join(f.years_used)} from ESEF filing {f.fxo_id} (period end {f.period_end})" for f in used
+    )
+    add(
+        "financial_sources",
+        "Financial history source: ESEF filings (filings.xbrl.org)",
+        f"Annual figures above for {', '.join(summary.periods_imported)} are the company's own tagged ESEF "
+        f"(iXBRL) values, LEI {summary.lei}: {listing}.",
+        citation="filings.xbrl.org — " + (used[0].report_url or used[0].viewer_url),
     )
 
 
