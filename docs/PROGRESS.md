@@ -2,7 +2,7 @@
 
 Quick-glance tracker. Detail for each item lives in its own linked doc; this page stays short tables only.
 
-**Last updated:** 2026-09-24
+**Last updated:** 2026-09-25
 
 ---
 
@@ -12,8 +12,8 @@ Quick-glance tracker. Detail for each item lives in its own linked doc; this pag
 |---|---|
 | **Current phase** | Phase 11: the Buffett/Munger single-focus rebuild ([sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md)) |
 | **Sprints closed** | 0, 1, 2, 3, 4, 5, 5B, 6, **7**, 8 |
-| **In progress** | Nothing open. **Built today:** numeric macro data (Norges Bank / SSB / FRED, in the analysis as packet v5) and **Sprint 7** (CI, pre-commit, secret scan, smoke test). All planned sprints are now built; next is picked from the backlog (3c) |
-| **Latest build** | `c4b2ed2` macro backend, `551a141` macro UI, `f81a824` Sprint 7 (+ docs): committed in the session clone, **not pushed, not deployed** (delivered as a zip). Sprint 8 is on GitHub (`origin/main` = `d2701e5`); deploy not verified. |
+| **In progress** | Nothing open. **Built today:** Ollama passes now stream (fixes "timed out generating"), dark theme, more readable analysis cards. Next is picked from the backlog (3c) |
+| **Latest build** | `787cf53` Ollama streaming + dark theme/readable analysis: committed in `E:\Aladdin`, **not pushed, not deployed**. Macro data + Sprint 7 are on GitHub (`origin/main` = `dd42b35`); deploy not verified. |
 | **Tests** | 678 backend (29 new), 6 frontend (vitest, new), 16 smoke checks; ruff clean repo-wide; migration `a9b0c1d2e3f4` checked up/down on Postgres 16. Locally the 2 `test_factory` tests still fail while `.env` selects Ollama |
 | **Live-verified?** | ❌ The analysis engine, EDGAR, Newsweb, the worker and the macro fetch have only been tested against fakes and a local Postgres. CI and the smoke test haven't run on GitHub yet. |
 
@@ -23,7 +23,8 @@ Quick-glance tracker. Detail for each item lives in its own linked doc; this pag
 
 | # | Action | Why |
 |---|---|---|
-| ★ | **Copy the zip into `E:\Aladdin`, commit and push** (macro data + Sprint 7). Railway runs migration `a9b0c1d2e3f4` (additive) on start | [doc](macro-data-and-guardrails-sprint7-2026-09-24.md) §7 |
+| ★ | **Push `787cf53`**, then restart the local backend and the PC worker (new Ollama timeouts load on start). Set Windows user variable `OLLAMA_NUM_PARALLEL=1` and restart Ollama. During a pass, `ollama ps` should say `100% GPU` | Fixes the "blind pass failed: Ollama timed out" runs — [doc](ollama-streaming-dark-theme-2026-09-25.md) §1 |
+| ★ | Look through the app in the **dark theme** (switch at the bottom of the nav) and say what still reads badly | [doc](ollama-streaming-dark-theme-2026-09-25.md) §2–3 |
 | ★ | After deploy: **Macro → Refresh data** (expect 13 updated; US series fail = `FRED_API_KEY` missing in Railway). Restart the PC worker | First real Norges Bank / SSB / FRED fetch |
 | ★ | GitHub → Settings → Actions → **Variables** `SMOKE_FRONTEND_URL`, `SMOKE_API_URL`; then run the **Smoke test** workflow | Post-deploy check (F4) |
 | ★ | Once on the PC: `pip install -r backend\requirements-dev.txt`, then `pre-commit install` in `E:\Aladdin`. Later: require CI on `main` (branch protection) | Hooks run on every commit, CI on every push |
@@ -131,6 +132,7 @@ Detail: [free-market-data-research-providers-2026-09-21.md](free-market-data-res
 
 | Date | Change | Summary | Detail |
 |---|---|---|---|
+| 2026-09-25 | **Ollama streaming + dark theme + readable analysis** | Ollama passes stream, so a slow pass no longer times out while tokens are still coming: `OLLAMA_STALL_TIMEOUT_SECONDS` (600, gap between tokens) + `OLLAMA_TIMEOUT_SECONDS` (900 → 1800, whole pass). Timeout errors show tokens/s and GPU share; whitespace loops stopped early; readiness warns when the model is partly on the CPU. UI: dark theme by default (CSS-variable tokens, light kept behind a nav switch), Inter / Space Grotesk / JetBrains Mono, analysis narratives with a lead sentence, short paragraphs, highlighted figures, "data gap" markers and Read more. 683 backend tests (8 new), 13 vitest (7 new). Committed `787cf53`, not pushed. | [doc](ollama-streaming-dark-theme-2026-09-25.md) |
 | 2026-09-24 | **Sprint 7: guardrail tooling (+ F4 smoke test)** | CI on every push/PR: ruff + pytest, migrations up/down/up on Postgres 16, tsc + eslint + vitest + build, gitleaks over full history, dependency audit (report-only). Pre-commit: ruff, gitleaks, file checks, blocks `.env` files and document uploads. Read-only Playwright smoke test (no non-GET, no Gemini spend) + `smoke.yml` after each Railway deploy / daily / on demand. First vitest tests. Ruff pinned (0.16.8), repo lint-clean. History scanned: no leaks. Committed `f81a824`, not pushed. | [doc](macro-data-and-guardrails-sprint7-2026-09-24.md) §5 |
 | 2026-09-24 | **Numeric macro data: Norges Bank, SSB, FRED (F10, decision 24)** | 13 series (policy rates, NOWA, T-bill, 10y yields, USD/NOK, EUR/NOK, CPI y/y ×2, curve, unemployment, HY spread) + real policy rates and NO−US 10y. Stored append-only in the legacy `macro_observations` table + new `macro_series_status` (migration `a9b0c1d2e3f4`, additive). Background refresh every 12 h, stale series refreshed before each run. Evidence packet **v5** / **fund-v2** with cited `macro_indicator` items; readiness + System status rows; Macro page card + dashboard strip. Norway CPI from SSB (OECD copy on FRED stopped 2025). 678 tests (29 new). Committed `c4b2ed2`, `551a141`, not pushed. | [doc](macro-data-and-guardrails-sprint7-2026-09-24.md) |
 | 2026-09-24 | **Sprint 8: fund & ETF analysis (F9)** | Funds and ETFs get their own Buffett/Munger analysis. New type `equity_fund`; **Fund facts** (profile & cost, returns vs benchmark, holdings / sector / country / currency) typed in with a cited document + page, or imported from a holdings CSV/XLSX — never read by an LLM (decision 23). Deterministic fee drag, excess return / tracking difference, concentration, look-through ROE/margins with coverage, overlap with direct stocks. Evidence packet `fund-v1`, schema + prompts `fund_v1`, umbrella-report filter for excerpts, fund readiness checks. Migration `f8a9b0c1d2e3` (additive). 649 tests (30 new). Committed `8847311`, not pushed. | [doc](fund-etf-analysis-sprint8-2026-09-24.md) |
