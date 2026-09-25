@@ -137,7 +137,7 @@ export function JournalEntryForm({
               aria-pressed={confidence === n}
               className={`h-7 w-7 rounded-full border text-xs font-medium ${
                 confidence !== null && n <= confidence
-                  ? "border-accent bg-accent text-white"
+                  ? "border-accent bg-accent text-onfill"
                   : "border-border bg-surface text-ink-muted hover:border-accent"
               }`}
             >

@@ -17,6 +17,8 @@ import type {
   VerdictRating,
 } from "../lib/types";
 import { isFundBlindPass } from "../lib/types";
+import { dataGapCount } from "../lib/prose";
+import { Prose, WithFigures } from "./Prose";
 import { Button, Card, EmptyState } from "./ui";
 
 /** The Buffett/Munger analysis for one holding (Sprint 4 frontend = F1,
@@ -54,11 +56,11 @@ const MOAT_SOURCE_LABELS: Record<string, string> = {
 };
 
 const RATING_STYLES: Record<VerdictRating, string> = {
-  "Strong Buy": "bg-positive text-white",
+  "Strong Buy": "bg-positive text-onfill",
   Buy: "bg-positive-subtle text-positive",
   Hold: "bg-border-subtle text-ink",
   Sell: "bg-negative-subtle text-negative",
-  Avoid: "bg-negative text-white",
+  Avoid: "bg-negative text-onfill",
 };
 
 const MOAT_STYLES: Record<MoatRating, string> = {
@@ -97,9 +99,9 @@ function Citations({ ids, evidence }: { ids: string[]; evidence: Map<string, Evi
   const selected = open ? evidence.get(open) : undefined;
 
   return (
-    <div className="mt-2">
-      <div className="flex flex-wrap items-center gap-1.5">
-        <span className="text-xs text-ink-faint">Evidence</span>
+    <div className="mt-4">
+      <div className="flex flex-wrap items-center gap-1.5 border-t border-border-subtle pt-3">
+        <span className="mr-1 text-[11px] font-medium uppercase tracking-wider text-ink-faint">Evidence</span>
         {ids.map((id) => {
           const known = evidence.has(id);
           const active = open === id;
@@ -110,12 +112,12 @@ function Citations({ ids, evidence }: { ids: string[]; evidence: Map<string, Evi
               onClick={() => setOpen(active ? null : id)}
               aria-expanded={active}
               title={known ? evidence.get(id)?.label : "Not found in this run's evidence packet"}
-              className={`tabular rounded px-1.5 py-0.5 text-xs font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+              className={`tabular rounded-md px-1.5 py-0.5 font-mono text-[11px] font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                 !known
                   ? "bg-caution-subtle text-caution line-through"
                   : active
-                    ? "bg-accent text-white"
-                    : "bg-accent-subtle text-accent hover:bg-accent hover:text-white"
+                    ? "bg-accent text-onfill"
+                    : "bg-accent-subtle text-accent hover:bg-accent hover:text-onfill"
               }`}
             >
               {id}
@@ -124,7 +126,7 @@ function Citations({ ids, evidence }: { ids: string[]; evidence: Map<string, Evi
         })}
       </div>
       {open && (
-        <div className="mt-2 rounded-md border border-border-subtle bg-background p-3 text-sm">
+        <div className="mt-2 rounded-lg border border-border-subtle bg-raised p-3 text-sm">
           {selected ? (
             <>
               <p className="font-medium text-ink">{selected.label}</p>
@@ -323,14 +325,14 @@ function BulletList({ title, items }: { title: string; items: string[] }) {
   if (items.length === 0) return null;
   return (
     <div>
-      <h4 className="text-xs font-medium text-ink-muted">{title}</h4>
-      <ul className="mt-1.5 space-y-1 text-sm text-ink">
+      <h4 className="text-[11px] font-semibold uppercase tracking-wider text-ink-faint">{title}</h4>
+      <ul className="mt-2 space-y-2 text-sm leading-relaxed text-ink">
         {items.map((item, i) => (
-          <li key={i} className="flex gap-2">
-            <span className="text-ink-faint" aria-hidden="true">
-              –
+          <li key={i} className="flex gap-2.5">
+            <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" aria-hidden="true" />
+            <span>
+              <WithFigures text={item} />
             </span>
-            <span>{item}</span>
           </li>
         ))}
       </ul>
@@ -355,9 +357,9 @@ function VerdictCard({
     <Card>
       <div className="flex flex-wrap items-start justify-between gap-6">
         <div>
-          <p className="text-xs text-ink-muted">Verdict</p>
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-faint">Verdict</p>
           <p
-            className={`mt-1 inline-block rounded-md px-3 py-1 text-xl font-semibold ${RATING_STYLES[verdict.rating]}`}
+            className={`mt-1.5 inline-block rounded-lg px-4 py-1.5 font-display text-2xl font-semibold tracking-tight ${RATING_STYLES[verdict.rating]}`}
           >
             {verdict.rating}
           </p>
@@ -374,12 +376,12 @@ function VerdictCard({
           )}
         </div>
         <div className="md:text-right">
-          <p className="text-xs text-ink-muted">Price target range</p>
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-faint">Price target range</p>
           {run.schema_version.startsWith("fund") ? (
             <p className="mt-1 text-sm text-ink-faint">Not applicable to a fund (no DCF)</p>
           ) : run.price_target_low && run.price_target_high ? (
             <>
-              <p className="tabular mt-1 text-xl font-semibold text-ink">
+              <p className="tabular mt-1.5 font-display text-2xl font-semibold tracking-tight text-ink">
                 {formatDecimal(run.price_target_low)} – {formatDecimal(run.price_target_high)}
                 {run.price_target_currency && (
                   <span className="ml-1 text-xs font-normal text-ink-faint">
@@ -396,14 +398,14 @@ function VerdictCard({
       </div>
 
       {reconciliation && reconciliation.reconciliation_narrative && (
-        <div className="mt-4 rounded-md bg-background p-3">
-          <p className="text-xs font-medium text-ink-muted">How your notes were weighed</p>
-          <p className="mt-1 text-sm text-ink">{reconciliation.reconciliation_narrative}</p>
+        <div className="mt-5 rounded-lg border-l-2 border-accent bg-raised p-4">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-ink-faint">How your notes were weighed</p>
+          <Prose text={reconciliation.reconciliation_narrative} clampAfter={2} />
           <Citations ids={reconciliation.evidence_ids} evidence={evidence} />
         </div>
       )}
 
-      <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-2">
+      <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
         <BulletList title="Thesis" items={verdict.thesis_bullets} />
         <BulletList title="Top risks" items={verdict.top_risks} />
         <BulletList title="Metrics to monitor" items={verdict.metrics_to_monitor} />
@@ -430,13 +432,15 @@ function FundMoatCard({
   return (
     <Card>
       <div className="flex items-center justify-between gap-4">
-        <h3 className="text-sm font-semibold text-ink">The businesses underneath (look-through moat)</h3>
+        <CardTitle icon="moat">The businesses underneath (look-through moat)</CardTitle>
         <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${MOAT_STYLES[moat.overall_rating]}`}>
           {moat.overall_rating === "None" ? "No moat" : `${moat.overall_rating} moat`}
         </span>
       </div>
-      <p className="mt-2 text-sm text-ink">{moat.circle_of_competence_summary}</p>
-      <p className="mt-2 text-xs text-caution">Coverage: {moat.coverage_caveat}</p>
+      <div className="mt-3">
+        <Prose text={moat.circle_of_competence_summary} clampAfter={2} />
+      </div>
+      <p className="mt-3 text-xs text-caution">Coverage: {moat.coverage_caveat}</p>
       <Citations ids={moat.evidence_ids} evidence={evidence} />
     </Card>
   );
@@ -449,12 +453,14 @@ function MoatCard({ run, evidence }: { run: AnalysisRun; evidence: Map<string, E
   return (
     <Card>
       <div className="flex items-center justify-between gap-4">
-        <h3 className="text-sm font-semibold text-ink">Business quality &amp; moat</h3>
+        <CardTitle icon="moat">Business quality &amp; moat</CardTitle>
         <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${MOAT_STYLES[moat.overall_rating]}`}>
           {moat.overall_rating === "None" ? "No moat" : `${moat.overall_rating} moat`}
         </span>
       </div>
-      <p className="mt-2 text-sm text-ink">{moat.circle_of_competence_summary}</p>
+      <div className="mt-3">
+        <Prose text={moat.circle_of_competence_summary} clampAfter={2} />
+      </div>
       <Citations ids={moat.evidence_ids} evidence={evidence} />
 
       <ul className="mt-4 divide-y divide-border-subtle border-t border-border-subtle">
@@ -468,7 +474,9 @@ function MoatCard({ run, evidence }: { run: AnalysisRun; evidence: Map<string, E
                 {source.rating}
               </span>
             </div>
-            <p className="mt-1 text-sm text-ink-muted">{source.reasoning}</p>
+            <p className="mt-1 max-w-[72ch] text-sm leading-relaxed text-ink-muted">
+              <WithFigures text={source.reasoning} />
+            </p>
             <Citations ids={source.evidence_ids} evidence={evidence} />
           </li>
         ))}
@@ -477,19 +485,70 @@ function MoatCard({ run, evidence }: { run: AnalysisRun; evidence: Map<string, E
   );
 }
 
+type SectionIcon =
+  | "moat"
+  | "capital"
+  | "fortress"
+  | "macro"
+  | "valuation"
+  | "steward"
+  | "portfolio"
+  | "role";
+
+// Simple 24px line icons (stroke = currentColor), one per analysis section,
+// so the cards can be told apart before reading a word.
+const ICON_PATHS: Record<SectionIcon, string> = {
+  moat: "M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6l8-3z M9 12l2 2 4-4",
+  capital: "M3 17l6-6 4 4 8-8 M15 7h6v6",
+  fortress: "M4 21V8l4-3 4 3 4-3 4 3v13 M4 21h16 M10 21v-5h4v5",
+  macro: "M12 3a9 9 0 100 18 9 9 0 000-18z M3 12h18 M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3z",
+  valuation: "M12 3v18 M5 7h14 M5 7l-3 7a4 4 0 006 0L5 7z M19 7l-3 7a4 4 0 006 0l-3-7z",
+  steward: "M12 11a4 4 0 100-8 4 4 0 000 8z M4 21a8 8 0 0116 0",
+  portfolio: "M12 3v9l7.8 4.5 M12 3a9 9 0 109 9",
+  role: "M12 3a9 9 0 100 18 9 9 0 000-18z M12 8a4 4 0 100 8 4 4 0 000-8z M12 11.5v1",
+};
+
+function CardTitle({ icon, children }: { icon: SectionIcon; children: React.ReactNode }) {
+  return (
+    <h3 className="flex items-center gap-3 font-display text-[15px] font-semibold tracking-tight text-ink">
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent-subtle text-accent">
+        <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d={ICON_PATHS[icon]} />
+        </svg>
+      </span>
+      {children}
+    </h3>
+  );
+}
+
 function NarrativeCard({
   title,
+  icon,
   section,
   evidence,
 }: {
   title: string;
+  icon: SectionIcon;
   section: NarrativeAssessment;
   evidence: Map<string, EvidenceItem>;
 }) {
+  const gaps = dataGapCount(section.summary);
   return (
-    <Card>
-      <h3 className="text-sm font-semibold text-ink">{title}</h3>
-      <p className="mt-2 whitespace-pre-line text-sm text-ink">{section.summary}</p>
+    <Card className="flex flex-col">
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <CardTitle icon={icon}>{title}</CardTitle>
+        {gaps > 0 && (
+          <span
+            className="shrink-0 rounded-full bg-caution-subtle px-2 py-0.5 text-[11px] font-medium text-caution"
+            title="Sentences where the analysis says it lacked data — highlighted below"
+          >
+            {gaps} data gap{gaps === 1 ? "" : "s"}
+          </span>
+        )}
+      </div>
+      <div className="flex-1">
+        <Prose text={section.summary} />
+      </div>
       <Citations ids={section.evidence_ids} evidence={evidence} />
     </Card>
   );
@@ -862,12 +921,12 @@ export function AnalysisPanel({ holdingId }: { holdingId: string }) {
         <>
           <FundMoatCard blind={blind} evidence={evidence} />
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <NarrativeCard title="Steward & costs" section={blind.steward_and_costs} evidence={evidence} />
-            <NarrativeCard title="Portfolio construction" section={blind.portfolio_construction} evidence={evidence} />
-            <NarrativeCard title="Macro & industry stress test" section={blind.macro_stress_test} evidence={evidence} />
-            <NarrativeCard title="Valuation" section={blind.valuation_synthesis} evidence={evidence} />
+            <NarrativeCard title="Steward & costs" icon="steward" section={blind.steward_and_costs} evidence={evidence} />
+            <NarrativeCard title="Portfolio construction" icon="portfolio" section={blind.portfolio_construction} evidence={evidence} />
+            <NarrativeCard title="Macro & industry stress test" icon="macro" section={blind.macro_stress_test} evidence={evidence} />
+            <NarrativeCard title="Valuation" icon="valuation" section={blind.valuation_synthesis} evidence={evidence} />
           </div>
-          <NarrativeCard title="Role in your portfolio" section={blind.role_in_portfolio} evidence={evidence} />
+          <NarrativeCard title="Role in your portfolio" icon="role" section={blind.role_in_portfolio} evidence={evidence} />
         </>
       )}
 
@@ -875,10 +934,10 @@ export function AnalysisPanel({ holdingId }: { holdingId: string }) {
         <>
           <MoatCard run={run} evidence={evidence} />
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <NarrativeCard title="Capital efficiency" section={blind.capital_efficiency} evidence={evidence} />
-            <NarrativeCard title="Financial fortress" section={blind.financial_fortress} evidence={evidence} />
-            <NarrativeCard title="Macro & industry stress test" section={blind.macro_stress_test} evidence={evidence} />
-            <NarrativeCard title="Valuation & margin of safety" section={blind.valuation_synthesis} evidence={evidence} />
+            <NarrativeCard title="Capital efficiency" icon="capital" section={blind.capital_efficiency} evidence={evidence} />
+            <NarrativeCard title="Financial fortress" icon="fortress" section={blind.financial_fortress} evidence={evidence} />
+            <NarrativeCard title="Macro & industry stress test" icon="macro" section={blind.macro_stress_test} evidence={evidence} />
+            <NarrativeCard title="Valuation & margin of safety" icon="valuation" section={blind.valuation_synthesis} evidence={evidence} />
           </div>
         </>
       )}

@@ -58,7 +58,11 @@ class Settings(BaseSettings):
     ollama_model_name: str = "qwen3:14b"
     ollama_num_ctx: int = 16384
     ollama_keep_alive: str = "30m"
-    ollama_timeout_seconds: float = 900.0
+    # Calls stream (2026-09-25): OLLAMA_TIMEOUT_SECONDS caps one whole pass
+    # (wall clock); OLLAMA_STALL_TIMEOUT_SECONDS is the longest wait for the
+    # next chunk — mostly model load + reading a 16k-token prompt.
+    ollama_timeout_seconds: float = 1800.0
+    ollama_stall_timeout_seconds: float = 600.0
     # False = ask thinking models (Qwen3) to skip the <think> phase, which
     # is much faster and doesn't help schema-constrained JSON. None = don't
     # send the field at all.

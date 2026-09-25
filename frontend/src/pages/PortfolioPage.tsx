@@ -103,7 +103,7 @@ function UploadPanel({ onImported }: { onImported: () => void }) {
             if (files && files.length > 0) void handleFiles(files);
             e.target.value = "";
           }}
-          className="text-sm text-ink-muted file:mr-3 file:rounded-md file:border-0 file:bg-accent file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-accent-hover disabled:opacity-50"
+          className="text-sm text-ink-muted file:mr-3 file:rounded-md file:border-0 file:bg-accent file:px-3 file:py-2 file:text-sm file:font-medium file:text-onfill hover:file:bg-accent-hover disabled:opacity-50"
         />
       </label>
       {uploading && <p className="mt-3 text-sm text-ink-muted">Importing…</p>}
@@ -174,30 +174,35 @@ function CompositionChart({ holdings }: { holdings: Holding[] | null }) {
             layout="vertical"
             margin={{ top: 4, right: 24, bottom: 0, left: 0 }}
           >
-            <CartesianGrid stroke="#F0EFED" horizontal={false} />
+            <CartesianGrid stroke="rgb(var(--c-border-subtle))" horizontal={false} />
             <XAxis type="number" hide />
             <YAxis
               type="category"
               dataKey="label"
-              tick={{ fontSize: 12, fill: "#111111" }}
+              tick={{ fontSize: 12, fill: "rgb(var(--c-ink))" }}
               axisLine={false}
               tickLine={false}
               width={120}
             />
             <Tooltip
               formatter={(value: number) => [value, "Holdings"]}
+              cursor={{ fill: "rgb(var(--c-border-subtle))", stroke: "rgb(var(--c-border))" }}
               contentStyle={{
                 fontSize: 12,
                 borderRadius: 8,
-                border: "1px solid #E5E7EB",
-                boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+                border: "1px solid rgb(var(--c-border))",
+                background: "rgb(var(--c-raised))",
+                color: "rgb(var(--c-ink))",
+                boxShadow: "0 8px 24px -12px rgba(0,0,0,0.6)",
               }}
+              labelStyle={{ color: "rgb(var(--c-ink-muted))" }}
+              itemStyle={{ color: "rgb(var(--c-ink))" }}
             />
-            <Bar dataKey="count" fill="#2563EB" radius={[0, 4, 4, 0]} barSize={16}>
+            <Bar dataKey="count" fill="rgb(var(--c-accent))" radius={[0, 4, 4, 0]} barSize={16}>
               <LabelList
                 dataKey="count"
                 position="right"
-                style={{ fontSize: 12, fill: "#6B7280" }}
+                style={{ fontSize: 12, fill: "rgb(var(--c-ink-muted))" }}
               />
             </Bar>
           </BarChart>

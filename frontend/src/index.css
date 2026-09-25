@@ -2,9 +2,85 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Theme tokens as RGB triplets (tailwind.config.js wraps them in rgb()).
+   Dark is the default (2026-09-25); [data-theme="light"] restores the
+   warm-gray light palette of 2026-09-23. The theme switch in the nav sets
+   the attribute; index.html applies a saved choice before first paint. */
+:root {
+  color-scheme: dark;
+  --c-background: 11 14 19;       /* #0B0E13 page */
+  --c-surface: 20 24 31;          /* #14181F cards */
+  --c-raised: 28 33 42;           /* #1C212A inputs, inset panels */
+  --c-border: 46 53 64;           /* #2E3540 */
+  --c-border-subtle: 33 39 48;    /* #212730 */
+  --c-ink: 230 234 240;           /* #E6EAF0 */
+  --c-ink-muted: 160 170 184;     /* #A0AAB8 */
+  --c-ink-faint: 120 131 146;     /* #788392 */
+  --c-accent: 96 165 250;         /* #60A5FA */
+  --c-accent-hover: 147 197 253;  /* #93C5FD */
+  --c-accent-subtle: 23 39 64;    /* #172740 */
+  --c-onfill: 11 14 19;
+  --c-positive: 74 222 128;       /* #4ADE80 */
+  --c-positive-subtle: 18 42 29;  /* #122A1D */
+  --c-negative: 248 113 113;      /* #F87171 */
+  --c-negative-subtle: 48 22 24;  /* #301618 */
+  --c-caution: 251 191 36;        /* #FBBF24 */
+  --c-caution-subtle: 45 34 12;   /* #2D220C */
+  --shadow-card: 0 1px 0 0 rgb(255 255 255 / 0.04) inset, 0 10px 30px -18px rgb(0 0 0 / 0.8);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --c-background: 228 226 221;    /* #E4E2DD */
+  --c-surface: 242 241 237;       /* #F2F1ED */
+  --c-raised: 255 255 255;
+  --c-border: 210 207 200;
+  --c-border-subtle: 232 230 225;
+  --c-ink: 17 17 17;
+  --c-ink-muted: 91 97 107;
+  --c-ink-faint: 133 139 149;
+  --c-accent: 37 99 235;
+  --c-accent-hover: 29 78 216;
+  --c-accent-subtle: 226 233 250;
+  --c-onfill: 255 255 255;
+  --c-positive: 22 163 74;
+  --c-positive-subtle: 240 253 244;
+  --c-negative: 220 38 38;
+  --c-negative-subtle: 254 242 242;
+  --c-caution: 217 119 6;
+  --c-caution-subtle: 255 251 235;
+  --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.04);
+}
+
 @layer base {
   body {
     @apply bg-background text-ink font-body antialiased;
+    font-feature-settings: "cv11", "ss01"; /* Inter: straight-sided 1, open digits */
+  }
+
+  ::selection {
+    background: rgb(var(--c-accent) / 0.35);
+  }
+
+  /* Text fields get their own surface; otherwise the browser's white
+     default shows through on the dark theme. */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]),
+  select,
+  textarea {
+    background-color: rgb(var(--c-raised));
+    color: rgb(var(--c-ink));
+  }
+}
+
+@layer components {
+  /* Section headings on the holding page and dashboards: a short accent
+     bar and the display face instead of small grey capitals. */
+  .section-title {
+    @apply mb-3 flex items-center gap-2.5 font-display text-base font-semibold tracking-tight text-ink;
+  }
+  .section-title::before {
+    content: "";
+    @apply h-4 w-1 shrink-0 rounded-full bg-accent;
   }
 }
 

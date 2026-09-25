@@ -395,7 +395,7 @@ function DocumentsPanel({
               if (file) void handleFile(file);
               e.target.value = "";
             }}
-            className="text-sm text-ink-muted file:mr-3 file:rounded-md file:border-0 file:bg-accent file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-accent-hover disabled:opacity-50"
+            className="text-sm text-ink-muted file:mr-3 file:rounded-md file:border-0 file:bg-accent file:px-3 file:py-2 file:text-sm file:font-medium file:text-onfill hover:file:bg-accent-hover disabled:opacity-50"
           />
         </label>
         {uploading && <span className="text-sm text-ink-muted">Uploading…</span>}
@@ -612,7 +612,7 @@ export default function HoldingDetailPage() {
       {error && <p className="mb-4 text-sm text-negative">{error}</p>}
 
       <div className="mb-8">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-muted">
+        <h2 className="section-title">
           Buffett/Munger analysis
         </h2>
         {/* Keyed on metricsKey so readiness re-checks after an upload or
@@ -622,14 +622,14 @@ export default function HoldingDetailPage() {
 
       {isFund ? (
         <div className="mb-8">
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-muted">
+          <h2 className="section-title">
             Fund facts
           </h2>
           <FundFactsPanel key={metricsKey} holdingId={id} />
         </div>
       ) : (
         <div className="mb-8">
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-muted">
+          <h2 className="section-title">
             Deterministic metrics
           </h2>
           <MetricsPanel key={metricsKey} holdingId={id} />
@@ -637,7 +637,7 @@ export default function HoldingDetailPage() {
       )}
 
       <div className="mb-8">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-muted">
+        <h2 className="section-title">
           Documents
         </h2>
         <DocumentsPanel holdingId={id} isFund={isFund} onUploaded={() => setMetricsKey((k) => k + 1)} />
@@ -646,14 +646,14 @@ export default function HoldingDetailPage() {
       {!isFund && (
         <>
           <div className="mb-8">
-            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-muted">
+            <h2 className="section-title">
               Valuation
             </h2>
             <ValuationPanel holdingId={id} ticker={holding.ticker} />
           </div>
 
           <div className="mb-8">
-            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-muted">
+            <h2 className="section-title">
               Research
             </h2>
             <CompanyResearchSection holdingId={id} ticker={holding.ticker} />

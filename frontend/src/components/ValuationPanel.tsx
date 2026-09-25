@@ -92,34 +92,39 @@ function MultiplesChart({
       <div className="h-32 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={points} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
-            <CartesianGrid stroke="#F0EFED" vertical={false} />
+            <CartesianGrid stroke="rgb(var(--c-border-subtle))" vertical={false} />
             <XAxis
               dataKey="period"
-              tick={{ fontSize: 11, fill: "#9CA3AF" }}
-              axisLine={{ stroke: "#E5E7EB" }}
+              tick={{ fontSize: 11, fill: "rgb(var(--c-ink-faint))" }}
+              axisLine={{ stroke: "rgb(var(--c-border))" }}
               tickLine={false}
             />
             <YAxis
-              tick={{ fontSize: 11, fill: "#9CA3AF" }}
+              tick={{ fontSize: 11, fill: "rgb(var(--c-ink-faint))" }}
               axisLine={false}
               tickLine={false}
               width={32}
             />
             <Tooltip
               formatter={(value: number) => value.toFixed(2)}
+              cursor={{ fill: "rgb(var(--c-border-subtle))", stroke: "rgb(var(--c-border))" }}
               contentStyle={{
                 fontSize: 12,
                 borderRadius: 8,
-                border: "1px solid #E5E7EB",
-                boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+                border: "1px solid rgb(var(--c-border))",
+                background: "rgb(var(--c-raised))",
+                color: "rgb(var(--c-ink))",
+                boxShadow: "0 8px 24px -12px rgba(0,0,0,0.6)",
               }}
+              labelStyle={{ color: "rgb(var(--c-ink-muted))" }}
+              itemStyle={{ color: "rgb(var(--c-ink))" }}
             />
             <Line
               type="monotone"
               dataKey="value"
-              stroke="#2563EB"
+              stroke="rgb(var(--c-accent))"
               strokeWidth={2}
-              dot={{ r: 4, fill: "#2563EB", strokeWidth: 0 }}
+              dot={{ r: 4, fill: "rgb(var(--c-accent))", strokeWidth: 0 }}
               activeDot={{ r: 5 }}
             />
           </LineChart>

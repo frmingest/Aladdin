@@ -69,7 +69,7 @@ export default function MacroPage() {
       </div>
 
       <div>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-muted">
+        <h2 className="section-title">
           Sector research
         </h2>
         {holdings === null && <p className="text-sm text-ink-muted">Loading…</p>}

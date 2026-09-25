@@ -56,7 +56,7 @@ def main(argv: list[str] | None = None) -> int:
             h = check_ollama_health(
                 base_url=settings.ollama_base_url, model=model_name, api_key=settings.ollama_api_key
             )
-            return LLMHealth(h.ok, h.detail)
+            return LLMHealth(h.ok, f"{h.detail} {h.warning}" if h.warning else h.detail)
     else:
         model_name = settings.llm_model_name if llm_name == "google_ai_studio" else settings.mistral_model_name
         health = None

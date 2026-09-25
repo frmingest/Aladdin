@@ -40,6 +40,7 @@ These two settings roughly halve the memory the context window needs, so a 14B m
    |---|---|
    | `OLLAMA_FLASH_ATTENTION` | `1` |
    | `OLLAMA_KV_CACHE_TYPE` | `q8_0` |
+   | `OLLAMA_NUM_PARALLEL` | `1` (each parallel slot reserves its own context; on a 12GB card a second one pushes the model onto the CPU) |
 
 3. **Quit Ollama** from the system-tray icon (right-click → Quit) and start it again, so it picks
    the variables up.
@@ -88,7 +89,8 @@ OLLAMA_BASE_URL=http://localhost:11434
 OLLAMA_MODEL_NAME=qwen3:14b
 OLLAMA_NUM_CTX=16384
 OLLAMA_KEEP_ALIVE=30m
-OLLAMA_TIMEOUT_SECONDS=900
+OLLAMA_TIMEOUT_SECONDS=1800        # cap for one whole pass
+OLLAMA_STALL_TIMEOUT_SECONDS=600   # longest wait for the next token (model load + reading the prompt)
 OLLAMA_THINK=false
 
 # Optional: if Ollama is off, fall back to Gemini (spends the 20/day budget).
@@ -196,7 +198,10 @@ restarts the worker if it crashes. To start it at log-on: Task Scheduler → *Cr
 |---|---|
 | "filled Ollama's context window" | The evidence packet is bigger than `OLLAMA_NUM_CTX`. Raise it to `24576`, re-check `ollama ps` says 100% GPU. The app refuses rather than let Ollama silently cut evidence. |
 | "stopped at the output limit" | Raise `LLM_MAX_OUTPUT_TOKENS` (e.g. `12288`). |
-| "timed out generating" | Raise `OLLAMA_TIMEOUT_SECONDS`, or switch to `qwen3:8b`. |
+| "timed out generating … no new output for 600s" | Nothing came back at all: the model was still loading or reading the prompt. Check `ollama ps`; raise `OLLAMA_STALL_TIMEOUT_SECONDS` if the PC is just slow. |
+| "timed out generating … passed the 1800s limit … ~N tokens/s" | Tokens were coming, just slowly. Under ~10 tokens/s means the model is partly on the CPU (the message says how much is on the GPU): close GPU-heavy apps, set `OLLAMA_NUM_PARALLEL=1`, lower `OLLAMA_NUM_CTX`, or use `qwen3:8b`. |
+| "got stuck emitting blank output" | The model looped on whitespace inside the JSON; the app stops it early. Run again; if it repeats, try another model. |
+| Readiness shows "only N% of it is on the GPU" | Same cause as a slow pass — fix before running. |
 | Very slow, `ollama ps` shows CPU | Model spilling to RAM — see Step 4. |
 | Output quality looks weak | Try `gemma3:12b` on the same holding and compare side by side. |
 | `No module named 'click'` (or any module) when starting uvicorn | The venv is incomplete. `python -m pip install -r requirements.txt` inside the venv. |

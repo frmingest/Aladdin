@@ -76,6 +76,7 @@ def _build_provider(name: str, settings: Settings) -> LLMProvider:
             num_ctx=settings.ollama_num_ctx,
             keep_alive=settings.ollama_keep_alive,
             timeout_seconds=settings.ollama_timeout_seconds,
+            stall_timeout_seconds=settings.ollama_stall_timeout_seconds,
             think=settings.ollama_think,
             api_key=settings.ollama_api_key,
         )

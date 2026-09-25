@@ -12,7 +12,7 @@ export function Card({
   className?: string;
 }) {
   return (
-    <div className={`rounded-lg border border-border bg-surface p-5 ${className}`}>
+    <div className={`rounded-xl border border-border bg-surface p-5 shadow-card ${className}`}>
       {children}
     </div>
   );
@@ -30,7 +30,7 @@ export function PageHeader({
   return (
     <div className="mb-6 flex items-start justify-between gap-4">
       <div>
-        <h1 className="font-display text-xl font-semibold text-ink">{title}</h1>
+        <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">{title}</h1>
         {subtitle && <p className="mt-1 text-sm text-ink-muted">{subtitle}</p>}
       </div>
       {actions}
@@ -59,11 +59,11 @@ export function CollapsibleSection({
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        className="mb-3 flex w-full items-center gap-2 text-left text-sm font-semibold uppercase tracking-wide text-ink-muted hover:text-ink"
+        className="group mb-3 flex w-full items-center gap-2.5 text-left font-display text-base font-semibold tracking-tight text-ink"
       >
         <span
           aria-hidden
-          className={`inline-block text-xs transition-transform ${open ? "rotate-90" : ""}`}
+          className={`inline-flex h-5 w-5 items-center justify-center rounded-md bg-raised text-[10px] text-ink-muted transition-transform group-hover:text-accent ${open ? "rotate-90" : ""}`}
         >
           ▶
         </span>
@@ -110,9 +110,9 @@ export function Button({
 }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "secondary" | "danger" }) {
   const base = "rounded-md px-3 py-2 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
   const styles = {
-    primary: "bg-accent text-white hover:bg-accent-hover",
+    primary: "bg-accent text-onfill hover:bg-accent-hover",
     secondary: "border border-border bg-surface text-ink hover:bg-border-subtle",
-    danger: "bg-negative text-white hover:bg-negative/90",
+    danger: "bg-negative text-onfill hover:bg-negative/90",
   } as const;
   return (
     <button className={`${base} ${styles[variant]}`} {...props}>
@@ -122,11 +122,11 @@ export function Button({
 }
 
 const VERDICT_STYLES: Record<string, string> = {
-  "Strong Buy": "bg-positive text-white",
+  "Strong Buy": "bg-positive text-onfill",
   Buy: "bg-positive-subtle text-positive",
   Hold: "bg-border-subtle text-ink",
   Sell: "bg-negative-subtle text-negative",
-  Avoid: "bg-negative text-white",
+  Avoid: "bg-negative text-onfill",
 };
 
 /** The analysis verdict as a pill. Colour follows the verdict's meaning
@@ -149,7 +149,7 @@ export function VerdictBadge({ rating, title }: { rating: string | null; title?:
 export function SectionTitle({ children, hint }: { children: React.ReactNode; hint?: string }) {
   return (
     <div className="mb-3">
-      <h2 className="text-sm font-semibold text-ink">{children}</h2>
+      <h2 className="font-display text-[15px] font-semibold tracking-tight text-ink">{children}</h2>
       {hint && <p className="mt-0.5 text-xs text-ink-faint">{hint}</p>}
     </div>
   );
@@ -169,8 +169,8 @@ export function StatTile({
 }) {
   return (
     <Card>
-      <p className="text-xs text-ink-muted">{label}</p>
-      <p className={`tabular mt-1 text-2xl font-semibold ${tone}`}>{value}</p>
+      <p className="text-xs font-medium uppercase tracking-wider text-ink-faint">{label}</p>
+      <p className={`tabular mt-1.5 font-display text-[1.7rem] font-semibold leading-tight tracking-tight ${tone}`}>{value}</p>
       {hint && <p className="mt-0.5 text-xs text-ink-faint">{hint}</p>}
     </Card>
   );

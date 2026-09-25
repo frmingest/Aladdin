@@ -763,7 +763,7 @@ function HoldingsImport({
             if (file) void handle(file);
             e.target.value = "";
           }}
-          className="text-sm text-ink-muted file:mr-3 file:rounded-md file:border-0 file:bg-accent file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-accent-hover disabled:opacity-50"
+          className="text-sm text-ink-muted file:mr-3 file:rounded-md file:border-0 file:bg-accent file:px-3 file:py-2 file:text-sm file:font-medium file:text-onfill hover:file:bg-accent-hover disabled:opacity-50"
         />
       </label>
       {busy && <span className="text-sm text-ink-muted">Importing…</span>}

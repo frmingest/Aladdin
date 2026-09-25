@@ -196,6 +196,10 @@ def _check_local_llm(settings: Settings) -> ReadinessCheck | None:
         model=settings.ollama_model_name,
         api_key=settings.ollama_api_key,
     )
+    if health.ok and health.warning:
+        return ReadinessCheck(
+            "local_llm", "Local LLM (Ollama)", "warn", f"{health.detail} {health.warning}"
+        )
     if health.ok:
         return ReadinessCheck("local_llm", "Local LLM (Ollama)", "ok", health.detail)
     fallback = settings.llm_fallback_provider
