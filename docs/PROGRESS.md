@@ -14,7 +14,7 @@ Quick-glance tracker. Detail for each item lives in its own linked doc; this pag
 | **Sprints closed** | 0, 1, 2, 3, 4, 5, 5B, 6, **7**, 8 |
 | **In progress** | Nothing open. **Built today:** Ollama passes now stream (fixes "timed out generating"), dark theme, more readable analysis cards. Next is picked from the backlog (3c) |
 | **Latest build** | `787cf53` Ollama streaming + dark theme/readable analysis: committed in `E:\Aladdin`, **not pushed, not deployed**. Macro data + Sprint 7 are on GitHub (`origin/main` = `dd42b35`); deploy not verified. |
-| **Tests** | 678 backend (29 new), 6 frontend (vitest, new), 16 smoke checks; ruff clean repo-wide; migration `a9b0c1d2e3f4` checked up/down on Postgres 16. Locally the 2 `test_factory` tests still fail while `.env` selects Ollama |
+| **Tests** | 685 backend (8 new on 2026-09-25), 13 frontend vitest (7 new), 16 smoke checks; ruff clean repo-wide; migration `a9b0c1d2e3f4` checked up/down on Postgres 16. Locally the 2 `test_factory` tests still fail while `.env` selects Ollama |
 | **Live-verified?** | ❌ The analysis engine, EDGAR, Newsweb, the worker and the macro fetch have only been tested against fakes and a local Postgres. CI and the smoke test haven't run on GitHub yet. |
 
 ---
