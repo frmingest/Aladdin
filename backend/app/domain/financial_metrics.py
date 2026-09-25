@@ -38,6 +38,18 @@ CANONICAL_METRICS = (
     "interest_paid_financing",
     "lease_payments_financing",
     "hybrid_distributions",
+    # ROIC / ROE / multiples inputs (2026-09-25, see
+    # claude/gap-closing-roic-roe-multiples-2026-09-25.md). Tax and pre-tax
+    # profit give the effective tax rate ROIC needs (Vår Energi: ~90%);
+    # leases and minority interests complete invested capital and EV; basic
+    # EPS cross-checks the share count; raw materials give a "materials
+    # margin" for income statements by nature (Salmon Evolution).
+    "income_before_tax",
+    "income_tax_expense",
+    "lease_liabilities",
+    "minority_interests",
+    "eps_basic",
+    "raw_materials_used",
 )
 
 # Exact-match (case-insensitive, whitespace-normalized) label -> canonical
@@ -133,6 +145,22 @@ _LABEL_MAP: dict[str, str] = {
     "investments in property, plant and equipment": "capital_expenditures",
     "interest expenses": "interest_expense",
     "finance costs": "interest_expense",
+    # --- 2026-09-25: effective tax rate inputs for ROIC.
+    "profit before tax": "income_before_tax",
+    "profit/(loss) before tax": "income_before_tax",
+    "profit (loss) before tax": "income_before_tax",
+    "profit before income tax": "income_before_tax",
+    "income before taxes": "income_before_tax",
+    "income before income taxes": "income_before_tax",
+    "resultat før skatt": "income_before_tax",
+    "resultat før skattekostnad": "income_before_tax",
+    # No tax-expense labels on purpose: IR tables print tax both as "2,986"
+    # and "(2,986)", so its sign can't be read from a table. Tax comes from
+    # tagged filings (ESEF/SEC), where the sign is defined.
+    "lease liabilities": "lease_liabilities",
+    "non-controlling interests": "minority_interests",
+    "non-controlling interest": "minority_interests",
+    "minority interests": "minority_interests",
 }
 
 # When two different labels in the same statement map to the same metric
@@ -176,8 +204,14 @@ POSITIVE_MAGNITUDE_METRICS: frozenset[str] = frozenset(
         "interest_paid_financing",
         "lease_payments_financing",
         "hybrid_distributions",
+        "lease_liabilities",
+        "raw_materials_used",
     }
 )
+
+# Per-share figures: never scaled by a table's "in millions" note and never
+# summed with monetary amounts. Their unit is "<currency>/shares".
+PER_SHARE_METRICS: frozenset[str] = frozenset({"eps_basic"})
 
 
 def normalize_label(raw_label: str) -> str:

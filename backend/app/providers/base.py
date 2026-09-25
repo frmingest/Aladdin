@@ -221,6 +221,13 @@ class MarketDataProvider(ABC):
         app/domain/valuation_assumptions/)."""
         raise NotImplementedError
 
+    def get_shares_outstanding(self, ticker: str) -> Decimal:
+        """The vendor's current count of shares outstanding (2026-09-25,
+        app/services/market_data/shares.py). Not abstract: a provider that
+        has no share counts simply raises, and the share-count service falls
+        back to the next source."""
+        raise MarketDataUnavailableError(f"{self.name} does not provide share counts")
+
 
 # --- Risk-free-rate provider interface (Sprint 3 — DCF discount rate) ---
 
@@ -309,6 +316,9 @@ class CompanyFundamentals:
     facts: list[ReportedFact]
     raw_payload: bytes  # stored verbatim as the Document for audit/traceability
     retrieved_at: datetime
+    # The filer's current share count from the latest cover page (SEC
+    # dei:EntityCommonStockSharesOutstanding), when reported.
+    cover_shares: ReportedFact | None = None
 
 
 class FundamentalsProvider(ABC):

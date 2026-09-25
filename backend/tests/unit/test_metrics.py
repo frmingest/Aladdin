@@ -41,21 +41,18 @@ def test_computes_every_derivable_ratio_when_all_facts_present():
     assert result.computed["debt_to_equity"] == Decimal(400) / Decimal(800)
 
 
-def test_always_skips_roic_roe_and_valuation_multiples():
-    result = compute_holding_metrics(FULL_FACTS)
-
-    for metric in ("roic", "roe"):
-        assert metric in result.skipped
-        assert metric not in result.computed
-
+def test_market_multiples_need_market_inputs_and_say_why():
+    result = compute_holding_metrics(FULL_FACTS, market_unavailable_reason="no share count")
     for metric in (
         "price_to_earnings",
         "price_to_book",
         "price_to_sales",
         "ev_to_ebitda",
         "enterprise_value",
+        "market_cap",
     ):
-        assert "market data" in result.skipped[metric]
+        assert metric not in result.computed
+        assert "no share count" in result.skipped[metric]
 
 
 def test_reports_specific_missing_inputs_when_facts_are_sparse():
@@ -100,7 +97,8 @@ def test_ebit_falls_back_to_operating_income_and_says_so():
 
 def test_explicit_ebit_and_ebitda_are_never_overridden():
     result = compute_holding_metrics(FULL_FACTS)
-    assert result.notes == {}
+    assert "interest_coverage" not in result.notes
+    assert "net_debt_to_ebitda" not in result.notes
 
 
 # --- owner's-view definitions (2026-09-23) --------------------------------

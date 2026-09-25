@@ -354,7 +354,7 @@ def test_run_refreshes_stale_macro_data_and_cites_it(client, db_session):
     finally:
         _clear_overrides()
     assert body["status"] == "COMPLETED"
-    assert body["evidence_packet_version"] == "v5"
+    assert body["evidence_packet_version"] == "v6"
     assert _Macro.calls == 13
     macro_items = [i for i in body["evidence_items"] if i["category"] == "macro_indicator"]
     policy = next(i for i in macro_items if i["label"] == "Norges Bank policy rate (NO)")

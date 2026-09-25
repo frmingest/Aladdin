@@ -114,3 +114,39 @@ class RiskFreeRateObservation(Base):
 
     def __repr__(self) -> str:  # pragma: no cover
         return f"<RiskFreeRateObservation {self.currency} rate={self.rate} ({self.source_series_id})>"
+
+
+class ShareCountObservation(Base):
+    """One dated count of a holding's shares outstanding (2026-09-25,
+    app/services/market_data/shares.py). Append-only like the other
+    observation tables. `source`:
+
+    - "manual": Faiz typed it in (with a reference, e.g. a Newsweb notice
+      or the company's IR page) — always wins while it exists;
+    - "sec_edgar": the cover-page count of the latest SEC filing
+      (dei:EntityCommonStockSharesOutstanding), saved by the EDGAR import;
+    - "yfinance": Yahoo's current count, cached 24 h.
+
+    A share count describes a date, not a fiscal year, so it is not a
+    FinancialLineItem."""
+
+    __tablename__ = "share_count_observations"
+    __table_args__ = (
+        Index("ix_share_count_observations_holding_observed", "holding_id", "observed_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(GUID(), primary_key=True, default=uuid.uuid4)
+    holding_id: Mapped[uuid.UUID] = mapped_column(GUID(), ForeignKey("holdings.id"), nullable=False)
+    shares: Mapped[Decimal] = mapped_column(Numeric(24, 2), nullable=False)
+    # The date the count is true for (the cover-page date, the notice date,
+    # or the fetch time for yfinance).
+    observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    source: Mapped[str] = mapped_column(String(16), nullable=False)
+    reference: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    note: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc)
+    )
+
+    def __repr__(self) -> str:  # pragma: no cover
+        return f"<ShareCountObservation holding_id={self.holding_id} shares={self.shares} ({self.source})>"

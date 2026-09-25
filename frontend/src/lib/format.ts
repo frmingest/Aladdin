@@ -114,3 +114,41 @@ export function formatIndicatorChange(change: string | null, kind: "pp" | "pct")
   const sign = n > 0 ? "+" : n < 0 ? "−" : "±";
   return `${sign}${Math.abs(n).toFixed(2)}${kind === "pp" ? " pp" : "%"}`;
 }
+
+/** A share count in millions: "2,496.4m shares". */
+export function formatShares(value: string | null): string {
+  if (value === null) return "—";
+  const n = Number(value);
+  if (!Number.isFinite(n)) return value;
+  if (Math.abs(n) >= 1_000_000) {
+    return `${(n / 1_000_000).toLocaleString("en-US", {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    })}m shares`;
+  }
+  return `${n.toLocaleString("en-US", { maximumFractionDigits: 0 })} shares`;
+}
+
+/** A per-share price with its currency: "NOK 30.12". */
+export function formatPrice(value: string | null, currency: string | null): string {
+  if (value === null) return "—";
+  const n = Number(value);
+  if (!Number.isFinite(n)) return value;
+  const digits = Math.abs(n) >= 1 ? 2 : 4;
+  return `${currency ? `${currency} ` : ""}${n.toLocaleString("en-US", {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  })}`;
+}
+
+/** Parses what someone types as a share count — "2 496 406 246",
+ * "2,496,406,246" or "2496.4m" — into a plain integer string, or null. */
+export function parseShareCount(input: string): string | null {
+  const cleaned = input.trim().toLowerCase().replace(/[\s\u00a0,_']/g, "");
+  const match = cleaned.match(/^(\d+(?:\.\d+)?)(m|bn|b)?$/);
+  if (!match) return null;
+  const scale = match[2] === "m" ? 1e6 : match[2] ? 1e9 : 1;
+  const n = Number(match[1]) * scale;
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return String(Math.round(n));
+}

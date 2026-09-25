@@ -29,7 +29,12 @@ from app.models.analysis import (
 from app.models.document import Document
 from app.models.holding import Holding
 from app.models.macro import MacroSeriesStatus
-from app.models.market import FxObservation, MarketObservation, RiskFreeRateObservation
+from app.models.market import (
+    FxObservation,
+    MarketObservation,
+    RiskFreeRateObservation,
+    ShareCountObservation,
+)
 from app.models.portfolio import PortfolioSnapshot
 from app.models.research import ResearchRun, ResearchRunStatus
 from app.providers.budget import DailyBudgetGuard
@@ -224,6 +229,20 @@ def _fresh(key: str, label: str, last_at: datetime | None, max_age: timedelta | 
     return FreshnessItem(key, label, last_at, OK, detail)
 
 
+def _share_count_detail(db: Session) -> str:
+    """'3 holdings with a share count: 1 entered by you, 2 from Yahoo'."""
+    rows = db.execute(
+        select(ShareCountObservation.source, func.count(func.distinct(ShareCountObservation.holding_id)))
+        .group_by(ShareCountObservation.source)
+    ).all()
+    if not rows:
+        return ""
+    labels = {"manual": "entered by you", "sec_edgar": "from SEC", "yfinance": "from Yahoo"}
+    return "Holdings with a share count: " + ", ".join(
+        f"{count} {labels.get(source, source)}" for source, count in sorted(rows)
+    )
+
+
 def build_system_status(
     db: Session, settings: Settings, budget: DailyBudgetGuard, *, now: datetime | None = None
 ) -> SystemStatus:
@@ -266,6 +285,11 @@ def build_system_status(
         _fresh("edgar", "SEC EDGAR import",
                db.scalar(select(func.max(Document.uploaded_at)).where(Document.type == DOCUMENT_TYPE_SEC_XBRL)),
                None, now, never="Never imported"),
+        _fresh("share_counts", "Latest share count (Yahoo)",
+               db.scalar(select(func.max(ShareCountObservation.observed_at))
+                         .where(ShareCountObservation.source == "yfinance")),
+               timedelta(days=7), now, never="Never fetched",
+               detail=_share_count_detail(db)),
         _fresh("snapshot", "Latest portfolio import", db.scalar(select(func.max(PortfolioSnapshot.uploaded_at))),
                timedelta(days=31), now, never="No portfolio imported", detail=""),
     ]

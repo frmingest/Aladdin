@@ -30,7 +30,7 @@ from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal, InvalidOperation
 
-from app.domain.financial_metrics import POSITIVE_MAGNITUDE_METRICS
+from app.domain.financial_metrics import PER_SHARE_METRICS, POSITIVE_MAGNITUDE_METRICS
 from app.providers.sec_edgar_provider import CONCEPT_MAP as EDGAR_CONCEPT_MAP
 from app.services.documents.extraction.base import (
     ExtractedFact,
@@ -63,7 +63,15 @@ _ESEF_FALLBACK_CONCEPTS: dict[str, tuple[str, ...]] = {
     ),
     "interest_expense": ("ifrs-full:InterestExpenseOnBorrowings",),
     "shares_outstanding": ("ifrs-full:NumberOfSharesIssuedAndFullyPaid",),
+    # Income statement by nature (Salmon Evolution): no cost of sales, but
+    # raw materials and consumables used — feeds "materials margin".
+    "raw_materials_used": ("ifrs-full:RawMaterialsAndConsumablesUsed",),
+    "eps_basic": ("ifrs-full:BasicAndDilutedEarningsLossPerShare",),
 }
+
+# Lease liabilities are usually tagged as a current and a non-current line
+# (Vår Energi 2024: 70.4 + 141.5) rather than one total.
+_LEASE_COMPONENTS = ("ifrs-full:CurrentLeaseLiabilities", "ifrs-full:NoncurrentLeaseLiabilities")
 
 # Inserted BEFORE the generic ifrs-full concepts of the EDGAR list (after
 # the us-gaap ones): a stricter concept that, when tagged, is the right one.
@@ -500,6 +508,18 @@ def _resolve_metric(
     if chosen is not None:
         return chosen.value, IXBRL_CONFIDENCE, chosen.concept, chosen.unit, chosen.page or None
 
+    if metric == "lease_liabilities":
+        parts = [get(c) for c in _LEASE_COMPONENTS if get(c) is not None]
+        if parts and len({p.unit for p in parts}) == 1:
+            return (
+                sum((_positive(p) for p in parts), Decimal(0)),
+                IXBRL_CONFIDENCE if len(parts) == 1 else DERIVED_CONFIDENCE,
+                parts[0].concept if len(parts) == 1 else "derived: " + " + ".join(p.concept for p in parts),
+                parts[0].unit,
+                parts[0].page or None,
+            )
+        return None
+
     if metric == "total_debt":
         parts = [get(c) for c in _DEBT_COMPONENTS if get(c) is not None]
         if parts and len({p.unit for p in parts}) == 1:
@@ -743,6 +763,11 @@ def extract_ixbrl(content: bytes) -> ExtractionResult:
             value, confidence, source, unit_raw, page = picked
             if metric == "shares_outstanding":
                 unit, currency = "shares", None
+            elif metric in PER_SHARE_METRICS:
+                # "USD/shares": the per-share unit must name a currency.
+                if not unit_raw or not re.fullmatch(r"[A-Z]{3}/shares", unit_raw):
+                    continue
+                unit, currency = unit_raw, unit_raw.split("/", 1)[0]
             else:
                 if not unit_raw or not re.fullmatch(r"[A-Z]{3}", unit_raw):
                     continue  # a monetary metric without a currency unit is not trusted

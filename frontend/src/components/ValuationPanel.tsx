@@ -235,6 +235,7 @@ export function ValuationPanel({ holdingId, ticker }: { holdingId: string; ticke
                 <p className="mt-2 text-xs text-ink-faint">
                   Discount rate {formatPercent(valuation.dcf.discount_rate)} · terminal growth{" "}
                   {formatPercent(valuation.dcf.terminal_growth_rate)}
+                  {valuation.shares_source ? ` · ${valuation.shares_source}` : ""}
                 </p>
               </>
             )}
@@ -247,16 +248,29 @@ export function ValuationPanel({ holdingId, ticker }: { holdingId: string; ticke
             {valuation.multiples.length === 0 ? (
               <EmptyState>No periods with both extracted facts and a market price yet.</EmptyState>
             ) : (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                {MULTIPLE_ORDER.map((key) => (
-                  <MultiplesChart
-                    key={key}
-                    metricKey={key}
-                    label={MULTIPLE_LABELS[key]}
-                    series={valuation.multiples}
-                  />
-                ))}
-              </div>
+              <>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  {MULTIPLE_ORDER.map((key) => (
+                    <MultiplesChart
+                      key={key}
+                      metricKey={key}
+                      label={MULTIPLE_LABELS[key]}
+                      series={valuation.multiples}
+                    />
+                  ))}
+                </div>
+                {valuation.multiples.some((m) => (m.notes ?? []).length > 0) && (
+                  <ul className="mt-2 space-y-0.5 text-xs text-ink-faint">
+                    {valuation.multiples
+                      .filter((m) => (m.notes ?? []).length > 0)
+                      .map((m) => (
+                        <li key={m.period}>
+                          {m.period}: {(m.notes ?? []).join("; ")}
+                        </li>
+                      ))}
+                  </ul>
+                )}
+              </>
             )}
           </div>
         </div>

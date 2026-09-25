@@ -26,7 +26,12 @@ from app.models.legacy_analysis import (
     LlmUsageEvent,
 )
 from app.models.macro import MacroObservation, MacroSeriesStatus
-from app.models.market import FxObservation, MarketObservation, RiskFreeRateObservation
+from app.models.market import (
+    FxObservation,
+    MarketObservation,
+    RiskFreeRateObservation,
+    ShareCountObservation,
+)
 from app.models.portfolio import PortfolioPosition, PortfolioSnapshot
 from app.models.research import ResearchItem, ResearchRun
 from app.models.watchlist import WatchlistItem
@@ -58,6 +63,7 @@ __all__ = [
     "PortfolioPosition",
     "PortfolioSnapshot",
     "ResearchItem",
+    "ShareCountObservation",
     "ResearchRun",
     "RiskFreeRateObservation",
     "WatchlistItem",

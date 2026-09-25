@@ -81,9 +81,12 @@ def _to_out(result: HoldingValuationResult) -> HoldingValuationOut:
                 matched_price_observed_at=m.matched_price_observed_at,
                 computed=m.computed,
                 skipped=m.skipped,
+                notes=m.notes,
             )
             for m in result.multiples
         ],
+        shares_outstanding=result.shares_outstanding,
+        shares_source=result.shares_source,
         assumptions_version=result.assumptions_version,
         unavailable_reasons=result.unavailable_reasons,
     )

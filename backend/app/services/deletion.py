@@ -37,7 +37,7 @@ from app.models.legacy_analysis import (
     HoldingAnalysis,
     LlmUsageEvent,
 )
-from app.models.market import MarketObservation
+from app.models.market import MarketObservation, ShareCountObservation
 from app.models.portfolio import PortfolioPosition, PortfolioSnapshot
 from app.models.research import ResearchItem, ResearchRun
 from app.models.watchlist import WatchlistItem
@@ -186,6 +186,12 @@ def _purge_holding_rows(db: Session, holding_ids: list[uuid.UUID], counts: Delet
     counts.market_observations += (
         db.query(MarketObservation)
         .filter(MarketObservation.holding_id.in_(holding_ids))
+        .delete(synchronize_session=False)
+    )
+    # Share counts are market observations too (counted with prices).
+    counts.market_observations += (
+        db.query(ShareCountObservation)
+        .filter(ShareCountObservation.holding_id.in_(holding_ids))
         .delete(synchronize_session=False)
     )
     run_ids = list(db.scalars(select(ResearchRun.id).where(ResearchRun.holding_id.in_(holding_ids))))

@@ -32,6 +32,7 @@ import type {
   HoldingCreateInput,
   HoldingFieldOptions,
   HoldingMetrics,
+  ShareCount,
   HoldingNote,
   HoldingUpdateInput,
   HoldingValuation,
@@ -154,6 +155,21 @@ export const api = {
     request<string[]>(`/holdings/${holdingId}/periods`),
   getHoldingMetrics: (holdingId: string, period: string) =>
     request<HoldingMetrics>(`/holdings/${holdingId}/metrics`, { query: { period } }),
+  /** Enter the current share count yourself; it wins over Yahoo / SEC. */
+  setShareCount: (
+    holdingId: string,
+    body: { shares: string; as_of: string; reference?: string; note?: string },
+  ) =>
+    request<ShareCount>(`/holdings/${holdingId}/share-count`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    }),
+  /** Removes the share counts you entered (Yahoo / SEC take over again). */
+  clearShareCount: (holdingId: string) =>
+    request<{ removed: number }>(`/holdings/${holdingId}/share-count`, {
+      method: "DELETE",
+      query: { confirm: true },
+    }),
 
   deleteDocument: (id: string) =>
     request<DeletionResult>(`/documents/${id}`, { method: "DELETE", query: { confirm: true } }),

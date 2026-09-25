@@ -11,6 +11,7 @@ import type {
 import {
   FACT_LABELS,
   FUND_TYPES,
+  MARKET_METRICS,
   METRIC_LABELS,
   METRIC_ORDER,
   MONEY_METRICS,
@@ -27,6 +28,7 @@ import {
 import { Button, Card, CollapsibleSection, EmptyState, PageHeader, StatusBadge } from "../components/ui";
 import { AnalysisPanel } from "../components/AnalysisPanel";
 import { FundFactsPanel } from "../components/FundFactsPanel";
+import { MarketMultiplesCard } from "../components/MarketMultiplesCard";
 import { DocumentFlagsNote } from "../components/DocumentFlagsNote";
 import { ResearchPanel } from "../components/ResearchPanel";
 import { SourcesPanel } from "../components/SourcesPanel";
@@ -39,6 +41,8 @@ function MetricsPanel({ holdingId }: { holdingId: string }) {
   const [period, setPeriod] = useState<string | null>(null);
   const [metrics, setMetrics] = useState<HoldingMetrics | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Bumped after the share count is edited, to reload the multiples.
+  const [reload, setReload] = useState(0);
 
   useEffect(() => {
     api
@@ -61,7 +65,7 @@ function MetricsPanel({ holdingId }: { holdingId: string }) {
       .catch((err) =>
         setError(err instanceof ApiError ? err.message : "Could not load metrics."),
       );
-  }, [holdingId, period]);
+  }, [holdingId, period, reload]);
 
   if (error) return <p className="text-sm text-negative">{error}</p>;
 
@@ -80,10 +84,11 @@ function MetricsPanel({ holdingId }: { holdingId: string }) {
   // result, not a gap — shown with the computed ratios as "n/m" + reason.
   const isNotMeaningful = (k: string) =>
     metrics?.skipped[k]?.startsWith("not meaningful") ?? false;
-  const computedKeys = METRIC_ORDER.filter(
+  const filingKeys = METRIC_ORDER.filter((k) => !MARKET_METRICS.has(k));
+  const computedKeys = filingKeys.filter(
     (k) => metrics?.computed[k] !== undefined || isNotMeaningful(k),
   );
-  const skippedKeys = METRIC_ORDER.filter(
+  const skippedKeys = filingKeys.filter(
     (k) => metrics?.skipped[k] !== undefined && !isNotMeaningful(k),
   );
 
@@ -112,6 +117,11 @@ function MetricsPanel({ holdingId }: { holdingId: string }) {
           <span className="text-sm text-ink-muted">
             Figures in <span className="font-medium text-ink">{metrics.currency}</span> (the
             filing&apos;s reporting currency)
+          </span>
+        )}
+        {metrics?.prior_period && (
+          <span className="text-sm text-ink-muted">
+            · returns averaged with {metrics.prior_period}
           </span>
         )}
       </div>
@@ -175,6 +185,11 @@ function MetricsPanel({ holdingId }: { holdingId: string }) {
               </dl>
             </Card>
           </div>
+          <MarketMultiplesCard
+            holdingId={holdingId}
+            metrics={metrics}
+            onChanged={() => setReload((r) => r + 1)}
+          />
           <FactSourcesTable metrics={metrics} />
         </>
       )}
@@ -216,7 +231,9 @@ function FactSourcesTable({ metrics }: { metrics: HoldingMetrics }) {
                   <td className="py-2 text-right tabular text-ink">
                     {f.metric === "shares_outstanding"
                       ? formatDecimal(f.value, 0)
-                      : formatMoney(f.value, f.currency)}
+                      : f.metric === "eps_basic"
+                        ? `${f.currency ?? ""} ${formatDecimal(f.value, 2)}`
+                        : formatMoney(f.value, f.currency)}
                   </td>
                   <td className="break-all py-2 pl-4 text-xs text-ink-muted">
                     {f.source ?? "—"}

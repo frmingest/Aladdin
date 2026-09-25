@@ -10,14 +10,9 @@ hands the LLM raw, uninterpreted filing rows for it to do arithmetic on
 research services and Sprint 3's valuation orchestration exactly as they
 already exist — no changes to either.
 
-Note on ROE: app/services/metrics.py (Sprint 1, GET /holdings/{id}/metrics)
-deliberately always skips ROE alongside ROIC, by a decision already shipped
-and tested there. That endpoint's contract is left untouched by this
-module. Brain Step 1.3 needs 3-5yr average ROE, and ROE *is* directly
-computable from extracted facts (net_income, total_equity — no NOPAT/
-invested-capital derivation required, unlike ROIC), so this module calls
-app/services/calculations.roe() directly per period instead of going
-through metrics.compute_holding_metrics() for that one figure.
+ROE, ROIC and ROCE (since v6, 2026-09-25) come from
+metrics.compute_holding_metrics() with the prior year passed in, so the
+packet and the metrics panel use one definition.
 """
 from __future__ import annotations
 
@@ -41,7 +36,6 @@ from app.providers.base import (
     RiskFreeRateProvider,
 )
 from app.providers.newsweb_provider import NewswebAnnouncementsProvider
-from app.services import calculations
 from app.services.analysis.document_excerpts import (
     add_document_excerpt_evidence,
     select_document_excerpts,
@@ -50,7 +44,9 @@ from app.services.filings.announcements import get_holding_announcements
 from app.services.filings.eligibility import newsweb_applies
 from app.services.filings.sec_edgar import latest_edgar_document
 from app.services.macro.evidence import add_macro_indicator_evidence
-from app.services.metrics import MetricsResult, compute_holding_metrics, ordinary_equity
+from app.services.holding_facts import facts_by_period, latest_period
+from app.services.market_inputs import build_market_context
+from app.services.metrics import MetricsResult, compute_holding_metrics
 from app.services.research.common import ResearchSnapshot
 from app.services.research.company import get_company_research
 from app.services.research.macro import get_macro_research
@@ -73,7 +69,12 @@ from app.services.valuation.holding_valuation import (
 # v5 (2026-09-24): adds "macro_indicator" items — policy rates, yields,
 # CPI, FX and credit spread from Norges Bank / FRED / SSB, with 3- and
 # 12-month changes and derived real rates (app/services/macro/).
-EVIDENCE_PACKET_VERSION = "v5"
+# v6 (2026-09-25): ROE on AVERAGE ordinary equity (not meaningful when book
+# equity is depleted), ROIC on the filing's effective tax rate, ROCE, and
+# "current market multiples" (today's price in the filing currency x the
+# current share count on the latest year's figures). Historical multiples
+# now convert the price into the filing currency.
+EVIDENCE_PACKET_VERSION = "v6"
 
 
 @dataclass(frozen=True)
@@ -191,6 +192,7 @@ def build_evidence_packet(
     packet.valuation = valuation
     _add_valuation_evidence(valuation, add)
     packet.unavailable_reasons.extend(f"valuation: {reason}" for reason in valuation.unavailable_reasons)
+    _add_market_multiples_evidence(db, holding, market_data_provider, packet, add)
 
     macro_snapshot = get_macro_research(db, research_provider)
     _add_research_evidence(macro_snapshot, "macro_research", "Macro/geopolitical research", add)
@@ -227,6 +229,97 @@ def build_evidence_packet(
         _note_research_gap(packet, announcements, "Newsweb announcements")
 
     return packet
+
+
+def _add_return_on_capital_evidence(
+    per_period: list[tuple[int, str, MetricsResult, Decimal | None]], assumptions, add: Callable
+) -> None:
+    """ROIC (after the filing's effective tax) and ROCE (pre-tax) series,
+    with the latest period's definition note — the tax rate matters (Vår
+    Energi pays ~78% petroleum tax)."""
+    latest_period_label = per_period[0][1]
+    for key, label in (
+        ("roic", "ROIC (return on invested capital, after effective tax)"),
+        ("roce", "ROCE (pre-tax return on the same invested capital)"),
+    ):
+        series = sorted(
+            ((y, m.computed[key]) for y, _p, m, _r in per_period if key in m.computed), key=lambda r: r[0]
+        )
+        latest = per_period[0][2]
+        if series:
+            average = sum(v for _y, v in series) / len(series)
+            content = (
+                ", ".join(f"{y}: {_fmt_pct(v)}" for y, v in series)
+                + f". {len(series)}-period average: {_fmt_pct(average)}."
+            )
+            if key == "roic":
+                hurdle = assumptions.capital_efficiency_hurdle
+                content += (
+                    f" Capital-efficiency hurdle (assumptions {assumptions.version}): {_fmt_pct(hurdle)} — "
+                    f"average ROIC is {'MEETS' if average >= hurdle else 'BELOW'} hurdle."
+                )
+            if key in latest.notes:
+                content += f" Definition ({latest_period_label}): {latest.notes[key]}."
+            elif key in latest.skipped:
+                content += f" {latest_period_label}: {latest.skipped[key]}."
+            add("financial_history", label, content)
+        else:
+            add(
+                "financial_history",
+                label,
+                f"Not computable for any available period — {latest_period_label}: "
+                f"{latest.skipped.get(key, 'missing inputs')}.",
+            )
+
+
+def _add_market_multiples_evidence(
+    db: Session, holding: Holding, provider: MarketDataProvider, packet: EvidencePacket, add: Callable
+) -> None:
+    """Today's price and share count on the latest fiscal year's figures —
+    the same numbers as the metrics panel's market multiples."""
+    latest = latest_period(facts_by_period(db, holding.id))
+    if latest is None:
+        return
+    no_currency = not any(c for m, c in latest.currencies.items() if m != "shares_outstanding")
+    context = build_market_context(
+        db,
+        holding,
+        provider,
+        reporting_currency=latest.currency,
+        latest_facts=latest.facts,
+        latest_period=latest.period,
+        currency_unknown_not_mixed=no_currency,
+    )
+    label = f"Current market multiples (today's price, {latest.period} figures)"
+    if context.inputs is None:
+        add("valuation", label, f"Not available: {context.unavailable_reason}.")
+        packet.unavailable_reasons.append(f"market multiples: {context.unavailable_reason}")
+        return
+    result = compute_holding_metrics(latest.facts, latest.currencies, market=context.inputs)
+    currency = context.reporting_currency or ""
+    parts: list[str] = []
+    for key, name, kind in (
+        ("market_cap", "market cap", "money"),
+        ("enterprise_value", "EV", "money"),
+        ("price_to_earnings", "P/E", "x"),
+        ("price_to_book", "P/B", "x"),
+        ("price_to_sales", "P/S", "x"),
+        ("ev_to_ebitda", "EV/EBITDA", "x"),
+        ("fcf_yield", "FCF yield", "pct"),
+    ):
+        if key in result.computed:
+            value = result.computed[key]
+            text = (
+                f"{currency} {_fmt_num(value / Decimal(1_000_000))}m" if kind == "money"
+                else _fmt_pct(value) if kind == "pct" else f"{value:.2f}x"
+            )
+            parts.append(f"{name} {text}")
+        elif result.skipped.get(key, "").startswith("not meaningful"):
+            parts.append(f"{name} n/m ({result.skipped[key].removeprefix('not meaningful: ')})")
+    content = "; ".join(parts) + f". Inputs: {context.inputs.note}."
+    for warning in context.warnings:
+        content += f" Caution: {warning}."
+    add("valuation", label, content)
 
 
 def _add_financial_source_evidence(db: Session, holding: Holding, add: Callable) -> None:
@@ -348,19 +441,14 @@ def _add_financial_history_evidence(
         )
         return
 
+    facts_by_year = {year: facts for year, _period, facts in _financial_history_by_period(db, holding)}
     per_period: list[tuple[int, str, MetricsResult, Decimal | None]] = []
     for year, period, facts in history:
-        metrics_result = compute_holding_metrics(facts)
-        roe_value: Decimal | None = None
-        equity = ordinary_equity(facts)
-        if "net_income" in facts and equity is not None and equity > 0:
-            try:
-                roe_value = calculations.roe(facts["net_income"], equity)
-            except ValueError:
-                roe_value = None
-        per_period.append((year, period, metrics_result, roe_value))
+        metrics_result = compute_holding_metrics(facts, prior_facts=facts_by_year.get(year - 1))
+        per_period.append((year, period, metrics_result, metrics_result.computed.get("roe")))
 
     roe_series = sorted(((y, v) for y, _p, _m, v in per_period if v is not None), key=lambda r: r[0])
+    latest_roe_skip = per_period[0][2].skipped.get("roe", "")
     if roe_series:
         avg_roe = sum(v for _y, v in roe_series) / len(roe_series)
         hurdle = assumptions.capital_efficiency_hurdle
@@ -377,15 +465,16 @@ def _add_financial_history_evidence(
         add(
             "financial_history",
             "ROE (return on equity) history",
-            "Not computable for any available period (missing net_income/total_equity, "
-            "or ordinary shareholders' equity is zero or negative).",
+            "Not computable for any available period"
+            + (f" — latest period: {latest_roe_skip}." if latest_roe_skip else "."),
         )
-    add(
-        "financial_history",
-        "ROIC (return on invested capital)",
-        "Not computable from extracted filing facts alone — needs NOPAT and invested capital, "
-        "neither of which is derived from raw extracted facts today.",
-    )
+    if roe_series and latest_roe_skip.startswith("not meaningful"):
+        add(
+            "financial_history",
+            f"ROE ({per_period[0][1]})",
+            f"Not meaningful for the latest period: {latest_roe_skip}.",
+        )
+    _add_return_on_capital_evidence(per_period, assumptions, add)
 
     for metric_name, label in (
         ("gross_margin", "Gross margin"),

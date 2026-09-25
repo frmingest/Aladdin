@@ -170,7 +170,9 @@ def test_computes_roe_history_and_hurdle_comparison():
 
     roic_items = [i for i in packet.items if i.label.startswith("ROIC")]
     assert len(roic_items) == 1
+    # No debt/cash/tax facts in this fixture: ROIC says what is missing.
     assert "not computable" in roic_items[0].content.lower()
+    assert "missing" in roic_items[0].content
 
 
 def test_no_financial_facts_reports_a_gap_not_a_crash():
@@ -271,7 +273,7 @@ def test_oslo_holding_gets_newsweb_announcements_as_cited_data():
     ann = [i for i in packet.items if i.category == "regulatory_announcements"]
     assert len(ann) == 1
     assert ann[0].citation.endswith("https://newsweb.oslobors.no/message/7")
-    assert packet.version == "v5"
+    assert packet.version == "v6"
 
 
 def test_us_holding_skips_newsweb_and_cites_edgar_filings():
@@ -339,3 +341,79 @@ def test_uploaded_annual_report_passages_become_cited_document_excerpts():
     assert excerpts[0].id in packet.known_ids()
     assert "(document_excerpt)" in packet.render_for_prompt()
     assert not any(r.startswith("document excerpts") for r in packet.unavailable_reasons)
+
+
+def _add_facts(db, document, holding, period, currency, facts):
+    for metric, value in facts.items():
+        db.add(
+            FinancialLineItem(
+                document=document, holding=holding, metric=metric, value=D(value),
+                unit=currency, currency=currency, period=period, confidence=1.0,
+            )
+        )
+
+
+def test_v6_cites_roic_on_effective_tax_and_depleted_roe():
+    db = _session()
+    holding = _holding(ticker="VAR.OL", name="Vår Energi ASA", trading_currency="NOK", sector="Energy")
+    db.add(holding)
+    document = _document(holding)
+    db.add(document)
+    db.flush()
+    base = {
+        "net_income": "785", "total_equity": "832.5", "hybrid_capital": "799.5", "total_assets": "20000",
+        "ebit": "3500", "income_before_tax": "3313", "income_tax_expense": "2986",
+        "total_debt": "5000", "cash_and_equivalents": "300", "revenue": "7800",
+    }
+    _add_facts(db, document, holding, "FY2025", "USD", base)
+    _add_facts(db, document, holding, "FY2024", "USD", {**base, "total_equity": "1000"})
+    db.commit()
+
+    packet = build_evidence_packet(
+        db, holding,
+        market_data_provider=_FakeMarket(),
+        risk_free_rate_provider=_FakeRate(),
+        research_provider=_FakeResearch(),
+    )
+    by_label = {i.label: i.content for i in packet.items}
+    roic = by_label["ROIC (return on invested capital, after effective tax)"]
+    assert "effective tax 90.1%" in roic
+    assert "hurdle" in roic
+    assert "ROCE (pre-tax return on the same invested capital)" in by_label
+    assert "judge on ROIC" in by_label["ROE (return on equity) history"]
+    # No price configured: the multiples say why instead of guessing.
+    multiples = by_label["Current market multiples (today's price, FY2025 figures)"]
+    assert multiples.startswith("Not available: no share price")
+
+
+def test_v6_market_multiples_convert_price_and_cite_share_source():
+    db = _session()
+    holding = _holding(ticker="VAR.OL", name="Vår Energi ASA", trading_currency="NOK", sector="Energy")
+    db.add(holding)
+    document = _document(holding)
+    db.add(document)
+    db.flush()
+    _add_facts(db, document, holding, "FY2025", "USD", {
+        "net_income": "785000000", "total_equity": "5000000000", "revenue": "7800000000",
+        "total_debt": "5000000000", "cash_and_equivalents": "300000000", "ebitda": "5500000000",
+        "shares_outstanding": "2496000000",
+    })
+    db.commit()
+    price = PricePoint(price=D("30"), currency="NOK", observed_at=datetime.now(timezone.utc), provider="fake")
+
+    class _Market(_FakeMarket):
+        def get_fx_rate(self, from_currency, to_currency):
+            return FxRate(from_currency=from_currency, to_currency=to_currency, rate=D("0.1"),
+                          observed_at=datetime.now(timezone.utc), provider="fake")
+
+    packet = build_evidence_packet(
+        db, holding,
+        market_data_provider=_Market(price=price),
+        risk_free_rate_provider=_FakeRate(),
+        research_provider=_FakeResearch(),
+    )
+    content = next(i.content for i in packet.items if i.label.startswith("Current market multiples"))
+    # 30 NOK x 0.1 = 3 USD x 2,496m shares = USD 7,488m
+    assert "market cap USD 7,488.00m" in content
+    assert "P/E 9.54x" in content
+    assert "annual report (year-end)" in content

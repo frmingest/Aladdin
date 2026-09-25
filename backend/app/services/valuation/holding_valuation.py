@@ -39,6 +39,7 @@ from app.providers.base import MarketDataProvider, RiskFreeRateProvider
 from app.services.market_data.fx import get_or_refresh_fx
 from app.services.market_data.price import get_or_refresh_price
 from app.services.market_data.risk_free_rate import get_or_refresh_risk_free_rate
+from app.services.market_data.shares import resolve_share_count
 from app.services.metrics import owner_earnings_from_facts
 from app.services.valuation.dcf import (
     DCFScenarioResult,
@@ -65,6 +66,9 @@ class HoldingValuationResult:
     dcf: DCFScenarioResult | None = None
     reverse_dcf_implied_growth: Decimal | None = None
     multiples: list[PeriodMultiples] = field(default_factory=list)
+    shares_outstanding: Decimal | None = None
+    # "2,496.4m shares (Yahoo Finance, 2026-09-25)"
+    shares_source: str | None = None
     assumptions_version: str = ""
     unavailable_reasons: list[str] = field(default_factory=list)
 
@@ -106,13 +110,21 @@ def _valuation_currency(db: Session, holding: Holding, latest_period: str) -> st
     return currency or holding.trading_currency
 
 
-def _shares_outstanding(db: Session, holding: Holding, period: str) -> Decimal | None:
-    stmt = select(FinancialLineItem.value).where(
-        FinancialLineItem.holding_id == holding.id,
-        FinancialLineItem.period == period,
-        FinancialLineItem.metric == "shares_outstanding",
+def _period_facts(db: Session, holding: Holding, period: str) -> dict[str, Decimal]:
+    stmt = select(FinancialLineItem).where(
+        FinancialLineItem.holding_id == holding.id, FinancialLineItem.period == period
     )
-    return db.scalar(stmt)
+    return {item.metric: item.value for item in db.scalars(stmt)}
+
+
+def _fx_fallback(db: Session, provider: MarketDataProvider, force: bool):
+    def rate(from_currency: str, to_currency: str) -> Decimal | None:
+        snapshot = get_or_refresh_fx(
+            db, provider, from_currency=from_currency, to_currency=to_currency, force=force
+        )
+        return snapshot.value.rate if snapshot.available and snapshot.value is not None else None
+
+    return rate
 
 
 def compute_holding_valuation(
@@ -129,7 +141,9 @@ def compute_holding_valuation(
         holding_id=holding.id, ticker=holding.ticker, assumptions_version=assumptions.version
     )
 
-    result.multiples = multiples_over_time(db, holding)
+    result.multiples = multiples_over_time(
+        db, holding, fx_fallback=_fx_fallback(db, market_data_provider, force_refresh)
+    )
 
     history = _owner_earnings_history(db, holding)
     if len(history) < 2:
@@ -150,12 +164,26 @@ def compute_holding_valuation(
     valuation_currency = _valuation_currency(db, holding, latest_period)
     result.valuation_currency = valuation_currency
 
-    shares_outstanding = _shares_outstanding(db, holding, latest_period)
+    # Current share count (manual > SEC cover page > Yahoo > filing fact),
+    # app/services/market_data/shares.py — the same count the metrics
+    # panel's market cap uses.
+    share_count = resolve_share_count(
+        db,
+        holding,
+        market_data_provider,
+        latest_facts=_period_facts(db, holding, latest_period),
+        latest_period=latest_period,
+        force=force_refresh,
+    )
+    shares_outstanding = share_count.shares
     if shares_outstanding is None or shares_outstanding <= 0:
         result.unavailable_reasons.append(
-            f"DCF unavailable: no positive shares_outstanding fact for period {latest_period!r}"
+            f"DCF unavailable: no share count ({share_count.unavailable_reason})"
         )
         return result
+    result.shares_outstanding = shares_outstanding
+    result.shares_source = share_count.describe()
+    result.unavailable_reasons.extend(share_count.warnings)
 
     rate_snapshot = get_or_refresh_risk_free_rate(
         db, risk_free_rate_provider, currency=valuation_currency, force=force_refresh

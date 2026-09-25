@@ -181,6 +181,17 @@ def get_market_data_provider() -> MarketDataProvider:
     )
 
 
+def get_market_data_provider_or_none() -> MarketDataProvider | None:
+    """Like get_market_data_provider, but None instead of an error when
+    the provider can't be built — for endpoints that still answer without
+    market data (the metrics panel shows filing ratios and says why the
+    multiples are missing)."""
+    try:
+        return get_market_data_provider()
+    except MarketDataUnavailableError:
+        return None
+
+
 @lru_cache
 def get_risk_free_rate_provider() -> RiskFreeRateProvider:
     """The configured risk-free-rate provider (RISK_FREE_RATE_PROVIDER,

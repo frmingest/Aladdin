@@ -131,8 +131,37 @@ CONCEPT_MAP: dict[str, tuple[str, ...]] = {
         "ifrs-full:InterestExpense",
         "ifrs-full:FinanceCosts",
     ),
+    # 2026-09-25: ROIC / multiples inputs.
+    "income_before_tax": (
+        "us-gaap:IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest",
+        "us-gaap:IncomeLossFromContinuingOperationsBeforeIncomeTaxesMinorityInterestAndIncomeLossFromEquityMethodInvestments",
+        "ifrs-full:ProfitLossBeforeTax",
+    ),
+    "income_tax_expense": (
+        "us-gaap:IncomeTaxExpenseBenefit",
+        "ifrs-full:IncomeTaxExpenseContinuingOperations",
+    ),
+    "lease_liabilities": (
+        "us-gaap:OperatingLeaseLiability",
+        "ifrs-full:LeaseLiabilities",
+    ),
+    "minority_interests": (
+        "us-gaap:MinorityInterest",
+        "ifrs-full:NoncontrollingInterests",
+    ),
+    "eps_basic": (
+        "us-gaap:EarningsPerShareBasic",
+        "ifrs-full:BasicEarningsLossPerShare",
+    ),
 }
 SHARE_METRICS = frozenset({"shares_outstanding"})
+PER_SHARE_METRICS = frozenset({"eps_basic"})
+
+# Cover-page share count ("shares outstanding as of <date shortly before
+# filing>") — the SEC's own current share count for a filer. Used by the
+# share-count service (app/services/market_data/shares.py), not stored as a
+# fiscal-year fact: it describes the filing date, not a fiscal year.
+COVER_SHARES_CONCEPT = "dei:EntityCommonStockSharesOutstanding"
 
 
 def normalize_ticker(ticker: str) -> str:
@@ -233,7 +262,12 @@ def extract_annual_facts(payload: dict, *, max_years: int = 10) -> list[Reported
 
     facts: list[ReportedFact] = []
     for metric, concepts in CONCEPT_MAP.items():
-        wanted_unit = "shares" if metric in SHARE_METRICS else currency
+        if metric in SHARE_METRICS:
+            wanted_unit: str | None = "shares"
+        elif metric in PER_SHARE_METRICS:
+            wanted_unit = f"{currency}/shares" if currency else None
+        else:
+            wanted_unit = currency
         if wanted_unit is None:
             continue
         chosen: dict[date, ReportedFact] = {}
@@ -263,7 +297,11 @@ def extract_annual_facts(payload: dict, *, max_years: int = 10) -> list[Reported
                     metric=metric,
                     value=_to_decimal(entry["val"]),  # type: ignore[arg-type]
                     unit=wanted_unit,
-                    currency=None if metric in SHARE_METRICS else wanted_unit,
+                    currency=(
+                        None if metric in SHARE_METRICS
+                        else currency if metric in PER_SHARE_METRICS
+                        else wanted_unit
+                    ),
                     period=f"FY{fy_end.year}",
                     period_end=fy_end.isoformat(),
                     concept=concept,
@@ -273,6 +311,38 @@ def extract_annual_facts(payload: dict, *, max_years: int = 10) -> list[Reported
                 )
         facts.extend(chosen[k] for k in sorted(chosen))
     return facts
+
+
+def extract_cover_shares(payload: dict) -> ReportedFact | None:
+    """The most recent dei:EntityCommonStockSharesOutstanding (cover page of
+    the latest 10-K/10-Q/20-F), or None. Selection only — no arithmetic.
+    A filer with several share classes reports one entry per class for the
+    same date; those are not summed here (that would be arithmetic across
+    classes with different rights), so such a filer returns None."""
+    entries = [
+        e for e in _concept_units(payload, COVER_SHARES_CONCEPT).get("shares", [])
+        if isinstance(e, dict) and _parse_date(e.get("end")) is not None
+        and _to_decimal(e.get("val")) is not None
+    ]
+    if not entries:
+        return None
+    latest_end = max(str(e["end"]) for e in entries)
+    same_date = [e for e in entries if str(e["end"]) == latest_end]
+    if len({str(e.get("val")) for e in same_date}) > 1:
+        return None
+    entry = max(same_date, key=lambda e: str(e.get("filed", "")))
+    return ReportedFact(
+        metric="shares_outstanding",
+        value=_to_decimal(entry["val"]),  # type: ignore[arg-type]
+        unit="shares",
+        currency=None,
+        period=f"as of {latest_end}",
+        period_end=latest_end,
+        concept=COVER_SHARES_CONCEPT,
+        form=str(entry.get("form", "")),
+        accession_number=str(entry.get("accn", "")),
+        filed=str(entry.get("filed", "")),
+    )
 
 
 class SecEdgarFundamentalsProvider(FundamentalsProvider):
@@ -362,6 +432,7 @@ class SecEdgarFundamentalsProvider(FundamentalsProvider):
             company_id=cik,
             entity_name=str(payload.get("entityName") or ""),
             facts=facts,
+            cover_shares=extract_cover_shares(payload),
             raw_payload=raw,
             retrieved_at=datetime.now(timezone.utc),
         )

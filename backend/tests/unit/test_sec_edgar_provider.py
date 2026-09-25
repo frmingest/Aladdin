@@ -13,6 +13,7 @@ from app.providers.base import FundamentalsUnavailableError
 from app.providers.sec_edgar_provider import (
     SecEdgarFundamentalsProvider,
     extract_annual_facts,
+    extract_cover_shares,
     normalize_ticker,
 )
 
@@ -165,3 +166,45 @@ def test_http_error_becomes_unavailable():
     )
     with pytest.raises(FundamentalsUnavailableError, match="403"):
         provider.get_annual_fundamentals("1")
+
+
+# --- 2026-09-25: EPS and the cover-page share count ----------------------
+
+
+def test_eps_uses_the_per_share_unit_and_keeps_the_currency():
+    payload = _payload({
+        "us-gaap:Revenues": {"USD": [_e(1000, "2024-09-28", start="2023-10-01")]},
+        "us-gaap:EarningsPerShareBasic": {"USD/shares": [_e(6.11, "2024-09-28", start="2023-10-01")]},
+        "us-gaap:IncomeTaxExpenseBenefit": {"USD": [_e(29, "2024-09-28", start="2023-10-01")]},
+    })
+    facts = _by(extract_annual_facts(payload))
+    eps = facts[("eps_basic", "FY2024")]
+    assert eps.value == Decimal("6.11")
+    assert eps.unit == "USD/shares"
+    assert eps.currency == "USD"
+    assert facts[("income_tax_expense", "FY2024")].value == Decimal(29)
+
+
+def test_cover_shares_takes_the_latest_cover_page():
+    payload = _payload({
+        "dei:EntityCommonStockSharesOutstanding": {"shares": [
+            _e(15_300_000_000, "2024-10-18", form="10-K", filed="2024-11-01", accn="K"),
+            _e(15_100_000_000, "2025-07-18", form="10-Q", filed="2025-08-01", accn="Q"),
+        ]},
+    })
+    fact = extract_cover_shares(payload)
+    assert fact is not None
+    assert fact.value == Decimal(15_100_000_000)
+    assert fact.period_end == "2025-07-18"
+    assert fact.accession_number == "Q"
+
+
+def test_cover_shares_with_several_classes_is_not_summed():
+    payload = _payload({
+        "dei:EntityCommonStockSharesOutstanding": {"shares": [
+            _e(100, "2025-07-18", accn="A"),
+            _e(200, "2025-07-18", accn="A"),
+        ]},
+    })
+    assert extract_cover_shares(payload) is None
+    assert extract_cover_shares(_payload({})) is None

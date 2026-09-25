@@ -26,6 +26,7 @@ class PeriodMultiplesOut(BaseModel):
     matched_price_observed_at: datetime | None
     computed: dict[str, Decimal]
     skipped: dict[str, str]
+    notes: list[str] = []
 
 
 class HoldingValuationOut(BaseModel):
@@ -42,6 +43,8 @@ class HoldingValuationOut(BaseModel):
     dcf: DCFOut | None
     reverse_dcf_implied_growth: Decimal | None
     multiples: list[PeriodMultiplesOut]
+    shares_outstanding: Decimal | None = None
+    shares_source: str | None = None
     assumptions_version: str
     unavailable_reasons: list[str]
 

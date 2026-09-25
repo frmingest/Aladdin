@@ -106,7 +106,10 @@ def test_missing_facts_are_skipped_with_reasons_not_dropped_silently():
     assert "price_to_earnings" in result.computed
     assert "total_equity" in result.skipped["price_to_book"]
     assert "revenue" in result.skipped["price_to_sales"]
-    assert "total_debt" in result.skipped["ev_to_ebitda"]
+    # One definition with the metrics panel (2026-09-25): EBITDA is checked
+    # first; EV's own inputs are reported under enterprise_value.
+    assert "ebitda" in result.skipped["ev_to_ebitda"]
+    assert "net_debt" in result.skipped["enterprise_value"]
 
 
 def test_period_with_no_parseable_year_is_skipped():
@@ -191,3 +194,79 @@ def test_multiple_periods_are_each_computed_independently_and_sorted():
     assert [r.period for r in results] == ["FY2023", "FY2024", "FY2025"]
     assert results[0].computed["price_to_earnings"] == D("30") / D("8")
     assert results[2].computed["price_to_earnings"] == D("5")
+
+
+# --- 2026-09-25: FX conversion and EPS-derived shares ---------------------
+
+
+def _cur_fact(document, holding, metric, value, period, currency):
+    return FinancialLineItem(
+        document=document, holding=holding, metric=metric, value=D(value),
+        unit=currency, currency=currency, period=period, confidence=1.0,
+    )
+
+
+def test_price_is_converted_into_the_filing_currency():
+    from app.models import FxObservation
+
+    with _session() as db:
+        holding = Holding(ticker="VAR.OL", name="Vår Energi ASA", trading_currency="NOK")
+        document = _document(holding)
+        db.add_all([holding, document])
+        db.flush()
+        for metric, value in {"net_income": "785", "shares_outstanding": "2496", "revenue": "7800"}.items():
+            db.add(_cur_fact(document, holding, metric, value, "FY2025", "USD"))
+        db.add(MarketObservation(
+            holding=holding, observed_at=datetime(2025, 12, 31, tzinfo=timezone.utc),
+            price=D("30"), currency="NOK", provider="yfinance",
+        ))
+        db.add(FxObservation(
+            from_currency="NOK", to_currency="USD", rate=D("0.1"),
+            observed_at=datetime(2025, 12, 20, tzinfo=timezone.utc), provider="yfinance",
+        ))
+        db.commit()
+        result = multiples_over_time(db, holding)[0]
+
+    # USD 3.00 x 2496 = 7488 market cap; P/E = 7488 / 785
+    assert result.computed["price_to_earnings"] == D("3.0") * D(2496) / D(785)
+    assert result.notes == []
+
+
+def test_todays_fx_rate_is_the_labelled_fallback():
+    with _session() as db:
+        holding = Holding(ticker="VAR.OL", name="Vår Energi ASA", trading_currency="NOK")
+        document = _document(holding)
+        db.add_all([holding, document])
+        db.flush()
+        for metric, value in {"net_income": "785", "shares_outstanding": "2496"}.items():
+            db.add(_cur_fact(document, holding, metric, value, "FY2024", "USD"))
+        db.add(MarketObservation(
+            holding=holding, observed_at=datetime(2024, 12, 31, tzinfo=timezone.utc),
+            price=D("30"), currency="NOK", provider="yfinance",
+        ))
+        db.commit()
+        with_fallback = multiples_over_time(db, holding, fx_fallback=lambda f, t: D("0.09"))[0]
+        without = multiples_over_time(db, holding)[0]
+
+    assert "today's rate" in with_fallback.notes[0]
+    assert with_fallback.computed["price_to_earnings"] == D("2.70") * D(2496) / D(785)
+    assert "no FX rate" in without.skipped["_period"]
+
+
+def test_shares_fall_back_to_net_income_over_eps():
+    with _session() as db:
+        holding = Holding(ticker="X.OL", name="X", trading_currency="NOK")
+        document = _document(holding)
+        db.add_all([holding, document])
+        db.flush()
+        for metric, value in {"net_income": "100000000", "eps_basic": "1.00", "revenue": "500000000"}.items():
+            db.add(_cur_fact(document, holding, metric, value, "FY2025", "NOK"))
+        db.add(MarketObservation(
+            holding=holding, observed_at=datetime(2025, 12, 31, tzinfo=timezone.utc),
+            price=D("10"), currency="NOK", provider="yfinance",
+        ))
+        db.commit()
+        result = multiples_over_time(db, holding)[0]
+
+    assert "net income ÷ basic EPS" in result.notes[0]
+    assert "price_to_sales" in result.computed

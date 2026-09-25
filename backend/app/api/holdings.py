@@ -31,7 +31,8 @@ from app.models.document import Document
 from app.models.financial_line_item import FinancialLineItem
 from app.models.holding import Holding
 from app.models.portfolio import PortfolioPosition
-from app.providers.factory import get_object_storage
+from app.providers.base import MarketDataProvider
+from app.providers.factory import get_market_data_provider_or_none, get_object_storage
 from app.schemas.document import DeletionResult
 from app.schemas.holding import (
     HoldingCreate,
@@ -39,7 +40,13 @@ from app.schemas.holding import (
     HoldingOut,
     HoldingUpdate,
 )
-from app.schemas.metrics import HoldingMetricsOut, MetricFactOut
+from app.schemas.metrics import (
+    HoldingMetricsOut,
+    MarketContextOut,
+    MetricFactOut,
+    ShareCountIn,
+    ShareCountOut,
+)
 from app.services.deletion import (
     DeletionBlockedError,
     DeletionCounts,
@@ -47,6 +54,14 @@ from app.services.deletion import (
     purge_holding,
     wipe_all_holdings,
 )
+from app.services.holding_facts import facts_by_period, latest_period, previous_period
+from app.services.market_data.shares import (
+    ShareCountResult,
+    add_manual_share_count,
+    clear_manual_share_counts,
+    resolve_share_count,
+)
+from app.services.market_inputs import MarketContext, build_market_context
 from app.services.metrics import compute_holding_metrics
 
 router = APIRouter(prefix="/holdings", tags=["holdings"])
@@ -329,15 +344,51 @@ def list_holding_periods(holding_id: UUID, db: Session = Depends(get_db)) -> lis
     return list(periods)
 
 
+def _share_count_out(result: ShareCountResult) -> ShareCountOut:
+    low, high = result.eps_implied_range or (None, None)
+    return ShareCountOut(
+        shares=result.shares,
+        source=result.source,
+        source_label=result.source_label or None,
+        as_of=result.as_of,
+        reference=result.reference,
+        note=result.note,
+        override_id=result.override_id,
+        eps_implied_low=low,
+        eps_implied_high=high,
+        warnings=result.warnings,
+        unavailable_reason=result.unavailable_reason,
+    )
+
+
+def _market_out(context: MarketContext, *, stale_period: bool) -> MarketContextOut:
+    return MarketContextOut(
+        price=context.price,
+        price_currency=context.price_currency,
+        price_as_of=context.price_as_of,
+        fx_rate=context.fx_rate,
+        price_in_reporting_currency=context.price_in_reporting_currency,
+        reporting_currency=context.reporting_currency,
+        shares=_share_count_out(context.shares),
+        unavailable_reason=context.unavailable_reason,
+        stale_period=stale_period,
+    )
+
+
 @router.get("/{holding_id}/metrics", response_model=HoldingMetricsOut)
 def get_holding_metrics(
-    holding_id: UUID, period: str, db: Session = Depends(get_db)
+    holding_id: UUID,
+    period: str,
+    db: Session = Depends(get_db),
+    market_data_provider: MarketDataProvider | None = Depends(get_market_data_provider_or_none),
 ) -> HoldingMetricsOut:
     """Deterministic ratios computed from this holding's extracted filing
     facts for one period — CLAUDE.md Rule 1, never LLM arithmetic. See
-    app/services/metrics.py for which ratios are computable from facts
-    alone and why the rest (ROIC/ROE, every valuation multiple) are
-    reported as skipped rather than guessed at.
+    app/services/metrics.py. ROE / ROIC / ROCE average this and the prior
+    year when the prior year is on file; the market multiples use today's
+    price (converted to the filing's currency) and the current share count
+    (app/services/market_data/shares.py), and are skipped with the reason
+    when either is missing.
     """
     holding = db.get(Holding, holding_id)
     if holding is None:
@@ -356,7 +407,36 @@ def get_holding_metrics(
 
     facts = {item.metric: item.value for item in line_items}
     currencies = {item.metric: item.currency for item in line_items}
-    result = compute_holding_metrics(facts, currencies)
+    periods = facts_by_period(db, holding_id)
+    prior = previous_period(periods, period)
+    latest = latest_period(periods)
+    reporting_currency = periods[period].currency if period in periods else None
+    no_currency = not any(
+        c for m, c in currencies.items() if m not in ("shares_outstanding",)
+    )
+    market = build_market_context(
+        db,
+        holding,
+        market_data_provider,
+        reporting_currency=reporting_currency,
+        latest_facts=latest.facts if latest else facts,
+        latest_period=latest.period if latest else period,
+        currency_unknown_not_mixed=no_currency,
+    )
+    result = compute_holding_metrics(
+        facts,
+        currencies,
+        prior_facts=prior.facts if prior else None,
+        market=market.inputs,
+        market_unavailable_reason=market.unavailable_reason,
+    )
+    stale_period = latest is not None and latest.period != period
+    if stale_period and market.inputs is not None:
+        for key in ("price_to_earnings", "price_to_sales", "price_to_book", "ev_to_ebitda", "fcf_yield"):
+            if key in result.computed:
+                result.notes[key] = "; ".join(
+                    filter(None, [result.notes.get(key), f"today's price on {period} figures"])
+                )
 
     documents = {
         d.id: d
@@ -419,7 +499,8 @@ def get_holding_metrics(
                     f"Statement check failed ({document.original_filename}): {entry}"
                 )
 
-    monetary = {c for m, c in currencies.items() if c and m != "shares_outstanding"}
+    warnings.extend(market.warnings)
+    monetary = {c for m, c in currencies.items() if c and m not in ("shares_outstanding", "eps_basic")}
     return HoldingMetricsOut(
         holding_id=holding_id,
         period=period,
@@ -430,4 +511,76 @@ def get_holding_metrics(
         notes=notes,
         warnings=warnings,
         fact_details=fact_details,
+        prior_period=prior.period if prior else None,
+        market=_market_out(market, stale_period=stale_period),
     )
+
+
+@router.get("/{holding_id}/share-count", response_model=ShareCountOut)
+def get_share_count(
+    holding_id: UUID,
+    db: Session = Depends(get_db),
+    market_data_provider: MarketDataProvider | None = Depends(get_market_data_provider_or_none),
+) -> ShareCountOut:
+    """The share count the multiples and the DCF use, with its source."""
+    holding = db.get(Holding, holding_id)
+    if holding is None:
+        raise HTTPException(status_code=404, detail="holding not found")
+    latest = latest_period(facts_by_period(db, holding_id))
+    return _share_count_out(
+        resolve_share_count(
+            db,
+            holding,
+            market_data_provider,
+            latest_facts=latest.facts if latest else None,
+            latest_period=latest.period if latest else None,
+        )
+    )
+
+
+@router.put("/{holding_id}/share-count", response_model=ShareCountOut)
+def set_share_count(
+    holding_id: UUID,
+    payload: ShareCountIn,
+    db: Session = Depends(get_db),
+) -> ShareCountOut:
+    """Enter the current share count yourself (e.g. from a Newsweb notice
+    after a share issue). It wins over Yahoo / SEC until removed."""
+    holding = db.get(Holding, holding_id)
+    if holding is None:
+        raise HTTPException(status_code=404, detail="holding not found")
+    if payload.shares <= 0:
+        raise HTTPException(status_code=422, detail="shares must be positive")
+    add_manual_share_count(
+        db,
+        holding,
+        shares=payload.shares,
+        as_of=payload.as_of,
+        reference=payload.reference,
+        note=payload.note,
+    )
+    latest = latest_period(facts_by_period(db, holding_id))
+    return _share_count_out(
+        resolve_share_count(
+            db,
+            holding,
+            None,
+            latest_facts=latest.facts if latest else None,
+            latest_period=latest.period if latest else None,
+        )
+    )
+
+
+@router.delete("/{holding_id}/share-count", response_model=dict)
+def remove_share_count_override(
+    holding_id: UUID, confirm: bool = False, db: Session = Depends(get_db)
+) -> dict:
+    """Removes the share counts you entered; Yahoo / SEC take over again.
+    Only manual entries are removed — nothing fetched is deleted. Requires
+    confirm=true like every delete."""
+    if not confirm:
+        raise HTTPException(status_code=400, detail="pass confirm=true to remove your share count")
+    holding = db.get(Holding, holding_id)
+    if holding is None:
+        raise HTTPException(status_code=404, detail="holding not found")
+    return {"removed": clear_manual_share_counts(db, holding)}

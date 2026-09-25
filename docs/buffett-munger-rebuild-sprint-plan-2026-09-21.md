@@ -283,6 +283,17 @@ real policy rates and NO−US 10y. Background refresh + refresh before each run;
 fund-v2; Macro page card and dashboard strip. Detail:
 [macro-data-and-guardrails-sprint7-2026-09-24.md](macro-data-and-guardrails-sprint7-2026-09-24.md).
 
+### Sprint 9 — ROIC, ROE, ROCE and market multiples — ✅ built 2026-09-25 (not deployed)
+
+Layers A–C of [gap-closing-roic-roe-multiples-2026-09-25.md](gap-closing-roic-roe-multiples-2026-09-25.md):
+tax, pre-tax profit, leases, minorities, EPS and raw materials stored from ESEF/SEC; ROE on average
+ordinary equity (n/m when depleted), ROIC on the effective tax rate, ROCE; share counts (manual >
+SEC cover page > Yahoo > filing, EPS cross-check); market cap, owner's-view EV, P/E, P/B, P/S,
+EV/EBITDA, FCF yield; DCF uses the current share count; price converted into the filing currency;
+evidence packet v6. Migration `b1c2d3e4f5a6` (additive). Detail:
+[roic-roe-multiples-sprint9-2026-09-25.md](roic-roe-multiples-sprint9-2026-09-25.md). Layer D
+(filings.xbrl.org history import) stays in the backlog.
+
 ## Backlog — candidate future phases (all planned sprints now built)
 
 | Candidate | What it would deliver | Why it's not scheduled yet |
@@ -307,6 +318,7 @@ fund-v2; Macro page card and dashboard strip. Detail:
 
 | Date | Summary |
 |---|---|
+| 2026-09-25 | **Sprint 9 built: ROIC / ROE / ROCE + market multiples.** Effective-tax ROIC, averaged ROE with the depleted-equity rule, share-count service (migration `b1c2d3e4f5a6`), FX-correct multiples, evidence packet v6, Market multiples card. 725 tests (40 new). Not deployed. See [roic-roe-multiples-sprint9-2026-09-25.md](roic-roe-multiples-sprint9-2026-09-25.md). |
 | 2026-09-24 | **Sprint 7 built: guardrail tooling + F4 smoke test.** CI (ruff, pytest, migrations on Postgres 16, tsc/eslint/vitest/build, gitleaks, dependency audit), pre-commit hooks, `.gitleaks.toml`, read-only Playwright smoke test + `smoke.yml`. `f81a824`, not pushed. See [macro-data-and-guardrails-sprint7-2026-09-24.md](macro-data-and-guardrails-sprint7-2026-09-24.md). |
 | 2026-09-24 | **Numeric macro data built (F10, decision 24).** 13 Norges Bank / SSB / FRED series + 3 derived; migration `a9b0c1d2e3f4` (additive); evidence packet v5 / fund-v2; Macro page + dashboard. 678 tests (29 new). `c4b2ed2`, `551a141`, not pushed. |
 | 2026-09-24 | **Sprint 8 built (decision 23): fund & ETF analysis (F9).** `equity_fund` type; Fund facts typed in with citations or imported from a holdings file; deterministic fee drag, benchmark gap, concentration, look-through and overlap; evidence packet `fund-v1`, schema + prompts `fund_v1`. Migration `f8a9b0c1d2e3` (additive). 649 tests (30 new). `8847311`, not pushed. See [fund-etf-analysis-sprint8-2026-09-24.md](fund-etf-analysis-sprint8-2026-09-24.md). |

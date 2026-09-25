@@ -316,3 +316,53 @@ def test_biological_asset_fair_value_is_taken_out_of_ebit_and_ebitda():
     # The reported operating profit (used for the operating margin) is unchanged.
     assert facts[("operating_income", "FY2025")].value == Decimal(-143276000)
     assert "BiologicalAssets" in result.details["ixbrl"]["fact_sources"]["FY2025 ebitda"]
+
+
+# --- ROIC / multiples inputs (2026-09-25) -----------------------------------
+
+EPS_UNIT = (
+    '<xbrli:unit id="usdps"><xbrli:divide><xbrli:unitNumerator><xbrli:measure>iso4217:USD'
+    "</xbrli:measure></xbrli:unitNumerator><xbrli:unitDenominator><xbrli:measure>xbrli:shares"
+    "</xbrli:measure></xbrli:unitDenominator></xbrli:divide></xbrli:unit>"
+)
+TAX_INCOME = (
+    f"<tr><td>Profit before tax</td><td>{_nf('ifrs-full:ProfitLossBeforeTax', 'fy25', '3 313.0')}</td></tr>"
+    f"<tr><td>Income tax</td><td>{_nf('ifrs-full:IncomeTaxExpenseContinuingOperations', 'fy25', '2 986.0')}</td></tr>"
+    f"<tr><td>Raw materials</td><td>{_nf('ifrs-full:RawMaterialsAndConsumablesUsed', 'fy25', '200.9')}</td></tr>"
+    f"<tr><td>EPS</td><td>{_nf('ifrs-full:BasicEarningsLossPerShare', 'fy25', '0.11', unit='usdps', scale='0')}</td></tr>"
+)
+LEASE_BALANCE = (
+    f"<tr><td>Lease current</td><td>{_nf('ifrs-full:CurrentLeaseLiabilities', 'i25', '70.4')}</td></tr>"
+    f"<tr><td>Lease non-current</td><td>{_nf('ifrs-full:NoncurrentLeaseLiabilities', 'i25', '141.5')}</td></tr>"
+    f"<tr><td>NCI</td><td>{_nf('ifrs-full:NoncontrollingInterests', 'i25', '12.0')}</td></tr>"
+)
+
+
+def _tax_filing():
+    content = _filing(INCOME + TAX_INCOME, BALANCE + LEASE_BALANCE).decode()
+    return content.replace("</ix:resources>", EPS_UNIT + "</ix:resources>").encode()
+
+
+def test_tax_and_pre_tax_profit_are_stored_for_the_effective_rate():
+    facts = _facts(extract_ixbrl(_tax_filing()))
+    assert facts[("income_before_tax", "FY2025")].value == Decimal(3313000000)
+    assert facts[("income_tax_expense", "FY2025")].value == Decimal(2986000000)
+
+
+def test_lease_liabilities_sum_current_and_non_current():
+    fact = _facts(extract_ixbrl(_tax_filing()))[("lease_liabilities", "FY2025")]
+    assert fact.value == Decimal(211900000)
+    assert fact.confidence < 1.0
+
+
+def test_eps_keeps_its_per_share_unit_and_is_not_scaled():
+    fact = _facts(extract_ixbrl(_tax_filing()))[("eps_basic", "FY2025")]
+    assert fact.value == Decimal("0.11")
+    assert fact.unit == "USD/shares"
+    assert fact.currency == "USD"
+
+
+def test_minorities_and_raw_materials_are_extracted():
+    facts = _facts(extract_ixbrl(_tax_filing()))
+    assert facts[("minority_interests", "FY2025")].value == Decimal(12000000)
+    assert facts[("raw_materials_used", "FY2025")].value == Decimal(200900000)

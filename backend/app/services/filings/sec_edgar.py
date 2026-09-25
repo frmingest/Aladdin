@@ -19,7 +19,7 @@ Persistence rules:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -32,6 +32,7 @@ from app.providers.base import FundamentalsProvider, FundamentalsUnavailableErro
 from app.providers.object_storage import ObjectStorageProvider
 from app.services.documents.hashing import sha256_hex
 from app.services.filings.eligibility import has_foreign_suffix, names_match
+from app.services.market_data.shares import record_sec_cover_shares
 
 EDGAR_FACT_CONFIDENCE = 1.0  # filer-reported XBRL, not an LLM/heuristic extraction
 
@@ -215,6 +216,20 @@ def import_sec_edgar_fundamentals(
     )
     db.add(document)
     db.flush()
+    cover = fundamentals.cover_shares
+    if cover is not None and cover.value > 0:
+        try:
+            as_of = datetime.fromisoformat(cover.period_end).replace(tzinfo=timezone.utc)
+        except ValueError:
+            as_of = None
+        if as_of is not None:
+            record_sec_cover_shares(
+                db,
+                holding,
+                shares=cover.value,
+                as_of=as_of,
+                reference=filing_url(cik, cover.accession_number) if cover.accession_number else fundamentals.source_url,
+            )
     for fact in imported:
         db.add(
             FinancialLineItem(

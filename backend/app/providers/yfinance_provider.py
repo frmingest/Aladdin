@@ -197,6 +197,32 @@ class YFinanceMarketDataProvider(MarketDataProvider):
             observed_at=now, provider=self.name,
         )
 
+    def get_shares_outstanding(self, ticker: str) -> Decimal:
+        """Current shares outstanding. Same fallback discipline as the price:
+        `fast_info["shares"]`, then `.info["sharesOutstanding"]`, then
+        `.info["impliedSharesOutstanding"]`. Cached by the caller (a dated
+        ShareCountObservation row, 24 h), not here."""
+        yf_ticker = self._ticker(ticker)
+        try:
+            fast_info = yf_ticker.fast_info
+        except Exception:  # noqa: BLE001 - vendor SDK can raise anything; falls through
+            fast_info = None
+        value = _to_decimal(_get(fast_info, "shares"))
+        if value is not None and value > 0:
+            return value
+        try:
+            info = yf_ticker.info
+        except Exception:  # noqa: BLE001 - vendor SDK can raise anything; falls through
+            info = None
+        if info:
+            for key in ("sharesOutstanding", "impliedSharesOutstanding"):
+                value = _to_decimal(info.get(key))
+                if value is not None and value > 0:
+                    return value
+        raise MarketDataUnavailableError(
+            f"yfinance has no share count for {ticker!r} (tried fast_info and info)"
+        )
+
     def get_beta(self, ticker: str) -> Decimal | None:
         key = ticker.upper()
         now = time.monotonic()

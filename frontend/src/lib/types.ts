@@ -167,6 +167,38 @@ export interface HoldingMetrics {
   notes: Record<string, string>;
   warnings: string[];
   fact_details: MetricFact[];
+  /** Previous fiscal year averaged into ROE / ROIC / ROCE, if on file. */
+  prior_period?: string | null;
+  market?: MarketContext | null;
+}
+
+/** Mirrors backend/app/schemas/metrics.py's ShareCountOut. */
+export interface ShareCount {
+  shares: string | null;
+  /** manual | sec_edgar | yfinance | filing */
+  source: string | null;
+  source_label: string | null;
+  as_of: string | null;
+  reference: string | null;
+  note: string | null;
+  override_id: string | null;
+  eps_implied_low: string | null;
+  eps_implied_high: string | null;
+  warnings: string[];
+  unavailable_reason: string | null;
+}
+
+/** Mirrors backend/app/schemas/metrics.py's MarketContextOut. */
+export interface MarketContext {
+  price: string | null;
+  price_currency: string | null;
+  price_as_of: string | null;
+  fx_rate: string | null;
+  price_in_reporting_currency: string | null;
+  reporting_currency: string | null;
+  shares: ShareCount;
+  unavailable_reason: string | null;
+  stale_period: boolean;
 }
 
 /** Mirrors backend/app/schemas/document.py's DeletionResult. */
@@ -209,14 +241,30 @@ export const METRIC_LABELS: Record<string, string> = {
   net_debt_to_fcf: "Net debt / FCF",
   interest_coverage: "Interest coverage",
   debt_to_equity: "Debt / equity",
-  roic: "ROIC",
+  materials_margin: "Materials margin",
+  roic: "ROIC (after tax)",
+  roce: "ROCE (pre-tax)",
   roe: "ROE",
+  market_cap: "Market cap",
+  enterprise_value: "Enterprise value",
   price_to_earnings: "P/E",
   price_to_book: "P/B",
   price_to_sales: "P/S",
   ev_to_ebitda: "EV / EBITDA",
-  enterprise_value: "Enterprise value",
+  fcf_yield: "FCF yield",
 };
+
+/** The market multiples: shown in their own card, next to the price and
+ * share count they were computed from. */
+export const MARKET_METRICS = new Set([
+  "market_cap",
+  "enterprise_value",
+  "price_to_earnings",
+  "price_to_book",
+  "price_to_sales",
+  "ev_to_ebitda",
+  "fcf_yield",
+]);
 
 export const METRIC_ORDER = Object.keys(METRIC_LABELS);
 
@@ -225,7 +273,13 @@ export const METRIC_ORDER = Object.keys(METRIC_LABELS);
  * tabular number. Matches app/services/calculations.py's own doc comments. */
 /** Absolute money amounts (rendered "USD 1,787.4m"); every other
  * non-percent metric is a multiple (rendered "2.93×"). */
-export const MONEY_METRICS = new Set(["free_cash_flow", "owner_earnings", "net_debt"]);
+export const MONEY_METRICS = new Set([
+  "free_cash_flow",
+  "owner_earnings",
+  "net_debt",
+  "market_cap",
+  "enterprise_value",
+]);
 
 /** Labels for the extracted inputs (canonical facts) in the provenance table. */
 export const FACT_LABELS: Record<string, string> = {
@@ -250,14 +304,23 @@ export const FACT_LABELS: Record<string, string> = {
   interest_paid_financing: "Interest paid (financing)",
   lease_payments_financing: "Lease payments",
   hybrid_distributions: "Hybrid capital coupons",
+  income_before_tax: "Profit before tax",
+  income_tax_expense: "Income tax expense",
+  lease_liabilities: "Lease liabilities",
+  minority_interests: "Minority interests",
+  eps_basic: "Basic EPS",
+  raw_materials_used: "Raw materials & consumables",
 };
 
 export const PERCENT_METRICS = new Set([
   "gross_margin",
   "operating_margin",
   "net_margin",
+  "materials_margin",
   "roic",
+  "roce",
   "roe",
+  "fcf_yield",
 ]);
 
 
@@ -465,6 +528,7 @@ export interface PeriodMultiples {
   matched_price_observed_at: string | null;
   computed: Record<string, string>;
   skipped: Record<string, string>;
+  notes?: string[];
 }
 
 export interface HoldingValuation {
@@ -481,6 +545,9 @@ export interface HoldingValuation {
   dcf: DCF | null;
   reverse_dcf_implied_growth: string | null;
   multiples: PeriodMultiples[];
+  /** "2,496.4m shares (Yahoo Finance, 2026-09-25)" — the count the DCF used. */
+  shares_outstanding?: string | null;
+  shares_source?: string | null;
   assumptions_version: string;
   unavailable_reasons: string[];
 }

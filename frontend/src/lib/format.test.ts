@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { formatIndicatorChange, formatIndicatorValue, formatNok, formatPct100, formatPercent } from "./format";
+import {
+  formatIndicatorChange,
+  formatIndicatorValue,
+  formatNok,
+  formatPct100,
+  formatPercent,
+  formatPrice,
+  formatShares,
+  parseShareCount,
+} from "./format";
 
 describe("formatIndicatorValue", () => {
   it("shows rates with the precision the server sent", () => {
@@ -34,5 +43,25 @@ describe("existing formatters", () => {
   });
   it("formats NOK amounts rounded, Norwegian grouping", () => {
     expect(formatNok("1234567.8").replace(/\s/g, " ")).toBe("1 234 568 kr");
+  });
+});
+
+describe("share counts and prices", () => {
+  it("shows share counts in millions", () => {
+    expect(formatShares("2496406246")).toBe("2,496.4m shares");
+    expect(formatShares("950000")).toBe("950,000 shares");
+    expect(formatShares(null)).toBe("—");
+  });
+  it("shows small converted prices with four decimals", () => {
+    expect(formatPrice("30.1234", "NOK")).toBe("NOK 30.12");
+    expect(formatPrice("0.28453", "USD")).toBe("USD 0.2845");
+  });
+  it("parses typed share counts", () => {
+    expect(parseShareCount("2 496 406 246")).toBe("2496406246");
+    expect(parseShareCount("2,496,406,246")).toBe("2496406246");
+    expect(parseShareCount("2496.4m")).toBe("2496400000");
+    expect(parseShareCount("1.2bn")).toBe("1200000000");
+    expect(parseShareCount("abc")).toBeNull();
+    expect(parseShareCount("0")).toBeNull();
   });
 });
