@@ -12,7 +12,7 @@ Quick-glance tracker. Detail for each item lives in its own linked doc; this pag
 |---|---|
 | **Current phase** | Phase 11: the Buffett/Munger single-focus rebuild ([sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md)) |
 | **Sprints closed** | 0, 1, 2, 3, 4, 5, 5B, 6, **7**, 8 |
-| **In progress** | Nothing open. **Built today:** Ollama passes now stream (fixes "timed out generating"), dark theme, more readable analysis cards. Next is picked from the backlog (3c) |
+| **In progress** | Nothing open. **Researched today:** how to fill ROIC, ROE and the market multiples ([doc](gap-closing-roic-roe-multiples-2026-09-25.md)), awaiting Faiz's go. **Built today:** Ollama passes now stream (fixes "timed out generating"), dark theme, more readable analysis cards. Next is picked from the backlog (3c) |
 | **Latest build** | `787cf53` Ollama streaming + dark theme/readable analysis: committed in `E:\Aladdin`, **not pushed, not deployed**. Macro data + Sprint 7 are on GitHub (`origin/main` = `dd42b35`); deploy not verified. |
 | **Tests** | 685 backend (8 new on 2026-09-25), 13 frontend vitest (7 new), 16 smoke checks; ruff clean repo-wide; migration `a9b0c1d2e3f4` checked up/down on Postgres 16. Locally the 2 `test_factory` tests still fail while `.env` selects Ollama |
 | **Live-verified?** | ❌ The analysis engine, EDGAR, Newsweb, the worker and the macro fetch have only been tested against fakes and a local Postgres. CI and the smoke test haven't run on GitHub yet. |
@@ -23,6 +23,7 @@ Quick-glance tracker. Detail for each item lives in its own linked doc; this pag
 
 | # | Action | Why |
 |---|---|---|
+| ★ | Decide on the **ROIC / ROE / multiples sprint** (layers A–C, D optional) | Fills the "Not available" column and unblocks the DCF for Oslo holdings — [doc](gap-closing-roic-roe-multiples-2026-09-25.md) §4–5 |
 | ★ | **Push `787cf53`**, then restart the local backend and the PC worker (new Ollama timeouts load on start). Set Windows user variable `OLLAMA_NUM_PARALLEL=1` and restart Ollama. During a pass, `ollama ps` should say `100% GPU` | Fixes the "blind pass failed: Ollama timed out" runs — [doc](ollama-streaming-dark-theme-2026-09-25.md) §1 |
 | ★ | Look through the app in the **dark theme** (switch at the bottom of the nav) and say what still reads badly | [doc](ollama-streaming-dark-theme-2026-09-25.md) §2–3 |
 | ★ | After deploy: **Macro → Refresh data** (expect 13 updated; US series fail = `FRED_API_KEY` missing in Railway). Restart the PC worker | First real Norges Bank / SSB / FRED fetch |
@@ -88,6 +89,8 @@ Quick-glance tracker. Detail for each item lives in its own linked doc; this pag
 
 | Candidate | Note |
 |---|---|
+| **ROIC / ROE / multiples + share count** | Store tax and pre-tax profit; ROE, ROIC (effective tax), ROCE; shares from SEC `dei` / yfinance with EPS cross-check + manual override; owner's-view EV — [doc](gap-closing-roic-roe-multiples-2026-09-25.md) |
+| filings.xbrl.org history import | Free FY2021–FY2024 ESEF for Oslo holdings by LEI (no FY2025 yet) — [doc](gap-closing-roic-roe-multiples-2026-09-25.md) §4D |
 | Portfolio risk and regime intelligence | Correlation, drawdown scenarios, rebalancing flags |
 | Thesis tracking over time | Persist verdicts; flag fired invalidation triggers |
 | Historical price/FX and performance | Daily P&L, benchmark comparison |
@@ -105,6 +108,8 @@ Quick-glance tracker. Detail for each item lives in its own linked doc; this pag
 |---|---|---|
 | SEC EDGAR (XBRL company facts) | US financials, citation-grade | ✅ Built 2026-09-22 |
 | Oslo Børs Newsweb | Oslo regulated announcements | ✅ Built 2026-09-22 |
+| filings.xbrl.org (ESEF index) | Oslo filing history FY2021–FY2024, xBRL-JSON | Proposed 2026-09-25 |
+| yfinance share count · SEC `dei` shares | Shares outstanding for multiples + DCF | Proposed 2026-09-25 |
 | Brønnøysundregistrene | Norwegian entity data and annual accounts | Nice to have |
 | VFF (vff.no) | Norwegian fund NAVs (Alfred Berg, Heimdal) | Needs a look — would replace typed-in fund returns |
 | World Bank / OECD / IMF, GDELT | Global macro, news sentiment | Low |
@@ -122,6 +127,8 @@ Detail: [free-market-data-research-providers-2026-09-21.md](free-market-data-res
 | Gemini quota counter is in-memory | Resets on every server/worker restart, so "left today" can be optimistic; the worker's overnight wait uses the same counter | LLM usage ledger (backlog) |
 | No GitHub push credentials in any session shell | Faiz pushes manually | Needs a PAT or credential helper from Faiz |
 | gitleaks pre-commit hook builds with Go | First `pre-commit install` run is slow (downloads Go once) | Expected; CI uses the prebuilt binary |
+| `valuation/multiples.py` has no FX conversion; EV ignores hybrid/leases; P/B on total equity | Vår (NOK price, USD statements) would show P/E, P/S about 10× too high once shares exist | Part of the ROIC/multiples sprint — [doc](gap-closing-roic-roe-multiples-2026-09-25.md) §3.2 |
+| Metrics panel in the screenshots still shows pre-`34beec7` figures (Vår D/E 10.61×, FCF 1,787m) | Owner's-view numbers not applied on that instance | Delete + re-upload the `.xhtml` files (see §2) |
 | Interest coverage ignores capitalised interest | Understates interest during a build-out (Salmon: 36m capitalised) | Not scheduled — [doc](owner-view-metrics-and-local-worker-plan-2026-09-23.md) §2 "Not changed" |
 | ESEF notes are only block-tagged; shares outstanding rarely tagged | Note tables arrive as text, not figures; no per-share value from ESEF alone | [upload doc](financial-statement-uploads-xhtml-csv-2026-09-23.md) §3 |
 | An umbrella fund report (e.g. L&G, 1,266 pp) adds little excerpt text | Its Gold Mining passages are mostly number tables; the useful part is the holdings schedule | Holdings parser (backlog) — [doc](fund-etf-analysis-sprint8-2026-09-24.md) §4 |
@@ -132,6 +139,7 @@ Detail: [free-market-data-research-providers-2026-09-21.md](free-market-data-res
 
 | Date | Change | Summary | Detail |
 |---|---|---|---|
+| 2026-09-25 | **Research: closing the ROIC / ROE / multiples gaps** | The 7 "Not available" metrics need 3 inputs: tax + pre-tax profit (in ESEF, dropped after the integrity check), ordinary-equity averages (already stored), shares outstanding (not tagged in Oslo ESEF). Found: Vår effective tax 90% (ROIC must use it), Vår ordinary equity ≈ 0 (ROE/P-B n/m), FX bug in `multiples.py`, filings.xbrl.org has Vår/Salmon FY2021–24 free but no FY2025. Proposed a 6-step sprint. Docs only. | [doc](gap-closing-roic-roe-multiples-2026-09-25.md) |
 | 2026-09-25 | **Ollama streaming + dark theme + readable analysis** | Ollama passes stream, so a slow pass no longer times out while tokens are still coming: `OLLAMA_STALL_TIMEOUT_SECONDS` (600, gap between tokens) + `OLLAMA_TIMEOUT_SECONDS` (900 → 1800, whole pass). Timeout errors show tokens/s and GPU share; whitespace loops stopped early; readiness warns when the model is partly on the CPU. UI: dark theme by default (CSS-variable tokens, light kept behind a nav switch), Inter / Space Grotesk / JetBrains Mono, analysis narratives with a lead sentence, short paragraphs, highlighted figures, "data gap" markers and Read more. 683 backend tests (8 new), 13 vitest (7 new). Committed `787cf53`, not pushed. | [doc](ollama-streaming-dark-theme-2026-09-25.md) |
 | 2026-09-24 | **Sprint 7: guardrail tooling (+ F4 smoke test)** | CI on every push/PR: ruff + pytest, migrations up/down/up on Postgres 16, tsc + eslint + vitest + build, gitleaks over full history, dependency audit (report-only). Pre-commit: ruff, gitleaks, file checks, blocks `.env` files and document uploads. Read-only Playwright smoke test (no non-GET, no Gemini spend) + `smoke.yml` after each Railway deploy / daily / on demand. First vitest tests. Ruff pinned (0.16.8), repo lint-clean. History scanned: no leaks. Committed `f81a824`, not pushed. | [doc](macro-data-and-guardrails-sprint7-2026-09-24.md) §5 |
 | 2026-09-24 | **Numeric macro data: Norges Bank, SSB, FRED (F10, decision 24)** | 13 series (policy rates, NOWA, T-bill, 10y yields, USD/NOK, EUR/NOK, CPI y/y ×2, curve, unemployment, HY spread) + real policy rates and NO−US 10y. Stored append-only in the legacy `macro_observations` table + new `macro_series_status` (migration `a9b0c1d2e3f4`, additive). Background refresh every 12 h, stale series refreshed before each run. Evidence packet **v5** / **fund-v2** with cited `macro_indicator` items; readiness + System status rows; Macro page card + dashboard strip. Norway CPI from SSB (OECD copy on FRED stopped 2025). 678 tests (29 new). Committed `c4b2ed2`, `551a141`, not pushed. | [doc](macro-data-and-guardrails-sprint7-2026-09-24.md) |
