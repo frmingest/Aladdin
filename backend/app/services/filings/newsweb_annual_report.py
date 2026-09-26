@@ -1,36 +1,56 @@
-"""Fetch a holding's annual reports straight from Oslo Børs Newsweb and run
-each through the same iXBRL extraction an upload uses (Sprint 15,
-2026-09-26; extended 2026-09-26 to fetch every available year, not just
-the newest — Faiz's follow-up ask after confirming the single-report
-version worked).
+"""Fetch a holding's annual and half-year reports straight from Oslo Børs
+Newsweb and run each through the same ingestion pipeline an upload uses
+(Sprint 15, 2026-09-26; extended same day to fetch every available annual
+year, not just the newest; extended again 2026-09-26 to also cover
+half-year/interim reports after a document-sources investigation —
+Faiz's asks throughout).
 
-Faiz's ask: a button that finds a company's ESEF annual reports on Newsweb
-itself (rather than him downloading and re-uploading them by hand), back
-to around when ESEF/iXBRL reporting started for Oslo Børs issuers
-(settings.newsweb_filing_history_start_year, default 2022), unzips each
-one if needed, and attaches the resulting figures to the holding.
+Faiz's ask: a button that finds a company's reports on Newsweb itself
+(rather than him downloading and re-uploading them by hand), back to
+around when ESEF/iXBRL reporting started for Oslo Børs issuers
+(settings.newsweb_filing_history_start_year, default 2022), unzips an ESEF
+package if needed, and attaches whatever it finds to the holding.
+
+Annual vs. interim reports behave differently, and this module is honest
+about it rather than pretending they're the same:
+- **Annual** reports are (almost) always ESEF-tagged — the fetch requires
+  an ESEF (.zip/.xhtml) attachment, extracts tagged facts into
+  FinancialLineItem rows, and errors into ``no_esef_file`` if only a PDF
+  exists (unchanged behaviour from the original build).
+- **Interim/half-year** reports are essentially never ESEF-tagged in
+  Norway (EU Transparency Directive only mandates it for annual reports).
+  The fetch accepts a PDF fallback so the report still gets ingested as
+  text (citable LLM evidence), but — per CLAUDE.md Rule 1 — **no financial
+  facts are extracted from a PDF**. Every interim import result carries a
+  warning making this explicit rather than silently importing "0 facts"
+  with no explanation.
 
 Persistence rules (same spirit as SEC EDGAR / ESEF-index imports,
 app/services/filings/sec_edgar.py, esef_index.py):
-- Each extracted .xhtml is stored and processed through the *exact*
-  upload pipeline (app/services/documents/ingestion.py:
-  ingest_holding_document), so it gets sha256-dedup, embedded-media
-  stripping, the 250 MB iXBRL size cap, section chunking and "first
-  source wins per metric/year" for free — no parallel document/fact code
-  path to keep in sync.
+- Each attachment is stored and processed through the *exact* upload
+  pipeline (app/services/documents/ingestion.py: ingest_holding_document),
+  so it gets sha256-dedup, embedded-media stripping (ESEF only), the size
+  caps, section chunking and "first source wins per metric/year" for
+  free — no parallel document/fact code path to keep in sync. This also
+  means a report already uploaded by hand is recognised (by content hash)
+  rather than duplicated, and simply gets the Newsweb provenance flag
+  added to the existing Document.
 - Newsweb's own provenance (message id/url, title, published date, which
-  attachment was used) is recorded in each Document's quality_flags after
-  ingestion, alongside whatever the extractor itself already wrote there.
-- Each fetch only ever creates ``annual_report`` Documents exactly as a
-  manual upload would — never a system-only document type — so every one
-  shows up in the documents list and can be deleted like any upload.
+  attachment was used, report kind) is recorded in each Document's
+  quality_flags after ingestion, alongside whatever the extractor itself
+  already wrote there.
+- Each fetch only ever creates Documents of the ordinary user-facing type
+  (``annual_report`` / ``quarterly_report``) exactly as a manual upload
+  would — never a system-only document type — so every one shows up in
+  the documents list and can be deleted like any upload.
 - A message already imported in an earlier fetch (matched by Newsweb's own
-  message_id, stored in quality_flags) is never re-downloaded — repeat
-  clicks only fetch years that are actually new.
+  message_id, stored in quality_flags, scoped per report kind) is never
+  re-downloaded — repeat clicks only fetch reports that are actually new.
 """
 from __future__ import annotations
 
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
 
@@ -45,7 +65,7 @@ from app.providers.newsweb_filing_provider import (
     NewswebFilingProvider,
     NewswebFilingUnavailableError,
     extract_xhtml_from_zip,
-    pick_esef_attachment,
+    pick_report_attachment,
 )
 from app.providers.newsweb_provider import issuer_sign_for_ticker
 from app.providers.object_storage import ObjectStorageProvider
@@ -53,7 +73,13 @@ from app.services.documents.ingestion import ingest_holding_document
 from app.services.filings.eligibility import newsweb_applies
 
 ANNUAL_REPORT_DOCUMENT_TYPE = "annual_report"
+INTERIM_REPORT_DOCUMENT_TYPE = "quarterly_report"
 NEWSWEB_SOURCE_FLAG = "newsweb_source"
+PDF_NO_FACTS_WARNING = (
+    "Newsweb only has this report as a PDF (no ESEF/iXBRL tagging) — the text was captured as "
+    "evidence for analysis, but no financial facts could be extracted from it. This is expected: "
+    "Norwegian issuers generally don't ESEF-tag half-year reports, only annual ones."
+)
 
 
 class NewswebImportError(Exception):
@@ -119,13 +145,13 @@ def _result_from_document(db: Session, document: Document) -> NewswebImportResul
     )
 
 
-def _newsweb_documents(db: Session, holding: Holding) -> list[Document]:
-    """Every Document this importer itself created for this holding (an
-    ordinary upload never carries the newsweb_source flag), newest
-    published-date first."""
+def _newsweb_documents(db: Session, holding: Holding, document_type: str) -> list[Document]:
+    """Every Document this importer itself created for this holding of the
+    given kind (an ordinary upload never carries the newsweb_source flag),
+    newest published-date first."""
     documents = db.scalars(
         select(Document)
-        .where(Document.holding_id == holding.id, Document.type == ANNUAL_REPORT_DOCUMENT_TYPE)
+        .where(Document.holding_id == holding.id, Document.type == document_type)
         .order_by(Document.uploaded_at.desc())
     )
     return [d for d in documents if isinstance((d.quality_flags or {}).get(NEWSWEB_SOURCE_FLAG), dict)]
@@ -134,7 +160,17 @@ def _newsweb_documents(db: Session, holding: Holding) -> list[Document]:
 def list_newsweb_imports(db: Session, holding: Holding) -> list[NewswebImportResult]:
     """Every annual report fetched from Newsweb for this holding so far,
     newest first — empty if none has ever been fetched this way."""
-    documents = _newsweb_documents(db, holding)
+    return _list_newsweb_imports(db, holding, document_type=ANNUAL_REPORT_DOCUMENT_TYPE)
+
+
+def list_newsweb_interim_imports(db: Session, holding: Holding) -> list[NewswebImportResult]:
+    """Every half-year report fetched from Newsweb for this holding so
+    far, newest first — empty if none has ever been fetched this way."""
+    return _list_newsweb_imports(db, holding, document_type=INTERIM_REPORT_DOCUMENT_TYPE)
+
+
+def _list_newsweb_imports(db: Session, holding: Holding, *, document_type: str) -> list[NewswebImportResult]:
+    documents = _newsweb_documents(db, holding, document_type)
     documents.sort(
         key=lambda d: (d.quality_flags or {}).get(NEWSWEB_SOURCE_FLAG, {}).get("published_at") or "",
         reverse=True,
@@ -142,9 +178,9 @@ def list_newsweb_imports(db: Session, holding: Holding) -> list[NewswebImportRes
     return [_result_from_document(db, d) for d in documents]
 
 
-def _already_imported_message_ids(db: Session, holding: Holding) -> set[str]:
+def _already_imported_message_ids(db: Session, holding: Holding, *, document_type: str) -> set[str]:
     ids: set[str] = set()
-    for document in _newsweb_documents(db, holding):
+    for document in _newsweb_documents(db, holding, document_type):
         message_id = (document.quality_flags or {}).get(NEWSWEB_SOURCE_FLAG, {}).get("message_id")
         if message_id:
             ids.add(str(message_id))
@@ -157,17 +193,22 @@ def _import_one(
     provider: NewswebFilingProvider,
     storage: ObjectStorageProvider,
     ref: NewswebAnnualReportRef,
+    *,
+    document_type: str,
+    allow_pdf_fallback: bool,
+    report_label: str,
 ) -> NewswebImportResult:
     """Download, extract and ingest a single already-found announcement.
     Raises NewswebImportError on anything that goes wrong (a bad zip, an
     ingestion failure, ...) — callers of the bulk fetch catch this per
     report so one bad year doesn't abort the rest."""
-    chosen = pick_esef_attachment(ref.attachments)
+    chosen, is_esef = pick_report_attachment(ref.attachments, allow_pdf_fallback=allow_pdf_fallback)
     if chosen is None:
         names = ", ".join(a.name for a in ref.attachments) or "no attachments"
+        wanted = "no ESEF (.xhtml or .zip) or PDF attachment" if allow_pdf_fallback else "no ESEF (.xhtml or .zip) attachment"
         raise NewswebImportError(
-            f"'{ref.title}' has no ESEF (.xhtml or .zip) attachment on Newsweb — only {names} is published. "
-            "Upload the ESEF file by hand if the company publishes one elsewhere (e.g. its own investor site)"
+            f"'{ref.title}' has {wanted} on Newsweb — only {names} is published. "
+            "Upload the file by hand if the company publishes it elsewhere (e.g. its own investor site)"
         )
 
     try:
@@ -176,13 +217,19 @@ def _import_one(
         raise NewswebImportError(str(exc)) from exc
 
     warnings: list[str] = []
-    if chosen.name.lower().endswith(".zip"):
+    if not is_esef:
+        # PDF fallback (interim reports only, see module docstring): ingest
+        # the PDF bytes as-is — no unzip/extract step, no financial facts.
+        filename, content, mime_type = chosen.name, raw, "application/pdf"
+        warnings.append(PDF_NO_FACTS_WARNING)
+    elif chosen.name.lower().endswith(".zip"):
         try:
-            filename, xhtml_bytes = extract_xhtml_from_zip(raw, max_member_bytes=300 * 1024 * 1024)
+            filename, content = extract_xhtml_from_zip(raw, max_member_bytes=300 * 1024 * 1024)
         except NewswebFilingUnavailableError as exc:
             raise NewswebImportError(str(exc)) from exc
+        mime_type = "application/xhtml+xml"
     else:
-        filename, xhtml_bytes = chosen.name, raw
+        filename, content, mime_type = chosen.name, raw, "application/xhtml+xml"
 
     try:
         intake = ingest_holding_document(
@@ -190,9 +237,9 @@ def _import_one(
             storage,
             holding_id=holding.id,
             filename=filename,
-            content=xhtml_bytes,
-            mime_type="application/xhtml+xml",
-            document_type=ANNUAL_REPORT_DOCUMENT_TYPE,
+            content=content,
+            mime_type=mime_type,
+            document_type=document_type,
             reporting_period=None,
         )
     except Exception as exc:
@@ -209,6 +256,7 @@ def _import_one(
         "imported_at": imported_at,
         "warnings": warnings,
         "import_id": str(uuid.uuid4()),
+        "report_kind": report_label,
     }
     document = intake.document
     document.quality_flags = {**(document.quality_flags or {}), NEWSWEB_SOURCE_FLAG: source_flags}
@@ -217,6 +265,63 @@ def _import_one(
     result = _result_from_document(db, document)
     result.was_duplicate = intake.was_duplicate
     return result
+
+
+def _import_all_reports_from_newsweb(
+    db: Session,
+    holding: Holding,
+    provider: NewswebFilingProvider,
+    storage: ObjectStorageProvider,
+    *,
+    since: date,
+    document_type: str,
+    allow_pdf_fallback: bool,
+    report_label: str,
+    list_refs: Callable[[str, date], list[NewswebAnnualReportRef]],
+) -> NewswebBulkImportResult:
+    if not newsweb_applies(holding):
+        raise NewswebImportError(
+            "Newsweb covers Oslo Børs issuers only (.OL ticker or NOK) — this holding doesn't look like one"
+        )
+    issuer_sign = issuer_sign_for_ticker(holding.ticker)
+    if not issuer_sign:
+        raise NewswebImportError(f"no issuer sign derivable from ticker '{holding.ticker}'")
+
+    try:
+        refs = list_refs(issuer_sign, since)
+    except NewswebFilingUnavailableError as exc:
+        raise NewswebImportError(str(exc)) from exc
+    if not refs:
+        raise NewswebImportError(
+            f"no {report_label} announcement with an attachment found on Newsweb for {issuer_sign} "
+            f"since {since.isoformat()} — check newsweb.oslobors.no directly, or upload reports by hand"
+        )
+
+    already = _already_imported_message_ids(db, holding, document_type=document_type)
+    bulk = NewswebBulkImportResult()
+    for ref in refs:
+        if ref.message_id in already:
+            bulk.already_on_file.append(ref.title)
+            continue
+        try:
+            bulk.newly_imported.append(
+                _import_one(
+                    db,
+                    holding,
+                    provider,
+                    storage,
+                    ref,
+                    document_type=document_type,
+                    allow_pdf_fallback=allow_pdf_fallback,
+                    report_label=report_label,
+                )
+            )
+        except NewswebImportError as exc:
+            if "no ESEF" in str(exc):
+                bulk.no_esef_file.append(ref.title)
+            else:
+                bulk.failed.append(f"{ref.title}: {exc}")
+    return bulk
 
 
 def import_all_annual_reports_from_newsweb(
@@ -234,35 +339,41 @@ def import_all_annual_reports_from_newsweb(
     issuer sign, Newsweb unreachable, or nothing at all found in the
     window) — a single bad year among several found is recorded in
     ``failed``/``no_esef_file`` instead of aborting the whole run."""
-    if not newsweb_applies(holding):
-        raise NewswebImportError(
-            "Newsweb covers Oslo Børs issuers only (.OL ticker or NOK) — this holding doesn't look like one"
-        )
-    issuer_sign = issuer_sign_for_ticker(holding.ticker)
-    if not issuer_sign:
-        raise NewswebImportError(f"no issuer sign derivable from ticker '{holding.ticker}'")
+    return _import_all_reports_from_newsweb(
+        db,
+        holding,
+        provider,
+        storage,
+        since=since,
+        document_type=ANNUAL_REPORT_DOCUMENT_TYPE,
+        allow_pdf_fallback=False,
+        report_label="ANNUAL FINANCIAL REPORT",
+        list_refs=lambda issuer_sign, since_date: provider.list_annual_reports(issuer_sign, since=since_date),
+    )
 
-    try:
-        refs = provider.list_annual_reports(issuer_sign, since=since)
-    except NewswebFilingUnavailableError as exc:
-        raise NewswebImportError(str(exc)) from exc
-    if not refs:
-        raise NewswebImportError(
-            f"no ANNUAL FINANCIAL REPORT announcement with an attachment found on Newsweb for {issuer_sign} "
-            f"since {since.isoformat()} — check newsweb.oslobors.no directly, or upload reports by hand"
-        )
 
-    already = _already_imported_message_ids(db, holding)
-    bulk = NewswebBulkImportResult()
-    for ref in refs:
-        if ref.message_id in already:
-            bulk.already_on_file.append(ref.title)
-            continue
-        try:
-            bulk.newly_imported.append(_import_one(db, holding, provider, storage, ref))
-        except NewswebImportError as exc:
-            if "no ESEF" in str(exc):
-                bulk.no_esef_file.append(ref.title)
-            else:
-                bulk.failed.append(f"{ref.title}: {exc}")
-    return bulk
+def import_all_interim_reports_from_newsweb(
+    db: Session,
+    holding: Holding,
+    provider: NewswebFilingProvider,
+    storage: ObjectStorageProvider,
+    *,
+    since: date,
+) -> NewswebBulkImportResult:
+    """Fetch every HALF YEAR FINANCIAL REPORT announcement on Newsweb for
+    this holding from ``since`` through today, skipping any already on
+    file. Same shape as import_all_annual_reports_from_newsweb, but a PDF
+    attachment is accepted (Norwegian issuers essentially never ESEF-tag
+    interim reports) — ingested as text evidence only, no financial facts
+    (see PDF_NO_FACTS_WARNING and the module docstring)."""
+    return _import_all_reports_from_newsweb(
+        db,
+        holding,
+        provider,
+        storage,
+        since=since,
+        document_type=INTERIM_REPORT_DOCUMENT_TYPE,
+        allow_pdf_fallback=True,
+        report_label="HALF YEAR FINANCIAL REPORT",
+        list_refs=lambda issuer_sign, since_date: provider.list_interim_reports(issuer_sign, since=since_date),
+    )

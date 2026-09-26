@@ -20,6 +20,8 @@ class SourceEligibilityOut(BaseModel):
     esef_index_reason: str | None = None
     newsweb_annual_report: bool = False
     newsweb_annual_report_reason: str | None = None
+    newsweb_interim_report: bool = False
+    newsweb_interim_report_reason: str | None = None
 
 
 class EdgarFilingOut(BaseModel):
@@ -89,9 +91,12 @@ class AnnouncementsOut(BaseModel):
 
 
 class NewswebAnnualReportOut(BaseModel):
-    """One annual report fetched straight from Newsweb (Sprint 15,
+    """One report fetched straight from Newsweb (Sprint 15,
     app/services/filings/newsweb_annual_report.py) — the ESEF .xhtml is
-    unzipped if needed and run through the same extractor an upload uses."""
+    unzipped if needed and run through the same extractor an upload uses.
+    Reused as-is (same shape) for the interim/half-year report endpoint
+    added 2026-09-26 — a PDF-only interim report still uses this schema,
+    just with facts_imported=0 and a warning explaining why."""
 
     message_id: str
     message_url: str
@@ -108,15 +113,18 @@ class NewswebAnnualReportOut(BaseModel):
 
 
 class NewswebAnnualReportsOut(BaseModel):
-    """Every annual report fetched from Newsweb for this holding so far.
-    Extended 2026-09-26 (Faiz's follow-up ask) to fetch every available
-    year back to ``history_since``, not just the newest one — a POST also
-    reports what this particular run skipped or couldn't process."""
+    """Every report fetched from Newsweb for this holding so far (annual
+    or interim, depending on which endpoint returned this). Extended
+    2026-09-26 (Faiz's follow-up ask) to fetch every available year back
+    to ``history_since``, not just the newest one — a POST also reports
+    what this particular run skipped or couldn't process. Extended again
+    2026-09-26 to also serve the interim/half-year report endpoint (same
+    shape, reused as-is)."""
 
     holding_id: UUID
     history_since: date  # the earliest year this fetch looked for
     reports: list[NewswebAnnualReportOut] = []  # every year on file, newest first
     newly_imported_this_run: int = 0
     already_on_file_this_run: list[str] = []  # titles skipped — already fetched in an earlier run
-    no_esef_file_this_run: list[str] = []  # titles Newsweb has, but only as a PDF (no ESEF to extract)
+    no_esef_file_this_run: list[str] = []  # titles Newsweb has, but only as a PDF (no ESEF to extract) — annual only
     failed_this_run: list[str] = []  # "title: reason" for a report that couldn't be processed

@@ -246,7 +246,33 @@ function EsefHistoryCard({ holdingId, onImported }: { holdingId: string; onImpor
   );
 }
 
-export function NewswebAnnualReportCard({ holdingId, onImported }: { holdingId: string; onImported: () => void }) {
+/** Shared shape for the annual and interim Newsweb-fetch cards below — same
+ * flow, same response shape (NewswebAnnualReports), different endpoint,
+ * copy and framing (annual = structured facts; interim = text evidence
+ * only, see NewswebInterimReportCard). */
+function NewswebFilingCard({
+  holdingId,
+  onImported,
+  title,
+  description,
+  fetchLabel,
+  checkMoreLabel,
+  emptyHint,
+  get,
+  runImportCall,
+  factsLine,
+}: {
+  holdingId: string;
+  onImported: () => void;
+  title: string;
+  description: (historyYear: string | null) => React.ReactNode;
+  fetchLabel: string;
+  checkMoreLabel: string;
+  emptyHint: string;
+  get: (holdingId: string) => Promise<NewswebAnnualReports>;
+  runImportCall: (holdingId: string) => Promise<NewswebAnnualReports>;
+  factsLine: (report: NewswebAnnualReports["reports"][number]) => React.ReactNode;
+}) {
   const [data, setData] = useState<NewswebAnnualReports | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -256,14 +282,14 @@ export function NewswebAnnualReportCard({ holdingId, onImported }: { holdingId: 
 
   useEffect(() => {
     setLastRun(null);
-    api.getNewswebAnnualReports(holdingId).then(setData).catch((e) => setError(errorText(e)));
+    get(holdingId).then(setData).catch((e) => setError(errorText(e)));
   }, [holdingId]);
 
   async function runImport() {
     setBusy(true);
     setError(null);
     try {
-      const result = await api.importNewswebAnnualReports(holdingId);
+      const result = await runImportCall(holdingId);
       setData(result);
       setLastRun(result);
       onImported();
@@ -281,24 +307,18 @@ export function NewswebAnnualReportCard({ holdingId, onImported }: { holdingId: 
     <Card>
       <div className="mb-3 flex items-start justify-between gap-4">
         <div>
-          <h3 className="text-sm font-semibold text-ink">Annual reports from Newsweb</h3>
-          <p className="mt-0.5 text-xs text-ink-faint">
-            Fetches every one of the company&apos;s own ESEF annual reports straight from Newsweb, back to{" "}
-            {historyYear ?? "2022"} (unzipping each if needed) instead of you downloading and re-uploading them one
-            by one. Already-fetched years aren&apos;t re-downloaded. Free, no key.
-          </p>
+          <h3 className="text-sm font-semibold text-ink">{title}</h3>
+          <p className="mt-0.5 text-xs text-ink-faint">{description(historyYear)}</p>
         </div>
         <Button variant="secondary" onClick={runImport} disabled={busy}>
-          {busy ? "Fetching…" : reports.length > 0 ? "Check for more years" : "Fetch all annual reports"}
+          {busy ? "Fetching…" : reports.length > 0 ? checkMoreLabel : fetchLabel}
         </Button>
       </div>
 
       {error && <p className="mb-3 text-sm text-negative">{error}</p>}
       {data === null && !error && <p className="text-sm text-ink-muted">Loading…</p>}
 
-      {data && reports.length === 0 && !error && (
-        <EmptyState>Nothing fetched yet.</EmptyState>
-      )}
+      {data && reports.length === 0 && !error && <EmptyState>{emptyHint}</EmptyState>}
 
       {lastRun && (
         <p className="mb-3 text-xs text-ink-faint">
@@ -306,7 +326,7 @@ export function NewswebAnnualReportCard({ holdingId, onImported }: { holdingId: 
           {lastRun.already_on_file_this_run.length > 0 &&
             `, ${lastRun.already_on_file_this_run.length} already on file`}
           {lastRun.no_esef_file_this_run.length > 0 &&
-            ` · ${lastRun.no_esef_file_this_run.length} with no ESEF file on Newsweb (PDF only): ${lastRun.no_esef_file_this_run.join(", ")}`}
+            ` · ${lastRun.no_esef_file_this_run.length} with no attachment usable on Newsweb: ${lastRun.no_esef_file_this_run.join(", ")}`}
         </p>
       )}
       {lastRun?.failed_this_run.map((w) => (
@@ -337,8 +357,7 @@ export function NewswebAnnualReportCard({ holdingId, onImported }: { holdingId: 
                 )}
               </p>
               <p className="text-ink-muted">
-                {report.facts_imported} facts across {report.periods_imported.length} years (
-                {report.periods_imported.join(", ") || "none"}) from &quot;{report.attachment_name}&quot;
+                {factsLine(report)} from &quot;{report.attachment_name}&quot;
                 {report.was_duplicate && <span className="text-ink-faint"> · already up to date</span>}
               </p>
               {report.warnings.map((w) => (
@@ -351,6 +370,68 @@ export function NewswebAnnualReportCard({ holdingId, onImported }: { holdingId: 
         </ul>
       )}
     </Card>
+  );
+}
+
+export function NewswebAnnualReportCard({ holdingId, onImported }: { holdingId: string; onImported: () => void }) {
+  return (
+    <NewswebFilingCard
+      holdingId={holdingId}
+      onImported={onImported}
+      title="Annual reports from Newsweb"
+      description={(historyYear) => (
+        <>
+          Fetches every one of the company&apos;s own ESEF annual reports straight from Newsweb, back to{" "}
+          {historyYear ?? "2022"} (unzipping each if needed) instead of you downloading and re-uploading them one by
+          one. Every year&apos;s figures feed the metrics, DCF and ratios. Already-fetched years aren&apos;t
+          re-downloaded. Free, no key.
+        </>
+      )}
+      fetchLabel="Fetch all annual reports"
+      checkMoreLabel="Check for more years"
+      emptyHint="Nothing fetched yet."
+      get={api.getNewswebAnnualReports}
+      runImportCall={api.importNewswebAnnualReports}
+      factsLine={(report) => (
+        <>
+          {report.facts_imported} facts across {report.periods_imported.length} years (
+          {report.periods_imported.join(", ") || "none"})
+        </>
+      )}
+    />
+  );
+}
+
+export function NewswebInterimReportCard({ holdingId, onImported }: { holdingId: string; onImported: () => void }) {
+  return (
+    <NewswebFilingCard
+      holdingId={holdingId}
+      onImported={onImported}
+      title="Half-year reports from Newsweb"
+      description={(historyYear) => (
+        <>
+          Fetches the company&apos;s half-year/interim reports straight from Newsweb, back to {historyYear ?? "2022"}
+          . Norwegian issuers almost never publish these in ESEF format, so this is usually a PDF — captured as text
+          for the analysis to cite, but it does <strong>not</strong> add any new numbers to the DCF, ratios or
+          metrics (see CLAUDE.md Rule 1). Already-fetched reports aren&apos;t re-downloaded. Free, no key.
+        </>
+      )}
+      fetchLabel="Fetch half-year reports"
+      checkMoreLabel="Check for more reports"
+      emptyHint="Nothing fetched yet."
+      get={api.getNewswebInterimReports}
+      runImportCall={api.importNewswebInterimReports}
+      factsLine={(report) =>
+        report.facts_imported > 0 ? (
+          <>
+            {report.facts_imported} facts across {report.periods_imported.length} periods (
+            {report.periods_imported.join(", ") || "none"})
+          </>
+        ) : (
+          <>Text evidence only — no financial facts</>
+        )
+      }
+    />
   );
 }
 
@@ -403,7 +484,13 @@ export function SourcesPanel({ holdingId, onFinancialsChanged }: { holdingId: st
       {eligibility.newsweb && <NewswebCard holdingId={holdingId} />}
       {/* The Newsweb annual-report fetch itself is shown at the top of the
           holding page (HoldingDetailPage) instead of here, so it's easy to
-          find right after opening a position — not repeated in this panel. */}
+          find right after opening a position — not repeated in this panel.
+          The interim/half-year fetch lives here instead: it's supplementary
+          evidence text, not new valuation numbers, so it doesn't need the
+          same top-of-page prominence (2026-09-26). */}
+      {eligibility.newsweb_interim_report && (
+        <NewswebInterimReportCard holdingId={holdingId} onImported={onFinancialsChanged} />
+      )}
       {eligibility.esef_index && <EsefHistoryCard holdingId={holdingId} onImported={onFinancialsChanged} />}
       <EdgarCard holdingId={holdingId} hint={eligibility.sec_edgar_reason} onImported={onFinancialsChanged} />
     </div>

@@ -350,6 +350,12 @@ export const api = {
     request<NewswebAnnualReports>(`/sources/holdings/${holdingId}/newsweb-annual-report/import`, {
       method: "POST",
     }),
+  getNewswebInterimReports: (holdingId: string) =>
+    request<NewswebAnnualReports>(`/sources/holdings/${holdingId}/newsweb-interim-report`),
+  importNewswebInterimReports: (holdingId: string) =>
+    request<NewswebAnnualReports>(`/sources/holdings/${holdingId}/newsweb-interim-report/import`, {
+      method: "POST",
+    }),
 
   // Analysis (Sprint 4 + F2) — see backend/app/api/analysis.py. GET returns
   // the latest stored run (404 before the first one); POST .../run always

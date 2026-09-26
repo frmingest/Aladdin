@@ -63,7 +63,9 @@ from app.services.filings.newsweb_annual_report import (
     NewswebImportError,
     NewswebImportResult,
     import_all_annual_reports_from_newsweb,
+    import_all_interim_reports_from_newsweb,
     list_newsweb_imports,
+    list_newsweb_interim_imports,
 )
 from app.services.filings.sec_edgar import (
     EdgarImportError,
@@ -150,6 +152,8 @@ def get_eligibility(holding_id: UUID, db: Session = Depends(get_db)) -> SourceEl
         ),
         newsweb_annual_report=nw,
         newsweb_annual_report_reason=None if nw else "Newsweb covers Oslo Børs issuers only (.OL ticker or NOK)",
+        newsweb_interim_report=nw,
+        newsweb_interim_report_reason=None if nw else "Newsweb covers Oslo Børs issuers only (.OL ticker or NOK)",
     )
 
 
@@ -336,3 +340,40 @@ def import_newsweb_annual_reports(
         db.rollback()
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return _newsweb_reports_out(holding, list_newsweb_imports(db, holding), bulk=bulk)
+
+
+@router.get("/holdings/{holding_id}/newsweb-interim-report", response_model=NewswebAnnualReportsOut)
+def get_newsweb_interim_reports(holding_id: UUID, db: Session = Depends(get_db)) -> NewswebAnnualReportsOut:
+    """Every half-year report already fetched from Newsweb for this holding
+    (empty list if none yet) — doesn't touch Newsweb itself."""
+    require_not_demo(db)
+    holding = _get_holding_or_404(db, holding_id)
+    return _newsweb_reports_out(holding, list_newsweb_interim_imports(db, holding))
+
+
+@router.post("/holdings/{holding_id}/newsweb-interim-report/import", response_model=NewswebAnnualReportsOut)
+def import_newsweb_interim_reports(
+    holding_id: UUID,
+    db: Session = Depends(get_db),
+    provider: NewswebFilingProvider | None = Depends(get_newsweb_filing_provider_or_none),
+    storage=Depends(get_object_storage),
+) -> NewswebAnnualReportsOut:
+    """Fetches every HALF YEAR FINANCIAL REPORT announcement on Newsweb
+    back to settings.newsweb_filing_history_start_year, skipping reports
+    already on file. Norwegian issuers essentially never ESEF-tag interim
+    reports, so this almost always ingests a PDF as text evidence only —
+    no financial facts, unlike the annual-report fetch (see the warning on
+    each imported report and CLAUDE.md Rule 1). Faiz's ask, 2026-09-26,
+    from the document-sources investigation."""
+    require_not_demo(db)
+    holding = _get_holding_or_404(db, holding_id)
+    if provider is None:
+        raise HTTPException(status_code=422, detail="the Newsweb filing fetch is switched off (NEWSWEB_FILING_PROVIDER)")
+    try:
+        bulk = import_all_interim_reports_from_newsweb(
+            db, holding, provider, storage, since=_newsweb_history_since()
+        )
+    except NewswebImportError as exc:
+        db.rollback()
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return _newsweb_reports_out(holding, list_newsweb_interim_imports(db, holding), bulk=bulk)

@@ -475,6 +475,8 @@ export interface SourceEligibility {
   esef_index_reason: string | null;
   newsweb_annual_report: boolean;
   newsweb_annual_report_reason: string | null;
+  newsweb_interim_report: boolean;
+  newsweb_interim_report_reason: string | null;
 }
 
 /** Mirrors backend NewswebAnnualReportOut — one ESEF annual-report filing

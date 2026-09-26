@@ -18,8 +18,10 @@ from app.providers.newsweb_filing_provider import (
     ZipHasNoReportError,
     extract_xhtml_from_zip,
     parse_annual_report_list,
+    parse_interim_report_list,
     parse_message_attachments,
     pick_esef_attachment,
+    pick_report_attachment,
 )
 
 NOW = datetime(2026, 9, 26, tzinfo=timezone.utc)
@@ -111,6 +113,72 @@ def test_pick_esef_attachment_falls_back_to_bare_xhtml():
 
 def test_pick_esef_attachment_none_when_pdf_only():
     assert pick_esef_attachment([NewswebAttachmentRef("1", "Report.pdf")]) is None
+
+
+# --- interim/half-year additions (2026-09-27) ------------------------------
+
+
+def test_parse_interim_report_list_uses_category_1002():
+    rows = parse_interim_report_list(
+        _list_payload(
+            _msg(670839, "Nykode Therapeutics - Annual Report 2025"),
+            _msg(666642, "Nykode Therapeutics - Half Year Report H1 2026", category_id=1002),
+        ),
+        issuer_sign="NYKD",
+    )
+    assert [r[0] for r in rows] == ["666642"]
+    assert rows[0][1] == "Nykode Therapeutics - Half Year Report H1 2026"
+
+
+def test_pick_report_attachment_prefers_esef_when_present():
+    attachments = [
+        NewswebAttachmentRef("1", "Report.pdf"),
+        NewswebAttachmentRef("2", "acme-2026-06-30-0-en.zip"),
+    ]
+    attachment, is_esef = pick_report_attachment(attachments, allow_pdf_fallback=True)
+    assert attachment.name == "acme-2026-06-30-0-en.zip"
+    assert is_esef is True
+
+
+def test_pick_report_attachment_falls_back_to_pdf_when_allowed():
+    attachments = [NewswebAttachmentRef("1", "Half Year Report.pdf")]
+    attachment, is_esef = pick_report_attachment(attachments, allow_pdf_fallback=True)
+    assert attachment.name == "Half Year Report.pdf"
+    assert is_esef is False
+
+
+def test_pick_report_attachment_none_when_pdf_fallback_disabled():
+    attachments = [NewswebAttachmentRef("1", "Annual Report.pdf")]
+    attachment, is_esef = pick_report_attachment(attachments, allow_pdf_fallback=False)
+    assert attachment is None
+    assert is_esef is False
+
+
+def test_pick_report_attachment_none_when_no_attachments_at_all():
+    attachment, is_esef = pick_report_attachment([], allow_pdf_fallback=True)
+    assert attachment is None
+    assert is_esef is False
+
+
+def test_provider_list_interim_reports_calls_category_1002():
+    calls: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(request)
+        if "list" in str(request.url):
+            assert dict(request.url.params)["category"] == "1002"
+            assert dict(request.url.params)["issuer"] == "NYKD"
+            return httpx.Response(
+                200, json=_list_payload(_msg(666642, "Nykode - Half Year Report H1 2026", category_id=1002))
+            )
+        assert dict(request.url.params)["messageId"] == "666642"
+        return httpx.Response(200, json=_message_payload(666642, [{"id": 1, "name": "Half Year Report.pdf"}]))
+
+    provider = NewswebFilingProvider(client=httpx.Client(transport=httpx.MockTransport(handler)))
+    refs = provider.list_interim_reports("NYKD", since=date(2022, 1, 1), today=date(2026, 9, 26))
+    assert [r.message_id for r in refs] == ["666642"]
+    assert refs[0].attachments[0].name == "Half Year Report.pdf"
+    assert len(calls) == 2
 
 
 def _zip_bytes(members: dict[str, bytes]) -> bytes:

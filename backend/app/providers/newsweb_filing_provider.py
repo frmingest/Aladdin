@@ -1,11 +1,14 @@
-"""Oslo Børs Newsweb annual-report *filing* fetch (Sprint 15, 2026-09-26).
+"""Oslo Børs Newsweb annual/interim-report *filing* fetch (Sprint 15,
+2026-09-26; extended 2026-09-26 to also cover half-year/interim reports,
+category 1002 — Faiz's ask after a document-sources investigation found
+Newsweb's other announcement categories).
 
 Companion to app/providers/newsweb_provider.py, which only ever reads
 announcement *metadata* (title, category, date — CLAUDE.md Rule 5 keeps
 issuer body text away from the LLM). This module goes one step further and
-downloads the actual ESEF filing attached to a company's "ANNUAL FINANCIAL
-REPORT" announcement, so its .xhtml can be run through the same iXBRL
-extractor an upload uses (app/services/filings/newsweb_annual_report.py).
+downloads the actual filing attached to one of a company's regulated
+report announcements, so it can be run through the same ingestion pipeline
+an upload uses (app/services/filings/newsweb_annual_report.py).
 
 Three keyless api3.oslo.oslobors.no endpoints, all confirmed live
 2026-09-26 (by inspecting the real newsweb.oslobors.no SPA's own network
@@ -14,8 +17,9 @@ calls for a real filing, Nykode Therapeutics' Annual Report 2025):
     GET /v1/newsreader/list?issuer=<sign>&category=1001&fromDate=&toDate=
         -> {"data": {"messages": [...]}}, one row per announcement.
         category 1001 is Oslo Børs' own taxonomy id for "ANNUAL FINANCIAL
-        REPORT" (Norwegian: ÅRSRAPPORT) — confirmed against the live list,
-        it is stable across issuers, not a per-company label.
+        REPORT" (Norwegian: ÅRSRAPPORT); 1002 is "HALF YEAR FINANCIAL
+        REPORT" (HALVÅRSRAPPORT) — both confirmed against the live list,
+        stable across issuers, not a per-company label.
 
     GET /v1/newsreader/message?messageId=<id>
         -> {"data": {"message": {..., "attachments": [{"id", "name"}, ...]}}}
@@ -24,6 +28,17 @@ calls for a real filing, Nykode Therapeutics' Annual Report 2025):
 
     GET /v1/newsreader/attachment?messageId=<id>&attachmentId=<attId>
         -> the raw file bytes (a PDF, or an ESEF .zip/.xhtml).
+
+Important asymmetry between the two categories: ESEF/iXBRL tagging is an EU
+Transparency Directive requirement for *annual* financial reports only —
+Norwegian issuers essentially never tag their half-year report, so its
+Newsweb attachment is almost always a plain PDF. A PDF still gets ingested
+(page text -> citable evidence) but yields no structured financial facts,
+per CLAUDE.md Rule 1 (no arithmetic/fact promotion from PDFs — see
+app/services/documents/extraction/pdf.py). ``pick_report_attachment``
+reflects this: annual imports still require an ESEF file (as before, no
+behaviour change); interim imports accept a PDF fallback because that is
+normally all that exists.
 
 Like newsweb_provider.py, this is an undocumented endpoint behind a public
 site, not a contracted API: every parse is defensive and anything
@@ -47,9 +62,15 @@ MESSAGE_URL = "https://api3.oslo.oslobors.no/v1/newsreader/message"
 ATTACHMENT_URL = "https://api3.oslo.oslobors.no/v1/newsreader/attachment"
 MESSAGE_PAGE_URL = "https://newsweb.oslobors.no/message/{message_id}"
 
-# Oslo Børs' own category id for "ANNUAL FINANCIAL REPORT" (ÅRSRAPPORT) —
-# confirmed against the live list endpoint, not guessed from a title match.
-ANNUAL_REPORT_CATEGORY_ID = 1001
+# Oslo Børs' own category ids — confirmed against the live list endpoint,
+# not guessed from a title match.
+ANNUAL_REPORT_CATEGORY_ID = 1001  # ÅRSRAPPORT / ANNUAL FINANCIAL REPORT
+INTERIM_REPORT_CATEGORY_ID = 1002  # HALVÅRSRAPPORT / HALF YEAR FINANCIAL REPORT
+
+_CATEGORY_LABELS = {
+    ANNUAL_REPORT_CATEGORY_ID: "ANNUAL FINANCIAL REPORT",
+    INTERIM_REPORT_CATEGORY_ID: "HALF YEAR FINANCIAL REPORT",
+}
 
 # ESEF packages carry the report text, the taxonomy and (often) an iXBRL
 # viewer bundled together; the report itself is always the largest
@@ -90,16 +111,18 @@ def _parse_time(value: Any) -> datetime | None:
     return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
 
 
-def _has_annual_report_category(message: dict[str, Any]) -> bool:
+def _has_category(message: dict[str, Any], category_id: int) -> bool:
     for cat in message.get("category") or []:
-        if isinstance(cat, dict) and cat.get("id") == ANNUAL_REPORT_CATEGORY_ID:
+        if isinstance(cat, dict) and cat.get("id") == category_id:
             return True
     return False
 
 
-def parse_annual_report_list(payload: Any, *, issuer_sign: str) -> list[tuple[str, str, datetime | None]]:
+def parse_report_list(
+    payload: Any, *, issuer_sign: str, category_id: int
+) -> list[tuple[str, str, datetime | None]]:
     """Pure parse of a /list payload -> [(message_id, title, published_at)],
-    newest first, restricted to this issuer's ANNUAL FINANCIAL REPORT rows
+    newest first, restricted to this issuer's rows of the given category
     with at least one attachment. Unit-tested against a fixture."""
     if not isinstance(payload, dict) or not isinstance(payload.get("data"), dict):
         raise NewswebFilingUnavailableError("Newsweb response had no 'data' object")
@@ -113,7 +136,7 @@ def parse_annual_report_list(payload: Any, *, issuer_sign: str) -> list[tuple[st
             continue
         if str(message.get("issuerSign", "")).upper() != issuer_sign:
             continue
-        if not _has_annual_report_category(message):
+        if not _has_category(message, category_id):
             continue
         if not (message.get("numbAttachments") or 0):
             continue
@@ -124,6 +147,16 @@ def parse_annual_report_list(payload: Any, *, issuer_sign: str) -> list[tuple[st
         rows.append((str(message_id), title, _parse_time(message.get("publishedTime"))))
     rows.sort(key=lambda r: r[2] or datetime.min.replace(tzinfo=timezone.utc), reverse=True)
     return rows
+
+
+def parse_annual_report_list(payload: Any, *, issuer_sign: str) -> list[tuple[str, str, datetime | None]]:
+    """Back-compat wrapper: annual reports only (category 1001)."""
+    return parse_report_list(payload, issuer_sign=issuer_sign, category_id=ANNUAL_REPORT_CATEGORY_ID)
+
+
+def parse_interim_report_list(payload: Any, *, issuer_sign: str) -> list[tuple[str, str, datetime | None]]:
+    """Half-year/interim reports only (category 1002)."""
+    return parse_report_list(payload, issuer_sign=issuer_sign, category_id=INTERIM_REPORT_CATEGORY_ID)
 
 
 def parse_message_attachments(payload: Any) -> list[NewswebAttachmentRef]:
@@ -159,6 +192,25 @@ def pick_esef_attachment(attachments: list[NewswebAttachmentRef]) -> NewswebAtta
         if att.name.lower().endswith(_REPORT_EXTENSIONS):
             return att
     return None
+
+
+def pick_report_attachment(
+    attachments: list[NewswebAttachmentRef], *, allow_pdf_fallback: bool
+) -> tuple[NewswebAttachmentRef | None, bool]:
+    """(attachment, is_esef). Same ESEF preference as pick_esef_attachment;
+    when nothing ESEF-tagged is published and allow_pdf_fallback is True
+    (interim reports — see module docstring), falls back to the first PDF
+    so the report is at least ingested as text evidence, with no financial
+    facts promoted. Annual imports pass allow_pdf_fallback=False, keeping
+    their existing "no ESEF -> error" behaviour unchanged."""
+    esef = pick_esef_attachment(attachments)
+    if esef is not None:
+        return esef, True
+    if allow_pdf_fallback:
+        for att in attachments:
+            if att.name.lower().endswith(".pdf"):
+                return att, False
+    return None, False
 
 
 class ZipHasNoReportError(NewswebFilingUnavailableError):
@@ -242,17 +294,19 @@ class NewswebFilingProvider:
             if self._client is None:
                 client.close()
 
-    def _list_rows(self, issuer_sign: str, *, start: date, end: date) -> list[tuple[str, str, datetime | None]]:
+    def _list_rows(
+        self, issuer_sign: str, *, start: date, end: date, category_id: int = ANNUAL_REPORT_CATEGORY_ID
+    ) -> list[tuple[str, str, datetime | None]]:
         payload = self._get_json(
             LIST_URL,
             {
                 "issuer": issuer_sign,
-                "category": str(ANNUAL_REPORT_CATEGORY_ID),
+                "category": str(category_id),
                 "fromDate": start.isoformat(),
                 "toDate": end.isoformat(),
             },
         )
-        return parse_annual_report_list(payload, issuer_sign=issuer_sign)
+        return parse_report_list(payload, issuer_sign=issuer_sign, category_id=category_id)
 
     def find_latest_annual_report(
         self, issuer_sign: str, *, today: date | None = None
@@ -277,19 +331,12 @@ class NewswebFilingProvider:
             attachments=attachments,
         )
 
-    def list_annual_reports(
-        self, issuer_sign: str, *, since: date, today: date | None = None
+    def _list_reports(
+        self, issuer_sign: str, *, since: date, today: date | None, category_id: int
     ) -> list[NewswebAnnualReportRef]:
-        """Every ANNUAL FINANCIAL REPORT announcement for this issuer from
-        ``since`` through today (inclusive), newest first, each with its
-        attachments already fetched. Used by the "fetch every available
-        year" flow (Faiz's ask, 2026-09-26) — an explicit calendar start
-        date rather than find_latest_annual_report's rolling lookback
-        window, so a company that's been reporting since 2022 keeps
-        showing all of it no matter how far "today" has moved on."""
         issuer_sign = issuer_sign.strip().upper()
         end = today or datetime.now(timezone.utc).date()
-        rows = self._list_rows(issuer_sign, start=since, end=end)
+        rows = self._list_rows(issuer_sign, start=since, end=end, category_id=category_id)
         return [
             NewswebAnnualReportRef(
                 message_id=message_id,
@@ -300,6 +347,27 @@ class NewswebFilingProvider:
             )
             for message_id, title, published_at in rows
         ]
+
+    def list_annual_reports(
+        self, issuer_sign: str, *, since: date, today: date | None = None
+    ) -> list[NewswebAnnualReportRef]:
+        """Every ANNUAL FINANCIAL REPORT announcement for this issuer from
+        ``since`` through today (inclusive), newest first, each with its
+        attachments already fetched. Used by the "fetch every available
+        year" flow (Faiz's ask, 2026-09-26) — an explicit calendar start
+        date rather than find_latest_annual_report's rolling lookback
+        window, so a company that's been reporting since 2022 keeps
+        showing all of it no matter how far "today" has moved on."""
+        return self._list_reports(issuer_sign, since=since, today=today, category_id=ANNUAL_REPORT_CATEGORY_ID)
+
+    def list_interim_reports(
+        self, issuer_sign: str, *, since: date, today: date | None = None
+    ) -> list[NewswebAnnualReportRef]:
+        """Every HALF YEAR FINANCIAL REPORT announcement for this issuer
+        from ``since`` through today, newest first — same shape as
+        list_annual_reports, category 1002 instead of 1001 (Faiz's ask,
+        2026-09-26, following the document-sources investigation)."""
+        return self._list_reports(issuer_sign, since=since, today=today, category_id=INTERIM_REPORT_CATEGORY_ID)
 
     def get_message_attachments(self, message_id: str) -> list[NewswebAttachmentRef]:
         payload = self._get_json(MESSAGE_URL, {"messageId": str(message_id)})
