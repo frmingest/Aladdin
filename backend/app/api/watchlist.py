@@ -25,6 +25,12 @@ from app.schemas.watchlist import (
     WatchlistRowOut,
     WatchlistUpdate,
 )
+from app.services.settings.demo_guard import require_not_demo
+from app.services.settings.demo_mode import is_demo_mode
+from app.services.settings.synthetic_data import (
+    demo_watchlist,
+    demo_watchlist_for_holding,
+)
 from app.services.valuation.board import current_positions
 from app.services.watchlist import BUY_ZONE, build_row, build_watchlist
 
@@ -43,6 +49,8 @@ def get_watchlist(
     market_data_provider: MarketDataProvider = Depends(get_market_data_provider),
     risk_free_rate_provider: RiskFreeRateProvider = Depends(get_risk_free_rate_provider),
 ) -> WatchlistOut:
+    if is_demo_mode(db):
+        return demo_watchlist()
     rows = build_watchlist(
         db, market_data_provider=market_data_provider, risk_free_rate_provider=risk_free_rate_provider
     )
@@ -55,12 +63,15 @@ def get_watchlist(
 @router.get("/holdings/{holding_id}", response_model=WatchlistRowOut | None)
 def get_watchlist_entry_for_holding(holding_id: UUID, db: Session = Depends(get_db)) -> WatchlistRowOut | None:
     """The watchlist entry for one holding, or null (used by the holding page)."""
+    if is_demo_mode(db):
+        return demo_watchlist_for_holding(holding_id)
     item = db.scalar(select(WatchlistItem).where(WatchlistItem.holding_id == holding_id))
     return _row_out(db, item) if item else None
 
 
 @router.post("", response_model=WatchlistRowOut, status_code=201)
 def add_to_watchlist(payload: WatchlistCreate, db: Session = Depends(get_db)) -> WatchlistRowOut:
+    require_not_demo(db)
     if payload.holding_id is not None:
         holding = db.get(Holding, payload.holding_id)
         if holding is None:
@@ -101,6 +112,7 @@ def add_to_watchlist(payload: WatchlistCreate, db: Session = Depends(get_db)) ->
 
 @router.patch("/{item_id}", response_model=WatchlistRowOut)
 def update_watchlist_entry(item_id: UUID, payload: WatchlistUpdate, db: Session = Depends(get_db)) -> WatchlistRowOut:
+    require_not_demo(db)
     item = db.get(WatchlistItem, item_id)
     if item is None:
         raise HTTPException(status_code=404, detail="watchlist entry not found")
@@ -117,6 +129,7 @@ def update_watchlist_entry(item_id: UUID, payload: WatchlistUpdate, db: Session 
 
 @router.delete("/{item_id}", status_code=204, response_model=None)
 def remove_from_watchlist(item_id: UUID, confirm: bool = False, db: Session = Depends(get_db)) -> None:
+    require_not_demo(db)
     if not confirm:
         raise HTTPException(status_code=400, detail="pass confirm=true to remove a watchlist entry")
     item = db.get(WatchlistItem, item_id)

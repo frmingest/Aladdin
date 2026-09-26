@@ -29,6 +29,9 @@ from app.schemas.valuation import (
     MarginOfSafetyBoardOut,
     PeriodMultiplesOut,
 )
+from app.services.settings.demo_guard import require_not_demo
+from app.services.settings.demo_mode import is_demo_mode
+from app.services.settings.synthetic_data import demo_valuation, demo_valuation_board
 from app.services.valuation.board import build_board
 from app.services.valuation.holding_valuation import (
     HoldingValuationResult,
@@ -103,6 +106,11 @@ def get_holding_valuation(
     market_data_provider: MarketDataProvider = Depends(get_market_data_provider),
     risk_free_rate_provider: RiskFreeRateProvider = Depends(get_risk_free_rate_provider),
 ) -> HoldingValuationOut:
+    if is_demo_mode(db):
+        demo = demo_valuation(holding_id)
+        if demo is None:
+            raise HTTPException(status_code=404, detail="holding not found")
+        return demo
     holding = _get_holding_or_404(db, holding_id)
     result = compute_holding_valuation(db, holding, market_data_provider, risk_free_rate_provider)
     return _to_out(result)
@@ -115,6 +123,7 @@ def refresh_holding_valuation(
     market_data_provider: MarketDataProvider = Depends(get_market_data_provider),
     risk_free_rate_provider: RiskFreeRateProvider = Depends(get_risk_free_rate_provider),
 ) -> HoldingValuationOut:
+    require_not_demo(db)
     holding = _get_holding_or_404(db, holding_id)
     result = compute_holding_valuation(
         db, holding, market_data_provider, risk_free_rate_provider, force_refresh=True
@@ -131,6 +140,8 @@ def get_margin_of_safety_board(
     """Feature F3: every currently owned equity ranked by margin of safety.
     Uses the same cached price/FX/rate data as GET /valuation/holdings/{id};
     no LLM call is ever made."""
+    if is_demo_mode(db):
+        return demo_valuation_board()
     board = build_board(
         db, market_data_provider=market_data_provider, risk_free_rate_provider=risk_free_rate_provider
     )

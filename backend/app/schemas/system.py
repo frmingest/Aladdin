@@ -41,3 +41,6 @@ class SystemStatusOut(BaseModel):
     analysis: list[StatusItemOut]
     counts: dict[str, int]
     issues: list[str]
+    # Set true only while demo mode is on (app/services/settings/demo_mode.py)
+    # so the System status page always shows it — never inferred elsewhere.
+    demo_mode: bool = False

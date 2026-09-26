@@ -28,6 +28,7 @@ from app.schemas.document import (
 )
 from app.services.deletion import DeletionBlockedError, delete_documents
 from app.services.documents.ingestion import ingest_holding_document
+from app.services.settings.demo_guard import require_not_demo
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -97,6 +98,7 @@ async def upload_document(
     db: Session = Depends(get_db),
     storage=Depends(get_object_storage),
 ) -> DocumentUploadResponse:
+    require_not_demo(db)
     if document_type not in DOCUMENT_TYPES:
         raise HTTPException(
             status_code=422,
@@ -141,6 +143,7 @@ async def upload_document(
 def list_documents(
     holding_id: UUID | None = None, db: Session = Depends(get_db)
 ) -> list[DocumentOut]:
+    require_not_demo(db)
     query = db.query(Document)
     if holding_id is not None:
         query = query.filter(Document.holding_id == holding_id)
@@ -150,6 +153,7 @@ def list_documents(
 
 @router.get("/{document_id}", response_model=DocumentDetail)
 def get_document(document_id: UUID, db: Session = Depends(get_db)) -> DocumentDetail:
+    require_not_demo(db)
     document = db.get(Document, document_id)
     if document is None:
         raise HTTPException(status_code=404, detail="document not found")
@@ -163,6 +167,7 @@ def delete_document(
     db: Session = Depends(get_db),
     storage=Depends(get_object_storage),
 ) -> DeletionResult:
+    require_not_demo(db)
     """Deletes one uploaded document: its extracted facts, pages, chunks,
     and the original file in object storage. Destructive (CLAUDE.md):
     `confirm=true` required. Also the way to re-extract a file after an

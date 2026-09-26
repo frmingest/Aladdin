@@ -22,6 +22,7 @@ import type {
   DeletionResult,
   DocumentSummary,
   EdgarImport,
+  NewswebAnnualReportImport,
   EsefImport,
   FundDimension,
   FundExposureRowInput,
@@ -64,6 +65,7 @@ import type {
   SnapshotDeleteResult,
   SourceEligibility,
   SystemStatus,
+  DemoModeState,
   ThesisMonitor,
   TripwireCreateInput,
   TripwireUpdateInput,
@@ -309,6 +311,16 @@ export const api = {
   /** F4 — configuration, data freshness and failures. Never calls a provider. */
   getSystemStatus: () => request<SystemStatus>("/system/status"),
 
+  /** Demo mode (2026-09-26) — backend/app/api/settings.py. Turning it on
+   * makes every page show a fixed set of fabricated data; real portfolio
+   * data, documents and research are never read while it is on. */
+  getDemoMode: () => request<DemoModeState>("/settings/demo-mode"),
+  setDemoMode: (enabled: boolean) =>
+    request<DemoModeState>("/settings/demo-mode", {
+      method: "PUT",
+      body: JSON.stringify({ enabled }),
+    }),
+
   /** F3 — every owned equity ranked by margin of safety. */
   getMarginOfSafetyBoard: () => request<MarginOfSafetyBoard>("/valuation/board"),
 
@@ -330,6 +342,12 @@ export const api = {
     request<HoldingAnnouncements>(`/sources/holdings/${holdingId}/announcements`),
   refreshAnnouncements: (holdingId: string) =>
     request<HoldingAnnouncements>(`/sources/holdings/${holdingId}/announcements/refresh`, {
+      method: "POST",
+    }),
+  getNewswebAnnualReportImport: (holdingId: string) =>
+    request<NewswebAnnualReportImport>(`/sources/holdings/${holdingId}/newsweb-annual-report`),
+  importNewswebAnnualReport: (holdingId: string) =>
+    request<NewswebAnnualReportImport>(`/sources/holdings/${holdingId}/newsweb-annual-report/import`, {
       method: "POST",
     }),
 

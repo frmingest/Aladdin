@@ -251,3 +251,175 @@ def test_esef_index_import_endpoint(client):
     assert "roe" in metrics.json()["computed"]
     eligibility = client.get(f"/sources/holdings/{hid}").json()
     assert eligibility["esef_index"] is True
+
+
+# --- Newsweb annual-report filing fetch (Sprint 15) -----------------------------
+
+
+def _newsweb_zip(xhtml_bytes: bytes, *, xhtml_name: str = "acme-2025-12-31-0-en.xhtml") -> bytes:
+    import io
+    import zipfile
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr("META-INF/taxonomyPackage.xml", "<xml/>")
+        zf.writestr(f"reports/{xhtml_name}", xhtml_bytes)
+    return buf.getvalue()
+
+
+class FakeNewswebFiling:
+    name = "Oslo Børs Newsweb"
+
+    def __init__(self, *, ref=None, attachment_bytes=b"", fail=None):
+        self.ref = ref
+        self.attachment_bytes = attachment_bytes
+        self.fail = fail
+        self.downloaded: list[tuple[str, str]] = []
+
+    def find_latest_annual_report(self, issuer_sign, *, today=None):
+        if self.fail:
+            from app.providers.newsweb_filing_provider import (
+                NewswebFilingUnavailableError,
+            )
+
+            raise NewswebFilingUnavailableError(self.fail)
+        return self.ref
+
+    def download_attachment(self, message_id, attachment_id):
+        self.downloaded.append((message_id, attachment_id))
+        return self.attachment_bytes
+
+
+@pytest.fixture()
+def newsweb_filing():
+    from app.providers.factory import get_newsweb_filing_provider_or_none
+
+    fake = FakeNewswebFiling()
+    app.dependency_overrides[get_newsweb_filing_provider_or_none] = lambda: fake
+    yield fake
+    del app.dependency_overrides[get_newsweb_filing_provider_or_none]
+
+
+def test_newsweb_annual_report_import_round_trip(client, db_session, newsweb_filing):
+    """A fake Newsweb list -> a .zip attachment -> the real iXBRL extractor
+    (same fixture as test_extraction_ixbrl.py) -> facts on the holding,
+    exactly as an equivalent manual upload of the same .xhtml would give."""
+    from app.providers.newsweb_filing_provider import (
+        NewswebAnnualReportRef,
+        NewswebAttachmentRef,
+    )
+    from tests.unit.test_extraction_ixbrl import BALANCE, HEAD, INCOME
+
+    xhtml = (HEAD + INCOME + BALANCE + "</div></body></html>").encode("utf-8")
+    newsweb_filing.ref = NewswebAnnualReportRef(
+        message_id="670839",
+        message_url="https://newsweb.oslobors.no/message/670839",
+        title="ACME ASA - Annual Report 2025",
+        published_at=datetime(2026, 4, 17, 7, 30, tzinfo=timezone.utc),
+        attachments=[
+            NewswebAttachmentRef("323509", "ACME ASA - Annual Report 2025.pdf"),
+            NewswebAttachmentRef("323510", "acme-2025-12-31-0-en.zip"),
+        ],
+    )
+    newsweb_filing.attachment_bytes = _newsweb_zip(xhtml)
+
+    hid = _holding(client, ticker="ACME.OL", name="ACME ASA", currency="NOK")
+
+    before = client.get(f"/sources/holdings/{hid}/newsweb-annual-report").json()
+    assert before["imported"] is False
+
+    resp = client.post(f"/sources/holdings/{hid}/newsweb-annual-report/import")
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["imported"] is True
+    assert body["message_id"] == "670839"
+    assert body["message_url"] == "https://newsweb.oslobors.no/message/670839"
+    assert body["attachment_name"] == "acme-2025-12-31-0-en.zip"
+    assert body["facts_imported"] > 0
+    assert "FY2025" in body["periods_imported"]
+    assert newsweb_filing.downloaded == [("670839", "323510")]
+
+    # It's a real Document like any upload: shows up in the documents list,
+    # is the right type, and carries Newsweb's own provenance.
+    doc = client.get(f"/documents/{body['document_id']}").json()
+    assert doc["type"] == "annual_report"
+    assert doc["quality_flags"]["newsweb_source"]["message_id"] == "670839"
+
+    # GET now returns the same stored result without re-fetching.
+    again = client.get(f"/sources/holdings/{hid}/newsweb-annual-report").json()
+    assert again["imported"] is True and again["facts_imported"] == body["facts_imported"]
+    assert newsweb_filing.downloaded == [("670839", "323510")]  # not called again
+
+    eligibility = client.get(f"/sources/holdings/{hid}").json()
+    assert eligibility["newsweb_annual_report"] is True
+
+
+def test_newsweb_annual_report_bare_xhtml_attachment_no_zip(client, db_session, newsweb_filing):
+    from app.providers.newsweb_filing_provider import (
+        NewswebAnnualReportRef,
+        NewswebAttachmentRef,
+    )
+    from tests.unit.test_extraction_ixbrl import BALANCE, HEAD, INCOME
+
+    xhtml = (HEAD + INCOME + BALANCE + "</div></body></html>").encode("utf-8")
+    newsweb_filing.ref = NewswebAnnualReportRef(
+        message_id="1", message_url="https://newsweb.oslobors.no/message/1",
+        title="ACME ASA - Annual Report 2025", published_at=None,
+        attachments=[NewswebAttachmentRef("2", "acme-2025.xhtml")],
+    )
+    newsweb_filing.attachment_bytes = xhtml
+
+    hid = _holding(client, ticker="ACME.OL", name="ACME ASA", currency="NOK")
+    resp = client.post(f"/sources/holdings/{hid}/newsweb-annual-report/import")
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["attachment_name"] == "acme-2025.xhtml"
+
+
+def test_newsweb_annual_report_pdf_only_is_422(client, db_session, newsweb_filing):
+    from app.providers.newsweb_filing_provider import (
+        NewswebAnnualReportRef,
+        NewswebAttachmentRef,
+    )
+
+    newsweb_filing.ref = NewswebAnnualReportRef(
+        message_id="1", message_url="https://newsweb.oslobors.no/message/1",
+        title="ACME ASA - Annual Report 2025", published_at=None,
+        attachments=[NewswebAttachmentRef("2", "ACME Annual Report.pdf")],
+    )
+    hid = _holding(client, ticker="ACME.OL", name="ACME ASA", currency="NOK")
+    resp = client.post(f"/sources/holdings/{hid}/newsweb-annual-report/import")
+    assert resp.status_code == 422
+    assert "no ESEF" in resp.json()["detail"]
+
+
+def test_newsweb_annual_report_none_found_is_422(client, db_session, newsweb_filing):
+    newsweb_filing.ref = None
+    hid = _holding(client, ticker="ACME.OL", name="ACME ASA", currency="NOK")
+    resp = client.post(f"/sources/holdings/{hid}/newsweb-annual-report/import")
+    assert resp.status_code == 422
+    assert "no ANNUAL FINANCIAL REPORT" in resp.json()["detail"]
+
+
+def test_newsweb_annual_report_provider_failure_is_422_not_500(client, db_session, newsweb_filing):
+    newsweb_filing.fail = "Newsweb returned HTTP 500"
+    hid = _holding(client, ticker="ACME.OL", name="ACME ASA", currency="NOK")
+    resp = client.post(f"/sources/holdings/{hid}/newsweb-annual-report/import")
+    assert resp.status_code == 422
+    assert "500" in resp.json()["detail"]
+
+
+def test_newsweb_annual_report_not_applicable_for_us_holding(client, db_session):
+    hid = _holding(client)
+    resp = client.post(f"/sources/holdings/{hid}/newsweb-annual-report/import")
+    assert resp.status_code == 422
+    assert "Oslo" in resp.json()["detail"]
+
+
+def test_newsweb_annual_report_switched_off_is_422(client, db_session):
+    from app.providers.factory import get_newsweb_filing_provider_or_none
+
+    app.dependency_overrides[get_newsweb_filing_provider_or_none] = lambda: None
+    hid = _holding(client, ticker="ACME.OL", name="ACME ASA", currency="NOK")
+    resp = client.post(f"/sources/holdings/{hid}/newsweb-annual-report/import")
+    assert resp.status_code == 422 and "switched off" in resp.json()["detail"]
+    del app.dependency_overrides[get_newsweb_filing_provider_or_none]
