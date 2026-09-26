@@ -423,6 +423,14 @@ def _add_valuation_evidence(result: HoldingValuationResult, add: Callable) -> No
             f"{_fmt_pct(result.discount_rate)} (risk-free rate {_fmt_pct((result.risk_free_rate_pct or Decimal(0)) / 100)}, "
             f"beta {result.beta}, equity risk premium {_fmt_pct(result.equity_risk_premium or Decimal(0))}).",
         )
+    if result.regime and result.regime_discount_rate_addon:
+        add(
+            "valuation",
+            "Regime-adjusted discount rate (Sprint 14)",
+            f"Widened by {_fmt_pct(result.regime_discount_rate_addon)} for the current "
+            f"{result.regime} macro regime (regime adjustments {result.regime_adjustments_version}); "
+            f"base CAPM rate before widening was {_fmt_pct(result.base_discount_rate or Decimal(0))}.",
+        )
     if result.dcf is not None:
         scenario_lines = []
         for scenario in result.dcf.scenarios:

@@ -79,6 +79,7 @@ def _fake_valuation(values: dict[str, tuple]):
             return SimpleNamespace(
                 valuation_currency="NOK", current_price_per_share=None, as_of=None, dcf=None,
                 unavailable_reasons=["DCF unavailable: fewer than two periods"],
+                regime=None, regime_discount_rate_addon=None,
             )
         price, bear, base, bull = (None if v is None else D(v) for v in spec)
         scenarios = [
@@ -95,6 +96,7 @@ def _fake_valuation(values: dict[str, tuple]):
             valuation_currency="NOK", current_price_per_share=price, as_of=NOW,
             dcf=SimpleNamespace(scenarios=scenarios, margin_of_safety=mos),
             unavailable_reasons=[] if price is not None else ["current price unavailable"],
+            regime=None, regime_discount_rate_addon=None,
         )
 
     return fake

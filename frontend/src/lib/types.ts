@@ -581,6 +581,14 @@ export interface HoldingValuation {
   shares_source?: string | null;
   assumptions_version: string;
   unavailable_reasons: string[];
+  /** Sprint 14 (2026-09-26) — set only when the backend's
+   * regime_adjusted_dcf_enabled setting is on. base_discount_rate is the
+   * plain CAPM rate before any widening; discount_rate above is what the
+   * DCF actually used (they're equal when this feature is off). */
+  base_discount_rate?: string | null;
+  regime?: MacroRegime | null;
+  regime_discount_rate_addon?: string | null;
+  regime_adjustments_version?: string | null;
 }
 
 /** Order + display label for every multiple
@@ -825,6 +833,9 @@ export interface BoardRow {
   verdict_rating: VerdictRating | null;
   moat_rating: MoatRating | null;
   analyzed_at: string | null;
+  /** Sprint 14 (2026-09-26) — same meaning as HoldingValuation's fields. */
+  regime?: MacroRegime | null;
+  regime_discount_rate_addon?: string | null;
 }
 
 export interface MarginOfSafetyBoard {

@@ -59,6 +59,25 @@ def test_missing_key_and_unknown_provider_are_errors(db):
     assert any("Prices" in issue for issue in status.issues)
 
 
+def test_regime_adjusted_dcf_off_by_default(db):
+    status = build_system_status(db, _settings(), DailyBudgetGuard(daily_limit=20), now=NOW)
+    item = _by_key(status.providers)["regime_dcf"]
+    assert item.status == "off"
+    assert item.value == "off"
+
+
+def test_regime_adjusted_dcf_shows_current_regime_when_enabled(db):
+    # No macro data stored -> classify_regime defaults to baseline with a
+    # "not enough data" explanation; the status row should still show it
+    # plainly rather than erroring.
+    status = build_system_status(
+        db, _settings(regime_adjusted_dcf_enabled=True), DailyBudgetGuard(daily_limit=20), now=NOW,
+    )
+    item = _by_key(status.providers)["regime_dcf"]
+    assert item.status == "ok"
+    assert "baseline" in item.value
+
+
 def test_localhost_ollama_on_deployed_server_warns(db):
     status = build_system_status(db, _settings(llm_provider="ollama", environment="production"),
                                  DailyBudgetGuard(daily_limit=20), now=NOW)

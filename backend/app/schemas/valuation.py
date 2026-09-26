@@ -47,6 +47,13 @@ class HoldingValuationOut(BaseModel):
     shares_source: str | None = None
     assumptions_version: str
     unavailable_reasons: list[str]
+    # Sprint 14 (2026-09-26): set only when settings.regime_adjusted_dcf_enabled
+    # is True. base_discount_rate is the plain CAPM rate before any widening;
+    # discount_rate above is what the DCF actually used.
+    base_discount_rate: Decimal | None = None
+    regime: str | None = None
+    regime_discount_rate_addon: Decimal | None = None
+    regime_adjustments_version: str | None = None
 
 
 class BoardRowOut(BaseModel):
@@ -69,6 +76,9 @@ class BoardRowOut(BaseModel):
     verdict_rating: str | None
     moat_rating: str | None
     analyzed_at: datetime | None
+    # Sprint 14 (2026-09-26): same meaning as HoldingValuationOut's fields.
+    regime: str | None = None
+    regime_discount_rate_addon: Decimal | None = None
 
 
 class MarginOfSafetyBoardOut(BaseModel):

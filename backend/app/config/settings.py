@@ -133,6 +133,17 @@ class Settings(BaseSettings):
     # ERP / terminal growth / scenario offsets — app/domain/valuation_assumptions/.
     active_valuation_assumptions_version: str = "v1"
 
+    # --- Regime-adjusted DCF (Sprint 14, 2026-09-26, app/domain/regime_adjustments/) ---
+    # Off by default: wiring Sprint 12's macro regime (app/services/risk/regime.py)
+    # into the DCF discount rate is a real behavior change to every valuation
+    # in the app — Sprint 12 explicitly deferred it as Faiz's call rather than
+    # switching it on silently in the same sprint that introduced the regime
+    # signal. When true, every DCF's discount rate gets a per-regime add-on
+    # from active_regime_adjustment_version
+    # (app/services/valuation/holding_valuation.py).
+    regime_adjusted_dcf_enabled: bool = False
+    active_regime_adjustment_version: str = "v1"
+
     # --- Portfolio risk (Sprint 12, 2026-09-26, app/services/risk/) ---
     # Daily price history used for correlation/stress is cached per ticker
     # (app/models/risk.py's PriceHistoryObservation) and only re-fetched

@@ -89,6 +89,10 @@ def _to_out(result: HoldingValuationResult) -> HoldingValuationOut:
         shares_source=result.shares_source,
         assumptions_version=result.assumptions_version,
         unavailable_reasons=result.unavailable_reasons,
+        base_discount_rate=result.base_discount_rate,
+        regime=result.regime,
+        regime_discount_rate_addon=result.regime_discount_rate_addon,
+        regime_adjustments_version=result.regime_adjustments_version,
     )
 
 

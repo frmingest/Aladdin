@@ -63,6 +63,10 @@ class BoardRow:
     verdict_rating: str | None = None
     moat_rating: str | None = None
     analyzed_at: datetime | None = None
+    # Sprint 14 (2026-09-26): set only when settings.regime_adjusted_dcf_enabled
+    # is True (app/services/valuation/holding_valuation.py).
+    regime: str | None = None
+    regime_discount_rate_addon: Decimal | None = None
 
 
 @dataclass
@@ -167,6 +171,8 @@ def build_board(
         row.valuation_currency = valuation.valuation_currency
         row.price = valuation.current_price_per_share
         row.price_as_of = valuation.as_of
+        row.regime = valuation.regime
+        row.regime_discount_rate_addon = valuation.regime_discount_rate_addon
         if valuation.dcf is not None:
             values = {s.label: s.intrinsic_value_per_share for s in valuation.dcf.scenarios}
             row.bear, row.base, row.bull = values.get("bear"), values.get("base"), values.get("bull")

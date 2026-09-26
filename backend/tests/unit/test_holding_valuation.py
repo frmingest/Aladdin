@@ -8,6 +8,8 @@ from decimal import Decimal
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
+import app.services.valuation.holding_valuation as holding_valuation_module
+from app.config.settings import Settings
 from app.models import Base, Document, FinancialLineItem, Holding
 from app.providers.base import (
     FxRate,
@@ -15,6 +17,7 @@ from app.providers.base import (
     PricePoint,
     RiskFreeRate,
 )
+from app.services.risk.regime import RegimeResult
 from app.services.valuation.holding_valuation import compute_holding_valuation
 
 D = Decimal
@@ -123,6 +126,73 @@ def test_full_valuation_computes_dcf_and_reverse_dcf():
     assert result.dcf is not None
     assert {s.label for s in result.dcf.scenarios} == {"bear", "base", "bull"}
     assert result.reverse_dcf_implied_growth is not None
+
+
+def _regime_settings(**overrides) -> Settings:
+    base = {"_env_file": None, "regime_adjusted_dcf_enabled": True}
+    base.update(overrides)
+    return Settings(**base)
+
+
+def _fake_regime(regime: str) -> RegimeResult:
+    return RegimeResult(
+        regime=regime, home_market_series_included=True, curve_and_credit_are_us_only=True,
+        explanation="test", method_note="test",
+    )
+
+
+def test_regime_adjusted_dcf_disabled_by_default_matches_base_rate():
+    """Sprint 14 (2026-09-26): with the feature off (the default), behavior
+    is identical to before this sprint — base_discount_rate mirrors
+    discount_rate and no regime fields are set."""
+    with _session() as db:
+        holding = _setup_holding_with_two_periods(db)
+        result = compute_holding_valuation(
+            db, holding, _FakeMarketDataProvider(price=_price_point()), _FakeRiskFreeRateProvider(rate=_risk_free_rate())
+        )
+
+    assert result.discount_rate == D("0.085")
+    assert result.base_discount_rate == D("0.085")
+    assert result.regime is None
+    assert result.regime_discount_rate_addon is None
+
+
+def test_regime_adjusted_dcf_widens_discount_rate_when_enabled(monkeypatch):
+    """When enabled, a stagflation/crisis regime widens the discount rate
+    by the versioned add-on and both rates are reported for transparency."""
+    monkeypatch.setattr(holding_valuation_module, "get_settings", lambda: _regime_settings())
+    monkeypatch.setattr(holding_valuation_module, "classify_regime", lambda db: _fake_regime("crisis"))
+
+    with _session() as db:
+        holding = _setup_holding_with_two_periods(db)
+        result = compute_holding_valuation(
+            db, holding, _FakeMarketDataProvider(price=_price_point()), _FakeRiskFreeRateProvider(rate=_risk_free_rate())
+        )
+
+    assert result.base_discount_rate == D("0.085")
+    assert result.regime == "crisis"
+    assert result.regime_discount_rate_addon == D("0.03")
+    assert result.discount_rate == D("0.115")  # 0.085 + 0.03
+    assert result.dcf is not None
+    assert result.dcf.discount_rate == D("0.115")  # the DCF itself used the widened rate
+    assert any("widened" in reason.lower() for reason in result.unavailable_reasons)
+
+
+def test_regime_adjusted_dcf_baseline_regime_leaves_rate_unchanged(monkeypatch):
+    monkeypatch.setattr(holding_valuation_module, "get_settings", lambda: _regime_settings())
+    monkeypatch.setattr(holding_valuation_module, "classify_regime", lambda db: _fake_regime("baseline"))
+
+    with _session() as db:
+        holding = _setup_holding_with_two_periods(db)
+        result = compute_holding_valuation(
+            db, holding, _FakeMarketDataProvider(price=_price_point()), _FakeRiskFreeRateProvider(rate=_risk_free_rate())
+        )
+
+    assert result.regime == "baseline"
+    assert result.regime_discount_rate_addon == D("0")
+    assert result.discount_rate == result.base_discount_rate == D("0.085")
+    # No noisy "widened by 0.00pp" note when there's nothing to widen.
+    assert not any("widened" in reason.lower() for reason in result.unavailable_reasons)
 
 
 def test_currency_mismatch_converts_price_via_fx():

@@ -137,6 +137,10 @@ export default function MarginOfSafetyPage() {
 
   const ranked = board?.rows.filter((r) => r.zone !== "unavailable") ?? [];
   const unavailable = board?.rows.filter((r) => r.zone === "unavailable") ?? [];
+  // Sprint 14 (2026-09-26): when regime-adjusted DCF is on, every row used
+  // the same widened discount rate — surfaced once here rather than repeated
+  // per row.
+  const regimeRow = board?.rows.find((r) => r.regime && r.regime_discount_rate_addon && Number(r.regime_discount_rate_addon) !== 0);
   const valueBelowBase = ranked
     .filter((r) => r.zone === "below_bear" || r.zone === "bear_to_base")
     .reduce((sum, r) => sum + Number(r.market_value_nok ?? 0), 0);
@@ -165,6 +169,17 @@ export default function MarginOfSafetyPage() {
 
       {board && board.rows.length > 0 && (
         <div className="space-y-6">
+          {regimeRow && (
+            <div className="rounded-md border border-accent/30 bg-accent/5 px-3 py-2 text-xs text-ink-muted">
+              Regime-adjusted DCF is on: every holding's discount rate is widened by{" "}
+              {formatPercent(regimeRow.regime_discount_rate_addon!)} for the current{" "}
+              <span className="font-medium text-ink">{regimeRow.regime}</span> macro regime — see{" "}
+              <Link to="/risk" className="underline hover:text-accent">
+                Portfolio risk
+              </Link>{" "}
+              for the full reading.
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
             {ZONES.map((zone) => (
               <Card key={zone.key}>

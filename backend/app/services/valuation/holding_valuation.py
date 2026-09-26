@@ -32,6 +32,7 @@ from sqlalchemy.orm import Session
 
 from app.config.settings import get_settings
 from app.domain.period_dates import extract_year
+from app.domain.regime_adjustments import get_regime_adjustments
 from app.domain.valuation_assumptions import get_valuation_assumptions
 from app.models.financial_line_item import FinancialLineItem
 from app.models.holding import Holding
@@ -41,6 +42,7 @@ from app.services.market_data.price import get_or_refresh_price
 from app.services.market_data.risk_free_rate import get_or_refresh_risk_free_rate
 from app.services.market_data.shares import resolve_share_count
 from app.services.metrics import owner_earnings_from_facts
+from app.services.risk.regime import classify_regime
 from app.services.valuation.dcf import (
     DCFScenarioResult,
     dcf_scenarios,
@@ -59,6 +61,15 @@ class HoldingValuationResult:
     as_of: datetime | None = None
     base_growth_rate: Decimal | None = None
     discount_rate: Decimal | None = None
+    # The plain CAPM rate, before any regime widening below — always set
+    # alongside discount_rate once the risk-free rate/beta/ERP are known,
+    # even when regime_adjusted_dcf_enabled is False (in which case the
+    # two are equal) — Sprint 14, 2026-09-26.
+    base_discount_rate: Decimal | None = None
+    # Set only when settings.regime_adjusted_dcf_enabled is True (Sprint 14).
+    regime: str | None = None
+    regime_discount_rate_addon: Decimal | None = None
+    regime_adjustments_version: str | None = None
     risk_free_rate_pct: Decimal | None = None
     beta: Decimal | None = None
     equity_risk_premium: Decimal | None = None
@@ -250,6 +261,27 @@ def compute_holding_valuation(
     result.discount_rate = cost_of_equity(
         risk_free_rate_pct=rate_snapshot.value.rate, beta=beta, equity_risk_premium=equity_risk_premium
     )
+    result.base_discount_rate = result.discount_rate
+
+    # Sprint 14 (2026-09-26): optional regime widening of the discount rate.
+    # Off by default (see Settings.regime_adjusted_dcf_enabled's docstring) —
+    # classify_regime(db) is a cheap DB-only read (app/services/macro/indicators.py,
+    # no external call), so calling it per holding here (and per row on the
+    # margin-of-safety board) doesn't add meaningful latency.
+    if settings.regime_adjusted_dcf_enabled:
+        regime_result = classify_regime(db)
+        adjustments = get_regime_adjustments(settings.active_regime_adjustment_version)
+        addon = adjustments.discount_rate_addon.get(regime_result.regime, adjustments.default_addon)
+        result.regime = regime_result.regime
+        result.regime_discount_rate_addon = addon
+        result.regime_adjustments_version = adjustments.version
+        result.discount_rate = result.base_discount_rate + addon
+        if addon != 0:
+            result.unavailable_reasons.append(
+                f"Discount rate widened {addon * 100:.2f}pp for the current {regime_result.regime} "
+                f"macro regime (regime adjustments {adjustments.version}, base CAPM rate "
+                f"{result.base_discount_rate * 100:.2f}%)."
+            )
 
     # Already fetched above (in `valuation_currency`, refetched only if the
     # owner-earnings period's currency differs from the "any period" one).

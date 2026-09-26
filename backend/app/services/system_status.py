@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session
 from app.config.paths import BACKEND_DIR
 from app.config.settings import Settings
 from app.domain.document_types import DOCUMENT_TYPE_ESEF_INDEX, DOCUMENT_TYPE_SEC_XBRL
+from app.domain.regime_adjustments import get_regime_adjustments
 from app.models.account import Account
 from app.models.analysis import (
     AnalysisWorkerHeartbeat,
@@ -39,6 +40,7 @@ from app.models.portfolio import PortfolioSnapshot
 from app.models.research import ResearchRun, ResearchRunStatus
 from app.models.thesis import ThesisTripwire
 from app.providers.budget import DailyBudgetGuard
+from app.services.risk.regime import classify_regime
 
 OK, WARN, ERROR, OFF = "ok", "warn", "error", "off"
 STUCK_RUN_AFTER = timedelta(hours=1)
@@ -220,6 +222,25 @@ def _providers(settings: Settings) -> list[StatusItem]:
     return items
 
 
+def _regime_dcf_item(db: Session, settings: Settings) -> StatusItem:
+    """Sprint 14 (2026-09-26): whether the macro regime (app/services/risk/regime.py)
+    is wired into the DCF discount rate. Off by default — a real behavior
+    change to every valuation, Faiz's call (see Settings.regime_adjusted_dcf_enabled)."""
+    if not settings.regime_adjusted_dcf_enabled:
+        return StatusItem(
+            "regime_dcf", "Regime-adjusted DCF", OFF, "off",
+            "Every DCF uses the plain CAPM discount rate (Sprint 14 backlog item, not enabled)",
+        )
+    regime_result = classify_regime(db)
+    adjustments = get_regime_adjustments(settings.active_regime_adjustment_version)
+    addon = adjustments.discount_rate_addon.get(regime_result.regime, adjustments.default_addon)
+    return StatusItem(
+        "regime_dcf", "Regime-adjusted DCF", OK,
+        f"{regime_result.regime} (+{addon * 100:.2f}pp)",
+        f"Regime adjustments {adjustments.version} — every holding's DCF discount rate is widened by this amount",
+    )
+
+
 def _fresh(key: str, label: str, last_at: datetime | None, max_age: timedelta | None, now: datetime,
            *, never: str = "Never", detail: str = "") -> FreshnessItem:
     last_at = _aware(last_at)
@@ -261,6 +282,7 @@ def build_system_status(
         llm_daily_limit=settings.llm_rate_limit_rpd,
         llm_calls_remaining_today=budget.remaining_today(),
     )
+    status.providers.append(_regime_dcf_item(db, settings))
 
     market_window = timedelta(hours=settings.market_data_stale_after_hours)
     research_window = timedelta(hours=settings.research_stale_after_hours)

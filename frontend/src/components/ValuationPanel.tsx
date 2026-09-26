@@ -200,7 +200,11 @@ export function ValuationPanel({ holdingId, ticker }: { holdingId: string; ticke
               label="Discount rate (CAPM)"
               value={valuation.discount_rate ? formatPercent(valuation.discount_rate) : "—"}
               hint={
-                valuation.risk_free_rate_pct && valuation.beta
+                valuation.regime && valuation.regime_discount_rate_addon && Number(valuation.regime_discount_rate_addon) !== 0
+                  ? `${valuation.base_discount_rate ? formatPercent(valuation.base_discount_rate) + " base, " : ""}+${formatPercent(
+                      valuation.regime_discount_rate_addon
+                    )} for ${valuation.regime} regime`
+                  : valuation.risk_free_rate_pct && valuation.beta
                   ? `rf ${formatPercent(valuation.risk_free_rate_pct)} · β ${formatDecimal(valuation.beta)}`
                   : undefined
               }
@@ -236,6 +240,9 @@ export function ValuationPanel({ holdingId, ticker }: { holdingId: string; ticke
                   Discount rate {formatPercent(valuation.dcf.discount_rate)} · terminal growth{" "}
                   {formatPercent(valuation.dcf.terminal_growth_rate)}
                   {valuation.shares_source ? ` · ${valuation.shares_source}` : ""}
+                  {valuation.regime && valuation.regime_discount_rate_addon && Number(valuation.regime_discount_rate_addon) !== 0
+                    ? ` · widened for ${valuation.regime} regime (+${formatPercent(valuation.regime_discount_rate_addon)})`
+                    : ""}
                 </p>
               </>
             )}
