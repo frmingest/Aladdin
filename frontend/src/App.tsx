@@ -9,6 +9,7 @@ import JournalPage from "./pages/JournalPage";
 import MacroPage from "./pages/MacroPage";
 import MarginOfSafetyPage from "./pages/MarginOfSafetyPage";
 import SectorPage from "./pages/SectorPage";
+import SettingsPage from "./pages/SettingsPage";
 import SystemStatusPage from "./pages/SystemStatusPage";
 import PerformancePage from "./pages/PerformancePage";
 import PortfolioRiskPage from "./pages/PortfolioRiskPage";
@@ -47,6 +48,7 @@ export default function App() {
         <Route path="/journal" element={<JournalPage />} />
         <Route path="/analysis-queue" element={<AnalysisQueuePage />} />
         <Route path="/status" element={<SystemStatusPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
       </Routes>
     </Layout>
   );

@@ -23,6 +23,9 @@ from app.schemas.journal import (
 )
 from app.services.analysis.latest import latest_runs_by_holding, run_ratings
 from app.services.journal import outcomes_for
+from app.services.settings.demo_guard import require_not_demo
+from app.services.settings.demo_mode import is_demo_mode
+from app.services.settings.synthetic_data import demo_journal
 
 router = APIRouter(prefix="/journal", tags=["journal"])
 
@@ -53,6 +56,11 @@ def _get_or_404(db: Session, entry_id: UUID) -> DecisionJournalEntry:
 
 @router.get("", response_model=JournalOut)
 def list_entries(holding_id: UUID | None = None, db: Session = Depends(get_db)) -> JournalOut:
+    if is_demo_mode(db):
+        demo = demo_journal()
+        if holding_id is not None:
+            demo.entries = [e for e in demo.entries if e.holding_id == holding_id]
+        return demo
     stmt = select(DecisionJournalEntry).order_by(
         DecisionJournalEntry.decided_on.desc(), DecisionJournalEntry.created_at.desc()
     )
@@ -67,6 +75,7 @@ def list_entries(holding_id: UUID | None = None, db: Session = Depends(get_db)) 
 
 @router.post("", response_model=JournalEntryOut, status_code=201)
 def create_entry(payload: JournalEntryCreate, db: Session = Depends(get_db)) -> JournalEntryOut:
+    require_not_demo(db)
     holding = db.get(Holding, payload.holding_id)
     if holding is None:
         raise HTTPException(status_code=404, detail="holding not found")
@@ -93,6 +102,7 @@ def create_entry(payload: JournalEntryCreate, db: Session = Depends(get_db)) -> 
 
 @router.patch("/{entry_id}", response_model=JournalEntryOut)
 def update_entry(entry_id: UUID, payload: JournalEntryUpdate, db: Session = Depends(get_db)) -> JournalEntryOut:
+    require_not_demo(db)
     entry = _get_or_404(db, entry_id)
     for name in payload.model_fields_set:
         value = getattr(payload, name)
@@ -110,6 +120,7 @@ def update_entry(entry_id: UUID, payload: JournalEntryUpdate, db: Session = Depe
 
 @router.delete("/{entry_id}", status_code=204, response_model=None)
 def delete_entry(entry_id: UUID, confirm: bool = False, db: Session = Depends(get_db)) -> None:
+    require_not_demo(db)
     if not confirm:
         raise HTTPException(status_code=400, detail="deleting a journal entry is permanent; pass confirm=true")
     db.delete(_get_or_404(db, entry_id))

@@ -38,6 +38,7 @@ from app.services.research.common import ResearchSnapshot
 from app.services.research.company import get_company_research
 from app.services.research.macro import get_macro_research
 from app.services.research.sector import get_sector_research
+from app.services.settings.demo_guard import require_not_demo
 
 router = APIRouter(prefix="/research", tags=["research"])
 
@@ -61,6 +62,7 @@ def _items_out(snapshot: ResearchSnapshot) -> list[ResearchItemOut]:
 def get_macro(
     db: Session = Depends(get_db), provider: ResearchProvider = Depends(get_research_provider)
 ) -> MacroResearchOut:
+    require_not_demo(db)
     snapshot = get_macro_research(db, provider)
     return MacroResearchOut(
         available=snapshot.available, as_of=snapshot.as_of, items=_items_out(snapshot), reason=snapshot.reason
@@ -71,6 +73,7 @@ def get_macro(
 def refresh_macro(
     db: Session = Depends(get_db), provider: ResearchProvider = Depends(get_research_provider)
 ) -> MacroResearchOut:
+    require_not_demo(db)
     snapshot = get_macro_research(db, provider, force=True)
     return MacroResearchOut(
         available=snapshot.available, as_of=snapshot.as_of, items=_items_out(snapshot), reason=snapshot.reason
@@ -83,6 +86,7 @@ def get_sector(
     db: Session = Depends(get_db),
     provider: ResearchProvider = Depends(get_research_provider),
 ) -> SectorResearchOut:
+    require_not_demo(db)
     snapshot = get_sector_research(db, provider, sector=sector)
     return SectorResearchOut(
         available=snapshot.available,
@@ -99,6 +103,7 @@ def refresh_sector(
     db: Session = Depends(get_db),
     provider: ResearchProvider = Depends(get_research_provider),
 ) -> SectorResearchOut:
+    require_not_demo(db)
     snapshot = get_sector_research(db, provider, sector=sector, force=True)
     return SectorResearchOut(
         available=snapshot.available,
@@ -122,6 +127,7 @@ def get_company(
     db: Session = Depends(get_db),
     provider: ResearchProvider = Depends(get_research_provider),
 ) -> CompanyResearchOut:
+    require_not_demo(db)
     holding = _get_holding_or_404(db, holding_id)
     snapshot = get_company_research(db, provider, holding=holding)
     return CompanyResearchOut(
@@ -140,6 +146,7 @@ def refresh_company(
     db: Session = Depends(get_db),
     provider: ResearchProvider = Depends(get_research_provider),
 ) -> CompanyResearchOut:
+    require_not_demo(db)
     holding = _get_holding_or_404(db, holding_id)
     snapshot = get_company_research(db, provider, holding=holding, force=True)
     return CompanyResearchOut(

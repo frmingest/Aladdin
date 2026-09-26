@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useDemoMode } from "../lib/demoMode";
 
 type Theme = "dark" | "light";
 
@@ -83,6 +84,7 @@ const NAV_ITEMS: { label: string; to: string; disabled?: boolean }[] = [
   { label: "Portfolio risk", to: "/risk" },
   { label: "Performance", to: "/performance" },
   { label: "Precious metals", to: "/precious-metals" },
+  { label: "Settings", to: "/settings" },
 ];
 
 function HealthBadge() {
@@ -100,9 +102,31 @@ function HealthBadge() {
   );
 }
 
+/** Persistent, unmissable strip shown at the top of every page whenever
+ * demo mode is on — a load-bearing safety cue (per the feature spec), not
+ * decoration, so anyone screen-sharing sees it immediately. */
+function DemoModeBanner() {
+  const { demoMode } = useDemoMode();
+  if (demoMode !== true) return null;
+  return (
+    <div className="flex items-center justify-center gap-3 bg-caution px-4 py-2 text-center text-sm font-semibold text-onfill">
+      <span aria-hidden>●</span>
+      <span>
+        DEMO MODE — every page shows fabricated data. Real portfolio data, documents and research
+        are never read while this is on.
+      </span>
+      <NavLink to="/settings" className="underline underline-offset-2 hover:opacity-80">
+        Turn off
+      </NavLink>
+    </div>
+  );
+}
+
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen flex-col">
+      <DemoModeBanner />
+      <div className="flex min-h-0 flex-1">
       <nav className="flex w-56 shrink-0 flex-col border-r border-border bg-surface px-4 py-6">
         <div className="mb-8 flex items-center gap-2.5 px-2">
           <span
@@ -158,7 +182,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </NavLink>
         </div>
       </nav>
-      <main className="min-w-0 flex-1 overflow-y-auto">{children}</main>
+        <main className="min-w-0 flex-1 overflow-y-auto">{children}</main>
+      </div>
     </div>
   );
 }

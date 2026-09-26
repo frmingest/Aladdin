@@ -27,6 +27,9 @@ from app.schemas.thesis import (
     TripwireUpdate,
 )
 from app.services.analysis.latest import latest_runs_by_holding, run_ratings
+from app.services.settings.demo_guard import require_not_demo
+from app.services.settings.demo_mode import is_demo_mode
+from app.services.settings.synthetic_data import demo_thesis, demo_thesis_monitor
 from app.services.thesis.history import changes_since_run
 from app.services.thesis.metrics_registry import METRICS_BY_KEY, metric_registry
 from app.services.thesis.monitor import STATUS_LABELS, build_monitor, classify
@@ -89,6 +92,11 @@ def get_metric_registry() -> list[MetricDefOut]:
 
 @router.get("/holdings/{holding_id}", response_model=HoldingThesisOut)
 def get_holding_thesis(holding_id: UUID, db: Session = Depends(get_db)) -> HoldingThesisOut:
+    if is_demo_mode(db):
+        demo = demo_thesis(holding_id)
+        if demo is None:
+            raise HTTPException(status_code=404, detail="holding not found")
+        return demo
     holding = db.get(Holding, holding_id)
     if holding is None:
         raise HTTPException(status_code=404, detail="holding not found")
@@ -150,6 +158,7 @@ def get_holding_thesis(holding_id: UUID, db: Session = Depends(get_db)) -> Holdi
 def create_holding_tripwire(
     holding_id: UUID, payload: TripwireCreate, db: Session = Depends(get_db)
 ) -> TripwireOut:
+    require_not_demo(db)
     holding = db.get(Holding, holding_id)
     if holding is None:
         raise HTTPException(status_code=404, detail="holding not found")
@@ -171,6 +180,7 @@ def create_holding_tripwire(
 
 @router.patch("/tripwires/{tripwire_id}", response_model=TripwireOut)
 def patch_tripwire(tripwire_id: UUID, payload: TripwireUpdate, db: Session = Depends(get_db)) -> TripwireOut:
+    require_not_demo(db)
     tripwire = db.get(ThesisTripwire, tripwire_id)
     if tripwire is None:
         raise HTTPException(status_code=404, detail="tripwire not found")
@@ -191,6 +201,7 @@ def patch_tripwire(tripwire_id: UUID, payload: TripwireUpdate, db: Session = Dep
 
 @router.post("/tripwires/{tripwire_id}/acknowledge", response_model=TripwireOut)
 def acknowledge(tripwire_id: UUID, db: Session = Depends(get_db)) -> TripwireOut:
+    require_not_demo(db)
     tripwire = db.get(ThesisTripwire, tripwire_id)
     if tripwire is None:
         raise HTTPException(status_code=404, detail="tripwire not found")
@@ -203,6 +214,7 @@ def acknowledge(tripwire_id: UUID, db: Session = Depends(get_db)) -> TripwireOut
 
 @router.delete("/tripwires/{tripwire_id}", status_code=204, response_model=None)
 def delete_tripwire(tripwire_id: UUID, confirm: bool = False, db: Session = Depends(get_db)) -> None:
+    require_not_demo(db)
     if not confirm:
         raise HTTPException(status_code=400, detail="pass confirm=true to delete a tripwire")
     tripwire = db.get(ThesisTripwire, tripwire_id)
@@ -214,6 +226,8 @@ def delete_tripwire(tripwire_id: UUID, confirm: bool = False, db: Session = Depe
 
 @router.get("/monitor", response_model=MonitorOut)
 def get_monitor(db: Session = Depends(get_db)) -> MonitorOut:
+    if is_demo_mode(db):
+        return demo_thesis_monitor()
     rows = build_monitor(db)
     return MonitorOut(
         rows=[

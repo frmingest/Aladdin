@@ -22,6 +22,9 @@ from app.services.macro.indicators import (
     get_macro_indicators,
 )
 from app.services.macro.refresh import refresh_macro_data
+from app.services.settings.demo_guard import require_not_demo
+from app.services.settings.demo_mode import is_demo_mode
+from app.services.settings.synthetic_data import demo_macro_indicators
 
 router = APIRouter(prefix="/macro", tags=["macro"])
 
@@ -71,6 +74,8 @@ def list_indicators(
     provider: MacroDataProvider | None = Depends(get_macro_data_provider_or_none),
 ) -> MacroIndicatorsOut:
     """Stored values only — no network call."""
+    if is_demo_mode(db):
+        return demo_macro_indicators()
     return _indicators_out(get_macro_indicators(db), fetching_enabled=provider is not None)
 
 
@@ -80,6 +85,7 @@ def refresh_indicators(
     db: Session = Depends(get_db),
     provider: MacroDataProvider | None = Depends(get_macro_data_provider_or_none),
 ) -> MacroRefreshOut:
+    require_not_demo(db)
     if provider is None:
         raise HTTPException(status_code=503, detail="Macro data fetching is off (MACRO_DATA_PROVIDER=none).")
     results = refresh_macro_data(db, provider, only_stale=only_stale)

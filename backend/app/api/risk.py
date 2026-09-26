@@ -28,6 +28,9 @@ from app.schemas.risk import (
     StressOut,
 )
 from app.services.risk.portfolio_risk import PortfolioRisk, build_portfolio_risk
+from app.services.settings.demo_guard import require_not_demo
+from app.services.settings.demo_mode import is_demo_mode
+from app.services.settings.synthetic_data import demo_risk
 
 router = APIRouter(prefix="/risk", tags=["risk"])
 
@@ -94,6 +97,8 @@ def get_portfolio_risk(
     market_data_provider: MarketDataProvider = Depends(get_market_data_provider),
     risk_free_rate_provider: RiskFreeRateProvider = Depends(get_risk_free_rate_provider),
 ) -> PortfolioRiskOut:
+    if is_demo_mode(db):
+        return demo_risk()
     risk = build_portfolio_risk(
         db, market_data_provider=market_data_provider, risk_free_rate_provider=risk_free_rate_provider
     )
@@ -106,6 +111,7 @@ def refresh_portfolio_risk(
     market_data_provider: MarketDataProvider = Depends(get_market_data_provider),
     risk_free_rate_provider: RiskFreeRateProvider = Depends(get_risk_free_rate_provider),
 ) -> PortfolioRiskOut:
+    require_not_demo(db)
     risk = build_portfolio_risk(
         db,
         market_data_provider=market_data_provider,

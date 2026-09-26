@@ -64,6 +64,14 @@ from app.services.analysis.latest import run_ratings
 from app.services.analysis.notes import get_holding_note, set_holding_note
 from app.services.analysis.pipeline import NotEquityAnalyzableError, run_full_analysis
 from app.services.analysis.readiness import check_analysis_readiness
+from app.services.settings.demo_guard import require_not_demo
+from app.services.settings.demo_mode import is_demo_mode
+from app.services.settings.synthetic_data import (
+    demo_analysis_note,
+    demo_analysis_queue,
+    demo_analysis_readiness,
+    demo_analysis_run,
+)
 
 router = APIRouter(prefix="/analysis", tags=["analysis"])
 
@@ -167,6 +175,11 @@ def _evidence_items(run: EquityAnalysisRun) -> list[EvidenceItemOut]:
 
 @router.get("/holdings/{holding_id}", response_model=EquityAnalysisRunOut)
 def get_latest_analysis(holding_id: UUID, db: Session = Depends(get_db)) -> EquityAnalysisRunOut:
+    if is_demo_mode(db):
+        demo = demo_analysis_run(holding_id)
+        if demo is None:
+            raise HTTPException(status_code=404, detail="no analysis run yet for this holding")
+        return demo
     holding = _get_holding_or_404(db, holding_id)
     run = _latest_run(db, holding.id)
     if run is None:
@@ -184,6 +197,11 @@ def get_readiness(
     worth it — without spending anything. Deliberately depends on no live
     provider (those factories raise on a misconfigured provider name,
     which is exactly what this endpoint must be able to report)."""
+    if is_demo_mode(db):
+        demo = demo_analysis_readiness(holding_id)
+        if demo is None:
+            raise HTTPException(status_code=404, detail="holding not found")
+        return demo
     holding = _get_holding_or_404(db, holding_id)
     report = check_analysis_readiness(
         db, holding, settings=get_settings(), budget_guard=budget_guard
@@ -216,6 +234,7 @@ def run_analysis(
     ),
     macro_data_provider: MacroDataProvider | None = Depends(get_macro_data_provider_or_none),
 ) -> EquityAnalysisRunOut:
+    require_not_demo(db)
     holding = _get_holding_or_404(db, holding_id)
     try:
         run = run_full_analysis(
@@ -240,6 +259,7 @@ def queue_local_analysis(holding_id: UUID, db: Session = Depends(get_db)) -> Que
     worker (`python -m app.worker`) picks it up. Deliberately depends on no
     LLM/research/market provider: nothing runs on this server. A holding
     that already has a queued or running local run gets that run back."""
+    require_not_demo(db)
     holding = _get_holding_or_404(db, holding_id)
     try:
         run, _created = analysis_queue.enqueue_local_run(db, holding, settings=get_settings())
@@ -251,6 +271,8 @@ def queue_local_analysis(holding_id: UUID, db: Session = Depends(get_db)) -> Que
 @router.get("/queue", response_model=AnalysisQueueOut)
 def get_queue(db: Session = Depends(get_db)) -> AnalysisQueueOut:
     """Local workers, the pending local runs and the last finished ones."""
+    if is_demo_mode(db):
+        return demo_analysis_queue()
     workers = analysis_queue.worker_statuses(db, settings=get_settings())
     return AnalysisQueueOut(
         workers=[AnalysisWorkerOut(**w.__dict__) for w in workers],
@@ -264,6 +286,7 @@ def get_queue(db: Session = Depends(get_db)) -> AnalysisQueueOut:
 def queue_ready_holdings(db: Session = Depends(get_db)) -> QueueReadyHoldingsOut:
     """F5: queue every owned stock / equity ETF that isn't blocked on its
     instrument type, ticker or financial history."""
+    require_not_demo(db)
     result = analysis_queue.queue_ready_holdings(db, settings=get_settings())
     return QueueReadyHoldingsOut(
         queued=[_queued_out(db, r) for r in result.queued],
@@ -279,6 +302,7 @@ def queue_ready_holdings(db: Session = Depends(get_db)) -> QueueReadyHoldingsOut
 def cancel_queued_run(run_id: UUID, db: Session = Depends(get_db)) -> QueuedRunOut:
     """Removes a queued run no worker has started (e.g. before choosing
     "Run in cloud instead"). A running run can't be cancelled from here."""
+    require_not_demo(db)
     run = db.get(EquityAnalysisRun, run_id)
     if run is None:
         raise HTTPException(status_code=404, detail="run not found")
@@ -291,6 +315,11 @@ def cancel_queued_run(run_id: UUID, db: Session = Depends(get_db)) -> QueuedRunO
 
 @router.get("/holdings/{holding_id}/notes", response_model=EquityHoldingNoteOut)
 def get_notes(holding_id: UUID, db: Session = Depends(get_db)) -> EquityHoldingNoteOut:
+    if is_demo_mode(db):
+        demo = demo_analysis_note(holding_id)
+        if demo is None:
+            raise HTTPException(status_code=404, detail="holding not found")
+        return demo
     holding = _get_holding_or_404(db, holding_id)
     note = get_holding_note(db, holding.id)
     if note is None:
@@ -304,6 +333,7 @@ def get_notes(holding_id: UUID, db: Session = Depends(get_db)) -> EquityHoldingN
 def put_notes(
     holding_id: UUID, payload: EquityHoldingNoteIn, db: Session = Depends(get_db)
 ) -> EquityHoldingNoteOut:
+    require_not_demo(db)
     holding = _get_holding_or_404(db, holding_id)
     note = set_holding_note(db, holding.id, payload.content)
     return EquityHoldingNoteOut(

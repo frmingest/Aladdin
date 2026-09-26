@@ -24,6 +24,9 @@ from app.services.performance.portfolio_performance import (
     PortfolioPerformance,
     build_portfolio_performance,
 )
+from app.services.settings.demo_guard import require_not_demo
+from app.services.settings.demo_mode import is_demo_mode
+from app.services.settings.synthetic_data import demo_performance
 
 router = APIRouter(prefix="/performance", tags=["performance"])
 
@@ -67,6 +70,8 @@ def get_portfolio_performance(
     db: Session = Depends(get_db),
     market_data_provider: MarketDataProvider = Depends(get_market_data_provider),
 ) -> PortfolioPerformanceOut:
+    if is_demo_mode(db):
+        return demo_performance()
     perf = build_portfolio_performance(
         db, market_data_provider=market_data_provider, lookback_days=lookback_days, benchmark_ticker=benchmark,
     )
@@ -80,6 +85,7 @@ def refresh_portfolio_performance(
     db: Session = Depends(get_db),
     market_data_provider: MarketDataProvider = Depends(get_market_data_provider),
 ) -> PortfolioPerformanceOut:
+    require_not_demo(db)
     perf = build_portfolio_performance(
         db, market_data_provider=market_data_provider, lookback_days=lookback_days, benchmark_ticker=benchmark,
         force_refresh=True,

@@ -61,6 +61,7 @@ from app.services.filings.sec_edgar import (
     result_from_document,
 )
 from app.services.research.common import ResearchSnapshot
+from app.services.settings.demo_guard import require_not_demo
 
 router = APIRouter(prefix="/sources", tags=["sources"])
 
@@ -117,6 +118,7 @@ def _announcements_out(holding: Holding, snapshot: ResearchSnapshot) -> Announce
 def get_eligibility(holding_id: UUID, db: Session = Depends(get_db)) -> SourceEligibilityOut:
     """Cheap, offline hint for the UI — which buttons to show. EDGAR's real
     answer needs SEC's ticker map, so it is 'try it' for any ticker."""
+    require_not_demo(db)
     holding = _get_holding_or_404(db, holding_id)
     nw = newsweb_applies(holding)
     return SourceEligibilityOut(
@@ -166,6 +168,7 @@ def _esef_out(db: Session, holding: Holding, result: EsefImportResult | None) ->
 
 @router.get("/holdings/{holding_id}/esef-index", response_model=EsefImportOut)
 def get_esef_index(holding_id: UUID, db: Session = Depends(get_db)) -> EsefImportOut:
+    require_not_demo(db)
     holding = _get_holding_or_404(db, holding_id)
     return _esef_out(db, holding, latest_import_summary(db, holding))
 
@@ -178,6 +181,7 @@ def import_esef_index(
     provider: FilingsXbrlOrgProvider | None = Depends(get_esef_index_provider_or_none),
     storage=Depends(get_object_storage),
 ) -> EsefImportOut:
+    require_not_demo(db)
     holding = _get_holding_or_404(db, holding_id)
     if provider is None:
         raise HTTPException(status_code=422, detail="the ESEF history import is switched off (ESEF_INDEX_PROVIDER)")
@@ -198,6 +202,7 @@ def import_esef_index(
 
 @router.get("/holdings/{holding_id}/sec-edgar", response_model=EdgarImportOut)
 def get_sec_edgar(holding_id: UUID, db: Session = Depends(get_db)) -> EdgarImportOut:
+    require_not_demo(db)
     holding = _get_holding_or_404(db, holding_id)
     document = latest_edgar_document(db, holding)
     if document is None:
@@ -212,6 +217,7 @@ def import_sec_edgar(
     provider: FundamentalsProvider | None = Depends(get_fundamentals_provider_or_none),
     storage=Depends(get_object_storage),
 ) -> EdgarImportOut:
+    require_not_demo(db)
     holding = _get_holding_or_404(db, holding_id)
     if provider is None:
         raise HTTPException(status_code=422, detail="fundamentals provider is disabled (FUNDAMENTALS_PROVIDER)")
@@ -229,6 +235,7 @@ def get_announcements(
     db: Session = Depends(get_db),
     provider: NewswebAnnouncementsProvider | None = Depends(get_announcements_provider_or_none),
 ) -> AnnouncementsOut:
+    require_not_demo(db)
     holding = _get_holding_or_404(db, holding_id)
     return _announcements_out(holding, get_holding_announcements(db, provider, holding=holding))
 
@@ -239,5 +246,6 @@ def refresh_announcements(
     db: Session = Depends(get_db),
     provider: NewswebAnnouncementsProvider | None = Depends(get_announcements_provider_or_none),
 ) -> AnnouncementsOut:
+    require_not_demo(db)
     holding = _get_holding_or_404(db, holding_id)
     return _announcements_out(holding, get_holding_announcements(db, provider, holding=holding, force=True))
