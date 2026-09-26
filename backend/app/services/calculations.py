@@ -20,6 +20,7 @@ Conventions used throughout this module:
 """
 from __future__ import annotations
 
+import itertools
 from collections.abc import Sequence
 from decimal import Decimal
 
@@ -164,3 +165,71 @@ def herfindahl_hirschman_index(weights_pct: Sequence[Decimal]) -> Decimal:
     if not weights_pct:
         raise ValueError("Cannot compute HHI: no weights given")
     return sum((w * w for w in weights_pct), start=ZERO)
+
+
+# --- Portfolio risk: correlation, volatility (Sprint 12) --------------------
+
+
+def daily_returns(closes: Sequence[Decimal]) -> list[Decimal]:
+    """Simple (not log) day-over-day returns from a series of closing
+    prices, oldest first: (p[i] - p[i-1]) / p[i-1]. One fewer value than
+    the input. A zero or negative price in the series raises rather than
+    silently skipping it — a bad price should be caught, not hidden inside
+    an average."""
+    if len(closes) < 2:
+        raise ValueError("Cannot compute returns: need at least 2 prices")
+    returns: list[Decimal] = []
+    for prev, curr in itertools.pairwise(closes):
+        if prev <= ZERO:
+            raise ValueError(f"Cannot compute a return: non-positive price {prev}")
+        returns.append((curr - prev) / prev)
+    return returns
+
+
+def mean(values: Sequence[Decimal]) -> Decimal:
+    if not values:
+        raise ValueError("Cannot compute mean: no values given")
+    return sum(values, ZERO) / len(values)
+
+
+def standard_deviation(values: Sequence[Decimal]) -> Decimal:
+    """Sample standard deviation (n-1 denominator) — the usual convention
+    for a historical-return volatility estimate. Needs at least 2 values."""
+    if len(values) < 2:
+        raise ValueError("Cannot compute standard deviation: need at least 2 values")
+    m = mean(values)
+    variance = sum(((v - m) ** 2 for v in values), ZERO) / (len(values) - 1)
+    # Decimal has no native sqrt; float round-trip is fine for a volatility
+    # estimate feeding a UI stress scenario, not a stored financial fact.
+    return _decimal_sqrt(variance)
+
+
+def _decimal_sqrt(value: Decimal) -> Decimal:
+    if value < ZERO:
+        raise ValueError("Cannot take the square root of a negative value")
+    if value == ZERO:
+        return ZERO
+    return Decimal(str(float(value) ** 0.5))
+
+
+def pearson_correlation(x: Sequence[Decimal], y: Sequence[Decimal]) -> Decimal:
+    """Pearson correlation coefficient between two equal-length series
+    (e.g. two holdings' daily returns over the same dates), in [-1, 1].
+
+    Raises if the series differ in length, have fewer than 2 points, or
+    either series has zero variance (a correlation with a constant series
+    is undefined, not zero) — callers (app/services/risk/correlation.py)
+    decide how to report "cannot be computed" for that pair.
+    """
+    if len(x) != len(y):
+        raise ValueError(f"Cannot compute correlation: series lengths differ ({len(x)} vs {len(y)})")
+    if len(x) < 2:
+        raise ValueError("Cannot compute correlation: need at least 2 points")
+    mx, my = mean(x), mean(y)
+    cov = sum(((xi - mx) * (yi - my) for xi, yi in zip(x, y)), ZERO)
+    var_x = sum(((xi - mx) ** 2 for xi in x), ZERO)
+    var_y = sum(((yi - my) ** 2 for yi in y), ZERO)
+    if var_x == ZERO or var_y == ZERO:
+        raise ValueError("Cannot compute correlation: one series has zero variance")
+    denom = _decimal_sqrt(var_x) * _decimal_sqrt(var_y)
+    return cov / denom

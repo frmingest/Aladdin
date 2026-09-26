@@ -176,6 +176,47 @@ class YFinanceMarketDataProvider(MarketDataProvider):
             raise MarketDataUnavailableError(f"yfinance history for {ticker!r} had no usable close prices")
         return points
 
+    def get_daily_price_history(
+        self, ticker: str, *, days: int = 400, currency_hint: str | None = None
+    ) -> list[PricePoint]:
+        """Daily closes over roughly the last `days` calendar days
+        (2026-09-26, Sprint 12 portfolio risk — app/services/risk/). Uses
+        yfinance's own `period`/`interval="1d"` — a fixed set of `period`
+        strings is all Yahoo's chart API accepts, so `days` is mapped to
+        the smallest covering one rather than passed through as an exact
+        window; the caller trims to the exact lookback it wants."""
+        yf_ticker = self._ticker(ticker)
+        period = "2y" if days > 400 else ("1y" if days > 95 else ("3mo" if days > 25 else "1mo"))
+        try:
+            history = yf_ticker.history(period=period, interval="1d", auto_adjust=True)
+        except Exception as exc:  # pragma: no cover
+            raise MarketDataUnavailableError(
+                f"yfinance daily history lookup failed for {ticker!r}: {exc}"
+            ) from exc
+        if history is None or history.empty:
+            raise MarketDataUnavailableError(f"yfinance returned no daily price history for {ticker!r}")
+
+        try:
+            fast_info = yf_ticker.fast_info
+        except Exception:  # noqa: BLE001 - currency is best-effort here; currency_hint covers the rest
+            fast_info = None
+        currency = _get(fast_info, "currency") or currency_hint
+        currency = str(currency).upper() if currency else "USD"
+
+        points: list[PricePoint] = []
+        for observed_at, row in history.iterrows():
+            close = _to_decimal(row.get("Close"))
+            if close is None or close <= 0:
+                continue
+            ts = observed_at.to_pydatetime()
+            if ts.tzinfo is None:
+                ts = ts.replace(tzinfo=timezone.utc)
+            points.append(PricePoint(price=close, currency=currency, observed_at=ts, provider=self.name))
+
+        if not points:
+            raise MarketDataUnavailableError(f"yfinance daily history for {ticker!r} had no usable close prices")
+        return points
+
     def get_fx_rate(self, from_currency: str, to_currency: str) -> FxRate:
         from_currency = from_currency.upper()
         to_currency = to_currency.upper()

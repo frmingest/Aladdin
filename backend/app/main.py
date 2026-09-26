@@ -25,6 +25,7 @@ from app.api.journal import router as journal_router
 from app.api.macro import router as macro_router
 from app.api.portfolio import router as portfolio_router
 from app.api.research import router as research_router
+from app.api.risk import router as risk_router
 from app.api.sources import router as sources_router
 from app.api.system import router as system_router
 from app.api.thesis import router as thesis_router
@@ -96,6 +97,7 @@ app.include_router(journal_router)
 app.include_router(funds_router)
 app.include_router(macro_router)
 app.include_router(thesis_router)
+app.include_router(risk_router)
 
 
 @app.get("/health")

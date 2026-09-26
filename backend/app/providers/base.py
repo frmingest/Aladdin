@@ -228,6 +228,21 @@ class MarketDataProvider(ABC):
         back to the next source."""
         raise MarketDataUnavailableError(f"{self.name} does not provide share counts")
 
+    def get_daily_price_history(
+        self, ticker: str, *, days: int = 400, currency_hint: str | None = None
+    ) -> list[PricePoint]:
+        """Daily closing prices for `ticker` over roughly the last `days`
+        calendar days, oldest first (2026-09-26, Sprint 12 —
+        app/services/risk/). Distinct from `get_price_history` above, which
+        is monthly and feeds multiples-over-time: portfolio risk needs
+        genuine daily returns to compute a correlation matrix and
+        volatility-based stress sizing. Not abstract, same discipline as
+        `get_shares_outstanding`: a provider with no daily history simply
+        raises, and the caller (app/services/risk/price_history.py) falls
+        back to a cached observation or excludes the holding with a stated
+        reason — it never invents a price."""
+        raise MarketDataUnavailableError(f"{self.name} does not provide daily price history")
+
 
 # --- Risk-free-rate provider interface (Sprint 3 — DCF discount rate) ---
 

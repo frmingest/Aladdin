@@ -133,6 +133,23 @@ class Settings(BaseSettings):
     # ERP / terminal growth / scenario offsets — app/domain/valuation_assumptions/.
     active_valuation_assumptions_version: str = "v1"
 
+    # --- Portfolio risk (Sprint 12, 2026-09-26, app/services/risk/) ---
+    # Daily price history used for correlation/stress is cached per ticker
+    # (app/models/risk.py's PriceHistoryObservation) and only re-fetched
+    # from yfinance when the cached rows are older than this.
+    risk_price_history_stale_after_hours: int = 24
+    # 1 year of daily returns — long enough to average out single-name
+    # noise, short enough to reflect the current correlation regime rather
+    # than a stale one from years ago (app/services/risk/correlation.py).
+    risk_correlation_lookback_days: int = 365
+    # |correlation| at or above this, between two of the largest holdings,
+    # is flagged as a correlated risk cluster (app/services/risk/correlation.py).
+    risk_cluster_correlation_threshold: str = "0.6"
+    # Stress shock size in standard deviations of the historical daily
+    # return distribution, scaled to an annualized-ish shock (see
+    # app/services/risk/stress.py's docstring for the exact scaling).
+    risk_stress_shock_std_devs: str = "2"
+
     # --- Numeric macro data (2026-09-24, app/services/macro/) ---
     # Norges Bank + SSB are keyless; FRED reuses fred_api_key above.
     # "live" | "none" ("none" = no fetching; stored values are still shown).
