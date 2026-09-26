@@ -477,24 +477,35 @@ export interface SourceEligibility {
   newsweb_annual_report_reason: string | null;
 }
 
-/** Mirrors backend NewswebAnnualReportImportOut (Sprint 15 — the actual
- * ESEF annual-report filing fetched from Newsweb itself, unzipped if
- * needed, and run through the same extractor an upload uses). */
-export interface NewswebAnnualReportImport {
-  holding_id: string;
-  imported: boolean;
-  message_id: string | null;
-  message_url: string | null;
-  title: string | null;
+/** Mirrors backend NewswebAnnualReportOut — one ESEF annual-report filing
+ * fetched from Newsweb itself, unzipped if needed, and run through the
+ * same extractor an upload uses (Sprint 15). */
+export interface NewswebAnnualReport {
+  message_id: string;
+  message_url: string;
+  title: string;
   published_at: string | null;
-  attachment_name: string | null;
-  document_id: string | null;
+  attachment_name: string;
+  document_id: string;
   was_duplicate: boolean;
   imported_at: string | null;
   facts_imported: number;
   periods_imported: string[];
   metrics_by_period: Record<string, string[]>;
   warnings: string[];
+}
+
+/** Mirrors backend NewswebAnnualReportsOut — every year fetched from
+ * Newsweb for a holding so far (extended 2026-09-26 to fetch every
+ * available year back to history_since, not just the newest one). */
+export interface NewswebAnnualReports {
+  holding_id: string;
+  history_since: string; // e.g. "2022-01-01"
+  reports: NewswebAnnualReport[]; // newest first
+  newly_imported_this_run: number;
+  already_on_file_this_run: string[];
+  no_esef_file_this_run: string[];
+  failed_this_run: string[];
 }
 
 /** Mirrors backend EsefImportOut (Sprint 10 — ESEF history from

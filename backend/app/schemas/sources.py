@@ -1,7 +1,7 @@
 """Pydantic schemas for the primary-source filings API (app/api/sources.py)."""
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -88,22 +88,35 @@ class AnnouncementsOut(BaseModel):
     reason: str | None = None
 
 
-class NewswebAnnualReportImportOut(BaseModel):
-    """A holding's annual report fetched straight from Newsweb (Sprint 15,
+class NewswebAnnualReportOut(BaseModel):
+    """One annual report fetched straight from Newsweb (Sprint 15,
     app/services/filings/newsweb_annual_report.py) — the ESEF .xhtml is
     unzipped if needed and run through the same extractor an upload uses."""
 
-    holding_id: UUID
-    imported: bool  # False = never fetched this way for this holding
-    message_id: str | None = None
-    message_url: str | None = None
-    title: str | None = None
+    message_id: str
+    message_url: str
+    title: str
     published_at: datetime | None = None
-    attachment_name: str | None = None
-    document_id: str | None = None
+    attachment_name: str
+    document_id: str
     was_duplicate: bool = False
     imported_at: datetime | None = None
     facts_imported: int = 0
     periods_imported: list[str] = []
     metrics_by_period: dict[str, list[str]] = {}
     warnings: list[str] = []
+
+
+class NewswebAnnualReportsOut(BaseModel):
+    """Every annual report fetched from Newsweb for this holding so far.
+    Extended 2026-09-26 (Faiz's follow-up ask) to fetch every available
+    year back to ``history_since``, not just the newest one — a POST also
+    reports what this particular run skipped or couldn't process."""
+
+    holding_id: UUID
+    history_since: date  # the earliest year this fetch looked for
+    reports: list[NewswebAnnualReportOut] = []  # every year on file, newest first
+    newly_imported_this_run: int = 0
+    already_on_file_this_run: list[str] = []  # titles skipped — already fetched in an earlier run
+    no_esef_file_this_run: list[str] = []  # titles Newsweb has, but only as a PDF (no ESEF to extract)
+    failed_this_run: list[str] = []  # "title: reason" for a report that couldn't be processed

@@ -6,7 +6,7 @@ import type {
   EdgarImport,
   EsefImport,
   HoldingAnnouncements,
-  NewswebAnnualReportImport,
+  NewswebAnnualReports,
   SourceEligibility,
 } from "../lib/types";
 import { Button, Card, EmptyState } from "./ui";
@@ -247,20 +247,25 @@ function EsefHistoryCard({ holdingId, onImported }: { holdingId: string; onImpor
 }
 
 export function NewswebAnnualReportCard({ holdingId, onImported }: { holdingId: string; onImported: () => void }) {
-  const [data, setData] = useState<NewswebAnnualReportImport | null>(null);
+  const [data, setData] = useState<NewswebAnnualReports | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // What the most recent fetch run did, so it can be shown once and then
+  // cleared on the next fetch rather than persisting stale run info.
+  const [lastRun, setLastRun] = useState<NewswebAnnualReports | null>(null);
 
   useEffect(() => {
-    api.getNewswebAnnualReportImport(holdingId).then(setData).catch((e) => setError(errorText(e)));
+    setLastRun(null);
+    api.getNewswebAnnualReports(holdingId).then(setData).catch((e) => setError(errorText(e)));
   }, [holdingId]);
 
   async function runImport() {
     setBusy(true);
     setError(null);
     try {
-      const result = await api.importNewswebAnnualReport(holdingId);
+      const result = await api.importNewswebAnnualReports(holdingId);
       setData(result);
+      setLastRun(result);
       onImported();
     } catch (e) {
       setError(errorText(e));
@@ -269,56 +274,81 @@ export function NewswebAnnualReportCard({ holdingId, onImported }: { holdingId: 
     }
   }
 
+  const reports = data?.reports ?? [];
+  const historyYear = data ? data.history_since.slice(0, 4) : null;
+
   return (
     <Card>
       <div className="mb-3 flex items-start justify-between gap-4">
         <div>
-          <h3 className="text-sm font-semibold text-ink">Annual report from Newsweb</h3>
+          <h3 className="text-sm font-semibold text-ink">Annual reports from Newsweb</h3>
           <p className="mt-0.5 text-xs text-ink-faint">
-            Fetches the company&apos;s own ESEF annual report straight from Newsweb (unzipping it if needed) instead
-            of you downloading and re-uploading it. Free, no key.
+            Fetches every one of the company&apos;s own ESEF annual reports straight from Newsweb, back to{" "}
+            {historyYear ?? "2022"} (unzipping each if needed) instead of you downloading and re-uploading them one
+            by one. Already-fetched years aren&apos;t re-downloaded. Free, no key.
           </p>
         </div>
         <Button variant="secondary" onClick={runImport} disabled={busy}>
-          {busy ? "Fetching…" : data?.imported ? "Re-fetch" : "Fetch from Newsweb"}
+          {busy ? "Fetching…" : reports.length > 0 ? "Check for more years" : "Fetch all annual reports"}
         </Button>
       </div>
 
       {error && <p className="mb-3 text-sm text-negative">{error}</p>}
       {data === null && !error && <p className="text-sm text-ink-muted">Loading…</p>}
 
-      {data && !data.imported && !error && (
+      {data && reports.length === 0 && !error && (
         <EmptyState>Nothing fetched yet.</EmptyState>
       )}
 
-      {data?.imported && (
-        <div className="space-y-3 text-sm">
-          <p className="text-ink">
-            {data.message_url ? (
-              <a
-                href={data.message_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-medium text-accent hover:text-accent-hover"
-              >
-                {data.title}
-              </a>
-            ) : (
-              <span className="font-medium">{data.title}</span>
-            )}
-            {data.published_at && <span className="text-ink-faint"> · published {formatDate(data.published_at)}</span>}
-          </p>
-          <p className="text-ink-muted">
-            {data.facts_imported} facts across {data.periods_imported.length} years (
-            {data.periods_imported.join(", ") || "none"}) from &quot;{data.attachment_name}&quot;
-            {data.was_duplicate && <span className="text-ink-faint"> · already up to date</span>}
-          </p>
-          {data.warnings.map((w) => (
-            <p key={w} className="text-xs text-caution">
-              {w}
-            </p>
+      {lastRun && (
+        <p className="mb-3 text-xs text-ink-faint">
+          This run: {lastRun.newly_imported_this_run} new
+          {lastRun.already_on_file_this_run.length > 0 &&
+            `, ${lastRun.already_on_file_this_run.length} already on file`}
+          {lastRun.no_esef_file_this_run.length > 0 &&
+            ` · ${lastRun.no_esef_file_this_run.length} with no ESEF file on Newsweb (PDF only): ${lastRun.no_esef_file_this_run.join(", ")}`}
+        </p>
+      )}
+      {lastRun?.failed_this_run.map((w) => (
+        <p key={w} className="mb-1 text-xs text-caution">
+          {w}
+        </p>
+      ))}
+
+      {reports.length > 0 && (
+        <ul className="space-y-3 text-sm">
+          {reports.map((report) => (
+            <li key={report.message_id} className="border-t border-border-subtle pt-3 first:border-0 first:pt-0">
+              <p className="text-ink">
+                {report.message_url ? (
+                  <a
+                    href={report.message_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-medium text-accent hover:text-accent-hover"
+                  >
+                    {report.title}
+                  </a>
+                ) : (
+                  <span className="font-medium">{report.title}</span>
+                )}
+                {report.published_at && (
+                  <span className="text-ink-faint"> · published {formatDate(report.published_at)}</span>
+                )}
+              </p>
+              <p className="text-ink-muted">
+                {report.facts_imported} facts across {report.periods_imported.length} years (
+                {report.periods_imported.join(", ") || "none"}) from &quot;{report.attachment_name}&quot;
+                {report.was_duplicate && <span className="text-ink-faint"> · already up to date</span>}
+              </p>
+              {report.warnings.map((w) => (
+                <p key={w} className="text-xs text-caution">
+                  {w}
+                </p>
+              ))}
+            </li>
           ))}
-        </div>
+        </ul>
       )}
     </Card>
   );

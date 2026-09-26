@@ -17,6 +17,7 @@ never a 500 (fail visibly).
 """
 from __future__ import annotations
 
+from datetime import date
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -44,7 +45,8 @@ from app.schemas.sources import (
     EsefFilingOut,
     EsefImportIn,
     EsefImportOut,
-    NewswebAnnualReportImportOut,
+    NewswebAnnualReportOut,
+    NewswebAnnualReportsOut,
     SourceEligibilityOut,
 )
 from app.services.filings.announcements import get_holding_announcements
@@ -57,10 +59,11 @@ from app.services.filings.esef_index import (
     latest_import_summary,
 )
 from app.services.filings.newsweb_annual_report import (
+    NewswebBulkImportResult,
     NewswebImportError,
     NewswebImportResult,
-    import_annual_report_from_newsweb,
-    latest_newsweb_import,
+    import_all_annual_reports_from_newsweb,
+    list_newsweb_imports,
 )
 from app.services.filings.sec_edgar import (
     EdgarImportError,
@@ -262,14 +265,8 @@ def refresh_announcements(
     return _announcements_out(holding, get_holding_announcements(db, provider, holding=holding, force=True))
 
 
-def _newsweb_annual_report_out(
-    holding: Holding, result: NewswebImportResult | None
-) -> NewswebAnnualReportImportOut:
-    if result is None:
-        return NewswebAnnualReportImportOut(holding_id=holding.id, imported=False)
-    return NewswebAnnualReportImportOut(
-        holding_id=holding.id,
-        imported=True,
+def _newsweb_report_out(result: NewswebImportResult) -> NewswebAnnualReportOut:
+    return NewswebAnnualReportOut(
         message_id=result.message_id,
         message_url=result.message_url,
         title=result.title,
@@ -285,27 +282,57 @@ def _newsweb_annual_report_out(
     )
 
 
-@router.get("/holdings/{holding_id}/newsweb-annual-report", response_model=NewswebAnnualReportImportOut)
-def get_newsweb_annual_report(holding_id: UUID, db: Session = Depends(get_db)) -> NewswebAnnualReportImportOut:
+def _newsweb_history_since() -> date:
+    return date(get_settings().newsweb_filing_history_start_year, 1, 1)
+
+
+def _newsweb_reports_out(
+    holding: Holding,
+    reports: list[NewswebImportResult],
+    *,
+    bulk: NewswebBulkImportResult | None = None,
+) -> NewswebAnnualReportsOut:
+    return NewswebAnnualReportsOut(
+        holding_id=holding.id,
+        history_since=_newsweb_history_since(),
+        reports=[_newsweb_report_out(r) for r in reports],
+        newly_imported_this_run=len(bulk.newly_imported) if bulk else 0,
+        already_on_file_this_run=bulk.already_on_file if bulk else [],
+        no_esef_file_this_run=bulk.no_esef_file if bulk else [],
+        failed_this_run=bulk.failed if bulk else [],
+    )
+
+
+@router.get("/holdings/{holding_id}/newsweb-annual-report", response_model=NewswebAnnualReportsOut)
+def get_newsweb_annual_reports(holding_id: UUID, db: Session = Depends(get_db)) -> NewswebAnnualReportsOut:
+    """Every annual report already fetched from Newsweb for this holding
+    (empty list if none yet) — doesn't touch Newsweb itself."""
     require_not_demo(db)
     holding = _get_holding_or_404(db, holding_id)
-    return _newsweb_annual_report_out(holding, latest_newsweb_import(db, holding))
+    return _newsweb_reports_out(holding, list_newsweb_imports(db, holding))
 
 
-@router.post("/holdings/{holding_id}/newsweb-annual-report/import", response_model=NewswebAnnualReportImportOut)
-def import_newsweb_annual_report(
+@router.post("/holdings/{holding_id}/newsweb-annual-report/import", response_model=NewswebAnnualReportsOut)
+def import_newsweb_annual_reports(
     holding_id: UUID,
     db: Session = Depends(get_db),
     provider: NewswebFilingProvider | None = Depends(get_newsweb_filing_provider_or_none),
     storage=Depends(get_object_storage),
-) -> NewswebAnnualReportImportOut:
+) -> NewswebAnnualReportsOut:
+    """Fetches every ANNUAL FINANCIAL REPORT announcement on Newsweb back
+    to settings.newsweb_filing_history_start_year (default 2022 — around
+    when ESEF/iXBRL reporting started for Oslo Børs issuers), skipping
+    years already on file from an earlier run. Faiz's follow-up ask,
+    2026-09-26, after confirming the single-latest-year version worked."""
     require_not_demo(db)
     holding = _get_holding_or_404(db, holding_id)
     if provider is None:
         raise HTTPException(status_code=422, detail="the Newsweb annual-report fetch is switched off (NEWSWEB_FILING_PROVIDER)")
     try:
-        result = import_annual_report_from_newsweb(db, holding, provider, storage)
+        bulk = import_all_annual_reports_from_newsweb(
+            db, holding, provider, storage, since=_newsweb_history_since()
+        )
     except NewswebImportError as exc:
         db.rollback()
         raise HTTPException(status_code=422, detail=str(exc)) from exc
-    return _newsweb_annual_report_out(holding, result)
+    return _newsweb_reports_out(holding, list_newsweb_imports(db, holding), bulk=bulk)

@@ -221,6 +221,14 @@ class Settings(BaseSettings):
     newsweb_filing_lookback_days: int = 730  # ~2 years, wide enough to always catch the latest annual report
     newsweb_filing_timeout_seconds: float = 30.0
     newsweb_filing_max_download_mb: int = 300  # the raw .zip/.xhtml attachment as downloaded
+    # "Fetch every available year" (2026-09-26, Faiz's ask): an absolute
+    # calendar year, not a rolling day-count like newsweb_filing_lookback_days
+    # above, so the window always reaches this far back no matter how much
+    # later "today" is. 2022 is Faiz's own backstop for "around when ESEF/
+    # iXBRL annual-report tagging started in Norway" — Oslo Børs issuers
+    # generally began publishing ESEF-tagged annual reports on Newsweb from
+    # FY2020/FY2021 onward, so 2022 comfortably covers what's actually there.
+    newsweb_filing_history_start_year: int = 2022
 
     # --- Analysis engine (Sprint 4, see app/services/analysis/) ---
     # Two-pass Buffett/Munger analysis: a blind pass (evidence only, no

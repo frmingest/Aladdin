@@ -242,15 +242,7 @@ class NewswebFilingProvider:
             if self._client is None:
                 client.close()
 
-    def find_latest_annual_report(
-        self, issuer_sign: str, *, today: date | None = None
-    ) -> NewswebAnnualReportRef | None:
-        """The newest ANNUAL FINANCIAL REPORT announcement for this issuer,
-        with its attachments already fetched — or None if Newsweb has no
-        such announcement in the lookback window."""
-        issuer_sign = issuer_sign.strip().upper()
-        end = today or datetime.now(timezone.utc).date()
-        start = end - timedelta(days=self._lookback_days)
+    def _list_rows(self, issuer_sign: str, *, start: date, end: date) -> list[tuple[str, str, datetime | None]]:
         payload = self._get_json(
             LIST_URL,
             {
@@ -260,7 +252,19 @@ class NewswebFilingProvider:
                 "toDate": end.isoformat(),
             },
         )
-        rows = parse_annual_report_list(payload, issuer_sign=issuer_sign)
+        return parse_annual_report_list(payload, issuer_sign=issuer_sign)
+
+    def find_latest_annual_report(
+        self, issuer_sign: str, *, today: date | None = None
+    ) -> NewswebAnnualReportRef | None:
+        """The newest ANNUAL FINANCIAL REPORT announcement for this issuer,
+        with its attachments already fetched — or None if Newsweb has no
+        such announcement in the lookback window (self._lookback_days,
+        e.g. ~2 years — enough to always catch the latest one)."""
+        issuer_sign = issuer_sign.strip().upper()
+        end = today or datetime.now(timezone.utc).date()
+        start = end - timedelta(days=self._lookback_days)
+        rows = self._list_rows(issuer_sign, start=start, end=end)
         if not rows:
             return None
         message_id, title, published_at = rows[0]
@@ -272,6 +276,30 @@ class NewswebFilingProvider:
             published_at=published_at,
             attachments=attachments,
         )
+
+    def list_annual_reports(
+        self, issuer_sign: str, *, since: date, today: date | None = None
+    ) -> list[NewswebAnnualReportRef]:
+        """Every ANNUAL FINANCIAL REPORT announcement for this issuer from
+        ``since`` through today (inclusive), newest first, each with its
+        attachments already fetched. Used by the "fetch every available
+        year" flow (Faiz's ask, 2026-09-26) — an explicit calendar start
+        date rather than find_latest_annual_report's rolling lookback
+        window, so a company that's been reporting since 2022 keeps
+        showing all of it no matter how far "today" has moved on."""
+        issuer_sign = issuer_sign.strip().upper()
+        end = today or datetime.now(timezone.utc).date()
+        rows = self._list_rows(issuer_sign, start=since, end=end)
+        return [
+            NewswebAnnualReportRef(
+                message_id=message_id,
+                message_url=MESSAGE_PAGE_URL.format(message_id=message_id),
+                title=title,
+                published_at=published_at,
+                attachments=self.get_message_attachments(message_id),
+            )
+            for message_id, title, published_at in rows
+        ]
 
     def get_message_attachments(self, message_id: str) -> list[NewswebAttachmentRef]:
         payload = self._get_json(MESSAGE_URL, {"messageId": str(message_id)})
