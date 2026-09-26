@@ -57,6 +57,13 @@ When picking up a task, verify against the actual repo/deployment state rather t
 session's summary — this app's history includes real cases of stale assumptions costing Faiz real
 time.
 
+**Concretely: run `git status` and `git log --oneline -15` (and, if a Claude project doc claims a
+feature exists, `grep`/`find` for its actual files) at the start of any session before repeating a
+"built"/"committed" claim from a project doc or a prior session's summary.** 2026-09-26: a whole
+sprint (thesis tracking) was documented as "built, just uncommitted" for days when none of its code
+had ever actually been written to this repo — caught only because the next session checked `git
+status` first instead of trusting the doc.
+
 ## Documentation sync
 
 Every real change to this project's state (a decision, a sprint milestone, a discovered
