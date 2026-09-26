@@ -13,11 +13,12 @@ Quick-glance tracker. Detail for each item lives in its own linked doc; this pag
 | **Current phase** | Phase 11: the Buffett/Munger single-focus rebuild ([sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md)) |
 | **Sprints closed** | 0, 1, 2, 3, 4, 5, 5B, 6, 7, 8, 9, 10, 11, 12, **13** |
 | **In progress** | Nothing open. Next: pick another backlog item (3c) |
+| **Live URLs** | Frontend: `https://exciting-gratitude-production-71b5.up.railway.app` · Backend: `https://aladdin-production-bd25.up.railway.app` — found 2026-09-26 (old backend URL in earlier notes, `aladdin-backend.up.railway.app`, was never provisioned — this is the real one) |
 | **Latest build** | Sprint 13: **pushed to `origin/main` — confirmed 2026-09-26** (`bd342c1`, docs sync commit on top of `ed9ea03`) |
 | **GitHub access** | Claude now has direct push/PR access to `frmingest/aladdin` (set up 2026-09-26, at Faiz's request) — no longer dependent on `E:\Aladdin` for git operations. Railway auto-deploys on every push to `main`, confirmed by Faiz |
-| **Migrations on real Postgres** | ✅ **Confirmed 2026-09-26.** `c7a1e9f3b2d5` and `a3f5c8d1e942` were already applied to production (found already at head before testing). Faiz ran a full downgrade→upgrade cycle twice against real Postgres from `E:\Aladdin\backend` — clean, no errors, ended back at head |
+| **Migrations on real Postgres** | ✅ **Confirmed 2026-09-26.** `c7a1e9f3b2d5` and `a3f5c8d1e942` were already applied to production. Faiz ran a full downgrade→upgrade cycle twice against real Postgres from `E:\Aladdin\backend` — clean, no errors, ended back at head |
 | **Tests** | Sprint 13: 844/846 backend pass (11 new, same 2 of the 3 previously-noted pre-existing failures — `test_factory.py`'s LLM provider default, env-dependent). tsc/eslint/vitest(19)/build clean |
-| **Live-verified?** | ❌ Nothing checked live this session. Since Railway auto-deploys on push and `bd342c1` is on `origin/main`, Sprint 13 should be live — not yet confirmed against the actual URL |
+| **Live-verified?** | ✅ **Yes — confirmed 2026-09-26.** Opened the live frontend and System status page: commit `ba4726b` (the latest push) is deployed, migration `a3f5c8d1e942` matches head, "no configuration problems found," dashboard renders real portfolio data (1 043 964 kr, 8 holdings). Two things need attention: **local PC worker offline** (last seen ~07:50 that morning) and **Gemini daily quota exhausted** (0/20 left) — see §4 |
 
 > ⚠️ **Correction found and fixed 2026-09-26:** this page previously said Sprint 11 was "written... as
 > uncommitted changes." That was false — nothing had actually been written to `E:\Aladdin`; the repo
@@ -35,36 +36,35 @@ Going through this list point by point with Faiz (started 2026-09-26).
 
 | # | Action | Why | Status |
 |---|---|---|---|
-| ✅ | ~~Commit review + push~~ | — | **Done — already pushed.** `git status` on `E:\Aladdin` showed clean, up to date with `origin/main` at `bd342c1`. Railway auto-deploys on push — next is to verify the live URL |
-| ✅ | ~~Run both new migrations against real Postgres~~ | — | **Done 2026-09-26.** Both `c7a1e9f3b2d5` and `a3f5c8d1e942` were already applied to production. Faiz ran `alembic downgrade -1` / `upgrade head` twice from `E:\Aladdin\backend` against the real Supabase Postgres — clean, no errors, ended back at head. Both migrations confirmed reversible on real Postgres, not just SQLite |
+| ✅ | ~~Commit review + push~~ | — | **Done — already pushed.** `git status` on `E:\Aladdin` showed clean, up to date with `origin/main`. Railway auto-deploys on push |
+| ✅ | ~~Run both new migrations against real Postgres~~ | — | **Done 2026-09-26.** Both `c7a1e9f3b2d5` and `a3f5c8d1e942` were already applied to production. Faiz ran `alembic downgrade -1` / `upgrade head` twice from `E:\Aladdin\backend` against the real Supabase Postgres — clean, no errors, ended back at head |
+| ✅ | ~~Which Railway URL is live?~~ | — | **Done 2026-09-26.** Frontend `https://exciting-gratitude-production-71b5.up.railway.app`, backend `https://aladdin-production-bd25.up.railway.app`. System status confirms commit `ba4726b` deployed, migration at head, no config problems |
 | ★ | After deploy: open **Performance** in the nav. Check whether the reindexed value history looks right against what you remember, and whether OSEBX.OL is the benchmark you want (or a different/blended one) | First real use of Sprint 13 — [doc](portfolio-performance-sprint13-2026-09-27.md) §6 | Open |
 | ★ | After deploy: open a holding with an analysis → **Thesis tracking** → **Make a tripwire** on 2–3 invalidation triggers; open **Thesis monitor**. Tell me which triggers pre-filled badly, and whether 180 days / 20% feel right | First real use of Sprint 11 — [doc](thesis-tracking-sprint11-2026-09-26.md) §8 | Open |
 | ★ | After deploy: open **Portfolio risk** in the nav. Check the correlation matrix against holdings you'd expect to move together, look at any cluster flag, and check today's regime reading. Say if the \|r\|≥0.6 cluster threshold or the 2σ/20-day stress sizing feel too aggressive or too tame | First real use of Sprint 12 — [doc](portfolio-risk-regime-sprint12-2026-09-26.md) §5 | Open |
-| ★ | **Which Railway URL is live?** `https://aladdin-backend.up.railway.app` returned "domain not provisioned" as of 2026-09-25. Check Railway → Settings → Networking | Nothing can be live-verified until the URL is known | Open |
 | ★ | After the deploy: upload `Orklaasa-2025-12-31-1-no.xhtml` again: expect a note *"… embedded images/fonts removed on upload"* | Large ESEF uploads (Sprint 10) — [doc](esef-history-import-large-uploads-sprint10-2026-09-25.md) §1 | Open |
 | ★ | On Vår Energi, Salmon Evolution and Orkla: **Primary sources → Earlier annual reports → Import history**. Tell me the years imported and any warnings | First real run of the ESEF history import — [doc](esef-history-import-large-uploads-sprint10-2026-09-25.md) §5 | Open |
 | ★ | After the deploy: **delete and re-upload** the Vår Energi and Salmon Evolution `.xhtml` files, then open each holding's **Market multiples** card and check the share count. Vår's IR page says **2,496,406,246** shares (24 Sep 2026); if Yahoo differs, use **Enter share count** | Tax, leases and EPS are only stored on extraction; the share count feeds the DCF too | Open |
-| ★ | Restart the local backend and the PC worker (new Ollama timeouts load on start). Set Windows user variable `OLLAMA_NUM_PARALLEL=1` and restart Ollama. During a pass, `ollama ps` should say `100% GPU` | Fixes the "blind pass failed: Ollama timed out" runs — [doc](ollama-streaming-dark-theme-2026-09-25.md) §1 | Open |
+| ★★ | **Restart the local backend and the PC worker** — System status shows the local worker (DESKTOP-U0MD9TM) **offline**, last seen ~07:50 this morning. Set Windows user variable `OLLAMA_NUM_PARALLEL=1` and restart Ollama. During a pass, `ollama ps` should say `100% GPU` | Fixes the "blind pass failed: Ollama timed out" runs; also nothing can run on the local LLM while the worker is down — [doc](ollama-streaming-dark-theme-2026-09-25.md) §1 | Open |
 | ★ | Look through the app in the **dark theme** and say what still reads badly | [doc](ollama-streaming-dark-theme-2026-09-25.md) §2–3 | Open |
 | ★ | After deploy: **Macro → Refresh data** (expect updates; US series fail = `FRED_API_KEY` missing in Railway). Restart the PC worker | First real Norges Bank / SSB / FRED fetch | Open |
-| ★ | GitHub → Settings → Actions → **Variables** `SMOKE_FRONTEND_URL`, `SMOKE_API_URL`; then run the **Smoke test** workflow | Post-deploy check (F4) | Open |
+| ★ | GitHub → Settings → Actions → **Variables** `SMOKE_FRONTEND_URL`, `SMOKE_API_URL`; then run the **Smoke test** workflow | Post-deploy check (F4). URLs now known — see §1 | Open |
 | ★ | Once on the PC: `pip install -r backend\requirements-dev.txt`, then `pre-commit install` in `E:\Aladdin`. Later: require CI on `main` (branch protection) | Hooks run on every commit, CI on every push | Open |
 | ★★ | **Rotate credentials** pasted into chat: Supabase DB password + storage S3 keys, Google AI Studio, Mistral, FRED keys (2026-09-23) — **and now also the Supabase `DATABASE_URL` (incl. password) pasted 2026-09-26** to run the migration check. Then update `backend/.env` and Railway | They're in chat transcripts — this now includes a live production DB password | Open — **higher priority than before** |
 | ★ | Railway Variables: `LLM_PROVIDER=google_ai_studio` (or unset), `LLM_FALLBACK_PROVIDER=none` | Railway can't reach Ollama on your PC | Open |
+| ★★ | **Gemini daily quota is exhausted (0/20 left)** — a research call failed 2 min before this check with `429 RESOURCE_EXHAUSTED`. Nothing that needs live research/analysis will work until it resets or the plan is upgraded | Blocks readiness/analysis runs and live research until reset | Open — check when it resets, or Railway's Gemini billing plan |
 | ★ | Fix the 1 remaining readiness blocker on the first holding, then run the first local analysis | First real run on the local LLM | Open |
 | ★ | Change Vår Energi's ticker `VARRY` → **`VAR.OL`**; fix sectors: Xetra-Gold + L&G Gold Mining → Materials, Salmon Evolution → Consumer Staples | [ticker decision](local-llm-tickers-ui-2026-09-23.md#2-ticker-convention--decision) | Open |
 | ★ | Redeploy covers Sprint 8 too (migration `f8a9b0c1d2e3`, 3 fund tables). If Railway sets `ACTIVE_ANALYSIS_PROMPT_VERSION=v1`, remove it | Fund facts + fund analysis — [doc](fund-etf-analysis-sprint8-2026-09-24.md) | Open |
 | ★ | **Set up your funds:** tag Heimdal Utbytte A as **Equity fund**; upload each fund's fact sheet; fill in Fund facts; run the analysis | First real fund analysis — [doc](fund-etf-analysis-sprint8-2026-09-24.md) §7 | Open |
 | ★ | **Start the worker on the PC**: `python -m app.worker` (or `scripts\start-worker.ps1`). Then **Run on my PC** on a holding from the Railway site | First real local run started from Railway — [guide](local-llm-ollama-setup.md) | Open |
-| ★ | After the deploy, open **System status** and fix anything under *Needs attention* | Replaces items 1–3 below | Open |
 | ★ | Upload the **ESEF annual report `.xhtml`** for each Oslo holding (2 years each gives 3 years of history) | [upload doc](financial-statement-uploads-xhtml-csv-2026-09-23.md) | Open |
-| 1 | Set `MARKET_DATA_PROVIDER=yfinance` and `RESEARCH_PROVIDER=gemini_search` in **Railway** | The analysis engine can't produce real output while these are `stub` | Open |
-| 2 | Add `SEC_EDGAR_USER_AGENT` in **Railway** | SEC requires a contact email | Open |
-| 3 | Confirm Railway is running the latest commit | System status shows the commit + DB migration | Open |
-| 4 | Try "Import from SEC EDGAR" on a US holding, and open an Oslo holding's announcements | First live test of both sources | Open |
-| 5 | Open an equity holding, check the Readiness card, then click **Run analysis** | First real signal on prompt quality, cost and usefulness | Open |
+| 1 | Set `MARKET_DATA_PROVIDER=yfinance` and `RESEARCH_PROVIDER=gemini_search` in **Railway** | The analysis engine can't produce real output while these are `stub` | Open — System status shows these are already set correctly (yfinance, Gemini + Google Search); worth double-checking against this row |
+| 2 | Add `SEC_EDGAR_USER_AGENT` in **Railway** | SEC requires a contact email | Open — System status shows "Contact user agent set", so this may already be done; worth confirming |
+| 4 | Try "Import from SEC EDGAR" on a US holding, and open an Oslo holding's announcements | First live test of both sources — System status shows SEC EDGAR "Never imported" | Open |
+| 5 | Open an equity holding, check the Readiness card, then click **Run analysis** | First real signal on prompt quality, cost and usefulness — note: Gemini quota is exhausted right now (see above); local worker is also offline | Open |
 | 6 | Open **Margin of safety** in the nav | First real ranking | Open |
-| 7 | Try **Dashboard**, **Watchlist** and **Journal** | First real use | Open |
+| 7 | Try **Dashboard**, **Watchlist** and **Journal** | First real use — Dashboard confirmed rendering real data 2026-09-26 | Open |
 | 7b | On a US holding, run **Import from SEC EDGAR** again | Saves the SEC cover-page share count | Open |
 | 8 | Upload an annual report, run an analysis and open the **document excerpt** group | First real check of Sprint 6 — [doc](evidence-quality-sprint6-2026-09-24.md) §6 | Open |
 | 9 | Review `analysis_schema/v1.py` and `prompts/analysis/*_v2.md` | Once a real run uses v1, any change needs a new version file (CLAUDE.md Rule 3) | Open |
@@ -89,7 +89,7 @@ Going through this list point by point with Faiz (started 2026-09-26).
 | F9 | **Fund & ETF analysis** | Both | Fund facts, look-through, fee drag, fund-version analysis | Sprint 8 | ✅ Done 2026-09-24 |
 | F11 | **Thesis tracking** | Both | Tripwires checked by code, "what changed", verdict timeline, Thesis monitor | Sprint 11 | ✅ **Actually built and committed 2026-09-26** (`88e77e2`, `fbb2afe`) — see correction note in §1 |
 | F12 | **Portfolio risk & regime intelligence** | Both | Real correlation matrix, correlated-cluster flag, drawdown/stress scenarios, regime classification | Sprint 12 | ✅ Built and committed 2026-09-26 (`612bc5a`, `cab8272`) — [doc](portfolio-risk-regime-sprint12-2026-09-26.md) |
-| F13 | **Portfolio performance over time** | Both | Daily portfolio value history + benchmark comparison, reindexed from today's positions | Sprint 13 | ✅ Built, committed and **pushed** 2026-09-27 (`ed9ea03`, docs sync `bd342c1`) — [doc](portfolio-performance-sprint13-2026-09-27.md) |
+| F13 | **Portfolio performance over time** | Both | Daily portfolio value history + benchmark comparison, reindexed from today's positions | Sprint 13 | ✅ Built, committed and **pushed, deployed, live-verified** 2026-09-26 — [doc](portfolio-performance-sprint13-2026-09-27.md) |
 
 ### 3b. Sprint status
 
@@ -104,13 +104,13 @@ Going through this list point by point with Faiz (started 2026-09-26).
 | 5B | Local LLM from Railway + overnight queue (F8 + F5) | ✅ Built 2026-09-23 (`18e8a4e`, pushed) |
 | 6 | Evidence quality (section-aware chunking, evidence budget) | ✅ Built 2026-09-24 (`71ec23b`, pushed) |
 | 7 | Guardrail tooling: pre-commit, CI, secret scanning (+ F4 smoke test) | ✅ Built 2026-09-24 (`f81a824`, pushed) |
-| 8 | Fund & ETF analysis (F9, decision 23) | ✅ Built 2026-09-24 (`8847311`, pushed, not deployed) |
+| 8 | Fund & ETF analysis (F9, decision 23) | ✅ Built 2026-09-24 (`8847311`, pushed) |
 | — | Numeric macro data (F10, decision 24) | ✅ Built 2026-09-24 (`c4b2ed2`, `551a141`, pushed) |
-| 9 | ROIC / ROE / ROCE + market multiples with share counts | ✅ Built 2026-09-25 (`0b05364`, pushed, not deployed) |
-| 10 | ESEF history import (layer D) + large `.xhtml` uploads | ✅ Built 2026-09-25 (`176721f`, pushed, not deployed) |
-| 11 | Thesis tracking over time (F11, decision 25) + price without a DCF | ✅ **Actually** built 2026-09-26 (`88e77e2` backend, `fbb2afe` frontend). Migration `c7a1e9f3b2d5` — **confirmed on real Postgres 2026-09-26** — [doc](thesis-tracking-sprint11-2026-09-26.md). Pushed |
-| 12 | Portfolio risk & regime intelligence (F12) | ✅ Built 2026-09-26 (`612bc5a` backend, `cab8272` frontend). Migration `a3f5c8d1e942` — **confirmed on real Postgres 2026-09-26** — [doc](portfolio-risk-regime-sprint12-2026-09-26.md). Pushed |
-| 13 | Portfolio performance over time (F13, backlog 3c) | ✅ Built 2026-09-27 (`ed9ea03`). No schema change — reuses Sprint 12's `PriceHistoryObservation` cache as-is — [doc](portfolio-performance-sprint13-2026-09-27.md). Pushed (`bd342c1` on top) |
+| 9 | ROIC / ROE / ROCE + market multiples with share counts | ✅ Built 2026-09-25 (`0b05364`, pushed) |
+| 10 | ESEF history import (layer D) + large `.xhtml` uploads | ✅ Built 2026-09-25 (`176721f`, pushed) |
+| 11 | Thesis tracking over time (F11, decision 25) + price without a DCF | ✅ **Actually** built 2026-09-26 (`88e77e2` backend, `fbb2afe` frontend). Migration `c7a1e9f3b2d5` — **confirmed on real Postgres and live in prod, 2026-09-26** — [doc](thesis-tracking-sprint11-2026-09-26.md) |
+| 12 | Portfolio risk & regime intelligence (F12) | ✅ Built 2026-09-26 (`612bc5a` backend, `cab8272` frontend). Migration `a3f5c8d1e942` — **confirmed on real Postgres and live in prod, 2026-09-26** — [doc](portfolio-risk-regime-sprint12-2026-09-26.md) |
+| 13 | Portfolio performance over time (F13, backlog 3c) | ✅ Built 2026-09-27 (`ed9ea03`). No schema change — reuses Sprint 12's `PriceHistoryObservation` cache as-is — [doc](portfolio-performance-sprint13-2026-09-27.md). **Live in prod, confirmed 2026-09-26** (commit `ba4726b` on top) |
 | — | Unplanned, shipped 2026-09-23: F4 status page, F6 decision journal, F7 watchlist | ✅ Done |
 
 ### 3c. Backlog (unscheduled)
@@ -132,6 +132,7 @@ Going through this list point by point with Faiz (started 2026-09-26).
 | Liquidity tier for illiquid alternative assets | Whisky, physical metals — no "sellable today at a quoted price" flag exists (from the old Phase 10 notes) |
 | Benchmark-relative / real-return reporting | No index comparison or inflation adjustment on returns yet (from the old Phase 10 notes) |
 | Dependency audit → blocking, mypy in CI | After CI has run clean for a while |
+| LLM usage ledger | Gemini's daily quota counter is in-memory and resets on restart; ran out mid-session 2026-09-26 with no persistent tracking of when |
 
 ### 3d. Free data sources
 
@@ -155,8 +156,10 @@ Detail: [free-market-data-research-providers-2026-09-21.md](free-market-data-res
 
 | Issue | Impact | Fix |
 |---|---|---|
+| **Local PC worker (DESKTOP-U0MD9TM) is offline** — last seen ~07:50 the morning of 2026-09-26 | No local-LLM analysis runs, no worker-side macro/price refresh, tripwire checks can't run overnight | Restart it — see §2 |
+| **Gemini daily quota exhausted** — 0/20 calls left, last research call failed with `429 RESOURCE_EXHAUSTED` | No live research, no new analysis runs, until the quota resets or the plan changes | See §2 — check reset timing / billing plan |
 | ~~Neither Sprint 11 nor Sprint 12's migration has run on real Postgres~~ | — | **Resolved 2026-09-26** — both confirmed with a full downgrade/upgrade cycle against real Supabase Postgres, clean |
-| Gemini quota counter is in-memory | Resets on every server/worker restart | LLM usage ledger (backlog) |
+| Gemini quota counter is in-memory | Resets on every server/worker restart, no persistent record of when it resets | LLM usage ledger (backlog) |
 | No GitHub push credentials in any session shell | **Resolved 2026-09-26** — Claude now has direct push/PR access to `frmingest/aladdin` | — |
 | A live Supabase `DATABASE_URL` (with password) was pasted into this chat 2026-09-26, to run the migration check | Credential exposure in a chat transcript, same as the 2026-09-23 leak | **Rotate the Supabase DB password** — see §2 |
 | gitleaks pre-commit hook builds with Go | First `pre-commit install` run is slow | Expected; CI uses the prebuilt binary |
@@ -175,6 +178,7 @@ Detail: [free-market-data-research-providers-2026-09-21.md](free-market-data-res
 
 | Date | Change | Summary | Detail |
 |---|---|---|---|
+| 2026-09-26 | **Live-verified production for the first time this session** | Found the real Railway URLs (frontend `exciting-gratitude-production-71b5`, backend `aladdin-production-bd25` — the old documented backend URL was never provisioned). Opened the live app: Dashboard renders real portfolio data; System status confirms commit `ba4726b` deployed and migration `a3f5c8d1e942` at head, "no configuration problems found." Found two live issues: local PC worker offline since ~07:50, and Gemini daily quota exhausted (0/20) | — |
 | 2026-09-26 | **Confirmed both migrations on real Postgres** | Both `c7a1e9f3b2d5` and `a3f5c8d1e942` were found already applied to production Postgres (unexpected — not previously confirmed). Faiz ran a downgrade→upgrade cycle twice against real Supabase Postgres from `E:\Aladdin\backend` — clean, no errors, ended back at head. Note: this required pasting the live `DATABASE_URL` (with password) into chat, since neither the cloud session nor the linked-PC sandbox could reach Postgres' port directly (HTTPS-only egress in both) — flagged in §4 for credential rotation | — |
 | 2026-09-26 | **Corrected push status + set up direct GitHub access** | Re-checked `E:\Aladdin` directly (`git status`/`git log`, not the doc): repo is clean, `main` up to date with `origin/main` at `bd342c1` — Sprint 13 (and the docs-sync commit on top of it) was already pushed, contrary to what this page said. Railway auto-deploys on push (confirmed by Faiz). Also attached `frmingest/aladdin` to Claude's GitHub access directly (push scope) at Faiz's request, so future sessions don't need to route git operations through `E:\Aladdin` | — |
 | 2026-09-27 | **Sprint 13: portfolio performance over time (F13, backlog 3c)** | Confirmed at session start (via `git status`) that Sprint 11+12 were already pushed to `origin/main` (`cd944a6`) — corrected the stale "not pushed" claim. Then built daily portfolio value history + benchmark comparison: reindexes each holding's today's NOK value backward through its own price/FX history (today's positions held constant) — stated as an approximation, not a real past-transaction P&L, in every response's `method_note`. Reuses Sprint 12's `PriceHistoryObservation` cache as-is for tickers, FX pairs and the benchmark index alike — **no new table, no migration**. Days before every included holding has data are marked `partial` rather than truncating the series. New **Performance** page (cumulative-return chart vs. benchmark, stat tiles, coverage notes), nav entry, dashboard link card. Default benchmark OSEBX.OL. 11 new tests (844/846 backend total, 2 pre-existing unrelated failures), tsc/eslint/vitest/build clean. Committed (`ed9ea03`), pushed | [doc](portfolio-performance-sprint13-2026-09-27.md) |
