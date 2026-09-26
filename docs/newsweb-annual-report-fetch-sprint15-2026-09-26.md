@@ -92,4 +92,41 @@ position.
   endpoints key off `holding_id` alone. A watchlist row links to the exact same
   `/holdings/{holding_id}` page an owned position uses, so the newly-relocated card appears there too.
 - Frontend-only. `tsc --noEmit`, `eslint`, and `vitest` (19/19) all clean; no backend tests affected
-  since no backend code changed.
+  since no backend code changed. Committed and pushed (`06e519c`).
+
+## 8. Fetch every available year, not just the newest (2026-09-26, second follow-up)
+
+Faiz's next ask, right after confirming §7 worked live: pull **every** annual report Oslo Børs has
+published on Newsweb for a holding, back to around when ESEF/iXBRL reporting started in Norway
+(he said "around 2022"), instead of stopping at the newest one.
+
+- **New setting**: `newsweb_filing_history_start_year` (default `2022`) in `backend/app/config/
+  settings.py`. It's an absolute calendar year, not a rolling day-count like the existing
+  `newsweb_filing_lookback_days` — the window is always `[2022-01-01, today]`, so it never drifts
+  forward and stop covering 2022 no matter how many years from now this runs.
+- **Provider**: `NewswebFilingProvider.list_annual_reports(issuer_sign, since=...)` — lists every
+  ANNUAL FINANCIAL REPORT announcement in the window (not just the first), fetching each one's
+  attachments. `find_latest_annual_report` is unchanged and still used nowhere else, kept for its own
+  tests; both now share one `_list_rows()` helper internally.
+- **Service**: `import_all_annual_reports_from_newsweb()` replaces the old single-report import. It
+  lists every announcement since 2022, skips any whose Newsweb `message_id` is already recorded on an
+  existing Document's `quality_flags` (so clicking the button again only fetches genuinely new years,
+  never re-downloads what's already on file), and imports the rest one at a time through the same
+  ingestion pipeline as before — one `annual_report` Document per year, same sha256 de-dup, same
+  "first source wins per metric/year" rule. A single bad year (only a PDF on Newsweb, or a download/
+  extraction failure) is recorded and skipped rather than aborting the whole run; the endpoint only
+  fails outright if the eligibility check fails, the ticker has no issuer sign, Newsweb itself can't
+  be reached, or literally nothing is found in the window at all.
+- **API**: `GET`/`POST /sources/holdings/{id}/newsweb-annual-report[/import]` now return
+  `NewswebAnnualReportsOut` — `reports` (every year on file, newest first) plus, on a `POST`, what
+  that run did: `newly_imported_this_run`, `already_on_file_this_run`, `no_esef_file_this_run`,
+  `failed_this_run`. The URLs are unchanged.
+- **Frontend**: `NewswebAnnualReportCard` lists every fetched year (title linked to its Newsweb
+  message, published date, facts/periods, per-report warnings) instead of just one, with the button
+  reading **Fetch all annual reports** the first time and **Check for more years** afterwards, plus a
+  one-line summary of what the last run found (new / already on file / no-ESEF titles).
+- Tests: 3 net new backend tests (multi-year fetch, second-run skip, PDF-only-is-skipped-not-fatal
+  instead of a hard 422) — 907/908 total, same 1 pre-existing, unrelated demo-mode env failure as
+  before this change. Frontend: `tsc --noEmit`, `eslint`, `vitest` (19/19), production build all clean.
+- Still not exercised against the real Newsweb site from this environment (same limitation as §4) —
+  the next live click will be the first real multi-year test.
