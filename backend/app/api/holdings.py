@@ -63,6 +63,15 @@ from app.services.market_data.shares import (
 )
 from app.services.market_inputs import MarketContext, build_market_context
 from app.services.metrics import compute_holding_metrics
+from app.services.settings.demo_guard import require_not_demo
+from app.services.settings.demo_mode import is_demo_mode
+from app.services.settings.synthetic_data import (
+    demo_holding,
+    demo_holding_metrics,
+    demo_holding_periods,
+    demo_holdings,
+    demo_share_count,
+)
 
 router = APIRouter(prefix="/holdings", tags=["holdings"])
 
@@ -120,6 +129,7 @@ def _to_out_many(db: Session, holdings: list[Holding]) -> list[HoldingOut]:
 
 @router.post("", response_model=HoldingOut, status_code=201)
 def create_holding(payload: HoldingCreate, db: Session = Depends(get_db)) -> HoldingOut:
+    require_not_demo(db)
     existing = db.scalar(select(Holding).where(Holding.ticker == payload.ticker))
     if existing is not None:
         raise HTTPException(
@@ -143,6 +153,8 @@ def create_holding(payload: HoldingCreate, db: Session = Depends(get_db)) -> Hol
 
 @router.get("", response_model=list[HoldingOut])
 def list_holdings(db: Session = Depends(get_db)) -> list[HoldingOut]:
+    if is_demo_mode(db):
+        return demo_holdings()
     holdings = db.scalars(select(Holding).order_by(Holding.ticker)).all()
     return _to_out_many(db, list(holdings))
 
@@ -160,6 +172,11 @@ def get_field_options() -> HoldingFieldOptions:
 
 @router.get("/{holding_id}", response_model=HoldingOut)
 def get_holding(holding_id: UUID, db: Session = Depends(get_db)) -> HoldingOut:
+    if is_demo_mode(db):
+        demo = demo_holding(holding_id)
+        if demo is None:
+            raise HTTPException(status_code=404, detail="holding not found")
+        return demo
     holding = db.get(Holding, holding_id)
     if holding is None:
         raise HTTPException(status_code=404, detail="holding not found")
@@ -170,6 +187,7 @@ def get_holding(holding_id: UUID, db: Session = Depends(get_db)) -> HoldingOut:
 def update_holding(
     holding_id: UUID, payload: HoldingUpdate, db: Session = Depends(get_db)
 ) -> HoldingOut:
+    require_not_demo(db)
     holding = db.get(Holding, holding_id)
     if holding is None:
         raise HTTPException(status_code=404, detail="holding not found")
@@ -212,6 +230,7 @@ def delete_all_holdings(
     db: Session = Depends(get_db),
     storage=Depends(get_object_storage),
 ) -> DeletionResult:
+    require_not_demo(db)
     """Clean slate for holdings — added 2026-09-23 at Faiz's request (the
     2026-09-21 portfolio wipe deliberately left holdings and documents
     alone). Deletes every holding with all its documents (+ stored files),
@@ -238,6 +257,7 @@ def delete_holding_documents(
     db: Session = Depends(get_db),
     storage=Depends(get_object_storage),
 ) -> DeletionResult:
+    require_not_demo(db)
     """Deletes everything uploaded, imported or generated for one holding —
     documents (+ stored files), extracted facts (incl. SEC EDGAR imports),
     analysis runs, notes, price observations and company research — but
@@ -266,6 +286,7 @@ def delete_holding(
     db: Session = Depends(get_db),
     storage=Depends(get_object_storage),
 ) -> None:
+    require_not_demo(db)
     """Without `cascade`: refused while anything references the holding.
     With `cascade=true`: its documents, facts, analyses, notes, prices and
     research go too (still refused while it's in a portfolio snapshot)."""
@@ -331,6 +352,11 @@ def delete_holding(
 
 @router.get("/{holding_id}/periods", response_model=list[str])
 def list_holding_periods(holding_id: UUID, db: Session = Depends(get_db)) -> list[str]:
+    if is_demo_mode(db):
+        demo = demo_holding_periods(holding_id)
+        if demo is None:
+            raise HTTPException(status_code=404, detail="holding not found")
+        return demo
     holding = db.get(Holding, holding_id)
     if holding is None:
         raise HTTPException(status_code=404, detail="holding not found")
@@ -390,6 +416,11 @@ def get_holding_metrics(
     (app/services/market_data/shares.py), and are skipped with the reason
     when either is missing.
     """
+    if is_demo_mode(db):
+        demo = demo_holding_metrics(holding_id, period)
+        if demo is None:
+            raise HTTPException(status_code=404, detail="holding not found")
+        return demo
     holding = db.get(Holding, holding_id)
     if holding is None:
         raise HTTPException(status_code=404, detail="holding not found")
@@ -523,6 +554,11 @@ def get_share_count(
     market_data_provider: MarketDataProvider | None = Depends(get_market_data_provider_or_none),
 ) -> ShareCountOut:
     """The share count the multiples and the DCF use, with its source."""
+    if is_demo_mode(db):
+        demo = demo_share_count(holding_id)
+        if demo is None:
+            raise HTTPException(status_code=404, detail="holding not found")
+        return demo
     holding = db.get(Holding, holding_id)
     if holding is None:
         raise HTTPException(status_code=404, detail="holding not found")
@@ -546,6 +582,7 @@ def set_share_count(
 ) -> ShareCountOut:
     """Enter the current share count yourself (e.g. from a Newsweb notice
     after a share issue). It wins over Yahoo / SEC until removed."""
+    require_not_demo(db)
     holding = db.get(Holding, holding_id)
     if holding is None:
         raise HTTPException(status_code=404, detail="holding not found")
@@ -578,6 +615,7 @@ def remove_share_count_override(
     """Removes the share counts you entered; Yahoo / SEC take over again.
     Only manual entries are removed — nothing fetched is deleted. Requires
     confirm=true like every delete."""
+    require_not_demo(db)
     if not confirm:
         raise HTTPException(status_code=400, detail="pass confirm=true to remove your share count")
     holding = db.get(Holding, holding_id)

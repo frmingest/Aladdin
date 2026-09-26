@@ -20,6 +20,9 @@ from app.config.database import get_db
 from app.models.account import Account
 from app.models.portfolio import PortfolioPosition, PortfolioSnapshot
 from app.schemas.account import AccountCreate, AccountOut, AccountUpdate
+from app.services.settings.demo_guard import require_not_demo
+from app.services.settings.demo_mode import is_demo_mode
+from app.services.settings.synthetic_data import demo_account, demo_accounts
 
 router = APIRouter(prefix="/accounts", tags=["accounts"])
 
@@ -68,6 +71,7 @@ def _to_out_many(db: Session, accounts: list[Account]) -> list[AccountOut]:
 
 @router.post("", response_model=AccountOut, status_code=201)
 def create_account(payload: AccountCreate, db: Session = Depends(get_db)) -> AccountOut:
+    require_not_demo(db)
     existing = db.scalar(select(Account).where(Account.account_number == payload.account_number))
     if existing is not None:
         raise HTTPException(
@@ -88,12 +92,19 @@ def create_account(payload: AccountCreate, db: Session = Depends(get_db)) -> Acc
 
 @router.get("", response_model=list[AccountOut])
 def list_accounts(db: Session = Depends(get_db)) -> list[AccountOut]:
+    if is_demo_mode(db):
+        return demo_accounts()
     accounts = db.scalars(select(Account).order_by(Account.name)).all()
     return _to_out_many(db, list(accounts))
 
 
 @router.get("/{account_id}", response_model=AccountOut)
 def get_account(account_id: UUID, db: Session = Depends(get_db)) -> AccountOut:
+    if is_demo_mode(db):
+        demo = demo_account(account_id)
+        if demo is None:
+            raise HTTPException(status_code=404, detail="account not found")
+        return demo
     account = db.get(Account, account_id)
     if account is None:
         raise HTTPException(status_code=404, detail="account not found")
@@ -104,6 +115,7 @@ def get_account(account_id: UUID, db: Session = Depends(get_db)) -> AccountOut:
 def update_account(
     account_id: UUID, payload: AccountUpdate, db: Session = Depends(get_db)
 ) -> AccountOut:
+    require_not_demo(db)
     account = db.get(Account, account_id)
     if account is None:
         raise HTTPException(status_code=404, detail="account not found")
@@ -118,6 +130,7 @@ def update_account(
 
 @router.delete("/{account_id}", status_code=204, response_model=None)
 def delete_account(account_id: UUID, confirm: bool = False, db: Session = Depends(get_db)) -> None:
+    require_not_demo(db)
     if not confirm:
         raise HTTPException(
             status_code=400,

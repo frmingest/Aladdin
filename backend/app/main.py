@@ -24,10 +24,11 @@ from app.api.holdings import router as holdings_router
 from app.api.journal import router as journal_router
 from app.api.macro import router as macro_router
 from app.api.performance import router as performance_router
-from app.api.precious_metals import router as precious_metals_router
 from app.api.portfolio import router as portfolio_router
+from app.api.precious_metals import router as precious_metals_router
 from app.api.research import router as research_router
 from app.api.risk import router as risk_router
+from app.api.settings import router as settings_router
 from app.api.sources import router as sources_router
 from app.api.system import router as system_router
 from app.api.thesis import router as thesis_router
@@ -42,6 +43,7 @@ from app.providers.base import (
     RiskFreeRateUnavailableError,
 )
 from app.services.macro.scheduler import MacroRefreshScheduler
+from app.services.settings.demo_guard import DemoModeWriteBlockedError
 
 settings = get_settings()
 
@@ -85,6 +87,14 @@ async def provider_unavailable(_request: Request, exc: Exception) -> JSONRespons
     return JSONResponse(status_code=503, content={"detail": str(exc)})
 
 
+@app.exception_handler(DemoModeWriteBlockedError)
+async def demo_mode_write_blocked(_request: Request, exc: Exception) -> JSONResponse:
+    """Every mutating endpoint calls require_not_demo(db) first while demo
+    mode is on (app/services/settings/demo_guard.py) - this turns that
+    into a clean 403 instead of an unhandled 500."""
+    return JSONResponse(status_code=403, content={"detail": str(exc)})
+
+
 app.include_router(documents_router)
 app.include_router(holdings_router)
 app.include_router(accounts_router)
@@ -102,6 +112,7 @@ app.include_router(thesis_router)
 app.include_router(risk_router)
 app.include_router(performance_router)
 app.include_router(precious_metals_router)
+app.include_router(settings_router)
 
 
 @app.get("/health")

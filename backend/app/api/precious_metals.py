@@ -39,6 +39,12 @@ from app.services.precious_metals.holdings import (
     update_holding,
 )
 from app.services.precious_metals.pricing import get_price_history_nok
+from app.services.settings.demo_guard import require_not_demo
+from app.services.settings.demo_mode import is_demo_mode
+from app.services.settings.synthetic_data import (
+    demo_precious_metals_overview,
+    demo_precious_metals_price_history,
+)
 
 router = APIRouter(prefix="/precious-metals", tags=["precious-metals"])
 
@@ -83,6 +89,8 @@ def get_overview(
     metal_provider: MarketDataProvider = Depends(get_metal_price_provider),
     fx_provider: MarketDataProvider = Depends(get_market_data_provider),
 ) -> PreciousMetalsOverviewOut:
+    if is_demo_mode(db):
+        return demo_precious_metals_overview()
     return _to_overview_out(compute_overview(db, metal_provider, fx_provider))
 
 
@@ -92,6 +100,7 @@ def refresh_overview(
     metal_provider: MarketDataProvider = Depends(get_metal_price_provider),
     fx_provider: MarketDataProvider = Depends(get_market_data_provider),
 ) -> PreciousMetalsOverviewOut:
+    require_not_demo(db)
     return _to_overview_out(compute_overview(db, metal_provider, fx_provider, force=True))
 
 
@@ -105,6 +114,11 @@ def get_price_history(
 ) -> MetalPriceHistoryOut:
     if metal not in METALS:
         raise HTTPException(status_code=404, detail=f"Unknown metal: {metal!r}")
+    if is_demo_mode(db):
+        demo = demo_precious_metals_price_history(metal)
+        cutoff_count = max(days, 1)
+        demo.points = demo.points[-cutoff_count:]
+        return demo
     points = get_price_history_nok(db, metal_provider, fx_provider, metal=metal)
     cutoff_count = max(days, 1)
     points = points[-cutoff_count:]
@@ -124,6 +138,7 @@ def add_holding(
     payload: PreciousMetalHoldingCreate,
     db: Session = Depends(get_db),
 ) -> HoldingRowOut:
+    require_not_demo(db)
     from app.domain.precious_metals import display_name
 
     if not is_valid_series(payload.coin_series):
@@ -154,6 +169,7 @@ def patch_holding(
     payload: PreciousMetalHoldingUpdate,
     db: Session = Depends(get_db),
 ) -> HoldingRowOut:
+    require_not_demo(db)
     from app.domain.precious_metals import display_name
 
     try:
@@ -183,5 +199,6 @@ def patch_holding(
 
 @router.delete("/{holding_id}", status_code=204, response_model=None)
 def remove_holding(holding_id: UUID, db: Session = Depends(get_db)) -> None:
+    require_not_demo(db)
     if not delete_holding(db, holding_id):
         raise HTTPException(status_code=404, detail="Holding not found")

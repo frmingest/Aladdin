@@ -55,6 +55,7 @@ from app.services.funds.facts import (
 )
 from app.services.funds.holdings_import import HoldingsFileError, parse_holdings_file
 from app.services.funds.metrics import compute_fund_metrics
+from app.services.settings.demo_guard import require_not_demo
 
 router = APIRouter(prefix="/funds", tags=["funds"])
 
@@ -95,6 +96,7 @@ def _facts_out(db: Session, holding: Holding) -> FundFactsOut:
 
 @router.get("/{holding_id}", response_model=FundFactsOut)
 def get_fund_facts(holding_id: UUID, db: Session = Depends(get_db)) -> FundFactsOut:
+    require_not_demo(db)
     holding = _holding(db, holding_id)
     try:
         require_fund_holding(holding)
@@ -105,6 +107,7 @@ def get_fund_facts(holding_id: UUID, db: Session = Depends(get_db)) -> FundFacts
 
 @router.put("/{holding_id}/profile", response_model=FundFactsOut)
 def put_profile(holding_id: UUID, body: FundProfileIn, db: Session = Depends(get_db)) -> FundFactsOut:
+    require_not_demo(db)
     holding = _holding(db, holding_id)
     values = body.model_dump()
     for key in ("base_currency", "fund_size_currency"):
@@ -120,6 +123,7 @@ def put_profile(holding_id: UUID, body: FundProfileIn, db: Session = Depends(get
 
 @router.put("/{holding_id}/returns", response_model=FundFactsOut)
 def put_returns(holding_id: UUID, body: list[FundReturnIn], db: Session = Depends(get_db)) -> FundFactsOut:
+    require_not_demo(db)
     holding = _holding(db, holding_id)
     try:
         replace_returns(db, holding, [r.model_dump() for r in body])
@@ -133,6 +137,7 @@ def put_returns(holding_id: UUID, body: list[FundReturnIn], db: Session = Depend
 def put_exposures(
     holding_id: UUID, dimension: str, body: FundExposuresIn, db: Session = Depends(get_db)
 ) -> FundFactsOut:
+    require_not_demo(db)
     holding = _holding(db, holding_id)
     try:
         replace_exposures(
@@ -158,6 +163,7 @@ def put_exposures(
 def patch_link(
     holding_id: UUID, exposure_id: UUID, body: ManualLinkIn, db: Session = Depends(get_db)
 ) -> FundFactsOut:
+    require_not_demo(db)
     holding = _holding(db, holding_id)
     try:
         set_manual_link(db, holding, exposure_id, body.linked_holding_id)
@@ -179,6 +185,7 @@ async def import_holdings_file(
     document of this fund, parses it deterministically and replaces the
     holding rows for its as-of date. Sector / country / currency splits
     are derived from the same rows when the file has those columns."""
+    require_not_demo(db)
     holding = _holding(db, holding_id)
     try:
         require_fund_holding(holding)

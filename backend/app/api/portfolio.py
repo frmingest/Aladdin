@@ -56,6 +56,9 @@ from app.services.calculations import herfindahl_hirschman_index
 from app.services.portfolio_import.csv_parser import CsvParseError
 from app.services.portfolio_import.ingestion import import_portfolio_csv
 from app.services.portfolio_overview import build_overview
+from app.services.settings.demo_guard import require_not_demo
+from app.services.settings.demo_mode import is_demo_mode
+from app.services.settings.synthetic_data import demo_portfolio_overview
 
 router = APIRouter(prefix="/portfolio", tags=["portfolio"])
 
@@ -241,6 +244,7 @@ async def import_csv(
     db: Session = Depends(get_db),
     storage=Depends(get_object_storage),
 ) -> PortfolioImportResponse:
+    require_not_demo(db)
     """Imports a broker-export CSV (Nordnet-style "Beholdningstabell", one
     per real-world account) straight into an Account + traceable Document +
     PortfolioSnapshot + PortfolioPositions — see
@@ -293,6 +297,7 @@ def _validate_position_refs(db: Session, position: PortfolioPositionIn) -> None:
 def create_snapshot(
     payload: PortfolioSnapshotCreate, db: Session = Depends(get_db)
 ) -> PortfolioSnapshotOut:
+    require_not_demo(db)
     document = db.get(Document, payload.source_file_id)
     if document is None:
         raise HTTPException(
@@ -337,6 +342,7 @@ def create_snapshot(
 def list_snapshots(
     account_id: UUID | None = None, db: Session = Depends(get_db)
 ) -> list[PortfolioSnapshotSummary]:
+    require_not_demo(db)
     query = select(PortfolioSnapshot).order_by(PortfolioSnapshot.uploaded_at.desc())
     if account_id is not None:
         query = query.where(PortfolioSnapshot.account_id == account_id)
@@ -372,6 +378,7 @@ def list_snapshots(
 
 @router.get("/snapshots/{snapshot_id}", response_model=PortfolioSnapshotOut)
 def get_snapshot(snapshot_id: UUID, db: Session = Depends(get_db)) -> PortfolioSnapshotOut:
+    require_not_demo(db)
     snapshot = db.get(PortfolioSnapshot, snapshot_id)
     if snapshot is None:
         raise HTTPException(status_code=404, detail="portfolio snapshot not found")
@@ -382,6 +389,7 @@ def get_snapshot(snapshot_id: UUID, db: Session = Depends(get_db)) -> PortfolioS
 def delete_snapshot(
     snapshot_id: UUID, confirm: bool = False, db: Session = Depends(get_db)
 ) -> SnapshotDeleteResult:
+    require_not_demo(db)
     if not confirm:
         raise HTTPException(
             status_code=400,
@@ -414,6 +422,7 @@ def delete_snapshot(
 def delete_all_portfolio_data(
     confirm: bool = False, db: Session = Depends(get_db)
 ) -> PortfolioWipeResult:
+    require_not_demo(db)
     """Wipes every account, portfolio snapshot, and position in one call —
     added 2026-09-21 at Faiz's request, as a faster reset path than
     deleting snapshots/accounts one by one in the UI.
@@ -456,6 +465,7 @@ def delete_all_portfolio_data(
 def add_position(
     snapshot_id: UUID, payload: PortfolioPositionIn, db: Session = Depends(get_db)
 ) -> PortfolioPositionOut:
+    require_not_demo(db)
     snapshot = db.get(PortfolioSnapshot, snapshot_id)
     if snapshot is None:
         raise HTTPException(status_code=404, detail="portfolio snapshot not found")
@@ -485,6 +495,7 @@ def add_position(
 def delete_position(
     snapshot_id: UUID, position_id: UUID, confirm: bool = False, db: Session = Depends(get_db)
 ) -> None:
+    require_not_demo(db)
     if not confirm:
         raise HTTPException(
             status_code=400,
@@ -499,6 +510,7 @@ def delete_position(
 
 @router.get("/snapshots/{snapshot_id}/concentration", response_model=ConcentrationOut)
 def get_concentration(snapshot_id: UUID, db: Session = Depends(get_db)) -> ConcentrationOut:
+    require_not_demo(db)
     """Herfindahl-Hirschman concentration index over this snapshot's
     positions' weight_pct — CLAUDE.md Rule 1, deterministic application
     code (app/services/calculations.py), never the LLM.
@@ -524,5 +536,7 @@ def get_portfolio_overview(db: Session = Depends(get_db)) -> PortfolioOverviewOu
     verdict/moat roll-up and a deterministic executive summary over the
     latest snapshot of each account (app/services/portfolio_overview.py).
     Database-only; never calls market data or an LLM."""
+    if is_demo_mode(db):
+        return demo_portfolio_overview()
     overview = build_overview(db)
     return PortfolioOverviewOut.model_validate(overview, from_attributes=True)

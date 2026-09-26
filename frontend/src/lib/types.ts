@@ -956,6 +956,13 @@ export interface SystemStatus {
   analysis: StatusItem[];
   counts: Record<string, number>;
   issues: string[];
+  demo_mode: boolean;
+}
+
+// --- Demo mode settings (2026-09-26) — backend/app/api/settings.py
+
+export interface DemoModeState {
+  demo_mode: boolean;
 }
 
 // --- Watchlist (F7) — backend/app/schemas/watchlist.py
