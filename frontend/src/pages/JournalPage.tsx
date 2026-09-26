@@ -43,7 +43,7 @@ export default function JournalPage() {
     ) ?? [];
 
   return (
-    <div className="mx-auto max-w-5xl px-8 py-8">
+    <div className="mx-auto max-w-5xl px-4 py-6 sm:px-8 sm:py-8">
       <PageHeader
         title="Decision journal"
         subtitle="Why you acted, what would prove you wrong, and how it turned out."
@@ -68,7 +68,7 @@ export default function JournalPage() {
         )}
 
         {entries && entries.length > 0 && (
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <StatTile label="Entries" value={entries.length} />
             <StatTile
               label="Price moved in your favour"

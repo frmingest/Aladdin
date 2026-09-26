@@ -31,7 +31,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="mx-auto max-w-3xl px-8 py-8">
+    <div className="mx-auto max-w-3xl px-4 py-6 sm:px-8 sm:py-8">
       <PageHeader title="Settings" subtitle="App-wide settings for this deployment." />
 
       <Card>

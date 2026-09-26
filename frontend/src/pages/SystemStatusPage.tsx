@@ -98,7 +98,7 @@ export default function SystemStatusPage() {
     : 0;
 
   return (
-    <div className="mx-auto max-w-5xl px-8 py-8">
+    <div className="mx-auto max-w-5xl px-4 py-6 sm:px-8 sm:py-8">
       <PageHeader
         title="System status"
         subtitle="Configuration, data freshness and recent failures. Nothing here calls an external service."

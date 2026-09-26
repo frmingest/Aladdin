@@ -41,7 +41,7 @@ export default function SectorPage() {
   if (!sector) return null;
 
   return (
-    <div className="mx-auto max-w-5xl px-8 py-8">
+    <div className="mx-auto max-w-5xl px-4 py-6 sm:px-8 sm:py-8">
       <Link to="/macro" className="mb-4 inline-block text-sm text-ink-muted hover:text-ink">
         ← Macro
       </Link>

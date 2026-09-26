@@ -493,6 +493,7 @@ function ReturnsCard({
             sheet.
           </p>
         ) : (
+          <div className="overflow-x-auto">
           <table className="mt-3 w-full text-sm">
             <thead>
               <tr className="text-left text-xs uppercase tracking-wide text-ink-muted">
@@ -532,6 +533,7 @@ function ReturnsCard({
               ))}
             </tbody>
           </table>
+          </div>
         )
       ) : (
         <div className="mt-3 space-y-2">

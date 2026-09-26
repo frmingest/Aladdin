@@ -441,6 +441,7 @@ function DocumentsPanel({
       )}
 
       {documents !== null && documents.length > 0 && (
+      <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-xs uppercase tracking-wide text-ink-muted">
@@ -485,6 +486,7 @@ function DocumentsPanel({
             ))}
           </tbody>
         </table>
+        </div>
       )}
 
       <div className="mt-4 flex items-center justify-between gap-4 border-t border-border-subtle pt-4">
@@ -578,7 +580,7 @@ export default function HoldingDetailPage() {
 
   if (error && !holding) {
     return (
-      <div className="mx-auto max-w-5xl px-8 py-8">
+      <div className="mx-auto max-w-5xl px-4 py-6 sm:px-8 sm:py-8">
         <p className="text-sm text-negative">{error}</p>
         <Link to="/holdings" className="mt-4 inline-block text-sm text-accent hover:text-accent-hover">
           ← Back to holdings
@@ -589,7 +591,7 @@ export default function HoldingDetailPage() {
 
   if (!holding) {
     return (
-      <div className="mx-auto max-w-5xl px-8 py-8">
+      <div className="mx-auto max-w-5xl px-4 py-6 sm:px-8 sm:py-8">
         <p className="text-sm text-ink-muted">Loading…</p>
       </div>
     );
@@ -600,7 +602,7 @@ export default function HoldingDetailPage() {
   const isFund = FUND_TYPES.has(holding.asset_class_raw);
 
   return (
-    <div className="mx-auto max-w-5xl px-8 py-8">
+    <div className="mx-auto max-w-5xl px-4 py-6 sm:px-8 sm:py-8">
       <Link to="/holdings" className="mb-4 inline-block text-sm text-ink-muted hover:text-ink">
         ← Holdings
       </Link>

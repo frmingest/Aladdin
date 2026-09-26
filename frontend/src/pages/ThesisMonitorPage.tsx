@@ -82,7 +82,7 @@ export default function ThesisMonitorPage() {
   })).filter((g) => g.rows.length > 0);
 
   return (
-    <div className="mx-auto max-w-6xl px-8 py-8">
+    <div className="mx-auto max-w-6xl px-4 py-6 sm:px-8 sm:py-8">
       <PageHeader
         title="Thesis"
         subtitle="Is my thesis still intact? Tripwires, what's changed since the last analysis, and the verdict timeline — for every holding you own or watch."

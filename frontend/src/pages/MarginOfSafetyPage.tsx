@@ -147,7 +147,7 @@ export default function MarginOfSafetyPage() {
   const totalValue = Number(board?.total_equity_value_nok ?? 0);
 
   return (
-    <div className="mx-auto max-w-6xl px-8 py-8">
+    <div className="mx-auto max-w-6xl px-4 py-6 sm:px-8 sm:py-8">
       <PageHeader
         title="Margin of safety"
         subtitle="Every stock you own, ranked by how far today's price sits below its DCF value."

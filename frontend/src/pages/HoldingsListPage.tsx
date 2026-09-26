@@ -326,7 +326,7 @@ export default function HoldingsListPage() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl px-8 py-8">
+    <div className="mx-auto max-w-5xl px-4 py-6 sm:px-8 sm:py-8">
       <PageHeader
         title="Holdings"
         subtitle="Every equity being tracked for the Buffett/Munger analysis. Hover a row and click Edit to fix its ticker, type, or sector."
@@ -355,6 +355,7 @@ export default function HoldingsListPage() {
 
       {holdings !== null && holdings.length > 0 && (
         <Card className="overflow-hidden !p-0">
+        <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-border-subtle text-left text-xs uppercase tracking-wide text-ink-muted">
@@ -382,6 +383,7 @@ export default function HoldingsListPage() {
               )}
             </tbody>
           </table>
+          </div>
         </Card>
       )}
     </div>

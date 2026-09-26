@@ -250,7 +250,7 @@ export default function PortfolioRiskPage() {
   };
 
   return (
-    <div className="mx-auto max-w-6xl px-8 py-8">
+    <div className="mx-auto max-w-6xl px-4 py-6 sm:px-8 sm:py-8">
       <PageHeader
         title="Portfolio risk"
         subtitle={

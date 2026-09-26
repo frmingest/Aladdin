@@ -183,7 +183,7 @@ export default function WatchlistPage() {
   const inZone = rows?.filter((r) => r.status === "buy_zone") ?? [];
 
   return (
-    <div className="mx-auto max-w-6xl px-8 py-8">
+    <div className="mx-auto max-w-6xl px-4 py-6 sm:px-8 sm:py-8">
       <PageHeader
         title="Watchlist"
         subtitle="Wonderful businesses you'd like to own at a fair price. Flagged when the price reaches your buy-below level."

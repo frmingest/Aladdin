@@ -349,6 +349,7 @@ function AccountsPanel({
         </div>
       )}
       {accounts !== null && accounts.length > 0 && (
+        <div className="overflow-x-auto">
         <table className="mt-3 w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-border-subtle text-left text-xs uppercase tracking-wide text-ink-muted">
@@ -371,6 +372,7 @@ function AccountsPanel({
             ))}
           </tbody>
         </table>
+        </div>
       )}
     </Card>
   );
@@ -389,6 +391,7 @@ function PositionsTable({ positions }: { positions: PortfolioSnapshot["positions
     return <p className="px-5 pb-4 text-sm text-ink-muted">No positions in this snapshot.</p>;
   }
   return (
+    <div className="overflow-x-auto">
     <table className="w-full text-sm">
       <thead>
         <tr className="text-left text-xs uppercase tracking-wide text-ink-muted">
@@ -436,6 +439,7 @@ function PositionsTable({ positions }: { positions: PortfolioSnapshot["positions
         })}
       </tbody>
     </table>
+    </div>
   );
 }
 
@@ -577,6 +581,7 @@ function SnapshotsPanel({
         </div>
       )}
       {snapshots !== null && snapshots.length > 0 && (
+        <div className="overflow-x-auto">
         <table className="mt-3 w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-border-subtle text-left text-xs uppercase tracking-wide text-ink-muted">
@@ -600,6 +605,7 @@ function SnapshotsPanel({
             ))}
           </tbody>
         </table>
+        </div>
       )}
     </Card>
   );
@@ -756,7 +762,7 @@ export default function PortfolioPage() {
   const totalValue = (snapshots ?? []).reduce((sum, s) => sum + s.position_count, 0);
 
   return (
-    <div className="mx-auto max-w-5xl px-8 py-8">
+    <div className="mx-auto max-w-5xl px-4 py-6 sm:px-8 sm:py-8">
       <PageHeader
         title="Portfolio"
         subtitle={
