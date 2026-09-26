@@ -37,6 +37,7 @@ from app.models.market import (
 )
 from app.models.portfolio import PortfolioSnapshot
 from app.models.research import ResearchRun, ResearchRunStatus
+from app.models.thesis import ThesisTripwire
 from app.providers.budget import DailyBudgetGuard
 
 OK, WARN, ERROR, OFF = "ok", "warn", "error", "off"
@@ -362,6 +363,22 @@ def build_system_status(
             " · ".join(p for p in (beat.model_name, f"last seen {seen.isoformat()}", beat.detail or "") if p)))
     status.analysis.append(StatusItem(
         "queued_local", "Queued for your PC", OK, str(queued_local)))
+
+    # Sprint 11: reads the tripwires' state as last evaluated (whenever a
+    # thesis page was last opened), not a fresh evaluation — this endpoint
+    # reads configuration and the database only, same as everywhere else on
+    # this page.
+    active_tripwires = db.scalar(
+        select(func.count(ThesisTripwire.id)).where(ThesisTripwire.active.is_(True))
+    ) or 0
+    firing_tripwires = db.scalar(
+        select(func.count(ThesisTripwire.id)).where(
+            ThesisTripwire.active.is_(True), ThesisTripwire.fired_at.is_not(None)
+        )
+    ) or 0
+    status.analysis.append(StatusItem(
+        "thesis_tripwires", "Thesis tripwires", WARN if firing_tripwires else OK,
+        f"{active_tripwires} active, {firing_tripwires} firing"))
 
     status.counts = {
         "holdings": db.scalar(select(func.count(Holding.id))) or 0,

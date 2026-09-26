@@ -146,6 +146,31 @@ def test_document_a_snapshot_was_imported_from_cannot_be_deleted(client, db_sess
     assert "snapshot" in response.json()["detail"]
 
 
+def test_holding_documents_delete_keeps_tripwires_but_cascade_delete_removes_them(client, db_session):
+    """Sprint 11: a tripwire belongs to the holding, not its financial
+    data — the "delete this holding's documents, then re-upload" flow must
+    not sweep it up, but actually deleting the holding must."""
+    from app.models.thesis import ThesisTripwire
+
+    holding_id = _holding(client)
+    _upload(client, holding_id)
+    tripwire = client.post(
+        f"/thesis/holdings/{holding_id}/tripwires",
+        json={"metric": "share_price", "operator": "below", "threshold": "10"},
+    )
+    assert tripwire.status_code == 201, tripwire.text
+    tripwire_id = tripwire.json()["id"]
+
+    response = client.delete(f"/holdings/{holding_id}/documents", params={"confirm": "true"})
+    assert response.status_code == 200, response.text
+    assert response.json().get("tripwires", 0) == 0
+    assert client.get(f"/thesis/holdings/{holding_id}").json()["tripwires"][0]["id"] == tripwire_id
+
+    cascade = client.delete(f"/holdings/{holding_id}", params={"confirm": "true", "cascade": "true"})
+    assert cascade.status_code == 204, cascade.text
+    assert db_session.query(ThesisTripwire).filter_by(id=uuid.UUID(tripwire_id)).first() is None
+
+
 def test_wipe_all_holdings_requires_an_empty_portfolio_then_clears_everything(client, db_session):
     first = _holding(client, "VAR.OL")
     _holding(client, "EQNR.OL")

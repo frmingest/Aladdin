@@ -197,6 +197,44 @@ def test_fewer_than_two_periods_makes_dcf_unavailable():
     assert any("fewer than two periods" in reason for reason in result.unavailable_reasons)
 
 
+def test_fewer_than_two_periods_still_fetches_and_shows_the_price():
+    """2026-09-26 fix: a holding with too little data for a DCF used to
+    skip the price fetch entirely, so the margin-of-safety board and
+    watchlist showed "no price" for a company that in fact has a
+    perfectly good quote (see Sprint 11's known-issue fix)."""
+    with _session() as db:
+        holding = Holding(ticker="AAPL", name="Apple Inc.", trading_currency="USD")
+        document = _document(holding)
+        db.add_all([holding, document])
+        db.flush()
+        _add_period(db, document, holding, "FY2025", net_income="100", d_and_a="25", capex="15", shares="10")
+        db.commit()
+
+        market_provider = _FakeMarketDataProvider(price=_price_point())
+        rate_provider = _FakeRiskFreeRateProvider(rate=_risk_free_rate())
+        result = compute_holding_valuation(db, holding, market_provider, rate_provider)
+
+    assert result.dcf is None
+    assert result.current_price_per_share == D("200")
+    assert result.valuation_currency == "USD"
+
+
+def test_no_financial_line_items_at_all_still_fetches_price_in_trading_currency():
+    with _session() as db:
+        holding = Holding(ticker="AAPL", name="Apple Inc.", trading_currency="USD")
+        db.add(holding)
+        db.flush()
+        db.commit()
+
+        market_provider = _FakeMarketDataProvider(price=_price_point())
+        rate_provider = _FakeRiskFreeRateProvider(rate=_risk_free_rate())
+        result = compute_holding_valuation(db, holding, market_provider, rate_provider)
+
+    assert result.dcf is None
+    assert result.valuation_currency == "USD"
+    assert result.current_price_per_share == D("200")
+
+
 def test_multiples_are_still_computed_even_when_dcf_is_unavailable():
     with _session() as db:
         holding = Holding(ticker="AAPL", name="Apple Inc.", trading_currency="USD")

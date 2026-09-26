@@ -102,6 +102,17 @@ def _owner_earnings_history(db: Session, holding: Holding) -> list[tuple[int, st
     return history
 
 
+def _latest_financial_period(db: Session, holding: Holding) -> str | None:
+    """The most recent period with ANY financial line item on file,
+    regardless of whether it has a complete owner-earnings input set —
+    used only to resolve a currency to fetch/convert the live price into
+    when there isn't (yet) enough data to run a DCF. None when the holding
+    has no financial line items at all."""
+    periods = set(db.scalars(select(FinancialLineItem.period).where(FinancialLineItem.holding_id == holding.id)))
+    parseable = sorted((year, period) for period in periods if (year := extract_year(period)) is not None)
+    return parseable[-1][1] if parseable else None
+
+
 def _valuation_currency(db: Session, holding: Holding, latest_period: str) -> str:
     stmt = select(FinancialLineItem.currency).where(
         FinancialLineItem.holding_id == holding.id, FinancialLineItem.period == latest_period
@@ -145,6 +156,23 @@ def compute_holding_valuation(
         db, holding, fx_fallback=_fx_fallback(db, market_data_provider, force_refresh)
     )
 
+    # Resolve a currency and fetch/convert today's price *before* any of the
+    # DCF-specific early returns below (2026-09-26 fix: a holding with too
+    # little data for a DCF used to skip the price fetch entirely, so the
+    # margin-of-safety board and watchlist showed "no price" for a company
+    # that in fact has a perfectly good quote — they just can't be valued
+    # yet). `_latest_financial_period` falls back to any period on file
+    # (not just one with a complete owner-earnings input set), and to the
+    # holding's trading currency when there's no financial data at all.
+    latest_any_period = _latest_financial_period(db, holding)
+    valuation_currency = (
+        _valuation_currency(db, holding, latest_any_period) if latest_any_period else holding.trading_currency
+    )
+    result.valuation_currency = valuation_currency
+    result.current_price_per_share = _current_price_in_valuation_currency(
+        db, holding, valuation_currency, market_data_provider, result, force_refresh=force_refresh
+    )
+
     history = _owner_earnings_history(db, holding)
     if len(history) < 2:
         result.unavailable_reasons.append(
@@ -161,8 +189,18 @@ def compute_holding_valuation(
         return result
     result.base_growth_rate = base_growth_rate
 
-    valuation_currency = _valuation_currency(db, holding, latest_period)
-    result.valuation_currency = valuation_currency
+    # The owner-earnings history's own latest period can differ from the
+    # "any period" one above (e.g. the newest filing lacks a complete
+    # owner-earnings input set yet) — recompute and only refetch the price
+    # if the currency actually changes, so the normal (DCF-succeeds) case
+    # still does exactly one price fetch, as before this fix.
+    owner_earnings_currency = _valuation_currency(db, holding, latest_period)
+    if owner_earnings_currency != valuation_currency:
+        valuation_currency = owner_earnings_currency
+        result.valuation_currency = valuation_currency
+        result.current_price_per_share = _current_price_in_valuation_currency(
+            db, holding, valuation_currency, market_data_provider, result, force_refresh=force_refresh
+        )
 
     # Current share count (manual > SEC cover page > Yahoo > filing fact),
     # app/services/market_data/shares.py — the same count the metrics
@@ -213,10 +251,9 @@ def compute_holding_valuation(
         risk_free_rate_pct=rate_snapshot.value.rate, beta=beta, equity_risk_premium=equity_risk_premium
     )
 
-    current_price_per_share = _current_price_in_valuation_currency(
-        db, holding, valuation_currency, market_data_provider, result, force_refresh=force_refresh
-    )
-    result.current_price_per_share = current_price_per_share
+    # Already fetched above (in `valuation_currency`, refetched only if the
+    # owner-earnings period's currency differs from the "any period" one).
+    current_price_per_share = result.current_price_per_share
 
     try:
         result.dcf = dcf_scenarios(

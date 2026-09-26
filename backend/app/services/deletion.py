@@ -40,6 +40,7 @@ from app.models.legacy_analysis import (
 from app.models.market import MarketObservation, ShareCountObservation
 from app.models.portfolio import PortfolioPosition, PortfolioSnapshot
 from app.models.research import ResearchItem, ResearchRun
+from app.models.thesis import ThesisTripwire
 from app.models.watchlist import WatchlistItem
 from app.providers.object_storage import ObjectStorageProvider
 
@@ -66,6 +67,7 @@ class DeletionCounts:
     legacy_holding_analyses: int = 0
     holdings: int = 0
     watchlist_items: int = 0
+    tripwires: int = 0
     journal_entries_unlinked: int = 0
     fund_rows: int = 0
     fund_links_removed: int = 0
@@ -228,9 +230,14 @@ def _purge_holding_rows(db: Session, holding_ids: list[uuid.UUID], counts: Delet
 
 
 def detach_holding_rows(db: Session, holding_ids: list[uuid.UUID], counts: DeletionCounts) -> None:
-    """Only when the holding row itself goes: its watchlist entry is
-    removed, and its decision-journal entries are unlinked (holding_id ->
-    NULL) but kept, since they are your own record. No commit."""
+    """Only when the holding row itself goes: its watchlist entry and
+    thesis tripwires are removed (Sprint 11: a tripwire without a holding
+    means nothing — unlike financial facts, it isn't something you'd want
+    to keep across a "delete this holding's documents, then re-upload"
+    cycle, which calls `_purge_holding_rows` with `keep_holding=True` and
+    never reaches here), and its decision-journal entries are unlinked
+    (holding_id -> NULL) but kept, since they are your own record. No
+    commit."""
     # Another fund's holding row pointing at this company keeps its row
     # (it is that fund's figure) but loses the link.
     counts.fund_links_removed += (
@@ -240,6 +247,9 @@ def detach_holding_rows(db: Session, holding_ids: list[uuid.UUID], counts: Delet
     )
     counts.watchlist_items += (
         db.query(WatchlistItem).filter(WatchlistItem.holding_id.in_(holding_ids)).delete(synchronize_session=False)
+    )
+    counts.tripwires += (
+        db.query(ThesisTripwire).filter(ThesisTripwire.holding_id.in_(holding_ids)).delete(synchronize_session=False)
     )
     counts.journal_entries_unlinked += (
         db.query(DecisionJournalEntry)

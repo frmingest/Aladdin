@@ -34,6 +34,7 @@ from app.models.market import (
 )
 from app.models.portfolio import PortfolioPosition, PortfolioSnapshot
 from app.models.research import ResearchItem, ResearchRun
+from app.models.thesis import ThesisTripwire
 from app.models.watchlist import WatchlistItem
 
 __all__ = [
@@ -66,5 +67,6 @@ __all__ = [
     "ResearchRun",
     "RiskFreeRateObservation",
     "ShareCountObservation",
+    "ThesisTripwire",
     "WatchlistItem",
 ]
