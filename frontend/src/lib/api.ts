@@ -49,6 +49,7 @@ import type {
   MarginOfSafetyBoard,
   PortfolioImportResponse,
   PortfolioOverview,
+  PortfolioPerformance,
   PortfolioRisk,
   PortfolioSnapshot,
   PortfolioSnapshotSummary,
@@ -400,4 +401,17 @@ export const api = {
   // correlated-cluster flags, stress scenarios and macro regime.
   getPortfolioRisk: () => request<PortfolioRisk>("/risk/portfolio"),
   refreshPortfolioRisk: () => request<PortfolioRisk>("/risk/portfolio/refresh", { method: "POST" }),
+
+  // Portfolio performance (Sprint 13) — backend/app/api/performance.py.
+  // Daily value history + benchmark comparison, reindexed from today's
+  // positions (see the service module's docstring for the method).
+  getPortfolioPerformance: (opts?: { lookbackDays?: number; benchmark?: string }) =>
+    request<PortfolioPerformance>("/performance/portfolio", {
+      query: { lookback_days: opts?.lookbackDays?.toString(), benchmark: opts?.benchmark },
+    }),
+  refreshPortfolioPerformance: (opts?: { lookbackDays?: number; benchmark?: string }) =>
+    request<PortfolioPerformance>("/performance/portfolio/refresh", {
+      method: "POST",
+      query: { lookback_days: opts?.lookbackDays?.toString(), benchmark: opts?.benchmark },
+    }),
 };

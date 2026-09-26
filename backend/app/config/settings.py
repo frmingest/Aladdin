@@ -150,6 +150,16 @@ class Settings(BaseSettings):
     # app/services/risk/stress.py's docstring for the exact scaling).
     risk_stress_shock_std_devs: str = "2"
 
+    # --- Portfolio performance (Sprint 13, 2026-09-27, app/services/performance/) ---
+    # Reuses PriceHistoryObservation (Sprint 12) for tickers, FX pairs and the
+    # benchmark index alike — no dedicated staleness setting needed here.
+    performance_lookback_days_default: int = 365
+    performance_max_lookback_days: int = 730  # yfinance daily history tops out around 2y in practice
+    # Oslo Børs Benchmark Index (yfinance ticker) — a reasonable default for a
+    # NOK-denominated, largely Oslo-listed portfolio. Override per-request via
+    # GET /performance/portfolio?benchmark=... (e.g. "^GSPC" for the S&P 500).
+    performance_default_benchmark_ticker: str = "OSEBX.OL"
+
     # --- Numeric macro data (2026-09-24, app/services/macro/) ---
     # Norges Bank + SSB are keyless; FRED reuses fred_api_key above.
     # "live" | "none" ("none" = no fetching; stored values are still shown).

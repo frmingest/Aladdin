@@ -200,6 +200,26 @@ function PortfolioRiskLinkCard() {
   );
 }
 
+/** Sprint 13 — same reasoning as PortfolioRiskLinkCard: a year of daily
+ * price history per holding is heavier than the rest of this dashboard. */
+function PerformanceLinkCard() {
+  return (
+    <Card>
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h2 className="text-sm font-semibold text-ink">Performance</h2>
+          <p className="mt-0.5 text-xs text-ink-muted">
+            Daily portfolio value and a benchmark comparison, reindexed from today's positions.
+          </p>
+        </div>
+        <Link to="/performance" className="shrink-0 text-xs font-medium text-accent hover:text-accent-hover">
+          Open →
+        </Link>
+      </div>
+    </Card>
+  );
+}
+
 function SummaryCard({ points }: { points: SummaryPoint[] }) {
   return (
     <Card>
@@ -384,6 +404,8 @@ export default function DashboardPage() {
           <ThesisCheckCard rows={thesisRows} />
 
           <PortfolioRiskLinkCard />
+
+          <PerformanceLinkCard />
 
           {macro && macro.indicators.some((i) => i.value !== null) && (
             <Card>

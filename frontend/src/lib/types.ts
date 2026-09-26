@@ -1493,3 +1493,41 @@ export interface PortfolioRisk {
   regime: Regime;
   price_history_notes: string[];
 }
+
+// Sprint 13 (2026-09-27) — GET /performance/portfolio
+// (backend/app/services/performance/portfolio_performance.py). See its
+// module docstring for the reindexing method and its stated approximation.
+export interface ExcludedPerformanceHolding {
+  ticker: string;
+  name: string;
+  reason: string;
+}
+
+export interface DailyValue {
+  on: string;
+  portfolio_value_nok: string;
+  partial: boolean;
+  portfolio_return_pct: string | null;
+  daily_pnl_nok: string | null;
+  benchmark_return_pct: string | null;
+}
+
+export interface PortfolioPerformance {
+  as_of: string | null;
+  lookback_days: number;
+  equity_value_nok: string;
+  included_value_nok: string;
+  covered_pct: string | null;
+  full_coverage_from: string | null;
+  starting_value_nok: string | null;
+  ending_value_nok: string | null;
+  total_return_pct: string | null;
+  best_day: DailyValue | null;
+  worst_day: DailyValue | null;
+  benchmark_ticker: string;
+  benchmark_available: boolean;
+  benchmark_reason: string | null;
+  excluded: ExcludedPerformanceHolding[];
+  method_note: string;
+  series: DailyValue[];
+}
