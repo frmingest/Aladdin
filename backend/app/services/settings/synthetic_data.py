@@ -475,7 +475,7 @@ def demo_portfolio_overview() -> PortfolioOverviewOut:
         summary=[
             SummaryPointOut(tone="info", text=DEMO_NOTE),
             SummaryPointOut(
-                tone="neutral",
+                tone="info",
                 text="Fabricated 10-holding US large-cap demo portfolio — not real brokerage data.",
             ),
         ],
@@ -537,19 +537,33 @@ def demo_valuation(holding_id: uuid.UUID) -> HoldingValuationOut | None:
         assumptions_version="demo",
         unavailable_reasons=[],
         base_discount_rate=row["discount_rate"] / Decimal(100),
-        regime="neutral",
+        regime="baseline",
         regime_discount_rate_addon=Decimal("0.00"),
         regime_adjustments_version="demo",
     )
 
 
+def _demo_zone(price: Decimal, bear: Decimal, base: Decimal, bull: Decimal) -> str:
+    """Mirrors app/services/valuation/board.py's `_zone` exactly — the real
+    BoardZone values (below_bear/bear_to_base/base_to_bull/above_bull), not
+    a parallel vocabulary the frontend's ZONE_DOT lookup doesn't know."""
+    low, high = min(bear, bull), max(bear, bull)
+    if price < low:
+        return "below_bear"
+    if price <= base:
+        return "bear_to_base"
+    if price <= high:
+        return "base_to_bull"
+    return "above_bull"
+
+
 def demo_valuation_board() -> MarginOfSafetyBoardOut:
     rows: list[BoardRowOut] = []
-    zone_counts: dict[str, int] = {}
+    zone_counts: dict[str, int] = {"below_bear": 0, "bear_to_base": 0, "base_to_bull": 0, "above_bull": 0, "unavailable": 0}
     for r in sorted(_ROWS, key=lambda r: _margin(r["base"], r["price"]), reverse=True):
         margin_base = _margin(r["base"], r["price"])
         margin_bear = _margin(r["bear"], r["price"])
-        zone = "buy_zone" if margin_base >= Decimal(15) else "fair_value" if margin_base >= Decimal(0) else "expensive"
+        zone = _demo_zone(r["price"], r["bear"], r["base"], r["bull"])
         zone_counts[zone] = zone_counts.get(zone, 0) + 1
         rows.append(
             BoardRowOut(
@@ -558,7 +572,7 @@ def demo_valuation_board() -> MarginOfSafetyBoardOut:
                 price=r["price"], price_as_of=_NOW, bear=r["bear"], base=r["base"], bull=r["bull"],
                 margin_of_safety_base=margin_base, margin_of_safety_bear=margin_bear, zone=zone,
                 unavailable_reason=None, verdict_rating=r["verdict"], moat_rating=r["moat"],
-                analyzed_at=_NOW - timedelta(days=2), regime="neutral",
+                analyzed_at=_NOW - timedelta(days=2), regime="baseline",
                 regime_discount_rate_addon=Decimal("0.00"),
             )
         )
@@ -608,7 +622,7 @@ def demo_analysis_run(holding_id: uuid.UUID) -> EquityAnalysisRunOut | None:
     return EquityAnalysisRunOut(
         id=_other_id("run", row["ticker"]),
         holding_id=row["id"],
-        status="completed",
+        status="COMPLETED",
         schema_version="v1",
         blind_prompt_version="demo",
         reconciliation_prompt_version="demo",
@@ -678,8 +692,8 @@ def demo_thesis(holding_id: uuid.UUID) -> HoldingThesisOut | None:
         holding_id=row["id"],
         ticker=row["ticker"],
         name=row["name"],
-        status="on_track",
-        status_label="On track",
+        status="intact",
+        status_label="Intact",
         analyzed_at=_NOW - timedelta(days=2),
         change_reasons=[],
         tripwires=[],
@@ -709,8 +723,8 @@ def demo_thesis_monitor() -> MonitorOut:
     return MonitorOut(
         rows=[
             MonitorRowOut(
-                holding_id=r["id"], ticker=r["ticker"], name=r["name"], status="on_track",
-                status_label="On track", firing_count=0, change_reason_count=0,
+                holding_id=r["id"], ticker=r["ticker"], name=r["name"], status="intact",
+                status_label="Intact", firing_count=0, change_reason_count=0,
                 analyzed_at=_NOW - timedelta(days=2),
             )
             for r in sorted(_ROWS, key=lambda r: r["ticker"])
@@ -768,7 +782,7 @@ def demo_risk() -> PortfolioRiskOut:
             holdings=stress_holdings,
         ),
         regime=RegimeOut(
-            regime="neutral",
+            regime="baseline",
             home_market_series_included=True,
             curve_and_credit_are_us_only=True,
             explanation=DEMO_NOTE,
