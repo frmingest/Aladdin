@@ -46,6 +46,12 @@ import type {
   MacroIndicators,
   MacroRefreshResult,
   MacroResearch,
+  MetalHoldingRow,
+  MetalPriceHistory,
+  CoinSeries,
+  PreciousMetalHoldingCreateInput,
+  PreciousMetalHoldingUpdateInput,
+  PreciousMetalsOverview,
   MarginOfSafetyBoard,
   PortfolioImportResponse,
   PortfolioOverview,
@@ -414,4 +420,19 @@ export const api = {
       method: "POST",
       query: { lookback_days: opts?.lookbackDays?.toString(), benchmark: opts?.benchmark },
     }),
+
+  // Precious metals (2026-09-26) -- backend/app/api/precious_metals.py.
+  // Physical 1oz gold/silver coins, valued at gold-api.com spot in NOK.
+  getCoinSeries: () => request<CoinSeries[]>("/precious-metals/coin-series"),
+  getPreciousMetalsOverview: () => request<PreciousMetalsOverview>("/precious-metals/overview"),
+  refreshPreciousMetalsOverview: () =>
+    request<PreciousMetalsOverview>("/precious-metals/overview/refresh", { method: "POST" }),
+  getMetalPriceHistory: (metal: "gold" | "silver", days?: number) =>
+    request<MetalPriceHistory>(`/precious-metals/price-history/${metal}`, { query: { days: days?.toString() } }),
+  addMetalHolding: (input: PreciousMetalHoldingCreateInput) =>
+    request<MetalHoldingRow>("/precious-metals", { method: "POST", body: JSON.stringify(input) }),
+  updateMetalHolding: (id: string, input: PreciousMetalHoldingUpdateInput) =>
+    request<MetalHoldingRow>(`/precious-metals/${id}`, { method: "PATCH", body: JSON.stringify(input) }),
+  removeMetalHolding: (id: string) =>
+    request<void>(`/precious-metals/${id}`, { method: "DELETE" }),
 };

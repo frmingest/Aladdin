@@ -11,13 +11,13 @@ Quick-glance tracker. Detail for each item lives in its own linked doc; this pag
 | | |
 |---|---|
 | **Current phase** | Phase 11: the Buffett/Munger single-focus rebuild ([sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md)) |
-| **Sprints closed** | 0, 1, 2, 3, 4, 5, 5B, 6, 7, 8, 9, 10, 11, 12, **13** |
-| **In progress** | Nothing open. Next: pick another backlog item (3c) |
+| **Sprints closed** | 0, 1, 2, 3, 4, 5, 5B, 6, 7, 8, 9, 10, 11, 12, 13, 14 |
+| **In progress** | Nothing open in code. **Precious metals tracking (F15) built this session** (unplanned, Faiz's direct request) — see [doc](precious-metals-tracking-2026-09-26.md). Not yet committed |
 | **Live URLs** | Frontend: `https://exciting-gratitude-production-71b5.up.railway.app` · Backend: `https://aladdin-production-bd25.up.railway.app` — found 2026-09-26 (old backend URL in earlier notes, `aladdin-backend.up.railway.app`, was never provisioned — this is the real one) |
-| **Latest build** | Sprint 13: **pushed to `origin/main` — confirmed 2026-09-26** (`bd342c1`, docs sync commit on top of `ed9ea03`) |
+| **Latest build** | **Precious metals tracking (F15)** — this session, 2026-09-26 — backend + frontend, not yet committed. Before that: Sprint 14 (`b7a0398`), Sprint 13 pushed and confirmed (`bd342c1` on top of `ed9ea03`) |
 | **GitHub access** | Claude now has direct push/PR access to `frmingest/aladdin` (set up 2026-09-26, at Faiz's request) — no longer dependent on `E:\Aladdin` for git operations. Railway auto-deploys on every push to `main`, confirmed by Faiz |
 | **Migrations on real Postgres** | ✅ **Confirmed 2026-09-26.** `c7a1e9f3b2d5` and `a3f5c8d1e942` were already applied to production. Faiz ran a full downgrade→upgrade cycle twice against real Postgres from `E:\Aladdin\backend` — clean, no errors, ended back at head |
-| **Tests** | Sprint 13: 844/846 backend pass (11 new, same 2 of the 3 previously-noted pre-existing failures — `test_factory.py`'s LLM provider default, env-dependent). tsc/eslint/vitest(19)/build clean |
+| **Tests** | Precious metals: 863/865 backend pass (12 new, same 2 pre-existing `test_factory.py` failures). tsc/eslint/vitest(19)/build clean |
 | **Live-verified?** | ✅ **Yes — confirmed 2026-09-26.** Opened the live frontend and System status page: commit `ba4726b` (the latest push) is deployed, migration `a3f5c8d1e942` matches head, "no configuration problems found," dashboard renders real portfolio data (1 043 964 kr, 8 holdings). Two things need attention: **local PC worker offline** (last seen ~07:50 that morning) and **Gemini daily quota exhausted** (0/20 left) — see §4 |
 
 > ⚠️ **Correction found and fixed 2026-09-26:** this page previously said Sprint 11 was "written... as
@@ -90,6 +90,8 @@ Going through this list point by point with Faiz (started 2026-09-26).
 | F11 | **Thesis tracking** | Both | Tripwires checked by code, "what changed", verdict timeline, Thesis monitor | Sprint 11 | ✅ **Actually built and committed 2026-09-26** (`88e77e2`, `fbb2afe`) — see correction note in §1 |
 | F12 | **Portfolio risk & regime intelligence** | Both | Real correlation matrix, correlated-cluster flag, drawdown/stress scenarios, regime classification | Sprint 12 | ✅ Built and committed 2026-09-26 (`612bc5a`, `cab8272`) — [doc](portfolio-risk-regime-sprint12-2026-09-26.md) |
 | F13 | **Portfolio performance over time** | Both | Daily portfolio value history + benchmark comparison, reindexed from today's positions | Sprint 13 | ✅ Built, committed and **pushed, deployed, live-verified** 2026-09-26 — [doc](portfolio-performance-sprint13-2026-09-27.md) |
+| F14 | **Regime → DCF discount-rate wiring** | Both | Widens the DCF discount rate per macro regime, off by default | Sprint 14 | ✅ Built and pushed 2026-09-26 — [doc](regime-dcf-wiring-sprint14-2026-09-26.md) |
+| F15 | **Precious metals tracking** | Both | Physical 1oz gold/silver coins (top 15 series each), valued at gold-api.com spot in NOK, price-development chart | Unplanned | ✅ Built 2026-09-26, not yet committed — [doc](precious-metals-tracking-2026-09-26.md) |
 
 ### 3b. Sprint status
 
@@ -111,6 +113,8 @@ Going through this list point by point with Faiz (started 2026-09-26).
 | 11 | Thesis tracking over time (F11, decision 25) + price without a DCF | ✅ **Actually** built 2026-09-26 (`88e77e2` backend, `fbb2afe` frontend). Migration `c7a1e9f3b2d5` — **confirmed on real Postgres and live in prod, 2026-09-26** — [doc](thesis-tracking-sprint11-2026-09-26.md) |
 | 12 | Portfolio risk & regime intelligence (F12) | ✅ Built 2026-09-26 (`612bc5a` backend, `cab8272` frontend). Migration `a3f5c8d1e942` — **confirmed on real Postgres and live in prod, 2026-09-26** — [doc](portfolio-risk-regime-sprint12-2026-09-26.md) |
 | 13 | Portfolio performance over time (F13, backlog 3c) | ✅ Built 2026-09-27 (`ed9ea03`). No schema change — reuses Sprint 12's `PriceHistoryObservation` cache as-is — [doc](portfolio-performance-sprint13-2026-09-27.md). **Live in prod, confirmed 2026-09-26** (commit `ba4726b` on top) |
+| 14 | Regime → DCF discount-rate wiring (backlog 3c, Faiz's call) | ✅ Built and pushed 2026-09-26 (`b7a0398`). Off by default (`REGIME_ADJUSTED_DCF_ENABLED=false`). No schema change — [doc](regime-dcf-wiring-sprint14-2026-09-26.md) |
+| — | **Precious metals tracking (F15)** — physical gold/silver coin holdings, gold-api.com spot pricing, price-development chart | ✅ Built 2026-09-26, backend + frontend, not yet committed — [doc](precious-metals-tracking-2026-09-26.md) |
 | — | Unplanned, shipped 2026-09-23: F4 status page, F6 decision journal, F7 watchlist | ✅ Done |
 
 ### 3c. Backlog (unscheduled)
@@ -143,6 +147,7 @@ Going through this list point by point with Faiz (started 2026-09-26).
 | filings.xbrl.org (ESEF index) | Oslo filing history FY2020–FY2024, xBRL-JSON | ✅ Built 2026-09-25 (Sprint 10) |
 | yfinance share count · SEC `dei` shares | Shares outstanding for multiples + DCF | ✅ Built 2026-09-25 (Sprint 9) |
 | yfinance daily price history | Correlation + stress sizing (Sprint 12), cached in `price_history_observations` | ✅ Built 2026-09-26 (Sprint 12) |
+| gold-api.com | Gold/silver spot price (USD), free and keyless — no free history endpoint | ✅ Built 2026-09-26 (F15) |
 | Brønnøysundregistrene | Norwegian entity data and annual accounts | Nice to have |
 | VFF (vff.no) | Norwegian fund NAVs (Alfred Berg, Heimdal) | Needs a look |
 | World Bank / OECD / IMF, GDELT | Global macro, news sentiment | Low |
@@ -171,6 +176,8 @@ Detail: [free-market-data-research-providers-2026-09-21.md](free-market-data-res
 | ESEF notes are only block-tagged; shares outstanding rarely tagged | No per-share value from ESEF alone | — |
 | An umbrella fund report adds little excerpt text | The useful part is the holdings schedule | Holdings parser (backlog) |
 | Sprint 12's regime classifier is US-only for yield curve + credit spread | Norway's own rate/curve dynamics aren't reflected in those two legs (CPI does use Norway's series) | Needs a Norwegian data source (backlog) |
+| Precious metals price history has no backfill | Chart starts empty and grows one point/day (gold-api.com's history endpoint is paid) | Stated plainly in the UI; backlog if a free historical source turns up |
+| Precious metals valued at spot only, no numismatic premium | A coin dealer's actual buy/sell price differs from spot by a series-specific premium | Backlog — no free premium data source found yet |
 
 ---
 
@@ -178,6 +185,7 @@ Detail: [free-market-data-research-providers-2026-09-21.md](free-market-data-res
 
 | Date | Change | Summary | Detail |
 |---|---|---|---|
+| 2026-09-26 | **Precious metals tracking (F15) — physical gold/silver coins** | New feature, Faiz's direct request: track 1oz gold/silver coins from the top 15 popular series per metal (Maple Leaf, Krugerrand, Kangaroo, and more), valued at gold-api.com's free spot price converted to NOK. Own table (`PreciousMetalHolding`) — deliberately kept out of the equity-only `Holding` model and out of `PortfolioOverview`'s concentration math, same reasoning as Portfolio risk / Performance getting their own cards. No free historical-price endpoint exists, so the price-development chart accumulates one real point per day rather than backfilling or inventing data — stated plainly in the API's `method_note` and the chart's caption. New migration `a74ba6a059dd` (additive). New **Precious metals** page (add-coin form, holdings table with inline quantity edit, spot/value stat tiles, dual-axis gold/silver price chart), nav entry, dashboard link card. 12 new backend tests (863/865 total, same 2 pre-existing env-dependent failures), tsc/eslint/vitest(19)/build clean. Not yet committed | [doc](precious-metals-tracking-2026-09-26.md) |
 | 2026-09-26 | **Live-verified production for the first time this session** | Found the real Railway URLs (frontend `exciting-gratitude-production-71b5`, backend `aladdin-production-bd25` — the old documented backend URL was never provisioned). Opened the live app: Dashboard renders real portfolio data; System status confirms commit `ba4726b` deployed and migration `a3f5c8d1e942` at head, "no configuration problems found." Found two live issues: local PC worker offline since ~07:50, and Gemini daily quota exhausted (0/20) | — |
 | 2026-09-26 | **Confirmed both migrations on real Postgres** | Both `c7a1e9f3b2d5` and `a3f5c8d1e942` were found already applied to production Postgres (unexpected — not previously confirmed). Faiz ran a downgrade→upgrade cycle twice against real Supabase Postgres from `E:\Aladdin\backend` — clean, no errors, ended back at head. Note: this required pasting the live `DATABASE_URL` (with password) into chat, since neither the cloud session nor the linked-PC sandbox could reach Postgres' port directly (HTTPS-only egress in both) — flagged in §4 for credential rotation | — |
 | 2026-09-26 | **Corrected push status + set up direct GitHub access** | Re-checked `E:\Aladdin` directly (`git status`/`git log`, not the doc): repo is clean, `main` up to date with `origin/main` at `bd342c1` — Sprint 13 (and the docs-sync commit on top of it) was already pushed, contrary to what this page said. Railway auto-deploys on push (confirmed by Faiz). Also attached `frmingest/aladdin` to Claude's GitHub access directly (push scope) at Faiz's request, so future sessions don't need to route git operations through `E:\Aladdin` | — |

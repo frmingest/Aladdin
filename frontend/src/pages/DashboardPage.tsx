@@ -6,13 +6,14 @@ import type {
   AllocationSlice,
   MacroIndicators,
   MonitorRow,
+  OverviewPosition,
   PortfolioOverview,
   RatingSlice,
   SummaryPoint,
 } from "../lib/types";
 import { MacroHeadlineStrip } from "../components/MacroIndicatorsPanel";
 import { EQUITY_ANALYZABLE_TYPES, INSTRUMENT_TYPE_LABELS } from "../lib/types";
-import { Card, EmptyState, PageHeader, SectionTitle, StatTile, VerdictBadge } from "../components/ui";
+import { Card, EmptyState, PageHeader, SectionTitle, VerdictBadge } from "../components/ui";
 
 /** Sprint 5 dashboard, the app's home page. Everything comes from
  * GET /portfolio/overview (backend/app/services/portfolio_overview.py),
@@ -220,6 +221,126 @@ function PerformanceLinkCard() {
   );
 }
 
+/** Physical 1oz gold/silver coins (Faiz's request, 2026-09-26) -- valued at
+ * gold-api.com spot in NOK. Kept off the equity-only PortfolioOverview and
+ * given its own card, same reasoning as PortfolioRiskLinkCard above. */
+function PreciousMetalsLinkCard() {
+  return (
+    <Card>
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h2 className="text-sm font-semibold text-ink">Precious metals</h2>
+          <p className="mt-0.5 text-xs text-ink-muted">
+            Gold and silver coin holdings, valued at today's spot price, with a price-development chart.
+          </p>
+        </div>
+        <Link to="/precious-metals" className="shrink-0 text-xs font-medium text-accent hover:text-accent-hover">
+          Open →
+        </Link>
+      </div>
+    </Card>
+  );
+}
+
+/** Sprint 16 — a single "at a glance" card replacing the old 4-tile stat
+ * grid, borrowing the dribbble reference's hero-balance layout: one big
+ * headline number with supporting stats beside it, rather than four
+ * equal-weight boxes. Same underlying overview fields as before, just
+ * laid out with a clearer visual hierarchy. */
+function HeroCard({ overview }: { overview: PortfolioOverview }) {
+  const c = overview.concentration;
+  const coverage = overview.analyzed_equity_value_pct;
+  const coverageLow = coverage !== null && coverage !== undefined && Number(coverage) < 50;
+
+  return (
+    <Card className="!p-6">
+      <div className="flex flex-wrap items-end justify-between gap-x-10 gap-y-6">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-wider text-ink-faint">Portfolio value</p>
+          <p className="tabular mt-1.5 font-display text-4xl font-semibold leading-none tracking-tight text-ink">
+            {formatNok(overview.total_value_nok)}
+          </p>
+          <p className="mt-2 text-xs text-ink-faint">
+            {formatNok(overview.equity_value_nok)} in stocks and equity ETFs
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-x-8 gap-y-4">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wider text-ink-faint">Holdings</p>
+            <p className="tabular mt-1 text-lg font-semibold text-ink">{overview.holding_count}</p>
+            <p className="text-xs text-ink-faint">
+              {overview.position_count} position{overview.position_count === 1 ? "" : "s"} ·{" "}
+              {overview.accounts.length} account{overview.accounts.length === 1 ? "" : "s"}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wider text-ink-faint">Top 5 share</p>
+            <p className="tabular mt-1 text-lg font-semibold text-ink">{formatPct100(c.top5_pct)}</p>
+            <p className="text-xs text-ink-faint">
+              {c.effective_holdings
+                ? `Like ${Number(c.effective_holdings).toFixed(1)} equal positions`
+                : " "}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wider text-ink-faint">Analysis coverage</p>
+            <p className={`tabular mt-1 text-lg font-semibold ${coverageLow ? "text-caution" : "text-ink"}`}>
+              {formatPct100(coverage ?? null, 0)}
+            </p>
+            <p className="text-xs text-ink-faint">
+              {overview.analyzed_equity_count} of {overview.equity_count} equities
+            </p>
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+/** Sprint 16 — a row of top-holding cards (name, ticker, value, verdict),
+ * the dribbble reference's "portfolio card strip" pattern adapted to what
+ * Aladdin actually tracks: weight and Buffett/Munger verdict rather than
+ * a fabricated intraday price move (the dashboard deliberately has no
+ * live price feed — see the module docstring above). Purely a different
+ * view of PositionsCard's own data, so it stays in sync with it for free. */
+function HoldingCardsRow({ positions }: { positions: OverviewPosition[] }) {
+  const top = [...positions]
+    .sort((a, b) => Number(b.weight_pct ?? 0) - Number(a.weight_pct ?? 0))
+    .slice(0, 4);
+  if (top.length === 0) return null;
+
+  return (
+    <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      {top.map((p) => (
+        <Link key={p.holding_id} to={`/holdings/${p.holding_id}`}>
+          <Card className="h-full transition-colors hover:border-accent/50">
+            <div className="flex items-center gap-3">
+              <span
+                aria-hidden
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent-subtle font-display text-sm font-semibold text-accent"
+              >
+                {p.name.trim().slice(0, 1).toUpperCase()}
+              </span>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-ink">{p.name}</p>
+                <p className="truncate text-xs text-ink-faint">{p.ticker}</p>
+              </div>
+            </div>
+            <div className="mt-3 flex items-end justify-between gap-2">
+              <span className="tabular text-base font-semibold text-ink">{formatNok(p.value_nok)}</span>
+              {EQUITY_ANALYZABLE_TYPES.has(p.instrument_type) ? (
+                <VerdictBadge rating={p.verdict_rating} />
+              ) : (
+                <span className="tabular text-xs text-ink-faint">{formatPct100(p.weight_pct)}</span>
+              )}
+            </div>
+          </Card>
+        </Link>
+      ))}
+    </div>
+  );
+}
+
 function SummaryCard({ points }: { points: SummaryPoint[] }) {
   return (
     <Card>
@@ -340,9 +461,6 @@ export default function DashboardPage() {
     api.getThesisMonitor().then((m) => setThesisRows(m.rows)).catch(() => setThesisRows([]));
   }, []);
 
-  const c = overview?.concentration;
-  const coverage = overview?.analyzed_equity_value_pct;
-
   return (
     <div className="mx-auto max-w-6xl px-8 py-8">
       <PageHeader
@@ -369,35 +487,9 @@ export default function DashboardPage() {
 
       {overview && overview.as_of !== null && (
         <div className="space-y-6">
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <StatTile
-              label="Portfolio value"
-              value={formatNok(overview.total_value_nok)}
-              hint={`${formatNok(overview.equity_value_nok)} in stocks and equity ETFs`}
-            />
-            <StatTile
-              label="Holdings"
-              value={overview.holding_count}
-              hint={`${overview.position_count} positions in ${overview.accounts.length} account${
-                overview.accounts.length === 1 ? "" : "s"
-              }`}
-            />
-            <StatTile
-              label="Top 5 share"
-              value={formatPct100(c?.top5_pct ?? null)}
-              hint={
-                c?.effective_holdings
-                  ? `Like ${Number(c.effective_holdings).toFixed(1)} equal positions (HHI ${Math.round(Number(c.hhi))})`
-                  : undefined
-              }
-            />
-            <StatTile
-              label="Analysis coverage"
-              value={formatPct100(coverage ?? null, 0)}
-              tone={coverage !== null && coverage !== undefined && Number(coverage) < 50 ? "text-caution" : "text-ink"}
-              hint={`${overview.analyzed_equity_count} of ${overview.equity_count} equities, by value`}
-            />
-          </div>
+          <HeroCard overview={overview} />
+
+          <HoldingCardsRow positions={overview.positions} />
 
           {overview.summary.length > 0 && <SummaryCard points={overview.summary} />}
 
@@ -406,6 +498,8 @@ export default function DashboardPage() {
           <PortfolioRiskLinkCard />
 
           <PerformanceLinkCard />
+
+          <PreciousMetalsLinkCard />
 
           {macro && macro.indicators.some((i) => i.value !== null) && (
             <Card>

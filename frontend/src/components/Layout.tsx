@@ -82,6 +82,7 @@ const NAV_ITEMS: { label: string; to: string; disabled?: boolean }[] = [
   { label: "Thesis", to: "/thesis" },
   { label: "Portfolio risk", to: "/risk" },
   { label: "Performance", to: "/performance" },
+  { label: "Precious metals", to: "/precious-metals" },
 ];
 
 function HealthBadge() {

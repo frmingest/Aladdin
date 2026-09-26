@@ -12,6 +12,7 @@ import SectorPage from "./pages/SectorPage";
 import SystemStatusPage from "./pages/SystemStatusPage";
 import PerformancePage from "./pages/PerformancePage";
 import PortfolioRiskPage from "./pages/PortfolioRiskPage";
+import PreciousMetalsPage from "./pages/PreciousMetalsPage";
 import ThesisMonitorPage from "./pages/ThesisMonitorPage";
 import WatchlistPage from "./pages/WatchlistPage";
 
@@ -42,6 +43,7 @@ export default function App() {
         <Route path="/thesis" element={<ThesisMonitorPage />} />
         <Route path="/risk" element={<PortfolioRiskPage />} />
         <Route path="/performance" element={<PerformancePage />} />
+        <Route path="/precious-metals" element={<PreciousMetalsPage />} />
         <Route path="/journal" element={<JournalPage />} />
         <Route path="/analysis-queue" element={<AnalysisQueuePage />} />
         <Route path="/status" element={<SystemStatusPage />} />

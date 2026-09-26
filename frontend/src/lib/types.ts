@@ -1542,3 +1542,78 @@ export interface PortfolioPerformance {
   method_note: string;
   series: DailyValue[];
 }
+
+// Precious metals (2026-09-26) — GET/POST /precious-metals/* (backend/app/api/precious_metals.py).
+// Physical 1oz gold/silver coins, valued at gold-api.com spot converted to NOK. Not part of
+// PortfolioOverview's equity math (see the backend module's docstring) — its own dashboard card,
+// same pattern as Portfolio risk / Performance.
+export interface CoinSeries {
+  code: string;
+  name: string;
+  metal: "gold" | "silver";
+  country: string;
+  weight_oz: string;
+}
+
+export interface PreciousMetalHoldingCreateInput {
+  coin_series: string;
+  quantity: string;
+  purchase_date?: string | null;
+  purchase_price_nok?: string | null;
+  storage_location?: string | null;
+  notes?: string | null;
+}
+
+export interface PreciousMetalHoldingUpdateInput {
+  quantity?: string;
+  purchase_date?: string | null;
+  purchase_price_nok?: string | null;
+  clear_purchase_price?: boolean;
+  storage_location?: string | null;
+  clear_storage_location?: boolean;
+  notes?: string | null;
+  clear_notes?: boolean;
+}
+
+export interface MetalHoldingRow {
+  id: string;
+  coin_series: string;
+  coin_series_label: string;
+  metal: "gold" | "silver";
+  quantity: string;
+  purchase_date: string | null;
+  purchase_price_nok: string | null;
+  storage_location: string | null;
+  notes: string | null;
+  value_nok: string | null;
+  unrealized_pnl_nok: string | null;
+}
+
+export interface MetalSpot {
+  metal: "gold" | "silver";
+  available: boolean;
+  price_nok_per_oz: string | null;
+  price_usd_per_oz: string | null;
+  usd_nok_rate: string | null;
+  as_of: string | null;
+  reason: string | null;
+}
+
+export interface PreciousMetalsOverview {
+  as_of: string;
+  spots: MetalSpot[];
+  holdings: MetalHoldingRow[];
+  total_value_nok: string;
+  total_oz_by_metal: Record<string, string>;
+}
+
+export interface MetalPricePoint {
+  on: string;
+  price_nok: string;
+}
+
+export interface MetalPriceHistory {
+  metal: string;
+  points: MetalPricePoint[];
+  method_note: string;
+}

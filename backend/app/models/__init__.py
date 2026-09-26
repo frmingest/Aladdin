@@ -33,6 +33,7 @@ from app.models.market import (
     ShareCountObservation,
 )
 from app.models.portfolio import PortfolioPosition, PortfolioSnapshot
+from app.models.precious_metal import PreciousMetalHolding
 from app.models.research import ResearchItem, ResearchRun
 from app.models.risk import PriceHistoryObservation
 from app.models.thesis import ThesisTripwire
@@ -64,6 +65,7 @@ __all__ = [
     "MarketObservation",
     "PortfolioPosition",
     "PortfolioSnapshot",
+    "PreciousMetalHolding",
     "PriceHistoryObservation",
     "ResearchItem",
     "ResearchRun",

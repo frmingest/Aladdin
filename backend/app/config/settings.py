@@ -171,6 +171,18 @@ class Settings(BaseSettings):
     # GET /performance/portfolio?benchmark=... (e.g. "^GSPC" for the S&P 500).
     performance_default_benchmark_ticker: str = "OSEBX.OL"
 
+    # --- Precious metals (2026-09-26, app/services/precious_metals/) ---
+    # gold-api.com's current-price endpoint is free/keyless with no
+    # documented rate limit, but there's still no reason to hit it on
+    # every page load -- refreshed at most this often, same staleness
+    # discipline as every other live price in the app.
+    precious_metals_price_stale_after_hours: int = 6
+    # How much accumulated spot-price history to serve on the price chart.
+    # There is no backfill (gold-api.com's historical endpoint isn't free)
+    # -- this just caps how far back a request looks into what's been
+    # organically cached since the feature was turned on.
+    precious_metals_price_history_days_default: int = 365
+
     # --- Numeric macro data (2026-09-24, app/services/macro/) ---
     # Norges Bank + SSB are keyless; FRED reuses fred_api_key above.
     # "live" | "none" ("none" = no fetching; stored values are still shown).

@@ -26,6 +26,7 @@ from app.providers.budget import DailyBudgetGuard
 from app.providers.esef_index_provider import FilingsXbrlOrgProvider
 from app.providers.fred_risk_free_rate_provider import FredRiskFreeRateProvider
 from app.providers.gemini_research_provider import GeminiResearchProvider
+from app.providers.gold_api_provider import GoldApiProvider
 from app.providers.google_ai_studio_provider import GoogleAIStudioProvider
 from app.providers.macro_data_providers import (
     CompositeMacroDataProvider,
@@ -191,6 +192,14 @@ def get_market_data_provider_or_none() -> MarketDataProvider | None:
         return get_market_data_provider()
     except MarketDataUnavailableError:
         return None
+
+
+@lru_cache
+def get_metal_price_provider() -> MarketDataProvider:
+    """gold-api.com (2026-09-26, app/providers/gold_api_provider.py) —
+    the only free option, so unlike get_market_data_provider there's no
+    MARKET_DATA_PROVIDER-style choice to make yet."""
+    return GoldApiProvider()
 
 
 @lru_cache
