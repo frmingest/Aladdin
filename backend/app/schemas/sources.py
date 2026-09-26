@@ -18,6 +18,8 @@ class SourceEligibilityOut(BaseModel):
     newsweb_reason: str | None = None
     esef_index: bool = False
     esef_index_reason: str | None = None
+    newsweb_annual_report: bool = False
+    newsweb_annual_report_reason: str | None = None
 
 
 class EdgarFilingOut(BaseModel):
@@ -84,3 +86,24 @@ class AnnouncementsOut(BaseModel):
     as_of: datetime | None
     items: list[ResearchItemOut]
     reason: str | None = None
+
+
+class NewswebAnnualReportImportOut(BaseModel):
+    """A holding's annual report fetched straight from Newsweb (Sprint 15,
+    app/services/filings/newsweb_annual_report.py) — the ESEF .xhtml is
+    unzipped if needed and run through the same extractor an upload uses."""
+
+    holding_id: UUID
+    imported: bool  # False = never fetched this way for this holding
+    message_id: str | None = None
+    message_url: str | None = None
+    title: str | None = None
+    published_at: datetime | None = None
+    attachment_name: str | None = None
+    document_id: str | None = None
+    was_duplicate: bool = False
+    imported_at: datetime | None = None
+    facts_imported: int = 0
+    periods_imported: list[str] = []
+    metrics_by_period: dict[str, list[str]] = {}
+    warnings: list[str] = []

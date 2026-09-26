@@ -22,6 +22,7 @@ import type {
   DeletionResult,
   DocumentSummary,
   EdgarImport,
+  NewswebAnnualReportImport,
   EsefImport,
   FundDimension,
   FundExposureRowInput,
@@ -341,6 +342,12 @@ export const api = {
     request<HoldingAnnouncements>(`/sources/holdings/${holdingId}/announcements`),
   refreshAnnouncements: (holdingId: string) =>
     request<HoldingAnnouncements>(`/sources/holdings/${holdingId}/announcements/refresh`, {
+      method: "POST",
+    }),
+  getNewswebAnnualReportImport: (holdingId: string) =>
+    request<NewswebAnnualReportImport>(`/sources/holdings/${holdingId}/newsweb-annual-report`),
+  importNewswebAnnualReport: (holdingId: string) =>
+    request<NewswebAnnualReportImport>(`/sources/holdings/${holdingId}/newsweb-annual-report/import`, {
       method: "POST",
     }),
 

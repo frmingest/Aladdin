@@ -35,6 +35,7 @@ from app.providers.macro_data_providers import (
     SsbMacroProvider,
 )
 from app.providers.mistral_provider import MistralProvider
+from app.providers.newsweb_filing_provider import NewswebFilingProvider
 from app.providers.newsweb_provider import NewswebAnnouncementsProvider
 from app.providers.object_storage import (
     LocalObjectStorageProvider,
@@ -261,6 +262,21 @@ def get_announcements_provider_or_none() -> NewswebAnnouncementsProvider | None:
         return get_announcements_provider()
     except ResearchUnavailableError:
         return None
+
+
+def get_newsweb_filing_provider_or_none() -> NewswebFilingProvider | None:
+    """The Newsweb annual-report *filing* fetch (NEWSWEB_FILING_PROVIDER,
+    default "newsweb") — downloads and unzips the actual ESEF attachment,
+    unlike get_announcements_provider() above which only ever reads
+    metadata. None when switched off (the button is disabled, not a 500)."""
+    settings = get_settings()
+    if settings.newsweb_filing_provider != "newsweb":
+        return None
+    return NewswebFilingProvider(
+        lookback_days=settings.newsweb_filing_lookback_days,
+        timeout_seconds=settings.newsweb_filing_timeout_seconds,
+        max_download_bytes=settings.newsweb_filing_max_download_mb * 1024 * 1024,
+    )
 
 
 def get_fundamentals_provider_or_none() -> FundamentalsProvider | None:

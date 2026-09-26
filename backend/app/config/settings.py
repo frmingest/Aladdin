@@ -213,6 +213,14 @@ class Settings(BaseSettings):
     # How many of the most recent announcements go into the analysis
     # evidence packet (all are still stored and shown in the UI).
     announcements_in_evidence_packet: int = 15
+    # Newsweb annual-report *filing* fetch (Sprint 15, 2026-09-26):
+    # downloads the actual ESEF attachment (unzipping it if needed) and
+    # runs it through the same iXBRL extractor an upload uses, instead of
+    # only reading announcement metadata. Keyless, same host as above.
+    newsweb_filing_provider: str = "newsweb"  # "newsweb" | "none"
+    newsweb_filing_lookback_days: int = 730  # ~2 years, wide enough to always catch the latest annual report
+    newsweb_filing_timeout_seconds: float = 30.0
+    newsweb_filing_max_download_mb: int = 300  # the raw .zip/.xhtml attachment as downloaded
 
     # --- Analysis engine (Sprint 4, see app/services/analysis/) ---
     # Two-pass Buffett/Munger analysis: a blind pass (evidence only, no
