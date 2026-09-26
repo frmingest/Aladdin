@@ -32,10 +32,32 @@ import { FundFactsPanel } from "../components/FundFactsPanel";
 import { MarketMultiplesCard } from "../components/MarketMultiplesCard";
 import { DocumentFlagsNote } from "../components/DocumentFlagsNote";
 import { ResearchPanel } from "../components/ResearchPanel";
-import { SourcesPanel } from "../components/SourcesPanel";
+import { NewswebAnnualReportCard, SourcesPanel } from "../components/SourcesPanel";
 import { ValuationPanel } from "../components/ValuationPanel";
 import WatchButton from "../components/WatchButton";
 import JournalPanel from "../components/JournalPanel";
+import type { SourceEligibility } from "../lib/types";
+
+/** Surfaces the Newsweb annual-report fetch at the very top of the holding
+ * page (Faiz's ask, 2026-09-26: it was buried at the bottom inside
+ * "Primary sources" and hard to find right after opening a position).
+ * Renders nothing for holdings Newsweb doesn't cover (non-Oslo Børs). */
+function NewswebFetchHighlight({ holdingId, onImported }: { holdingId: string; onImported: () => void }) {
+  const [eligibility, setEligibility] = useState<SourceEligibility | null>(null);
+
+  useEffect(() => {
+    setEligibility(null);
+    api.getSourceEligibility(holdingId).then(setEligibility).catch(() => setEligibility(null));
+  }, [holdingId]);
+
+  if (!eligibility?.newsweb_annual_report) return null;
+
+  return (
+    <div className="mb-8">
+      <NewswebAnnualReportCard holdingId={holdingId} onImported={onImported} />
+    </div>
+  );
+}
 
 function MetricsPanel({ holdingId }: { holdingId: string }) {
   const [periods, setPeriods] = useState<string[] | null>(null);
@@ -631,6 +653,8 @@ export default function HoldingDetailPage() {
       )}
 
       {error && <p className="mb-4 text-sm text-negative">{error}</p>}
+
+      <NewswebFetchHighlight holdingId={id} onImported={() => setMetricsKey((k) => k + 1)} />
 
       <div className="mb-8">
         <h2 className="section-title">

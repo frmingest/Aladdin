@@ -246,7 +246,7 @@ function EsefHistoryCard({ holdingId, onImported }: { holdingId: string; onImpor
   );
 }
 
-function NewswebAnnualReportCard({ holdingId, onImported }: { holdingId: string; onImported: () => void }) {
+export function NewswebAnnualReportCard({ holdingId, onImported }: { holdingId: string; onImported: () => void }) {
   const [data, setData] = useState<NewswebAnnualReportImport | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -371,9 +371,9 @@ export function SourcesPanel({ holdingId, onFinancialsChanged }: { holdingId: st
   return (
     <div className="space-y-4">
       {eligibility.newsweb && <NewswebCard holdingId={holdingId} />}
-      {eligibility.newsweb_annual_report && (
-        <NewswebAnnualReportCard holdingId={holdingId} onImported={onFinancialsChanged} />
-      )}
+      {/* The Newsweb annual-report fetch itself is shown at the top of the
+          holding page (HoldingDetailPage) instead of here, so it's easy to
+          find right after opening a position — not repeated in this panel. */}
       {eligibility.esef_index && <EsefHistoryCard holdingId={holdingId} onImported={onFinancialsChanged} />}
       <EdgarCard holdingId={holdingId} hint={eligibility.sec_edgar_reason} onImported={onFinancialsChanged} />
     </div>

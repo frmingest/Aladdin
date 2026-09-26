@@ -71,3 +71,25 @@ and re-uploading it by hand.
   the real site.
 - If a company you track only publishes a PDF on Newsweb (no ESEF file), the button will say so
   plainly — that's expected, not a bug; upload the report by hand for those as before.
+
+## 7. Placement fix + watchlist confirmation (2026-09-26, after merge)
+
+Faiz's feedback after using it live: the "Fetch from Newsweb" card was buried at the bottom of a
+holding's page inside the collapsed **Primary sources** section — easy to miss right after opening a
+position.
+
+- **Moved to the top.** `NewswebAnnualReportCard` (now exported from `SourcesPanel.tsx`) renders in
+  its own section right after the page header in `HoldingDetailPage.tsx`, before "Buffett/Munger
+  analysis" — the first thing on the page for a Newsweb-eligible holding. It's gone from the bottom
+  Primary sources section so it isn't shown twice; the announcements/ESEF-history/EDGAR cards stay
+  there unchanged. Same eligibility check as before (`GET /sources/holdings/{id}` →
+  `newsweb_annual_report`), so non-Oslo holdings still show nothing extra.
+- **Confirmed it already works for watchlist items — no backend change needed.** A watched company is
+  a real row in the same `Holding` table (`POST /watchlist` in `backend/app/api/watchlist.py` creates
+  one with `ticker`/`trading_currency` set when it doesn't already exist), and Newsweb eligibility
+  (`newsweb_applies()` in `app/services/filings/eligibility.py`) reads only `ticker` and
+  `trading_currency` — nothing about portfolio ownership or position size. The fetch and import
+  endpoints key off `holding_id` alone. A watchlist row links to the exact same
+  `/holdings/{holding_id}` page an owned position uses, so the newly-relocated card appears there too.
+- Frontend-only. `tsc --noEmit`, `eslint`, and `vitest` (19/19) all clean; no backend tests affected
+  since no backend code changed.
