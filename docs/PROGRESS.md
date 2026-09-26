@@ -2,7 +2,7 @@
 
 Quick-glance tracker. Detail for each item lives in its own linked doc; this page stays short tables only.
 
-**Last updated:** 2026-09-26
+**Last updated:** 2026-09-27
 
 ---
 
@@ -11,16 +11,16 @@ Quick-glance tracker. Detail for each item lives in its own linked doc; this pag
 | | |
 |---|---|
 | **Current phase** | Phase 11: the Buffett/Munger single-focus rebuild ([sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md)) |
-| **Sprints closed** | 0, 1, 2, 3, 4, 5, 5B, 6, 7, 8, 9, 10, **11, 12** |
-| **In progress** | Nothing open. **Built today:** Sprint 11 — thesis tracking (rebuilt for real, see correction below), and Sprint 12 — portfolio risk & regime intelligence. Next: pick from the backlog (3c) |
-| **Latest build** | Sprint 11 + Sprint 12: **4 commits on `E:\Aladdin`, local only, not pushed** (`88e77e2`, `fbb2afe`, `612bc5a`, `cab8272`). `origin/main` is still Sprint 10 (`176721f`) |
-| **Tests** | Sprint 11: 797/800 backend pass (3 pre-existing failures, confirmed unrelated). Sprint 12: 832/835 backend pass (29 new, same 3 pre-existing failures). Both: tsc/eslint/vitest(19)/build clean, no new frontend tests (no component-test harness exists). **Neither migration was run against real Postgres** — the build sandbox had none; both were only verified structurally (single `alembic heads`) and up/down/up on SQLite |
+| **Sprints closed** | 0, 1, 2, 3, 4, 5, 5B, 6, 7, 8, 9, 10, 11, 12, **13** |
+| **In progress** | Nothing open. **Built today:** Sprint 13 — portfolio performance over time (backlog 3c). Sprint 11+12 confirmed pushed to `origin/main` this session (see below). Next: pick another backlog item (3c) |
+| **Latest build** | Sprint 13: **1 commit on `E:\Aladdin`, local only, not pushed** (`ed9ea03`). `origin/main` is now Sprint 12 (`cd944a6`) — Sprint 11+12 confirmed pushed this session (`git status` showed "up to date with origin/main" before Sprint 13 started) |
+| **Tests** | Sprint 13: 844/846 backend pass (11 new, same 2 of the 3 previously-noted pre-existing failures — `test_factory.py`'s LLM provider default, env-dependent). tsc/eslint/vitest(19)/build clean. **No schema change this sprint** — reuses Sprint 12's `PriceHistoryObservation` cache as-is, so there's no new migration to verify |
 | **Live-verified?** | ❌ Nothing checked live this session. Railway deploy status from 2026-09-25 stands: the documented URLs answered "not provisioned" |
 
-> ⚠️ **Correction found and fixed today:** this page previously said Sprint 11 was "written... as
+> ⚠️ **Correction found and fixed 2026-09-26:** this page previously said Sprint 11 was "written... as
 > uncommitted changes." That was false — nothing had actually been written to `E:\Aladdin`; the repo
 > was clean at Sprint 10 with no thesis code anywhere. Caught at the start of today's session,
-> confirmed by `git status`/`git log`, and rebuilt for real. See
+> confirmed by `git status`/`git log` that session, and rebuilt for real. See
 > [thesis-tracking-sprint11-2026-09-26.md](thesis-tracking-sprint11-2026-09-26.md) for the full
 > correction note. Going forward: don't trust a prior session's "built" claim without checking
 > `git status`/`git log` in the current session first (this is also now explicit in CLAUDE.md).
@@ -31,8 +31,9 @@ Quick-glance tracker. Detail for each item lives in its own linked doc; this pag
 
 | # | Action | Why |
 |---|---|---|
-| ★★ | **Commit review + push.** 4 new local commits on `E:\Aladdin` (Sprint 11 + 12) sit on top of Sprint 10. Review in GitHub Desktop, push, then redeploy | Nothing from Sprint 11 or 12 is on GitHub or Railway yet |
+| ★★ | **Commit review + push.** 5 new local commits on `E:\Aladdin` (Sprint 11, 12, 13) sit on top of what's pushed. Sprint 11+12 confirmed already pushed to `origin/main` this session (`cd944a6`) — Sprint 13 (`ed9ea03`) is the one still local. Review in GitHub Desktop, push, then redeploy | Nothing from Sprint 13 is on GitHub or Railway yet |
 | ★★ | **Run both new migrations against real Postgres**, in order: `c7a1e9f3b2d5` (thesis_tripwires) then `a3f5c8d1e942` (price_history_observations) — `alembic upgrade head`, `downgrade -1` ×2, `upgrade head` again. Only verified on SQLite so far (no Postgres in the build sandbox) | Same up/down/up rigor as every other migration, just not yet done for these two |
+| ★ | After deploy: open **Performance** in the nav. Check whether the reindexed value history looks right against what you remember, and whether OSEBX.OL is the benchmark you want (or a different/blended one) | First real use of Sprint 13 — [doc](portfolio-performance-sprint13-2026-09-27.md) §6 |
 | ★ | After deploy: open a holding with an analysis → **Thesis tracking** → **Make a tripwire** on 2–3 invalidation triggers; open **Thesis monitor**. Tell me which triggers pre-filled badly, and whether 180 days / 20% feel right | First real use of Sprint 11 — [doc](thesis-tracking-sprint11-2026-09-26.md) §8 |
 | ★ | After deploy: open **Portfolio risk** in the nav. Check the correlation matrix against holdings you'd expect to move together, look at any cluster flag, and check today's regime reading. Say if the \|r\|≥0.6 cluster threshold or the 2σ/20-day stress sizing feel too aggressive or too tame | First real use of Sprint 12 — [doc](portfolio-risk-regime-sprint12-2026-09-26.md) §5 |
 | ★ | **Which Railway URL is live?** `https://aladdin-backend.up.railway.app` returned "domain not provisioned" as of 2026-09-25. Check Railway → Settings → Networking | Nothing can be live-verified until the URL is known |
@@ -84,6 +85,7 @@ Quick-glance tracker. Detail for each item lives in its own linked doc; this pag
 | F9 | **Fund & ETF analysis** | Both | Fund facts, look-through, fee drag, fund-version analysis | Sprint 8 | ✅ Done 2026-09-24 |
 | F11 | **Thesis tracking** | Both | Tripwires checked by code, "what changed", verdict timeline, Thesis monitor | Sprint 11 | ✅ **Actually built and committed 2026-09-26** (`88e77e2`, `fbb2afe`) — see correction note in §1 |
 | F12 | **Portfolio risk & regime intelligence** | Both | Real correlation matrix, correlated-cluster flag, drawdown/stress scenarios, regime classification | Sprint 12 | ✅ Built and committed 2026-09-26 (`612bc5a`, `cab8272`) — [doc](portfolio-risk-regime-sprint12-2026-09-26.md) |
+| F13 | **Portfolio performance over time** | Both | Daily portfolio value history + benchmark comparison, reindexed from today's positions | Sprint 13 | ✅ Built and committed 2026-09-27 (`ed9ea03`) — [doc](portfolio-performance-sprint13-2026-09-27.md) |
 
 ### 3b. Sprint status
 
@@ -104,6 +106,7 @@ Quick-glance tracker. Detail for each item lives in its own linked doc; this pag
 | 10 | ESEF history import (layer D) + large `.xhtml` uploads | ✅ Built 2026-09-25 (`176721f`, pushed, not deployed) |
 | 11 | Thesis tracking over time (F11, decision 25) + price without a DCF | ✅ **Actually** built 2026-09-26 (`88e77e2` backend, `fbb2afe` frontend; **not pushed**). Migration `c7a1e9f3b2d5`, verified on SQLite only — [doc](thesis-tracking-sprint11-2026-09-26.md) |
 | 12 | Portfolio risk & regime intelligence (F12) | ✅ Built 2026-09-26 (`612bc5a` backend, `cab8272` frontend; **not pushed**). Migration `a3f5c8d1e942`, verified on SQLite only — [doc](portfolio-risk-regime-sprint12-2026-09-26.md) |
+| 13 | Portfolio performance over time (F13, backlog 3c) | ✅ Built 2026-09-27 (`ed9ea03`; **not pushed**). No schema change — reuses Sprint 12's `PriceHistoryObservation` cache as-is — [doc](portfolio-performance-sprint13-2026-09-27.md) |
 | — | Unplanned, shipped 2026-09-23: F4 status page, F6 decision journal, F7 watchlist | ✅ Done |
 
 ### 3c. Backlog (unscheduled)
@@ -112,7 +115,6 @@ Quick-glance tracker. Detail for each item lives in its own linked doc; this pag
 |---|---|
 | Share-count refresh from the PC worker | Yahoo may block Railway's datacenter IP; the worker (home IP) could refresh prices and share counts |
 | Operating margin from EBIT | When a filing tags EBIT but not operating income, operating margin stays empty |
-| Historical price/FX and performance | Daily P&L, benchmark comparison |
 | Alerts and notifications | Unblocked by Sprint 11 (tripwires store when they fired); needs a delivery channel (e-mail / push) |
 | Nightly tripwire check | The PC worker could check tripwires with fresh prices overnight (today: when a page opens) |
 | Qualitative thesis triggers | "Management changes" can't be a number; could be matched against Newsweb announcements |
@@ -168,6 +170,7 @@ Detail: [free-market-data-research-providers-2026-09-21.md](free-market-data-res
 
 | Date | Change | Summary | Detail |
 |---|---|---|---|
+| 2026-09-27 | **Sprint 13: portfolio performance over time (F13, backlog 3c)** | Confirmed at session start (via `git status`) that Sprint 11+12 were already pushed to `origin/main` (`cd944a6`) — corrected the stale "not pushed" claim. Then built daily portfolio value history + benchmark comparison: reindexes each holding's today's NOK value backward through its own price/FX history (today's positions held constant) — stated as an approximation, not a real past-transaction P&L, in every response's `method_note`. Reuses Sprint 12's `PriceHistoryObservation` cache as-is for tickers, FX pairs and the benchmark index alike — **no new table, no migration**. Days before every included holding has data are marked `partial` rather than truncating the series. New **Performance** page (cumulative-return chart vs. benchmark, stat tiles, coverage notes), nav entry, dashboard link card. Default benchmark OSEBX.OL. 11 new tests (844/846 backend total, 2 pre-existing unrelated failures), tsc/eslint/vitest/build clean. Committed locally (`ed9ea03`), **not pushed** | [doc](portfolio-performance-sprint13-2026-09-27.md) |
 | 2026-09-26 | **Sprint 12: portfolio risk & regime intelligence (F12)** | Real Pearson correlation matrix from actual fetched 1-year daily price history (not a sector proxy); correlated-cluster flag (\|r\|≥0.6 among the top-10 holdings by weight); portfolio + per-holding drawdown/stress scenarios (DCF bear price when available, else 2σ×√20-day historical volatility); regime classifier (baseline/stagflation/crisis) from US HY spread, US 10y-2y curve, US + Norway CPI, smoothed over a 3-month rolling average so one noisy print can't flip it — explicitly flagged as US-only for the curve/credit legs. New **Portfolio risk** page + dashboard card. Migration `a3f5c8d1e942` (additive, new `price_history_observations` cache table). 29 new backend tests (832/835 total, 3 pre-existing unrelated failures), tsc/eslint/vitest/build clean. Committed locally (`612bc5a`, `cab8272`), **not pushed**. Migration verified on SQLite only, not Postgres | [doc](portfolio-risk-regime-sprint12-2026-09-26.md) |
 | 2026-09-26 | **Sprint 11: thesis tracking, rebuilt for real (F11, decision 25)** | Found at session start that the previously "documented as built" Sprint 11 didn't exist in the repo at all (clean working tree at Sprint 10, no thesis code anywhere) — built it for real. Tripwires (metric·below/above·threshold, metrics from `services/metrics.py`, checked by code, never the LLM); "what changed since the analysis" (age≥180d, new figures/documents, notes edited, price move≥20%, price outside DCF range); verdict timeline from `equity_analysis_runs`; new **Thesis monitor** page, dashboard card, System status row; **Make a tripwire** pattern-matching (no LLM). Also fixed: price shown without a DCF ("No DCF yet" instead of "No price"). Migration `c7a1e9f3b2d5` (additive). 797/800 backend tests pass (3 pre-existing unrelated failures), tsc/eslint/vitest(19)/build clean, no new frontend tests (no component-test harness). Committed locally (`88e77e2`, `fbb2afe`), **not pushed**. Migration verified on SQLite only, not Postgres | [doc](thesis-tracking-sprint11-2026-09-26.md) |
 | 2026-09-25 | **Sprint 10: ESEF history import + large `.xhtml` uploads** | Base64 images/fonts stripped before storing and parsing; duplicate check on the original hash; iXBRL limit 80 → 250 MB. Earlier ESEF reports imported by LEI from filings.xbrl.org as xBRL-JSON. `GET/POST /sources/holdings/{id}/esef-index`, Primary sources card, System status row, evidence packet v7. 744 tests (19 new), 19 vitest (3 new). Committed | [doc](esef-history-import-large-uploads-sprint10-2026-09-25.md) |
