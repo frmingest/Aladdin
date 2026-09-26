@@ -1408,3 +1408,88 @@ export interface MonitorRow {
 export interface ThesisMonitor {
   rows: MonitorRow[];
 }
+
+// --- Portfolio risk (Sprint 12) — backend/app/api/risk.py -----------------
+
+export interface CorrelationPair {
+  ticker_a: string;
+  ticker_b: string;
+  correlation: string;
+  overlap_days: number;
+}
+
+export interface ExcludedTicker {
+  key: string;
+  reason: string;
+}
+
+export interface CorrelationMatrix {
+  lookback_days: number;
+  tickers: string[];
+  pairs: CorrelationPair[];
+  excluded: ExcludedTicker[];
+}
+
+export interface ClusterFlag {
+  tickers: string[];
+  names: string[];
+  correlation: string;
+  combined_weight_pct: string;
+}
+
+export type StressMethod = "dcf_bear" | "volatility" | "unavailable";
+
+export interface HoldingStress {
+  holding_id: string;
+  ticker: string;
+  name: string;
+  method: StressMethod;
+  value_nok: string;
+  weight_pct: string | null;
+  shock_pct: string | null;
+  contribution_nok: string | null;
+  reason: string | null;
+}
+
+export interface StressScenario {
+  std_devs: string;
+  horizon_note: string;
+  portfolio_shock_pct: string | null;
+  portfolio_drawdown_nok: string | null;
+  total_value_considered_nok: string;
+  holdings: HoldingStress[];
+}
+
+export type MacroRegime = "baseline" | "stagflation" | "crisis";
+
+export interface RegimeInput {
+  key: string;
+  label: string;
+  region: string;
+  latest_value: string | null;
+  smoothed_value: string | null;
+  unit: string;
+}
+
+export interface Regime {
+  regime: MacroRegime;
+  home_market_series_included: boolean;
+  curve_and_credit_are_us_only: boolean;
+  explanation: string;
+  method_note: string;
+  inputs: RegimeInput[];
+  data_complete: boolean;
+  missing: string[];
+}
+
+export interface PortfolioRisk {
+  as_of: string | null;
+  equity_value_nok: string;
+  lookback_days: number;
+  cluster_threshold: string;
+  correlation: CorrelationMatrix;
+  clusters: ClusterFlag[];
+  stress: StressScenario;
+  regime: Regime;
+  price_history_notes: string[];
+}

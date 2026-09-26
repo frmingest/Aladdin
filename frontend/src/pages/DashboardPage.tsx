@@ -178,6 +178,28 @@ function ThesisCheckCard({ rows }: { rows: MonitorRow[] }) {
   );
 }
 
+/** Sprint 12 — a plain link, not a data fetch: the risk page's own load
+ * (a year of daily price history per holding) is heavier than anything
+ * else on this dashboard, so it's not triggered just by opening the
+ * dashboard. */
+function PortfolioRiskLinkCard() {
+  return (
+    <Card>
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h2 className="text-sm font-semibold text-ink">Portfolio risk</h2>
+          <p className="mt-0.5 text-xs text-ink-muted">
+            Correlation matrix, correlated-risk clusters, stress scenarios and macro regime.
+          </p>
+        </div>
+        <Link to="/risk" className="shrink-0 text-xs font-medium text-accent hover:text-accent-hover">
+          Open →
+        </Link>
+      </div>
+    </Card>
+  );
+}
+
 function SummaryCard({ points }: { points: SummaryPoint[] }) {
   return (
     <Card>
@@ -360,6 +382,8 @@ export default function DashboardPage() {
           {overview.summary.length > 0 && <SummaryCard points={overview.summary} />}
 
           <ThesisCheckCard rows={thesisRows} />
+
+          <PortfolioRiskLinkCard />
 
           {macro && macro.indicators.some((i) => i.value !== null) && (
             <Card>

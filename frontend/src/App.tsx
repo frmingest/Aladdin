@@ -10,6 +10,7 @@ import MacroPage from "./pages/MacroPage";
 import MarginOfSafetyPage from "./pages/MarginOfSafetyPage";
 import SectorPage from "./pages/SectorPage";
 import SystemStatusPage from "./pages/SystemStatusPage";
+import PortfolioRiskPage from "./pages/PortfolioRiskPage";
 import ThesisMonitorPage from "./pages/ThesisMonitorPage";
 import WatchlistPage from "./pages/WatchlistPage";
 
@@ -38,6 +39,7 @@ export default function App() {
         <Route path="/sectors/:sector" element={<SectorPage />} />
         <Route path="/watchlist" element={<WatchlistPage />} />
         <Route path="/thesis" element={<ThesisMonitorPage />} />
+        <Route path="/risk" element={<PortfolioRiskPage />} />
         <Route path="/journal" element={<JournalPage />} />
         <Route path="/analysis-queue" element={<AnalysisQueuePage />} />
         <Route path="/status" element={<SystemStatusPage />} />

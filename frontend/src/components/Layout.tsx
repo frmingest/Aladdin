@@ -80,6 +80,7 @@ const NAV_ITEMS: { label: string; to: string; disabled?: boolean }[] = [
   { label: "Journal", to: "/journal" },
   { label: "Macro", to: "/macro" },
   { label: "Thesis", to: "/thesis" },
+  { label: "Portfolio risk", to: "/risk" },
 ];
 
 function HealthBadge() {

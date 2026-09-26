@@ -49,6 +49,7 @@ import type {
   MarginOfSafetyBoard,
   PortfolioImportResponse,
   PortfolioOverview,
+  PortfolioRisk,
   PortfolioSnapshot,
   PortfolioSnapshotSummary,
   PortfolioWipeResult,
@@ -394,4 +395,9 @@ export const api = {
   deleteTripwire: (tripwireId: string) =>
     request<void>(`/thesis/tripwires/${tripwireId}`, { method: "DELETE", query: { confirm: true } }),
   getThesisMonitor: () => request<ThesisMonitor>("/thesis/monitor"),
+
+  // Portfolio risk (Sprint 12) — backend/app/api/risk.py. Correlation,
+  // correlated-cluster flags, stress scenarios and macro regime.
+  getPortfolioRisk: () => request<PortfolioRisk>("/risk/portfolio"),
+  refreshPortfolioRisk: () => request<PortfolioRisk>("/risk/portfolio/refresh", { method: "POST" }),
 };
