@@ -39,12 +39,11 @@ import { NavLink } from "react-router-dom";
 /**
  * Fixed left nav + content area — Design & UX direction's "left-nav
  * information architecture" principle
- * (claude/buffett-munger-rebuild-sprint-plan-2026-09-21.md), sized to grow
- * as later sprints add thesis/valuation sections. "Thesis" is still
- * visible-but-disabled so the intended shape of the app stays legible
- * before Sprint 4 lands; Macro is live as of Sprint 2's research UI
- * (Sector research is reached from within Macro / a holding's sector
- * link rather than getting its own top-level nav item).
+ * (claude/buffett-munger-rebuild-sprint-plan-2026-09-21.md). "Thesis"
+ * (Sprint 11's tracking-over-time page) went live 2026-09-26 — previously
+ * a visible-but-disabled placeholder. Sector research is reached from
+ * within Macro / a holding's sector link rather than getting its own
+ * top-level nav item.
  */
 
 type HealthState = "checking" | "ok" | "unreachable";
@@ -80,7 +79,7 @@ const NAV_ITEMS: { label: string; to: string; disabled?: boolean }[] = [
   { label: "Watchlist", to: "/watchlist" },
   { label: "Journal", to: "/journal" },
   { label: "Macro", to: "/macro" },
-  { label: "Thesis", to: "/thesis", disabled: true },
+  { label: "Thesis", to: "/thesis" },
 ];
 
 function HealthBadge() {

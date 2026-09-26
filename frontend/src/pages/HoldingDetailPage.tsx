@@ -27,6 +27,7 @@ import {
 } from "../lib/format";
 import { Button, Card, CollapsibleSection, EmptyState, PageHeader, StatusBadge } from "../components/ui";
 import { AnalysisPanel } from "../components/AnalysisPanel";
+import { ThesisPanel } from "../components/ThesisPanel";
 import { FundFactsPanel } from "../components/FundFactsPanel";
 import { MarketMultiplesCard } from "../components/MarketMultiplesCard";
 import { DocumentFlagsNote } from "../components/DocumentFlagsNote";
@@ -637,6 +638,18 @@ export default function HoldingDetailPage() {
             EDGAR import adds financial history. */}
         <AnalysisPanel key={metricsKey} holdingId={id} />
       </div>
+
+      {!isFund && (
+        <div className="mb-8">
+          <CollapsibleSection
+            title="Thesis tracking"
+            hint="Is my thesis still intact? Tripwires, what's changed, verdict timeline"
+            defaultOpen
+          >
+            <ThesisPanel holdingId={id} />
+          </CollapsibleSection>
+        </div>
+      )}
 
       {isFund ? (
         <div className="mb-8">

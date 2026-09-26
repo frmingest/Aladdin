@@ -1302,3 +1302,109 @@ export interface MacroRefreshResult {
   results: MacroSeriesRefresh[];
   indicators: MacroIndicators;
 }
+
+// --- Thesis tracking (Sprint 11) — backend/app/schemas/thesis.py
+
+export type ThesisStatus = "tripwire_fired" | "review" | "not_analyzed" | "intact";
+export type TripwireOperator = "below" | "above";
+export type MetricGroup = "fundamentals" | "market_multiples" | "price";
+
+export interface MetricDef {
+  key: string;
+  label: string;
+  group: MetricGroup;
+  unit: string;
+}
+
+export interface Tripwire {
+  id: string;
+  holding_id: string;
+  metric: string;
+  metric_label: string;
+  operator: TripwireOperator;
+  threshold: string;
+  label: string | null;
+  origin: string | null;
+  source_run_id: string | null;
+  active: boolean;
+  fired_at: string | null;
+  seen_at: string | null;
+  created_at: string;
+  updated_at: string;
+  current_value: string | null;
+  unavailable_reason: string | null;
+  firing: boolean;
+}
+
+export interface TripwireCreateInput {
+  metric: string;
+  operator: TripwireOperator;
+  threshold: string;
+  label?: string | null;
+  origin?: string | null;
+  source_run_id?: string | null;
+}
+
+export interface TripwireUpdateInput {
+  operator?: TripwireOperator;
+  threshold?: string;
+  label?: string | null;
+  active?: boolean;
+}
+
+export interface ChangeReason {
+  key: string;
+  text: string;
+}
+
+export interface TimelineEntry {
+  run_id: string;
+  date: string;
+  verdict: VerdictRating | null;
+  verdict_direction: "up" | "down" | "flat" | null;
+  moat: MoatRating | null;
+  moat_direction: "up" | "down" | "flat" | null;
+  price: string | null;
+  price_currency: string | null;
+  dcf_low: string | null;
+  dcf_high: string | null;
+  pass_type: "blind_only" | "reconciled";
+  engine: string;
+  model_name: string | null;
+  thesis_bullets: string[];
+}
+
+export interface TripwireSuggestion {
+  text: string;
+  metric: string | null;
+  operator: TripwireOperator | null;
+  threshold: string | null;
+}
+
+export interface HoldingThesis {
+  holding_id: string;
+  ticker: string;
+  name: string;
+  status: ThesisStatus;
+  status_label: string;
+  analyzed_at: string | null;
+  change_reasons: ChangeReason[];
+  tripwires: Tripwire[];
+  timeline: TimelineEntry[];
+  suggestions: TripwireSuggestion[];
+}
+
+export interface MonitorRow {
+  holding_id: string;
+  ticker: string;
+  name: string;
+  status: ThesisStatus;
+  status_label: string;
+  firing_count: number;
+  change_reason_count: number;
+  analyzed_at: string | null;
+}
+
+export interface ThesisMonitor {
+  rows: MonitorRow[];
+}

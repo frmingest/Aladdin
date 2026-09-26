@@ -223,7 +223,15 @@ export default function MarginOfSafetyPage() {
                         {row.name}
                       </Link>
                       <span className="ml-2 text-xs text-ink-faint">{row.ticker}</span>
-                      <p className="text-xs text-ink-muted">{row.unavailable_reason}</p>
+                      {/* 2026-09-26: a price fetched despite no DCF now
+                          reads as "No DCF yet", not a bare "no price". */}
+                      {row.price ? (
+                        <p className="text-xs text-ink-muted">
+                          No DCF yet — price {formatDecimal(row.price)} {row.valuation_currency}. {row.unavailable_reason}
+                        </p>
+                      ) : (
+                        <p className="text-xs text-ink-muted">{row.unavailable_reason}</p>
+                      )}
                     </div>
                     <span className="tabular text-xs text-ink-muted">{formatNok(row.market_value_nok)}</span>
                   </li>

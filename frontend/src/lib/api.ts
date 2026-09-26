@@ -35,6 +35,7 @@ import type {
   HoldingMetrics,
   ShareCount,
   HoldingNote,
+  HoldingThesis,
   HoldingUpdateInput,
   HoldingValuation,
   HoldingsImportResult,
@@ -55,6 +56,11 @@ import type {
   SnapshotDeleteResult,
   SourceEligibility,
   SystemStatus,
+  ThesisMonitor,
+  TripwireCreateInput,
+  TripwireUpdateInput,
+  Tripwire,
+  MetricDef,
   Watchlist,
   WatchlistCreateInput,
   WatchlistRow,
@@ -371,4 +377,21 @@ export const api = {
       method: "PUT",
       body: JSON.stringify({ content }),
     }),
+
+  // Thesis tracking (Sprint 11) — backend/app/api/thesis.py. Everything
+  // here is database-only: no LLM call, no live market-data provider.
+  getThesisMetrics: () => request<MetricDef[]>("/thesis/metrics"),
+  getHoldingThesis: (holdingId: string) => request<HoldingThesis>(`/thesis/holdings/${holdingId}`),
+  createTripwire: (holdingId: string, input: TripwireCreateInput) =>
+    request<Tripwire>(`/thesis/holdings/${holdingId}/tripwires`, {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
+  updateTripwire: (tripwireId: string, input: TripwireUpdateInput) =>
+    request<Tripwire>(`/thesis/tripwires/${tripwireId}`, { method: "PATCH", body: JSON.stringify(input) }),
+  acknowledgeTripwire: (tripwireId: string) =>
+    request<Tripwire>(`/thesis/tripwires/${tripwireId}/acknowledge`, { method: "POST" }),
+  deleteTripwire: (tripwireId: string) =>
+    request<void>(`/thesis/tripwires/${tripwireId}`, { method: "DELETE", query: { confirm: true } }),
+  getThesisMonitor: () => request<ThesisMonitor>("/thesis/monitor"),
 };

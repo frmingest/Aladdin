@@ -2,7 +2,14 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, ApiError } from "../lib/api";
 import { formatDate, formatNok, formatPct100 } from "../lib/format";
-import type { AllocationSlice, MacroIndicators, PortfolioOverview, RatingSlice, SummaryPoint } from "../lib/types";
+import type {
+  AllocationSlice,
+  MacroIndicators,
+  MonitorRow,
+  PortfolioOverview,
+  RatingSlice,
+  SummaryPoint,
+} from "../lib/types";
 import { MacroHeadlineStrip } from "../components/MacroIndicatorsPanel";
 import { EQUITY_ANALYZABLE_TYPES, INSTRUMENT_TYPE_LABELS } from "../lib/types";
 import { Card, EmptyState, PageHeader, SectionTitle, StatTile, VerdictBadge } from "../components/ui";
@@ -138,6 +145,39 @@ function RatingRows({ slices, kind }: { slices: RatingSlice[]; kind: "verdict" |
   );
 }
 
+/** Sprint 11 — only rendered when something actually needs attention (a
+ * firing tripwire or a "something changed" review), never as an empty
+ * "all good" card here — the Thesis page itself covers the all-clear
+ * case. */
+function ThesisCheckCard({ rows }: { rows: MonitorRow[] }) {
+  const firing = rows.filter((r) => r.status === "tripwire_fired");
+  const review = rows.filter((r) => r.status === "review");
+  if (firing.length === 0 && review.length === 0) return null;
+
+  return (
+    <Card className="border-caution/50">
+      <div className="mb-3 flex items-baseline justify-between gap-3">
+        <SectionTitle hint="Tripwires and analysis changes needing a look.">Thesis check</SectionTitle>
+        <Link to="/thesis" className="text-xs font-medium text-accent hover:text-accent-hover">
+          Open Thesis →
+        </Link>
+      </div>
+      <ul className="space-y-2 text-sm">
+        {[...firing, ...review].slice(0, 6).map((row) => (
+          <li key={row.holding_id} className="flex items-center justify-between gap-3">
+            <Link to={`/holdings/${row.holding_id}`} className="font-medium text-ink hover:text-accent">
+              {row.name}
+            </Link>
+            <span className={row.status === "tripwire_fired" ? "text-negative" : "text-caution"}>
+              {row.status_label}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+}
+
 function SummaryCard({ points }: { points: SummaryPoint[] }) {
   return (
     <Card>
@@ -246,6 +286,7 @@ export default function DashboardPage() {
   const [overview, setOverview] = useState<PortfolioOverview | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [macro, setMacro] = useState<MacroIndicators | null>(null);
+  const [thesisRows, setThesisRows] = useState<MonitorRow[]>([]);
 
   useEffect(() => {
     api
@@ -254,6 +295,7 @@ export default function DashboardPage() {
       .catch((e) => setError(e instanceof ApiError ? e.message : "Could not load the overview."));
     // Optional strip: a failure here just hides it.
     api.getMacroIndicators().then(setMacro).catch(() => setMacro(null));
+    api.getThesisMonitor().then((m) => setThesisRows(m.rows)).catch(() => setThesisRows([]));
   }, []);
 
   const c = overview?.concentration;
@@ -316,6 +358,8 @@ export default function DashboardPage() {
           </div>
 
           {overview.summary.length > 0 && <SummaryCard points={overview.summary} />}
+
+          <ThesisCheckCard rows={thesisRows} />
 
           {macro && macro.indicators.some((i) => i.value !== null) && (
             <Card>
