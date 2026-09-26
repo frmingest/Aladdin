@@ -31,8 +31,10 @@ from app.providers.factory import (
     get_announcements_provider_or_none,
     get_esef_index_provider_or_none,
     get_fundamentals_provider_or_none,
+    get_newsweb_filing_provider_or_none,
     get_object_storage,
 )
+from app.providers.newsweb_filing_provider import NewswebFilingProvider
 from app.providers.newsweb_provider import NewswebAnnouncementsProvider
 from app.schemas.research import ResearchItemOut
 from app.schemas.sources import (
@@ -42,6 +44,7 @@ from app.schemas.sources import (
     EsefFilingOut,
     EsefImportIn,
     EsefImportOut,
+    NewswebAnnualReportImportOut,
     SourceEligibilityOut,
 )
 from app.services.filings.announcements import get_holding_announcements
@@ -52,6 +55,12 @@ from app.services.filings.esef_index import (
     find_lei,
     import_esef_history,
     latest_import_summary,
+)
+from app.services.filings.newsweb_annual_report import (
+    NewswebImportError,
+    NewswebImportResult,
+    import_annual_report_from_newsweb,
+    latest_newsweb_import,
 )
 from app.services.filings.sec_edgar import (
     EdgarImportError,
@@ -136,6 +145,8 @@ def get_eligibility(holding_id: UUID, db: Session = Depends(get_db)) -> SourceEl
         esef_index_reason=(
             None if nw else "The ESEF index is for EU/EEA-listed companies; this holding looks non-European"
         ),
+        newsweb_annual_report=nw,
+        newsweb_annual_report_reason=None if nw else "Newsweb covers Oslo Børs issuers only (.OL ticker or NOK)",
     )
 
 
@@ -249,3 +260,52 @@ def refresh_announcements(
     require_not_demo(db)
     holding = _get_holding_or_404(db, holding_id)
     return _announcements_out(holding, get_holding_announcements(db, provider, holding=holding, force=True))
+
+
+def _newsweb_annual_report_out(
+    holding: Holding, result: NewswebImportResult | None
+) -> NewswebAnnualReportImportOut:
+    if result is None:
+        return NewswebAnnualReportImportOut(holding_id=holding.id, imported=False)
+    return NewswebAnnualReportImportOut(
+        holding_id=holding.id,
+        imported=True,
+        message_id=result.message_id,
+        message_url=result.message_url,
+        title=result.title,
+        published_at=result.published_at,
+        attachment_name=result.attachment_name,
+        document_id=result.document_id,
+        was_duplicate=result.was_duplicate,
+        imported_at=result.imported_at or None,
+        facts_imported=result.facts_imported,
+        periods_imported=result.periods_imported,
+        metrics_by_period=result.metrics_by_period,
+        warnings=result.warnings,
+    )
+
+
+@router.get("/holdings/{holding_id}/newsweb-annual-report", response_model=NewswebAnnualReportImportOut)
+def get_newsweb_annual_report(holding_id: UUID, db: Session = Depends(get_db)) -> NewswebAnnualReportImportOut:
+    require_not_demo(db)
+    holding = _get_holding_or_404(db, holding_id)
+    return _newsweb_annual_report_out(holding, latest_newsweb_import(db, holding))
+
+
+@router.post("/holdings/{holding_id}/newsweb-annual-report/import", response_model=NewswebAnnualReportImportOut)
+def import_newsweb_annual_report(
+    holding_id: UUID,
+    db: Session = Depends(get_db),
+    provider: NewswebFilingProvider | None = Depends(get_newsweb_filing_provider_or_none),
+    storage=Depends(get_object_storage),
+) -> NewswebAnnualReportImportOut:
+    require_not_demo(db)
+    holding = _get_holding_or_404(db, holding_id)
+    if provider is None:
+        raise HTTPException(status_code=422, detail="the Newsweb annual-report fetch is switched off (NEWSWEB_FILING_PROVIDER)")
+    try:
+        result = import_annual_report_from_newsweb(db, holding, provider, storage)
+    except NewswebImportError as exc:
+        db.rollback()
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return _newsweb_annual_report_out(holding, result)

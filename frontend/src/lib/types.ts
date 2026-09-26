@@ -473,6 +473,28 @@ export interface SourceEligibility {
   newsweb_reason: string | null;
   esef_index: boolean;
   esef_index_reason: string | null;
+  newsweb_annual_report: boolean;
+  newsweb_annual_report_reason: string | null;
+}
+
+/** Mirrors backend NewswebAnnualReportImportOut (Sprint 15 — the actual
+ * ESEF annual-report filing fetched from Newsweb itself, unzipped if
+ * needed, and run through the same extractor an upload uses). */
+export interface NewswebAnnualReportImport {
+  holding_id: string;
+  imported: boolean;
+  message_id: string | null;
+  message_url: string | null;
+  title: string | null;
+  published_at: string | null;
+  attachment_name: string | null;
+  document_id: string | null;
+  was_duplicate: boolean;
+  imported_at: string | null;
+  facts_imported: number;
+  periods_imported: string[];
+  metrics_by_period: Record<string, string[]>;
+  warnings: string[];
 }
 
 /** Mirrors backend EsefImportOut (Sprint 10 — ESEF history from
