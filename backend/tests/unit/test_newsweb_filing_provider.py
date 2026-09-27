@@ -160,6 +160,30 @@ def test_pick_report_attachment_none_when_no_attachments_at_all():
     assert is_esef is False
 
 
+def test_pick_report_attachment_skips_presentation_pdf_even_when_listed_first():
+    """Reproduces the real Kongsberg Gruppen (KOG.OL) attachment order that
+    prompted Faiz's 2026-09-27 bug report: a Newsweb message can list an
+    investor presentation PDF before the actual report PDF, and 'first PDF
+    wins' would pick the wrong file."""
+    attachments = [
+        NewswebAttachmentRef("1", "Presentasjon Q2 2023.pdf"),
+        NewswebAttachmentRef("2", "Q2 Rapport.pdf"),
+    ]
+    attachment, is_esef = pick_report_attachment(attachments, allow_pdf_fallback=True)
+    assert attachment.name == "Q2 Rapport.pdf"
+    assert is_esef is False
+
+
+def test_pick_report_attachment_falls_back_to_first_pdf_when_all_look_like_presentations():
+    attachments = [
+        NewswebAttachmentRef("1", "Webcast invitation.pdf"),
+        NewswebAttachmentRef("2", "Presentation slides.pdf"),
+    ]
+    attachment, is_esef = pick_report_attachment(attachments, allow_pdf_fallback=True)
+    assert attachment.name == "Webcast invitation.pdf"
+    assert is_esef is False
+
+
 def test_provider_list_interim_reports_calls_category_1002():
     calls: list[httpx.Request] = []
 

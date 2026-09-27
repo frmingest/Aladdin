@@ -32,16 +32,20 @@ import { FundFactsPanel } from "../components/FundFactsPanel";
 import { MarketMultiplesCard } from "../components/MarketMultiplesCard";
 import { DocumentFlagsNote } from "../components/DocumentFlagsNote";
 import { ResearchPanel } from "../components/ResearchPanel";
-import { NewswebAnnualReportCard, SourcesPanel } from "../components/SourcesPanel";
+import { NewswebAllReportsCard, SourcesPanel } from "../components/SourcesPanel";
 import { ValuationPanel } from "../components/ValuationPanel";
 import WatchButton from "../components/WatchButton";
 import JournalPanel from "../components/JournalPanel";
 import type { SourceEligibility } from "../lib/types";
 
-/** Surfaces the Newsweb annual-report fetch at the very top of the holding
- * page (Faiz's ask, 2026-09-26: it was buried at the bottom inside
- * "Primary sources" and hard to find right after opening a position).
- * Renders nothing for holdings Newsweb doesn't cover (non-Oslo Børs). */
+/** Surfaces the combined Newsweb reports fetch (annual + half-year, one
+ * button) at the very top of the holding page (Faiz's ask, 2026-09-26: it
+ * was buried at the bottom inside "Primary sources" and hard to find right
+ * after opening a position). Unified into one card 2026-09-27 — two
+ * separate buttons ("annual" here, "half-year" down in Primary sources)
+ * made it look like the half-year fetch was broken when really it just
+ * hadn't been clicked, since only this top card was easy to find. Renders
+ * nothing for holdings Newsweb doesn't cover at all (non-Oslo Børs). */
 function NewswebFetchHighlight({ holdingId, onImported }: { holdingId: string; onImported: () => void }) {
   const [eligibility, setEligibility] = useState<SourceEligibility | null>(null);
 
@@ -50,12 +54,12 @@ function NewswebFetchHighlight({ holdingId, onImported }: { holdingId: string; o
     api.getSourceEligibility(holdingId).then(setEligibility).catch(() => setEligibility(null));
   }, [holdingId]);
 
-  if (!eligibility?.newsweb_annual_report) return null;
+  if (!eligibility?.newsweb_annual_report && !eligibility?.newsweb_interim_report) return null;
 
   return (
     <div className="mb-8">
       <CollapsibleSection title="Reports from Newsweb" hint="Annual & interim filings fetched from Oslo Børs">
-        <NewswebAnnualReportCard holdingId={holdingId} onImported={onImported} />
+        <NewswebAllReportsCard holdingId={holdingId} onImported={onImported} />
       </CollapsibleSection>
     </div>
   );
