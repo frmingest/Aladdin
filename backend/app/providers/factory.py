@@ -301,3 +301,14 @@ def get_macro_data_provider_or_none() -> CompositeMacroDataProvider | None:
             "ssb": SsbMacroProvider(),
         }
     )
+
+
+def get_country_indicator_provider_or_none():
+    """World Bank (keyless) for Dalio mode's country-risk inputs (F22,
+    story 22.10). Follows MACRO_DATA_PROVIDER: "none" switches it off too,
+    since both are the same kind of public statistics fetch."""
+    from app.providers.world_bank import WorldBankProvider
+
+    if get_settings().macro_data_provider != "live":
+        return None
+    return WorldBankProvider()

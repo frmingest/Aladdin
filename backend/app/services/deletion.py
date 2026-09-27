@@ -26,6 +26,7 @@ from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.models.analysis import EquityAnalysisRun, EquityHoldingNote
+from app.models.analyst_synthesis import AnalystSynthesis
 from app.models.document import Document, DocumentChunk, DocumentPage
 from app.models.financial_line_item import FinancialLineItem
 from app.models.fund import FundExposure, FundProfile, FundReturnPeriod
@@ -175,6 +176,11 @@ def _purge_holding_rows(db: Session, holding_ids: list[uuid.UUID], counts: Delet
         counts.fund_rows += (
             db.query(model).filter(model.holding_id.in_(holding_ids)).delete(synchronize_session=False)
         )
+    # F22 syntheses point at runs (and the holding), so they go first.
+    # Not counted separately: they're derived from the runs deleted below.
+    db.query(AnalystSynthesis).filter(AnalystSynthesis.holding_id.in_(holding_ids)).delete(
+        synchronize_session=False
+    )
     counts.analysis_runs += (
         db.query(EquityAnalysisRun)
         .filter(EquityAnalysisRun.holding_id.in_(holding_ids))

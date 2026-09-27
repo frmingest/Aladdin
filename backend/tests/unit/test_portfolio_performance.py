@@ -18,7 +18,10 @@ from app.models.holding import Holding
 from app.models.macro import MacroObservation
 from app.models.portfolio import PortfolioPosition, PortfolioSnapshot
 from app.providers.base import MarketDataUnavailableError, PricePoint
-from app.services.performance.portfolio_performance import CPI_SERIES_KEY, build_portfolio_performance
+from app.services.performance.portfolio_performance import (
+    CPI_SERIES_KEY,
+    build_portfolio_performance,
+)
 
 D = Decimal
 TODAY = datetime.now(timezone.utc).date()
@@ -56,7 +59,7 @@ class _FakeMarket:
 
 
 def _points_ending_today(
-    n: int, *, start_price: Decimal = D("100"), step: Decimal = D("1"), currency: str = "USD"
+    n: int, *, start_price: Decimal = D("100"), step: Decimal = D("1"), currency: str = "USD"  # noqa: B008
 ) -> list[PricePoint]:
     """n consecutive calendar days of closes, the last one dated today —
     build_portfolio_performance anchors every series to "today" (the most

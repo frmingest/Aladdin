@@ -43,7 +43,7 @@ class CoinSeries:
     name: str
     metal: str
     country: str
-    weight_oz: Decimal = Decimal("1")
+    weight_oz: Decimal = Decimal(1)
 
 
 # 15 gold + 15 silver — real, currently-minted 1oz bullion coin series,

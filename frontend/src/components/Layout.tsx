@@ -36,6 +36,7 @@ function ThemeToggle() {
   );
 }
 import { NavLink } from "react-router-dom";
+import { AnalystModeToggle } from "./AnalystModeToggle";
 
 /**
  * Left nav + content area — Design & UX direction's "left-nav information
@@ -301,6 +302,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <Brand />
         <span className="w-9" aria-hidden />
       </div>
+      {/* Mobile analyst-mode row (F22): the toggle stays one tap away. */}
+      <div className="flex items-center justify-center border-b border-border bg-surface px-3 py-2 lg:hidden">
+        <AnalystModeToggle compact />
+      </div>
 
       {/* Mobile drawer + backdrop (< lg), only mounted while open. */}
       {mobileNavOpen && (
@@ -341,7 +346,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
           <NavContents />
         </nav>
-        <main className="min-w-0 flex-1 overflow-y-auto">{children}</main>
+        <main className="min-w-0 flex-1 overflow-y-auto">
+          {/* Desktop top bar (F22 story 22.1): the whole-app analyst mode. */}
+          <div className="sticky top-0 z-30 hidden items-center justify-end border-b border-border bg-surface/95 px-6 py-2 backdrop-blur lg:flex">
+            <AnalystModeToggle />
+          </div>
+          {children}
+        </main>
       </div>
     </div>
   );

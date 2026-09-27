@@ -14,6 +14,7 @@ import type {
 import { MacroHeadlineStrip } from "../components/MacroIndicatorsPanel";
 import { EQUITY_ANALYZABLE_TYPES, INSTRUMENT_TYPE_LABELS } from "../lib/types";
 import { Card, EmptyState, PageHeader, SectionTitle, VerdictBadge } from "../components/ui";
+import { AnalystModeDashboardCard } from "../components/DalioViews";
 
 /** Sprint 5 dashboard, the app's home page. Everything comes from
  * GET /portfolio/overview (backend/app/services/portfolio_overview.py),
@@ -488,6 +489,8 @@ export default function DashboardPage() {
       {overview && overview.as_of !== null && (
         <div className="space-y-6">
           <HeroCard overview={overview} />
+
+          <AnalystModeDashboardCard />
 
           <HoldingCardsRow positions={overview.positions} />
 

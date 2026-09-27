@@ -49,7 +49,7 @@ class _FakeRiskFreeRate:
         raise RiskFreeRateUnavailableError("not configured for this test")
 
 
-def _daily_points(n: int, *, start_price=D("100"), step=D("1")) -> list[PricePoint]:
+def _daily_points(n: int, *, start_price=D("100"), step=D("1")) -> list[PricePoint]:  # noqa: B008
     base = datetime(2026, 1, 1, tzinfo=timezone.utc)
     out, price = [], start_price
     for i in range(n):

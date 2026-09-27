@@ -42,7 +42,11 @@ from app.providers.budget import DailyBudgetGuard
 from app.providers.macro_data_providers import MacroDataProvider
 from app.providers.newsweb_provider import NewswebAnnouncementsProvider
 from app.services.analysis import queue
-from app.services.analysis.pipeline import STAGE_PROGRESS, NotEquityAnalyzableError, run_full_analysis
+from app.services.analysis.pipeline import (
+    STAGE_PROGRESS,
+    NotEquityAnalyzableError,
+    run_full_analysis,
+)
 from app.services.analysis.readiness import research_refreshes_needed
 
 log = logging.getLogger("aladdin.worker")
@@ -82,6 +86,8 @@ class WorkerProviders:
     # Numeric macro data (2026-09-24): stale series are re-fetched on the
     # PC before a run. Default None keeps older call sites/tests working.
     macro_data: MacroDataProvider | None = None
+    # F22 story 22.10: World Bank / WGI inputs for Dalio runs' country risk.
+    country_indicators: object | None = None
 
 
 class AnalysisWorker:
@@ -193,6 +199,8 @@ class AnalysisWorker:
             run_id = run.id
             holding = db.get(Holding, run.holding_id)
             label = holding.ticker if holding is not None else str(run.holding_id)
+            if run.persona == "dalio":
+                label += " (Dalio)"  # F22: the queue's progress line says which analyst
             self._set_state(queue.RUNNING.lower(), f"Analyzing {label} — Starting (0%)", run_id)
             log.info("claimed run %s (%s), attempt %s", run_id, label, run.attempts)
             try:
@@ -208,6 +216,7 @@ class AnalysisWorker:
                     research_provider=self.providers.research,
                     announcements_provider=self.providers.announcements,
                     macro_data_provider=self.providers.macro_data,
+                    country_indicator_provider=self.providers.country_indicators,
                     run=run,
                     on_stage=lambda stage: self._on_stage(label, run_id, stage),
                 )

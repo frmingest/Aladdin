@@ -13,6 +13,7 @@ from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.domain.analyst_modes import DEFAULT_PERSONA
 from app.models.analysis import EquityAnalysisRun
 from app.services.analysis.latest import run_ratings
 from app.services.thesis.prices import stored_price_at_or_before
@@ -52,7 +53,11 @@ def _direction(rank_map: dict[str, int], current: str | None, previous: str | No
 def build_timeline(db: Session, holding_id: uuid.UUID) -> list[TimelineEntry]:
     runs = db.scalars(
         select(EquityAnalysisRun)
-        .where(EquityAnalysisRun.holding_id == holding_id)
+        .where(
+            EquityAnalysisRun.holding_id == holding_id,
+            # F22: thesis tracking follows the Buffett/Munger verdict line.
+            EquityAnalysisRun.persona == DEFAULT_PERSONA,
+        )
         .order_by(EquityAnalysisRun.started_at.desc())
     ).all()
     # Filtered in Python (JSON null quirk), same as latest_runs_by_holding.

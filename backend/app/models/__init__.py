@@ -7,13 +7,15 @@ Alembic autogenerate and for the in-memory SQLite tables the test suite
 creates.
 """
 from app.models.account import Account
-from app.models.app_setting import AppSetting
 from app.models.analysis import (
     AnalysisWorkerHeartbeat,
     EquityAnalysisRun,
     EquityHoldingNote,
 )
+from app.models.analyst_synthesis import AnalystSynthesis
+from app.models.app_setting import AppSetting
 from app.models.base import Base
+from app.models.country_risk import CountryIndicator
 from app.models.document import Document, DocumentChunk, DocumentPage
 from app.models.financial_line_item import FinancialLineItem
 from app.models.fund import FundExposure, FundProfile, FundReturnPeriod
@@ -42,10 +44,12 @@ from app.models.watchlist import WatchlistItem
 
 __all__ = [
     "Account",
-    "AppSetting",
     "AnalysisRun",
     "AnalysisWorkerHeartbeat",
+    "AnalystSynthesis",
+    "AppSetting",
     "Base",
+    "CountryIndicator",
     "DecisionJournalEntry",
     "Document",
     "DocumentChunk",

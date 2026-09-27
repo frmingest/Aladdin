@@ -704,17 +704,65 @@ export interface FundBlindPassOutput {
   verdict: VerdictContent;
 }
 
-export function isFundBlindPass(
-  output: BlindPassOutput | FundBlindPassOutput,
-): output is FundBlindPassOutput {
+/** Epic F22: the Ray Dalio blind pass (backend schema "dalio_v1"), one
+ * schema for every instrument type — see backend/app/domain/analysis_schema/dalio_v1.py. */
+export type Persona = "buffett_munger" | "dalio";
+export type AnalystMode = Persona | "side_by_side";
+export type ShortTermDebtCyclePhase =
+  | "early_expansion"
+  | "late_expansion"
+  | "tightening"
+  | "contraction"
+  | "reflation"
+  | "unclear";
+export type LongTermDebtCyclePhase = "early" | "mid" | "late_leveraging" | "deleveraging" | "unclear";
+export type Environment = "rising_growth" | "falling_growth" | "rising_inflation" | "falling_inflation";
+export type PortfolioRole =
+  | "growth_engine"
+  | "inflation_hedge"
+  | "deflation_hedge"
+  | "currency_debasement_hedge"
+  | "diversifier"
+  | "redundant";
+
+export interface DalioVerdict extends VerdictContent {
+  portfolio_role: PortfolioRole;
+}
+
+export interface DalioBlindPassOutput {
+  debt_cycle: {
+    short_term_phase: ShortTermDebtCyclePhase;
+    long_term_phase: LongTermDebtCyclePhase;
+    summary: string;
+    evidence_ids: string[];
+  };
+  quadrant_fit: { favoured_environments: Environment[]; summary: string; evidence_ids: string[] };
+  currency_risk: NarrativeAssessment;
+  country_risk: NarrativeAssessment;
+  internal_external_order: NarrativeAssessment;
+  portfolio_role_and_diversification: NarrativeAssessment;
+  verdict: DalioVerdict;
+}
+
+export type AnyBlindPassOutput = BlindPassOutput | FundBlindPassOutput | DalioBlindPassOutput;
+
+export function isDalioBlindPass(output: AnyBlindPassOutput): output is DalioBlindPassOutput {
+  return "debt_cycle" in output;
+}
+
+export function isFundBlindPass(output: AnyBlindPassOutput): output is FundBlindPassOutput {
   return "role_in_portfolio" in output;
 }
 
 export interface ReconciliationOutput {
-  verdict: VerdictContent;
+  verdict: VerdictContent | DalioVerdict;
   reconciliation_narrative: string;
   changed_from_blind: boolean;
   evidence_ids: string[];
+}
+
+export function verdictRole(verdict: VerdictContent | DalioVerdict | null | undefined): PortfolioRole | null {
+  return verdict && "portfolio_role" in verdict ? verdict.portfolio_role : null;
 }
 
 export interface EvidenceItem {
@@ -752,8 +800,8 @@ export interface AnalysisRun {
   completed_at: string | null;
   error_message: string | null;
   evidence_unavailable_reasons: string[];
-  /** Shape depends on schema_version: "v1" (a company) or "fund_v1". */
-  blind_pass: BlindPassOutput | FundBlindPassOutput | null;
+  /** Shape depends on schema_version: "v1" (a company), "fund_v1" or "dalio_v1" (F22). */
+  blind_pass: AnyBlindPassOutput | null;
   blind_pass_citation_warnings: string[] | null;
   reconciliation: ReconciliationOutput | null;
   reconciliation_citation_warnings: string[] | null;
@@ -767,6 +815,8 @@ export interface AnalysisRun {
   queued_at: string | null;
   claimed_by: string | null;
   attempts: number;
+  /** Epic F22 — which analyst produced the run. */
+  persona: Persona;
 }
 
 // --- Sprint 5B: local worker queue (backend/app/api/analysis.py /queue) ---
@@ -788,6 +838,9 @@ export interface QueuedRun {
   provider: string | null;
   model_name: string | null;
   verdict: VerdictRating | null;
+  persona: Persona;
+  /** Queued automatically by side-by-side mode (F22 story 22.7). */
+  auto_queued: boolean;
 }
 
 export type WorkerState = "idle" | "running" | "waiting_quota" | "llm_unavailable" | "stopped";
@@ -813,6 +866,7 @@ export interface AnalysisQueue {
 }
 
 export type QueueScope = "holdings" | "watchlist" | "all";
+export type QueuePersona = Persona | "both";
 
 export interface QueueReadyHoldingsResult {
   queued: QueuedRun[];

@@ -12,6 +12,7 @@ from app.config.settings import get_settings
 from app.domain.analysis_schema import (
     cited_evidence_ids_any_blind,
     get_blind_pass_schema,
+    is_dalio_schema,
     is_fund_schema,
 )
 from app.providers.base import LLMProvider, LLMResponse, LLMUnavailableError
@@ -25,6 +26,18 @@ def load_blind_prompt(version: str) -> str:
             f"no blind-pass prompt found for version {version!r} under prompts/analysis/"
         )
     return path.read_text(encoding="utf-8")
+
+
+def max_output_tokens_for_schema(schema_version: str) -> int | None:
+    """Schema-aware output budget: fund_v1 and dalio_v1 have 7 sections
+    (v1 has 6), so they get more room than the shared default. None = the
+    provider's own default (Settings.llm_max_output_tokens)."""
+    settings = get_settings()
+    if is_fund_schema(schema_version):
+        return settings.llm_max_output_tokens_fund
+    if is_dalio_schema(schema_version):
+        return settings.llm_max_output_tokens_dalio
+    return None
 
 
 @dataclass
@@ -50,10 +63,7 @@ def run_blind_pass(
     # get its JSON cut off mid-answer (2026-09-27: happened on qwen3:14b for
     # XDEF.DE at the 8192-token default). Every provider honors this the
     # same way via generate_structured's optional override.
-    settings = get_settings()
-    max_output_tokens = (
-        settings.llm_max_output_tokens_fund if is_fund_schema(schema_version) else None
-    )
+    max_output_tokens = max_output_tokens_for_schema(schema_version)
     response = llm_provider.generate_structured(
         system_prompt=system_prompt,
         user_prompt=user_prompt,
