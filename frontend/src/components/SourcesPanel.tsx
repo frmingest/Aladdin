@@ -6,6 +6,7 @@ import type {
   EdgarImport,
   EsefImport,
   HoldingAnnouncements,
+  NewswebAnnualReport,
   NewswebAnnualReports,
   SourceEligibility,
 } from "../lib/types";
@@ -250,86 +251,134 @@ function EsefHistoryCard({ holdingId, onImported }: { holdingId: string; onImpor
  * flow, same response shape (NewswebAnnualReports), different endpoint,
  * copy and framing (annual = structured facts; interim = text evidence
  * only, see NewswebInterimReportCard). */
-function NewswebFilingCard({
-  holdingId,
-  onImported,
-  title,
-  description,
-  fetchLabel,
-  checkMoreLabel,
-  emptyHint,
-  get,
-  runImportCall,
-  factsLine,
-}: {
-  holdingId: string;
-  onImported: () => void;
-  title: string;
-  description: (historyYear: string | null) => React.ReactNode;
-  fetchLabel: string;
-  checkMoreLabel: string;
-  emptyHint: string;
-  get: (holdingId: string) => Promise<NewswebAnnualReports>;
-  runImportCall: (holdingId: string) => Promise<NewswebAnnualReports>;
-  factsLine: (report: NewswebAnnualReports["reports"][number]) => React.ReactNode;
-}) {
-  const [data, setData] = useState<NewswebAnnualReports | null>(null);
-  const [error, setError] = useState<string | null>(null);
+type NewswebReportKind = "annual" | "interim";
+type TaggedNewswebReport = NewswebAnnualReport & { kind: NewswebReportKind };
+
+/** Merges the two report lists newest-first by published date. Reports
+ * with no date (shouldn't normally happen) sort last. */
+function mergeNewswebReports(annual: NewswebAnnualReport[], interim: NewswebAnnualReport[]): TaggedNewswebReport[] {
+  const tagged: TaggedNewswebReport[] = [
+    ...annual.map((r) => ({ ...r, kind: "annual" as const })),
+    ...interim.map((r) => ({ ...r, kind: "interim" as const })),
+  ];
+  tagged.sort((a, b) => {
+    const ta = a.published_at ? Date.parse(a.published_at) : 0;
+    const tb = b.published_at ? Date.parse(b.published_at) : 0;
+    return tb - ta;
+  });
+  return tagged;
+}
+
+type NewswebRunSummary = {
+  newlyImported: number;
+  alreadyOnFile: string[];
+  noAttachment: string[];
+  failed: string[];
+};
+
+const EMPTY_RUN: NewswebRunSummary = { newlyImported: 0, alreadyOnFile: [], noAttachment: [], failed: [] };
+
+/** One button that fetches everything Newsweb has for a holding — every
+ * ESEF annual report (feeds metrics/DCF/ratios) and every half-year/interim
+ * report (almost always a plain PDF, captured as citable text evidence
+ * only — no financial facts, per CLAUDE.md Rule 1). Faiz's ask 2026-09-27:
+ * having two separate buttons/cards for "the same thing, Newsweb reports"
+ * was confusing — one holding's data getting the annual-only button
+ * fetched looked like "the half-year fetch is broken" when really the
+ * half-year button just hadn't been found/clicked yet. Both report kinds
+ * are still fetched through their own backend endpoints (different
+ * category id, different document_type, different PDF-fallback rule) —
+ * this card only unifies the two calls behind one button and one merged
+ * list, tagging each report with a small ANNUAL/HALF-YEAR badge. */
+export function NewswebAllReportsCard({ holdingId, onImported }: { holdingId: string; onImported: () => void }) {
+  const [annual, setAnnual] = useState<NewswebAnnualReports | null>(null);
+  const [interim, setInterim] = useState<NewswebAnnualReports | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  // What the most recent fetch run did, so it can be shown once and then
-  // cleared on the next fetch rather than persisting stale run info.
-  const [lastRun, setLastRun] = useState<NewswebAnnualReports | null>(null);
+  const [lastRun, setLastRun] = useState<NewswebRunSummary | null>(null);
 
   useEffect(() => {
+    setAnnual(null);
+    setInterim(null);
     setLastRun(null);
-    get(holdingId).then(setData).catch((e) => setError(errorText(e)));
+    setLoadError(null);
+    Promise.allSettled([api.getNewswebAnnualReports(holdingId), api.getNewswebInterimReports(holdingId)]).then(
+      ([a, i]) => {
+        if (a.status === "fulfilled") setAnnual(a.value);
+        if (i.status === "fulfilled") setInterim(i.value);
+        // Only surface a load error if both calls failed — one holding
+        // being ineligible for one report kind is normal, not an error.
+        if (a.status === "rejected" && i.status === "rejected") setLoadError(errorText(a.reason));
+      },
+    );
   }, [holdingId]);
 
   async function runImport() {
     setBusy(true);
-    setError(null);
-    try {
-      const result = await runImportCall(holdingId);
-      setData(result);
-      setLastRun(result);
-      onImported();
-    } catch (e) {
-      setError(errorText(e));
-    } finally {
-      setBusy(false);
+    setLoadError(null);
+    const [a, i] = await Promise.allSettled([
+      api.importNewswebAnnualReports(holdingId),
+      api.importNewswebInterimReports(holdingId),
+    ]);
+    const run: NewswebRunSummary = { ...EMPTY_RUN, alreadyOnFile: [], noAttachment: [], failed: [] };
+    if (a.status === "fulfilled") {
+      setAnnual(a.value);
+      run.newlyImported += a.value.newly_imported_this_run;
+      run.alreadyOnFile.push(...a.value.already_on_file_this_run);
+      run.noAttachment.push(...a.value.no_esef_file_this_run);
+      run.failed.push(...a.value.failed_this_run);
+    } else {
+      run.failed.push(`Annual reports: ${errorText(a.reason)}`);
     }
+    if (i.status === "fulfilled") {
+      setInterim(i.value);
+      run.newlyImported += i.value.newly_imported_this_run;
+      run.alreadyOnFile.push(...i.value.already_on_file_this_run);
+      run.noAttachment.push(...i.value.no_esef_file_this_run);
+      run.failed.push(...i.value.failed_this_run);
+    } else {
+      run.failed.push(`Half-year reports: ${errorText(i.reason)}`);
+    }
+    setLastRun(run);
+    setBusy(false);
+    if (run.newlyImported > 0) onImported();
   }
 
-  const reports = data?.reports ?? [];
-  const historyYear = data ? data.history_since.slice(0, 4) : null;
+  const loaded = annual !== null || interim !== null || loadError !== null;
+  const reports = mergeNewswebReports(annual?.reports ?? [], interim?.reports ?? []);
+  const historyYear = (annual ?? interim)?.history_since.slice(0, 4) ?? null;
 
   return (
     <Card>
       <div className="mb-3 flex items-start justify-between gap-4">
         <div>
-          <h3 className="text-sm font-semibold text-ink">{title}</h3>
-          <p className="mt-0.5 text-xs text-ink-faint">{description(historyYear)}</p>
+          <h3 className="text-sm font-semibold text-ink">Reports from Newsweb</h3>
+          <p className="mt-0.5 text-xs text-ink-faint">
+            Fetches every annual and half-year report the company has published on Oslo Børs Newsweb, back to{" "}
+            {historyYear ?? "2022"}, instead of you downloading and re-uploading them one by one. Annual ESEF reports
+            feed the metrics, DCF and ratios; half-year reports are almost always plain PDFs, so they&apos;re
+            captured as citable evidence text only — they do <strong>not</strong> add any new numbers (CLAUDE.md
+            Rule 1). Already-fetched reports aren&apos;t re-downloaded. Free, no key.
+          </p>
         </div>
         <Button variant="secondary" onClick={runImport} disabled={busy}>
-          {busy ? "Fetching…" : reports.length > 0 ? checkMoreLabel : fetchLabel}
+          {busy ? "Fetching…" : reports.length > 0 ? "Check for more reports" : "Fetch all reports"}
         </Button>
       </div>
 
-      {error && <p className="mb-3 text-sm text-negative">{error}</p>}
-      {data === null && !error && <p className="text-sm text-ink-muted">Loading…</p>}
-
-      {data && reports.length === 0 && !error && <EmptyState>{emptyHint}</EmptyState>}
+      {loadError && <p className="mb-3 text-sm text-negative">{loadError}</p>}
+      {!loaded && !loadError && <p className="text-sm text-ink-muted">Loading…</p>}
+      {loaded && reports.length === 0 && !loadError && <EmptyState>Nothing fetched yet.</EmptyState>}
 
       {lastRun && (
         <p className="mb-3 text-xs text-ink-faint">
-          This run: {lastRun.newly_imported_this_run} new
-          {lastRun.already_on_file_this_run.length > 0 &&
-            `, ${lastRun.already_on_file_this_run.length} already on file`}
-          {lastRun.no_esef_file_this_run.length > 0 &&
-            ` · ${lastRun.no_esef_file_this_run.length} with no attachment usable on Newsweb: ${lastRun.no_esef_file_this_run.join(", ")}`}
+          This run: {lastRun.newlyImported} new
+          {lastRun.alreadyOnFile.length > 0 && `, ${lastRun.alreadyOnFile.length} already on file`}
+          {lastRun.noAttachment.length > 0 &&
+            ` · ${lastRun.noAttachment.length} with no attachment usable on Newsweb: ${lastRun.noAttachment.join(", ")}`}
         </p>
       )}
-      {lastRun?.failed_this_run.map((w) => (
+      {lastRun?.failed.map((w) => (
         <p key={w} className="mb-1 text-xs text-caution">
           {w}
         </p>
@@ -338,8 +387,18 @@ function NewswebFilingCard({
       {reports.length > 0 && (
         <ul className="space-y-3 text-sm">
           {reports.map((report) => (
-            <li key={report.message_id} className="border-t border-border-subtle pt-3 first:border-0 first:pt-0">
+            <li
+              key={`${report.kind}-${report.message_id}`}
+              className="border-t border-border-subtle pt-3 first:border-0 first:pt-0"
+            >
               <p className="text-ink">
+                <span
+                  className={`mr-2 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                    report.kind === "annual" ? "bg-accent/15 text-accent" : "bg-ink-faint/15 text-ink-muted"
+                  }`}
+                >
+                  {report.kind === "annual" ? "Annual" : "Half-year"}
+                </span>
                 {report.message_url ? (
                   <a
                     href={report.message_url}
@@ -357,7 +416,15 @@ function NewswebFilingCard({
                 )}
               </p>
               <p className="text-ink-muted">
-                {factsLine(report)} from &quot;{report.attachment_name}&quot;
+                {report.facts_imported > 0 ? (
+                  <>
+                    {report.facts_imported} facts across {report.periods_imported.length} periods (
+                    {report.periods_imported.join(", ") || "none"})
+                  </>
+                ) : (
+                  <>Text evidence only — no financial facts</>
+                )}{" "}
+                from &quot;{report.attachment_name}&quot;
                 {report.was_duplicate && <span className="text-ink-faint"> · already up to date</span>}
               </p>
               {report.warnings.map((w) => (
@@ -370,68 +437,6 @@ function NewswebFilingCard({
         </ul>
       )}
     </Card>
-  );
-}
-
-export function NewswebAnnualReportCard({ holdingId, onImported }: { holdingId: string; onImported: () => void }) {
-  return (
-    <NewswebFilingCard
-      holdingId={holdingId}
-      onImported={onImported}
-      title="Annual reports from Newsweb"
-      description={(historyYear) => (
-        <>
-          Fetches every one of the company&apos;s own ESEF annual reports straight from Newsweb, back to{" "}
-          {historyYear ?? "2022"} (unzipping each if needed) instead of you downloading and re-uploading them one by
-          one. Every year&apos;s figures feed the metrics, DCF and ratios. Already-fetched years aren&apos;t
-          re-downloaded. Free, no key.
-        </>
-      )}
-      fetchLabel="Fetch all annual reports"
-      checkMoreLabel="Check for more years"
-      emptyHint="Nothing fetched yet."
-      get={api.getNewswebAnnualReports}
-      runImportCall={api.importNewswebAnnualReports}
-      factsLine={(report) => (
-        <>
-          {report.facts_imported} facts across {report.periods_imported.length} years (
-          {report.periods_imported.join(", ") || "none"})
-        </>
-      )}
-    />
-  );
-}
-
-export function NewswebInterimReportCard({ holdingId, onImported }: { holdingId: string; onImported: () => void }) {
-  return (
-    <NewswebFilingCard
-      holdingId={holdingId}
-      onImported={onImported}
-      title="Half-year reports from Newsweb"
-      description={(historyYear) => (
-        <>
-          Fetches the company&apos;s half-year/interim reports straight from Newsweb, back to {historyYear ?? "2022"}
-          . Norwegian issuers almost never publish these in ESEF format, so this is usually a PDF — captured as text
-          for the analysis to cite, but it does <strong>not</strong> add any new numbers to the DCF, ratios or
-          metrics (see CLAUDE.md Rule 1). Already-fetched reports aren&apos;t re-downloaded. Free, no key.
-        </>
-      )}
-      fetchLabel="Fetch half-year reports"
-      checkMoreLabel="Check for more reports"
-      emptyHint="Nothing fetched yet."
-      get={api.getNewswebInterimReports}
-      runImportCall={api.importNewswebInterimReports}
-      factsLine={(report) =>
-        report.facts_imported > 0 ? (
-          <>
-            {report.facts_imported} facts across {report.periods_imported.length} periods (
-            {report.periods_imported.join(", ") || "none"})
-          </>
-        ) : (
-          <>Text evidence only — no financial facts</>
-        )
-      }
-    />
   );
 }
 
@@ -482,15 +487,11 @@ export function SourcesPanel({ holdingId, onFinancialsChanged }: { holdingId: st
   return (
     <div className="space-y-4">
       {eligibility.newsweb && <NewswebCard holdingId={holdingId} />}
-      {/* The Newsweb annual-report fetch itself is shown at the top of the
-          holding page (HoldingDetailPage) instead of here, so it's easy to
-          find right after opening a position — not repeated in this panel.
-          The interim/half-year fetch lives here instead: it's supplementary
-          evidence text, not new valuation numbers, so it doesn't need the
-          same top-of-page prominence (2026-09-26). */}
-      {eligibility.newsweb_interim_report && (
-        <NewswebInterimReportCard holdingId={holdingId} onImported={onFinancialsChanged} />
-      )}
+      {/* The combined Newsweb reports fetch (annual + half-year, one
+          button) is shown at the top of the holding page (HoldingDetailPage)
+          instead of here, so it's easy to find right after opening a
+          position — not repeated in this panel (2026-09-26, unified
+          2026-09-27 after Faiz found two separate buttons confusing). */}
       {eligibility.esef_index && <EsefHistoryCard holdingId={holdingId} onImported={onFinancialsChanged} />}
       <EdgarCard holdingId={holdingId} hint={eligibility.sec_edgar_reason} onImported={onFinancialsChanged} />
     </div>
