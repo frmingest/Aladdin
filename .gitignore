@@ -5,6 +5,13 @@ __pycache__/
 .venv/
 venv/
 env/
+# Any other venv variant a session creates (e.g. .venv-linux, for running
+# pytest from a Linux device-bridge shell against a Windows checkout) —
+# 2026-09-27: one of these almost got committed wholesale (thousands of
+# files, some Windows git can't even process) because it didn't match the
+# two patterns above.
+.venv-*/
+*-venv/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
