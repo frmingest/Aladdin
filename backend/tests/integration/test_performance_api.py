@@ -38,7 +38,7 @@ class _FakeMarket:
         return points
 
 
-def _points_ending_today(n: int, *, start_price=D("100"), step=D("0"), currency="NOK") -> list[PricePoint]:
+def _points_ending_today(n: int, *, start_price=D("100"), step=D("0"), currency="NOK") -> list[PricePoint]:  # noqa: B008
     out, price = [], start_price
     for i in range(n):
         d = TODAY - timedelta(days=(n - 1 - i))
@@ -67,8 +67,8 @@ def _create_holding(client, ticker, name="Test Co", currency="NOK"):
 
 
 def _add_position(db_session, holding_id, value_nok):
-    from app.models.holding import Holding
     from app.models.document import Document
+    from app.models.holding import Holding
     from app.models.portfolio import PortfolioPosition, PortfolioSnapshot
 
     holding = db_session.get(Holding, holding_id)

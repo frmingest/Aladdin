@@ -26,7 +26,7 @@ import {
   formatPercent,
 } from "../lib/format";
 import { Button, Card, CollapsibleSection, EmptyState, PageHeader, StatusBadge } from "../components/ui";
-import { AnalysisPanel } from "../components/AnalysisPanel";
+import { ModeAwareAnalysis } from "../components/ModeAwareAnalysis";
 import { ThesisPanel } from "../components/ThesisPanel";
 import { FundFactsPanel } from "../components/FundFactsPanel";
 import { MarketMultiplesCard } from "../components/MarketMultiplesCard";
@@ -662,14 +662,8 @@ export default function HoldingDetailPage() {
 
       <NewswebFetchHighlight holdingId={id} onImported={() => setMetricsKey((k) => k + 1)} />
 
-      <div className="mb-8">
-        <h2 className="section-title">
-          Buffett/Munger analysis
-        </h2>
-        {/* Keyed on metricsKey so readiness re-checks after an upload or
-            EDGAR import adds financial history. */}
-        <AnalysisPanel key={metricsKey} holdingId={id} />
-      </div>
+      {/* Epic F22: follows the whole-app analyst mode (top bar). */}
+      <ModeAwareAnalysis holdingId={id} refreshKey={metricsKey} />
 
       {!isFund && (
         <div className="mb-8">

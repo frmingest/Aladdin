@@ -18,6 +18,7 @@ from fastapi.responses import JSONResponse
 
 from app.api.accounts import router as accounts_router
 from app.api.analysis import router as analysis_router
+from app.api.dalio import router as dalio_router
 from app.api.documents import router as documents_router
 from app.api.funds import router as funds_router
 from app.api.holdings import router as holdings_router
@@ -122,6 +123,7 @@ app.include_router(risk_router)
 app.include_router(performance_router)
 app.include_router(precious_metals_router)
 app.include_router(settings_router)
+app.include_router(dalio_router)
 
 
 @app.get("/health")

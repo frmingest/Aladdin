@@ -10,7 +10,12 @@ easily between three modes:
 | **2. Ray Dalio** | Macro-cycle, currency, country-risk and portfolio-balance lens, with its own Buy/Sell verdict |
 | **3. Side-by-side** | Both analyses next to each other, with where they agree and disagree |
 
-**Planning-only doc. No code changed.** Aladdin seams checked against `E:\Aladdin` at `f746a3e`.
+> **Status 2026-09-27 (later): BUILT.** All 12 stories written and tested, uncommitted — see
+> [analyst-modes-build-sprint16-17-2026-09-27.md](analyst-modes-build-sprint16-17-2026-09-27.md).
+> COFER not integrated (§4a #6 turned out to be static mock data in CWO); 6 more economist flags
+> (ECON-F22-11..16) found and fixed while porting.
+
+**Planning doc (rev 2).** Aladdin seams checked against `E:\Aladdin` at `f746a3e`.
 CWO reuse assessed against `frmingest/CWO` at `4400fda` (§4).
 
 > **Rev 2 (2026-09-27, same day):** Faiz answered the 5 open decisions (§7). Added the CWO

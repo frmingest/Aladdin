@@ -65,6 +65,10 @@ class MacroRefreshScheduler:
         try:
             with SessionLocal() as db:
                 results = refresh_macro_data(db, provider, only_stale=True)
+                # F22: the Dalio-only FRED series ride along on the same loop.
+                from app.services.dalio.macro import refresh_dalio_macro_data
+
+                results += refresh_dalio_macro_data(db, provider, only_stale=True)
             failed = [r.key for r in results if r.status == "failed"]
             logger.info(
                 "macro refresh: %d updated, %d unchanged, %d fresh, failed: %s",

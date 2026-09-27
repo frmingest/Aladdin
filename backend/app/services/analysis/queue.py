@@ -34,6 +34,12 @@ from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app.config.settings import Settings
+from app.domain.analyst_modes import (
+    DALIO,
+    DALIO_ANALYZABLE_TYPES,
+    DEFAULT_PERSONA,
+    PERSONAS,
+)
 from app.domain.instrument_types import EQUITY_ANALYZABLE_TYPES, is_fund_type
 from app.models.analysis import (
     PENDING_RUN_STATUSES,
@@ -46,6 +52,7 @@ from app.models.holding import Holding
 from app.services.analysis.evidence_packet import EVIDENCE_PACKET_VERSION
 from app.services.analysis.pipeline import NotEquityAnalyzableError
 from app.services.analysis.readiness import check_analysis_readiness
+from app.services.dalio.evidence import DALIO_EVIDENCE_PACKET_VERSION
 from app.services.funds.evidence import FUND_EVIDENCE_PACKET_VERSION
 
 QUEUED = EquityAnalysisRunStatus.QUEUED.value
@@ -80,14 +87,18 @@ def _aware(value: datetime | None) -> datetime | None:
 # --------------------------------------------------------------------------
 
 
-def pending_run_for_holding(db: Session, holding_id: uuid.UUID) -> EquityAnalysisRun | None:
-    """The holding's queued or running local run, if any."""
+def pending_run_for_holding(
+    db: Session, holding_id: uuid.UUID, *, persona: str = DEFAULT_PERSONA
+) -> EquityAnalysisRun | None:
+    """The holding's queued or running local run for `persona`, if any
+    (F22: a pending Dalio run doesn't block queueing a Buffett one)."""
     return db.scalar(
         select(EquityAnalysisRun)
         .where(
             EquityAnalysisRun.holding_id == holding_id,
             EquityAnalysisRun.engine == LOCAL,
             EquityAnalysisRun.status.in_(PENDING_RUN_STATUSES),
+            EquityAnalysisRun.persona == persona,
         )
         .order_by(EquityAnalysisRun.started_at.desc())
         .limit(1)
@@ -95,22 +106,44 @@ def pending_run_for_holding(db: Session, holding_id: uuid.UUID) -> EquityAnalysi
 
 
 def enqueue_local_run(
-    db: Session, holding: Holding, *, settings: Settings, now: datetime | None = None
+    db: Session,
+    holding: Holding,
+    *,
+    settings: Settings,
+    now: datetime | None = None,
+    persona: str = DEFAULT_PERSONA,
+    auto_queued: bool = False,
 ) -> tuple[EquityAnalysisRun, bool]:
-    """Queues a local run for `holding`. Returns (run, created); a holding
-    that already has a queued/running local run gets that run back rather
-    than a duplicate."""
-    if holding.asset_class_raw not in EQUITY_ANALYZABLE_TYPES:
+    """Queues a local run for `holding` and `persona`. Returns (run,
+    created); a holding that already has a queued/running local run for
+    that persona gets that run back rather than a duplicate."""
+    if persona not in PERSONAS:
+        raise ValueError(f"unknown persona: {persona!r}")
+    is_dalio = persona == DALIO
+    allowed = DALIO_ANALYZABLE_TYPES if is_dalio else EQUITY_ANALYZABLE_TYPES
+    if holding.asset_class_raw not in allowed:
         raise NotEquityAnalyzableError(
             f"holding {holding.ticker!r} is tagged {holding.asset_class_raw!r}, not analyzable as "
             f"equity ({', '.join(sorted(EQUITY_ANALYZABLE_TYPES))} only)"
         )
-    existing = pending_run_for_holding(db, holding.id)
+    existing = pending_run_for_holding(db, holding.id, persona=persona)
     if existing is not None:
         return existing, False
 
     now = now or _now()
     fund = is_fund_type(holding.asset_class_raw)
+    if is_dalio:
+        schema_version = settings.active_dalio_analysis_schema_version
+        prompt_version = settings.active_dalio_analysis_prompt_version
+        packet_version = DALIO_EVIDENCE_PACKET_VERSION
+    else:
+        schema_version = (
+            settings.active_fund_analysis_schema_version if fund else settings.active_analysis_schema_version
+        )
+        prompt_version = (
+            settings.active_fund_analysis_prompt_version if fund else settings.active_analysis_prompt_version
+        )
+        packet_version = FUND_EVIDENCE_PACKET_VERSION if fund else EVIDENCE_PACKET_VERSION
     run = EquityAnalysisRun(
         holding_id=holding.id,
         status=QUEUED,
@@ -119,16 +152,14 @@ def enqueue_local_run(
         started_at=now,  # replaced with the claim time when a worker starts it
         # Placeholders: the worker overwrites these with its own code's
         # versions when it executes the run.
-        schema_version=(
-            settings.active_fund_analysis_schema_version if fund else settings.active_analysis_schema_version
-        ),
-        blind_prompt_version=(
-            settings.active_fund_analysis_prompt_version if fund else settings.active_analysis_prompt_version
-        ),
-        evidence_packet_version=FUND_EVIDENCE_PACKET_VERSION if fund else EVIDENCE_PACKET_VERSION,
+        schema_version=schema_version,
+        blind_prompt_version=prompt_version,
+        evidence_packet_version=packet_version,
         evidence_packet_json={},
         evidence_unavailable_reasons=[],
         attempts=0,
+        persona=persona,
+        auto_queued=auto_queued,
     )
     db.add(run)
     db.commit()
@@ -187,6 +218,7 @@ class QueueAllResult:
 
 
 QueueScope = Literal["holdings", "watchlist", "all"]
+QueuePersona = Literal["buffett_munger", "dalio", "both"]
 
 
 def _scoped_holding_ids(db: Session, scope: QueueScope) -> list[uuid.UUID]:
@@ -208,27 +240,52 @@ def _scoped_holding_ids(db: Session, scope: QueueScope) -> list[uuid.UUID]:
     return holding_ids
 
 
-def queue_ready_holdings(db: Session, *, settings: Settings, scope: QueueScope = "holdings") -> QueueAllResult:
+def queue_blocker(db: Session, holding: Holding, *, settings: Settings, persona: str) -> str | None:
+    """Why `holding` can't be queued for `persona` right now, or None.
+
+    Buffett/Munger: the QUEUE_BLOCKING_CHECKS readiness checks. Dalio
+    (F22): any instrument type, but it needs a ticker (price history,
+    betas and correlation all hang off it)."""
+    if persona == DALIO:
+        if not (holding.ticker or "").strip():
+            return "Ticker: a Dalio analysis needs a ticker for price history."
+        return None
+    report = check_analysis_readiness(db, holding, settings=settings, budget_guard=None)
+    blockers = [c for c in report.checks if c.status == "block" and c.key in QUEUE_BLOCKING_CHECKS]
+    if blockers:
+        return " ".join(f"{c.label}: {c.detail}" for c in blockers)
+    return None
+
+
+def queue_ready_holdings(
+    db: Session, *, settings: Settings, scope: QueueScope = "holdings", persona: QueuePersona = "buffett_munger"
+) -> QueueAllResult:
     """F5: queue every holding in `scope` that passes the readiness checks
     in QUEUE_BLOCKING_CHECKS. `scope` picks which holdings are considered:
     "holdings" (currently owned positions, the original F5 behaviour and
     the default), "watchlist" (companies followed but not owned), or "all"
     (the union of both). Holdings that already have a pending local run
-    are reported, not queued twice."""
+    are reported, not queued twice.
+
+    `persona` (F22, story 22.6): which analyst to queue — Buffett/Munger
+    (default, the original behaviour), Dalio, or both (one run each)."""
     holding_ids = _scoped_holding_ids(db, scope)
+    personas = list(PERSONAS) if persona == "both" else [persona]
 
     result = QueueAllResult()
     holdings = [db.get(Holding, hid) for hid in holding_ids]
     for holding in sorted((h for h in holdings if h is not None), key=lambda h: (h.name or h.ticker or "")):
-        if holding.asset_class_raw not in EQUITY_ANALYZABLE_TYPES:
-            continue  # bonds, money market, commodities: never analyzable, not worth listing
-        report = check_analysis_readiness(db, holding, settings=settings, budget_guard=None)
-        blockers = [c for c in report.checks if c.status == "block" and c.key in QUEUE_BLOCKING_CHECKS]
-        if blockers:
-            result.skipped.append((holding, " ".join(f"{c.label}: {c.detail}" for c in blockers)))
-            continue
-        run, created = enqueue_local_run(db, holding, settings=settings)
-        (result.queued if created else result.already_queued).append(run)
+        for p in personas:
+            allowed = DALIO_ANALYZABLE_TYPES if p == DALIO else EQUITY_ANALYZABLE_TYPES
+            if holding.asset_class_raw not in allowed:
+                continue  # Buffett: bonds, money market, commodities are never analyzable
+            blocker = queue_blocker(db, holding, settings=settings, persona=p)
+            if blocker:
+                label = "" if len(personas) == 1 else ("Dalio — " if p == DALIO else "Buffett/Munger — ")
+                result.skipped.append((holding, label + blocker))
+                continue
+            run, created = enqueue_local_run(db, holding, settings=settings, persona=p)
+            (result.queued if created else result.already_queued).append(run)
     return result
 
 

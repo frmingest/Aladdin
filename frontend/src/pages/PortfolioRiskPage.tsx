@@ -4,6 +4,8 @@ import { api, ApiError } from "../lib/api";
 import { formatDate, formatNok, formatPercent, formatPct100 } from "../lib/format";
 import type { ClusterFlag, CorrelationMatrix, HoldingStress, PortfolioRisk, Regime } from "../lib/types";
 import { Button, Card, EmptyState, PageHeader, SectionTitle } from "../components/ui";
+import { AllWeatherPanel } from "../components/DalioViews";
+import { useAnalystMode } from "../lib/analystMode";
 
 /** Sprint 12 — correlation matrix, correlated-cluster flags, drawdown/
  * stress scenarios and macro regime, all from GET /risk/portfolio
@@ -245,6 +247,7 @@ export default function PortfolioRiskPage() {
   const [risk, setRisk] = useState<PortfolioRisk | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const { mode } = useAnalystMode();
 
   const load = () => {
     api
@@ -281,6 +284,13 @@ export default function PortfolioRiskPage() {
           </Button>
         }
       />
+
+      {mode !== "buffett_munger" && (
+        <div className="mb-8">
+          <h2 className="section-title">All-Weather balance (Dalio)</h2>
+          <AllWeatherPanel />
+        </div>
+      )}
 
       {error && <p className="text-sm text-negative">{error}</p>}
       {!risk && !error && <p className="text-sm text-ink-muted">Loading…</p>}

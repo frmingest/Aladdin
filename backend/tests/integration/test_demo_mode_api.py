@@ -322,6 +322,16 @@ def test_every_mutating_endpoint_is_blocked_in_demo_mode(client):
         ("post", "/analysis/queue/ready-holdings", {}),
         ("post", f"/analysis/runs/{u}/cancel", {}),
         ("put", f"/analysis/holdings/{u}/notes", {"json": {"content": "x"}}),
+        # analyst modes (Epic F22) — PUT /settings/analyst-mode is the one
+        # deliberate exception (a view switch, see app/api/settings.py)
+        ("post", f"/analysis/holdings/{u}/run", {"params": {"persona": "dalio"}}),
+        ("post", f"/analysis/holdings/{u}/queue", {"params": {"persona": "dalio"}}),
+        ("post", "/analysis/queue/ready-holdings", {"params": {"persona": "both"}}),
+        ("post", f"/analysis/holdings/{u}/auto-queue", {}),
+        ("post", "/analysis/auto-queue", {}),
+        ("post", f"/analysis/holdings/{u}/synthesis", {}),
+        ("put", "/settings/analyst-synthesis", {"json": {"enabled": True}}),
+        ("post", "/dalio/refresh", {}),
         # thesis
         (
             "post",

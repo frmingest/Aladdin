@@ -78,7 +78,20 @@ import type {
   QueuedRun,
   QueueReadyHoldingsResult,
   QueueScope,
+  QueuePersona,
+  Persona,
+  AnalystMode,
 } from "./types";
+import type {
+  AllWeather,
+  AnalystModeState,
+  AutoQueueResult,
+  CycleFitBoard,
+  DalioMacro,
+  DalioRefreshResult,
+  SideBySide,
+  Synthesis,
+} from "./analystTypes";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL as string | undefined;
 // Sent as X-API-Key on every request (2026-09-27, see backend/app/security.py).
@@ -366,16 +379,36 @@ export const api = {
   // Analysis (Sprint 4 + F2) — see backend/app/api/analysis.py. GET returns
   // the latest stored run (404 before the first one); POST .../run always
   // spends real LLM quota; readiness never does.
-  getLatestAnalysis: (holdingId: string) =>
-    request<AnalysisRun>(`/analysis/holdings/${holdingId}`),
-  runAnalysis: (holdingId: string) =>
-    request<AnalysisRun>(`/analysis/holdings/${holdingId}/run`, { method: "POST" }),
+  // Epic F22: every per-holding call takes a persona (default Buffett/Munger).
+  getLatestAnalysis: (holdingId: string, persona: Persona = "buffett_munger") =>
+    request<AnalysisRun>(`/analysis/holdings/${holdingId}`, { query: { persona } }),
+  runAnalysis: (holdingId: string, persona: Persona = "buffett_munger") =>
+    request<AnalysisRun>(`/analysis/holdings/${holdingId}/run`, { method: "POST", query: { persona } }),
   // Sprint 5B: "Run on my PC" only queues; the local worker runs it.
-  queueAnalysis: (holdingId: string) =>
-    request<QueuedRun>(`/analysis/holdings/${holdingId}/queue`, { method: "POST" }),
+  queueAnalysis: (holdingId: string, persona: Persona = "buffett_munger") =>
+    request<QueuedRun>(`/analysis/holdings/${holdingId}/queue`, { method: "POST", query: { persona } }),
   getAnalysisQueue: () => request<AnalysisQueue>("/analysis/queue"),
-  queueReadyHoldings: (scope: QueueScope = "holdings") =>
-    request<QueueReadyHoldingsResult>(`/analysis/queue/ready-holdings?scope=${scope}`, { method: "POST" }),
+  queueReadyHoldings: (scope: QueueScope = "holdings", persona: QueuePersona = "buffett_munger") =>
+    request<QueueReadyHoldingsResult>("/analysis/queue/ready-holdings", {
+      method: "POST",
+      query: { scope, persona },
+    }),
+  // Epic F22 — analyst modes (backend/app/api/settings.py, analysis.py, dalio.py).
+  getAnalystMode: () => request<AnalystModeState>("/settings/analyst-mode"),
+  setAnalystMode: (mode: AnalystMode) =>
+    request<AnalystModeState>("/settings/analyst-mode", { method: "PUT", body: JSON.stringify({ mode }) }),
+  setSynthesisEnabled: (enabled: boolean) =>
+    request<AnalystModeState>("/settings/analyst-synthesis", { method: "PUT", body: JSON.stringify({ enabled }) }),
+  getSideBySide: (holdingId: string) => request<SideBySide>(`/analysis/holdings/${holdingId}/side-by-side`),
+  autoQueueHolding: (holdingId: string) =>
+    request<AutoQueueResult>(`/analysis/holdings/${holdingId}/auto-queue`, { method: "POST" }),
+  autoQueuePortfolio: () => request<AutoQueueResult>("/analysis/auto-queue", { method: "POST" }),
+  runSynthesis: (holdingId: string) =>
+    request<Synthesis>(`/analysis/holdings/${holdingId}/synthesis`, { method: "POST" }),
+  getAllWeather: () => request<AllWeather>("/dalio/all-weather"),
+  getCycleFitBoard: () => request<CycleFitBoard>("/dalio/cycle-fit-board"),
+  getDalioMacro: () => request<DalioMacro>("/dalio/macro"),
+  refreshDalioData: () => request<DalioRefreshResult>("/dalio/refresh", { method: "POST" }),
   cancelAnalysisRun: (runId: string) =>
     request<QueuedRun>(`/analysis/runs/${runId}/cancel`, { method: "POST" }),
   getAnalysisReadiness: (holdingId: string) =>
