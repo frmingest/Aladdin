@@ -78,6 +78,15 @@ _CATEGORY_LABELS = {
 # report are excluded outright rather than risked as the pick.
 _REPORT_EXTENSIONS = (".xhtml", ".htm", ".html")
 
+# A half-year Newsweb message often bundles an investor presentation PDF
+# alongside the actual report PDF (e.g. Kongsberg Gruppen's real interim
+# announcements — confirmed 2026-09-27 while investigating Faiz's report
+# that KOG.OL fetches "only captured html/xbrl files"), and not always in
+# report-first order. The PDF fallback should not blindly take "first PDF
+# in the list" when a differently-named one is clearly the presentation,
+# not the report.
+_PRESENTATION_PDF_KEYWORDS = ("presentation", "presentasjon", "webcast", "invitation", "invitasjon")
+
 
 class NewswebFilingUnavailableError(ResearchUnavailableError):
     """The filing list/detail/attachment fetch failed, or returned
@@ -199,17 +208,27 @@ def pick_report_attachment(
 ) -> tuple[NewswebAttachmentRef | None, bool]:
     """(attachment, is_esef). Same ESEF preference as pick_esef_attachment;
     when nothing ESEF-tagged is published and allow_pdf_fallback is True
-    (interim reports — see module docstring), falls back to the first PDF
-    so the report is at least ingested as text evidence, with no financial
-    facts promoted. Annual imports pass allow_pdf_fallback=False, keeping
-    their existing "no ESEF -> error" behaviour unchanged."""
+    (interim reports — see module docstring), falls back to a PDF so the
+    report is at least ingested as text evidence, with no financial facts
+    promoted. Annual imports pass allow_pdf_fallback=False, keeping their
+    existing "no ESEF -> error" behaviour unchanged.
+
+    Among PDFs, an attachment that looks like an investor presentation
+    (see _PRESENTATION_PDF_KEYWORDS) is skipped in favour of one that
+    doesn't, regardless of attachment order — real Newsweb messages don't
+    reliably list the report PDF first. Only if every PDF looks like a
+    presentation does this fall back to the first one, on the theory that
+    an imperfect pick beats none."""
     esef = pick_esef_attachment(attachments)
     if esef is not None:
         return esef, True
     if allow_pdf_fallback:
-        for att in attachments:
-            if att.name.lower().endswith(".pdf"):
+        pdfs = [att for att in attachments if att.name.lower().endswith(".pdf")]
+        for att in pdfs:
+            if not any(keyword in att.name.lower() for keyword in _PRESENTATION_PDF_KEYWORDS):
                 return att, False
+        if pdfs:
+            return pdfs[0], False
     return None, False
 
 
