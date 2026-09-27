@@ -15,6 +15,7 @@ from app.config.settings import Settings
 from app.models import Base, Document, FinancialLineItem, Holding
 from app.models.analysis import EquityAnalysisRun
 from app.models.portfolio import PortfolioPosition, PortfolioSnapshot
+from app.models.watchlist import WatchlistItem
 from app.services.analysis import queue
 from app.services.analysis.pipeline import NotEquityAnalyzableError
 
@@ -213,6 +214,12 @@ def _own(db: Session, holdings: list[Holding]) -> None:
     db.commit()
 
 
+def _watch(db: Session, holdings: list[Holding]) -> None:
+    for holding in holdings:
+        db.add(WatchlistItem(holding_id=holding.id))
+    db.commit()
+
+
 def _three_years(db: Session, holding: Holding) -> None:
     doc = Document(holding=holding, type="filing", original_filename="10k.pdf", mime_type="application/pdf",
                    size_bytes=1, storage_path="10k.pdf", sha256=("f" + holding.ticker).ljust(64, "0")[:64],
@@ -243,3 +250,48 @@ def test_queue_ready_holdings_skips_blocked_and_already_queued():
     assert [r.id for r in result.already_queued] == [existing.id]
     assert [h.ticker for h, _ in result.skipped] == ["MSFT"]
     assert "Financial history" in result.skipped[0][1]
+
+
+def test_queue_ready_holdings_scope_holdings_ignores_watchlist():
+    db = _session()
+    owned = _holding(db, "AAPL")
+    _three_years(db, owned)
+    watched = _holding(db, "NVDA")
+    _three_years(db, watched)
+    _own(db, [owned])
+    _watch(db, [watched])
+
+    result = queue.queue_ready_holdings(db, settings=SETTINGS, scope="holdings")
+
+    assert [r.holding_id for r in result.queued] == [owned.id]
+
+
+def test_queue_ready_holdings_scope_watchlist_ignores_owned():
+    db = _session()
+    owned = _holding(db, "AAPL")
+    _three_years(db, owned)
+    watched = _holding(db, "NVDA")
+    _three_years(db, watched)
+    _own(db, [owned])
+    _watch(db, [watched])
+
+    result = queue.queue_ready_holdings(db, settings=SETTINGS, scope="watchlist")
+
+    assert [r.holding_id for r in result.queued] == [watched.id]
+
+
+def test_queue_ready_holdings_scope_all_combines_and_dedupes():
+    db = _session()
+    owned = _holding(db, "AAPL")
+    _three_years(db, owned)
+    watched = _holding(db, "NVDA")
+    _three_years(db, watched)
+    both = _holding(db, "KO")
+    _three_years(db, both)
+    _own(db, [owned, both])
+    _watch(db, [watched, both])
+
+    result = queue.queue_ready_holdings(db, settings=SETTINGS, scope="all")
+
+    assert {r.holding_id for r in result.queued} == {owned.id, watched.id, both.id}
+    assert len(result.queued) == 3

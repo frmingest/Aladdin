@@ -2,8 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, ApiError } from "../lib/api";
 import { formatDate, formatDuration, formatRelative } from "../lib/format";
-import type { AnalysisQueue, AnalysisWorker, QueuedRun, QueueReadyHoldingsResult } from "../lib/types";
-import { Button, Card, EmptyState, PageHeader, SectionTitle } from "../components/ui";
+import type { AnalysisQueue, AnalysisWorker, QueuedRun, QueueReadyHoldingsResult, QueueScope } from "../lib/types";
+import { Button, Card, EmptyState, Modal, PageHeader, SectionTitle } from "../components/ui";
 
 /** Sprint 5B (F8 local LLM from Railway + F5 overnight queue).
  *
@@ -13,6 +13,12 @@ import { Button, Card, EmptyState, PageHeader, SectionTitle } from "../component
  * run and runs it on Ollama. Backend: app/services/analysis/queue.py. */
 
 const REFRESH_MS = 15000;
+
+const QUEUE_SCOPE_OPTIONS: { value: QueueScope; label: string; hint: string }[] = [
+  { value: "holdings", label: "Actual holdings only", hint: "Currently owned positions. Skips anything on the watchlist." },
+  { value: "watchlist", label: "Watchlist only", hint: "Companies you're following but don't own." },
+  { value: "all", label: "All holdings + watchlist", hint: "Owned positions and watchlist companies together." },
+];
 
 const WORKER_STATE: Record<string, string> = {
   idle: "Idle, waiting for work",
@@ -224,6 +230,8 @@ export default function AnalysisQueuePage() {
   const [queueing, setQueueing] = useState(false);
   const [result, setResult] = useState<QueueReadyHoldingsResult | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [scopePickerOpen, setScopePickerOpen] = useState(false);
+  const [scope, setScope] = useState<QueueScope>("holdings");
 
   const load = useCallback(() => {
     api
@@ -241,11 +249,12 @@ export default function AnalysisQueuePage() {
     return () => window.clearInterval(timer);
   }, [load]);
 
-  async function queueAll() {
+  async function queueAll(chosenScope: QueueScope) {
+    setScopePickerOpen(false);
     setQueueing(true);
     setError(null);
     try {
-      setResult(await api.queueReadyHoldings());
+      setResult(await api.queueReadyHoldings(chosenScope));
       load();
     } catch (e) {
       setError(errorText(e));
@@ -275,11 +284,46 @@ export default function AnalysisQueuePage() {
         title="Analysis queue"
         subtitle="Runs queued for the worker on your PC. It runs research and both analysis passes there, on the local LLM; nothing is spent on this server."
         actions={
-          <Button onClick={() => void queueAll()} disabled={queueing}>
+          <Button onClick={() => setScopePickerOpen(true)} disabled={queueing}>
             {queueing ? "Queueing…" : "Queue all ready holdings"}
           </Button>
         }
       />
+
+      <Modal open={scopePickerOpen} onClose={() => setScopePickerOpen(false)} title="Queue all ready holdings">
+        <p className="mb-4 text-sm text-ink-muted">Which holdings should be queued for analysis?</p>
+        <div className="space-y-2">
+          {QUEUE_SCOPE_OPTIONS.map((opt) => (
+            <label
+              key={opt.value}
+              className={`flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-2.5 transition-colors ${
+                scope === opt.value ? "border-accent bg-accent-subtle" : "border-border hover:bg-border-subtle"
+              }`}
+            >
+              <input
+                type="radio"
+                name="queue-scope"
+                value={opt.value}
+                checked={scope === opt.value}
+                onChange={() => setScope(opt.value)}
+                className="mt-0.5 accent-current text-accent"
+              />
+              <span>
+                <span className="block text-sm font-medium text-ink">{opt.label}</span>
+                <span className="block text-xs text-ink-muted">{opt.hint}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+        <div className="mt-5 flex justify-end gap-2">
+          <Button variant="secondary" onClick={() => setScopePickerOpen(false)}>
+            Cancel
+          </Button>
+          <Button onClick={() => void queueAll(scope)} disabled={queueing}>
+            {queueing ? "Queueing…" : "Queue"}
+          </Button>
+        </div>
+      </Modal>
 
       {error && <p className="mb-4 text-sm text-negative">{error}</p>}
 

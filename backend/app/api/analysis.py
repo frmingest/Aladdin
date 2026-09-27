@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -283,11 +283,15 @@ def get_queue(db: Session = Depends(get_db)) -> AnalysisQueueOut:
 
 
 @router.post("/queue/ready-holdings", response_model=QueueReadyHoldingsOut)
-def queue_ready_holdings(db: Session = Depends(get_db)) -> QueueReadyHoldingsOut:
-    """F5: queue every owned stock / equity ETF that isn't blocked on its
-    instrument type, ticker or financial history."""
+def queue_ready_holdings(
+    scope: analysis_queue.QueueScope = Query("holdings"),
+    db: Session = Depends(get_db),
+) -> QueueReadyHoldingsOut:
+    """F5: queue every stock / equity ETF in `scope` that isn't blocked on
+    its instrument type, ticker or financial history. `scope` is
+    "holdings" (owned positions, default), "watchlist", or "all"."""
     require_not_demo(db)
-    result = analysis_queue.queue_ready_holdings(db, settings=get_settings())
+    result = analysis_queue.queue_ready_holdings(db, settings=get_settings(), scope=scope)
     return QueueReadyHoldingsOut(
         queued=[_queued_out(db, r) for r in result.queued],
         already_queued=[_queued_out(db, r) for r in result.already_queued],

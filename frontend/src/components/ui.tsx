@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 /** Small shared building blocks used by both holding pages — kept here
  * rather than duplicated once a second page needed the same card/badge
@@ -175,5 +175,56 @@ export function StatTile({
       <p className={`tabular mt-1.5 font-display text-[1.7rem] font-semibold leading-tight tracking-tight ${tone}`}>{value}</p>
       {hint && <p className="mt-0.5 text-xs text-ink-faint">{hint}</p>}
     </Card>
+  );
+}
+
+/** Centered modal dialog with a click-outside/Escape-to-close backdrop,
+ * in the same overlay style as the mobile nav drawer (Layout.tsx). Body
+ * is only mounted while `open`, so it never runs effects or holds state
+ * in the background. */
+export function Modal({
+  open,
+  onClose,
+  title,
+  children,
+}: {
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  children: React.ReactNode;
+}) {
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <button type="button" aria-label="Close" className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        className="relative w-full max-w-sm rounded-xl border border-border bg-surface p-5 shadow-card"
+      >
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <h2 className="font-display text-base font-semibold tracking-tight text-ink">{title}</h2>
+          <button
+            type="button"
+            aria-label="Close"
+            onClick={onClose}
+            className="-mr-1 -mt-1 rounded-md p-1 text-ink-faint hover:bg-border-subtle hover:text-ink"
+          >
+            ✕
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
   );
 }

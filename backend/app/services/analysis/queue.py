@@ -28,6 +28,7 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
+from typing import Literal
 
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session
@@ -185,16 +186,36 @@ class QueueAllResult:
     skipped: list[tuple[Holding, str]] = field(default_factory=list)
 
 
-def queue_ready_holdings(db: Session, *, settings: Settings) -> QueueAllResult:
-    """F5: queue every currently owned stock / equity ETF that passes the
-    readiness checks in QUEUE_BLOCKING_CHECKS. Holdings that already have a
-    pending local run are reported, not queued twice."""
+QueueScope = Literal["holdings", "watchlist", "all"]
+
+
+def _scoped_holding_ids(db: Session, scope: QueueScope) -> list[uuid.UUID]:
+    """Holding ids for `scope`, de-duplicated, owned positions first (then
+    watchlist-only additions) so "all" reads the same as "holdings" with
+    watchlist names appended."""
+    from app.models.watchlist import WatchlistItem
     from app.services.valuation.board import current_positions  # avoid an import cycle
 
     holding_ids: list[uuid.UUID] = []
-    for position in current_positions(db):
-        if position.holding_id not in holding_ids:
-            holding_ids.append(position.holding_id)
+    if scope in ("holdings", "all"):
+        for position in current_positions(db):
+            if position.holding_id not in holding_ids:
+                holding_ids.append(position.holding_id)
+    if scope in ("watchlist", "all"):
+        for (holding_id,) in db.execute(select(WatchlistItem.holding_id)):
+            if holding_id not in holding_ids:
+                holding_ids.append(holding_id)
+    return holding_ids
+
+
+def queue_ready_holdings(db: Session, *, settings: Settings, scope: QueueScope = "holdings") -> QueueAllResult:
+    """F5: queue every holding in `scope` that passes the readiness checks
+    in QUEUE_BLOCKING_CHECKS. `scope` picks which holdings are considered:
+    "holdings" (currently owned positions, the original F5 behaviour and
+    the default), "watchlist" (companies followed but not owned), or "all"
+    (the union of both). Holdings that already have a pending local run
+    are reported, not queued twice."""
+    holding_ids = _scoped_holding_ids(db, scope)
 
     result = QueueAllResult()
     holdings = [db.get(Holding, hid) for hid in holding_ids]

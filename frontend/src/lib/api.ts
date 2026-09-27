@@ -77,6 +77,7 @@ import type {
   WatchlistUpdateInput,
   QueuedRun,
   QueueReadyHoldingsResult,
+  QueueScope,
 } from "./types";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL as string | undefined;
@@ -368,8 +369,8 @@ export const api = {
   queueAnalysis: (holdingId: string) =>
     request<QueuedRun>(`/analysis/holdings/${holdingId}/queue`, { method: "POST" }),
   getAnalysisQueue: () => request<AnalysisQueue>("/analysis/queue"),
-  queueReadyHoldings: () =>
-    request<QueueReadyHoldingsResult>("/analysis/queue/ready-holdings", { method: "POST" }),
+  queueReadyHoldings: (scope: QueueScope = "holdings") =>
+    request<QueueReadyHoldingsResult>(`/analysis/queue/ready-holdings?scope=${scope}`, { method: "POST" }),
   cancelAnalysisRun: (runId: string) =>
     request<QueuedRun>(`/analysis/runs/${runId}/cancel`, { method: "POST" }),
   getAnalysisReadiness: (holdingId: string) =>

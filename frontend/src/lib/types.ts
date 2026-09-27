@@ -812,6 +812,8 @@ export interface AnalysisQueue {
   recent: QueuedRun[];
 }
 
+export type QueueScope = "holdings" | "watchlist" | "all";
+
 export interface QueueReadyHoldingsResult {
   queued: QueuedRun[];
   already_queued: QueuedRun[];
