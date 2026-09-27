@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, ApiError } from "../lib/api";
-import { formatDate, formatRelative } from "../lib/format";
+import { formatDate, formatDuration, formatRelative } from "../lib/format";
 import type { AnalysisQueue, AnalysisWorker, QueuedRun, QueueReadyHoldingsResult } from "../lib/types";
 import { Button, Card, EmptyState, PageHeader, SectionTitle } from "../components/ui";
 
@@ -31,6 +31,42 @@ const STATUS_STYLE: Record<string, string> = {
   CANCELLED: "bg-border-subtle text-ink-muted",
 };
 
+/** The worker bakes "(NN%)" onto the end of its heartbeat `detail` text at
+ * each pipeline stage boundary (backend/app/worker/runner.py `_on_stage`) —
+ * no separate progress field, so a heartbeat from an older worker build
+ * (no percentage yet) just renders as plain text, no bar. */
+function parseProgress(detail: string | null | undefined): { pct: number; label: string } | null {
+  if (!detail) return null;
+  const m = detail.match(/^(.*)\((\d{1,3})%\)\s*$/);
+  if (!m) return null;
+  const pct = Math.min(100, Math.max(0, parseInt(m[2], 10)));
+  return { pct, label: m[1].trim() };
+}
+
+/** Average wall-clock time of recently finished runs — the only ETA basis
+ * we have (the backend doesn't track per-stage timing). COMPLETED only:
+ * a FAILED run can end after seconds and would otherwise drag the average
+ * down to something misleading. */
+function averageRunSeconds(recent: QueuedRun[]): number | null {
+  const durations = recent
+    .filter((r) => r.status === "COMPLETED" && r.completed_at)
+    .map((r) => (new Date(r.completed_at as string).getTime() - new Date(r.started_at).getTime()) / 1000)
+    .filter((s) => Number.isFinite(s) && s > 0);
+  if (durations.length === 0) return null;
+  return durations.reduce((a, b) => a + b, 0) / durations.length;
+}
+
+function ProgressBar({ pct }: { pct: number }) {
+  return (
+    <div className="h-1.5 w-full overflow-hidden rounded-full bg-border-subtle" aria-hidden>
+      <div
+        className="h-full rounded-full bg-accent transition-[width] duration-500"
+        style={{ width: `${pct}%` }}
+      />
+    </div>
+  );
+}
+
 function errorText(err: unknown): string {
   return err instanceof ApiError || err instanceof Error ? err.message : "Request failed.";
 }
@@ -43,12 +79,17 @@ function StatusPill({ status }: { status: string }) {
   );
 }
 
-function WorkerRow({ worker }: { worker: AnalysisWorker }) {
+function WorkerRow({ worker, avgRunSeconds }: { worker: AnalysisWorker; avgRunSeconds: number | null }) {
   const dot = !worker.online
     ? "bg-ink-faint"
     : worker.state === "llm_unavailable" || worker.state === "waiting_quota"
       ? "bg-caution"
       : "bg-positive";
+  const progress = worker.online && worker.state === "running" ? parseProgress(worker.detail) : null;
+  const eta =
+    progress && progress.pct > 0 && avgRunSeconds
+      ? formatDuration(avgRunSeconds * (1 - progress.pct / 100))
+      : null;
   return (
     <li className="flex items-start gap-3 py-2.5 text-sm">
       <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${dot}`} aria-hidden />
@@ -61,7 +102,25 @@ function WorkerRow({ worker }: { worker: AnalysisWorker }) {
         <p className="text-xs text-ink-muted">
           Last seen {formatRelative(worker.last_seen_at)} · started {formatDate(worker.started_at)}
         </p>
-        {worker.online && worker.detail && <p className="text-xs text-ink-muted">{worker.detail}</p>}
+        {worker.online && worker.detail && (
+          <div className="mt-1.5 max-w-sm">
+            <p className="text-xs text-ink-muted">
+              {progress ? progress.label : worker.detail}
+              {progress && (
+                <>
+                  {" "}
+                  <span className="font-medium text-ink">{progress.pct}%</span>
+                  {eta && <span> · ETA {eta}</span>}
+                </>
+              )}
+            </p>
+            {progress && (
+              <div className="mt-1">
+                <ProgressBar pct={progress.pct} />
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </li>
   );
@@ -72,11 +131,15 @@ function RunTable({
   onCancel,
   busyId,
   finished,
+  workers,
+  avgRunSeconds,
 }: {
   runs: QueuedRun[];
   onCancel?: (run: QueuedRun) => void;
   busyId?: string | null;
   finished?: boolean;
+  workers?: AnalysisWorker[];
+  avgRunSeconds?: number | null;
 }) {
   return (
     <div className="overflow-x-auto">
@@ -118,6 +181,23 @@ function RunTable({
                   <>
                     {run.claimed_by}
                     <span className="block text-xs text-ink-faint">since {formatRelative(run.claimed_at)}</span>
+                    {(() => {
+                      const worker = workers?.find((w) => w.worker_id === run.claimed_by);
+                      const progress = worker?.online ? parseProgress(worker.detail) : null;
+                      if (!progress) return null;
+                      const eta =
+                        progress.pct > 0 && avgRunSeconds
+                          ? formatDuration(avgRunSeconds * (1 - progress.pct / 100))
+                          : null;
+                      return (
+                        <span className="mt-1 block w-32">
+                          <span className="block text-xs text-ink-faint">
+                            {progress.pct}%{eta && ` · ETA ${eta}`}
+                          </span>
+                          <ProgressBar pct={progress.pct} />
+                        </span>
+                      );
+                    })()}
                   </>
                 ) : (
                   "—"
@@ -187,6 +267,7 @@ export default function AnalysisQueuePage() {
   }
 
   const online = queue?.workers.filter((w) => w.online) ?? [];
+  const avgRunSeconds = averageRunSeconds(queue?.recent ?? []);
 
   return (
     <div>
@@ -245,7 +326,7 @@ export default function AnalysisQueuePage() {
                 )}
                 <ul className="divide-y divide-border-subtle">
                   {queue.workers.map((w) => (
-                    <WorkerRow key={w.worker_id} worker={w} />
+                    <WorkerRow key={w.worker_id} worker={w} avgRunSeconds={avgRunSeconds} />
                   ))}
                 </ul>
               </>
@@ -262,7 +343,13 @@ export default function AnalysisQueuePage() {
           ) : (
             queue && (
               <Card>
-                <RunTable runs={queue.pending} onCancel={(r) => void cancel(r)} busyId={busyId} />
+                <RunTable
+                  runs={queue.pending}
+                  onCancel={(r) => void cancel(r)}
+                  busyId={busyId}
+                  workers={queue.workers}
+                  avgRunSeconds={avgRunSeconds}
+                />
               </Card>
             )
           )}

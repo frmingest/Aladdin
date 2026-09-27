@@ -97,6 +97,17 @@ export function formatRelative(iso: string | null): string {
 }
 
 /** Macro indicator value: "4.25%", "9.3466" (NOK per unit), "+1.25 pp". */
+/** Rough duration for an ETA badge: "~4 min", "~45 s", "~1.5 h". Never
+ * more than one significant unit — precision would be a lie here. */
+export function formatDuration(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds <= 0) return "—";
+  if (seconds < 90) return `~${Math.max(5, Math.round(seconds / 5) * 5)} s`;
+  const minutes = seconds / 60;
+  if (minutes < 90) return `~${Math.round(minutes)} min`;
+  const hours = minutes / 60;
+  return `~${hours.toFixed(hours < 10 ? 1 : 0)} h`;
+}
+
 export function formatIndicatorValue(ind: { value: string | null; display_unit: string }): string {
   if (ind.value === null) return "—";
   const n = Number(ind.value);

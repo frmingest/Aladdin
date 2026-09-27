@@ -22,6 +22,7 @@ class ExcludedOut(BaseModel):
 class CorrelationOut(BaseModel):
     lookback_days: int
     tickers: list[str]
+    ticker_names: dict[str, str]
     pairs: list[CorrelationPairOut]
     excluded: list[ExcludedOut]
 

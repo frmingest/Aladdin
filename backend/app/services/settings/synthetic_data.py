@@ -771,7 +771,13 @@ def demo_risk() -> PortfolioRiskOut:
         equity_value_nok=_TOTAL_VALUE_NOK,
         lookback_days=252,
         cluster_threshold=Decimal("0.60"),
-        correlation=CorrelationOut(lookback_days=252, tickers=tickers, pairs=pairs, excluded=[]),
+        correlation=CorrelationOut(
+            lookback_days=252,
+            tickers=tickers,
+            ticker_names={r["ticker"]: r["name"] for r in _ROWS},
+            pairs=pairs,
+            excluded=[],
+        ),
         clusters=clusters,
         stress=StressOut(
             std_devs=Decimal("2.00"),

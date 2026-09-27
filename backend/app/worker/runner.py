@@ -42,7 +42,7 @@ from app.providers.budget import DailyBudgetGuard
 from app.providers.macro_data_providers import MacroDataProvider
 from app.providers.newsweb_provider import NewswebAnnouncementsProvider
 from app.services.analysis import queue
-from app.services.analysis.pipeline import NotEquityAnalyzableError, run_full_analysis
+from app.services.analysis.pipeline import STAGE_PROGRESS, NotEquityAnalyzableError, run_full_analysis
 from app.services.analysis.readiness import research_refreshes_needed
 
 log = logging.getLogger("aladdin.worker")
@@ -52,6 +52,16 @@ RAN = "ran"
 IDLE = "idle"
 WAITING_QUOTA = "waiting_quota"
 LLM_UNAVAILABLE = "llm_unavailable"
+
+# Display text for each pipeline._report_stage() marker (queue progress UI,
+# Sprint 15). Percentages come from pipeline.STAGE_PROGRESS so the backend
+# has one definition of "how far along is this stage".
+STAGE_LABELS: dict[str, str] = {
+    "evidence_packet": "Building evidence packet",
+    "blind_pass": "Running blind pass (LLM)",
+    "reconciliation_pass": "Running reconciliation pass (LLM)",
+    "finalizing": "Finalizing",
+}
 
 
 @dataclass(frozen=True)
@@ -107,6 +117,16 @@ class AnalysisWorker:
             self._state, self._detail, self._current_run_id = state, detail, run_id
         if changed:
             self.beat()
+
+    def _on_stage(self, label: str, run_id: uuid.UUID, stage: str) -> None:
+        """Called from inside run_full_analysis (same thread) at each
+        pipeline stage boundary. The percentage is baked into `detail` as
+        `(NN%)` at the end — the frontend parses it back out rather than
+        the API carrying a separate field, so this needed no DB migration
+        or schema change."""
+        pct = STAGE_PROGRESS.get(stage, 0)
+        stage_label = STAGE_LABELS.get(stage, stage)
+        self._set_state(queue.RUNNING.lower(), f"Analyzing {label} — {stage_label} ({pct}%)", run_id)
 
     def beat(self, *, started: bool = False) -> None:
         with self._lock:
@@ -173,7 +193,7 @@ class AnalysisWorker:
             run_id = run.id
             holding = db.get(Holding, run.holding_id)
             label = holding.ticker if holding is not None else str(run.holding_id)
-            self._set_state(queue.RUNNING.lower(), f"Analyzing {label}", run_id)
+            self._set_state(queue.RUNNING.lower(), f"Analyzing {label} — Starting (0%)", run_id)
             log.info("claimed run %s (%s), attempt %s", run_id, label, run.attempts)
             try:
                 if holding is None:
@@ -189,6 +209,7 @@ class AnalysisWorker:
                     announcements_provider=self.providers.announcements,
                     macro_data_provider=self.providers.macro_data,
                     run=run,
+                    on_stage=lambda stage: self._on_stage(label, run_id, stage),
                 )
                 log.info("run %s finished: %s", run_id, finished.status)
             except KeyboardInterrupt:

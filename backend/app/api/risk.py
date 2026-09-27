@@ -44,6 +44,7 @@ def _to_out(risk: PortfolioRisk) -> PortfolioRiskOut:
         correlation=CorrelationOut(
             lookback_days=risk.correlation.lookback_days,
             tickers=risk.correlation.tickers,
+            ticker_names=risk.correlation.ticker_names,
             pairs=[
                 CorrelationPairOut(
                     ticker_a=p.ticker_a, ticker_b=p.ticker_b, correlation=p.correlation, overlap_days=p.overlap_days

@@ -49,6 +49,26 @@ from app.services.macro.evidence import ensure_macro_fresh
 
 T = TypeVar("T")
 
+# Coarse stage markers for the local worker's progress display (Sprint 15
+# queue UX). Percent-complete is a fixed estimate per stage, not measured
+# work — good enough for a progress bar / ETA, not a guarantee.
+STAGE_PROGRESS: dict[str, int] = {
+    "evidence_packet": 5,
+    "blind_pass": 20,
+    "reconciliation_pass": 65,
+    "finalizing": 95,
+}
+
+
+def _report_stage(on_stage: Callable[[str], None] | None, name: str) -> None:
+    if on_stage is None:
+        return
+    try:
+        on_stage(name)
+    except Exception:  # progress reporting must never break the run
+        pass
+
+
 
 class NotEquityAnalyzableError(Exception):
     """A bond fund, money-market fund, or physical commodity ETC has no
@@ -84,6 +104,7 @@ def run_full_analysis(
     announcements_provider: NewswebAnnouncementsProvider | None = None,
     macro_data_provider: MacroDataProvider | None = None,
     run: EquityAnalysisRun | None = None,
+    on_stage: Callable[[str], None] | None = None,
 ) -> EquityAnalysisRun:
     """Runs the full pipeline for `holding`.
 
@@ -141,6 +162,7 @@ def run_full_analysis(
         run.error_message = None
     db.flush()
 
+    _report_stage(on_stage, "evidence_packet")
     if is_fund:
         packet = build_fund_evidence_packet(db, holding, research_provider=research_provider)
     else:
@@ -155,6 +177,7 @@ def run_full_analysis(
     run.evidence_packet_json = packet.as_dict()
     run.evidence_unavailable_reasons = packet.unavailable_reasons
 
+    _report_stage(on_stage, "blind_pass")
     try:
         blind_result, used_provider = _call_with_fallback(
             llm_provider,
@@ -182,6 +205,7 @@ def run_full_analysis(
     run.user_notes_snapshot = user_notes
     run.reconciliation_prompt_version = prompt_version
 
+    _report_stage(on_stage, "reconciliation_pass")
     try:
         reconciliation_result, _used_provider = _call_with_fallback(
             llm_provider,
@@ -201,6 +225,7 @@ def run_full_analysis(
         db.refresh(run)
         return run
 
+    _report_stage(on_stage, "finalizing")
     run.reconciliation_json = reconciliation_result.output.model_dump(mode="json")
     run.reconciliation_citation_warnings = reconciliation_result.citation_warnings
     run.completed_at = datetime.now(timezone.utc)

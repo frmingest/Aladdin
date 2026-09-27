@@ -34,6 +34,15 @@ function correlationCellStyle(r: number): React.CSSProperties {
   return { backgroundColor: `rgb(var(${varName}) / ${alpha})` };
 }
 
+/** First part of a name, cut to `maxChars` — used for narrow heatmap
+ * headers where the full security name would blow up the column width.
+ * The full name is always still available in the cell's `title` tooltip. */
+function shortName(name: string, maxChars: number): string {
+  const trimmed = name.trim();
+  if (trimmed.length <= maxChars) return trimmed;
+  return `${trimmed.slice(0, maxChars).trimEnd()}…`;
+}
+
 function CorrelationHeatmap({ matrix }: { matrix: CorrelationMatrix }) {
   if (matrix.tickers.length < 2) {
     return (
@@ -42,6 +51,7 @@ function CorrelationHeatmap({ matrix }: { matrix: CorrelationMatrix }) {
       </p>
     );
   }
+  const displayName = (ticker: string) => matrix.ticker_names[ticker] ?? ticker;
   const get = (a: string, b: string): number | null => {
     if (a === b) return 1;
     const pair = matrix.pairs.find(
@@ -57,8 +67,8 @@ function CorrelationHeatmap({ matrix }: { matrix: CorrelationMatrix }) {
           <tr>
             <th className="p-1" />
             {matrix.tickers.map((t) => (
-              <th key={t} className="p-1 text-center font-medium text-ink-muted">
-                {t}
+              <th key={t} className="w-14 max-w-14 p-1 text-center font-medium text-ink-muted" title={displayName(t)}>
+                <span className="block truncate">{shortName(displayName(t), 9)}</span>
               </th>
             ))}
           </tr>
@@ -66,7 +76,12 @@ function CorrelationHeatmap({ matrix }: { matrix: CorrelationMatrix }) {
         <tbody>
           {matrix.tickers.map((rowTicker) => (
             <tr key={rowTicker}>
-              <th className="pr-2 text-right font-medium text-ink-muted">{rowTicker}</th>
+              <th
+                className="max-w-[9rem] pr-2 text-right font-medium text-ink-muted"
+                title={displayName(rowTicker)}
+              >
+                <span className="block truncate">{shortName(displayName(rowTicker), 18)}</span>
+              </th>
               {matrix.tickers.map((colTicker) => {
                 const r = get(rowTicker, colTicker);
                 return (
@@ -74,7 +89,7 @@ function CorrelationHeatmap({ matrix }: { matrix: CorrelationMatrix }) {
                     key={colTicker}
                     className="tabular h-9 w-14 rounded text-center align-middle"
                     style={r !== null ? correlationCellStyle(r) : undefined}
-                    title={`${rowTicker} vs ${colTicker}: ${r !== null ? r.toFixed(2) : "not computable"}`}
+                    title={`${displayName(rowTicker)} vs ${displayName(colTicker)}: ${r !== null ? r.toFixed(2) : "not computable"}`}
                   >
                     {r !== null ? r.toFixed(2) : <span className="text-ink-faint">—</span>}
                   </td>

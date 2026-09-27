@@ -55,6 +55,12 @@ class CorrelationResult:
     tickers: list[str] = field(default_factory=list)  # tickers included in the matrix, in input order
     pairs: list[CorrelationPair] = field(default_factory=list)  # one entry per unordered pair, a != b
     excluded: list[ExcludedTicker] = field(default_factory=list)
+    # ticker -> holding name, for display (heatmap headers show the name,
+    # not the ticker — Sprint 15 UX). Populated by the caller
+    # (portfolio_risk.py has the holding names; this module only sees
+    # price history keyed by ticker), so it defaults empty for any
+    # existing caller/test that doesn't set it.
+    ticker_names: dict[str, str] = field(default_factory=dict)
 
     def get(self, a: str, b: str) -> Decimal | None:
         if a == b:

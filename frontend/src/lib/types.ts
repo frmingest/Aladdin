@@ -1479,6 +1479,7 @@ export interface ExcludedTicker {
 export interface CorrelationMatrix {
   lookback_days: number;
   tickers: string[];
+  ticker_names: Record<string, string>;
   pairs: CorrelationPair[];
   excluded: ExcludedTicker[];
 }

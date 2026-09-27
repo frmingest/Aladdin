@@ -81,6 +81,10 @@ def build_portfolio_risk(
             notes.append(f"{p.ticker}: {history.reason}")
 
     correlation = build_correlation_matrix(histories, lookback_days=lookback_days)
+    # First position seen per ticker wins the display name (matches the
+    # de-dup by ticker done above for histories).
+    for p in equity_positions:
+        correlation.ticker_names.setdefault(p.ticker, p.name)
 
     top_holdings = sorted(
         ((p.ticker, p.name, p.weight_pct or Decimal(0)) for p in equity_positions),

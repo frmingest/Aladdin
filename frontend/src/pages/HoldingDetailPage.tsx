@@ -54,7 +54,9 @@ function NewswebFetchHighlight({ holdingId, onImported }: { holdingId: string; o
 
   return (
     <div className="mb-8">
-      <NewswebAnnualReportCard holdingId={holdingId} onImported={onImported} />
+      <CollapsibleSection title="Reports from Newsweb" hint="Annual & interim filings fetched from Oslo Børs">
+        <NewswebAnnualReportCard holdingId={holdingId} onImported={onImported} />
+      </CollapsibleSection>
     </div>
   );
 }
@@ -694,10 +696,9 @@ export default function HoldingDetailPage() {
       )}
 
       <div className="mb-8">
-        <h2 className="section-title">
-          Documents
-        </h2>
-        <DocumentsPanel holdingId={id} isFund={isFund} onUploaded={() => setMetricsKey((k) => k + 1)} />
+        <CollapsibleSection title="Documents" hint="Uploaded filings and other files">
+          <DocumentsPanel holdingId={id} isFund={isFund} onUploaded={() => setMetricsKey((k) => k + 1)} />
+        </CollapsibleSection>
       </div>
 
       {!isFund && (

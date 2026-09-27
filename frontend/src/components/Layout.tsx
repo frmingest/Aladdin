@@ -72,20 +72,41 @@ function useBackendHealth(): HealthState {
   return state;
 }
 
-const NAV_ITEMS: { label: string; to: string; disabled?: boolean }[] = [
-  { label: "Dashboard", to: "/" },
-  { label: "Holdings", to: "/holdings" },
-  { label: "Portfolio", to: "/portfolio" },
-  { label: "Margin of safety", to: "/margin-of-safety" },
-  { label: "Analysis queue", to: "/analysis-queue" },
-  { label: "Watchlist", to: "/watchlist" },
-  { label: "Journal", to: "/journal" },
-  { label: "Macro", to: "/macro" },
-  { label: "Thesis", to: "/thesis" },
-  { label: "Portfolio risk", to: "/risk" },
-  { label: "Performance", to: "/performance" },
-  { label: "Precious metals", to: "/precious-metals" },
-  { label: "Settings", to: "/settings" },
+type NavItem = { label: string; to: string; disabled?: boolean };
+type NavSection = { title: string; items: NavItem[] };
+
+/** Grouped 2026-09-27 (13 flat links had become a wall of text). Order
+ * inside each group is the old flat order, so nothing muscle-memory
+ * depended on moved further than a section up or down. */
+const NAV_SECTIONS: NavSection[] = [
+  { title: "Overview", items: [{ label: "Dashboard", to: "/" }] },
+  {
+    title: "Portfolio",
+    items: [
+      { label: "Holdings", to: "/holdings" },
+      { label: "Portfolio", to: "/portfolio" },
+      { label: "Performance", to: "/performance" },
+      { label: "Portfolio risk", to: "/risk" },
+      { label: "Margin of safety", to: "/margin-of-safety" },
+      { label: "Precious metals", to: "/precious-metals" },
+    ],
+  },
+  {
+    title: "Research",
+    items: [
+      { label: "Analysis queue", to: "/analysis-queue" },
+      { label: "Watchlist", to: "/watchlist" },
+      { label: "Macro", to: "/macro" },
+    ],
+  },
+  {
+    title: "Tracking",
+    items: [
+      { label: "Journal", to: "/journal" },
+      { label: "Thesis", to: "/thesis" },
+    ],
+  },
+  { title: "System", items: [{ label: "Settings", to: "/settings" }] },
 ];
 
 function HealthBadge() {
@@ -123,16 +144,29 @@ function DemoModeBanner() {
   );
 }
 
-/** Logo mark reused by the desktop sidebar, the mobile top bar and the
- * mobile drawer header. */
+/** Genie-bottle mark (2026-09-27, replacing the plain "A" monogram) —
+ * reused by the desktop sidebar, the mobile top bar and the mobile drawer
+ * header. Two shapes only (stopper + body) so it still reads at 16px. */
+function BrandMark({ className = "h-4 w-4" }: { className?: string }) {
+  return (
+    <svg aria-hidden viewBox="0 0 24 24" className={className} xmlns="http://www.w3.org/2000/svg">
+      <rect x="10.2" y="1" width="3.6" height="1.7" rx="0.75" fill="currentColor" />
+      <path
+        d="M10.4 2.7h3.2v2.3c0 .5.2 1 .6 1.3 1.9 1.7 3 4.1 3 6.7v3.9c0 2-1.6 3.6-3.6 3.6h-3.2c-2 0-3.6-1.6-3.6-3.6v-3.9c0-2.6 1.1-5 3-6.7.4-.4.6-.8.6-1.3V2.7Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
 function Brand() {
   return (
     <div className="flex items-center gap-2.5 px-2">
       <span
         aria-hidden
-        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-accent to-positive font-display text-sm font-bold text-onfill"
+        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-accent to-positive text-onfill"
       >
-        A
+        <BrandMark />
       </span>
       <span className="font-display text-sm font-bold tracking-[0.2em] text-ink">ALADDIN</span>
     </div>
@@ -145,36 +179,45 @@ function Brand() {
 function NavContents({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <>
-      <ul className="flex flex-col gap-1">
-        {NAV_ITEMS.map((item) =>
-          item.disabled ? (
-            <li
-              key={item.to}
-              className="cursor-not-allowed rounded-md px-3 py-2 text-sm text-ink-faint"
-              title="Not built yet"
-            >
-              {item.label}
-            </li>
-          ) : (
-            <li key={item.to}>
-              <NavLink
-                to={item.to}
-                end
-                onClick={onNavigate}
-                className={({ isActive }) =>
-                  `block rounded-md border-l-2 px-3 py-2 text-sm font-medium transition-colors ${
-                    isActive
-                      ? "border-accent bg-accent-subtle text-ink"
-                      : "border-transparent text-ink-muted hover:bg-border-subtle hover:text-ink"
-                  }`
-                }
-              >
-                {item.label}
-              </NavLink>
-            </li>
-          ),
-        )}
-      </ul>
+      <div className="flex flex-col gap-4">
+        {NAV_SECTIONS.map((section) => (
+          <div key={section.title}>
+            <p className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-faint">
+              {section.title}
+            </p>
+            <ul className="flex flex-col gap-1">
+              {section.items.map((item) =>
+                item.disabled ? (
+                  <li
+                    key={item.to}
+                    className="cursor-not-allowed rounded-md px-3 py-2 text-sm text-ink-faint"
+                    title="Not built yet"
+                  >
+                    {item.label}
+                  </li>
+                ) : (
+                  <li key={item.to}>
+                    <NavLink
+                      to={item.to}
+                      end
+                      onClick={onNavigate}
+                      className={({ isActive }) =>
+                        `block rounded-md border-l-2 px-3 py-2 text-sm font-medium transition-colors ${
+                          isActive
+                            ? "border-accent bg-accent-subtle text-ink"
+                            : "border-transparent text-ink-muted hover:bg-border-subtle hover:text-ink"
+                        }`
+                      }
+                    >
+                      {item.label}
+                    </NavLink>
+                  </li>
+                ),
+              )}
+            </ul>
+          </div>
+        ))}
+      </div>
       <div className="mt-auto space-y-1 pt-6">
         <ThemeToggle />
         <NavLink

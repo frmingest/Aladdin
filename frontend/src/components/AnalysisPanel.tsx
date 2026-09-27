@@ -421,6 +421,20 @@ function VerdictCard({
 
 /** Sprint 8: a fund's moat is the look-through moat of what it owns, with
  * a caveat saying how much of the fund the judgement rests on. */
+/** Collapse-toggle chevron shared by FundMoatCard, MoatCard and
+ * NarrativeCard (2026-09-27: a full analysis run is 6-8 of these long
+ * text cards — collapsed by default keeps the page scannable). */
+function CardChevron({ open }: { open: boolean }) {
+  return (
+    <span
+      aria-hidden
+      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-raised text-[10px] text-ink-muted transition-transform ${open ? "rotate-90" : ""}`}
+    >
+      ▶
+    </span>
+  );
+}
+
 function FundMoatCard({
   blind,
   evidence,
@@ -429,58 +443,84 @@ function FundMoatCard({
   evidence: Map<string, EvidenceItem>;
 }) {
   const moat = blind.moat;
+  const [open, setOpen] = useState(false);
   return (
     <Card>
-      <div className="flex items-center justify-between gap-4">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-4 text-left"
+      >
         <CardTitle icon="moat">The businesses underneath (look-through moat)</CardTitle>
-        <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${MOAT_STYLES[moat.overall_rating]}`}>
-          {moat.overall_rating === "None" ? "No moat" : `${moat.overall_rating} moat`}
+        <span className="flex shrink-0 items-center gap-2">
+          <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${MOAT_STYLES[moat.overall_rating]}`}>
+            {moat.overall_rating === "None" ? "No moat" : `${moat.overall_rating} moat`}
+          </span>
+          <CardChevron open={open} />
         </span>
-      </div>
-      <div className="mt-3">
-        <Prose text={moat.circle_of_competence_summary} clampAfter={2} />
-      </div>
-      <p className="mt-3 text-xs text-caution">Coverage: {moat.coverage_caveat}</p>
-      <Citations ids={moat.evidence_ids} evidence={evidence} />
+      </button>
+      {open && (
+        <>
+          <div className="mt-3">
+            <Prose text={moat.circle_of_competence_summary} clampAfter={2} />
+          </div>
+          <p className="mt-3 text-xs text-caution">Coverage: {moat.coverage_caveat}</p>
+          <Citations ids={moat.evidence_ids} evidence={evidence} />
+        </>
+      )}
     </Card>
   );
 }
 
 function MoatCard({ run, evidence }: { run: AnalysisRun; evidence: Map<string, EvidenceItem> }) {
+  const [open, setOpen] = useState(false);
   const blind = run.blind_pass;
   if (!blind || isFundBlindPass(blind)) return null;
   const moat = blind.moat;
   return (
     <Card>
-      <div className="flex items-center justify-between gap-4">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-4 text-left"
+      >
         <CardTitle icon="moat">Business quality &amp; moat</CardTitle>
-        <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${MOAT_STYLES[moat.overall_rating]}`}>
-          {moat.overall_rating === "None" ? "No moat" : `${moat.overall_rating} moat`}
+        <span className="flex shrink-0 items-center gap-2">
+          <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${MOAT_STYLES[moat.overall_rating]}`}>
+            {moat.overall_rating === "None" ? "No moat" : `${moat.overall_rating} moat`}
+          </span>
+          <CardChevron open={open} />
         </span>
-      </div>
-      <div className="mt-3">
-        <Prose text={moat.circle_of_competence_summary} clampAfter={2} />
-      </div>
-      <Citations ids={moat.evidence_ids} evidence={evidence} />
+      </button>
+      {open && (
+        <>
+          <div className="mt-3">
+            <Prose text={moat.circle_of_competence_summary} clampAfter={2} />
+          </div>
+          <Citations ids={moat.evidence_ids} evidence={evidence} />
 
-      <ul className="mt-4 divide-y divide-border-subtle border-t border-border-subtle">
-        {moat.sources.map((source) => (
-          <li key={source.source} className="py-3">
-            <div className="flex items-center justify-between gap-3 text-sm">
-              <span className="font-medium text-ink">
-                {MOAT_SOURCE_LABELS[source.source] ?? source.source}
-              </span>
-              <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${MOAT_STYLES[source.rating]}`}>
-                {source.rating}
-              </span>
-            </div>
-            <p className="mt-1 max-w-[72ch] text-sm leading-relaxed text-ink-muted">
-              <WithFigures text={source.reasoning} />
-            </p>
-            <Citations ids={source.evidence_ids} evidence={evidence} />
-          </li>
-        ))}
-      </ul>
+          <ul className="mt-4 divide-y divide-border-subtle border-t border-border-subtle">
+            {moat.sources.map((source) => (
+              <li key={source.source} className="py-3">
+                <div className="flex items-center justify-between gap-3 text-sm">
+                  <span className="font-medium text-ink">
+                    {MOAT_SOURCE_LABELS[source.source] ?? source.source}
+                  </span>
+                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${MOAT_STYLES[source.rating]}`}>
+                    {source.rating}
+                  </span>
+                </div>
+                <p className="mt-1 max-w-[72ch] text-sm leading-relaxed text-ink-muted">
+                  <WithFigures text={source.reasoning} />
+                </p>
+                <Citations ids={source.evidence_ids} evidence={evidence} />
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
     </Card>
   );
 }
@@ -533,23 +573,36 @@ function NarrativeCard({
   evidence: Map<string, EvidenceItem>;
 }) {
   const gaps = dataGapCount(section.summary);
+  const [open, setOpen] = useState(false);
   return (
     <Card className="flex flex-col">
-      <div className="mb-4 flex items-start justify-between gap-3">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className={`flex w-full items-start justify-between gap-3 text-left ${open ? "mb-4" : ""}`}
+      >
         <CardTitle icon={icon}>{title}</CardTitle>
-        {gaps > 0 && (
-          <span
-            className="shrink-0 rounded-full bg-caution-subtle px-2 py-0.5 text-[11px] font-medium text-caution"
-            title="Sentences where the analysis says it lacked data — highlighted below"
-          >
-            {gaps} data gap{gaps === 1 ? "" : "s"}
-          </span>
-        )}
-      </div>
-      <div className="flex-1">
-        <Prose text={section.summary} />
-      </div>
-      <Citations ids={section.evidence_ids} evidence={evidence} />
+        <span className="flex shrink-0 items-center gap-2">
+          {gaps > 0 && (
+            <span
+              className="rounded-full bg-caution-subtle px-2 py-0.5 text-[11px] font-medium text-caution"
+              title="Sentences where the analysis says it lacked data — highlighted below"
+            >
+              {gaps} data gap{gaps === 1 ? "" : "s"}
+            </span>
+          )}
+          <CardChevron open={open} />
+        </span>
+      </button>
+      {open && (
+        <>
+          <div className="flex-1">
+            <Prose text={section.summary} />
+          </div>
+          <Citations ids={section.evidence_ids} evidence={evidence} />
+        </>
+      )}
     </Card>
   );
 }
