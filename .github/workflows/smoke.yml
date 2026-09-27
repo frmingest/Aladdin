@@ -3,6 +3,10 @@
 # and variables -> Actions -> Variables):
 #   SMOKE_FRONTEND_URL  e.g. https://aladdin-frontend.up.railway.app
 #   SMOKE_API_URL       e.g. https://aladdin-backend.up.railway.app
+# Optional repository secret, only needed once APP_AUTH_TOKEN is set in
+# Railway (2026-09-27, see backend/app/security.py) -- unset, the smoke
+# test's direct API calls send no header, same as before this existed:
+#   SMOKE_API_KEY       must match the backend's APP_AUTH_TOKEN
 # Runs after Railway reports a successful deployment to GitHub, every
 # morning, and on demand (Actions -> Smoke test -> Run workflow).
 name: Smoke test
@@ -29,6 +33,7 @@ jobs:
     env:
       SMOKE_FRONTEND_URL: ${{ vars.SMOKE_FRONTEND_URL }}
       SMOKE_API_URL: ${{ vars.SMOKE_API_URL }}
+      SMOKE_API_KEY: ${{ secrets.SMOKE_API_KEY }}
     steps:
       - name: Needs the two URLs
         if: env.SMOKE_FRONTEND_URL == '' || env.SMOKE_API_URL == ''

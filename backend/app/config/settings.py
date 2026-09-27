@@ -25,6 +25,28 @@ class Settings(BaseSettings):
     app_name: str = "aladdin-backend"
     app_version: str = "0.1.0"
 
+    # --- Access gate (2026-09-27, app/security.py -- see
+    # claude/agentic-coding-audit-2026-09-27.md finding #1/#2) ---
+    # Unset by default (local dev, CI): every endpoint stays exactly as
+    # open as before this change, since nothing here reads it. Set in
+    # Railway to require every request (except /health) to carry a
+    # matching X-API-Key header. This is *not* real access control -- the
+    # key ships in the frontend's built JS bundle (frontend/.env.example),
+    # readable by anyone who opens dev tools -- it's a minimal gate against
+    # stray/automated requests hitting a public backend URL (bots,
+    # scanners, crawlers hammering a real financial-data API), not a
+    # defense against a targeted attacker. Must match the frontend's
+    # VITE_API_KEY exactly.
+    app_auth_token: str | None = None
+    # Comma-separated list of origins allowed to call this API
+    # cross-origin. Local dev never needs this -- Vite's dev-server proxy
+    # (frontend/vite.config.ts) makes /api same-origin -- so this only
+    # matters for the real browser->backend call in production. Defaults
+    # to the one known deployed frontend origin (see claude/progress.md)
+    # rather than "*"; override to add another origin (a custom domain, a
+    # second frontend) without a code change.
+    cors_allowed_origins: str = "https://exciting-gratitude-production-71b5.up.railway.app"
+
     # --- LLM provider (see app/providers/) ---
     llm_provider: str = "google_ai_studio"  # "google_ai_studio" | "mistral" | "ollama"
     google_ai_studio_api_key: str | None = None

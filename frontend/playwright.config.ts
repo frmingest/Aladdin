@@ -11,6 +11,9 @@ import { defineConfig, devices } from "@playwright/test";
  * Also runs from GitHub Actions (.github/workflows/smoke.yml) after a
  * Railway deployment and on demand. First run on a machine:
  * `npx playwright install chromium`.
+ *
+ * Optional: SMOKE_API_KEY, once APP_AUTH_TOKEN is set in Railway (see
+ * backend/app/security.py) -- read directly by e2e/smoke.spec.ts.
  */
 export default defineConfig({
   testDir: "./e2e",

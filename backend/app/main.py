@@ -42,6 +42,7 @@ from app.providers.base import (
     ResearchUnavailableError,
     RiskFreeRateUnavailableError,
 )
+from app.security import ApiKeyMiddleware
 from app.services.macro.scheduler import MacroRefreshScheduler
 from app.services.settings.demo_guard import DemoModeWriteBlockedError
 
@@ -64,11 +65,19 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
 app = FastAPI(title=settings.app_name, version=settings.app_version, lifespan=lifespan)
 
-# Permissive for now (Sprint 0, no real frontend origin decided yet beyond
-# local dev). Tighten once the frontend has a fixed deployed origin.
+# --- Access gate + CORS (2026-09-27 -- see app/security.py's docstring and
+# claude/agentic-coding-audit-2026-09-27.md findings #1/#2) ---
+# ApiKeyMiddleware is added *before* CORSMiddleware so CORS ends up
+# outermost (Starlette wraps user middleware in reverse of add order): CORS
+# then handles a preflight OPTIONS before the key check ever runs, and adds
+# CORS headers to a 401 response too, not just a 200.
+app.add_middleware(ApiKeyMiddleware, get_settings=get_settings)
+_cors_allowed_origins = [
+    origin.strip() for origin in settings.cors_allowed_origins.split(",") if origin.strip()
+] or ["*"]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_cors_allowed_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )

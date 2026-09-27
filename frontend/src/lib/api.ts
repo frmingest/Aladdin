@@ -81,6 +81,10 @@ import type {
 } from "./types";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL as string | undefined;
+// Sent as X-API-Key on every request (2026-09-27, see backend/app/security.py).
+// Must match the backend's APP_AUTH_TOKEN; both unset (the default) means
+// no header is sent, matching the backend's own no-auth default.
+const API_KEY = import.meta.env.VITE_API_KEY as string | undefined;
 
 function apiUrl(path: string): string {
   return BASE_URL ? `${BASE_URL}${path}` : `/api${path}`;
@@ -122,6 +126,7 @@ async function request<T>(
     ...rest,
     headers: {
       Accept: "application/json",
+      ...(API_KEY ? { "X-API-Key": API_KEY } : {}),
       ...(rest.body && !(rest.body instanceof FormData)
         ? { "Content-Type": "application/json" }
         : {}),

@@ -16,6 +16,13 @@ import { expect, test, type Page } from "@playwright/test";
  */
 
 const API = (process.env.SMOKE_API_URL ?? "").replace(/\/$/, "");
+// Only needed once Faiz sets APP_AUTH_TOKEN in Railway (2026-09-27, see
+// backend/app/security.py) -- until then the backend takes any request
+// with no header at all, same as before, so this being unset changes
+// nothing. /health itself never needs it (the backend exempts that path).
+const API_HEADERS: Record<string, string> = process.env.SMOKE_API_KEY
+  ? { "X-API-Key": process.env.SMOKE_API_KEY }
+  : {};
 
 test.beforeAll(() => {
   if (!API || !process.env.SMOKE_FRONTEND_URL) {
@@ -31,7 +38,7 @@ test.describe("API", () => {
   });
 
   test("system status: database up and migrations applied", async ({ request }) => {
-    const res = await request.get(`${API}/system/status`);
+    const res = await request.get(`${API}/system/status`, { headers: API_HEADERS });
     expect(res.status()).toBe(200);
     const status = await res.json();
     expect(status.database_ok, "database reachable").toBe(true);
@@ -47,13 +54,13 @@ test.describe("API", () => {
 
   for (const path of ["/portfolio/overview", "/holdings", "/macro/indicators", "/analysis/queue", "/journal"]) {
     test(`GET ${path}`, async ({ request }) => {
-      const res = await request.get(`${API}${path}`);
+      const res = await request.get(`${API}${path}`, { headers: API_HEADERS });
       expect(res.status(), await res.text()).toBe(200);
     });
   }
 
   test("macro data has been captured", async ({ request }) => {
-    const body = await (await request.get(`${API}/macro/indicators`)).json();
+    const body = await (await request.get(`${API}/macro/indicators`, { headers: API_HEADERS })).json();
     const have = (body.indicators as { value: string | null }[]).filter((i) => i.value !== null).length;
     if (have === 0) {
       test.info().annotations.push({ type: "warning", description: "No macro series captured yet" });
