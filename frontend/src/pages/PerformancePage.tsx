@@ -20,7 +20,11 @@ import { Button, Card, EmptyState, PageHeader, SectionTitle } from "../component
  * APPROXIMATION, shown as a banner rather than buried: this reindexes
  * today's positions backward through price/FX history — it is not a real
  * past-transaction P&L, since only point-in-time portfolio snapshots are
- * stored (see the backend module's docstring). */
+ * stored (see the backend module's docstring).
+ *
+ * Real (CPI-deflated) return overlay (Sprint 15 backlog #2, 2026-09-27):
+ * an optional second line, deflating the same nominal series by Norway CPI
+ * (perf.real_return_available / real_return_reason / real_return_note). */
 
 const LOOKBACK_OPTIONS: { label: string; days: number }[] = [
   { label: "30d", days: 30 },
@@ -50,10 +54,22 @@ function toneFor(pct: string | null): "positive" | "negative" | undefined {
   return Number(pct) >= 0 ? "positive" : "negative";
 }
 
-function PerformanceChart({ series, benchmarkTicker, benchmarkAvailable }: {
+/** The most recent day's real_return_pct — the cumulative CPI-deflated
+ * return, mirroring perf.total_return_pct (the nominal series' own last
+ * value) since the backend doesn't precompute a separate real total. */
+function realTotalReturnPct(perf: PortfolioPerformance): string | null {
+  if (!perf.real_return_available) return null;
+  for (let i = perf.series.length - 1; i >= 0; i -= 1) {
+    if (perf.series[i].real_return_pct !== null) return perf.series[i].real_return_pct;
+  }
+  return null;
+}
+
+function PerformanceChart({ series, benchmarkTicker, benchmarkAvailable, showReal }: {
   series: DailyValue[];
   benchmarkTicker: string;
   benchmarkAvailable: boolean;
+  showReal: boolean;
 }) {
   const points = series
     .filter((d) => d.portfolio_return_pct !== null)
@@ -61,6 +77,7 @@ function PerformanceChart({ series, benchmarkTicker, benchmarkAvailable }: {
       on: d.on,
       portfolio: Number(d.portfolio_return_pct),
       benchmark: d.benchmark_return_pct !== null ? Number(d.benchmark_return_pct) : null,
+      real: d.real_return_pct !== null ? Number(d.real_return_pct) : null,
     }));
 
   if (points.length === 0) {
@@ -125,6 +142,19 @@ function PerformanceChart({ series, benchmarkTicker, benchmarkAvailable }: {
               connectNulls
             />
           )}
+          {showReal && (
+            <Line
+              type="monotone"
+              dataKey="real"
+              name="Portfolio (real, CPI-adjusted)"
+              stroke="rgb(var(--c-positive))"
+              strokeWidth={1.5}
+              strokeDasharray="2 2"
+              dot={false}
+              activeDot={{ r: 4 }}
+              connectNulls
+            />
+          )}
         </LineChart>
       </ResponsiveContainer>
     </div>
@@ -136,6 +166,7 @@ export default function PerformancePage() {
   const [perf, setPerf] = useState<PortfolioPerformance | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [showReal, setShowReal] = useState(false);
 
   const load = (days: number) => {
     setPerf(null);
@@ -216,7 +247,12 @@ export default function PerformancePage() {
                 tone={toneFor(perf.total_return_pct)}
                 hint={perf.full_coverage_from ? `since ${formatDate(perf.full_coverage_from)}` : undefined}
               />
-              <StatTile label="Portfolio value" value={perf.ending_value_nok ? formatNok(perf.ending_value_nok) : "—"} />
+              <StatTile
+                label="Real total return"
+                value={realTotalReturnPct(perf) !== null ? formatPct100(realTotalReturnPct(perf)!, 2) : "—"}
+                tone={toneFor(realTotalReturnPct(perf))}
+                hint={perf.real_return_available ? "CPI-adjusted (Norway)" : perf.real_return_reason ?? "Unavailable"}
+              />
               <StatTile
                 label="Best day"
                 value={perf.best_day ? formatNok(perf.best_day.daily_pnl_nok) : "—"}
@@ -230,19 +266,36 @@ export default function PerformancePage() {
                 hint={perf.worst_day ? formatDate(perf.worst_day.on) : undefined}
               />
             </div>
-            <SectionTitle
-              hint={
-                perf.benchmark_available
-                  ? `vs. ${perf.benchmark_ticker}`
-                  : perf.benchmark_reason ?? "Benchmark unavailable"
-              }
-            >
-              Cumulative return
-            </SectionTitle>
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <SectionTitle
+                hint={
+                  perf.benchmark_available
+                    ? `vs. ${perf.benchmark_ticker}`
+                    : perf.benchmark_reason ?? "Benchmark unavailable"
+                }
+              >
+                Cumulative return
+              </SectionTitle>
+              <label
+                className={`flex items-center gap-1.5 text-xs ${
+                  perf.real_return_available ? "text-ink-muted" : "cursor-not-allowed text-ink-faint"
+                }`}
+                title={perf.real_return_available ? perf.real_return_note : perf.real_return_reason ?? undefined}
+              >
+                <input
+                  type="checkbox"
+                  checked={showReal && perf.real_return_available}
+                  disabled={!perf.real_return_available}
+                  onChange={(e) => setShowReal(e.target.checked)}
+                />
+                Show real (CPI-adjusted) return
+              </label>
+            </div>
             <PerformanceChart
               series={perf.series}
               benchmarkTicker={perf.benchmark_ticker}
               benchmarkAvailable={perf.benchmark_available}
+              showReal={showReal && perf.real_return_available}
             />
           </Card>
 

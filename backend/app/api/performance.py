@@ -37,7 +37,7 @@ def _day_out(dv: DailyValue | None) -> DailyValueOut | None:
     return DailyValueOut(
         on=dv.on, portfolio_value_nok=dv.portfolio_value_nok, partial=dv.partial,
         portfolio_return_pct=dv.portfolio_return_pct, daily_pnl_nok=dv.daily_pnl_nok,
-        benchmark_return_pct=dv.benchmark_return_pct,
+        benchmark_return_pct=dv.benchmark_return_pct, real_return_pct=dv.real_return_pct,
     )
 
 
@@ -57,8 +57,12 @@ def _to_out(perf: PortfolioPerformance) -> PortfolioPerformanceOut:
         benchmark_ticker=perf.benchmark_ticker,
         benchmark_available=perf.benchmark_available,
         benchmark_reason=perf.benchmark_reason,
+        real_return_available=perf.real_return_available,
+        real_return_reason=perf.real_return_reason,
+        cpi_region=perf.cpi_region,
         excluded=[ExcludedHoldingOut(ticker=e.ticker, name=e.name, reason=e.reason) for e in perf.excluded],
         method_note=perf.method_note,
+        real_return_note=perf.real_return_note,
         series=[_day_out(dv) for dv in perf.series],
     )
 

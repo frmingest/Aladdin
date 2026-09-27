@@ -15,9 +15,10 @@ from app.domain.instrument_types import STOCK
 from app.models import Base
 from app.models.document import Document
 from app.models.holding import Holding
+from app.models.macro import MacroObservation
 from app.models.portfolio import PortfolioPosition, PortfolioSnapshot
 from app.providers.base import MarketDataUnavailableError, PricePoint
-from app.services.performance.portfolio_performance import build_portfolio_performance
+from app.services.performance.portfolio_performance import CPI_SERIES_KEY, build_portfolio_performance
 
 D = Decimal
 TODAY = datetime.now(timezone.utc).date()
@@ -79,6 +80,19 @@ def _holding(db: Session, ticker: str, *, currency: str = "USD") -> Holding:
     db.add(h)
     db.flush()
     return h
+
+
+def _cpi_point(db: Session, on: date, value: Decimal) -> None:
+    """Insert one raw Norway CPI index observation (app/domain/macro_series.py's
+    "no_cpi_yoy" spec — the stored value is the index level, not the y/y
+    transform)."""
+    db.add(
+        MacroObservation(
+            series_key=CPI_SERIES_KEY, provider="ssb", region="NO", value=value, unit="index",
+            observed_at=datetime.combine(on, time(0, 0), tzinfo=timezone.utc),
+        )
+    )
+    db.commit()
 
 
 def _snapshot(db: Session) -> PortfolioSnapshot:
@@ -235,3 +249,75 @@ def test_benchmark_comparison_computed_when_available():
     covered = [dv for dv in result.series if not dv.partial and dv.benchmark_return_pct is not None]
     assert covered
     assert covered[-1].benchmark_return_pct > 0  # benchmark rose over the window
+
+
+def test_real_return_unavailable_without_any_cpi_data():
+    db = _session()
+    holding = _holding(db, "EQNR", currency="NOK")
+    snap = _snapshot(db)
+    _position(db, snap, holding, 1_000_000)
+    points = _points_ending_today(30, start_price=D("100"), step=D("0"), currency="NOK")
+    market = _FakeMarket({"EQNR": points})
+
+    result = build_portfolio_performance(db, market_data_provider=market, lookback_days=30)
+
+    assert not result.real_return_available
+    assert result.real_return_reason is not None
+    assert "CPI" in result.real_return_reason
+    assert all(dv.real_return_pct is None for dv in result.series)
+
+
+def test_real_return_deflates_flat_nominal_series_by_cpi_growth():
+    db = _session()
+    holding = _holding(db, "EQNR", currency="NOK")
+    snap = _snapshot(db)
+    _position(db, snap, holding, 1_000_000)
+    # Flat nominal price -> nominal_return is 0.00 every covered day, so any
+    # non-zero real_return_pct is purely the CPI deflator, easy to check exactly.
+    points = _points_ending_today(60, start_price=D("100"), step=D("0"), currency="NOK")
+    market = _FakeMarket({"EQNR": points})
+
+    # One CPI point well before the window (anchor = 100), one 10 days ago
+    # (102 = 2% inflation since the anchor) — forward-filled like price/FX.
+    _cpi_point(db, TODAY - timedelta(days=200), D("100"))
+    _cpi_point(db, TODAY - timedelta(days=10), D("102"))
+
+    result = build_portfolio_performance(db, market_data_provider=market, lookback_days=90)
+
+    assert result.real_return_available
+    covered = [dv for dv in result.series if not dv.partial]
+    assert covered
+    # Nominal is flat (0.00) throughout.
+    assert all(dv.portfolio_return_pct == D("0.00") for dv in covered)
+    # Before the CPI jump: cpi_growth is still 1 -> real == nominal (0.00).
+    early = [dv for dv in covered if dv.on < TODAY - timedelta(days=10)]
+    assert early
+    assert all(dv.real_return_pct == D("0.00") for dv in early)
+    # On/after the CPI jump: flat nominal value is worth less in real terms.
+    late = [dv for dv in covered if dv.on >= TODAY - timedelta(days=10)]
+    assert late
+    for dv in late:
+        assert dv.real_return_pct is not None
+        assert dv.real_return_pct < D("0.00")
+    # Exact figure on the anchor day: (1 / 1.02 - 1) * 100.
+    expected_last = ((D(1) / D("1.02") - 1) * D(100)).quantize(D("0.01"))
+    assert covered[-1].real_return_pct == expected_last
+
+
+def test_real_return_unavailable_when_only_cpi_data_is_too_recent():
+    db = _session()
+    holding = _holding(db, "EQNR", currency="NOK")
+    snap = _snapshot(db)
+    _position(db, snap, holding, 1_000_000)
+    points = _points_ending_today(60, start_price=D("100"), step=D("0"), currency="NOK")
+    market = _FakeMarket({"EQNR": points})
+
+    # Only a CPI point dated after full_coverage_from — no anchor value
+    # exists on or before it, so real return can't be computed at all.
+    _cpi_point(db, TODAY - timedelta(days=1), D("100"))
+
+    result = build_portfolio_performance(db, market_data_provider=market, lookback_days=90)
+
+    assert not result.real_return_available
+    assert result.real_return_reason is not None
+    assert all(dv.real_return_pct is None for dv in result.series)

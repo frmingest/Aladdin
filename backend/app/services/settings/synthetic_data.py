@@ -821,6 +821,7 @@ def demo_performance() -> PortfolioPerformanceOut:
                 ),
                 daily_pnl_nok=(value - prev).quantize(Decimal("0.01")) if prev else None,
                 benchmark_return_pct=None,
+                real_return_pct=None,
             )
         )
     best_day = max(series[1:], key=lambda d: d.daily_pnl_nok or Decimal(-999999999))
@@ -842,8 +843,12 @@ def demo_performance() -> PortfolioPerformanceOut:
         benchmark_ticker="^GSPC",
         benchmark_available=False,
         benchmark_reason=DEMO_NOTE,
+        real_return_available=False,
+        real_return_reason=DEMO_NOTE,
+        cpi_region="NO",
         excluded=[],
         method_note=DEMO_NOTE,
+        real_return_note=DEMO_NOTE,
         series=series,
     )
 

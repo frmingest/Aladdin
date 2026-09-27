@@ -33,6 +33,19 @@ every included position has data are still shown (so the chart isn't
 truncated to whatever the newest holding's history covers) but are marked
 `partial=True` and carry no return_pct/daily_pnl_nok, since a return
 computed against an understated starting value would be misleading.
+
+REAL (INFLATION-ADJUSTED) RETURN (2026-09-27, Sprint 15 backlog item #2):
+alongside the nominal `portfolio_return_pct`, each covered day also gets a
+`real_return_pct` — the nominal cumulative return deflated by Norway CPI
+(the macro catalogue's `no_cpi_yoy` series, app/domain/macro_series.py),
+chosen because the portfolio itself is NOK-denominated and largely
+Oslo-listed, same reasoning as the OSEBX.OL benchmark default above.
+real_growth = nominal_growth / cpi_growth, where both are indexed to
+`full_coverage_from`. Reuses `app.services.macro.refresh.stored_points` to
+read whatever CPI index values the Macro page's own refresh has already
+stored — this module never fetches CPI itself, so a stale/empty CPI
+catalogue simply means `real_return_available=False` with a stated reason,
+never a guessed or interpolated inflation figure.
 """
 from __future__ import annotations
 
@@ -45,17 +58,33 @@ from sqlalchemy.orm import Session
 from app.config.settings import get_settings
 from app.domain.instrument_types import EQUITY_ANALYZABLE_TYPES
 from app.providers.base import MarketDataProvider
+from app.services.macro.refresh import stored_points
 from app.services.portfolio_overview import Overview, build_overview
 from app.services.risk.price_history import get_or_refresh_daily_history
 
 ZERO = Decimal(0)
 HUNDRED = Decimal(100)
 
+# Norway CPI (SSB table 14710, 2025=100) — see app/domain/macro_series.py's
+# "no_cpi_yoy" spec. The stored observations are the raw index level; the
+# yoy_pct transform is applied elsewhere (app/services/macro/indicators.py),
+# never here — this module wants the level itself to build a deflator.
+CPI_SERIES_KEY = "no_cpi_yoy"
+CPI_REGION = "NO"
+# CPI is monthly and the catalogue keeps ~3 years by default (Settings.
+# macro_history_years) — read well before the window so there's always an
+# anchor point to forward-fill from at full_coverage_from.
+_CPI_LOOKBACK_BUFFER_DAYS = 400
+
 METHOD_NOTE = (
     "Reindexes each holding's current NOK value through its own price and FX history "
     "(today's positions held constant across the window) — not a real past-transaction "
     "P&L, since only point-in-time portfolio snapshots are stored here, not a continuous "
     "buy/sell history."
+)
+REAL_RETURN_NOTE = (
+    "Real return deflates the nominal series by Norway CPI (SSB table 14710) — the "
+    "portfolio's own purchasing-power change in NOK, not a currency-blind nominal return."
 )
 
 
@@ -73,6 +102,7 @@ class DailyValue:
     portfolio_return_pct: Decimal | None  # cumulative since full_coverage_from; None while partial
     daily_pnl_nok: Decimal | None  # None on the first covered day and every partial day
     benchmark_return_pct: Decimal | None = None
+    real_return_pct: Decimal | None = None  # nominal return deflated by Norway CPI; None if unavailable
 
 
 @dataclass
@@ -98,8 +128,12 @@ class PortfolioPerformance:
     benchmark_ticker: str
     benchmark_available: bool
     benchmark_reason: str | None
+    real_return_available: bool = False
+    real_return_reason: str | None = None
+    cpi_region: str = CPI_REGION
     excluded: list[ExcludedHolding] = field(default_factory=list)
     method_note: str = METHOD_NOTE
+    real_return_note: str = REAL_RETURN_NOTE
     series: list[DailyValue] = field(default_factory=list)
 
 
@@ -287,6 +321,24 @@ def build_portfolio_performance(
         )
     benchmark_base = benchmark_unit.get(compare_from) if compare_from else None
 
+    # --- Real (CPI-deflated) return -------------------------------------
+    # Monthly Norway CPI index, forward-filled onto the same business-day
+    # axis as everything else. Read-only: never triggers a live CPI fetch
+    # (that's the Macro page's own refresh, app/services/macro/refresh.py).
+    cpi_since = start - timedelta(days=_CPI_LOOKBACK_BUFFER_DAYS)
+    cpi_points = stored_points(db, CPI_SERIES_KEY, since=cpi_since)
+    cpi_filled = _forward_fill(cpi_points, axis) if cpi_points else {}
+    cpi_anchor = cpi_filled.get(full_coverage_from)
+    real_return_available = cpi_anchor is not None and cpi_anchor != 0
+    real_return_reason: str | None = None
+    if not real_return_available:
+        real_return_reason = (
+            f"no Norway CPI observation on or before {full_coverage_from.isoformat()} — "
+            "run a Macro data refresh first"
+            if not cpi_points
+            else f"no Norway CPI observation on or before {full_coverage_from.isoformat()}"
+        )
+
     # --- Daily totals ---
     totals: dict[date, tuple[Decimal, bool]] = {}  # day -> (value_nok, complete)
     for d in axis:
@@ -309,8 +361,10 @@ def build_portfolio_performance(
         return_pct: Decimal | None = None
         pnl: Decimal | None = None
         bench_pct: Decimal | None = None
+        real_pct: Decimal | None = None
         if complete and base_value:
-            return_pct = ((value_nok / base_value - 1) * HUNDRED).quantize(Decimal("0.01"))
+            nominal_growth = value_nok / base_value
+            return_pct = ((nominal_growth - 1) * HUNDRED).quantize(Decimal("0.01"))
             if prev_covered_value is not None:
                 pnl = (value_nok - prev_covered_value).quantize(Decimal("0.01"))
             prev_covered_value = value_nok
@@ -318,12 +372,25 @@ def build_portfolio_performance(
                 bu = benchmark_unit.get(d)
                 if bu is not None:
                     bench_pct = ((bu / benchmark_base - 1) * HUNDRED).quantize(Decimal("0.01"))
+            if real_return_available:
+                cpi_d = cpi_filled.get(d)
+                if cpi_d is not None and cpi_d != 0:
+                    cpi_growth = cpi_d / cpi_anchor
+                    real_pct = ((nominal_growth / cpi_growth - 1) * HUNDRED).quantize(Decimal("0.01"))
         series.append(
             DailyValue(
                 on=d, portfolio_value_nok=value_nok.quantize(Decimal("0.01")), partial=not complete,
                 portfolio_return_pct=return_pct, daily_pnl_nok=pnl, benchmark_return_pct=bench_pct,
+                real_return_pct=real_pct,
             )
         )
+
+    # A day can lack real_pct even when real_return_available is True (no
+    # CPI observation yet forward-filled that far into a very recent
+    # window) — only claim availability if at least one day actually got one.
+    if real_return_available and not any(dv.real_return_pct is not None for dv in series):
+        real_return_available = False
+        real_return_reason = "no CPI-covered day fell within this window"
 
     covered_days = [dv for dv in series if dv.daily_pnl_nok is not None]
     best_day = max(covered_days, key=lambda dv: dv.daily_pnl_nok) if covered_days else None
@@ -346,6 +413,8 @@ def build_portfolio_performance(
         benchmark_ticker=benchmark_ticker,
         benchmark_available=benchmark_available,
         benchmark_reason=benchmark_reason,
+        real_return_available=real_return_available,
+        real_return_reason=real_return_reason,
         excluded=excluded,
         series=series,
     )

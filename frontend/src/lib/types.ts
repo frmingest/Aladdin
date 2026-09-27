@@ -1563,6 +1563,7 @@ export interface DailyValue {
   portfolio_return_pct: string | null;
   daily_pnl_nok: string | null;
   benchmark_return_pct: string | null;
+  real_return_pct: string | null;
 }
 
 export interface PortfolioPerformance {
@@ -1580,8 +1581,14 @@ export interface PortfolioPerformance {
   benchmark_ticker: string;
   benchmark_available: boolean;
   benchmark_reason: string | null;
+  // Real (CPI-deflated) return overlay (Sprint 15 backlog #2, 2026-09-27) — see
+  // backend/app/services/performance/portfolio_performance.py's module docstring.
+  real_return_available: boolean;
+  real_return_reason: string | null;
+  cpi_region: string;
   excluded: ExcludedPerformanceHolding[];
   method_note: string;
+  real_return_note: string;
   series: DailyValue[];
 }
 

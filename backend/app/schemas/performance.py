@@ -21,6 +21,7 @@ class DailyValueOut(BaseModel):
     portfolio_return_pct: Decimal | None
     daily_pnl_nok: Decimal | None
     benchmark_return_pct: Decimal | None
+    real_return_pct: Decimal | None = None
 
 
 class PortfolioPerformanceOut(BaseModel):
@@ -38,6 +39,10 @@ class PortfolioPerformanceOut(BaseModel):
     benchmark_ticker: str
     benchmark_available: bool
     benchmark_reason: str | None
+    real_return_available: bool = False
+    real_return_reason: str | None = None
+    cpi_region: str = "NO"
     excluded: list[ExcludedHoldingOut]
     method_note: str
+    real_return_note: str = ""
     series: list[DailyValueOut]

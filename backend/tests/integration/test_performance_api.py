@@ -151,3 +151,58 @@ def test_refresh_endpoint_forces_a_provider_call(client, db_session):
 
     assert first.status_code == 200
     assert second.status_code == 200
+
+
+def test_real_return_fields_present_and_unavailable_without_cpi_data(client, db_session):
+    """Sprint 15 backlog #2 (2026-09-27): the payload always carries the
+    real-return fields, and reports itself unavailable rather than
+    guessing when no Norway CPI observation has been stored yet."""
+    holding_id = _create_holding(client, "EQNR")
+    _add_position(db_session, holding_id, 1_000_000)
+    market = _FakeMarket({"EQNR": _points_ending_today(30)})
+    _override(market)
+    try:
+        response = client.get("/performance/portfolio?lookback_days=30")
+    finally:
+        _clear_overrides()
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["real_return_available"] is False
+    assert body["real_return_reason"] is not None
+    assert body["cpi_region"] == "NO"
+    assert "real_return_note" in body
+    assert all(dv["real_return_pct"] is None for dv in body["series"])
+
+
+def test_real_return_computed_when_cpi_data_is_stored(client, db_session):
+    from app.models.macro import MacroObservation
+
+    holding_id = _create_holding(client, "EQNR")
+    _add_position(db_session, holding_id, 1_000_000)
+    points = _points_ending_today(60, start_price=D("100"), step=D("0"))
+    market = _FakeMarket({"EQNR": points})
+
+    for days_ago, value in ((200, D("100")), (10, D("102"))):
+        db_session.add(
+            MacroObservation(
+                series_key="no_cpi_yoy", provider="ssb", region="NO", value=value, unit="index",
+                observed_at=datetime.combine(TODAY - timedelta(days=days_ago), time(0, 0), tzinfo=timezone.utc),
+            )
+        )
+    db_session.commit()
+
+    _override(market)
+    try:
+        response = client.get("/performance/portfolio?lookback_days=90")
+    finally:
+        _clear_overrides()
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["real_return_available"] is True
+    covered = [dv for dv in body["series"] if not dv["partial"]]
+    assert covered
+    # Flat nominal price throughout, so the last (anchor) day's real return
+    # is purely the CPI deflator: (1 / 1.02 - 1) * 100, negative.
+    assert D(covered[-1]["real_return_pct"]) < D("0")
