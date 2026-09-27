@@ -53,13 +53,17 @@ class GoogleAIStudioProvider(LLMProvider):
         system_prompt: str,
         user_prompt: str,
         response_schema: type[BaseModel],
+        max_output_tokens: int | None = None,
     ) -> LLMResponse:
+        # Caller override (e.g. a fund/ETF blind pass needing more room for
+        # the bigger fund_v1 schema, 2026-09-27) beats this provider's own
+        # configured default.
         config = genai_types.GenerateContentConfig(
             system_instruction=system_prompt,
             response_mime_type="application/json",
             response_schema=response_schema,
             temperature=self._temperature,
-            max_output_tokens=self._max_output_tokens,
+            max_output_tokens=max_output_tokens if max_output_tokens is not None else self._max_output_tokens,
         )
 
         def _call() -> genai_types.GenerateContentResponse:

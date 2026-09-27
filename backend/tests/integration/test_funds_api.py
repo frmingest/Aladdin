@@ -36,8 +36,10 @@ class _FundLLM:
 
     def __init__(self):
         self.prompts: list[tuple[str, str]] = []
+        self.max_output_tokens_seen: list[int | None] = []
 
-    def generate_structured(self, *, system_prompt, user_prompt, response_schema):
+    def generate_structured(self, *, system_prompt, user_prompt, response_schema, max_output_tokens=None):
+        self.max_output_tokens_seen.append(max_output_tokens)
         self.prompts.append((system_prompt, user_prompt))
         if response_schema is FundBlindPassOutputV1:
             section = {"summary": "s", "evidence_ids": ["EV-002"]}
@@ -348,6 +350,14 @@ def test_fund_readiness_and_analysis_run(client, db_session):
     assert "Ongoing charge 0.55% per year" in user_prompt
     assert "Gold Mining sub-fund review" in user_prompt
     assert "Cyber Security sub-fund review" not in user_prompt
+
+    # The fund_v1 schema has one more narrative section than equity's v1
+    # (role_in_portfolio) — the blind pass asks for the fund-sized output
+    # budget, not the shared default (2026-09-27: qwen3:14b truncated a
+    # real fund's JSON at the 8192-token default — see
+    # app/services/analysis/blind_pass.py).
+    from app.config.settings import get_settings
+    assert llm.max_output_tokens_seen[0] == get_settings().llm_max_output_tokens_fund
     categories = {item["category"] for item in body["evidence_items"]}
     assert {"fund_profile", "fund_cost", "fund_concentration", "fund_holdings", "document_excerpt"} <= categories
 

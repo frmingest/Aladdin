@@ -64,12 +64,21 @@ class LLMProvider(ABC):
         system_prompt: str,
         user_prompt: str,
         response_schema: type[BaseModel],
+        max_output_tokens: int | None = None,
     ) -> LLMResponse:
         """Ask the model for a response constrained to `response_schema`.
 
         Must raise LLMUnavailableError rather than return a malformed or
         partial response — callers validate `.content` directly against
         `response_schema.model_validate_json(...)` and expect it to succeed.
+
+        `max_output_tokens`: overrides the provider's own configured output
+        budget for this one call, when the caller knows `response_schema`
+        needs more (or less) room than the shared default — e.g. a fund/ETF
+        blind pass answering the bigger `fund_v1` schema (2026-09-27; see
+        app/services/analysis/blind_pass.py and Settings.
+        llm_max_output_tokens_fund). None (the default) keeps the
+        provider's own configured value.
         """
         raise NotImplementedError
 

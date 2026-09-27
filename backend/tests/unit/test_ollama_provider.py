@@ -62,8 +62,10 @@ def _provider(handler, **overrides) -> tuple[OllamaProvider, list[dict]]:
     return OllamaProvider(**kwargs), seen
 
 
-def _call(provider: OllamaProvider):
-    return provider.generate_structured(system_prompt="sys", user_prompt="user", response_schema=_EchoSchema)
+def _call(provider: OllamaProvider, **kwargs):
+    return provider.generate_structured(
+        system_prompt="sys", user_prompt="user", response_schema=_EchoSchema, **kwargs
+    )
 
 
 def test_successful_call_returns_content_and_usage():
@@ -114,6 +116,27 @@ def test_truncated_output_is_refused():
     provider, _ = _provider(lambda r: _ok(content='{"verd', done_reason="length"))
     with pytest.raises(LLMUnavailableError, match="output limit"):
         _call(provider)
+
+
+def test_max_output_tokens_override_sets_num_predict():
+    """A caller (e.g. blind_pass.py for the bigger fund_v1 schema) can ask
+    for more room than this provider's own configured default for one
+    call (2026-09-27)."""
+    provider, seen = _provider(lambda r: _ok(), max_output_tokens=8192)
+    _call(provider, max_output_tokens=16384)
+    assert seen[0]["options"]["num_predict"] == 16384
+
+
+def test_no_override_keeps_the_providers_own_default():
+    provider, seen = _provider(lambda r: _ok(), max_output_tokens=8192)
+    _call(provider)
+    assert seen[0]["options"]["num_predict"] == 8192
+
+
+def test_truncated_output_message_reports_the_budget_actually_used():
+    provider, _ = _provider(lambda r: _ok(content='{"verd', done_reason="length", output=16384))
+    with pytest.raises(LLMUnavailableError, match=r"16384/16384 tokens"):
+        _call(provider, max_output_tokens=16384)
 
 
 def test_empty_content_is_refused():

@@ -64,7 +64,7 @@ def _reconciliation_json() -> str:
 class _FakeLLM:
     name = "fake_llm"
 
-    def generate_structured(self, *, system_prompt, user_prompt, response_schema):
+    def generate_structured(self, *, system_prompt, user_prompt, response_schema, max_output_tokens=None):
         content = _blind_json() if response_schema is BlindPassOutputV1 else _reconciliation_json()
         return LLMResponse(content=content, usage=LLMUsageMetrics(provider=self.name, model="fake-model", input_tokens=1, output_tokens=1, total_tokens=2))
 
@@ -72,7 +72,7 @@ class _FakeLLM:
 class _FailingLLM:
     name = "failing_llm"
 
-    def generate_structured(self, *, system_prompt, user_prompt, response_schema):
+    def generate_structured(self, *, system_prompt, user_prompt, response_schema, max_output_tokens=None):
         raise LLMUnavailableError("simulated outage")
 
 

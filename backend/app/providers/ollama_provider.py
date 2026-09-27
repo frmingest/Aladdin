@@ -20,6 +20,12 @@ quietly worse analysis (CLAUDE.md Rule 2 — evidence-first):
   If the prompt fills the window, the call is refused with a message
   telling you to raise ``OLLAMA_NUM_CTX``.
 * Output truncation (``done_reason == "length"``) — half a JSON object.
+  2026-09-27: a fund/ETF blind pass answers the bigger ``fund_v1`` schema
+  (one more narrative section than equity's), so it can legitimately need
+  more output room than the shared ``LLM_MAX_OUTPUT_TOKENS`` default.
+  ``generate_structured``'s ``max_output_tokens`` lets a caller ask for
+  more (or less) for one call — see ``app/services/analysis/blind_pass.py``
+  and ``Settings.llm_max_output_tokens_fund``.
 
 2026-09-25 — streaming. A non-streaming call has to finish inside one HTTP
 read timeout, so a slow-but-healthy generation (14B on a 12GB card, part of
@@ -203,7 +209,13 @@ class OllamaProvider(LLMProvider):
         )
 
     def _payload(
-        self, system_prompt: str, user_prompt: str, schema: dict[str, Any], *, with_think: bool
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        schema: dict[str, Any],
+        *,
+        with_think: bool,
+        max_output_tokens: int,
     ) -> dict[str, Any]:
         payload: dict[str, Any] = {
             "model": self._model,
@@ -217,7 +229,7 @@ class OllamaProvider(LLMProvider):
             "options": {
                 "temperature": self._temperature,
                 "num_ctx": self._num_ctx,
-                "num_predict": self._max_output_tokens,
+                "num_predict": max_output_tokens,
             },
         }
         if with_think and self._think is not None:
@@ -332,9 +344,16 @@ class OllamaProvider(LLMProvider):
         system_prompt: str,
         user_prompt: str,
         response_schema: type[BaseModel],
+        max_output_tokens: int | None = None,
     ) -> LLMResponse:
+        # Caller override (e.g. blind_pass.py asking more room for the
+        # bigger fund_v1 schema) beats this provider's own configured
+        # default (2026-09-27).
+        output_budget = max_output_tokens if max_output_tokens is not None else self._max_output_tokens
         schema = response_schema.model_json_schema()
-        result = self._chat(self._payload(system_prompt, user_prompt, schema, with_think=True))
+        result = self._chat(
+            self._payload(system_prompt, user_prompt, schema, with_think=True, max_output_tokens=output_budget)
+        )
 
         # Models without a thinking mode reject the `think` field outright;
         # retry once without it rather than making the setting a trap.
@@ -343,7 +362,11 @@ class OllamaProvider(LLMProvider):
             and "think" in result.error_text.lower()
             and self._think is not None
         ):
-            result = self._chat(self._payload(system_prompt, user_prompt, schema, with_think=False))
+            result = self._chat(
+                self._payload(
+                    system_prompt, user_prompt, schema, with_think=False, max_output_tokens=output_budget
+                )
+            )
 
         if result.status_code == 404:
             raise LLMUnavailableError(
@@ -366,8 +389,9 @@ class OllamaProvider(LLMProvider):
             )
         if body.get("done_reason") == "length":
             raise LLMUnavailableError(
-                f"Ollama stopped at the output limit ({output_tokens} tokens) before finishing the "
-                f"JSON (model={self._model}) — raise LLM_MAX_OUTPUT_TOKENS or OLLAMA_NUM_CTX."
+                f"Ollama stopped at the output limit ({output_tokens}/{output_budget} tokens) before "
+                f"finishing the JSON (model={self._model}) — raise LLM_MAX_OUTPUT_TOKENS "
+                "(LLM_MAX_OUTPUT_TOKENS_FUND for a fund/ETF) or OLLAMA_NUM_CTX."
             )
 
         content = result.content

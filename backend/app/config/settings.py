@@ -30,6 +30,17 @@ class Settings(BaseSettings):
     google_ai_studio_api_key: str | None = None
     llm_model_name: str = "gemini-3.6-flash"
     llm_max_output_tokens: int = 8192
+    # A fund/ETF blind pass answers `fund_v1` (app/domain/analysis_schema/
+    # fund_v1.py) -- 7 sections vs equity v1's 6, one more full narrative
+    # section (`role_in_portfolio`) -- so it needs more room than the shared
+    # default above. Discovered 2026-09-27: qwen3:14b hit the 8192-token
+    # default mid-JSON on a real fund holding (XDEF.DE) and the app refused
+    # the truncated output rather than accept it (CLAUDE.md Rule 2). Wired
+    # in app/services/analysis/blind_pass.py via is_fund_schema(), applied
+    # to every provider (LLMProvider.generate_structured's optional
+    # `max_output_tokens` override) -- not just Ollama, since the cap is
+    # schema-shaped, not provider-shaped.
+    llm_max_output_tokens_fund: int = 16384
     llm_temperature: float = 0.2
 
     # Free-tier rate limits for llm_model_name. Hand-maintained — no API
@@ -56,7 +67,13 @@ class Settings(BaseSettings):
     # (RTX 3060 12GB) running qwen3:14b with OLLAMA_KV_CACHE_TYPE=q8_0.
     ollama_base_url: str = "http://localhost:11434"
     ollama_model_name: str = "qwen3:14b"
-    ollama_num_ctx: int = 16384
+    # 24576, not 16384 (2026-09-27): a fund pass now asks for up to
+    # llm_max_output_tokens_fund (16384) tokens of output, and num_ctx is
+    # Ollama's *combined* prompt+generation budget -- 16384 left no room
+    # for a real evidence-packet prompt alongside a full-length fund
+    # output. Still comfortable on a 12GB card with OLLAMA_KV_CACHE_TYPE=
+    # q8_0 (see docs/local-llm-ollama-setup.md).
+    ollama_num_ctx: int = 24576
     ollama_keep_alive: str = "30m"
     # Calls stream (2026-09-25): OLLAMA_TIMEOUT_SECONDS caps one whole pass
     # (wall clock); OLLAMA_STALL_TIMEOUT_SECONDS is the longest wait for the

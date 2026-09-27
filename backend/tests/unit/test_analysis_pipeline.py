@@ -106,15 +106,16 @@ def _reconciliation_json() -> str:
 
 class _RecordingLLM:
     """Succeeds every call, recording every (system_prompt, user_prompt,
-    response_schema) it was given, for asserting what it did/didn't see."""
+    response_schema, max_output_tokens) it was given, for asserting what it
+    did/didn't see."""
 
     name = "recording_llm"
 
     def __init__(self):
-        self.calls: list[tuple[str, str, type]] = []
+        self.calls: list[tuple[str, str, type, int | None]] = []
 
-    def generate_structured(self, *, system_prompt, user_prompt, response_schema):
-        self.calls.append((system_prompt, user_prompt, response_schema))
+    def generate_structured(self, *, system_prompt, user_prompt, response_schema, max_output_tokens=None):
+        self.calls.append((system_prompt, user_prompt, response_schema, max_output_tokens))
         content = _blind_json() if response_schema is BlindPassOutputV1 else _reconciliation_json()
         return LLMResponse(content=content, usage=LLMUsageMetrics(provider=self.name, model="fake-model", input_tokens=1, output_tokens=1, total_tokens=2))
 
@@ -122,7 +123,7 @@ class _RecordingLLM:
 class _FailingLLM:
     name = "failing_llm"
 
-    def generate_structured(self, *, system_prompt, user_prompt, response_schema):
+    def generate_structured(self, *, system_prompt, user_prompt, response_schema, max_output_tokens=None):
         raise LLMUnavailableError("simulated outage")
 
 
@@ -132,7 +133,7 @@ class _FailOnceThenFailLLM:
 
     name = "fail_once"
 
-    def generate_structured(self, *, system_prompt, user_prompt, response_schema):
+    def generate_structured(self, *, system_prompt, user_prompt, response_schema, max_output_tokens=None):
         raise LLMUnavailableError("blind pass outage")
 
 
@@ -215,13 +216,19 @@ def test_blind_pass_never_sees_user_notes_but_reconciliation_does():
     assert len(blind_calls) == 1
     assert len(reconciliation_calls) == 1
 
-    blind_system, blind_user, _ = blind_calls[0]
-    _reconciliation_system, reconciliation_user, _ = reconciliation_calls[0]
+    blind_system, blind_user, _, blind_max_output_tokens = blind_calls[0]
+    _reconciliation_system, reconciliation_user, _, _reconciliation_max_output_tokens = reconciliation_calls[0]
 
     assert "overvalued" not in blind_system
     assert "overvalued" not in blind_user
     assert "untrustworthy" not in blind_system
     assert "untrustworthy" not in blind_user
+
+    # An equity holding answers v1, the shared/smaller schema — no override
+    # requested, so the provider's own configured default applies (contrast
+    # a fund/ETF blind pass: tests/integration/test_funds_api.py asserts it
+    # asks for llm_max_output_tokens_fund instead).
+    assert blind_max_output_tokens is None
     assert "overvalued" in reconciliation_user
 
 
@@ -264,7 +271,7 @@ class _BlindOnlyThenFailLLM:
 
     name = "blind_only_then_fail"
 
-    def generate_structured(self, *, system_prompt, user_prompt, response_schema):
+    def generate_structured(self, *, system_prompt, user_prompt, response_schema, max_output_tokens=None):
         if response_schema is BlindPassOutputV1:
             return LLMResponse(content=_blind_json(), usage=LLMUsageMetrics(provider=self.name, model="m", input_tokens=1, output_tokens=1, total_tokens=2))
         raise LLMUnavailableError("reconciliation outage")

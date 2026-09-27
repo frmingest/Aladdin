@@ -8,9 +8,11 @@ from dataclasses import dataclass
 from pydantic import BaseModel, ValidationError
 
 from app.config.paths import PROMPTS_DIR
+from app.config.settings import get_settings
 from app.domain.analysis_schema import (
     cited_evidence_ids_any_blind,
     get_blind_pass_schema,
+    is_fund_schema,
 )
 from app.providers.base import LLMProvider, LLMResponse, LLMUnavailableError
 from app.services.analysis.evidence_packet import EvidencePacket
@@ -42,8 +44,21 @@ def run_blind_pass(
         "Produce your blind-pass assessment now, citing only evidence IDs that appear above."
     )
     schema = get_blind_pass_schema(schema_version)
+    # A fund/ETF answers fund_v1, which has one more full narrative section
+    # than equity's v1 (see app/domain/analysis_schema/fund_v1.py) — give it
+    # more output room than the shared default, or a real fund holding can
+    # get its JSON cut off mid-answer (2026-09-27: happened on qwen3:14b for
+    # XDEF.DE at the 8192-token default). Every provider honors this the
+    # same way via generate_structured's optional override.
+    settings = get_settings()
+    max_output_tokens = (
+        settings.llm_max_output_tokens_fund if is_fund_schema(schema_version) else None
+    )
     response = llm_provider.generate_structured(
-        system_prompt=system_prompt, user_prompt=user_prompt, response_schema=schema
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+        response_schema=schema,
+        max_output_tokens=max_output_tokens,
     )
     try:
         output = schema.model_validate_json(response.content)

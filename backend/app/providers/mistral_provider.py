@@ -54,7 +54,12 @@ class MistralProvider(LLMProvider):
         system_prompt: str,
         user_prompt: str,
         response_schema: type[BaseModel],
+        max_output_tokens: int | None = None,
     ) -> LLMResponse:
+        # Caller override (e.g. a fund/ETF blind pass needing more room for
+        # the bigger fund_v1 schema, 2026-09-27) beats this provider's own
+        # configured default.
+        output_budget = max_output_tokens if max_output_tokens is not None else self._max_output_tokens
         response_format = ResponseFormat(
             type="json_schema",
             json_schema=JSONSchema(
@@ -72,7 +77,7 @@ class MistralProvider(LLMProvider):
                     UserMessage(content=user_prompt),
                 ],
                 temperature=self._temperature,
-                max_tokens=self._max_output_tokens,
+                max_tokens=output_budget,
                 response_format=response_format,
             )
             if result is None:
