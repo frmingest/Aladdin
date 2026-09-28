@@ -160,6 +160,16 @@ class Settings(BaseSettings):
     # served as-is (the run record itself is the cache — see
     # app/services/research/common.py).
     research_stale_after_hours: int = 24
+    # Fallback for get_research_provider() when the primary provider raises
+    # ResearchUnavailableError — most commonly Gemini's daily search-request
+    # budget guard tripping on a portfolio with more sectors/holdings than
+    # llm_rate_limit_rpd allows in one sitting (app/providers/budget.py).
+    # "none" (default) keeps the pre-fallback behavior: get_or_refresh()
+    # falls back to stale cached research on its own; "tavily" tries
+    # app/providers/tavily_research_provider.py next, a free-tier
+    # (1,000 searches/month, no card) search-for-agents API.
+    research_fallback_provider: str = "none"  # "none" | "tavily"
+    tavily_api_key: str | None = None
 
     # --- Valuation engine (Sprint 3, see app/providers/yfinance_provider.py,
     # app/providers/fred_risk_free_rate_provider.py) ---

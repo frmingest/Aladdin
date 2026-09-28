@@ -23,6 +23,7 @@ from app.providers.base import (
     RiskFreeRateUnavailableError,
 )
 from app.providers.budget import DailyBudgetGuard
+from app.providers.composite_research_provider import CompositeResearchProvider
 from app.providers.esef_index_provider import FilingsXbrlOrgProvider
 from app.providers.fred_risk_free_rate_provider import FredRiskFreeRateProvider
 from app.providers.gemini_research_provider import GeminiResearchProvider
@@ -44,6 +45,7 @@ from app.providers.object_storage import (
 from app.providers.object_storage_s3 import S3ObjectStorageProvider
 from app.providers.ollama_provider import OllamaProvider
 from app.providers.sec_edgar_provider import SecEdgarFundamentalsProvider
+from app.providers.tavily_research_provider import TavilyResearchProvider
 from app.providers.yfinance_provider import YFinanceMarketDataProvider
 
 
@@ -150,14 +152,8 @@ def get_object_storage() -> ObjectStorageProvider:
     )
 
 
-@lru_cache
-def get_research_provider() -> ResearchProvider:
-    """The configured live-research provider (RESEARCH_PROVIDER, default
-    "gemini_search"). Reuses the same Google AI Studio key and RPM budget
-    as get_llm_provider() — see app/providers/gemini_research_provider.py.
-    """
-    settings = get_settings()
-    if settings.research_provider == "gemini_search":
+def _build_research_provider(name: str, settings: Settings) -> ResearchProvider:
+    if name == "gemini_search":
         return GeminiResearchProvider(
             api_key=settings.google_ai_studio_api_key or "",
             model=settings.llm_model_name,
@@ -167,9 +163,26 @@ def get_research_provider() -> ResearchProvider:
             rpm=settings.llm_rate_limit_rpm,
             budget_guard=get_primary_budget_guard(),
         )
-    raise ResearchUnavailableError(
-        f"Unknown research provider: {settings.research_provider!r}"
-    )
+    if name == "tavily":
+        return TavilyResearchProvider(api_key=settings.tavily_api_key or "")
+    raise ResearchUnavailableError(f"Unknown research provider: {name!r}")
+
+
+@lru_cache
+def get_research_provider() -> ResearchProvider:
+    """The configured live-research provider (RESEARCH_PROVIDER, default
+    "gemini_search"), reusing the same Google AI Studio key and RPM budget
+    as get_llm_provider() — see app/providers/gemini_research_provider.py —
+    wrapped with a fallback (RESEARCH_FALLBACK_PROVIDER, default "none") for
+    when the primary raises ResearchUnavailableError, most commonly
+    Gemini's daily search-request budget guard tripping (see
+    app/providers/composite_research_provider.py)."""
+    settings = get_settings()
+    primary = _build_research_provider(settings.research_provider, settings)
+    fallback: ResearchProvider | None = None
+    if settings.research_fallback_provider != "none":
+        fallback = _build_research_provider(settings.research_fallback_provider, settings)
+    return CompositeResearchProvider(primary=primary, fallback=fallback)
 
 @lru_cache
 def get_market_data_provider() -> MarketDataProvider:
