@@ -416,6 +416,6 @@ def build_system_status(
         )
     issues += [f"{a.label}: {a.value}. {a.detail}".strip() for a in status.analysis if a.status == ERROR]
     if status.llm_calls_remaining_today == 0 and settings.llm_provider == "google_ai_studio":
-        issues.append("Gemini daily budget used up in this server process; it resets at 00:00 UTC.")
+        issues.append("Gemini daily budget used up (counted from the usage ledger, so restarts don't reset it); it resets at 00:00 UTC.")
     status.issues = issues
     return status

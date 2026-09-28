@@ -32,9 +32,9 @@ from app.models.legacy_analysis import (
     EvidenceReference,
     FactorAssessment,
     HoldingAnalysis,
-    LlmUsageEvent,
     PortfolioRiskSnapshot,
 )
+from app.models.llm_usage import LlmUsageEvent
 from app.models.portfolio import PortfolioPosition, PortfolioSnapshot
 from app.providers.factory import get_object_storage
 from app.schemas.account import AccountOut

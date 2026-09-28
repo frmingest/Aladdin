@@ -58,6 +58,7 @@ from app.providers.base import (
     LLMUnavailableError,
     LLMUsageMetrics,
 )
+from app.providers.ledger_recording import LedgerRecordingMixin
 
 # Connection-level retries only: a local server has no quota to pace
 # against, and a slow generation is not retried (it would just be slow again).
@@ -169,7 +170,7 @@ class _ChatResult:
     final: dict[str, Any] = field(default_factory=dict)
 
 
-class OllamaProvider(LLMProvider):
+class OllamaProvider(LedgerRecordingMixin, LLMProvider):
     name = "ollama"
 
     def __init__(
@@ -338,7 +339,7 @@ class OllamaProvider(LLMProvider):
             f"Ollama closed the stream before finishing (model={self._model}, {chunks:,} chunks)."
         )
 
-    def generate_structured(
+    def _generate_structured(
         self,
         *,
         system_prompt: str,

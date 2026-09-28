@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, ApiError } from "../lib/api";
-import type { FreshnessItem, StatusItem, StatusLevel, SystemStatus } from "../lib/types";
+import type { FreshnessItem, StatusItem, StatusLevel, SystemStatus, UsageSummary } from "../lib/types";
 import { Button, Card, PageHeader, SectionTitle } from "../components/ui";
 
 /** Feature F4. Everything comes from GET /system/status
@@ -72,8 +72,77 @@ function FreshnessRows({ items }: { items: FreshnessItem[] }) {
   );
 }
 
+function UsageCard({ usage }: { usage: UsageSummary }) {
+  const fmt = new Intl.NumberFormat("en-GB");
+  return (
+    <Card>
+      <SectionTitle hint="Every real request sent to an LLM, from the server and the PC worker. Gemini's daily cap is counted from this log, so restarts don't reset it.">
+        LLM usage, last {usage.days} days
+      </SectionTitle>
+      {usage.daily.length === 0 ? (
+        <p className="text-sm text-ink-muted">No LLM calls logged yet.</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[32rem] text-left text-sm">
+            <thead className="text-xs text-ink-muted">
+              <tr>
+                <th className="py-1 pr-3 font-medium">Day (UTC)</th>
+                <th className="py-1 pr-3 font-medium">Provider · model</th>
+                <th className="py-1 pr-3 text-right font-medium">Requests</th>
+                <th className="py-1 pr-3 text-right font-medium">Failed</th>
+                <th className="py-1 pr-3 text-right font-medium">Tokens in / out</th>
+                <th className="py-1 text-right font-medium">Left today</th>
+              </tr>
+            </thead>
+            <tbody>
+              {usage.daily.map((d) => (
+                <tr key={`${d.date}-${d.provider}-${d.model_name}`} className="border-t border-border-subtle">
+                  <td className="tabular py-1.5 pr-3 text-ink">{d.date}</td>
+                  <td className="py-1.5 pr-3 text-ink">
+                    {d.provider} <span className="text-ink-faint">· {d.model_name}</span>
+                  </td>
+                  <td className="tabular py-1.5 pr-3 text-right text-ink">
+                    {d.requests}
+                    {d.daily_limit ? <span className="text-ink-faint"> / {d.daily_limit}</span> : null}
+                  </td>
+                  <td className={`tabular py-1.5 pr-3 text-right ${d.failed ? "text-caution" : "text-ink-faint"}`}>
+                    {d.failed}
+                  </td>
+                  <td className="tabular py-1.5 pr-3 text-right text-ink-muted">
+                    {fmt.format(d.input_tokens)} / {fmt.format(d.output_tokens)}
+                  </td>
+                  <td className="tabular py-1.5 text-right text-ink">{d.remaining ?? "–"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {usage.by_call_type.length > 0 && (
+        <p className="mt-3 text-xs text-ink-muted">
+          By kind:{" "}
+          {usage.by_call_type.map((c) => `${c.provider} ${c.call_type.replace("_", " ")} ${c.requests}`).join(" · ")}
+        </p>
+      )}
+      {usage.recent_errors.length > 0 && (
+        <details className="mt-3 text-xs text-ink-muted">
+          <summary className="cursor-pointer">Recent failed calls ({usage.recent_errors.length})</summary>
+          <ul className="mt-2 space-y-1">
+            {usage.recent_errors.map((e) => (
+              <li key={`${e.occurred_at}-${e.detail}`}>
+                {relative(e.occurred_at)} · {e.provider} {e.call_type}: {e.detail || "no detail"}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </Card>
+  );
+}
+
 export default function SystemStatusPage() {
   const [status, setStatus] = useState<SystemStatus | null>(null);
+  const [usage, setUsage] = useState<UsageSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -87,6 +156,11 @@ export default function SystemStatusPage() {
       })
       .catch((e) => setError(e instanceof ApiError ? e.message : "Backend unreachable."))
       .finally(() => setLoading(false));
+    // Independent of the status call: a ledger hiccup must not hide the page.
+    api
+      .getUsageSummary(7)
+      .then(setUsage)
+      .catch(() => setUsage(null));
   }, []);
 
   useEffect(load, [load]);
@@ -167,9 +241,11 @@ export default function SystemStatusPage() {
                   style={{ width: `${budgetPct}%` }}
                 />
               </div>
-              <p className="mt-1 text-xs text-ink-faint">Counted in this server process; resets on restart.</p>
+              <p className="mt-1 text-xs text-ink-faint">Counted from the LLM usage log, so it survives restarts.</p>
             </Card>
           </div>
+
+          {usage && <UsageCard usage={usage} />}
 
           <Card>
             <SectionTitle hint="What each data source is set to. Keys show only as set or missing.">
