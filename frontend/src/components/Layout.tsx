@@ -35,8 +35,9 @@ function ThemeToggle() {
     </button>
   );
 }
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { AnalystModeToggle } from "./AnalystModeToggle";
+import CommandPalette from "./CommandPalette";
 
 /**
  * Left nav + content area — Design & UX direction's "left-nav information
@@ -177,9 +178,20 @@ function Brand() {
 /** The nav list + footer (theme toggle, status link) shared by the fixed
  * desktop sidebar and the mobile drawer. `onNavigate` closes the drawer
  * when a link is tapped on mobile; it's a no-op on desktop. */
-function NavContents({ onNavigate }: { onNavigate?: () => void }) {
+function NavContents({ onNavigate, onSearch }: { onNavigate?: () => void; onSearch: () => void }) {
   return (
     <>
+      <button
+        type="button"
+        onClick={() => {
+          onNavigate?.();
+          onSearch();
+        }}
+        className="mb-4 flex w-full items-center justify-between rounded-md border border-border bg-raised px-3 py-2 text-left text-sm text-ink-muted transition-colors hover:text-ink"
+      >
+        <span>Search…</span>
+        <kbd className="rounded border border-border px-1.5 text-[10px] text-ink-faint">Ctrl K</kbd>
+      </button>
       <div className="flex flex-col gap-4">
         {NAV_SECTIONS.map((section) => (
           <div key={section.title}>
@@ -200,7 +212,7 @@ function NavContents({ onNavigate }: { onNavigate?: () => void }) {
                   <li key={item.to}>
                     <NavLink
                       to={item.to}
-                      end
+                      end={item.to === "/"}
                       onClick={onNavigate}
                       className={({ isActive }) =>
                         `block rounded-md border-l-2 px-3 py-2 text-sm font-medium transition-colors ${
@@ -259,8 +271,45 @@ function IconButton({
   );
 }
 
+const PAGE_TITLES: Record<string, string> = {
+  "/status": "System status",
+  "/sectors": "Sector research",
+};
+
+/** Browser-tab titles: every page used to be just "Aladdin", so a dozen open
+ * tabs were indistinguishable. Holding pages set their own title (they know
+ * the company name), so they're skipped here. */
+function useRouteTitle() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    if (/^\/holdings\/[^/]+/.test(pathname)) return;
+    const item = NAV_SECTIONS.flatMap((s) => s.items).find((i) => i.to === pathname);
+    const base = "/" + pathname.split("/")[1];
+    const label = item?.label ?? PAGE_TITLES[pathname] ?? PAGE_TITLES[base];
+    document.title = label && pathname !== "/" ? `${label} · Aladdin` : "Aladdin";
+  }, [pathname]);
+}
+
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  useRouteTitle();
+
+  const paletteRoutes = NAV_SECTIONS.flatMap((s) =>
+    s.items.filter((i) => !i.disabled).map((i) => ({ label: i.label, to: i.to, group: s.title })),
+  );
+
+  // Ctrl/⌘+K opens quick search from anywhere.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setSearchOpen((o) => !o);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   // Lock background scroll while the mobile drawer is open, and always
   // close it if the viewport grows past the mobile breakpoint (e.g.
@@ -282,6 +331,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen flex-col">
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[70] focus:rounded-md focus:bg-accent focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-onfill"
+      >
+        Skip to content
+      </a>
+      <CommandPalette open={searchOpen} onClose={() => setSearchOpen(false)} routes={paletteRoutes} />
       <DemoModeBanner />
 
       {/* Mobile top bar (< lg): hamburger + logo, replaces the fixed sidebar. */}
@@ -333,7 +389,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 </svg>
               </IconButton>
             </div>
-            <NavContents onNavigate={() => setMobileNavOpen(false)} />
+            <NavContents onNavigate={() => setMobileNavOpen(false)} onSearch={() => setSearchOpen(true)} />
           </nav>
         </div>
       )}
@@ -344,9 +400,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <div className="mb-8">
             <Brand />
           </div>
-          <NavContents />
+          <NavContents onSearch={() => setSearchOpen(true)} />
         </nav>
-        <main className="min-w-0 flex-1 overflow-y-auto">
+        <main id="main" tabIndex={-1} className="min-w-0 flex-1 overflow-y-auto focus:outline-none">
           {/* Desktop top bar (F22 story 22.1): the whole-app analyst mode. */}
           <div className="sticky top-0 z-30 hidden items-center justify-end border-b border-border bg-surface/95 px-6 py-2 backdrop-blur lg:flex">
             <AnalystModeToggle />

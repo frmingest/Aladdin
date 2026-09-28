@@ -60,6 +60,14 @@ def test_catalogue_v1_has_the_agreed_core_set():
     assert SPECS["us_10y"].source_url == "https://fred.stlouisfed.org/series/DGS10"
 
 
+def test_catalogue_v2_adds_norway_curve_without_new_fetches():
+    assert {s.key for s in get_macro_series("v2")} == set(SPECS)  # same fetched series as v1
+    derived = {d.key: d for d in get_derived_indicators("v2")}
+    assert {d.key for d in get_derived_indicators("v1")} < set(derived)
+    curve = derived["no_curve_10y_3m"]
+    assert (curve.left, curve.right, curve.region) == ("no_10y", "no_3m_bill", "NO")
+
+
 def test_unknown_series_version_raises():
     with pytest.raises(ValueError):
         get_macro_series("v99")

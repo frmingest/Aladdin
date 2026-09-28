@@ -75,6 +75,11 @@
 @layer components {
   /* Section headings on the holding page and dashboards: a short accent
      bar and the display face instead of small grey capitals. */
+  /* Visible keyboard focus everywhere (mouse clicks don't show it). */
+  :focus-visible {
+    outline: 2px solid rgb(var(--c-accent));
+    outline-offset: 2px;
+  }
   .section-title {
     @apply mb-3 flex items-center gap-2.5 font-display text-base font-semibold tracking-tight text-ink;
   }
