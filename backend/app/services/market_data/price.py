@@ -25,7 +25,12 @@ def _latest_price(db: Session, holding_id: uuid.UUID) -> MarketObservation | Non
 
 
 def get_or_refresh_price(
-    db: Session, provider: MarketDataProvider, *, holding: Holding, force: bool = False
+    db: Session,
+    provider: MarketDataProvider,
+    *,
+    holding: Holding,
+    force: bool = False,
+    refresh_live: bool = True,
 ) -> MarketDataSnapshot[MarketObservation]:
     settings = get_settings()
 
@@ -50,4 +55,5 @@ def get_or_refresh_price(
         stale_after_hours=settings.market_data_stale_after_hours,
         unavailable_error=MarketDataUnavailableError,
         force=force,
+        refresh_live=refresh_live,
     )

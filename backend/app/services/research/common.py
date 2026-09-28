@@ -144,6 +144,7 @@ def get_or_refresh(
     fetch: Callable[[], list[ResearchItem]],
     methodology_version: str,
     force: bool = False,
+    refresh_live: bool = True,
 ) -> ResearchSnapshot:
     """The one entry point macro.py/sector.py/company.py call.
 
@@ -151,12 +152,33 @@ def get_or_refresh(
     asked for); otherwise calls `fetch()` for real, persists a new
     COMPLETED run on success or a FAILED run on failure, and returns the
     freshest data actually available.
+
+    `refresh_live=False` (page-load-performance P1, 2026-09-28): when the
+    cache IS stale and a live call would otherwise happen, skip it and
+    just serve whatever's cached (marked stale via `reason`), or an
+    unavailable snapshot if nothing's ever been fetched. Used by the plain
+    GET endpoints so a page load never blocks on a live provider call;
+    the matching POST .../refresh endpoint (which passes `force=True`,
+    unaffected by this flag) is how a real fetch actually happens.
     """
     existing_run = latest_completed_run(db, type_=type_, sector=sector, holding_id=holding_id)
     if not force and not is_stale(existing_run):
         assert existing_run is not None  # is_stale(None) is always True
         return ResearchSnapshot(
             available=True, as_of=existing_run.completed_at, items=items_for_run(db, existing_run)
+        )
+
+    if not force and not refresh_live and existing_run is not None:
+        # Only ever skip the live call when something is already cached —
+        # a holding/sector/macro scope with NO data yet still gets one
+        # real fetch (there's no "serve stale" option when nothing's been
+        # fetched at all; this is the one-time cold-start cost, not the
+        # repeated-every-page-load cost the P1 fix targets).
+        return ResearchSnapshot(
+            available=True,
+            as_of=existing_run.completed_at,
+            items=items_for_run(db, existing_run),
+            reason=f"showing data from {existing_run.completed_at} — click refresh to fetch new research",
         )
 
     try:

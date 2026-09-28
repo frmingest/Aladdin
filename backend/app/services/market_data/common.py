@@ -45,17 +45,39 @@ def get_or_refresh(
     stale_after_hours: int,
     unavailable_error: type[Exception],
     force: bool = False,
+    refresh_live: bool = True,
 ) -> MarketDataSnapshot[T]:
-    """The one entry point price.py/fx.py/risk_free_rate.py call.
+    """The one entry point price.py/fx.py/risk_free_rate.py/shares.py call.
 
     `fetch_and_persist` calls the provider for real, builds the new row,
     `db.add`s + `db.flush`es it, and returns it — this function commits on
     success. It never gets called at all when a fresh-enough observation
     already exists and `force` wasn't asked for.
+
+    `refresh_live=False` (page-load-performance P1, 2026-09-28): when the
+    cached observation IS stale and a live call would otherwise happen,
+    skip it and serve the stale observation instead (or an unavailable
+    snapshot if nothing's ever been fetched). Used by every plain GET in
+    the valuation path so a page load never blocks on a live vendor call;
+    the matching POST .../refresh endpoint passes `force=True`, which
+    always fetches regardless of this flag.
     """
     existing = latest()
     if not force and existing is not None and _age_hours(observed_at_of(existing)) <= stale_after_hours:
         return MarketDataSnapshot(available=True, as_of=observed_at_of(existing), value=existing)
+
+    if not force and not refresh_live and existing is not None:
+        # Only ever skip the live call when something is already cached —
+        # a value with NO observation yet still gets one real fetch
+        # (there's no "serve stale" option when nothing's been fetched at
+        # all; this is the one-time cold-start cost, not the
+        # repeated-every-page-load cost the P1 fix targets).
+        return MarketDataSnapshot(
+            available=True,
+            as_of=observed_at_of(existing),
+            value=existing,
+            reason=f"showing data from {observed_at_of(existing)} — click refresh to fetch new data",
+        )
 
     try:
         fresh = fetch_and_persist()

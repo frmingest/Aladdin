@@ -88,7 +88,7 @@ class _FakeMarket:
     def get_fx_rate(self, from_currency, to_currency):
         return FxRate(from_currency=from_currency, to_currency=to_currency, rate=D("1"), observed_at=datetime.now(timezone.utc), provider="fake")
 
-    def get_beta(self, ticker):
+    def get_beta(self, ticker, *, allow_live_fetch: bool = True):
         return D("1.0")
 
 

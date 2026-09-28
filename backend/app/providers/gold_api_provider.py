@@ -95,7 +95,7 @@ class GoldApiProvider(MarketDataProvider):
     def get_fx_rate(self, from_currency: str, to_currency: str) -> FxRate:
         raise MarketDataUnavailableError(f"{self.name} does not provide FX rates")
 
-    def get_beta(self, ticker: str) -> Decimal | None:
+    def get_beta(self, ticker: str, *, allow_live_fetch: bool = True) -> Decimal | None:
         raise MarketDataUnavailableError(f"{self.name} does not provide beta")
 
 

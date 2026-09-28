@@ -131,7 +131,7 @@ class _FakeYahoo:
 
         return Decimal(10)
 
-    def get_beta(self, ticker):
+    def get_beta(self, ticker, *, allow_live_fetch: bool = True):
         return None
 
 

@@ -63,7 +63,7 @@ def get_macro(
     db: Session = Depends(get_db), provider: ResearchProvider = Depends(get_research_provider)
 ) -> MacroResearchOut:
     require_not_demo(db)
-    snapshot = get_macro_research(db, provider)
+    snapshot = get_macro_research(db, provider, refresh_live=False)
     return MacroResearchOut(
         available=snapshot.available, as_of=snapshot.as_of, items=_items_out(snapshot), reason=snapshot.reason
     )
@@ -87,7 +87,7 @@ def get_sector(
     provider: ResearchProvider = Depends(get_research_provider),
 ) -> SectorResearchOut:
     require_not_demo(db)
-    snapshot = get_sector_research(db, provider, sector=sector)
+    snapshot = get_sector_research(db, provider, sector=sector, refresh_live=False)
     return SectorResearchOut(
         available=snapshot.available,
         sector=sector,
@@ -129,7 +129,7 @@ def get_company(
 ) -> CompanyResearchOut:
     require_not_demo(db)
     holding = _get_holding_or_404(db, holding_id)
-    snapshot = get_company_research(db, provider, holding=holding)
+    snapshot = get_company_research(db, provider, holding=holding, refresh_live=False)
     return CompanyResearchOut(
         available=snapshot.available,
         holding_id=holding.id,

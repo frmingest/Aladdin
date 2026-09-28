@@ -130,6 +130,7 @@ def build_board(
     *,
     market_data_provider: MarketDataProvider,
     risk_free_rate_provider: RiskFreeRateProvider,
+    force_refresh: bool = False,
 ) -> Board:
     positions = current_positions(db)
     value_by_holding: dict[uuid.UUID, Decimal | None] = {}
@@ -167,7 +168,9 @@ def build_board(
             weight_pct=weight,
         )
 
-        valuation = compute_holding_valuation(db, holding, market_data_provider, risk_free_rate_provider)
+        valuation = compute_holding_valuation(
+            db, holding, market_data_provider, risk_free_rate_provider, force_refresh=force_refresh
+        )
         row.valuation_currency = valuation.valuation_currency
         row.price = valuation.current_price_per_share
         row.price_as_of = valuation.as_of

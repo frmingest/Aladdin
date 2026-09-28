@@ -264,12 +264,20 @@ class YFinanceMarketDataProvider(MarketDataProvider):
             f"yfinance has no share count for {ticker!r} (tried fast_info and info)"
         )
 
-    def get_beta(self, ticker: str) -> Decimal | None:
+    def get_beta(self, ticker: str, *, allow_live_fetch: bool = True) -> Decimal | None:
         key = ticker.upper()
         now = time.monotonic()
         with self._beta_lock:
             cached = self._beta_cache.get(key)
         if cached is not None and now - cached[0] < BETA_CACHE_TTL_SECONDS:
+            return cached[1]
+
+        if not allow_live_fetch and cached is not None:
+            # A stale-but-present in-process cache entry is served as-is
+            # (P1 fix, 2026-09-28) rather than making a fresh live call
+            # from a plain GET. A ticker with NO cache entry at all still
+            # gets one real fetch below — there's no "serve stale" option
+            # for a ticker that's never been looked up in this process.
             return cached[1]
 
         yf_ticker = self._ticker(ticker)

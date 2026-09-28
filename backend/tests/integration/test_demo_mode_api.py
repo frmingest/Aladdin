@@ -50,7 +50,7 @@ class _FakeMarket:
     def get_fx_rate(self, base, quote):
         return FxRate(rate=D("10"), as_of=None)
 
-    def get_beta(self, ticker):
+    def get_beta(self, ticker, *, allow_live_fetch: bool = True):
         return D("1.0")
 
     def get_shares_outstanding(self, ticker):

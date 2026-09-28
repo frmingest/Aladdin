@@ -39,7 +39,7 @@ class _FakeMarketDataProvider:
     def get_fx_rate(self, from_currency, to_currency):
         raise MarketDataUnavailableError("no fx configured")
 
-    def get_beta(self, ticker):
+    def get_beta(self, ticker, *, allow_live_fetch: bool = True):
         return self._beta
 
 

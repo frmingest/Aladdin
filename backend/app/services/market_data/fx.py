@@ -28,6 +28,7 @@ def get_or_refresh_fx(
     from_currency: str,
     to_currency: str,
     force: bool = False,
+    refresh_live: bool = True,
 ) -> MarketDataSnapshot[FxObservation]:
     settings = get_settings()
     from_currency = from_currency.upper()
@@ -54,4 +55,5 @@ def get_or_refresh_fx(
         stale_after_hours=settings.market_data_stale_after_hours,
         unavailable_error=MarketDataUnavailableError,
         force=force,
+        refresh_live=refresh_live,
     )

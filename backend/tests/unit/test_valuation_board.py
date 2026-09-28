@@ -73,7 +73,7 @@ def _position(db, snapshot, holding, value):
 def _fake_valuation(values: dict[str, tuple]):
     """values[ticker] = (price, bear, base, bull) or None for no DCF."""
 
-    def fake(db, holding, market, rate):
+    def fake(db, holding, market, rate, force_refresh=False):
         spec = values.get(holding.ticker)
         if spec is None:
             return SimpleNamespace(

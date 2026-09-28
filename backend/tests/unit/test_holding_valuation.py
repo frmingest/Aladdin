@@ -51,7 +51,7 @@ class _FakeMarketDataProvider:
             raise MarketDataUnavailableError("no fx configured")
         return self._fx
 
-    def get_beta(self, ticker):
+    def get_beta(self, ticker, *, allow_live_fetch: bool = True):
         return self._beta
 
 

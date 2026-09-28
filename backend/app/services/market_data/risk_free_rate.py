@@ -23,7 +23,12 @@ def _latest_risk_free_rate(db: Session, currency: str) -> RiskFreeRateObservatio
 
 
 def get_or_refresh_risk_free_rate(
-    db: Session, provider: RiskFreeRateProvider, *, currency: str, force: bool = False
+    db: Session,
+    provider: RiskFreeRateProvider,
+    *,
+    currency: str,
+    force: bool = False,
+    refresh_live: bool = True,
 ) -> MarketDataSnapshot[RiskFreeRateObservation]:
     settings = get_settings()
     currency = currency.upper()
@@ -49,4 +54,5 @@ def get_or_refresh_risk_free_rate(
         stale_after_hours=settings.risk_free_rate_stale_after_hours,
         unavailable_error=RiskFreeRateUnavailableError,
         force=force,
+        refresh_live=refresh_live,
     )

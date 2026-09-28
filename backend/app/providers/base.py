@@ -223,11 +223,17 @@ class MarketDataProvider(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_beta(self, ticker: str) -> Decimal | None:
+    def get_beta(self, ticker: str, *, allow_live_fetch: bool = True) -> Decimal | None:
         """5-year monthly beta vs. the ticker's home index, if the vendor
         publishes one. None (not an error) when unavailable — callers fall
         back to a versioned default (see
-        app/domain/valuation_assumptions/)."""
+        app/domain/valuation_assumptions/).
+
+        `allow_live_fetch=False` (page-load-performance P1, 2026-09-28):
+        never make a live vendor call on a cache miss/expiry — return
+        whatever's cached (even past its normal TTL) or None. Used on a
+        plain GET so beta can't block the page; POST .../refresh passes
+        the default True."""
         raise NotImplementedError
 
     def get_shares_outstanding(self, ticker: str) -> Decimal:

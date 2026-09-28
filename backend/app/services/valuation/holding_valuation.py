@@ -142,7 +142,12 @@ def _period_facts(db: Session, holding: Holding, period: str) -> dict[str, Decim
 def _fx_fallback(db: Session, provider: MarketDataProvider, force: bool):
     def rate(from_currency: str, to_currency: str) -> Decimal | None:
         snapshot = get_or_refresh_fx(
-            db, provider, from_currency=from_currency, to_currency=to_currency, force=force
+            db,
+            provider,
+            from_currency=from_currency,
+            to_currency=to_currency,
+            force=force,
+            refresh_live=force,
         )
         return snapshot.value.rate if snapshot.available and snapshot.value is not None else None
 
@@ -223,6 +228,7 @@ def compute_holding_valuation(
         latest_facts=_period_facts(db, holding, latest_period),
         latest_period=latest_period,
         force=force_refresh,
+        refresh_live=force_refresh,
     )
     shares_outstanding = share_count.shares
     if shares_outstanding is None or shares_outstanding <= 0:
@@ -235,7 +241,7 @@ def compute_holding_valuation(
     result.unavailable_reasons.extend(share_count.warnings)
 
     rate_snapshot = get_or_refresh_risk_free_rate(
-        db, risk_free_rate_provider, currency=valuation_currency, force=force_refresh
+        db, risk_free_rate_provider, currency=valuation_currency, force=force_refresh, refresh_live=force_refresh
     )
     if not rate_snapshot.available or rate_snapshot.value is None:
         result.unavailable_reasons.append(
@@ -244,7 +250,7 @@ def compute_holding_valuation(
         return result
     result.risk_free_rate_pct = rate_snapshot.value.rate
 
-    beta = market_data_provider.get_beta(holding.ticker)
+    beta = market_data_provider.get_beta(holding.ticker, allow_live_fetch=force_refresh)
     if beta is None:
         beta = assumptions.default_beta
         result.unavailable_reasons.append(
@@ -329,7 +335,7 @@ def _current_price_in_valuation_currency(
     force_refresh: bool,
 ) -> Decimal | None:
     price_snapshot = get_or_refresh_price(
-        db, market_data_provider, holding=holding, force=force_refresh
+        db, market_data_provider, holding=holding, force=force_refresh, refresh_live=force_refresh
     )
     if not price_snapshot.available or price_snapshot.value is None:
         result.unavailable_reasons.append(
@@ -348,6 +354,7 @@ def _current_price_in_valuation_currency(
         from_currency=price.currency,
         to_currency=valuation_currency,
         force=force_refresh,
+        refresh_live=force_refresh,
     )
     if not fx_snapshot.available or fx_snapshot.value is None:
         result.unavailable_reasons.append(

@@ -138,7 +138,12 @@ def _cross_check(result: ShareCountResult, facts: dict[str, Decimal], period: st
 
 
 def _yfinance_row(
-    db: Session, holding: Holding, provider: MarketDataProvider, *, force: bool
+    db: Session,
+    holding: Holding,
+    provider: MarketDataProvider,
+    *,
+    force: bool,
+    refresh_live: bool = True,
 ) -> tuple[ShareCountObservation | None, str | None]:
     def _fetch_and_persist() -> ShareCountObservation:
         # getattr: a provider written before 2026-09-25 (or a test fake)
@@ -166,6 +171,7 @@ def _yfinance_row(
         stale_after_hours=YFINANCE_STALE_AFTER_HOURS,
         unavailable_error=MarketDataUnavailableError,
         force=force,
+        refresh_live=refresh_live,
     )
     return snapshot.value, snapshot.reason
 
@@ -178,6 +184,7 @@ def resolve_share_count(
     latest_facts: dict[str, Decimal] | None = None,
     latest_period: str | None = None,
     force: bool = False,
+    refresh_live: bool = True,
 ) -> ShareCountResult:
     """The share count to use now, with its source and any cross-check
     warning. Never raises for a missing source; `unavailable_reason` says
@@ -201,7 +208,7 @@ def resolve_share_count(
         tried.append(f"SEC cover-page count is from {sec.observed_at.date()}, too old")
 
     if provider is not None:
-        row, reason = _yfinance_row(db, holding, provider, force=force)
+        row, reason = _yfinance_row(db, holding, provider, force=force, refresh_live=refresh_live)
         if row is not None:
             result = _from_row(row)
             if reason:

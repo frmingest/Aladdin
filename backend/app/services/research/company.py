@@ -12,7 +12,12 @@ from app.services.research.common import ResearchSnapshot, get_or_refresh
 
 
 def get_company_research(
-    db: Session, provider: ResearchProvider, *, holding: Holding, force: bool = False
+    db: Session,
+    provider: ResearchProvider,
+    *,
+    holding: Holding,
+    force: bool = False,
+    refresh_live: bool = True,
 ) -> ResearchSnapshot:
     settings = get_settings()
     return get_or_refresh(
@@ -25,4 +30,5 @@ def get_company_research(
         ),
         methodology_version=settings.active_research_prompt_version,
         force=force,
+        refresh_live=refresh_live,
     )

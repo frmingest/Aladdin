@@ -139,11 +139,43 @@ def get_margin_of_safety_board(
 ) -> MarginOfSafetyBoardOut:
     """Feature F3: every currently owned equity ranked by margin of safety.
     Uses the same cached price/FX/rate data as GET /valuation/holdings/{id};
-    no LLM call is ever made."""
+    no LLM call is ever made.
+
+    Page-load-performance P1 (2026-09-28): never revalues live here — each
+    holding is priced from whatever's already cached (see
+    app/services/valuation/holding_valuation.py's `force_refresh=False`
+    default), so this always returns fast regardless of portfolio size.
+    Use POST /valuation/board/refresh to force a real revalue of every
+    equity holding."""
     if is_demo_mode(db):
         return demo_valuation_board()
     board = build_board(
         db, market_data_provider=market_data_provider, risk_free_rate_provider=risk_free_rate_provider
+    )
+    return MarginOfSafetyBoardOut(
+        rows=[BoardRowOut(**row.__dict__) for row in board.rows],
+        total_equity_value_nok=board.total_equity_value_nok,
+        zone_counts=board.zone_counts(),
+    )
+
+
+@router.post("/board/refresh", response_model=MarginOfSafetyBoardOut)
+def refresh_margin_of_safety_board(
+    db: Session = Depends(get_db),
+    market_data_provider: MarketDataProvider = Depends(get_market_data_provider),
+    risk_free_rate_provider: RiskFreeRateProvider = Depends(get_risk_free_rate_provider),
+) -> MarginOfSafetyBoardOut:
+    """Forces a real revalue (live price/FX/beta/risk-free-rate/share-count
+    fetch, subject to each provider's own staleness cache) of every equity
+    holding on the board — this is the slow path GET /board no longer
+    takes on its own. "I want this now", same shape as every other
+    .../refresh endpoint in the app."""
+    require_not_demo(db)
+    board = build_board(
+        db,
+        market_data_provider=market_data_provider,
+        risk_free_rate_provider=risk_free_rate_provider,
+        force_refresh=True,
     )
     return MarginOfSafetyBoardOut(
         rows=[BoardRowOut(**row.__dict__) for row in board.rows],

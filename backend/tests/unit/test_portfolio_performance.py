@@ -48,7 +48,7 @@ class _FakeMarket:
     def get_fx_rate(self, from_currency, to_currency):
         raise MarketDataUnavailableError("not configured for this test")
 
-    def get_beta(self, ticker):
+    def get_beta(self, ticker, *, allow_live_fetch: bool = True):
         return None
 
     def get_daily_price_history(self, ticker, *, days=400, currency_hint=None):

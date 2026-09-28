@@ -9,7 +9,9 @@ from app.providers.base import ResearchProvider
 from app.services.research.common import ResearchSnapshot, get_or_refresh
 
 
-def get_macro_research(db: Session, provider: ResearchProvider, *, force: bool = False) -> ResearchSnapshot:
+def get_macro_research(
+    db: Session, provider: ResearchProvider, *, force: bool = False, refresh_live: bool = True
+) -> ResearchSnapshot:
     settings = get_settings()
     return get_or_refresh(
         db,
@@ -19,4 +21,5 @@ def get_macro_research(db: Session, provider: ResearchProvider, *, force: bool =
         fetch=provider.get_macro_research,
         methodology_version=settings.active_research_prompt_version,
         force=force,
+        refresh_live=refresh_live,
     )
