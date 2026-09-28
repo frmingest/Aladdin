@@ -1,6 +1,6 @@
 # LLM usage ledger — Sprint 15 #1 (F27), 2026-09-28
 
-**Status:** written and tested on branch `feature/llm-usage-ledger`, PR open for review. Not merged, not deployed, not checked live.
+**Status:** written and tested on branch `feature/llm-usage-ledger`, PR #10 open for review. Not merged, not deployed, not checked live.
 
 ## Why
 The Gemini daily-request guard (`DailyBudgetGuard`) lived in process memory. It reset on every restart or redeploy, and the web server and the PC worker each kept their own count, so nobody could say how much of today's ~20 calls was really left. F22's side-by-side mode roughly doubles LLM calls, which made a trustworthy count a prerequisite.
