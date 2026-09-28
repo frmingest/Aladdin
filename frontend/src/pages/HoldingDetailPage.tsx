@@ -37,6 +37,8 @@ import { ValuationPanel } from "../components/ValuationPanel";
 import WatchButton from "../components/WatchButton";
 import JournalPanel from "../components/JournalPanel";
 import type { SourceEligibility } from "../lib/types";
+import { InfoTooltip } from "../components/InfoTooltip";
+import { METRIC_INFO } from "../lib/glossary";
 
 /** Surfaces the combined Newsweb reports fetch (annual + half-year, one
  * button) at the very top of the holding page (Faiz's ask, 2026-09-26: it
@@ -182,7 +184,10 @@ function MetricsPanel({ holdingId }: { holdingId: string }) {
                   {computedKeys.map((key) => (
                     <div key={key} className="py-2 text-sm">
                       <div className="flex justify-between gap-4">
-                        <dt className="text-ink-muted">{METRIC_LABELS[key]}</dt>
+                        <dt className="inline-flex items-center gap-1 text-ink-muted">
+                          {METRIC_LABELS[key]}
+                          {METRIC_INFO[key] && <InfoTooltip text={METRIC_INFO[key]} align="left" />}
+                        </dt>
                         <dd className="tabular font-medium text-ink">
                           {metrics.computed[key] !== undefined
                             ? renderValue(key, metrics.computed[key])
@@ -207,7 +212,10 @@ function MetricsPanel({ holdingId }: { holdingId: string }) {
               <dl className="divide-y divide-border-subtle">
                 {skippedKeys.map((key) => (
                   <div key={key} className="py-2 text-sm">
-                    <dt className="text-ink">{METRIC_LABELS[key]}</dt>
+                    <dt className="inline-flex items-center gap-1 text-ink">
+                      {METRIC_LABELS[key]}
+                      {METRIC_INFO[key] && <InfoTooltip text={METRIC_INFO[key]} align="left" />}
+                    </dt>
                     <dd className="mt-0.5 text-xs text-ink-muted">{metrics.skipped[key]}</dd>
                   </div>
                 ))}

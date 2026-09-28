@@ -3,10 +3,12 @@ import { Link } from "react-router-dom";
 import { api, ApiError } from "../lib/api";
 import { formatDate, formatDecimal, formatNok, formatPercent } from "../lib/format";
 import type { BoardRow, BoardZone, MarginOfSafetyBoard } from "../lib/types";
-import { Card, EmptyState, PageHeader, VerdictBadge } from "../components/ui";
+import { Button, Card, EmptyState, PageHeader, VerdictBadge } from "../components/ui";
 import { AnalystModeChip } from "../components/AnalystModeToggle";
 import { CycleFitBoardCard } from "../components/DalioViews";
 import { useAnalystMode } from "../lib/analystMode";
+import { InfoTooltip } from "../components/InfoTooltip";
+import { GLOSSARY } from "../lib/glossary";
 
 /** Feature F3 — every stock you own, ranked by how far its price sits below
  * the DCF value (backend/app/services/valuation/board.py). All numbers are
@@ -70,10 +72,20 @@ function RankedTable({ rows }: { rows: BoardRow[] }) {
           <tr className="text-left text-xs text-ink-muted">
             <th className="py-2 pr-4 font-medium">Holding</th>
             <th className="py-2 pr-4 font-medium">Verdict</th>
-            <th className="py-2 pr-4 font-medium">Price vs. bear · base · bull</th>
+            <th className="py-2 pr-4 font-medium">
+              <span className="inline-flex items-center gap-1">
+                Price vs. bear · base · bull
+                <InfoTooltip text={GLOSSARY.bearBaseBull} align="left" />
+              </span>
+            </th>
             <th className="py-2 pr-4 text-right font-medium">Price</th>
             <th className="py-2 pr-4 text-right font-medium">Base value</th>
-            <th className="py-2 pr-4 text-right font-medium">Margin of safety</th>
+            <th className="py-2 pr-4 text-right font-medium">
+              <span className="inline-flex items-center gap-1">
+                Margin of safety
+                <InfoTooltip text={GLOSSARY.marginOfSafety} />
+              </span>
+            </th>
             <th className="py-2 text-right font-medium">Weight</th>
           </tr>
         </thead>
@@ -150,6 +162,7 @@ export default function MarginOfSafetyPage() {
 function MarginOfSafetyBoardPage({ sideBySide }: { sideBySide: boolean }) {
   const [board, setBoard] = useState<MarginOfSafetyBoard | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     api
@@ -157,6 +170,16 @@ function MarginOfSafetyBoardPage({ sideBySide }: { sideBySide: boolean }) {
       .then(setBoard)
       .catch((e) => setError(e instanceof ApiError ? e.message : "Could not load the board."));
   }, []);
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    setError(null);
+    api
+      .refreshMarginOfSafetyBoard()
+      .then(setBoard)
+      .catch((e) => setError(e instanceof ApiError ? e.message : "Could not refresh the board."))
+      .finally(() => setRefreshing(false));
+  };
 
   const ranked = board?.rows.filter((r) => r.zone !== "unavailable") ?? [];
   const unavailable = board?.rows.filter((r) => r.zone === "unavailable") ?? [];
@@ -172,9 +195,21 @@ function MarginOfSafetyBoardPage({ sideBySide }: { sideBySide: boolean }) {
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 sm:px-8 sm:py-8">
       <PageHeader
-        title="Margin of safety"
+        title={
+          <span className="inline-flex items-center gap-1.5">
+            Margin of safety
+            <InfoTooltip text={GLOSSARY.marginOfSafety} />
+          </span>
+        }
         subtitle="Every stock you own, ranked by how far today's price sits below its DCF value."
-        actions={<AnalystModeChip />}
+        actions={
+          <>
+            <Button variant="secondary" onClick={handleRefresh} disabled={refreshing}>
+              {refreshing ? "Refreshing…" : "Refresh"}
+            </Button>
+            <AnalystModeChip />
+          </>
+        }
       />
 
       {sideBySide && (
@@ -186,7 +221,8 @@ function MarginOfSafetyBoardPage({ sideBySide }: { sideBySide: boolean }) {
       {error && <p className="text-sm text-negative">{error}</p>}
       {!board && !error && (
         <p className="text-sm text-ink-muted">
-          Valuing your holdings… the first load of the day refreshes prices and can take a little while.
+          Loading your holdings' last-known valuations… (each price/DCF is served from cache — hit
+          "Refresh" above for a live re-check, which can take a little while).
         </p>
       )}
 

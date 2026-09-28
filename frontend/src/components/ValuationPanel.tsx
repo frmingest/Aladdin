@@ -13,6 +13,8 @@ import { formatDate, formatDecimal, formatPercent } from "../lib/format";
 import type { DCFScenario, HoldingValuation, PeriodMultiples } from "../lib/types";
 import { MULTIPLE_LABELS, MULTIPLE_ORDER } from "../lib/types";
 import { Button, Card, EmptyState } from "./ui";
+import { InfoTooltip } from "./InfoTooltip";
+import { GLOSSARY } from "../lib/glossary";
 
 /** Valuation panel for HoldingDetailPage (Sprint 3 — Brain Step 4:
  * "Valuation & Margin of Safety"). Mirrors ResearchPanel's
@@ -26,14 +28,19 @@ function StatTile({
   label,
   value,
   hint,
+  info,
 }: {
   label: string;
   value: string;
   hint?: string;
+  info?: string;
 }) {
   return (
     <div>
-      <p className="text-xs uppercase tracking-wide text-ink-muted">{label}</p>
+      <p className="inline-flex items-center gap-1 text-xs uppercase tracking-wide text-ink-muted">
+        {label}
+        {info && <InfoTooltip text={info} />}
+      </p>
       <p className="tabular mt-1 text-lg font-semibold text-ink">{value}</p>
       {hint && <p className="mt-0.5 text-xs text-ink-faint">{hint}</p>}
     </div>
@@ -198,6 +205,7 @@ export function ValuationPanel({ holdingId, ticker }: { holdingId: string; ticke
             />
             <StatTile
               label="Discount rate (CAPM)"
+              info={GLOSSARY.discountRate}
               value={valuation.discount_rate ? formatPercent(valuation.discount_rate) : "—"}
               hint={
                 valuation.regime && valuation.regime_discount_rate_addon && Number(valuation.regime_discount_rate_addon) !== 0
@@ -215,6 +223,7 @@ export function ValuationPanel({ holdingId, ticker }: { holdingId: string; ticke
             />
             <StatTile
               label="Reverse DCF implied growth"
+              info={GLOSSARY.reverseDcf}
               value={
                 valuation.reverse_dcf_implied_growth
                   ? formatPercent(valuation.reverse_dcf_implied_growth)
@@ -224,8 +233,9 @@ export function ValuationPanel({ holdingId, ticker }: { holdingId: string; ticke
           </div>
 
           <div>
-            <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">
+            <h4 className="mb-3 inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-ink-muted">
               DCF scenarios (owner earnings)
+              <InfoTooltip text={`${GLOSSARY.dcf} ${GLOSSARY.ownerEarnings}`} align="left" />
             </h4>
             {valuation.dcf === null ? (
               <EmptyState>DCF unavailable for this holding — see the note above.</EmptyState>
@@ -249,8 +259,9 @@ export function ValuationPanel({ holdingId, ticker }: { holdingId: string; ticke
           </div>
 
           <div>
-            <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">
+            <h4 className="mb-3 inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-ink-muted">
               Multiples over time
+              <InfoTooltip text={`${GLOSSARY.peRatio} ${GLOSSARY.evEbitda}`} align="left" />
             </h4>
             {valuation.multiples.length === 0 ? (
               <EmptyState>No periods with both extracted facts and a market price yet.</EmptyState>

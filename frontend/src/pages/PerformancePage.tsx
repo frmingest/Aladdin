@@ -14,6 +14,8 @@ import { api, ApiError } from "../lib/api";
 import { formatDate, formatNok, formatPct100 } from "../lib/format";
 import type { DailyValue, PortfolioPerformance } from "../lib/types";
 import { Button, Card, EmptyState, PageHeader, SectionTitle } from "../components/ui";
+import { InfoTooltip } from "../components/InfoTooltip";
+import { GLOSSARY } from "../lib/glossary";
 
 /** Sprint 13 — daily portfolio value history and a benchmark comparison,
  * from GET /performance/portfolio (backend/app/services/performance/).
@@ -33,10 +35,25 @@ const LOOKBACK_OPTIONS: { label: string; days: number }[] = [
   { label: "2y", days: 730 },
 ];
 
-function StatTile({ label, value, hint, tone }: { label: string; value: string; hint?: string; tone?: "positive" | "negative" }) {
+function StatTile({
+  label,
+  value,
+  hint,
+  tone,
+  info,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+  tone?: "positive" | "negative";
+  info?: string;
+}) {
   return (
     <div>
-      <p className="text-xs uppercase tracking-wide text-ink-muted">{label}</p>
+      <p className="inline-flex items-center gap-1 text-xs uppercase tracking-wide text-ink-muted">
+        {label}
+        {info && <InfoTooltip text={info} />}
+      </p>
       <p
         className={`tabular mt-1 text-lg font-semibold ${
           tone === "positive" ? "text-positive" : tone === "negative" ? "text-negative" : "text-ink"
@@ -249,6 +266,7 @@ export default function PerformancePage() {
               />
               <StatTile
                 label="Real total return"
+                info={GLOSSARY.realReturn}
                 value={realTotalReturnPct(perf) !== null ? formatPct100(realTotalReturnPct(perf)!, 2) : "—"}
                 tone={toneFor(realTotalReturnPct(perf))}
                 hint={perf.real_return_available ? "CPI-adjusted (Norway)" : perf.real_return_reason ?? "Unavailable"}
@@ -268,6 +286,7 @@ export default function PerformancePage() {
             </div>
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
               <SectionTitle
+                info={GLOSSARY.benchmarkComparison}
                 hint={
                   perf.benchmark_available
                     ? `vs. ${perf.benchmark_ticker}`

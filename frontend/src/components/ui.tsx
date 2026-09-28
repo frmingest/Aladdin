@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { InfoTooltip } from "./InfoTooltip";
 
 /** Small shared building blocks used by both holding pages — kept here
  * rather than duplicated once a second page needed the same card/badge
@@ -23,7 +24,7 @@ export function PageHeader({
   subtitle,
   actions,
 }: {
-  title: string;
+  title: React.ReactNode;
   subtitle?: string;
   actions?: React.ReactNode;
 }) {
@@ -147,31 +148,51 @@ export function VerdictBadge({ rating, title }: { rating: string | null; title?:
   );
 }
 
-/** Small uppercase label, used for card headings on the dashboard pages. */
-export function SectionTitle({ children, hint }: { children: React.ReactNode; hint?: string }) {
+/** Small uppercase label, used for card headings on the dashboard pages.
+ * `info` (optional) adds an <InfoTooltip> next to the heading — a
+ * plain-language explanation of the section, separate from `hint`, which
+ * states this instance's specific parameters (lookback window, threshold, …). */
+export function SectionTitle({
+  children,
+  hint,
+  info,
+}: {
+  children: React.ReactNode;
+  hint?: string;
+  info?: string;
+}) {
   return (
     <div className="mb-3">
-      <h2 className="font-display text-[15px] font-semibold tracking-tight text-ink">{children}</h2>
+      <h2 className="inline-flex items-center gap-1.5 font-display text-[15px] font-semibold tracking-tight text-ink">
+        {children}
+        {info && <InfoTooltip text={info} align="left" />}
+      </h2>
       {hint && <p className="mt-0.5 text-xs text-ink-faint">{hint}</p>}
     </div>
   );
 }
 
-/** One headline number. */
+/** One headline number. `info` (optional) adds an <InfoTooltip> next to
+ * the label, explaining the metric in plain language. */
 export function StatTile({
   label,
   value,
   hint,
   tone = "text-ink",
+  info,
 }: {
   label: string;
   value: React.ReactNode;
   hint?: React.ReactNode;
   tone?: string;
+  info?: string;
 }) {
   return (
     <Card>
-      <p className="text-xs font-medium uppercase tracking-wider text-ink-faint">{label}</p>
+      <p className="inline-flex items-center gap-1 text-xs font-medium uppercase tracking-wider text-ink-faint">
+        {label}
+        {info && <InfoTooltip text={info} />}
+      </p>
       <p className={`tabular mt-1.5 font-display text-[1.7rem] font-semibold leading-tight tracking-tight ${tone}`}>{value}</p>
       {hint && <p className="mt-0.5 text-xs text-ink-faint">{hint}</p>}
     </Card>

@@ -2,6 +2,8 @@ import { useState } from "react";
 import { api, ApiError } from "../lib/api";
 import type { HoldingMetrics } from "../lib/types";
 import { METRIC_LABELS, MONEY_METRICS, PERCENT_METRICS } from "../lib/types";
+import { InfoTooltip } from "./InfoTooltip";
+import { METRIC_INFO } from "../lib/glossary";
 import {
   formatDate,
   formatMoney,
@@ -165,7 +167,10 @@ export function MarketMultiplesCard({
           {rows.map((key) => (
             <div key={key} className="py-2 text-sm">
               <div className="flex justify-between gap-4">
-                <dt className="text-ink-muted">{METRIC_LABELS[key]}</dt>
+                <dt className="inline-flex items-center gap-1 text-ink-muted">
+                  {METRIC_LABELS[key]}
+                  {METRIC_INFO[key] && <InfoTooltip text={METRIC_INFO[key]} align="left" />}
+                </dt>
                 <dd className="tabular font-medium text-ink">
                   {metrics.computed[key] !== undefined ? renderValue(key, metrics.computed[key]) : "n/m"}
                 </dd>

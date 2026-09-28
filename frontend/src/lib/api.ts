@@ -340,8 +340,12 @@ export const api = {
       body: JSON.stringify({ enabled }),
     }),
 
-  /** F3 — every owned equity ranked by margin of safety. */
+  /** F3 — every owned equity ranked by margin of safety. Page-load-performance
+   * P1 (2026-09-28): this GET never revalues live, so it always returns
+   * fast — use refreshMarginOfSafetyBoard() for "I want this now". */
   getMarginOfSafetyBoard: () => request<MarginOfSafetyBoard>("/valuation/board"),
+  refreshMarginOfSafetyBoard: () =>
+    request<MarginOfSafetyBoard>("/valuation/board/refresh", { method: "POST" }),
 
   // Primary sources (2026-09-22) — see backend/app/api/sources.py.
   getSourceEligibility: (holdingId: string) =>

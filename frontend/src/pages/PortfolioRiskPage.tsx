@@ -4,6 +4,7 @@ import { api, ApiError } from "../lib/api";
 import { formatDate, formatNok, formatPercent, formatPct100 } from "../lib/format";
 import type { ClusterFlag, CorrelationMatrix, HoldingStress, PortfolioRisk, Regime } from "../lib/types";
 import { Button, Card, EmptyState, PageHeader, SectionTitle } from "../components/ui";
+import { GLOSSARY } from "../lib/glossary";
 import { AllWeatherPanel } from "../components/DalioViews";
 import { useAnalystMode } from "../lib/analystMode";
 
@@ -191,7 +192,10 @@ function RegimeCard({ regime }: { regime: Regime }) {
   return (
     <Card>
       <div className="mb-3 flex items-center justify-between gap-3">
-        <SectionTitle hint="Baseline / stagflation / crisis, smoothed over 3 months so one noisy print can't flip it.">
+        <SectionTitle
+          info={GLOSSARY.macroRegime}
+          hint="Baseline / stagflation / crisis, smoothed over 3 months so one noisy print can't flip it."
+        >
           Macro regime
         </SectionTitle>
         <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${REGIME_STYLE[regime.regime]}`}>
@@ -311,7 +315,10 @@ export default function PortfolioRiskPage() {
 
           <div className="grid gap-6 lg:grid-cols-2">
             <Card>
-              <SectionTitle hint={`${risk.lookback_days}-day lookback, Pearson correlation of daily returns.`}>
+              <SectionTitle
+                info={GLOSSARY.correlation}
+                hint={`${risk.lookback_days}-day lookback, Pearson correlation of daily returns.`}
+              >
                 Correlation matrix
               </SectionTitle>
               <CorrelationHeatmap matrix={risk.correlation} />
@@ -322,7 +329,10 @@ export default function PortfolioRiskPage() {
               )}
             </Card>
             <Card>
-              <SectionTitle hint={`Two or more top holdings correlated at |r| ≥ ${formatPercent(risk.cluster_threshold, 0)}.`}>
+              <SectionTitle
+                info={GLOSSARY.concentrationCluster}
+                hint={`Two or more top holdings correlated at |r| ≥ ${formatPercent(risk.cluster_threshold, 0)}.`}
+              >
                 Correlated risk clusters
               </SectionTitle>
               <ClusterFlags clusters={risk.clusters} threshold={risk.cluster_threshold} />
@@ -331,7 +341,9 @@ export default function PortfolioRiskPage() {
 
           <Card>
             <div className="mb-3 flex flex-wrap items-baseline justify-between gap-3">
-              <SectionTitle hint={risk.stress.horizon_note}>Stress scenario</SectionTitle>
+              <SectionTitle info={GLOSSARY.stressScenario} hint={risk.stress.horizon_note}>
+                Stress scenario
+              </SectionTitle>
               {risk.stress.portfolio_shock_pct !== null && (
                 <div className="text-right">
                   <p className="text-xs font-medium uppercase tracking-wider text-ink-faint">Portfolio impact</p>
