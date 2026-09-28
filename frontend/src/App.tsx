@@ -1,21 +1,42 @@
+import { Suspense, lazy } from "react";
 import { Route, Routes } from "react-router-dom";
 import Layout from "./components/Layout";
-import AnalysisQueuePage from "./pages/AnalysisQueuePage";
-import DashboardPage from "./pages/DashboardPage";
-import HoldingsListPage from "./pages/HoldingsListPage";
-import HoldingDetailPage from "./pages/HoldingDetailPage";
-import PortfolioPage from "./pages/PortfolioPage";
-import JournalPage from "./pages/JournalPage";
-import MacroPage from "./pages/MacroPage";
-import MarginOfSafetyPage from "./pages/MarginOfSafetyPage";
-import SectorPage from "./pages/SectorPage";
-import SettingsPage from "./pages/SettingsPage";
-import SystemStatusPage from "./pages/SystemStatusPage";
-import PerformancePage from "./pages/PerformancePage";
-import PortfolioRiskPage from "./pages/PortfolioRiskPage";
-import PreciousMetalsPage from "./pages/PreciousMetalsPage";
-import ThesisMonitorPage from "./pages/ThesisMonitorPage";
-import WatchlistPage from "./pages/WatchlistPage";
+
+/**
+ * Route-level code-splitting (2026-09-28, page-load-performance
+ * investigation — claude/page-load-performance-investigation-2026-09-28.md
+ * P0 fix #2): every page used to be a static import here, so opening any
+ * one page downloaded and parsed all 14 pages' code (and their
+ * dependencies, e.g. `recharts` used by only a handful) before the first
+ * page could even paint — the ~795 kB main-bundle warning `npm run build`
+ * has been printing since Sprint 1. `React.lazy` turns each page back into
+ * its own chunk, fetched only when its route is actually visited; the
+ * `Suspense` fallback below covers the brief gap while that chunk loads.
+ */
+const DashboardPage = lazy(() => import("./pages/DashboardPage"));
+const HoldingsListPage = lazy(() => import("./pages/HoldingsListPage"));
+const HoldingDetailPage = lazy(() => import("./pages/HoldingDetailPage"));
+const PortfolioPage = lazy(() => import("./pages/PortfolioPage"));
+const MarginOfSafetyPage = lazy(() => import("./pages/MarginOfSafetyPage"));
+const MacroPage = lazy(() => import("./pages/MacroPage"));
+const SectorPage = lazy(() => import("./pages/SectorPage"));
+const WatchlistPage = lazy(() => import("./pages/WatchlistPage"));
+const ThesisMonitorPage = lazy(() => import("./pages/ThesisMonitorPage"));
+const PortfolioRiskPage = lazy(() => import("./pages/PortfolioRiskPage"));
+const PerformancePage = lazy(() => import("./pages/PerformancePage"));
+const PreciousMetalsPage = lazy(() => import("./pages/PreciousMetalsPage"));
+const JournalPage = lazy(() => import("./pages/JournalPage"));
+const AnalysisQueuePage = lazy(() => import("./pages/AnalysisQueuePage"));
+const SystemStatusPage = lazy(() => import("./pages/SystemStatusPage"));
+const SettingsPage = lazy(() => import("./pages/SettingsPage"));
+
+function RouteLoading() {
+  return (
+    <div className="flex min-h-[40vh] items-center justify-center">
+      <span className="text-sm text-ink-muted">Loading…</span>
+    </div>
+  );
+}
 
 /**
  * Sprint 1 built the first real frontend pages (see
@@ -32,24 +53,26 @@ import WatchlistPage from "./pages/WatchlistPage";
 export default function App() {
   return (
     <Layout>
-      <Routes>
-        <Route path="/" element={<DashboardPage />} />
-        <Route path="/holdings" element={<HoldingsListPage />} />
-        <Route path="/holdings/:id" element={<HoldingDetailPage />} />
-        <Route path="/portfolio" element={<PortfolioPage />} />
-        <Route path="/margin-of-safety" element={<MarginOfSafetyPage />} />
-        <Route path="/macro" element={<MacroPage />} />
-        <Route path="/sectors/:sector" element={<SectorPage />} />
-        <Route path="/watchlist" element={<WatchlistPage />} />
-        <Route path="/thesis" element={<ThesisMonitorPage />} />
-        <Route path="/risk" element={<PortfolioRiskPage />} />
-        <Route path="/performance" element={<PerformancePage />} />
-        <Route path="/precious-metals" element={<PreciousMetalsPage />} />
-        <Route path="/journal" element={<JournalPage />} />
-        <Route path="/analysis-queue" element={<AnalysisQueuePage />} />
-        <Route path="/status" element={<SystemStatusPage />} />
-        <Route path="/settings" element={<SettingsPage />} />
-      </Routes>
+      <Suspense fallback={<RouteLoading />}>
+        <Routes>
+          <Route path="/" element={<DashboardPage />} />
+          <Route path="/holdings" element={<HoldingsListPage />} />
+          <Route path="/holdings/:id" element={<HoldingDetailPage />} />
+          <Route path="/portfolio" element={<PortfolioPage />} />
+          <Route path="/margin-of-safety" element={<MarginOfSafetyPage />} />
+          <Route path="/macro" element={<MacroPage />} />
+          <Route path="/sectors/:sector" element={<SectorPage />} />
+          <Route path="/watchlist" element={<WatchlistPage />} />
+          <Route path="/thesis" element={<ThesisMonitorPage />} />
+          <Route path="/risk" element={<PortfolioRiskPage />} />
+          <Route path="/performance" element={<PerformancePage />} />
+          <Route path="/precious-metals" element={<PreciousMetalsPage />} />
+          <Route path="/journal" element={<JournalPage />} />
+          <Route path="/analysis-queue" element={<AnalysisQueuePage />} />
+          <Route path="/status" element={<SystemStatusPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+        </Routes>
+      </Suspense>
     </Layout>
   );
 }

@@ -34,12 +34,29 @@ COPY --from=build /app/dist /usr/share/nginx/html
 # the file is present in the repo. Baking the config in with RUN sidesteps
 # that context-snapshot lookup entirely. Content matches the former
 # frontend/nginx.conf (kept in the repo for local `docker build` reference).
+#
+# gzip + long-lived caching added 2026-09-28 (page-load-performance
+# investigation, claude/page-load-performance-investigation-2026-09-28.md):
+# this previously shipped the built JS/CSS bundle uncompressed and with no
+# cache headers on every single visit.
 COPY <<EOF /etc/nginx/templates/default.conf.template
 server {
     listen \${PORT};
     server_name _;
     root /usr/share/nginx/html;
     index index.html;
+
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_comp_level 6;
+    gzip_types text/plain text/css text/xml application/javascript application/json
+        application/xml application/xml+rss image/svg+xml font/woff2;
+
+    location /assets/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
 
     # SPA fallback — client-side routing owns every unknown path.
     location / {
