@@ -65,6 +65,7 @@ import type {
   SnapshotDeleteResult,
   SourceEligibility,
   SystemStatus,
+  UsageSummary,
   DemoModeState,
   ThesisMonitor,
   TripwireCreateInput,
@@ -329,6 +330,9 @@ export const api = {
 
   /** F4 — configuration, data freshness and failures. Never calls a provider. */
   getSystemStatus: () => request<SystemStatus>("/system/status"),
+
+  /** LLM usage ledger (Sprint 15 #1) — per-day, per-provider request counts. Database only. */
+  getUsageSummary: (days = 7) => request<UsageSummary>(`/usage/summary?days=${days}`),
 
   /** Demo mode (2026-09-26) — backend/app/api/settings.py. Turning it on
    * makes every page show a fixed set of fabricated data; real portfolio

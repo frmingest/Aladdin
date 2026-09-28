@@ -25,10 +25,11 @@ from app.providers.base import (
     LLMUnavailableError,
     LLMUsageMetrics,
 )
+from app.providers.ledger_recording import LedgerRecordingMixin
 from app.providers.mistral_retry import call_with_retry
 
 
-class MistralProvider(LLMProvider):
+class MistralProvider(LedgerRecordingMixin, LLMProvider):
     name = "mistral"
 
     def __init__(
@@ -48,7 +49,7 @@ class MistralProvider(LLMProvider):
         self._max_output_tokens = max_output_tokens
         self._rpm = rpm
 
-    def generate_structured(
+    def _generate_structured(
         self,
         *,
         system_prompt: str,

@@ -29,6 +29,7 @@ from app.providers.fred_risk_free_rate_provider import FredRiskFreeRateProvider
 from app.providers.gemini_research_provider import GeminiResearchProvider
 from app.providers.gold_api_provider import GoldApiProvider
 from app.providers.google_ai_studio_provider import GoogleAIStudioProvider
+from app.providers.ledger_budget import LedgerBudgetGuard
 from app.providers.macro_data_providers import (
     CompositeMacroDataProvider,
     FredMacroProvider,
@@ -49,6 +50,14 @@ from app.providers.tavily_research_provider import TavilyResearchProvider
 from app.providers.yfinance_provider import YFinanceMarketDataProvider
 
 
+def _ledger_session_factory():
+    """The session factory the LLM usage ledger writes through, or None when
+    no DATABASE_URL is configured (unit tests; ledger then no-ops)."""
+    from app.config.database import SessionLocal
+
+    return SessionLocal
+
+
 def _build_provider(name: str, settings: Settings) -> LLMProvider:
     if name == "google_ai_studio":
         return GoogleAIStudioProvider(
@@ -65,15 +74,17 @@ def _build_provider(name: str, settings: Settings) -> LLMProvider:
             budget_guard=get_primary_budget_guard(),
         )
     if name == "mistral":
-        return MistralProvider(
+        provider: LLMProvider = MistralProvider(
             api_key=settings.mistral_api_key or "",
             model=settings.mistral_model_name,
             temperature=settings.llm_temperature,
             max_output_tokens=settings.llm_max_output_tokens,
             rpm=settings.mistral_rate_limit_rpm,
         )
+        provider.ledger_session_factory = _ledger_session_factory()  # type: ignore[attr-defined]
+        return provider
     if name == "ollama":
-        return OllamaProvider(
+        provider = OllamaProvider(
             base_url=settings.ollama_base_url,
             model=settings.ollama_model_name,
             temperature=settings.llm_temperature,
@@ -85,6 +96,8 @@ def _build_provider(name: str, settings: Settings) -> LLMProvider:
             think=settings.ollama_think,
             api_key=settings.ollama_api_key,
         )
+        provider.ledger_session_factory = _ledger_session_factory()  # type: ignore[attr-defined]
+        return provider
     raise LLMUnavailableError(f"Unknown LLM provider: {name!r}")
 
 
@@ -114,9 +127,15 @@ def get_llm_fallback_provider() -> LLMProvider | None:
 
 @lru_cache
 def get_primary_budget_guard() -> DailyBudgetGuard:
-    """The primary provider's daily request-budget guard (see budget.py)."""
+    """The primary provider's daily request-budget guard — ledger-backed, so the
+    count survives restarts and is shared with the PC worker (ledger_budget.py)."""
     settings = get_settings()
-    return DailyBudgetGuard(daily_limit=settings.llm_rate_limit_rpd)
+    return LedgerBudgetGuard(
+        daily_limit=settings.llm_rate_limit_rpd,
+        provider="google_ai_studio",
+        model_name=settings.llm_model_name,
+        session_factory=_ledger_session_factory(),
+    )
 
 
 @lru_cache

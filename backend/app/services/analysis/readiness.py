@@ -401,7 +401,7 @@ def _check_quota(
             None,
         )
     remaining = budget_guard.remaining_today()
-    note = "Counted by this server since its last restart."
+    note = "Counted from the LLM usage ledger (shared by the server and the PC worker)."
     if remaining >= estimated:
         return (
             ReadinessCheck(

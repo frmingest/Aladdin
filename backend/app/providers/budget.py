@@ -8,16 +8,13 @@ See claude/gemini-daily-budget-guard-2026-09-16.md for the incident this
 guard is modeled on. A caller checks "would this call fit in today's
 budget" before spending a network round-trip finding out the hard way.
 
-Deliberately in-memory, not backed by a database table yet — Sprint 1
-hasn't built any models at the point this is written. Once an
-`llm_usage_events` ledger exists (see
-claude/llm-usage-ledger-and-rate-limit-estimation.md for the pre-reset
-design this should eventually match), replace this with a ledger-backed
-guard so the count survives a process restart and reflects real history
-instead of only what this process has seen today. Until then this protects
-a single running process for a single day — enough to stop a batch job from
-burning every remaining retry into a guaranteed 429, not a source of truth
-across restarts or deployments.
+This class is the in-process guard: a count for one process on one UTC day.
+Since 2026-09-28 the app itself uses its ledger-backed subclass
+(app/providers/ledger_budget.py::LedgerBudgetGuard), which reads today's
+count from the `llm_usage_events` table so it survives restarts and is shared
+between the web server and the PC worker. This base class remains as that
+subclass's fallback when the database can't be reached, and as the simple
+guard the unit tests use.
 """
 from __future__ import annotations
 
@@ -53,13 +50,31 @@ class DailyBudgetGuard:
         """Whether spending `cost` more requests today would exceed the cap."""
         return self.remaining_today() < cost
 
-    def record_usage(self, cost: int = 1) -> None:
+    def record_usage(
+        self,
+        cost: int = 1,
+        *,
+        call_type: str = "unknown",
+        model_name: str | None = None,
+        outcome: str = "success",
+        latency_ms: float | None = None,
+        input_tokens: int | None = None,
+        output_tokens: int | None = None,
+        error_detail: str | None = None,
+    ) -> None:
         """Record that `cost` real requests were just spent.
+
+        The keyword-only arguments describe the call for the persistent
+        ledger (app/providers/ledger_budget.py); this in-process guard keeps
+        only the count and ignores them. A `blocked_by_budget` outcome means
+        the request was refused before sending, so nothing is spent.
 
         Call this for a failed call too, not only a successful one — a
         failed call still cost real quota (see the 2026-09-16 doc's
         "conservative debiting on a failed call").
         """
+        if outcome == "blocked_by_budget":
+            return
         with self._lock:
             self._roll_if_new_day()
             self._count += cost

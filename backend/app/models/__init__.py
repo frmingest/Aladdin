@@ -26,8 +26,8 @@ from app.models.legacy_analysis import (
     EvidenceReference,
     FactorAssessment,
     HoldingAnalysis,
-    LlmUsageEvent,
 )
+from app.models.llm_usage import LlmUsageEvent
 from app.models.macro import MacroObservation, MacroSeriesStatus
 from app.models.market import (
     FxObservation,

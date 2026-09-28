@@ -66,6 +66,9 @@ def call_with_retry(
     *,
     rpm: int = 0,
     budget_guard: DailyBudgetGuard | None = None,
+    call_type: str = "unknown",
+    model_name: str | None = None,
+    usage_of: Callable[[T], tuple[int | None, int | None]] | None = None,
     _sleep: Callable[[float], None] = time.sleep,
     _random: Callable[[], float] = random.random,
 ) -> T:
@@ -86,6 +89,10 @@ def call_with_retry(
     docstring asks callers to do.
     """
     if budget_guard is not None and budget_guard.would_exceed():
+        budget_guard.record_usage(
+            0, call_type=call_type, model_name=model_name, outcome="blocked_by_budget",
+            error_detail="daily request budget already spent",
+        )
         raise DailyBudgetExceededError(
             "daily request budget already spent for today — no calls remaining"
         )
@@ -93,11 +100,16 @@ def call_with_retry(
     last_exc: BaseException | None = None
     for attempt in range(_MAX_RETRIES + 1):
         pace_call(rpm, _sleep=_sleep)
+        started = time.monotonic()
         try:
             result = fn()
         except BaseException as exc:
             if budget_guard is not None:
-                budget_guard.record_usage(1)
+                budget_guard.record_usage(
+                    1, call_type=call_type, model_name=model_name, outcome="error",
+                    latency_ms=(time.monotonic() - started) * 1000,
+                    error_detail=f"{type(exc).__name__}: {exc}"[:240],
+                )
             if not _is_retryable(exc):
                 raise
             last_exc = exc
@@ -106,7 +118,12 @@ def call_with_retry(
                 _sleep(delay)
             continue
         if budget_guard is not None:
-            budget_guard.record_usage(1)
+            tokens_in, tokens_out = usage_of(result) if usage_of is not None else (None, None)
+            budget_guard.record_usage(
+                1, call_type=call_type, model_name=model_name, outcome="success",
+                latency_ms=(time.monotonic() - started) * 1000,
+                input_tokens=tokens_in, output_tokens=tokens_out,
+            )
         return result
     assert last_exc is not None  # pragma: no cover - loop always returns or raises above
     raise last_exc

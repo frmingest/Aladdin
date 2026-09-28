@@ -33,6 +33,7 @@ from app.api.settings import router as settings_router
 from app.api.sources import router as sources_router
 from app.api.system import router as system_router
 from app.api.thesis import router as thesis_router
+from app.api.usage import router as usage_router
 from app.api.valuation import router as valuation_router
 from app.api.watchlist import router as watchlist_router
 from app.config.settings import get_settings
@@ -124,6 +125,7 @@ app.include_router(performance_router)
 app.include_router(precious_metals_router)
 app.include_router(settings_router)
 app.include_router(dalio_router)
+app.include_router(usage_router)
 
 
 @app.get("/health")

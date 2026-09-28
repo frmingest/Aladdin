@@ -1031,6 +1031,32 @@ export interface FreshnessItem {
   detail: string;
 }
 
+/** GET /usage/summary — the LLM usage ledger (backend/app/services/llm_ledger.py). */
+export interface UsageDay {
+  date: string;
+  provider: string;
+  model_name: string;
+  requests: number;
+  failed: number;
+  blocked: number;
+  input_tokens: number;
+  output_tokens: number;
+  daily_limit: number | null;
+  remaining: number | null;
+}
+
+export interface UsageSummary {
+  generated_at: string;
+  days: number;
+  gemini_daily_limit: number;
+  gemini_used_today: number;
+  gemini_remaining_today: number;
+  daily: UsageDay[];
+  by_call_type: { provider: string; call_type: string; requests: number }[];
+  recent_errors: { occurred_at: string; provider: string; call_type: string; detail: string }[];
+  demo_mode: boolean;
+}
+
 export interface SystemStatus {
   generated_at: string;
   version: string;

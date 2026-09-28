@@ -53,6 +53,13 @@ SECTOR_SOURCE_TYPE = "sector_research"
 COMPANY_SOURCE_TYPE = "company_research"
 
 
+def _usage_tokens(response: genai_types.GenerateContentResponse) -> tuple[int | None, int | None]:
+    usage = getattr(response, "usage_metadata", None)
+    if usage is None:
+        return None, None
+    return usage.prompt_token_count, usage.candidates_token_count
+
+
 class GeminiResearchProvider(ResearchProvider):
     name = "gemini_search"
 
@@ -117,7 +124,14 @@ class GeminiResearchProvider(ResearchProvider):
             )
 
         try:
-            response = call_with_retry(_call, rpm=self._rpm, budget_guard=self._budget_guard)
+            response = call_with_retry(
+                _call,
+                rpm=self._rpm,
+                budget_guard=self._budget_guard,
+                call_type="grounded_research",
+                model_name=self._model,
+                usage_of=_usage_tokens,
+            )
         except DailyBudgetExceededError as exc:
             raise ResearchUnavailableError(
                 f"Gemini daily request budget exhausted (model={self._model}): {exc}"

@@ -36,8 +36,8 @@ from app.models.legacy_analysis import (
     EvidenceReference,
     FactorAssessment,
     HoldingAnalysis,
-    LlmUsageEvent,
 )
+from app.models.llm_usage import LlmUsageEvent
 from app.models.market import MarketObservation, ShareCountObservation
 from app.models.portfolio import PortfolioPosition, PortfolioSnapshot
 from app.models.research import ResearchItem, ResearchRun
