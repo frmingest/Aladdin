@@ -2,13 +2,15 @@
 macro catalogue actually stores (app/domain/macro_series.py `v1`):
 
   NO: policy rate, NOWA, 3m T-bill, 10y yield, USD/NOK, EUR/NOK, CPI y/y
+      (v2 adds a derived Norway 10y-3m curve - shown as an input, not a trigger)
   US: fed funds upper bound, 10y yield, 10y-2y curve, CPI y/y,
       unemployment, HY credit spread
 
-That's both a home-market series (Norway CPI, via SSB) and a set of US
-series — no Norges Bank yield-curve or credit-spread series exists in the
-catalogue, so the curve/credit legs of this classification are
-necessarily US-only; the output says so plainly rather than implying a
+That's both home-market series (Norway CPI, via SSB; Norway's 10y-3m curve
+from Norges Bank yields) and a set of US series. No free Norwegian
+credit-spread series exists (Sprint 15 #4 investigation, 2026-09-28), so
+the credit leg - and the curve leg of the stagflation TRIGGER - stay
+US-calibrated; the output says so plainly rather than implying a
 Norway-specific signal that isn't there.
 
 Three categories (baseline / stagflation / crisis) is deliberately coarse:
@@ -80,6 +82,11 @@ class RegimeResult:
     inputs: list[RegimeInput] = field(default_factory=list)
     data_complete: bool = True
     missing: list[str] = field(default_factory=list)
+    # Norway's own 10y-3m curve (smoothed, pp). Informational only: shown and cited,
+    # but NOT a regime trigger - Norway's front end sits on a high policy rate, so
+    # the curve is often inverted for reasons the US-calibrated thresholds weren't
+    # sized for. None when either leg isn't stored yet.
+    norway_curve_pp: Decimal | None = None
 
 
 def _smoothed(snap: IndicatorSnapshot) -> Decimal | None:
@@ -91,6 +98,14 @@ def _smoothed(snap: IndicatorSnapshot) -> Decimal | None:
     if not tail:
         return snap.value
     return sum((p.value for p in tail), Decimal(0)) / len(tail)
+
+
+def _norway_curve(by_key: dict[str, IndicatorSnapshot]) -> Decimal | None:
+    """Smoothed Norway 10y minus smoothed 3m T-bill, or None if either is missing."""
+    long, short = by_key.get("no_10y"), by_key.get("no_3m_bill")
+    if long is None or short is None or long.value is None or short.value is None:
+        return None
+    return _smoothed(long) - _smoothed(short)  # type: ignore[operator]
 
 
 def classify_regime(db: Session, *, indicators: MacroIndicators | None = None) -> RegimeResult:
@@ -115,6 +130,15 @@ def classify_regime(db: Session, *, indicators: MacroIndicators | None = None) -
             )
         )
 
+    no_curve = _norway_curve(by_key)
+    if no_curve is not None:
+        inputs.append(
+            RegimeInput(
+                key="no_curve_10y_3m", label="Norway yield curve (10y minus 3m T-bill)", region="NO",
+                latest_value=None, smoothed_value=no_curve.quantize(Decimal("0.01")), unit="pp",
+            )
+        )
+
     method_note = (
         f"Each input is a {ROLLING_MONTHS}-month rolling average of Aladdin's own stored monthly "
         "history, not the single latest print, so one noisy month can't flip the regime on its own."
@@ -133,6 +157,7 @@ def classify_regime(db: Session, *, indicators: MacroIndicators | None = None) -
             inputs=inputs,
             data_complete=False,
             missing=missing,
+            norway_curve_pp=no_curve,
         )
 
     hy_spread = smoothed["us_hy_spread"]
@@ -176,4 +201,5 @@ def classify_regime(db: Session, *, indicators: MacroIndicators | None = None) -
         explanation=explanation,
         method_note=method_note,
         inputs=inputs,
+        norway_curve_pp=no_curve,
     )

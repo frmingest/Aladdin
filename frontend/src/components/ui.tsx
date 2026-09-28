@@ -48,16 +48,27 @@ export function CollapsibleSection({
   title,
   hint,
   defaultOpen = false,
+  id,
   children,
 }: {
   title: string;
   hint?: string;
   defaultOpen?: boolean;
+  /** Anchor for `SectionJumpBar`; jumping to a collapsed section opens it. */
+  id?: string;
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(defaultOpen);
+  useEffect(() => {
+    if (!id) return;
+    const onJump = (e: Event) => {
+      if ((e as CustomEvent<string>).detail === id) setOpen(true);
+    };
+    window.addEventListener("section-jump", onJump);
+    return () => window.removeEventListener("section-jump", onJump);
+  }, [id]);
   return (
-    <div>
+    <div id={id} className="scroll-mt-24">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
@@ -247,5 +258,36 @@ export function Modal({
         {children}
       </div>
     </div>
+  );
+}
+
+
+/** Sticky "On this page" row for long pages (the holding page is ~8
+ * sections tall). Clicking a chip scrolls to that section and opens it if
+ * it's a collapsed `CollapsibleSection` with the same id. */
+export function SectionJumpBar({ items }: { items: { id: string; label: string }[] }) {
+  const jump = (id: string) => {
+    window.dispatchEvent(new CustomEvent("section-jump", { detail: id }));
+    // Wait a frame so a just-opened section has mounted before scrolling.
+    requestAnimationFrame(() =>
+      document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" }),
+    );
+  };
+  return (
+    <nav
+      aria-label="On this page"
+      className="sticky top-0 z-20 -mx-4 mb-6 flex gap-1.5 overflow-x-auto border-b border-border bg-background/95 px-4 py-2 backdrop-blur sm:-mx-8 sm:px-8 lg:top-[41px]"
+    >
+      {items.map((item) => (
+        <button
+          key={item.id}
+          type="button"
+          onClick={() => jump(item.id)}
+          className="shrink-0 rounded-full border border-border bg-surface px-3 py-1 text-xs font-medium text-ink-muted transition-colors hover:text-ink"
+        >
+          {item.label}
+        </button>
+      ))}
+    </nav>
   );
 }

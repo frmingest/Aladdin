@@ -210,8 +210,10 @@ function RegimeCard({ regime }: { regime: Regime }) {
       )}
       {regime.curve_and_credit_are_us_only && (
         <p className="mt-2 text-xs text-ink-faint">
-          The credit-spread and yield-curve inputs are US-only — Norges Bank does not publish an equivalent
-          series in Aladdin's macro catalogue. {regime.home_market_series_included && "Norway's own CPI is included in the inflation leg."}
+          The regime triggers use US credit spreads and the US yield curve — no free Norwegian credit-spread
+          series exists. {regime.home_market_series_included && "Norway's own CPI is included in the inflation leg. "}
+          Norway's own yield curve (10-year minus 3-month T-bill) is shown in the table below as context; it
+          doesn't change the regime on its own.
         </p>
       )}
       {regime.inputs.length > 0 && (

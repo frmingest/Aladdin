@@ -37,7 +37,7 @@ class _FakeMacro(MacroDataProvider):
 
 def test_indicators_empty_then_refresh(client):
     body = client.get("/macro/indicators").json()
-    assert body["series_version"] == "v1"
+    assert body["series_version"] == "v2"
     assert body["fetching_enabled"] is False  # conftest switches fetching off
     assert len(body["indicators"]) == len(get_macro_series("v1"))
     assert all(i["value"] is None for i in body["indicators"])

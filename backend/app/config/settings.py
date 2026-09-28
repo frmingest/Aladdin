@@ -236,7 +236,7 @@ class Settings(BaseSettings):
     # Norges Bank + SSB are keyless; FRED reuses fred_api_key above.
     # "live" | "none" ("none" = no fetching; stored values are still shown).
     macro_data_provider: str = "live"
-    active_macro_series_version: str = "v1"  # app/domain/macro_series.py
+    active_macro_series_version: str = "v2"  # app/domain/macro_series.py
     # A series whose last successful fetch is older than this is refreshed
     # before an analysis builds its evidence packet (best effort).
     macro_stale_after_hours: int = 20

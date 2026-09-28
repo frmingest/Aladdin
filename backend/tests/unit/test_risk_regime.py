@@ -105,3 +105,31 @@ def test_missing_series_defaults_to_baseline_and_flags_incomplete():
     assert result.regime == REGIME_BASELINE
     assert not result.data_complete
     assert "us_hy_spread" in result.missing
+
+
+def _with_norway_yields(ind: MacroIndicators, long: list, short: list) -> MacroIndicators:
+    ind.indicators += [
+        _snap("no_10y", "Norway 10y", "NO", value=long[-1], history_values=long),
+        _snap("no_3m_bill", "Norway 3m bill", "NO", value=short[-1], history_values=short),
+    ]
+    return ind
+
+
+def test_norway_curve_is_smoothed_difference_and_shown_as_input():
+    ind = _with_norway_yields(_indicators(**_calm()), [D("4.0"), D("4.2"), D("4.4")], [D("4.6"), D("4.6"), D("4.6")])
+    result = classify_regime(None, indicators=ind)
+    assert result.norway_curve_pp == D("4.2") - D("4.6")  # 3m-avg 10y minus 3m-avg bill = -0.4
+    assert any(i.key == "no_curve_10y_3m" and i.smoothed_value == D("-0.40") for i in result.inputs)
+
+
+def test_inverted_norway_curve_alone_never_triggers_stagflation_or_crisis():
+    ind = _with_norway_yields(_indicators(**_calm()), [D("3.0")] * 3, [D("5.0")] * 3)
+    result = classify_regime(None, indicators=ind)
+    assert result.norway_curve_pp == D("-2.0")
+    assert result.regime == REGIME_BASELINE
+
+
+def test_norway_curve_is_none_when_a_leg_is_missing():
+    result = classify_regime(None, indicators=_indicators(**_calm()))
+    assert result.norway_curve_pp is None
+    assert all(i.key != "no_curve_10y_3m" for i in result.inputs)

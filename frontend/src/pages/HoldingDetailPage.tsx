@@ -25,7 +25,7 @@ import {
   formatMultiple,
   formatPercent,
 } from "../lib/format";
-import { Button, Card, CollapsibleSection, EmptyState, PageHeader, StatusBadge } from "../components/ui";
+import { Button, Card, CollapsibleSection, EmptyState, PageHeader, SectionJumpBar, StatusBadge } from "../components/ui";
 import { ModeAwareAnalysis } from "../components/ModeAwareAnalysis";
 import { ThesisPanel } from "../components/ThesisPanel";
 import { FundFactsPanel } from "../components/FundFactsPanel";
@@ -612,6 +612,10 @@ export default function HoldingDetailPage() {
     }
   }
 
+  useEffect(() => {
+    if (holding) document.title = `${holding.ticker} · Aladdin`;
+  }, [holding]);
+
   if (!id) return null;
 
   if (error && !holding) {
@@ -636,6 +640,15 @@ export default function HoldingDetailPage() {
   // Sprint 8: an equity ETF / fund is analysed as a fund — Fund facts
   // replace the company metrics, valuation (DCF) and company research.
   const isFund = FUND_TYPES.has(holding.asset_class_raw);
+  const jumpItems = [
+    { id: "sec-analysis", label: "Analysis" },
+    ...(isFund ? [] : [{ id: "sec-thesis", label: "Thesis" }]),
+    { id: "sec-metrics", label: isFund ? "Fund facts" : "Metrics" },
+    { id: "sec-documents", label: "Documents" },
+    ...(isFund ? [] : [{ id: "sec-valuation", label: "Valuation" }, { id: "sec-research", label: "Research" }]),
+    { id: "sec-journal", label: "Journal" },
+    { id: "sec-sources", label: "Sources" },
+  ];
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-6 sm:px-8 sm:py-8">
@@ -650,9 +663,6 @@ export default function HoldingDetailPage() {
         actions={
           <div className="flex shrink-0 items-start gap-2">
             <WatchButton holdingId={id} />
-            <Button variant="danger" onClick={handleDelete}>
-              Delete holding
-            </Button>
           </div>
         }
       />
@@ -671,11 +681,16 @@ export default function HoldingDetailPage() {
       <NewswebFetchHighlight holdingId={id} onImported={() => setMetricsKey((k) => k + 1)} />
 
       {/* Epic F22: follows the whole-app analyst mode (top bar). */}
-      <ModeAwareAnalysis holdingId={id} refreshKey={metricsKey} />
+      <SectionJumpBar items={jumpItems} />
+
+      <div id="sec-analysis" className="scroll-mt-24">
+        <ModeAwareAnalysis holdingId={id} refreshKey={metricsKey} />
+      </div>
 
       {!isFund && (
         <div className="mb-8">
           <CollapsibleSection
+            id="sec-thesis"
             title="Thesis tracking"
             hint="Is my thesis still intact? Tripwires, what's changed, verdict timeline"
             defaultOpen
@@ -686,14 +701,14 @@ export default function HoldingDetailPage() {
       )}
 
       {isFund ? (
-        <div className="mb-8">
+        <div id="sec-metrics" className="mb-8 scroll-mt-24">
           <h2 className="section-title">
             Fund facts
           </h2>
           <FundFactsPanel key={metricsKey} holdingId={id} />
         </div>
       ) : (
-        <div className="mb-8">
+        <div id="sec-metrics" className="mb-8 scroll-mt-24">
           <h2 className="section-title">
             Deterministic metrics
           </h2>
@@ -702,21 +717,21 @@ export default function HoldingDetailPage() {
       )}
 
       <div className="mb-8">
-        <CollapsibleSection title="Documents" hint="Uploaded filings and other files">
+        <CollapsibleSection id="sec-documents" title="Documents" hint="Uploaded filings and other files">
           <DocumentsPanel holdingId={id} isFund={isFund} onUploaded={() => setMetricsKey((k) => k + 1)} />
         </CollapsibleSection>
       </div>
 
       {!isFund && (
         <>
-          <div className="mb-8">
+          <div id="sec-valuation" className="mb-8 scroll-mt-24">
             <h2 className="section-title">
               Valuation
             </h2>
             <ValuationPanel holdingId={id} ticker={holding.ticker} />
           </div>
 
-          <div className="mb-8">
+          <div id="sec-research" className="mb-8 scroll-mt-24">
             <h2 className="section-title">
               Research
             </h2>
@@ -726,14 +741,30 @@ export default function HoldingDetailPage() {
       )}
 
       <div className="mb-8">
-        <CollapsibleSection title="Decision journal" hint="Why you bought or sold, and how it turned out">
+        <CollapsibleSection id="sec-journal" title="Decision journal" hint="Why you bought or sold, and how it turned out">
           <JournalPanel holding={holding} />
         </CollapsibleSection>
       </div>
 
-      <CollapsibleSection title="Primary sources" hint="SEC EDGAR filings · Oslo Børs announcements">
-        <SourcesPanel holdingId={id} onFinancialsChanged={() => setMetricsKey((k) => k + 1)} />
-      </CollapsibleSection>
+      <div className="mb-10">
+        <CollapsibleSection id="sec-sources" title="Primary sources" hint="SEC EDGAR filings · Oslo Børs announcements">
+          <SourcesPanel holdingId={id} onFinancialsChanged={() => setMetricsKey((k) => k + 1)} />
+        </CollapsibleSection>
+      </div>
+
+      {/* Destructive action lives at the very bottom, away from the everyday buttons. */}
+      <Card className="border-negative/40">
+        <h2 className="text-sm font-semibold text-ink">Delete this holding</h2>
+        <p className="mt-1 text-sm text-ink-muted">
+          Removes {holding.ticker} with its documents, figures, analyses and notes. You'll be asked to confirm; it
+          cannot be undone.
+        </p>
+        <div className="mt-3">
+          <Button variant="danger" onClick={handleDelete}>
+            Delete holding
+          </Button>
+        </div>
+      </Card>
     </div>
   );
 }

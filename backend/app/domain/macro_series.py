@@ -170,8 +170,27 @@ _DERIVED_V1: tuple[DerivedIndicatorSpec, ...] = (
     ),
 )
 
-MACRO_SERIES_VERSIONS: dict[str, tuple[MacroSeriesSpec, ...]] = {"v1": _V1}
-DERIVED_INDICATOR_VERSIONS: dict[str, tuple[DerivedIndicatorSpec, ...]] = {"v1": _DERIVED_V1}
+# v2 (2026-09-28, Sprint 15 #4): same series as v1, plus Norway's own yield
+# curve (10y bond minus 3m T-bill, both already captured from Norges Bank's
+# GOVT_GENERIC_RATES) as a derived indicator. No free Norwegian credit-spread
+# series exists (investigated 2026-09-28: Norges Bank publishes no corporate
+# spread, NIBOR is not in its open data, FRED has only BIS credit volumes), so
+# there is deliberately no Norway credit series here - see
+# claude project doc norway-curve-credit-sourcing-sprint15-2026-09-28.md.
+_DERIVED_V2: tuple[DerivedIndicatorSpec, ...] = _DERIVED_V1 + (
+    DerivedIndicatorSpec(
+        key="no_curve_10y_3m", label="Norway yield curve (10y minus 3m T-bill)", left="no_10y",
+        right="no_3m_bill", region="NO",
+        description=(
+            "Norwegian 10-year government bond yield minus the 3-month T-bill yield. Negative = inverted, "
+            "i.e. the market expects Norges Bank to cut rates / weaker growth. Norway's own counterpart "
+            "to the US 10y-2y curve."
+        ),
+    ),
+)
+
+MACRO_SERIES_VERSIONS: dict[str, tuple[MacroSeriesSpec, ...]] = {"v1": _V1, "v2": _V1}
+DERIVED_INDICATOR_VERSIONS: dict[str, tuple[DerivedIndicatorSpec, ...]] = {"v1": _DERIVED_V1, "v2": _DERIVED_V2}
 
 
 def get_macro_series(version: str) -> tuple[MacroSeriesSpec, ...]:
