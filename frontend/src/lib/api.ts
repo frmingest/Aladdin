@@ -67,6 +67,7 @@ import type {
   SystemStatus,
   UsageSummary,
   DemoModeState,
+  LookThroughRefresh,
   ThesisMonitor,
   TripwireCreateInput,
   TripwireUpdateInput,
@@ -449,6 +450,14 @@ export const api = {
     if (asOfDate) form.set("as_of_date", asOfDate);
     return request<HoldingsImportResult>(`/funds/${holdingId}/holdings/import`, { method: "POST", body: form });
   },
+  // Fund look-through (2026-09-29): free Xtrackers holdings feed + per-constituent P/Es.
+  fetchXtrackersHoldings: (holdingId: string, isin: string) =>
+    request<HoldingsImportResult>(`/funds/${holdingId}/holdings/fetch-xtrackers`, {
+      method: "POST",
+      body: JSON.stringify({ isin }),
+    }),
+  refreshFundLookThrough: (holdingId: string) =>
+    request<LookThroughRefresh>(`/funds/${holdingId}/look-through/refresh`, { method: "POST" }),
   getAnalysisNotes: (holdingId: string) =>
     request<HoldingNote>(`/analysis/holdings/${holdingId}/notes`),
   saveAnalysisNotes: (holdingId: string, content: string) =>
