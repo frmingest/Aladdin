@@ -30,9 +30,11 @@ One holding failing never stops the rest. A paused tripwire is skipped. "No data
 ## Tests
 Backend 1031 pass / 2 fail — the same 2 pre-existing failures as unmodified `main` (`test_demo_mode_api…blocked_outright`, `test_factory…shares_the_primary_budget_guard`). `ruff check .` clean.
 
+## Frontend (added later the same day)
+Thesis page: **Check now** button + last-run text. Dashboard: red banner while any tripwire fires (holding links, Open Thesis, Check now). Same branch/PR.
+
 ## Not built (deliberate)
 - No push/e-mail notification — the result is visible in the app; a delivery channel is a separate backlog item.
-- No frontend button for `POST /thesis/check` yet (API + status text only).
 - Only the **share price** is refreshed; fundamentals-based tripwires (margins, leverage…) change only when a new filing is uploaded, which already re-evaluates on read.
 - Runs only while the PC worker is running. Railway does not run it (its IP is often blocked by Yahoo).
 
