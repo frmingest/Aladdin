@@ -185,7 +185,8 @@ class Settings(BaseSettings):
     active_risk_free_rate_series_version: str = "v1"
     risk_free_rate_stale_after_hours: int = 24
     # ERP / terminal growth / scenario offsets — app/domain/valuation_assumptions/.
-    active_valuation_assumptions_version: str = "v1"
+    # v2 (2026-09-29) adds the plausibility guardrails and the financials method.
+    active_valuation_assumptions_version: str = "v2"
 
     # --- Regime-adjusted DCF (Sprint 14, 2026-09-26, app/domain/regime_adjustments/) ---
     # Off by default: wiring Sprint 12's macro regime (app/services/risk/regime.py)

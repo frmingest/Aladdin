@@ -295,13 +295,17 @@ def _add_valuation(
 
     valuation = compute_holding_valuation(db, holding, market_data_provider, risk_free_rate_provider)
     packet.valuation = valuation
-    if valuation.dcf is None:
-        add("valuation", "Owner-earnings DCF (context only)", "Not available for this holding.")
+    values = valuation.headline_values()
+    if values is None:
+        add(
+            "valuation",
+            "Owner-earnings DCF (context only)",
+            "Not available for this holding"
+            + (f": {valuation.valuation_status_reason}" if valuation.valuation_status == "implausible" else "."),
+        )
         packet.unavailable_reasons.extend(f"valuation: {r}" for r in valuation.unavailable_reasons)
         return
-    scenarios = "; ".join(
-        f"{s.label} {s.intrinsic_value_per_share:,.2f}" for s in valuation.dcf.scenarios
-    )
+    scenarios = "; ".join(f"{label} {value:,.2f}" for label, value in values.items())
     price = (
         f"{valuation.current_price_per_share:,.2f}" if valuation.current_price_per_share is not None else "unavailable"
     )

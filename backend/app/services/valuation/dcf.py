@@ -20,15 +20,35 @@ ZERO = Decimal(0)
 ONE = Decimal(1)
 
 
-def project_cash_flows(base_value: Decimal, growth_rate: Decimal, years: int) -> list[Decimal]:
-    """`years` future values of `base_value` compounding at `growth_rate`,
-    nearest year first (index 0 = year 1)."""
+def growth_path(growth_rate: Decimal, years: int, fade_to_growth: Decimal | None = None) -> list[Decimal]:
+    """The growth rate applied in each explicit year (index 0 = year 1).
+
+    Constant at `growth_rate` when `fade_to_growth` is None. Otherwise it
+    fades linearly from `growth_rate` in year 1 to `fade_to_growth` in the
+    final year — a company cannot compound at its historical rate forever,
+    and jumping straight from a high rate to the terminal rate at the end
+    of the window overstates value the same way a constant rate does."""
     if years < 1:
         raise ValueError("Cannot project cash flows: years must be >= 1")
+    if fade_to_growth is None or years == 1:
+        return [growth_rate] * years
+    step = (fade_to_growth - growth_rate) / Decimal(years - 1)
+    return [growth_rate + step * Decimal(i) for i in range(years)]
+
+
+def project_cash_flows(
+    base_value: Decimal,
+    growth_rate: Decimal,
+    years: int,
+    fade_to_growth: Decimal | None = None,
+) -> list[Decimal]:
+    """`years` future values of `base_value` growing at `growth_rate` (or
+    fading from it, see `growth_path`), nearest year first (index 0 =
+    year 1)."""
     flows: list[Decimal] = []
     value = base_value
-    for _ in range(years):
-        value = value * (ONE + growth_rate)
+    for rate in growth_path(growth_rate, years, fade_to_growth):
+        value = value * (ONE + rate)
         flows.append(value)
     return flows
 
@@ -65,10 +85,11 @@ def intrinsic_equity_value(
     discount_rate: Decimal,
     terminal_growth_rate: Decimal,
     years: int,
+    fade_to_growth: Decimal | None = None,
 ) -> Decimal:
     """Total intrinsic equity value (not per-share) — present value of the
     explicit projection plus the discounted terminal value."""
-    cash_flows = project_cash_flows(base_owner_earnings, growth_rate, years)
+    cash_flows = project_cash_flows(base_owner_earnings, growth_rate, years, fade_to_growth)
     pv_flows = present_value_of_cash_flows(cash_flows, discount_rate)
     tv = terminal_value(cash_flows[-1], discount_rate, terminal_growth_rate)
     pv_terminal = tv / (ONE + discount_rate) ** years
@@ -83,6 +104,7 @@ def intrinsic_value_per_share(
     terminal_growth_rate: Decimal,
     years: int,
     shares_outstanding: Decimal,
+    fade_to_growth: Decimal | None = None,
 ) -> Decimal:
     if shares_outstanding <= ZERO:
         raise ValueError("Cannot compute per-share value: shares_outstanding must be positive")
@@ -92,6 +114,7 @@ def intrinsic_value_per_share(
         discount_rate=discount_rate,
         terminal_growth_rate=terminal_growth_rate,
         years=years,
+        fade_to_growth=fade_to_growth,
     )
     return total / shares_outstanding
 
@@ -109,6 +132,10 @@ class DCFScenarioResult:
     discount_rate: Decimal
     terminal_growth_rate: Decimal
     current_price_per_share: Decimal | None = None
+    # True when explicit-period growth fades to the terminal rate (see
+    # growth_path) rather than staying constant — shown in the UI so a
+    # "growth 10%" scenario is not misread as 10% for all ten years.
+    fades_to_terminal: bool = False
 
     def scenario(self, label: str) -> DCFScenario:
         for candidate in self.scenarios:
@@ -140,6 +167,7 @@ def dcf_scenarios(
     bull_growth_offset: Decimal,
     bear_growth_offset: Decimal,
     current_price_per_share: Decimal | None = None,
+    fade_to_terminal: bool = False,
 ) -> DCFScenarioResult:
     """Base/bull/bear intrinsic per-share values around one
     deterministically-computed base-case growth rate
@@ -162,6 +190,7 @@ def dcf_scenarios(
                 terminal_growth_rate=terminal_growth_rate,
                 years=years,
                 shares_outstanding=shares_outstanding,
+                fade_to_growth=terminal_growth_rate if fade_to_terminal else None,
             ),
         )
         for label, growth_rate in scenario_growth.items()
@@ -171,6 +200,7 @@ def dcf_scenarios(
         discount_rate=discount_rate,
         terminal_growth_rate=terminal_growth_rate,
         current_price_per_share=current_price_per_share,
+        fades_to_terminal=fade_to_terminal,
     )
 
 
@@ -188,6 +218,7 @@ def reverse_dcf_implied_growth(
     shares_outstanding: Decimal,
     tolerance: Decimal = Decimal("0.0001"),
     max_iterations: int = 100,
+    fade_to_terminal: bool = False,
 ) -> Decimal:
     """The constant explicit-period growth rate that makes
     intrinsic_value_per_share equal `current_price_per_share` — solved by
@@ -212,6 +243,7 @@ def reverse_dcf_implied_growth(
             terminal_growth_rate=terminal_growth_rate,
             years=years,
             shares_outstanding=shares_outstanding,
+            fade_to_growth=terminal_growth_rate if fade_to_terminal else None,
         )
 
     low, high = _REVERSE_DCF_LOW_GROWTH, _REVERSE_DCF_HIGH_GROWTH

@@ -21,6 +21,25 @@ class DCFOut(BaseModel):
     scenarios: list[DCFScenarioOut]
 
 
+class FinancialsScenarioOut(BaseModel):
+    label: str
+    roe: Decimal
+    justified_price_to_book: Decimal
+    value_per_share: Decimal
+    margin_of_safety: Decimal | None = None
+
+
+class FinancialsValuationOut(BaseModel):
+    """Justified price-to-book valuation for banks/insurers (2026-09-29)."""
+
+    cost_of_equity: Decimal
+    growth_rate: Decimal
+    book_value_per_share: Decimal
+    roe_periods_used: int
+    roe_was_capped: bool
+    scenarios: list[FinancialsScenarioOut]
+
+
 class PeriodMultiplesOut(BaseModel):
     period: str
     matched_price_observed_at: datetime | None
@@ -54,6 +73,21 @@ class HoldingValuationOut(BaseModel):
     regime: str | None = None
     regime_discount_rate_addon: Decimal | None = None
     regime_adjustments_version: str | None = None
+    # --- v2 guardrails (2026-09-29) ---
+    # "owner_earnings_dcf" | "financials_price_to_book"
+    valuation_method: str = "owner_earnings_dcf"
+    # "ok" | "implausible" (computed, then withheld) | "unavailable"
+    valuation_status: str = "unavailable"
+    valuation_status_reason: str | None = None
+    raw_base_growth_rate: Decimal | None = None
+    growth_capped: bool = False
+    fades_to_terminal: bool = False
+    capm_cost_of_equity: Decimal | None = None
+    financials: FinancialsValuationOut | None = None
+    # bear/base/bull value per share the model produced before it was
+    # withheld as implausible. For display as "rejected" only — never a
+    # valuation, never a margin of safety.
+    rejected_values: dict[str, Decimal] | None = None
 
 
 class BoardRowOut(BaseModel):
@@ -76,6 +110,10 @@ class BoardRowOut(BaseModel):
     verdict_rating: str | None
     moat_rating: str | None
     analyzed_at: datetime | None
+    # v2 (2026-09-29): which model produced bear/base/bull and whether it
+    # was withheld as implausible (same meaning as HoldingValuationOut).
+    valuation_method: str = "owner_earnings_dcf"
+    valuation_status: str = "unavailable"
     # Sprint 14 (2026-09-26): same meaning as HoldingValuationOut's fields.
     regime: str | None = None
     regime_discount_rate_addon: Decimal | None = None

@@ -65,6 +65,11 @@ class WatchlistRow:
     moat_rating: str | None = None
     analyzed_at: datetime | None = None
     unavailable_reason: str | None = None
+    # v2 (2026-09-29): "owner_earnings_dcf" | "financials_price_to_book", and
+    # "ok" | "implausible" | "unavailable" — so a withheld value reads as
+    # "not credible" rather than as a missing one.
+    valuation_method: str = "owner_earnings_dcf"
+    valuation_status: str = "unavailable"
 
 
 def price_status(
@@ -123,11 +128,14 @@ def build_watchlist(
         row.price = valuation.current_price_per_share
         row.price_currency = valuation.valuation_currency
         row.price_as_of = valuation.as_of
-        if valuation.dcf is not None:
-            row.dcf_base = next(
-                (s.intrinsic_value_per_share for s in valuation.dcf.scenarios if s.label == "base"), None
-            )
-            row.margin_of_safety_base = valuation.dcf.margin_of_safety("base")
+        row.valuation_method = valuation.valuation_method
+        row.valuation_status = valuation.valuation_status
+        values = valuation.headline_values()
+        if values is not None:
+            row.dcf_base = values.get("base")
+            row.margin_of_safety_base = valuation.headline_margin_of_safety("base")
+        elif valuation.valuation_status == "implausible":
+            row.unavailable_reason = valuation.valuation_status_reason
         if row.price is None:
             # No DCF yet (a newly watched company rarely has financials on
             # file), so the valuation stopped before fetching a price. The

@@ -37,3 +37,42 @@ class ValuationAssumptions:
     # Used only when a holding's live beta (app/providers/base.py's
     # MarketDataProvider.get_beta) is unavailable.
     default_beta: Decimal = Decimal("1.0")
+
+    # --- v2 (2026-09-29): guardrails against implausible valuations -------
+    # The defaults below leave every guardrail OFF, so v1 (which never set
+    # them) keeps producing exactly the numbers it always did — CLAUDE.md
+    # Rule 3, never edit a version a real run has used.
+
+    # Ceiling on the base-case growth rate taken from historical CAGR. A
+    # raw CAGR is not a forecast: SB1NO.OL's owner earnings compounded at
+    # 31.5%/yr across a bank merger, and projecting that for 10 years gave
+    # a "DCF value" 17x the share price.
+    max_base_growth: Decimal | None = None
+    # When True, explicit-period growth fades linearly from the (capped)
+    # base rate in year 1 to the terminal growth rate in the final year,
+    # instead of compounding one rate for the whole window.
+    fade_growth_to_terminal: bool = False
+    # Floor under the CAPM cost of equity. A low observed beta (banks,
+    # utilities: 0.4-0.6) pushes CAPM below what any equity investor would
+    # accept, which inflates every value derived from it.
+    min_cost_of_equity: Decimal | None = None
+    # A DCF whose base value is more than this multiple of the price (or
+    # less than 1/multiple of it) is treated as a model failure, not a
+    # finding: it is withheld from the margin of safety, price target and
+    # the analysis evidence, and the reason is shown instead.
+    plausibility_max_ratio: Decimal | None = None
+
+    # Banks/insurers: owner earnings are not distributable (regulatory
+    # capital must be retained), so an owner-earnings DCF does not apply.
+    # A holding whose sector contains one of these (case-insensitive) is
+    # valued on justified price-to-book instead:
+    #   P/B = (ROE - g) / (cost of equity - g).
+    financials_sector_keywords: tuple[str, ...] = ()
+    # How many of the latest fiscal years' ROE are averaged (fewer if the
+    # holding has fewer periods on file).
+    financials_roe_history_years: int = 5
+    # ROE above this is not assumed sustainable (competitive erosion).
+    financials_max_roe: Decimal = Decimal("0.20")
+    # Bull/bear scenarios move the ROE by this many points around base.
+    financials_roe_spread: Decimal = Decimal("0.02")
+

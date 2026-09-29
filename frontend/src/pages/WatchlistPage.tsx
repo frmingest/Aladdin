@@ -258,8 +258,11 @@ export default function WatchlistPage() {
                         <td className={`tabular py-3 pr-4 text-right font-medium ${d === null ? "text-ink-faint" : Number(d) <= 0 ? "text-positive" : "text-ink"}`}>
                           {d === null ? "—" : `${Number(d) > 0 ? "+" : ""}${formatPct100(d)}`}
                         </td>
-                        <td className="tabular py-3 pr-4 text-right text-ink-muted">
-                          {row.dcf_base ? formatDecimal(row.dcf_base) : "—"}
+                        <td
+                          className="tabular py-3 pr-4 text-right text-ink-muted"
+                          title={row.valuation_status === "implausible" ? row.unavailable_reason ?? "Valuation withheld — not reliable" : undefined}
+                        >
+                          {row.dcf_base ? formatDecimal(row.dcf_base) : row.valuation_status === "implausible" ? "Not reliable" : "—"}
                           {mos !== null && (
                             <span className={`ml-2 ${Number(mos) >= 0 ? "text-positive" : "text-negative"}`}>
                               {formatPercent(mos)}

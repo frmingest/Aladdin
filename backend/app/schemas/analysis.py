@@ -64,6 +64,8 @@ class EquityAnalysisRunOut(BaseModel):
     price_target_low: Decimal | None
     price_target_high: Decimal | None
     price_target_currency: str | None
+    # Set at read time when a stored target is implausible vs the price (pre-guard runs).
+    price_target_warning: str | None = None
     evidence_items: list[EvidenceItemOut] = []
     user_notes_snapshot: str | None = None
     engine: str = "cloud"

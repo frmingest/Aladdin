@@ -66,6 +66,8 @@ class WatchlistRowOut(BaseModel):
     moat_rating: str | None
     analyzed_at: datetime | None
     unavailable_reason: str | None
+    valuation_method: str = "owner_earnings_dcf"
+    valuation_status: str = "unavailable"
 
 
 class WatchlistOut(BaseModel):

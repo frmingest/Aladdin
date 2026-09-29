@@ -67,6 +67,9 @@ class BoardRow:
     # is True (app/services/valuation/holding_valuation.py).
     regime: str | None = None
     regime_discount_rate_addon: Decimal | None = None
+    # v2 (2026-09-29): which model produced bear/base/bull, and its status.
+    valuation_method: str = "owner_earnings_dcf"
+    valuation_status: str = "unavailable"
 
 
 @dataclass
@@ -176,18 +179,25 @@ def build_board(
         row.price_as_of = valuation.as_of
         row.regime = valuation.regime
         row.regime_discount_rate_addon = valuation.regime_discount_rate_addon
-        if valuation.dcf is not None:
-            values = {s.label: s.intrinsic_value_per_share for s in valuation.dcf.scenarios}
+        row.valuation_method = valuation.valuation_method
+        row.valuation_status = valuation.valuation_status
+        # headline_values() is None for a withheld (implausible) model, so a
+        # value the plausibility guard rejected can never be ranked here.
+        values = valuation.headline_values()
+        if values is not None:
             row.bear, row.base, row.bull = values.get("bear"), values.get("base"), values.get("bull")
-            row.margin_of_safety_base = valuation.dcf.margin_of_safety("base")
-            row.margin_of_safety_bear = valuation.dcf.margin_of_safety("bear")
+            row.margin_of_safety_base = valuation.headline_margin_of_safety("base")
+            row.margin_of_safety_bear = valuation.headline_margin_of_safety("bear")
             if None not in (row.price, row.bear, row.base, row.bull):
                 row.zone = _zone(row.price, row.bear, row.base, row.bull)  # type: ignore[arg-type]
         if row.zone == UNAVAILABLE:
-            row.unavailable_reason = next(
-                (r for r in valuation.unavailable_reasons if "unavailable" in r),
-                valuation.unavailable_reasons[0] if valuation.unavailable_reasons else "no DCF",
-            )
+            if valuation.valuation_status == "implausible":
+                row.unavailable_reason = valuation.valuation_status_reason
+            else:
+                row.unavailable_reason = next(
+                    (r for r in valuation.unavailable_reasons if "unavailable" in r),
+                    valuation.unavailable_reasons[0] if valuation.unavailable_reasons else "no DCF",
+                )
 
         _attach_verdict(row, runs.get(holding.id))
         board.rows.append(row)

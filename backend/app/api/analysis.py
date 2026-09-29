@@ -78,6 +78,7 @@ from app.services.analysis.synthesis import (
     latest_synthesis,
     run_synthesis,
 )
+from app.services.analysis.target_check import stored_target_warning
 from app.services.settings.analyst_mode import is_synthesis_enabled
 from app.services.settings.demo_guard import require_not_demo
 from app.services.settings.demo_mode import is_demo_mode
@@ -123,7 +124,7 @@ def _latest_run(db: Session, holding_id: UUID, persona: str = DEFAULT_PERSONA) -
     return db.scalar(stmt)
 
 
-def _to_out(run: EquityAnalysisRun) -> EquityAnalysisRunOut:
+def _to_out(run: EquityAnalysisRun, db: Session | None = None) -> EquityAnalysisRunOut:
     return EquityAnalysisRunOut(
         id=run.id,
         holding_id=run.holding_id,
@@ -154,6 +155,7 @@ def _to_out(run: EquityAnalysisRun) -> EquityAnalysisRunOut:
         price_target_low=run.price_target_low,
         price_target_high=run.price_target_high,
         price_target_currency=run.price_target_currency,
+        price_target_warning=stored_target_warning(db, run) if db is not None else None,
         evidence_items=_evidence_items(run),
         user_notes_snapshot=run.user_notes_snapshot,
         engine=run.engine or "cloud",
@@ -213,7 +215,7 @@ def get_latest_analysis(
     run = _latest_run(db, holding.id, persona)
     if run is None:
         raise HTTPException(status_code=404, detail="no analysis run yet for this holding")
-    return _to_out(run)
+    return _to_out(run, db)
 
 
 @router.get("/holdings/{holding_id}/readiness", response_model=AnalysisReadinessOut)
@@ -283,7 +285,7 @@ def run_analysis(
         )
     except NotEquityAnalyzableError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
-    return _to_out(run)
+    return _to_out(run, db)
 
 
 @router.post("/holdings/{holding_id}/queue", response_model=QueuedRunOut, status_code=202)
@@ -434,8 +436,8 @@ def get_side_by_side(holding_id: UUID, db: Session = Depends(get_db)) -> SideByS
     synthesis = latest_synthesis(db, holding.id)
     return SideBySideOut(
         holding_id=holding.id,
-        buffett=_to_out(buffett) if buffett else None,
-        dalio=_to_out(dalio) if dalio else None,
+        buffett=_to_out(buffett, db) if buffett else None,
+        dalio=_to_out(dalio, db) if dalio else None,
         comparison=ComparisonOut(**comparison.__dict__),
         synthesis=_synthesis_out(synthesis) if synthesis else None,
         synthesis_enabled=is_synthesis_enabled(db),

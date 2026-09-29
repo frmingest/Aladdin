@@ -205,6 +205,41 @@ def _not_meaningful(what: str, value: Decimal) -> str:
     return f"not meaningful: {what} is {'zero' if value == ZERO else 'negative'} ({_fmt(value)})"
 
 
+# Metrics that mislead for a bank or insurer (2026-09-29): interest is its
+# cost of goods (interest coverage of 0.37x is normal, not distress), deposits
+# are not "debt" in the industrial sense, and profit is not free cash.
+NOT_MEANINGFUL_FOR_FINANCIALS = (
+    "gross_margin",
+    "free_cash_flow",
+    "owner_earnings",
+    "net_debt",
+    "net_debt_to_ebitda",
+    "net_debt_to_fcf",
+    "interest_coverage",
+    "debt_to_equity",
+    "roic",
+    "roce",
+    "enterprise_value",
+    "ev_to_ebitda",
+    "fcf_yield",
+)
+
+
+def mark_not_meaningful_for_financials(result: MetricsResult) -> MetricsResult:
+    """Move the industrial-company metrics out of `computed` and into
+    `skipped` with a plain reason, for a bank/insurer. ROE, P/E, P/B and the
+    margins that survive stay. Mutates and returns `result`."""
+    reason = (
+        "not meaningful for a bank/insurer — interest is its operating cost and capital is "
+        "regulatory, so this industrial-company measure would mislead"
+    )
+    for name in NOT_MEANINGFUL_FOR_FINANCIALS:
+        result.computed.pop(name, None)
+        result.notes.pop(name, None)
+        result.skipped[name] = reason
+    return result
+
+
 def compute_holding_metrics(
     facts: dict[str, Decimal],
     currencies: dict[str, str | None] | None = None,

@@ -304,9 +304,13 @@ def _refresh_country_inputs(db: Session, holding: Holding, provider) -> None:
 
 def _attach_price_target(run: EquityAnalysisRun, packet) -> None:
     valuation = packet.valuation
-    if valuation is None or valuation.dcf is None:
+    if valuation is None:
         return
-    scenarios = {s.label: s.intrinsic_value_per_share for s in valuation.dcf.scenarios}
+    # headline_values() is None when the model was withheld as implausible
+    # (or does not apply), so a rejected valuation never becomes a target.
+    scenarios = valuation.headline_values()
+    if scenarios is None:
+        return
     bear = scenarios.get("bear")
     bull = scenarios.get("bull")
     if bear is None or bull is None:
