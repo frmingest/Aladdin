@@ -29,7 +29,12 @@ from app.models.analysis import EquityAnalysisRun, EquityHoldingNote
 from app.models.analyst_synthesis import AnalystSynthesis
 from app.models.document import Document, DocumentChunk, DocumentPage
 from app.models.financial_line_item import FinancialLineItem
-from app.models.fund import FundExposure, FundProfile, FundReturnPeriod
+from app.models.fund import (
+    FundConstituentMultiple,
+    FundExposure,
+    FundProfile,
+    FundReturnPeriod,
+)
 from app.models.holding import Holding
 from app.models.journal import DecisionJournalEntry
 from app.models.legacy_analysis import (
@@ -172,7 +177,7 @@ def _purge_holding_rows(db: Session, holding_ids: list[uuid.UUID], counts: Delet
         .filter(FinancialLineItem.holding_id.in_(holding_ids))
         .delete(synchronize_session=False)
     )
-    for model in (FundExposure, FundReturnPeriod, FundProfile):
+    for model in (FundConstituentMultiple, FundExposure, FundReturnPeriod, FundProfile):
         counts.fund_rows += (
             db.query(model).filter(model.holding_id.in_(holding_ids)).delete(synchronize_session=False)
         )

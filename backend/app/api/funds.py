@@ -26,7 +26,7 @@ from app.domain.errors import (
 )
 from app.models.document import Document
 from app.models.holding import Holding
-from app.providers.factory import get_object_storage
+from app.providers.factory import get_constituent_multiples_provider, get_object_storage
 from app.providers.xtrackers_holdings import (
     XtrackersFeedError,
     fetch_xtrackers_holdings,
@@ -42,10 +42,12 @@ from app.schemas.fund import (
     FundReturnIn,
     FundReturnOut,
     HoldingsImportOut,
+    LookThroughRefreshOut,
     ManualLinkIn,
     XtrackersFetchIn,
 )
 from app.services.documents.ingestion import ingest_holding_document
+from app.services.funds.constituent_multiples import refresh_constituent_multiples
 from app.services.funds.facts import (
     EXPOSURE_DIMENSIONS,
     ExposureInput,
@@ -337,4 +339,29 @@ def fetch_xtrackers_holdings_endpoint(
         content=to_csv_bytes(feed),
         mime_type="text/csv",
         as_of_date=feed.as_of_date,
+    )
+
+
+@router.post("/{holding_id}/look-through/refresh", response_model=LookThroughRefreshOut)
+def refresh_look_through(
+    holding_id: UUID,
+    db: Session = Depends(get_db),
+    provider=Depends(get_constituent_multiples_provider),
+) -> LookThroughRefreshOut:
+    """Fetches the trailing P/E of every equity line in the fund's latest
+    holdings import (one provider call per line — slow, so POST-only) and
+    stores them; the look-through valuation on the board and the holding
+    page reads the stored numbers."""
+    require_not_demo(db)
+    holding = _holding(db, holding_id)
+    try:
+        require_fund_holding(holding)
+    except FundFactsError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    result = refresh_constituent_multiples(db, holding, provider)
+    if result.lines == 0:
+        raise HTTPException(status_code=422, detail="this fund has no imported holdings to look through into")
+    return LookThroughRefreshOut(
+        lines=result.lines, priced=result.priced, unpriced=result.unpriced,
+        no_isin=result.no_isin, refreshed_at=result.refreshed_at,
     )

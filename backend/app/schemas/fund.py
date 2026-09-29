@@ -134,3 +134,11 @@ class ManualLinkIn(BaseModel):
 class XtrackersFetchIn(BaseModel):
     isin: str
     """The Xtrackers ETF's own ISIN (e.g. LU3061478973) — the only key DWS's public feed needs."""
+
+
+class LookThroughRefreshOut(BaseModel):
+    lines: int
+    priced: int
+    unpriced: int
+    no_isin: int
+    refreshed_at: datetime

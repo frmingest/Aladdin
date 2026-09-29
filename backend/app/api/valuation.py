@@ -27,7 +27,9 @@ from app.schemas.valuation import (
     DCFScenarioOut,
     FinancialsScenarioOut,
     FinancialsValuationOut,
+    FundLookThroughOut,
     HoldingValuationOut,
+    LookThroughScenarioOut,
     MarginOfSafetyBoardOut,
     PeriodMultiplesOut,
 )
@@ -87,11 +89,38 @@ def _to_out(result: HoldingValuationResult) -> HoldingValuationOut:
                 for sc in fin.scenarios
             ],
         )
+    look_out = None
+    if result.fund_look_through is not None:
+        look = result.fund_look_through
+        look_out = FundLookThroughOut(
+            scenarios=[
+                LookThroughScenarioOut(
+                    label=sc.label,
+                    growth_rate=sc.growth_rate,
+                    fair_pe=sc.fair_pe,
+                    value_per_unit=sc.value_per_unit,
+                    margin_of_safety=look.margin_of_safety(sc.label),
+                )
+                for sc in look.scenarios
+            ],
+            fund_earnings_yield=look.fund_earnings_yield,
+            fund_pe=look.fund_pe,
+            coverage_pct=look.coverage_pct,
+            constituents_used=look.constituents_used,
+            constituents_total=look.constituents_total,
+            cost_of_equity=look.cost_of_equity,
+            terminal_growth_rate=look.terminal_growth_rate,
+            oldest_observation=look.oldest_observation,
+            notes=look.notes,
+            method_note=look.method_note,
+        )
     rejected_values = None
     if result.rejected_dcf is not None:
         rejected_values = {sc.label: sc.intrinsic_value_per_share for sc in result.rejected_dcf.scenarios}
     elif result.rejected_financials is not None:
         rejected_values = {sc.label: sc.value_per_share for sc in result.rejected_financials.scenarios}
+    elif result.rejected_fund_look_through is not None:
+        rejected_values = {sc.label: sc.value_per_unit for sc in result.rejected_fund_look_through.scenarios}
     fades = bool(result.dcf and result.dcf.fades_to_terminal) or bool(
         result.rejected_dcf and result.rejected_dcf.fades_to_terminal
     )
@@ -135,6 +164,7 @@ def _to_out(result: HoldingValuationResult) -> HoldingValuationOut:
         fades_to_terminal=fades,
         capm_cost_of_equity=result.capm_cost_of_equity,
         financials=financials_out,
+        fund_look_through=look_out,
         rejected_values=rejected_values,
     )
 

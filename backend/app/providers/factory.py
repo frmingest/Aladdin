@@ -344,3 +344,11 @@ def get_country_indicator_provider_or_none():
     if get_settings().macro_data_provider != "live":
         return None
     return WorldBankProvider()
+
+
+@lru_cache
+def get_constituent_multiples_provider():
+    """Trailing P/E per fund constituent (fund look-through valuation)."""
+    from app.providers.constituent_multiples import YFinanceConstituentMultiplesProvider
+
+    return YFinanceConstituentMultiplesProvider()

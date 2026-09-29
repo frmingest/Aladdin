@@ -40,6 +40,30 @@ class FinancialsValuationOut(BaseModel):
     scenarios: list[FinancialsScenarioOut]
 
 
+class LookThroughScenarioOut(BaseModel):
+    label: str
+    growth_rate: Decimal
+    fair_pe: Decimal
+    value_per_unit: Decimal
+    margin_of_safety: Decimal | None = None
+
+
+class FundLookThroughOut(BaseModel):
+    """The fund look-through earnings-yield screen (2026-09-29)."""
+
+    scenarios: list[LookThroughScenarioOut]
+    fund_earnings_yield: Decimal
+    fund_pe: Decimal
+    coverage_pct: Decimal
+    constituents_used: int
+    constituents_total: int
+    cost_of_equity: Decimal
+    terminal_growth_rate: Decimal
+    oldest_observation: datetime | None = None
+    notes: list[str] = []
+    method_note: str
+
+
 class PeriodMultiplesOut(BaseModel):
     period: str
     matched_price_observed_at: datetime | None
@@ -74,7 +98,7 @@ class HoldingValuationOut(BaseModel):
     regime_discount_rate_addon: Decimal | None = None
     regime_adjustments_version: str | None = None
     # --- v2 guardrails (2026-09-29) ---
-    # "owner_earnings_dcf" | "financials_price_to_book"
+    # "owner_earnings_dcf" | "financials_price_to_book" | "fund_look_through_pe"
     valuation_method: str = "owner_earnings_dcf"
     # "ok" | "implausible" (computed, then withheld) | "unavailable"
     valuation_status: str = "unavailable"
@@ -84,6 +108,7 @@ class HoldingValuationOut(BaseModel):
     fades_to_terminal: bool = False
     capm_cost_of_equity: Decimal | None = None
     financials: FinancialsValuationOut | None = None
+    fund_look_through: FundLookThroughOut | None = None
     # bear/base/bull value per share the model produced before it was
     # withheld as implausible. For display as "rejected" only — never a
     # valuation, never a margin of safety.

@@ -154,3 +154,27 @@ class FundExposure(Base):
     )
     source_page: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=_now)
+
+
+class FundConstituentMultiple(Base):
+    """Trailing P/E of one constituent of a fund, fetched for the fund
+    look-through valuation (app/services/valuation/fund_look_through.py).
+
+    One row per (fund, constituent ISIN), replaced on each refresh. A row
+    with `trailing_pe` NULL is a constituent the provider could not price
+    or that has no positive earnings — kept, with `reason`, so the coverage
+    figure is honest about what the look-through does NOT cover."""
+
+    __tablename__ = "fund_constituent_multiples"
+    __table_args__ = (Index("ix_fund_constituent_multiples_holding", "holding_id"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(GUID(), primary_key=True, default=uuid.uuid4)
+    holding_id: Mapped[uuid.UUID] = mapped_column(GUID(), ForeignKey("holdings.id"), nullable=False)
+    isin: Mapped[str] = mapped_column(String(12), nullable=False)
+    label: Mapped[str] = mapped_column(String(255), nullable=False)
+    weight_pct: Mapped[Decimal] = mapped_column(Numeric(9, 4), nullable=False)
+    resolved_ticker: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    trailing_pe: Mapped[Decimal | None] = mapped_column(Numeric(14, 4), nullable=True)
+    reason: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    provider: Mapped[str] = mapped_column(String(32), nullable=False)
+    observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=_now)
