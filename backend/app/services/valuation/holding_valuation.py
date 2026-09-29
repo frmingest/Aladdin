@@ -31,6 +31,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config.settings import get_settings
+from app.domain.instrument_types import FUND_ANALYSIS_TYPES
 from app.domain.period_dates import extract_year
 from app.domain.regime_adjustments import get_regime_adjustments
 from app.domain.valuation_assumptions import get_valuation_assumptions
@@ -55,11 +56,19 @@ from app.services.valuation.dcf import (
 )
 from app.services.valuation.discount_rate import cost_of_equity
 from app.services.valuation.financials import FinancialsValuation, financials_valuation
+from app.services.valuation.fund_look_through import (
+    STALE_AFTER_DAYS,
+    FundLookThroughValuation,
+    LookThroughUnavailable,
+    compute_look_through,
+    load_constituents,
+)
 from app.services.valuation.growth import historical_cagr
 from app.services.valuation.multiples import PeriodMultiples, multiples_over_time
 
 OWNER_EARNINGS_DCF = "owner_earnings_dcf"
 FINANCIALS_PRICE_TO_BOOK = "financials_price_to_book"
+FUND_LOOK_THROUGH_PE = "fund_look_through_pe"
 
 # valuation_status values
 STATUS_OK = "ok"  # a headline valuation is available and passed the plausibility check
@@ -115,6 +124,9 @@ class HoldingValuationResult:
     # the UI can show it as "rejected", never as a valuation.
     rejected_dcf: DCFScenarioResult | None = None
     rejected_financials: FinancialsValuation | None = None
+    # Funds/ETFs (2026-09-29): the look-through earnings-yield screen.
+    fund_look_through: FundLookThroughValuation | None = None
+    rejected_fund_look_through: FundLookThroughValuation | None = None
 
     def headline_values(self) -> dict[str, Decimal] | None:
         """bear/base/bull value per share from whichever method applies, or
@@ -125,6 +137,8 @@ class HoldingValuationResult:
             return {s.label: s.intrinsic_value_per_share for s in self.dcf.scenarios}
         if self.financials is not None:
             return {s.label: s.value_per_share for s in self.financials.scenarios}
+        if self.fund_look_through is not None:
+            return {s.label: s.value_per_unit for s in self.fund_look_through.scenarios}
         return None
 
     def headline_margin_of_safety(self, label: str) -> Decimal | None:
@@ -132,6 +146,8 @@ class HoldingValuationResult:
             return self.dcf.margin_of_safety(label)
         if self.financials is not None:
             return self.financials.margin_of_safety(label)
+        if self.fund_look_through is not None:
+            return self.fund_look_through.margin_of_safety(label)
         return None
 
 
@@ -407,6 +423,78 @@ def _value_financials(
     result.valuation_status = STATUS_OK
 
 
+
+def _value_fund_look_through(
+    db: Session,
+    holding: Holding,
+    market_data_provider: MarketDataProvider,
+    risk_free_rate_provider: RiskFreeRateProvider,
+    result: HoldingValuationResult,
+    assumptions,
+    *,
+    force_refresh: bool,
+) -> None:
+    """Funds/ETFs: the look-through earnings-yield screen
+    (app/services/valuation/fund_look_through.py) instead of a DCF — a fund
+    has no statements, but the businesses it holds have P/Es. Reads stored
+    constituent P/Es only (POST /funds/{id}/look-through/refresh fetches
+    them), so a page load never makes one provider call per constituent."""
+    what = "Look-through valuation"
+    result.valuation_method = FUND_LOOK_THROUGH_PE
+    constituents, oldest, unrefreshed = load_constituents(db, holding)
+    if not constituents:
+        result.unavailable_reasons.append(
+            f"{what} unavailable: no holdings imported for this fund (fetch or upload its holdings first)"
+        )
+        return
+    if unrefreshed == len(constituents):
+        result.unavailable_reasons.append(
+            f"{what} unavailable: constituent P/Es not fetched yet — run Refresh look-through on the fund page"
+        )
+        return
+    price = result.current_price_per_share
+    if price is None:
+        result.unavailable_reasons.append(f"{what} unavailable: no current price for {holding.ticker}")
+        return
+    ke = _resolve_cost_of_equity(
+        db, holding, market_data_provider, risk_free_rate_provider, result, assumptions,
+        result.valuation_currency or holding.trading_currency, what=what, force_refresh=force_refresh,
+    )
+    if ke is None:
+        return
+    try:
+        look = compute_look_through(
+            constituents=constituents,
+            cost_of_equity=ke,
+            terminal_growth=assumptions.terminal_growth_rate,
+            bull_offset=assumptions.bull_growth_offset,
+            bear_offset=assumptions.bear_growth_offset,
+            current_price=price,
+        )
+    except LookThroughUnavailable as exc:
+        result.unavailable_reasons.append(f"{what} unavailable: {exc}")
+        return
+    look.oldest_observation = oldest
+    if unrefreshed:
+        look.notes.append(f"{unrefreshed} holding(s) have no stored P/E yet (counted as uncovered).")
+    if oldest is not None:
+        from datetime import timezone as _tz
+
+        age_days = (datetime.now(_tz.utc) - oldest).days
+        if age_days > STALE_AFTER_DAYS:
+            look.notes.append(f"Constituent P/Es are {age_days} days old — run Refresh look-through.")
+    if assumptions.plausibility_max_ratio is not None:
+        reason = _implausible_reason(
+            look.scenario("base").value_per_unit, price, assumptions.plausibility_max_ratio, "Base value"
+        )
+        if reason is not None:
+            result.rejected_fund_look_through = look
+            _withhold(result, what, reason)
+            return
+    result.fund_look_through = look
+    result.valuation_status = STATUS_OK
+
+
 def compute_holding_valuation(
     db: Session,
     holding: Holding,
@@ -421,9 +509,11 @@ def compute_holding_valuation(
         holding_id=holding.id, ticker=holding.ticker, assumptions_version=assumptions.version
     )
 
-    result.multiples = multiples_over_time(
-        db, holding, fx_fallback=_fx_fallback(db, market_data_provider, force_refresh)
-    )
+    is_fund = holding.asset_class_raw in FUND_ANALYSIS_TYPES
+    if not is_fund:
+        result.multiples = multiples_over_time(
+            db, holding, fx_fallback=_fx_fallback(db, market_data_provider, force_refresh)
+        )
 
     # Resolve a currency and fetch/convert today's price *before* any of the
     # DCF-specific early returns below (2026-09-26 fix: a holding with too
@@ -441,6 +531,14 @@ def compute_holding_valuation(
     result.current_price_per_share = _current_price_in_valuation_currency(
         db, holding, valuation_currency, market_data_provider, result, force_refresh=force_refresh
     )
+
+    # Funds/ETFs: no statements to run a DCF on — value the basket they hold.
+    if is_fund:
+        _value_fund_look_through(
+            db, holding, market_data_provider, risk_free_rate_provider, result, assumptions,
+            force_refresh=force_refresh,
+        )
+        return result
 
     # Banks/insurers (v2): an owner-earnings DCF is the wrong model — value
     # them on justified price-to-book and stop here.

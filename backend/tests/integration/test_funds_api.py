@@ -364,3 +364,54 @@ def test_fund_readiness_and_analysis_run(client, db_session):
     latest = client.get(f"/analysis/holdings/{fund_id}")
     assert latest.status_code == 200
     assert latest.json()["blind_pass"]["role_in_portfolio"]["summary"] == "s"
+
+
+def test_fetch_xtrackers_holdings_stores_a_document_and_imports_rows(client, db_session, monkeypatch):
+    import json
+    from pathlib import Path
+
+    from app.providers import xtrackers_holdings as xt
+
+    fixture = json.loads(
+        (Path(__file__).parent.parent / "fixtures" / "xtrackers_holdings_xdef.json").read_text()
+    )
+    monkeypatch.setattr(
+        "app.api.funds.fetch_xtrackers_holdings",
+        lambda isin: xt.parse_holdings(fixture, fund_isin=isin),
+    )
+    fund_id = _holding(client, db_session, "XDEF.DE", "Xtrackers Europe Defence Technologies", "equity_etf")
+    kongsberg = _holding(client, db_session, "KOG.OL", "KONGSBERG GRUPPEN", "stock")
+
+    response = client.post(f"/funds/{fund_id}/holdings/fetch-xtrackers", json={"isin": "LU3061478973"})
+    assert response.status_code == 201, response.text
+    body = response.json()
+    assert body["rows_imported"] == 6
+    assert body["as_of_date"] == "2026-09-28"
+    assert body["linked"] == 1  # KONGSBERG GRUPPEN matched by name
+
+    document = db_session.get(Document, body["document_id"])
+    assert document.type == "fund_holdings"
+    assert document.original_filename == "xtrackers-LU3061478973-holdings-2026-09-28.csv"
+
+    facts = client.get(f"/funds/{fund_id}").json()
+    rows = facts["exposures"]["holding"]
+    assert rows[0]["label"] == "ROLLS-ROYCE HOLDINGS PLC" and rows[0]["isin"] == "GB00B63H8491"
+    linked = next(r for r in rows if r["label"] == "KONGSBERG GRUPPEN")
+    assert linked["linked_holding_id"] == kongsberg
+
+
+def test_fetch_xtrackers_reports_feed_errors_and_refuses_non_funds(client, db_session, monkeypatch):
+    from app.providers.xtrackers_holdings import XtrackersFeedError
+
+    def fail(isin):
+        raise XtrackersFeedError("could not reach etf.dws.com")
+
+    monkeypatch.setattr("app.api.funds.fetch_xtrackers_holdings", fail)
+    fund_id = _holding(client, db_session, "XDEF.DE", "Xtrackers Europe Defence", "equity_etf")
+    response = client.post(f"/funds/{fund_id}/holdings/fetch-xtrackers", json={"isin": "LU3061478973"})
+    assert response.status_code == 502
+    assert "could not reach" in response.json()["detail"]
+
+    stock = _holding(client, db_session, "NEM", "Newmont Corporation", "stock")
+    response = client.post(f"/funds/{stock}/holdings/fetch-xtrackers", json={"isin": "LU3061478973"})
+    assert response.status_code == 422

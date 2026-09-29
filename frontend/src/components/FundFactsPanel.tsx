@@ -14,6 +14,7 @@ import type {
   HoldingsImportResult,
 } from "../lib/types";
 import { Button, Card, EmptyState, StatTile, VerdictBadge } from "./ui";
+import { FundLookThroughCard } from "./FundLookThroughCard";
 
 /** Sprint 8 (F9): the facts a fund / ETF analysis rests on, and every
  * number computed from them. Backend: app/api/funds.py.
@@ -1071,6 +1072,7 @@ export function FundFactsPanel({ holdingId, onChanged }: { holdingId: string; on
           onChanged?.();
         }}
       />
+      <FundLookThroughCard holdingId={holdingId} onChanged={load} />
       <SplitsCard holdingId={holdingId} facts={facts} onSaved={saved} />
       {overlap.fund_value_nok !== null && overlap.rows.length > 0 && (
         <Card>

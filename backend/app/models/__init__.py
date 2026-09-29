@@ -18,7 +18,12 @@ from app.models.base import Base
 from app.models.country_risk import CountryIndicator
 from app.models.document import Document, DocumentChunk, DocumentPage
 from app.models.financial_line_item import FinancialLineItem
-from app.models.fund import FundExposure, FundProfile, FundReturnPeriod
+from app.models.fund import (
+    FundConstituentMultiple,
+    FundExposure,
+    FundProfile,
+    FundReturnPeriod,
+)
 from app.models.holding import Holding
 from app.models.journal import DecisionJournalEntry
 from app.models.legacy_analysis import (
@@ -59,6 +64,7 @@ __all__ = [
     "EvidenceReference",
     "FactorAssessment",
     "FinancialLineItem",
+    "FundConstituentMultiple",
     "FundExposure",
     "FundProfile",
     "FundReturnPeriod",

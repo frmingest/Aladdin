@@ -615,9 +615,40 @@ export interface FinancialsValuation {
   scenarios: FinancialsScenario[];
 }
 
-export type ValuationMethod = "owner_earnings_dcf" | "financials_price_to_book";
+export type ValuationMethod = "owner_earnings_dcf" | "financials_price_to_book" | "fund_look_through_pe";
 /** "implausible" = computed, then withheld because it was not credible vs the price. */
 export type ValuationStatus = "ok" | "implausible" | "unavailable";
+
+export interface LookThroughScenario {
+  label: string;
+  growth_rate: string;
+  fair_pe: string;
+  value_per_unit: string;
+  margin_of_safety: string | null;
+}
+
+/** Fund look-through earnings-yield screen (2026-09-29) — GET /valuation/holdings/{fund}. */
+export interface FundLookThrough {
+  scenarios: LookThroughScenario[];
+  fund_earnings_yield: string;
+  fund_pe: string;
+  coverage_pct: string;
+  constituents_used: number;
+  constituents_total: number;
+  cost_of_equity: string;
+  terminal_growth_rate: string;
+  oldest_observation: string | null;
+  notes: string[];
+  method_note: string;
+}
+
+export interface LookThroughRefresh {
+  lines: number;
+  priced: number;
+  unpriced: number;
+  no_isin: number;
+  refreshed_at: string;
+}
 
 export interface HoldingValuation {
   holding_id: string;
@@ -654,6 +685,7 @@ export interface HoldingValuation {
   fades_to_terminal?: boolean;
   capm_cost_of_equity?: string | null;
   financials?: FinancialsValuation | null;
+  fund_look_through?: FundLookThrough | null;
   /** Withheld values, for display as "rejected" only. */
   rejected_values?: Record<string, string> | null;
 }
