@@ -134,6 +134,42 @@ def test_get_valuation_for_real_holding_computes_dcf(client):
     assert body["unavailable_reasons"] == []
 
 
+def test_valuation_reports_the_growth_cap_and_status(client):
+    holding_id = _create_holding(client)
+    _upload_filing(client, holding_id, "FY2024", net_income=80, d_and_a=20, capex=10, shares=10)
+    _upload_filing(client, holding_id, "FY2025", net_income=100, d_and_a=25, capex=15, shares=10)  # +22%
+
+    _override(market_provider=_FakeMarketDataProvider(price=_price_point()), rate_provider=_FakeRiskFreeRateProvider(rate=_risk_free_rate()))
+    body = client.get(f"/valuation/holdings/{holding_id}").json()
+    _clear_overrides()
+
+    assert body["assumptions_version"] == "v2"
+    assert body["valuation_method"] == "owner_earnings_dcf"
+    assert body["valuation_status"] == "ok"
+    assert body["growth_capped"] is True
+    assert Decimal(body["raw_base_growth_rate"]) > D("0.2")
+    assert Decimal(body["base_growth_rate"]) == D("0.10")
+    assert body["fades_to_terminal"] is True
+    assert body["rejected_values"] is None
+
+
+def test_an_implausible_dcf_is_withheld_by_the_api(client):
+    holding_id = _create_holding(client)
+    _upload_filing(client, holding_id, "FY2024", net_income=80, d_and_a=20, capex=10, shares=10)
+    _upload_filing(client, holding_id, "FY2025", net_income=85, d_and_a=25, capex=15, shares=10)
+
+    # A 5 USD price against ~150 USD of value per share: the model, not the market, is wrong.
+    _override(market_provider=_FakeMarketDataProvider(price=_price_point("5")), rate_provider=_FakeRiskFreeRateProvider(rate=_risk_free_rate()))
+    body = client.get(f"/valuation/holdings/{holding_id}").json()
+    _clear_overrides()
+
+    assert body["valuation_status"] == "implausible"
+    assert body["dcf"] is None
+    assert set(body["rejected_values"]) == {"bear", "base", "bull"}
+    assert "x the share price" in body["valuation_status_reason"]
+    assert any("withheld as not credible" in r for r in body["unavailable_reasons"])
+
+
 def test_get_valuation_for_unknown_holding_is_404(client):
     _override(market_provider=_FakeMarketDataProvider(price=_price_point()), rate_provider=_FakeRiskFreeRateProvider(rate=_risk_free_rate()))
     response = client.get("/valuation/holdings/00000000-0000-0000-0000-000000000000")

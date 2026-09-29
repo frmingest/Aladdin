@@ -366,12 +366,12 @@ def _value_financials(
         return
 
     roes: list[Decimal] = []
-    by_year = sorted((p for p in periods.values() if p.year is not None), key=lambda p: p.year, reverse=True)
+    dated = [(p.year, p) for p in periods.values() if p.year is not None]
     seen_years: set[int] = set()
-    for entry in by_year:
-        if entry.year in seen_years or len(roes) >= assumptions.financials_roe_history_years:
+    for year, entry in sorted(dated, key=lambda row: row[0], reverse=True):
+        if year in seen_years or len(roes) >= assumptions.financials_roe_history_years:
             continue
-        seen_years.add(entry.year)  # type: ignore[arg-type]
+        seen_years.add(year)
         prior = previous_period(periods, entry.period)
         roe = compute_holding_metrics(entry.facts, prior_facts=prior.facts if prior else None).computed.get("roe")
         if roe is not None:
