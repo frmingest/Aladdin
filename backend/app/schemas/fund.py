@@ -129,3 +129,8 @@ class HoldingsImportOut(BaseModel):
 
 class ManualLinkIn(BaseModel):
     linked_holding_id: UUID | None
+
+
+class XtrackersFetchIn(BaseModel):
+    isin: str
+    """The Xtrackers ETF's own ISIN (e.g. LU3061478973) — the only key DWS's public feed needs."""

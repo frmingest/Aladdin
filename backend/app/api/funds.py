@@ -27,6 +27,11 @@ from app.domain.errors import (
 from app.models.document import Document
 from app.models.holding import Holding
 from app.providers.factory import get_object_storage
+from app.providers.xtrackers_holdings import (
+    XtrackersFeedError,
+    fetch_xtrackers_holdings,
+    to_csv_bytes,
+)
 from app.schemas.fund import (
     FundDocumentOut,
     FundExposureOut,
@@ -38,6 +43,7 @@ from app.schemas.fund import (
     FundReturnOut,
     HoldingsImportOut,
     ManualLinkIn,
+    XtrackersFetchIn,
 )
 from app.services.documents.ingestion import ingest_holding_document
 from app.services.funds.facts import (
@@ -173,27 +179,19 @@ def patch_link(
     return _facts_out(db, holding)
 
 
-@router.post("/{holding_id}/holdings/import", response_model=HoldingsImportOut, status_code=201)
-async def import_holdings_file(
-    holding_id: UUID,
-    file: UploadFile = File(...),
-    as_of_date: date | None = Form(default=None),
-    db: Session = Depends(get_db),
-    storage=Depends(get_object_storage),
+def _import_holdings_content(
+    db: Session,
+    storage,
+    holding: Holding,
+    *,
+    filename: str,
+    content: bytes,
+    mime_type: str,
+    as_of_date: date | None,
 ) -> HoldingsImportOut:
-    """Uploads a provider holdings file (CSV/XLSX) as a `fund_holdings`
-    document of this fund, parses it deterministically and replaces the
-    holding rows for its as-of date. Sector / country / currency splits
-    are derived from the same rows when the file has those columns."""
-    require_not_demo(db)
-    holding = _holding(db, holding_id)
-    try:
-        require_fund_holding(holding)
-    except FundFactsError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-
-    content = await file.read()
-    filename = file.filename or "holdings.csv"
+    """Shared by the file upload and the Xtrackers fetch: stores `content`
+    as a `fund_holdings` document of this fund and replaces its holding /
+    sector / country rows from it — one deterministic path, one provenance."""
     # Parse first: a file that isn't a holdings list is refused before
     # anything is stored.
     try:
@@ -214,7 +212,7 @@ async def import_holdings_file(
             holding_id=holding.id,
             filename=filename,
             content=content,
-            mime_type=file.content_type or "application/octet-stream",
+            mime_type=mime_type,
             document_type=DOCUMENT_TYPE_FUND_HOLDINGS,
             reporting_period=effective_date.isoformat(),
         )
@@ -276,4 +274,67 @@ async def import_holdings_file(
         columns=parsed.columns,
         weights_were_fractions=parsed.weights_were_fractions,
         warnings=parsed.warnings,
+    )
+
+
+@router.post("/{holding_id}/holdings/import", response_model=HoldingsImportOut, status_code=201)
+async def import_holdings_file(
+    holding_id: UUID,
+    file: UploadFile = File(...),
+    as_of_date: date | None = Form(default=None),
+    db: Session = Depends(get_db),
+    storage=Depends(get_object_storage),
+) -> HoldingsImportOut:
+    """Uploads a provider holdings file (CSV/XLSX) as a `fund_holdings`
+    document of this fund, parses it deterministically and replaces the
+    holding rows for its as-of date. Sector / country / currency splits
+    are derived from the same rows when the file has those columns."""
+    require_not_demo(db)
+    holding = _holding(db, holding_id)
+    try:
+        require_fund_holding(holding)
+    except FundFactsError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    return _import_holdings_content(
+        db,
+        storage,
+        holding,
+        filename=file.filename or "holdings.csv",
+        content=await file.read(),
+        mime_type=file.content_type or "application/octet-stream",
+        as_of_date=as_of_date,
+    )
+
+
+@router.post("/{holding_id}/holdings/fetch-xtrackers", response_model=HoldingsImportOut, status_code=201)
+def fetch_xtrackers_holdings_endpoint(
+    holding_id: UUID,
+    body: XtrackersFetchIn,
+    db: Session = Depends(get_db),
+    storage=Depends(get_object_storage),
+) -> HoldingsImportOut:
+    """Fetches the fund's full holdings list from DWS's free public feed
+    (etf.dws.com, keyed only by the fund's ISIN), stores it as a
+    `fund_holdings` document and imports it exactly like an uploaded
+    holdings file. Xtrackers ETFs only."""
+    require_not_demo(db)
+    holding = _holding(db, holding_id)
+    try:
+        require_fund_holding(holding)
+    except FundFactsError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    try:
+        feed = fetch_xtrackers_holdings(body.isin)
+    except XtrackersFeedError as exc:
+        raise HTTPException(status_code=502, detail=f"Xtrackers holdings feed: {exc}") from exc
+    stamp = feed.as_of_date.isoformat() if feed.as_of_date else "undated"
+    return _import_holdings_content(
+        db,
+        storage,
+        holding,
+        filename=f"xtrackers-{feed.fund_isin}-holdings-{stamp}.csv",
+        content=to_csv_bytes(feed),
+        mime_type="text/csv",
+        as_of_date=feed.as_of_date,
     )

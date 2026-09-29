@@ -1,0 +1,318 @@
+{
+ "tables": [
+  {
+   "columns": [
+    {
+     "key": "header",
+     "value": "ISIN",
+     "alignment": "left",
+     "isVisibleOnHeader": true
+    },
+    {
+     "key": "column_0",
+     "value": "Name",
+     "alignment": "left",
+     "isVisibleOnHeader": true
+    },
+    {
+     "key": "column_1",
+     "value": "% Weight",
+     "alignment": "left",
+     "isVisibleOnHeader": true
+    },
+    {
+     "key": "column_2",
+     "value": "Market value",
+     "alignment": "left",
+     "isVisibleOnHeader": true
+    },
+    {
+     "key": "column_3",
+     "value": "Country",
+     "alignment": "left",
+     "isVisibleOnHeader": true
+    },
+    {
+     "key": "column_4",
+     "value": "Industry",
+     "alignment": "left",
+     "isVisibleOnHeader": true
+    },
+    {
+     "key": "column_5",
+     "value": "Asset class",
+     "alignment": "left",
+     "isVisibleOnHeader": true
+    }
+   ],
+   "values": [
+    {
+     "header": {
+      "value": "GB00B63H8491",
+      "type": "text"
+     },
+     "column_0": {
+      "value": "ROLLS-ROYCE HOLDINGS PLC",
+      "type": "text"
+     },
+     "column_1": {
+      "value": "11.490%",
+      "sortValue": 11.48997323,
+      "type": "text"
+     },
+     "column_2": {
+      "value": "4.59 M EUR",
+      "sortValue": 4589591.65,
+      "type": "text"
+     },
+     "column_3": {
+      "value": "United Kingdom",
+      "type": "text"
+     },
+     "column_4": {
+      "value": "Aerospace & Defense",
+      "type": "text"
+     },
+     "column_5": {
+      "value": "Equities",
+      "type": "text"
+     }
+    },
+    {
+     "header": {
+      "value": "FR0000073272",
+      "type": "text"
+     },
+     "column_0": {
+      "value": "SAFRAN SA",
+      "type": "text"
+     },
+     "column_1": {
+      "value": "10.982%",
+      "sortValue": 10.98180924,
+      "type": "text"
+     },
+     "column_2": {
+      "value": "4.39 M EUR",
+      "sortValue": 4386609,
+      "type": "text"
+     },
+     "column_3": {
+      "value": "France",
+      "type": "text"
+     },
+     "column_4": {
+      "value": "Aerospace & Defense",
+      "type": "text"
+     },
+     "column_5": {
+      "value": "Equities",
+      "type": "text"
+     }
+    },
+    {
+     "header": {
+      "value": "NL0000235190",
+      "type": "text"
+     },
+     "column_0": {
+      "value": "AIRBUS",
+      "type": "text"
+     },
+     "column_1": {
+      "value": "10.730%",
+      "sortValue": 10.72957187,
+      "type": "text"
+     },
+     "column_2": {
+      "value": "4.29 M EUR",
+      "sortValue": 4285854.5,
+      "type": "text"
+     },
+     "column_3": {
+      "value": "France",
+      "type": "text"
+     },
+     "column_4": {
+      "value": "Aerospace & Defense",
+      "type": "text"
+     },
+     "column_5": {
+      "value": "Equities",
+      "type": "text"
+     }
+    },
+    {
+     "header": {
+      "value": "NO0013536151",
+      "type": "text"
+     },
+     "column_0": {
+      "value": "KONGSBERG GRUPPEN",
+      "type": "text"
+     },
+     "column_1": {
+      "value": "4.245%",
+      "sortValue": 4.24504162,
+      "type": "text"
+     },
+     "column_2": {
+      "value": "1.70 M EUR",
+      "sortValue": 1695653,
+      "type": "text"
+     },
+     "column_3": {
+      "value": "Norway",
+      "type": "text"
+     },
+     "column_4": {
+      "value": "Aerospace & Defense",
+      "type": "text"
+     },
+     "column_5": {
+      "value": "Equities",
+      "type": "text"
+     }
+    },
+    {
+     "header": {
+      "value": "ES0118594417",
+      "type": "text"
+     },
+     "column_0": {
+      "value": "INDRA SISTEMAS SA",
+      "type": "text"
+     },
+     "column_1": {
+      "value": "2.022%",
+      "sortValue": 2.02165235,
+      "type": "text"
+     },
+     "column_2": {
+      "value": "0.81 M EUR",
+      "sortValue": 807535.28,
+      "type": "text"
+     },
+     "column_3": {
+      "value": "Spain",
+      "type": "text"
+     },
+     "column_4": {
+      "value": "IT Consulting & Other Services",
+      "type": "text"
+     },
+     "column_5": {
+      "value": "Equities",
+      "type": "text"
+     }
+    },
+    {
+     "header": {
+      "value": "SE0010948711",
+      "type": "text"
+     },
+     "column_0": {
+      "value": "OVZON",
+      "type": "text"
+     },
+     "column_1": {
+      "value": "0.102%",
+      "sortValue": 0.10199928,
+      "type": "text"
+     },
+     "column_2": {
+      "value": "0.04 M EUR",
+      "sortValue": 40742.92,
+      "type": "text"
+     },
+     "column_3": {
+      "value": "Sweden",
+      "type": "text"
+     },
+     "column_4": {
+      "value": "Alternative Carriers",
+      "type": "text"
+     },
+     "column_5": {
+      "value": "Equities",
+      "type": "text"
+     }
+    },
+    {
+     "header": {
+      "value": "_CURRENCYGBP",
+      "type": "text"
+     },
+     "column_0": {
+      "value": "POUND STERLING",
+      "type": "text"
+     },
+     "column_1": {
+      "value": "0.028%",
+      "sortValue": 0.02805635,
+      "type": "text"
+     },
+     "column_2": {
+      "value": "0.01 M EUR",
+      "sortValue": 11206.92,
+      "type": "text"
+     },
+     "column_3": {
+      "value": "United Kingdom",
+      "type": "text"
+     },
+     "column_4": {
+      "value": "Unknown",
+      "type": "text"
+     },
+     "column_5": {
+      "value": "Cash",
+      "type": "text"
+     }
+    },
+    {
+     "header": {
+      "value": "_CURRENCYEUR",
+      "type": "text"
+     },
+     "column_0": {
+      "value": "EURO CURRENCY",
+      "type": "text"
+     },
+     "column_1": {
+      "value": "-0.003%",
+      "sortValue": -0.0032534,
+      "type": "text"
+     },
+     "column_2": {
+      "value": "0.00 M EUR",
+      "sortValue": -1299.55,
+      "type": "text"
+     },
+     "column_3": {
+      "value": "--",
+      "type": "text"
+     },
+     "column_4": {
+      "value": "Unknown",
+      "type": "text"
+     },
+     "column_5": {
+      "value": "Cash",
+      "type": "text"
+     }
+    }
+   ],
+   "rowsPerPage": 15,
+   "id": "securitiesheldtable-securitiesholding",
+   "disclaimers": [
+    {
+     "text": "<p>Source: DWS 28.09.2026</p>"
+    }
+   ]
+  }
+ ],
+ "accordionItems": [],
+ "settings": [],
+ "asOfDate": ""
+}
