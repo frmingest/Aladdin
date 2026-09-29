@@ -179,3 +179,33 @@ def test_synthesis_cites_prefixed_ids_and_never_touches_either_verdict(client, d
     db_session.refresh(d)
     assert (b.blind_pass_json, d.blind_pass_json) == before
     assert client.get(f"/analysis/holdings/{h.id}/side-by-side").json()["synthesis"]["output"]["where_they_would_argue"] == "crux"
+
+
+def _stored_target(db_session, holding, *, price, low, high):
+    from datetime import timedelta
+    from decimal import Decimal
+
+    from app.models.market import MarketObservation
+
+    run = _run(db_session, holding, "buffett_munger", "Buy")
+    db_session.add(MarketObservation(
+        holding_id=holding.id, observed_at=run.started_at - timedelta(hours=1),
+        price=Decimal(price), currency="NOK", provider="fake",
+    ))
+    run.price_target_low, run.price_target_high, run.price_target_currency = Decimal(low), Decimal(high), "NOK"
+    db_session.commit()
+
+
+def test_stored_price_target_far_from_price_is_flagged(client, db_session):
+    # The SB1NO case: a 3,170–4,899 NOK target on a ~150 NOK share.
+    h = _holding(db_session, ticker="SB1NO.OL", name="SpareBank 1 Nord-Norge")
+    _stored_target(db_session, h, price="150", low="3170.65", high="4899.14")
+    body = client.get(f"/analysis/holdings/{h.id}").json()
+    assert body["price_target_warning"] is not None
+    assert "re-run" in body["price_target_warning"]
+
+
+def test_stored_price_target_near_price_is_not_flagged(client, db_session):
+    h = _holding(db_session)
+    _stored_target(db_session, h, price="150", low="130", high="190")
+    assert client.get(f"/analysis/holdings/{h.id}").json()["price_target_warning"] is None

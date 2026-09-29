@@ -37,11 +37,16 @@ from app.domain.valuation_assumptions import get_valuation_assumptions
 from app.models.financial_line_item import FinancialLineItem
 from app.models.holding import Holding
 from app.providers.base import MarketDataProvider, RiskFreeRateProvider
+from app.services.holding_facts import facts_by_period, previous_period
 from app.services.market_data.fx import get_or_refresh_fx
 from app.services.market_data.price import get_or_refresh_price
 from app.services.market_data.risk_free_rate import get_or_refresh_risk_free_rate
 from app.services.market_data.shares import resolve_share_count
-from app.services.metrics import owner_earnings_from_facts
+from app.services.metrics import (
+    compute_holding_metrics,
+    ordinary_equity,
+    owner_earnings_from_facts,
+)
 from app.services.risk.regime import classify_regime
 from app.services.valuation.dcf import (
     DCFScenarioResult,
@@ -49,8 +54,17 @@ from app.services.valuation.dcf import (
     reverse_dcf_implied_growth,
 )
 from app.services.valuation.discount_rate import cost_of_equity
+from app.services.valuation.financials import FinancialsValuation, financials_valuation
 from app.services.valuation.growth import historical_cagr
 from app.services.valuation.multiples import PeriodMultiples, multiples_over_time
+
+OWNER_EARNINGS_DCF = "owner_earnings_dcf"
+FINANCIALS_PRICE_TO_BOOK = "financials_price_to_book"
+
+# valuation_status values
+STATUS_OK = "ok"  # a headline valuation is available and passed the plausibility check
+STATUS_IMPLAUSIBLE = "implausible"  # computed, then withheld: see valuation_status_reason
+STATUS_UNAVAILABLE = "unavailable"  # missing data — see unavailable_reasons
 
 
 @dataclass
@@ -82,6 +96,43 @@ class HoldingValuationResult:
     shares_source: str | None = None
     assumptions_version: str = ""
     unavailable_reasons: list[str] = field(default_factory=list)
+
+    # --- v2 guardrails (2026-09-29) -----------------------------------
+    # Which model produced the headline value: the owner-earnings DCF, or
+    # (banks/insurers) justified price-to-book.
+    valuation_method: str = OWNER_EARNINGS_DCF
+    valuation_status: str = STATUS_UNAVAILABLE
+    # Plain-language why, for "implausible" (and the reason a DCF was
+    # skipped for a financial). None when the status needs no explanation.
+    valuation_status_reason: str | None = None
+    # The historical CAGR before the growth cap, and whether it was capped.
+    raw_base_growth_rate: Decimal | None = None
+    growth_capped: bool = False
+    # CAPM before the cost-of-equity floor.
+    capm_cost_of_equity: Decimal | None = None
+    financials: FinancialsValuation | None = None
+    # What the model produced when it was withheld as implausible — kept so
+    # the UI can show it as "rejected", never as a valuation.
+    rejected_dcf: DCFScenarioResult | None = None
+    rejected_financials: FinancialsValuation | None = None
+
+    def headline_values(self) -> dict[str, Decimal] | None:
+        """bear/base/bull value per share from whichever method applies, or
+        None when there is no trustworthy headline valuation. Every
+        consumer that shows a margin of safety, a zone, a price target or
+        evidence reads this, so the plausibility guard cannot be bypassed."""
+        if self.dcf is not None:
+            return {s.label: s.intrinsic_value_per_share for s in self.dcf.scenarios}
+        if self.financials is not None:
+            return {s.label: s.value_per_share for s in self.financials.scenarios}
+        return None
+
+    def headline_margin_of_safety(self, label: str) -> Decimal | None:
+        if self.dcf is not None:
+            return self.dcf.margin_of_safety(label)
+        if self.financials is not None:
+            return self.financials.margin_of_safety(label)
+        return None
 
 
 def _owner_earnings_history(db: Session, holding: Holding) -> list[tuple[int, str, Decimal]]:
@@ -154,6 +205,208 @@ def _fx_fallback(db: Session, provider: MarketDataProvider, force: bool):
     return rate
 
 
+def _is_financial(holding: Holding, assumptions) -> bool:
+    sector = (holding.sector or "").lower()
+    return bool(sector) and any(keyword in sector for keyword in assumptions.financials_sector_keywords)
+
+
+def _resolve_cost_of_equity(
+    db: Session,
+    holding: Holding,
+    market_data_provider: MarketDataProvider,
+    risk_free_rate_provider: RiskFreeRateProvider,
+    result: HoldingValuationResult,
+    assumptions,
+    valuation_currency: str,
+    *,
+    what: str,
+    force_refresh: bool,
+) -> Decimal | None:
+    """Risk-free rate -> beta -> CAPM -> floor -> optional regime add-on,
+    recorded on `result`. Shared by the DCF and the bank P/B valuation
+    (both discount at the cost of equity). None when no risk-free rate."""
+    settings = get_settings()
+    rate_snapshot = get_or_refresh_risk_free_rate(
+        db, risk_free_rate_provider, currency=valuation_currency, force=force_refresh, refresh_live=force_refresh
+    )
+    if not rate_snapshot.available or rate_snapshot.value is None:
+        result.unavailable_reasons.append(
+            f"{what} unavailable: no risk-free rate for {valuation_currency}: {rate_snapshot.reason}"
+        )
+        return None
+    result.risk_free_rate_pct = rate_snapshot.value.rate
+
+    beta = market_data_provider.get_beta(holding.ticker, allow_live_fetch=force_refresh)
+    if beta is None:
+        beta = assumptions.default_beta
+        result.unavailable_reasons.append(
+            f"beta unavailable from {market_data_provider.name}, used default beta "
+            f"{assumptions.default_beta} from assumptions {assumptions.version}"
+        )
+    result.beta = beta
+
+    equity_risk_premium = assumptions.equity_risk_premium.get(
+        valuation_currency, assumptions.default_equity_risk_premium
+    )
+    result.equity_risk_premium = equity_risk_premium
+
+    capm = cost_of_equity(
+        risk_free_rate_pct=rate_snapshot.value.rate, beta=beta, equity_risk_premium=equity_risk_premium
+    )
+    result.capm_cost_of_equity = capm
+    floor = assumptions.min_cost_of_equity
+    if floor is not None and capm < floor:
+        result.unavailable_reasons.append(
+            f"Cost of equity floored at {floor * 100:.1f}% (CAPM gave {capm * 100:.1f}% from beta {beta}: "
+            f"a low beta understates equity risk; assumptions {assumptions.version})."
+        )
+        capm = floor
+    result.discount_rate = capm
+    result.base_discount_rate = capm
+
+    # Sprint 14 (2026-09-26): optional regime widening of the discount rate.
+    # Off by default (see Settings.regime_adjusted_dcf_enabled's docstring) —
+    # classify_regime(db) is a cheap DB-only read (app/services/macro/indicators.py,
+    # no external call), so calling it per holding here (and per row on the
+    # margin-of-safety board) doesn't add meaningful latency.
+    if settings.regime_adjusted_dcf_enabled:
+        regime_result = classify_regime(db)
+        adjustments = get_regime_adjustments(settings.active_regime_adjustment_version)
+        addon = adjustments.discount_rate_addon.get(regime_result.regime, adjustments.default_addon)
+        result.regime = regime_result.regime
+        result.regime_discount_rate_addon = addon
+        result.regime_adjustments_version = adjustments.version
+        result.discount_rate = result.base_discount_rate + addon
+        if addon != 0:
+            result.unavailable_reasons.append(
+                f"Discount rate widened {addon * 100:.2f}pp for the current {regime_result.regime} "
+                f"macro regime (regime adjustments {adjustments.version}, base CAPM rate "
+                f"{result.base_discount_rate * 100:.2f}%)."
+            )
+    return result.discount_rate
+
+
+def _implausible_reason(value: Decimal, price: Decimal, max_ratio: Decimal, what: str) -> str | None:
+    """Text when `value` is more than `max_ratio` times, or less than
+    1/`max_ratio` of, `price` — else None."""
+    if price <= 0 or value <= 0:
+        return None if value > 0 else f"{what} is not positive"
+    ratio = value / price
+    if ratio > max_ratio:
+        return f"{what} of {value:,.2f} is {ratio:.1f}x the share price of {price:,.2f}"
+    if ratio < Decimal(1) / max_ratio:
+        return f"{what} of {value:,.2f} is only {ratio * 100:.0f}% of the share price of {price:,.2f}"
+    return None
+
+
+def _withhold(result: HoldingValuationResult, what: str, reason: str) -> None:
+    result.valuation_status = STATUS_IMPLAUSIBLE
+    result.valuation_status_reason = (
+        f"{reason} — far outside what a sound model gives, so it is withheld rather than shown "
+        f"as a valuation. Check the inputs (growth history, share count, currency)."
+    )
+    result.unavailable_reasons.append(f"{what} unavailable: {reason} (withheld as not credible)")
+
+
+def _value_financials(
+    db: Session,
+    holding: Holding,
+    market_data_provider: MarketDataProvider,
+    risk_free_rate_provider: RiskFreeRateProvider,
+    result: HoldingValuationResult,
+    assumptions,
+    *,
+    force_refresh: bool,
+) -> None:
+    """Banks and insurers: justified price-to-book instead of the
+    owner-earnings DCF (app/services/valuation/financials.py)."""
+    what = "Price-to-book valuation"
+    result.valuation_method = FINANCIALS_PRICE_TO_BOOK
+    result.valuation_status_reason = (
+        "An owner-earnings DCF does not apply to banks and insurers — they must retain capital, so "
+        "profit is not distributable. Valued on justified price-to-book (ROE vs cost of equity)."
+    )
+    periods = facts_by_period(db, holding.id)
+    latest_year = max((p.year for p in periods.values() if p.year is not None), default=None)
+    latest = next(
+        (
+            p for p in sorted(periods.values(), key=lambda p: p.period)
+            if p.year == latest_year and p.period.upper().startswith("FY")
+        ),
+        None,
+    ) or next((p for p in periods.values() if p.year == latest_year), None)
+    if latest is None:
+        result.unavailable_reasons.append(f"{what} unavailable: no financial history on file")
+        return
+
+    valuation_currency = result.valuation_currency or holding.trading_currency
+    share_count = resolve_share_count(
+        db, holding, market_data_provider, latest_facts=latest.facts, latest_period=latest.period,
+        force=force_refresh, refresh_live=force_refresh,
+    )
+    shares = share_count.shares
+    if shares is None or shares <= 0:
+        result.unavailable_reasons.append(f"{what} unavailable: no share count ({share_count.unavailable_reason})")
+        return
+    result.shares_outstanding = shares
+    result.shares_source = share_count.describe()
+    result.unavailable_reasons.extend(share_count.warnings)
+
+    equity = ordinary_equity(latest.facts)
+    if equity is None or equity <= 0:
+        result.unavailable_reasons.append(f"{what} unavailable: no positive ordinary equity in {latest.period}")
+        return
+    book_value_per_share = equity / shares
+
+    ke = _resolve_cost_of_equity(
+        db, holding, market_data_provider, risk_free_rate_provider, result, assumptions,
+        valuation_currency, what=what, force_refresh=force_refresh,
+    )
+    if ke is None:
+        return
+
+    roes: list[Decimal] = []
+    dated = [(p.year, p) for p in periods.values() if p.year is not None]
+    seen_years: set[int] = set()
+    for year, entry in sorted(dated, key=lambda row: row[0], reverse=True):
+        if year in seen_years or len(roes) >= assumptions.financials_roe_history_years:
+            continue
+        seen_years.add(year)
+        prior = previous_period(periods, entry.period)
+        roe = compute_holding_metrics(entry.facts, prior_facts=prior.facts if prior else None).computed.get("roe")
+        if roe is not None:
+            roes.append(roe)
+
+    try:
+        valuation = financials_valuation(
+            roes=roes,
+            book_value_per_share=book_value_per_share,
+            cost_of_equity=ke,
+            growth_rate=assumptions.terminal_growth_rate,
+            max_roe=assumptions.financials_max_roe,
+            roe_spread=assumptions.financials_roe_spread,
+            current_price_per_share=result.current_price_per_share,
+        )
+    except ValueError as exc:
+        result.unavailable_reasons.append(f"{what} unavailable: {exc}")
+        return
+
+    if valuation.roe_was_capped:
+        result.unavailable_reasons.append(
+            f"Average ROE capped at {assumptions.financials_max_roe * 100:.0f}% (not assumed sustainable)."
+        )
+    price = result.current_price_per_share
+    if price is not None and assumptions.plausibility_max_ratio is not None:
+        base_value = valuation.scenario("base").value_per_share
+        reason = _implausible_reason(base_value, price, assumptions.plausibility_max_ratio, "Base value")
+        if reason:
+            result.rejected_financials = valuation
+            _withhold(result, what, reason)
+            return
+    result.financials = valuation
+    result.valuation_status = STATUS_OK
+
+
 def compute_holding_valuation(
     db: Session,
     holding: Holding,
@@ -189,6 +442,15 @@ def compute_holding_valuation(
         db, holding, valuation_currency, market_data_provider, result, force_refresh=force_refresh
     )
 
+    # Banks/insurers (v2): an owner-earnings DCF is the wrong model — value
+    # them on justified price-to-book and stop here.
+    if _is_financial(holding, assumptions):
+        _value_financials(
+            db, holding, market_data_provider, risk_free_rate_provider, result, assumptions,
+            force_refresh=force_refresh,
+        )
+        return result
+
     history = _owner_earnings_history(db, holding)
     if len(history) < 2:
         result.unavailable_reasons.append(
@@ -199,10 +461,26 @@ def compute_holding_valuation(
 
     _latest_year, latest_period, base_owner_earnings = history[-1]
     try:
-        base_growth_rate = historical_cagr([row[2] for row in history])
+        raw_growth_rate = historical_cagr([row[2] for row in history])
     except ValueError as exc:
         result.unavailable_reasons.append(f"DCF unavailable: {exc}")
         return result
+    base_growth_rate = raw_growth_rate
+    cap = assumptions.max_base_growth
+    if cap is not None and raw_growth_rate > cap:
+        base_growth_rate = cap
+        result.growth_capped = True
+        result.unavailable_reasons.append(
+            f"Historical growth of {raw_growth_rate * 100:.1f}%/yr capped at {cap * 100:.1f}% — a past "
+            f"rate (often a merger or recovery from a low base) is not a forecast"
+            + (
+                f"; growth fades to {assumptions.terminal_growth_rate * 100:.1f}% by year "
+                f"{assumptions.projection_years}."
+                if assumptions.fade_growth_to_terminal
+                else "."
+            )
+        )
+    result.raw_base_growth_rate = raw_growth_rate
     result.base_growth_rate = base_growth_rate
 
     # The owner-earnings history's own latest period can differ from the
@@ -240,70 +518,30 @@ def compute_holding_valuation(
     result.shares_source = share_count.describe()
     result.unavailable_reasons.extend(share_count.warnings)
 
-    rate_snapshot = get_or_refresh_risk_free_rate(
-        db, risk_free_rate_provider, currency=valuation_currency, force=force_refresh, refresh_live=force_refresh
+    discount_rate = _resolve_cost_of_equity(
+        db, holding, market_data_provider, risk_free_rate_provider, result, assumptions,
+        valuation_currency, what="DCF", force_refresh=force_refresh,
     )
-    if not rate_snapshot.available or rate_snapshot.value is None:
-        result.unavailable_reasons.append(
-            f"DCF unavailable: no risk-free rate for {valuation_currency}: {rate_snapshot.reason}"
-        )
+    if discount_rate is None:
         return result
-    result.risk_free_rate_pct = rate_snapshot.value.rate
-
-    beta = market_data_provider.get_beta(holding.ticker, allow_live_fetch=force_refresh)
-    if beta is None:
-        beta = assumptions.default_beta
-        result.unavailable_reasons.append(
-            f"beta unavailable from {market_data_provider.name}, used default beta "
-            f"{assumptions.default_beta} from assumptions {assumptions.version}"
-        )
-    result.beta = beta
-
-    equity_risk_premium = assumptions.equity_risk_premium.get(
-        valuation_currency, assumptions.default_equity_risk_premium
-    )
-    result.equity_risk_premium = equity_risk_premium
-
-    result.discount_rate = cost_of_equity(
-        risk_free_rate_pct=rate_snapshot.value.rate, beta=beta, equity_risk_premium=equity_risk_premium
-    )
-    result.base_discount_rate = result.discount_rate
-
-    # Sprint 14 (2026-09-26): optional regime widening of the discount rate.
-    # Off by default (see Settings.regime_adjusted_dcf_enabled's docstring) —
-    # classify_regime(db) is a cheap DB-only read (app/services/macro/indicators.py,
-    # no external call), so calling it per holding here (and per row on the
-    # margin-of-safety board) doesn't add meaningful latency.
-    if settings.regime_adjusted_dcf_enabled:
-        regime_result = classify_regime(db)
-        adjustments = get_regime_adjustments(settings.active_regime_adjustment_version)
-        addon = adjustments.discount_rate_addon.get(regime_result.regime, adjustments.default_addon)
-        result.regime = regime_result.regime
-        result.regime_discount_rate_addon = addon
-        result.regime_adjustments_version = adjustments.version
-        result.discount_rate = result.base_discount_rate + addon
-        if addon != 0:
-            result.unavailable_reasons.append(
-                f"Discount rate widened {addon * 100:.2f}pp for the current {regime_result.regime} "
-                f"macro regime (regime adjustments {adjustments.version}, base CAPM rate "
-                f"{result.base_discount_rate * 100:.2f}%)."
-            )
 
     # Already fetched above (in `valuation_currency`, refetched only if the
     # owner-earnings period's currency differs from the "any period" one).
     current_price_per_share = result.current_price_per_share
+    fade = assumptions.fade_growth_to_terminal
 
     try:
-        result.dcf = dcf_scenarios(
+        dcf = dcf_scenarios(
             base_owner_earnings=base_owner_earnings,
             base_growth_rate=base_growth_rate,
-            discount_rate=result.discount_rate,
+            discount_rate=discount_rate,
             terminal_growth_rate=assumptions.terminal_growth_rate,
             years=assumptions.projection_years,
             shares_outstanding=shares_outstanding,
             bull_growth_offset=assumptions.bull_growth_offset,
             bear_growth_offset=assumptions.bear_growth_offset,
             current_price_per_share=current_price_per_share,
+            fade_to_terminal=fade,
         )
     except ValueError as exc:
         result.unavailable_reasons.append(f"DCF unavailable: {exc}")
@@ -314,14 +552,29 @@ def compute_holding_valuation(
             result.reverse_dcf_implied_growth = reverse_dcf_implied_growth(
                 current_price_per_share=current_price_per_share,
                 base_owner_earnings=base_owner_earnings,
-                discount_rate=result.discount_rate,
+                discount_rate=discount_rate,
                 terminal_growth_rate=assumptions.terminal_growth_rate,
                 years=assumptions.projection_years,
                 shares_outstanding=shares_outstanding,
+                fade_to_terminal=fade,
             )
         except ValueError as exc:
             result.unavailable_reasons.append(f"reverse DCF unavailable: {exc}")
 
+    if current_price_per_share is not None and assumptions.plausibility_max_ratio is not None:
+        reason = _implausible_reason(
+            dcf.scenario("base").intrinsic_value_per_share,
+            current_price_per_share,
+            assumptions.plausibility_max_ratio,
+            "DCF base value",
+        )
+        if reason:
+            result.rejected_dcf = dcf
+            _withhold(result, "DCF", reason)
+            return result
+
+    result.dcf = dcf
+    result.valuation_status = STATUS_OK
     return result
 
 

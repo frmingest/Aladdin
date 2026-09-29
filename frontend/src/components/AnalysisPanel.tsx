@@ -400,6 +400,11 @@ function VerdictCard({
             <p className="mt-1 text-sm text-ink-faint">Not applicable to a fund (no DCF)</p>
           ) : isDalio && !run.price_target_low ? (
             <p className="mt-1 text-sm text-ink-faint">n/a — no DCF for this holding (funds, ETFs and ETCs have none)</p>
+          ) : run.price_target_warning ? (
+            <div className="mt-1.5 rounded-md border border-negative/30 bg-negative-subtle px-3 py-2 text-left text-xs text-negative">
+              <p className="font-semibold">Price target not reliable</p>
+              <p className="mt-0.5">{run.price_target_warning}</p>
+            </div>
           ) : run.price_target_low && run.price_target_high ? (
             <>
               <p className="tabular mt-1.5 font-display text-2xl font-semibold tracking-tight text-ink">

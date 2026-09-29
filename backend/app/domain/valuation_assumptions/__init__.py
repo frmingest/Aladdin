@@ -18,9 +18,13 @@ the one place that gets divided by 100 before being combined with these.
 from __future__ import annotations
 
 from app.domain.valuation_assumptions.v1 import VALUATION_ASSUMPTIONS_V1
+from app.domain.valuation_assumptions.v2 import VALUATION_ASSUMPTIONS_V2
 from app.domain.valuation_assumptions.value_types import ValuationAssumptions
 
-_VERSIONS: dict[str, ValuationAssumptions] = {"v1": VALUATION_ASSUMPTIONS_V1}
+_VERSIONS: dict[str, ValuationAssumptions] = {
+    "v1": VALUATION_ASSUMPTIONS_V1,
+    "v2": VALUATION_ASSUMPTIONS_V2,
+}
 
 
 def get_valuation_assumptions(version: str) -> ValuationAssumptions:

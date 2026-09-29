@@ -25,6 +25,8 @@ from app.schemas.valuation import (
     BoardRowOut,
     DCFOut,
     DCFScenarioOut,
+    FinancialsScenarioOut,
+    FinancialsValuationOut,
     HoldingValuationOut,
     MarginOfSafetyBoardOut,
     PeriodMultiplesOut,
@@ -65,6 +67,35 @@ def _to_out(result: HoldingValuationResult) -> HoldingValuationOut:
             ],
         )
 
+    financials_out = None
+    if result.financials is not None:
+        fin = result.financials
+        financials_out = FinancialsValuationOut(
+            cost_of_equity=fin.cost_of_equity,
+            growth_rate=fin.growth_rate,
+            book_value_per_share=fin.book_value_per_share,
+            roe_periods_used=fin.roe_periods_used,
+            roe_was_capped=fin.roe_was_capped,
+            scenarios=[
+                FinancialsScenarioOut(
+                    label=sc.label,
+                    roe=sc.roe,
+                    justified_price_to_book=sc.justified_price_to_book,
+                    value_per_share=sc.value_per_share,
+                    margin_of_safety=fin.margin_of_safety(sc.label),
+                )
+                for sc in fin.scenarios
+            ],
+        )
+    rejected_values = None
+    if result.rejected_dcf is not None:
+        rejected_values = {sc.label: sc.intrinsic_value_per_share for sc in result.rejected_dcf.scenarios}
+    elif result.rejected_financials is not None:
+        rejected_values = {sc.label: sc.value_per_share for sc in result.rejected_financials.scenarios}
+    fades = bool(result.dcf and result.dcf.fades_to_terminal) or bool(
+        result.rejected_dcf and result.rejected_dcf.fades_to_terminal
+    )
+
     return HoldingValuationOut(
         holding_id=result.holding_id,
         ticker=result.ticker,
@@ -96,6 +127,15 @@ def _to_out(result: HoldingValuationResult) -> HoldingValuationOut:
         regime=result.regime,
         regime_discount_rate_addon=result.regime_discount_rate_addon,
         regime_adjustments_version=result.regime_adjustments_version,
+        valuation_method=result.valuation_method,
+        valuation_status=result.valuation_status,
+        valuation_status_reason=result.valuation_status_reason,
+        raw_base_growth_rate=result.raw_base_growth_rate,
+        growth_capped=result.growth_capped,
+        fades_to_terminal=fades,
+        capm_cost_of_equity=result.capm_cost_of_equity,
+        financials=financials_out,
+        rejected_values=rejected_values,
     )
 
 

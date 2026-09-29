@@ -145,6 +145,7 @@ export function ValuationPanel({ holdingId, ticker }: { holdingId: string; ticke
   const [valuation, setValuation] = useState<HoldingValuation | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const isBank = valuation?.valuation_method === "financials_price_to_book";
 
   useEffect(() => {
     setValuation(null);
@@ -213,7 +214,7 @@ export function ValuationPanel({ holdingId, ticker }: { holdingId: string; ticke
                       valuation.regime_discount_rate_addon
                     )} for ${valuation.regime} regime`
                   : valuation.risk_free_rate_pct && valuation.beta
-                  ? `rf ${formatPercent(valuation.risk_free_rate_pct)} · β ${formatDecimal(valuation.beta)}`
+                  ? `rf ${formatDecimal(valuation.risk_free_rate_pct)}% · β ${formatDecimal(valuation.beta)}`
                   : undefined
               }
             />
@@ -234,10 +235,46 @@ export function ValuationPanel({ holdingId, ticker }: { holdingId: string; ticke
 
           <div>
             <h4 className="mb-3 inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-ink-muted">
-              DCF scenarios (owner earnings)
+              {isBank ? "Justified price-to-book (bank / insurer)" : "DCF scenarios (owner earnings)"}
               <InfoTooltip text={`${GLOSSARY.dcf} ${GLOSSARY.ownerEarnings}`} align="left" />
             </h4>
-            {valuation.dcf === null ? (
+            {isBank && valuation.financials ? (
+              <>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  {valuation.financials.scenarios.map((s) => (
+                    <div key={s.label} className="rounded-md border border-border-subtle p-3">
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-faint">{s.label}</p>
+                      <p className="tabular mt-1 font-display text-xl font-semibold text-ink">
+                        {formatDecimal(s.value_per_share)} {valuation.valuation_currency ?? ""}
+                      </p>
+                      <p className="mt-0.5 text-xs text-ink-faint">
+                        ROE {formatPercent(s.roe)} · fair P/B {formatDecimal(s.justified_price_to_book)}x
+                        {s.margin_of_safety !== null ? ` · MoS ${formatPercent(s.margin_of_safety)}` : ""}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-2 text-xs text-ink-faint">
+                  Banks are valued on book value and return on equity, not owner-earnings DCF: fair P/B = (ROE − g) ÷
+                  (cost of equity − g). Cost of equity {formatPercent(valuation.financials.cost_of_equity)} · growth{" "}
+                  {formatPercent(valuation.financials.growth_rate)} · {valuation.financials.roe_periods_used} years of ROE
+                  {valuation.financials.roe_was_capped ? " · ROE capped at the sustainable maximum" : ""}
+                </p>
+              </>
+            ) : valuation.valuation_status === "implausible" ? (
+              <div className="rounded-md border border-negative/30 bg-negative-subtle px-3 py-3 text-sm text-negative">
+                <p className="font-semibold">Valuation withheld — not reliable</p>
+                <p className="mt-1 text-xs">{valuation.valuation_status_reason}</p>
+                {valuation.rejected_values && (
+                  <p className="mt-2 text-xs text-ink-faint">
+                    Rejected model output (do not use):{" "}
+                    {Object.entries(valuation.rejected_values)
+                      .map(([k, v]) => `${k} ${formatDecimal(v, 0)}`)
+                      .join(" · ")}
+                  </p>
+                )}
+              </div>
+            ) : valuation.dcf === null ? (
               <EmptyState>DCF unavailable for this holding — see the note above.</EmptyState>
             ) : (
               <>
@@ -250,6 +287,10 @@ export function ValuationPanel({ holdingId, ticker }: { holdingId: string; ticke
                   Discount rate {formatPercent(valuation.dcf.discount_rate)} · terminal growth{" "}
                   {formatPercent(valuation.dcf.terminal_growth_rate)}
                   {valuation.shares_source ? ` · ${valuation.shares_source}` : ""}
+                  {valuation.growth_capped && valuation.raw_base_growth_rate
+                    ? ` · growth capped from ${formatPercent(valuation.raw_base_growth_rate)} to ${formatPercent(valuation.base_growth_rate ?? "0")}`
+                    : ""}
+                  {valuation.fades_to_terminal ? " · growth fades to terminal rate" : ""}
                   {valuation.regime && valuation.regime_discount_rate_addon && Number(valuation.regime_discount_rate_addon) !== 0
                     ? ` · widened for ${valuation.regime} regime (+${formatPercent(valuation.regime_discount_rate_addon)})`
                     : ""}
