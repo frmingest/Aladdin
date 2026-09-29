@@ -26,7 +26,7 @@ from sqlalchemy.orm import Session
 
 from app.config.database import get_db
 from app.domain.instrument_types import INSTRUMENT_TYPES, classify_instrument
-from app.domain.sectors import SECTORS
+from app.domain.sectors import SECTORS, is_financial_sector
 from app.models.document import Document
 from app.models.financial_line_item import FinancialLineItem
 from app.models.holding import Holding
@@ -62,7 +62,10 @@ from app.services.market_data.shares import (
     resolve_share_count,
 )
 from app.services.market_inputs import MarketContext, build_market_context
-from app.services.metrics import compute_holding_metrics
+from app.services.metrics import (
+    compute_holding_metrics,
+    mark_not_meaningful_for_financials,
+)
 from app.services.settings.demo_guard import require_not_demo
 from app.services.settings.demo_mode import is_demo_mode
 from app.services.settings.synthetic_data import (
@@ -461,6 +464,8 @@ def get_holding_metrics(
         market=market.inputs,
         market_unavailable_reason=market.unavailable_reason,
     )
+    if is_financial_sector(holding.sector):
+        mark_not_meaningful_for_financials(result)
     stale_period = latest is not None and latest.period != period
     if stale_period and market.inputs is not None:
         for key in ("price_to_earnings", "price_to_sales", "price_to_book", "ev_to_ebitda", "fcf_yield"):

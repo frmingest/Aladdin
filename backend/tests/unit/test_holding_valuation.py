@@ -89,13 +89,15 @@ def _add_period(db: Session, document: Document, holding: Holding, period: str, 
         )
 
 
-def _setup_holding_with_two_periods(db: Session, *, trading_currency="USD", filing_currency="USD") -> Holding:
-    holding = Holding(ticker="AAPL", name="Apple Inc.", trading_currency=trading_currency)
+def _setup_holding_with_two_periods(
+    db: Session, *, trading_currency="USD", filing_currency="USD", fy2025_net_income="100", sector=None
+) -> Holding:
+    holding = Holding(ticker="AAPL", name="Apple Inc.", trading_currency=trading_currency, sector=sector)
     document = _document(holding)
     db.add_all([holding, document])
     db.flush()
     _add_period(db, document, holding, "FY2024", net_income="80", d_and_a="20", capex="10", shares="10", currency=filing_currency)
-    _add_period(db, document, holding, "FY2025", net_income="100", d_and_a="25", capex="15", shares="10", currency=filing_currency)
+    _add_period(db, document, holding, "FY2025", net_income=fy2025_net_income, d_and_a="25", capex="15", shares="10", currency=filing_currency)
     db.commit()
     return holding
 
@@ -110,7 +112,8 @@ def _risk_free_rate(rate="4.00", currency="USD") -> RiskFreeRate:
 
 def test_full_valuation_computes_dcf_and_reverse_dcf():
     with _session() as db:
-        holding = _setup_holding_with_two_periods(db)
+        # FY2025 net income 85 keeps the historical CAGR (5.6%) under v2's 10% growth cap.
+        holding = _setup_holding_with_two_periods(db, fy2025_net_income="85")
         market_provider = _FakeMarketDataProvider(price=_price_point())
         rate_provider = _FakeRiskFreeRateProvider(rate=_risk_free_rate())
 
@@ -118,8 +121,9 @@ def test_full_valuation_computes_dcf_and_reverse_dcf():
 
     assert result.unavailable_reasons == []
     assert result.valuation_currency == "USD"
-    # owner earnings: FY2024 = 80+20-10=90, FY2025 = 100+25-15=110 -> CAGR over 1 year = 110/90-1
-    assert result.base_growth_rate == D("110") / D("90") - D("1")
+    # owner earnings: FY2024 = 80+20-10=90, FY2025 = 85+25-15=95 -> CAGR over 1 year = 95/90-1
+    assert result.base_growth_rate == D("95") / D("90") - D("1")
+    assert not result.growth_capped
     # discount rate = 4%/100 + 1.0*0.045 = 0.04+0.045 = 0.085
     assert result.discount_rate == D("0.085")
     assert result.current_price_per_share == D("200")

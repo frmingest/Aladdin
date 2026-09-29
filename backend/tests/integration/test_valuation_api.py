@@ -116,7 +116,8 @@ def _risk_free_rate(rate="4.00", currency="USD") -> RiskFreeRate:
 def test_get_valuation_for_real_holding_computes_dcf(client):
     holding_id = _create_holding(client)
     _upload_filing(client, holding_id, "FY2024", net_income=80, d_and_a=20, capex=10, shares=10)
-    _upload_filing(client, holding_id, "FY2025", net_income=100, d_and_a=25, capex=15, shares=10)
+    # 85 (not 100) keeps the historical CAGR under v2's 10% growth cap.
+    _upload_filing(client, holding_id, "FY2025", net_income=85, d_and_a=25, capex=15, shares=10)
 
     _override(market_provider=_FakeMarketDataProvider(price=_price_point()), rate_provider=_FakeRiskFreeRateProvider(rate=_risk_free_rate()))
     response = client.get(f"/valuation/holdings/{holding_id}")

@@ -28,6 +28,7 @@ from sqlalchemy.orm import Session
 from app.config.settings import get_settings
 from app.domain.analysis_assumptions import get_analysis_assumptions
 from app.domain.period_dates import extract_year
+from app.domain.sectors import is_financial_sector
 from app.models.financial_line_item import FinancialLineItem
 from app.models.holding import Holding
 from app.providers.base import (
@@ -47,7 +48,11 @@ from app.services.filings.sec_edgar import latest_edgar_document
 from app.services.holding_facts import facts_by_period, latest_period
 from app.services.macro.evidence import add_macro_indicator_evidence
 from app.services.market_inputs import build_market_context
-from app.services.metrics import MetricsResult, compute_holding_metrics
+from app.services.metrics import (
+    MetricsResult,
+    compute_holding_metrics,
+    mark_not_meaningful_for_financials,
+)
 from app.services.research.common import ResearchSnapshot
 from app.services.research.company import get_company_research
 from app.services.research.macro import get_macro_research
@@ -300,6 +305,8 @@ def _add_market_multiples_evidence(
         packet.unavailable_reasons.append(f"market multiples: {context.unavailable_reason}")
         return
     result = compute_holding_metrics(latest.facts, latest.currencies, market=context.inputs)
+    if is_financial_sector(holding.sector):
+        mark_not_meaningful_for_financials(result)
     currency = context.reporting_currency or ""
     parts: list[str] = []
     for key, name, kind in (
@@ -410,11 +417,33 @@ def _add_research_evidence(
 
 
 def _add_valuation_evidence(result: HoldingValuationResult, add: Callable) -> None:
+    if result.valuation_status == "implausible":
+        add(
+            "valuation",
+            "Valuation withheld — model output not credible",
+            f"{result.valuation_status_reason} Do not cite a DCF, intrinsic value, margin of safety or "
+            "price target for this holding: the deterministic model's output was rejected by the "
+            "plausibility check, so there is no trustworthy valuation to rely on. Judge valuation from "
+            "the market multiples and financial history instead, and say the valuation is unavailable.",
+        )
+    if result.valuation_method == "financials_price_to_book":
+        add(
+            "valuation",
+            "Valuation method: justified price-to-book (bank/insurer)",
+            "An owner-earnings DCF does not apply to banks and insurers (capital must be retained, so "
+            "profit is not distributable). Owner earnings, net debt, interest coverage and ROIC are "
+            "deliberately not computed for this holding; do not treat their absence as a data gap or a risk.",
+        )
     if result.base_growth_rate is not None:
+        capped = (
+            f" (capped from a historical {_fmt_pct(result.raw_base_growth_rate)}; a past rate is not a forecast)"
+            if result.growth_capped and result.raw_base_growth_rate is not None
+            else ""
+        )
         add(
             "valuation",
             "Historical owner-earnings growth rate (base case)",
-            f"{_fmt_pct(result.base_growth_rate)}, assumptions {result.assumptions_version}.",
+            f"{_fmt_pct(result.base_growth_rate)}{capped}, assumptions {result.assumptions_version}.",
         )
     if result.discount_rate is not None:
         add(
@@ -431,6 +460,28 @@ def _add_valuation_evidence(result: HoldingValuationResult, add: Callable) -> No
             f"{result.regime} macro regime (regime adjustments {result.regime_adjustments_version}); "
             f"base CAPM rate before widening was {_fmt_pct(result.base_discount_rate or Decimal(0))}.",
         )
+    if result.financials is not None:
+        fin = result.financials
+        lines = []
+        for sc in fin.scenarios:
+            mos = fin.margin_of_safety(sc.label)
+            mos_text = f", margin of safety {_fmt_pct(mos)}" if mos is not None else ""
+            lines.append(
+                f"{sc.label}: ROE {_fmt_pct(sc.roe)}, justified P/B {sc.justified_price_to_book:.2f}x, "
+                f"value/share {_fmt_num(sc.value_per_share)} {result.valuation_currency or ''}{mos_text}"
+            )
+        price_text = (
+            _fmt_num(result.current_price_per_share) if result.current_price_per_share is not None else "unavailable"
+        )
+        add(
+            "valuation",
+            "Justified price-to-book scenarios (bear/base/bull)",
+            "; ".join(lines)
+            + f". Book value/share {_fmt_num(fin.book_value_per_share)}, cost of equity "
+            f"{_fmt_pct(fin.cost_of_equity)}, growth {_fmt_pct(fin.growth_rate)}, average of "
+            f"{fin.roe_periods_used} period(s) of ROE. Current price/share: {price_text} "
+            f"{result.valuation_currency or ''}.",
+        )
     if result.dcf is not None:
         scenario_lines = []
         for scenario in result.dcf.scenarios:
@@ -443,7 +494,13 @@ def _add_valuation_evidence(result: HoldingValuationResult, add: Callable) -> No
         add(
             "valuation",
             "DCF scenarios (base/bull/bear)",
-            "; ".join(scenario_lines) + f". Current price/share: "
+            "; ".join(scenario_lines)
+            + (
+                " Growth fades linearly to the terminal rate over the projection window."
+                if result.dcf.fades_to_terminal
+                else ""
+            )
+            + f" Current price/share: "
             f"{_fmt_num(result.current_price_per_share) if result.current_price_per_share is not None else 'unavailable'} "
             f"{result.valuation_currency or ''}.",
         )
@@ -457,7 +514,11 @@ def _add_valuation_evidence(result: HoldingValuationResult, add: Callable) -> No
         if m.computed:
             formatted = ", ".join(f"{name}={value:.2f}" for name, value in m.computed.items())
             add("valuation", f"Multiples ({m.period})", formatted)
-    if not result.dcf and not result.multiples:
+    if (
+        result.headline_values() is None
+        and not result.multiples
+        and result.valuation_status != "implausible"
+    ):
         add("valuation", "Valuation", "No valuation could be computed for this holding.")
 
 
@@ -477,6 +538,8 @@ def _add_financial_history_evidence(
     per_period: list[tuple[int, str, MetricsResult, Decimal | None]] = []
     for year, period, facts in history:
         metrics_result = compute_holding_metrics(facts, prior_facts=facts_by_year.get(year - 1))
+        if is_financial_sector(holding.sector):
+            mark_not_meaningful_for_financials(metrics_result)
         per_period.append((year, period, metrics_result, metrics_result.computed.get("roe")))
 
     roe_series = sorted(((y, v) for y, _p, _m, v in per_period if v is not None), key=lambda r: r[0])
