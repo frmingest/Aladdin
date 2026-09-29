@@ -47,9 +47,13 @@ def _to_decimal(value: object) -> Decimal | None:
     if value is None:
         return None
     try:
-        return Decimal(str(value))
+        result = Decimal(str(value))
     except (InvalidOperation, ValueError):
         return None
+    # yfinance yields NaN for missing closes (common on .OL/.DE tickers and
+    # funds). Decimal('NaN') parses fine but raises InvalidOperation on any
+    # ordered comparison (`<= 0`), which crashed whole analysis runs.
+    return result if result.is_finite() else None
 
 
 def _get(obj: object, key: str) -> object:
