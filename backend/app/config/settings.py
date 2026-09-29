@@ -102,6 +102,11 @@ class Settings(BaseSettings):
     # next chunk — mostly model load + reading a 16k-token prompt.
     ollama_timeout_seconds: float = 1800.0
     ollama_stall_timeout_seconds: float = 600.0
+    # A pass stops within seconds (instead of after OLLAMA_TIMEOUT_SECONDS)
+    # when less than this fraction of the model is in VRAM -- a partly-CPU
+    # model runs several times slower (2026-09-29, ETLX.DE: 78% on GPU,
+    # 3.5 tokens/s, timed out after 30 min). 0 disables the check.
+    ollama_min_gpu_share: float = 0.95
     # False = ask thinking models (Qwen3) to skip the <think> phase, which
     # is much faster and doesn't help schema-constrained JSON. None = don't
     # send the field at all.

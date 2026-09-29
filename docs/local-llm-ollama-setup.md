@@ -91,6 +91,7 @@ OLLAMA_NUM_CTX=24576               # room for a fund pass's prompt + its bigger 
 OLLAMA_KEEP_ALIVE=30m
 OLLAMA_TIMEOUT_SECONDS=1800        # cap for one whole pass
 OLLAMA_STALL_TIMEOUT_SECONDS=600   # longest wait for the next token (model load + reading the prompt)
+OLLAMA_MIN_GPU_SHARE=0.95          # stop a pass at once if less of the model than this is on the GPU (0 = off)
 OLLAMA_THINK=false
 # A fund/ETF blind pass answers a bigger schema than an equity's — give it
 # more output room, or its JSON can get cut off mid-answer (2026-09-27):
@@ -201,6 +202,7 @@ restarts the worker if it crashes. To start it at log-on: Task Scheduler → *Cr
 |---|---|
 | "filled Ollama's context window" | The evidence packet is bigger than `OLLAMA_NUM_CTX`. Raise it to `24576`, re-check `ollama ps` says 100% GPU. The app refuses rather than let Ollama silently cut evidence. |
 | "stopped at the output limit" | A fund/ETF blind pass already asks for a bigger budget automatically (`LLM_MAX_OUTPUT_TOKENS_FUND`, default `16384` — its `fund_v1` schema has one more section than an equity's `v1`). If it still happens, raise `LLM_MAX_OUTPUT_TOKENS_FUND` further (or `LLM_MAX_OUTPUT_TOKENS` for a plain equity holding), and make sure `OLLAMA_NUM_CTX` has room for both the prompt and that output (default `24576`). |
+| "Stopped early … only N% of the model is on the GPU" | The app refused to start a pass that would crawl on the CPU (partly-offloaded model, e.g. 78% GPU ≈ 3.5 tokens/s). Server-side, set `OLLAMA_FLASH_ATTENTION=1`, `OLLAMA_KV_CACHE_TYPE=q8_0`, `OLLAMA_NUM_PARALLEL=1` and restart Ollama; if it still spills, lower `OLLAMA_NUM_CTX` (each +8k of context costs roughly 1 GB of f16 KV cache for qwen3:14b) or use `qwen3:8b`. `OLLAMA_MIN_GPU_SHARE=0` runs anyway. |
 | "timed out generating … no new output for 600s" | Nothing came back at all: the model was still loading or reading the prompt. Check `ollama ps`; raise `OLLAMA_STALL_TIMEOUT_SECONDS` if the PC is just slow. |
 | "timed out generating … passed the 1800s limit … ~N tokens/s" | Tokens were coming, just slowly. Under ~10 tokens/s means the model is partly on the CPU (the message says how much is on the GPU): close GPU-heavy apps, set `OLLAMA_NUM_PARALLEL=1`, lower `OLLAMA_NUM_CTX`, or use `qwen3:8b`. |
 | "got stuck emitting blank output" | The model looped on whitespace inside the JSON; the app stops it early. Run again; if it repeats, try another model. |

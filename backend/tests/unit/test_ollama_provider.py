@@ -211,6 +211,27 @@ def test_wall_clock_cap_reports_progress_and_gpu_share(monkeypatch):
     assert "70% of the model is on the GPU" in message
 
 
+def test_partly_on_cpu_model_is_refused_at_first_token(monkeypatch):
+    monkeypatch.setattr(op, "gpu_share", lambda **_kw: 0.78)
+    provider, _ = _provider(lambda r: _ok(), min_gpu_share=0.95)
+    with pytest.raises(LLMUnavailableError, match="only 78% of the model is on the GPU") as err:
+        _call(provider)
+    assert "OLLAMA_MIN_GPU_SHARE" in str(err.value)
+
+
+def test_fully_on_gpu_or_unknown_share_is_allowed(monkeypatch):
+    for share in (1.0, 0.96, None):
+        monkeypatch.setattr(op, "gpu_share", lambda _s=share, **_kw: _s)
+        provider, _ = _provider(lambda r: _ok(), min_gpu_share=0.95)
+        assert _call(provider).content
+
+
+def test_gpu_check_is_off_by_default(monkeypatch):
+    monkeypatch.setattr(op, "gpu_share", lambda **_kw: 0.5)
+    provider, _ = _provider(lambda r: _ok())
+    assert _call(provider).content
+
+
 def test_endless_whitespace_is_stopped_early():
     pieces = ['{"verdict": '] + ["\n"] * 700
     provider, _ = _provider(lambda r: httpx.Response(200, content=_stream_body(pieces)))

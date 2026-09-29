@@ -184,6 +184,7 @@ class OllamaProvider(LedgerRecordingMixin, LLMProvider):
         keep_alive: str = "30m",
         timeout_seconds: float = 1800.0,
         stall_timeout_seconds: float = 600.0,
+        min_gpu_share: float = 0.0,
         think: bool | None = False,
         api_key: str | None = None,
         client: httpx.Client | None = None,
@@ -202,6 +203,10 @@ class OllamaProvider(LedgerRecordingMixin, LLMProvider):
         self._api_key = api_key
         self._timeout_seconds = timeout_seconds
         self._stall_timeout_seconds = stall_timeout_seconds
+        # Fail fast when the loaded model spills onto the CPU (2026-09-29).
+        # 0 = never check (the default here keeps unit tests hermetic; the
+        # factory passes Settings.ollama_min_gpu_share).
+        self._min_gpu_share = min_gpu_share
         # Streaming: the read timeout is the longest allowed gap between two
         # chunks, not the whole generation (see the module docstring).
         self._client = client or httpx.Client(
@@ -256,6 +261,23 @@ class OllamaProvider(LedgerRecordingMixin, LLMProvider):
             f"Ollama timed out generating (model={self._model}): {reason}; {progress}.{advice}"
         )
 
+    def _refuse_if_partly_on_cpu(self) -> None:
+        """Stop a pass that would crawl, instead of finding out 30 minutes
+        later (2026-09-29: ETLX.DE ran at 3.5 tokens/s with 78% of qwen3:14b
+        on the GPU and hit OLLAMA_TIMEOUT_SECONDS). Skipped when unknown."""
+        if self._min_gpu_share <= 0:
+            return
+        share = gpu_share(base_url=self._base_url, model=self._model, api_key=self._api_key)
+        if share is None or share >= self._min_gpu_share:
+            return
+        raise LLMUnavailableError(
+            f"Stopped early (model={self._model}): only {share:.0%} of the model is on the GPU "
+            f"(OLLAMA_MIN_GPU_SHARE={self._min_gpu_share:.0%}), so this pass would run several "
+            "times slower and likely hit the timeout."
+            + _offload_advice(share)
+            + " Set OLLAMA_MIN_GPU_SHARE=0 to run anyway."
+        )
+
     def _chat(self, payload: dict[str, Any]) -> _ChatResult:
         """One streamed ``/api/chat`` call, with connection-level retries."""
         url = f"{self._base_url}/api/chat"
@@ -302,6 +324,10 @@ class OllamaProvider(LedgerRecordingMixin, LLMProvider):
                     if piece:
                         parts.append(piece)
                         chunks += 1
+                        if chunks == 1:
+                            # The model is loaded now, so /api/ps shows how much
+                            # of it really sits in VRAM for this call's context.
+                            self._refuse_if_partly_on_cpu()
                         stripped = piece.rstrip()
                         if not stripped:
                             whitespace_run += len(piece)
