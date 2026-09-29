@@ -68,6 +68,7 @@ import type {
   UsageSummary,
   DemoModeState,
   ThesisMonitor,
+  TripwireCheckResult,
   TripwireCreateInput,
   TripwireUpdateInput,
   Tripwire,
@@ -473,6 +474,8 @@ export const api = {
   deleteTripwire: (tripwireId: string) =>
     request<void>(`/thesis/tripwires/${tripwireId}`, { method: "DELETE", query: { confirm: true } }),
   getThesisMonitor: () => request<ThesisMonitor>("/thesis/monitor"),
+  // Sprint 15 #5 — runs the nightly tripwire check now (refreshes prices, then evaluates).
+  checkTripwires: () => request<TripwireCheckResult>("/thesis/check", { method: "POST" }),
 
   // Portfolio risk (Sprint 12) — backend/app/api/risk.py. Correlation,
   // correlated-cluster flags, stress scenarios and macro regime.
