@@ -12,10 +12,8 @@ from app.models.analysis import (
     EquityAnalysisRun,
     EquityHoldingNote,
 )
-from app.models.analyst_synthesis import AnalystSynthesis
 from app.models.app_setting import AppSetting
 from app.models.base import Base
-from app.models.country_risk import CountryIndicator
 from app.models.document import Document, DocumentChunk, DocumentPage
 from app.models.financial_line_item import FinancialLineItem
 from app.models.fund import (
@@ -51,10 +49,8 @@ __all__ = [
     "Account",
     "AnalysisRun",
     "AnalysisWorkerHeartbeat",
-    "AnalystSynthesis",
     "AppSetting",
     "Base",
-    "CountryIndicator",
     "DecisionJournalEntry",
     "Document",
     "DocumentChunk",

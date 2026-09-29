@@ -9,12 +9,11 @@ from pydantic import BaseModel, ValidationError
 
 from app.config.paths import PROMPTS_DIR
 from app.domain.analysis_schema import (
+    ReconciliationOutputV1,
     cited_evidence_ids_reconciliation,
     get_reconciliation_schema,
-    is_dalio_schema,
 )
 from app.providers.base import LLMProvider, LLMResponse, LLMUnavailableError
-from app.services.analysis.blind_pass import max_output_tokens_for_schema
 from app.services.analysis.evidence_packet import EvidencePacket
 
 _NO_NOTES_PLACEHOLDER = "(the owner has not written any notes on this holding)"
@@ -31,7 +30,7 @@ def load_reconciliation_prompt(version: str) -> str:
 
 @dataclass
 class ReconciliationPassResult:
-    output: BaseModel  # ReconciliationOutputV1, or DalioReconciliationOutputV1 (F22)
+    output: ReconciliationOutputV1
     response: LLMResponse
     citation_warnings: list[str]
 
@@ -57,13 +56,8 @@ def run_reconciliation_pass(
         "Produce your reconciled assessment now, citing only evidence IDs from the list above."
     )
     schema = get_reconciliation_schema(schema_version)
-    extra = {}
-    if is_dalio_schema(schema_version):
-        # The Dalio reconciliation prompt carries the full 7-section blind
-        # output back in; same budget as its blind pass.
-        extra["max_output_tokens"] = max_output_tokens_for_schema(schema_version)
     response = llm_provider.generate_structured(
-        system_prompt=system_prompt, user_prompt=user_prompt, response_schema=schema, **extra
+        system_prompt=system_prompt, user_prompt=user_prompt, response_schema=schema
     )
     try:
         output = schema.model_validate_json(response.content)

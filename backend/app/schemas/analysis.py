@@ -16,12 +16,9 @@ from pydantic import BaseModel
 
 from app.domain.analysis_schema import (
     BlindPassOutputV1,
-    DalioBlindPassOutputV1,
-    DalioReconciliationOutputV1,
     FundBlindPassOutputV1,
     ReconciliationOutputV1,
 )
-from app.domain.analysis_schema.synthesis_v1 import SynthesisOutputV1
 
 
 class EvidenceItemOut(BaseModel):
@@ -55,11 +52,10 @@ class EquityAnalysisRunOut(BaseModel):
     completed_at: datetime | None
     error_message: str | None
     evidence_unavailable_reasons: list[str]
-    # Which one is decided by `schema_version` ("v1" vs "fund_v1", Sprint 8;
-    # "dalio_v1", Epic F22).
-    blind_pass: BlindPassOutputV1 | FundBlindPassOutputV1 | DalioBlindPassOutputV1 | None
+    # Which one is decided by `schema_version` ("v1" vs "fund_v1", Sprint 8).
+    blind_pass: BlindPassOutputV1 | FundBlindPassOutputV1 | None
     blind_pass_citation_warnings: list[str] | None
-    reconciliation: ReconciliationOutputV1 | DalioReconciliationOutputV1 | None
+    reconciliation: ReconciliationOutputV1 | None
     reconciliation_citation_warnings: list[str] | None
     price_target_low: Decimal | None
     price_target_high: Decimal | None
@@ -72,7 +68,6 @@ class EquityAnalysisRunOut(BaseModel):
     queued_at: datetime | None = None
     claimed_by: str | None = None
     attempts: int = 0
-    persona: str = "buffett_munger"
 
 
 class EquityHoldingNoteOut(BaseModel):
@@ -130,8 +125,6 @@ class QueuedRunOut(BaseModel):
     provider: str | None
     model_name: str | None
     verdict: str | None = None
-    persona: str = "buffett_munger"
-    auto_queued: bool = False
 
 
 class AnalysisWorkerOut(BaseModel):
@@ -167,64 +160,3 @@ class QueueReadyHoldingsOut(BaseModel):
     queued: list[QueuedRunOut]
     already_queued: list[QueuedRunOut]
     skipped: list[QueueSkippedOut]
-
-
-# --- Epic F22: side-by-side, auto-queue, synthesis ---
-
-
-class ComparisonOut(BaseModel):
-    agreement: Literal["agree", "partly_agree", "disagree", "incomplete"]
-    headline: str
-    buffett_verdict: str | None
-    dalio_verdict: str | None
-    dalio_role: str | None
-    buffett_moat: str | None
-    verdict_gap: int | None
-    points: list[str]
-    buffett_analyzed_at: datetime | None
-    dalio_analyzed_at: datetime | None
-
-
-class SynthesisOut(BaseModel):
-    model_config = {"protected_namespaces": ()}
-
-    id: UUID
-    holding_id: UUID
-    buffett_run_id: UUID
-    dalio_run_id: UUID
-    status: str
-    schema_version: str
-    prompt_version: str
-    provider: str | None
-    model_name: str | None
-    output: SynthesisOutputV1 | None
-    citation_warnings: list[str]
-    error_message: str | None
-    created_at: datetime
-
-
-class SideBySideOut(BaseModel):
-    holding_id: UUID
-    buffett: EquityAnalysisRunOut | None
-    dalio: EquityAnalysisRunOut | None
-    comparison: ComparisonOut
-    synthesis: SynthesisOut | None
-    synthesis_enabled: bool
-    dalio_verdict_basis: str
-
-
-class AutoQueueActionOut(BaseModel):
-    holding_id: UUID
-    ticker: str
-    persona: str
-    action: str
-    detail: str
-    run_id: UUID | None
-
-
-class AutoQueueOut(BaseModel):
-    mode: str
-    cap: int
-    auto_queued_last_24h: int
-    queued_count: int
-    actions: list[AutoQueueActionOut]

@@ -1,8 +1,6 @@
 import { useState } from "react";
 import { ApiError } from "../lib/api";
 import { useDemoMode } from "../lib/demoMode";
-import { useAnalystMode } from "../lib/analystMode";
-import { MODE_OPTIONS } from "../lib/analystTypes";
 import { Card, PageHeader, SectionTitle } from "../components/ui";
 
 /**
@@ -16,7 +14,6 @@ import { Card, PageHeader, SectionTitle } from "../components/ui";
  */
 export default function SettingsPage() {
   const { demoMode, setDemoMode } = useDemoMode();
-  const analyst = useAnalystMode();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -86,70 +83,6 @@ export default function SettingsPage() {
         </p>
 
         {error && <p className="mt-3 text-sm text-negative">{error}</p>}
-      </Card>
-
-      <Card className="mt-6">
-        <SectionTitle hint="Epic F22 — the same switch as the top bar; applies to every page">
-          Analyst modes
-        </SectionTitle>
-        <div className="space-y-2">
-          {MODE_OPTIONS.map((opt) => (
-            <label
-              key={opt.value}
-              className={`flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-2.5 transition-colors ${
-                analyst.mode === opt.value ? "border-accent bg-accent-subtle" : "border-border hover:bg-border-subtle"
-              }`}
-            >
-              <input
-                type="radio"
-                name="analyst-mode"
-                checked={analyst.mode === opt.value}
-                onChange={() => void analyst.setMode(opt.value)}
-                className="mt-0.5"
-              />
-              <span>
-                <span className="block text-sm font-medium text-ink">{opt.label}</span>
-                <span className="block text-xs text-ink-muted">{opt.hint}</span>
-              </span>
-            </label>
-          ))}
-        </div>
-        <p className="mt-3 text-xs text-ink-muted">
-          In side-by-side mode, a holding missing the other analyst&apos;s run (or with one more than 30 days
-          older than its partner) gets it queued automatically on your PC&apos;s local LLM — never on Gemini —
-          at most 20 automatic runs per 24 hours. Automatic runs are marked &ldquo;auto&rdquo; on the Analysis
-          queue page.
-        </p>
-
-        <div className="mt-5 flex items-start justify-between gap-6 border-t border-border-subtle pt-4">
-          <div className="max-w-md space-y-1 text-sm text-ink-muted">
-            <p className="font-medium text-ink">&ldquo;Where they&apos;d argue&rdquo; synthesis</p>
-            <p>
-              Adds a button in side-by-side mode for an optional, clearly labelled model pass that reads both
-              analyses and lays out where they agree and disagree. It never changes either verdict. Off by
-              default; each run spends one call on the server&apos;s LLM.
-            </p>
-          </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={analyst.synthesisEnabled}
-            disabled={!analyst.loaded}
-            onClick={() => void analyst.setSynthesisEnabled(!analyst.synthesisEnabled)}
-            className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${
-              analyst.synthesisEnabled ? "bg-accent" : "bg-border"
-            }`}
-            title={analyst.synthesisEnabled ? "Turn the synthesis off" : "Turn the synthesis on"}
-          >
-            <span
-              aria-hidden
-              className={`inline-block h-5 w-5 rounded-full bg-onfill shadow transition-transform ${
-                analyst.synthesisEnabled ? "translate-x-6" : "translate-x-1"
-              }`}
-            />
-          </button>
-        </div>
-        {analyst.error && <p className="mt-3 text-sm text-negative">{analyst.error}</p>}
       </Card>
     </div>
   );

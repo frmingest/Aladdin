@@ -3,7 +3,7 @@
 **Status:** written and tested on branch `feature/llm-usage-ledger`, PR #10 open for review. Not merged, not deployed, not checked live.
 
 ## Why
-The Gemini daily-request guard (`DailyBudgetGuard`) lived in process memory. It reset on every restart or redeploy, and the web server and the PC worker each kept their own count, so nobody could say how much of today's ~20 calls was really left. F22's side-by-side mode roughly doubles LLM calls, which made a trustworthy count a prerequisite.
+The Gemini daily-request guard (`DailyBudgetGuard`) lived in process memory. It reset on every restart or redeploy, and the web server and the PC worker each kept their own count, so nobody could say how much of today's ~20 calls was really left. A trustworthy count was a prerequisite for any feature that adds LLM calls.
 
 ## What was built
 
@@ -36,4 +36,4 @@ The Gemini daily-request guard (`DailyBudgetGuard`) lived in process memory. It 
 4. Restart the PC worker so it uses the shared count.
 
 ## Follow-ups (backlog)
-Per-holding / per-run attribution, per-persona split for F22 side-by-side, Tavily call logging, a cost-per-token estimate, pruning old rows.
+Per-holding / per-run attribution, Tavily call logging, a cost-per-token estimate, pruning old rows.

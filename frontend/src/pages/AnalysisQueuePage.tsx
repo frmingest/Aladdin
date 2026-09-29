@@ -2,15 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, ApiError } from "../lib/api";
 import { formatDate, formatDuration, formatRelative } from "../lib/format";
-import type {
-  AnalysisQueue,
-  AnalysisWorker,
-  QueuedRun,
-  QueuePersona,
-  QueueReadyHoldingsResult,
-  QueueScope,
-} from "../lib/types";
-import { useAnalystMode } from "../lib/analystMode";
+import type { AnalysisQueue, AnalysisWorker, QueuedRun, QueueReadyHoldingsResult, QueueScope } from "../lib/types";
 import { Button, Card, EmptyState, Modal, PageHeader, SectionTitle } from "../components/ui";
 
 /** Sprint 5B (F8 local LLM from Railway + F5 overnight queue).
@@ -27,37 +19,6 @@ const QUEUE_SCOPE_OPTIONS: { value: QueueScope; label: string; hint: string }[] 
   { value: "watchlist", label: "Watchlist only", hint: "Companies you're following but don't own." },
   { value: "all", label: "All holdings + watchlist", hint: "Owned positions and watchlist companies together." },
 ];
-
-// Epic F22, story 22.6: which analyst to queue.
-const QUEUE_PERSONA_OPTIONS: { value: QueuePersona; label: string; hint: string }[] = [
-  { value: "buffett_munger", label: "Buffett/Munger", hint: "Stocks, equity funds and ETFs." },
-  { value: "dalio", label: "Ray Dalio", hint: "Every holding type, including bond funds and gold ETCs." },
-  { value: "both", label: "Both", hint: "One run per analyst for each holding." },
-];
-
-/** Persona + "auto" labels on a queue row (F22). */
-function PersonaTags({ run }: { run: QueuedRun }) {
-  const dalio = run.persona === "dalio";
-  return (
-    <span className="mt-1 flex flex-wrap gap-1">
-      <span
-        className={`rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
-          dalio ? "bg-accent-subtle text-accent" : "bg-border-subtle text-ink-muted"
-        }`}
-      >
-        {dalio ? "Dalio" : "Buffett/Munger"}
-      </span>
-      {run.auto_queued && (
-        <span
-          className="rounded bg-caution-subtle px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-caution"
-          title="Queued automatically by side-by-side mode"
-        >
-          auto
-        </span>
-      )}
-    </span>
-  );
-}
 
 const WORKER_STATE: Record<string, string> = {
   idle: "Idle, waiting for work",
@@ -206,7 +167,6 @@ function RunTable({
                   {run.holding_name ?? run.ticker ?? run.holding_id}
                 </Link>
                 <p className="text-xs text-ink-faint">{run.ticker}</p>
-                <PersonaTags run={run} />
               </td>
               <td className="py-3 pr-4">
                 <StatusPill status={run.status} />
@@ -272,10 +232,6 @@ export default function AnalysisQueuePage() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [scopePickerOpen, setScopePickerOpen] = useState(false);
   const [scope, setScope] = useState<QueueScope>("holdings");
-  const { mode } = useAnalystMode();
-  const [persona, setPersona] = useState<QueuePersona>(
-    mode === "dalio" ? "dalio" : mode === "side_by_side" ? "both" : "buffett_munger",
-  );
 
   const load = useCallback(() => {
     api
@@ -293,12 +249,12 @@ export default function AnalysisQueuePage() {
     return () => window.clearInterval(timer);
   }, [load]);
 
-  async function queueAll(chosenScope: QueueScope, chosenPersona: QueuePersona) {
+  async function queueAll(chosenScope: QueueScope) {
     setScopePickerOpen(false);
     setQueueing(true);
     setError(null);
     try {
-      setResult(await api.queueReadyHoldings(chosenScope, chosenPersona));
+      setResult(await api.queueReadyHoldings(chosenScope));
       load();
     } catch (e) {
       setError(errorText(e));
@@ -359,35 +315,11 @@ export default function AnalysisQueuePage() {
             </label>
           ))}
         </div>
-        <p className="mb-2 mt-5 text-sm text-ink-muted">Which analyst?</p>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-          {QUEUE_PERSONA_OPTIONS.map((opt) => (
-            <label
-              key={opt.value}
-              className={`flex cursor-pointer items-start gap-2 rounded-lg border px-3 py-2 transition-colors ${
-                persona === opt.value ? "border-accent bg-accent-subtle" : "border-border hover:bg-border-subtle"
-              }`}
-            >
-              <input
-                type="radio"
-                name="queue-persona"
-                value={opt.value}
-                checked={persona === opt.value}
-                onChange={() => setPersona(opt.value)}
-                className="mt-0.5 accent-current text-accent"
-              />
-              <span>
-                <span className="block text-sm font-medium text-ink">{opt.label}</span>
-                <span className="block text-xs text-ink-muted">{opt.hint}</span>
-              </span>
-            </label>
-          ))}
-        </div>
         <div className="mt-5 flex justify-end gap-2">
           <Button variant="secondary" onClick={() => setScopePickerOpen(false)}>
             Cancel
           </Button>
-          <Button onClick={() => void queueAll(scope, persona)} disabled={queueing}>
+          <Button onClick={() => void queueAll(scope)} disabled={queueing}>
             {queueing ? "Queueing…" : "Queue"}
           </Button>
         </div>
@@ -404,8 +336,8 @@ export default function AnalysisQueuePage() {
           </p>
           {result.skipped.length > 0 && (
             <ul className="mt-2 space-y-1 text-xs text-ink-muted">
-              {result.skipped.map((s, i) => (
-                <li key={`${s.holding_id}-${i}`}>
+              {result.skipped.map((s) => (
+                <li key={s.holding_id}>
                   <Link to={`/holdings/${s.holding_id}`} className="font-medium text-ink hover:text-accent">
                     {s.holding_name ?? s.ticker}
                   </Link>{" "}

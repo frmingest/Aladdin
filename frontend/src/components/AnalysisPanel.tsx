@@ -6,21 +6,17 @@ import type {
   AnalysisQueue,
   AnalysisReadiness,
   AnalysisRun,
-  DalioBlindPassOutput,
   EvidenceItem,
   FundBlindPassOutput,
   HoldingNote,
   MoatRating,
   NarrativeAssessment,
-  Persona,
   QueuedRun,
   ReadinessStatus,
   VerdictContent,
   VerdictRating,
 } from "../lib/types";
-import { isDalioBlindPass, isFundBlindPass, verdictRole } from "../lib/types";
-import { ENVIRONMENT_LABELS, ROLE_LABELS } from "../lib/analystTypes";
-import { useAnalystMode } from "../lib/analystMode";
+import { isFundBlindPass } from "../lib/types";
 import { dataGapCount } from "../lib/prose";
 import { Prose, WithFigures } from "./Prose";
 import { Button, Card, EmptyState } from "./ui";
@@ -348,17 +344,12 @@ function VerdictCard({
   run,
   verdict,
   evidence,
-  basis,
 }: {
   run: AnalysisRun;
   verdict: VerdictContent;
   evidence: Map<string, EvidenceItem>;
-  /** F22: the Dalio verdict's "basis" line (ECON-F22-01). */
-  basis?: string;
 }) {
   const reconciliation = run.reconciliation;
-  const role = verdictRole(verdict);
-  const isDalio = run.persona === "dalio";
   const blindRating = run.blind_pass?.verdict.rating;
   const changed = reconciliation?.changed_from_blind && blindRating && blindRating !== verdict.rating;
 
@@ -366,22 +357,12 @@ function VerdictCard({
     <Card>
       <div className="flex flex-wrap items-start justify-between gap-6">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-faint">
-            {isDalio ? "Dalio verdict" : "Verdict"}
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-faint">Verdict</p>
+          <p
+            className={`mt-1.5 inline-block rounded-lg px-4 py-1.5 font-display text-2xl font-semibold tracking-tight ${RATING_STYLES[verdict.rating]}`}
+          >
+            {verdict.rating}
           </p>
-          <div className="mt-1.5 flex flex-wrap items-center gap-2">
-            <p
-              className={`inline-block rounded-lg px-4 py-1.5 font-display text-2xl font-semibold tracking-tight ${RATING_STYLES[verdict.rating]}`}
-            >
-              {verdict.rating}
-            </p>
-            {role && (
-              <span className="rounded-full bg-accent-subtle px-3 py-1 text-xs font-medium text-accent">
-                Role: {ROLE_LABELS[role]}
-              </span>
-            )}
-          </div>
-          {isDalio && basis && <p className="mt-2 max-w-[60ch] text-xs text-ink-muted">{basis}</p>}
           {changed && (
             <p className="mt-2 text-xs text-ink-muted">
               Blind pass said <span className="font-medium text-ink">{blindRating}</span>; changed after
@@ -398,8 +379,6 @@ function VerdictCard({
           <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-faint">Price target range</p>
           {run.schema_version.startsWith("fund") ? (
             <p className="mt-1 text-sm text-ink-faint">Not applicable to a fund (no DCF)</p>
-          ) : isDalio && !run.price_target_low ? (
-            <p className="mt-1 text-sm text-ink-faint">n/a — no DCF for this holding (funds, ETFs and ETCs have none)</p>
           ) : run.price_target_warning ? (
             <div className="mt-1.5 rounded-md border border-negative/30 bg-negative-subtle px-3 py-2 text-left text-xs text-negative">
               <p className="font-semibold">Price target not reliable</p>
@@ -502,7 +481,7 @@ function FundMoatCard({
 function MoatCard({ run, evidence }: { run: AnalysisRun; evidence: Map<string, EvidenceItem> }) {
   const [open, setOpen] = useState(false);
   const blind = run.blind_pass;
-  if (!blind || isFundBlindPass(blind) || isDalioBlindPass(blind)) return null;
+  if (!blind || isFundBlindPass(blind)) return null;
   const moat = blind.moat;
   return (
     <Card>
@@ -559,12 +538,7 @@ type SectionIcon =
   | "valuation"
   | "steward"
   | "portfolio"
-  | "role"
-  | "cycle"
-  | "quadrant"
-  | "currency"
-  | "country"
-  | "order";
+  | "role";
 
 // Simple 24px line icons (stroke = currentColor), one per analysis section,
 // so the cards can be told apart before reading a word.
@@ -577,11 +551,6 @@ const ICON_PATHS: Record<SectionIcon, string> = {
   steward: "M12 11a4 4 0 100-8 4 4 0 000 8z M4 21a8 8 0 0116 0",
   portfolio: "M12 3v9l7.8 4.5 M12 3a9 9 0 109 9",
   role: "M12 3a9 9 0 100 18 9 9 0 000-18z M12 8a4 4 0 100 8 4 4 0 000-8z M12 11.5v1",
-  cycle: "M21 12a9 9 0 01-15.5 6.2 M3 12a9 9 0 0115.5-6.2 M18.5 2v4h-4 M5.5 22v-4h4",
-  quadrant: "M12 3v18 M3 12h18 M7 7h.01 M17 17h.01",
-  currency: "M12 3v18 M16 7.5c-.6-1.2-2.1-2-4-2-2.2 0-4 1.2-4 3s1.8 2.6 4 3 4 1.2 4 3-1.8 3-4 3c-1.9 0-3.4-.8-4-2",
-  country: "M4 21V4 M4 4h11l-2 4 2 4H4",
-  order: "M12 3l9 5-9 5-9-5 9-5z M3 13l9 5 9-5",
 };
 
 function CardTitle({ icon, children }: { icon: SectionIcon; children: React.ReactNode }) {
@@ -818,158 +787,7 @@ function NotesCard({
 
 // ---------------------------------------------------------------------------
 
-/** Epic F22: the Dalio persona has no readiness endpoint — it needs only a
- * ticker, and works on every instrument type — so its run card is simpler. */
-function DalioRunCard({
-  running,
-  onRun,
-  hasRun,
-  onQueue,
-  queueing,
-  pending,
-}: {
-  running: boolean;
-  onRun: () => void;
-  hasRun: boolean;
-  onQueue: () => void;
-  queueing: boolean;
-  pending: boolean;
-}) {
-  return (
-    <Card>
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0">
-          <h3 className="text-sm font-semibold text-ink">Dalio analysis</h3>
-          <p className="mt-0.5 max-w-[70ch] text-xs text-ink-muted">
-            Cycle position, growth/inflation fit, currency and country risk, and the job this holding does
-            in your portfolio. Works for stocks, funds and ETCs. Numbers come from stored macro, price and
-            World Bank data; missing data is listed, never guessed. A cloud run costs about 2 Gemini calls.
-          </p>
-        </div>
-        <div className="flex shrink-0 flex-wrap gap-2">
-          <Button
-            variant="secondary"
-            onClick={onQueue}
-            disabled={queueing || pending || running}
-            title="Queue it for the worker on your PC (Ollama). The page doesn't need to stay open."
-          >
-            {queueing ? "Queueing…" : pending ? "Queued on PC" : "Run on my PC"}
-          </Button>
-          <Button onClick={onRun} disabled={running || pending}>
-            {running ? "Analyzing…" : hasRun ? "Run again" : "Run Dalio analysis"}
-          </Button>
-        </div>
-      </div>
-      {running && (
-        <p className="mt-3 text-sm text-ink-muted">
-          Building the Dalio evidence packet (macro, liquidity, betas, correlation, country risk), then the
-          blind and reconciliation passes. Keep this page open.
-        </p>
-      )}
-    </Card>
-  );
-}
-
-const SHORT_PHASE_LABELS: Record<string, string> = {
-  early_expansion: "Early expansion",
-  late_expansion: "Late expansion",
-  tightening: "Tightening",
-  contraction: "Contraction",
-  reflation: "Reflation",
-  unclear: "Unclear",
-};
-const LONG_PHASE_LABELS: Record<string, string> = {
-  early: "Early",
-  mid: "Mid",
-  late_leveraging: "Late (leveraging)",
-  deleveraging: "Deleveraging",
-  unclear: "Unclear",
-};
-
-function DalioCycleCard({ blind, evidence }: { blind: DalioBlindPassOutput; evidence: Map<string, EvidenceItem> }) {
-  const [open, setOpen] = useState(false);
-  const envs = blind.quadrant_fit.favoured_environments;
-  return (
-    <Card>
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        aria-expanded={open}
-        className="flex w-full flex-wrap items-center justify-between gap-3 text-left"
-      >
-        <CardTitle icon="cycle">Cycle position &amp; quadrant fit</CardTitle>
-        <span className="flex flex-wrap items-center gap-2">
-          <span className="rounded-full bg-border-subtle px-2.5 py-0.5 text-xs font-medium text-ink">
-            Short-term: {SHORT_PHASE_LABELS[blind.debt_cycle.short_term_phase] ?? blind.debt_cycle.short_term_phase}
-          </span>
-          <span className="rounded-full bg-border-subtle px-2.5 py-0.5 text-xs font-medium text-ink">
-            Long-term: {LONG_PHASE_LABELS[blind.debt_cycle.long_term_phase] ?? blind.debt_cycle.long_term_phase}
-          </span>
-          <CardChevron open={open} />
-        </span>
-      </button>
-      <div className="mt-3 flex flex-wrap items-center gap-1.5">
-        <span className="mr-1 text-[11px] font-medium uppercase tracking-wider text-ink-faint">Suits</span>
-        {envs.length === 0 ? (
-          <span className="text-xs text-ink-muted">no clear environment</span>
-        ) : (
-          envs.map((e) => (
-            <span key={e} className="rounded-full bg-accent-subtle px-2 py-0.5 text-xs font-medium text-accent">
-              {ENVIRONMENT_LABELS[e] ?? e}
-            </span>
-          ))
-        )}
-      </div>
-      {open && (
-        <div className="mt-4 space-y-4">
-          <div>
-            <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-ink-faint">Debt cycle</p>
-            <Prose text={blind.debt_cycle.summary} />
-            <Citations ids={blind.debt_cycle.evidence_ids} evidence={evidence} />
-          </div>
-          <div>
-            <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-ink-faint">Growth / inflation quadrant</p>
-            <Prose text={blind.quadrant_fit.summary} />
-            <Citations ids={blind.quadrant_fit.evidence_ids} evidence={evidence} />
-          </div>
-        </div>
-      )}
-    </Card>
-  );
-}
-
-function DalioSections({ blind, evidence }: { blind: DalioBlindPassOutput; evidence: Map<string, EvidenceItem> }) {
-  return (
-    <>
-      <DalioCycleCard blind={blind} evidence={evidence} />
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <NarrativeCard title="Currency & reserve-currency risk" icon="currency" section={blind.currency_risk} evidence={evidence} />
-        <NarrativeCard title="Country & sovereign risk" icon="country" section={blind.country_risk} evidence={evidence} />
-        <NarrativeCard title="Internal & external order" icon="order" section={blind.internal_external_order} evidence={evidence} />
-        <NarrativeCard
-          title="Portfolio role & diversification"
-          icon="portfolio"
-          section={blind.portfolio_role_and_diversification}
-          evidence={evidence}
-        />
-      </div>
-    </>
-  );
-}
-
-export function AnalysisPanel({
-  holdingId,
-  persona = "buffett_munger",
-  showNotes = true,
-}: {
-  holdingId: string;
-  /** Epic F22: which analyst's latest run to show and run. */
-  persona?: Persona;
-  /** Side-by-side shows one shared notes card instead of one per column. */
-  showNotes?: boolean;
-}) {
-  const isDalio = persona === "dalio";
-  const { dalioVerdictBasis } = useAnalystMode();
+export function AnalysisPanel({ holdingId }: { holdingId: string }) {
   const [run, setRun] = useState<AnalysisRun | null | undefined>(undefined);
   const [runError, setRunError] = useState<string | null>(null);
   const [readiness, setReadiness] = useState<AnalysisReadiness | null>(null);
@@ -978,12 +796,11 @@ export function AnalysisPanel({
   const [queue, setQueue] = useState<AnalysisQueue | null>(null);
   const [queueing, setQueueing] = useState(false);
 
-  const pending =
-    queue?.pending.find((r) => r.holding_id === holdingId && (r.persona ?? "buffett_munger") === persona) ?? null;
+  const pending = queue?.pending.find((r) => r.holding_id === holdingId) ?? null;
 
   const loadLatest = useCallback(() => {
     return api
-      .getLatestAnalysis(holdingId, persona)
+      .getLatestAnalysis(holdingId)
       .then(setRun)
       .catch((e) => {
         if (e instanceof ApiError && e.status === 404) setRun(null);
@@ -992,7 +809,7 @@ export function AnalysisPanel({
           setRunError(errorText(e));
         }
       });
-  }, [holdingId, persona]);
+  }, [holdingId]);
 
   const loadQueue = useCallback(() => {
     return api
@@ -1002,7 +819,6 @@ export function AnalysisPanel({
   }, []);
 
   function loadReadiness() {
-    if (isDalio) return; // Buffett/Munger readiness checks don't apply to the Dalio persona
     setReadinessError(null);
     api
       .getAnalysisReadiness(holdingId)
@@ -1016,7 +832,7 @@ export function AnalysisPanel({
     loadQueue();
     loadReadiness();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [holdingId, persona]);
+  }, [holdingId]);
 
   // While a local run is pending, poll the queue; when it leaves the queue,
   // fetch the finished result.
@@ -1043,7 +859,7 @@ export function AnalysisPanel({
     setQueueing(true);
     setRunError(null);
     try {
-      await api.queueAnalysis(holdingId, persona);
+      await api.queueAnalysis(holdingId);
       await loadQueue();
     } catch (e) {
       setRunError(errorText(e));
@@ -1069,9 +885,9 @@ export function AnalysisPanel({
   }
 
   function confirmCloudRun(): boolean {
-    const cost = isDalio ? 2 : readiness?.estimated_gemini_calls ?? 2;
+    const cost = readiness?.estimated_gemini_calls ?? 2;
     return window.confirm(
-      `Run the ${isDalio ? "Dalio " : ""}analysis? This spends about ${cost} Gemini call${cost === 1 ? "" : "s"} of today's quota.`,
+      `Run the analysis? This spends about ${cost} Gemini call${cost === 1 ? "" : "s"} of today's quota.`,
     );
   }
 
@@ -1089,7 +905,7 @@ export function AnalysisPanel({
     setRunning(true);
     setRunError(null);
     try {
-      setRun(await api.runAnalysis(holdingId, persona));
+      setRun(await api.runAnalysis(holdingId));
     } catch (e) {
       setRunError(errorText(e));
     } finally {
@@ -1105,27 +921,16 @@ export function AnalysisPanel({
 
   return (
     <div className="space-y-4">
-      {isDalio ? (
-        <DalioRunCard
-          running={running}
-          onRun={() => void handleRun()}
-          hasRun={Boolean(run)}
-          onQueue={handleQueue}
-          queueing={queueing}
-          pending={Boolean(pending)}
-        />
-      ) : (
-        <ReadinessCard
-          readiness={readiness}
-          error={readinessError}
-          running={running}
-          onRun={() => void handleRun()}
-          hasRun={Boolean(run)}
-          onQueue={handleQueue}
-          queueing={queueing}
-          pending={Boolean(pending)}
-        />
-      )}
+      <ReadinessCard
+        readiness={readiness}
+        error={readinessError}
+        running={running}
+        onRun={() => void handleRun()}
+        hasRun={Boolean(run)}
+        onQueue={handleQueue}
+        queueing={queueing}
+        pending={Boolean(pending)}
+      />
 
       {pending && queue && (
         <PendingRunCard
@@ -1134,7 +939,7 @@ export function AnalysisPanel({
           busy={queueing || running}
           onCancel={() => void handleCancel()}
           onRunInCloud={() => void handleRunInCloud()}
-          cloudReady={isDalio || Boolean(readiness?.ready)}
+          cloudReady={Boolean(readiness?.ready)}
         />
       )}
 
@@ -1144,9 +949,8 @@ export function AnalysisPanel({
 
       {run === null && !runError && (
         <EmptyState>
-          {isDalio
-            ? "No Dalio analysis yet. Run one — the Dalio verdict, portfolio role, cycle position and every piece of evidence behind them will show here."
-            : "No analysis yet. When the readiness checks pass, run one — the verdict, moat breakdown and every piece of evidence behind them will show here."}
+          No analysis yet. When the readiness checks pass, run one — the verdict, moat breakdown and
+          every piece of evidence behind them will show here.
         </EmptyState>
       )}
 
@@ -1169,11 +973,7 @@ export function AnalysisPanel({
         <p className="text-xs text-caution">{run.error_message}</p>
       )}
 
-      {run && verdict && (
-        <VerdictCard run={run} verdict={verdict} evidence={evidence} basis={isDalio ? dalioVerdictBasis : undefined} />
-      )}
-
-      {run && blind && isDalioBlindPass(blind) && <DalioSections blind={blind} evidence={evidence} />}
+      {run && verdict && <VerdictCard run={run} verdict={verdict} evidence={evidence} />}
 
       {run && blind && isFundBlindPass(blind) && (
         <>
@@ -1188,7 +988,7 @@ export function AnalysisPanel({
         </>
       )}
 
-      {run && blind && !isFundBlindPass(blind) && !isDalioBlindPass(blind) && (
+      {run && blind && !isFundBlindPass(blind) && (
         <>
           <MoatCard run={run} evidence={evidence} />
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -1200,11 +1000,9 @@ export function AnalysisPanel({
         </>
       )}
 
-      {showNotes && <NotesCard holdingId={holdingId} usedInLatestRun={run ? run.user_notes_snapshot : undefined} />}
+      <NotesCard holdingId={holdingId} usedInLatestRun={run ? run.user_notes_snapshot : undefined} />
 
       {run && <RunDetails run={run} />}
     </div>
   );
 }
-
-export { NotesCard, Citations };

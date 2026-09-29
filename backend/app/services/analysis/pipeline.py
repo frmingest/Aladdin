@@ -22,12 +22,6 @@ from typing import TypeVar
 from sqlalchemy.orm import Session
 
 from app.config.settings import get_settings
-from app.domain.analyst_modes import (
-    DALIO,
-    DALIO_ANALYZABLE_TYPES,
-    DEFAULT_PERSONA,
-    is_persona,
-)
 from app.domain.instrument_types import EQUITY_ANALYZABLE_TYPES, is_fund_type
 from app.models.analysis import EquityAnalysisRun, EquityAnalysisRunStatus
 from app.models.holding import Holding
@@ -47,11 +41,6 @@ from app.services.analysis.evidence_packet import (
 )
 from app.services.analysis.notes import get_holding_note
 from app.services.analysis.reconciliation_pass import run_reconciliation_pass
-from app.services.dalio.evidence import (
-    DALIO_EVIDENCE_PACKET_VERSION,
-    build_dalio_evidence_packet,
-)
-from app.services.dalio.macro import ensure_dalio_macro_fresh
 from app.services.funds.evidence import (
     FUND_EVIDENCE_PACKET_VERSION,
     build_fund_evidence_packet,
@@ -114,10 +103,8 @@ def run_full_analysis(
     research_provider: ResearchProvider,
     announcements_provider: NewswebAnnouncementsProvider | None = None,
     macro_data_provider: MacroDataProvider | None = None,
-    country_indicator_provider=None,
     run: EquityAnalysisRun | None = None,
     on_stage: Callable[[str], None] | None = None,
-    persona: str | None = None,
 ) -> EquityAnalysisRun:
     """Runs the full pipeline for `holding`.
 
@@ -125,18 +112,8 @@ def run_full_analysis(
     local worker passes the QUEUED run it claimed, so the row the UI has
     been polling is the one that gets the result). None = create a new row
     (the synchronous cloud path, unchanged).
-
-    `persona` (Epic F22): "buffett_munger" (default) or "dalio". None =
-    the claimed run's own persona, else the default — so a queued Dalio run
-    is always executed as Dalio.
     """
-    if persona is None:
-        persona = run.persona if run is not None and run.persona else DEFAULT_PERSONA
-    if not is_persona(persona):
-        raise ValueError(f"unknown persona: {persona!r}")
-    is_dalio = persona == DALIO
-    allowed = DALIO_ANALYZABLE_TYPES if is_dalio else EQUITY_ANALYZABLE_TYPES
-    if holding.asset_class_raw not in allowed:
+    if holding.asset_class_raw not in EQUITY_ANALYZABLE_TYPES:
         raise NotEquityAnalyzableError(
             f"holding {holding.ticker!r} is tagged {holding.asset_class_raw!r}, not analyzable as "
             f"equity ({', '.join(sorted(EQUITY_ANALYZABLE_TYPES))} only)"
@@ -146,13 +123,9 @@ def run_full_analysis(
     # Sprint 8 (F9): an equity ETF / fund takes the fund path — its own
     # evidence packet (look-through, cost, track record), schema and
     # prompts. Everything else below (passes, fallback, notes, statuses) is
-    # shared. F22: the Dalio persona has one path for every type.
-    is_fund = is_fund_type(holding.asset_class_raw) and not is_dalio
-    if is_dalio:
-        schema_version = settings.active_dalio_analysis_schema_version
-        prompt_version = settings.active_dalio_analysis_prompt_version
-        packet_version = DALIO_EVIDENCE_PACKET_VERSION
-    elif is_fund:
+    # shared.
+    is_fund = is_fund_type(holding.asset_class_raw)
+    if is_fund:
         schema_version = settings.active_fund_analysis_schema_version
         prompt_version = settings.active_fund_analysis_prompt_version
         packet_version = FUND_EVIDENCE_PACKET_VERSION
@@ -165,9 +138,6 @@ def run_full_analysis(
     # committed or rolled back by it: stale Norges Bank / FRED / SSB series
     # are re-fetched; a failure keeps the stored values (flagged stale).
     ensure_macro_fresh(db, macro_data_provider)
-    if is_dalio:
-        ensure_dalio_macro_fresh(db, macro_data_provider)
-        _refresh_country_inputs(db, holding, country_indicator_provider)
 
     if run is None:
         run = EquityAnalysisRun(
@@ -178,7 +148,6 @@ def run_full_analysis(
             evidence_packet_version=packet_version,
             evidence_packet_json={},
             evidence_unavailable_reasons=[],
-            persona=persona,
         )
         db.add(run)
     else:
@@ -190,22 +159,11 @@ def run_full_analysis(
         run.schema_version = schema_version
         run.blind_prompt_version = prompt_version
         run.evidence_packet_version = packet_version
-        run.persona = persona
         run.error_message = None
     db.flush()
 
     _report_stage(on_stage, "evidence_packet")
-    if is_dalio:
-        # Plan §2: built from market, macro, country and portfolio data only
-        # — never the notes, never the other persona's runs.
-        packet = build_dalio_evidence_packet(
-            db,
-            holding,
-            market_data_provider=market_data_provider,
-            risk_free_rate_provider=risk_free_rate_provider,
-            research_provider=research_provider,
-        )
-    elif is_fund:
+    if is_fund:
         packet = build_fund_evidence_packet(db, holding, research_provider=research_provider)
     else:
         packet = build_evidence_packet(
@@ -273,33 +231,12 @@ def run_full_analysis(
     run.completed_at = datetime.now(timezone.utc)
     run.status = EquityAnalysisRunStatus.COMPLETED.value
 
-    # Only a stock's packet carries a DCF (Buffett and Dalio alike); a
-    # fund, ETF or ETC has none, so no price-target range (never invented).
-    _attach_price_target(run, packet)
+    if not is_fund:  # a fund has no DCF, so no price-target range
+        _attach_price_target(run, packet)
 
     db.commit()
     db.refresh(run)
     return run
-
-
-def _refresh_country_inputs(db: Session, holding: Holding, provider) -> None:
-    """Best effort: fetch stale World Bank / WGI inputs for the countries
-    this holding is exposed to (F22 story 22.10). Never raises."""
-    if provider is None:
-        return
-    from app.services.country_risk.domicile import country_exposure
-    from app.services.country_risk.indicators import refresh_countries
-    from app.services.dalio.evidence import MAX_COUNTRIES, MIN_COUNTRY_WEIGHT_PCT
-
-    try:
-        exposure = country_exposure(db, holding)
-        countries = [
-            c for c, w in sorted(exposure.weights.items(), key=lambda kv: -kv[1])[:MAX_COUNTRIES]
-            if w >= MIN_COUNTRY_WEIGHT_PCT
-        ]
-        refresh_countries(db, provider, countries)
-    except Exception:  # noqa: BLE001 - country data is optional evidence
-        db.rollback()
 
 
 def _attach_price_target(run: EquityAnalysisRun, packet) -> None:

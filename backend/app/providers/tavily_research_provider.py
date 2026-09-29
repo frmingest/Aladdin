@@ -27,7 +27,7 @@ Verified against Tavily's documented request/response shape as of
 content, score, published_date}], ...}); this build environment has no
 network path to the live API, so a first live call is the real check
 (matches this codebase's existing practice for every other live-API
-provider — see e.g. app/providers/world_bank.py's module docstring).
+provider).
 """
 from __future__ import annotations
 

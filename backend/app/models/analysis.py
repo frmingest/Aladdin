@@ -13,17 +13,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import (
-    JSON,
-    Boolean,
-    DateTime,
-    ForeignKey,
-    Index,
-    Integer,
-    Numeric,
-    String,
-    Text,
-)
+from sqlalchemy import JSON, DateTime, ForeignKey, Index, Integer, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
@@ -72,7 +62,6 @@ class EquityAnalysisRun(Base):
     __table_args__ = (
         Index("ix_equity_analysis_runs_holding_completed", "holding_id", "completed_at"),
         Index("ix_equity_analysis_runs_status_queued", "status", "queued_at"),
-        Index("ix_equity_analysis_runs_holding_persona_started", "holding_id", "persona", "started_at"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(GUID(), primary_key=True, default=uuid.uuid4)
@@ -135,21 +124,6 @@ class EquityAnalysisRun(Base):
     claimed_by: Mapped[str | None] = mapped_column(String(128), nullable=True)
     claimed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
-
-    # --- Epic F22 (analyst modes) ---
-    # persona: which analyst produced this run — "buffett_munger" (every run
-    # before F22, backfilled by migration f22a1b2c3d4e) or "dalio"
-    # (app/domain/analyst_modes.py). Latest-run lookups are per persona, so
-    # a Dalio run never shows up as a Buffett verdict or vice versa.
-    persona: Mapped[str] = mapped_column(
-        String(24), nullable=False, default="buffett_munger", server_default="buffett_munger"
-    )
-    # auto_queued: queued by the side-by-side auto-queue (story 22.7), not
-    # by a click — labelled "auto" on the queue page and counted against
-    # the nightly cap (app/services/analysis/auto_queue.py).
-    auto_queued: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=False, server_default="false"
-    )
 
     holding: Mapped[Holding] = relationship()
 

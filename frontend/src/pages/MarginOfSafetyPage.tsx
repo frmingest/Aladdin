@@ -4,9 +4,6 @@ import { api, ApiError } from "../lib/api";
 import { formatDate, formatDecimal, formatNok, formatPercent } from "../lib/format";
 import type { BoardRow, BoardZone, MarginOfSafetyBoard } from "../lib/types";
 import { Button, Card, EmptyState, PageHeader, VerdictBadge } from "../components/ui";
-import { AnalystModeChip } from "../components/AnalystModeToggle";
-import { CycleFitBoardCard } from "../components/DalioViews";
-import { useAnalystMode } from "../lib/analystMode";
 import { InfoTooltip } from "../components/InfoTooltip";
 import { GLOSSARY } from "../lib/glossary";
 
@@ -149,27 +146,7 @@ function RankedTable({ rows }: { rows: BoardRow[] }) {
   );
 }
 
-/** Epic F22, story 22.11: the board follows the analyst mode — Dalio mode
- * shows the cycle-fit board instead (no DCF work is started), side-by-side
- * shows both. */
 export default function MarginOfSafetyPage() {
-  const { mode } = useAnalystMode();
-  if (mode === "dalio") {
-    return (
-      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-8 sm:py-8">
-        <PageHeader
-          title="Cycle-fit board"
-          subtitle="Every holding you own, by Dalio verdict and the job it does in the portfolio."
-          actions={<AnalystModeChip />}
-        />
-        <CycleFitBoardCard showBuffett={false} />
-      </div>
-    );
-  }
-  return <MarginOfSafetyBoardPage sideBySide={mode === "side_by_side"} />;
-}
-
-function MarginOfSafetyBoardPage({ sideBySide }: { sideBySide: boolean }) {
   const [board, setBoard] = useState<MarginOfSafetyBoard | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -213,20 +190,11 @@ function MarginOfSafetyBoardPage({ sideBySide }: { sideBySide: boolean }) {
         }
         subtitle="Every stock you own, ranked by how far today's price sits below its DCF value."
         actions={
-          <>
-            <Button variant="secondary" onClick={handleRefresh} disabled={refreshing}>
-              {refreshing ? "Refreshing…" : "Refresh"}
-            </Button>
-            <AnalystModeChip />
-          </>
+          <Button variant="secondary" onClick={handleRefresh} disabled={refreshing}>
+            {refreshing ? "Refreshing…" : "Refresh"}
+          </Button>
         }
       />
-
-      {sideBySide && (
-        <div className="mb-8">
-          <CycleFitBoardCard showBuffett />
-        </div>
-      )}
 
       {error && <p className="text-sm text-negative">{error}</p>}
       {!board && !error && (

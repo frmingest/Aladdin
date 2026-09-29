@@ -46,10 +46,6 @@ export const GLOSSARY = {
     "A specific, checkable condition you set yourself (e.g. \"revenue growth falls below 5%\") that would mean your original reason for owning this stock no longer holds. The app checks these automatically against real numbers as they come in, rather than relying on you remembering to re-check.",
   verdict:
     "The latest Buffett/Munger-style analysis's bottom-line call (Strong Buy through Avoid) — built by the LLM reasoning over the deterministic numbers and evidence gathered for that run, always with citations back to real sources.",
-  cycleFit:
-    "In Ray Dalio's framework: how well this holding's role (e.g. inflation hedge, growth exposure) fits where the economy currently sits in the long-term debt and business cycle — a different question from \"is it cheap,\" more \"does it belong here right now.\"",
-  sovereignRisk:
-    "A country-level score built from real fiscal, political-stability and external-position indicators (World Bank, WGI, FRED) — how exposed a holding is to trouble in the country whose economy or currency it's most tied to, not the company's own financial health.",
   fxExposure:
     "How much of your holding's value depends on a currency other than NOK moving in your favour — separate from the business actually doing well, since a strong NOK can erase gains made in another currency and vice versa.",
 } as const;

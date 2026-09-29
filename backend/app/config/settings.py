@@ -309,37 +309,6 @@ class Settings(BaseSettings):
     active_fund_analysis_schema_version: str = "fund_v1"  # app/domain/analysis_schema/fund_v1.py
     active_fund_analysis_prompt_version: str = "fund_v1"  # prompts/analysis/{blind,reconciliation}_fund_v1.md
 
-    # --- Epic F22: analyst modes (claude/analyst-modes-epic-f22-2026-09-27.md) ---
-    # The Dalio persona: one schema/prompt pair for every instrument type
-    # (decision 5, §3c) and its own evidence packet (app/services/dalio/).
-    active_dalio_analysis_schema_version: str = "dalio_v1"  # app/domain/analysis_schema/dalio_v1.py
-    active_dalio_analysis_prompt_version: str = "dalio_v1"  # prompts/analysis/{blind,reconciliation}_dalio_v1.md
-    # Extra FRED series only the Dalio packet cites (net liquidity, US
-    # debt/GDP, interest outlays, broad dollar...) — app/domain/dalio_macro_series.py.
-    # Separate from active_macro_series_version so adding them never changes
-    # a Buffett/Munger evidence packet (CLAUDE.md Rule 3).
-    active_dalio_macro_series_version: str = "dalio_v1"
-    # dalio_v1 has 7 sections like fund_v1: give it the same output room
-    # (the 2026-09-27 fund truncation lesson, applied up front).
-    llm_max_output_tokens_dalio: int = 16384
-    # Quadrant betas / rate sensitivity look back this far (monthly returns);
-    # fewer than dalio_min_months overlapping months = "insufficient history",
-    # never a number (ECON-F22-05).
-    dalio_price_history_days: int = 1095
-    dalio_min_months: int = 24
-    # Country-risk inputs (story 22.10): World Bank annual data is
-    # re-fetched when the stored copy is older than this.
-    country_indicators_stale_after_days: int = 30
-    active_country_risk_assumptions_version: str = "v1"  # app/domain/country_risk_assumptions/
-    # Side-by-side auto-queue (story 22.7, §5): local engine only, never
-    # more than this many auto-queued runs in any rolling 24 hours, and a
-    # partner run older than this many days is re-queued.
-    f22_auto_queue_nightly_cap: int = 20
-    f22_auto_queue_stale_days: int = 30
-    # Optional "where they'd argue" synthesis (story 22.8).
-    active_synthesis_schema_version: str = "synthesis_v1"
-    active_synthesis_prompt_version: str = "synthesis_v1"
-
 
 @lru_cache
 def get_settings() -> Settings:

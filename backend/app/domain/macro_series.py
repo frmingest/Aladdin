@@ -37,15 +37,13 @@ class MacroSeriesSpec:
     region: str  # "NO" | "US"
     unit: str  # unit of the *stored* raw value: "percent" | "index" | "NOK"
     display_unit: str  # unit of the figure after `transform`: "%" | "NOK"
-    # "weekly"/"quarterly" added 2026-09-27 for the Dalio catalogue
-    # (app/domain/dalio_macro_series.py); _V1 below still only uses daily/monthly.
-    frequency: Literal["daily", "weekly", "monthly", "quarterly"]
+    frequency: Literal["daily", "monthly"]
     transform: Transform = "level"
     change_kind: ChangeKind = "pp"
     # An observation older than this is flagged stale (publication lag
     # included: US CPI for August is published mid-September).
     stale_after_days: int = 7
-    group: str = "rates"  # "rates" | "inflation" | "fx" | "labour" | "credit" | "liquidity" | "debt" — UI grouping
+    group: str = "rates"  # "rates" | "inflation" | "fx" | "labour" | "credit" — UI grouping
     description: str = ""
 
     @property

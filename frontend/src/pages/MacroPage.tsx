@@ -3,8 +3,6 @@ import { Link } from "react-router-dom";
 import { api, ApiError } from "../lib/api";
 import type { Holding, MacroResearch } from "../lib/types";
 import { PageHeader } from "../components/ui";
-import { DalioMacroPanel } from "../components/DalioViews";
-import { useAnalystMode } from "../lib/analystMode";
 import { ResearchPanel } from "../components/ResearchPanel";
 import { MacroIndicatorsPanel } from "../components/MacroIndicatorsPanel";
 
@@ -23,7 +21,6 @@ export default function MacroPage() {
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [holdings, setHoldings] = useState<Holding[] | null>(null);
-  const { mode } = useAnalystMode();
 
   useEffect(() => {
     api
@@ -59,13 +56,6 @@ export default function MacroPage() {
       <div className="mb-6">
         <MacroIndicatorsPanel />
       </div>
-
-      {mode !== "buffett_munger" && (
-        <div className="mb-6">
-          <h2 className="section-title">Dalio lens: liquidity, debt cycle and country risk</h2>
-          <DalioMacroPanel />
-        </div>
-      )}
 
       <div className="mb-6">
         <ResearchPanel

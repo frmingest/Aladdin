@@ -89,11 +89,6 @@ def refresh_indicators(
     if provider is None:
         raise HTTPException(status_code=503, detail="Macro data fetching is off (MACRO_DATA_PROVIDER=none).")
     results = refresh_macro_data(db, provider, only_stale=only_stale)
-    # F22: "Refresh data" also fetches the Dalio-only FRED series (net
-    # liquidity inputs, US debt/GDP, interest outlays, broad dollar).
-    from app.services.dalio.macro import refresh_dalio_macro_data
-
-    results += refresh_dalio_macro_data(db, provider, only_stale=only_stale)
     return MacroRefreshOut(
         results=[
             MacroSeriesRefreshOut(

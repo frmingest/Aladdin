@@ -8,12 +8,6 @@ from __future__ import annotations
 
 from pydantic import BaseModel
 
-from app.domain.analysis_schema.dalio_v1 import (
-    DalioBlindPassOutputV1,
-    DalioReconciliationOutputV1,
-    DalioVerdict,
-    cited_evidence_ids_dalio_blind,
-)
 from app.domain.analysis_schema.fund_v1 import (
     FundBlindPassOutputV1,
     LookThroughMoat,
@@ -33,18 +27,13 @@ from app.domain.analysis_schema.v1 import (
 
 # "fund_v1" (Sprint 8): the fund / ETF analysis. Its reconciliation output
 # has the same shape as v1's, so it reuses that class.
-# "dalio_v1" (Epic F22): the Ray Dalio persona, one schema for every
-# instrument type, with its own reconciliation shape (the verdict carries a
-# portfolio_role).
 _BLIND_SCHEMAS: dict[str, type[BaseModel]] = {
     "v1": BlindPassOutputV1,
     "fund_v1": FundBlindPassOutputV1,
-    "dalio_v1": DalioBlindPassOutputV1,
 }
 _RECONCILIATION_SCHEMAS: dict[str, type[BaseModel]] = {
     "v1": ReconciliationOutputV1,
     "fund_v1": ReconciliationOutputV1,
-    "dalio_v1": DalioReconciliationOutputV1,
 }
 
 
@@ -52,14 +41,8 @@ def is_fund_schema(version: str) -> bool:
     return version.startswith("fund_")
 
 
-def is_dalio_schema(version: str) -> bool:
-    return version.startswith("dalio_")
-
-
 def cited_evidence_ids_any_blind(output: BaseModel) -> set[str]:
     """Every evidence_id cited in a blind-pass output of any schema."""
-    if isinstance(output, DalioBlindPassOutputV1):
-        return cited_evidence_ids_dalio_blind(output)
     if isinstance(output, FundBlindPassOutputV1):
         return cited_evidence_ids_fund_blind(output)
     if isinstance(output, BlindPassOutputV1):
@@ -84,9 +67,6 @@ def get_reconciliation_schema(version: str) -> type[BaseModel]:
 __all__ = [
     "MOAT_SOURCES",
     "BlindPassOutputV1",
-    "DalioBlindPassOutputV1",
-    "DalioReconciliationOutputV1",
-    "DalioVerdict",
     "FundBlindPassOutputV1",
     "LookThroughMoat",
     "MoatAssessment",
@@ -96,11 +76,9 @@ __all__ = [
     "VerdictContent",
     "cited_evidence_ids_any_blind",
     "cited_evidence_ids_blind",
-    "cited_evidence_ids_dalio_blind",
     "cited_evidence_ids_fund_blind",
     "cited_evidence_ids_reconciliation",
     "get_blind_pass_schema",
     "get_reconciliation_schema",
-    "is_dalio_schema",
     "is_fund_schema",
 ]
