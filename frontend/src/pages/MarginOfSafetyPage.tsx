@@ -98,7 +98,17 @@ function RankedTable({ rows }: { rows: BoardRow[] }) {
                   <Link to={`/holdings/${row.holding_id}`} className="font-medium text-ink hover:text-accent">
                     {row.name}
                   </Link>
-                  <p className="text-xs text-ink-faint">{row.ticker}</p>
+                  <p className="text-xs text-ink-faint">
+                    {row.ticker}
+                    {row.valuation_method === "fund_look_through_pe" && (
+                      <span
+                        className="ml-1.5 rounded bg-border-subtle px-1 py-0.5 text-[10px] font-medium text-ink-muted"
+                        title="Fund: valued on its holdings' earnings yield, not a DCF"
+                      >
+                        look-through
+                      </span>
+                    )}
+                  </p>
                 </td>
                 <td className="py-3 pr-4">
                   <VerdictBadge
