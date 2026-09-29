@@ -457,6 +457,12 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ isin }),
     }),
+  // L&G (LGIM) ETFs: the fund page's public holdings file (2026-09-29).
+  fetchLgimHoldings: (holdingId: string, isin: string) =>
+    request<HoldingsImportResult>(`/funds/${holdingId}/holdings/fetch-lgim`, {
+      method: "POST",
+      body: JSON.stringify({ isin }),
+    }),
   refreshFundLookThrough: (holdingId: string) =>
     request<LookThroughRefresh>(`/funds/${holdingId}/look-through/refresh`, { method: "POST" }),
   getAnalysisNotes: (holdingId: string) =>

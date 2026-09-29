@@ -11,8 +11,14 @@ function errorText(err: unknown): string {
   return err instanceof ApiError || err instanceof Error ? err.message : "Request failed.";
 }
 
-/** Fund look-through valuation (2026-09-29): fetch an Xtrackers ETF's full
- * holdings from DWS's free feed, fetch each holding's trailing P/E, and
+type Provider = "xtrackers" | "lgim";
+const PROVIDERS: Record<Provider, { label: string; placeholder: string }> = {
+  xtrackers: { label: "Xtrackers", placeholder: "LU3061478973" },
+  lgim: { label: "L&G", placeholder: "IE00B3CNHG25" },
+};
+
+/** Fund look-through valuation (2026-09-29): fetch an Xtrackers or L&G ETF's
+ * full holdings from the issuer's free public feed/file, fetch each holding's trailing P/E, and
  * show the earnings-yield screen that puts the fund on the margin-of-safety
  * board. Fetching P/Es is one provider call per holding, so it only runs
  * when the button is pressed — never on page load. */
@@ -24,6 +30,7 @@ export function FundLookThroughCard({
   onChanged: () => void;
 }) {
   const [valuation, setValuation] = useState<HoldingValuation | null>(null);
+  const [provider, setProvider] = useState<Provider>("xtrackers");
   const [isin, setIsin] = useState("");
   const [busy, setBusy] = useState<"fetch" | "refresh" | null>(null);
   const [note, setNote] = useState<string | null>(null);
@@ -43,7 +50,10 @@ export function FundLookThroughCard({
     setError(null);
     setNote(null);
     try {
-      const r = await api.fetchXtrackersHoldings(holdingId, isin.trim());
+      const r =
+        provider === "lgim"
+          ? await api.fetchLgimHoldings(holdingId, isin.trim())
+          : await api.fetchXtrackersHoldings(holdingId, isin.trim());
       setNote(`Fetched ${r.rows_imported} holdings as of ${r.as_of_date}; ${r.linked} linked to companies in the app. Now refresh the look-through.`);
       onChanged();
       load();
@@ -87,16 +97,31 @@ export function FundLookThroughCard({
 
       <div className="mt-3 flex flex-wrap items-end gap-3 border-b border-border-subtle pb-3">
         <label className="flex flex-col gap-1 text-sm">
-          <span className="text-ink-muted">Xtrackers fund ISIN</span>
+          <span className="text-ink-muted">Issuer</span>
+          <select
+            value={provider}
+            onChange={(e) => setProvider(e.target.value as Provider)}
+            className={INPUT}
+            aria-label="Holdings provider"
+          >
+            {(Object.keys(PROVIDERS) as Provider[]).map((p) => (
+              <option key={p} value={p}>
+                {PROVIDERS[p].label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="text-ink-muted">{PROVIDERS[provider].label} fund ISIN</span>
           <input
             value={isin}
             onChange={(e) => setIsin(e.target.value)}
-            placeholder="LU3061478973"
+            placeholder={PROVIDERS[provider].placeholder}
             className={`${INPUT} w-44 uppercase`}
           />
         </label>
         <Button variant="secondary" onClick={() => void fetchHoldings()} disabled={busy !== null || isin.trim().length < 12}>
-          {busy === "fetch" ? "Fetching…" : "Fetch holdings from Xtrackers"}
+          {busy === "fetch" ? "Fetching…" : `Fetch holdings from ${PROVIDERS[provider].label}`}
         </Button>
         <Button onClick={() => void refresh()} disabled={busy !== null}>
           {busy === "refresh" ? "Fetching P/Es… (can take a minute)" : "Refresh look-through"}

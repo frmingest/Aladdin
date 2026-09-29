@@ -35,7 +35,7 @@ Fund page → **Look-through valuation** card: ISIN box + *Fetch holdings from X
 | Frontend tsc/eslint/vitest 22/22/build clean | |
 
 ## Not built
-- L&G Gold Mining (no free feed; geo-gated T&Cs page) and Xetra-Gold (single-commodity, nothing to look through) — still manual upload / not applicable.
+- Xetra-Gold (single-commodity, nothing to look through) — not applicable. **L&G Gold Mining: superseded the same day** — a free public holdings CSV was found on its fund page and built as F31, see [lgim-holdings-capture-2026-09-29.md](lgim-holdings-capture-2026-09-29.md).
 - Constituent fundamentals beyond trailing P/E (ROIC, growth, per-holding DCF).
 - ISIN is typed on each fetch (holdings have no ISIN field yet).
 - Refresh runs from the API server; a worker-side refresh (home IP) is a follow-up if Yahoo blocks Railway.

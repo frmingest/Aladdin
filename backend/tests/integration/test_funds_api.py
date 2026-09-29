@@ -415,3 +415,49 @@ def test_fetch_xtrackers_reports_feed_errors_and_refuses_non_funds(client, db_se
     stock = _holding(client, db_session, "NEM", "Newmont Corporation", "stock")
     response = client.post(f"/funds/{stock}/holdings/fetch-xtrackers", json={"isin": "LU3061478973"})
     assert response.status_code == 422
+
+
+def test_fetch_lgim_holdings_stores_a_document_and_imports_rows(client, db_session, monkeypatch):
+    from pathlib import Path
+
+    from app.providers import lgim_holdings as lg
+
+    csv_text = (Path(__file__).parent.parent / "fixtures" / "lgim_fundholdings_gold_mining.csv").read_text()
+    monkeypatch.setattr(
+        "app.api.funds.fetch_lgim_holdings",
+        lambda isin: lg.parse_holdings_csv(csv_text, fund_isin=isin),
+    )
+    fund_id = _holding(client, db_session, "AUCO.L", "L&G Gold Mining UCITS ETF", "equity_etf")
+    newmont = _holding(client, db_session, "NEM", "Newmont Corporation", "stock")
+
+    response = client.post(f"/funds/{fund_id}/holdings/fetch-lgim", json={"isin": "IE00B3CNHG25"})
+    assert response.status_code == 201, response.text
+    body = response.json()
+    assert body["rows_imported"] == 44
+    assert body["as_of_date"] == "2026-09-29"
+
+    document = db_session.get(Document, body["document_id"])
+    assert document.type == "fund_holdings"
+    assert document.original_filename == "lgim-IE00B3CNHG25-holdings-2026-09-29.csv"
+
+    rows = client.get(f"/funds/{fund_id}").json()["exposures"]["holding"]
+    assert rows[0]["label"] == "NEWMONT CORP" and rows[0]["isin"] == "US6516391066"
+    # NEWMONT CORP matches the held 'Newmont Corporation' by normalised name
+    assert next(r for r in rows if r["label"] == "NEWMONT CORP")["linked_holding_id"] == newmont
+
+
+def test_fetch_lgim_reports_feed_errors_and_refuses_non_funds(client, db_session, monkeypatch):
+    from app.providers.lgim_holdings import LgimFeedError
+
+    def fail(isin):
+        raise LgimFeedError("could not reach fundcentres.landg.com")
+
+    monkeypatch.setattr("app.api.funds.fetch_lgim_holdings", fail)
+    fund_id = _holding(client, db_session, "AUCO.L", "L&G Gold Mining UCITS ETF", "equity_etf")
+    response = client.post(f"/funds/{fund_id}/holdings/fetch-lgim", json={"isin": "IE00B3CNHG25"})
+    assert response.status_code == 502
+    assert "could not reach" in response.json()["detail"]
+
+    stock = _holding(client, db_session, "NEM", "Newmont Corporation", "stock")
+    response = client.post(f"/funds/{stock}/holdings/fetch-lgim", json={"isin": "IE00B3CNHG25"})
+    assert response.status_code == 422

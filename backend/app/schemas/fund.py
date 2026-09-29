@@ -136,6 +136,11 @@ class XtrackersFetchIn(BaseModel):
     """The Xtrackers ETF's own ISIN (e.g. LU3061478973) — the only key DWS's public feed needs."""
 
 
+class LgimFetchIn(BaseModel):
+    isin: str
+    """The L&G ETF's own ISIN (e.g. IE00B3CNHG25); must be one of the funds configured in app/providers/lgim_holdings.py."""
+
+
 class LookThroughRefreshOut(BaseModel):
     lines: int
     priced: int

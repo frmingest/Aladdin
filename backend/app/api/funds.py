@@ -27,6 +27,13 @@ from app.domain.errors import (
 from app.models.document import Document
 from app.models.holding import Holding
 from app.providers.factory import get_constituent_multiples_provider, get_object_storage
+from app.providers.lgim_holdings import (
+    LgimFeedError,
+    fetch_lgim_holdings,
+)
+from app.providers.lgim_holdings import (
+    to_csv_bytes as lgim_to_csv_bytes,
+)
 from app.providers.xtrackers_holdings import (
     XtrackersFeedError,
     fetch_xtrackers_holdings,
@@ -42,6 +49,7 @@ from app.schemas.fund import (
     FundReturnIn,
     FundReturnOut,
     HoldingsImportOut,
+    LgimFetchIn,
     LookThroughRefreshOut,
     ManualLinkIn,
     XtrackersFetchIn,
@@ -337,6 +345,39 @@ def fetch_xtrackers_holdings_endpoint(
         holding,
         filename=f"xtrackers-{feed.fund_isin}-holdings-{stamp}.csv",
         content=to_csv_bytes(feed),
+        mime_type="text/csv",
+        as_of_date=feed.as_of_date,
+    )
+
+
+@router.post("/{holding_id}/holdings/fetch-lgim", response_model=HoldingsImportOut, status_code=201)
+def fetch_lgim_holdings_endpoint(
+    holding_id: UUID,
+    body: LgimFetchIn,
+    db: Session = Depends(get_db),
+    storage=Depends(get_object_storage),
+) -> HoldingsImportOut:
+    """Fetches the fund's full holdings basket from L&G's public fund-page
+    file (fundcentres.landg.com; the file URL is resolved on every call),
+    stores it as a `fund_holdings` document and imports it exactly like an
+    uploaded holdings file. Configured L&G ETFs only."""
+    require_not_demo(db)
+    holding = _holding(db, holding_id)
+    try:
+        require_fund_holding(holding)
+    except FundFactsError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    try:
+        feed = fetch_lgim_holdings(body.isin)
+    except LgimFeedError as exc:
+        raise HTTPException(status_code=502, detail=f"L&G holdings file: {exc}") from exc
+    stamp = feed.as_of_date.isoformat() if feed.as_of_date else "undated"
+    return _import_holdings_content(
+        db,
+        storage,
+        holding,
+        filename=f"lgim-{feed.fund_isin}-holdings-{stamp}.csv",
+        content=lgim_to_csv_bytes(feed),
         mime_type="text/csv",
         as_of_date=feed.as_of_date,
     )
