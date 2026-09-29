@@ -4,6 +4,7 @@ import { api, ApiError } from "../lib/api";
 import { formatDate } from "../lib/format";
 import type { MonitorRow, ThesisMonitor, ThesisStatus } from "../lib/types";
 import { Card, EmptyState, PageHeader, SectionTitle } from "../components/ui";
+import { CheckTripwiresButton } from "../components/TripwireBanner";
 
 /** Sprint 11 — "is my thesis still intact?" One row per holding you own
  * or have a tripwire on, most urgent status first. Everything comes from
@@ -69,12 +70,14 @@ export default function ThesisMonitorPage() {
   const [monitor, setMonitor] = useState<ThesisMonitor | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const load = () => {
     api
       .getThesisMonitor()
       .then(setMonitor)
       .catch((e) => setError(e instanceof ApiError ? e.message : "Could not load the thesis monitor."));
-  }, []);
+  };
+
+  useEffect(load, []);
 
   const groups = STATUS_ORDER.map((status) => ({
     status,
@@ -86,7 +89,16 @@ export default function ThesisMonitorPage() {
       <PageHeader
         title="Thesis"
         subtitle="Is my thesis still intact? Tripwires, what's changed since the last analysis, and the verdict timeline — for every holding you own or watch."
+        actions={<CheckTripwiresButton onChecked={load} />}
       />
+
+      {monitor && (
+        <p className="mb-4 text-xs text-ink-muted">
+          {monitor.last_check_at
+            ? `Nightly check last ran ${formatDate(monitor.last_check_at)}${monitor.last_check_summary ? ` — ${monitor.last_check_summary}` : ""}.`
+            : "The nightly tripwire check hasn't run yet — the PC worker runs it once a day, or press Check now."}
+        </p>
+      )}
 
       {error && <p className="text-sm text-negative">{error}</p>}
       {!monitor && !error && <p className="text-sm text-ink-muted">Loading…</p>}

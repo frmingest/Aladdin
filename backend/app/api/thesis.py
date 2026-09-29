@@ -21,6 +21,8 @@ from app.schemas.thesis import (
     MonitorOut,
     MonitorRowOut,
     TimelineEntryOut,
+    TripwireChangeOut,
+    TripwireCheckOut,
     TripwireCreate,
     TripwireOut,
     TripwireSuggestionOut,
@@ -33,6 +35,7 @@ from app.services.settings.synthetic_data import demo_thesis, demo_thesis_monito
 from app.services.thesis.history import changes_since_run
 from app.services.thesis.metrics_registry import METRICS_BY_KEY, metric_registry
 from app.services.thesis.monitor import STATUS_LABELS, build_monitor, classify
+from app.services.thesis.nightly import last_check, run_tripwire_check
 from app.services.thesis.timeline import build_timeline
 from app.services.thesis.tripwires import (
     UNSET,
@@ -229,7 +232,10 @@ def get_monitor(db: Session = Depends(get_db)) -> MonitorOut:
     if is_demo_mode(db):
         return demo_thesis_monitor()
     rows = build_monitor(db)
+    last_at, last_summary = last_check(db)
     return MonitorOut(
+        last_check_at=last_at,
+        last_check_summary=last_summary,
         rows=[
             MonitorRowOut(
                 holding_id=r.holding_id,
@@ -243,4 +249,26 @@ def get_monitor(db: Session = Depends(get_db)) -> MonitorOut:
             )
             for r in rows
         ]
+    )
+
+
+@router.post("/check", response_model=TripwireCheckOut)
+def check_now(db: Session = Depends(get_db)) -> TripwireCheckOut:
+    """Runs the nightly tripwire check now: refreshes the share price of
+    every holding with an active tripwire (best effort), evaluates them and
+    reports what newly fired or cleared. The worker does the same once a
+    day; this is the "check now" button's endpoint."""
+    require_not_demo(db)
+    from app.providers.factory import get_market_data_provider
+
+    result = run_tripwire_check(db, market_data_provider=get_market_data_provider())
+    return TripwireCheckOut(
+        ran_at=result.ran_at,
+        holdings_checked=result.holdings_checked,
+        tripwires_checked=result.tripwires_checked,
+        newly_fired=[TripwireChangeOut(**vars(c)) for c in result.newly_fired],
+        cleared=[TripwireChangeOut(**vars(c)) for c in result.cleared],
+        no_data=result.no_data,
+        price_refresh_failed=result.price_refresh_failed,
+        summary=result.summary(),
     )

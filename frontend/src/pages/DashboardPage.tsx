@@ -15,6 +15,7 @@ import { MacroHeadlineStrip } from "../components/MacroIndicatorsPanel";
 import { EQUITY_ANALYZABLE_TYPES, INSTRUMENT_TYPE_LABELS } from "../lib/types";
 import { Card, EmptyState, PageHeader, SectionTitle, VerdictBadge } from "../components/ui";
 import { AnalystModeDashboardCard } from "../components/DalioViews";
+import { TripwireBanner } from "../components/TripwireBanner";
 
 /** Sprint 5 dashboard, the app's home page. Everything comes from
  * GET /portfolio/overview (backend/app/services/portfolio_overview.py),
@@ -452,6 +453,10 @@ export default function DashboardPage() {
   const [macro, setMacro] = useState<MacroIndicators | null>(null);
   const [thesisRows, setThesisRows] = useState<MonitorRow[]>([]);
 
+  const loadThesis = () => {
+    api.getThesisMonitor().then((m) => setThesisRows(m.rows)).catch(() => setThesisRows([]));
+  };
+
   useEffect(() => {
     api
       .getPortfolioOverview()
@@ -459,7 +464,7 @@ export default function DashboardPage() {
       .catch((e) => setError(e instanceof ApiError ? e.message : "Could not load the overview."));
     // Optional strip: a failure here just hides it.
     api.getMacroIndicators().then(setMacro).catch(() => setMacro(null));
-    api.getThesisMonitor().then((m) => setThesisRows(m.rows)).catch(() => setThesisRows([]));
+    loadThesis();
   }, []);
 
   return (
@@ -472,6 +477,8 @@ export default function DashboardPage() {
             : "Your portfolio at a glance."
         }
       />
+
+      <TripwireBanner rows={thesisRows} onChecked={loadThesis} />
 
       {error && <p className="text-sm text-negative">{error}</p>}
       {!overview && !error && <p className="text-sm text-ink-muted">Loading…</p>}

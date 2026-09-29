@@ -111,3 +111,27 @@ class MonitorRowOut(BaseModel):
 
 class MonitorOut(BaseModel):
     rows: list[MonitorRowOut]
+    # Sprint 15 #5: when the nightly tripwire check last ran (None = never)
+    # and its one-line summary.
+    last_check_at: datetime | None = None
+    last_check_summary: str | None = None
+
+
+class TripwireChangeOut(BaseModel):
+    holding_id: UUID
+    ticker: str
+    tripwire_id: UUID
+    metric: str
+    label: str | None = None
+    current_value: str | None = None
+
+
+class TripwireCheckOut(BaseModel):
+    ran_at: datetime
+    holdings_checked: int
+    tripwires_checked: int
+    newly_fired: list[TripwireChangeOut]
+    cleared: list[TripwireChangeOut]
+    no_data: int
+    price_refresh_failed: list[str]
+    summary: str

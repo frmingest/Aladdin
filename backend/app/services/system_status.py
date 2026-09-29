@@ -95,6 +95,15 @@ class SystemStatus:
     issues: list[str] = field(default_factory=list)
 
 
+def _last_check_text(db) -> str:
+    from app.services.thesis.nightly import last_check
+
+    when, summary = last_check(db)
+    if when is None:
+        return "has not run yet (the PC worker runs it daily)"
+    return f"last ran {when.isoformat(timespec='minutes')}: {summary or 'no summary'}"
+
+
 def _aware(value: datetime | None) -> datetime | None:
     if value is None:
         return None
@@ -400,7 +409,8 @@ def build_system_status(
     ) or 0
     status.analysis.append(StatusItem(
         "thesis_tripwires", "Thesis tripwires", WARN if firing_tripwires else OK,
-        f"{active_tripwires} active, {firing_tripwires} firing"))
+        f"{active_tripwires} active, {firing_tripwires} firing"
+        + (f" · nightly check {_last_check_text(db)}" if active_tripwires else "")))
 
     status.counts = {
         "holdings": db.scalar(select(func.count(Holding.id))) or 0,

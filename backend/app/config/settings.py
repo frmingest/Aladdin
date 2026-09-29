@@ -125,6 +125,11 @@ class Settings(BaseSettings):
     worker_max_attempts: int = 2
     # A worker counts as "online" in the UI if seen within this window.
     worker_online_seconds: int = 120
+    # Sprint 15 #5: the worker runs the nightly tripwire check once per UTC
+    # day, on its first poll after this hour (03:00 UTC = 05:00 Oslo in
+    # summer, 04:00 in winter — after the Oslo/EU close and the FX fixings).
+    tripwire_check_enabled: bool = True
+    tripwire_check_hour_utc: int = 3
 
     # --- Object storage (see app/providers/object_storage.py) ---
     # "local" (default, dev only — Railway's disk is ephemeral, not a real

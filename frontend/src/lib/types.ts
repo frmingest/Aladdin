@@ -1612,6 +1612,30 @@ export interface MonitorRow {
 
 export interface ThesisMonitor {
   rows: MonitorRow[];
+  /** When the nightly tripwire check last ran (null = never), and its one-line summary. */
+  last_check_at?: string | null;
+  last_check_summary?: string | null;
+}
+
+export interface TripwireChange {
+  holding_id: string;
+  ticker: string;
+  tripwire_id: string;
+  metric: string;
+  label: string | null;
+  current_value: string | null;
+}
+
+/** POST /thesis/check — what the tripwire check found this pass. */
+export interface TripwireCheckResult {
+  ran_at: string;
+  holdings_checked: number;
+  tripwires_checked: number;
+  newly_fired: TripwireChange[];
+  cleared: TripwireChange[];
+  no_data: number;
+  price_refresh_failed: string[];
+  summary: string;
 }
 
 // --- Portfolio risk (Sprint 12) — backend/app/api/risk.py -----------------

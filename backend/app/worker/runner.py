@@ -240,6 +240,25 @@ class AnalysisWorker:
                 self._set_state(IDLE, None)
         return RAN
 
+    def maybe_check_tripwires(self) -> None:
+        """Sprint 15 #5: the nightly tripwire check, at most once per UTC
+        day. Runs between analysis runs on this PC (home IP, so the price
+        refresh isn't blocked like Railway's). Never raises — a failed
+        check must not stop the analysis queue."""
+        if not self.settings.tripwire_check_enabled:
+            return
+        try:
+            from app.services.thesis.nightly import run_check_if_due
+
+            with self.session_factory() as db:
+                run_check_if_due(
+                    db,
+                    market_data_provider=self.providers.market_data,
+                    hour_utc=self.settings.tripwire_check_hour_utc,
+                )
+        except Exception:
+            log.exception("nightly tripwire check failed")
+
     def _fail(self, run_id: uuid.UUID, message: str) -> None:
         with self.session_factory() as db:
             queue.fail_run(db, run_id, message=message)
@@ -261,6 +280,7 @@ class AnalysisWorker:
         try:
             while not self._stop.is_set():
                 outcome = self.run_once()
+                self.maybe_check_tripwires()
                 if once:
                     break
                 if outcome != RAN:
