@@ -597,6 +597,28 @@ export interface PeriodMultiples {
   notes?: string[];
 }
 
+export interface FinancialsScenario {
+  label: string;
+  roe: string;
+  justified_price_to_book: string;
+  value_per_share: string;
+  margin_of_safety: string | null;
+}
+
+/** Justified price-to-book valuation for banks/insurers (2026-09-29). */
+export interface FinancialsValuation {
+  cost_of_equity: string;
+  growth_rate: string;
+  book_value_per_share: string;
+  roe_periods_used: number;
+  roe_was_capped: boolean;
+  scenarios: FinancialsScenario[];
+}
+
+export type ValuationMethod = "owner_earnings_dcf" | "financials_price_to_book";
+/** "implausible" = computed, then withheld because it was not credible vs the price. */
+export type ValuationStatus = "ok" | "implausible" | "unavailable";
+
 export interface HoldingValuation {
   holding_id: string;
   ticker: string;
@@ -624,6 +646,16 @@ export interface HoldingValuation {
   regime?: MacroRegime | null;
   regime_discount_rate_addon?: string | null;
   regime_adjustments_version?: string | null;
+  valuation_method?: ValuationMethod;
+  valuation_status?: ValuationStatus;
+  valuation_status_reason?: string | null;
+  raw_base_growth_rate?: string | null;
+  growth_capped?: boolean;
+  fades_to_terminal?: boolean;
+  capm_cost_of_equity?: string | null;
+  financials?: FinancialsValuation | null;
+  /** Withheld values, for display as "rejected" only. */
+  rejected_values?: Record<string, string> | null;
 }
 
 /** Order + display label for every multiple
@@ -809,6 +841,8 @@ export interface AnalysisRun {
   price_target_low: string | null;
   price_target_high: string | null;
   price_target_currency: string | null;
+  /** Set when a stored target is implausible vs the price (pre-guard runs). */
+  price_target_warning?: string | null;
   evidence_items: EvidenceItem[];
   user_notes_snapshot: string | null;
   engine: AnalysisEngine;
@@ -920,6 +954,8 @@ export interface BoardRow {
   margin_of_safety_base: string | null;
   margin_of_safety_bear: string | null;
   zone: BoardZone;
+  valuation_method?: ValuationMethod;
+  valuation_status?: ValuationStatus;
   unavailable_reason: string | null;
   verdict_rating: VerdictRating | null;
   moat_rating: MoatRating | null;
@@ -1104,6 +1140,8 @@ export interface WatchlistRow {
   /** 0-100 scale; negative = price is below your buy-below price. */
   distance_to_buy_pct: string | null;
   status: WatchlistStatus;
+  valuation_method?: ValuationMethod;
+  valuation_status?: ValuationStatus;
   dcf_base: string | null;
   /** Fraction (0.25 = 25%), same as the margin-of-safety board. */
   margin_of_safety_base: string | null;
