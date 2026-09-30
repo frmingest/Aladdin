@@ -142,6 +142,24 @@ export interface DocumentSummary {
   fact_count: number;
 }
 
+/** One stored figure of a document — mirrors backend/app/schemas/document.py's
+ * FinancialLineItemOut. `source_page` is the rendered report page (XHTML) or
+ * PDF page it came from; null/0 when the source has no pages (CSV, derived). */
+export interface DocumentFact {
+  metric: string;
+  value: string;
+  unit: string;
+  currency: string | null;
+  period: string;
+  source_page: number | null;
+  confidence: number;
+}
+
+/** GET /documents/{id}: the summary plus every stored figure. */
+export interface DocumentDetail extends DocumentSummary {
+  facts: DocumentFact[];
+}
+
 /** One extracted input behind the ratios — mirrors
  * backend/app/schemas/metrics.py's MetricFactOut. */
 export interface MetricFact {

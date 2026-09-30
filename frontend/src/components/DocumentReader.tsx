@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from "react";
 import { createPortal } from "react-dom";
-import { ApiError, fetchDocumentFile } from "../lib/api";
-import { viewKindOf } from "../lib/documents";
+import { ApiError, api, fetchDocumentFile } from "../lib/api";
+import { pageFragment, viewKindOf } from "../lib/documents";
+import { factKey, jumpablePage } from "../lib/statements";
+import type { DocumentFact } from "../lib/types";
+import { StatementsPane } from "./StatementsPane";
 
 /** Minimum a stored-document reference has to carry to be readable. */
 export interface ReadableDocument {
@@ -9,7 +13,13 @@ export interface ReadableDocument {
   original_filename: string;
   type?: string;
   reporting_period?: string | null;
+  /** When known to be 0 the figures pane is skipped without asking the API. */
+  fact_count?: number;
 }
+
+const PANE_MIN = 300;
+const PANE_MAX = 760;
+const PANE_DEFAULT = 440;
 
 const EXIT_MS = 200;
 
@@ -28,10 +38,16 @@ export function DocumentReadButton({
   document,
   label = "Read",
   className = "",
+  initialPage,
+  focusMetric,
 }: {
   document: ReadableDocument;
   label?: string | null;
   className?: string;
+  /** Open the filing at this page (the page a figure was taken from). */
+  initialPage?: number | null;
+  /** Emphasise this metric's row in the figures pane. */
+  focusMetric?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [origin, setOrigin] = useState("50% 50%");
@@ -53,7 +69,13 @@ export function DocumentReadButton({
         <EyeIcon />
         {label && <span>{label}</span>}
       </button>
-      {open && <DocumentReader document={document} origin={origin} onClosed={() => setOpen(false)} />}
+      {open && <DocumentReader
+          document={document}
+          origin={origin}
+          initialPage={initialPage}
+          focusMetric={focusMetric}
+          onClosed={() => setOpen(false)}
+        />}
     </>
   );
 }
@@ -61,10 +83,14 @@ export function DocumentReadButton({
 function DocumentReader({
   document: doc,
   origin,
+  initialPage,
+  focusMetric,
   onClosed,
 }: {
   document: ReadableDocument;
   origin: string;
+  initialPage?: number | null;
+  focusMetric?: string;
   onClosed: () => void;
 }) {
   const kind = viewKindOf(doc.original_filename);
@@ -72,6 +98,72 @@ function DocumentReader({
   const [error, setError] = useState<string | null>(null);
   const [closing, setClosing] = useState(false);
   const closeTimer = useRef<number | undefined>(undefined);
+
+  // Figures stored from this file, shown beside it. null = still loading.
+  const expectsFigures = kind !== "download" && (doc.fact_count === undefined || doc.fact_count > 0);
+  const [facts, setFacts] = useState<DocumentFact[] | null>(null);
+  const [factsError, setFactsError] = useState(false);
+  const [paneOpen, setPaneOpen] = useState(true);
+  const [mobileTab, setMobileTab] = useState<"document" | "figures">("document");
+  const [paneWidth, setPaneWidth] = useState(PANE_DEFAULT);
+  const [dragging, setDragging] = useState(false);
+  const [activeKey, setActiveKey] = useState<string | null>(null);
+  const splitRef = useRef<HTMLDivElement>(null);
+  const frameRef = useRef<HTMLIFrameElement>(null);
+
+  useEffect(() => {
+    if (!expectsFigures) return;
+    let cancelled = false;
+    api
+      .getDocument(doc.id)
+      .then((detail) => {
+        if (cancelled) return;
+        setFacts(detail.facts);
+        // Opened from one figure: mark it as the one the filing is showing.
+        const opened = initialPage
+          ? detail.facts.find((f) => f.metric === focusMetric && f.source_page === initialPage)
+          : undefined;
+        if (opened) setActiveKey(factKey(opened));
+      })
+      .catch(() => {
+        if (!cancelled) setFactsError(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [doc.id, expectsFigures, initialPage, focusMetric]);
+
+  const paneVisible =
+    expectsFigures && paneOpen && !error && (facts === null ? !factsError : facts.length > 0 || factsError);
+
+  /** Scroll the filing to a figure's page. The iframe has no scripts, so this
+   * is a plain fragment navigation on the same blob (no reload). Assigning
+   * `src` imperatively also works when the same page is pressed twice. */
+  function jumpTo(fact: DocumentFact) {
+    const page = jumpablePage(fact);
+    const frame = frameRef.current;
+    if (!page || !frame || !blobUrl) return;
+    frame.src = `${blobUrl}${pageFragment(kind, page)}`;
+    setActiveKey(factKey(fact));
+    setMobileTab("document"); // on a narrow screen, show what was asked for
+  }
+
+  function startDrag(e: ReactPointerEvent<HTMLDivElement>) {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setDragging(true);
+  }
+  function drag(e: ReactPointerEvent<HTMLDivElement>) {
+    if (!dragging || !splitRef.current) return;
+    const rect = splitRef.current.getBoundingClientRect();
+    const max = Math.min(PANE_MAX, rect.width - 360); // always leave the filing readable
+    setPaneWidth(Math.round(Math.max(PANE_MIN, Math.min(max, rect.right - e.clientX))));
+  }
+  function dragKey(e: ReactKeyboardEvent<HTMLDivElement>) {
+    if (e.key === "ArrowLeft") setPaneWidth((w) => Math.min(PANE_MAX, w + 24));
+    else if (e.key === "ArrowRight") setPaneWidth((w) => Math.max(PANE_MIN, w - 24));
+    else return;
+    e.preventDefault();
+  }
 
   const close = useCallback(() => {
     setClosing(true);
@@ -143,7 +235,7 @@ function DocumentReader({
       />
       <div
         style={{ transformOrigin: origin }}
-        className={`relative mx-auto flex h-full max-w-6xl flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-card motion-reduce:animate-none ${
+        className={`relative mx-auto flex h-full ${paneVisible ? "max-w-[96rem]" : "max-w-6xl"} flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-card motion-reduce:animate-none ${
           closing ? "animate-reader-panel-out" : "animate-reader-panel-in"
         }`}
       >
@@ -165,6 +257,16 @@ function DocumentReader({
               Open in new tab ↗
             </a>
           )}
+          {expectsFigures && (facts === null || facts.length > 0) && (
+            <button
+              type="button"
+              onClick={() => setPaneOpen((v) => !v)}
+              aria-pressed={paneOpen}
+              className="hidden rounded-md px-2 py-1 text-xs font-medium text-accent hover:bg-accent-subtle lg:inline-block"
+            >
+              {paneOpen ? "Hide figures" : "Show figures"}
+            </button>
+          )}
           <button
             type="button"
             onClick={() => void download()}
@@ -182,29 +284,107 @@ function DocumentReader({
           </button>
         </header>
 
-        <div className="relative min-h-0 flex-1 bg-background motion-reduce:animate-none animate-reader-content-in">
-          {kind === "download" ? (
-            <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
-              <p className="text-sm text-ink">This file type can&apos;t be shown in the browser.</p>
-              <p className="text-xs text-ink-muted">Download it to open in Excel, PowerPoint or a text editor.</p>
+        {paneVisible && (
+          <div role="tablist" aria-label="Reader view" className="flex border-b border-border-subtle lg:hidden">
+            {(["document", "figures"] as const).map((tab) => (
               <button
+                key={tab}
                 type="button"
-                onClick={() => void download()}
-                className="rounded-md bg-accent px-3 py-2 text-sm font-medium text-onfill hover:bg-accent-hover"
+                role="tab"
+                aria-selected={mobileTab === tab}
+                onClick={() => setMobileTab(tab)}
+                className={`flex-1 px-3 py-2 text-xs font-medium ${
+                  mobileTab === tab ? "border-b-2 border-accent text-ink" : "text-ink-muted"
+                }`}
               >
-                Download {doc.original_filename}
+                {tab === "document" ? "Filing" : "Figures"}
               </button>
-            </div>
-          ) : error ? (
-            <p className="p-6 text-sm text-negative">{error}</p>
-          ) : !blobUrl ? (
-            <p className="p-6 text-sm text-ink-muted">Opening report…</p>
-          ) : kind === "pdf" ? (
-            <iframe title={doc.original_filename} src={blobUrl} className="h-full w-full border-0" />
-          ) : (
-            // Empty sandbox: no scripts, forms, popups or same-origin access.
-            // White page — filings are styled for paper, not the dark theme.
-            <iframe title={doc.original_filename} src={blobUrl} sandbox="" className="h-full w-full border-0 bg-white" />
+            ))}
+          </div>
+        )}
+
+        <div
+          ref={splitRef}
+          style={{ "--pane-w": `${paneWidth}px` } as CSSProperties}
+          className="relative flex min-h-0 flex-1 flex-col bg-background motion-reduce:animate-none animate-reader-content-in lg:flex-row"
+        >
+          <div className={`relative min-h-0 min-w-0 flex-1 ${paneVisible && mobileTab === "figures" ? "hidden lg:block" : ""}`}>
+            {kind === "download" ? (
+              <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
+                <p className="text-sm text-ink">This file type can&apos;t be shown in the browser.</p>
+                <p className="text-xs text-ink-muted">Download it to open in Excel, PowerPoint or a text editor.</p>
+                <button
+                  type="button"
+                  onClick={() => void download()}
+                  className="rounded-md bg-accent px-3 py-2 text-sm font-medium text-onfill hover:bg-accent-hover"
+                >
+                  Download {doc.original_filename}
+                </button>
+              </div>
+            ) : error ? (
+              <p className="p-6 text-sm text-negative">{error}</p>
+            ) : !blobUrl ? (
+              <p className="p-6 text-sm text-ink-muted">Opening report…</p>
+            ) : kind === "pdf" ? (
+              <iframe
+                ref={frameRef}
+                title={doc.original_filename}
+                src={`${blobUrl}${pageFragment(kind, initialPage)}`}
+                className={`h-full w-full border-0 ${dragging ? "pointer-events-none" : ""}`}
+              />
+            ) : (
+              // Empty sandbox: no scripts, forms, popups or same-origin access.
+              // White page — filings are styled for paper, not the dark theme.
+              <iframe
+                ref={frameRef}
+                title={doc.original_filename}
+                src={`${blobUrl}${pageFragment(kind, initialPage)}`}
+                sandbox=""
+                className={`h-full w-full border-0 bg-white ${dragging ? "pointer-events-none" : ""}`}
+              />
+            )}
+          </div>
+
+          {paneVisible && (
+            <>
+              <div
+                role="separator"
+                aria-orientation="vertical"
+                aria-label="Resize figures pane"
+                aria-valuenow={paneWidth}
+                aria-valuemin={PANE_MIN}
+                aria-valuemax={PANE_MAX}
+                tabIndex={0}
+                onPointerDown={startDrag}
+                onPointerMove={drag}
+                onPointerUp={() => setDragging(false)}
+                onPointerCancel={() => setDragging(false)}
+                onKeyDown={dragKey}
+                className={`hidden w-1.5 shrink-0 cursor-col-resize touch-none transition-colors hover:bg-accent focus-visible:bg-accent lg:block ${
+                  dragging ? "bg-accent" : "bg-border-subtle"
+                }`}
+              />
+              <aside
+                aria-label="Figures from this filing"
+                className={`min-h-0 bg-surface lg:w-[var(--pane-w)] lg:shrink-0 ${
+                  mobileTab === "figures" ? "block flex-1 lg:flex-none" : "hidden lg:block"
+                }`}
+              >
+                {factsError ? (
+                  <p className="p-4 text-sm text-negative">Could not load the figures for this file.</p>
+                ) : facts === null ? (
+                  <p className="p-4 text-sm text-ink-muted">Loading figures…</p>
+                ) : (
+                  <StatementsPane
+                    facts={facts}
+                    activeKey={activeKey}
+                    focusMetric={focusMetric}
+                    canJump={blobUrl !== null}
+                    onJump={jumpTo}
+                  />
+                )}
+              </aside>
+            </>
           )}
         </div>
       </div>

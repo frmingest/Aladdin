@@ -20,6 +20,7 @@ import type {
   AccountUpdateInput,
   CompanyResearch,
   DeletionResult,
+  DocumentDetail,
   DocumentSummary,
   EdgarImport,
   NewswebAnnualReports,
@@ -219,6 +220,8 @@ export const api = {
 
   deleteDocument: (id: string) =>
     request<DeletionResult>(`/documents/${id}`, { method: "DELETE", query: { confirm: true } }),
+  /** One document with its stored figures — feeds the reader's statements pane. */
+  getDocument: (id: string) => request<DocumentDetail>(`/documents/${id}`),
   listDocuments: (holdingId: string) =>
     request<DocumentSummary[]>("/documents", { query: { holding_id: holdingId } }),
   uploadDocument: (params: {

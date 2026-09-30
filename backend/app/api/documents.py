@@ -30,6 +30,7 @@ from app.schemas.document import (
     FinancialLineItemOut,
 )
 from app.services.deletion import DeletionBlockedError, delete_documents
+from app.services.documents.anchoring import add_page_anchors
 from app.services.documents.ingestion import ingest_holding_document
 from app.services.documents.viewing import describe_viewing
 from app.services.settings.demo_guard import require_not_demo
@@ -206,6 +207,11 @@ def get_document_file(
         "Cache-Control": "private, max-age=300",
     }
     if viewing.is_html:
+        if not download:
+            # Reading, not downloading: add page anchors so the reader can
+            # jump to the page a figure was taken from. The stored original
+            # is never modified.
+            content = add_page_anchors(content)
         headers["Content-Security-Policy"] = (
             "sandbox; default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:"
         )
