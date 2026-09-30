@@ -30,7 +30,7 @@ from app.schemas.document import (
     FinancialLineItemOut,
 )
 from app.services.deletion import DeletionBlockedError, delete_documents
-from app.services.documents.anchoring import add_page_anchors
+from app.services.documents.anchoring import AnchorFact, add_page_anchors
 from app.services.documents.ingestion import ingest_holding_document
 from app.services.documents.viewing import describe_viewing
 from app.services.settings.demo_guard import require_not_demo
@@ -208,10 +208,18 @@ def get_document_file(
     }
     if viewing.is_html:
         if not download:
-            # Reading, not downloading: add page anchors so the reader can
-            # jump to the page a figure was taken from. The stored original
-            # is never modified.
-            content = add_page_anchors(content)
+            # Reading, not downloading: add anchors so the reader can jump to a
+            # figure's page, and to the number itself where it can be found.
+            # The stored original is never modified.
+            stored = (
+                db.query(FinancialLineItem)
+                .filter(FinancialLineItem.document_id == document.id, FinancialLineItem.source_page > 0)
+                .all()
+            )
+            content = add_page_anchors(
+                content,
+                [AnchorFact(f.metric, f.period, f.value, f.source_page) for f in stored],
+            )
         headers["Content-Security-Policy"] = (
             "sandbox; default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:"
         )

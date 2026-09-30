@@ -290,6 +290,7 @@ function FactSourcesTable({ metrics }: { metrics: HoldingMetrics }) {
                       className="ml-1 align-middle"
                       initialPage={f.source_page}
                       focusMetric={f.metric}
+                      focusPeriod={metrics.period}
                     />
                   </td>
                 </tr>
