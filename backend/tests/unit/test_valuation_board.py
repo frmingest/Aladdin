@@ -202,3 +202,31 @@ def test_empty_portfolio_gives_empty_board():
     db = _session()
     board = build_board(db, market_data_provider=None, risk_free_rate_provider=None)
     assert board.rows == [] and board.total_equity_value_nok == 0
+
+
+def test_watchlist_rows_are_separate_and_exclude_owned(monkeypatch, setup):
+    from app.models.watchlist import WatchlistItem
+
+    db, holdings = setup
+    watched = _holding(db, "WATCHED")
+    db.add_all([
+        WatchlistItem(holding_id=watched.id, buy_below_price=D("70"), buy_below_currency="NOK"),
+        WatchlistItem(holding_id=holdings["cheap"].id),  # owned -> stays on the portfolio side
+    ])
+    db.commit()
+    monkeypatch.setattr(board_module, "compute_holding_valuation", _fake_valuation({
+        "CHEAP": ("50", "60", "100", "140"),
+        "FAIR": ("90", "60", "100", "140"),
+        "RICH": ("160", "60", "100", "140"),
+        "WATCHED": ("50", "60", "100", "140"),
+    }))
+
+    board = build_board(db, market_data_provider=None, risk_free_rate_provider=None)
+
+    assert [r.ticker for r in board.watchlist_rows] == ["WATCHED"]
+    assert board.watchlist_rows[0].buy_below_price == D("70")
+    assert board.watchlist_rows[0].weight_pct is None
+    # Portfolio rows, totals and zone counts are untouched by the watchlist.
+    assert "WATCHED" not in [r.ticker for r in board.rows]
+    assert board.total_equity_value_nok == D("9000")
+    assert sum(board.zone_counts().values()) == len(board.rows)

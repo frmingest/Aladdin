@@ -76,6 +76,8 @@ class RegimeOut(BaseModel):
 
 
 class PortfolioRiskOut(BaseModel):
+    # When this payload was stored (page-load snapshots, 2026-09-30).
+    snapshot_at: datetime | None = None
     as_of: datetime | None
     equity_value_nok: Decimal
     lookback_days: int

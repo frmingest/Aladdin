@@ -13,7 +13,7 @@ import {
 import { api, ApiError } from "../lib/api";
 import { formatDate, formatNok, formatPct100 } from "../lib/format";
 import type { DailyValue, PortfolioPerformance } from "../lib/types";
-import { Button, Card, EmptyState, PageHeader, SectionTitle } from "../components/ui";
+import { Button, Card, EmptyState, PageHeader, SectionTitle, SnapshotStamp } from "../components/ui";
 import { InfoTooltip } from "../components/InfoTooltip";
 import { GLOSSARY } from "../lib/glossary";
 
@@ -224,6 +224,7 @@ export default function PerformancePage() {
                 </button>
               ))}
             </div>
+            <SnapshotStamp at={perf?.snapshot_at} />
             <Button variant="secondary" onClick={onRefresh} disabled={refreshing}>
               {refreshing ? "Refreshing…" : "Refresh price data"}
             </Button>

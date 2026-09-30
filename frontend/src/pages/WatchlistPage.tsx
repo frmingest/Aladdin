@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { api, ApiError } from "../lib/api";
 import { formatDate, formatDecimal, formatPct100, formatPercent } from "../lib/format";
 import type { HoldingFieldOptions, WatchlistRow, WatchlistStatus } from "../lib/types";
-import { Button, Card, EmptyState, PageHeader, VerdictBadge } from "../components/ui";
+import { Button, Card, EmptyState, PageHeader, SnapshotStamp, VerdictBadge } from "../components/ui";
 
 /** Feature F7 — companies you follow, with your own buy-below price.
  * Prices and DCF values come from the same cached valuation as the
@@ -19,6 +19,67 @@ const STATUS: Record<WatchlistStatus, { label: string; className: string }> = {
   no_price: { label: "No price", className: "bg-border-subtle text-ink-faint" },
   currency_mismatch: { label: "Currency differs", className: "bg-caution-subtle text-caution" },
 };
+
+/** Where today's price sits relative to your buy-below price: the tick is the
+ * buy price, everything left of it is the buy zone. Track spans -30%..+50%. */
+const GAUGE_MIN = -30;
+const GAUGE_MAX = 50;
+function BuyGauge({ row }: { row: WatchlistRow }) {
+  const d = row.distance_to_buy_pct === null ? null : Number(row.distance_to_buy_pct);
+  const pos = (v: number) => ((Math.min(GAUGE_MAX, Math.max(GAUGE_MIN, v)) - GAUGE_MIN) / (GAUGE_MAX - GAUGE_MIN)) * 100;
+  const dot =
+    row.status === "buy_zone" ? "bg-positive" : row.status === "near" ? "bg-caution" : "bg-ink-faint";
+  if (d === null) {
+    return <span className="text-xs text-ink-faint">{STATUS[row.status].label}</span>;
+  }
+  return (
+    <div className="w-40" title={STATUS[row.status].label}>
+      <div
+        className="relative h-4"
+        role="img"
+        aria-label={`${STATUS[row.status].label}: ${d > 0 ? "+" : ""}${d.toFixed(0)}% versus your buy price`}
+      >
+        <div className="absolute top-1/2 h-1.5 w-full -translate-y-1/2 rounded-full bg-border-subtle" />
+        <div
+          className="absolute top-1/2 h-1.5 -translate-y-1/2 rounded-l-full bg-positive/25"
+          style={{ left: 0, width: `${pos(0)}%` }}
+        />
+        <div className="absolute top-1/2 h-3.5 w-px -translate-y-1/2 bg-ink" style={{ left: `${pos(0)}%` }} />
+        <div
+          className={`absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-surface ${dot}`}
+          style={{ left: `${pos(d)}%` }}
+        />
+      </div>
+      <p className={`tabular mt-0.5 text-xs font-medium ${d <= 0 ? "text-positive" : "text-ink-muted"}`}>
+        {d > 0 ? "+" : ""}
+        {formatPct100(String(d))} vs. buy price
+      </p>
+    </div>
+  );
+}
+
+function StatusTiles({ rows }: { rows: WatchlistRow[] }) {
+  const tiles: { label: string; count: number; tone: string }[] = [
+    { label: "At or below buy price", count: rows.filter((r) => r.status === "buy_zone").length, tone: "text-positive" },
+    { label: "Within 10%", count: rows.filter((r) => r.status === "near").length, tone: "text-caution" },
+    { label: "Above buy price", count: rows.filter((r) => r.status === "above").length, tone: "text-ink" },
+    {
+      label: "Needs a buy price or price",
+      count: rows.filter((r) => ["no_target", "no_price", "currency_mismatch"].includes(r.status)).length,
+      tone: "text-ink-muted",
+    },
+  ];
+  return (
+    <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+      {tiles.map((t) => (
+        <Card key={t.label}>
+          <p className="text-xs text-ink-muted">{t.label}</p>
+          <p className={`tabular mt-1 text-2xl font-semibold ${t.tone}`}>{t.count}</p>
+        </Card>
+      ))}
+    </div>
+  );
+}
 
 function AddForm({ onAdded }: { onAdded: () => void }) {
   const [ticker, setTicker] = useState("");
@@ -160,15 +221,33 @@ function BuyBelowCell({ row, onSaved }: { row: WatchlistRow; onSaved: () => void
 
 export default function WatchlistPage() {
   const [rows, setRows] = useState<WatchlistRow[] | null>(null);
+  const [snapshotAt, setSnapshotAt] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(() => {
     api
       .getWatchlist()
-      .then((w) => setRows(w.rows))
+      .then((w) => {
+        setRows(w.rows);
+        setSnapshotAt(w.snapshot_at ?? null);
+      })
       .catch((e) => setError(e instanceof ApiError ? e.message : "Could not load the watchlist."));
   }, []);
   useEffect(load, [load]);
+
+  function refreshPrices() {
+    setRefreshing(true);
+    setError(null);
+    api
+      .refreshWatchlist()
+      .then((w) => {
+        setRows(w.rows);
+        setSnapshotAt(w.snapshot_at ?? null);
+      })
+      .catch((e) => setError(e instanceof ApiError ? e.message : "Could not refresh the watchlist."))
+      .finally(() => setRefreshing(false));
+  }
 
   async function remove(row: WatchlistRow) {
     if (!window.confirm(`Remove ${row.name} from the watchlist? The holding and its data stay.`)) return;
@@ -187,6 +266,14 @@ export default function WatchlistPage() {
       <PageHeader
         title="Watchlist"
         subtitle="Wonderful businesses you'd like to own at a fair price. Flagged when the price reaches your buy-below level."
+        actions={
+          <div className="flex items-center gap-3">
+            <SnapshotStamp at={snapshotAt} />
+            <Button variant="secondary" onClick={refreshPrices} disabled={refreshing}>
+              {refreshing ? "Refreshing…" : "Refresh prices"}
+            </Button>
+          </div>
+        }
       />
 
       <div className="space-y-6">
@@ -199,15 +286,13 @@ export default function WatchlistPage() {
           <EmptyState>Nothing on the watchlist yet. Add a company above, or use Watch on any holding page.</EmptyState>
         )}
 
+        {rows && rows.length > 0 && <StatusTiles rows={rows} />}
+
         {inZone.length > 0 && (
-          <Card className="border-positive/40">
-            <p className="text-sm text-ink">
-              <span className="font-semibold text-positive">
-                {inZone.length} {inZone.length === 1 ? "company is" : "companies are"} at or below your buy price:
-              </span>{" "}
-              {inZone.map((r) => r.name).join(", ")}. Re-read the thesis and run an analysis before acting.
-            </p>
-          </Card>
+          <p className="text-sm text-ink-muted">
+            <span className="font-semibold text-positive">At or below your buy price:</span>{" "}
+            {inZone.map((r) => r.name).join(", ")}. Re-read the thesis and run an analysis before acting.
+          </p>
         )}
 
         {rows && rows.length > 0 && (
@@ -217,10 +302,9 @@ export default function WatchlistPage() {
                 <thead>
                   <tr className="text-left text-xs text-ink-muted">
                     <th className="py-2 pr-4 font-medium">Company</th>
-                    <th className="py-2 pr-4 font-medium">Status</th>
+                    <th className="py-2 pr-4 font-medium">Price vs. your buy price</th>
                     <th className="py-2 pr-4 text-right font-medium">Price</th>
                     <th className="py-2 pr-4 text-right font-medium">Buy below</th>
-                    <th className="py-2 pr-4 text-right font-medium">vs. buy price</th>
                     <th className="py-2 pr-4 text-right font-medium">DCF base · MoS</th>
                     <th className="py-2 pr-4 font-medium">Verdict</th>
                     <th className="py-2" />
@@ -228,7 +312,6 @@ export default function WatchlistPage() {
                 </thead>
                 <tbody>
                   {rows.map((row) => {
-                    const d = row.distance_to_buy_pct;
                     const mos = row.margin_of_safety_base;
                     return (
                       <tr key={row.id} className="border-t border-border-subtle align-middle">
@@ -244,9 +327,7 @@ export default function WatchlistPage() {
                           {row.notes && <p className="mt-0.5 max-w-xs truncate text-xs text-ink-muted" title={row.notes}>{row.notes}</p>}
                         </td>
                         <td className="py-3 pr-4">
-                          <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${STATUS[row.status].className}`}>
-                            {STATUS[row.status].label}
-                          </span>
+                          <BuyGauge row={row} />
                         </td>
                         <td className="tabular py-3 pr-4 text-right text-ink" title={row.price_as_of ? `As of ${formatDate(row.price_as_of)}` : row.unavailable_reason ?? undefined}>
                           {row.price ? formatDecimal(row.price) : "—"}
@@ -254,9 +335,6 @@ export default function WatchlistPage() {
                         </td>
                         <td className="py-3 pr-4 text-right">
                           <BuyBelowCell row={row} onSaved={load} />
-                        </td>
-                        <td className={`tabular py-3 pr-4 text-right font-medium ${d === null ? "text-ink-faint" : Number(d) <= 0 ? "text-positive" : "text-ink"}`}>
-                          {d === null ? "—" : `${Number(d) > 0 ? "+" : ""}${formatPct100(d)}`}
                         </td>
                         <td
                           className="tabular py-3 pr-4 text-right text-ink-muted"

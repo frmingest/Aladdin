@@ -42,11 +42,13 @@ from app.models.portfolio import PortfolioPosition, PortfolioSnapshot
 from app.models.precious_metal import PreciousMetalHolding
 from app.models.research import ResearchItem, ResearchRun
 from app.models.risk import PriceHistoryObservation
+from app.models.snapshot import ComputedSnapshot
 from app.models.thesis import ThesisTripwire
 from app.models.watchlist import WatchlistItem
 
 __all__ = [
     "Account",
+    "ComputedSnapshot",
     "AnalysisRun",
     "AnalysisWorkerHeartbeat",
     "AppSetting",

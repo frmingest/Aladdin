@@ -36,6 +36,7 @@ from app.schemas.valuation import (
 from app.services.settings.demo_guard import require_not_demo
 from app.services.settings.demo_mode import is_demo_mode
 from app.services.settings.synthetic_data import demo_valuation, demo_valuation_board
+from app.services.snapshots import BOARD_KEY, get_or_build
 from app.services.valuation.board import build_board
 from app.services.valuation.holding_valuation import (
     HoldingValuationResult,
@@ -201,31 +202,49 @@ def refresh_holding_valuation(
     return _to_out(result)
 
 
+def build_board_out(
+    db: Session,
+    market_data_provider: MarketDataProvider,
+    risk_free_rate_provider: RiskFreeRateProvider,
+    *,
+    force_refresh: bool,
+) -> MarginOfSafetyBoardOut:
+    board = build_board(
+        db,
+        market_data_provider=market_data_provider,
+        risk_free_rate_provider=risk_free_rate_provider,
+        force_refresh=force_refresh,
+    )
+    return MarginOfSafetyBoardOut(
+        rows=[BoardRowOut(**row.__dict__) for row in board.rows],
+        total_equity_value_nok=board.total_equity_value_nok,
+        zone_counts=board.zone_counts(),
+        watchlist_rows=[BoardRowOut(**row.__dict__) for row in board.watchlist_rows],
+    )
+
+
 @router.get("/board", response_model=MarginOfSafetyBoardOut)
 def get_margin_of_safety_board(
     db: Session = Depends(get_db),
     market_data_provider: MarketDataProvider = Depends(get_market_data_provider),
     risk_free_rate_provider: RiskFreeRateProvider = Depends(get_risk_free_rate_provider),
 ) -> MarginOfSafetyBoardOut:
-    """Feature F3: every currently owned equity ranked by margin of safety.
+    """Feature F3: every currently owned equity ranked by margin of safety,
+    plus watchlist companies you don't own in `watchlist_rows`.
     Uses the same cached price/FX/rate data as GET /valuation/holdings/{id};
     no LLM call is ever made.
 
-    Page-load-performance P1 (2026-09-28): never revalues live here — each
-    holding is priced from whatever's already cached (see
-    app/services/valuation/holding_valuation.py's `force_refresh=False`
-    default), so this always returns fast regardless of portfolio size.
-    Use POST /valuation/board/refresh to force a real revalue of every
-    equity holding."""
+    Page-load work (2026-09-28/30): never revalues live here, and serves a
+    stored snapshot (app/services/snapshots.py) while the portfolio,
+    watchlist, documents and analyses are unchanged. Use
+    POST /valuation/board/refresh to force a real revalue."""
     if is_demo_mode(db):
         return demo_valuation_board()
-    board = build_board(
-        db, market_data_provider=market_data_provider, risk_free_rate_provider=risk_free_rate_provider
-    )
-    return MarginOfSafetyBoardOut(
-        rows=[BoardRowOut(**row.__dict__) for row in board.rows],
-        total_equity_value_nok=board.total_equity_value_nok,
-        zone_counts=board.zone_counts(),
+    return get_or_build(
+        db,
+        BOARD_KEY,
+        MarginOfSafetyBoardOut,
+        lambda: build_board_out(db, market_data_provider, risk_free_rate_provider, force_refresh=False),
     )
 
 
@@ -237,18 +256,12 @@ def refresh_margin_of_safety_board(
 ) -> MarginOfSafetyBoardOut:
     """Forces a real revalue (live price/FX/beta/risk-free-rate/share-count
     fetch, subject to each provider's own staleness cache) of every equity
-    holding on the board — this is the slow path GET /board no longer
-    takes on its own. "I want this now", same shape as every other
-    .../refresh endpoint in the app."""
+    holding on the board and stores the result as the new snapshot."""
     require_not_demo(db)
-    board = build_board(
+    return get_or_build(
         db,
-        market_data_provider=market_data_provider,
-        risk_free_rate_provider=risk_free_rate_provider,
-        force_refresh=True,
-    )
-    return MarginOfSafetyBoardOut(
-        rows=[BoardRowOut(**row.__dict__) for row in board.rows],
-        total_equity_value_nok=board.total_equity_value_nok,
-        zone_counts=board.zone_counts(),
+        BOARD_KEY,
+        MarginOfSafetyBoardOut,
+        lambda: build_board_out(db, market_data_provider, risk_free_rate_provider, force_refresh=True),
+        refresh=True,
     )

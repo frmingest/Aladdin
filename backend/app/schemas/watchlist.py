@@ -73,3 +73,5 @@ class WatchlistRowOut(BaseModel):
 class WatchlistOut(BaseModel):
     rows: list[WatchlistRowOut]
     buy_zone_count: int
+    # When this payload was stored (page-load snapshots, 2026-09-30).
+    snapshot_at: datetime | None = None

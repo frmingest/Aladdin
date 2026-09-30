@@ -66,7 +66,13 @@ def get_or_refresh_daily_history(
     currency_hint: str | None,
     lookback_days: int,
     force: bool = False,
+    serve_stale: bool = False,
 ) -> TickerHistory:
+    """`serve_stale` (page-load work, 2026-09-30): a plain page GET passes
+    True so stored history older than the staleness window is served as-is
+    instead of blocking on a live Yahoo call; only a ticker with nothing
+    stored yet is still fetched. The Refresh buttons and the worker pass
+    `force=True`."""
     settings = get_settings()
     now = datetime.now(timezone.utc)
     since = (now - timedelta(days=lookback_days)).date()
@@ -77,6 +83,17 @@ def get_or_refresh_daily_history(
     )
 
     if not force and is_fresh:
+        rows = _stored_points(db, ticker, since=since)
+        if rows:
+            return TickerHistory(
+                ticker=ticker,
+                available=True,
+                currency=rows[-1].currency,
+                points=[(r.observed_on, r.close) for r in rows],
+                as_of=_aware(newest_fetch),
+            )
+
+    if serve_stale and not force and newest_fetch is not None:
         rows = _stored_points(db, ticker, since=since)
         if rows:
             return TickerHistory(

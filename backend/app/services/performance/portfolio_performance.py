@@ -187,6 +187,17 @@ def _empty_result(
     )
 
 
+def resolve_window(lookback_days: int | None, benchmark_ticker: str | None) -> tuple[int, str]:
+    """The (lookback, benchmark) a request really means — shared by the
+    builder and the snapshot key so both agree."""
+    settings = get_settings()
+    lookback = min(
+        lookback_days or settings.performance_lookback_days_default,
+        settings.performance_max_lookback_days,
+    )
+    return lookback, (benchmark_ticker or settings.performance_default_benchmark_ticker).strip().upper()
+
+
 def build_portfolio_performance(
     db: Session,
     *,
@@ -194,6 +205,7 @@ def build_portfolio_performance(
     lookback_days: int | None = None,
     benchmark_ticker: str | None = None,
     force_refresh: bool = False,
+    serve_stale: bool = False,
 ) -> PortfolioPerformance:
     settings = get_settings()
     lookback_days = min(
@@ -233,6 +245,7 @@ def build_portfolio_performance(
             currency_hint=p.trading_currency,
             lookback_days=lookback_days,
             force=force_refresh,
+            serve_stale=serve_stale,
         )
         if not history.available or len(history.points) < 2:
             excluded.append(ExcludedHolding(p.ticker, p.name, history.reason or "no daily price history"))
@@ -251,6 +264,7 @@ def build_portfolio_performance(
                     currency_hint=None,
                     lookback_days=lookback_days,
                     force=force_refresh,
+                    serve_stale=serve_stale,
                 )
                 fx_cache[pair] = _forward_fill(fx_hist.points, axis) if fx_hist.available else {}
             fx_filled = fx_cache[pair]
@@ -303,6 +317,7 @@ def build_portfolio_performance(
         currency_hint=None,
         lookback_days=lookback_days,
         force=force_refresh,
+        serve_stale=serve_stale,
     )
     if bench_history.available and len(bench_history.points) >= 2:
         benchmark_unit = _forward_fill(bench_history.points, axis)

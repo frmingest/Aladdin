@@ -52,6 +52,7 @@ def build_portfolio_risk(
     market_data_provider: MarketDataProvider,
     risk_free_rate_provider: RiskFreeRateProvider,
     force_refresh: bool = False,
+    serve_stale: bool = False,
 ) -> PortfolioRisk:
     settings = get_settings()
     lookback_days = settings.risk_correlation_lookback_days
@@ -75,6 +76,7 @@ def build_portfolio_risk(
             currency_hint=p.trading_currency,
             lookback_days=lookback_days,
             force=force_refresh,
+            serve_stale=serve_stale,
         )
         histories[p.ticker] = history
         if history.reason:
