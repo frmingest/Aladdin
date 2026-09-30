@@ -192,6 +192,31 @@ def test_read_html_filing_inline_with_sandbox_csp(client):
     assert response.headers["x-content-type-options"] == "nosniff"
 
 
+def test_read_ixbrl_filing_has_figure_anchors_but_download_is_the_original(client):
+    from tests.unit.test_extraction_ixbrl import BALANCE, INCOME, _filing
+
+    test_client, holding_id = client
+    content = _filing(INCOME, BALANCE)
+    upload = test_client.post(
+        "/documents/upload",
+        data={"holding_id": holding_id, "document_type": "annual_report"},
+        files={"file": ("acme-2025.xhtml", content, "application/xhtml+xml")},
+    )
+    assert upload.status_code == 201, upload.text
+    doc = upload.json()["document"]
+    assert doc["fact_count"] > 0
+
+    read = test_client.get(f"/documents/{doc['id']}/file")
+    assert read.status_code == 200
+    assert b'id="aladdin-page-2"' in read.content
+    assert b'id="aladdin-fact-revenue-FY2025"' in read.content  # exact: wraps the tagged number
+    assert b'id="aladdin-fact-total_debt-FY2025"' in read.content  # derived: page-level fallback
+    assert "sandbox" in read.headers["content-security-policy"]
+
+    download = test_client.get(f"/documents/{doc['id']}/file", params={"download": True})
+    assert download.content == content  # the stored original is untouched
+
+
 def test_read_xlsx_is_served_as_attachment(client):
     test_client, holding_id = client
     upload = test_client.post(

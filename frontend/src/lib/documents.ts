@@ -19,3 +19,16 @@ export function pageFragment(kind: DocumentViewKind, page: number | null | undef
   if (kind === "html") return `#aladdin-page-${page}`;
   return "";
 }
+
+/** Fragment that opens a filing at one *figure*. XHTML: the backend wraps the
+ * tagged number (or, for derived figures, marks the page) with
+ * `aladdin-fact-<metric>-<period>` — see anchoring.py, which builds the same
+ * id. PDFs have no per-number target, so they open at the figure's page. */
+export function factFragment(
+  kind: DocumentViewKind,
+  fact: { metric: string; period: string; source_page: number | null },
+): string {
+  if (!fact.source_page || fact.source_page < 1) return "";
+  if (kind === "html") return `#aladdin-fact-${`${fact.metric}-${fact.period}`.replace(/[^A-Za-z0-9_-]/g, "_")}`;
+  return pageFragment(kind, fact.source_page);
+}

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from "react";
 import { createPortal } from "react-dom";
 import { ApiError, api, fetchDocumentFile } from "../lib/api";
-import { pageFragment, viewKindOf } from "../lib/documents";
+import { factFragment, pageFragment, viewKindOf } from "../lib/documents";
 import { factKey, jumpablePage } from "../lib/statements";
 import type { DocumentFact } from "../lib/types";
 import { StatementsPane } from "./StatementsPane";
@@ -40,14 +40,17 @@ export function DocumentReadButton({
   className = "",
   initialPage,
   focusMetric,
+  focusPeriod,
 }: {
   document: ReadableDocument;
   label?: string | null;
   className?: string;
   /** Open the filing at this page (the page a figure was taken from). */
   initialPage?: number | null;
-  /** Emphasise this metric's row in the figures pane. */
+  /** Emphasise this metric's row in the figures pane — and, with
+   * `focusPeriod` and `initialPage`, open the filing at that exact number. */
   focusMetric?: string;
+  focusPeriod?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [origin, setOrigin] = useState("50% 50%");
@@ -74,6 +77,7 @@ export function DocumentReadButton({
           origin={origin}
           initialPage={initialPage}
           focusMetric={focusMetric}
+          focusPeriod={focusPeriod}
           onClosed={() => setOpen(false)}
         />}
     </>
@@ -85,12 +89,14 @@ function DocumentReader({
   origin,
   initialPage,
   focusMetric,
+  focusPeriod,
   onClosed,
 }: {
   document: ReadableDocument;
   origin: string;
   initialPage?: number | null;
   focusMetric?: string;
+  focusPeriod?: string;
   onClosed: () => void;
 }) {
   const kind = viewKindOf(doc.original_filename);
@@ -121,7 +127,12 @@ function DocumentReader({
         setFacts(detail.facts);
         // Opened from one figure: mark it as the one the filing is showing.
         const opened = initialPage
-          ? detail.facts.find((f) => f.metric === focusMetric && f.source_page === initialPage)
+          ? detail.facts.find(
+              (f) =>
+                f.metric === focusMetric &&
+                f.source_page === initialPage &&
+                (focusPeriod === undefined || f.period === focusPeriod),
+            )
           : undefined;
         if (opened) setActiveKey(factKey(opened));
       })
@@ -131,19 +142,26 @@ function DocumentReader({
     return () => {
       cancelled = true;
     };
-  }, [doc.id, expectsFigures, initialPage, focusMetric]);
+  }, [doc.id, expectsFigures, initialPage, focusMetric, focusPeriod]);
+
+  // Opened from one figure (Metrics): land on that exact number when we know
+  // which figure it is, otherwise on its page.
+  const initialFragment =
+    initialPage && focusMetric && focusPeriod
+      ? factFragment(kind, { metric: focusMetric, period: focusPeriod, source_page: initialPage })
+      : pageFragment(kind, initialPage);
 
   const paneVisible =
     expectsFigures && paneOpen && !error && (facts === null ? !factsError : facts.length > 0 || factsError);
 
-  /** Scroll the filing to a figure's page. The iframe has no scripts, so this
+  /** Scroll the filing to a figure — the number itself in XHTML (highlighted
+   * by CSS `:target`), the page in a PDF. The iframe has no scripts, so this
    * is a plain fragment navigation on the same blob (no reload). Assigning
-   * `src` imperatively also works when the same page is pressed twice. */
+   * `src` imperatively also works when the same figure is pressed twice. */
   function jumpTo(fact: DocumentFact) {
-    const page = jumpablePage(fact);
     const frame = frameRef.current;
-    if (!page || !frame || !blobUrl) return;
-    frame.src = `${blobUrl}${pageFragment(kind, page)}`;
+    if (!jumpablePage(fact) || !frame || !blobUrl) return;
+    frame.src = `${blobUrl}${factFragment(kind, fact)}`;
     setActiveKey(factKey(fact));
     setMobileTab("document"); // on a narrow screen, show what was asked for
   }
@@ -329,7 +347,7 @@ function DocumentReader({
               <iframe
                 ref={frameRef}
                 title={doc.original_filename}
-                src={`${blobUrl}${pageFragment(kind, initialPage)}`}
+                src={`${blobUrl}${initialFragment}`}
                 className={`h-full w-full border-0 ${dragging ? "pointer-events-none" : ""}`}
               />
             ) : (
@@ -338,7 +356,7 @@ function DocumentReader({
               <iframe
                 ref={frameRef}
                 title={doc.original_filename}
-                src={`${blobUrl}${pageFragment(kind, initialPage)}`}
+                src={`${blobUrl}${initialFragment}`}
                 sandbox=""
                 className={`h-full w-full border-0 bg-white ${dragging ? "pointer-events-none" : ""}`}
               />
