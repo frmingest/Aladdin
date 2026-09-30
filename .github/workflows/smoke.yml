@@ -37,6 +37,10 @@ jobs:
     steps:
       - name: Needs the two URLs
         if: env.SMOKE_FRONTEND_URL == '' || env.SMOKE_API_URL == ''
+        # Runs before checkout, so `frontend/` does not exist yet: without this
+        # the step crashed ("working directory ... No such file") instead of
+        # printing the message below.
+        working-directory: .
         run: |
           echo "::error::Set the repository variables SMOKE_FRONTEND_URL and SMOKE_API_URL."
           exit 1
