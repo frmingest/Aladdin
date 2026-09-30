@@ -288,6 +288,8 @@ function FactSourcesTable({ metrics }: { metrics: HoldingMetrics }) {
                       document={{ id: f.document_id, original_filename: f.original_filename }}
                       label={null}
                       className="ml-1 align-middle"
+                      initialPage={f.source_page}
+                      focusMetric={f.metric}
                     />
                   </td>
                 </tr>
