@@ -96,6 +96,7 @@ def _build_provider(name: str, settings: Settings) -> LLMProvider:
             min_gpu_share=settings.ollama_min_gpu_share,
             fallback_model=settings.ollama_fallback_model_name or None,
             adaptive_fit=settings.ollama_adaptive_fit,
+            fallback_num_ctx=settings.ollama_fallback_num_ctx,
             think=settings.ollama_think,
             api_key=settings.ollama_api_key,
         )

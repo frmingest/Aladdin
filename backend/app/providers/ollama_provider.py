@@ -76,6 +76,7 @@ log = logging.getLogger(__name__)
 _CONTEXT_BANDS = (8192, 12288, 16384, 20480, 24576, 32768)
 _CHARS_PER_TOKEN = 3.0  # conservative for Norwegian text, numbers and JSON
 _MISFIT_MEMORY_SECONDS = 600.0
+_OUTPUT_RESERVE_TOKENS = 8192
 
 
 @dataclass(frozen=True)
@@ -192,6 +193,7 @@ class OllamaProvider(LedgerRecordingMixin, LLMProvider):
         stall_timeout_seconds: float = 600.0,
         min_gpu_share: float = 0.0,
         fallback_model: str | None = None,
+        fallback_num_ctx: int = 32768,
         adaptive_fit: bool = False,
         think: bool | None = False,
         api_key: str | None = None,
@@ -210,6 +212,8 @@ class OllamaProvider(LedgerRecordingMixin, LLMProvider):
         # 2026-09-30: with adaptive_fit the provider picks a (model, num_ctx)
         # that sits fully in VRAM *before* the pass, instead of failing after
         # the first token. Off by default so unit tests stay hermetic.
+        self._fallback_num_ctx = fallback_num_ctx
+        self._chars_per_token = _CHARS_PER_TOKEN
         self._adaptive_fit = adaptive_fit and min_gpu_share > 0
         self._misfit_until: dict[tuple[str, int], float] = {}
         self._temperature = temperature
@@ -333,23 +337,22 @@ class OllamaProvider(LedgerRecordingMixin, LLMProvider):
             )
         return gpu_share(base_url=self._base_url, model=model, api_key=self._api_key)
 
-    def _context_bands(self) -> list[int]:
-        bands = [b for b in _CONTEXT_BANDS if b < self._num_ctx] + [self._num_ctx]
-        return sorted(set(bands))
+    def _context_bands(self, ceiling: int) -> list[int]:
+        return sorted({b for b in _CONTEXT_BANDS if b < ceiling} | {ceiling})
+
+    def _ceiling_for(self, model: str) -> int:
+        """Largest context this model may be asked for. The smaller fallback
+        model has VRAM to spare, so it may go above OLLAMA_NUM_CTX."""
+        if model == self._primary_model:
+            return self._num_ctx
+        return max(self._num_ctx, self._fallback_num_ctx)
 
     def _plan_fit(self, needed_tokens: int) -> int:
         """Pick the model + context for this call, set ``self._model`` and
         return the num_ctx to use. Tries the configured model at the smallest
-        context that holds the prompt + output, then the fallback model.
-        Raises when nothing sits fully on the GPU."""
+        context that holds the prompt + output, then the fallback model (which
+        may use a larger context). Raises when nothing sits fully on the GPU."""
         self._model = self._primary_model
-        bands = [b for b in self._context_bands() if b >= needed_tokens]
-        if not bands:
-            raise LLMUnavailableError(
-                f"This call needs ~{needed_tokens:,} tokens (prompt + output) but OLLAMA_NUM_CTX is "
-                f"{self._num_ctx:,}. Raise OLLAMA_NUM_CTX, or trim the evidence packet."
-            )
-        ctx = bands[0]
         candidates = [self._primary_model]
         if self._fallback_model:
             installed = self._installed_models()
@@ -358,6 +361,11 @@ class OllamaProvider(LedgerRecordingMixin, LLMProvider):
         tried: list[str] = []
         now = time.monotonic()
         for model in candidates:
+            bands = [b for b in self._context_bands(self._ceiling_for(model)) if b >= needed_tokens]
+            if not bands:
+                tried.append(f"{model}: needs {needed_tokens:,} tokens, max context {self._ceiling_for(model):,}")
+                continue
+            ctx = bands[0]
             if self._misfit_until.get((model, ctx), 0.0) > now:
                 tried.append(f"{model}@{ctx} (skipped, did not fit a moment ago)")
                 continue
@@ -365,8 +373,8 @@ class OllamaProvider(LedgerRecordingMixin, LLMProvider):
             if share is None or share >= self._min_gpu_share:
                 if model != self._primary_model:
                     log.warning(
-                        "ollama: %s@%d does not fit on the GPU, using fallback %s@%d",
-                        self._primary_model, ctx, model, ctx,
+                        "ollama: %s does not fit on the GPU for this call, using fallback %s@%d",
+                        self._primary_model, model, ctx,
                     )
                 self._model = model
                 return ctx
@@ -375,8 +383,8 @@ class OllamaProvider(LedgerRecordingMixin, LLMProvider):
         raise LLMUnavailableError(
             "No model fits fully on the GPU for this call (needs "
             f"~{needed_tokens:,} tokens of context). Tried " + "; ".join(tried) + ". "
-            "Close other GPU-heavy apps, check OLLAMA_FLASH_ATTENTION=1 and OLLAMA_KV_CACHE_TYPE=q8_0 "
-            "are set for the Ollama server, or pull a smaller OLLAMA_FALLBACK_MODEL_NAME. "
+            "Trim the evidence packet, close other GPU-heavy apps, check OLLAMA_FLASH_ATTENTION=1 and "
+            "OLLAMA_KV_CACHE_TYPE=q8_0 are set for the Ollama server, or raise OLLAMA_FALLBACK_NUM_CTX. "
             "Set OLLAMA_MIN_GPU_SHARE=0 to run anyway (slow)."
         )
 
@@ -482,8 +490,12 @@ class OllamaProvider(LedgerRecordingMixin, LLMProvider):
         schema = response_schema.model_json_schema()
         call_ctx = self._num_ctx
         if self._adaptive_fit:
-            est_prompt = int((len(system_prompt) + len(user_prompt)) / _CHARS_PER_TOKEN * 1.05) + 256
-            call_ctx = self._plan_fit(est_prompt + output_budget)
+            prompt_chars = len(system_prompt) + len(user_prompt)
+            est_prompt = int(prompt_chars / self._chars_per_token * 1.05) + 256
+            # Reserve room for a realistic answer, not the whole (much larger)
+            # output cap: a fund answer is ~6-7k tokens, the cap is 16k. If the
+            # answer still outgrows the context, done_reason=length is caught.
+            call_ctx = self._plan_fit(est_prompt + min(output_budget, _OUTPUT_RESERVE_TOKENS))
         result = self._chat(
             self._payload(
                 system_prompt, user_prompt, schema, with_think=True,
@@ -518,6 +530,11 @@ class OllamaProvider(LedgerRecordingMixin, LLMProvider):
         prompt_tokens = int(body.get("prompt_eval_count") or 0)
         output_tokens = int(body.get("eval_count") or 0)
 
+        if prompt_tokens > 500:
+            # Learn this model's real chars-per-token so the next estimate is
+            # tight (bounded, and shaded down for safety).
+            measured = (len(system_prompt) + len(user_prompt)) / prompt_tokens
+            self._chars_per_token = min(5.0, max(2.0, measured * 0.95))
         if prompt_tokens >= call_ctx - 16:
             raise LLMUnavailableError(
                 f"The analysis prompt ({prompt_tokens} tokens) filled Ollama's context window "

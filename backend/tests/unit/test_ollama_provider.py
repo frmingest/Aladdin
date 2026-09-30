@@ -361,30 +361,47 @@ def _fit_provider(monkeypatch, shares, loads, **overrides):
     return provider, state
 
 
+def _call_needing(provider, prompt_tokens: int, **kwargs):
+    """A call whose prompt the planner estimates at ~prompt_tokens."""
+    chars = int((prompt_tokens - 256) * 3.0 / 1.05)
+    return provider.generate_structured(
+        system_prompt="sys", user_prompt="x" * chars, response_schema=_EchoSchema, **kwargs
+    )
+
+
 def test_adaptive_fit_uses_smallest_context_that_holds_the_call(monkeypatch):
     loads: list = []
-    provider, state = _fit_provider(monkeypatch, {("qwen3:14b", 12288): 1.0}, loads)
-    assert _call(provider, max_output_tokens=9000).content
-    assert loads == [("qwen3:14b", 12288)]
-    assert state["chat"] == ("qwen3:14b", 12288)
+    provider, state = _fit_provider(monkeypatch, {("qwen3:14b", 8192): 1.0}, loads)
+    assert _call(provider, max_output_tokens=3000).content
+    assert loads == [("qwen3:14b", 8192)]
+    assert state["chat"] == ("qwen3:14b", 8192)
 
 
 def test_adaptive_fit_falls_back_to_smaller_model_when_primary_spills(monkeypatch):
     loads: list = []
     shares = {("qwen3:14b", 24576): 0.78, ("qwen3:8b", 24576): 1.0}
     provider, state = _fit_provider(monkeypatch, shares, loads)
-    assert _call(provider, max_output_tokens=23000).content
+    assert _call_needing(provider, 14000).content  # 14k + 8k reserve -> 24576 band
     assert loads == [("qwen3:14b", 24576), ("qwen3:8b", 24576)]
     assert state["chat"] == ("qwen3:8b", 24576)
     assert provider._model == "qwen3:8b"  # so the usage ledger records the model that ran
+
+
+def test_fallback_model_may_use_a_bigger_context_than_the_main_one(monkeypatch):
+    loads: list = []
+    provider, state = _fit_provider(monkeypatch, {("qwen3:8b", 32768): 1.0}, loads)
+    assert _call_needing(provider, 22000).content  # 22k + 8k reserve > 24576
+    assert loads == [("qwen3:8b", 32768)]  # the 14b is not even tried
+    assert state["chat"] == ("qwen3:8b", 32768)
 
 
 def test_adaptive_fit_remembers_a_misfit_and_resets_the_model_per_call(monkeypatch):
     loads: list = []
     shares = {("qwen3:14b", 24576): 0.78, ("qwen3:8b", 24576): 1.0, ("qwen3:14b", 8192): 1.0}
     provider, state = _fit_provider(monkeypatch, shares, loads)
-    _call(provider, max_output_tokens=23000)  # 14b misfits -> 8b
-    _call(provider, max_output_tokens=23000)  # 14b skipped straight away
+    _call_needing(provider, 14000)  # 14b misfits -> 8b
+    provider._chars_per_token = 3.0  # undo the learning, keep the sizes comparable
+    _call_needing(provider, 14000)  # 14b skipped straight away
     assert loads == [("qwen3:14b", 24576), ("qwen3:8b", 24576), ("qwen3:8b", 24576)]
     _call(provider, max_output_tokens=3000)  # smaller call: 14b fits again
     assert state["chat"] == ("qwen3:14b", 8192)
@@ -395,11 +412,29 @@ def test_adaptive_fit_fails_clearly_when_nothing_fits(monkeypatch):
     shares = {("qwen3:14b", 24576): 0.78, ("qwen3:8b", 24576): 0.9}
     provider, _ = _fit_provider(monkeypatch, shares, loads)
     with pytest.raises(LLMUnavailableError, match="No model fits fully on the GPU") as err:
-        _call(provider, max_output_tokens=23000)
+        _call_needing(provider, 14000)
     assert "qwen3:14b@24576: 78%" in str(err.value)
 
 
-def test_adaptive_fit_refuses_a_call_bigger_than_num_ctx(monkeypatch):
+def test_adaptive_fit_refuses_a_call_bigger_than_every_model_can_hold(monkeypatch):
     provider, _ = _fit_provider(monkeypatch, {}, [])
-    with pytest.raises(LLMUnavailableError, match="Raise OLLAMA_NUM_CTX"):
-        _call(provider, max_output_tokens=30000)
+    with pytest.raises(LLMUnavailableError, match="max context 32,768"):
+        _call_needing(provider, 40000)
+
+
+def test_chars_per_token_is_learned_from_the_real_prompt_size(monkeypatch):
+    loads: list = []
+    handler, _state = _router({}, loads)
+    monkeypatch.setattr(op, "gpu_share", lambda **kw: None)
+
+    def chat_handler(request):
+        if request.url.path == "/api/chat":
+            return _ok(prompt=6000)  # 18k chars / 6000 tokens = 3.0 -> measured * .95
+        return handler(request)
+
+    provider, _ = _provider(
+        chat_handler, min_gpu_share=0.95, adaptive_fit=True, fallback_model="qwen3:8b", num_ctx=24576
+    )
+    _call_needing(provider, 6000)
+    assert 2.0 <= provider._chars_per_token <= 5.0
+    assert provider._chars_per_token != 3.0

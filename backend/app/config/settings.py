@@ -114,6 +114,10 @@ class Settings(BaseSettings):
     # (qwen3:8b, ~5 GB, fits with room to spare). "" = no fallback model.
     ollama_adaptive_fit: bool = True
     ollama_fallback_model_name: str = "qwen3:8b"
+    # The fallback model is small enough for a bigger context than the main
+    # one (qwen3:8b at 32k needs ~8 GB incl. KV cache), so big evidence packets
+    # run on it instead of failing.
+    ollama_fallback_num_ctx: int = 32768
     # False = ask thinking models (Qwen3) to skip the <think> phase, which
     # is much faster and doesn't help schema-constrained JSON. None = don't
     # send the field at all.
