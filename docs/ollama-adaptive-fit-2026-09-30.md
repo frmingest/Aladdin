@@ -23,12 +23,17 @@ Before each pass the provider now **plans**:
 
 The model that actually ran is what the usage ledger and the run record (`self._model`), so a fallback is visible, not silent. Short calls use a small context, so they run **faster and with more headroom** than before.
 
+## Update (2026-09-30, same day): "needs ~34,700 tokens but OLLAMA_NUM_CTX is 24,576"
+
+First real run: every holding failed the new planner's own size check. Two causes: (1) it reserved the whole output *cap* (8k equity / 16k fund) inside the context although real answers are ~6-7k at most, and (2) the fallback model was capped at the same 24k as the 14b. Fixed: output reserve is now at most 8,192 tokens; the fallback model may use up to `OLLAMA_FALLBACK_NUM_CTX` (32,768; qwen3:8b at 32k needs ~8 GB incl. q8 KV cache); the chars-per-token estimate is learned from each real response instead of a fixed 3.0. Consequence: most big evidence packets (~20-26k tokens) will run on qwen3:8b, since the 14b cannot hold them on a 12 GB card. To keep the 14b for them, the evidence packet has to shrink.
+
 ## Settings
 
 | Setting | Default | Meaning |
 |---|---|---|
 | `OLLAMA_ADAPTIVE_FIT` | `true` | Turn the preflight planner on/off |
 | `OLLAMA_FALLBACK_MODEL_NAME` | `qwen3:8b` | Smaller model used when the main one spills. Empty = no fallback |
+| `OLLAMA_FALLBACK_NUM_CTX` | `32768` | Largest context the fallback model may use |
 | `OLLAMA_MIN_GPU_SHARE` | `0.95` | Unchanged |
 
 ## Do on the PC

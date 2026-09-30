@@ -12,3 +12,12 @@ paths = [
   '''backend/\.env\.example$''',
   '''frontend/package-lock\.json$''',
 ]
+
+# Known false positives (2026-09-30): the generic-api-key rule matches a macro
+# series *identifier* named `..._3m` and a fake thesis note used by a test to
+# prove blind-pass isolation. Neither is a credential. Match on the exact
+# values, not on paths, so a real secret in those files is still caught.
+regexes = [
+  '''no_curve_10y_3m''',
+  '''MY-PRIVATE-THESIS-7731''',
+]
