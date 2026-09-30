@@ -257,6 +257,9 @@ def test_risk_and_performance_are_fabricated_in_demo_mode(client):
 
 
 def test_documents_sources_research_funds_are_blocked_outright_in_demo_mode(client):
+    # Fake providers: the demo guard must answer 403, not a 503 from a provider
+    # dependency that can't be built (no API key in CI).
+    _override_live_providers()
     _enable_demo(client)
     assert client.get("/documents").status_code == 403
     assert client.get(f"/documents/{NIL_UUID}").status_code == 403

@@ -92,7 +92,7 @@ def store(db: Session, key: str, model: BaseModel, *, fp: str | None = None) -> 
         else:
             row.payload, row.fingerprint, row.computed_at = payload, fp, now
         db.commit()
-    except Exception:  # noqa: BLE001 - a cache write must never fail the request
+    except Exception:
         db.rollback()
         log.warning("could not store snapshot %s", key, exc_info=True)
     return now
@@ -119,7 +119,7 @@ def get_or_build(
                 and datetime.now(timezone.utc) - _aware(row.computed_at) <= max_age
             ):
                 return model_cls.model_validate_json(row.payload)
-        except Exception:  # noqa: BLE001 - unreadable/absent snapshot -> build live
+        except Exception:
             db.rollback()
             log.warning("snapshot %s unreadable; building live", key, exc_info=True)
     model = build()

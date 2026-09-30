@@ -1,9 +1,9 @@
 # Sprint 0 dependencies.
-fastapi==0.115.0
+fastapi==0.142.2
 uvicorn[standard]==0.30.6
 pydantic==2.9.2
 pydantic-settings==2.5.2
-python-dotenv==1.0.1
+python-dotenv==1.2.2
 sqlalchemy==2.0.35
 psycopg2-binary==2.9.9
 alembic==1.13.2
@@ -36,5 +36,5 @@ yfinance==1.7.0
 httpx==0.28.1
 
 # Test tooling.
-pytest==8.3.3
+pytest==9.0.3
 pytest-mock==3.14.0

@@ -105,7 +105,9 @@ def test_llm_provider_shares_the_primary_budget_guard_instance(monkeypatch):
     llm_provider = factory.get_llm_provider()
     research_provider = factory.get_research_provider()
     assert llm_provider._budget_guard is factory.get_primary_budget_guard()
-    assert research_provider._budget_guard is factory.get_primary_budget_guard()
+    # get_research_provider() always returns a CompositeResearchProvider;
+    # the Gemini provider (and its guard) is its primary.
+    assert research_provider._primary._budget_guard is factory.get_primary_budget_guard()
 
 
 def test_default_market_data_provider_is_yfinance(monkeypatch):

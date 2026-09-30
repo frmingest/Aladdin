@@ -25,12 +25,12 @@ _stats: ContextVar[dict | None] = ContextVar("request_db_stats", default=None)
 
 
 @event.listens_for(Engine, "before_cursor_execute")
-def _before(conn, cursor, statement, parameters, context, executemany):  # noqa: ARG001
+def _before(conn, cursor, statement, parameters, context, executemany):
     context._aladdin_t0 = time.perf_counter()
 
 
 @event.listens_for(Engine, "after_cursor_execute")
-def _after(conn, cursor, statement, parameters, context, executemany):  # noqa: ARG001
+def _after(conn, cursor, statement, parameters, context, executemany):
     stats = _stats.get()
     if stats is None:
         return
