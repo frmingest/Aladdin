@@ -1,6 +1,6 @@
 #!/bin/sh
-# Runs pending Alembic migrations, then starts the API server (architecture
-# §26 "Deployment & production hardening" phase — see docs/decisions/0010).
+# Runs pending Alembic migrations, then starts the API server (see
+# docs/architecture.md §4).
 # `alembic upgrade head` is idempotent — safe to run on every container
 # start, including scale-out to multiple instances.
 set -e

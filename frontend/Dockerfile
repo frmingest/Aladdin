@@ -1,7 +1,6 @@
 # syntax=docker/dockerfile:1.7
 # Production image for the frontend: a Vite build served as static files
-# (architecture §26 "Deployment & production hardening" phase — see
-# docs/decisions/0010). Not used by local dev, which runs `npm run dev`
+# (see docs/architecture.md §4). Not used by local dev, which runs `npm run dev`
 # directly — see README.
 #
 # Build context is frontend/ itself:
@@ -9,7 +8,7 @@
 #     --build-arg VITE_API_BASE_URL=https://aladdin-backend.up.railway.app \
 #     -t aladdin-frontend frontend
 # VITE_API_BASE_URL is baked in at build time (Vite env vars are
-# compile-time, not runtime) — see src/services/api.ts. Leave it unset only
+# compile-time, not runtime) — see src/lib/api.ts. Leave it unset only
 # if frontend and backend genuinely share an origin in production, which
 # Railway's per-service model does not give you by default.
 

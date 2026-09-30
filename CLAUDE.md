@@ -105,3 +105,24 @@ irreversible, say so — and what it will delete — before running it, not afte
 
 Real credentials only ever live in `backend/.env` (gitignored) or Railway's env vars — never in
 code, tests, prompts, or session docs.
+
+## Pull requests
+
+Faiz reviews and merges in GitHub. Finish every feature or fix by opening the PR yourself, from the
+chat, without being asked again:
+
+1. Work on a branch off the current `main` (`feature/<topic>`, `fix/<topic>`, `docs/<topic>`), never on `main`.
+2. Before opening the PR, run what CI runs: `ruff check .` and `pytest -q` in `backend/`
+   (use the pinned ruff from `requirements-dev.txt` and `MACRO_DATA_PROVIDER=none`), and for frontend
+   changes `tsc --noEmit`, `npm run lint`, `npm test`, `npm run build`. Don't open a PR with a known red check.
+3. Commit with a real message, push the branch, open the PR against `main` with a short body:
+   what changed and why, how it was verified, and anything Faiz must do after deploy. Give Faiz the PR link.
+4. Update `docs/PROGRESS.md` (and the Claude project's `progress.md`) in the same PR.
+5. Watch the PR's checks; if one goes red, fix it on the same branch.
+6. Never merge for Faiz. A merge to `main` is a production deploy.
+
+From a cloud session the `gh` CLI is usually absent: use the GitHub REST API with `GH_TOKEN`
+(`POST /repos/frmingest/Aladdin/pulls`, JSON body, `Content-Type: application/json`). Logs download
+is blocked by the proxy; read failures from `/actions/runs/{id}/jobs`, check-run annotations, or by
+reproducing the check locally. Changes pushed from a cloud session reach `E:\Aladdin` only after a
+`git pull` there.
