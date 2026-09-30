@@ -142,6 +142,9 @@ class BoardRowOut(BaseModel):
     # Sprint 14 (2026-09-26): same meaning as HoldingValuationOut's fields.
     regime: str | None = None
     regime_discount_rate_addon: Decimal | None = None
+    # 2026-09-30: watchlist rows only.
+    buy_below_price: Decimal | None = None
+    buy_below_currency: str | None = None
 
 
 class MarginOfSafetyBoardOut(BaseModel):
@@ -151,3 +154,8 @@ class MarginOfSafetyBoardOut(BaseModel):
     rows: list[BoardRowOut]
     total_equity_value_nok: Decimal
     zone_counts: dict[str, int]
+    # 2026-09-30: watchlist companies you don't own, ranked the same way but
+    # shown in their own card on the page.
+    watchlist_rows: list[BoardRowOut] = []
+    # When this payload was stored (page-load snapshots, 2026-09-30).
+    snapshot_at: datetime | None = None

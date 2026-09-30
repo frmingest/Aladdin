@@ -30,6 +30,7 @@ from app.domain.instrument_types import EQUITY_ANALYZABLE_TYPES
 from app.models.analysis import EquityAnalysisRun
 from app.models.holding import Holding
 from app.models.portfolio import PortfolioPosition, PortfolioSnapshot
+from app.models.watchlist import WatchlistItem
 from app.providers.base import MarketDataProvider, RiskFreeRateProvider
 from app.services.analysis.latest import latest_runs_by_holding, run_ratings
 from app.services.valuation.holding_valuation import compute_holding_valuation
@@ -70,12 +71,18 @@ class BoardRow:
     # v2 (2026-09-29): which model produced bear/base/bull, and its status.
     valuation_method: str = "owner_earnings_dcf"
     valuation_status: str = "unavailable"
+    # 2026-09-30: only set on watchlist rows (your own buy-below target).
+    buy_below_price: Decimal | None = None
+    buy_below_currency: str | None = None
 
 
 @dataclass
 class Board:
     rows: list[BoardRow] = field(default_factory=list)
     total_equity_value_nok: Decimal = Decimal(0)
+    # 2026-09-30: watchlist companies you do NOT own, ranked the same way but
+    # kept apart so they never mix into the portfolio totals or weights.
+    watchlist_rows: list[BoardRow] = field(default_factory=list)
 
     def zone_counts(self) -> dict[str, int]:
         counts = {z: 0 for z in (BELOW_BEAR, BEAR_TO_BASE, BASE_TO_BULL, ABOVE_BULL, UNAVAILABLE)}
@@ -128,6 +135,46 @@ def _sort_key(row: BoardRow) -> tuple:
     return (2, -(row.market_value_nok or Decimal(0)), row.ticker)
 
 
+def _value_row(
+    db: Session,
+    holding: Holding,
+    row: BoardRow,
+    market_data_provider: MarketDataProvider,
+    risk_free_rate_provider: RiskFreeRateProvider,
+    *,
+    force_refresh: bool,
+) -> None:
+    """Fill one row's price, bear/base/bull, zone and reason from Sprint 3's
+    valuation. Shared by the portfolio rows and the watchlist rows."""
+    valuation = compute_holding_valuation(
+        db, holding, market_data_provider, risk_free_rate_provider, force_refresh=force_refresh
+    )
+    row.valuation_currency = valuation.valuation_currency
+    row.price = valuation.current_price_per_share
+    row.price_as_of = valuation.as_of
+    row.regime = valuation.regime
+    row.regime_discount_rate_addon = valuation.regime_discount_rate_addon
+    row.valuation_method = valuation.valuation_method
+    row.valuation_status = valuation.valuation_status
+    # headline_values() is None for a withheld (implausible) model, so a
+    # value the plausibility guard rejected can never be ranked here.
+    values = valuation.headline_values()
+    if values is not None:
+        row.bear, row.base, row.bull = values.get("bear"), values.get("base"), values.get("bull")
+        row.margin_of_safety_base = valuation.headline_margin_of_safety("base")
+        row.margin_of_safety_bear = valuation.headline_margin_of_safety("bear")
+        if None not in (row.price, row.bear, row.base, row.bull):
+            row.zone = _zone(row.price, row.bear, row.base, row.bull)  # type: ignore[arg-type]
+    if row.zone == UNAVAILABLE:
+        if valuation.valuation_status == "implausible":
+            row.unavailable_reason = valuation.valuation_status_reason
+        else:
+            row.unavailable_reason = next(
+                (r for r in valuation.unavailable_reasons if "unavailable" in r),
+                valuation.unavailable_reasons[0] if valuation.unavailable_reasons else "no DCF",
+            )
+
+
 def build_board(
     db: Session,
     *,
@@ -171,36 +218,61 @@ def build_board(
             weight_pct=weight,
         )
 
-        valuation = compute_holding_valuation(
-            db, holding, market_data_provider, risk_free_rate_provider, force_refresh=force_refresh
+        _value_row(
+            db, holding, row, market_data_provider, risk_free_rate_provider, force_refresh=force_refresh
         )
-        row.valuation_currency = valuation.valuation_currency
-        row.price = valuation.current_price_per_share
-        row.price_as_of = valuation.as_of
-        row.regime = valuation.regime
-        row.regime_discount_rate_addon = valuation.regime_discount_rate_addon
-        row.valuation_method = valuation.valuation_method
-        row.valuation_status = valuation.valuation_status
-        # headline_values() is None for a withheld (implausible) model, so a
-        # value the plausibility guard rejected can never be ranked here.
-        values = valuation.headline_values()
-        if values is not None:
-            row.bear, row.base, row.bull = values.get("bear"), values.get("base"), values.get("bull")
-            row.margin_of_safety_base = valuation.headline_margin_of_safety("base")
-            row.margin_of_safety_bear = valuation.headline_margin_of_safety("bear")
-            if None not in (row.price, row.bear, row.base, row.bull):
-                row.zone = _zone(row.price, row.bear, row.base, row.bull)  # type: ignore[arg-type]
-        if row.zone == UNAVAILABLE:
-            if valuation.valuation_status == "implausible":
-                row.unavailable_reason = valuation.valuation_status_reason
-            else:
-                row.unavailable_reason = next(
-                    (r for r in valuation.unavailable_reasons if "unavailable" in r),
-                    valuation.unavailable_reasons[0] if valuation.unavailable_reasons else "no DCF",
-                )
-
         _attach_verdict(row, runs.get(holding.id))
         board.rows.append(row)
 
     board.rows.sort(key=_sort_key)
+    board.watchlist_rows = _build_watchlist_rows(
+        db,
+        owned_ids=set(value_by_holding),
+        market_data_provider=market_data_provider,
+        risk_free_rate_provider=risk_free_rate_provider,
+        force_refresh=force_refresh,
+    )
     return board
+
+
+def _build_watchlist_rows(
+    db: Session,
+    *,
+    owned_ids: set[uuid.UUID],
+    market_data_provider: MarketDataProvider,
+    risk_free_rate_provider: RiskFreeRateProvider,
+    force_refresh: bool,
+) -> list[BoardRow]:
+    """Watchlist companies you don't own, valued exactly like portfolio rows."""
+    items = db.scalars(select(WatchlistItem)).all()
+    items = [i for i in items if i.holding_id not in owned_ids]
+    if not items:
+        return []
+    holdings = {
+        h.id: h
+        for h in db.scalars(select(Holding).where(Holding.id.in_([i.holding_id for i in items])))
+        if h.asset_class_raw in EQUITY_ANALYZABLE_TYPES
+    }
+    runs = latest_runs_by_holding(db, list(holdings))
+    rows: list[BoardRow] = []
+    for item in items:
+        holding = holdings.get(item.holding_id)
+        if holding is None:
+            continue
+        row = BoardRow(
+            holding_id=holding.id,
+            ticker=holding.ticker,
+            name=holding.name,
+            sector=holding.sector,
+            market_value_nok=None,
+            weight_pct=None,
+            buy_below_price=item.buy_below_price,
+            buy_below_currency=item.buy_below_currency,
+        )
+        _value_row(
+            db, holding, row, market_data_provider, risk_free_rate_provider, force_refresh=force_refresh
+        )
+        _attach_verdict(row, runs.get(holding.id))
+        rows.append(row)
+    rows.sort(key=_sort_key)
+    return rows

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { formatRelative } from "../lib/format";
 import { InfoTooltip } from "./InfoTooltip";
 
 /** Small shared building blocks used by both holding pages — kept here
@@ -289,5 +290,16 @@ export function SectionJumpBar({ items }: { items: { id: string; label: string }
         </button>
       ))}
     </nav>
+  );
+}
+
+/** "Updated 3 h ago" next to a Refresh button — pages now serve a stored
+ * snapshot (backend app/services/snapshots.py), so say how old it is. */
+export function SnapshotStamp({ at }: { at?: string | null }) {
+  if (!at) return null;
+  return (
+    <span className="text-xs text-ink-faint" title={new Date(at).toLocaleString()}>
+      Updated {formatRelative(at)}
+    </span>
   );
 }

@@ -31,6 +31,7 @@ from app.services.settings.synthetic_data import (
     demo_watchlist,
     demo_watchlist_for_holding,
 )
+from app.services.snapshots import WATCHLIST_KEY, get_or_build
 from app.services.valuation.board import current_positions
 from app.services.watchlist import BUY_ZONE, build_row, build_watchlist
 
@@ -43,20 +44,58 @@ def _row_out(db: Session, item: WatchlistItem) -> WatchlistRowOut:
     return WatchlistRowOut.model_validate(build_row(item, holding, owned=owned), from_attributes=True)
 
 
+def build_watchlist_out(
+    db: Session,
+    market_data_provider: MarketDataProvider,
+    risk_free_rate_provider: RiskFreeRateProvider,
+    *,
+    force_refresh: bool,
+) -> WatchlistOut:
+    rows = build_watchlist(
+        db,
+        market_data_provider=market_data_provider,
+        risk_free_rate_provider=risk_free_rate_provider,
+        force_refresh=force_refresh,
+    )
+    return WatchlistOut(
+        rows=[WatchlistRowOut.model_validate(r, from_attributes=True) for r in rows],
+        buy_zone_count=sum(1 for r in rows if r.status == BUY_ZONE),
+    )
+
+
 @router.get("", response_model=WatchlistOut)
 def get_watchlist(
     db: Session = Depends(get_db),
     market_data_provider: MarketDataProvider = Depends(get_market_data_provider),
     risk_free_rate_provider: RiskFreeRateProvider = Depends(get_risk_free_rate_provider),
 ) -> WatchlistOut:
+    """Served from a stored snapshot while the watchlist, buy-below prices,
+    holdings, documents and analyses are unchanged; POST /watchlist/refresh
+    (or the worker's nightly pass) re-prices it."""
     if is_demo_mode(db):
         return demo_watchlist()
-    rows = build_watchlist(
-        db, market_data_provider=market_data_provider, risk_free_rate_provider=risk_free_rate_provider
+    return get_or_build(
+        db,
+        WATCHLIST_KEY,
+        WatchlistOut,
+        lambda: build_watchlist_out(db, market_data_provider, risk_free_rate_provider, force_refresh=False),
     )
-    return WatchlistOut(
-        rows=[WatchlistRowOut.model_validate(r, from_attributes=True) for r in rows],
-        buy_zone_count=sum(1 for r in rows if r.status == BUY_ZONE),
+
+
+@router.post("/refresh", response_model=WatchlistOut)
+def refresh_watchlist(
+    db: Session = Depends(get_db),
+    market_data_provider: MarketDataProvider = Depends(get_market_data_provider),
+    risk_free_rate_provider: RiskFreeRateProvider = Depends(get_risk_free_rate_provider),
+) -> WatchlistOut:
+    """Re-prices and revalues every watched company now."""
+    require_not_demo(db)
+    return get_or_build(
+        db,
+        WATCHLIST_KEY,
+        WatchlistOut,
+        lambda: build_watchlist_out(db, market_data_provider, risk_free_rate_provider, force_refresh=True),
+        refresh=True,
     )
 
 

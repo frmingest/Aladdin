@@ -941,12 +941,18 @@ export interface BoardRow {
   /** Sprint 14 (2026-09-26) — same meaning as HoldingValuation's fields. */
   regime?: MacroRegime | null;
   regime_discount_rate_addon?: string | null;
+  /** 2026-09-30 — watchlist rows only: your own buy-below target. */
+  buy_below_price?: string | null;
+  buy_below_currency?: string | null;
 }
 
 export interface MarginOfSafetyBoard {
   rows: BoardRow[];
   total_equity_value_nok: string;
   zone_counts: Record<BoardZone, number>;
+  /** Watchlist companies you don't own — shown in their own card. */
+  watchlist_rows?: BoardRow[];
+  snapshot_at?: string | null;
 }
 
 // --- Portfolio overview (Sprint 5 dashboard) — backend/app/schemas/portfolio.py
@@ -1132,6 +1138,8 @@ export interface WatchlistRow {
 export interface Watchlist {
   rows: WatchlistRow[];
   buy_zone_count: number;
+  /** When the stored snapshot was built (page-load work, 2026-09-30). */
+  snapshot_at?: string | null;
 }
 
 export interface WatchlistCreateInput {
@@ -1659,6 +1667,7 @@ export interface Regime {
 }
 
 export interface PortfolioRisk {
+  snapshot_at?: string | null;
   as_of: string | null;
   equity_value_nok: string;
   lookback_days: number;
@@ -1690,6 +1699,7 @@ export interface DailyValue {
 }
 
 export interface PortfolioPerformance {
+  snapshot_at?: string | null;
   as_of: string | null;
   lookback_days: number;
   equity_value_nok: string;

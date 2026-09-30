@@ -13,17 +13,69 @@ import { CheckTripwiresButton } from "../components/TripwireBanner";
 
 const STATUS_ORDER: ThesisStatus[] = ["tripwire_fired", "review", "not_analyzed", "intact"];
 
-const STATUS_STYLE: Record<ThesisStatus, string> = {
-  tripwire_fired: "bg-negative-subtle text-negative",
-  review: "bg-caution-subtle text-caution",
-  not_analyzed: "bg-border-subtle text-ink-faint",
-  intact: "bg-positive-subtle text-positive",
+const STATUS_BAR: Record<ThesisStatus, string> = {
+  tripwire_fired: "bg-negative",
+  review: "bg-caution",
+  not_analyzed: "bg-ink-faint/50",
+  intact: "bg-positive",
 };
 
-function StatusPill({ row }: { row: MonitorRow }) {
+/** One glance: how many holdings sit in each status. */
+function StatusBar({ rows }: { rows: MonitorRow[] }) {
+  const total = rows.length;
   return (
-    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLE[row.status]}`}>
-      {row.status_label}
+    <Card>
+      <div
+        className="flex h-3 w-full overflow-hidden rounded-full bg-border-subtle"
+        role="img"
+        aria-label="Holdings by thesis status"
+      >
+        {STATUS_ORDER.map((status) => {
+          const n = rows.filter((r) => r.status === status).length;
+          return n > 0 ? (
+            <div key={status} className={STATUS_BAR[status]} style={{ width: `${(n / total) * 100}%` }} />
+          ) : null;
+        })}
+      </div>
+      <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm">
+        {STATUS_ORDER.map((status) => {
+          const match = rows.filter((r) => r.status === status);
+          if (match.length === 0) return null;
+          return (
+            <span key={status} className="inline-flex items-center gap-2 text-ink-muted">
+              <span className={`inline-block h-2.5 w-2.5 rounded-full ${STATUS_BAR[status]}`} />
+              <span className="tabular font-semibold text-ink">{match.length}</span>
+              {match[0].status_label}
+            </span>
+          );
+        })}
+      </div>
+    </Card>
+  );
+}
+
+/** Signals column: nothing to say = a quiet check mark; otherwise a chip. */
+function Signals({ row }: { row: MonitorRow }) {
+  if (row.status === "not_analyzed") return <span className="text-xs text-ink-faint">Run an analysis first</span>;
+  if (!row.firing_count && !row.change_reason_count) {
+    return (
+      <span className="text-positive" title="No tripwires firing and nothing changed since the last analysis">
+        ✓
+      </span>
+    );
+  }
+  return (
+    <span className="flex flex-wrap gap-1.5">
+      {row.firing_count > 0 && (
+        <span className="rounded-full bg-negative-subtle px-2 py-0.5 text-xs font-medium text-negative">
+          {row.firing_count} tripwire{row.firing_count === 1 ? "" : "s"} firing
+        </span>
+      )}
+      {row.change_reason_count > 0 && (
+        <span className="rounded-full bg-caution-subtle px-2 py-0.5 text-xs font-medium text-caution">
+          {row.change_reason_count} change{row.change_reason_count === 1 ? "" : "s"}
+        </span>
+      )}
     </span>
   );
 }
@@ -35,9 +87,7 @@ function MonitorTable({ rows }: { rows: MonitorRow[] }) {
         <thead>
           <tr className="text-left text-xs text-ink-muted">
             <th className="py-2 pr-4 font-medium">Holding</th>
-            <th className="py-2 pr-4 font-medium">Status</th>
-            <th className="py-2 pr-4 font-medium">Tripwires firing</th>
-            <th className="py-2 pr-4 font-medium">What changed</th>
+            <th className="py-2 pr-4 font-medium">Signals</th>
             <th className="py-2 pr-4 font-medium">Last analyzed</th>
           </tr>
         </thead>
@@ -51,10 +101,8 @@ function MonitorTable({ rows }: { rows: MonitorRow[] }) {
                 <p className="text-xs text-ink-faint">{row.ticker}</p>
               </td>
               <td className="py-3 pr-4">
-                <StatusPill row={row} />
+                <Signals row={row} />
               </td>
-              <td className="tabular py-3 pr-4 text-ink-muted">{row.firing_count || "—"}</td>
-              <td className="tabular py-3 pr-4 text-ink-muted">{row.change_reason_count || "—"}</td>
               <td className="py-3 pr-4 text-xs text-ink-muted">
                 {row.analyzed_at ? formatDate(row.analyzed_at) : "Never"}
               </td>
@@ -88,7 +136,7 @@ export default function ThesisMonitorPage() {
     <div className="mx-auto max-w-6xl px-4 py-6 sm:px-8 sm:py-8">
       <PageHeader
         title="Thesis"
-        subtitle="Is my thesis still intact? Tripwires, what's changed since the last analysis, and the verdict timeline — for every holding you own or watch."
+        subtitle="Is my thesis still intact? One row per holding you own or watch."
         actions={<CheckTripwiresButton onChecked={load} />}
       />
 
@@ -112,6 +160,7 @@ export default function ThesisMonitorPage() {
 
       {monitor && monitor.rows.length > 0 && (
         <div className="space-y-6">
+          <StatusBar rows={monitor.rows} />
           {groups.map((group) => (
             <Card key={group.status}>
               <SectionTitle>

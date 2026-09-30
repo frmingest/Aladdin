@@ -266,6 +266,25 @@ class AnalysisWorker:
         except Exception:
             log.exception("nightly tripwire check failed")
 
+    def maybe_refresh_snapshots(self) -> None:
+        """2026-09-30 page-load work: rebuild the stored Risk / Performance /
+        Margin-of-safety / Watchlist snapshots once per UTC day (after
+        `snapshot_refresh_hour_utc`). Never raises."""
+        if not self.settings.snapshot_refresh_enabled:
+            return
+        try:
+            from app.services.snapshot_refresh import run_if_due
+
+            with self.session_factory() as db:
+                run_if_due(
+                    db,
+                    market_data_provider=self.providers.market_data,
+                    risk_free_rate_provider=self.providers.risk_free_rate,
+                    hour_utc=self.settings.snapshot_refresh_hour_utc,
+                )
+        except Exception:
+            log.exception("nightly snapshot refresh failed")
+
     def _fail(self, run_id: uuid.UUID, message: str) -> None:
         with self.session_factory() as db:
             queue.fail_run(db, run_id, message=message)
@@ -288,6 +307,7 @@ class AnalysisWorker:
             while not self._stop.is_set():
                 outcome = self.run_once()
                 self.maybe_check_tripwires()
+                self.maybe_refresh_snapshots()
                 if once:
                     break
                 if outcome != RAN:

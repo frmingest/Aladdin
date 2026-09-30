@@ -31,6 +31,7 @@ import { ThesisPanel } from "../components/ThesisPanel";
 import { FundFactsPanel } from "../components/FundFactsPanel";
 import { MarketMultiplesCard } from "../components/MarketMultiplesCard";
 import { DocumentFlagsNote } from "../components/DocumentFlagsNote";
+import { DocumentReadButton } from "../components/DocumentReader";
 import { ResearchPanel } from "../components/ResearchPanel";
 import { NewswebAllReportsCard, SourcesPanel } from "../components/SourcesPanel";
 import { ValuationPanel } from "../components/ValuationPanel";
@@ -283,6 +284,11 @@ function FactSourcesTable({ metrics }: { metrics: HoldingMetrics }) {
                   <td className="py-2 text-xs text-ink-muted">
                     {f.original_filename}
                     {f.source_page ? ` · p${f.source_page}` : ""}
+                    <DocumentReadButton
+                      document={{ id: f.document_id, original_filename: f.original_filename }}
+                      label={null}
+                      className="ml-1 align-middle"
+                    />
                   </td>
                 </tr>
               ))}
@@ -508,7 +514,8 @@ function DocumentsPanel({
                 <td className="py-2 text-right tabular text-ink-muted">
                   {formatBytes(d.size_bytes)}
                 </td>
-                <td className="py-2 pl-3 text-right">
+                <td className="whitespace-nowrap py-2 pl-3 text-right">
+                  <DocumentReadButton document={d} className="mr-2" />
                   <button
                     type="button"
                     disabled={deletingId !== null}

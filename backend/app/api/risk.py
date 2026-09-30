@@ -31,6 +31,7 @@ from app.services.risk.portfolio_risk import PortfolioRisk, build_portfolio_risk
 from app.services.settings.demo_guard import require_not_demo
 from app.services.settings.demo_mode import is_demo_mode
 from app.services.settings.synthetic_data import demo_risk
+from app.services.snapshots import RISK_KEY, get_or_build
 
 router = APIRouter(prefix="/risk", tags=["risk"])
 
@@ -92,18 +93,42 @@ def _to_out(risk: PortfolioRisk) -> PortfolioRiskOut:
     )
 
 
+def build_risk_out(
+    db: Session,
+    market_data_provider: MarketDataProvider,
+    risk_free_rate_provider: RiskFreeRateProvider,
+    *,
+    force_refresh: bool,
+) -> PortfolioRiskOut:
+    """Build the payload; a non-forced build reads stored price history
+    only (`serve_stale`) and never calls Yahoo for a ticker that has some."""
+    return _to_out(
+        build_portfolio_risk(
+            db,
+            market_data_provider=market_data_provider,
+            risk_free_rate_provider=risk_free_rate_provider,
+            force_refresh=force_refresh,
+            serve_stale=not force_refresh,
+        )
+    )
+
+
 @router.get("/portfolio", response_model=PortfolioRiskOut)
 def get_portfolio_risk(
     db: Session = Depends(get_db),
     market_data_provider: MarketDataProvider = Depends(get_market_data_provider),
     risk_free_rate_provider: RiskFreeRateProvider = Depends(get_risk_free_rate_provider),
 ) -> PortfolioRiskOut:
+    """Served from a stored snapshot when the inputs are unchanged (see
+    app/services/snapshots.py); otherwise built from stored price history."""
     if is_demo_mode(db):
         return demo_risk()
-    risk = build_portfolio_risk(
-        db, market_data_provider=market_data_provider, risk_free_rate_provider=risk_free_rate_provider
+    return get_or_build(
+        db,
+        RISK_KEY,
+        PortfolioRiskOut,
+        lambda: build_risk_out(db, market_data_provider, risk_free_rate_provider, force_refresh=False),
     )
-    return _to_out(risk)
 
 
 @router.post("/portfolio/refresh", response_model=PortfolioRiskOut)
@@ -113,10 +138,10 @@ def refresh_portfolio_risk(
     risk_free_rate_provider: RiskFreeRateProvider = Depends(get_risk_free_rate_provider),
 ) -> PortfolioRiskOut:
     require_not_demo(db)
-    risk = build_portfolio_risk(
+    return get_or_build(
         db,
-        market_data_provider=market_data_provider,
-        risk_free_rate_provider=risk_free_rate_provider,
-        force_refresh=True,
+        RISK_KEY,
+        PortfolioRiskOut,
+        lambda: build_risk_out(db, market_data_provider, risk_free_rate_provider, force_refresh=True),
+        refresh=True,
     )
-    return _to_out(risk)

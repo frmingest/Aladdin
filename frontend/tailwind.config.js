@@ -45,6 +45,31 @@ export default {
         negative: { DEFAULT: v("negative"), subtle: v("negative-subtle") },
         caution: { DEFAULT: v("caution"), subtle: v("caution-subtle") },
       },
+      // "Read report" mode (DocumentReader): the backdrop fades and blurs in,
+      // the reader grows out of the eye button that opened it.
+      keyframes: {
+        "reader-backdrop-in": { from: { opacity: "0" }, to: { opacity: "1" } },
+        "reader-backdrop-out": { from: { opacity: "1" }, to: { opacity: "0" } },
+        "reader-panel-in": {
+          from: { opacity: "0", transform: "scale(0.6)" },
+          to: { opacity: "1", transform: "scale(1)" },
+        },
+        "reader-panel-out": {
+          from: { opacity: "1", transform: "scale(1)" },
+          to: { opacity: "0", transform: "scale(0.6)" },
+        },
+        "reader-content-in": {
+          from: { opacity: "0", transform: "translateY(8px)" },
+          to: { opacity: "1", transform: "translateY(0)" },
+        },
+      },
+      animation: {
+        "reader-backdrop-in": "reader-backdrop-in 240ms ease-out both",
+        "reader-backdrop-out": "reader-backdrop-out 200ms ease-in both",
+        "reader-panel-in": "reader-panel-in 340ms cubic-bezier(0.16, 1, 0.3, 1) both",
+        "reader-panel-out": "reader-panel-out 200ms cubic-bezier(0.7, 0, 0.84, 0) both",
+        "reader-content-in": "reader-content-in 320ms ease-out 120ms both",
+      },
       boxShadow: {
         card: "var(--shadow-card)",
       },
