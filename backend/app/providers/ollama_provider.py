@@ -71,6 +71,12 @@ _PROGRESS_LOG_SECONDS = 60.0
 
 log = logging.getLogger(__name__)
 
+# Context sizes the planner steps through (capped by OLLAMA_NUM_CTX). Fixed
+# steps, not exact fits, so model reloads stay rare.
+_CONTEXT_BANDS = (8192, 12288, 16384, 20480, 24576, 32768)
+_CHARS_PER_TOKEN = 3.0  # conservative for Norwegian text, numbers and JSON
+_MISFIT_MEMORY_SECONDS = 600.0
+
 
 @dataclass(frozen=True)
 class OllamaHealth:
@@ -185,6 +191,8 @@ class OllamaProvider(LedgerRecordingMixin, LLMProvider):
         timeout_seconds: float = 1800.0,
         stall_timeout_seconds: float = 600.0,
         min_gpu_share: float = 0.0,
+        fallback_model: str | None = None,
+        adaptive_fit: bool = False,
         think: bool | None = False,
         api_key: str | None = None,
         client: httpx.Client | None = None,
@@ -194,7 +202,16 @@ class OllamaProvider(LedgerRecordingMixin, LLMProvider):
         if not model:
             raise LLMUnavailableError("OLLAMA_MODEL_NAME is not set — cannot call Ollama.")
         self._base_url = base_url.rstrip("/")
+        # `_model` is the model of the call in flight (the ledger and the
+        # usage metrics read it); `_primary_model` is the configured one.
+        self._primary_model = model
         self._model = model
+        self._fallback_model = fallback_model if fallback_model and fallback_model != model else None
+        # 2026-09-30: with adaptive_fit the provider picks a (model, num_ctx)
+        # that sits fully in VRAM *before* the pass, instead of failing after
+        # the first token. Off by default so unit tests stay hermetic.
+        self._adaptive_fit = adaptive_fit and min_gpu_share > 0
+        self._misfit_until: dict[tuple[str, int], float] = {}
         self._temperature = temperature
         self._max_output_tokens = max_output_tokens
         self._num_ctx = num_ctx
@@ -222,6 +239,7 @@ class OllamaProvider(LedgerRecordingMixin, LLMProvider):
         *,
         with_think: bool,
         max_output_tokens: int,
+        num_ctx: int | None = None,
     ) -> dict[str, Any]:
         payload: dict[str, Any] = {
             "model": self._model,
@@ -234,7 +252,7 @@ class OllamaProvider(LedgerRecordingMixin, LLMProvider):
             "keep_alive": self._keep_alive,
             "options": {
                 "temperature": self._temperature,
-                "num_ctx": self._num_ctx,
+                "num_ctx": num_ctx or self._num_ctx,
                 "num_predict": max_output_tokens,
             },
         }
@@ -276,6 +294,90 @@ class OllamaProvider(LedgerRecordingMixin, LLMProvider):
             "times slower and likely hit the timeout."
             + _offload_advice(share)
             + " Set OLLAMA_MIN_GPU_SHARE=0 to run anyway."
+        )
+
+    # ---- preflight: choose a (model, num_ctx) that fits in VRAM (2026-09-30) ----
+
+    def _installed_models(self) -> set[str] | None:
+        try:
+            resp = self._client.get(f"{self._base_url}/api/tags", timeout=5.0)
+            resp.raise_for_status()
+            return {m.get("name") or m.get("model") or "" for m in resp.json().get("models", [])}
+        except (httpx.HTTPError, ValueError):
+            return None
+
+    def _load_and_measure(self, model: str, ctx: int) -> float | None:
+        """Load ``model`` at ``ctx`` (empty generate, so no prompt is spent)
+        and return the share of it in VRAM (None = unknown). Ollama reloads a
+        model whose num_ctx changed, so this is also how a too-big context
+        gets replaced."""
+        try:
+            resp = self._client.post(
+                f"{self._base_url}/api/generate",
+                json={
+                    "model": model,
+                    "prompt": "",
+                    "stream": False,
+                    "keep_alive": self._keep_alive,
+                    "options": {"num_ctx": ctx},
+                },
+                timeout=self._stall_timeout_seconds,
+            )
+        except httpx.HTTPError as exc:
+            raise LLMUnavailableError(f"Ollama request failed loading {model}: {exc}") from exc
+        if resp.status_code == 404:
+            raise LLMUnavailableError(f"Ollama doesn't have model '{model}' -- run: ollama pull {model}")
+        if resp.status_code >= 400:
+            raise LLMUnavailableError(
+                f"Ollama returned HTTP {resp.status_code} loading {model}: {resp.text[:300]}"
+            )
+        return gpu_share(base_url=self._base_url, model=model, api_key=self._api_key)
+
+    def _context_bands(self) -> list[int]:
+        bands = [b for b in _CONTEXT_BANDS if b < self._num_ctx] + [self._num_ctx]
+        return sorted(set(bands))
+
+    def _plan_fit(self, needed_tokens: int) -> int:
+        """Pick the model + context for this call, set ``self._model`` and
+        return the num_ctx to use. Tries the configured model at the smallest
+        context that holds the prompt + output, then the fallback model.
+        Raises when nothing sits fully on the GPU."""
+        self._model = self._primary_model
+        bands = [b for b in self._context_bands() if b >= needed_tokens]
+        if not bands:
+            raise LLMUnavailableError(
+                f"This call needs ~{needed_tokens:,} tokens (prompt + output) but OLLAMA_NUM_CTX is "
+                f"{self._num_ctx:,}. Raise OLLAMA_NUM_CTX, or trim the evidence packet."
+            )
+        ctx = bands[0]
+        candidates = [self._primary_model]
+        if self._fallback_model:
+            installed = self._installed_models()
+            if installed is None or any(_model_matches(self._fallback_model, n) for n in installed):
+                candidates.append(self._fallback_model)
+        tried: list[str] = []
+        now = time.monotonic()
+        for model in candidates:
+            if self._misfit_until.get((model, ctx), 0.0) > now:
+                tried.append(f"{model}@{ctx} (skipped, did not fit a moment ago)")
+                continue
+            share = self._load_and_measure(model, ctx)
+            if share is None or share >= self._min_gpu_share:
+                if model != self._primary_model:
+                    log.warning(
+                        "ollama: %s@%d does not fit on the GPU, using fallback %s@%d",
+                        self._primary_model, ctx, model, ctx,
+                    )
+                self._model = model
+                return ctx
+            self._misfit_until[(model, ctx)] = now + _MISFIT_MEMORY_SECONDS
+            tried.append(f"{model}@{ctx}: {share:.0%} on GPU")
+        raise LLMUnavailableError(
+            "No model fits fully on the GPU for this call (needs "
+            f"~{needed_tokens:,} tokens of context). Tried " + "; ".join(tried) + ". "
+            "Close other GPU-heavy apps, check OLLAMA_FLASH_ATTENTION=1 and OLLAMA_KV_CACHE_TYPE=q8_0 "
+            "are set for the Ollama server, or pull a smaller OLLAMA_FALLBACK_MODEL_NAME. "
+            "Set OLLAMA_MIN_GPU_SHARE=0 to run anyway (slow)."
         )
 
     def _chat(self, payload: dict[str, Any]) -> _ChatResult:
@@ -378,8 +480,15 @@ class OllamaProvider(LedgerRecordingMixin, LLMProvider):
         # default (2026-09-27).
         output_budget = max_output_tokens if max_output_tokens is not None else self._max_output_tokens
         schema = response_schema.model_json_schema()
+        call_ctx = self._num_ctx
+        if self._adaptive_fit:
+            est_prompt = int((len(system_prompt) + len(user_prompt)) / _CHARS_PER_TOKEN * 1.05) + 256
+            call_ctx = self._plan_fit(est_prompt + output_budget)
         result = self._chat(
-            self._payload(system_prompt, user_prompt, schema, with_think=True, max_output_tokens=output_budget)
+            self._payload(
+                system_prompt, user_prompt, schema, with_think=True,
+                max_output_tokens=output_budget, num_ctx=call_ctx,
+            )
         )
 
         # Models without a thinking mode reject the `think` field outright;
@@ -391,7 +500,8 @@ class OllamaProvider(LedgerRecordingMixin, LLMProvider):
         ):
             result = self._chat(
                 self._payload(
-                    system_prompt, user_prompt, schema, with_think=False, max_output_tokens=output_budget
+                    system_prompt, user_prompt, schema, with_think=False,
+                    max_output_tokens=output_budget, num_ctx=call_ctx,
                 )
             )
 
@@ -408,10 +518,10 @@ class OllamaProvider(LedgerRecordingMixin, LLMProvider):
         prompt_tokens = int(body.get("prompt_eval_count") or 0)
         output_tokens = int(body.get("eval_count") or 0)
 
-        if prompt_tokens >= self._num_ctx - 16:
+        if prompt_tokens >= call_ctx - 16:
             raise LLMUnavailableError(
                 f"The analysis prompt ({prompt_tokens} tokens) filled Ollama's context window "
-                f"(OLLAMA_NUM_CTX={self._num_ctx}), so evidence may have been cut off. "
+                f"(num_ctx={call_ctx}, OLLAMA_NUM_CTX={self._num_ctx}), so evidence may have been cut off. "
                 "Raise OLLAMA_NUM_CTX (and keep OLLAMA_KV_CACHE_TYPE=q8_0 so it still fits in VRAM)."
             )
         if body.get("done_reason") == "length":

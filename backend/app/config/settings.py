@@ -107,6 +107,13 @@ class Settings(BaseSettings):
     # model runs several times slower (2026-09-29, ETLX.DE: 78% on GPU,
     # 3.5 tokens/s, timed out after 30 min). 0 disables the check.
     ollama_min_gpu_share: float = 0.95
+    # 2026-09-30: instead of failing a pass at the first token when the model
+    # spills to the CPU, plan before the pass: pick the smallest context that
+    # holds the prompt + output, load the model at it, and use it only if it
+    # is >= ollama_min_gpu_share in VRAM; else try the smaller fallback model
+    # (qwen3:8b, ~5 GB, fits with room to spare). "" = no fallback model.
+    ollama_adaptive_fit: bool = True
+    ollama_fallback_model_name: str = "qwen3:8b"
     # False = ask thinking models (Qwen3) to skip the <think> phase, which
     # is much faster and doesn't help schema-constrained JSON. None = don't
     # send the field at all.

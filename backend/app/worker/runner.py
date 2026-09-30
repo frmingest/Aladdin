@@ -89,6 +89,15 @@ class WorkerProviders:
 
 
 class AnalysisWorker:
+    def _research_fallback_ready(self) -> bool:
+        st = self.settings
+        provider = (st.research_fallback_provider or "none").lower()
+        if provider == "none":
+            return False
+        if provider == "tavily":
+            return bool(st.tavily_api_key)
+        return True
+
     def __init__(
         self,
         *,
@@ -178,7 +187,10 @@ class AnalysisWorker:
                 self._set_state(IDLE, None)
                 return IDLE
             guard = self.providers.budget_guard
-            if guard is not None:
+            # 2026-09-30: with a configured research fallback (Tavily) an
+            # exhausted Gemini budget is not a reason to wait -- the research
+            # step falls through to the fallback on its own.
+            if guard is not None and not self._research_fallback_ready():
                 holding = db.get(Holding, nxt.holding_id)
                 needed = research_refreshes_needed(db, holding) if holding is not None else 0
                 if needed and guard.remaining_today() < needed:
