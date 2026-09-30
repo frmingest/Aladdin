@@ -96,7 +96,7 @@ def refresh_all_snapshots(
             model = build()
             snapshots.store(db, key, model)
             ok.append(name)
-        except Exception:  # noqa: BLE001 - one page failing must not stop the rest
+        except Exception:
             db.rollback()
             log.warning("snapshot %s failed", name, exc_info=True)
             failed.append(name)

@@ -48,11 +48,11 @@ from app.models.watchlist import WatchlistItem
 
 __all__ = [
     "Account",
-    "ComputedSnapshot",
     "AnalysisRun",
     "AnalysisWorkerHeartbeat",
     "AppSetting",
     "Base",
+    "ComputedSnapshot",
     "DecisionJournalEntry",
     "Document",
     "DocumentChunk",

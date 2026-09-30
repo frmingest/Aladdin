@@ -2,7 +2,7 @@
 the Server-Timing header."""
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 from fastapi import FastAPI
@@ -76,7 +76,7 @@ def test_changed_inputs_invalidate_the_snapshot():
         return Payload(value=n["v"])
 
     snapshots.get_or_build(db, "k", Payload, build)
-    db.add(WatchlistItem(holding_id=holding.id, buy_below_price=Decimal("10")))
+    db.add(WatchlistItem(holding_id=holding.id, buy_below_price=Decimal(10)))
     db.commit()
     assert snapshots.get_or_build(db, "k", Payload, build).value == 2
 
@@ -84,11 +84,11 @@ def test_changed_inputs_invalidate_the_snapshot():
 def test_buy_below_edit_invalidates_the_snapshot():
     db = _db()
     holding = _holding(db)
-    item = WatchlistItem(holding_id=holding.id, buy_below_price=Decimal("10"))
+    item = WatchlistItem(holding_id=holding.id, buy_below_price=Decimal(10))
     db.add(item)
     db.commit()
     before = snapshots.fingerprint(db)
-    item.buy_below_price = Decimal("12")
+    item.buy_below_price = Decimal(12)
     db.commit()
     assert snapshots.fingerprint(db) != before
 
@@ -126,7 +126,7 @@ def _stale_history(db, ticker="ABC"):
     old = datetime.now(timezone.utc) - timedelta(days=10)
     for i in range(5):
         db.add(PriceHistoryObservation(
-            ticker=ticker, observed_on=date.today() - timedelta(days=20 - i), close=Decimal("100"),
+            ticker=ticker, observed_on=datetime.now(timezone.utc).date() - timedelta(days=20 - i), close=Decimal(100),
             currency="NOK", provider="test", fetched_at=old,
         ))
     db.commit()

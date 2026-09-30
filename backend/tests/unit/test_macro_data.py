@@ -393,5 +393,5 @@ def test_describe_flags_stale_values():
     ],
 )
 def test_scheduler_enabled_switches(overrides, enabled):
-    settings = Settings(_env_file=None, **{"database_url": "postgresql://x/y", **overrides})
+    settings = Settings(_env_file=None, **{"database_url": "postgresql://x/y", "macro_data_provider": "live", **overrides})
     assert MacroRefreshScheduler(settings).enabled is enabled

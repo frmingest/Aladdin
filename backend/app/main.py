@@ -44,9 +44,9 @@ from app.providers.base import (
     RiskFreeRateUnavailableError,
 )
 from app.security import ApiKeyMiddleware
-from app.timing import TimingMiddleware
 from app.services.macro.scheduler import MacroRefreshScheduler
 from app.services.settings.demo_guard import DemoModeWriteBlockedError
+from app.timing import TimingMiddleware
 
 settings = get_settings()
 
