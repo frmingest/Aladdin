@@ -112,6 +112,7 @@ def build_watchlist(
     *,
     market_data_provider: MarketDataProvider,
     risk_free_rate_provider: RiskFreeRateProvider,
+    force_refresh: bool = False,
 ) -> list[WatchlistRow]:
     items = db.scalars(select(WatchlistItem)).all()
     if not items:
@@ -124,7 +125,9 @@ def build_watchlist(
     for item in items:
         holding = holdings[item.holding_id]
         row = build_row(item, holding, owned=holding.id in owned_ids)
-        valuation = compute_holding_valuation(db, holding, market_data_provider, risk_free_rate_provider)
+        valuation = compute_holding_valuation(
+            db, holding, market_data_provider, risk_free_rate_provider, force_refresh=force_refresh
+        )
         row.price = valuation.current_price_per_share
         row.price_currency = valuation.valuation_currency
         row.price_as_of = valuation.as_of

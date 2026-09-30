@@ -299,6 +299,7 @@ export const api = {
   // Watchlist (F7) — backend/app/api/watchlist.py. GET values each entry
   // like the margin-of-safety board (cached prices); never calls an LLM.
   getWatchlist: () => request<Watchlist>("/watchlist"),
+  refreshWatchlist: () => request<Watchlist>("/watchlist/refresh", { method: "POST" }),
   getWatchlistEntry: (holdingId: string) => request<WatchlistRow | null>(`/watchlist/holdings/${holdingId}`),
   addToWatchlist: (input: WatchlistCreateInput) =>
     request<WatchlistRow>("/watchlist", { method: "POST", body: JSON.stringify(input) }),

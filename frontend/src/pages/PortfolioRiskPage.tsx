@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { api, ApiError } from "../lib/api";
 import { formatDate, formatNok, formatPercent, formatPct100 } from "../lib/format";
 import type { ClusterFlag, CorrelationMatrix, HoldingStress, PortfolioRisk, Regime } from "../lib/types";
-import { Button, Card, EmptyState, PageHeader, SectionTitle } from "../components/ui";
+import { Button, Card, EmptyState, PageHeader, SectionTitle, SnapshotStamp } from "../components/ui";
 import { GLOSSARY } from "../lib/glossary";
 
 /** Sprint 12 — correlation matrix, correlated-cluster flags, drawdown/
@@ -282,9 +282,12 @@ export default function PortfolioRiskPage() {
             : "Correlation, stress scenarios and macro regime."
         }
         actions={
-          <Button variant="secondary" onClick={onRefresh} disabled={refreshing}>
-            {refreshing ? "Refreshing…" : "Refresh price data"}
-          </Button>
+          <div className="flex items-center gap-3">
+            <SnapshotStamp at={risk?.snapshot_at} />
+            <Button variant="secondary" onClick={onRefresh} disabled={refreshing}>
+              {refreshing ? "Refreshing…" : "Refresh price data"}
+            </Button>
+          </div>
         }
       />
 

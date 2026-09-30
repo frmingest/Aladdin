@@ -146,6 +146,13 @@ class Settings(BaseSettings):
     # summer, 04:00 in winter — after the Oslo/EU close and the FX fixings).
     tripwire_check_enabled: bool = True
     tripwire_check_hour_utc: int = 3
+    # 2026-09-30 page-load work: stored snapshots of Risk / Performance /
+    # Margin of safety / Watchlist (app/services/snapshots.py). Served while
+    # younger than this and the inputs are unchanged; the worker rebuilds
+    # them once per UTC day after `snapshot_refresh_hour_utc`.
+    snapshot_max_age_hours: int = 36
+    snapshot_refresh_enabled: bool = True
+    snapshot_refresh_hour_utc: int = 4
 
     # --- Object storage (see app/providers/object_storage.py) ---
     # "local" (default, dev only — Railway's disk is ephemeral, not a real

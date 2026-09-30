@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { api, ApiError } from "../lib/api";
 import { formatDate, formatDecimal, formatNok, formatPercent } from "../lib/format";
 import type { BoardRow, BoardZone, MarginOfSafetyBoard } from "../lib/types";
-import { Button, Card, EmptyState, PageHeader, VerdictBadge } from "../components/ui";
+import { Button, Card, EmptyState, PageHeader, SnapshotStamp, VerdictBadge } from "../components/ui";
 import { InfoTooltip } from "../components/InfoTooltip";
 import { GLOSSARY } from "../lib/glossary";
 
@@ -61,7 +61,8 @@ function RangeBar({ row }: { row: BoardRow }) {
   );
 }
 
-function RankedTable({ rows }: { rows: BoardRow[] }) {
+function RankedTable({ rows, variant = "portfolio" }: { rows: BoardRow[]; variant?: "portfolio" | "watchlist" }) {
+  const watch = variant === "watchlist";
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
@@ -83,7 +84,7 @@ function RankedTable({ rows }: { rows: BoardRow[] }) {
                 <InfoTooltip text={GLOSSARY.marginOfSafety} />
               </span>
             </th>
-            <th className="py-2 text-right font-medium">Weight</th>
+            <th className="py-2 text-right font-medium">{watch ? "Your buy-below" : "Weight"}</th>
           </tr>
         </thead>
         <tbody>
@@ -135,7 +136,13 @@ function RankedTable({ rows }: { rows: BoardRow[] }) {
                   {mos === null ? "—" : formatPercent(mos)}
                 </td>
                 <td className="tabular py-3 text-right text-ink-muted">
-                  {row.weight_pct ? formatPercent(row.weight_pct) : "—"}
+                  {watch
+                    ? row.buy_below_price
+                      ? `${formatDecimal(row.buy_below_price)} ${row.buy_below_currency ?? ""}`
+                      : "—"
+                    : row.weight_pct
+                      ? formatPercent(row.weight_pct)
+                      : "—"}
                 </td>
               </tr>
             );
@@ -170,6 +177,9 @@ export default function MarginOfSafetyPage() {
 
   const ranked = board?.rows.filter((r) => r.zone !== "unavailable") ?? [];
   const unavailable = board?.rows.filter((r) => r.zone === "unavailable") ?? [];
+  const watchRows = board?.watchlist_rows ?? [];
+  const watchRanked = watchRows.filter((r) => r.zone !== "unavailable");
+  const watchUnavailable = watchRows.filter((r) => r.zone === "unavailable");
   // Sprint 14 (2026-09-26): when regime-adjusted DCF is on, every row used
   // the same widened discount rate — surfaced once here rather than repeated
   // per row.
@@ -190,9 +200,12 @@ export default function MarginOfSafetyPage() {
         }
         subtitle="Every stock you own, ranked by how far today's price sits below its DCF value."
         actions={
-          <Button variant="secondary" onClick={handleRefresh} disabled={refreshing}>
-            {refreshing ? "Refreshing…" : "Refresh"}
-          </Button>
+          <div className="flex items-center gap-3">
+            <SnapshotStamp at={board?.snapshot_at} />
+            <Button variant="secondary" onClick={handleRefresh} disabled={refreshing}>
+              {refreshing ? "Refreshing…" : "Refresh"}
+            </Button>
+          </div>
         }
       />
 
@@ -237,10 +250,34 @@ export default function MarginOfSafetyPage() {
           </div>
 
           {totalValue > 0 && ranked.length > 0 && (
-            <p className="text-sm text-ink-muted">
-              {formatPercent(String(valueBelowBase / totalValue))} of your equity value (
-              {formatNok(board.total_equity_value_nok)}) is priced at or below its base-case value.
-            </p>
+            <Card>
+              <div
+                className="flex h-3 w-full overflow-hidden rounded-full bg-border-subtle"
+                role="img"
+                aria-label="Share of your equity value by valuation zone"
+              >
+                {[...ZONES, { key: "unavailable" as const, label: "Not ranked", hint: "", tone: "" }].map((z) => {
+                  const value = (board.rows ?? [])
+                    .filter((r) => r.zone === z.key)
+                    .reduce((sum, r) => sum + Number(r.market_value_nok ?? 0), 0);
+                  return value > 0 ? (
+                    <div
+                      key={z.key}
+                      className={ZONE_DOT[z.key]}
+                      style={{ width: `${(value / totalValue) * 100}%` }}
+                      title={`${z.label}: ${formatPercent(String(value / totalValue))}`}
+                    />
+                  ) : null;
+                })}
+              </div>
+              <p className="mt-2 text-sm text-ink-muted">
+                <span className="font-semibold text-ink">
+                  {formatPercent(String(valueBelowBase / totalValue))}
+                </span>{" "}
+                of your {formatNok(board.total_equity_value_nok)} equity is priced at or below its
+                base-case value.
+              </p>
+            </Card>
           )}
 
           <Card>
@@ -264,6 +301,41 @@ export default function MarginOfSafetyPage() {
               <span>Values are deterministic DCF output, not model opinions.</span>
             </p>
           </Card>
+
+          {watchRows.length > 0 && (
+            <Card className="border-dashed">
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <h2 className="text-sm font-semibold text-ink">
+                  Watchlist — not owned ({watchRows.length})
+                </h2>
+                <Link to="/watchlist" className="text-xs text-ink-muted underline hover:text-accent">
+                  Manage watchlist
+                </Link>
+              </div>
+              <p className="mt-0.5 text-xs text-ink-faint">
+                Companies you follow but don't hold. Same valuation as above; kept separate so it never
+                counts toward your portfolio totals.
+              </p>
+              {watchRanked.length > 0 && (
+                <div className="mt-3">
+                  <RankedTable rows={watchRanked} variant="watchlist" />
+                </div>
+              )}
+              {watchUnavailable.length > 0 && (
+                <ul className="mt-3 divide-y divide-border-subtle">
+                  {watchUnavailable.map((row) => (
+                    <li key={row.holding_id} className="py-2 text-sm">
+                      <Link to={`/holdings/${row.holding_id}`} className="font-medium text-ink hover:text-accent">
+                        {row.name}
+                      </Link>
+                      <span className="ml-2 text-xs text-ink-faint">{row.ticker}</span>
+                      <p className="text-xs text-ink-muted">{row.unavailable_reason ?? "No DCF yet"}</p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Card>
+          )}
 
           {unavailable.length > 0 && (
             <Card>

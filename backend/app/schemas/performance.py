@@ -25,6 +25,8 @@ class DailyValueOut(BaseModel):
 
 
 class PortfolioPerformanceOut(BaseModel):
+    # When this payload was stored (page-load snapshots, 2026-09-30).
+    snapshot_at: datetime | None = None
     as_of: datetime | None
     lookback_days: int
     equity_value_nok: Decimal

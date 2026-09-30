@@ -23,10 +23,12 @@ from app.services.performance.portfolio_performance import (
     DailyValue,
     PortfolioPerformance,
     build_portfolio_performance,
+    resolve_window,
 )
 from app.services.settings.demo_guard import require_not_demo
 from app.services.settings.demo_mode import is_demo_mode
 from app.services.settings.synthetic_data import demo_performance
+from app.services.snapshots import get_or_build, performance_key
 
 router = APIRouter(prefix="/performance", tags=["performance"])
 
@@ -67,6 +69,44 @@ def _to_out(perf: PortfolioPerformance) -> PortfolioPerformanceOut:
     )
 
 
+def build_performance_out(
+    db: Session,
+    market_data_provider: MarketDataProvider,
+    lookback_days: int,
+    benchmark_ticker: str,
+    *,
+    force_refresh: bool,
+) -> PortfolioPerformanceOut:
+    return _to_out(
+        build_portfolio_performance(
+            db,
+            market_data_provider=market_data_provider,
+            lookback_days=lookback_days,
+            benchmark_ticker=benchmark_ticker,
+            force_refresh=force_refresh,
+            serve_stale=not force_refresh,
+        )
+    )
+
+
+def _serve(
+    db: Session,
+    market_data_provider: MarketDataProvider,
+    lookback_days: int | None,
+    benchmark: str | None,
+    *,
+    refresh: bool,
+) -> PortfolioPerformanceOut:
+    lookback, bench = resolve_window(lookback_days, benchmark)
+    return get_or_build(
+        db,
+        performance_key(lookback, bench),
+        PortfolioPerformanceOut,
+        lambda: build_performance_out(db, market_data_provider, lookback, bench, force_refresh=refresh),
+        refresh=refresh,
+    )
+
+
 @router.get("/portfolio", response_model=PortfolioPerformanceOut)
 def get_portfolio_performance(
     lookback_days: int | None = Query(default=None, ge=7, le=730),
@@ -74,12 +114,11 @@ def get_portfolio_performance(
     db: Session = Depends(get_db),
     market_data_provider: MarketDataProvider = Depends(get_market_data_provider),
 ) -> PortfolioPerformanceOut:
+    """Stored snapshot when inputs are unchanged; else built from stored
+    price history (no live Yahoo call for a ticker that has history)."""
     if is_demo_mode(db):
         return demo_performance()
-    perf = build_portfolio_performance(
-        db, market_data_provider=market_data_provider, lookback_days=lookback_days, benchmark_ticker=benchmark,
-    )
-    return _to_out(perf)
+    return _serve(db, market_data_provider, lookback_days, benchmark, refresh=False)
 
 
 @router.post("/portfolio/refresh", response_model=PortfolioPerformanceOut)
@@ -90,8 +129,4 @@ def refresh_portfolio_performance(
     market_data_provider: MarketDataProvider = Depends(get_market_data_provider),
 ) -> PortfolioPerformanceOut:
     require_not_demo(db)
-    perf = build_portfolio_performance(
-        db, market_data_provider=market_data_provider, lookback_days=lookback_days, benchmark_ticker=benchmark,
-        force_refresh=True,
-    )
-    return _to_out(perf)
+    return _serve(db, market_data_provider, lookback_days, benchmark, refresh=True)

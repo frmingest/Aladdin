@@ -95,35 +95,53 @@ const RUN_STATUS_TEXT: Record<AnalysisRun["status"], { text: string; style: stri
 
 function Citations({ ids, evidence }: { ids: string[]; evidence: Map<string, EvidenceItem> }) {
   const [open, setOpen] = useState<string | null>(null);
+  // 2026-09-30 UX: a run cites 20-40 evidence ids per card; as a chip wall it
+  // dominated the page. Collapsed by default behind one "N sources" toggle.
+  const [showAll, setShowAll] = useState(false);
   if (ids.length === 0) return null;
   const selected = open ? evidence.get(open) : undefined;
+  const unknownCount = ids.filter((id) => !evidence.has(id)).length;
 
   return (
     <div className="mt-4">
       <div className="flex flex-wrap items-center gap-1.5 border-t border-border-subtle pt-3">
-        <span className="mr-1 text-[11px] font-medium uppercase tracking-wider text-ink-faint">Evidence</span>
-        {ids.map((id) => {
-          const known = evidence.has(id);
-          const active = open === id;
-          return (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setOpen(active ? null : id)}
-              aria-expanded={active}
-              title={known ? evidence.get(id)?.label : "Not found in this run's evidence packet"}
-              className={`tabular rounded-md px-1.5 py-0.5 font-mono text-[11px] font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
-                !known
-                  ? "bg-caution-subtle text-caution line-through"
-                  : active
-                    ? "bg-accent text-onfill"
-                    : "bg-accent-subtle text-accent hover:bg-accent hover:text-onfill"
-              }`}
-            >
-              {id}
-            </button>
-          );
-        })}
+        <button
+          type="button"
+          onClick={() => setShowAll((v) => !v)}
+          aria-expanded={showAll}
+          className="inline-flex items-center gap-1.5 rounded-full bg-accent-subtle px-2.5 py-0.5 text-xs font-medium text-accent hover:bg-accent hover:text-onfill focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        >
+          {ids.length} source{ids.length === 1 ? "" : "s"}
+          <span aria-hidden="true">{showAll ? "▴" : "▾"}</span>
+        </button>
+        {unknownCount > 0 && (
+          <span className="rounded-full bg-caution-subtle px-2 py-0.5 text-[11px] font-medium text-caution">
+            {unknownCount} not in evidence
+          </span>
+        )}
+        {(showAll || open) &&
+          ids.map((id) => {
+            const known = evidence.has(id);
+            const active = open === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setOpen(active ? null : id)}
+                aria-expanded={active}
+                title={known ? evidence.get(id)?.label : "Not found in this run's evidence packet"}
+                className={`tabular rounded-md px-1.5 py-0.5 font-mono text-[11px] font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                  !known
+                    ? "bg-caution-subtle text-caution line-through"
+                    : active
+                      ? "bg-accent text-onfill"
+                      : "bg-accent-subtle text-accent hover:bg-accent hover:text-onfill"
+                }`}
+              >
+                {id}
+              </button>
+            );
+          })}
       </div>
       {open && (
         <div className="mt-2 rounded-lg border border-border-subtle bg-raised p-3 text-sm">
@@ -340,6 +358,35 @@ function BulletList({ title, items }: { title: string; items: string[] }) {
   );
 }
 
+/** 5-step scale so the verdict reads at a glance, not just as a word. */
+const VERDICT_SCALE: VerdictRating[] = ["Avoid", "Sell", "Hold", "Buy", "Strong Buy"];
+const VERDICT_SEGMENT: Record<VerdictRating, string> = {
+  Avoid: "bg-negative",
+  Sell: "bg-negative/60",
+  Hold: "bg-ink-faint",
+  Buy: "bg-positive/60",
+  "Strong Buy": "bg-positive",
+};
+
+function VerdictScale({ rating }: { rating: VerdictRating }) {
+  return (
+    <div className="mt-3 w-56" role="img" aria-label={`Verdict ${rating} on a scale from Avoid to Strong Buy`}>
+      <div className="flex gap-1">
+        {VERDICT_SCALE.map((step) => (
+          <div
+            key={step}
+            className={`h-2 flex-1 rounded-full ${VERDICT_SEGMENT[step]} ${step === rating ? "ring-2 ring-ink ring-offset-2 ring-offset-surface" : "opacity-30"}`}
+          />
+        ))}
+      </div>
+      <div className="mt-1.5 flex justify-between text-[10px] text-ink-faint">
+        <span>Avoid</span>
+        <span>Strong Buy</span>
+      </div>
+    </div>
+  );
+}
+
 function VerdictCard({
   run,
   verdict,
@@ -363,6 +410,7 @@ function VerdictCard({
           >
             {verdict.rating}
           </p>
+          <VerdictScale rating={verdict.rating} />
           {changed && (
             <p className="mt-2 text-xs text-ink-muted">
               Blind pass said <span className="font-medium text-ink">{blindRating}</span>; changed after

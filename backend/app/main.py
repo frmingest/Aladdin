@@ -44,6 +44,7 @@ from app.providers.base import (
     RiskFreeRateUnavailableError,
 )
 from app.security import ApiKeyMiddleware
+from app.timing import TimingMiddleware
 from app.services.macro.scheduler import MacroRefreshScheduler
 from app.services.settings.demo_guard import DemoModeWriteBlockedError
 
@@ -73,6 +74,7 @@ app = FastAPI(title=settings.app_name, version=settings.app_version, lifespan=li
 # then handles a preflight OPTIONS before the key check ever runs, and adds
 # CORS headers to a 401 response too, not just a 200.
 app.add_middleware(ApiKeyMiddleware, get_settings=get_settings)
+app.add_middleware(TimingMiddleware)
 _cors_allowed_origins = [
     origin.strip() for origin in settings.cors_allowed_origins.split(",") if origin.strip()
 ] or ["*"]
@@ -81,6 +83,7 @@ app.add_middleware(
     allow_origins=_cors_allowed_origins,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["Server-Timing", "X-DB-Queries"],
 )
 
 
