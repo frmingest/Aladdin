@@ -5,7 +5,9 @@ from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, computed_field, field_validator
+
+from app.services.documents.viewing import describe_viewing
 
 PREVIEW_CHARS = 300
 
@@ -45,6 +47,19 @@ class DocumentOut(BaseModel):
     quality_flags: dict[str, Any]
     page_count: int
     fact_count: int
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def file_url(self) -> str:
+        """Where the stored original can be read (relative to the API root;
+        needs the X-API-Key header like every route)."""
+        return f"/documents/{self.id}/file"
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def viewable_in_browser(self) -> bool:
+        """PDF/HTML can be shown inline; PPTX/XLSX/CSV are download-only."""
+        return describe_viewing(self.original_filename, self.mime_type).inline
 
     @field_validator("quality_flags", mode="before")
     @classmethod

@@ -1,9 +1,11 @@
 """Holding-document upload + retrieval endpoints."""
 from __future__ import annotations
 
+from urllib.parse import quote
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app.config.database import get_db
@@ -17,6 +19,7 @@ from app.models.document import Document, DocumentPage
 from app.models.financial_line_item import FinancialLineItem
 from app.models.holding import Holding
 from app.providers.factory import get_object_storage
+from app.providers.object_storage import ObjectStorageUnavailableError
 from app.schemas.document import (
     PREVIEW_CHARS,
     DeletionResult,
@@ -28,6 +31,7 @@ from app.schemas.document import (
 )
 from app.services.deletion import DeletionBlockedError, delete_documents
 from app.services.documents.ingestion import ingest_holding_document
+from app.services.documents.viewing import describe_viewing
 from app.services.settings.demo_guard import require_not_demo
 
 router = APIRouter(prefix="/documents", tags=["documents"])
@@ -158,6 +162,54 @@ def get_document(document_id: UUID, db: Session = Depends(get_db)) -> DocumentDe
     if document is None:
         raise HTTPException(status_code=404, detail="document not found")
     return _doc_to_detail(db, document)
+
+
+@router.get("/{document_id}/file")
+def get_document_file(
+    document_id: UUID,
+    download: bool = False,
+    db: Session = Depends(get_db),
+    storage=Depends(get_object_storage),
+) -> Response:
+    """The stored original file, for the "Read" button. Served inline when a
+    browser can render it (PDF, HTML/XHTML) and as a download otherwise
+    (PPTX/XLSX/CSV). Behind the same X-API-Key gate as every other route, so
+    the frontend fetches it with the key and shows it from a blob.
+
+    Filings are untrusted input (CLAUDE.md rule 5): HTML is served under a
+    sandboxing Content-Security-Policy — no scripts, no forms, no network
+    fetches — so a hostile document can't run code next to real holdings."""
+    require_not_demo(db)
+    document = db.get(Document, document_id)
+    if document is None:
+        raise HTTPException(status_code=404, detail="document not found")
+
+    content: bytes | None = None
+    # ingestion stores under f"{sha256}/{filename}"; fall back to the saved
+    # path for rows written before that convention.
+    for key in (f"{document.sha256}/{document.original_filename}", document.storage_path):
+        try:
+            content = storage.retrieve(key)
+            break
+        except ObjectStorageUnavailableError:
+            continue
+    if content is None:
+        raise HTTPException(
+            status_code=404, detail="the stored file for this document is not available"
+        )
+
+    viewing = describe_viewing(document.original_filename, document.mime_type)
+    disposition = "inline" if viewing.inline and not download else "attachment"
+    headers = {
+        "Content-Disposition": f'{disposition}; filename*=UTF-8\'\'{quote(document.original_filename)}',
+        "X-Content-Type-Options": "nosniff",
+        "Cache-Control": "private, max-age=300",
+    }
+    if viewing.is_html:
+        headers["Content-Security-Policy"] = (
+            "sandbox; default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:"
+        )
+    return Response(content=content, media_type=viewing.media_type, headers=headers)
 
 
 @router.delete("/{document_id}", response_model=DeletionResult)

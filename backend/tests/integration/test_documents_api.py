@@ -152,3 +152,60 @@ def test_upload_rejects_unknown_document_type(client):
         files={"file": ("q4.xlsx", _xlsx_bytes(), "application/octet-stream")},
     )
     assert response.status_code == 422
+
+
+# --- GET /documents/{id}/file — the "Read" button's source ------------------
+
+
+def test_document_out_carries_file_url_and_viewable_flag(client):
+    test_client, holding_id = client
+    response = test_client.post(
+        "/documents/upload",
+        data={"holding_id": holding_id, "document_type": "annual_report"},
+        files={"file": ("q4.xlsx", _xlsx_bytes(), "application/octet-stream")},
+    )
+    assert response.status_code == 201, response.text
+    doc = response.json()["document"]
+    assert doc["file_url"] == f"/documents/{doc['id']}/file"
+    assert doc["viewable_in_browser"] is False  # xlsx is download-only
+
+
+def test_read_html_filing_inline_with_sandbox_csp(client):
+    test_client, holding_id = client
+    html = b"<html><body><h1>Annual report</h1><script>alert(1)</script></body></html>"
+    upload = test_client.post(
+        "/documents/upload",
+        data={"holding_id": holding_id, "document_type": "annual_report"},
+        files={"file": ("report.xhtml", html, "application/xhtml+xml")},
+    )
+    assert upload.status_code == 201, upload.text
+    doc = upload.json()["document"]
+    assert doc["viewable_in_browser"] is True
+
+    response = test_client.get(f"/documents/{doc['id']}/file")
+    assert response.status_code == 200
+    assert response.content == html
+    assert response.headers["content-type"].startswith("text/html")
+    assert response.headers["content-disposition"].startswith("inline")
+    csp = response.headers["content-security-policy"]
+    assert csp.startswith("sandbox") and "default-src 'none'" in csp
+    assert response.headers["x-content-type-options"] == "nosniff"
+
+
+def test_read_xlsx_is_served_as_attachment(client):
+    test_client, holding_id = client
+    upload = test_client.post(
+        "/documents/upload",
+        data={"holding_id": holding_id, "document_type": "annual_report"},
+        files={"file": ("q4.xlsx", _xlsx_bytes(), "application/octet-stream")},
+    )
+    doc_id = upload.json()["document"]["id"]
+    response = test_client.get(f"/documents/{doc_id}/file")
+    assert response.status_code == 200
+    assert response.headers["content-disposition"].startswith("attachment")
+
+
+def test_read_unknown_document_is_404(client):
+    test_client, _ = client
+    response = test_client.get("/documents/00000000-0000-0000-0000-000000000000/file")
+    assert response.status_code == 404

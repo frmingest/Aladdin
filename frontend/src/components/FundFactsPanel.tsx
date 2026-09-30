@@ -15,6 +15,7 @@ import type {
 } from "../lib/types";
 import { Button, Card, EmptyState, StatTile, VerdictBadge } from "./ui";
 import { FundLookThroughCard } from "./FundLookThroughCard";
+import { DocumentReadButton } from "./DocumentReader";
 
 /** Sprint 8 (F9): the facts a fund / ETF analysis rests on, and every
  * number computed from them. Backend: app/api/funds.py.
@@ -285,6 +286,12 @@ function ProfileCard({
             )}
             <p className="mt-2 text-xs text-ink-faint">
               Source: {sourceName(facts.documents, profile.source_document_id, profile.source_page)}
+              {facts.documents.find((d) => d.id === profile.source_document_id) && (
+                <DocumentReadButton
+                  document={facts.documents.find((d) => d.id === profile.source_document_id)!}
+                  className="ml-1 align-middle"
+                />
+              )}
             </p>
           </>
         )}

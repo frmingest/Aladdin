@@ -93,6 +93,26 @@ function apiUrl(path: string): string {
   return BASE_URL ? `${BASE_URL}${path}` : `/api${path}`;
 }
 
+/** The stored original of an uploaded document, fetched with the API key
+ * (a plain link can't carry the X-API-Key header). Backend:
+ * GET /documents/{id}/file. */
+export async function fetchDocumentFile(id: string, signal?: AbortSignal): Promise<Blob> {
+  const response = await fetch(apiUrl(`/documents/${id}/file`), {
+    signal,
+    headers: API_KEY ? { "X-API-Key": API_KEY } : {},
+  });
+  if (!response.ok) {
+    let detail: unknown = `could not load the file (status ${response.status})`;
+    try {
+      detail = await response.json();
+    } catch {
+      /* keep the status message */
+    }
+    throw new ApiError(response.status, detail);
+  }
+  return response.blob();
+}
+
 export class ApiError extends Error {
   status: number;
   detail: unknown;
