@@ -94,6 +94,8 @@ def _build_provider(name: str, settings: Settings) -> LLMProvider:
             timeout_seconds=settings.ollama_timeout_seconds,
             stall_timeout_seconds=settings.ollama_stall_timeout_seconds,
             min_gpu_share=settings.ollama_min_gpu_share,
+            fallback_model=settings.ollama_fallback_model_name or None,
+            adaptive_fit=settings.ollama_adaptive_fit,
             think=settings.ollama_think,
             api_key=settings.ollama_api_key,
         )

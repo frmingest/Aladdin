@@ -124,6 +124,26 @@ def test_empty_gemini_budget_waits_instead_of_running_on_stale_research():
         assert "00:00 UTC" in db.get(AnalysisWorkerHeartbeat, "pc-1").detail
 
 
+def test_empty_gemini_budget_does_not_wait_when_tavily_fallback_is_configured():
+    factory = _factory()
+    _queued_holding(factory)
+    worker = _worker(factory, budget=DailyBudgetGuard(daily_limit=0))
+    worker.settings = SETTINGS.model_copy(
+        update={"research_fallback_provider": "tavily", "tavily_api_key": "tvly-test"}
+    )
+    assert worker.run_once() == RAN
+
+
+def test_empty_gemini_budget_still_waits_when_fallback_has_no_key():
+    factory = _factory()
+    _queued_holding(factory)
+    worker = _worker(factory, budget=DailyBudgetGuard(daily_limit=0))
+    worker.settings = SETTINGS.model_copy(
+        update={"research_fallback_provider": "tavily", "tavily_api_key": None}
+    )
+    assert worker.run_once() == WAITING_QUOTA
+
+
 class _ExplodingLLM:
     name = "exploding"
 

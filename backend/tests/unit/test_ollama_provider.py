@@ -322,3 +322,84 @@ def test_health_ok_without_warning_when_fully_on_gpu(monkeypatch):
     health = check_ollama_health(base_url="http://x", model="qwen3:14b")
     assert health.ok and health.warning is None
     assert "100% on the GPU" in health.detail
+
+
+# ---- adaptive fit: choose model + context before the pass (2026-09-30) ----
+
+
+def _router(shares: dict[tuple[str, int], float], loads: list, installed=("qwen3:14b", "qwen3:8b")):
+    """Mock Ollama: /api/generate 'loads' a model at a ctx, /api/ps then
+    reports the share for whatever was loaded last; /api/chat streams."""
+    state: dict = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        path = request.url.path
+        body = json.loads(request.content) if request.content else {}
+        if path == "/api/tags":
+            return httpx.Response(200, json={"models": [{"name": n} for n in installed]})
+        if path == "/api/generate":
+            state["loaded"] = (body["model"], body["options"]["num_ctx"])
+            loads.append(state["loaded"])
+            return httpx.Response(200, json={"done": True})
+        if path == "/api/chat":
+            state["chat"] = (body["model"], body["options"]["num_ctx"])
+            return _ok()
+        return httpx.Response(404)
+
+    return handler, state
+
+
+def _fit_provider(monkeypatch, shares, loads, **overrides):
+    handler, state = _router(shares, loads)
+    monkeypatch.setattr(
+        op, "gpu_share", lambda **kw: shares.get(state.get("loaded"), None)
+    )
+    provider, _ = _provider(
+        handler, min_gpu_share=0.95, adaptive_fit=True, fallback_model="qwen3:8b",
+        num_ctx=24576, **overrides,
+    )
+    return provider, state
+
+
+def test_adaptive_fit_uses_smallest_context_that_holds_the_call(monkeypatch):
+    loads: list = []
+    provider, state = _fit_provider(monkeypatch, {("qwen3:14b", 12288): 1.0}, loads)
+    assert _call(provider, max_output_tokens=9000).content
+    assert loads == [("qwen3:14b", 12288)]
+    assert state["chat"] == ("qwen3:14b", 12288)
+
+
+def test_adaptive_fit_falls_back_to_smaller_model_when_primary_spills(monkeypatch):
+    loads: list = []
+    shares = {("qwen3:14b", 24576): 0.78, ("qwen3:8b", 24576): 1.0}
+    provider, state = _fit_provider(monkeypatch, shares, loads)
+    assert _call(provider, max_output_tokens=23000).content
+    assert loads == [("qwen3:14b", 24576), ("qwen3:8b", 24576)]
+    assert state["chat"] == ("qwen3:8b", 24576)
+    assert provider._model == "qwen3:8b"  # so the usage ledger records the model that ran
+
+
+def test_adaptive_fit_remembers_a_misfit_and_resets_the_model_per_call(monkeypatch):
+    loads: list = []
+    shares = {("qwen3:14b", 24576): 0.78, ("qwen3:8b", 24576): 1.0, ("qwen3:14b", 8192): 1.0}
+    provider, state = _fit_provider(monkeypatch, shares, loads)
+    _call(provider, max_output_tokens=23000)  # 14b misfits -> 8b
+    _call(provider, max_output_tokens=23000)  # 14b skipped straight away
+    assert loads == [("qwen3:14b", 24576), ("qwen3:8b", 24576), ("qwen3:8b", 24576)]
+    _call(provider, max_output_tokens=3000)  # smaller call: 14b fits again
+    assert state["chat"] == ("qwen3:14b", 8192)
+
+
+def test_adaptive_fit_fails_clearly_when_nothing_fits(monkeypatch):
+    loads: list = []
+    shares = {("qwen3:14b", 24576): 0.78, ("qwen3:8b", 24576): 0.9}
+    provider, _ = _fit_provider(monkeypatch, shares, loads)
+    with pytest.raises(LLMUnavailableError, match="No model fits fully on the GPU") as err:
+        _call(provider, max_output_tokens=23000)
+    assert "qwen3:14b@24576: 78%" in str(err.value)
+
+
+def test_adaptive_fit_refuses_a_call_bigger_than_num_ctx(monkeypatch):
+    provider, _ = _fit_provider(monkeypatch, {}, [])
+    with pytest.raises(LLMUnavailableError, match="Raise OLLAMA_NUM_CTX"):
+        _call(provider, max_output_tokens=30000)
