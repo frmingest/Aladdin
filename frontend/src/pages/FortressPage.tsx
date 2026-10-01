@@ -5,7 +5,9 @@ import { formatDecimal, formatNok, formatPct100 } from "../lib/format";
 import type { GameState } from "../lib/types";
 import AdvisorsCard from "../components/fortress/AdvisorsCard";
 import FortressLedger from "../components/fortress/FortressLedger";
-import FortressScene, { TowerPeek } from "../components/fortress/FortressScene";
+import FortressScene, { RealmPeek, TowerPeek } from "../components/fortress/FortressScene";
+import RealmVerdict from "../components/fortress/RealmVerdict";
+import { REALM_LEVEL_LABEL, summarizeRealm } from "../lib/realmVerdict";
 import { GameFrame, GameHud } from "../components/fortress/GameFrame";
 import SoundToggle from "../components/fortress/SoundToggle";
 import StudyDesk from "../components/fortress/StudyDesk";
@@ -43,6 +45,9 @@ export default function FortressPage() {
   const [view, setView] = useState<View>("scene");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [hoverId, setHoverId] = useState<string | null>(null);
+  // The Great Keep and the walls stand for the whole fortress.
+  const [realmSelected, setRealmSelected] = useState(false);
+  const [realmHot, setRealmHot] = useState(false);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -67,6 +72,16 @@ export default function FortressPage() {
   const selected =
     state?.towers.find((t) => t.holding_id === selectedId) ?? null;
   const hovered = state?.towers.find((t) => t.holding_id === hoverId) ?? null;
+  const realm = useMemo(() => (state ? summarizeRealm(state) : null), [state]);
+
+  const selectHolding = (id: string) => {
+    setRealmSelected(false);
+    setSelectedId((cur) => (cur === id ? null : id));
+  };
+  const selectRealm = () => {
+    setSelectedId(null);
+    setRealmSelected((cur) => !cur);
+  };
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
@@ -123,6 +138,22 @@ export default function FortressPage() {
                   </button>
                 ))}
               </div>
+              {view === "scene" && state.towers.length > 0 && realm && (
+                <button
+                  type="button"
+                  onClick={selectRealm}
+                  aria-pressed={realmSelected}
+                  className={`rounded-md border px-3 py-1 text-sm font-medium transition-colors ${
+                    realmSelected
+                      ? "border-accent bg-accent-subtle text-ink"
+                      : "border-border text-ink-muted hover:text-ink"
+                  }`}
+                  title="Same as pressing the keep or the walls"
+                >
+                  Verdict on the whole fortress ·{" "}
+                  {REALM_LEVEL_LABEL[realm.level]}
+                </button>
+              )}
               <p className="text-xs text-ink-faint">
                 {state.towers.length}{" "}
                 {state.towers.length === 1 ? "holding" : "holdings"} ·{" "}
@@ -148,10 +179,12 @@ export default function FortressPage() {
                       shackCount={state.diworsification.shack_count}
                       siege={state.siege}
                       selectedId={selectedId}
-                      onSelect={(id) =>
-                        setSelectedId((cur) => (cur === id ? null : id))
-                      }
+                      onSelect={selectHolding}
                       onHover={setHoverId}
+                      realm={{ hot: realmHot, selected: realmSelected }}
+                      realmLevel={realm?.level ?? "unknown"}
+                      onRealmSelect={selectRealm}
+                      onRealmHover={setRealmHot}
                     />
                   </div>
                 </GameFrame>
@@ -159,9 +192,15 @@ export default function FortressPage() {
                 <div className="fortress-peek-slot" aria-live="polite">
                   {hovered ? (
                     <TowerPeek tower={hovered} />
+                  ) : realmHot ? (
+                    <RealmPeek
+                      count={state.towers.length}
+                      oneLine={realm ? realm.oneLine : null}
+                    />
                   ) : (
                     <p className="text-xs text-ink-faint">
-                      Point at or tap a tower for a quick look.
+                      Point at or tap a tower for a quick look. The keep and the
+                      walls stand for the whole fortress.
                     </p>
                   )}
                 </div>
@@ -190,17 +229,29 @@ export default function FortressPage() {
               </li>
               <li>Cracked wall between towers: they move together</li>
               <li>Fog, a ghost outline or a ?: not surveyed</li>
-              <li>Green ring: the tower you selected</li>
+              <li>Green ring: the tower or fortress part you selected</li>
+              <li>Great Keep and walls: the whole portfolio. Towers: single holdings</li>
+              <li>
+                Water or dry ditch in front of the wall: that tower&apos;s moat,
+                one stretch of one continuous moat
+              </li>
             </ul>
           )}
 
           {view === "scene" &&
             state.towers.length > 0 &&
-            (selected ? (
+            (realmSelected && realm ? (
+              <RealmVerdict
+                verdict={realm}
+                count={state.towers.length}
+                onOpenHolding={selectHolding}
+              />
+            ) : selected ? (
               <TowerSurvey tower={selected} />
             ) : (
               <p className="px-1 text-sm text-ink-faint">
-                Press a tower to read its survey.
+                Press a tower to read that holding's survey, or press the keep
+                or the walls for the verdict on the whole fortress.
               </p>
             ))}
 

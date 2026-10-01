@@ -26,9 +26,19 @@ import type {
 
 export const SCENE_WIDTH = 1000;
 export const ROW_HEIGHT = 290;
-export const SCENE_TOP = 96;
+export const SCENE_TOP = 130;
 const SIDE_MARGIN = 36;
-const TOWER_GAP = 26;
+export const TOWER_GAP = 26;
+
+/** The fortress is one structure (2026-10-01): a Great Keep in the middle of
+ * the top terrace stands for the whole portfolio, every holding is a tower in
+ * its curtain wall, and the moat runs in one channel in front of the walls. */
+export const KEEP_WIDTH = 190;
+export const KEEP_HEIGHT = 190;
+/** Height of the curtain wall that joins the towers of a row. */
+export const CURTAIN_HEIGHT = 54;
+/** Outer end of every curtain wall and moat (corner bastions stand here). */
+export const WALL_EDGE = 28;
 
 const SIZE_DIMENSIONS: Record<FortressSize, { w: number; h: number }> = {
   great: { w: 118, h: 156 },
@@ -59,10 +69,24 @@ export interface PlacedTower {
   index: number;
 }
 
+/** The Great Keep: stands for the whole fortress, not for one holding. */
+export interface PlacedKeep {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
 export interface FortressLayout {
   items: PlacedTower[];
   rows: number;
   height: number;
+  keep: PlacedKeep;
+}
+
+/** Ground line of a row of towers. */
+export function groundY(row: number): number {
+  return SCENE_TOP + row * ROW_HEIGHT + 170;
 }
 
 function weightOf(t: GameTower): number {
@@ -82,46 +106,189 @@ export function towerDimensions(t: GameTower): { w: number; h: number } {
   return { w: base.w, h: Math.round(base.h * STRUCTURE_HEIGHT[t.structure]) };
 }
 
-/** Flow towers left to right, wrapping to a new row when the next one would
- * pass the scene's right margin; each row is centred. */
+/** Lay the towers out as one fortress. The first (top) terrace has the Great
+ * Keep in its middle with the biggest holdings on either side of it, each new
+ * holding going to the side that is currently shorter; the rest flow left to
+ * right on the terraces below, wrapping when the next tower would pass the
+ * margin, each row centred. */
 export function layoutTowers(towers: GameTower[], width = SCENE_WIDTH): FortressLayout {
   const usable = width - SIDE_MARGIN * 2;
-  const rows: GameTower[][] = [[]];
-  let rowWidth = 0;
-  for (const tower of sortTowers(towers)) {
+  const keepX = Math.round((width - KEEP_WIDTH) / 2);
+  const keep: PlacedKeep = { x: keepX, y: groundY(0), w: KEEP_WIDTH, h: KEEP_HEIGHT };
+  const half = (usable - KEEP_WIDTH - TOWER_GAP * 2) / 2;
+
+  const sorted = sortTowers(towers);
+  const left: GameTower[] = [];
+  const right: GameTower[] = [];
+  let lw = 0;
+  let rw = 0;
+  let consumed = 0;
+  for (const tower of sorted) {
     const { w } = towerDimensions(tower);
-    const needed = rows[rows.length - 1].length === 0 ? w : rowWidth + TOWER_GAP + w;
-    if (needed > usable && rows[rows.length - 1].length > 0) {
-      rows.push([]);
-      rowWidth = 0;
+    const addL = left.length === 0 ? w : lw + TOWER_GAP + w;
+    const addR = right.length === 0 ? w : rw + TOWER_GAP + w;
+    const preferLeft = addL <= addR;
+    if (preferLeft && addL <= half) {
+      left.push(tower);
+      lw = addL;
+    } else if (!preferLeft && addR <= half) {
+      right.push(tower);
+      rw = addR;
+    } else if (addL <= half) {
+      left.push(tower);
+      lw = addL;
+    } else if (addR <= half) {
+      right.push(tower);
+      rw = addR;
+    } else {
+      break;
     }
-    const current = rows[rows.length - 1];
-    rowWidth = current.length === 0 ? w : rowWidth + TOWER_GAP + w;
-    current.push(tower);
+    consumed += 1;
   }
 
   const items: PlacedTower[] = [];
   let index = 0;
-  rows.forEach((rowTowers, row) => {
+  const place = (tower: GameTower, x: number, row: number) => {
+    const d = towerDimensions(tower);
+    items.push({ tower, x, y: groundY(row), w: d.w, h: d.h, row, index: index++ });
+  };
+  // Left side: the biggest stands next to the keep, so place from the keep outwards.
+  const leftPlaced: Array<{ tower: GameTower; x: number }> = [];
+  let edge = keepX - TOWER_GAP;
+  for (const tower of left) {
+    const { w } = towerDimensions(tower);
+    leftPlaced.push({ tower, x: edge - w });
+    edge -= w + TOWER_GAP;
+  }
+  leftPlaced.reverse().forEach(({ tower, x }) => place(tower, x, 0));
+  let rx = keepX + KEEP_WIDTH + TOWER_GAP;
+  for (const tower of right) {
+    place(tower, rx, 0);
+    rx += towerDimensions(tower).w + TOWER_GAP;
+  }
+
+  // The remaining holdings fill the terraces below.
+  const rows: GameTower[][] = [[]];
+  let rowWidth = 0;
+  for (const tower of sorted.slice(consumed)) {
+    const { w } = towerDimensions(tower);
+    const current = rows[rows.length - 1];
+    const needed = current.length === 0 ? w : rowWidth + TOWER_GAP + w;
+    if (needed > usable && current.length > 0) {
+      rows.push([]);
+      rowWidth = 0;
+    }
+    const cur = rows[rows.length - 1];
+    rowWidth = cur.length === 0 ? w : rowWidth + TOWER_GAP + w;
+    cur.push(tower);
+  }
+  rows.forEach((rowTowers, i) => {
+    if (rowTowers.length === 0) return;
+    const row = i + 1;
     const dims = rowTowers.map(towerDimensions);
     const total = dims.reduce((sum, d) => sum + d.w, 0) + TOWER_GAP * Math.max(0, rowTowers.length - 1);
     let x = Math.round((width - total) / 2);
-    rowTowers.forEach((tower, i) => {
-      items.push({
-        tower,
-        x,
-        y: SCENE_TOP + row * ROW_HEIGHT + 170,
-        w: dims[i].w,
-        h: dims[i].h,
-        row,
-        index: index++,
-      });
-      x += dims[i].w + TOWER_GAP;
+    rowTowers.forEach((tower, k) => {
+      place(tower, x, row);
+      x += dims[k].w + TOWER_GAP;
     });
   });
 
-  const rowCount = towers.length === 0 ? 0 : rows.length;
-  return { items, rows: rowCount, height: SCENE_TOP + Math.max(1, rowCount) * ROW_HEIGHT + 20 };
+  const rowCount = towers.length === 0 ? 0 : items.reduce((m, it) => Math.max(m, it.row), 0) + 1;
+  return { items, rows: rowCount, height: SCENE_TOP + Math.max(1, rowCount) * ROW_HEIGHT + 20, keep };
+}
+
+/** Moat channel. Each holding's own moat tier is one stretch of one moat that
+ * runs in front of the whole row of walls: water for a wide or narrow moat, a
+ * dry ditch for none, a dotted outline for unsurveyed. Funds and the like have
+ * no moat tier, so that stretch is left as plain ground. */
+export type MoatKind = "water" | "dry" | "fog" | "plain";
+
+export interface MoatSeg {
+  x0: number;
+  x1: number;
+  depth: number;
+  moat: FortressMoat;
+  holdingId: string;
+}
+
+export interface MoatRun {
+  kind: MoatKind;
+  row: number;
+  y: number;
+  x0: number;
+  x1: number;
+  segs: MoatSeg[];
+}
+
+const MOAT_DEPTH: Record<FortressMoat, number> = {
+  wide: 26,
+  narrow: 12,
+  none: 7,
+  unsurveyed: 10,
+  not_applicable: 0,
+};
+
+export function moatKindOf(m: FortressMoat): MoatKind {
+  switch (m) {
+    case "wide":
+    case "narrow":
+      return "water";
+    case "none":
+      return "dry";
+    case "unsurveyed":
+      return "fog";
+    default:
+      return "plain";
+  }
+}
+
+export function moatRuns(layout: FortressLayout, width = SCENE_WIDTH): MoatRun[] {
+  const runs: MoatRun[] = [];
+  const byRow = new Map<number, PlacedTower[]>();
+  for (const it of layout.items) {
+    const list = byRow.get(it.row) ?? [];
+    list.push(it);
+    byRow.set(it.row, list);
+  }
+  const half = TOWER_GAP / 2;
+  for (const [row, list] of [...byRow.entries()].sort((a, b) => a[0] - b[0])) {
+    const sorted = [...list].sort((a, b) => a.x - b.x);
+    // Chains: a gap wider than a normal one is the keep's forecourt.
+    const chains: PlacedTower[][] = [[]];
+    for (const it of sorted) {
+      const cur = chains[chains.length - 1];
+      const prev = cur[cur.length - 1];
+      if (prev && it.x - (prev.x + prev.w) > TOWER_GAP * 1.5) chains.push([it]);
+      else cur.push(it);
+    }
+    chains.forEach((chain, ci) => {
+      const segs: MoatSeg[] = chain.map((it, i) => {
+        const prev = chain[i - 1];
+        const next = chain[i + 1];
+        const x0 = prev ? (prev.x + prev.w + it.x) / 2 : it.x - half;
+        const x1 = next ? (it.x + it.w + next.x) / 2 : it.x + it.w + half;
+        return { x0, x1, depth: MOAT_DEPTH[it.tower.moat], moat: it.tower.moat, holdingId: it.tower.holding_id };
+      });
+      // The outer ends of the channel run out to the corner bastions.
+      const keepOnRight = row === 0 && ci === 0 && chains.length > 1;
+      const keepOnLeft = row === 0 && ci > 0;
+      if (!keepOnLeft) segs[0].x0 = WALL_EDGE;
+      if (!keepOnRight && ci === chains.length - 1) segs[segs.length - 1].x1 = width - WALL_EDGE;
+      let run: MoatRun | null = null;
+      for (const seg of segs) {
+        const kind = moatKindOf(seg.moat);
+        if (run && run.kind === kind) {
+          run.segs.push(seg);
+          run.x1 = seg.x1;
+        } else {
+          run = { kind, row, y: groundY(row), x0: seg.x0, x1: seg.x1, segs: [seg] };
+          runs.push(run);
+        }
+      }
+    });
+  }
+  return runs;
 }
 
 /** Huts drawn in the shantytown strip: one per tiny position, capped so a
@@ -334,6 +501,7 @@ export interface WallLink {
 export function sharedWallLinks(
   items: PlacedTower[],
   walls: GameSharedWall[],
+  keep?: PlacedKeep,
 ): WallLink[] {
   const byTicker = new Map(items.map((i) => [i.tower.ticker, i]));
   const links: WallLink[] = [];
@@ -344,6 +512,8 @@ export function sharedWallLinks(
       .sort((a, b) => a.x - b.x);
     for (let i = 0; i + 1 < members.length; i++) {
       if (members[i].row !== members[i + 1].row) continue;
+      // The Great Keep stands between the two halves of the top row: no wall runs through it.
+      if (keep && members[i].row === 0 && members[i].x + members[i].w <= keep.x && members[i + 1].x >= keep.x + keep.w) continue;
       links.push({
         fromId: members[i].tower.holding_id,
         toId: members[i + 1].tower.holding_id,
