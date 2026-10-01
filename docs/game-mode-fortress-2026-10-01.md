@@ -1,6 +1,6 @@
 # Game mode ("Fortress") — feasibility and plan — 2026-10-01
 
-Status: **G1–G6 are merged to `main` (PRs #23, #25, #27 carrying G3 + G4, #28, #29), not yet checked live. The G7 art pass (painted scene, ambience, frame and resource bar) is on `feature/game-mode-art-pass`, PR #30 open. G7 advisors not started.** F33 in `PROGRESS.md`.
+Status: **G1–G7a are merged to `main` (PRs #23, #25, #27 carrying G3 + G4, #28, #29, #30 art pass, #31 quick-look fix), not yet checked live. G7b (advisors, study lamp and clock, optional sound) is built on `feature/game-mode-g7b-advisors`, PR open.** F33 in `PROGRESS.md`.
 
 ## Why
 
@@ -113,8 +113,8 @@ page. That gives the "whole app feels different" effect without doubling fronten
 | G4 | Sieges (regime/stress), margin-of-safety "land for sale", tripwire breaches (analysis-freshness weathering already shipped in G2) | M — **merged (#27)** |
 | G5 | Vault entry screen (D2) | S–M — **merged (#28)** |
 | G6 | Temperament meter, journal-driven | M — **merged (#29)** |
-| G7a | Art pass: painted scene, ambience, frame, resource bar, hover card | M — **built 2026-10-01 (PR #30)** |
-| G7b | Advisors, lamp/clock, optional sound | M |
+| G7a | Art pass: painted scene, ambience, frame, resource bar, hover card | M — **merged (#30)** |
+| G7b | Advisors, lamp/clock, optional sound | M — **built 2026-10-01 (PR open)** |
 
 Sizes are relative effort, not hours. **The art is the long pole** — a procedural SVG kit gets to
 "calm and scholarly" but not to hand-painted miniature quality; swapping in illustrated sprites
@@ -367,3 +367,60 @@ backend, mapping, rule or migration change; every visual still comes from a back
   and phone width, plus hover and selection. **Not yet seen with Faiz's real portfolio.**
 - **Still procedural SVG**, not hand-painted sprites: illustrated sprites could still replace parts later
   without touching the mapping.
+
+## G7b advisors, study lamp and clock, sound as built (2026-10-01)
+
+Decision D4 followed: hand-written, rule-triggered lines; nothing is generated. No mapping threshold was
+added and there is no migration: the advisors only read values `GET /game/state` already derived.
+
+- **Where it lives:** `app/services/game/advisors.py` (pure: no database, provider, model or clock) picks the
+  lines; the words are in the versioned `app/domain/game_mapping/advisor_lines_v1.py` (CLAUDE.md Rule 3: a
+  change to a template that has been shown is a new `advisor_lines_v2.py`, not an edit). The result is the new
+  `advisors` block of `GET /game/state` (demo mode builds it from the invented state like every other block).
+- **Two advisors:** the **Oracle** (patient owner) and the **Partner** (blunt sceptic). Original wording in the
+  spirit of each; **not quotations** from Warren Buffett or Charlie Munger, and the disclaimer is shown on the card.
+- **Voice rules, enforced by tests:** no line says buy, sell, add, trim, invest or purchase; no flattery; unknown
+  stays unknown (fog, an unsurveyed vault, an unknown weather or a low-confidence meter produces a "cannot judge"
+  line or nothing, never a confident one); nothing rewards trading.
+- **Rules (id: advisor, tone):**
+
+| Rule | Who, tone | Fires when |
+|---|---|---|
+| `tripwire_fired` | Partner, warning | the holding's thesis is breached (a tripwire has fired) |
+| `weak_walls_big_tower` | Partner, warning | great/medium tower with timber or rotted walls |
+| `no_moat_big_tower` | Partner, warning | great/medium tower where the analysis found no moat (not "unsurveyed") |
+| `storm_vault_thin` | Partner, warning | weather gathering/besieged and the vault is thin or empty |
+| `temperament_strained` | Partner, warning | restless or rash with a confident (not low-confidence) reading |
+| `thesis_review` | Oracle, note | thesis flagged for review |
+| `stale_big_tower` | Oracle, note | great/medium tower, analysis older than the stale cut-off |
+| `shared_wall` | Partner, note | a stored correlation cluster (up to 2 shown) |
+| `dear_big_tower` | Partner, note | great/medium tower priced above its bull case |
+| `shantytown` | Partner, note | light or heavy shantytown |
+| `vault_unknown` | Oracle, note | no cash entered, or the figure is older than the cash limit |
+| `cheap_on_strong_walls` | Oracle, note | price below the bear or base case **and** basalt/granite walls **and** a wide/narrow moat ("a reason to study it, not a signal") |
+| `storm_vault_ready` | Oracle, calm | weather gathering/besieged and the vault deep or stocked ("nothing here says you must spend it") |
+| `temperament_composed` | Oracle, calm | composed with a confident reading |
+| `all_quiet` | Oracle, calm | nothing above is a warning or note **and** a stored risk reading says calm. Unknown weather is never called quiet |
+
+- **Order and limits:** warnings, then notes, then calm; inside a tone, the fixed rule order above, then the
+  largest holding first. At most 6 lines and 2 per rule so one rule cannot drown the rest; the response carries
+  `hidden_count` so the card says how many more matched. Every line carries `facts` (the stored values it was
+  chosen from), shown under *Why this line*.
+- **Frontend:** *The advisors* card with two small drawn busts (generic, not likenesses of anyone), a tone chip,
+  the holding as a link, and the fact list. A **study desk** card holds a live analog clock (local time, updates
+  every 30 s) and a **lamp** that mirrors the age of the newest portfolio snapshot: lit within 7 days (the same
+  limit as the stored-snapshot cut-off), dim when older, out when there is none. It is a reading of data age,
+  not a reward. The lamp's glow breathes slowly and is still under `prefers-reduced-motion`.
+- **Sound (optional):** a **Sound: off/on** button in the Fortress header. Off by default and **not remembered**
+  across page loads: browsers only allow audio after a press, and a surprise noise on a page showing real
+  money is not wanted (a deviation from the per-browser persistence of D5, on purpose). Synthesized in the
+  browser (looped noise through a filter, no audio files, no network): a soft wind when calm, a fuller roar when
+  the weather is gathering, a low rumble when besieged, fainter when unsurveyed; a slow swell; faded in and out;
+  hard-capped at a master level of 0.12. It carries no information a sighted reader lacks.
+- **Verified:** backend 1,335 pass (76 new: 70 rule and boundary tests, 6 API tests incl. read-only, demo, the
+  unknown-weather and quiet-realm cases), ruff clean; frontend tsc clean, ESLint 0 errors (the same 2 existing
+  warnings), 94 tests (11 new for the wording, lamp, clock and sound profile), build. Rendered in Chromium
+  against a synthetic state (every tone, two advisors, hidden count) at desktop and phone width, dark theme.
+  **Not seen with Faiz's real portfolio, and the sound has not been listened to** (no audio in the build sandbox).
+- **Not in G7b:** generated advisor lines (possible later, per D4), per-holding advisor lines on the holding page,
+  illustrated sprites for the portraits, a remembered sound preference.
