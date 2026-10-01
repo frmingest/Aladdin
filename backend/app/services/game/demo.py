@@ -11,9 +11,13 @@ from decimal import Decimal
 
 from app.domain.game_mapping import get_game_mapping
 from app.schemas.game import GameStateOut
-from app.services.game.rules import WallFacts
+from app.services.game.rules import ClusterFact, LandFacts, RiskFacts, ThesisFacts, WallFacts
 from app.services.game.state import AccountCash, GameInputs, build_game_state
-from app.services.settings.synthetic_data import demo_portfolio_overview
+from app.services.settings.synthetic_data import (
+    demo_portfolio_overview,
+    demo_thesis_monitor,
+    demo_valuation_board,
+)
 
 D = Decimal
 
@@ -37,6 +41,51 @@ _DEMO_FINANCIALS: dict[str, tuple[str, str]] = {
 }
 
 
+# Invented one-in-a-book stress losses (fractions, negative = a loss), chosen
+# so the demo shows sheltered, exposed and breach-risk towers.
+_DEMO_SHOCKS: dict[str, str] = {
+    "AAPL": "-0.18", "MSFT": "-0.15", "GOOGL": "-0.22", "JNJ": "-0.10", "PG": "-0.12",
+    "KO": "-0.09", "JPM": "-0.30", "V": "-0.14", "HD": "-0.45", "XOM": "-0.33",
+}
+_DEMO_CLUSTER = ("AAPL", "MSFT", "GOOGL")
+# The invented demo board puts every name in one zone; these overrides make the
+# demo show every kind of land. (zone, valuation status). XOM is fog: withheld.
+_DEMO_LAND: dict[str, tuple[str, str]] = {
+    "KO": ("below_bear", "ok"),
+    "MSFT": ("base_to_bull", "ok"),
+    "AAPL": ("above_bull", "ok"),
+    "XOM": ("below_bear", "implausible"),
+}
+# Invented thesis states so game mode shows a review mark and a breach.
+_DEMO_THESIS: dict[str, tuple[str, int]] = {"PG": ("review", 0), "HD": ("tripwire_fired", 1)}
+
+
+def _demo_risk(overview, now: datetime) -> RiskFacts:
+    by_ticker = {p.ticker: p for p in overview.positions}
+    cluster_positions = [by_ticker[t] for t in _DEMO_CLUSTER if t in by_ticker]
+    return RiskFacts(
+        regime="baseline",
+        regime_explanation="Demo data: an invented, calm macro backdrop.",
+        regime_data_complete=True,
+        portfolio_shock_pct=D("-0.27"),
+        portfolio_drawdown_nok=None,
+        snapshot_at=now - timedelta(days=1),
+        holding_shocks={
+            by_ticker[t].holding_id: (D(v), "volatility") for t, v in _DEMO_SHOCKS.items() if t in by_ticker
+        },
+        clusters=[
+            ClusterFact(
+                tickers=[p.ticker for p in cluster_positions],
+                names=[p.name for p in cluster_positions],
+                correlation=D("0.82"),
+                combined_weight_pct=sum((p.weight_pct or D(0) for p in cluster_positions), D(0)),
+            )
+        ]
+        if len(cluster_positions) > 1
+        else [],
+    )
+
+
 def demo_game_state(version: str) -> GameStateOut:
     overview = demo_portfolio_overview()
     walls: dict = {}
@@ -54,9 +103,29 @@ def demo_game_state(version: str) -> GameStateOut:
         walls[position.holding_id] = WallFacts(
             period="FY-DEMO", net_debt=net_debt, ebitda=ebitda, interest_coverage=cover
         )
+    now = datetime.now(timezone.utc)
+    tickers = {p.holding_id: p.ticker for p in overview.positions}
+    # The demo board stores margins as percent; the real board stores fractions.
+    land = {}
+    for r in demo_valuation_board().rows:
+        zone, status = _DEMO_LAND.get(tickers.get(r.holding_id, ""), (r.zone, "ok"))
+        land[r.holding_id] = LandFacts(
+            zone=zone,
+            valuation_status=status,
+            margin_of_safety_base=(r.margin_of_safety_base / D(100)) if r.margin_of_safety_base is not None else None,
+            unavailable_reason="Demo data: valuation withheld as not reliable." if status != "ok" else None,
+        )
+    thesis: dict = {}
+    for row in demo_thesis_monitor().rows:
+        status, fired = _DEMO_THESIS.get(tickers.get(row.holding_id, ""), (row.status, row.firing_count))
+        thesis[row.holding_id] = ThesisFacts(status=status, firing_count=fired)
     inputs = GameInputs(
         overview=overview,
         wall_facts=walls,
+        risk=_demo_risk(overview, now),
+        land=land,
+        land_snapshot_at=now - timedelta(days=1),
+        thesis=thesis,
         accounts=[AccountCash(cash_nok=D("180000"), cash_as_of=datetime.now(timezone.utc) - timedelta(days=3))],
         gold_oz=D("12"),
         silver_oz=D("150"),

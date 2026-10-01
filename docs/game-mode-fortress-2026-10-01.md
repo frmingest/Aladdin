@@ -1,6 +1,6 @@
 # Game mode ("Fortress") — feasibility and plan — 2026-10-01
 
-Status: **G1 (backend) and G2 (Fortress home, top-bar toggle) written and tested, PRs #23 and #24 open and stacked (`feature/game-mode-fortress`, `feature/game-mode-g2-fortress-home`) — not merged, not deployed, not checked live.** G3–G7 not started. F33 in `PROGRESS.md`.
+Status: **G1 (backend) and G2 (Fortress home) are merged to `main` (PRs #23, #25), not yet deployed or checked live. G3 (PR #26) was merged into the already-merged G2 branch, so it never reached `main`; the G4 branch (`feature/game-mode-g4-sieges-land`) carries G3 and G4 together. G4 is built, tested and checked in a browser, PR open. G5–G7 not started.** F33 in `PROGRESS.md`.
 
 ## Why
 
@@ -109,8 +109,8 @@ page. That gives the "whole app feels different" effect without doubling fronten
 | G0 | This ADR; decisions D1–D5 | done |
 | G1 | `game_mapping/v1.py`, `/game/state`, demo branch, account cash field, pytest for every rule and threshold | M — **built 2026-10-01 (PR open)** |
 | G2 | Top bar + toggle + provider; Fortress home with moat, walls, tower footprint, diworsification | L — **built 2026-10-01 (PR open, stacked on G1)** |
-| G3 | Drill-down: holding pages re-skinned (`data-skin`), Ledger view | M |
-| G4 | Sieges (regime/stress), margin-of-safety "land for sale", analysis-freshness weathering | M |
+| G3 | Drill-down: holding pages re-skinned (`data-skin`), Ledger view | M — **built 2026-10-01 (PR open, stacked on G2)** |
+| G4 | Sieges (regime/stress), margin-of-safety "land for sale", tripwire breaches (analysis-freshness weathering already shipped in G2) | M — **built 2026-10-01 (PR open, carries G3)** |
 | G5 | Vault (needs D2) | S–M |
 | G6 | Temperament meter, journal-driven | M |
 | G7 | Advisors, polish, ambience (rain, lamp, clock), reduced-motion | M |
@@ -202,3 +202,63 @@ PR for Faiz to review.
   shantytown) at desktop and phone width. **Not yet seen against Faiz's real data on the live deploy.**
 - **Not in G2:** re-skinned holding pages (G3), sieges and margin-of-safety land (G4), a cash entry
   screen (G5, today cash is set via `PATCH /accounts/{id}`), temperament (G6), advisors and ambience (G7).
+
+## G3 as built (2026-10-01)
+
+- **Study skin:** while game mode is on, `GameModeProvider` sets `data-skin="study"` on `<html>`; removing it
+  (switch off, or leaving the provider) restores the app exactly. `index.css` re-points only the neutral
+  surface/ink/accent tokens to a candlelit-study palette (dark and light variants, composed with the existing
+  `data-theme`), and sets headings in a system serif (no new font download). **State colours (positive,
+  negative, caution) are not overridden**, so red still means bad. This is the "re-skinned existing pages"
+  half of decision D1: every page changes feel, none is duplicated.
+- **Holding page:** in game mode a **tower survey** card sits at the top of `/holdings/:id` (same wall /
+  moat / size / analysis-age survey as the Fortress, shared `TowerSurvey` component, link back to the
+  Fortress). It renders nothing with game mode off, on an error, or for a holding with no tower (watchlist).
+- **Ledger:** sortable columns (holding, weight, moat, walls, analysis; strongest first, unknown last), a
+  **Needs a look** filter (timber/rotted walls, no moat, stale or missing analysis) and a totals line
+  (rows shown, share of portfolio, how many to look at first). All pure helpers in `lib/fortress.ts`. The
+  filter is a reading aid over backend categories, not a score and not advice to trade.
+- **Rules kept:** read-only, no new endpoint, no backend change, no points or rewards.
+- **Verified:** tsc clean, ESLint 0 errors, 53 frontend tests (7 new), build. Rendered the Ledger with the
+  skin in Chromium against a synthetic state. **Holding page with real data not seen yet.**
+- **Not in G3:** sieges and margin-of-safety land (G4), cash entry screen (G5), temperament (G6), advisors
+  and ambience (G7).
+
+## G4 as built (2026-10-01)
+
+- **Source of data:** database only, no provider or LLM call. Three stored layers are read as last saved and
+  labelled with their age: the **risk snapshot** (macro regime, stress what-if, correlation clusters), the
+  **margin-of-safety snapshot** (price zone per holding) and the **thesis monitor** (fired tripwires). The
+  snapshots are *not* rebuilt here (the fingerprint and max-age rules of the page endpoints are ignored on
+  purpose); if one was never stored the layer is fog and a note says which page to open once. A corrupt
+  snapshot degrades to fog, not an error. Older than 7 days = shown but marked old, with a note.
+- **Weather (`siege.level`):** calm / gathering / besieged / unsurveyed. Besieged: regime `crisis`, or the stored
+  stress scenario costs the equity book 40% or more. Gathering: regime `stagflation`, or 25% or more.
+  Nothing stored = unsurveyed (mist), never calm. Reasons are listed line by line, including "regime not
+  available" and "partial reading".
+- **Land for sale (per tower):** straight from the stored zone: below the bear case = bargain (gold SALE sign),
+  below base = discount (OFFER), above base but inside bull = full price (no sign), above bull = dear (red
+  DEAR). A withheld/implausible valuation or a missing row is fog and carries **no number**.
+- **Breach (per tower):** a fired tripwire = breached (hole in the wall, red !); thesis flagged for review = amber
+  i; funds etc. with no thesis rules = not applicable.
+- **Siege exposure (per tower):** the stored what-if loss for that holding: 20% = exposed, 40% = breach risk.
+  Ladders are drawn **only while the weather is gathering or besieged**; in calm weather it appears in the
+  survey and Ledger only. It is a what-if, not a forecast.
+- **Shared weak walls:** stored correlation clusters; a cracked curtain wall is drawn between same-row
+  neighbours, the survey names the partners for the rest.
+- **Rules kept:** read-only; demo mode shows invented data and never the real snapshots; no points or buy
+  buttons; "needs a look" gains only a fired tripwire (cheap land or a hypothetical exposure is not a problem
+  with the business).
+- **Mapping:** new thresholds added to `GameMapping` v1 as additive fields (no earlier v1 value changed; v1 had not
+  been shown on real data). Any later change to them is v2.
+- **Frontend:** weather sky (clouds, enemy camps, mist) and a top-right weather label, land signposts (top layer),
+  breach marks, ladders, shared walls, a legend, a "weather and siege" card, three new Ledger columns (land,
+  thesis, siege) with sorting, and Land / Thesis / Under siege rows in the tower survey (also on holding pages).
+- **Verified:** backend 1,226 pass (48 new: boundary tests for every threshold, 10 API tests incl. stale, corrupt,
+  read-only, demo), ruff clean; frontend tsc clean, ESLint 0 errors, 70 tests (17 new), build. Rendered in
+  Chromium (calm, gathering, besieged, unsurveyed, Ledger, phone) against synthetic states. **Not seen against
+  real data on the live deploy.**
+- **Needs once on the live app:** open Portfolio risk and Margin of safety once (or wait for the nightly snapshot
+  refresh) so there is something stored to read.
+- **Not in G4:** vault entry screen (G5), temperament (G6), advisors and ambience (G7). Weather is not animated
+  (rain etc. is G7).

@@ -1,12 +1,20 @@
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
+  EXPOSURE_SHORT,
   FRESHNESS_LABEL,
+  LAND_SHORT,
   MOAT_LABEL,
   SIZE_LABEL,
   STRUCTURE_LABEL,
+  THESIS_SHORT,
   WALL_LABEL,
-  sortTowers,
+  formatShock,
+  filterLedger,
+  ledgerTotals,
+  sortLedger,
 } from "../../lib/fortress";
+import type { LedgerFilter, LedgerSortDir, LedgerSortKey } from "../../lib/fortress";
 import { formatNok, formatPct100 } from "../../lib/format";
 import type { GameTower } from "../../lib/types";
 import { VerdictBadge } from "../ui";
@@ -14,19 +22,75 @@ import { VerdictBadge } from "../ui";
 /** The same state as the picture, as a plain table. It exists so no fact is
  * available only as a drawing (accessibility, screen readers, exactness). */
 export default function FortressLedger({ towers }: { towers: GameTower[] }) {
-  const rows = sortTowers(towers);
+  const [sortKey, setSortKey] = useState<LedgerSortKey>("weight");
+  const [sortDir, setSortDir] = useState<LedgerSortDir>("desc");
+  const [filter, setFilter] = useState<LedgerFilter>("all");
+
+  const rows = useMemo(() => sortLedger(filterLedger(towers, filter), sortKey, sortDir), [towers, filter, sortKey, sortDir]);
+  const totals = useMemo(() => ledgerTotals(rows), [rows]);
+
+  const sortBy = (key: LedgerSortKey) => {
+    if (key === sortKey) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else {
+      setSortKey(key);
+      setSortDir(key === "weight" ? "desc" : "asc");
+    }
+  };
+  const header = (key: LedgerSortKey, label: string, align = "") => (
+    <th
+      className={`py-2 pr-3 font-semibold ${align}`}
+      aria-sort={sortKey === key ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
+    >
+      <button type="button" onClick={() => sortBy(key)} className="uppercase tracking-wide hover:text-ink">
+        {label}
+        {sortKey === key ? (sortDir === "asc" ? " ↑" : " ↓") : ""}
+      </button>
+    </th>
+  );
+
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-[820px] text-left text-sm">
+    <div>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-sm">
+        <div role="group" aria-label="Ledger filter" className="inline-flex rounded-md border border-border p-0.5">
+          {(["all", "attention"] as const).map((f) => (
+            <button
+              key={f}
+              type="button"
+              aria-pressed={filter === f}
+              onClick={() => setFilter(f)}
+              className={`rounded px-3 py-1 text-sm font-medium transition-colors ${
+                filter === f ? "bg-accent-subtle text-ink" : "text-ink-muted hover:text-ink"
+              }`}
+            >
+              {f === "all" ? "All holdings" : "Needs a look"}
+            </button>
+          ))}
+        </div>
+        <p className="tabular text-xs text-ink-faint">
+          {totals.count} shown · {totals.weightPct.toFixed(1)}% of the portfolio · {totals.attention} to look at first
+        </p>
+      </div>
+      {filter === "attention" && (
+        <p className="mb-2 text-xs text-ink-faint">
+          Timber or rotted walls, no moat, an analysis that is stale or missing, or a fired tripwire. A
+          reading aid over the same categories; it is not a score and not advice to trade.
+        </p>
+      )}
+      {rows.length === 0 && <p className="py-4 text-sm text-ink-muted">Nothing needs a look right now.</p>}
+      <div className="overflow-x-auto">
+      <table className="w-full min-w-[1100px] text-left text-sm">
         <thead>
           <tr className="border-b border-border text-xs uppercase tracking-wide text-ink-faint">
-            <th className="py-2 pr-3 font-semibold">Holding</th>
+            {header("name", "Holding")}
             <th className="py-2 pr-3 font-semibold">Structure</th>
             <th className="py-2 pr-3 text-right font-semibold">Value</th>
-            <th className="py-2 pr-3 text-right font-semibold">Weight</th>
-            <th className="py-2 pr-3 font-semibold">Moat</th>
-            <th className="py-2 pr-3 font-semibold">Walls</th>
-            <th className="py-2 pr-3 font-semibold">Analysis</th>
+            {header("weight", "Weight", "text-right")}
+            {header("moat", "Moat")}
+            {header("wall", "Walls")}
+            {header("freshness", "Analysis")}
+            {header("land", "Land")}
+            {header("thesis", "Thesis")}
+            {header("siege", "Siege")}
             <th className="py-2 font-semibold">Verdict</th>
           </tr>
         </thead>
@@ -56,6 +120,27 @@ export default function FortressLedger({ towers }: { towers: GameTower[] }) {
                   <p className="text-xs text-ink-faint">{t.analysis_age_days} days old</p>
                 )}
               </td>
+              <td className="py-2 pr-3 text-ink-muted" title={t.land_reason}>
+                {LAND_SHORT[t.land]}
+                {t.margin_of_safety_pct !== null && (
+                  <p className="tabular text-xs text-ink-faint">{formatPct100(t.margin_of_safety_pct)} margin</p>
+                )}
+              </td>
+              <td className={`py-2 pr-3 ${t.thesis === "breached" ? "font-semibold text-negative" : "text-ink-muted"}`}>
+                {THESIS_SHORT[t.thesis]}
+                {t.thesis === "breached" && (
+                  <p className="text-xs font-normal text-ink-faint">{t.tripwires_fired} fired</p>
+                )}
+              </td>
+              <td className="py-2 pr-3 text-ink-muted">
+                {EXPOSURE_SHORT[t.siege_exposure]}
+                {t.siege_shock_pct !== null && (
+                  <p className="tabular text-xs text-ink-faint">{formatShock(t.siege_shock_pct)} in the what-if</p>
+                )}
+                {t.shared_wall_with.length > 0 && (
+                  <p className="text-xs text-ink-faint">shares a wall with {t.shared_wall_with.join(", ")}</p>
+                )}
+              </td>
               <td className="py-2">
                 <VerdictBadge rating={t.verdict_rating} />
               </td>
@@ -63,6 +148,7 @@ export default function FortressLedger({ towers }: { towers: GameTower[] }) {
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

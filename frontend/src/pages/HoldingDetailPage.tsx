@@ -36,6 +36,7 @@ import { ResearchPanel } from "../components/ResearchPanel";
 import { NewswebAllReportsCard, SourcesPanel } from "../components/SourcesPanel";
 import { ValuationPanel } from "../components/ValuationPanel";
 import WatchButton from "../components/WatchButton";
+import HoldingTowerCard from "../components/fortress/HoldingTowerCard";
 import JournalPanel from "../components/JournalPanel";
 import type { SourceEligibility } from "../lib/types";
 import { InfoTooltip } from "../components/InfoTooltip";
@@ -687,6 +688,8 @@ export default function HoldingDetailPage() {
       )}
 
       {error && <p className="mb-4 text-sm text-negative">{error}</p>}
+
+      <HoldingTowerCard holdingId={id} />
 
       <NewswebFetchHighlight holdingId={id} onImported={() => setMetricsKey((k) => k + 1)} />
 

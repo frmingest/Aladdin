@@ -4,12 +4,18 @@ import {
   ROW_HEIGHT,
   SCENE_TOP,
   SCENE_WIDTH,
+  SIEGE_LABEL,
   describeTower,
   drawnShacks,
+  ladderCount,
+  landSignText,
+  sharedWallLinks,
+  siegeSky,
   type FortressLayout,
   type PlacedTower,
+  type SiegeSky,
 } from "../../lib/fortress";
-import type { FortressShantytown, FortressWall } from "../../lib/types";
+import type { FortressShantytown, FortressSiegeLevel, FortressWall, GameSiege } from "../../lib/types";
 
 /**
  * The Fortress home scene (F33, G2): a layered SVG diorama of the real
@@ -40,12 +46,16 @@ function shortName(name: string, towerWidth: number): string {
   return name.length > max ? `${name.slice(0, max - 1)}…` : name;
 }
 
-function Defs() {
+function Defs({ sky }: { sky: SiegeSky }) {
   return (
     <defs>
       <linearGradient id="fs-sky" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stopColor="#141b29" />
-        <stop offset="1" stopColor="#2a3850" />
+        <stop offset="0" stopColor={sky.top} />
+        <stop offset="1" stopColor={sky.bottom} />
+      </linearGradient>
+      <linearGradient id="fs-mist" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stopColor="#dbe2ee" stopOpacity="0" />
+        <stop offset="1" stopColor="#dbe2ee" stopOpacity="0.22" />
       </linearGradient>
       <linearGradient id="fs-ground" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0" stopColor="#323a2c" />
@@ -69,7 +79,46 @@ function Defs() {
   );
 }
 
-function Backdrop({ layout }: { layout: FortressLayout }) {
+/** Dark clouds, thicker the worse the stored regime / stress scenario. */
+function StormClouds({ opacity }: { opacity: number }) {
+  if (opacity <= 0) return null;
+  const blobs: [number, number, number, number][] = [
+    [120, 50, 120, 22], [300, 38, 150, 26], [520, 56, 140, 24], [720, 42, 160, 28], [900, 58, 110, 22],
+  ];
+  return (
+    <g aria-hidden opacity={opacity}>
+      {blobs.map(([cx, cy, rx, ry]) => (
+        <g key={cx}>
+          <ellipse cx={cx} cy={cy} rx={rx} ry={ry} fill="#0b0e15" opacity={0.8} />
+          <ellipse cx={cx + rx * 0.4} cy={cy + ry * 0.3} rx={rx * 0.7} ry={ry * 0.8} fill="#171c28" />
+        </g>
+      ))}
+    </g>
+  );
+}
+
+/** Enemy camps on the far hills while the realm is besieged: a tent and a
+ * flickering fire each, drawn behind everything else. */
+function SiegeFires({ count, y }: { count: number; y: number }) {
+  if (count <= 0) return null;
+  const xs = [48, 262, 508, 742, 952].slice(0, count);
+  return (
+    <g aria-hidden>
+      {xs.map((x, i) => (
+        <g key={x}>
+          <path d={`M${x - 20} ${y + 4} L${x - 11} ${y - 12} L${x - 2} ${y + 4} Z`} fill="#3d2b2b" stroke="#000" strokeOpacity=".4" />
+          <g className="fortress-flicker" style={{ animationDelay: `${i * 160}ms` }}>
+            <ellipse cx={x + 8} cy={y + 4} rx={16} ry={4} fill="#f59e0b" opacity={0.28} />
+            <path d={`M${x + 8} ${y + 3} q-8 -10 -2 -19 q2 7 6 3 q4 7 -4 16 Z`} fill="#f59e0b" />
+            <path d={`M${x + 8} ${y + 3} q-3 -5 0 -10 q3 5 0 10 Z`} fill="#fde68a" />
+          </g>
+        </g>
+      ))}
+    </g>
+  );
+}
+
+function Backdrop({ layout, sky }: { layout: FortressLayout; sky: SiegeSky }) {
   const rows = Math.max(1, layout.rows);
   const stars = [
     [70, 30], [180, 58], [320, 24], [470, 48], [610, 22], [760, 52], [900, 30], [540, 66], [120, 74],
@@ -78,13 +127,18 @@ function Backdrop({ layout }: { layout: FortressLayout }) {
     <g aria-hidden>
       <rect width={SCENE_WIDTH} height={layout.height + 70} fill="url(#fs-sky)" />
       {stars.map(([x, y]) => (
-        <circle key={`${x}-${y}`} cx={x} cy={y} r={1.3} fill="#e8eefc" opacity={0.55} />
+        <circle key={`${x}-${y}`} cx={x} cy={y} r={1.3} fill="#e8eefc" opacity={0.55 * (1 - sky.clouds)} />
       ))}
+      <StormClouds opacity={sky.clouds} />
       <path
         d={`M0 ${layout.height - 150} C 180 ${layout.height - 205}, 330 ${layout.height - 120}, 520 ${layout.height - 175} S 860 ${layout.height - 200}, 1000 ${layout.height - 150} V ${layout.height + 70} H0 Z`}
         fill="#1b2230"
         opacity={0.8}
       />
+      <SiegeFires count={sky.fires} y={layout.height - 168} />
+      {sky.mist && (
+        <rect x={0} y={layout.height - 230} width={SCENE_WIDTH} height={110} fill="url(#fs-mist)" />
+      )}
       {Array.from({ length: rows }, (_, r) => (
         <rect
           key={r}
@@ -303,6 +357,128 @@ function Weathering({ item }: { item: PlacedTower }) {
   return null;
 }
 
+/** A signpost in the gap beside the tower, from the stored margin-of-safety
+ * zone: gold SALE below the bear case, OFFER below the base case, a red DEAR
+ * above the bull case. No sign when fully priced or when the price is fog. */
+function LandSign({ item }: { item: PlacedTower }) {
+  const text = landSignText(item.tower.land);
+  if (text === null) return null;
+  const { x, y, w } = item;
+  const px = x + w + 13;
+  const fill = item.tower.land === "overpriced" ? "#8a3b3b" : item.tower.land === "bargain" ? "#e3b341" : "#b89a4a";
+  const ink = item.tower.land === "overpriced" ? "#fbe9e9" : "#241a05";
+  return (
+    <g aria-hidden>
+      <rect x={px - 1} y={y - 26} width={2} height={26} fill="#5b4526" />
+      <g transform={`rotate(-4 ${px} ${y - 20})`}>
+        <rect x={px - 15} y={y - 29} width={30} height={13} rx={2} fill={fill} stroke="#3a2a10" strokeOpacity=".7" />
+        <text x={px} y={y - 19.5} textAnchor="middle" fontSize={8} fontWeight={700} fill={ink}>
+          {text}
+        </text>
+      </g>
+    </g>
+  );
+}
+
+/** A fired tripwire is a breach in the wall; a thesis flagged for review is
+ * an amber notice. Both carry a symbol, so colour is never the only cue. */
+function ThesisMarks({ item }: { item: PlacedTower }) {
+  const { tower, x, y, w, h } = item;
+  if (tower.thesis !== "breached" && tower.thesis !== "review") return null;
+  const top = y - h;
+  const bx = x + w - 2;
+  const by = top - 6;
+  if (tower.thesis === "review") {
+    return (
+      <g aria-hidden>
+        <circle cx={bx} cy={by} r={8} fill="#d29922" stroke="#2b1f05" strokeOpacity=".6" />
+        <text x={bx} y={by + 4} textAnchor="middle" fontSize={11} fontWeight={800} fill="#2b1f05">
+          i
+        </text>
+      </g>
+    );
+  }
+  const gapX = x + w * 0.58;
+  return (
+    <g aria-hidden>
+      <path
+        d={`M${gapX} ${top + h * 0.2} l9 8 l-5 7 l8 9 l-6 8 l5 10 l-14 0 l-3 -12 l6 -8 l-7 -9 Z`}
+        fill="#0e0a07"
+        stroke="#c0392b"
+        strokeOpacity=".8"
+      />
+      <rect x={x + 3} y={y - 5} width={9} height={5} fill="#5c5348" />
+      <rect x={x + w - 14} y={y - 7} width={11} height={7} fill="#6b6155" />
+      <rect x={x + w * 0.35} y={y - 4} width={7} height={4} fill="#4d463d" />
+      <circle cx={bx} cy={by} r={9} fill="#c0392b" stroke="#fff" strokeOpacity=".85" />
+      <text x={bx} y={by + 4.5} textAnchor="middle" fontSize={13} fontWeight={800} fill="#fff">
+        !
+      </text>
+    </g>
+  );
+}
+
+/** Siege ladders against the wall, only while the weather is gathering or
+ * worse and only for towers the stored stress scenario hits hard. */
+function Ladders({ item, level }: { item: PlacedTower; level: FortressSiegeLevel | null }) {
+  const count = ladderCount(item.tower.siege_exposure, level);
+  if (count === 0) return null;
+  const { x, y, w, h } = item;
+  const top = y - h;
+  const ladder = (side: 1 | -1) => {
+    const baseX = side === 1 ? x + w + 9 : x - 9;
+    const topX = side === 1 ? x + w - 1 : x + 1;
+    const topY = top + h * 0.2;
+    const rungs = [0.25, 0.5, 0.75].map((t) => ({
+      cx: baseX + (topX - baseX) * t,
+      cy: y + (topY - y) * t,
+    }));
+    return (
+      <g key={side} stroke="#b08a4a" strokeWidth={1.6} strokeLinecap="round">
+        <line x1={baseX - 2} y1={y} x2={topX - 2} y2={topY} />
+        <line x1={baseX + 2} y1={y} x2={topX + 2} y2={topY} />
+        {rungs.map((r, i) => (
+          <line key={i} x1={r.cx - 3} y1={r.cy} x2={r.cx + 3} y2={r.cy} />
+        ))}
+      </g>
+    );
+  };
+  return <g aria-hidden>{count === 2 ? [ladder(1), ladder(-1)] : ladder(1)}</g>;
+}
+
+/** A cracked curtain wall joining two towers that move together (a stored
+ * correlation flag): when one falls the other is hit by the same blow. */
+function SharedWalls({ layout, siege }: { layout: FortressLayout; siege: GameSiege | null }) {
+  if (!siege || siege.shared_walls.length === 0) return null;
+  const byId = new Map(layout.items.map((i) => [i.tower.holding_id, i]));
+  return (
+    <g aria-hidden>
+      {sharedWallLinks(layout.items, siege.shared_walls).map((link) => {
+        const a = byId.get(link.fromId);
+        const b = byId.get(link.toId);
+        if (!a || !b) return null;
+        const x1 = a.x + a.w - 2;
+        const x2 = b.x + 2;
+        const y = a.y;
+        const mid = (x1 + x2) / 2;
+        return (
+          <g key={`${link.fromId}-${link.toId}`}>
+            <rect x={x1} y={y - 46} width={x2 - x1} height={46} fill="#6b6155" />
+            <rect x={x1} y={y - 46} width={x2 - x1} height={46} fill="url(#fs-stone)" />
+            <path
+              d={`M${mid - 3} ${y - 46} l6 12 l-7 9 l7 11 l-4 14`}
+              stroke="#e0554a"
+              strokeWidth={2}
+              fill="none"
+            />
+            <rect x={x1} y={y - 46} width={x2 - x1} height={46} fill="none" stroke="#c0392b" strokeOpacity=".7" strokeDasharray="3 3" />
+          </g>
+        );
+      })}
+    </g>
+  );
+}
+
 function TowerBody({ item }: { item: PlacedTower }) {
   switch (item.tower.structure) {
     case "outpost":
@@ -320,10 +496,12 @@ function TowerFigure({
   item,
   selected,
   onSelect,
+  level,
 }: {
   item: PlacedTower;
   selected: boolean;
   onSelect: (id: string) => void;
+  level: FortressSiegeLevel | null;
 }) {
   const { tower, x, y, w } = item;
   const pad = 30;
@@ -348,6 +526,8 @@ function TowerFigure({
         <Moat item={item} />
         <TowerBody item={item} />
         <Weathering item={item} />
+        <ThesisMarks item={item} />
+        <Ladders item={item} level={level} />
       </g>
       <text x={x + w / 2} y={y + 44} textAnchor="middle" fontSize={11} fontWeight={600} fill={LABEL_FILL}>
         {shortName(tower.name, w)}
@@ -410,19 +590,23 @@ export default function FortressScene({
   layout,
   shantytown,
   shackCount,
+  siege,
   selectedId,
   onSelect,
 }: {
   layout: FortressLayout;
   shantytown: FortressShantytown;
   shackCount: number;
+  siege: GameSiege | null;
   selectedId: string | null;
   onSelect: (id: string) => void;
 }) {
   const height = layout.height + 70;
-  const summary = `Fortress of ${layout.items.length} ${layout.items.length === 1 ? "tower" : "towers"}. ${layout.items
-    .map((i) => `${i.tower.name}: ${MOAT_LABEL[i.tower.moat].toLowerCase()}`)
-    .join("; ")}`;
+  const level = siege?.level ?? null;
+  const sky = siegeSky(level);
+  const summary = `${SIEGE_LABEL[level ?? "unsurveyed"]}. Fortress of ${layout.items.length} ${
+    layout.items.length === 1 ? "tower" : "towers"
+  }. ${layout.items.map((i) => `${i.tower.name}: ${MOAT_LABEL[i.tower.moat].toLowerCase()}`).join("; ")}`;
   return (
     <svg
       viewBox={`0 0 ${SCENE_WIDTH} ${height}`}
@@ -430,16 +614,24 @@ export default function FortressScene({
       role="group"
       aria-label={summary}
     >
-      <Defs />
-      <Backdrop layout={layout} />
+      <Defs sky={sky} />
+      <Backdrop layout={layout} sky={sky} />
+      <SharedWalls layout={layout} siege={siege} />
       {layout.items.map((item) => (
         <TowerFigure
           key={item.tower.holding_id}
           item={item}
           selected={selectedId === item.tower.holding_id}
           onSelect={onSelect}
+          level={level}
         />
       ))}
+      {layout.items.map((item) => (
+        <LandSign key={`sign-${item.tower.holding_id}`} item={item} />
+      ))}
+      <text x={SCENE_WIDTH - 16} y={22} textAnchor="end" fontSize={12} fontWeight={600} fill={LABEL_FILL} opacity={0.9}>
+        {SIEGE_LABEL[level ?? "unsurveyed"]}
+      </text>
       <Shantytown level={shantytown} count={shackCount} y={layout.height + 24} />
     </svg>
   );

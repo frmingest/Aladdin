@@ -7,6 +7,7 @@ Unknown stays unknown: missing inputs give "unsurveyed", never a guess.
 """
 from __future__ import annotations
 
+import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from decimal import Decimal
@@ -194,3 +195,170 @@ def vault_level(
     if share >= mapping.thin_vault_min_pct:
         return "thin", share
     return "empty", share
+
+
+# --- G4: sieges, land for sale, breaches ----------------------------------
+# These read values the app has already stored (risk snapshot, margin-of-
+# safety snapshot, thesis monitor). Nothing here fetches or recomputes.
+
+
+@dataclass
+class ClusterFact:
+    """Two or more holdings that move together (a stored correlation flag)."""
+
+    tickers: list[str]
+    names: list[str]
+    correlation: Decimal
+    combined_weight_pct: Decimal
+
+
+@dataclass
+class RiskFacts:
+    """The stored portfolio-risk snapshot, reduced to what the game needs.
+
+    Shocks are fractions, negative = a loss (the stored stress unit).
+    """
+
+    regime: str | None = None
+    regime_explanation: str | None = None
+    regime_data_complete: bool = True
+    portfolio_shock_pct: Decimal | None = None
+    portfolio_drawdown_nok: Decimal | None = None
+    snapshot_at: datetime | None = None
+    # holding_id -> (scenario shock, method: "dcf_bear" | "volatility")
+    holding_shocks: dict[uuid.UUID, tuple[Decimal | None, str]] = field(default_factory=dict)
+    clusters: list[ClusterFact] = field(default_factory=list)
+
+
+@dataclass
+class LandFacts:
+    """One row of the stored margin-of-safety board."""
+
+    zone: str
+    valuation_status: str
+    margin_of_safety_base: Decimal | None = None  # fraction: 0.25 = 25%
+    unavailable_reason: str | None = None
+
+
+@dataclass
+class ThesisFacts:
+    """One row of the thesis monitor (tripwires and changes since the run)."""
+
+    status: str
+    firing_count: int = 0
+
+
+def siege_level(risk: RiskFacts | None, mapping: GameMapping) -> tuple[str, list[str]]:
+    """(level, reasons). Level is calm / gathering / besieged / unsurveyed.
+
+    Besieged: the macro regime is "crisis", or the stored stress scenario
+    costs the equity book `besieged_portfolio_shock` or more. Gathering:
+    regime "stagflation" or a scenario loss of `gathering_portfolio_shock`.
+    With neither input stored the answer is "unsurveyed", never "calm".
+    """
+    if risk is None:
+        return "unsurveyed", ["no stored portfolio-risk snapshot yet"]
+    regime, shock = risk.regime, risk.portfolio_shock_pct
+    if regime is None and shock is None:
+        return "unsurveyed", ["the stored risk snapshot has neither a regime nor a stress result"]
+    reasons: list[str] = []
+    besieged = gathering = False
+    if regime == "crisis":
+        besieged = True
+        reasons.append("macro regime: crisis")
+    elif regime == "stagflation":
+        gathering = True
+        reasons.append("macro regime: stagflation")
+    elif regime is not None:
+        reasons.append(f"macro regime: {regime}")
+    else:
+        reasons.append("macro regime not available")
+    if shock is None:
+        reasons.append("no portfolio stress result stored")
+    else:
+        shown = f"{(shock * 100).quantize(Decimal('0.1'))}%"
+        if shock <= mapping.besieged_portfolio_shock:
+            besieged = True
+            reasons.append(f"stress scenario costs the equity book {shown}")
+        elif shock <= mapping.gathering_portfolio_shock:
+            gathering = True
+            reasons.append(f"stress scenario costs the equity book {shown}")
+        else:
+            reasons.append(f"stress scenario costs the equity book {shown}")
+    if not risk.regime_data_complete and regime is not None:
+        reasons.append("some macro inputs are missing, so the regime is a partial reading")
+    if besieged:
+        return "besieged", reasons
+    if gathering:
+        return "gathering", reasons
+    return "calm", reasons
+
+
+def siege_exposure(shock_pct: Decimal | None, mapping: GameMapping) -> str:
+    """How hard the stored stress scenario hits one holding."""
+    if shock_pct is None:
+        return "unsurveyed"
+    if shock_pct <= mapping.breach_risk_holding_shock:
+        return "breach_risk"
+    if shock_pct <= mapping.exposed_holding_shock:
+        return "exposed"
+    return "sheltered"
+
+
+def shared_wall_partners(ticker: str, clusters: list[ClusterFact]) -> list[str]:
+    """Names of the other holdings that share a weak wall with `ticker`."""
+    partners: list[str] = []
+    for cluster in clusters:
+        if ticker not in cluster.tickers:
+            continue
+        for other_ticker, name in zip(cluster.tickers, cluster.names, strict=False):
+            if other_ticker != ticker and name not in partners:
+                partners.append(name)
+    return partners
+
+
+def land_for_sale(facts: LandFacts | None) -> tuple[str, str]:
+    """(land, reason) from the stored margin-of-safety zone.
+
+    bargain = price below even the bear-case value; discount = below the base
+    case; full_price = above base but inside the bull case; overpriced =
+    above the bull case. A withheld, implausible or missing valuation is
+    fog: no number is invented.
+    """
+    if facts is None:
+        return "fog", "no stored margin-of-safety result for this holding"
+    if facts.valuation_status != "ok" or facts.zone == "unavailable":
+        return "fog", facts.unavailable_reason or "valuation unavailable or withheld as not reliable"
+    mos = facts.margin_of_safety_base
+    shown = f" (margin of safety {(mos * 100).quantize(Decimal('0.1'))}%)" if mos is not None else ""
+    if facts.zone == "below_bear":
+        return "bargain", "price is below even the bear-case value" + shown
+    if facts.zone == "bear_to_base":
+        return "discount", "price is below the base-case value" + shown
+    if facts.zone == "base_to_bull":
+        return "full_price", "price is above the base-case value but within the bull case" + shown
+    if facts.zone == "above_bull":
+        return "overpriced", "price is above the bull-case value" + shown
+    return "fog", f"unrecognised valuation zone {facts.zone!r}"
+
+
+def thesis_state(facts: ThesisFacts | None, *, analyzable: bool) -> tuple[str, int]:
+    """(state, tripwires fired). breached = at least one tripwire fired."""
+    if not analyzable:
+        return "not_applicable", 0
+    if facts is None:
+        return "not_analyzed", 0
+    if facts.status == "tripwire_fired":
+        return "breached", facts.firing_count
+    if facts.status == "review":
+        return "review", 0
+    if facts.status == "intact":
+        return "intact", 0
+    return "not_analyzed", 0
+
+
+def snapshot_age_days(snapshot_at: datetime | None, now: datetime) -> int | None:
+    if snapshot_at is None:
+        return None
+    when = snapshot_at if snapshot_at.tzinfo is not None else snapshot_at.replace(tzinfo=timezone.utc)
+    return max((now - when).days, 0)

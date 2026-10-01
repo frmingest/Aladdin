@@ -47,3 +47,18 @@ class GameMapping:
     deep_vault_min_pct: Decimal
     stocked_vault_min_pct: Decimal
     thin_vault_min_pct: Decimal
+
+    # --- Sieges (G4): stored portfolio-stress and macro regime ------------
+    # All shocks are fractions, negative = a loss (-0.25 is a 25% fall), the
+    # same unit the stored stress result uses.
+    # Portfolio-wide scenario loss at or below this: the realm is "gathering"
+    # (storm clouds) / "besieged".
+    gathering_portfolio_shock: Decimal
+    besieged_portfolio_shock: Decimal
+    # One holding's scenario loss at or below this: the tower is "exposed" /
+    # "breach_risk" in the siege picture.
+    exposed_holding_shock: Decimal
+    breach_risk_holding_shock: Decimal
+    # A stored risk or margin-of-safety snapshot older than this is shown, but
+    # labelled as old (prices and macro data move).
+    stored_snapshot_stale_days: int

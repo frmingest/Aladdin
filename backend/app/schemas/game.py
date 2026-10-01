@@ -15,6 +15,10 @@ WallMaterial = Literal["basalt", "granite", "brick", "timber", "rotted", "unsurv
 Freshness = Literal["fresh", "weathered", "overgrown", "unsurveyed", "not_applicable"]
 Shantytown = Literal["none", "light", "heavy"]
 VaultLevel = Literal["deep", "stocked", "thin", "empty", "unsurveyed"]
+SiegeLevel = Literal["calm", "gathering", "besieged", "unsurveyed"]
+SiegeExposure = Literal["sheltered", "exposed", "breach_risk", "unsurveyed"]
+LandState = Literal["bargain", "discount", "full_price", "overpriced", "fog"]
+ThesisState = Literal["intact", "review", "breached", "not_analyzed", "not_applicable"]
 
 
 class TowerOut(BaseModel):
@@ -36,6 +40,16 @@ class TowerOut(BaseModel):
     freshness: Freshness
     analysis_age_days: int | None
     verdict_rating: str | None
+    # G4. Defaults keep the shape backward compatible for older callers.
+    land: LandState = "fog"
+    land_reason: str = "no stored margin-of-safety result for this holding"
+    margin_of_safety_pct: Decimal | None = None
+    thesis: ThesisState = "not_analyzed"
+    tripwires_fired: int = 0
+    siege_exposure: SiegeExposure = "unsurveyed"
+    siege_shock_pct: Decimal | None = None
+    siege_method: str | None = None
+    shared_wall_with: list[str] = Field(default_factory=list)
 
 
 class DiworsificationOut(BaseModel):
@@ -61,6 +75,34 @@ class VaultOut(BaseModel):
     silver_oz: Decimal
 
 
+class SharedWallOut(BaseModel):
+    names: list[str]
+    tickers: list[str]
+    correlation: Decimal
+    combined_weight_pct: Decimal
+
+
+class SiegeOut(BaseModel):
+    """The weather over the realm: macro regime plus the stored stress
+    scenario. A stored view, never a live read and never a forecast."""
+
+    level: SiegeLevel
+    reasons: list[str]
+    regime: str | None
+    regime_explanation: str | None
+    portfolio_shock_pct: Decimal | None
+    portfolio_drawdown_nok: Decimal | None
+    risk_snapshot_at: datetime | None
+    risk_snapshot_age_days: int | None
+    risk_snapshot_stale: bool
+    # When the margin-of-safety prices behind "land for sale" were stored.
+    land_snapshot_at: datetime | None
+    land_snapshot_age_days: int | None
+    land_snapshot_stale: bool
+    shared_walls: list[SharedWallOut]
+    breached_count: int
+
+
 class GameStateOut(BaseModel):
     mapping_version: str
     as_of: datetime | None
@@ -69,6 +111,7 @@ class GameStateOut(BaseModel):
     towers: list[TowerOut]
     diworsification: DiworsificationOut
     vault: VaultOut
+    siege: SiegeOut | None = None
     # Plain-language data gaps ("3 holdings have no analysis"), so an
     # unfinished fortress is labelled as unfinished.
     notes: list[str]
