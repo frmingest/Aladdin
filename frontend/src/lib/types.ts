@@ -1817,3 +1817,71 @@ export interface MetalPriceHistory {
   points: MetalPricePoint[];
   method_note: string;
 }
+
+// --- Game mode (F33, G1) — backend/app/schemas/game.py
+// Decimals arrive as strings, like every other schema here.
+export type FortressStructure = "keep" | "outpost" | "bullion" | "granary";
+export type FortressSize = "great" | "medium" | "small" | "tiny" | "unknown";
+export type FortressMoat = "wide" | "narrow" | "none" | "unsurveyed" | "not_applicable";
+export type FortressWall =
+  | "basalt"
+  | "granite"
+  | "brick"
+  | "timber"
+  | "rotted"
+  | "unsurveyed"
+  | "not_applicable";
+export type FortressFreshness = "fresh" | "weathered" | "overgrown" | "unsurveyed" | "not_applicable";
+export type FortressShantytown = "none" | "light" | "heavy";
+export type FortressVaultLevel = "deep" | "stocked" | "thin" | "empty" | "unsurveyed";
+
+export interface GameTower {
+  holding_id: string;
+  ticker: string;
+  name: string;
+  instrument_type: string;
+  sector: string | null;
+  structure: FortressStructure;
+  value_nok: string | null;
+  weight_pct: string | null;
+  size_class: FortressSize;
+  moat: FortressMoat;
+  wall: FortressWall;
+  wall_reason: string;
+  wall_inputs: Record<string, string>;
+  freshness: FortressFreshness;
+  analysis_age_days: number | null;
+  verdict_rating: string | null;
+}
+
+export interface GameDiworsification {
+  position_count: number;
+  shack_count: number;
+  shantytown: FortressShantytown;
+  hhi: string | null;
+  effective_holdings: string | null;
+  top1_pct: string | null;
+  top5_pct: string | null;
+}
+
+export interface GameVault {
+  level: FortressVaultLevel;
+  cash_nok: string | null;
+  cash_share_pct: string | null;
+  accounts_total: number;
+  accounts_with_cash: number;
+  cash_oldest_as_of: string | null;
+  gold_oz: string;
+  silver_oz: string;
+}
+
+export interface GameState {
+  mapping_version: string;
+  as_of: string | null;
+  demo: boolean;
+  total_value_nok: string;
+  towers: GameTower[];
+  diworsification: GameDiworsification;
+  vault: GameVault;
+  notes: string[];
+}

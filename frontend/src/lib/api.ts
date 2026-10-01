@@ -30,6 +30,7 @@ import type {
   FundFacts,
   FundProfileInput,
   FundReturn,
+  GameState,
   Holding,
   HoldingAnnouncements,
   HoldingCreateInput,
@@ -346,6 +347,9 @@ export const api = {
 
   /** LLM usage ledger (Sprint 15 #1) — per-day, per-provider request counts. Database only. */
   getUsageSummary: (days = 7) => request<UsageSummary>(`/usage/summary?days=${days}`),
+
+  /** Game mode (F33, G1) — the fortress state: a read-only view over stored data, no provider call. */
+  getGameState: () => request<GameState>("/game/state"),
 
   /** Demo mode (2026-09-26) — backend/app/api/settings.py. Turning it on
    * makes every page show a fixed set of fabricated data; real portfolio

@@ -14,6 +14,8 @@ import Layout from "./components/Layout";
  * `Suspense` fallback below covers the brief gap while that chunk loads.
  */
 const DashboardPage = lazy(() => import("./pages/DashboardPage"));
+// Game mode (F33, G2): its own chunk, so default mode downloads nothing for it.
+const FortressPage = lazy(() => import("./pages/FortressPage"));
 const HoldingsListPage = lazy(() => import("./pages/HoldingsListPage"));
 const HoldingDetailPage = lazy(() => import("./pages/HoldingDetailPage"));
 const PortfolioPage = lazy(() => import("./pages/PortfolioPage"));
@@ -56,6 +58,7 @@ export default function App() {
       <Suspense fallback={<RouteLoading />}>
         <Routes>
           <Route path="/" element={<DashboardPage />} />
+          <Route path="/fortress" element={<FortressPage />} />
           <Route path="/holdings" element={<HoldingsListPage />} />
           <Route path="/holdings/:id" element={<HoldingDetailPage />} />
           <Route path="/portfolio" element={<PortfolioPage />} />
