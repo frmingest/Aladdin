@@ -23,8 +23,8 @@ import type {
  */
 
 export const SCENE_WIDTH = 1000;
-export const ROW_HEIGHT = 250;
-export const SCENE_TOP = 70;
+export const ROW_HEIGHT = 290;
+export const SCENE_TOP = 96;
 const SIDE_MARGIN = 36;
 const TOWER_GAP = 26;
 
