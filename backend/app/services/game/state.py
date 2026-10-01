@@ -23,7 +23,7 @@ from __future__ import annotations
 import logging
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Any, TypeVar
 
@@ -36,13 +36,20 @@ from app.domain.game_mapping.value_types import GameMapping
 from app.domain.instrument_types import EQUITY_ANALYZABLE_TYPES, STOCK
 from app.domain.sectors import is_financial_sector
 from app.models.account import Account
+from app.models.holding import Holding
+from app.models.journal import DecisionJournalEntry
+from app.models.portfolio import PortfolioPosition, PortfolioSnapshot
 from app.models.snapshot import ComputedSnapshot
+from app.models.thesis import ThesisTripwire
 from app.schemas.game import (
     DiworsificationOut,
     GameStateOut,
     SharedWallOut,
     SiegeOut,
+    TemperamentEventOut,
+    TemperamentOut,
     TowerOut,
+    TurnoverOut,
     VaultAccountOut,
     VaultOut,
 )
@@ -50,6 +57,8 @@ from app.schemas.risk import PortfolioRiskOut
 from app.schemas.valuation import MarginOfSafetyBoardOut
 from app.services import metrics as metrics_service
 from app.services.game import rules
+from app.services.game import temperament as temperament_rules
+from app.services.game.temperament import DecisionFact, PositionStep, TemperamentInputs, TurnoverFact
 from app.services.game.rules import ClusterFact, LandFacts, RiskFacts, ThesisFacts, WallFacts
 from app.services.holding_facts import facts_by_period, latest_period, previous_period
 from app.services.portfolio_overview import build_overview
@@ -86,6 +95,8 @@ class GameInputs:
     land: dict[uuid.UUID, LandFacts] = field(default_factory=dict)
     land_snapshot_at: datetime | None = None
     thesis: dict[uuid.UUID, ThesisFacts] = field(default_factory=dict)
+    # G6: journal entries, tripwire firings and snapshot-to-snapshot steps.
+    temperament: TemperamentInputs = field(default_factory=TemperamentInputs)
 
 
 def _wall_facts_for(db: Session, holding_id: uuid.UUID) -> WallFacts | None:
@@ -173,7 +184,116 @@ def land_facts_from(board: MarginOfSafetyBoardOut) -> dict[uuid.UUID, LandFacts]
     }
 
 
-def gather_game_inputs(db: Session, *, now: datetime | None = None) -> GameInputs:
+def _decision_facts(db: Session, since: datetime) -> list[DecisionFact]:
+    rows = db.scalars(
+        select(DecisionJournalEntry).where(DecisionJournalEntry.decided_on >= since.date())
+    ).all()
+    return [
+        DecisionFact(
+            entry_id=e.id,
+            holding_id=e.holding_id,
+            ticker=e.ticker,
+            name=e.company_name,
+            action=e.action,
+            decided_on=e.decided_on,
+            verdict_at_decision=e.verdict_at_decision,
+            has_invalidation=bool((e.invalidation or "").strip()),
+            review_6m_written=bool((e.review_6m or "").strip()),
+            review_12m_written=bool((e.review_12m or "").strip()),
+        )
+        for e in rows
+    ]
+
+
+def _tripwire_firings(db: Session) -> dict[uuid.UUID, list[datetime]]:
+    fired: dict[uuid.UUID, list[datetime]] = {}
+    for holding_id, fired_at in db.execute(
+        select(ThesisTripwire.holding_id, ThesisTripwire.fired_at).where(ThesisTripwire.fired_at.is_not(None))
+    ):
+        fired.setdefault(holding_id, []).append(fired_at)
+    return fired
+
+
+def _snapshot_steps(
+    db: Session, window_start: datetime
+) -> tuple[list[PositionStep], list[TurnoverFact]]:
+    """Consecutive snapshot pairs per account inside the window (plus the last
+    snapshot before it, so the first in-window upload has something to be
+    compared with), and the turnover between each account's two latest."""
+    snapshots = db.scalars(select(PortfolioSnapshot).order_by(PortfolioSnapshot.uploaded_at)).all()
+    by_account: dict[uuid.UUID | None, list[PortfolioSnapshot]] = {}
+    for snap in snapshots:
+        by_account.setdefault(snap.account_id, []).append(snap)
+    chains: dict[uuid.UUID | None, list[PortfolioSnapshot]] = {}
+    for account_id, chain in by_account.items():
+        first_in = next((i for i, s in enumerate(chain) if _aware(s.uploaded_at) >= window_start), len(chain))
+        chains[account_id] = chain[max(first_in - 1, 0):] if first_in < len(chain) else chain[-2:]
+    ids = [s.id for chain in chains.values() for s in chain]
+    if not ids:
+        return [], []
+    positions: dict[uuid.UUID, dict[uuid.UUID, PortfolioPosition]] = {}
+    for p in db.scalars(select(PortfolioPosition).where(PortfolioPosition.snapshot_id.in_(ids))):
+        positions.setdefault(p.snapshot_id, {})[p.holding_id] = p
+    holding_ids = {h for per in positions.values() for h in per}
+    names = dict(db.execute(select(Holding.id, Holding.name).where(Holding.id.in_(holding_ids))).all()) if holding_ids else {}
+    account_names = dict(db.execute(select(Account.id, Account.name)).all())
+
+    steps: list[PositionStep] = []
+    turnover: list[TurnoverFact] = []
+    for account_id, chain in chains.items():
+        for before, after in zip(chain, chain[1:], strict=False):
+            pb, pa = positions.get(before.id, {}), positions.get(after.id, {})
+            for holding_id in pb.keys() & pa.keys():
+                a, b = pb[holding_id], pa[holding_id]
+                steps.append(
+                    PositionStep(
+                        holding_id=holding_id,
+                        name=names.get(holding_id, ""),
+                        from_at=before.uploaded_at,
+                        to_at=after.uploaded_at,
+                        quantity_before=a.quantity,
+                        quantity_after=b.quantity,
+                        price_before=a.last_price,
+                        price_after=b.last_price,
+                        same_currency=a.cost_basis_currency == b.cost_basis_currency,
+                    )
+                )
+        if len(chain) >= 2:
+            before, after = chain[-2], chain[-1]
+            pb, pa = positions.get(before.id, {}), positions.get(after.id, {})
+            both = pb.keys() & pa.keys()
+            turnover.append(
+                TurnoverFact(
+                    account_name=account_names.get(account_id, "Unassigned") if account_id else "Unassigned",
+                    from_at=before.uploaded_at,
+                    to_at=after.uploaded_at,
+                    positions_before=len(pb),
+                    positions_after=len(pa),
+                    added=len(pa.keys() - pb.keys()),
+                    removed=len(pb.keys() - pa.keys()),
+                    resized=sum(
+                        1 for h in both
+                        if pb[h].quantity is not None and pa[h].quantity is not None and pb[h].quantity != pa[h].quantity
+                    ),
+                )
+            )
+    return steps, turnover
+
+
+def gather_temperament_inputs(db: Session, *, now: datetime, mapping_window_days: int) -> TemperamentInputs:
+    window_start = now - timedelta(days=mapping_window_days)
+    # A decision up to a year older than the window can still have its
+    # 12-month review fall due inside it.
+    decisions = _decision_facts(db, window_start - timedelta(days=366))
+    steps, turnover = _snapshot_steps(db, window_start)
+    return TemperamentInputs(
+        decisions=decisions, tripwire_fired_at=_tripwire_firings(db), steps=steps, turnover=turnover
+    )
+
+
+def gather_game_inputs(
+    db: Session, *, now: datetime | None = None, temperament_window_days: int = 365
+) -> GameInputs:
     now = now or datetime.now(timezone.utc)
     overview = build_overview(db, now=now)
     wall_facts: dict[uuid.UUID, WallFacts] = {}
@@ -208,6 +328,7 @@ def gather_game_inputs(db: Session, *, now: datetime | None = None) -> GameInput
         land=land_facts_from(board_out) if board_out is not None else {},
         land_snapshot_at=board_at if board_out is not None else None,
         thesis=thesis,
+        temperament=gather_temperament_inputs(db, now=now, mapping_window_days=temperament_window_days),
     )
 
 
@@ -344,6 +465,9 @@ def build_game_state(
 
     siege = _build_siege(inputs, towers, mapping, now)
     notes.extend(_siege_notes(inputs, siege, mapping))
+    temperament = _build_temperament(inputs, mapping, now)
+    if temperament.decisions_logged == 0:
+        notes.append("No decisions logged in the journal this year: the temperament meter has little to read.")
 
     return GameStateOut(
         mapping_version=mapping.version,
@@ -354,6 +478,7 @@ def build_game_state(
         diworsification=diworsification,
         vault=vault,
         siege=siege,
+        temperament=temperament,
         notes=notes,
     )
 
@@ -408,6 +533,49 @@ def _siege_notes(inputs: GameInputs, siege: SiegeOut, mapping: GameMapping) -> l
     return notes
 
 
+def _build_temperament(inputs: GameInputs, mapping: GameMapping, now: datetime) -> TemperamentOut:
+    result = temperament_rules.temperament(inputs.temperament, mapping, now=now)
+    return TemperamentOut(
+        level=result.level,  # type: ignore[arg-type]
+        needle_pct=result.needle_pct,
+        low_confidence=result.low_confidence,
+        decisions_logged=result.decisions_logged,
+        snapshot_comparisons=result.snapshot_comparisons,
+        drains=result.drains,
+        restores=result.restores,
+        window_days=result.window_days,
+        summary=result.summary,
+        events=[
+            TemperamentEventOut(
+                kind=e.kind,  # type: ignore[arg-type]
+                rule=e.rule,
+                on=e.on,
+                holding_name=e.holding_name,
+                holding_id=e.holding_id,
+                explanation=e.explanation,
+                source=e.source,  # type: ignore[arg-type]
+                entry_id=e.entry_id,
+            )
+            for e in result.events
+        ],
+        turnover=[
+            TurnoverOut(
+                account_name=t.account_name,
+                from_at=t.from_at,
+                to_at=t.to_at,
+                positions_before=t.positions_before,
+                positions_after=t.positions_after,
+                added=t.added,
+                removed=t.removed,
+                resized=t.resized,
+                turnover_pct=temperament_rules.turnover_pct(t),
+            )
+            for t in result.turnover
+        ],
+    )
+
+
 def get_game_state(db: Session, version: str, *, now: datetime | None = None) -> GameStateOut:
     mapping = get_game_mapping(version)
-    return build_game_state(gather_game_inputs(db, now=now), mapping, now=now)
+    inputs = gather_game_inputs(db, now=now, temperament_window_days=mapping.temperament_window_days)
+    return build_game_state(inputs, mapping, now=now)

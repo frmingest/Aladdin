@@ -1932,6 +1932,51 @@ export interface GameSiege {
   breached_count: number;
 }
 
+// --- Game mode G6: temperament meter — backend/app/services/game/temperament.py
+
+export type FortressTemperamentLevel = "composed" | "steady" | "restless" | "rash" | "unsurveyed";
+
+export interface GameTemperamentEvent {
+  kind: "drain" | "restore";
+  /** Rule id, e.g. "churn", "acted_on_tripwire" (see TEMPERAMENT_RULE_LABEL). */
+  rule: string;
+  /** ISO date (YYYY-MM-DD). */
+  on: string;
+  holding_name: string;
+  holding_id: string | null;
+  explanation: string;
+  source: "journal" | "snapshots";
+  entry_id: string | null;
+}
+
+export interface GameTurnover {
+  account_name: string;
+  from_at: string;
+  to_at: string;
+  positions_before: number;
+  positions_after: number;
+  added: number;
+  removed: number;
+  resized: number;
+  /** 0-100: changed positions as a share of all positions seen in either snapshot. */
+  turnover_pct: string | null;
+}
+
+export interface GameTemperament {
+  level: FortressTemperamentLevel;
+  /** 0-100: restoring events as a share of all judged events; null when nothing was judged. */
+  needle_pct: string | null;
+  low_confidence: boolean;
+  decisions_logged: number;
+  snapshot_comparisons: number;
+  drains: number;
+  restores: number;
+  window_days: number;
+  summary: string;
+  events: GameTemperamentEvent[];
+  turnover: GameTurnover[];
+}
+
 export interface GameState {
   mapping_version: string;
   as_of: string | null;
@@ -1941,5 +1986,7 @@ export interface GameState {
   diworsification: GameDiworsification;
   vault: GameVault;
   siege: GameSiege | null;
+  /** G6. Optional so an older backend without the meter still renders. */
+  temperament?: GameTemperament | null;
   notes: string[];
 }
