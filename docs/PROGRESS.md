@@ -15,7 +15,7 @@ Architecture and diagram: [architecture.md](architecture.md).
 |---|---|
 | **Phase** | Phase 11: Buffett/Munger single-focus rebuild ([sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md)) |
 | **`main`** | `4dfb32a` (PR #31). Merged: CI fixes (#21), docs (#22), game mode G1 (#23), G2 (#25), G3 + G4 (#27), G5 (#28), G6 (#29), art pass (#30), quick-look fix (#31). PR #26 (G3 alone) is superseded by #27; close it if still open |
-| **Open PRs** | Game mode G7b (advisors, study lamp and clock, optional sound) on `feature/game-mode-g7b-advisors`: see the PR list for the link |
+| **Open PRs** | #33: AI-vs-deterministic provenance doc (docs only). Game mode G7b was merged as #32 (`main` is at `d594339`) |
 | **Sprints closed** | 0–15 (16 and 17 / Epic F22 were built and removed 2026-09-29) |
 | **Backend tests** | 1,335 pass (verified 2026-10-01 on the G7b branch) · Ruff clean · frontend 94 tests, tsc clean, ESLint 0 errors (G7b branch) |
 | **Migration head** | `o1a6b7c8d9e0` (one head). Not yet confirmed on Supabase: `l1d2e3f4a5b6`, `n1f5a6b7c8d9`, `o1a6b7c8d9e0` |
