@@ -5,6 +5,7 @@ import { formatDecimal, formatNok, formatPct100 } from "../lib/format";
 import type { GameState } from "../lib/types";
 import FortressLedger from "../components/fortress/FortressLedger";
 import FortressScene from "../components/fortress/FortressScene";
+import { GameFrame, GameHud } from "../components/fortress/GameFrame";
 import SiegeCard from "../components/fortress/SiegeCard";
 import TemperamentCard from "../components/fortress/TemperamentCard";
 import TowerSurvey from "../components/fortress/TowerSurvey";
@@ -109,16 +110,19 @@ export default function FortressPage() {
                 fortress will rise.
               </EmptyState>
             ) : view === "scene" ? (
-              <div className="overflow-x-auto">
-                <FortressScene
-                  layout={layout}
-                  shantytown={state.diworsification.shantytown}
-                  shackCount={state.diworsification.shack_count}
-                  siege={state.siege}
-                  selectedId={selectedId}
-                  onSelect={(id) => setSelectedId((cur) => (cur === id ? null : id))}
-                />
-              </div>
+              <GameFrame>
+                <GameHud state={state} />
+                <div className="game-frame-inner">
+                  <FortressScene
+                    layout={layout}
+                    shantytown={state.diworsification.shantytown}
+                    shackCount={state.diworsification.shack_count}
+                    siege={state.siege}
+                    selectedId={selectedId}
+                    onSelect={(id) => setSelectedId((cur) => (cur === id ? null : id))}
+                  />
+                </div>
+              </GameFrame>
             ) : (
               <FortressLedger towers={state.towers} />
             )}
@@ -126,13 +130,16 @@ export default function FortressPage() {
 
           {view === "scene" && state.towers.length > 0 && (
             <ul className="flex flex-wrap gap-x-4 gap-y-1 px-1 text-xs text-ink-faint" aria-label="How to read the picture">
+              <li>Lit windows and a banner: analysed recently</li>
+              <li>Ivy, then scaffolding: the analysis is ageing, then stale</li>
               <li>Gold sign (SALE / OFFER): price below the bear or base case</li>
               <li>Red sign (DEAR): above the bull case</li>
-              <li>Red ! and a hole in the wall: a tripwire has fired</li>
+              <li>Flames, a hole and a red !: a tripwire has fired</li>
               <li>Amber i: something changed, review the thesis</li>
               <li>Ladders: hit hard in the stored stress what-if (shown only when the weather turns)</li>
               <li>Cracked wall between towers: they move together</li>
-              <li>Fog or scaffolding: not surveyed</li>
+              <li>Fog, a ghost outline or a ?: not surveyed</li>
+              <li>Green ring: the tower you selected</li>
             </ul>
           )}
 

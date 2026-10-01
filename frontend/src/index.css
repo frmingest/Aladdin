@@ -85,9 +85,33 @@
   --c-accent-subtle: 240 226 194;
   --c-onfill: 252 248 238;
 }
-/* Headings in a serif (system fonts, nothing extra to download). */
+/* Headings in Marcellus, a flared-serif display face in the spirit of the
+   classic fantasy-strategy title type (G7 art pass). Loaded from the same
+   Google Fonts link as the rest; the file only downloads while the skin is on.
+   It has one weight, so headings are not faux-bolded. */
 :root[data-skin="study"] .font-display {
-  font-family: Georgia, "Iowan Old Style", "Palatino Linotype", Palatino, serif;
+  font-family: "Marcellus", "Palatino Linotype", Palatino, Georgia, serif;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+}
+/* Panels: a thin gilded edge and a faint warm sheen at the top, so every page
+   reads as part of the same game UI while game mode is on. */
+:root[data-skin="study"] .ui-card {
+  border-color: rgb(var(--c-accent) / 0.28);
+  background-image: linear-gradient(180deg, rgb(var(--c-accent) / 0.06), transparent 120px);
+  box-shadow:
+    inset 0 1px 0 rgb(var(--c-accent) / 0.18),
+    inset 0 0 0 1px rgb(0 0 0 / 0.25),
+    0 14px 30px -20px rgb(0 0 0 / 0.9);
+}
+/* Section markers become a small gilded lozenge instead of a bar. */
+:root[data-skin="study"] .section-title::before {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 1px;
+  transform: rotate(45deg);
+  background: linear-gradient(135deg, #f6dc8c, rgb(var(--c-accent)) 55%, #7a5418);
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.35), 0 0 6px rgb(var(--c-accent) / 0.5);
 }
 
 
@@ -136,44 +160,178 @@
   }
 }
 
-/* Fortress scene (game mode, F33). Towers rise once when the scene appears;
-   people who ask their system for reduced motion get a still picture. */
+/* ---------------------------------------------------------------------------
+   Fortress scene (game mode, F33). Ambient motion is slow and small, and all
+   of it is off for people who ask their system for reduced motion: they get
+   a still painting with the same facts.
+   ------------------------------------------------------------------------ */
 @keyframes fortress-rise {
-  from {
-    opacity: 0;
-    transform: translateY(14px) scaleY(0.75);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-.fortress-rise {
-  transform-box: fill-box;
-  transform-origin: bottom center;
-}
-@media (prefers-reduced-motion: no-preference) {
-  .fortress-rise {
-    animation: fortress-rise 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
-  }
+  from { opacity: 0; transform: translateY(14px) scaleY(0.75); }
+  to { opacity: 1; transform: none; }
 }
 @keyframes fortress-flicker {
-  0%, 100% { opacity: 1; }
-  45% { opacity: 0.72; }
-  70% { opacity: 0.9; }
+  0%, 100% { opacity: 1; transform: scaleY(1); }
+  45% { opacity: 0.75; transform: scaleY(0.92); }
+  70% { opacity: 0.92; transform: scaleY(1.05); }
 }
+@keyframes fortress-banner {
+  0%, 100% { transform: skewY(0deg) scaleX(1); }
+  50% { transform: skewY(-6deg) scaleX(0.9); }
+}
+@keyframes fortress-shimmer { to { stroke-dashoffset: -30; } }
+@keyframes fortress-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+@keyframes fortress-twinkle {
+  0%, 100% { opacity: 0; transform: scale(0.4); }
+  50% { opacity: 1; transform: scale(1); }
+}
+@keyframes fortress-smoke {
+  0% { opacity: 0.2; transform: translateY(4px); }
+  50% { opacity: 0.55; }
+  100% { opacity: 0.2; transform: translateY(-6px); }
+}
+@keyframes fortress-firefly {
+  0%, 100% { opacity: 0; transform: translate(0, 0); }
+  30% { opacity: 0.9; }
+  60% { opacity: 0.5; transform: translate(10px, -8px); }
+  80% { opacity: 0.9; transform: translate(4px, -14px); }
+}
+@keyframes fortress-ember {
+  0% { opacity: 0; transform: translate(0, 0); }
+  20% { opacity: 1; }
+  100% { opacity: 0; transform: translate(14px, -70px); }
+}
+@keyframes fortress-rain { to { transform: translate(-12px, 32px); } }
+@keyframes fortress-ring {
+  0%, 100% { stroke-opacity: 0.95; }
+  50% { stroke-opacity: 0.55; }
+}
+
+.fortress-rise { transform-box: fill-box; transform-origin: bottom center; }
+.fortress-flicker { transform-box: fill-box; transform-origin: bottom center; }
+.fortress-twinkle { transform-box: fill-box; transform-origin: center; opacity: 0.8; }
+.fortress-firefly, .fortress-ember { opacity: 0.6; }
+.fortress-rain { opacity: 0.8; }
+
 @media (prefers-reduced-motion: no-preference) {
-  .fortress-flicker {
-    animation: fortress-flicker 1.6s ease-in-out infinite;
-  }
+  .fortress-rise { animation: fortress-rise 700ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+  .fortress-flicker { animation: fortress-flicker 1.6s ease-in-out infinite; }
+  .fortress-banner { animation: fortress-banner 3.2s ease-in-out infinite; }
+  .fortress-shimmer { animation: fortress-shimmer 4s linear infinite; }
+  .fortress-bob { animation: fortress-bob 2.4s ease-in-out infinite; }
+  .fortress-twinkle { animation: fortress-twinkle 2.6s ease-in-out infinite; }
+  .fortress-smoke { animation: fortress-smoke 5s ease-in-out infinite; }
+  .fortress-firefly { animation: fortress-firefly 6s ease-in-out infinite; }
+  .fortress-ember { animation: fortress-ember 5s linear infinite; }
+  .fortress-rain { animation: fortress-rain 0.6s linear infinite; }
 }
-.fortress-tower {
-  cursor: pointer;
-  outline: none;
+@media (prefers-reduced-motion: reduce) {
+  .fortress-firefly, .fortress-ember, .fortress-rain { display: none; }
 }
-.fortress-tower:hover .fortress-focus,
-.fortress-tower:focus-visible .fortress-focus {
-  stroke: #60a5fa;
-  stroke-opacity: 0.7;
-  stroke-width: 2;
+
+/* Towers: a selection ring on the ground, gold on hover and keyboard focus,
+   green (and gently pulsing) when selected. */
+.fortress-tower { cursor: pointer; outline: none; }
+.fortress-ring, .fortress-ring-inner { stroke: transparent; transition: stroke 120ms; }
+.fortress-tower:hover .fortress-ring,
+.fortress-tower:focus-visible .fortress-ring { stroke: #f2c94c; stroke-opacity: 0.85; }
+.fortress-tower:focus-visible .fortress-ring-inner { stroke: #fff3c4; stroke-opacity: 0.8; stroke-dasharray: 3 4; }
+.fortress-tower.is-selected .fortress-ring { stroke: #4ade6a; filter: drop-shadow(0 0 4px #4ade6a); }
+.fortress-tower.is-selected .fortress-ring-inner { stroke: #b8ffc6; stroke-opacity: 0.6; }
+@media (prefers-reduced-motion: no-preference) {
+  .fortress-tower.is-selected .fortress-ring { animation: fortress-ring 1.8s ease-in-out infinite; }
+}
+
+/* Hover card over the scene: dark translucent panel, thin gilded rule, the
+   name in the display face — the classic strategy-game tooltip. */
+.fortress-tip {
+  position: absolute;
+  z-index: 10;
+  width: 15.5rem;
+  pointer-events: none;
+  padding: 0.6rem 0.75rem 0.55rem;
+  border-radius: 4px;
+  background: linear-gradient(180deg, rgb(14 18 34 / 0.95), rgb(8 10 20 / 0.95));
+  border: 1px solid #8a7a5a;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.6), inset 0 1px 0 rgb(255 240 200 / 0.12), 0 10px 24px rgb(0 0 0 / 0.6);
+  color: #e8e2d2;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+.fortress-tip-name {
+  font-family: "Marcellus", "Palatino Linotype", Palatino, Georgia, serif;
+  font-size: 1rem;
+  color: #f6d77a;
+  line-height: 1.2;
+}
+.fortress-tip-sub { color: #b9b3a5; font-size: 0.72rem; }
+.fortress-tip-hint { margin-top: 0.4rem; color: #4ade6a; font-size: 0.72rem; }
+
+/* The frame around the painting: dark iron, a gilded inner rule, and four
+   cast corner pieces. Fixed colours, like the painting it holds. */
+.game-frame {
+  position: relative;
+  padding: 7px;
+  border-radius: 6px;
+  background:
+    linear-gradient(180deg, #3a2c1d, #1a120b 40%, #231810);
+  box-shadow:
+    inset 0 0 0 1px #000,
+    inset 0 0 0 2px #a07b3a,
+    inset 0 0 0 3px #3b2a16,
+    inset 0 1px 0 3px rgb(255 220 150 / 0.15),
+    0 18px 40px -18px rgb(0 0 0 / 0.95);
+}
+.game-frame-inner {
+  position: relative;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border-radius: 3px;
+  box-shadow: 0 0 0 1px #000, 0 0 0 2px #6b5126;
+}
+.game-frame-corner {
+  position: absolute;
+  z-index: 2;
+  width: 30px;
+  height: 30px;
+  pointer-events: none;
+}
+.game-frame-corner.tl { left: -5px; top: -5px; }
+.game-frame-corner.tr { right: -5px; top: -5px; transform: scaleX(-1); }
+.game-frame-corner.bl { left: -5px; bottom: -5px; transform: scaleY(-1); }
+.game-frame-corner.br { right: -5px; bottom: -5px; transform: scale(-1, -1); }
+
+/* Resource bar above the painting: real figures, never points. */
+.game-hud {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 2px;
+  margin-bottom: 7px;
+  padding: 3px;
+  border-radius: 4px;
+  background: linear-gradient(180deg, #120d08, #20170e);
+  box-shadow: inset 0 0 0 1px #000, inset 0 0 0 2px #5a4220, inset 0 2px 6px rgb(0 0 0 / 0.6);
+}
+.game-hud-item {
+  display: flex;
+  flex: 1 1 9rem;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.3rem 0.6rem;
+  border-radius: 2px;
+  background: linear-gradient(180deg, rgb(255 255 255 / 0.04), rgb(0 0 0 / 0.15));
+  box-shadow: inset 0 0 0 1px rgb(255 220 150 / 0.06);
+}
+.game-hud-label { display: block; font-size: 0.66rem; color: #a8977a; line-height: 1.1; }
+/* Figures stay in the reading face: the display serif draws 1 like I. */
+.game-hud-value {
+  display: block;
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: #f3e4bf;
+  line-height: 1.25;
 }

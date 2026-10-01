@@ -1,6 +1,6 @@
 # Game mode ("Fortress") — feasibility and plan — 2026-10-01
 
-Status: **G1–G5 are merged to `main` (PRs #23, #25, #27 carrying G3 + G4, #28), not yet checked live. G6 (temperament meter) is built on `feature/game-mode-g6-temperament`, PR #29 open. G7 not started.** F33 in `PROGRESS.md`.
+Status: **G1–G6 are merged to `main` (PRs #23, #25, #27 carrying G3 + G4, #28, #29), not yet checked live. The G7 art pass (painted scene, ambience, frame and resource bar) is on `feature/game-mode-art-pass`, PR #30 open. G7 advisors not started.** F33 in `PROGRESS.md`.
 
 ## Why
 
@@ -112,8 +112,9 @@ page. That gives the "whole app feels different" effect without doubling fronten
 | G3 | Drill-down: holding pages re-skinned (`data-skin`), Ledger view | M — **merged (#27, with G4)** |
 | G4 | Sieges (regime/stress), margin-of-safety "land for sale", tripwire breaches (analysis-freshness weathering already shipped in G2) | M — **merged (#27)** |
 | G5 | Vault entry screen (D2) | S–M — **merged (#28)** |
-| G6 | Temperament meter, journal-driven | M — **built 2026-10-01 (PR #29)** |
-| G7 | Advisors, polish, ambience (rain, lamp, clock), reduced-motion | M |
+| G6 | Temperament meter, journal-driven | M — **merged (#29)** |
+| G7a | Art pass: painted scene, ambience, frame, resource bar, hover card | M — **built 2026-10-01 (PR #30)** |
+| G7b | Advisors, lamp/clock, optional sound | M |
 
 Sizes are relative effort, not hours. **The art is the long pole** — a procedural SVG kit gets to
 "calm and scholarly" but not to hand-painted miniature quality; swapping in illustrated sprites
@@ -326,3 +327,43 @@ PR for Faiz to review.
   demo), ruff clean; frontend tsc clean, ESLint 0 errors, 80 tests (6 new), build. Card rendered in Chromium at
   desktop and phone width against the demo state and an empty state. **Not seen with real journal data.**
 - **Not in G6:** advisors, polish and ambience (G7).
+
+## G7a art pass as built (2026-10-01)
+
+Faiz asked for game-UX design skills and "more modern / Warcraft-like" graphics. Frontend only: no
+backend, mapping, rule or migration change; every visual still comes from a backend category.
+
+- **Direction:** a painted fantasy-strategy diorama, not flat clip-art. One light source (upper left),
+  a lit and a shadowed side on every building, contact shadows, painterly grain (SVG `feTurbulence`),
+  atmospheric depth (two mountain ranges with haze, snow caps, a pine treeline), terraced hillside with
+  cliff faces per row of towers, a vignette.
+- **Weather paints the world** (`lib/fortressArt.ts`, tested): calm = dusk with a low sun and fireflies;
+  gathering = overcast with light rain; besieged = ember-red sky, enemy camps with smoke, rising embers;
+  unsurveyed = pale moonlit mist (never calm).
+- **Buildings:** keeps have conical roofs whose material follows the wall (slate for basalt/granite/brick,
+  shingle for timber, a holed, broken roof for rot), so quality reads twice; crenellated parapets with
+  corbels (stone) or palisade stakes (wood), quoins, iron bands on timber, arched doors, footing.
+  Funds = round allied towers with a green roof; gold = a gold mine with glinting nuggets; cash-like funds
+  = thatched granaries; unsurveyed walls = a ghost building plan with stakes and rope and a "?".
+- **Freshness:** lit windows, torches and a banner when fresh; one lit window when ageing; ivy, then
+  ivy + scaffolding; fog when never analysed. **Fired tripwire:** flames, smoke, the breach and a red "!"
+  medallion. Review: an amber "i" medallion. Ladders, shared cracked walls, signposts redrawn in wood/gilt.
+- **Interaction:** a ground selection ring (gold on hover/focus, green and pulsing when selected); a
+  game-style hover card (name, structure and weight, wall, moat, analysis age, land, thesis) beside the
+  tower; keyboard focus shows the same ring and card.
+- **Frame and resource bar:** the painting sits in an iron-and-gilt frame with cast corner pieces; above it a
+  resource bar shows realm value, vault cash, towers, weather and temperament. They are facts from
+  `/game/state`, never points.
+- **Whole app in game mode:** headings in Marcellus (one Google Fonts family added to the existing link; it
+  only downloads while the skin is on), panels with a gilded edge, section markers as gilded lozenges.
+  State colours are still untouched.
+- **Motion:** banners, water shimmer, flicker, smoke, medallion bob, gold twinkle, fireflies/rain/embers;
+  all small and slow, all off under `prefers-reduced-motion` (particles hidden entirely).
+- **Layout:** `ROW_HEIGHT` 250 → 290 and `SCENE_TOP` 70 → 96 to fit the roofs; the meadow below the last
+  row is only drawn when there is a shantytown.
+- **Verified:** tsc clean, ESLint 0 errors (2 pre-existing warnings), 83 frontend tests (3 new), build.
+  Rendered in Chromium against the backend's demo state and a synthetic "variety" state (every structure,
+  wall, freshness, moat, shantytown) in calm, gathering and besieged weather, dark and light theme, desktop
+  and phone width, plus hover and selection. **Not yet seen with Faiz's real portfolio.**
+- **Still procedural SVG**, not hand-painted sprites: illustrated sprites could still replace parts later
+  without touching the mapping.
