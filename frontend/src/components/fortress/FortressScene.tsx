@@ -1,11 +1,15 @@
-import { type KeyboardEvent } from "react";
+import { useMemo, type KeyboardEvent } from "react";
 import {
+  CURTAIN_HEIGHT,
   FRESHNESS_LABEL,
   LAND_LABEL,
   MOAT_LABEL,
   SCENE_WIDTH,
   SIEGE_LABEL,
   STRUCTURE_LABEL,
+  WALL_EDGE,
+  groundY,
+  moatRuns,
   THESIS_LABEL,
   WALL_LABEL,
   describeTower,
@@ -15,8 +19,12 @@ import {
   sharedWallLinks,
   siegeSky,
   type FortressLayout,
+  type MoatRun,
+  type PlacedKeep,
   type PlacedTower,
 } from "../../lib/fortress";
+import type { RealmLevel } from "../../lib/realmVerdict";
+import LampLogo from "../LampLogo";
 import type { FortressShantytown, FortressSiegeLevel, FortressWall, GameSiege, GameTower } from "../../lib/types";
 import { worldPalette } from "../../lib/fortressArt";
 import { SceneAmbience, SceneBackdrop, SceneDefs, SceneVignette } from "./sceneWorld";
@@ -202,64 +210,93 @@ function Torch({ x, y }: { x: number; y: number }) {
 // ---------------------------------------------------------------------------
 // Moats
 
-function Moat({ item }: { item: PlacedTower }) {
+/** The drawbridge over a water moat, at the foot of its tower. */
+function Drawbridge({ item }: { item: PlacedTower }) {
   const { tower, x, y, w } = item;
+  if (tower.moat !== "wide" && tower.moat !== "narrow") return null;
+  const wide = tower.moat === "wide";
+  const depth = wide ? 26 : 12;
+  const bw = wide ? 24 : 16;
   const cx = x + w / 2;
-  switch (tower.moat) {
-    case "wide":
-    case "narrow": {
-      const wide = tower.moat === "wide";
-      const pad = wide ? 14 : 7;
-      const depth = wide ? 26 : 12;
-      const bw = wide ? 24 : 16;
-      const d = `M${x - pad} ${y + 2} Q${x - pad - 4} ${y + depth / 2} ${x - pad + 4} ${y + depth} H${x + w + pad - 4} Q${x + w + pad + 4} ${y + depth / 2} ${x + w + pad} ${y + 2} Z`;
-      return (
-        <g>
-          <path d={d} fill="#4a4136" />
-          <path d={d} transform={`translate(0 1)`} fill="url(#fs-water)" stroke="#8f8573" strokeWidth={2.4} />
-          <path
-            className="fortress-shimmer"
-            d={`M${x - pad + 6} ${y + depth * 0.4} h${w * 0.3} M${x + w * 0.5} ${y + depth * 0.4} h${w * 0.3} M${x - pad + 14} ${y + depth * 0.72} h${w * 0.25} M${x + w * 0.62} ${y + depth * 0.72} h${w * 0.3}`}
-            stroke="#d8f0ff"
-            strokeOpacity={0.55}
-            strokeWidth={1.3}
-            strokeLinecap="round"
-            strokeDasharray="6 9"
-          />
-          <path d={`M${x - pad + 4} ${y + 4} H${x + w + pad - 4}`} stroke="#000" strokeOpacity={0.35} strokeWidth={2} />
-          {/* drawbridge */}
-          <rect x={cx - bw / 2} y={y - 2} width={bw} height={depth + 4} fill="#7a5128" stroke="#2a1a0b" strokeOpacity={0.7} />
-          <rect x={cx - bw / 2} y={y - 2} width={bw} height={depth + 4} fill="url(#fs-planks)" />
-          <rect x={cx - bw / 2} y={y - 2} width={bw} height={depth + 4} fill="url(#fs-shade-flat)" />
-          {wide && (
-            <path d={`M${cx - bw / 2 + 2} ${y - 18} L${cx - bw / 2 + 2} ${y + depth} M${cx + bw / 2 - 2} ${y - 18} L${cx + bw / 2 - 2} ${y + depth}`} stroke="#2a2724" strokeWidth={1} strokeDasharray="2 1.5" />
-          )}
-        </g>
-      );
+  return (
+    <g>
+      <rect x={cx - bw / 2} y={y - 2} width={bw} height={depth + 5} fill="#7a5128" stroke="#2a1a0b" strokeOpacity={0.7} />
+      <rect x={cx - bw / 2} y={y - 2} width={bw} height={depth + 5} fill="url(#fs-planks)" />
+      <rect x={cx - bw / 2} y={y - 2} width={bw} height={depth + 5} fill="url(#fs-shade-flat)" />
+      {wide && (
+        <path d={`M${cx - bw / 2 + 2} ${y - 18} L${cx - bw / 2 + 2} ${y + depth} M${cx + bw / 2 - 2} ${y - 18} L${cx + bw / 2 - 2} ${y + depth}`} stroke="#2a2724" strokeWidth={1} strokeDasharray="2 1.5" />
+      )}
+    </g>
+  );
+}
+
+/** One stretch of the moat, as a single ribbon: its depth steps from tower to
+ * tower, because each tower's own moat tier decides its stretch. */
+function ribbonPath(run: MoatRun): string {
+  const top = run.y + 2;
+  const segs = run.segs;
+  const n = segs.length;
+  const bottom = segs.map((sg) => top + Math.max(5, sg.depth));
+  let d = `M${run.x0} ${top} H${run.x1}`;
+  d += ` Q${run.x1 + 3} ${top + (bottom[n - 1] - top) / 2} ${run.x1 - 6} ${bottom[n - 1]}`;
+  for (let i = n - 1; i >= 0; i -= 1) {
+    d += ` L${segs[i].x0 + 6} ${bottom[i]}`;
+    if (i > 0) {
+      const a = segs[i].x0 + 6;
+      const b = segs[i - 1].x1 - 6;
+      const mid = (a + b) / 2;
+      d += ` C${mid} ${bottom[i]} ${mid} ${bottom[i - 1]} ${b} ${bottom[i - 1]}`;
     }
-    case "none":
-      return (
-        <g>
-          <path d={`M${x - 6} ${y + 2} H${x + w + 6} L${x + w + 2} ${y + 9} H${x - 2} Z`} fill="#4a3a26" />
-          <path d={`M${x - 6} ${y + 2} H${x + w + 6}`} stroke="#b59a6a" strokeOpacity={0.6} strokeDasharray="4 3" />
-          {[0.15, 0.45, 0.8].map((f) => (
-            <ellipse key={f} cx={x + w * f} cy={y + 6} rx={2.5} ry={1.5} fill="#7a6a52" />
-          ))}
-        </g>
-      );
-    case "unsurveyed":
-      return (
-        <path
-          d={`M${x - 8} ${y + 3} Q${x - 10} ${y + 8} ${x - 6} ${y + 13} H${x + w + 6} Q${x + w + 10} ${y + 8} ${x + w + 8} ${y + 3} Z`}
-          fill="none"
-          stroke="#c9d6ea"
-          strokeOpacity={0.6}
-          strokeDasharray="2 4"
-        />
-      );
-    default:
-      return null;
   }
+  d += ` Q${run.x0 - 3} ${top + (bottom[0] - top) / 2} ${run.x0} ${top} Z`;
+  return d;
+}
+
+function MoatRuns({ runs }: { runs: MoatRun[] }) {
+  return (
+    <g aria-hidden>
+      {runs.map((run, i) => {
+        if (run.kind === "plain") return null;
+        const d = ribbonPath(run);
+        if (run.kind === "fog") {
+          return <path key={i} d={d} fill="none" stroke="#c9d6ea" strokeOpacity={0.6} strokeDasharray="2 4" />;
+        }
+        if (run.kind === "dry") {
+          return (
+            <g key={i}>
+              <path d={d} fill="#6b5538" stroke="#b59a6a" strokeOpacity={0.75} strokeWidth={1.4} />
+              <path d={d} fill="url(#fs-shade-flat)" opacity={0.45} />
+              <path d={`M${run.x0 + 4} ${run.y + 2} H${run.x1 - 4}`} stroke="#d8c08a" strokeOpacity={0.6} strokeDasharray="4 3" />
+              {run.segs.flatMap((sg) =>
+                [0.2, 0.5, 0.8].map((f) => (
+                  <ellipse key={`${sg.holdingId}-${f}`} cx={sg.x0 + (sg.x1 - sg.x0) * f} cy={run.y + 7} rx={2.5} ry={1.5} fill="#7a6a52" />
+                )),
+              )}
+            </g>
+          );
+        }
+        return (
+          <g key={i}>
+            <path d={d} fill="#4a4136" />
+            <path d={d} transform="translate(0 1)" fill="url(#fs-water)" stroke="#8f8573" strokeWidth={2.4} />
+            {run.segs.map((sg) => (
+              <path
+                key={sg.holdingId}
+                className="fortress-shimmer"
+                d={`M${sg.x0 + 12} ${run.y + 2 + sg.depth * 0.45} H${sg.x1 - 12}`}
+                stroke="#d8f0ff"
+                strokeOpacity={0.55}
+                strokeWidth={1.3}
+                strokeLinecap="round"
+                strokeDasharray="6 9"
+              />
+            ))}
+            <path d={`M${run.x0 + 4} ${run.y + 4} H${run.x1 - 4}`} stroke="#000" strokeOpacity={0.35} strokeWidth={2} />
+          </g>
+        );
+      })}
+    </g>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -744,27 +781,27 @@ function Ladders({ item, level }: { item: PlacedTower; level: FortressSiegeLevel
 
 /** A cracked curtain wall joining two towers that move together (a stored
  * correlation flag): when one falls the other is hit by the same blow. */
-function SharedWalls({ layout, siege }: { layout: FortressLayout; siege: GameSiege | null }) {
+function SharedWalls({ layout, siege, row }: { layout: FortressLayout; siege: GameSiege | null; row: number }) {
   if (!siege || siege.shared_walls.length === 0) return null;
   const byId = new Map(layout.items.map((i) => [i.tower.holding_id, i]));
   return (
     <g aria-hidden>
-      {sharedWallLinks(layout.items, siege.shared_walls).map((link) => {
+      {sharedWallLinks(layout.items, siege.shared_walls, layout.keep).map((link) => {
         const a = byId.get(link.fromId);
         const b = byId.get(link.toId);
-        if (!a || !b) return null;
+        if (!a || !b || a.row !== row) return null;
         const x1 = a.x + a.w - 2;
         const x2 = b.x + 2;
         const y = a.y;
         const mid = (x1 + x2) / 2;
-        const top = y - 48;
+        const top = y - CURTAIN_HEIGHT;
         const n = Math.max(1, Math.floor((x2 - x1) / 9));
         return (
           <g key={`${link.fromId}-${link.toId}`}>
             <g filter="url(#fs-grain)">
-              <rect x={x1} y={top} width={x2 - x1} height={48} fill="#7a7468" />
-              <rect x={x1} y={top} width={x2 - x1} height={48} fill="url(#fs-granite)" />
-              <rect x={x1} y={top} width={x2 - x1} height={48} fill="url(#fs-ao)" />
+              <rect x={x1} y={top} width={x2 - x1} height={CURTAIN_HEIGHT} fill="#7a7468" />
+              <rect x={x1} y={top} width={x2 - x1} height={CURTAIN_HEIGHT} fill="url(#fs-granite)" />
+              <rect x={x1} y={top} width={x2 - x1} height={CURTAIN_HEIGHT} fill="url(#fs-ao)" />
               {Array.from({ length: n }, (_, i) =>
                 i % 2 === 0 ? <rect key={i} x={x1 + i * 9} y={top - 7} width={7} height={7} fill="#7a7468" /> : null,
               )}
@@ -775,6 +812,272 @@ function SharedWalls({ layout, siege }: { layout: FortressLayout; siege: GameSie
           </g>
         );
       })}
+    </g>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// The fortress as one structure: curtain walls, corner bastions, the Great Keep.
+// These stand for the WHOLE portfolio: pressing any of them opens the verdict
+// on everything, while pressing a tower opens that one holding.
+
+export interface RealmState {
+  hot: boolean;
+  selected: boolean;
+}
+
+interface RealmHandlers {
+  realm: RealmState;
+  onRealmSelect: () => void;
+  onRealmHover: (on: boolean) => void;
+}
+
+const TONE_BANNER: Record<RealmLevel, string> = {
+  sound: "#2c55b5",
+  mixed: "#c58a1a",
+  attention: "#b3261e",
+  unknown: "#6b7a90",
+};
+
+/** A pointer-only group: the keep is the keyboard-focusable way in, the walls
+ * and bastions just make the whole structure clickable. */
+function RealmPart({ realm, onRealmSelect, onRealmHover, children }: RealmHandlers & { children: React.ReactNode }) {
+  return (
+    <g
+      aria-hidden
+      className={`fortress-realm-part${realm.hot ? " is-hot" : ""}${realm.selected ? " is-selected" : ""}`}
+      onClick={onRealmSelect}
+      onMouseEnter={() => onRealmHover(true)}
+      onMouseLeave={() => onRealmHover(false)}
+    >
+      {children}
+    </g>
+  );
+}
+
+/** Crenellations along a wall top: merlons in the wall's own stone. */
+function Crenels({ x, top, w, step = 18, mw = 11, mh = 10, base = "#8a909a", pattern = "fs-granite" }: { x: number; top: number; w: number; step?: number; mw?: number; mh?: number; base?: string; pattern?: string }) {
+  const n = Math.max(1, Math.floor((w - mw) / step) + 1);
+  return (
+    <g>
+      {Array.from({ length: n }, (_, i) => {
+        const mx = x + 2 + i * step;
+        return (
+          <g key={i}>
+            <rect x={mx} y={top - mh} width={mw} height={mh + 1} fill={base} />
+            <rect x={mx} y={top - mh} width={mw} height={mh + 1} fill={`url(#${pattern})`} opacity={0.6} />
+            <rect x={mx} y={top - mh} width={mw} height={1.5} fill="#fff" opacity={0.28} />
+            <rect x={mx + mw - 2} y={top - mh} width={2} height={mh + 1} fill="#000" opacity={0.3} />
+          </g>
+        );
+      })}
+    </g>
+  );
+}
+
+/** The curtain wall that joins every tower of a row into one rampart. */
+function CurtainWall({ row, ...handlers }: { row: number } & RealmHandlers) {
+  const y = groundY(row);
+  const x0 = WALL_EDGE;
+  const w = SCENE_WIDTH - WALL_EDGE * 2;
+  const top = y - CURTAIN_HEIGHT;
+  return (
+    <RealmPart {...handlers}>
+      <g filter="url(#fs-grain)">
+        <rect x={x0} y={top} width={w} height={CURTAIN_HEIGHT} fill="#858a93" />
+        <rect x={x0} y={top} width={w} height={CURTAIN_HEIGHT} fill="url(#fs-granite)" />
+        <rect x={x0} y={top} width={w} height={CURTAIN_HEIGHT} fill="url(#fs-shade-flat)" />
+        <rect x={x0} y={top} width={w} height={CURTAIN_HEIGHT} fill="url(#fs-ao)" />
+        <Crenels x={x0} top={top} w={w} />
+        <rect x={x0} y={top} width={w} height={3} fill="#fff" opacity={0.18} />
+        <rect x={x0} y={top + 6} width={w} height={2} fill="#000" opacity={0.25} />
+        {Array.from({ length: Math.floor(w / 96) }, (_, i) => (
+          <rect key={i} x={x0 + 40 + i * 96} y={top + 18} width={4} height={14} rx={1.5} fill="#10131a" opacity={0.85} />
+        ))}
+        <rect x={x0} y={y - 7} width={w} height={7} fill="#585d66" />
+        <rect x={x0} y={y - 7} width={w} height={1.4} fill="#fff" opacity={0.18} />
+      </g>
+    </RealmPart>
+  );
+}
+
+/** A round corner bastion at each end of a curtain wall. */
+function Bastion({ x, y, ...handlers }: { x: number; y: number } & RealmHandlers) {
+  const w = 46;
+  const h = 86;
+  const top = y - h;
+  const cx = x + w / 2;
+  return (
+    <RealmPart {...handlers}>
+      <GroundShadow x={x} y={y} w={w} />
+      <ConeRoof cx={cx} base={top - 7} half={w / 2 + 6} height={38} fill="fs-roof-slate" trim="url(#fs-gold)" />
+      <g filter="url(#fs-grain)">
+        <rect x={x} y={top} width={w} height={h} fill="#8a909a" />
+        <rect x={x} y={top} width={w} height={h} fill="url(#fs-granite)" />
+        <rect x={x} y={top} width={w} height={h} fill="url(#fs-shade-round)" />
+        <rect x={x} y={top} width={w} height={h} fill="url(#fs-ao)" />
+        <rect x={x - 4} y={top - 7} width={w + 8} height={8} fill="#8a909a" />
+        <rect x={x - 4} y={top - 7} width={w + 8} height={8} fill="url(#fs-shade-round)" />
+        <rect x={x - 4} y={top - 7} width={w + 8} height={1.5} fill="#fff" opacity={0.25} />
+        <rect x={cx - 3} y={top + 22} width={6} height={20} rx={3} fill="#10131a" opacity={0.9} />
+        <rect x={cx - 3} y={top + 54} width={6} height={14} rx={3} fill="#10131a" opacity={0.9} />
+        <rect x={x - 3} y={y - 8} width={w + 6} height={8} fill="#585d66" />
+      </g>
+    </RealmPart>
+  );
+}
+
+/** Stone forecourt in front of the keep, where the moat gives way to a causeway. */
+function Causeway({ keep }: { keep: PlacedKeep }) {
+  const { x, y, w } = keep;
+  const cx = x + w / 2;
+  return (
+    <g aria-hidden>
+      <path d={`M${x - 12} ${y + 2} H${x + w + 12} L${x + w + 4} ${y + 34} H${x - 4} Z`} fill="#6f6a5e" />
+      <path d={`M${x - 12} ${y + 2} H${x + w + 12} L${x + w + 4} ${y + 34} H${x - 4} Z`} fill="url(#fs-granite)" opacity={0.7} />
+      <path d={`M${x - 12} ${y + 2} H${x + w + 12} L${x + w + 4} ${y + 34} H${x - 4} Z`} fill="url(#fs-shade-flat)" />
+      {[10, 20, 30].map((dy) => (
+        <path key={dy} d={`M${x - 12 + dy * 0.26} ${y + dy} H${x + w + 12 - dy * 0.26}`} stroke="#000" strokeOpacity={0.3} />
+      ))}
+      <rect x={cx - 34} y={y + 2} width={68} height={32} fill="#a89f8c" opacity={0.55} />
+      <path d={`M${cx - 34} ${y + 2} V${y + 34} M${cx + 34} ${y + 2} V${y + 34}`} stroke="#3a342a" strokeOpacity={0.6} />
+    </g>
+  );
+}
+
+/** The Great Keep: the whole portfolio, in the middle of the top terrace. It
+ * has no wall material, moat or size of its own (those belong to the towers);
+ * the banner on its roof only follows the verdict on the whole fortress. */
+function GreatKeep({
+  keep,
+  level,
+  lit,
+  count,
+  realm,
+  onRealmSelect,
+  onRealmHover,
+}: { keep: PlacedKeep; level: RealmLevel; lit: boolean; count: number } & RealmHandlers) {
+  const { x, y, w } = keep;
+  const cx = x + w / 2;
+  const hallW = 150;
+  const hallH = 96;
+  const hallX = cx - hallW / 2;
+  const hallTop = y - hallH;
+  const donW = 80;
+  const donH = 178;
+  const donX = cx - donW / 2;
+  const donTop = y - donH;
+  const donRoof = 60;
+  const turW = 34;
+  const turH = 132;
+  const turTop = y - turH;
+  const base = "#9097a1";
+  const dark = "#585d66";
+  const onKey = (e: KeyboardEvent<SVGGElement>) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onRealmSelect();
+    }
+  };
+  const turret = (tx: number) => (
+    <g key={tx}>
+      <ConeRoof cx={tx + turW / 2} base={turTop - 6} half={turW / 2 + 7} height={44} fill="fs-roof-slate" trim="url(#fs-gold)" />
+      <g filter="url(#fs-grain)">
+        <rect x={tx} y={turTop} width={turW} height={turH} fill={base} />
+        <rect x={tx} y={turTop} width={turW} height={turH} fill="url(#fs-granite)" />
+        <rect x={tx} y={turTop} width={turW} height={turH} fill="url(#fs-shade-round)" />
+        <rect x={tx} y={turTop} width={turW} height={turH} fill="url(#fs-ao)" />
+        <rect x={tx - 4} y={turTop - 7} width={turW + 8} height={8} fill={base} />
+        <rect x={tx - 4} y={turTop - 7} width={turW + 8} height={1.5} fill="#fff" opacity={0.25} />
+        <ArchWindow x={tx + turW / 2 - 3.5} y={turTop + 24} w={7} lit={lit} />
+        <ArchWindow x={tx + turW / 2 - 3.5} y={turTop + 64} w={7} lit={lit} />
+      </g>
+    </g>
+  );
+  return (
+    <g
+      role="button"
+      tabIndex={0}
+      aria-pressed={realm.selected}
+      aria-label={`The whole fortress: ${count} ${count === 1 ? "holding" : "holdings"}. Press for the summary verdict on all of them.`}
+      className={`fortress-tower fortress-realm-keep${realm.selected ? " is-selected" : ""}${realm.hot ? " is-hot" : ""}`}
+      onClick={onRealmSelect}
+      onKeyDown={onKey}
+      onMouseEnter={() => onRealmHover(true)}
+      onMouseLeave={() => onRealmHover(false)}
+      onFocus={() => onRealmHover(true)}
+      onBlur={() => onRealmHover(false)}
+    >
+      <ellipse className="fortress-ring" cx={cx} cy={y + 10} rx={w / 2 + 34} ry={16} fill="none" strokeWidth={2.5} />
+      <ellipse className="fortress-ring-inner" cx={cx} cy={y + 10} rx={w / 2 + 26} ry={12} fill="none" strokeWidth={1} />
+      <g className="fortress-rise">
+        <GroundShadow x={x} y={y} w={w} />
+        {/* the donjon, behind everything else */}
+        <ConeRoof cx={cx} base={donTop - 6} half={donW / 2 + 12} height={donRoof} fill="fs-roof-slate" trim="url(#fs-gold)" />
+        <Banner x={cx} y={donTop - 6 - donRoof - 9} color={TONE_BANNER[level]} />
+        <g filter="url(#fs-grain)">
+          <rect x={donX} y={donTop} width={donW} height={donH} fill={base} />
+          <rect x={donX} y={donTop} width={donW} height={donH} fill="url(#fs-granite)" />
+          {Array.from({ length: Math.floor(donH / 14) }, (_, i) => (
+            <g key={i}>
+              <rect x={donX} y={donTop + i * 14 + 1} width={i % 2 ? 7 : 11} height={12} fill="#fff" opacity={0.07} />
+              <rect x={donX + donW - (i % 2 ? 7 : 11)} y={donTop + i * 14 + 1} width={i % 2 ? 7 : 11} height={12} fill="#000" opacity={0.1} />
+            </g>
+          ))}
+          <rect x={donX} y={donTop} width={donW} height={donH} fill="url(#fs-shade-flat)" />
+          <rect x={donX} y={donTop} width={donW} height={donH} fill="url(#fs-rim)" />
+          <rect x={donX} y={donTop} width={donW} height={donH} fill="url(#fs-ao)" />
+          <rect x={donX - 5} y={donTop - 7} width={donW + 10} height={8} fill={base} />
+          <rect x={donX - 5} y={donTop - 7} width={donW + 10} height={1.5} fill="#fff" opacity={0.25} />
+          <Crenels x={donX - 5} top={donTop - 7} w={donW + 10} step={14} mw={8} mh={10} base={base} />
+        </g>
+        {/* a medallion with the lamp: the mark of the whole */}
+        <circle cx={cx} cy={donTop + 40} r={23} fill="#d9a93e" />
+        <circle cx={cx} cy={donTop + 40} r={21} fill="#111a2f" stroke="#6e4a12" strokeWidth={1} />
+        <LampLogo x={cx - 17} y={donTop + 40 - 17} width={34} height={34} />
+        {turret(x + 2)}
+        {turret(x + w - 2 - turW)}
+        {/* the great hall in front */}
+        <g filter="url(#fs-grain)">
+          <rect x={hallX} y={hallTop} width={hallW} height={hallH} fill={base} />
+          <rect x={hallX} y={hallTop} width={hallW} height={hallH} fill="url(#fs-granite)" />
+          <rect x={hallX} y={hallTop} width={hallW} height={hallH} fill="url(#fs-shade-flat)" />
+          <rect x={hallX} y={hallTop} width={hallW} height={hallH} fill="url(#fs-rim)" />
+          <rect x={hallX} y={hallTop} width={hallW} height={hallH} fill="url(#fs-ao)" />
+          <rect x={hallX - 5} y={hallTop - 7} width={hallW + 10} height={8} fill={base} />
+          <rect x={hallX - 5} y={hallTop - 7} width={hallW + 10} height={1.5} fill="#fff" opacity={0.25} />
+          <Crenels x={hallX - 5} top={hallTop - 7} w={hallW + 10} base={base} />
+          <ArchWindow x={hallX + 22} y={hallTop + 18} w={8} lit={lit} />
+          <ArchWindow x={hallX + hallW - 30} y={hallTop + 18} w={8} lit={lit} />
+          {/* gate with a portcullis */}
+          <path d={`M${cx - 22} ${y - 1} V${y - 44} A22 22 0 0 1 ${cx + 22} ${y - 44} V${y - 1} Z`} fill={dark} />
+          <path d={`M${cx - 17} ${y - 1} V${y - 43} A17 17 0 0 1 ${cx + 17} ${y - 43} V${y - 1} Z`} fill="#0d0f14" />
+          {[-11, -4, 3, 10].map((dx) => (
+            <line key={dx} x1={cx + dx} y1={y - 1} x2={cx + dx} y2={y - 50} stroke="#4a4f58" strokeWidth={2} />
+          ))}
+          {[12, 26, 40].map((dy) => (
+            <line key={dy} x1={cx - 17} y1={y - dy} x2={cx + 17} y2={y - dy} stroke="#4a4f58" strokeWidth={2} />
+          ))}
+          <rect x={hallX - 4} y={y - 8} width={hallW + 8} height={8} fill={dark} />
+        </g>
+        {lit && (
+          <>
+            <Torch x={cx - 32} y={y - 30} />
+            <Torch x={cx + 32} y={y - 30} />
+          </>
+        )}
+      </g>
+      {/* name plate */}
+      <g>
+        <path d={`M${cx - 62} ${y + 40} h124 l-5 9 l5 9 h-124 l5 -9 Z`} fill="#1a120a" fillOpacity={0.9} stroke="#b8893a" strokeOpacity={0.9} />
+        <text x={cx} y={y + 53} textAnchor="middle" fontSize={11.5} fontFamily={SERIF} letterSpacing={1.4} fill="#f3e4bf">
+          THE REALM
+        </text>
+        <text x={cx} y={y + 69} textAnchor="middle" fontSize={10} fill="#cdb98f" className="tabular">
+          {count} {count === 1 ? "holding" : "holdings"}
+        </text>
+      </g>
+      <rect x={x - 40} y={donTop - 80} width={w + 80} height={donH + 150} fill="transparent" />
     </g>
   );
 }
@@ -861,7 +1164,7 @@ function TowerFigure({
       <ellipse className="fortress-ring-inner" cx={x + w / 2} cy={y + 8} rx={w / 2 + 14} ry={10} fill="none" strokeWidth={1} />
       <g className="fortress-rise" style={{ animationDelay: `${item.index * 70}ms` }}>
         <GroundShadow x={x} y={y} w={w} />
-        <Moat item={item} />
+        <Drawbridge item={item} />
         <TowerBody item={item} />
         <Weathering item={item} />
         <ThesisMarks item={item} />
@@ -949,6 +1252,20 @@ export function TowerPeek({ tower: t }: { tower: GameTower }) {
   );
 }
 
+/** Quick-look card for the whole fortress (hover over the keep or the walls). */
+export function RealmPeek({ count, oneLine }: { count: number; oneLine: string | null }) {
+  return (
+    <div className="fortress-tip" role="status">
+      <p className="fortress-tip-name">The whole fortress</p>
+      <p className="fortress-tip-sub">
+        {count} {count === 1 ? "holding" : "holdings"}, kept together by one set of walls and one moat
+      </p>
+      {oneLine && <p className="mt-1.5">{oneLine}</p>}
+      <p className="fortress-tip-hint">Click to read the verdict on everything</p>
+    </div>
+  );
+}
+
 export default function FortressScene({
   layout,
   shantytown,
@@ -957,6 +1274,10 @@ export default function FortressScene({
   selectedId,
   onSelect,
   onHover,
+  realm,
+  realmLevel,
+  onRealmSelect,
+  onRealmHover,
 }: {
   layout: FortressLayout;
   shantytown: FortressShantytown;
@@ -965,6 +1286,10 @@ export default function FortressScene({
   selectedId: string | null;
   onSelect: (id: string) => void;
   onHover: (id: string | null) => void;
+  realm: RealmState;
+  realmLevel: RealmLevel;
+  onRealmSelect: () => void;
+  onRealmHover: (on: boolean) => void;
 }) {
   // Room below the last terrace only when there is a shantytown to draw there.
   const hasShacks = shantytown !== "none" && drawnShacks(shackCount) > 0;
@@ -972,28 +1297,48 @@ export default function FortressScene({
   const level = siege?.level ?? null;
   const sky = siegeSky(level);
   const palette = worldPalette(level);
-  const summary = `${SIEGE_LABEL[level ?? "unsurveyed"]}. Fortress of ${layout.items.length} ${
+  const runs = useMemo(() => moatRuns(layout), [layout]);
+  const rowCount = Math.max(1, layout.rows);
+  const handlers: RealmHandlers = { realm, onRealmSelect, onRealmHover };
+  const anyFresh = layout.items.some((i) => i.tower.freshness === "fresh");
+  const summary = `${SIEGE_LABEL[level ?? "unsurveyed"]}. One fortress with a Great Keep for the whole portfolio and ${layout.items.length} ${
     layout.items.length === 1 ? "tower" : "towers"
-  }. ${layout.items.map((i) => `${i.tower.name}: ${MOAT_LABEL[i.tower.moat].toLowerCase()}`).join("; ")}`;
+  }, each a holding. ${layout.items.map((i) => `${i.tower.name}: ${MOAT_LABEL[i.tower.moat].toLowerCase()}`).join("; ")}`;
   return (
     <div className="relative min-w-[720px]">
       <svg viewBox={`0 0 ${SCENE_WIDTH} ${height}`} className="block h-auto w-full" role="group" aria-label={summary}>
         <SceneDefs palette={palette} />
         <SceneBackdrop layout={layout} sky={sky} palette={palette} height={height} />
-        <SharedWalls layout={layout} siege={siege} />
-        {layout.items.map((item) => (
-          <TowerFigure
-            key={item.tower.holding_id}
-            item={item}
-            selected={selectedId === item.tower.holding_id}
-            onSelect={onSelect}
-            onHover={onHover}
-            level={level}
-          />
-        ))}
-        {layout.items.map((item) => (
-          <LandSign key={`sign-${item.tower.holding_id}`} item={item} />
-        ))}
+        {Array.from({ length: rowCount }, (_, r) => {
+          const rowItems = layout.items.filter((i) => i.row === r);
+          const y = groundY(r);
+          return (
+            <g key={r}>
+              <MoatRuns runs={runs.filter((run) => run.row === r)} />
+              {r === 0 && <Causeway keep={layout.keep} />}
+              <CurtainWall row={r} {...handlers} />
+              <Bastion x={6} y={y} {...handlers} />
+              <Bastion x={SCENE_WIDTH - 52} y={y} {...handlers} />
+              {r === 0 && (
+                <GreatKeep keep={layout.keep} level={realmLevel} lit={anyFresh} count={layout.items.length} {...handlers} />
+              )}
+              <SharedWalls layout={layout} siege={siege} row={r} />
+              {rowItems.map((item) => (
+                <TowerFigure
+                  key={item.tower.holding_id}
+                  item={item}
+                  selected={selectedId === item.tower.holding_id}
+                  onSelect={onSelect}
+                  onHover={onHover}
+                  level={level}
+                />
+              ))}
+              {rowItems.map((item) => (
+                <LandSign key={`sign-${item.tower.holding_id}`} item={item} />
+              ))}
+            </g>
+          );
+        })}
         <Shantytown level={shantytown} count={shackCount} y={layout.height + 24} />
         <SceneAmbience palette={palette} height={height} />
         <SceneVignette height={height} />

@@ -249,6 +249,11 @@
 .fortress-tower:focus-visible .fortress-ring-inner { stroke: #fff3c4; stroke-opacity: 0.8; stroke-dasharray: 3 4; }
 .fortress-tower.is-selected .fortress-ring { stroke: #4ade6a; filter: drop-shadow(0 0 4px #4ade6a); }
 .fortress-tower.is-selected .fortress-ring-inner { stroke: #b8ffc6; stroke-opacity: 0.6; }
+/* The whole fortress (keep, curtain walls, bastions) lights up as one piece. */
+.fortress-tower.is-hot .fortress-ring { stroke: #f2c94c; stroke-opacity: 0.85; }
+.fortress-realm-part { cursor: pointer; transition: filter 140ms; }
+.fortress-realm-part.is-hot { filter: drop-shadow(0 0 5px rgba(242, 201, 76, 0.85)); }
+.fortress-realm-part.is-selected { filter: drop-shadow(0 0 6px rgba(74, 222, 106, 0.9)); }
 @media (prefers-reduced-motion: no-preference) {
   .fortress-tower.is-selected .fortress-ring { animation: fortress-ring 1.8s ease-in-out infinite; }
 }

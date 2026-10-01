@@ -28,6 +28,11 @@ import {
   needsAttention,
   sortLedger,
   layoutTowers,
+  groundY,
+  moatRuns,
+  moatKindOf,
+  KEEP_HEIGHT,
+  WALL_EDGE,
   sortTowers,
   towerDimensions,
 } from "./fortress";
@@ -143,6 +148,90 @@ describe("layoutTowers", () => {
     ]);
     expect(layout.items.map((i) => i.tower.holding_id)).toEqual(["big", "small"]);
     expect(layout.items.map((i) => i.index)).toEqual([0, 1]);
+  });
+});
+
+describe("the fortress as one structure", () => {
+  const many = (n: number) =>
+    Array.from({ length: n }, (_, i) =>
+      tower({
+        holding_id: `h${i}`,
+        name: `Co ${i}`,
+        weight_pct: String(40 - i),
+        size_class: (["great", "medium", "small", "tiny"] as const)[i % 4],
+        moat: (["wide", "narrow", "none", "unsurveyed", "not_applicable"] as const)[i % 5],
+      }),
+    );
+
+  it("puts the Great Keep in the middle of the top terrace, even with no holdings", () => {
+    const empty = layoutTowers([]);
+    expect(empty.keep.x + empty.keep.w / 2).toBe(SCENE_WIDTH / 2);
+    const layout = layoutTowers(many(9));
+    expect(layout.keep.x + layout.keep.w / 2).toBe(SCENE_WIDTH / 2);
+    expect(layout.keep.y).toBe(groundY(0));
+    expect(layout.keep.h).toBe(KEEP_HEIGHT);
+  });
+
+  it("never lets a tower overlap the keep and keeps the biggest holdings beside it", () => {
+    const layout = layoutTowers(many(9));
+    const top = layout.items.filter((i) => i.row === 0);
+    expect(top.length).toBeGreaterThan(1);
+    for (const it of top) {
+      const clear = it.x + it.w <= layout.keep.x || it.x >= layout.keep.x + layout.keep.w;
+      expect(clear).toBe(true);
+    }
+    // The two heaviest holdings are on the top terrace, one on each side.
+    const heaviest = layout.items.filter((i) => i.tower.holding_id === "h0" || i.tower.holding_id === "h1");
+    expect(heaviest.every((i) => i.row === 0)).toBe(true);
+    expect(new Set(heaviest.map((i) => i.x < layout.keep.x)).size).toBe(2);
+  });
+
+  it("puts every tower on a terrace that exists and keeps rows contiguous", () => {
+    const layout = layoutTowers(many(31));
+    const rows = new Set(layout.items.map((i) => i.row));
+    for (let r = 0; r < layout.rows; r++) expect(rows.has(r)).toBe(true);
+    expect(layout.items).toHaveLength(31);
+  });
+
+  it("moat runs: one stretch per tower tier, no gaps and no overlap along a row", () => {
+    const layout = layoutTowers(many(9));
+    const runs = moatRuns(layout);
+    for (const run of runs) {
+      expect(run.x1).toBeGreaterThan(run.x0);
+      for (let i = 1; i < run.segs.length; i++) expect(run.segs[i].x0).toBeCloseTo(run.segs[i - 1].x1, 5);
+    }
+    // Every tower owns exactly one stretch of moat.
+    const owned = runs.flatMap((r) => r.segs.map((sg) => sg.holdingId));
+    expect(owned.sort()).toEqual(layout.items.map((i) => i.tower.holding_id).sort());
+  });
+
+  it("moat runs: water for wide and narrow, a dry ditch for none, fog for unsurveyed, plain for funds", () => {
+    expect(moatKindOf("wide")).toBe("water");
+    expect(moatKindOf("narrow")).toBe("water");
+    expect(moatKindOf("none")).toBe("dry");
+    expect(moatKindOf("unsurveyed")).toBe("fog");
+    expect(moatKindOf("not_applicable")).toBe("plain");
+  });
+
+  it("moat runs: neighbours with the same kind join into one stretch", () => {
+    const layout = layoutTowers([
+      tower({ holding_id: "a", weight_pct: "30", moat: "wide" }),
+      tower({ holding_id: "b", weight_pct: "20", moat: "narrow" }),
+      tower({ holding_id: "c", weight_pct: "10", moat: "none" }),
+    ]);
+    const runs = moatRuns(layout);
+    const water = runs.filter((r) => r.kind === "water");
+    const dry = runs.filter((r) => r.kind === "dry");
+    expect(water.reduce((n, r) => n + r.segs.length, 0)).toBe(2);
+    expect(dry).toHaveLength(1);
+    expect(dry[0].segs[0].holdingId).toBe("c");
+  });
+
+  it("the outer moat ends reach the corner bastions", () => {
+    const layout = layoutTowers(many(9));
+    const top = moatRuns(layout).filter((r) => r.row === 0);
+    expect(Math.min(...top.map((r) => r.x0))).toBe(WALL_EDGE);
+    expect(Math.max(...top.map((r) => r.x1))).toBe(SCENE_WIDTH - WALL_EDGE);
   });
 });
 
@@ -324,14 +413,29 @@ describe("sharedWallLinks", () => {
     expect(links).toHaveLength(1);
     const a = layout.items.find((i) => i.tower.ticker === "AAA");
     const c = layout.items.find((i) => i.tower.ticker === "CCC");
-    expect(a && c && a.x < c.x).toBe(true);
-    expect(links[0]).toMatchObject({ fromId: "a", toId: "c", correlation: "0.85" });
+    // The biggest holding stands next to the keep and Gamma is outside it, so Gamma is on the left.
+    expect(a && c && c.x < a.x).toBe(true);
+    expect(links[0]).toMatchObject({ fromId: "c", toId: "a", correlation: "0.85" });
   });
 
   it("chains three members and ignores tickers that are not in the scene", () => {
     expect(sharedWallLinks(layout.items, [wall(["AAA", "BBB", "CCC"])])).toHaveLength(2);
     expect(sharedWallLinks(layout.items, [wall(["AAA", "NOPE"])])).toEqual([]);
     expect(sharedWallLinks(layout.items, [])).toEqual([]);
+  });
+
+  it("draws no wall through the Great Keep", () => {
+    const keepLayout = layoutTowers([
+      tower({ holding_id: "a", ticker: "AAA", weight_pct: "30" }),
+      tower({ holding_id: "b", ticker: "BBB", weight_pct: "20" }),
+    ]);
+    // Alpha and Beta are on opposite sides of the keep.
+    const a = keepLayout.items.find((i) => i.tower.ticker === "AAA")!;
+    const b = keepLayout.items.find((i) => i.tower.ticker === "BBB")!;
+    expect(a.x + a.w).toBeLessThanOrEqual(keepLayout.keep.x);
+    expect(b.x).toBeGreaterThanOrEqual(keepLayout.keep.x + keepLayout.keep.w);
+    expect(sharedWallLinks(keepLayout.items, [wall(["AAA", "BBB"])], keepLayout.keep)).toEqual([]);
+    expect(sharedWallLinks(keepLayout.items, [wall(["AAA", "BBB"])])).toHaveLength(1);
   });
 
   it("does not draw a wall across rows", () => {

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useDemoMode } from "../lib/demoMode";
+import LampLogo from "./LampLogo";
 
 type Theme = "dark" | "light";
 
@@ -196,30 +197,13 @@ function DemoModeBanner() {
   );
 }
 
-/** Genie-bottle mark (2026-09-27, replacing the plain "A" monogram) —
- * reused by the desktop sidebar, the mobile top bar and the mobile drawer
- * header. Two shapes only (stopper + body) so it still reads at 16px. */
-function BrandMark({ className = "h-4 w-4" }: { className?: string }) {
-  return (
-    <svg aria-hidden viewBox="0 0 24 24" className={className} xmlns="http://www.w3.org/2000/svg">
-      <rect x="10.2" y="1" width="3.6" height="1.7" rx="0.75" fill="currentColor" />
-      <path
-        d="M10.4 2.7h3.2v2.3c0 .5.2 1 .6 1.3 1.9 1.7 3 4.1 3 6.7v3.9c0 2-1.6 3.6-3.6 3.6h-3.2c-2 0-3.6-1.6-3.6-3.6v-3.9c0-2.6 1.1-5 3-6.7.4-.4.6-.8.6-1.3V2.7Z"
-        fill="currentColor"
-      />
-    </svg>
-  );
-}
-
+/** Brand: the golden magic lamp (2026-10-01, replacing the genie-bottle
+ * silhouette) beside the wordmark. Reused by the desktop sidebar, the mobile
+ * top bar and the mobile drawer header. */
 function Brand() {
   return (
-    <div className="flex items-center gap-2.5 px-2">
-      <span
-        aria-hidden
-        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-accent to-positive text-onfill"
-      >
-        <BrandMark />
-      </span>
+    <div className="flex items-center gap-2 px-1">
+      <LampLogo className="h-9 w-9 shrink-0 drop-shadow-[0_1px_6px_rgba(242,193,78,0.35)]" />
       <span className="font-display text-sm font-bold tracking-[0.2em] text-ink">ALADDIN</span>
     </div>
   );
