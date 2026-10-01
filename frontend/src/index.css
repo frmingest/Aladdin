@@ -96,3 +96,35 @@
     font-variant-numeric: tabular-nums;
   }
 }
+
+/* Fortress scene (game mode, F33). Towers rise once when the scene appears;
+   people who ask their system for reduced motion get a still picture. */
+@keyframes fortress-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scaleY(0.75);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.fortress-rise {
+  transform-box: fill-box;
+  transform-origin: bottom center;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .fortress-rise {
+    animation: fortress-rise 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+}
+.fortress-tower {
+  cursor: pointer;
+  outline: none;
+}
+.fortress-tower:hover .fortress-focus,
+.fortress-tower:focus-visible .fortress-focus {
+  stroke: #60a5fa;
+  stroke-opacity: 0.7;
+  stroke-width: 2;
+}

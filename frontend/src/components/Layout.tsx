@@ -35,7 +35,8 @@ function ThemeToggle() {
     </button>
   );
 }
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { useGameMode } from "../lib/gameMode";
 import CommandPalette from "./CommandPalette";
 
 /**
@@ -110,6 +111,56 @@ const NAV_SECTIONS: NavSection[] = [
   { title: "System", items: [{ label: "Settings", to: "/settings" }] },
 ];
 
+/** Game mode (F33, G2) adds one entry, the Fortress home, to the top of the
+ * Overview group; with game mode off the nav is exactly the old one. */
+function navSectionsFor(gameMode: boolean): NavSection[] {
+  if (!gameMode) return NAV_SECTIONS;
+  return NAV_SECTIONS.map((section) =>
+    section.title === "Overview"
+      ? { ...section, items: [{ label: "Fortress", to: "/fortress" }, ...section.items] }
+      : section,
+  );
+}
+
+/** The top-bar switch. A view preference only: it changes how the app is
+ * shown, never an analysis or a stored value. Switching on lands on the
+ * Fortress; switching off from the Fortress returns to the Dashboard. */
+function GameModeToggle() {
+  const { gameMode, setGameMode } = useGameMode();
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const flip = () => {
+    const next = !gameMode;
+    setGameMode(next);
+    if (next) navigate("/fortress");
+    else if (pathname.startsWith("/fortress")) navigate("/");
+  };
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={gameMode}
+      onClick={flip}
+      title="Show your portfolio as a value investor's fortress. Same data, a different view."
+      className="flex items-center gap-2 rounded-full border border-border bg-raised py-1 pl-3 pr-1.5 text-xs font-medium text-ink-muted transition-colors hover:text-ink"
+    >
+      <span>Game mode</span>
+      <span
+        aria-hidden
+        className={`flex h-5 w-9 items-center rounded-full p-0.5 transition-colors ${
+          gameMode ? "bg-accent" : "bg-border"
+        }`}
+      >
+        <span
+          className={`h-4 w-4 rounded-full bg-onfill shadow transition-transform ${
+            gameMode ? "translate-x-4" : "translate-x-0"
+          } ${gameMode ? "" : "bg-ink-faint"}`}
+        />
+      </span>
+    </button>
+  );
+}
+
 function HealthBadge() {
   const health = useBackendHealth();
   const dotColor =
@@ -178,6 +229,8 @@ function Brand() {
  * desktop sidebar and the mobile drawer. `onNavigate` closes the drawer
  * when a link is tapped on mobile; it's a no-op on desktop. */
 function NavContents({ onNavigate, onSearch }: { onNavigate?: () => void; onSearch: () => void }) {
+  const { gameMode } = useGameMode();
+  const sections = navSectionsFor(gameMode);
   return (
     <>
       <button
@@ -192,7 +245,7 @@ function NavContents({ onNavigate, onSearch }: { onNavigate?: () => void; onSear
         <kbd className="rounded border border-border px-1.5 text-[10px] text-ink-faint">Ctrl K</kbd>
       </button>
       <div className="flex flex-col gap-4">
-        {NAV_SECTIONS.map((section) => (
+        {sections.map((section) => (
           <div key={section.title}>
             <p className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-faint">
               {section.title}
@@ -280,21 +333,23 @@ const PAGE_TITLES: Record<string, string> = {
  * the company name), so they're skipped here. */
 function useRouteTitle() {
   const { pathname } = useLocation();
+  const { gameMode } = useGameMode();
   useEffect(() => {
     if (/^\/holdings\/[^/]+/.test(pathname)) return;
-    const item = NAV_SECTIONS.flatMap((s) => s.items).find((i) => i.to === pathname);
+    const item = navSectionsFor(gameMode).flatMap((s) => s.items).find((i) => i.to === pathname);
     const base = "/" + pathname.split("/")[1];
     const label = item?.label ?? PAGE_TITLES[pathname] ?? PAGE_TITLES[base];
     document.title = label && pathname !== "/" ? `${label} · Aladdin` : "Aladdin";
-  }, [pathname]);
+  }, [pathname, gameMode]);
 }
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   useRouteTitle();
+  const { gameMode } = useGameMode();
 
-  const paletteRoutes = NAV_SECTIONS.flatMap((s) =>
+  const paletteRoutes = navSectionsFor(gameMode).flatMap((s) =>
     s.items.filter((i) => !i.disabled).map((i) => ({ label: i.label, to: i.to, group: s.title })),
   );
 
@@ -355,7 +410,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </svg>
         </IconButton>
         <Brand />
-        <span className="w-9" aria-hidden />
+        <GameModeToggle />
       </div>
 
       {/* Mobile drawer + backdrop (< lg), only mounted while open. */}
@@ -397,9 +452,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
           <NavContents onSearch={() => setSearchOpen(true)} />
         </nav>
-        <main id="main" tabIndex={-1} className="min-w-0 flex-1 overflow-y-auto focus:outline-none">
-          {children}
-        </main>
+        <div className="flex min-w-0 flex-1 flex-col">
+          {/* Slim top bar (lg+): the game-mode switch. Below lg the switch sits in the mobile bar. */}
+          <div className="hidden items-center justify-end border-b border-border bg-surface px-6 py-2 lg:flex">
+            <GameModeToggle />
+          </div>
+          <main id="main" tabIndex={-1} className="min-w-0 flex-1 overflow-y-auto focus:outline-none">
+            {children}
+          </main>
+        </div>
       </div>
     </div>
   );

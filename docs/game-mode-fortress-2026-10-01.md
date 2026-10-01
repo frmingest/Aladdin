@@ -1,6 +1,6 @@
 # Game mode ("Fortress") — feasibility and plan — 2026-10-01
 
-Status: **G1 (backend) written and tested, on branch `feature/game-mode-fortress`, PR open — not merged, not deployed, not checked live.** G2–G7 not started. F33 in `PROGRESS.md`.
+Status: **G1 (backend) and G2 (Fortress home, top-bar toggle) written and tested, PRs #23 and #24 open and stacked (`feature/game-mode-fortress`, `feature/game-mode-g2-fortress-home`) — not merged, not deployed, not checked live.** G3–G7 not started. F33 in `PROGRESS.md`.
 
 ## Why
 
@@ -108,7 +108,7 @@ page. That gives the "whole app feels different" effect without doubling fronten
 |---|---|---|
 | G0 | This ADR; decisions D1–D5 | done |
 | G1 | `game_mapping/v1.py`, `/game/state`, demo branch, account cash field, pytest for every rule and threshold | M — **built 2026-10-01 (PR open)** |
-| G2 | Top bar + toggle + provider; Fortress home with moat, walls, tower footprint, diworsification | L |
+| G2 | Top bar + toggle + provider; Fortress home with moat, walls, tower footprint, diworsification | L — **built 2026-10-01 (PR open, stacked on G1)** |
 | G3 | Drill-down: holding pages re-skinned (`data-skin`), Ledger view | M |
 | G4 | Sieges (regime/stress), margin-of-safety "land for sale", analysis-freshness weathering | M |
 | G5 | Vault (needs D2) | S–M |
@@ -171,3 +171,34 @@ PR for Faiz to review.
   temperament meter (G6), advisors (G7), any frontend (G2).
 - **Verified:** 59 boundary tests on the rules, 9 API tests, whole backend suite 1,178 passed,
   ruff clean, migration `p1b7c8d9e0f1` up / down / up on Postgres 16 with a single Alembic head.
+
+## G2 as built (2026-10-01)
+
+- **Toggle:** a **Game mode** switch in a new slim top bar (desktop) and in the mobile bar. Per browser
+  (`localStorage` key `aladdin-game-mode`, guarded), default off. On: opens `/fortress` and adds a
+  *Fortress* entry to the Overview nav group and the Ctrl+K palette. Off from the Fortress: back to the
+  Dashboard. With it off the app is unchanged.
+- **Scene:** `/fortress`, a lazy route chunk. One SVG, laid out by `lib/fortress.ts` (biggest holding
+  first, rows wrap and centre). Wall colour/pattern from the backend wall material (basalt, granite,
+  brick, timber, rotted; scaffolded outline with a "?" when unsurveyed); moat from the moat tier (wide
+  water with drawbridge, narrow, dry ditch, dotted when unsurveyed); ivy for ageing analysis, heavy ivy
+  plus scaffolding for stale, fog for none; funds drawn as outposts, physical gold as a gold store,
+  cash-like funds as granaries; a shantytown strip when the backend says so (capped at 16 huts drawn,
+  the true count is printed). Pressing a tower opens its survey (numbers behind the wall, analysis age,
+  verdict, link to the existing holding page).
+- **Beside the scene:** Vault card (level from the backend, the cash figure and its age, coin ounces
+  without a value), Spread-of-the-realm card (positions, effective holdings, top 1 / top 5), the data-gap
+  notes, and the rules version.
+- **Ledger tab:** the same state as a table, so nothing is only a drawing.
+- **Rules kept:** read-only; reads `GET /game/state` only (stored data, demo mode honoured, "Demo data"
+  chip when it is the fabricated state); no points, streaks or buy buttons; unknown data is drawn as fog
+  or scaffolding.
+- **Accessibility:** towers are keyboard-focusable buttons with a plain-language label; the rise-in
+  animation is switched off under `prefers-reduced-motion`.
+- **Deviation from the plan:** no Framer Motion. One CSS keyframe did the only animation needed, so the
+  planned new dependency was not added; the "iron gate snaps into place" effect (G7) can still use it.
+- **Verified:** tsc clean, ESLint 0 errors, 46 frontend tests (11 new), build. Rendered in Chromium
+  against synthetic states (19 holdings covering every material, structure, freshness and moat, heavy
+  shantytown) at desktop and phone width. **Not yet seen against Faiz's real data on the live deploy.**
+- **Not in G2:** re-skinned holding pages (G3), sieges and margin-of-safety land (G4), a cash entry
+  screen (G5, today cash is set via `PATCH /accounts/{id}`), temperament (G6), advisors and ambience (G7).
