@@ -3,13 +3,16 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import { DemoModeProvider } from "./lib/demoMode";
+import { GameModeProvider } from "./lib/gameMode";
 import "./index.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <BrowserRouter>
       <DemoModeProvider>
-        <App />
+        <GameModeProvider>
+          <App />
+        </GameModeProvider>
       </DemoModeProvider>
     </BrowserRouter>
   </React.StrictMode>,
