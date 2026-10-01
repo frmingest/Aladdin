@@ -52,6 +52,45 @@
   --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.04);
 }
 
+/* "Study" skin (game mode, F33 G3). Only the neutral surfaces and the accent
+   change, to a candlelit-study palette; the state colours (positive,
+   negative, caution) are NOT overridden, so a red still means bad and a
+   green good. Applied as data-skin="study" on <html> by GameModeProvider and
+   composed with the dark/light theme: it is a re-skin, never a second app. */
+:root[data-skin="study"] {
+  --c-background: 20 15 11;       /* #140F0B */
+  --c-surface: 31 24 18;          /* #1F1812 */
+  --c-raised: 42 33 25;           /* #2A2119 */
+  --c-border: 74 59 44;           /* #4A3B2C */
+  --c-border-subtle: 52 41 31;    /* #34291F */
+  --c-ink: 238 228 211;           /* #EEE4D3 */
+  --c-ink-muted: 187 172 150;     /* #BBAC96 */
+  --c-ink-faint: 146 131 111;     /* #92836F */
+  --c-accent: 214 168 90;         /* #D6A85A */
+  --c-accent-hover: 232 196 128;  /* #E8C480 */
+  --c-accent-subtle: 56 43 24;    /* #382B18 */
+  --c-onfill: 20 15 11;
+}
+:root[data-skin="study"][data-theme="light"] {
+  --c-background: 236 227 208;    /* #ECE3D0 */
+  --c-surface: 246 239 224;       /* #F6EFE0 */
+  --c-raised: 252 248 238;
+  --c-border: 214 201 175;
+  --c-border-subtle: 228 217 195;
+  --c-ink: 41 31 20;
+  --c-ink-muted: 100 86 66;
+  --c-ink-faint: 138 123 100;
+  --c-accent: 146 98 24;
+  --c-accent-hover: 112 74 14;
+  --c-accent-subtle: 240 226 194;
+  --c-onfill: 252 248 238;
+}
+/* Headings in a serif (system fonts, nothing extra to download). */
+:root[data-skin="study"] .font-display {
+  font-family: Georgia, "Iowan Old Style", "Palatino Linotype", Palatino, serif;
+}
+
+
 @layer base {
   body {
     @apply bg-background text-ink font-body antialiased;

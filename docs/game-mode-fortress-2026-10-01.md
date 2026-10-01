@@ -109,7 +109,7 @@ page. That gives the "whole app feels different" effect without doubling fronten
 | G0 | This ADR; decisions D1–D5 | done |
 | G1 | `game_mapping/v1.py`, `/game/state`, demo branch, account cash field, pytest for every rule and threshold | M — **built 2026-10-01 (PR open)** |
 | G2 | Top bar + toggle + provider; Fortress home with moat, walls, tower footprint, diworsification | L — **built 2026-10-01 (PR open, stacked on G1)** |
-| G3 | Drill-down: holding pages re-skinned (`data-skin`), Ledger view | M |
+| G3 | Drill-down: holding pages re-skinned (`data-skin`), Ledger view | M — **built 2026-10-01 (PR open, stacked on G2)** |
 | G4 | Sieges (regime/stress), margin-of-safety "land for sale", analysis-freshness weathering | M |
 | G5 | Vault (needs D2) | S–M |
 | G6 | Temperament meter, journal-driven | M |
@@ -202,3 +202,24 @@ PR for Faiz to review.
   shantytown) at desktop and phone width. **Not yet seen against Faiz's real data on the live deploy.**
 - **Not in G2:** re-skinned holding pages (G3), sieges and margin-of-safety land (G4), a cash entry
   screen (G5, today cash is set via `PATCH /accounts/{id}`), temperament (G6), advisors and ambience (G7).
+
+## G3 as built (2026-10-01)
+
+- **Study skin:** while game mode is on, `GameModeProvider` sets `data-skin="study"` on `<html>`; removing it
+  (switch off, or leaving the provider) restores the app exactly. `index.css` re-points only the neutral
+  surface/ink/accent tokens to a candlelit-study palette (dark and light variants, composed with the existing
+  `data-theme`), and sets headings in a system serif (no new font download). **State colours (positive,
+  negative, caution) are not overridden**, so red still means bad. This is the "re-skinned existing pages"
+  half of decision D1: every page changes feel, none is duplicated.
+- **Holding page:** in game mode a **tower survey** card sits at the top of `/holdings/:id` (same wall /
+  moat / size / analysis-age survey as the Fortress, shared `TowerSurvey` component, link back to the
+  Fortress). It renders nothing with game mode off, on an error, or for a holding with no tower (watchlist).
+- **Ledger:** sortable columns (holding, weight, moat, walls, analysis; strongest first, unknown last), a
+  **Needs a look** filter (timber/rotted walls, no moat, stale or missing analysis) and a totals line
+  (rows shown, share of portfolio, how many to look at first). All pure helpers in `lib/fortress.ts`. The
+  filter is a reading aid over backend categories, not a score and not advice to trade.
+- **Rules kept:** read-only, no new endpoint, no backend change, no points or rewards.
+- **Verified:** tsc clean, ESLint 0 errors, 53 frontend tests (7 new), build. Rendered the Ledger with the
+  skin in Chromium against a synthetic state. **Holding page with real data not seen yet.**
+- **Not in G3:** sieges and margin-of-safety land (G4), cash entry screen (G5), temperament (G6), advisors
+  and ambience (G7).

@@ -4,6 +4,10 @@ import {
   SCENE_WIDTH,
   describeTower,
   drawnShacks,
+  filterLedger,
+  ledgerTotals,
+  needsAttention,
+  sortLedger,
   layoutTowers,
   sortTowers,
   towerDimensions,
@@ -134,5 +138,53 @@ describe("describeTower", () => {
       tower({ name: "Gold ETC", structure: "bullion", moat: "not_applicable", wall: "not_applicable" }),
     );
     expect(text).toBe("Gold ETC, medium tower, gold store");
+  });
+});
+
+describe("ledger helpers (G3)", () => {
+  const strong = tower({ holding_id: "s", name: "Strong", weight_pct: "30", wall: "basalt", moat: "wide", freshness: "fresh" });
+  const weak = tower({ holding_id: "w", name: "Weak", weight_pct: "5", wall: "rotted", moat: "none", freshness: "overgrown" });
+  const fog = tower({ holding_id: "f", name: "Fog", weight_pct: null, wall: "unsurveyed", moat: "unsurveyed", freshness: "unsurveyed" });
+  const mid = tower({ holding_id: "m", name: "Mid", weight_pct: "15", wall: "brick", moat: "narrow", freshness: "weathered" });
+
+  it("sorts weight descending by default and puts unweighted last", () => {
+    expect(sortLedger([weak, fog, strong, mid], "weight").map((t) => t.holding_id)).toEqual(["s", "m", "w", "f"]);
+  });
+
+  it("sorts walls strongest first and puts unsurveyed after real ratings", () => {
+    expect(sortLedger([fog, weak, mid, strong], "wall").map((t) => t.holding_id)).toEqual(["s", "m", "w", "f"]);
+    expect(sortLedger([fog, weak, mid, strong], "wall", "desc")[0].holding_id).toBe("f");
+  });
+
+  it("sorts by moat, freshness and name", () => {
+    expect(sortLedger([weak, mid, strong], "moat").map((t) => t.holding_id)).toEqual(["s", "m", "w"]);
+    expect(sortLedger([weak, mid, strong], "freshness").map((t) => t.holding_id)).toEqual(["s", "m", "w"]);
+    expect(sortLedger([weak, mid, strong], "name").map((t) => t.name)).toEqual(["Mid", "Strong", "Weak"]);
+  });
+
+  it("does not mutate its input", () => {
+    const input = [weak, strong];
+    sortLedger(input, "weight");
+    expect(input[0]).toBe(weak);
+  });
+
+  it("flags attention on timber/rotted walls, no moat, stale or missing analysis", () => {
+    expect(needsAttention(strong)).toBe(false);
+    expect(needsAttention(mid)).toBe(false);
+    expect(needsAttention(weak)).toBe(true);
+    expect(needsAttention(fog)).toBe(true);
+    expect(needsAttention(tower({ wall: "timber" }))).toBe(true);
+    expect(needsAttention(tower({ moat: "none" }))).toBe(true);
+    expect(needsAttention(tower({ freshness: "overgrown" }))).toBe(true);
+  });
+
+  it("filters to the attention list", () => {
+    expect(filterLedger([strong, weak, fog, mid], "all")).toHaveLength(4);
+    expect(filterLedger([strong, weak, fog, mid], "attention").map((t) => t.holding_id)).toEqual(["w", "f"]);
+  });
+
+  it("totals count, weight and attention, ignoring missing weights", () => {
+    expect(ledgerTotals([strong, weak, fog, mid])).toEqual({ count: 4, weightPct: 50, attention: 2 });
+    expect(ledgerTotals([])).toEqual({ count: 0, weightPct: 0, attention: 0 });
   });
 });
