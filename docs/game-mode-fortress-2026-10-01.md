@@ -1,6 +1,6 @@
 # Game mode ("Fortress") — feasibility and plan — 2026-10-01
 
-Status: **G1 (backend) and G2 (Fortress home, top-bar toggle) written and tested, PRs open and stacked (`feature/game-mode-fortress`, `feature/game-mode-g2-fortress-home`) — not merged, not deployed, not checked live.** G3–G7 not started. F33 in `PROGRESS.md`.
+Status: **G1 (backend) and G2 (Fortress home, top-bar toggle) written and tested, PRs #23 and #24 open and stacked (`feature/game-mode-fortress`, `feature/game-mode-g2-fortress-home`) — not merged, not deployed, not checked live.** G3–G7 not started. F33 in `PROGRESS.md`.
 
 ## Why
 
