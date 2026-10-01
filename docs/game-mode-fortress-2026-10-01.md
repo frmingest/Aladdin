@@ -1,6 +1,6 @@
 # Game mode ("Fortress") — feasibility and plan — 2026-10-01
 
-Status: **G1–G5 are merged to `main` (PRs #23, #25, #27 carrying G3 + G4, #28), not yet checked live. G6 (temperament meter) is built on `feature/game-mode-g6-temperament`, PR open. G7 not started.** F33 in `PROGRESS.md`.
+Status: **G1–G5 are merged to `main` (PRs #23, #25, #27 carrying G3 + G4, #28), not yet checked live. G6 (temperament meter) is built on `feature/game-mode-g6-temperament`, PR #29 open. G7 not started.** F33 in `PROGRESS.md`.
 
 ## Why
 
@@ -112,7 +112,7 @@ page. That gives the "whole app feels different" effect without doubling fronten
 | G3 | Drill-down: holding pages re-skinned (`data-skin`), Ledger view | M — **merged (#27, with G4)** |
 | G4 | Sieges (regime/stress), margin-of-safety "land for sale", tripwire breaches (analysis-freshness weathering already shipped in G2) | M — **merged (#27)** |
 | G5 | Vault entry screen (D2) | S–M — **merged (#28)** |
-| G6 | Temperament meter, journal-driven | M — **built 2026-10-01 (PR open)** |
+| G6 | Temperament meter, journal-driven | M — **built 2026-10-01 (PR #29)** |
 | G7 | Advisors, polish, ambience (rain, lamp, clock), reduced-motion | M |
 
 Sizes are relative effort, not hours. **The art is the long pole** — a procedural SVG kit gets to
