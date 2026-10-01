@@ -111,7 +111,7 @@ page. That gives the "whole app feels different" effect without doubling fronten
 | G2 | Top bar + toggle + provider; Fortress home with moat, walls, tower footprint, diworsification | L — **built 2026-10-01 (PR open, stacked on G1)** |
 | G3 | Drill-down: holding pages re-skinned (`data-skin`), Ledger view | M — **built 2026-10-01 (PR open, stacked on G2)** |
 | G4 | Sieges (regime/stress), margin-of-safety "land for sale", tripwire breaches (analysis-freshness weathering already shipped in G2) | M — **built 2026-10-01 (PR open, carries G3)** |
-| G5 | Vault entry screen (D2) | S–M — **built 2026-10-01 (PR open, stacked on G4)** |
+| G5 | Vault entry screen (D2) | S–M — **built 2026-10-01 (PR #28, stacked on G4)** |
 | G6 | Temperament meter, journal-driven | M |
 | G7 | Advisors, polish, ambience (rain, lamp, clock), reduced-motion | M |
 

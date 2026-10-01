@@ -15,7 +15,7 @@ Architecture and diagram: [architecture.md](architecture.md).
 |---|---|
 | **Phase** | Phase 11: Buffett/Munger single-focus rebuild ([sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md)) |
 | **`main`** | `067376e` (PR #25). Merged: CI fixes (#21), docs (#22), game mode G1 (#23) and G2 (#25). **G3 (PR #26) is not in `main`**: it was merged into the already-merged G2 branch; the G4 PR carries it |
-| **Open PRs** | **Game mode G5** (vault entry screen, `feature/game-mode-g5-vault`, stacked on the G3+G4 branch: merge G3+G4 first). **Game mode G3 + G4** (`feature/game-mode-g4-sieges-land` → `main`; close #26, it is included) |
+| **Open PRs** | **Game mode G5** (PR #28, vault entry screen, `feature/game-mode-g5-vault`, stacked on the G3+G4 branch: merge G3+G4 first). **Game mode G3 + G4** (`feature/game-mode-g4-sieges-land` → `main`; close #26, it is included) |
 | **Sprints closed** | 0–15 (16 and 17 / Epic F22 were built and removed 2026-09-29) |
 | **Backend tests** | 1,226 pass (verified 2026-10-01 on the G4 branch) · Ruff clean · frontend 70 tests, tsc and ESLint clean |
 | **Migration head** | `o1a6b7c8d9e0` (one head). Not yet confirmed on Supabase: `l1d2e3f4a5b6`, `n1f5a6b7c8d9`, `o1a6b7c8d9e0` |
