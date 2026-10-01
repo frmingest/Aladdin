@@ -28,6 +28,7 @@ import LampLogo from "../LampLogo";
 import type { FortressShantytown, FortressSiegeLevel, FortressWall, GameSiege, GameTower } from "../../lib/types";
 import { worldPalette } from "../../lib/fortressArt";
 import { SceneAmbience, SceneBackdrop, SceneDefs, SceneVignette } from "./sceneWorld";
+import MarketSquare, { MARKET_HEIGHT, type MarketSquareProps } from "./MarketSquare";
 
 /**
  * The Fortress home scene (F33): a painted 2.5D diorama of the real
@@ -1266,6 +1267,22 @@ export function RealmPeek({ count, oneLine }: { count: number; oneLine: string |
   );
 }
 
+/** Quick-look card for the market square (hover over the stalls or the hall). */
+export function MarketPeek({ count, inRange }: { count: number | null; inRange: number }) {
+  return (
+    <div className="fortress-tip" role="status">
+      <p className="fortress-tip-name">The Marketplace</p>
+      <p className="fortress-tip-sub">
+        {count === null
+          ? "Your watchlist, one store per company"
+          : `${count} ${count === 1 ? "store" : "stores"}, one per watchlist company${inRange > 0 ? ` · ${inRange} in your price range` : ""}`}
+      </p>
+      <p className="mt-1.5">Outside the walls: a place to look at what you do not own yet.</p>
+      <p className="fortress-tip-hint">Click to walk the street and step into a store</p>
+    </div>
+  );
+}
+
 export default function FortressScene({
   layout,
   shantytown,
@@ -1278,6 +1295,7 @@ export default function FortressScene({
   realmLevel,
   onRealmSelect,
   onRealmHover,
+  market = null,
 }: {
   layout: FortressLayout;
   shantytown: FortressShantytown;
@@ -1290,10 +1308,14 @@ export default function FortressScene({
   realmLevel: RealmLevel;
   onRealmSelect: () => void;
   onRealmHover: (on: boolean) => void;
+  /** The market square below the walls (G9). Null draws none. */
+  market?: MarketSquareProps | null;
 }) {
   // Room below the last terrace only when there is a shantytown to draw there.
   const hasShacks = shantytown !== "none" && drawnShacks(shackCount) > 0;
-  const height = layout.height + (hasShacks ? 70 : 12);
+  // The market sits just below the last terrace (and below the shantytown, when there is one).
+  const marketTop = layout.height + (hasShacks ? 70 : -30);
+  const height = market ? marketTop + MARKET_HEIGHT : layout.height + (hasShacks ? 70 : 12);
   const level = siege?.level ?? null;
   const sky = siegeSky(level);
   const palette = worldPalette(level);
@@ -1340,6 +1362,7 @@ export default function FortressScene({
           );
         })}
         <Shantytown level={shantytown} count={shackCount} y={layout.height + 24} />
+        {market && <MarketSquare y={marketTop} {...market} />}
         <SceneAmbience palette={palette} height={height} />
         <SceneVignette height={height} />
       </svg>

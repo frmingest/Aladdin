@@ -118,7 +118,7 @@ function navSectionsFor(gameMode: boolean): NavSection[] {
   if (!gameMode) return NAV_SECTIONS;
   return NAV_SECTIONS.map((section) =>
     section.title === "Overview"
-      ? { ...section, items: [{ label: "Fortress", to: "/fortress" }, ...section.items] }
+      ? { ...section, items: [{ label: "Fortress", to: "/fortress" }, { label: "Marketplace", to: "/fortress/marketplace" }, ...section.items] }
       : section,
   );
 }
@@ -248,7 +248,7 @@ function NavContents({ onNavigate, onSearch }: { onNavigate?: () => void; onSear
                   <li key={item.to}>
                     <NavLink
                       to={item.to}
-                      end={item.to === "/"}
+                      end={item.to === "/" || item.to === "/fortress"}
                       onClick={onNavigate}
                       className={({ isActive }) =>
                         `block rounded-md border-l-2 px-3 py-2 text-sm font-medium transition-colors ${
@@ -319,7 +319,7 @@ function useRouteTitle() {
   const { pathname } = useLocation();
   const { gameMode } = useGameMode();
   useEffect(() => {
-    if (/^\/holdings\/[^/]+/.test(pathname)) return;
+    if (/^\/(holdings|fortress\/marketplace)\/[^/]+/.test(pathname)) return;
     const item = navSectionsFor(gameMode).flatMap((s) => s.items).find((i) => i.to === pathname);
     const base = "/" + pathname.split("/")[1];
     const label = item?.label ?? PAGE_TITLES[pathname] ?? PAGE_TITLES[base];

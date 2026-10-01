@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { api, ApiError } from "../lib/api";
 import { layoutTowers } from "../lib/fortress";
 import { formatDecimal, formatNok, formatPct100 } from "../lib/format";
-import type { GameState } from "../lib/types";
+import type { GameState, Watchlist } from "../lib/types";
+import { MARKET_PATH, orderStreet, shopFront } from "../lib/marketplace";
 import AdvisorsCard from "../components/fortress/AdvisorsCard";
 import FortressLedger from "../components/fortress/FortressLedger";
-import FortressScene, { RealmPeek, TowerPeek } from "../components/fortress/FortressScene";
+import FortressScene, { MarketPeek, RealmPeek, TowerPeek } from "../components/fortress/FortressScene";
 import RealmVerdict from "../components/fortress/RealmVerdict";
 import { REALM_LEVEL_LABEL, summarizeRealm } from "../lib/realmVerdict";
 import { GameFrame, GameHud } from "../components/fortress/GameFrame";
@@ -48,6 +50,10 @@ export default function FortressPage() {
   // The Great Keep and the walls stand for the whole fortress.
   const [realmSelected, setRealmSelected] = useState(false);
   const [realmHot, setRealmHot] = useState(false);
+  // The Marketplace (G9) reads the watchlist; the fortress still draws if it cannot load.
+  const [watch, setWatch] = useState<Watchlist | null>(null);
+  const [marketHot, setMarketHot] = useState(false);
+  const navigate = useNavigate();
 
   const load = useCallback(() => {
     setLoading(true);
@@ -67,6 +73,25 @@ export default function FortressPage() {
     document.title = "Fortress · Aladdin";
     load();
   }, [load]);
+
+  useEffect(() => {
+    api
+      .getWatchlist()
+      .then(setWatch)
+      .catch(() => setWatch(null));
+  }, []);
+
+  const market = useMemo(() => {
+    const rows = orderStreet(watch?.rows ?? []);
+    return {
+      count: watch ? rows.length : null,
+      inRange: rows.filter((r) => r.status === "buy_zone").length,
+      tones: rows.map((r) => shopFront(r).tone),
+      hot: marketHot,
+      onOpen: () => navigate(MARKET_PATH),
+      onHover: setMarketHot,
+    };
+  }, [watch, marketHot, navigate]);
 
   const layout = useMemo(() => layoutTowers(state?.towers ?? []), [state]);
   const selected =
@@ -138,6 +163,16 @@ export default function FortressPage() {
                   </button>
                 ))}
               </div>
+              {view === "scene" && (
+                <button
+                  type="button"
+                  onClick={() => navigate(MARKET_PATH)}
+                  className="rounded-md border border-border px-3 py-1 text-sm font-medium text-ink-muted transition-colors hover:text-ink"
+                  title="Same as pressing the market square below the walls"
+                >
+                  Enter the Marketplace{market.count !== null ? ` · ${market.count}` : ""}
+                </button>
+              )}
               {view === "scene" && state.towers.length > 0 && realm && (
                 <button
                   type="button"
@@ -185,6 +220,7 @@ export default function FortressPage() {
                       realmLevel={realm?.level ?? "unknown"}
                       onRealmSelect={selectRealm}
                       onRealmHover={setRealmHot}
+                      market={market}
                     />
                   </div>
                 </GameFrame>
@@ -192,6 +228,8 @@ export default function FortressPage() {
                 <div className="fortress-peek-slot" aria-live="polite">
                   {hovered ? (
                     <TowerPeek tower={hovered} />
+                  ) : marketHot ? (
+                    <MarketPeek count={market.count} inRange={market.inRange} />
                   ) : realmHot ? (
                     <RealmPeek
                       count={state.towers.length}
@@ -231,6 +269,7 @@ export default function FortressPage() {
               <li>Fog, a ghost outline or a ?: not surveyed</li>
               <li>Green ring: the tower or fortress part you selected</li>
               <li>Great Keep and walls: the whole portfolio. Towers: single holdings</li>
+              <li>The market square below the walls: your watchlist. A lit lantern means that company is in the price range you named</li>
               <li>
                 Water or dry ditch in front of the wall: that tower&apos;s moat,
                 one stretch of one continuous moat
