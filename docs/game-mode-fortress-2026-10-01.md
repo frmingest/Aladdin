@@ -424,3 +424,39 @@ added and there is no migration: the advisors only read values `GET /game/state`
   **Not seen with Faiz's real portfolio, and the sound has not been listened to** (no audio in the build sandbox).
 - **Not in G7b:** generated advisor lines (possible later, per D4), per-holding advisor lines on the holding page,
   illustrated sprites for the portraits, a remembered sound preference.
+
+## G8: magic-lamp logo, one connected fortress, verdict on the whole (2026-10-01)
+
+Faiz asked (1) for a real Disney-style magic lamp as the logo and (2) for the towers to be pieces of one
+fortress/moat, each clickable for its own holding, with a click on the whole structure giving a summary
+verdict for all investments. Frontend only; no backend, mapping or migration change.
+
+- **Logo:** `components/LampLogo.tsx` (golden lamp, jewels, blue genie smoke; unique gradient ids per
+  instance; `simple` variant for tiny sizes), used in `Brand` (sidebar, mobile bar, drawer), as the medallion on
+  the Great Keep and on the verdict card; `public/favicon.svg` replaces the inline favicon.
+- **One structure:** `layoutTowers` now puts a **Great Keep** (190 wide) in the middle of the top terrace, the
+  heaviest holdings alternately either side (each goes to the shorter side), the rest on the terraces below
+  (rows centred as before). `SCENE_TOP` 96 to 130 for the keep's height. Each terrace gets a **curtain wall**
+  (full width, crenellated) and a **corner bastion** at each end; towers stand in the wall.
+- **One moat:** `moatRuns()` turns each tower's moat tier into one stretch of a continuous channel per row:
+  water (wide deeper, narrow shallower), dry ditch (none), dotted outline (unsurveyed), plain ground (funds, no
+  moat tier). Neighbouring stretches of the same kind join. The ends run out to the bastions; the keep stands on a
+  stone causeway, so no stretch of moat belongs to the keep. Drawbridges stay at each water-moat tower.
+  Shared (correlated) weak walls are drawn only within a row and never through the keep.
+- **Clicking:** a tower = that holding's `TowerSurvey`. The keep, any curtain wall or bastion, and a toolbar
+  button ("Verdict on the whole fortress", the keyboard and touch route) = `RealmVerdict`. Hovering the whole
+  lights keep, walls and bastions together and shows a quick-look card.
+- **The whole-fortress verdict** (`lib/realmVerdict.ts`, rules `realm-v1`): level by fixed rules in order.
+  *Needs a look first*: any fired tripwire, or 20%+ of the portfolio behind timber/rotted walls, or 40%+ with no
+  moat, or besieged weather. *Cannot judge yet*: 50%+ never surveyed or nothing to judge. *Mixed*: any weak wall
+  or moat-less weight, 25%+ stale, 25%+ above the bull case, 20%+ unsurveyed, a thesis in review, gathering
+  storm, restless/rash temperament. Otherwise *No rule flags* (it does not mean "buy"). Lines for walls, moats,
+  analysis age, thesis, land, weather, vault, spread, temperament; up to five "open these towers first" buttons
+  with reasons; the stored analyst-rating mix (labelled as from the saved analyses, not re-rated). Read-only,
+  no provider or model call, never says buy/sell/add/trim (a test enforces it), unknown is never called sound.
+  The keep's banner colour follows the level.
+- **Open decision:** the thresholds live in the frontend like the Ledger's "Needs a look" filter. Rule 3 style
+  versioning would put them in the backend mapping; not done unless Faiz wants it.
+- **Verified:** tsc clean, 116 frontend tests (21 new: layout with keep, moat runs, verdict rules and boundaries),
+  production build; rendered in Chromium (14, 5 and 3 holdings; calm and gathering; hovered and selected;
+  verdict card dark and light). **Not seen with real data or in the full app.**
