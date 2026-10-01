@@ -231,6 +231,15 @@
   .fortress-firefly, .fortress-ember, .fortress-rain { display: none; }
 }
 
+/* Study lamp glow (G7b): a slow breath, switched off under reduced motion. */
+@keyframes study-lamp-breathe {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.45; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .study-lamp-glow { opacity: 0.38; animation: study-lamp-breathe 4.5s ease-in-out infinite; }
+}
+
 /* Towers: a selection ring on the ground, gold on hover and keyboard focus,
    green (and gently pulsing) when selected. */
 .fortress-tower { cursor: pointer; outline: none; }

@@ -59,6 +59,7 @@ from app.schemas.valuation import MarginOfSafetyBoardOut
 from app.services import metrics as metrics_service
 from app.services.game import rules
 from app.services.game import temperament as temperament_rules
+from app.services.game.advisors import advisors
 from app.services.game.rules import (
     ClusterFact,
     LandFacts,
@@ -480,6 +481,7 @@ def build_game_state(
     temperament = _build_temperament(inputs, mapping, now)
     if temperament.decisions_logged == 0:
         notes.append("No decisions logged in the journal this year: the temperament meter has little to read.")
+    advisor_lines = advisors(towers, diworsification, vault, siege, temperament)
 
     return GameStateOut(
         mapping_version=mapping.version,
@@ -491,6 +493,7 @@ def build_game_state(
         vault=vault,
         siege=siege,
         temperament=temperament,
+        advisors=advisor_lines,
         notes=notes,
     )
 

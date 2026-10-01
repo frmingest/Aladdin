@@ -1977,6 +1977,31 @@ export interface GameTemperament {
   turnover: GameTurnover[];
 }
 
+// --- Game mode G7b: advisors — backend/app/services/game/advisors.py
+
+export type GameAdvisorName = "oracle" | "partner";
+export type GameAdvisorTone = "warning" | "note" | "calm";
+
+export interface GameAdvisorLine {
+  advisor: GameAdvisorName;
+  /** Rule id, e.g. "tripwire_fired". */
+  rule: string;
+  tone: GameAdvisorTone;
+  text: string;
+  holding_id: string | null;
+  holding_name: string | null;
+  /** The stored facts the rule was triggered by, so every line can be checked. */
+  facts: string[];
+}
+
+export interface GameAdvisors {
+  lines_version: string;
+  lines: GameAdvisorLine[];
+  /** Lines that matched a rule but did not fit in the shown set. */
+  hidden_count: number;
+  disclaimer: string;
+}
+
 export interface GameState {
   mapping_version: string;
   as_of: string | null;
@@ -1988,5 +2013,7 @@ export interface GameState {
   siege: GameSiege | null;
   /** G6. Optional so an older backend without the meter still renders. */
   temperament?: GameTemperament | null;
+  /** G7b. Optional so an older backend without the advisors still renders. */
+  advisors?: GameAdvisors | null;
   notes: string[];
 }

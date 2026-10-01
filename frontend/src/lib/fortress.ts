@@ -7,6 +7,8 @@ import type {
   FortressSize,
   FortressStructure,
   FortressTemperamentLevel,
+  GameAdvisorName,
+  GameAdvisorTone,
   FortressThesis,
   FortressVaultLevel,
   FortressWall,
@@ -536,4 +538,79 @@ export function needlePct(needle: string | null): number | null {
   if (needle === null) return null;
   const n = Number(needle);
   return Number.isFinite(n) ? Math.min(100, Math.max(0, n)) : null;
+}
+
+
+// --- G7b: advisors, study lamp and clock --------------------------------------
+// Wording and drawing geometry only. Which lines appear, in which order and for
+// which holding is decided by the backend (backend/app/services/game/advisors.py);
+// nothing here scores, ranks or recommends.
+
+export const ADVISOR_NAME: Record<GameAdvisorName, string> = {
+  oracle: "The Oracle",
+  partner: "The Partner",
+};
+
+export const ADVISOR_ROLE: Record<GameAdvisorName, string> = {
+  oracle: "A patient owner. Looks at what you hold the way an owner would.",
+  partner: "A blunt sceptic. Asks what could go wrong before anything else.",
+};
+
+export const ADVISOR_TONE_LABEL: Record<GameAdvisorTone, string> = {
+  warning: "Look at this",
+  note: "Worth noting",
+  calm: "Steady",
+};
+
+/** A line's rule id as short readable words, for the "why this line" fact list. */
+export function advisorRuleLabel(rule: string): string {
+  return rule.replace(/_/g, " ");
+}
+
+/** The portfolio snapshot is "recent" for the lamp for this many days: the same
+ * 7-day limit the backend uses for stored snapshots (mapping v1). */
+export const LAMP_RECENT_DAYS = 7;
+
+export type LampState = "lit" | "dim" | "out";
+
+export interface LampReading {
+  state: LampState;
+  ageDays: number | null;
+  text: string;
+}
+
+/** The study lamp mirrors how old the survey is. Lit = a portfolio snapshot from
+ * the last week, dim = older, out = no snapshot at all. It is a reading of the
+ * data's age, not a reward: it never "levels up". */
+export function lampReading(asOf: string | null, now: Date): LampReading {
+  if (asOf === null) {
+    return { state: "out", ageDays: null, text: "The lamp is out: there is no portfolio snapshot to read." };
+  }
+  const t = Date.parse(asOf);
+  if (!Number.isFinite(t)) {
+    return { state: "out", ageDays: null, text: "The lamp is out: the snapshot date could not be read." };
+  }
+  const ageDays = Math.max(0, Math.floor((now.getTime() - t) / 86_400_000));
+  if (ageDays <= LAMP_RECENT_DAYS) {
+    const when = ageDays === 0 ? "today" : ageDays === 1 ? "yesterday" : `${ageDays} days ago`;
+    return { state: "lit", ageDays, text: `The lamp is lit: the portfolio snapshot is from ${when}.` };
+  }
+  return {
+    state: "dim",
+    ageDays,
+    text: `The lamp is dim: the portfolio snapshot is ${ageDays} days old. Upload a new one to light it.`,
+  };
+}
+
+/** Hand angles in degrees clockwise from 12 o'clock for an analog clock face. */
+export function clockHands(now: Date): { hour: number; minute: number } {
+  const m = now.getMinutes();
+  const h = now.getHours() % 12;
+  return { minute: m * 6, hour: h * 30 + m * 0.5 };
+}
+
+/** A point on a clock face at `deg` clockwise from 12 o'clock. */
+export function clockPoint(deg: number, cx: number, cy: number, r: number): { x: number; y: number } {
+  const rad = (deg * Math.PI) / 180;
+  return { x: cx + r * Math.sin(rad), y: cy - r * Math.cos(rad) };
 }

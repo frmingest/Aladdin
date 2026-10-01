@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  ADVISOR_NAME,
+  ADVISOR_ROLE,
+  ADVISOR_TONE_LABEL,
+  LAMP_RECENT_DAYS,
+  advisorRuleLabel,
+  clockHands,
+  clockPoint,
+  lampReading,
   TEMPERAMENT_BANDS,
   dialArc,
   dialPoint,
@@ -400,5 +408,70 @@ describe("temperament helpers (G6)", () => {
 
   it("draws an arc path", () => {
     expect(dialArc(0, 100, 100, 100, 50)).toMatch(/^M50\.00 100\.00 A50 50 0 0 1 150\.00 100\.00$/);
+  });
+});
+
+
+describe("advisor wording (G7b)", () => {
+  it("names both advisors and every tone, and never presents them as the real people", () => {
+    expect(ADVISOR_NAME.oracle).toBe("The Oracle");
+    expect(ADVISOR_NAME.partner).toBe("The Partner");
+    expect(Object.keys(ADVISOR_ROLE).sort()).toEqual(["oracle", "partner"]);
+    expect(Object.keys(ADVISOR_TONE_LABEL).sort()).toEqual(["calm", "note", "warning"]);
+    const all = [...Object.values(ADVISOR_NAME), ...Object.values(ADVISOR_ROLE)].join(" ").toLowerCase();
+    expect(all).not.toMatch(/buffett|munger/);
+  });
+
+  it("shows a rule id as readable words", () => {
+    expect(advisorRuleLabel("weak_walls_big_tower")).toBe("weak walls big tower");
+    expect(advisorRuleLabel("all_quiet")).toBe("all quiet");
+  });
+});
+
+describe("study lamp (G7b)", () => {
+  const now = new Date("2026-10-01T12:00:00Z");
+
+  it("is lit for a snapshot from the last week, with the age in words", () => {
+    expect(lampReading("2026-10-01T08:00:00Z", now)).toMatchObject({ state: "lit", ageDays: 0 });
+    expect(lampReading("2026-10-01T08:00:00Z", now).text).toContain("today");
+    expect(lampReading("2026-09-30T08:00:00Z", now).text).toContain("yesterday");
+    expect(lampReading("2026-09-27T12:00:00Z", now)).toMatchObject({ state: "lit", ageDays: 4 });
+  });
+
+  it("flips from lit to dim exactly after the recent-days limit", () => {
+    const edge = new Date(now.getTime() - LAMP_RECENT_DAYS * 86_400_000).toISOString();
+    const past = new Date(now.getTime() - (LAMP_RECENT_DAYS + 1) * 86_400_000).toISOString();
+    expect(lampReading(edge, now).state).toBe("lit");
+    expect(lampReading(past, now)).toMatchObject({ state: "dim", ageDays: LAMP_RECENT_DAYS + 1 });
+    expect(lampReading(past, now).text).toContain("Upload a new one");
+  });
+
+  it("is out, never lit, with no snapshot or an unreadable date", () => {
+    expect(lampReading(null, now)).toMatchObject({ state: "out", ageDays: null });
+    expect(lampReading("not a date", now).state).toBe("out");
+  });
+
+  it("treats a future-dated snapshot as age zero rather than a negative age", () => {
+    expect(lampReading("2026-10-05T00:00:00Z", now)).toMatchObject({ state: "lit", ageDays: 0 });
+  });
+});
+
+describe("clock geometry (G7b)", () => {
+  it("puts the hands where an analog clock does", () => {
+    expect(clockHands(new Date(2026, 9, 1, 3, 0))).toEqual({ hour: 90, minute: 0 });
+    expect(clockHands(new Date(2026, 9, 1, 0, 30))).toEqual({ hour: 15, minute: 180 });
+    expect(clockHands(new Date(2026, 9, 1, 15, 15))).toEqual({ hour: 97.5, minute: 90 });
+    expect(clockHands(new Date(2026, 9, 1, 12, 0))).toEqual({ hour: 0, minute: 0 });
+  });
+
+  it("maps degrees clockwise from 12 o'clock to points on the face", () => {
+    const top = clockPoint(0, 22, 22, 10);
+    const right = clockPoint(90, 22, 22, 10);
+    const bottom = clockPoint(180, 22, 22, 10);
+    expect([top.x, top.y]).toEqual([22, 12]);
+    expect(right.x).toBeCloseTo(32);
+    expect(right.y).toBeCloseTo(22);
+    expect(bottom.x).toBeCloseTo(22);
+    expect(bottom.y).toBeCloseTo(32);
   });
 });
