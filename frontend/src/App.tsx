@@ -16,6 +16,9 @@ import Layout from "./components/Layout";
 const DashboardPage = lazy(() => import("./pages/DashboardPage"));
 // Game mode (F33, G2): its own chunk, so default mode downloads nothing for it.
 const FortressPage = lazy(() => import("./pages/FortressPage"));
+// Marketplace (G9): the street of watchlist stores and the deep-dive inside each.
+const MarketplacePage = lazy(() => import("./pages/MarketplacePage"));
+const MarketStorePage = lazy(() => import("./pages/MarketStorePage"));
 const HoldingsListPage = lazy(() => import("./pages/HoldingsListPage"));
 const HoldingDetailPage = lazy(() => import("./pages/HoldingDetailPage"));
 const PortfolioPage = lazy(() => import("./pages/PortfolioPage"));
@@ -59,6 +62,8 @@ export default function App() {
         <Routes>
           <Route path="/" element={<DashboardPage />} />
           <Route path="/fortress" element={<FortressPage />} />
+          <Route path="/fortress/marketplace" element={<MarketplacePage />} />
+          <Route path="/fortress/marketplace/:holdingId" element={<MarketStorePage />} />
           <Route path="/holdings" element={<HoldingsListPage />} />
           <Route path="/holdings/:id" element={<HoldingDetailPage />} />
           <Route path="/portfolio" element={<PortfolioPage />} />

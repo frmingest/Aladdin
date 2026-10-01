@@ -460,3 +460,39 @@ verdict for all investments. Frontend only; no backend, mapping or migration cha
 - **Verified:** tsc clean, 116 frontend tests (21 new: layout with keep, moat runs, verdict rules and boundaries),
   production build; rendered in Chromium (14, 5 and 3 holdings; calm and gathering; hovered and selected;
   verdict card dark and light). **Not seen with real data or in the full app.**
+
+## G9: Marketplace and store deep-dive (2026-10-01)
+
+Faiz asked for a Marketplace area in the fortress where he can enter a store to deep-dive a watchlist
+company, in the same playful theme, laid out as a decision view (invest or not). Frontend only; no backend,
+mapping or migration change. Every figure comes from data the app already stores.
+
+- **In the fortress:** a market square below the walls (timber Market Hall, up to six stalls, one per watchlist
+  company; the true count is printed). A stall's lantern is lit when that company is at or below the price Faiz
+  named. Press it (or the toolbar button, the keyboard route) to enter. Game mode adds a *Marketplace* nav entry.
+- **The street** `/fortress/marketplace`: one store per watchlist company, ordered in-range first, then nearest to
+  the price named. The shop window shows only what the watchlist row knows: price against your price, the stored
+  moat and verdict, the age of the analysis, as five round marks (tick open, half ajar, cross closed, dashed unknown).
+- **A store** `/fortress/marketplace/:holdingId`: shopfront with a merchant, the decision scales, **eight gates**
+  (moat, walls, earning power, fair price, your price, analyst's word, tripwires, freshness) each with its reading and
+  source (fixed rule / the model's reading / your input), a **price board** (stored bear, base and bull, the price
+  that leaves a 25% cushion, today's price, your price, and which zone today sits in), the **moat tour** (source by
+  source), the **numbers on the shelves** (ROIC, ROE, margins, leverage, cover, FCF yield, P/E, P/B, EV/EBITDA), **the
+  case** (why own it, what could go wrong, what would prove it wrong, what to watch, the analyst's notes), tripwires,
+  and **Name your price** (the one write: PATCH of the watchlist buy-below price, with one-press fills from the cushion
+  price or the bear case).
+- **How it decides** (`lib/marketplace.ts`, rules `market-v1`, shown on the page under "How the gates are read"):
+  walls on net debt / EBITDA (2.5x open, 4x ajar, interest cover under 3x lowers one step; net cash open; banks and
+  funds not applicable); earning power on ROIC 15% / 8% (banks ROE 10% / 6%); fair price on base-case margin of safety
+  (25% open, above 0 ajar, 0 or below closed; a withheld valuation is unknown); your price from the watchlist status;
+  freshness 90 / 180 days. Overall: a closed business gate = **Pass for now**; else closed price gate = **Wait for the
+  price**; else unknown moat or price = **Cannot judge yet**; else all business gates open and a real cushion =
+  **Gates open**; otherwise **Promising, doubts remain**. Never says buy or sell (a test enforces it); unknown stays unknown.
+- **Data and cost:** a store makes read requests only (holding, watchlist entry, valuation, latest analysis, thesis,
+  periods, newest-period ratios); each failing one is listed and its gates become unknown. `GET /valuation/holdings/{id}`
+  can refresh a stale valuation exactly as the holding page does.
+- **Decision for Faiz:** thresholds live in the frontend (like the realm verdict); say if you want them in the
+  backend's versioned mapping.
+- **Verified:** tsc clean, ESLint 0 errors (the 2 existing warnings), 156 frontend tests (40 new: every gate boundary,
+  verdict levels, ladder zones, street order, wording), production build; rendered in Chromium against sample data
+  (fortress with the square, street, store at desktop and phone width). **Not seen with real data.**

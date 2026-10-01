@@ -352,3 +352,57 @@
   color: #f3e4bf;
   line-height: 1.25;
 }
+
+/* ---------------------------------------------------------------------------
+   Marketplace (game mode, G9). Painted pieces keep fixed colours, like the
+   Fortress painting; the words around them follow the theme. */
+.market-shop {
+  overflow: hidden;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #2a1d12, #17110b 70%);
+  box-shadow:
+    inset 0 0 0 1px #000,
+    inset 0 0 0 2px #a07b3a,
+    inset 0 0 0 3px #3b2a16,
+    0 18px 40px -18px rgb(0 0 0 / 0.95);
+}
+.market-shop .game-hud { margin-top: 0; }
+.market-awning { display: block; width: 100%; height: 56px; filter: drop-shadow(0 6px 6px rgb(0 0 0 / 0.5)); }
+.market-awning-sm { display: block; width: 100%; height: 34px; }
+.market-sign {
+  display: inline-block;
+  max-width: 100%;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  background: linear-gradient(180deg, #4a3318, #2e1f0f);
+  box-shadow: inset 0 0 0 1px #000, inset 0 0 0 2px #a07b3a, 0 6px 14px -8px #000;
+}
+.market-bubble {
+  position: relative;
+  padding: 0.6rem 0.8rem;
+  border-radius: 10px;
+  color: #f3e4bf;
+  background: #2b2014;
+  box-shadow: inset 0 0 0 1px #8a6a32;
+}
+.market-bubble::before {
+  content: "";
+  position: absolute;
+  left: -7px;
+  bottom: 14px;
+  width: 12px;
+  height: 12px;
+  background: #2b2014;
+  box-shadow: -1px 1px 0 0 #8a6a32;
+  transform: rotate(45deg);
+}
+.market-stall { box-shadow: 0 10px 24px -18px rgb(0 0 0 / 0.9); }
+.market-stall:hover { border-color: rgb(var(--c-accent) / 0.6); }
+.market-tilt { transition: transform 1100ms cubic-bezier(0.34, 1.4, 0.64, 1); }
+.market-ring { stroke: transparent; transition: stroke 120ms; pointer-events: none; }
+.fortress-realm-part:hover .market-ring,
+.fortress-realm-part:focus-visible .market-ring { stroke: #f2c94c; stroke-opacity: 0.85; stroke-dasharray: 6 5; }
+@media (prefers-reduced-motion: reduce) {
+  .market-tilt { transition: none; }
+  .market-stall { transition: none; }
+}
