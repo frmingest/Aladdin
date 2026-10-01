@@ -5,7 +5,8 @@ what everything else runs on, and why each technology was chosen.
 
 *Written 2026-09-23; refreshed 2026-09-30 against `main` (`b8e8f79`). Update this doc whenever a provider,
 prompt or data source changes. The structure of the app (services, deployment, jobs, diagrams) is in
-[architecture.md](architecture.md).*
+[architecture.md](architecture.md). For a per-output view (which thing on screen is code, LLM or your input) see
+[AI-VS-DETERMINISTIC.md](AI-VS-DETERMINISTIC.md).*
 
 ---
 
@@ -60,10 +61,11 @@ API.
 | Included | Not included |
 |---|---|
 | Holding name, ticker, sector, trading currency | Your position size, quantity, cost basis or portfolio value |
-| Financial history already **computed by code** (margins, FCF, ROE, debt ratios…) | Raw text of your uploaded documents |
+| Financial history already **computed by code** (margins, FCF, ROE, debt ratios…) | Whole uploaded documents, or table rows as figures |
 | Where the figures came from (e.g. SEC filing numbers) | Your notes (blind pass). They go **only** to the reconciliation pass. |
 | DCF valuation range (computed by code) | API keys, account names |
 | Research items with source URLs; latest Oslo Børs announcements | |
+| Short **passages** from your uploaded filings, picked by keyword scoring within a token budget (quoted as untrusted data; `services/analysis/document_excerpts.py`) | |
 
 ---
 
