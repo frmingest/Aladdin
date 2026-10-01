@@ -246,11 +246,14 @@
 
 /* Hover card over the scene: dark translucent panel, thin gilded rule, the
    name in the display face — the classic strategy-game tooltip. */
+.fortress-peek-slot {
+  /* reserved so the page below does not jump as the quick look comes and goes */
+  min-height: 9.5rem;
+  margin-top: 0.75rem;
+}
 .fortress-tip {
-  position: absolute;
-  z-index: 10;
-  width: 15.5rem;
-  pointer-events: none;
+  width: 100%;
+  max-width: 28rem;
   padding: 0.6rem 0.75rem 0.55rem;
   border-radius: 4px;
   background: linear-gradient(180deg, rgb(14 18 34 / 0.95), rgb(8 10 20 / 0.95));

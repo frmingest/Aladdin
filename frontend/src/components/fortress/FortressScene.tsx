@@ -1,4 +1,4 @@
-import { useState, type KeyboardEvent } from "react";
+import { type KeyboardEvent } from "react";
 import {
   FRESHNESS_LABEL,
   LAND_LABEL,
@@ -928,19 +928,11 @@ const LAND_TONE: Record<string, string> = {
   overpriced: "text-[#ff8a7a]",
 };
 
-function TowerTooltip({ item, height }: { item: PlacedTower; height: number }) {
-  const t: GameTower = item.tower;
-  const leftHalf = item.x + item.w / 2 < SCENE_WIDTH / 2;
-  const anchorX = leftHalf ? item.x + item.w + 30 : item.x - 30;
-  const midY = item.y - item.h / 2;
-  const style = {
-    left: `${(anchorX / SCENE_WIDTH) * 100}%`,
-    top: `${(Math.max(60, Math.min(height - 60, midY)) / height) * 100}%`,
-    transform: `translate(${leftHalf ? "0" : "-100%"}, -50%)`,
-  };
+/** Quick-look card shown beneath the framed scene (never over the towers). */
+export function TowerPeek({ tower: t }: { tower: GameTower }) {
   const weight = t.weight_pct === null ? "weight unknown" : `${Number(t.weight_pct).toFixed(1)}% of the portfolio`;
   return (
-    <div className="fortress-tip" style={style} role="presentation">
+    <div className="fortress-tip" role="status">
       <p className="fortress-tip-name">{t.name}</p>
       <p className="fortress-tip-sub">
         {STRUCTURE_LABEL[t.structure]}, {weight}
@@ -964,6 +956,7 @@ export default function FortressScene({
   siege,
   selectedId,
   onSelect,
+  onHover,
 }: {
   layout: FortressLayout;
   shantytown: FortressShantytown;
@@ -971,15 +964,14 @@ export default function FortressScene({
   siege: GameSiege | null;
   selectedId: string | null;
   onSelect: (id: string) => void;
+  onHover: (id: string | null) => void;
 }) {
-  const [hoverId, setHoverId] = useState<string | null>(null);
   // Room below the last terrace only when there is a shantytown to draw there.
   const hasShacks = shantytown !== "none" && drawnShacks(shackCount) > 0;
   const height = layout.height + (hasShacks ? 70 : 12);
   const level = siege?.level ?? null;
   const sky = siegeSky(level);
   const palette = worldPalette(level);
-  const hovered = layout.items.find((i) => i.tower.holding_id === hoverId) ?? null;
   const summary = `${SIEGE_LABEL[level ?? "unsurveyed"]}. Fortress of ${layout.items.length} ${
     layout.items.length === 1 ? "tower" : "towers"
   }. ${layout.items.map((i) => `${i.tower.name}: ${MOAT_LABEL[i.tower.moat].toLowerCase()}`).join("; ")}`;
@@ -995,7 +987,7 @@ export default function FortressScene({
             item={item}
             selected={selectedId === item.tower.holding_id}
             onSelect={onSelect}
-            onHover={setHoverId}
+            onHover={onHover}
             level={level}
           />
         ))}
@@ -1006,7 +998,6 @@ export default function FortressScene({
         <SceneAmbience palette={palette} height={height} />
         <SceneVignette height={height} />
       </svg>
-      {hovered && <TowerTooltip item={hovered} height={height} />}
     </div>
   );
 }
