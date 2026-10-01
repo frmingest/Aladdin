@@ -1,6 +1,6 @@
 # Game mode ("Fortress") — feasibility and plan — 2026-10-01
 
-Status: **G1 (backend) and G2 (Fortress home) are merged to `main` (PRs #23, #25), not yet deployed or checked live. G3 (PR #26) was merged into the already-merged G2 branch, so it never reached `main`; the G4 branch (`feature/game-mode-g4-sieges-land`) carries G3 and G4 together. G4 is built, tested and checked in a browser, PR open. G5–G7 not started.** F33 in `PROGRESS.md`.
+Status: **G1 (backend) and G2 (Fortress home) are merged to `main` (PRs #23, #25), not yet deployed or checked live. G3 (PR #26) was merged into the already-merged G2 branch, so it never reached `main`; the G4 branch (`feature/game-mode-g4-sieges-land`) carries G3 and G4 together. G4 is built, tested and checked in a browser, PR open. G5 (vault entry screen) is built on its own branch stacked on G4, PR open. G6–G7 not started.** F33 in `PROGRESS.md`.
 
 ## Why
 
@@ -111,7 +111,7 @@ page. That gives the "whole app feels different" effect without doubling fronten
 | G2 | Top bar + toggle + provider; Fortress home with moat, walls, tower footprint, diworsification | L — **built 2026-10-01 (PR open, stacked on G1)** |
 | G3 | Drill-down: holding pages re-skinned (`data-skin`), Ledger view | M — **built 2026-10-01 (PR open, stacked on G2)** |
 | G4 | Sieges (regime/stress), margin-of-safety "land for sale", tripwire breaches (analysis-freshness weathering already shipped in G2) | M — **built 2026-10-01 (PR open, carries G3)** |
-| G5 | Vault (needs D2) | S–M |
+| G5 | Vault entry screen (D2) | S–M — **built 2026-10-01 (PR open, stacked on G4)** |
 | G6 | Temperament meter, journal-driven | M |
 | G7 | Advisors, polish, ambience (rain, lamp, clock), reduced-motion | M |
 
@@ -262,3 +262,29 @@ PR for Faiz to review.
   refresh) so there is something stored to read.
 - **Not in G4:** vault entry screen (G5), temperament (G6), advisors and ambience (G7). Weather is not animated
   (rain etc. is G7).
+
+## G5 as built (2026-10-01)
+
+- **Why:** the Vault is Faiz's own cash (D2) but the only way to enter it was a raw `PATCH /accounts/{id}`.
+  G5 adds the entry screen and makes old cash visible instead of silently trusted.
+- **Backend (additive, no migration):** the `vault` block of `GET /game/state` gained `accounts` (per account:
+  id, name, cash, entered-at, `stale`) and `cash_stale`. New rule `rules.cash_is_stale`; new mapping v1 field
+  `stale_cash_days=30` (additive, no earlier value changed; any later change is v2). A figure older than that is
+  still used for the vault level, only labelled, and a data-gap note says to update it. No figure, or one with no
+  stamp, is unknown, not stale. Demo state carries the fabricated account.
+- **Frontend:** the Vault card shows *Enter cash* (nothing entered yet) or *Update cash*, opening a per-account
+  editor: one box per account, Enter saves, Escape cancels, one Save sends a `PATCH` only for accounts whose
+  figure changed. An empty box clears the figure to "never entered"; `0` means entered and empty. The age of each
+  figure is shown, "(old)" in amber when stale. Hidden with a note in demo mode (writes are blocked there anyway).
+  After saving the Fortress reloads from `GET /game/state`.
+- **Amounts:** `parseCashNok` (lib/format.ts) reads `250 000`, `250,000`, `250.000`, `1.250,50`, `1,250.50`,
+  `250k`, `1.2m` and a trailing `kr`/`nok`; it refuses negatives, text, more than two decimals and ambiguous
+  separators rather than guessing.
+- **Rules kept:** nothing is traded and no other data is touched; no points or rewards for entering cash; the
+  figure is the user's own typed number and is labelled as such.
+- **Verified:** backend 1,228 pass (2 new: staleness boundaries, per-account vault + stale flag through the API),
+  frontend tsc clean, ESLint 0 errors, 74 tests (4 new for the parser), build. **Not seen in a browser or on real
+  data.** Backend tests were run in the cloud sandbox from a snapshot of the repo (the PC workspace shell is out of
+  disk space).
+- **Not in G5:** temperament meter (G6), advisors and ambience (G7); valuing physical coins in NOK stays out
+  (it needs a live spot-price call this endpoint never makes).

@@ -197,6 +197,17 @@ def vault_level(
     return "empty", share
 
 
+def cash_is_stale(
+    cash_nok: Decimal | None, cash_as_of: datetime | None, now: datetime, mapping: GameMapping
+) -> bool:
+    """A typed-in cash figure older than the mapping's limit. No figure, or a
+    figure with no stamp, is not 'stale' (it is unknown, and says so already)."""
+    if cash_nok is None or cash_as_of is None:
+        return False
+    stamped = cash_as_of if cash_as_of.tzinfo is not None else cash_as_of.replace(tzinfo=timezone.utc)
+    return (now - stamped).days > mapping.stale_cash_days
+
+
 # --- G4: sieges, land for sale, breaches ----------------------------------
 # These read values the app has already stored (risk snapshot, margin-of-
 # safety snapshot, thesis monitor). Nothing here fetches or recomputes.

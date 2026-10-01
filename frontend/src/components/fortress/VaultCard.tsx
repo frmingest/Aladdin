@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { VAULT_LABEL } from "../../lib/fortress";
 import { formatDate, formatNok, formatPct100 } from "../../lib/format";
 import type { FortressVaultLevel, GameVault } from "../../lib/types";
-import { Card } from "../ui";
+import { Button, Card } from "../ui";
+import VaultEditor from "./VaultEditor";
 
 /** How full the vault picture is drawn. Chosen by the backend's level, never
  * by this file. */
@@ -41,7 +43,16 @@ function VaultPicture({ level }: { level: FortressVaultLevel }) {
   );
 }
 
-export default function VaultCard({ vault }: { vault: GameVault }) {
+export default function VaultCard({
+  vault,
+  demo = false,
+  onChanged,
+}: {
+  vault: GameVault;
+  demo?: boolean;
+  onChanged?: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
   const gold = Number(vault.gold_oz);
   const silver = Number(vault.silver_oz);
   return (
@@ -53,8 +64,7 @@ export default function VaultCard({ vault }: { vault: GameVault }) {
           <p className="font-semibold text-ink">{VAULT_LABEL[vault.level]}</p>
           {vault.cash_nok === null ? (
             <p className="mt-1 text-ink-muted">
-              No cash entered yet. Set a cash amount on each account (Portfolio page) and the vault fills
-              from your own figure.
+              No cash entered yet. Use Enter cash below and the vault fills from your own figure.
             </p>
           ) : (
             <p className="mt-1 text-ink-muted">
@@ -71,6 +81,11 @@ export default function VaultCard({ vault }: { vault: GameVault }) {
             {vault.accounts_with_cash} of {vault.accounts_total} accounts have a cash figure
             {vault.cash_oldest_as_of ? `; oldest entered ${formatDate(vault.cash_oldest_as_of)}` : ""}.
           </p>
+          {vault.cash_stale && (
+            <p className="mt-1 text-xs text-caution">
+              Some cash figures are more than a month old. Update them so the vault is not drawn from an old number.
+            </p>
+          )}
           {(gold > 0 || silver > 0) && (
             <p className="mt-1 text-xs text-ink-muted">
               Physical coins: {gold > 0 ? `${gold} oz gold` : ""}
@@ -80,6 +95,21 @@ export default function VaultCard({ vault }: { vault: GameVault }) {
           )}
         </div>
       </div>
+      {demo ? (
+        <p className="mt-3 text-xs text-ink-faint">Demo data: cash cannot be edited while demo mode is on.</p>
+      ) : (
+        onChanged &&
+        vault.accounts.length > 0 &&
+        (editing ? (
+          <VaultEditor accounts={vault.accounts} onSaved={onChanged} onClose={() => setEditing(false)} />
+        ) : (
+          <div className="mt-3">
+            <Button type="button" variant="secondary" onClick={() => setEditing(true)}>
+              {vault.accounts_with_cash === 0 ? "Enter cash" : "Update cash"}
+            </Button>
+          </div>
+        ))
+      )}
     </Card>
   );
 }

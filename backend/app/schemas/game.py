@@ -62,6 +62,17 @@ class DiworsificationOut(BaseModel):
     top5_pct: Decimal | None
 
 
+class VaultAccountOut(BaseModel):
+    """One account's hand-entered cash, for the Vault's entry screen (G5)."""
+
+    account_id: UUID | None
+    name: str
+    cash_nok: Decimal | None
+    cash_as_of: datetime | None
+    # True when the figure was entered longer ago than the mapping's cash limit.
+    stale: bool = False
+
+
 class VaultOut(BaseModel):
     level: VaultLevel
     cash_nok: Decimal | None
@@ -73,6 +84,10 @@ class VaultOut(BaseModel):
     # live spot-price call, which this endpoint never makes.
     gold_oz: Decimal
     silver_oz: Decimal
+    # G5: per-account figures (so the entry screen needs no second call) and a
+    # flag for any figure older than the mapping's cash limit.
+    accounts: list[VaultAccountOut] = Field(default_factory=list)
+    cash_stale: bool = False
 
 
 class SharedWallOut(BaseModel):

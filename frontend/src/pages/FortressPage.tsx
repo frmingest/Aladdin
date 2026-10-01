@@ -146,7 +146,7 @@ export default function FortressPage() {
           <SiegeCard siege={state.siege} />
 
           <div className="grid gap-4 lg:grid-cols-2">
-            <VaultCard vault={state.vault} />
+            <VaultCard vault={state.vault} demo={state.demo} onChanged={load} />
             <Card>
               <h2 className="section-title">Spread of the realm</h2>
               <p className="text-sm text-ink-muted">{SHANTY_TEXT[state.diworsification.shantytown]}</p>

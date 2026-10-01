@@ -14,6 +14,7 @@ from app.schemas.game import GameStateOut
 from app.services.game.rules import ClusterFact, LandFacts, RiskFacts, ThesisFacts, WallFacts
 from app.services.game.state import AccountCash, GameInputs, build_game_state
 from app.services.settings.synthetic_data import (
+    demo_accounts,
     demo_portfolio_overview,
     demo_thesis_monitor,
     demo_valuation_board,
@@ -126,7 +127,14 @@ def demo_game_state(version: str) -> GameStateOut:
         land=land,
         land_snapshot_at=now - timedelta(days=1),
         thesis=thesis,
-        accounts=[AccountCash(cash_nok=D("180000"), cash_as_of=datetime.now(timezone.utc) - timedelta(days=3))],
+        accounts=[
+            AccountCash(
+                cash_nok=D("180000"),
+                cash_as_of=datetime.now(timezone.utc) - timedelta(days=3),
+                account_id=demo_accounts()[0].id,
+                name=demo_accounts()[0].name,
+            )
+        ],
         gold_oz=D("12"),
         silver_oz=D("150"),
         demo=True,

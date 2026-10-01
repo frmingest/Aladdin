@@ -62,3 +62,6 @@ class GameMapping:
     # A stored risk or margin-of-safety snapshot older than this is shown, but
     # labelled as old (prices and macro data move).
     stored_snapshot_stale_days: int
+    # G5: a cash figure Faiz typed in more than this many days ago is shown but
+    # labelled old (cash moves; the vault would otherwise look surer than it is).
+    stale_cash_days: int
