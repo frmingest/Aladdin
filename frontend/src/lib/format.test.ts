@@ -7,6 +7,7 @@ import {
   formatPercent,
   formatPrice,
   formatShares,
+  parseCashNok,
   parseShareCount,
 } from "./format";
 
@@ -63,5 +64,41 @@ describe("share counts and prices", () => {
     expect(parseShareCount("1.2bn")).toBe("1200000000");
     expect(parseShareCount("abc")).toBeNull();
     expect(parseShareCount("0")).toBeNull();
+  });
+});
+
+describe("parseCashNok", () => {
+  const ok = (input: string) => {
+    const r = parseCashNok(input);
+    return r.ok ? r.value : "INVALID";
+  };
+  it("reads Norwegian and English spellings of the same amount", () => {
+    expect(ok("250000")).toBe("250000");
+    expect(ok("250 000")).toBe("250000");
+    expect(ok("250\u00a0000")).toBe("250000");
+    expect(ok("250,000")).toBe("250000");
+    expect(ok("250.000")).toBe("250000");
+    expect(ok("250 000 kr")).toBe("250000");
+    expect(ok("1.250,50")).toBe("1250.50");
+    expect(ok("1,250.50")).toBe("1250.50");
+    expect(ok("1 250,5")).toBe("1250.50");
+    expect(ok("0")).toBe("0");
+  });
+  it("reads k and m suffixes", () => {
+    expect(ok("250k")).toBe("250000");
+    expect(ok("1.2m")).toBe("1200000");
+    expect(ok("1,5m")).toBe("1500000");
+  });
+  it("treats an empty box as clearing the figure", () => {
+    expect(ok("")).toBeNull();
+    expect(ok("   ")).toBeNull();
+  });
+  it("refuses what it cannot read instead of guessing", () => {
+    expect(ok("-5")).toBe("INVALID");
+    expect(ok("abc")).toBe("INVALID");
+    expect(ok("12,3456")).toBe("INVALID");
+    expect(ok("1,2,3")).toBe("INVALID");
+    expect(ok("12.5.5")).toBe("INVALID");
+    expect(ok("1e9")).toBe("INVALID");
   });
 });

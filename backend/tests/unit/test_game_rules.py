@@ -348,3 +348,26 @@ def test_snapshot_age_days():
     assert rules.snapshot_age_days(NOW - timedelta(days=3, hours=2), NOW) == 3
     assert rules.snapshot_age_days(NOW + timedelta(days=1), NOW) == 0     # never negative
     assert rules.snapshot_age_days(datetime(2026, 9, 28), NOW) == 3       # naive treated as UTC
+
+
+# --- G5: stale cash -----------------------------------------------------------
+
+def test_cash_staleness_boundaries():
+    from datetime import datetime, timedelta, timezone
+    from decimal import Decimal
+
+    from app.domain.game_mapping import get_game_mapping
+
+    mapping = get_game_mapping("v1")
+    now = datetime(2026, 10, 1, tzinfo=timezone.utc)
+    limit = mapping.stale_cash_days
+    fresh = now - timedelta(days=limit)
+    old = now - timedelta(days=limit + 1)
+    assert rules.cash_is_stale(Decimal(10), fresh, now, mapping) is False
+    assert rules.cash_is_stale(Decimal(10), old, now, mapping) is True
+    # Zero cash is still a figure; no figure or no stamp is unknown, not stale.
+    assert rules.cash_is_stale(Decimal(0), old, now, mapping) is True
+    assert rules.cash_is_stale(None, old, now, mapping) is False
+    assert rules.cash_is_stale(Decimal(10), None, now, mapping) is False
+    # A naive timestamp from the database is read as UTC.
+    assert rules.cash_is_stale(Decimal(10), old.replace(tzinfo=None), now, mapping) is True

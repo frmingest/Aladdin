@@ -43,6 +43,7 @@ from app.schemas.game import (
     SharedWallOut,
     SiegeOut,
     TowerOut,
+    VaultAccountOut,
     VaultOut,
 )
 from app.schemas.risk import PortfolioRiskOut
@@ -66,6 +67,8 @@ M = TypeVar("M", bound=BaseModel)
 class AccountCash:
     cash_nok: Decimal | None
     cash_as_of: datetime | None
+    account_id: uuid.UUID | None = None
+    name: str = ""
 
 
 @dataclass
@@ -180,7 +183,7 @@ def gather_game_inputs(db: Session, *, now: datetime | None = None) -> GameInput
             if found is not None:
                 wall_facts[position.holding_id] = found
     accounts = [
-        AccountCash(cash_nok=a.cash_nok, cash_as_of=a.cash_as_of)
+        AccountCash(cash_nok=a.cash_nok, cash_as_of=a.cash_as_of, account_id=a.id, name=a.name)
         for a in db.scalars(select(Account).order_by(Account.name))
     ]
     gold = silver = ZERO
@@ -295,6 +298,16 @@ def build_game_state(
     cash_nok = sum((a.cash_nok for a in with_cash), ZERO) if with_cash else None
     vault_state, share = rules.vault_level(cash_nok, overview.total_value_nok, mapping)
     as_ofs = [_aware(a.cash_as_of) for a in with_cash if a.cash_as_of is not None]
+    vault_accounts = [
+        VaultAccountOut(
+            account_id=a.account_id,
+            name=a.name,
+            cash_nok=a.cash_nok,
+            cash_as_of=a.cash_as_of,
+            stale=rules.cash_is_stale(a.cash_nok, a.cash_as_of, now, mapping),
+        )
+        for a in inputs.accounts
+    ]
     vault = VaultOut(
         level=vault_state,
         cash_nok=cash_nok,
@@ -304,6 +317,8 @@ def build_game_state(
         cash_oldest_as_of=min(as_ofs) if as_ofs else None,
         gold_oz=inputs.gold_oz,
         silver_oz=inputs.silver_oz,
+        accounts=vault_accounts,
+        cash_stale=any(a.stale for a in vault_accounts),
     )
 
     notes: list[str] = []
@@ -318,6 +333,11 @@ def build_game_state(
             f"Cash entered for {len(with_cash)} of {len(inputs.accounts)} account(s); the vault is incomplete."
             if with_cash
             else "No cash entered on any account; the vault is unsurveyed."
+        )
+    if vault.cash_stale:
+        notes.append(
+            f"Some cash figures were entered more than {mapping.stale_cash_days} days ago; "
+            "update them so the vault is not drawn from an old number."
         )
     if inputs.gold_oz or inputs.silver_oz:
         notes.append("Physical coins are shown in ounces; they are not valued in this view.")

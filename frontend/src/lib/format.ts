@@ -163,3 +163,43 @@ export function parseShareCount(input: string): string | null {
   if (!Number.isFinite(n) || n <= 0) return null;
   return String(Math.round(n));
 }
+
+/** Reads an amount of kroner typed by hand. Accepts Norwegian and English
+ * spellings: "250 000", "250000", "250,000", "1.250,50", "1 250,5", "250k",
+ * "1.2m". Returns `{ ok: true, value: null }` for an empty box (meaning "clear
+ * the figure"), `{ ok: true, value: "<plain decimal>" }` for a good amount,
+ * and `{ ok: false }` for anything else (negative, text, more than two
+ * decimals). It never guesses at something it cannot read. */
+export type CashParse = { ok: true; value: string | null } | { ok: false };
+
+export function parseCashNok(input: string): CashParse {
+  let t = input.trim().toLowerCase().replace(/(nok|kr)$/, "").replace(/[\s\u00a0_']/g, "");
+  if (t === "") return { ok: true, value: null };
+  let scale = 1;
+  const suffix = t.match(/(k|m)$/);
+  if (suffix) {
+    scale = suffix[1] === "k" ? 1e3 : 1e6;
+    t = t.slice(0, -1);
+  }
+  const hasDot = t.includes(".");
+  const hasComma = t.includes(",");
+  if (hasDot && hasComma) {
+    // The separator that comes last is the decimal point.
+    const decimal = t.lastIndexOf(".") > t.lastIndexOf(",") ? "." : ",";
+    const group = decimal === "." ? "," : ".";
+    t = t.split(group).join("").replace(decimal, ".");
+  } else if (hasComma || hasDot) {
+    const sep = hasComma ? "," : ".";
+    const parts = t.split(sep);
+    const isGrouping = parts.length > 1 && parts.slice(1).every((p) => p.length === 3) && parts[0].length <= 3;
+    if (isGrouping && !suffix) t = parts.join("");
+    else if (parts.length === 2) t = `${parts[0]}.${parts[1]}`;
+    else return { ok: false };
+  }
+  if (!/^\d+(\.\d+)?$/.test(t)) return { ok: false };
+  const fraction = t.split(".")[1] ?? "";
+  if (!suffix && fraction.length > 2) return { ok: false };
+  const n = Number(t) * scale;
+  if (!Number.isFinite(n) || n < 0 || n > 1e12) return { ok: false };
+  return { ok: true, value: n.toFixed(2).replace(/\.00$/, "") };
+}

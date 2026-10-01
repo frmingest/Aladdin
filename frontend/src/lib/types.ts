@@ -352,6 +352,9 @@ export interface Account {
   updated_at: string;
   position_count: number;
   snapshot_count: number;
+  /** Cash typed by hand (game mode's Vault). null = never entered; "0" = entered and empty. */
+  cash_nok: string | null;
+  cash_as_of: string | null;
 }
 
 /** Mirrors backend/app/schemas/account.py's AccountUpdate — every field
@@ -360,6 +363,8 @@ export interface Account {
 export interface AccountUpdateInput {
   name?: string;
   institution?: string | null;
+  /** Decimal string; null clears the figure back to "never entered". */
+  cash_nok?: string | null;
 }
 
 /** Mirrors backend/app/schemas/portfolio.py. */
@@ -1880,6 +1885,15 @@ export interface GameDiworsification {
   top5_pct: string | null;
 }
 
+/** One account's hand-entered cash (G5). */
+export interface GameVaultAccount {
+  account_id: string | null;
+  name: string;
+  cash_nok: string | null;
+  cash_as_of: string | null;
+  stale: boolean;
+}
+
 export interface GameVault {
   level: FortressVaultLevel;
   cash_nok: string | null;
@@ -1889,6 +1903,8 @@ export interface GameVault {
   cash_oldest_as_of: string | null;
   gold_oz: string;
   silver_oz: string;
+  accounts: GameVaultAccount[];
+  cash_stale: boolean;
 }
 
 export interface GameSharedWall {

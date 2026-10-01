@@ -202,3 +202,26 @@ def test_game_state_is_read_only(client, db_session):
         "runs": db_session.query(EquityAnalysisRun).count(),
         "items": db_session.query(FinancialLineItem).count(),
     }
+
+
+def test_vault_lists_each_account_and_flags_old_cash(client, db_session):
+    from datetime import datetime, timedelta, timezone
+
+    account = _seed(db_session)
+    before = client.get("/game/state").json()["vault"]
+    assert [a["name"] for a in before["accounts"]] == [account.name]
+    assert before["accounts"][0]["account_id"] == str(account.id)
+    assert before["accounts"][0]["cash_nok"] is None and before["cash_stale"] is False
+
+    client.patch(f"/accounts/{account.id}", json={"cash_nok": "250"})
+    fresh = client.get("/game/state").json()
+    assert D(fresh["vault"]["accounts"][0]["cash_nok"]) == 250
+    assert fresh["vault"]["accounts"][0]["stale"] is False and fresh["vault"]["cash_stale"] is False
+
+    account.cash_as_of = datetime.now(timezone.utc) - timedelta(days=45)
+    db_session.commit()
+    old = client.get("/game/state").json()
+    assert old["vault"]["accounts"][0]["stale"] is True and old["vault"]["cash_stale"] is True
+    assert any("cash figures were entered more than" in n for n in old["notes"])
+    # An old figure is still used, only labelled.
+    assert D(old["vault"]["cash_nok"]) == 250

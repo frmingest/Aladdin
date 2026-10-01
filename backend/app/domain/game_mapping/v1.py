@@ -28,6 +28,8 @@ Why these values:
   also the depth at which a holding can no longer be called a temporary
   setback in Buffett's sense (a 2-for-1 recovery is needed). A stored
   snapshot older than 7 days is shown but labelled old.
+- Cash older than 30 days (added in G5, additive) is labelled old: the figure
+  is typed by hand, so it is only as current as the last time Faiz updated it.
 - Land for sale is not a threshold at all: it reads the stored margin-of-
   safety zone (below the bear case, bear-to-base, base-to-bull, above bull).
 """
@@ -62,4 +64,5 @@ GAME_MAPPING_V1 = GameMapping(
     exposed_holding_shock=Decimal("-0.20"),
     breach_risk_holding_shock=Decimal("-0.40"),
     stored_snapshot_stale_days=7,
+    stale_cash_days=30,
 )
