@@ -9,6 +9,7 @@ still reference the account.
 """
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -64,6 +65,8 @@ def _to_out_many(db: Session, accounts: list[Account]) -> list[AccountOut]:
             updated_at=a.updated_at,
             position_count=position_counts.get(a.id, 0),
             snapshot_count=snapshot_counts.get(a.id, 0),
+            cash_nok=a.cash_nok,
+            cash_as_of=a.cash_as_of,
         )
         for a in accounts
     ]
@@ -122,6 +125,9 @@ def update_account(
 
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(account, field, value)
+    if "cash_nok" in payload.model_fields_set:
+        # Stamp when the cash figure was last set; clearing it clears the stamp.
+        account.cash_as_of = datetime.now(timezone.utc) if payload.cash_nok is not None else None
 
     db.commit()
     db.refresh(account)

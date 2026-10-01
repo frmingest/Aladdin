@@ -211,6 +211,11 @@ class Settings(BaseSettings):
     # v2 (2026-09-29) adds the plausibility guardrails and the financials method.
     active_valuation_assumptions_version: str = "v2"
 
+    # --- Game mode (2026-10-01, app/domain/game_mapping/) ---
+    # Thresholds that turn stored analysis values into fortress properties.
+    # Versioned like the valuation assumptions: a change is a new vN.py.
+    active_game_mapping_version: str = "v1"
+
     # --- Regime-adjusted DCF (Sprint 14, 2026-09-26, app/domain/regime_adjustments/) ---
     # Off by default: wiring Sprint 12's macro regime (app/services/risk/regime.py)
     # into the DCF discount rate is a real behavior change to every valuation
