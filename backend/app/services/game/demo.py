@@ -11,9 +11,20 @@ from decimal import Decimal
 
 from app.domain.game_mapping import get_game_mapping
 from app.schemas.game import GameStateOut
-from app.services.game.rules import ClusterFact, LandFacts, RiskFacts, ThesisFacts, WallFacts
+from app.services.game.rules import (
+    ClusterFact,
+    LandFacts,
+    RiskFacts,
+    ThesisFacts,
+    WallFacts,
+)
 from app.services.game.state import AccountCash, GameInputs, build_game_state
-from app.services.game.temperament import DecisionFact, PositionStep, TemperamentInputs, TurnoverFact
+from app.services.game.temperament import (
+    DecisionFact,
+    PositionStep,
+    TemperamentInputs,
+    TurnoverFact,
+)
 from app.services.settings.synthetic_data import (
     demo_accounts,
     demo_journal,

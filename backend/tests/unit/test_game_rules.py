@@ -347,7 +347,7 @@ def test_snapshot_age_days():
     assert rules.snapshot_age_days(None, NOW) is None
     assert rules.snapshot_age_days(NOW - timedelta(days=3, hours=2), NOW) == 3
     assert rules.snapshot_age_days(NOW + timedelta(days=1), NOW) == 0     # never negative
-    assert rules.snapshot_age_days(datetime(2026, 9, 28), NOW) == 3       # naive treated as UTC
+    assert rules.snapshot_age_days(datetime(2026, 9, 28), NOW) == 3  # noqa: DTZ001 (naive treated as UTC)
 
 
 # --- G5: stale cash -----------------------------------------------------------

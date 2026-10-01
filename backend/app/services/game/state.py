@@ -25,6 +25,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
+from itertools import pairwise
 from typing import Any, TypeVar
 
 from pydantic import BaseModel
@@ -58,8 +59,19 @@ from app.schemas.valuation import MarginOfSafetyBoardOut
 from app.services import metrics as metrics_service
 from app.services.game import rules
 from app.services.game import temperament as temperament_rules
-from app.services.game.temperament import DecisionFact, PositionStep, TemperamentInputs, TurnoverFact
-from app.services.game.rules import ClusterFact, LandFacts, RiskFacts, ThesisFacts, WallFacts
+from app.services.game.rules import (
+    ClusterFact,
+    LandFacts,
+    RiskFacts,
+    ThesisFacts,
+    WallFacts,
+)
+from app.services.game.temperament import (
+    DecisionFact,
+    PositionStep,
+    TemperamentInputs,
+    TurnoverFact,
+)
 from app.services.holding_facts import facts_by_period, latest_period, previous_period
 from app.services.portfolio_overview import build_overview
 from app.services.precious_metals.holdings import list_holdings
@@ -241,7 +253,7 @@ def _snapshot_steps(
     steps: list[PositionStep] = []
     turnover: list[TurnoverFact] = []
     for account_id, chain in chains.items():
-        for before, after in zip(chain, chain[1:], strict=False):
+        for before, after in pairwise(chain):
             pb, pa = positions.get(before.id, {}), positions.get(after.id, {})
             for holding_id in pb.keys() & pa.keys():
                 a, b = pb[holding_id], pa[holding_id]

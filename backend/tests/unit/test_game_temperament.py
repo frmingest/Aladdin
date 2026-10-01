@@ -12,7 +12,12 @@ from decimal import Decimal
 
 from app.domain.game_mapping import get_game_mapping
 from app.services.game import temperament as t
-from app.services.game.temperament import DecisionFact, PositionStep, TemperamentInputs, TurnoverFact
+from app.services.game.temperament import (
+    DecisionFact,
+    PositionStep,
+    TemperamentInputs,
+    TurnoverFact,
+)
 
 D = Decimal
 M = get_game_mapping("v1")
