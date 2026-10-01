@@ -1,20 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 import { api, ApiError } from "../lib/api";
-import {
-  FRESHNESS_LABEL,
-  MOAT_LABEL,
-  SIZE_LABEL,
-  STRUCTURE_LABEL,
-  WALL_LABEL,
-  layoutTowers,
-} from "../lib/fortress";
+import { layoutTowers } from "../lib/fortress";
 import { formatDecimal, formatNok, formatPct100 } from "../lib/format";
-import type { GameState, GameTower } from "../lib/types";
+import type { GameState } from "../lib/types";
 import FortressLedger from "../components/fortress/FortressLedger";
 import FortressScene from "../components/fortress/FortressScene";
+import TowerSurvey from "../components/fortress/TowerSurvey";
 import VaultCard from "../components/fortress/VaultCard";
-import { Button, Card, EmptyState, PageHeader, SnapshotStamp, VerdictBadge } from "../components/ui";
+import { Button, Card, EmptyState, PageHeader, SnapshotStamp } from "../components/ui";
 
 /** Game mode home (F33, G2). A read-only picture of the real portfolio built
  * from GET /game/state — stored data only, no provider or LLM call. It never
@@ -30,61 +23,6 @@ const SHANTY_TEXT = {
   light: "A few shacks: some tiny positions are scattered between the towers.",
   heavy: "A shantytown: many tiny positions, each too small to matter.",
 } as const;
-
-function TowerDetails({ tower }: { tower: GameTower }) {
-  const inputs = Object.entries(tower.wall_inputs);
-  return (
-    <Card>
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="font-display text-lg font-semibold text-ink">{tower.name}</h2>
-          <p className="text-xs text-ink-faint">
-            {tower.ticker}
-            {tower.sector ? ` · ${tower.sector}` : ""}
-          </p>
-        </div>
-        <VerdictBadge rating={tower.verdict_rating} />
-      </div>
-      <dl className="mt-4 grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
-        <div>
-          <dt className="text-xs uppercase tracking-wide text-ink-faint">Structure</dt>
-          <dd className="text-ink">
-            {STRUCTURE_LABEL[tower.structure]} · {SIZE_LABEL[tower.size_class]}
-          </dd>
-          <dd className="tabular text-ink-muted">
-            {formatNok(tower.value_nok)} · {formatPct100(tower.weight_pct)} of the portfolio
-          </dd>
-        </div>
-        <div>
-          <dt className="text-xs uppercase tracking-wide text-ink-faint">Moat</dt>
-          <dd className="text-ink">{MOAT_LABEL[tower.moat]}</dd>
-        </div>
-        <div>
-          <dt className="text-xs uppercase tracking-wide text-ink-faint">Walls</dt>
-          <dd className="text-ink">{WALL_LABEL[tower.wall]}</dd>
-          <dd className="text-ink-muted">{tower.wall_reason}</dd>
-          {inputs.length > 0 && (
-            <dd className="tabular mt-1 text-xs text-ink-faint">
-              {inputs.map(([k, v]) => `${k.replace(/_/g, " ")}: ${formatDecimal(v)}`).join(" · ")}
-            </dd>
-          )}
-        </div>
-        <div>
-          <dt className="text-xs uppercase tracking-wide text-ink-faint">Analysis</dt>
-          <dd className="text-ink">{FRESHNESS_LABEL[tower.freshness]}</dd>
-          {tower.analysis_age_days !== null && (
-            <dd className="text-ink-muted">Last analysed {tower.analysis_age_days} days ago</dd>
-          )}
-        </div>
-      </dl>
-      <p className="mt-4 text-sm">
-        <Link to={`/holdings/${tower.holding_id}`} className="font-medium text-accent hover:underline">
-          Open the holding page →
-        </Link>
-      </p>
-    </Card>
-  );
-}
 
 export default function FortressPage() {
   const [state, setState] = useState<GameState | null>(null);
@@ -185,7 +123,7 @@ export default function FortressPage() {
 
           {view === "scene" && state.towers.length > 0 && (
             selected ? (
-              <TowerDetails tower={selected} />
+              <TowerSurvey tower={selected} />
             ) : (
               <p className="px-1 text-sm text-ink-faint">Press a tower to read its survey.</p>
             )

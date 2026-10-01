@@ -33,6 +33,17 @@ export function GameModeProvider({ children }: { children: React.ReactNode }) {
 
   const setGameMode = useCallback((on: boolean) => setGameModeState(on), []);
 
+  // The "study" skin (G3) re-colours the whole app through the theme tokens
+  // while game mode is on. Off = the attribute is removed, nothing changes.
+  useEffect(() => {
+    const root = document.documentElement;
+    if (gameMode) root.dataset.skin = "study";
+    else delete root.dataset.skin;
+    return () => {
+      delete root.dataset.skin;
+    };
+  }, [gameMode]);
+
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, gameMode ? "on" : "off");

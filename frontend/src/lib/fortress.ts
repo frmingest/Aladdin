@@ -180,3 +180,94 @@ export function describeTower(t: GameTower): string {
   if (t.wall !== "not_applicable") parts.push(WALL_LABEL[t.wall].toLowerCase());
   return parts.join(", ");
 }
+
+/** Ledger sorting, filtering and totals (G3). Pure, so unit-tested. The Ledger
+ * only reorders and subsets what the backend decided; it never recomputes a
+ * wall, moat or size. */
+export type LedgerSortKey = "weight" | "name" | "wall" | "moat" | "freshness";
+export type LedgerSortDir = "asc" | "desc";
+
+/** Strongest first. Unknown / not-applicable sort after every real rating. */
+const WALL_RANK: Record<FortressWall, number> = {
+  basalt: 0,
+  granite: 1,
+  brick: 2,
+  timber: 3,
+  rotted: 4,
+  unsurveyed: 5,
+  not_applicable: 6,
+};
+const MOAT_RANK: Record<FortressMoat, number> = {
+  wide: 0,
+  narrow: 1,
+  none: 2,
+  unsurveyed: 3,
+  not_applicable: 4,
+};
+const FRESHNESS_RANK: Record<FortressFreshness, number> = {
+  fresh: 0,
+  weathered: 1,
+  overgrown: 2,
+  unsurveyed: 3,
+  not_applicable: 4,
+};
+
+export function sortLedger(
+  towers: GameTower[],
+  key: LedgerSortKey,
+  dir: LedgerSortDir = key === "weight" ? "desc" : "asc",
+): GameTower[] {
+  const sign = dir === "asc" ? 1 : -1;
+  const cmp = (a: GameTower, b: GameTower): number => {
+    switch (key) {
+      case "weight":
+        return weightOf(a) - weightOf(b);
+      case "name":
+        return a.name.localeCompare(b.name);
+      case "wall":
+        return WALL_RANK[a.wall] - WALL_RANK[b.wall];
+      case "moat":
+        return MOAT_RANK[a.moat] - MOAT_RANK[b.moat];
+      case "freshness":
+        return FRESHNESS_RANK[a.freshness] - FRESHNESS_RANK[b.freshness];
+    }
+  };
+  // Ties fall back to the scene's order so the table is stable.
+  return [...towers].sort((a, b) => sign * cmp(a, b) || weightOf(b) - weightOf(a) || a.name.localeCompare(b.name));
+}
+
+export type LedgerFilter = "all" | "attention";
+
+/** "Needs attention" = a wall at timber or worse, no moat, or an analysis that
+ * is stale or missing: the places a value investor should look first. It is a
+ * reading aid over backend categories, not a new score. */
+export function needsAttention(t: GameTower): boolean {
+  return (
+    t.wall === "timber" ||
+    t.wall === "rotted" ||
+    t.moat === "none" ||
+    t.freshness === "overgrown" ||
+    t.freshness === "unsurveyed"
+  );
+}
+
+export function filterLedger(towers: GameTower[], filter: LedgerFilter): GameTower[] {
+  return filter === "all" ? towers : towers.filter(needsAttention);
+}
+
+export interface LedgerTotals {
+  count: number;
+  /** Combined portfolio share of the rows shown, 0–100. */
+  weightPct: number;
+  attention: number;
+}
+
+export function ledgerTotals(towers: GameTower[]): LedgerTotals {
+  let weightPct = 0;
+  let attention = 0;
+  for (const t of towers) {
+    if (t.weight_pct !== null && Number.isFinite(Number(t.weight_pct))) weightPct += Number(t.weight_pct);
+    if (needsAttention(t)) attention += 1;
+  }
+  return { count: towers.length, weightPct, attention };
+}
