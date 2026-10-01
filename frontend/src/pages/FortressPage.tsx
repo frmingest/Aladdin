@@ -3,9 +3,12 @@ import { api, ApiError } from "../lib/api";
 import { layoutTowers } from "../lib/fortress";
 import { formatDecimal, formatNok, formatPct100 } from "../lib/format";
 import type { GameState } from "../lib/types";
+import AdvisorsCard from "../components/fortress/AdvisorsCard";
 import FortressLedger from "../components/fortress/FortressLedger";
 import FortressScene, { TowerPeek } from "../components/fortress/FortressScene";
 import { GameFrame, GameHud } from "../components/fortress/GameFrame";
+import SoundToggle from "../components/fortress/SoundToggle";
+import StudyDesk from "../components/fortress/StudyDesk";
 import SiegeCard from "../components/fortress/SiegeCard";
 import TemperamentCard from "../components/fortress/TemperamentCard";
 import TowerSurvey from "../components/fortress/TowerSurvey";
@@ -78,6 +81,7 @@ export default function FortressPage() {
               </span>
             )}
             <SnapshotStamp at={state?.as_of} />
+            {state && <SoundToggle weather={state.siege?.level} />}
             <Button variant="secondary" onClick={load} disabled={loading}>
               {loading ? "Loading…" : "Refresh"}
             </Button>
@@ -199,6 +203,12 @@ export default function FortressPage() {
                 Press a tower to read its survey.
               </p>
             ))}
+
+          <Card className="py-3">
+            <StudyDesk asOf={state.as_of} />
+          </Card>
+
+          <AdvisorsCard advisors={state.advisors} />
 
           <SiegeCard siege={state.siege} />
 

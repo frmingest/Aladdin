@@ -166,6 +166,30 @@ class TemperamentOut(BaseModel):
     turnover: list[TurnoverOut]
 
 
+class AdvisorLineOut(BaseModel):
+    """One line from an advisor: hand-written text chosen by a fixed rule, with
+    the stored facts that triggered it so every line can be checked."""
+
+    advisor: Literal["oracle", "partner"]
+    rule: str
+    tone: Literal["warning", "note", "calm"]
+    text: str
+    holding_id: UUID | None = None
+    holding_name: str | None = None
+    facts: list[str] = Field(default_factory=list)
+
+
+class AdvisorsOut(BaseModel):
+    """G7b: the Oracle and the Partner. Rule-triggered, hand-written, never
+    generated, and never a trade instruction. Informational only."""
+
+    lines_version: str
+    lines: list[AdvisorLineOut]
+    # Lines that matched a rule but did not fit in the shown set (most urgent first).
+    hidden_count: int = 0
+    disclaimer: str
+
+
 class GameStateOut(BaseModel):
     mapping_version: str
     as_of: datetime | None
@@ -176,6 +200,7 @@ class GameStateOut(BaseModel):
     vault: VaultOut
     siege: SiegeOut | None = None
     temperament: TemperamentOut | None = None
+    advisors: AdvisorsOut | None = None
     # Plain-language data gaps ("3 holdings have no analysis"), so an
     # unfinished fortress is labelled as unfinished.
     notes: list[str]
