@@ -157,6 +157,16 @@
     animation: fortress-rise 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 }
+@keyframes fortress-flicker {
+  0%, 100% { opacity: 1; }
+  45% { opacity: 0.72; }
+  70% { opacity: 0.9; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .fortress-flicker {
+    animation: fortress-flicker 1.6s ease-in-out infinite;
+  }
+}
 .fortress-tower {
   cursor: pointer;
   outline: none;

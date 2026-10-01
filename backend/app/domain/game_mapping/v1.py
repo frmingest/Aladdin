@@ -22,6 +22,14 @@ Why these values:
 - Shacks: positions under 2% of the portfolio. Two to four is a light
   shantytown, five or more a heavy one.
 - Vault 20% / 10% / 3% of cash + portfolio.
+- Sieges (added in G4, additive: no earlier value above changed): a stored
+  stress scenario that costs the equity book 25% is storm clouds, 40% is a
+  siege; for one holding 20% is "exposed" and 40% is "breach risk". 40% is
+  also the depth at which a holding can no longer be called a temporary
+  setback in Buffett's sense (a 2-for-1 recovery is needed). A stored
+  snapshot older than 7 days is shown but labelled old.
+- Land for sale is not a threshold at all: it reads the stored margin-of-
+  safety zone (below the bear case, bear-to-base, base-to-bull, above bull).
 """
 from __future__ import annotations
 
@@ -49,4 +57,9 @@ GAME_MAPPING_V1 = GameMapping(
     deep_vault_min_pct=Decimal(20),
     stocked_vault_min_pct=Decimal(10),
     thin_vault_min_pct=Decimal(3),
+    gathering_portfolio_shock=Decimal("-0.25"),
+    besieged_portfolio_shock=Decimal("-0.40"),
+    exposed_holding_shock=Decimal("-0.20"),
+    breach_risk_holding_shock=Decimal("-0.40"),
+    stored_snapshot_stale_days=7,
 )

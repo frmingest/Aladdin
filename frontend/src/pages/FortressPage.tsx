@@ -5,6 +5,7 @@ import { formatDecimal, formatNok, formatPct100 } from "../lib/format";
 import type { GameState } from "../lib/types";
 import FortressLedger from "../components/fortress/FortressLedger";
 import FortressScene from "../components/fortress/FortressScene";
+import SiegeCard from "../components/fortress/SiegeCard";
 import TowerSurvey from "../components/fortress/TowerSurvey";
 import VaultCard from "../components/fortress/VaultCard";
 import { Button, Card, EmptyState, PageHeader, SnapshotStamp } from "../components/ui";
@@ -112,6 +113,7 @@ export default function FortressPage() {
                   layout={layout}
                   shantytown={state.diworsification.shantytown}
                   shackCount={state.diworsification.shack_count}
+                  siege={state.siege}
                   selectedId={selectedId}
                   onSelect={(id) => setSelectedId((cur) => (cur === id ? null : id))}
                 />
@@ -122,12 +124,26 @@ export default function FortressPage() {
           </Card>
 
           {view === "scene" && state.towers.length > 0 && (
+            <ul className="flex flex-wrap gap-x-4 gap-y-1 px-1 text-xs text-ink-faint" aria-label="How to read the picture">
+              <li>Gold sign (SALE / OFFER): price below the bear or base case</li>
+              <li>Red sign (DEAR): above the bull case</li>
+              <li>Red ! and a hole in the wall: a tripwire has fired</li>
+              <li>Amber i: something changed, review the thesis</li>
+              <li>Ladders: hit hard in the stored stress what-if (shown only when the weather turns)</li>
+              <li>Cracked wall between towers: they move together</li>
+              <li>Fog or scaffolding: not surveyed</li>
+            </ul>
+          )}
+
+          {view === "scene" && state.towers.length > 0 && (
             selected ? (
               <TowerSurvey tower={selected} />
             ) : (
               <p className="px-1 text-sm text-ink-faint">Press a tower to read its survey.</p>
             )
           )}
+
+          <SiegeCard siege={state.siege} />
 
           <div className="grid gap-4 lg:grid-cols-2">
             <VaultCard vault={state.vault} />

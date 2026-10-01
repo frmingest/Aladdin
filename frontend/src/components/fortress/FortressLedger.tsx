@@ -1,11 +1,15 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
+  EXPOSURE_SHORT,
   FRESHNESS_LABEL,
+  LAND_SHORT,
   MOAT_LABEL,
   SIZE_LABEL,
   STRUCTURE_LABEL,
+  THESIS_SHORT,
   WALL_LABEL,
+  formatShock,
   filterLedger,
   ledgerTotals,
   sortLedger,
@@ -68,13 +72,13 @@ export default function FortressLedger({ towers }: { towers: GameTower[] }) {
       </div>
       {filter === "attention" && (
         <p className="mb-2 text-xs text-ink-faint">
-          Timber or rotted walls, no moat, or an analysis that is stale or missing. A reading aid over the
-          same categories; it is not a score and not advice to trade.
+          Timber or rotted walls, no moat, an analysis that is stale or missing, or a fired tripwire. A
+          reading aid over the same categories; it is not a score and not advice to trade.
         </p>
       )}
       {rows.length === 0 && <p className="py-4 text-sm text-ink-muted">Nothing needs a look right now.</p>}
       <div className="overflow-x-auto">
-      <table className="w-full min-w-[820px] text-left text-sm">
+      <table className="w-full min-w-[1100px] text-left text-sm">
         <thead>
           <tr className="border-b border-border text-xs uppercase tracking-wide text-ink-faint">
             {header("name", "Holding")}
@@ -84,6 +88,9 @@ export default function FortressLedger({ towers }: { towers: GameTower[] }) {
             {header("moat", "Moat")}
             {header("wall", "Walls")}
             {header("freshness", "Analysis")}
+            {header("land", "Land")}
+            {header("thesis", "Thesis")}
+            {header("siege", "Siege")}
             <th className="py-2 font-semibold">Verdict</th>
           </tr>
         </thead>
@@ -111,6 +118,27 @@ export default function FortressLedger({ towers }: { towers: GameTower[] }) {
                 {FRESHNESS_LABEL[t.freshness]}
                 {t.analysis_age_days !== null && (
                   <p className="text-xs text-ink-faint">{t.analysis_age_days} days old</p>
+                )}
+              </td>
+              <td className="py-2 pr-3 text-ink-muted" title={t.land_reason}>
+                {LAND_SHORT[t.land]}
+                {t.margin_of_safety_pct !== null && (
+                  <p className="tabular text-xs text-ink-faint">{formatPct100(t.margin_of_safety_pct)} margin</p>
+                )}
+              </td>
+              <td className={`py-2 pr-3 ${t.thesis === "breached" ? "font-semibold text-negative" : "text-ink-muted"}`}>
+                {THESIS_SHORT[t.thesis]}
+                {t.thesis === "breached" && (
+                  <p className="text-xs font-normal text-ink-faint">{t.tripwires_fired} fired</p>
+                )}
+              </td>
+              <td className="py-2 pr-3 text-ink-muted">
+                {EXPOSURE_SHORT[t.siege_exposure]}
+                {t.siege_shock_pct !== null && (
+                  <p className="tabular text-xs text-ink-faint">{formatShock(t.siege_shock_pct)} in the what-if</p>
+                )}
+                {t.shared_wall_with.length > 0 && (
+                  <p className="text-xs text-ink-faint">shares a wall with {t.shared_wall_with.join(", ")}</p>
                 )}
               </td>
               <td className="py-2">

@@ -2,8 +2,14 @@ import { describe, expect, it } from "vitest";
 import {
   MAX_DRAWN_SHACKS,
   SCENE_WIDTH,
+  describeSiegeExposure,
   describeTower,
   drawnShacks,
+  formatShock,
+  ladderCount,
+  landSignText,
+  sharedWallLinks,
+  siegeSky,
   filterLedger,
   ledgerTotals,
   needsAttention,
@@ -32,6 +38,15 @@ function tower(overrides: Partial<GameTower> = {}): GameTower {
     freshness: "fresh",
     analysis_age_days: 10,
     verdict_rating: "Buy",
+    land: "fog",
+    land_reason: "no stored margin-of-safety result for this holding",
+    margin_of_safety_pct: null,
+    thesis: "intact",
+    tripwires_fired: 0,
+    siege_exposure: "unsurveyed",
+    siege_shock_pct: null,
+    siege_method: null,
+    shared_wall_with: [],
     ...overrides,
   };
 }
@@ -186,5 +201,157 @@ describe("ledger helpers (G3)", () => {
   it("totals count, weight and attention, ignoring missing weights", () => {
     expect(ledgerTotals([strong, weak, fog, mid])).toEqual({ count: 4, weightPct: 50, attention: 2 });
     expect(ledgerTotals([])).toEqual({ count: 0, weightPct: 0, attention: 0 });
+  });
+});
+
+
+describe("siegeSky", () => {
+  it("is clear for calm, clouded for gathering, red with fires for besieged", () => {
+    expect(siegeSky("calm")).toMatchObject({ clouds: 0, fires: 0, mist: false });
+    expect(siegeSky("gathering").clouds).toBeGreaterThan(0);
+    expect(siegeSky("gathering").fires).toBe(0);
+    expect(siegeSky("besieged").clouds).toBeGreaterThan(siegeSky("gathering").clouds);
+    expect(siegeSky("besieged").fires).toBeGreaterThan(0);
+  });
+  it("draws mist, not clear skies, when the weather was never surveyed", () => {
+    for (const level of ["unsurveyed", null, undefined] as const) {
+      expect(siegeSky(level)).toMatchObject({ clouds: 0, fires: 0, mist: true });
+    }
+    expect(siegeSky("calm").mist).toBe(false);
+  });
+});
+
+describe("ladderCount", () => {
+  it("draws no ladders in calm or unsurveyed weather, whatever the exposure", () => {
+    for (const level of ["calm", "unsurveyed", null] as const) {
+      expect(ladderCount("breach_risk", level)).toBe(0);
+      expect(ladderCount("exposed", level)).toBe(0);
+    }
+  });
+  it("draws two ladders for breach risk and one for exposed once the weather turns", () => {
+    for (const level of ["gathering", "besieged"] as const) {
+      expect(ladderCount("breach_risk", level)).toBe(2);
+      expect(ladderCount("exposed", level)).toBe(1);
+      expect(ladderCount("sheltered", level)).toBe(0);
+      expect(ladderCount("unsurveyed", level)).toBe(0);
+    }
+  });
+});
+
+describe("landSignText", () => {
+  it("signs bargain, offer and dear land, and leaves full price and fog bare", () => {
+    expect(landSignText("bargain")).toBe("SALE");
+    expect(landSignText("discount")).toBe("OFFER");
+    expect(landSignText("overpriced")).toBe("DEAR");
+    expect(landSignText("full_price")).toBeNull();
+    expect(landSignText("fog")).toBeNull();
+  });
+});
+
+describe("formatShock", () => {
+  it("formats a stored fraction as a signed percentage", () => {
+    expect(formatShock("-0.25")).toBe("−25.0%");
+    expect(formatShock("-0.4321")).toBe("−43.2%");
+    expect(formatShock("0.05")).toBe("5.0%");
+    expect(formatShock("0")).toBe("0.0%");
+  });
+  it("shows a dash for nothing stored and passes odd text through", () => {
+    expect(formatShock(null)).toBe("—");
+    expect(formatShock("n/a")).toBe("n/a");
+  });
+});
+
+describe("describeSiegeExposure", () => {
+  it("says no stress result is stored instead of inventing one", () => {
+    expect(describeSiegeExposure(tower({ siege_exposure: "unsurveyed" }))).toMatch(/no stress result stored/i);
+    // a category without its number is not trusted either
+    expect(describeSiegeExposure(tower({ siege_exposure: "exposed", siege_shock_pct: null }))).toMatch(
+      /no stress result stored/i,
+    );
+  });
+  it("gives the label, the number and how the number was made", () => {
+    const text = describeSiegeExposure(
+      tower({ siege_exposure: "breach_risk", siege_shock_pct: "-0.45", siege_method: "volatility" }),
+    );
+    expect(text).toMatch(/risk of breach/i);
+    expect(text).toContain("−45.0%");
+    expect(text).toMatch(/two-standard-deviation/);
+  });
+});
+
+describe("describeTower (G4 facts)", () => {
+  it("mentions a fired tripwire, a review flag and cheap land for screen readers", () => {
+    expect(describeTower(tower({ thesis: "breached" }))).toMatch(/tripwire has fired/);
+    expect(describeTower(tower({ thesis: "review" }))).toMatch(/flagged for review/);
+    expect(describeTower(tower({ land: "bargain" }))).toMatch(/for sale/);
+    expect(describeTower(tower({ land: "discount" }))).toMatch(/on offer/);
+  });
+  it("stays quiet about intact theses and fog or fully priced land", () => {
+    const text = describeTower(tower({ thesis: "intact", land: "full_price" }));
+    expect(text).not.toMatch(/tripwire|review|sale|offer/);
+    expect(describeTower(tower({ land: "fog" }))).not.toMatch(/sale|offer/);
+  });
+});
+
+describe("sharedWallLinks", () => {
+  const layout = layoutTowers([
+    tower({ holding_id: "a", ticker: "AAA", name: "Alpha", weight_pct: "30" }),
+    tower({ holding_id: "b", ticker: "BBB", name: "Beta", weight_pct: "20" }),
+    tower({ holding_id: "c", ticker: "CCC", name: "Gamma", weight_pct: "10" }),
+  ]);
+  const wall = (tickers: string[]) => ({
+    names: tickers,
+    tickers,
+    correlation: "0.85",
+    combined_weight_pct: "50",
+  });
+
+  it("links same-row neighbours in left-to-right order", () => {
+    const links = sharedWallLinks(layout.items, [wall(["CCC", "AAA"])]);
+    expect(links).toHaveLength(1);
+    const a = layout.items.find((i) => i.tower.ticker === "AAA");
+    const c = layout.items.find((i) => i.tower.ticker === "CCC");
+    expect(a && c && a.x < c.x).toBe(true);
+    expect(links[0]).toMatchObject({ fromId: "a", toId: "c", correlation: "0.85" });
+  });
+
+  it("chains three members and ignores tickers that are not in the scene", () => {
+    expect(sharedWallLinks(layout.items, [wall(["AAA", "BBB", "CCC"])])).toHaveLength(2);
+    expect(sharedWallLinks(layout.items, [wall(["AAA", "NOPE"])])).toEqual([]);
+    expect(sharedWallLinks(layout.items, [])).toEqual([]);
+  });
+
+  it("does not draw a wall across rows", () => {
+    const many = Array.from({ length: 12 }, (_, i) =>
+      tower({ holding_id: `t${i}`, ticker: `T${i}`, name: `Tower ${i}`, weight_pct: String(20 - i), size_class: "great" }),
+    );
+    const big = layoutTowers(many);
+    const first = big.items[0];
+    const other = big.items.find((i) => i.row !== first.row);
+    expect(other).toBeDefined();
+    expect(sharedWallLinks(big.items, [wall([first.tower.ticker, other!.tower.ticker])])).toEqual([]);
+  });
+});
+
+describe("Ledger with G4 columns", () => {
+  const rows = [
+    tower({ holding_id: "1", name: "Aa", land: "overpriced", thesis: "intact", siege_exposure: "sheltered" }),
+    tower({ holding_id: "2", name: "Bb", land: "bargain", thesis: "breached", siege_exposure: "breach_risk", tripwires_fired: 2 }),
+    tower({ holding_id: "3", name: "Cc", land: "fog", thesis: "review", siege_exposure: "unsurveyed" }),
+    tower({ holding_id: "4", name: "Dd", land: "discount", thesis: "not_analyzed", siege_exposure: "exposed" }),
+  ];
+  it("sorts land cheapest first with fog last", () => {
+    expect(sortLedger(rows, "land", "asc").map((t) => t.name)).toEqual(["Bb", "Dd", "Aa", "Cc"]);
+  });
+  it("sorts thesis most urgent first and siege most exposed first, unknown last", () => {
+    expect(sortLedger(rows, "thesis", "asc").map((t) => t.name)).toEqual(["Bb", "Cc", "Aa", "Dd"]);
+    expect(sortLedger(rows, "siege", "asc").map((t) => t.name)).toEqual(["Bb", "Dd", "Aa", "Cc"]);
+  });
+  it("puts a fired tripwire in 'needs a look', but not cheap land or a hypothetical exposure", () => {
+    expect(needsAttention(tower({ thesis: "breached" }))).toBe(true);
+    expect(needsAttention(tower({ thesis: "review" }))).toBe(false);
+    expect(needsAttention(tower({ land: "bargain", siege_exposure: "breach_risk" }))).toBe(false);
+    expect(filterLedger(rows, "attention").map((t) => t.name)).toEqual(["Bb"]);
+    expect(ledgerTotals(rows).attention).toBe(1);
   });
 });

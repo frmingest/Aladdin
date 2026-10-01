@@ -1,10 +1,15 @@
 import type {
   FortressFreshness,
+  FortressLand,
   FortressMoat,
+  FortressSiegeExposure,
+  FortressSiegeLevel,
   FortressSize,
   FortressStructure,
+  FortressThesis,
   FortressVaultLevel,
   FortressWall,
+  GameSharedWall,
   GameTower,
 } from "./types";
 
@@ -178,13 +183,178 @@ export function describeTower(t: GameTower): string {
   if (t.structure !== "keep") parts.push(STRUCTURE_LABEL[t.structure].toLowerCase());
   if (t.moat !== "not_applicable") parts.push(MOAT_LABEL[t.moat].toLowerCase());
   if (t.wall !== "not_applicable") parts.push(WALL_LABEL[t.wall].toLowerCase());
+  if (t.thesis === "breached") parts.push("a tripwire has fired");
+  else if (t.thesis === "review") parts.push("thesis flagged for review");
+  if (t.land === "bargain" || t.land === "discount") parts.push(LAND_SHORT[t.land].toLowerCase());
   return parts.join(", ");
+}
+
+// --- G4: sieges, land for sale, breaches --------------------------------------
+// Wording and drawing helpers over categories the backend already decided
+// (backend/app/services/game/rules.py). Nothing here scores anything.
+
+export const SIEGE_LABEL: Record<FortressSiegeLevel, string> = {
+  calm: "Calm skies",
+  gathering: "Storm clouds gathering",
+  besieged: "Under siege",
+  unsurveyed: "Weather not surveyed",
+};
+
+export const EXPOSURE_LABEL: Record<FortressSiegeExposure, string> = {
+  sheltered: "Sheltered in the stored stress scenario",
+  exposed: "Exposed in the stored stress scenario",
+  breach_risk: "Wall at risk of breach in the stored stress scenario",
+  unsurveyed: "No stress result stored",
+};
+
+export const LAND_LABEL: Record<FortressLand, string> = {
+  bargain: "Land for sale: below even the bear case",
+  discount: "On offer: priced below the base case",
+  full_price: "Fully priced: above the base case",
+  overpriced: "Dear: above the bull case",
+  fog: "Price not surveyed (fog)",
+};
+
+export const THESIS_LABEL: Record<FortressThesis, string> = {
+  intact: "Thesis intact",
+  review: "Something changed: review the thesis",
+  breached: "Wall breached: a tripwire has fired",
+  not_analyzed: "No thesis analysed yet",
+  not_applicable: "No thesis applies",
+};
+
+/** Short tags for the Ledger and the signposts. */
+export const LAND_SHORT: Record<FortressLand, string> = {
+  bargain: "For sale",
+  discount: "On offer",
+  full_price: "Full price",
+  overpriced: "Dear",
+  fog: "Fog",
+};
+
+export const THESIS_SHORT: Record<FortressThesis, string> = {
+  intact: "Intact",
+  review: "Review",
+  breached: "Breached",
+  not_analyzed: "Not analysed",
+  not_applicable: "n/a",
+};
+
+export const EXPOSURE_SHORT: Record<FortressSiegeExposure, string> = {
+  sheltered: "Sheltered",
+  exposed: "Exposed",
+  breach_risk: "Breach risk",
+  unsurveyed: "Unknown",
+};
+
+/** The sky follows the backend's siege level. The scene is a painting in a
+ * frame, so these are fixed colours (like the rest of the scene). */
+export interface SiegeSky {
+  top: string;
+  bottom: string;
+  /** 0–1 opacity of the storm clouds. */
+  clouds: number;
+  /** Distant campfires on the horizon. */
+  fires: number;
+  /** A pale mist drawn when the weather itself was not surveyed. */
+  mist: boolean;
+}
+
+export function siegeSky(level: FortressSiegeLevel | null | undefined): SiegeSky {
+  switch (level) {
+    case "gathering":
+      return { top: "#171b27", bottom: "#3a3f52", clouds: 0.75, fires: 0, mist: false };
+    case "besieged":
+      return { top: "#1d1318", bottom: "#5a2a2a", clouds: 0.95, fires: 5, mist: false };
+    case "unsurveyed":
+    case null:
+    case undefined:
+      return { top: "#141b29", bottom: "#2a3850", clouds: 0, fires: 0, mist: true };
+    default:
+      return { top: "#141b29", bottom: "#2a3850", clouds: 0, fires: 0, mist: false };
+  }
+}
+
+/** Ladders against a wall only while the enemy is at the gate: in calm
+ * weather a hypothetical scenario loss is shown in the survey and Ledger, not
+ * drawn as an attack. 0 = none. */
+export function ladderCount(exposure: FortressSiegeExposure, level: FortressSiegeLevel | null | undefined): number {
+  if (level !== "gathering" && level !== "besieged") return 0;
+  if (exposure === "breach_risk") return 2;
+  if (exposure === "exposed") return 1;
+  return 0;
+}
+
+/** The text on a land signpost, or null when there is no sign. */
+export function landSignText(land: FortressLand): string | null {
+  switch (land) {
+    case "bargain":
+      return "SALE";
+    case "discount":
+      return "OFFER";
+    case "overpriced":
+      return "DEAR";
+    default:
+      return null;
+  }
+}
+
+/** A stored scenario shock (fraction, negative = loss) as "−25.0%". */
+export function formatShock(shock: string | null): string {
+  if (shock === null) return "—";
+  const n = Number(shock);
+  if (!Number.isFinite(n)) return shock;
+  const pct = (n * 100).toFixed(1);
+  return n < 0 ? `−${pct.slice(1)}%` : `${pct}%`;
+}
+
+const METHOD_LABEL: Record<string, string> = {
+  dcf_bear: "price falling to the bear-case value",
+  volatility: "a two-standard-deviation price move",
+};
+
+export function describeSiegeExposure(t: GameTower): string {
+  if (t.siege_exposure === "unsurveyed" || t.siege_shock_pct === null) return EXPOSURE_LABEL.unsurveyed;
+  const how = t.siege_method ? METHOD_LABEL[t.siege_method] : undefined;
+  return `${EXPOSURE_LABEL[t.siege_exposure]}: ${formatShock(t.siege_shock_pct)}${how ? ` (${how})` : ""}`;
+}
+
+/** Towers that share a weak wall, in the scene's left-to-right order, grouped
+ * into connectable pairs. Only same-row neighbours get a wall segment drawn
+ * between them; a pair on different rows is listed in the survey instead. */
+export interface WallLink {
+  fromId: string;
+  toId: string;
+  correlation: string;
+}
+
+export function sharedWallLinks(
+  items: PlacedTower[],
+  walls: GameSharedWall[],
+): WallLink[] {
+  const byTicker = new Map(items.map((i) => [i.tower.ticker, i]));
+  const links: WallLink[] = [];
+  for (const wall of walls) {
+    const members = wall.tickers
+      .map((tk) => byTicker.get(tk))
+      .filter((m): m is PlacedTower => m !== undefined)
+      .sort((a, b) => a.x - b.x);
+    for (let i = 0; i + 1 < members.length; i++) {
+      if (members[i].row !== members[i + 1].row) continue;
+      links.push({
+        fromId: members[i].tower.holding_id,
+        toId: members[i + 1].tower.holding_id,
+        correlation: wall.correlation,
+      });
+    }
+  }
+  return links;
 }
 
 /** Ledger sorting, filtering and totals (G3). Pure, so unit-tested. The Ledger
  * only reorders and subsets what the backend decided; it never recomputes a
  * wall, moat or size. */
-export type LedgerSortKey = "weight" | "name" | "wall" | "moat" | "freshness";
+export type LedgerSortKey = "weight" | "name" | "wall" | "moat" | "freshness" | "land" | "thesis" | "siege";
 export type LedgerSortDir = "asc" | "desc";
 
 /** Strongest first. Unknown / not-applicable sort after every real rating. */
@@ -212,6 +382,23 @@ const FRESHNESS_RANK: Record<FortressFreshness, number> = {
   not_applicable: 4,
 };
 
+/** G4 ranks. Land: cheapest first. Thesis and siege: the most urgent first
+ * (a breach, then a review; the most exposed first). Unknown sorts last. */
+const LAND_RANK: Record<FortressLand, number> = { bargain: 0, discount: 1, full_price: 2, overpriced: 3, fog: 4 };
+const THESIS_RANK: Record<FortressThesis, number> = {
+  breached: 0,
+  review: 1,
+  intact: 2,
+  not_analyzed: 3,
+  not_applicable: 4,
+};
+const EXPOSURE_RANK: Record<FortressSiegeExposure, number> = {
+  breach_risk: 0,
+  exposed: 1,
+  sheltered: 2,
+  unsurveyed: 3,
+};
+
 export function sortLedger(
   towers: GameTower[],
   key: LedgerSortKey,
@@ -230,6 +417,12 @@ export function sortLedger(
         return MOAT_RANK[a.moat] - MOAT_RANK[b.moat];
       case "freshness":
         return FRESHNESS_RANK[a.freshness] - FRESHNESS_RANK[b.freshness];
+      case "land":
+        return LAND_RANK[a.land] - LAND_RANK[b.land];
+      case "thesis":
+        return THESIS_RANK[a.thesis] - THESIS_RANK[b.thesis];
+      case "siege":
+        return EXPOSURE_RANK[a.siege_exposure] - EXPOSURE_RANK[b.siege_exposure];
     }
   };
   // Ties fall back to the scene's order so the table is stable.
@@ -238,16 +431,20 @@ export function sortLedger(
 
 export type LedgerFilter = "all" | "attention";
 
-/** "Needs attention" = a wall at timber or worse, no moat, or an analysis that
- * is stale or missing: the places a value investor should look first. It is a
- * reading aid over backend categories, not a new score. */
+/** "Needs attention" = a wall at timber or worse, no moat, an analysis that
+ * is stale or missing, or (G4) a fired tripwire: the places a value investor
+ * should look first. A fired tripwire counts because it is the one signal the
+ * owner set up in advance to say "look again". Being cheap ("land for sale")
+ * or exposed in a hypothetical scenario does not: those are not problems with
+ * the business. A reading aid over backend categories, not a new score. */
 export function needsAttention(t: GameTower): boolean {
   return (
     t.wall === "timber" ||
     t.wall === "rotted" ||
     t.moat === "none" ||
     t.freshness === "overgrown" ||
-    t.freshness === "unsurveyed"
+    t.freshness === "unsurveyed" ||
+    t.thesis === "breached"
   );
 }
 

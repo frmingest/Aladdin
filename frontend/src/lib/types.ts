@@ -1834,6 +1834,11 @@ export type FortressWall =
 export type FortressFreshness = "fresh" | "weathered" | "overgrown" | "unsurveyed" | "not_applicable";
 export type FortressShantytown = "none" | "light" | "heavy";
 export type FortressVaultLevel = "deep" | "stocked" | "thin" | "empty" | "unsurveyed";
+// G4 (sieges, land for sale, breaches).
+export type FortressLand = "bargain" | "discount" | "full_price" | "overpriced" | "fog";
+export type FortressThesis = "intact" | "review" | "breached" | "not_analyzed" | "not_applicable";
+export type FortressSiegeExposure = "sheltered" | "exposed" | "breach_risk" | "unsurveyed";
+export type FortressSiegeLevel = "calm" | "gathering" | "besieged" | "unsurveyed";
 
 export interface GameTower {
   holding_id: string;
@@ -1852,6 +1857,17 @@ export interface GameTower {
   freshness: FortressFreshness;
   analysis_age_days: number | null;
   verdict_rating: string | null;
+  land: FortressLand;
+  land_reason: string;
+  /** Percent (18.3 = 18.3%), null when the land is fog. */
+  margin_of_safety_pct: string | null;
+  thesis: FortressThesis;
+  tripwires_fired: number;
+  siege_exposure: FortressSiegeExposure;
+  /** Fraction, negative = a loss in the stored stress scenario (-0.25 = -25%). */
+  siege_shock_pct: string | null;
+  siege_method: string | null;
+  shared_wall_with: string[];
 }
 
 export interface GameDiworsification {
@@ -1875,6 +1891,31 @@ export interface GameVault {
   silver_oz: string;
 }
 
+export interface GameSharedWall {
+  names: string[];
+  tickers: string[];
+  correlation: string;
+  combined_weight_pct: string;
+}
+
+export interface GameSiege {
+  level: FortressSiegeLevel;
+  reasons: string[];
+  regime: string | null;
+  regime_explanation: string | null;
+  /** Fraction, negative = a loss in the stored stress scenario. */
+  portfolio_shock_pct: string | null;
+  portfolio_drawdown_nok: string | null;
+  risk_snapshot_at: string | null;
+  risk_snapshot_age_days: number | null;
+  risk_snapshot_stale: boolean;
+  land_snapshot_at: string | null;
+  land_snapshot_age_days: number | null;
+  land_snapshot_stale: boolean;
+  shared_walls: GameSharedWall[];
+  breached_count: number;
+}
+
 export interface GameState {
   mapping_version: string;
   as_of: string | null;
@@ -1883,5 +1924,6 @@ export interface GameState {
   towers: GameTower[];
   diworsification: GameDiworsification;
   vault: GameVault;
+  siege: GameSiege | null;
   notes: string[];
 }

@@ -1,10 +1,13 @@
 import { Link } from "react-router-dom";
 import {
   FRESHNESS_LABEL,
+  LAND_LABEL,
   MOAT_LABEL,
   SIZE_LABEL,
   STRUCTURE_LABEL,
+  THESIS_LABEL,
   WALL_LABEL,
+  describeSiegeExposure,
 } from "../../lib/fortress";
 import { formatDecimal, formatNok, formatPct100 } from "../../lib/format";
 import type { GameTower } from "../../lib/types";
@@ -57,6 +60,34 @@ export default function TowerSurvey({ tower, compact = false }: { tower: GameTow
           {tower.analysis_age_days !== null && (
             <dd className="text-ink-muted">Last analysed {tower.analysis_age_days} days ago</dd>
           )}
+        </div>
+        <div>
+          <dt className="text-xs uppercase tracking-wide text-ink-faint">Land</dt>
+          <dd className="text-ink">{LAND_LABEL[tower.land]}</dd>
+          <dd className="text-ink-muted">{tower.land_reason}</dd>
+        </div>
+        <div>
+          <dt className="text-xs uppercase tracking-wide text-ink-faint">Thesis</dt>
+          <dd className="text-ink">{THESIS_LABEL[tower.thesis]}</dd>
+          {tower.thesis === "breached" && (
+            <dd className="text-ink-muted">
+              {tower.tripwires_fired} {tower.tripwires_fired === 1 ? "tripwire has" : "tripwires have"} fired:
+              re-read the thesis before doing anything.
+            </dd>
+          )}
+        </div>
+        <div className="sm:col-span-2">
+          <dt className="text-xs uppercase tracking-wide text-ink-faint">Under siege</dt>
+          <dd className="text-ink">{describeSiegeExposure(tower)}</dd>
+          {tower.shared_wall_with.length > 0 && (
+            <dd className="text-ink-muted">
+              Shares a weak wall with {tower.shared_wall_with.join(", ")}: they have moved together, so a
+              blow to one is likely to reach the other.
+            </dd>
+          )}
+          <dd className="mt-1 text-xs text-ink-faint">
+            A stored what-if, not a forecast, and not advice to buy or sell.
+          </dd>
         </div>
       </dl>
       {!compact && (

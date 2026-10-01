@@ -212,3 +212,139 @@ def test_vault_levels(cash, portfolio, level):
 
 def test_vault_with_nothing_at_all_is_empty_not_unsurveyed():
     assert rules.vault_level(D(0), D(0), M) == ("empty", D(0))
+
+
+# --- G4: sieges, land for sale, breaches --------------------------------------
+
+
+def _risk(regime="baseline", shock=None, complete=True, **kw):
+    return rules.RiskFacts(
+        regime=regime, regime_data_complete=complete,
+        portfolio_shock_pct=D(shock) if shock is not None else None, **kw,
+    )
+
+
+def test_no_stored_risk_snapshot_is_unsurveyed_never_calm():
+    level, reasons = rules.siege_level(None, M)
+    assert level == "unsurveyed" and "no stored" in reasons[0]
+
+
+def test_risk_snapshot_with_neither_regime_nor_stress_is_unsurveyed():
+    assert rules.siege_level(_risk(regime=None, shock=None), M)[0] == "unsurveyed"
+
+
+@pytest.mark.parametrize(
+    ("regime", "shock", "expected"),
+    [
+        ("baseline", "-0.10", "calm"),
+        ("baseline", "-0.2499", "calm"),          # just inside the gathering edge
+        ("baseline", "-0.25", "gathering"),       # exactly at the edge
+        ("baseline", "-0.3999", "gathering"),
+        ("baseline", "-0.40", "besieged"),        # exactly at the edge
+        ("baseline", "-0.80", "besieged"),
+        ("stagflation", "-0.05", "gathering"),    # regime alone is enough
+        ("stagflation", "-0.40", "besieged"),     # the worse signal wins
+        ("crisis", "-0.01", "besieged"),
+        ("crisis", None, "besieged"),
+        ("baseline", None, "calm"),               # one known input, no warning sign
+        (None, "-0.30", "gathering"),             # regime unknown, stress known
+        (None, "-0.10", "calm"),
+    ],
+)
+def test_siege_level_boundaries(regime, shock, expected):
+    assert rules.siege_level(_risk(regime=regime, shock=shock), M)[0] == expected
+
+
+def test_siege_reasons_say_what_is_missing_and_partial():
+    _, reasons = rules.siege_level(_risk(regime=None, shock="-0.10"), M)
+    assert "macro regime not available" in reasons
+    _, reasons = rules.siege_level(_risk(regime="baseline", shock=None), M)
+    assert "no portfolio stress result stored" in reasons
+    _, reasons = rules.siege_level(_risk(regime="baseline", shock="-0.10", complete=False), M)
+    assert any("partial reading" in r for r in reasons)
+
+
+def test_siege_reason_for_a_losing_scenario_shows_the_percentage():
+    _, reasons = rules.siege_level(_risk(regime="baseline", shock="-0.4321"), M)
+    assert any("-43.2%" in r for r in reasons)
+
+
+@pytest.mark.parametrize(
+    ("shock", "expected"),
+    [
+        (None, "unsurveyed"),
+        ("0.05", "sheltered"),      # a gain in the scenario
+        ("-0.1999", "sheltered"),
+        ("-0.20", "exposed"),
+        ("-0.3999", "exposed"),
+        ("-0.40", "breach_risk"),
+        ("-0.90", "breach_risk"),
+    ],
+)
+def test_siege_exposure_boundaries(shock, expected):
+    assert rules.siege_exposure(D(shock) if shock is not None else None, M) == expected
+
+
+def _land(zone, status="ok", mos=None, reason=None):
+    return rules.LandFacts(zone=zone, valuation_status=status,
+                           margin_of_safety_base=D(mos) if mos is not None else None, unavailable_reason=reason)
+
+
+@pytest.mark.parametrize(
+    ("zone", "expected"),
+    [("below_bear", "bargain"), ("bear_to_base", "discount"),
+     ("base_to_bull", "full_price"), ("above_bull", "overpriced")],
+)
+def test_land_maps_each_stored_zone(zone, expected):
+    assert rules.land_for_sale(_land(zone))[0] == expected
+
+
+def test_land_reason_includes_the_margin_of_safety_when_stored():
+    land, reason = rules.land_for_sale(_land("bear_to_base", mos="0.1834"))
+    assert land == "discount" and "18.3%" in reason
+
+
+def test_land_is_fog_when_missing_withheld_or_unavailable_and_never_invents_a_number():
+    assert rules.land_for_sale(None)[0] == "fog"
+    land, reason = rules.land_for_sale(_land("below_bear", status="implausible", mos="0.9"))
+    assert land == "fog" and "90" not in reason          # an implausible 90% margin is not shown
+    land, reason = rules.land_for_sale(_land("unavailable", status="ok", reason="no price"))
+    assert land == "fog" and reason == "no price"
+    assert rules.land_for_sale(_land("sideways"))[0] == "fog"
+
+
+@pytest.mark.parametrize(
+    ("status", "fired", "expected"),
+    [
+        ("tripwire_fired", 2, ("breached", 2)),
+        ("review", 0, ("review", 0)),
+        ("intact", 0, ("intact", 0)),
+        ("not_analyzed", 0, ("not_analyzed", 0)),
+        ("something_new", 0, ("not_analyzed", 0)),
+    ],
+)
+def test_thesis_state_mapping(status, fired, expected):
+    assert rules.thesis_state(rules.ThesisFacts(status, fired), analyzable=True) == expected
+
+
+def test_thesis_state_for_missing_monitor_row_and_non_analyzable():
+    assert rules.thesis_state(None, analyzable=True) == ("not_analyzed", 0)
+    assert rules.thesis_state(rules.ThesisFacts("tripwire_fired", 1), analyzable=False) == ("not_applicable", 0)
+
+
+def test_shared_wall_partners_list_the_other_members_once():
+    clusters = [
+        rules.ClusterFact(["A", "B", "C"], ["Alpha", "Beta", "Gamma"], D("0.8"), D(30)),
+        rules.ClusterFact(["A", "D"], ["Alpha", "Delta"], D("0.9"), D(20)),
+    ]
+    assert rules.shared_wall_partners("A", clusters) == ["Beta", "Gamma", "Delta"]
+    assert rules.shared_wall_partners("D", clusters) == ["Alpha"]
+    assert rules.shared_wall_partners("Z", clusters) == []
+    assert rules.shared_wall_partners("A", []) == []
+
+
+def test_snapshot_age_days():
+    assert rules.snapshot_age_days(None, NOW) is None
+    assert rules.snapshot_age_days(NOW - timedelta(days=3, hours=2), NOW) == 3
+    assert rules.snapshot_age_days(NOW + timedelta(days=1), NOW) == 0     # never negative
+    assert rules.snapshot_age_days(datetime(2026, 9, 28), NOW) == 3       # naive treated as UTC
