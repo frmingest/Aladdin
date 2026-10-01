@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from decimal import Decimal
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -24,6 +25,9 @@ class AccountUpdate(BaseModel):
 
     name: str | None = Field(default=None, min_length=1, max_length=128)
     institution: str | None = None
+    # Cash in the account, NOK, typed by hand (game mode's Vault). Send null to
+    # clear it back to "never entered"; 0 means entered and empty.
+    cash_nok: Decimal | None = Field(default=None, ge=0)
 
 
 class AccountOut(BaseModel):
@@ -35,3 +39,5 @@ class AccountOut(BaseModel):
     updated_at: datetime
     position_count: int
     snapshot_count: int
+    cash_nok: Decimal | None = None
+    cash_as_of: datetime | None = None

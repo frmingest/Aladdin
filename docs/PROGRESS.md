@@ -1,6 +1,6 @@
 # Aladdin — Progress
 
-**Last updated:** 2026-09-30 · structure: [1 Now](#1-where-we-are-now) · [2 Needs from Faiz](#2-needs-from-faiz) · [3 Known issues](#3-known-issues) · [4 Roadmap](#4-roadmap) · [5 Features](#5-feature-index) · [6 Changes / history](#6-changes--history)
+**Last updated:** 2026-10-01 · structure: [1 Now](#1-where-we-are-now) · [2 Needs from Faiz](#2-needs-from-faiz) · [3 Known issues](#3-known-issues) · [4 Roadmap](#4-roadmap) · [5 Features](#5-feature-index) · [6 Changes / history](#6-changes--history)
 
 How this page works: short tables only. Each item links to its own doc in this folder. Finished work
 moves to **§6 Changes / history** as soon as it is done. The full previous version of this page (long
@@ -52,6 +52,7 @@ Grouped by what kind of effort it is. ★★★ = blocks something or costs mone
 
 | | What | Doc |
 |---|---|---|
+| ★★ | **Game mode G1: review and merge the PR; after the Railway deploy confirm migration `p1b7c8d9e0f1` ran, then `PATCH /accounts/{id}` with `{"cash_nok": <amount>}` on each account and open `/game/state`** (towers, walls, vault). Tell me any wall that looks wrong against what you know about the company. No UI yet (G2). Decisions D1–D5 are settled | Backend only, first look — [game mode](game-mode-fortress-2026-10-01.md) |
 | ★★ | Split-view reader: Holding → Metrics → eye next to a figure on an `.xhtml` filing; the exact number should be highlighted | [split view](split-view-reader-2026-09-30.md), [Read button](document-read-button-2026-09-30.md) |
 | ★★ | Page speed: press **Refresh** once on Risk, Performance, Margin of safety, Watchlist, then reload (should be sub-second); Network tab → Timing shows DB ms | page-load (project doc `page-load-snapshots-2026-09-30`) |
 | ★★ | Margin of safety after the valuation guardrails: re-run SB1NO.OL and the banks; old stored analyses show a red "not reliable" note until re-run; remove `ACTIVE_VALUATION_ASSUMPTIONS_VERSION=v1` in Railway if set | [guardrails](valuation-guardrails-build-2026-09-29.md) |
@@ -100,6 +101,7 @@ Grouped by what kind of effort it is. ★★★ = blocks something or costs mone
 | 2 | Sprint 15 #6: PDF export / reporting | Same plan |
 | 3 | Batch / precompute the Margin-of-safety board | Second half of the page-load work |
 | 4 | Client-side data cache (react-query or SWR) | Every navigation refetches today |
+| 5 | Game mode (F33): G2 Fortress home scene + top-bar toggle, then G3–G7 | G1 backend built (PR open); G2 starts after G1 is merged — [doc](game-mode-fortress-2026-10-01.md) |
 
 ### Backlog
 
@@ -151,6 +153,7 @@ Tavily (fallback, needs a key). Details: free-market-data-research-providers-202
 | F29 | Nightly tripwire check | ✅ merged (PR #14) |
 | F30, F31 | Fund look-through (Xtrackers), L&G holdings capture | ✅ merged (PR #13, #15) |
 | F32 | Split-view document reader, Read button | ✅ merged (PR #18–#20) |
+| F33 | Game mode ("Fortress"): top-bar toggle re-presenting the real portfolio as a value-investing fortress | 🔨 **G1 backend built 2026-10-01, PR open, not merged/deployed** (`GET /game/state`, versioned mapping `v1`, account cash field, migration `p1b7c8d9e0f1`); no UI yet ([doc](game-mode-fortress-2026-10-01.md)) |
 | — | Valuation guardrails (growth cap, plausibility guard, bank method) | ✅ merged |
 | — | Page-load snapshots + Server-Timing | ✅ merged (PR #17) |
 | — | Ollama adaptive fit | ✅ merged (PR #15, #16) |
@@ -164,6 +167,7 @@ Newest first. One line each; the full write-up of every entry is in
 
 | Date | Change | Summary | Detail |
 |---|---|---|---|
+| 2026-10-01 | **Game mode G1 backend (F33)** | Planning ADR (decisions D1–D5 settled with Faiz), then the backend: versioned mapping `app/domain/game_mapping/v1.py`; deterministic rules (moat tier, wall material from net debt / EBITDA or, for banks, equity / assets, tower size, analysis freshness, shantytown, vault level); `GET /game/state` (database only, demo branch first); optional per-account cash (`cash_nok`, `cash_as_of`, migration `p1b7c8d9e0f1`, additive) set via the existing `PATCH /accounts/{id}`. 59 rule-boundary tests + 9 API tests; whole backend 1,178 pass; ruff clean; migration up/down/up on Postgres 16, one head. No frontend change. **Written, not merged, not deployed** | [doc](game-mode-fortress-2026-10-01.md) |
 | 2026-09-30 | **Housekeeping: docs, architecture diagram, PR workflow, CI fixes** | New [architecture.md](architecture.md) with diagrams, README, refreshed technology overview, this page restructured; CLAUDE.md now says Claude opens PRs from chat. **PR #21** fixes red CI: Ruff 0.16.8 (12 findings), `pip-audit` (fastapi 0.115→0.142, starlette 0.38→1.7, python-dotenv, pytest), 3 stale tests that CI never reached, smoke workflow crash | PR #21 |
 | 2026-09-30 | **Split-view reader step 2: pressing a figure highlights the exact number in the filing** | Step 1 jumped to the figure's page; this lands on the number. **Backend:** `anchoring.py` now takes the document's stored figures (`api/documents.py` passes them) and, for each, finds the tagged number on its own page with the… | [doc](split-view-reader-2026-09-30.md) |
 | 2026-09-30 | **Split-view document reader: filing on one side, its stored figures on the other (F32)** | Faiz asked to read a financial report with the statements card beside it, and whether the PDF viewer supports XHTML. **Answer:** PDFs use the browser's own viewer; | [doc](split-view-reader-2026-09-30.md) |

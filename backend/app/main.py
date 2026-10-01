@@ -20,6 +20,7 @@ from app.api.accounts import router as accounts_router
 from app.api.analysis import router as analysis_router
 from app.api.documents import router as documents_router
 from app.api.funds import router as funds_router
+from app.api.game import router as game_router
 from app.api.holdings import router as holdings_router
 from app.api.journal import router as journal_router
 from app.api.macro import router as macro_router
@@ -127,6 +128,7 @@ app.include_router(performance_router)
 app.include_router(precious_metals_router)
 app.include_router(settings_router)
 app.include_router(usage_router)
+app.include_router(game_router)
 
 
 @app.get("/health")
