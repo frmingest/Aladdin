@@ -1,6 +1,6 @@
 # Game mode ("Fortress") — feasibility and plan — 2026-10-01
 
-Status: **G1 (backend) and G2 (Fortress home) are merged to `main` (PRs #23, #25), not yet deployed or checked live. G3 (PR #26) was merged into the already-merged G2 branch, so it never reached `main`; the G4 branch (`feature/game-mode-g4-sieges-land`) carries G3 and G4 together. G4 is built, tested and checked in a browser, PR open. G5 (vault entry screen) is built on its own branch stacked on G4, PR open. G6–G7 not started.** F33 in `PROGRESS.md`.
+Status: **G1–G5 are merged to `main` (PRs #23, #25, #27 carrying G3 + G4, #28), not yet checked live. G6 (temperament meter) is built on `feature/game-mode-g6-temperament`, PR #29 open. G7 not started.** F33 in `PROGRESS.md`.
 
 ## Why
 
@@ -107,12 +107,12 @@ page. That gives the "whole app feels different" effect without doubling fronten
 | Phase | Delivers | Size |
 |---|---|---|
 | G0 | This ADR; decisions D1–D5 | done |
-| G1 | `game_mapping/v1.py`, `/game/state`, demo branch, account cash field, pytest for every rule and threshold | M — **built 2026-10-01 (PR open)** |
-| G2 | Top bar + toggle + provider; Fortress home with moat, walls, tower footprint, diworsification | L — **built 2026-10-01 (PR open, stacked on G1)** |
-| G3 | Drill-down: holding pages re-skinned (`data-skin`), Ledger view | M — **built 2026-10-01 (PR open, stacked on G2)** |
-| G4 | Sieges (regime/stress), margin-of-safety "land for sale", tripwire breaches (analysis-freshness weathering already shipped in G2) | M — **built 2026-10-01 (PR open, carries G3)** |
-| G5 | Vault entry screen (D2) | S–M — **built 2026-10-01 (PR #28, stacked on G4)** |
-| G6 | Temperament meter, journal-driven | M |
+| G1 | `game_mapping/v1.py`, `/game/state`, demo branch, account cash field, pytest for every rule and threshold | M — **merged (#23)** |
+| G2 | Top bar + toggle + provider; Fortress home with moat, walls, tower footprint, diworsification | L — **merged (#25)** |
+| G3 | Drill-down: holding pages re-skinned (`data-skin`), Ledger view | M — **merged (#27, with G4)** |
+| G4 | Sieges (regime/stress), margin-of-safety "land for sale", tripwire breaches (analysis-freshness weathering already shipped in G2) | M — **merged (#27)** |
+| G5 | Vault entry screen (D2) | S–M — **merged (#28)** |
+| G6 | Temperament meter, journal-driven | M — **built 2026-10-01 (PR #29)** |
 | G7 | Advisors, polish, ambience (rain, lamp, clock), reduced-motion | M |
 
 Sizes are relative effort, not hours. **The art is the long pole** — a procedural SVG kit gets to
@@ -288,3 +288,41 @@ PR for Faiz to review.
   disk space).
 - **Not in G5:** temperament meter (G6), advisors and ambience (G7); valuing physical coins in NOK stays out
   (it needs a live spot-price call this endpoint never makes).
+
+## G6 as built (2026-10-01)
+
+- **Source of data:** database only, no provider or LLM call, no migration. Reads the decision journal, each
+  tripwire's `fired_at`, and the positions of stored portfolio snapshots (quantity, last price, currency).
+- **Window:** rolling 365 days. Rules run over every journal entry, then each event is kept by its own date, so a
+  6- or 12-month review that fell due inside the window counts even when the decision is older.
+- **Drains (one line each):**
+  - *Bought against the verdict*: buy/add while `verdict_at_decision` was Sell or Avoid.
+  - *No invalidation written*: buy/add with an empty "what would prove this wrong".
+  - *Sold an intact thesis*: a **sell** (trims are never judged as panic) while the verdict was Buy or Strong Buy
+    and no tripwire on that holding had fired by that day. A sell after a Hold verdict is not judged.
+  - *Churn*: 3 or more buy/add/trim/sell entries on one holding inside 90 days; one line per burst.
+- **Restores:**
+  - *Acted on a tripwire*: trim or sell on or after the day a tripwire on that holding fired.
+  - *6- / 12-month review done*: the review text is written and the review is due (182 / 365 days).
+  - *Held through a drop*: the position was kept (quantity not reduced) between two snapshots of the same account
+    while its price fell 15% or more in the same currency, with no tripwire fired by then. Holding on after a
+    tripwire fired is neither rewarded nor punished.
+- **Meter:** needle = restores / (restores + drains) × 100. 70 composed, 40 steady, 20 restless, below rash. Nothing
+  judged = *unsurveyed* (dashed dial, "?"), never a default needle. Fewer than 5 logged decisions in the window =
+  *Low confidence*, still shown. The summary always says "based on N logged decisions and M snapshot comparisons".
+- **Turnover ("remodelling"):** per account, the two latest snapshots: added, removed, resized, and the share of
+  positions changed. Counts only; there is no fee data to price it.
+- **Known limit:** a tripwire's `fired_at` is cleared when the metric recovers, so an old firing that later cleared
+  is no longer on record and its sell will not count as "acted on a tripwire". Stated, not worked around.
+- **Mapping:** thresholds added to `GameMapping` v1 as additive fields (`temperament_window_days`, `churn_window_days`,
+  `churn_min_actions`, `held_drop_min_fraction`, `temperament_min_decisions`, `composed/steady/restless_min_pct`);
+  no earlier v1 value changed. Any later change to them is v2.
+- **Rules kept:** read-only (tested), informational only, no points, no reward for trading; demo mode shows an
+  invented meter built from the demo journal plus a few invented decisions, never real entries.
+- **Frontend:** `TemperamentCard` below the weather card on the Fortress: half-dial with the four bands, level and
+  needle, ▲ restored / ▼ drained counts, the newest six lines (show all), turnover, link to the Journal. Colours come
+  from the theme tokens, so it follows dark/light and the study skin.
+- **Verified:** backend 1,259 pass (31 new: boundary tests for every rule and edge, 4 API tests incl. read-only and
+  demo), ruff clean; frontend tsc clean, ESLint 0 errors, 80 tests (6 new), build. Card rendered in Chromium at
+  desktop and phone width against the demo state and an empty state. **Not seen with real journal data.**
+- **Not in G6:** advisors, polish and ambience (G7).

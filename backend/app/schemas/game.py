@@ -1,7 +1,7 @@
 """Pydantic schemas for the game-mode API (app/api/game.py, 2026-10-01)."""
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Literal
 from uuid import UUID
@@ -19,6 +19,7 @@ SiegeLevel = Literal["calm", "gathering", "besieged", "unsurveyed"]
 SiegeExposure = Literal["sheltered", "exposed", "breach_risk", "unsurveyed"]
 LandState = Literal["bargain", "discount", "full_price", "overpriced", "fog"]
 ThesisState = Literal["intact", "review", "breached", "not_analyzed", "not_applicable"]
+TemperamentLevel = Literal["composed", "steady", "restless", "rash", "unsurveyed"]
 
 
 class TowerOut(BaseModel):
@@ -118,6 +119,53 @@ class SiegeOut(BaseModel):
     breached_count: int
 
 
+class TemperamentEventOut(BaseModel):
+    """One line of the temperament meter: which rule, when, on what, and why."""
+
+    kind: Literal["drain", "restore"]
+    rule: str
+    on: date
+    holding_name: str
+    holding_id: UUID | None
+    explanation: str
+    source: Literal["journal", "snapshots"]
+    entry_id: UUID | None = None
+
+
+class TurnoverOut(BaseModel):
+    """What changed between the two latest snapshots of one account. Shown as
+    counts only: there is no fee or commission data to price it in kroner."""
+
+    account_name: str
+    from_at: datetime
+    to_at: datetime
+    positions_before: int
+    positions_after: int
+    added: int
+    removed: int
+    resized: int
+    turnover_pct: Decimal | None
+
+
+class TemperamentOut(BaseModel):
+    """G6: a journal-driven reading of discipline, explainable line by line.
+    Informational only: it never blocks or suggests a trade."""
+
+    level: TemperamentLevel
+    # Restoring events as a share of all judged events, 0-100. None when
+    # nothing in the window met a rule.
+    needle_pct: Decimal | None
+    low_confidence: bool
+    decisions_logged: int
+    snapshot_comparisons: int
+    drains: int
+    restores: int
+    window_days: int
+    summary: str
+    events: list[TemperamentEventOut]
+    turnover: list[TurnoverOut]
+
+
 class GameStateOut(BaseModel):
     mapping_version: str
     as_of: datetime | None
@@ -127,6 +175,7 @@ class GameStateOut(BaseModel):
     diworsification: DiworsificationOut
     vault: VaultOut
     siege: SiegeOut | None = None
+    temperament: TemperamentOut | None = None
     # Plain-language data gaps ("3 holdings have no analysis"), so an
     # unfinished fortress is labelled as unfinished.
     notes: list[str]

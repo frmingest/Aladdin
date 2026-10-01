@@ -65,3 +65,21 @@ class GameMapping:
     # G5: a cash figure Faiz typed in more than this many days ago is shown but
     # labelled old (cash moves; the vault would otherwise look surer than it is).
     stale_cash_days: int
+
+    # --- Temperament meter (G6), journal-driven -------------------------
+    # Only decisions and snapshot comparisons inside this rolling window count.
+    temperament_window_days: int
+    # Churn: this many buy/add/trim/sell actions on one holding inside
+    # `churn_window_days` is one "churn" drain.
+    churn_window_days: int
+    churn_min_actions: int
+    # "Held through a drop": a position kept (quantity not reduced) between two
+    # snapshots of one account while its price fell by at least this fraction.
+    held_drop_min_fraction: Decimal
+    # Fewer logged decisions than this in the window = low-confidence reading.
+    temperament_min_decisions: int
+    # Needle (restoring events as a share of all judged events, percent) at or
+    # above these = composed / steady / restless; below the last = rash.
+    composed_min_pct: Decimal
+    steady_min_pct: Decimal
+    restless_min_pct: Decimal

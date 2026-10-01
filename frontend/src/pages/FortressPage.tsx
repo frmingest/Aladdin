@@ -6,6 +6,7 @@ import type { GameState } from "../lib/types";
 import FortressLedger from "../components/fortress/FortressLedger";
 import FortressScene from "../components/fortress/FortressScene";
 import SiegeCard from "../components/fortress/SiegeCard";
+import TemperamentCard from "../components/fortress/TemperamentCard";
 import TowerSurvey from "../components/fortress/TowerSurvey";
 import VaultCard from "../components/fortress/VaultCard";
 import { Button, Card, EmptyState, PageHeader, SnapshotStamp } from "../components/ui";
@@ -144,6 +145,8 @@ export default function FortressPage() {
           )}
 
           <SiegeCard siege={state.siege} />
+
+          <TemperamentCard temperament={state.temperament} />
 
           <div className="grid gap-4 lg:grid-cols-2">
             <VaultCard vault={state.vault} demo={state.demo} onChanged={load} />

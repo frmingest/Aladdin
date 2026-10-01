@@ -30,6 +30,14 @@ Why these values:
   snapshot older than 7 days is shown but labelled old.
 - Cash older than 30 days (added in G5, additive) is labelled old: the figure
   is typed by hand, so it is only as current as the last time Faiz updated it.
+- Temperament (added in G6, additive): a rolling 365-day window. Three or
+  more buy/add/trim/sell actions on one holding inside 90 days is churn. A
+  position kept through a 15% price fall between two snapshots is "held
+  through a drop" (15% is roughly a normal bad quarter for a single stock;
+  smaller moves are noise, not a test of temperament). Fewer than 5 logged
+  decisions is a low-confidence reading. The needle is the share of judged
+  events that restored the meter: 70% composed, 40% steady, 20% restless,
+  below that rash.
 - Land for sale is not a threshold at all: it reads the stored margin-of-
   safety zone (below the bear case, bear-to-base, base-to-bull, above bull).
 """
@@ -65,4 +73,12 @@ GAME_MAPPING_V1 = GameMapping(
     breach_risk_holding_shock=Decimal("-0.40"),
     stored_snapshot_stale_days=7,
     stale_cash_days=30,
+    temperament_window_days=365,
+    churn_window_days=90,
+    churn_min_actions=3,
+    held_drop_min_fraction=Decimal("0.15"),
+    temperament_min_decisions=5,
+    composed_min_pct=Decimal(70),
+    steady_min_pct=Decimal(40),
+    restless_min_pct=Decimal(20),
 )

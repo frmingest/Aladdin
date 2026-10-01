@@ -11,10 +11,23 @@ from decimal import Decimal
 
 from app.domain.game_mapping import get_game_mapping
 from app.schemas.game import GameStateOut
-from app.services.game.rules import ClusterFact, LandFacts, RiskFacts, ThesisFacts, WallFacts
+from app.services.game.rules import (
+    ClusterFact,
+    LandFacts,
+    RiskFacts,
+    ThesisFacts,
+    WallFacts,
+)
 from app.services.game.state import AccountCash, GameInputs, build_game_state
+from app.services.game.temperament import (
+    DecisionFact,
+    PositionStep,
+    TemperamentInputs,
+    TurnoverFact,
+)
 from app.services.settings.synthetic_data import (
     demo_accounts,
+    demo_journal,
     demo_portfolio_overview,
     demo_thesis_monitor,
     demo_valuation_board,
@@ -87,6 +100,58 @@ def _demo_risk(overview, now: datetime) -> RiskFacts:
     )
 
 
+def _demo_temperament(overview, now: datetime) -> TemperamentInputs:
+    """The demo journal plus a few invented decisions, so the demo meter shows
+    every kind of line (drains and restores) without touching real data."""
+    by_ticker = {p.ticker: p for p in overview.positions}
+    today = now.date()
+    decisions = [
+        DecisionFact(
+            entry_id=e.id, holding_id=e.holding_id, ticker=e.ticker, name=e.company_name, action=e.action,
+            decided_on=e.decided_on, verdict_at_decision=e.verdict_at_decision,
+            has_invalidation=bool((e.invalidation or "").strip()),
+            review_6m_written=bool((e.review_6m or "").strip()),
+            review_12m_written=bool((e.review_12m or "").strip()),
+        )
+        for e in demo_journal().entries
+    ]
+
+    def invented(ticker: str, action: str, days_ago: int, *, verdict: str | None = "Hold", invalidation=True):
+        p = by_ticker.get(ticker)
+        if p is None:
+            return
+        decisions.append(
+            DecisionFact(
+                entry_id=None, holding_id=p.holding_id, ticker=ticker, name=p.name, action=action,
+                decided_on=today - timedelta(days=days_ago), verdict_at_decision=verdict,
+                has_invalidation=invalidation,
+            )
+        )
+
+    invented("KO", "buy", 40, verdict="Buy", invalidation=False)  # drain: no invalidation written
+    invented("HD", "trim", 20)  # restore: acted after the (invented) tripwire fired
+    for days in (70, 45, 15):  # drain: churn
+        invented("PG", "add" if days != 45 else "trim", days)
+    steps = []
+    jnj = by_ticker.get("JNJ")
+    if jnj is not None:
+        steps.append(
+            PositionStep(
+                holding_id=jnj.holding_id, name=jnj.name, from_at=now - timedelta(days=120),
+                to_at=now - timedelta(days=30), quantity_before=D(40), quantity_after=D(40),
+                price_before=D("170"), price_after=D("142"),
+            )
+        )
+    fired = {by_ticker["HD"].holding_id: [now - timedelta(days=30)]} if "HD" in by_ticker else {}
+    turnover = [
+        TurnoverFact(
+            account_name=demo_accounts()[0].name, from_at=now - timedelta(days=30), to_at=now - timedelta(days=2),
+            positions_before=10, positions_after=10, added=0, removed=0, resized=2,
+        )
+    ]
+    return TemperamentInputs(decisions=decisions, tripwire_fired_at=fired, steps=steps, turnover=turnover)
+
+
 def demo_game_state(version: str) -> GameStateOut:
     overview = demo_portfolio_overview()
     walls: dict = {}
@@ -127,6 +192,7 @@ def demo_game_state(version: str) -> GameStateOut:
         land=land,
         land_snapshot_at=now - timedelta(days=1),
         thesis=thesis,
+        temperament=_demo_temperament(overview, now),
         accounts=[
             AccountCash(
                 cash_nok=D("180000"),

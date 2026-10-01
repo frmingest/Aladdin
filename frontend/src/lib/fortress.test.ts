@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  TEMPERAMENT_BANDS,
+  dialArc,
+  dialPoint,
+  needlePct,
+  temperamentRuleLabel,
   MAX_DRAWN_SHACKS,
   SCENE_WIDTH,
   describeSiegeExposure,
@@ -353,5 +358,47 @@ describe("Ledger with G4 columns", () => {
     expect(needsAttention(tower({ land: "bargain", siege_exposure: "breach_risk" }))).toBe(false);
     expect(filterLedger(rows, "attention").map((t) => t.name)).toEqual(["Bb"]);
     expect(ledgerTotals(rows).attention).toBe(1);
+  });
+});
+
+describe("temperament helpers (G6)", () => {
+  it("places the dial ends and the middle", () => {
+    const left = dialPoint(0, 100, 100, 50);
+    const top = dialPoint(50, 100, 100, 50);
+    const right = dialPoint(100, 100, 100, 50);
+    expect(left.x).toBeCloseTo(50);
+    expect(left.y).toBeCloseTo(100);
+    expect(top.x).toBeCloseTo(100);
+    expect(top.y).toBeCloseTo(50);
+    expect(right.x).toBeCloseTo(150);
+  });
+
+  it("clamps the dial to 0–100", () => {
+    expect(dialPoint(-20, 100, 100, 50)).toEqual(dialPoint(0, 100, 100, 50));
+    expect(dialPoint(140, 100, 100, 50)).toEqual(dialPoint(100, 100, 100, 50));
+  });
+
+  it("never invents a needle for a missing reading", () => {
+    expect(needlePct(null)).toBeNull();
+    expect(needlePct("not a number")).toBeNull();
+    expect(needlePct("60.0")).toBe(60);
+  });
+
+  it("bands cover 0–100 with the mapping's edges", () => {
+    expect(TEMPERAMENT_BANDS.map((b) => [b.from, b.to])).toEqual([
+      [0, 20],
+      [20, 40],
+      [40, 70],
+      [70, 100],
+    ]);
+  });
+
+  it("labels known rules and degrades gracefully for unknown ones", () => {
+    expect(temperamentRuleLabel("churn")).toBe("Churn");
+    expect(temperamentRuleLabel("some_new_rule")).toBe("some new rule");
+  });
+
+  it("draws an arc path", () => {
+    expect(dialArc(0, 100, 100, 100, 50)).toMatch(/^M50\.00 100\.00 A50 50 0 0 1 150\.00 100\.00$/);
   });
 });

@@ -6,6 +6,7 @@ import type {
   FortressSiegeLevel,
   FortressSize,
   FortressStructure,
+  FortressTemperamentLevel,
   FortressThesis,
   FortressVaultLevel,
   FortressWall,
@@ -467,4 +468,72 @@ export function ledgerTotals(towers: GameTower[]): LedgerTotals {
     if (needsAttention(t)) attention += 1;
   }
   return { count: towers.length, weightPct, attention };
+}
+
+// --- G6: temperament meter ----------------------------------------------------
+// Wording and dial geometry only. The level, needle and every event line are
+// decided by the backend's rules (backend/app/services/game/temperament.py).
+
+export const TEMPERAMENT_LABEL: Record<FortressTemperamentLevel, string> = {
+  composed: "Composed",
+  steady: "Steady",
+  restless: "Restless",
+  rash: "Rash",
+  unsurveyed: "Not enough to read",
+};
+
+export const TEMPERAMENT_TEXT: Record<FortressTemperamentLevel, string> = {
+  composed: "Most of what the journal and snapshots show is patient, documented decision-making.",
+  steady: "A mix: more discipline than haste, with some lines worth a look.",
+  restless: "More haste than discipline in what was logged.",
+  rash: "Almost everything the rules could judge drained the meter.",
+  unsurveyed: "Nothing in the window met a rule, so there is no reading (not the same as a good one).",
+};
+
+/** Short names for each rule id the backend can emit. Unknown ids fall back
+ * to the id itself, so a new backend rule never breaks the card. */
+export const TEMPERAMENT_RULE_LABEL: Record<string, string> = {
+  bought_against_verdict: "Bought against the verdict",
+  no_invalidation: "No invalidation written",
+  sold_intact_thesis: "Sold an intact thesis",
+  churn: "Churn",
+  acted_on_tripwire: "Acted on a tripwire",
+  held_through_drop: "Held through a drop",
+  review_6m_done: "6-month review done",
+  review_12m_done: "12-month review done",
+};
+
+export function temperamentRuleLabel(rule: string): string {
+  return TEMPERAMENT_RULE_LABEL[rule] ?? rule.replace(/_/g, " ");
+}
+
+/** The dial's bands, 0–100, matching the mapping's v1 edges (20 / 40 / 70).
+ * Drawing only: the backend decides the level. */
+export const TEMPERAMENT_BANDS: ReadonlyArray<{ from: number; to: number; level: FortressTemperamentLevel }> = [
+  { from: 0, to: 20, level: "rash" },
+  { from: 20, to: 40, level: "restless" },
+  { from: 40, to: 70, level: "steady" },
+  { from: 70, to: 100, level: "composed" },
+];
+
+/** A point on a half-dial: 0 is the far left, 100 the far right, centre (cx, cy). */
+export function dialPoint(pct: number, cx: number, cy: number, r: number): { x: number; y: number } {
+  const clamped = Math.min(100, Math.max(0, pct));
+  const angle = Math.PI * (1 - clamped / 100);
+  return { x: cx + r * Math.cos(angle), y: cy - r * Math.sin(angle) };
+}
+
+/** SVG arc path for one band of the half-dial. */
+export function dialArc(from: number, to: number, cx: number, cy: number, r: number): string {
+  const a = dialPoint(from, cx, cy, r);
+  const b = dialPoint(to, cx, cy, r);
+  const f = (n: number) => n.toFixed(2);
+  return `M${f(a.x)} ${f(a.y)} A${r} ${r} 0 0 1 ${f(b.x)} ${f(b.y)}`;
+}
+
+/** The needle position, or null when there is no reading (never a default 50). */
+export function needlePct(needle: string | null): number | null {
+  if (needle === null) return null;
+  const n = Number(needle);
+  return Number.isFinite(n) ? Math.min(100, Math.max(0, n)) : null;
 }
