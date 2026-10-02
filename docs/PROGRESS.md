@@ -1,6 +1,6 @@
 # Aladdin — Progress
 
-**Last updated:** 2026-10-01 · structure: [1 Now](#1-where-we-are-now) · [2 Needs from Faiz](#2-needs-from-faiz) · [3 Known issues](#3-known-issues) · [4 Roadmap](#4-roadmap) · [5 Features](#5-feature-index) · [6 Changes / history](#6-changes--history)
+**Last updated:** 2026-10-02 · structure: [1 Now](#1-where-we-are-now) · [2 Needs from Faiz](#2-needs-from-faiz) · [3 Known issues](#3-known-issues) · [4 Roadmap](#4-roadmap) · [5 Features](#5-feature-index) · [6 Changes / history](#6-changes--history)
 
 How this page works: short tables only. Each item links to its own doc in this folder. Finished work
 moves to **§6 Changes / history** as soon as it is done. The full previous version of this page (long
@@ -13,14 +13,14 @@ Architecture and diagram: [architecture.md](architecture.md).
 
 | | |
 |---|---|
-| **Phase** | Phase 11: Buffett/Munger single-focus rebuild ([sprint plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md)) |
-| **`main`** | `4dfb32a` (PR #31). Merged: CI fixes (#21), docs (#22), game mode G1 (#23), G2 (#25), G3 + G4 (#27), G5 (#28), G6 (#29), art pass (#30), quick-look fix (#31). PR #26 (G3 alone) is superseded by #27; close it if still open |
-| **Open PRs** | Lamp logo + connected fortress (branch `feature/lamp-logo-and-connected-fortress`): PR open. #33 and G7b (#32) are merged |
-| **Sprints closed** | 0–15 (16 and 17 / Epic F22 were built and removed 2026-09-29) |
+| **Phase** | Phase 11: Buffett/Munger single-focus rebuild. **Next: Sprints 18–22, approved 2026-10-02** (see §4) |
+| **`main`** | `58601a8` (PR #35). Everything built so far is merged, including game mode G1–G9 (#23–#35), CI fixes (#21) and the lamp logo (#34). PR #26 (G3 alone) is superseded by #27; close it if still open |
+| **Open PRs** | None known from this side (checked 2026-10-02 from the repo; confirm on GitHub) |
+| **Sprints closed** | 0–15 (16 and 17 / Epic F22 were built and removed 2026-09-29). **Sprint 18 is next** |
 | **Backend tests** | 1,335 pass (verified 2026-10-01 on the G7b branch) · Ruff clean · frontend 94 tests, tsc clean, ESLint 0 errors (G7b branch) |
 | **Migration head** | `o1a6b7c8d9e0` (one head). Not yet confirmed on Supabase: `l1d2e3f4a5b6`, `n1f5a6b7c8d9`, `o1a6b7c8d9e0` |
 | **Live URLs** | Frontend `https://exciting-gratitude-production-71b5.up.railway.app` · Backend `https://aladdin-production-bd25.up.railway.app` |
-| **Deploy** | Railway auto-deploys every push to `main`. Live state was **not** checked this session |
+| **Deploy** | Railway auto-deploys every push to `main`. Live state not re-verified since 2026-09-27; Sprint 18 does that |
 | **How Claude ships work** | Branch → commit → push → **Claude opens the PR from chat** → Faiz reviews and merges ([CLAUDE.md](../CLAUDE.md), "Pull requests") |
 
 ---
@@ -29,15 +29,14 @@ Architecture and diagram: [architecture.md](architecture.md).
 
 Grouped by what kind of effort it is. ★★★ = blocks something or costs money/safety.
 
-### A. This week: CI and deploy
+### A. This week: deploy checks
+
+Done on 2026-10-02 (confirmed by Faiz): GitHub Actions variables `SMOKE_FRONTEND_URL` / `SMOKE_API_URL`, and the `SMOKE_API_KEY` secret. PR #21 is merged. See §6.
 
 | | Action | Why |
 |---|---|---|
-| ★★★ | **Review and merge PR #21** | Turns CI green: Ruff, dependency audit (starlette/fastapi upgrade), 3 stale tests |
-| ★★★ | **GitHub → Settings → Secrets and variables → Actions → Variables:** add `SMOKE_FRONTEND_URL` and `SMOKE_API_URL` (the two live URLs above) | The post-deploy smoke test fails on every deploy without them |
-| ★★★ | **After the next Railway deploy:** backend log shows migrations `l1d2e3f4a5b6`, `n1f5a6b7c8d9`, `o1a6b7c8d9e0` ran; FastAPI upgrade (0.115 → 0.142) did not break startup | PR #21 upgrades the web framework, so check `/health` and open the app |
-| ★★★ | **Railway → backend → Deployments:** only one active; `APP_AUTH_TOKEN` equals the frontend's `VITE_API_KEY` | API-key gate was seen flapping 2026-09-27 |
-| ★★ | `SMOKE_API_KEY` secret set in GitHub (same value as `APP_AUTH_TOKEN`) | Smoke test calls the API directly |
+| ★★★ | **Railway → frontend service → Variables:** `VITE_API_KEY` exists and equals the backend's `APP_AUTH_TOKEN`. (It lives on the *frontend* service, not the backend, so seeing only `APP_AUTH_TOKEN` on the backend is expected.) Also confirm only one backend deployment is active | The API-key gate was seen flapping 2026-09-27; `VITE_API_KEY` is baked in at frontend build time |
+| ★★★ | **Backend deploy log** shows migrations `l1d2e3f4a5b6`, `n1f5a6b7c8d9`, `o1a6b7c8d9e0`, `p1b7c8d9e0f1` ran, and `/health` is OK after the FastAPI upgrade (0.115 → 0.142) | Not yet confirmed on Supabase |
 
 ### B. On your PC
 
@@ -52,14 +51,7 @@ Grouped by what kind of effort it is. ★★★ = blocks something or costs mone
 
 | | What | Doc |
 |---|---|---|
-| ★★ | **Game mode G9 Marketplace (after the PR is merged): `git pull`, game mode on, Fortress.** Press the market square below the walls (or *Enter the Marketplace*). Walk the street, enter two or three stores. Do the gates and the overall reading match what you know about each company? Is anything missing for deciding whether to look further? Try *Name your price* (use the 25% cushion button) and see the stall lantern change. Stores read the stored valuation, analysis, ratios and thesis, so a company with no analysis shows unknown gates and says what to run. Frontend only; deploy needs nothing else | Frontend, first look: [game mode](game-mode-fortress-2026-10-01.md) |
-| ★★ | **Magic-lamp logo + connected fortress (after you merge the PR): `git pull`, open the app, game mode on, Fortress.** Is the lamp logo what you pictured (sidebar, tab icon)? On the Fortress: press a tower (that holding's survey), then the central keep or any wall (verdict on everything). Does the verdict read fairly against your real portfolio, and are the "open these towers first" reasons right? Tell me if the thresholds under "How it is decided" feel off. Frontend only; deploy needs nothing else | Frontend, first look: [game mode](game-mode-fortress-2026-10-01.md) |
-| ★★ | **Game mode G7b (advisors, lamp and clock, sound): review and merge the PR, `git pull`, game mode on, open the Fortress.** Read every line the two advisors say about your real portfolio: does each one match what you know, and does any read like advice to trade, flattery or a scolding? Open *Why this line* on one or two to check the facts. Check the lamp (lit if your newest portfolio snapshot is under a week old, dim if older) and the clock. Press **Sound: off** in the page header: it should fade in a soft wind that deepens when the weather is gathering or besieged, and stay off on every page load. Tell me which lines feel wrong, missing or too many. Backend + frontend, no migration; deploy needs nothing else | Backend + frontend, first look: [game mode](game-mode-fortress-2026-10-01.md) |
-| ★★ | **Game mode art pass (PR #30, merged), with the quick-look fix (#31): `git pull`, game mode on, open the Fortress.** Look at it with your real portfolio: do wall materials still read at a glance (basalt dark blue-black, granite grey, brick red, timber planks, rotted tilted and holed)? Hover a tower (game-style card), click one (green ring + survey). Tell me what feels too busy, too dark, or not "Warcraft" enough, and whether the ambient motion (banners, fireflies/rain/embers, water) is welcome or distracting. Frontend only; deploy needs nothing else | Frontend, first look: [game mode](game-mode-fortress-2026-10-01.md) |
-| ★★ | **Game mode G6 (temperament meter, merged #29): `git pull`, game mode on, Fortress → Temperament card (below the weather card).** Check that every ▲/▼ line matches what you remember doing, that nothing reads as a scolding, and whether the dial level feels fair. With few journal entries it says "Low confidence": logging a few decisions in the Journal (with *what would prove me wrong* filled in) is what feeds it. No migration; deploy needs nothing else | Backend + frontend, first look: [game mode](game-mode-fortress-2026-10-01.md) |
-| ★★ | **Game mode G5 (vault entry screen, merged #28): `git pull`, game mode on, Fortress → Vault card → Enter cash. Type the cash held in each Nordnet account (e.g. `250 000`) and Save; the vault level, the cash share and the "entered <date>" label should update. Leave a box empty for "not checked", 0 for "fully invested". Tell me if a way you type an amount is not understood. No new migration; deploy needs nothing else** | Backend + frontend, first look: [game mode](game-mode-fortress-2026-10-01.md) |
-| ★★ | **Game mode G3 + G4 (merged #27; close #26 if still open): `git pull`, open the app, game mode on. First open Portfolio risk and Margin of safety once (the siege and land layers read what those pages stored).** On the Fortress: check the weather label and sky, the SALE / OFFER / DEAR signs against what you know about the prices, the red ! on any holding with a fired tripwire, the ladders (only when weather is gathering or worse), the cracked wall between correlated holdings, the new Ledger columns (Land, Thesis, Siege) and the "weather and siege" card. Tell me anything that reads wrong or alarmist. Switching game mode off returns the app exactly as it was | Backend + frontend, first look: [game mode](game-mode-fortress-2026-10-01.md) |
-| ★★ | **Game mode G1 (merged): after the Railway deploy confirm migration `p1b7c8d9e0f1` ran, then `PATCH /accounts/{id}` with `{"cash_nok": <amount>}` on each account and open `/game/state`** (towers, walls, vault). Tell me any wall that looks wrong against what you know about the company | Backend, first look: [game mode](game-mode-fortress-2026-10-01.md) |
+| ★★ | **Game mode walkthrough (G1–G9, all merged, none seen on real data).** `git pull`, deploy, then in order: (1) `PATCH /accounts/{id}` `{"cash_nok": …}` per account, or Fortress → Vault → Enter cash. (2) Open Portfolio risk and Margin of safety once so the siege and land layers have data. (3) Game mode on → Fortress: weather, SALE/OFFER/DEAR signs, tripwire marks, walls and moats against what you know, tower click (survey), keep or wall click (verdict on the whole). (4) Temperament card (needs a few Journal entries). (5) Advisors: does any line read as advice to trade, flattery or a scolding? Lamp and clock; **Sound** button. (6) Marketplace: walk the street, enter 2–3 stores, try *Name your price*. (7) Lamp logo in sidebar and tab. Tell me what reads wrong, alarmist, too busy or missing. Backend + frontend; migration `p1b7c8d9e0f1` is the only one | [game mode](game-mode-fortress-2026-10-01.md) |
 | ★★ | Split-view reader: Holding → Metrics → eye next to a figure on an `.xhtml` filing; the exact number should be highlighted | [split view](split-view-reader-2026-09-30.md), [Read button](document-read-button-2026-09-30.md) |
 | ★★ | Page speed: press **Refresh** once on Risk, Performance, Margin of safety, Watchlist, then reload (should be sub-second); Network tab → Timing shows DB ms | page-load (project doc `page-load-snapshots-2026-09-30`) |
 | ★★ | Margin of safety after the valuation guardrails: re-run SB1NO.OL and the banks; old stored analyses show a red "not reliable" note until re-run; remove `ACTIVE_VALUATION_ASSUMPTIONS_VERSION=v1` in Railway if set | [guardrails](valuation-guardrails-build-2026-09-29.md) |
@@ -85,7 +77,7 @@ Grouped by what kind of effort it is. ★★★ = blocks something or costs mone
 
 | Issue | Impact | Status |
 |---|---|---|
-| Smoke test red on every deploy | Post-deploy check never runs | Workflow message fixed in PR #21; **needs the two variables above** |
+| Smoke test red on every deploy | Post-deploy check never ran | Variables and `SMOKE_API_KEY` now set (2026-10-02); **confirm the next deploy's smoke run is green** (Sprint 18) |
 | Margin-of-safety board rankable rows | Vår Energi and Salmon Evolution fail on a loss-making first year; funds need look-through | Click Newsweb fetch on the two equities; run fund look-through (doc (project doc `margin-of-safety-data-gaps-2026-09-27`)) |
 | Gemini free quota is small (~20 calls/day) | Research and analysis stall when spent | Tavily fallback built; needs the key |
 | Split-view reader and Read button never seen in a browser | Built where no browser could be driven | Needs your first look (C above) |
@@ -100,15 +92,18 @@ Grouped by what kind of effort it is. ★★★ = blocks something or costs mone
 
 ## 4. Roadmap
 
-### Next up
+### Sprint plan (approved 2026-10-02)
 
-| # | Item | Notes |
+Order: make it trustworthy (18), make the board complete (19), make it fast (20), then depth and alerts (21, 22). Game mode is frozen until you have used it.
+
+| Sprint | Theme | Scope |
 |---|---|---|
-| 1 | Sprint 15 #3: rate sensitivity per holding | Was absorbed into F22, open again (plan (project doc `sprint15-plan-and-quarterly-review-2026-09-26`)) |
-| 2 | Sprint 15 #6: PDF export / reporting | Same plan |
-| 3 | Batch / precompute the Margin-of-safety board | Second half of the page-load work |
-| 4 | Client-side data cache (react-query or SWR) | Every navigation refetches today |
-| 5 | Game mode (F33): look at G1–G7b on real data and say what to change | G1–G7a merged; G7b (advisors, lamp/clock, sound) in an open PR. No further game phase is planned until you have used it: [doc](game-mode-fortress-2026-10-01.md) |
+| **18** | **Stabilise and verify (no new features)** | Verify live deploy and all migrations on Supabase. Confirm the smoke test runs green. Remove tracked clutter (`_to_delete/_tmp_bk.zip`, `.nanfix.patch`). Copy the 14 project-only write-ups into `docs/`. Decide whether game-mode thresholds (`market-v1`, `realm-v1`) move to the backend mapping. Fix the react-router `npm audit` warnings. |
+| **19** | **Make the Margin-of-safety board rank everything** | Newsweb fetch for Vår Energi and Salmon Evolution; DCF handling of a loss-making first year; fund annual-report holdings parser for funds that are not Xtrackers or L&G; re-tag the three Norwegian funds; turn on the Tavily fallback. |
+| **20** | **Speed** | Precompute the Margin-of-safety board in the worker; react-query client cache; move first price/beta/research fetches out of GET requests; persist beta/price/FX caches to the DB. |
+| **21** | **Analysis depth and reporting** | Rate sensitivity per holding (old Sprint 15 #3); PDF export / portfolio report (old #6); per-run LLM cost attribution. |
+| **22** | **Alerts and evidence** | Delivery channel for fired tripwires; insider trades and major-shareholder flags from Newsweb; SEC EDGAR full-text citations for US holdings. Sprints 21 and 22 may swap. |
+| **Game mode (F33)** | **Frozen** | Only fixes from your walkthrough feedback (C above). No new game phase planned. |
 
 ### Backlog
 
@@ -174,6 +169,7 @@ Newest first. One line each; the full write-up of every entry is in
 
 | Date | Change | Summary | Detail |
 |---|---|---|---|
+| 2026-10-02 | **Review and plan: Sprints 18–22 approved** | Reviewed this page against the repo. Findings: PR #21, #34 and #35 are merged (page was stale); `_to_delete/_tmp_bk.zip` and `.nanfix.patch` still tracked; no open PRs. Faiz approved a five-sprint plan (§4). Faiz confirmed done: GitHub Actions variables `SMOKE_FRONTEND_URL` / `SMOKE_API_URL` and the `SMOKE_API_KEY` secret. `VITE_API_KEY` is a frontend-service variable (build arg), so only `APP_AUTH_TOKEN` appearing on the backend is expected. Needs section trimmed; the ten game-mode first-look rows are merged into one walkthrough. Docs only, no code change | §4 |
 | 2026-10-01 | **Game mode G9: Marketplace and store deep-dive (F33)** | Frontend only, no backend, no migration. A **market square** below the fortress walls (Market Hall, a stall per watchlist company, lantern lit when in your price range) opens **the Marketplace** `/fortress/marketplace`: a street of stores. Entering a store `/fortress/marketplace/:id` gives a decision view in the same game theme: a merchant, decision scales, **eight gates** (moat, walls, earning power, fair price, your price, analyst's word, tripwires, freshness) each open / ajar / closed / unknown with its reason, a **price board** (stored bear / base / bull, the 25%-cushion price, today's price, your price), the moat tour, the numbers on the shelves, the case for and against from the stored analysis, tripwires, and **Name your price** (the only write: your buy-below price on the watchlist). Overall reading by fixed rules `market-v1`: Gates open / Promising, doubts remain / Wait for the price / Pass for now / Cannot judge yet; never says buy or sell, unknown is never called good. New `lib/marketplace.ts`; thresholds are in the frontend (**decision for Faiz:** move them to the backend mapping?). tsc, 156 frontend tests (40 new), ESLint 0 errors, build; rendered in Chromium (fortress, street, store, phone). **On branch `feature/fortress-marketplace`, not merged, not deployed; not seen with real data** | [doc](game-mode-fortress-2026-10-01.md) |
 | 2026-10-01 | **Magic-lamp logo + one connected fortress with a verdict on the whole (F33)** | Frontend only, no backend, no migration. **Logo:** the genie-bottle mark is replaced by a golden Aladdin lamp (spout, handle, jewels, blue genie smoke), new `LampLogo` in the sidebar, mobile bar and drawer, `public/favicon.svg` for the tab, and as the medallion on the Great Keep. **Fortress:** the separate towers are now parts of one structure. A **Great Keep** stands mid top terrace for the whole portfolio, the biggest holdings flank it, every terrace has a **curtain wall and corner bastions** joining its towers, and the **moat is one channel** in front of each wall whose stretches follow each tower's own moat tier (water, wider or narrower; dry ditch for none; dotted for unsurveyed; plain ground for funds). **Clicking a tower** opens that holding's survey; **clicking the keep, a wall or a bastion** (or the new toolbar button, which is the keyboard route) opens **the verdict on the whole fortress**: level (Needs a look first / Mixed / No rule flags / Cannot judge yet), a line each for walls, moats, analysis age, thesis tripwires, land, weather, vault, spread and temperament, the towers to open first, and the stored analyst-verdict mix. New `lib/realmVerdict.ts` (rules `realm-v1`, shown in the card under "How it is decided"): a read-only reading aid over backend categories, shares weighted by portfolio %, never says buy/sell, unknown data is never called sound. **Decision for Faiz:** these thresholds live in the frontend (like the Ledger's "Needs a look"); say if you want them moved to the backend's versioned mapping. tsc, 116 frontend tests (21 new), build; rendered in Chromium (14 holdings, 5, 3; calm/gathering; hover, selected). **PR open, not deployed; not seen with real data** | [doc](game-mode-fortress-2026-10-01.md) |
 | 2026-10-01 | **AI vs deterministic provenance doc** | Faiz asked which document clearly separates AI/local-LLM output from the rest. The existing LLM & technology overview covers each LLM call but not each output, so a companion doc now lists every output by source (LLM, code, or you), with code locations, local-vs-API, and what the LLM sees. Also fixed the overview, which said document text never reaches the LLM: short keyword-picked passages do (Sprint 6). Docs only, no code change. **Not committed** | [doc](AI-VS-DETERMINISTIC.md) |
