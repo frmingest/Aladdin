@@ -532,3 +532,18 @@ Frontend only; no backend, mapping or migration change.
   **Not run against the real backend or Newsweb; not seen on Faiz's data.**
 - **Not in G10:** looking the company name up from Yahoo (the backend has no ticker-to-name endpoint),
   setting the buy-below price in the dialog (use *Name your price* in the store), sound.
+
+## G11: magic lamp and Genie (2026-10-02)
+
+Faiz asked to extend game mode so analyses can be run from the Fortress: a magic lamp (from the logo) in
+the right-hand corner; pressing it plays a rubbing animation, a genie appears, asks which powerful magic to
+conjure and offers three analysis choices, the same as the analysis queue; playful. Frontend only; no backend,
+mapping or migration change. PR #39.
+
+- **Lamp:** `MagicLamp.tsx`, fixed bottom-right, the golden `LampLogo`, a "Rub me!" tag until first used, a slow idle float.
+- **Rub:** about 2 s: lamp shakes, a cloth sweeps across it, sparkles pop, a smoke puff grows; then the Genie rises out of the corner. Skipped under reduced motion.
+- **Wishes (same as the queue's scope picker):** *Awaken the Towers* = `holdings`, *Scry the Marketplace* = `watchlist`, *The Grand Conjuring* = `all`. One call, `api.queueReadyHoldings(scope)`, the same as *Queue all ready holdings*.
+- **Report (`summariseWish`, `lib/genie.ts`):** counts queued / already waiting / skipped; reads `any_worker_online` from the queue (best effort; unreadable = "could not see", never guessed); always says nothing is analysed yet (CLAUDE.md status honesty). Errors say nothing was queued. Links: Watch the queue, Make another wish, Close.
+- **Rules kept:** the only write is the existing queue call (cancellable on the queue page); nothing bought or sold; no points, streaks or rewards; invented character with a disclaimer (no real person's likeness or lines); tests forbid buy/sell/trim/invest/purchase and promises of gains; demo mode disables the wishes; Escape closes, focus returns to the lamp.
+- **Verified:** tsc clean, ESLint 0 errors (2 existing warnings), 197 frontend tests (13 new), build; rendered in Chromium against a mock API: idle, rubbing, wishes, queued, error, demo, phone. **Not run against the real backend or worker; not seen on Faiz's data.**
+- **Not in G11:** a sound for the rub, previewing how many holdings each wish would queue, choosing individual holdings.

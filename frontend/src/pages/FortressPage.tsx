@@ -7,6 +7,7 @@ import type { GameState, Watchlist } from "../lib/types";
 import { MARKET_PATH, orderStreet, shopFront } from "../lib/marketplace";
 import AdvisorsCard from "../components/fortress/AdvisorsCard";
 import FortressLedger from "../components/fortress/FortressLedger";
+import MagicLamp from "../components/fortress/MagicLamp";
 import FortressScene, { MarketPeek, RealmPeek, TowerPeek } from "../components/fortress/FortressScene";
 import RealmVerdict from "../components/fortress/RealmVerdict";
 import { REALM_LEVEL_LABEL, summarizeRealm } from "../lib/realmVerdict";
@@ -350,6 +351,7 @@ export default function FortressPage() {
           </p>
         </div>
       )}
+      <MagicLamp />
     </div>
   );
 }
