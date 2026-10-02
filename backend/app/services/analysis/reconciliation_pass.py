@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from pydantic import BaseModel, ValidationError
 
 from app.config.paths import PROMPTS_DIR
+from app.config.settings import get_settings
 from app.domain.analysis_schema import (
     ReconciliationOutputV1,
     cited_evidence_ids_reconciliation,
@@ -15,6 +16,7 @@ from app.domain.analysis_schema import (
 )
 from app.providers.base import LLMProvider, LLMResponse, LLMUnavailableError
 from app.services.analysis.evidence_packet import EvidencePacket
+from app.services.analysis.packet_budget import truncate_text
 
 _NO_NOTES_PLACEHOLDER = "(the owner has not written any notes on this holding)"
 
@@ -46,6 +48,9 @@ def run_reconciliation_pass(
 ) -> ReconciliationPassResult:
     system_prompt = load_reconciliation_prompt(prompt_version)
     notes_block = user_notes.strip() if user_notes and user_notes.strip() else _NO_NOTES_PLACEHOLDER
+    # Bounded so the prompt-size guarantee (packet_budget.py) holds however long
+    # the owner's note grows; a cut is marked in the text.
+    notes_block = truncate_text(notes_block, get_settings().analysis_notes_max_tokens)
     user_prompt = (
         "Evidence list (same as the blind pass):\n\n"
         f"{packet.render_for_prompt()}\n\n"

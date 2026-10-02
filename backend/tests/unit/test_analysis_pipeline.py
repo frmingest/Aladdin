@@ -292,3 +292,83 @@ def test_reconciliation_failure_keeps_blind_pass_result():
     assert run.blind_pass_json is not None
     assert run.reconciliation_json is None
     assert run.error_message and "reconciliation pass failed" in run.error_message
+
+
+# --- Evidence packet size limit (2026-10-02, Equinor / Aker BP) -------------
+
+class _BloatedResearch:
+    """A research feed whose every answer is far larger than any context."""
+
+    name = "bloated"
+
+    @staticmethod
+    def _items(kind: str):
+        from app.providers.base import ResearchItem
+
+        return [
+            ResearchItem(
+                source_url=f"https://example.com/{kind}/{n}", source_name="Example", title=f"{kind} {n}",
+                summary="Realised prices rose and capex guidance moved. " * 120,
+                source_type="web", retrieved_at=datetime.now(timezone.utc),
+            )
+            for n in range(40)
+        ]
+
+    def get_macro_research(self):
+        return self._items("macro")
+
+    def get_sector_research(self, sector):
+        return self._items("sector")
+
+    def get_company_research(self, *, company_name, ticker, sector):
+        return self._items("company")
+
+
+def test_bloated_research_cannot_push_the_prompt_past_the_budget():
+    from app.config.settings import get_settings
+    from app.services.analysis.packet_budget import estimate_tokens, packet_token_budget
+
+    db = _session()
+    holding = _stock_holding()
+    db.add(holding)
+    db.commit()
+    _with_two_periods(db, holding)
+    llm = _RecordingLLM()
+    llm.name = "ollama"  # the budget is derived for the local model
+
+    run = run_full_analysis(
+        db, holding, llm_provider=llm, llm_fallback_provider=None,
+        market_data_provider=_FakeMarket(), risk_free_rate_provider=_FakeRate(), research_provider=_BloatedResearch(),
+    )
+    assert run.status == EquityAnalysisRunStatus.COMPLETED.value
+    budget = packet_token_budget(get_settings(), provider_name="ollama")
+    report = run.evidence_packet_json["token_budget"]
+    assert report["tokens_before"] > budget  # the feed really was too big
+    assert report["tokens_after"] <= budget
+    assert not report["over_budget"]
+    # What the model was actually sent fits, in both passes.
+    for system_prompt, user_prompt, _schema, _max in llm.calls:
+        assert estimate_tokens(system_prompt + user_prompt) + 2 * 8192 <= get_settings().ollama_fallback_num_ctx
+    assert any(r.startswith("evidence trimmed") for r in run.evidence_unavailable_reasons)
+
+
+def test_long_owner_notes_are_cut_in_the_reconciliation_prompt_only():
+    from app.config.settings import get_settings
+    from app.services.analysis.packet_budget import TRIM_MARKER, estimate_tokens
+
+    db = _session()
+    holding = _stock_holding()
+    db.add(holding)
+    db.commit()
+    _with_two_periods(db, holding)
+    set_holding_note(db, holding.id, "My thesis is durable earnings power. " * 5000)
+    llm = _RecordingLLM()
+
+    run_full_analysis(
+        db, holding, llm_provider=llm, llm_fallback_provider=None,
+        market_data_provider=_FakeMarket(), risk_free_rate_provider=_FakeRate(), research_provider=_FakeResearch(),
+    )
+    reconciliation_prompt = llm.calls[1][1]
+    assert TRIM_MARKER in reconciliation_prompt
+    notes_part = reconciliation_prompt.split("notes on this holding:\n\n", 1)[1]
+    assert estimate_tokens(notes_part) < get_settings().analysis_notes_max_tokens + 300
