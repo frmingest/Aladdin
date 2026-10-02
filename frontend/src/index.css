@@ -406,3 +406,145 @@
   .market-tilt { transition: none; }
   .market-stall { transition: none; }
 }
+
+/* ---------------------------------------------------------------------------
+   Sal, the Sales Rep (Marketplace pop-up and booth). Painted pieces keep fixed
+   colours like the rest of the Marketplace; the page around them follows the
+   theme. Motion is small, finite where possible, and off under reduced motion. */
+.sal-panel {
+  max-height: calc(100vh - 1.5rem);
+  overflow-y: auto;
+  border-radius: 10px;
+  color: #f3e4bf;
+  background: linear-gradient(180deg, #2a1d12, #17110b 75%);
+  box-shadow:
+    inset 0 0 0 1px #000,
+    inset 0 0 0 2px #a07b3a,
+    inset 0 0 0 3px #3b2a16,
+    0 28px 60px -20px rgb(0 0 0 / 0.95);
+}
+.sal-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.7rem 1rem 0.55rem;
+  border-bottom: 1px solid #3b2a16;
+  background: linear-gradient(180deg, #4a3318, #2e1f0f);
+  border-radius: 8px 8px 0 0;
+}
+.sal-x { color: #cdbb97; border-radius: 6px; padding: 0.1rem 0.45rem; }
+.sal-x:hover:not(:disabled) { background: rgb(255 255 255 / 0.08); color: #fff; }
+.sal-x:disabled { opacity: 0.4; }
+.sal-figure { filter: drop-shadow(0 8px 8px rgb(0 0 0 / 0.5)); }
+.sal-label { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.72rem; color: #cdbb97; }
+.sal-input {
+  width: 100%;
+  padding: 0.5rem 0.65rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  color: #f8ecd0;
+  background: #120d08;
+  box-shadow: inset 0 0 0 1px #6b5328;
+}
+.sal-input::placeholder { color: #7d6d50; text-transform: none; }
+.sal-input:focus-visible { outline: none; box-shadow: inset 0 0 0 2px #f2c94c; }
+.sal-input:disabled { opacity: 0.55; }
+.sal-btn, .sal-btn-ghost {
+  display: inline-block;
+  padding: 0.5rem 0.95rem;
+  border-radius: 6px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 120ms, filter 120ms;
+}
+.sal-btn {
+  color: #2a1a0a;
+  background: linear-gradient(180deg, #f6d977, #c9962e);
+  box-shadow: inset 0 0 0 1px #6e4a12, 0 3px 0 #6e4a12, 0 8px 14px -8px #000;
+}
+.sal-btn:hover:not(:disabled) { filter: brightness(1.08); transform: translateY(-1px); }
+.sal-btn:active:not(:disabled) { transform: translateY(2px); box-shadow: inset 0 0 0 1px #6e4a12, 0 1px 0 #6e4a12; }
+.sal-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.sal-btn-ghost { color: #f3e4bf; background: rgb(255 255 255 / 0.04); box-shadow: inset 0 0 0 1px #8a6a32; }
+.sal-btn-ghost:hover { background: rgb(255 255 255 / 0.1); }
+.sal-btn:focus-visible, .sal-btn-ghost:focus-visible, .sal-link:focus-visible { outline: 2px solid #f2c94c; outline-offset: 2px; }
+.sal-link { color: #f2d16b; text-decoration: underline; text-underline-offset: 2px; }
+.sal-status { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: #cdbb97; }
+.sal-spin {
+  display: inline-block;
+  width: 0.9rem;
+  height: 0.9rem;
+  border-radius: 50%;
+  border: 2px solid #8a6a32;
+  border-top-color: #f2d16b;
+}
+.sal-chip {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  color: #cdbb97;
+  background: #120d08;
+  box-shadow: inset 0 0 0 1px #6b5328;
+}
+.sal-chip dd { color: #f2d16b; font-weight: 700; }
+.sal-bubble { min-height: 4.2rem; cursor: default; }
+.sal-bubble-oops { box-shadow: inset 0 0 0 1px #b8672a; }
+.sal-bubble-oops::before { box-shadow: -1px 1px 0 0 #b8672a; }
+.sal-caret { color: #f2d16b; }
+.sal-bar { height: 8px; overflow: hidden; border-radius: 999px; background: #120d08; box-shadow: inset 0 0 0 1px #6b5328; }
+.sal-bar > span { display: block; height: 100%; width: 38%; border-radius: 999px; background: linear-gradient(90deg, #8a6a1c, #f2d16b, #8a6a1c); }
+.sal-runner-strip { display: block; width: 100%; max-width: 360px; height: auto; }
+.sal-burst { position: absolute; left: 50%; top: 38%; width: 0; height: 0; pointer-events: none; }
+.sal-coin {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff3b0, #f2c94c 55%, #a8801c);
+  box-shadow: 0 0 0 1px #6e4a12;
+  opacity: 0;
+}
+/* The booth card on the Marketplace page. */
+.sal-booth {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.5rem 1.25rem;
+  align-items: center;
+  padding: 0.9rem 1.1rem;
+  border-radius: 8px;
+  color: #f3e4bf;
+  background: linear-gradient(180deg, #2a1d12, #17110b 80%);
+  box-shadow: inset 0 0 0 1px #000, inset 0 0 0 2px #a07b3a, inset 0 0 0 3px #3b2a16, 0 14px 30px -18px rgb(0 0 0 / 0.95);
+}
+@media (max-width: 639px) {
+  .sal-booth { grid-template-columns: 1fr; justify-items: center; text-align: center; }
+  .sal-bubble::before { left: 50%; bottom: auto; top: -6px; margin-left: -6px; box-shadow: -1px -1px 0 0 #8a6a32; }
+}
+@keyframes sal-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+@keyframes sal-spin { to { transform: rotate(360deg); } }
+@keyframes sal-bar { 0% { transform: translateX(-100%); } 100% { transform: translateX(270%); } }
+@keyframes sal-run { 0% { transform: translateX(0); opacity: 0; } 8% { opacity: 1; } 90% { opacity: 1; } 100% { transform: translateX(215px); opacity: 0; } }
+@keyframes sal-coin-burst {
+  0% { transform: translate(0, 0) scale(0.4); opacity: 0; }
+  15% { opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)) scale(1) rotate(360deg); opacity: 0; }
+}
+@keyframes sal-twinkle { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+@media (prefers-reduced-motion: no-preference) {
+  .sal-figure { animation: sal-bob 2.6s ease-in-out infinite; }
+  .sal-spin { animation: sal-spin 0.8s linear infinite; }
+  .sal-bar > span { animation: sal-bar 1.6s ease-in-out infinite; }
+  .sal-runner { animation: sal-run 2.7s linear infinite; }
+  .sal-coin { animation: sal-coin-burst 1.1s cubic-bezier(0.2, 0.8, 0.3, 1) forwards; }
+  .sal-twinkle { animation: sal-twinkle 1.2s ease-in-out infinite; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sal-burst { display: none; }
+  .sal-bar > span { width: 100%; }
+}

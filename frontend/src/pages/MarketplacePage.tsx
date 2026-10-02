@@ -1,10 +1,14 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, ApiError } from "../lib/api";
+import { useDemoMode } from "../lib/demoMode";
 import { formatPct100, formatPrice } from "../lib/format";
 import { orderStreet, shopFront, shopPips, storePath } from "../lib/marketplace";
+import { boothLine } from "../lib/salesRep";
 import type { Watchlist, WatchlistRow } from "../lib/types";
 import { Awning, Pip } from "../components/marketplace/MarketArt";
+import SalesRepDialog from "../components/marketplace/SalesRepDialog";
+import { SalesRep } from "../components/marketplace/SalesRepArt";
 import { TONE_PAINT } from "../lib/marketplacePaint";
 import { Button, Card, EmptyState, PageHeader, SnapshotStamp, VerdictBadge } from "../components/ui";
 
@@ -73,6 +77,10 @@ export default function MarketplacePage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [restocking, setRestocking] = useState(false);
+  const [talking, setTalking] = useState(false);
+  const [boothSeed] = useState(() => Math.floor(Math.random() * 1000));
+  const boothButton = useRef<HTMLButtonElement>(null);
+  const { demoMode } = useDemoMode();
 
   const load = useCallback(() => {
     setLoading(true);
@@ -101,6 +109,11 @@ export default function MarketplacePage() {
     }
   }
 
+  const closeBooth = useCallback(() => {
+    setTalking(false);
+    boothButton.current?.focus();
+  }, []);
+
   const rows = useMemo(() => orderStreet(list?.rows ?? []), [list]);
   const inRange = rows.filter((r) => r.status === "buy_zone").length;
   const near = rows.filter((r) => r.status === "near").length;
@@ -126,12 +139,27 @@ export default function MarketplacePage() {
         }
       />
 
+      <section className="sal-booth mb-4" aria-label="Sal, the sales rep">
+        <SalesRep mood="pitch" size={96} className="sal-figure" />
+        <div className="min-w-0 space-y-2">
+          <div className="market-bubble sal-bubble">
+            <p className="text-[0.95rem] leading-relaxed">{demoMode === true ? "Demo mode is on, so the street is painted scenery. Switch it off in Settings and I'll open real stalls." : boothLine(boothSeed)}</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <button ref={boothButton} type="button" className="sal-btn" onClick={() => setTalking(true)}>
+              Talk to Sal: open a new stall
+            </button>
+            <span className="text-xs text-[#a8977a]">Add a company by its Yahoo ticker. Oslo Børs symbols end in .OL.</span>
+          </div>
+        </div>
+      </section>
+
       {error && <Card className="mb-4 border-negative/40 bg-negative-subtle text-sm text-negative">{error}</Card>}
       {!list && loading && <EmptyState>Setting up the stalls…</EmptyState>}
 
       {list && rows.length === 0 && (
         <EmptyState>
-          The street is empty. Add companies on the <Link className="text-accent hover:underline" to="/watchlist">Watchlist</Link> page and a store will open for each.
+          The street is empty. Talk to Sal above to open the first stall, or add companies on the <Link className="text-accent hover:underline" to="/watchlist">Watchlist</Link> page, and a store will open for each.
         </EmptyState>
       )}
 
@@ -171,6 +199,8 @@ export default function MarketplacePage() {
           </ul>
         </div>
       )}
+
+      {talking && <SalesRepDialog demoMode={demoMode === true} rows={list?.rows ?? []} onClose={closeBooth} onAdded={setList} />}
     </div>
   );
 }

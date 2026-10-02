@@ -496,3 +496,39 @@ mapping or migration change. Every figure comes from data the app already stores
 - **Verified:** tsc clean, ESLint 0 errors (the 2 existing warnings), 156 frontend tests (40 new: every gate boundary,
   verdict levels, ladder zones, street order, wording), production build; rendered in Chromium against sample data
   (fortress with the square, street, store at desktop and phone width). **Not seen with real data.**
+
+## G10: Sal the Sales Rep (2026-10-02)
+
+Faiz asked to add new stocks from inside the Marketplace through a playful interaction with a new
+persona, a sales representative modelled on a TV stock personality, with a hint to use the Yahoo
+Finance ticker for Oslo Børs, and after adding, a playful dialogue that starts the Newsweb data capture.
+Frontend only; no backend, mapping or migration change.
+
+- **Persona:** **Sal**, an invented stall-barker (loud, sound-effect-happy, megaphone and headset). Only
+  the *energy* of the reference is used: no real person's name, likeness, quotes or catchphrases (same
+  rule as the advisors in G7b). A disclaimer is shown in the dialogue and a test checks the wording.
+- **Entry:** a booth card at the top of the Marketplace (`.sal-booth`) and a pop-up (`SalesRepDialog`).
+- **Flow:** form (ticker, name, currency) → adding → added (coin burst, price check) → optional Newsweb
+  runners (annual + half-year fetch, same two endpoints as `NewswebAllReportsCard`) → result.
+- **Ticker hint (`checkTicker`, `sal-v1`):** `.OL` = Oslo Børs, NOK, Newsweb available; `EQNR.OSL`,
+  `.NO`, `-OL`, `:OL`, `OSE:EQNR` are caught and the fix offered (and must be accepted before adding);
+  a bare symbol is warned as a US listing; other known suffixes give their currency (London gives none,
+  it quotes in pence); anything else needs a manually chosen currency. The backend still requires name
+  and currency for a company that is not already a holding, so the form requires both.
+- **Price check:** after adding, `GET /watchlist` (which prices the new entry and refreshes the street)
+  tells Sal whether Yahoo had a price. No price = he says the symbol may be a typo; the stall stays.
+- **Newsweb outcomes (`summariseCapture`):** captured, up to date, empty, not found, not an Oslo issuer,
+  provider switched off, failed. One call failing while the other works is a note, not a failure (many
+  companies have annual reports and no half-year PDF). Half-year reports are described as reading
+  material only, in line with CLAUDE.md Rule 1.
+- **Edge cases:** already on the street (client check and backend 409) links to the existing store; demo
+  mode disables the form; Escape or backdrop closes unless the stall is being built; closing during the
+  Newsweb run lets the server finish and the reports show on the holding page.
+- **Rules kept:** the only writes are add-to-watchlist and Newsweb fetch (both already exist on other
+  pages); nothing is bought or sold; no points, streaks or rewards (the coin burst is a flourish); unknown
+  stays unknown; reduced motion switches off typing, bobbing, runners and coins.
+- **Verified:** tsc clean, ESLint clean on the new files, 184 frontend tests (28 new), build; rendered in
+  Chromium against a mock API (desktop, phone, ticker fix, no-price, duplicate, one failed Newsweb call).
+  **Not run against the real backend or Newsweb; not seen on Faiz's data.**
+- **Not in G10:** looking the company name up from Yahoo (the backend has no ticker-to-name endpoint),
+  setting the buy-below price in the dialog (use *Name your price* in the store), sound.
