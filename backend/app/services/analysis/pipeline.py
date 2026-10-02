@@ -40,6 +40,7 @@ from app.services.analysis.evidence_packet import (
     build_evidence_packet,
 )
 from app.services.analysis.notes import get_holding_note
+from app.services.analysis.packet_budget import apply_token_budget, packet_token_budget
 from app.services.analysis.reconciliation_pass import run_reconciliation_pass
 from app.services.funds.evidence import (
     FUND_EVIDENCE_PACKET_VERSION,
@@ -174,6 +175,9 @@ def run_full_analysis(
             research_provider=research_provider,
             announcements_provider=announcements_provider,
         )
+    apply_token_budget(
+        packet, total_budget=packet_token_budget(settings, provider_name=getattr(llm_provider, "name", None))
+    )
     run.evidence_packet_json = packet.as_dict()
     run.evidence_unavailable_reasons = packet.unavailable_reasons
 
