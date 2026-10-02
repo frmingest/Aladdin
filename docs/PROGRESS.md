@@ -13,9 +13,9 @@ Architecture and diagram: [architecture.md](architecture.md).
 
 | | |
 |---|---|
-| **Phase** | Phase 11: Buffett/Munger single-focus rebuild. **Sprint 18 built 2026-10-02 (PR open). Next: Sprints 19–22** (see §4) |
+| **Phase** | Phase 11: Buffett/Munger single-focus rebuild. **Sprint 18 built 2026-10-02 (PR #40 open). Next: Sprints 19–22** (see §4) |
 | **`main`** | `1f8c9ff` (PR #39). Everything built so far is merged, including game mode G1–G11 (#23–#39), CI fixes (#21) and the lamp logo (#34). PR #26 (G3 alone) is superseded by #27; close it if still open |
-| **Open PRs** | **Sprint 18 stabilise** (branch `chore/sprint-18-stabilise`). Others: confirm on GitHub |
+| **Open PRs** | **#40** Sprint 18 stabilise. Others: confirm on GitHub |
 | **Sprints closed** | 0–15 (16 and 17 / Epic F22 were built and removed 2026-09-29). **Sprint 18 built, awaiting merge; Sprint 19 is next** |
 | **Backend tests** | 1,335 pass (verified 2026-10-01 on the G7b branch) · Ruff clean · frontend 94 tests, tsc clean, ESLint 0 errors (G7b branch) |
 | **Migration head** | `o1a6b7c8d9e0` (one head). Not yet confirmed on Supabase: `l1d2e3f4a5b6`, `n1f5a6b7c8d9`, `o1a6b7c8d9e0` |
@@ -99,7 +99,7 @@ Order: make it trustworthy (18), make the board complete (19), make it fast (20)
 
 | Sprint | Theme | Scope |
 |---|---|---|
-| **18** | **Stabilise and verify (no new features)** ✅ built 2026-10-02, PR open. Left for Faiz: confirm migrations on the Railway deploy log (A above), decide thresholds (A above) | Verify live deploy and all migrations on Supabase. Confirm the smoke test runs green. Remove tracked clutter (`_to_delete/_tmp_bk.zip`, `.nanfix.patch`). Copy the 14 project-only write-ups into `docs/`. Decide whether game-mode thresholds (`market-v1`, `realm-v1`) move to the backend mapping. Fix the react-router `npm audit` warnings. |
+| **18** | **Stabilise and verify (no new features)** ✅ built 2026-10-02, PR #40 open. Left for Faiz: confirm migrations on the Railway deploy log (A above), decide thresholds (A above) | Verify live deploy and all migrations on Supabase. Confirm the smoke test runs green. Remove tracked clutter (`_to_delete/_tmp_bk.zip`, `.nanfix.patch`). Copy the 14 project-only write-ups into `docs/`. Decide whether game-mode thresholds (`market-v1`, `realm-v1`) move to the backend mapping. Fix the react-router `npm audit` warnings. |
 | **19** | **Make the Margin-of-safety board rank everything** | Newsweb fetch for Vår Energi and Salmon Evolution; DCF handling of a loss-making first year; fund annual-report holdings parser for funds that are not Xtrackers or L&G; re-tag the three Norwegian funds; turn on the Tavily fallback. |
 | **20** | **Speed** | Precompute the Margin-of-safety board in the worker; react-query client cache; move first price/beta/research fetches out of GET requests; persist beta/price/FX caches to the DB. |
 | **21** | **Analysis depth and reporting** | Rate sensitivity per holding (old Sprint 15 #3); PDF export / portfolio report (old #6); per-run LLM cost attribution. |
