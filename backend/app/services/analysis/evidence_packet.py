@@ -94,6 +94,12 @@ class EvidenceItem:
     content: str
     citation: str | None = None
 
+    def render(self) -> str:
+        """The exact text this item contributes to the prompt. One place, so
+        the token budget (packet_budget.py) measures what the model reads."""
+        citation = f"\nsource: {self.citation}" if self.citation else ""
+        return f"[{self.id}] ({self.category}) {self.label}\n{self.content}{citation}"
+
 
 @dataclass
 class EvidencePacket:
@@ -106,13 +112,12 @@ class EvidencePacket:
     # from — its own numbers are separately surfaced as EvidenceItems below,
     # this reference isn't itself serialized to the LLM.
     valuation: HoldingValuationResult | None = None
+    # Set by packet_budget.apply_token_budget(): what the size limit kept,
+    # shortened or dropped. Stored with the run so a trimmed packet is visible.
+    token_budget: dict | None = None
 
     def render_for_prompt(self) -> str:
-        blocks = []
-        for item in self.items:
-            citation = f"\nsource: {item.citation}" if item.citation else ""
-            blocks.append(f"[{item.id}] ({item.category}) {item.label}\n{item.content}{citation}")
-        return "\n\n".join(blocks)
+        return "\n\n".join(item.render() for item in self.items)
 
     def known_ids(self) -> set[str]:
         return {item.id for item in self.items}
@@ -133,6 +138,7 @@ class EvidencePacket:
                 for item in self.items
             ],
             "unavailable_reasons": self.unavailable_reasons,
+            "token_budget": self.token_budget,
         }
 
 

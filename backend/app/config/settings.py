@@ -117,7 +117,11 @@ class Settings(BaseSettings):
     # The fallback model is small enough for a bigger context than the main
     # one (qwen3:8b at 32k needs ~8 GB incl. KV cache), so big evidence packets
     # run on it instead of failing.
-    ollama_fallback_num_ctx: int = 32768
+    # 40960 = qwen3's native maximum (max_position_embeddings), so not a
+    # stretched window; qwen3:8b at 40k needs ~9-10 GB incl. the q8_0 KV cache.
+    # Raised from 32768 (2026-10-02) -- the planner only uses it when a call
+    # needs it, and verifies the GPU share before running.
+    ollama_fallback_num_ctx: int = 40960
     # False = ask thinking models (Qwen3) to skip the <think> phase, which
     # is much faster and doesn't help schema-constrained JSON. None = don't
     # send the field at all.
@@ -326,6 +330,20 @@ class Settings(BaseSettings):
     evidence_document_token_budget: int = 4000
     evidence_document_max_excerpt_chars: int = 1600
     evidence_documents_max: int = 4
+    # 2026-10-02 (app/services/analysis/packet_budget.py): a hard ceiling on
+    # the whole evidence packet, in *estimated* tokens (3 chars/token + 5%,
+    # i.e. conservative -- real tokens come out ~25% lower). Per-category caps
+    # always apply; this total squeezes the least valuable categories first.
+    # With the local model the budget is additionally limited to what fits the
+    # largest context after the answer, the blind-pass JSON and prompt overhead
+    # (so both passes fit). 0 = no configured limit (derived/caps still apply).
+    # Lower it (~8000) if you want qwen3:14b rather than 8b to take the calls.
+    evidence_packet_token_budget: int = 18000
+    # System prompt + wrapper text + the owner's notes (capped below), in tokens.
+    analysis_prompt_overhead_tokens: int = 4000
+    # The reconciliation pass reads the owner's notes; an unbounded note would
+    # break the size guarantee. Longer notes are cut with a visible marker.
+    analysis_notes_max_tokens: int = 2000
     # Sprint 8 (F9): the fund / ETF analysis path (app/services/funds/).
     # Separate versions so a fund run never picks up the single-company
     # schema/prompts or vice versa.
