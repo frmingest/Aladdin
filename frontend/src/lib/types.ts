@@ -2017,3 +2017,57 @@ export interface GameState {
   advisors?: GameAdvisors | null;
   notes: string[];
 }
+
+// --- G13: Siege Simulator (backend/app/api/game.py GET /game/siege) ----------
+
+export type SiegeSimExposure = "sheltered" | "exposed" | "breach_risk" | "unmodelled";
+
+export interface SiegeSimHolding {
+  holding_id: string;
+  ticker: string;
+  name: string;
+  structure: FortressStructure;
+  size_class: FortressSize;
+  wall: FortressWall;
+  value_nok: string | null;
+  weight_pct: string | null;
+  beta: string | null;
+  beta_as_of: string | null;
+  modelled: boolean;
+  /** Fraction, negative = a loss. */
+  shock_pct: string | null;
+  loss_nok: string | null;
+  exposure: SiegeSimExposure;
+  /** The Fortress's own stored stress shock for the same holding. */
+  stored_shock_pct: string | null;
+  reason: string | null;
+}
+
+export interface SiegeSim {
+  scenarios_version: string;
+  mapping_version: string;
+  demo: boolean;
+  /** Fractions: 0.30 = a 30% market fall. */
+  market_drop: string;
+  drop_min: string;
+  drop_max: string;
+  drop_step: string;
+  level: FortressSiegeLevel;
+  level_reason: string;
+  portfolio_shock_pct: string | null;
+  portfolio_loss_nok: string | null;
+  covered_value_nok: string;
+  total_value_nok: string;
+  coverage: string | null;
+  weighted_beta: string | null;
+  gathering_line: string;
+  besieged_line: string;
+  drop_to_gathering: string | null;
+  drop_to_besieged: string | null;
+  reach_note_gathering: string;
+  reach_note_besieged: string;
+  counts: Record<string, number>;
+  oldest_beta_at: string | null;
+  holdings: SiegeSimHolding[];
+  notes: string[];
+}

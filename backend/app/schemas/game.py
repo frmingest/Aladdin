@@ -204,3 +204,59 @@ class GameStateOut(BaseModel):
     # Plain-language data gaps ("3 holdings have no analysis"), so an
     # unfinished fortress is labelled as unfinished.
     notes: list[str]
+
+
+# --- G13: Siege Simulator (2026-10-03) ------------------------------------
+
+SiegeSimExposure = Literal["sheltered", "exposed", "breach_risk", "unmodelled"]
+
+
+class SiegeSimHoldingOut(BaseModel):
+    holding_id: UUID
+    ticker: str
+    name: str
+    structure: Structure
+    size_class: SizeClass
+    wall: WallMaterial
+    value_nok: Decimal | None
+    weight_pct: Decimal | None
+    beta: Decimal | None
+    beta_as_of: datetime | None
+    modelled: bool
+    shock_pct: Decimal | None
+    loss_nok: Decimal | None
+    exposure: SiegeSimExposure
+    # The Fortress's own stored stress shock for the same holding, for comparison.
+    stored_shock_pct: Decimal | None
+    reason: str | None
+
+
+class SiegeSimOut(BaseModel):
+    """A what-if: one chosen market fall pushed through each holding's stored
+    beta. Never a forecast, never a recommendation."""
+
+    scenarios_version: str
+    mapping_version: str
+    demo: bool = False
+    market_drop: Decimal
+    drop_min: Decimal
+    drop_max: Decimal
+    drop_step: Decimal
+    level: SiegeLevel
+    level_reason: str
+    portfolio_shock_pct: Decimal | None
+    portfolio_loss_nok: Decimal | None
+    covered_value_nok: Decimal
+    total_value_nok: Decimal
+    coverage: Decimal | None
+    weighted_beta: Decimal | None
+    gathering_line: Decimal
+    besieged_line: Decimal
+    drop_to_gathering: Decimal | None
+    drop_to_besieged: Decimal | None
+    reach_note_gathering: str
+    reach_note_besieged: str
+    counts: dict[str, int]
+    oldest_beta_at: datetime | None
+    holdings: list[SiegeSimHoldingOut]
+    notes: list[str]

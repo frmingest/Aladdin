@@ -84,6 +84,15 @@ def _write(db: Session, ticker: str, beta: Decimal, now: datetime) -> None:
         log.warning("could not store beta for %s", ticker, exc_info=True)
 
 
+def read_stored_beta(db: Session, ticker: str) -> BetaResult:
+    """The stored beta exactly as saved, with its age. Never calls a vendor
+    and never waits on one (the Siege Simulator and other read-only views)."""
+    stored = _read(db, ticker)
+    if stored is None:
+        return BetaResult(None, None, "no beta stored yet for this holding")
+    return BetaResult(stored[0], stored[1])
+
+
 def has_stored_beta(db: Session, ticker: str) -> bool:
     return _read(db, ticker) is not None
 
