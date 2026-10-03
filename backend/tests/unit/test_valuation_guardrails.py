@@ -159,8 +159,20 @@ def test_v2_turns_the_guardrails_on_and_keeps_v1_market_inputs():
     assert v2.min_cost_of_equity > v2.terminal_growth_rate
 
 
-def test_default_settings_use_v2():
-    assert Settings(_env_file=None).active_valuation_assumptions_version == "v2"
+def test_default_settings_use_v3():
+    assert Settings(_env_file=None).active_valuation_assumptions_version == "v3"
+
+
+def test_v3_changes_only_the_growth_base_method():
+    import dataclasses
+
+    v2, v3 = get_valuation_assumptions("v2"), get_valuation_assumptions("v3")
+    assert v2.growth_base_method == "earliest_period"
+    assert v3.growth_base_method == "profitable_run"
+    differing = {
+        f.name for f in dataclasses.fields(v2) if getattr(v2, f.name) != getattr(v3, f.name)
+    }
+    assert differing == {"version", "growth_base_method"}
 
 
 @pytest.mark.parametrize("sector", ["Financials", "financial services", "Regional Banks", "Insurance"])
@@ -384,3 +396,70 @@ def test_interest_coverage_is_not_meaningful_for_a_bank():
     assert "interest_coverage" not in marked.computed
     assert "not meaningful for a bank" in marked.skipped["interest_coverage"]
     assert "net_margin" in marked.computed  # measures that still apply survive
+
+
+# ------------------------------- v3: a loss-making early year (Sprint 19)
+
+
+def _ramp_up(db, earnings):
+    """A company whose filed owner earnings (NOK millions) are `earnings`."""
+    holding = Holding(ticker="RAMP.OL", name="Ramp Up", trading_currency="NOK", sector="Consumer Staples")
+    document = _document(holding)
+    db.add_all([holding, document])
+    db.flush()
+    for offset, owner_earnings in enumerate(earnings):
+        _add(
+            db, document, holding, f"FY{2021 + offset}",
+            {"net_income": owner_earnings, "depreciation_and_amortization": "0",
+             "capital_expenditures": "0", "shares_outstanding": "100"},
+        )
+    db.commit()
+    return holding
+
+
+def _v(version):
+    return Settings(_env_file=None, active_valuation_assumptions_version=version)
+
+
+def test_v2_still_refuses_a_company_whose_earliest_year_is_a_loss(monkeypatch):
+    with _session() as db:
+        holding = _ramp_up(db, ["-80", "120", "150", "180"])
+        result = _value(db, holding, price="40", monkeypatch=monkeypatch, settings=_v("v2"))
+    assert result.dcf is None
+    assert any("earliest period's value is not positive" in r for r in result.unavailable_reasons)
+
+
+def test_v3_values_it_on_the_profitable_run_and_says_what_it_left_out(monkeypatch):
+    with _session() as db:
+        holding = _ramp_up(db, ["-80", "120", "150", "180"])
+        result = _value(db, holding, price="40", monkeypatch=monkeypatch, settings=_v("v3"))
+    assert result.dcf is not None and result.valuation_status == "ok"
+    assert result.assumptions_version == "v3"
+    # 120 -> 180 over two years
+    assert round(result.raw_base_growth_rate, 4) == round(D("1.5") ** D("0.5") - 1, 4)
+    assert any("FY2022-FY2024" in r and "FY2021" in r for r in result.unavailable_reasons)
+
+
+def test_v3_gives_the_same_answer_as_v2_when_every_year_is_profitable(monkeypatch):
+    with _session() as db:
+        holding = _ramp_up(db, ["100", "110", "121", "133"])
+        r2 = _value(db, holding, price="40", monkeypatch=monkeypatch, settings=_v("v2"))
+        r3 = _value(db, holding, price="40", monkeypatch=monkeypatch, settings=_v("v3"))
+    assert r2.dcf.scenario("base").intrinsic_value_per_share == r3.dcf.scenario("base").intrinsic_value_per_share
+    assert r2.base_growth_rate == r3.base_growth_rate
+
+
+def test_v3_does_not_guess_when_the_latest_year_is_a_loss(monkeypatch):
+    with _session() as db:
+        holding = _ramp_up(db, ["100", "120", "-30"])
+        result = _value(db, holding, price="40", monkeypatch=monkeypatch, settings=_v("v3"))
+    assert result.dcf is None
+    assert any("FY2023" in r and "not profitable" in r for r in result.unavailable_reasons)
+
+
+def test_v3_does_not_guess_from_a_single_profitable_year(monkeypatch):
+    with _session() as db:
+        holding = _ramp_up(db, ["-80", "-40", "60"])
+        result = _value(db, holding, price="40", monkeypatch=monkeypatch, settings=_v("v3"))
+    assert result.dcf is None
+    assert any("only one profitable year" in r for r in result.unavailable_reasons)

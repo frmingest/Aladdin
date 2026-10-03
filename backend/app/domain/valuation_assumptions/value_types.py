@@ -76,3 +76,11 @@ class ValuationAssumptions:
     # Bull/bear scenarios move the ROE by this many points around base.
     financials_roe_spread: Decimal = Decimal("0.02")
 
+
+    # --- v3 (2026-10-03): how the growth base is chosen ---------------------
+    # "earliest_period" (v1, v2): CAGR from the earliest period on file, which
+    # fails when that year is a loss. "profitable_run" (v3): CAGR over the
+    # latest unbroken run of profitable years (app/services/valuation/growth.py
+    # profitable_run_cagr), so one early loss year no longer blocks a company
+    # that is profitable now.
+    growth_base_method: str = "earliest_period"

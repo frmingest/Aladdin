@@ -212,8 +212,9 @@ class Settings(BaseSettings):
     active_risk_free_rate_series_version: str = "v1"
     risk_free_rate_stale_after_hours: int = 24
     # ERP / terminal growth / scenario offsets — app/domain/valuation_assumptions/.
-    # v2 (2026-09-29) adds the plausibility guardrails and the financials method.
-    active_valuation_assumptions_version: str = "v2"
+    # v2 (2026-09-29) adds the plausibility guardrails and the financials method;
+    # v3 (2026-10-03) measures growth over the latest profitable run of years.
+    active_valuation_assumptions_version: str = "v3"
 
     # --- Game mode (2026-10-01, app/domain/game_mapping/) ---
     # Thresholds that turn stored analysis values into fortress properties.
