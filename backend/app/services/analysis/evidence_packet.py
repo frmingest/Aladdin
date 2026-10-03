@@ -47,6 +47,7 @@ from app.services.filings.esef_index import latest_import_summary
 from app.services.filings.sec_edgar import latest_edgar_document
 from app.services.holding_facts import facts_by_period, latest_period
 from app.services.macro.evidence import add_macro_indicator_evidence
+from app.services.market_data.common import cold_fetch_allowed
 from app.services.market_inputs import build_market_context
 from app.services.metrics import (
     MetricsResult,
@@ -203,7 +204,10 @@ def build_evidence_packet(
     _add_financial_history_evidence(db, holding, assumptions, add)
     _add_financial_source_evidence(db, holding, add)
 
-    valuation = compute_holding_valuation(db, holding, market_data_provider, risk_free_rate_provider)
+    # An analysis run works on current data: unlike a page load it may make
+    # the first-ever price / FX / beta / share-count call (Sprint 20).
+    with cold_fetch_allowed():
+        valuation = compute_holding_valuation(db, holding, market_data_provider, risk_free_rate_provider)
     packet.valuation = valuation
     _add_valuation_evidence(valuation, add)
     packet.unavailable_reasons.extend(f"valuation: {reason}" for reason in valuation.unavailable_reasons)

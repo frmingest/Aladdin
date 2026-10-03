@@ -139,6 +139,7 @@ def test_refresh_then_valuation_and_board(client, db_session, monkeypatch):
         assert refresh.json() == {**refresh.json(), "lines": 6, "priced": 5, "unpriced": 1, "no_isin": 0}
         assert db_session.query(FundConstituentMultiple).count() == 6
 
+        client.post(f"/holdings/{fund_id}/warm-up")  # the first price fetch a page load no longer makes
         body = client.get(f"/valuation/holdings/{fund_id}").json()
         assert body["valuation_status"] == "ok", body
         look = body["fund_look_through"]
@@ -163,6 +164,7 @@ def test_low_coverage_is_unavailable_with_the_reason(client, db_session, monkeyp
     _override({"NO0013536151": "50"})  # Kongsberg (4%) only
     try:
         client.post(f"/funds/{fund_id}/look-through/refresh")
+        client.post(f"/holdings/{fund_id}/warm-up")  # the first price fetch a page load no longer makes
         body = client.get(f"/valuation/holdings/{fund_id}").json()
     finally:
         _clear()
@@ -175,6 +177,7 @@ def test_absurd_multiples_are_withheld_as_implausible(client, db_session, monkey
     _override({k: "0.5" if v else None for k, v in _ALL.items()})  # P/E 0.5 -> value >> 3x price
     try:
         client.post(f"/funds/{fund_id}/look-through/refresh")
+        client.post(f"/holdings/{fund_id}/warm-up")  # the first price fetch a page load no longer makes
         body = client.get(f"/valuation/holdings/{fund_id}").json()
     finally:
         _clear()

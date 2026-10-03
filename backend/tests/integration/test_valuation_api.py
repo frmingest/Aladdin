@@ -67,6 +67,14 @@ def _clear_overrides() -> None:
     app.dependency_overrides.pop(get_risk_free_rate_provider, None)
 
 
+def _warm(client, holding_id) -> None:
+    """The first fetch a page load no longer makes (Sprint 20): what the
+    Watchlist page / the worker do right after a holding appears. Call with
+    the provider overrides in place."""
+    response = client.post(f"/holdings/{holding_id}/warm-up")
+    assert response.status_code == 200, response.text
+
+
 def _create_holding(client, ticker="AAPL"):
     response = client.post(
         "/holdings", json={"ticker": ticker, "name": "Apple Inc.", "trading_currency": "USD"}
@@ -120,6 +128,7 @@ def test_get_valuation_for_real_holding_computes_dcf(client):
     _upload_filing(client, holding_id, "FY2025", net_income=85, d_and_a=25, capex=15, shares=10)
 
     _override(market_provider=_FakeMarketDataProvider(price=_price_point()), rate_provider=_FakeRiskFreeRateProvider(rate=_risk_free_rate()))
+    _warm(client, holding_id)
     response = client.get(f"/valuation/holdings/{holding_id}")
     _clear_overrides()
 
@@ -140,6 +149,7 @@ def test_valuation_reports_the_growth_cap_and_status(client):
     _upload_filing(client, holding_id, "FY2025", net_income=100, d_and_a=25, capex=15, shares=10)  # +22%
 
     _override(market_provider=_FakeMarketDataProvider(price=_price_point()), rate_provider=_FakeRiskFreeRateProvider(rate=_risk_free_rate()))
+    _warm(client, holding_id)
     body = client.get(f"/valuation/holdings/{holding_id}").json()
     _clear_overrides()
 
@@ -160,6 +170,7 @@ def test_an_implausible_dcf_is_withheld_by_the_api(client):
 
     # A 5 USD price against ~150 USD of value per share: the model, not the market, is wrong.
     _override(market_provider=_FakeMarketDataProvider(price=_price_point("5")), rate_provider=_FakeRiskFreeRateProvider(rate=_risk_free_rate()))
+    _warm(client, holding_id)
     body = client.get(f"/valuation/holdings/{holding_id}").json()
     _clear_overrides()
 
@@ -259,6 +270,7 @@ def test_margin_of_safety_board_ranks_owned_holding_with_dcf(client, db_session)
 
     _override(_FakeMarketDataProvider(price=_price_point()), _FakeRiskFreeRateProvider(rate=_risk_free_rate()))
     try:
+        _warm(client, holding_id)
         response = client.get("/valuation/board")
     finally:
         _clear_overrides()
@@ -270,3 +282,74 @@ def test_margin_of_safety_board_ranks_owned_holding_with_dcf(client, db_session)
     assert row["base"] is not None and row["margin_of_safety_base"] is not None
     assert row["zone"] in {"below_bear", "bear_to_base", "base_to_bull", "above_bull"}
     assert Decimal(row["weight_pct"]) == Decimal(1)
+
+
+def test_get_valuation_before_any_fetch_reports_it_and_never_calls_the_vendor(client):
+    """Sprint 20: a page load never makes the first-ever price / rate call."""
+    holding_id = _create_holding(client)
+    _upload_filing(client, holding_id, "FY2024", net_income=80, d_and_a=20, capex=10, shares=10)
+    _upload_filing(client, holding_id, "FY2025", net_income=85, d_and_a=25, capex=15, shares=10)
+
+    class _Counting(_FakeMarketDataProvider):
+        calls = 0
+
+        def get_current_price(self, ticker, *, currency_hint=None):
+            _Counting.calls += 1
+            return super().get_current_price(ticker, currency_hint=currency_hint)
+
+        def get_beta(self, ticker, *, allow_live_fetch: bool = True):
+            _Counting.calls += 1
+            return super().get_beta(ticker, allow_live_fetch=allow_live_fetch)
+
+    _override(market_provider=_Counting(price=_price_point()), rate_provider=_FakeRiskFreeRateProvider(rate=_risk_free_rate()))
+    body = client.get(f"/valuation/holdings/{holding_id}").json()
+    _clear_overrides()
+
+    assert _Counting.calls == 0
+    assert body["dcf"] is None
+    assert any("not fetched yet" in r for r in body["unavailable_reasons"])
+
+
+def test_warm_up_makes_the_next_page_load_complete_and_is_idempotent(client):
+    holding_id = _create_holding(client)
+    _upload_filing(client, holding_id, "FY2024", net_income=80, d_and_a=20, capex=10, shares=10)
+    _upload_filing(client, holding_id, "FY2025", net_income=85, d_and_a=25, capex=15, shares=10)
+
+    class _Counting(_FakeMarketDataProvider):
+        prices = 0
+
+        def get_current_price(self, ticker, *, currency_hint=None):
+            _Counting.prices += 1
+            return super().get_current_price(ticker, currency_hint=currency_hint)
+
+    _override(market_provider=_Counting(price=_price_point()), rate_provider=_FakeRiskFreeRateProvider(rate=_risk_free_rate()))
+    first = client.post(f"/holdings/{holding_id}/warm-up")
+    second = client.post(f"/holdings/{holding_id}/warm-up")
+    body = client.get(f"/valuation/holdings/{holding_id}").json()
+    _clear_overrides()
+
+    assert first.status_code == 200
+    assert "price" in first.json()["fetched"] and "beta" in first.json()["fetched"]
+    assert "risk-free rate USD" in first.json()["fetched"]
+    assert second.status_code == 200
+    assert _Counting.prices == 1  # the second warm-up found fresh data and fetched nothing
+    assert body["dcf"] is not None
+    assert body["unavailable_reasons"] == []
+
+
+def test_warm_up_unknown_holding_is_404(client):
+    _override(market_provider=_FakeMarketDataProvider(price=_price_point()), rate_provider=_FakeRiskFreeRateProvider(rate=_risk_free_rate()))
+    response = client.post("/holdings/00000000-0000-0000-0000-000000000000/warm-up")
+    _clear_overrides()
+    assert response.status_code == 404
+
+
+def test_warm_up_reports_why_a_price_is_missing(client):
+    holding_id = _create_holding(client)
+    _override(market_provider=_FakeMarketDataProvider(price=None), rate_provider=_FakeRiskFreeRateProvider(rate=_risk_free_rate()))
+    response = client.post(f"/holdings/{holding_id}/warm-up")
+    _clear_overrides()
+    assert response.status_code == 200
+    body = response.json()
+    assert "price" not in body["fetched"]
+    assert any("no price configured" in p for p in body["problems"])

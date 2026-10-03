@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { api, ApiError } from "../lib/api";
+import { useCachedQuery } from "../lib/queryCache";
 import { formatDate, formatDecimal, formatNok, formatPercent } from "../lib/format";
 import type { BoardRow, BoardZone, MarginOfSafetyBoard } from "../lib/types";
 import { Button, Card, EmptyState, PageHeader, SnapshotStamp, VerdictBadge } from "../components/ui";
@@ -154,24 +155,21 @@ function RankedTable({ rows, variant = "portfolio" }: { rows: BoardRow[]; varian
 }
 
 export default function MarginOfSafetyPage() {
-  const [board, setBoard] = useState<MarginOfSafetyBoard | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const query = useCachedQuery<MarginOfSafetyBoard>("board", () => api.getMarginOfSafetyBoard(), {
+    errorText: "Could not load the board.",
+  });
+  const board = query.data;
+  const [refreshError, setRefreshError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-
-  useEffect(() => {
-    api
-      .getMarginOfSafetyBoard()
-      .then(setBoard)
-      .catch((e) => setError(e instanceof ApiError ? e.message : "Could not load the board."));
-  }, []);
+  const error = refreshError ?? query.error;
 
   const handleRefresh = () => {
     setRefreshing(true);
-    setError(null);
+    setRefreshError(null);
     api
       .refreshMarginOfSafetyBoard()
-      .then(setBoard)
-      .catch((e) => setError(e instanceof ApiError ? e.message : "Could not refresh the board."))
+      .then(query.mutate)
+      .catch((e) => setRefreshError(e instanceof ApiError ? e.message : "Could not refresh the board."))
       .finally(() => setRefreshing(false));
   };
 

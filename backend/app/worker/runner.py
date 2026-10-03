@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import logging
 import threading
+import time
 import traceback
 import uuid
 from collections.abc import Callable
@@ -121,6 +122,9 @@ class AnalysisWorker:
         self._detail: str | None = None
         self._current_run_id: uuid.UUID | None = None
         self._stop = threading.Event()
+        # Sprint 20: warm-up retry bookkeeping and the keep-warm throttle.
+        self._warm_attempts: dict[uuid.UUID, float] = {}
+        self._last_keepwarm = float("-inf")
 
     # --- heartbeat ---------------------------------------------------------
 
@@ -285,6 +289,48 @@ class AnalysisWorker:
         except Exception:
             log.exception("nightly snapshot refresh failed")
 
+    def maybe_warm_cold_holdings(self) -> None:
+        """Sprint 20: first price / FX / share count / beta for holdings that
+        have none (a GET no longer fetches them). A few per pass, a failing
+        ticker waits `warmup_retry_seconds`. Never raises."""
+        market_data = self.providers.market_data
+        if market_data is None:
+            return
+        try:
+            from app.services.warmup import warm_cold_holdings
+
+            with self.session_factory() as db:
+                results = warm_cold_holdings(
+                    db, market_data, self.providers.risk_free_rate, attempts=self._warm_attempts
+                )
+            if any(r.fetched for r in results):
+                self._last_keepwarm = float("-inf")  # new prices: rebuild the pages now
+        except Exception:
+            log.exception("holding warm-up failed")
+
+    def maybe_keep_snapshots_warm(self) -> None:
+        """Sprint 20: rebuild stored pages whose inputs changed (an import, a
+        finished analysis, a watchlist change), at most once per
+        `snapshot_keepwarm_min_interval_seconds`, and only when the queue is
+        idle (the caller checks). Never raises."""
+        if not self.settings.snapshot_keepwarm_enabled:
+            return
+        now = time.monotonic()
+        if now - self._last_keepwarm < self.settings.snapshot_keepwarm_min_interval_seconds:
+            return
+        self._last_keepwarm = now
+        try:
+            from app.services.snapshot_refresh import rebuild_stale_snapshots
+
+            with self.session_factory() as db:
+                rebuild_stale_snapshots(
+                    db,
+                    market_data_provider=self.providers.market_data,
+                    risk_free_rate_provider=self.providers.risk_free_rate,
+                )
+        except Exception:
+            log.exception("keep-warm snapshot rebuild failed")
+
     def _fail(self, run_id: uuid.UUID, message: str) -> None:
         with self.session_factory() as db:
             queue.fail_run(db, run_id, message=message)
@@ -308,6 +354,9 @@ class AnalysisWorker:
                 outcome = self.run_once()
                 self.maybe_check_tripwires()
                 self.maybe_refresh_snapshots()
+                if outcome != RAN:  # queue idle: now is the cheap moment
+                    self.maybe_warm_cold_holdings()
+                    self.maybe_keep_snapshots_warm()
                 if once:
                     break
                 if outcome != RAN:

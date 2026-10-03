@@ -63,6 +63,16 @@ def test_add_new_ticker_creates_holding_and_flags_buy_zone(priced):
     assert [h["ticker"] for h in holdings] == ["ORK.OL"]
     assert holdings[0]["asset_class_raw"] == "stock"
 
+    # Sprint 20: the page load itself never makes the first price call, so
+    # right after the add the row says the price is not fetched yet ...
+    before = priced.get("/watchlist").json()["rows"][0]
+    assert before["price"] is None
+    assert "not fetched yet" in before["unavailable_reason"]
+
+    # ... and the warm-up (the Watchlist page calls it after an add; the
+    # worker does for anything missed) fetches it and refreshes the page.
+    assert priced.post(f"/holdings/{entry['holding_id']}/warm-up").status_code == 200
+
     body = priced.get("/watchlist").json()
     assert body["buy_zone_count"] == 1
     row = body["rows"][0]

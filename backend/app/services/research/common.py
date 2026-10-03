@@ -169,16 +169,25 @@ def get_or_refresh(
         )
 
     if not force and not refresh_live and existing_run is not None:
-        # Only ever skip the live call when something is already cached —
-        # a holding/sector/macro scope with NO data yet still gets one
-        # real fetch (there's no "serve stale" option when nothing's been
-        # fetched at all; this is the one-time cold-start cost, not the
-        # repeated-every-page-load cost the P1 fix targets).
         return ResearchSnapshot(
             available=True,
             as_of=existing_run.completed_at,
             items=items_for_run(db, existing_run),
             reason=f"showing data from {existing_run.completed_at} — click refresh to fetch new research",
+        )
+
+    if not force and not refresh_live:
+        # Sprint 20 (2026-10-03): a plain GET never makes the first-ever
+        # research call either. That call spends Gemini/Tavily quota and used
+        # to happen silently the first time anyone opened a page for a new
+        # holding, sector or the macro scope. Research is fetched by the
+        # analysis run itself (evidence packet) or by the page's Refresh
+        # button, never by merely looking.
+        return ResearchSnapshot(
+            available=False,
+            as_of=None,
+            items=[],
+            reason="no research stored yet — press Refresh, or queue an analysis (it fetches research first)",
         )
 
     try:

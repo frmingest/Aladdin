@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, ApiError } from "../lib/api";
+import { useCachedQuery } from "../lib/queryCache";
 import { formatDate, formatDecimal, formatPct100, formatPercent } from "../lib/format";
-import type { HoldingFieldOptions, WatchlistRow, WatchlistStatus } from "../lib/types";
+import type { HoldingFieldOptions, Watchlist, WatchlistRow, WatchlistStatus } from "../lib/types";
 import { Button, Card, EmptyState, PageHeader, SnapshotStamp, VerdictBadge } from "../components/ui";
 
 /** Feature F7 — companies you follow, with your own buy-below price.
@@ -101,7 +102,7 @@ function AddForm({ onAdded }: { onAdded: () => void }) {
     setBusy(true);
     setError(null);
     try {
-      await api.addToWatchlist({
+      const added = await api.addToWatchlist({
         ticker: ticker.trim(),
         name: name.trim() || undefined,
         trading_currency: currency.trim() || undefined,
@@ -112,6 +113,10 @@ function AddForm({ onAdded }: { onAdded: () => void }) {
       setName("");
       setBuyBelow("");
       setSector("");
+      // A page load no longer fetches a first price (Sprint 20); ask for it
+      // now, as part of the add. Best effort: the add itself already worked,
+      // and the worker (or Refresh prices) fills in anything this misses.
+      if (added?.holding_id) await api.warmUpHolding(added.holding_id).catch(() => undefined);
       onAdded();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not add.");
@@ -220,32 +225,23 @@ function BuyBelowCell({ row, onSaved }: { row: WatchlistRow; onSaved: () => void
 }
 
 export default function WatchlistPage() {
-  const [rows, setRows] = useState<WatchlistRow[] | null>(null);
-  const [snapshotAt, setSnapshotAt] = useState<string | null>(null);
+  const query = useCachedQuery<Watchlist>("watchlist", () => api.getWatchlist(), {
+    errorText: "Could not load the watchlist.",
+  });
+  const rows = query.data?.rows ?? null;
+  const snapshotAt = query.data?.snapshot_at ?? null;
+  const [actionError, setActionError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const load = useCallback(() => {
-    api
-      .getWatchlist()
-      .then((w) => {
-        setRows(w.rows);
-        setSnapshotAt(w.snapshot_at ?? null);
-      })
-      .catch((e) => setError(e instanceof ApiError ? e.message : "Could not load the watchlist."));
-  }, []);
-  useEffect(load, [load]);
+  const error = actionError ?? query.error;
+  const load = query.reload;
 
   function refreshPrices() {
     setRefreshing(true);
-    setError(null);
+    setActionError(null);
     api
       .refreshWatchlist()
-      .then((w) => {
-        setRows(w.rows);
-        setSnapshotAt(w.snapshot_at ?? null);
-      })
-      .catch((e) => setError(e instanceof ApiError ? e.message : "Could not refresh the watchlist."))
+      .then(query.mutate)
+      .catch((e) => setActionError(e instanceof ApiError ? e.message : "Could not refresh the watchlist."))
       .finally(() => setRefreshing(false));
   }
 
@@ -255,7 +251,7 @@ export default function WatchlistPage() {
       await api.removeFromWatchlist(row.id);
       load();
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Could not remove.");
+      setActionError(e instanceof ApiError ? e.message : "Could not remove.");
     }
   }
 

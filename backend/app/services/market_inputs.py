@@ -51,14 +51,26 @@ def build_market_context(
     latest_facts: dict[str, Decimal] | None,
     latest_period: str | None,
     force: bool = False,
+    refresh_live: bool = True,
     currency_unknown_not_mixed: bool = False,
 ) -> MarketContext:
     """`currency_unknown_not_mixed`: the figures carry no currency at all
     (older spreadsheet uploads) — then the price's own currency is assumed
-    and a warning says so, the same rule as the multiples history."""
+    and a warning says so, the same rule as the multiples history.
+
+    `refresh_live=False` (Sprint 20): a plain GET. Stored values are served
+    as they are (marked old when stale) and nothing is fetched from a vendor
+    during the request; a value never fetched at all is reported as such.
+    The analysis run keeps the default (True): it must work on fresh data."""
     context = MarketContext(reporting_currency=reporting_currency)
     context.shares = resolve_share_count(
-        db, holding, provider, latest_facts=latest_facts, latest_period=latest_period, force=force
+        db,
+        holding,
+        provider,
+        latest_facts=latest_facts,
+        latest_period=latest_period,
+        force=force,
+        refresh_live=refresh_live,
     )
     context.warnings.extend(context.shares.warnings)
 
@@ -69,7 +81,7 @@ def build_market_context(
         context.unavailable_reason = "the filing's figures are in more than one currency"
         return context
 
-    snapshot = get_or_refresh_price(db, provider, holding=holding, force=force)
+    snapshot = get_or_refresh_price(db, provider, holding=holding, force=force, refresh_live=refresh_live)
     if not snapshot.available or snapshot.value is None:
         context.unavailable_reason = f"no share price: {snapshot.reason}"
         return context
@@ -92,7 +104,12 @@ def build_market_context(
         converted = observation.price
     else:
         fx = get_or_refresh_fx(
-            db, provider, from_currency=observation.currency, to_currency=reporting_currency, force=force
+            db,
+            provider,
+            from_currency=observation.currency,
+            to_currency=reporting_currency,
+            force=force,
+            refresh_live=refresh_live,
         )
         if not fx.available or fx.value is None:
             context.unavailable_reason = (

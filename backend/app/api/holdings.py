@@ -31,14 +31,20 @@ from app.models.document import Document
 from app.models.financial_line_item import FinancialLineItem
 from app.models.holding import Holding
 from app.models.portfolio import PortfolioPosition
-from app.providers.base import MarketDataProvider
-from app.providers.factory import get_market_data_provider_or_none, get_object_storage
+from app.providers.base import MarketDataProvider, RiskFreeRateProvider
+from app.providers.factory import (
+    get_market_data_provider,
+    get_market_data_provider_or_none,
+    get_object_storage,
+    get_risk_free_rate_provider,
+)
 from app.schemas.document import DeletionResult
 from app.schemas.holding import (
     HoldingCreate,
     HoldingFieldOptions,
     HoldingOut,
     HoldingUpdate,
+    WarmupOut,
 )
 from app.schemas.metrics import (
     HoldingMetricsOut,
@@ -455,6 +461,7 @@ def get_holding_metrics(
         reporting_currency=reporting_currency,
         latest_facts=latest.facts if latest else facts,
         latest_period=latest.period if latest else period,
+        refresh_live=False,
         currency_unknown_not_mixed=no_currency,
     )
     result = compute_holding_metrics(
@@ -552,6 +559,28 @@ def get_holding_metrics(
     )
 
 
+@router.post("/{holding_id}/warm-up", response_model=WarmupOut)
+def warm_up_holding(
+    holding_id: UUID,
+    db: Session = Depends(get_db),
+    market_data_provider: MarketDataProvider = Depends(get_market_data_provider),
+    risk_free_rate_provider: RiskFreeRateProvider = Depends(get_risk_free_rate_provider),
+) -> WarmupOut:
+    """Fetch the first price, FX rate, share count and beta for one holding
+    now (Sprint 20). Plain GETs no longer make that first vendor call; the
+    Watchlist page calls this right after you add a company, the PC worker
+    does it for anything that still has no price. Safe to repeat. Company
+    research is not fetched here (it spends quota)."""
+    require_not_demo(db)
+    holding = db.get(Holding, holding_id)
+    if holding is None:
+        raise HTTPException(status_code=404, detail="holding not found")
+    from app.services.warmup import warm_holding
+
+    result = warm_holding(db, holding, market_data_provider, risk_free_rate_provider)
+    return WarmupOut(ticker=result.ticker, fetched=result.fetched, problems=result.problems)
+
+
 @router.get("/{holding_id}/share-count", response_model=ShareCountOut)
 def get_share_count(
     holding_id: UUID,
@@ -575,6 +604,7 @@ def get_share_count(
             market_data_provider,
             latest_facts=latest.facts if latest else None,
             latest_period=latest.period if latest else None,
+            refresh_live=False,
         )
     )
 

@@ -12,6 +12,7 @@
  *   "/api" prefix — the backend's own routers aren't mounted under one.
  */
 
+import { invalidateAll } from "./queryCache";
 import type {
   Account,
   AnalysisQueue,
@@ -158,6 +159,12 @@ async function request<T>(
       ...rest.headers,
     },
   });
+
+  // A write may change what any cached page shows: forget all cached GETs
+  // (lib/queryCache.ts). Done for every non-GET that reached the server,
+  // successful or not, since a failed write can still have changed part of it.
+  const isWrite = (rest.method ?? "GET").toUpperCase() !== "GET";
+  if (isWrite) invalidateAll();
 
   if (response.status === 204) {
     return undefined as T;
@@ -324,6 +331,13 @@ export const api = {
   // like the margin-of-safety board (cached prices); never calls an LLM.
   getWatchlist: () => request<Watchlist>("/watchlist"),
   refreshWatchlist: () => request<Watchlist>("/watchlist/refresh", { method: "POST" }),
+  /** Fetch the first price / FX / rate / share count / beta for a holding
+   * (page loads no longer do it). Idempotent; never fetches research. */
+  warmUpHolding: (holdingId: string) =>
+    request<{ ticker: string; fetched: string[]; problems: string[] }>(
+      `/holdings/${holdingId}/warm-up`,
+      { method: "POST" },
+    ),
   getWatchlistEntry: (holdingId: string) => request<WatchlistRow | null>(`/watchlist/holdings/${holdingId}`),
   addToWatchlist: (input: WatchlistCreateInput) =>
     request<WatchlistRow>("/watchlist", { method: "POST", body: JSON.stringify(input) }),
