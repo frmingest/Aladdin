@@ -26,7 +26,7 @@ from datetime import datetime, timedelta, timezone
 from typing import TypeVar
 
 from pydantic import BaseModel
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.orm import Session
 
 from app.config.settings import get_settings
@@ -74,6 +74,50 @@ def _aware(value: datetime) -> datetime:
     return value if value.tzinfo is not None else value.replace(tzinfo=timezone.utc)
 
 
+def _is_current(row: ComputedSnapshot | None, fp: str) -> bool:
+    """A stored row is servable: it exists, was built from the current
+    inputs and is younger than `snapshot_max_age_hours`."""
+    if row is None or row.fingerprint != fp:
+        return False
+    max_age = timedelta(hours=get_settings().snapshot_max_age_hours)
+    return datetime.now(timezone.utc) - _aware(row.computed_at) <= max_age
+
+
+def stale_keys(db: Session, keys: list[str], *, fp: str | None = None) -> list[str]:
+    """Which of `keys` would NOT be served from storage right now (missing,
+    built from different inputs, or too old). Sprint 20: the worker rebuilds
+    these between analysis runs so a visit is a stored read."""
+    fp = fp or fingerprint(db)
+    return [key for key in keys if not _is_current(db.get(ComputedSnapshot, key), fp)]
+
+
+INVALIDATED = "invalidated"
+
+
+def invalidate(db: Session) -> int:
+    """Mark every stored page snapshot out of date (they are rebuilt on the
+    next read or by the worker). For changes the fingerprint cannot see —
+    prices are not in it by design — such as the first price of a new
+    holding. Returns how many rows were marked. Never raises."""
+    try:
+        result = db.execute(
+            update(ComputedSnapshot)
+            .where(
+                or_(
+                    ComputedSnapshot.key.in_((RISK_KEY, BOARD_KEY, WATCHLIST_KEY)),
+                    ComputedSnapshot.key.like("performance:%"),
+                )
+            )
+            .values(fingerprint=INVALIDATED)
+        )
+        db.commit()
+        return int(result.rowcount or 0)
+    except Exception:
+        db.rollback()
+        log.warning("could not invalidate snapshots", exc_info=True)
+        return 0
+
+
 def _with_stamp(model: T, when: datetime) -> T:
     if hasattr(model, "snapshot_at"):
         return model.model_copy(update={"snapshot_at": when})
@@ -112,12 +156,7 @@ def get_or_build(
         try:
             fp = fingerprint(db)
             row = db.get(ComputedSnapshot, key)
-            max_age = timedelta(hours=get_settings().snapshot_max_age_hours)
-            if (
-                row is not None
-                and row.fingerprint == fp
-                and datetime.now(timezone.utc) - _aware(row.computed_at) <= max_age
-            ):
+            if row is not None and _is_current(row, fp):
                 return model_cls.model_validate_json(row.payload)
         except Exception:
             db.rollback()

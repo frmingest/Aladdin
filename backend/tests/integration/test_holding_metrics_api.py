@@ -142,10 +142,46 @@ def _with_market(client):
     app.dependency_overrides[get_market_data_provider_or_none] = lambda: _FakeYahoo()
 
 
-def test_metrics_include_market_multiples_when_price_and_shares_exist(client):
+def _store_market_data(db_session, holding_id) -> None:
+    """What a warm-up (or the nightly refresh) leaves in the database: one
+    stored price and one Yahoo share count."""
+    from datetime import datetime, timezone
+    from decimal import Decimal
+    from uuid import UUID
+
+    from app.models.market import MarketObservation, ShareCountObservation
+
+    now = datetime.now(timezone.utc)
+    hid = UUID(str(holding_id))
+    db_session.add(
+        MarketObservation(holding_id=hid, observed_at=now, price=Decimal(30), currency="NOK", provider="yfinance")
+    )
+    db_session.add(
+        ShareCountObservation(
+            holding_id=hid, shares=Decimal(10), observed_at=now, source="yfinance",
+            reference="https://finance.yahoo.com/quote/X",
+        )
+    )
+    db_session.commit()
+
+
+def test_metrics_page_load_never_fetches_a_first_price_or_share_count(client):
+    """Sprint 20: a GET on a holding nothing was ever fetched for reports
+    that, instead of waiting on Yahoo (the fake would have answered)."""
     _with_market(client)
     holding_id = _create_holding(client)
     _upload_filing(client, holding_id, period="FY2024")
+
+    body = client.get(f"/holdings/{holding_id}/metrics", params={"period": "FY2024"}).json()
+    assert "not fetched yet" in body["market"]["unavailable_reason"]
+    assert body["computed"].get("market_cap") is None
+
+
+def test_metrics_include_market_multiples_when_price_and_shares_exist(client, db_session):
+    _with_market(client)
+    holding_id = _create_holding(client)
+    _upload_filing(client, holding_id, period="FY2024")
+    _store_market_data(db_session, holding_id)
 
     body = client.get(f"/holdings/{holding_id}/metrics", params={"period": "FY2024"}).json()
     assert body["market"]["shares"]["source"] == "yfinance"

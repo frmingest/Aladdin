@@ -5,6 +5,7 @@ an in-memory SQLite DB and fake providers (no real network calls)."""
 from datetime import datetime, timezone
 from decimal import Decimal
 
+import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
@@ -17,10 +18,20 @@ from app.providers.base import (
     PricePoint,
     RiskFreeRate,
 )
+from app.services.market_data.common import cold_fetch_allowed
 from app.services.risk.regime import RegimeResult
 from app.services.valuation.holding_valuation import compute_holding_valuation
 
 D = Decimal
+
+
+@pytest.fixture(autouse=True)
+def _analysis_context():
+    """These tests exercise the valuation on a fresh in-memory database the way
+    an analysis run does, which may make the first-ever price / FX / beta call.
+    (A plain page load may not: tests/unit/test_cold_fetch_rule.py.)"""
+    with cold_fetch_allowed():
+        yield
 _DEFAULT_BETA = D("1.0")
 
 

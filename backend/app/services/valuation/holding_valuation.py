@@ -39,6 +39,7 @@ from app.models.financial_line_item import FinancialLineItem
 from app.models.holding import Holding
 from app.providers.base import MarketDataProvider, RiskFreeRateProvider
 from app.services.holding_facts import facts_by_period, previous_period
+from app.services.market_data.beta import get_or_refresh_beta
 from app.services.market_data.fx import get_or_refresh_fx
 from app.services.market_data.price import get_or_refresh_price
 from app.services.market_data.risk_free_rate import get_or_refresh_risk_free_rate
@@ -252,7 +253,11 @@ def _resolve_cost_of_equity(
         return None
     result.risk_free_rate_pct = rate_snapshot.value.rate
 
-    beta = market_data_provider.get_beta(holding.ticker, allow_live_fetch=force_refresh)
+    # Sprint 20: stored beta (app/services/market_data/beta.py). A plain GET
+    # serves the stored value; only Refresh / the worker call Yahoo.
+    beta = get_or_refresh_beta(
+        db, market_data_provider, holding.ticker, force=force_refresh, refresh_live=force_refresh
+    ).value
     if beta is None:
         beta = assumptions.default_beta
         result.unavailable_reasons.append(

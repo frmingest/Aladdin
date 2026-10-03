@@ -18,6 +18,7 @@ from app.domain.valuation_assumptions import get_valuation_assumptions
 from app.models import Document, FinancialLineItem, Holding
 from app.providers.base import RiskFreeRate
 from app.services.analysis.pipeline import _attach_price_target
+from app.services.market_data.common import cold_fetch_allowed
 from app.services.metrics import (
     compute_holding_metrics,
     mark_not_meaningful_for_financials,
@@ -31,6 +32,15 @@ from tests.unit.test_holding_valuation import (
 )
 
 D = Decimal
+
+
+@pytest.fixture(autouse=True)
+def _analysis_context():
+    """These tests exercise the valuation on a fresh in-memory database the way
+    an analysis run does, which may make the first-ever price / FX / beta call.
+    (A plain page load may not: tests/unit/test_cold_fetch_rule.py.)"""
+    with cold_fetch_allowed():
+        yield
 
 
 # ---------------------------------------------------------------- dcf fade

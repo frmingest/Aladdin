@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import { api, ApiError } from "../lib/api";
+import { api } from "../lib/api";
+import { useCachedQuery } from "../lib/queryCache";
 import { formatDate, formatNok, formatPct100 } from "../lib/format";
 import type {
   AllocationSlice,
@@ -447,24 +448,21 @@ function PositionsCard({ overview }: { overview: PortfolioOverview }) {
 }
 
 export default function DashboardPage() {
-  const [overview, setOverview] = useState<PortfolioOverview | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [macro, setMacro] = useState<MacroIndicators | null>(null);
-  const [thesisRows, setThesisRows] = useState<MonitorRow[]>([]);
-
-  const loadThesis = () => {
-    api.getThesisMonitor().then((m) => setThesisRows(m.rows)).catch(() => setThesisRows([]));
-  };
-
-  useEffect(() => {
-    api
-      .getPortfolioOverview()
-      .then(setOverview)
-      .catch((e) => setError(e instanceof ApiError ? e.message : "Could not load the overview."));
-    // Optional strip: a failure here just hides it.
-    api.getMacroIndicators().then(setMacro).catch(() => setMacro(null));
-    loadThesis();
-  }, []);
+  // Cached (lib/queryCache.ts): coming back to the Dashboard shows the last
+  // data at once and re-checks it in the background.
+  const overviewQuery = useCachedQuery<PortfolioOverview>("overview", () => api.getPortfolioOverview(), {
+    errorText: "Could not load the overview.",
+  });
+  const overview = overviewQuery.data;
+  const error = overviewQuery.error;
+  // Optional strips: a failure here just hides them.
+  const macro: MacroIndicators | null = useCachedQuery<MacroIndicators>(
+    "macro-indicators",
+    () => api.getMacroIndicators(),
+  ).data;
+  const thesisQuery = useCachedQuery<{ rows: MonitorRow[] }>("thesis-monitor", () => api.getThesisMonitor());
+  const thesisRows: MonitorRow[] = thesisQuery.data?.rows ?? [];
+  const loadThesis = thesisQuery.reload;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 sm:px-8 sm:py-8">

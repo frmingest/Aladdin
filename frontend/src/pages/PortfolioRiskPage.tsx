@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { api, ApiError } from "../lib/api";
+import { useCachedQuery } from "../lib/queryCache";
 import { formatDate, formatNok, formatPercent, formatPct100 } from "../lib/format";
 import type { ClusterFlag, CorrelationMatrix, HoldingStress, PortfolioRisk, Regime } from "../lib/types";
 import { Button, Card, EmptyState, PageHeader, SectionTitle, SnapshotStamp } from "../components/ui";
@@ -248,25 +249,21 @@ function RegimeCard({ regime }: { regime: Regime }) {
 }
 
 export default function PortfolioRiskPage() {
-  const [risk, setRisk] = useState<PortfolioRisk | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const query = useCachedQuery<PortfolioRisk>("risk", () => api.getPortfolioRisk(), {
+    errorText: "Could not load portfolio risk.",
+  });
+  const risk = query.data;
+  const [refreshError, setRefreshError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-
-  const load = () => {
-    api
-      .getPortfolioRisk()
-      .then(setRisk)
-      .catch((e) => setError(e instanceof ApiError ? e.message : "Could not load portfolio risk."));
-  };
-
-  useEffect(load, []);
+  const error = refreshError ?? query.error;
 
   const onRefresh = () => {
     setRefreshing(true);
+    setRefreshError(null);
     api
       .refreshPortfolioRisk()
-      .then(setRisk)
-      .catch((e) => setError(e instanceof ApiError ? e.message : "Refresh failed."))
+      .then(query.mutate)
+      .catch((e) => setRefreshError(e instanceof ApiError ? e.message : "Refresh failed."))
       .finally(() => setRefreshing(false));
   };
 

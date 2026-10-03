@@ -157,6 +157,17 @@ class Settings(BaseSettings):
     snapshot_max_age_hours: int = 36
     snapshot_refresh_enabled: bool = True
     snapshot_refresh_hour_utc: int = 4
+    # Sprint 20: besides the nightly rebuild, the worker rebuilds any stored
+    # snapshot whose inputs changed (a new import, a finished analysis, a new
+    # watchlist entry) once the analysis queue is idle, so the next page
+    # visit is a stored read instead of a 3-9 s build. Stored data only: no
+    # vendor calls. At most one such pass per interval.
+    snapshot_keepwarm_enabled: bool = True
+    snapshot_keepwarm_min_interval_seconds: int = 300
+    # Sprint 20: the worker also fetches the first price / share count / beta
+    # for holdings that have never had one (a GET no longer does). A holding
+    # whose fetch failed is retried after this many seconds, not every poll.
+    warmup_retry_seconds: int = 3600
 
     # --- Object storage (see app/providers/object_storage.py) ---
     # "local" (default, dev only — Railway's disk is ephemeral, not a real
@@ -207,6 +218,9 @@ class Settings(BaseSettings):
     # app/providers/fred_risk_free_rate_provider.py) ---
     market_data_provider: str = "yfinance"  # "yfinance" is the only option so far
     market_data_stale_after_hours: int = 24
+    # Sprint 20: beta is stored in the database (app/services/market_data/beta.py)
+    # so a deploy no longer empties it. It moves slowly: a week is fresh.
+    beta_stale_after_hours: int = 168
     risk_free_rate_provider: str = "fred"  # "fred" is the only option so far
     fred_api_key: str | None = None
     active_risk_free_rate_series_version: str = "v1"

@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { api } from "./api";
+import { invalidateAll } from "./queryCache";
 
 /**
  * Demo mode (2026-09-26): fetched once here and shared through context so
@@ -42,6 +43,9 @@ export function DemoModeProvider({ children }: { children: React.ReactNode }) {
 
   const setDemoMode = useCallback(async (enabled: boolean) => {
     const state = await api.setDemoMode(enabled);
+    // The whole data set changes: drop every cached page so real figures are
+    // never shown in demo mode (or the reverse), even briefly.
+    invalidateAll({ hard: true });
     setDemoModeState(state.demo_mode);
   }, []);
 

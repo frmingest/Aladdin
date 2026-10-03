@@ -112,3 +112,12 @@ class HoldingFieldOptions(BaseModel):
 
     sectors: list[str]
     instrument_types: list[str]
+
+
+class WarmupOut(BaseModel):
+    """Result of POST /holdings/{id}/warm-up (Sprint 20): what was fetched
+    and, per step, why something could not be."""
+
+    ticker: str
+    fetched: list[str]
+    problems: list[str]

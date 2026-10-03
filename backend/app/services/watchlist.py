@@ -143,7 +143,9 @@ def build_watchlist(
             # No DCF yet (a newly watched company rarely has financials on
             # file), so the valuation stopped before fetching a price. The
             # buy-below check only needs the quote itself.
-            quote = get_or_refresh_price(db, market_data_provider, holding=holding)
+            quote = get_or_refresh_price(
+                db, market_data_provider, holding=holding, force=force_refresh, refresh_live=force_refresh
+            )
             if quote.available and quote.value is not None:
                 row.price, row.price_currency, row.price_as_of = quote.value.price, quote.value.currency, quote.as_of
             else:

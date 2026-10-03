@@ -47,8 +47,24 @@ def _override(client, provider) -> None:
     client._fake_provider_override = provider  # not used, just a marker for readability
 
 
+def test_get_macro_with_nothing_stored_never_calls_the_provider(client):
+    """Sprint 20: looking at a page never spends research quota. The first
+    fetch is the Refresh button (or an analysis run)."""
+    provider = _FakeProvider(items=[_item()])
+    _override(client, provider)
+    response = client.get("/research/macro")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["available"] is False
+    assert body["items"] == []
+    assert "press Refresh" in body["reason"]
+    assert provider.calls == 0
+    app.dependency_overrides.pop(get_research_provider, None)
+
+
 def test_get_macro_returns_grounded_items(client):
     _override(client, _FakeProvider(items=[_item()]))
+    assert client.post("/research/macro/refresh").status_code == 200
     response = client.get("/research/macro")
     assert response.status_code == 200
     body = response.json()
@@ -62,6 +78,7 @@ def test_macro_second_get_is_served_from_cache(client):
     provider = _FakeProvider(items=[_item()])
     _override(client, provider)
 
+    client.post("/research/macro/refresh")
     client.get("/research/macro")
     client.get("/research/macro")
     assert provider.calls == 1
@@ -72,6 +89,7 @@ def test_macro_refresh_forces_a_new_provider_call(client):
     provider = _FakeProvider(items=[_item()])
     _override(client, provider)
 
+    client.post("/research/macro/refresh")
     client.get("/research/macro")
     response = client.post("/research/macro/refresh")
     assert response.status_code == 200
@@ -81,7 +99,7 @@ def test_macro_refresh_forces_a_new_provider_call(client):
 
 def test_provider_failure_returns_200_with_available_false_not_a_500(client):
     _override(client, _FakeProvider(error=ResearchUnavailableError("quota exhausted")))
-    response = client.get("/research/macro")
+    response = client.post("/research/macro/refresh")
     assert response.status_code == 200
     body = response.json()
     assert body["available"] is False
@@ -91,6 +109,7 @@ def test_provider_failure_returns_200_with_available_false_not_a_500(client):
 
 def test_get_sector_research(client):
     _override(client, _FakeProvider(items=[_item()]))
+    assert client.post("/research/sectors/Energy/refresh").status_code == 200
     response = client.get("/research/sectors/Energy")
     assert response.status_code == 200
     body = response.json()
@@ -108,6 +127,7 @@ def test_get_company_research_for_real_holding(client):
     assert create.status_code == 201
     holding_id = create.json()["id"]
 
+    assert client.post(f"/research/holdings/{holding_id}/refresh").status_code == 200
     response = client.get(f"/research/holdings/{holding_id}")
     assert response.status_code == 200
     body = response.json()

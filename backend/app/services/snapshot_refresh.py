@@ -10,8 +10,10 @@ result is a one-line summary in `app_settings` (no extra migration).
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from datetime import datetime, timezone
 
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.models.app_setting import AppSetting
@@ -55,14 +57,14 @@ def last_run(db: Session) -> tuple[datetime | None, str | None]:
     return when, _read(db, LAST_SUMMARY_KEY)
 
 
-def refresh_all_snapshots(
+def snapshot_jobs(
     db: Session,
-    *,
     market_data_provider: MarketDataProvider,
     risk_free_rate_provider: RiskFreeRateProvider,
-    now: datetime | None = None,
-) -> str:
-    """Rebuild all four snapshots with live data; returns the summary."""
+    *,
+    force_refresh: bool,
+) -> dict[str, tuple[str, Callable[[], BaseModel]]]:
+    """The four stored pages: name -> (snapshot key, builder)."""
     # Imported here: the payload builders live next to their endpoints.
     from app.api.performance import build_performance_out
     from app.api.risk import build_risk_out
@@ -71,24 +73,75 @@ def refresh_all_snapshots(
     from app.services.performance.portfolio_performance import resolve_window
 
     lookback, bench = resolve_window(None, None)
-    jobs = {
+    return {
         "risk": (
             snapshots.RISK_KEY,
-            lambda: build_risk_out(db, market_data_provider, risk_free_rate_provider, force_refresh=True),
+            lambda: build_risk_out(
+                db, market_data_provider, risk_free_rate_provider, force_refresh=force_refresh
+            ),
         ),
         "performance": (
             snapshots.performance_key(lookback, bench),
-            lambda: build_performance_out(db, market_data_provider, lookback, bench, force_refresh=True),
+            lambda: build_performance_out(
+                db, market_data_provider, lookback, bench, force_refresh=force_refresh
+            ),
         ),
         "board": (
             snapshots.BOARD_KEY,
-            lambda: build_board_out(db, market_data_provider, risk_free_rate_provider, force_refresh=True),
+            lambda: build_board_out(
+                db, market_data_provider, risk_free_rate_provider, force_refresh=force_refresh
+            ),
         ),
         "watchlist": (
             snapshots.WATCHLIST_KEY,
-            lambda: build_watchlist_out(db, market_data_provider, risk_free_rate_provider, force_refresh=True),
+            lambda: build_watchlist_out(
+                db, market_data_provider, risk_free_rate_provider, force_refresh=force_refresh
+            ),
         ),
     }
+
+
+def rebuild_stale_snapshots(
+    db: Session,
+    *,
+    market_data_provider: MarketDataProvider,
+    risk_free_rate_provider: RiskFreeRateProvider,
+) -> list[str]:
+    """Sprint 20: rebuild only the stored pages that would not be served
+    right now (missing, inputs changed, or too old) — WITHOUT forcing a
+    vendor refresh (stored prices are used, as a visit would). Returns the
+    names rebuilt. One failing page never blocks the others."""
+    jobs = snapshot_jobs(db, market_data_provider, risk_free_rate_provider, force_refresh=False)
+    # The fingerprint is read BEFORE building (as get_or_build does): if an
+    # input changes while a page is being built, the stored page carries the
+    # older fingerprint and is rebuilt on the next pass instead of being
+    # passed off as current.
+    fp = snapshots.fingerprint(db)
+    stale = set(snapshots.stale_keys(db, [key for key, _ in jobs.values()], fp=fp))
+    rebuilt: list[str] = []
+    for name, (key, build) in jobs.items():
+        if key not in stale:
+            continue
+        try:
+            snapshots.store(db, key, build(), fp=fp)
+            rebuilt.append(name)
+        except Exception:
+            db.rollback()
+            log.warning("keep-warm rebuild of %s failed", name, exc_info=True)
+    if rebuilt:
+        log.info("keep-warm: rebuilt %s", ", ".join(rebuilt))
+    return rebuilt
+
+
+def refresh_all_snapshots(
+    db: Session,
+    *,
+    market_data_provider: MarketDataProvider,
+    risk_free_rate_provider: RiskFreeRateProvider,
+    now: datetime | None = None,
+) -> str:
+    """Rebuild all four snapshots with live data; returns the summary."""
+    jobs = snapshot_jobs(db, market_data_provider, risk_free_rate_provider, force_refresh=True)
     ok: list[str] = []
     failed: list[str] = []
     for name, (key, build) in jobs.items():

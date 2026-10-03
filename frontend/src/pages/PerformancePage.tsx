@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import {
   CartesianGrid,
@@ -11,6 +11,7 @@ import {
   YAxis,
 } from "recharts";
 import { api, ApiError } from "../lib/api";
+import { useCachedQuery } from "../lib/queryCache";
 import { formatDate, formatNok, formatPct100 } from "../lib/format";
 import type { DailyValue, PortfolioPerformance } from "../lib/types";
 import { Button, Card, EmptyState, PageHeader, SectionTitle, SnapshotStamp } from "../components/ui";
@@ -180,27 +181,24 @@ function PerformanceChart({ series, benchmarkTicker, benchmarkAvailable, showRea
 
 export default function PerformancePage() {
   const [lookbackDays, setLookbackDays] = useState(365);
-  const [perf, setPerf] = useState<PortfolioPerformance | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const query = useCachedQuery<PortfolioPerformance>(
+    `performance:${lookbackDays}`,
+    () => api.getPortfolioPerformance({ lookbackDays }),
+    { errorText: "Could not load portfolio performance." },
+  );
+  const perf = query.data;
+  const [refreshError, setRefreshError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [showReal, setShowReal] = useState(false);
-
-  const load = (days: number) => {
-    setPerf(null);
-    api
-      .getPortfolioPerformance({ lookbackDays: days })
-      .then(setPerf)
-      .catch((e) => setError(e instanceof ApiError ? e.message : "Could not load portfolio performance."));
-  };
-
-  useEffect(() => load(lookbackDays), [lookbackDays]);
+  const error = refreshError ?? query.error;
 
   const onRefresh = () => {
     setRefreshing(true);
+    setRefreshError(null);
     api
       .refreshPortfolioPerformance({ lookbackDays })
-      .then(setPerf)
-      .catch((e) => setError(e instanceof ApiError ? e.message : "Refresh failed."))
+      .then(query.mutate)
+      .catch((e) => setRefreshError(e instanceof ApiError ? e.message : "Refresh failed."))
       .finally(() => setRefreshing(false));
   };
 
