@@ -14,7 +14,7 @@ Architecture and diagram: [architecture.md](architecture.md).
 | | |
 |---|---|
 | **Phase** | Phase 11: Buffett/Munger single-focus rebuild. **Sprints 18 (#40) and 19 (#42) merged. Sprint 20 merged (#43). Sprint 23 (game mode G12 + G13) built, PR open. Next: Sprints 21–22**; game-mode ideas are queued as **proposed Sprints 23–26** (see §4) |
-| **`main`** | `d7e9f0f` (PR #42, Sprint 19, verified with `git fetch` 2026-10-03). Before that `7e80ebd` (PR #40). Everything built so far is merged, including game mode G1–G11 (#23–#39), CI fixes (#21) and the lamp logo (#34). PR #26 (G3 alone) is superseded by #27; close it if still open |
+| **`main`** | `5e0a7ae` (PR #43, Sprint 20, verified with `git fetch` 2026-10-03). Before that `d7e9f0f` (PR #42, Sprint 19), then `7e80ebd` (PR #40). Everything built so far is merged, including game mode G1–G11 (#23–#39), CI fixes (#21) and the lamp logo (#34). PR #26 (G3 alone) is superseded by #27; close it if still open |
 | **Open PRs** | **Sprint 23 (game mode G12 + G13), branch `feature/game-mode-sprint-23-hype-and-stress`**. Others: confirm on GitHub |
 | **Sprints closed** | 0–15 (16 and 17 / Epic F22 were built and removed 2026-09-29). **Sprint 18 merged (#40), Sprint 19 merged (#42). Sprint 20 built, awaiting your review** |
 | **Backend tests** | 1,443 pass · Ruff clean · frontend 229 tests, tsc clean, ESLint 0 errors, build OK (Sprint 23 branch, 2026-10-03) |
