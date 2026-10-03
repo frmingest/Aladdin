@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api, ApiError } from "../lib/api";
+import { loadStore, type StoreData } from "../lib/marketStore";
 import { formatDate, formatMoney, formatMultiple, formatPercent, formatRelative } from "../lib/format";
 import { METRIC_INFO } from "../lib/glossary";
 import {
@@ -27,10 +28,8 @@ import {
   PERCENT_METRICS,
   isFundBlindPass,
   type AnalysisRun,
-  type Holding,
   type HoldingMetrics,
   type HoldingThesis,
-  type HoldingValuation,
   type VerdictContent,
   type WatchlistRow,
 } from "../lib/types";
@@ -45,51 +44,6 @@ import { Button, Card, EmptyState, SectionJumpBar, VerdictBadge } from "../compo
  * already stored (valuation, ratios, the stored analysis, the thesis monitor) and reads it
  * through eight gates. The one thing it can change is your own price on the watchlist. It
  * never trades, scores or rewards anything. */
-
-interface StoreData {
-  holding: Holding | null;
-  row: WatchlistRow | null;
-  valuation: HoldingValuation | null;
-  analysis: AnalysisRun | null;
-  thesis: HoldingThesis | null;
-  metrics: HoldingMetrics | null;
-  problems: string[];
-}
-
-const errText = (e: unknown, what: string): string =>
-  `${what}: ${e instanceof ApiError ? e.message : "could not be loaded."}`;
-
-async function loadStore(id: string): Promise<StoreData> {
-  const [h, w, v, a, t, p] = await Promise.allSettled([
-    api.getHolding(id),
-    api.getWatchlistEntry(id),
-    api.getHoldingValuation(id),
-    api.getLatestAnalysis(id),
-    api.getHoldingThesis(id),
-    api.listHoldingPeriods(id),
-  ]);
-  const problems: string[] = [];
-  const take = <T,>(r: PromiseSettledResult<T>, what: string, quiet404 = false): T | null => {
-    if (r.status === "fulfilled") return r.value;
-    if (!(quiet404 && r.reason instanceof ApiError && r.reason.status === 404)) problems.push(errText(r.reason, what));
-    return null;
-  };
-  const holding = take(h, "Company");
-  const row = take(w, "Watchlist entry");
-  const valuation = take(v, "Valuation");
-  const analysis = take(a, "Analysis", true);
-  const thesis = take(t, "Thesis monitor");
-  const periods = take(p, "Filing periods") ?? [];
-  let metrics: HoldingMetrics | null = null;
-  if (periods.length > 0) {
-    try {
-      metrics = await api.getHoldingMetrics(id, periods[periods.length - 1]);
-    } catch (e) {
-      problems.push(errText(e, "Ratios"));
-    }
-  }
-  return { holding, row, valuation, analysis, thesis, metrics, problems };
-}
 
 const METHOD_LABEL: Record<string, string> = {
   owner_earnings_dcf: "Owner-earnings DCF (bear, base and bull growth)",

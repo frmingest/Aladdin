@@ -60,7 +60,7 @@ function useTypewriter(text: string): { shown: string; finish: () => void } {
   return { shown: text.slice(0, n), finish: () => setN(text.length) };
 }
 
-function Bubble({ text, mood }: { text: string; mood: Mood }) {
+export function Bubble({ text, mood }: { text: string; mood: Mood }) {
   const { shown, finish } = useTypewriter(text);
   return (
     <div className={`market-bubble sal-bubble sal-bubble-${mood}`} onClick={finish} role="presentation">

@@ -22,7 +22,7 @@ const TONE_CLASS: Record<GameAdvisorTone, string> = {
 
 /** Small generic busts, drawn for this app: an owner with a lamp-lit scholar's
  * look, and a sharp-eyed sceptic. Not likenesses of any real person. */
-function Portrait({ who }: { who: GameAdvisorName }) {
+export function Portrait({ who }: { who: GameAdvisorName }) {
   const ring = who === "oracle" ? "#d9a93e" : "#9aa4b8";
   return (
     <svg viewBox="0 0 44 44" className="h-11 w-11 shrink-0" role="img" aria-label={ADVISOR_NAME[who]}>
