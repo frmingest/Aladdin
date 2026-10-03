@@ -14,6 +14,12 @@ What the files look like in practice, and what is handled:
 - decimal commas, non-breaking spaces, "%" signs
 - a trailing "Total" row, blank rows, derivative/cash lines with negative
   weights (skipped and reported)
+- (Sprint 19) a text-layer PDF — a fund's annual report or monthly report
+  with its "portfolio" / "schedule of investments" table. Tables are read
+  with PyMuPDF's table finder, a table that continues on the next page
+  without repeating its header is joined to the one before, and the as-of
+  date is looked for in the text just above each table. A scanned PDF (no
+  text layer) has no tables to find and is refused with that reason.
 
 Sector / country / currency splits are derived from the holdings rows
 when the file has those columns (summed in Python).
@@ -229,7 +235,79 @@ def _read_sheets(filename: str, content: bytes) -> list[tuple[str, list[list[obj
         sheets = [(ws.title, [list(r) for r in ws.iter_rows(values_only=True)]) for ws in workbook.worksheets]
         workbook.close()
         return sheets
-    raise HoldingsFileError(f"a holdings file must be .csv or .xlsx, not '{ext or filename}'")
+    if ext == ".pdf":
+        return _read_pdf_tables(content)
+    raise HoldingsFileError(f"a holdings file must be .csv, .xlsx or .pdf, not '{ext or filename}'")
+
+
+PDF_TEXT_ROWS_ABOVE_TABLE = 4  # lines of page text kept above a table (title, "as of" date)
+MAX_PDF_PAGES = 400
+
+
+def _has_holdings_header(row: list[object]) -> bool:
+    columns = _match_columns(row)
+    return "name" in columns and "weight" in columns
+
+
+def _read_pdf_tables(content: bytes) -> list[tuple[str, list[list[object]]]]:
+    """Every table in a text-layer PDF as rows, ready for the same header
+    search as a spreadsheet. Deterministic: no OCR, no LLM."""
+    import pymupdf
+
+    try:
+        doc = pymupdf.open(stream=content, filetype="pdf")
+    except Exception as exc:
+        raise HoldingsFileError(f"could not open the PDF: {exc}") from exc
+    tables: list[tuple[str, list[list[object]]]] = []
+    page_texts = 0
+    try:
+        if doc.page_count > MAX_PDF_PAGES:
+            raise HoldingsFileError(f"the PDF has {doc.page_count} pages (limit {MAX_PDF_PAGES} for a holdings file)")
+        for page_index in range(doc.page_count):
+            page = doc.load_page(page_index)
+            if page.get_text("text").strip():
+                page_texts += 1
+            try:
+                found = page.find_tables()
+            except Exception as exc:
+                raise HoldingsFileError(f"could not read the tables on PDF page {page_index + 1}: {exc}") from exc
+            blocks = [b for b in page.get_text("blocks") if str(b[4]).strip()]
+            for table_no, table in enumerate(found.tables, start=1):
+                rows = [list(r) for r in table.extract()]
+                if not rows:
+                    continue
+                above = [
+                    [" ".join(str(b[4]).split())]
+                    for b in sorted(blocks, key=lambda b: b[1])
+                    if b[3] <= table.bbox[1] + 1
+                ][-PDF_TEXT_ROWS_ABOVE_TABLE:]
+                label = f"page {page_index + 1} table {table_no}"
+                previous = tables[-1] if tables else None
+                continues = (
+                    previous is not None
+                    and previous[0].startswith(f"page {page_index} ")
+                    and not _has_holdings_header(rows[0])
+                    and any(_has_holdings_header(r) for r in previous[1][:HEADER_SCAN_ROWS])
+                    and len(rows[0]) == max((len(r) for r in previous[1]), default=-1)
+                )
+                if continues:
+                    previous[1].extend(rows)
+                    tables[-1] = (f"page {page_index + 1} " + previous[0].split(" ", 2)[2], previous[1])
+                else:
+                    tables.append((label, above + rows))
+    finally:
+        doc.close()
+    if not tables:
+        if page_texts == 0:
+            raise HoldingsFileError(
+                "the PDF has no text layer (it looks scanned), so no table can be read — "
+                "use the fund manager's Excel/CSV holdings file instead"
+            )
+        raise HoldingsFileError(
+            "no tables were found in the PDF — if the holdings are laid out as plain text lines, "
+            "use the fund manager's Excel/CSV holdings file instead"
+        )
+    return tables
 
 
 def parse_holdings_file(filename: str, content: bytes) -> ParsedHoldings:

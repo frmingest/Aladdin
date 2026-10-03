@@ -766,7 +766,7 @@ function HoldingsImport({
         <span className="sr-only">Holdings file</span>
         <input
           type="file"
-          accept=".csv,.xlsx"
+          accept=".csv,.xlsx,.pdf"
           disabled={busy}
           onChange={(e) => {
             const file = e.target.files?.[0];
@@ -848,7 +848,7 @@ function HoldingsCard({
           }}
         />
         <p className="mt-1 text-xs text-ink-faint">
-          Best source: the provider&apos;s full holdings download (CSV/Excel). Otherwise type in the top 10 from the
+          Best source: the provider&apos;s full holdings download (CSV/Excel), or the portfolio table in the fund&apos;s annual report (PDF with a text layer). Otherwise type in the top 10 from the
           fact sheet.
         </p>
         {importNote && <p className="mt-2 text-xs text-ink-muted">{importNote}</p>}

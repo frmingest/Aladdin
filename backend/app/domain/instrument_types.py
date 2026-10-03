@@ -83,6 +83,15 @@ _ETF_PATTERN = re.compile(r"\betf\b", re.IGNORECASE)
 _FUND_PATTERN = re.compile(r"\b(fund|fond|aksjefond|indeksfond|indeks|index)\b", re.IGNORECASE)
 
 
+# Norwegian/Nordic fund managers whose product names often carry no marker
+# at all ("Heimdal Utbytte N", "Skagen Vekst A"). Checked after every
+# specific pattern above, so "Heimdal Høyrente Pluss B" is still a
+# money-market fund and "Alfred Berg Nordic High Yield" a bond fund; a bare
+# manager-name product is an equity fund. Deliberately a short list: a name
+# like "DNB" or "Storebrand" is also a listed company.
+_FUND_MANAGER_PATTERN = re.compile(r"^(heimdal|alfred berg|skagen|holberg|delphi)\b", re.IGNORECASE)
+
+
 def classify_instrument(name: str) -> str:
     """Best-effort instrument-type guess from a security's display name.
 
@@ -98,6 +107,6 @@ def classify_instrument(name: str) -> str:
         return BOND_FUND
     if _ETF_PATTERN.search(name):
         return EQUITY_ETF
-    if _FUND_PATTERN.search(name):
+    if _FUND_PATTERN.search(name) or _FUND_MANAGER_PATTERN.search(name):
         return EQUITY_FUND
     return STOCK

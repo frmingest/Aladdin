@@ -63,7 +63,7 @@ from app.services.valuation.fund_look_through import (
     compute_look_through,
     load_constituents,
 )
-from app.services.valuation.growth import historical_cagr
+from app.services.valuation.growth import historical_cagr, profitable_run_cagr
 from app.services.valuation.multiples import PeriodMultiples, multiples_over_time
 
 OWNER_EARNINGS_DCF = "owner_earnings_dcf"
@@ -559,7 +559,17 @@ def compute_holding_valuation(
 
     _latest_year, latest_period, base_owner_earnings = history[-1]
     try:
-        raw_growth_rate = historical_cagr([row[2] for row in history])
+        if assumptions.growth_base_method == "profitable_run":
+            run = profitable_run_cagr([(row[0], row[2]) for row in history])
+            raw_growth_rate = run.rate
+            if run.skipped_years:
+                skipped = ", ".join(f"FY{y}" for y in run.skipped_years)
+                result.unavailable_reasons.append(
+                    f"Growth measured over FY{run.start_year}-FY{run.end_year}, the latest run of "
+                    f"profitable years; earlier loss-making years ({skipped}) are left out of the base."
+                )
+        else:
+            raw_growth_rate = historical_cagr([row[2] for row in history])
     except ValueError as exc:
         result.unavailable_reasons.append(f"DCF unavailable: {exc}")
         return result
