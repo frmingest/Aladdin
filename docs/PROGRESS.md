@@ -1,6 +1,6 @@
 # Aladdin — Progress
 
-**Last updated:** 2026-10-02 · structure: [1 Now](#1-where-we-are-now) · [2 Needs from Faiz](#2-needs-from-faiz) · [3 Known issues](#3-known-issues) · [4 Roadmap](#4-roadmap) · [5 Features](#5-feature-index) · [6 Changes / history](#6-changes--history)
+**Last updated:** 2026-10-03 · structure: [1 Now](#1-where-we-are-now) · [2 Needs from Faiz](#2-needs-from-faiz) · [3 Known issues](#3-known-issues) · [4 Roadmap](#4-roadmap) · [5 Features](#5-feature-index) · [6 Changes / history](#6-changes--history)
 
 How this page works: short tables only. Each item links to its own doc in this folder. Finished work
 moves to **§6 Changes / history** as soon as it is done. The full previous version of this page (long
@@ -13,10 +13,10 @@ Architecture and diagram: [architecture.md](architecture.md).
 
 | | |
 |---|---|
-| **Phase** | Phase 11: Buffett/Munger single-focus rebuild. **Sprint 18 built 2026-10-02 (PR #40 open). Next: Sprints 19–22** (see §4) |
-| **`main`** | `1f8c9ff` (PR #39). Everything built so far is merged, including game mode G1–G11 (#23–#39), CI fixes (#21) and the lamp logo (#34). PR #26 (G3 alone) is superseded by #27; close it if still open |
-| **Open PRs** | **#40** Sprint 18 stabilise. Others: confirm on GitHub |
-| **Sprints closed** | 0–15 (16 and 17 / Epic F22 were built and removed 2026-09-29). **Sprint 18 built, awaiting merge; Sprint 19 is next** |
+| **Phase** | Phase 11: Buffett/Munger single-focus rebuild. **Sprint 18 merged (PR #40). Next: Sprints 19–22**; game-mode ideas are queued as **proposed Sprints 23–26** (see §4) |
+| **`main`** | `7e80ebd` (PR #40, verified with `git fetch` 2026-10-03). Before that `1f8c9ff` (PR #39). Everything built so far is merged, including game mode G1–G11 (#23–#39), CI fixes (#21) and the lamp logo (#34). PR #26 (G3 alone) is superseded by #27; close it if still open |
+| **Open PRs** | The docs PR for the game-mode ideas plan (branch `docs/game-mode-next-ideas`). Others: confirm on GitHub |
+| **Sprints closed** | 0–15 (16 and 17 / Epic F22 were built and removed 2026-09-29). **Sprint 18 merged (#40); Sprint 19 is next** |
 | **Backend tests** | 1,335 pass (verified 2026-10-01 on the G7b branch) · Ruff clean · frontend 94 tests, tsc clean, ESLint 0 errors (G7b branch) |
 | **Migration head** | `o1a6b7c8d9e0` (one head). Not yet confirmed on Supabase: `l1d2e3f4a5b6`, `n1f5a6b7c8d9`, `o1a6b7c8d9e0` |
 | **Live URLs** | Frontend `https://exciting-gratitude-production-71b5.up.railway.app` · Backend `https://aladdin-production-bd25.up.railway.app` |
@@ -38,6 +38,7 @@ Done on 2026-10-02 (confirmed by Faiz): GitHub Actions variables `SMOKE_FRONTEND
 | ★★★ | **Railway → frontend service → Variables:** `VITE_API_KEY` exists and equals the backend's `APP_AUTH_TOKEN`. (It lives on the *frontend* service, not the backend, so seeing only `APP_AUTH_TOKEN` on the backend is expected.) Also confirm only one backend deployment is active | The API-key gate was seen flapping 2026-09-27; `VITE_API_KEY` is baked in at frontend build time |
 | ★★★ | **Backend deploy log** shows migrations `l1d2e3f4a5b6`, `n1f5a6b7c8d9`, `o1a6b7c8d9e0`, `p1b7c8d9e0f1` ran, and `/health` is OK after the FastAPI upgrade (0.115 → 0.142) | Not yet confirmed on Supabase |
 | ★ | **Decide:** do the game-mode thresholds (`market-v1`, `realm-v1`) stay in the frontend or move to the backend's versioned mapping? **Recommendation: keep them in the frontend** while game mode is frozen; move only if it is unfrozen | They are a reading aid, not a stored result; moving them is a backend change plus a mapping version for no user-visible gain today |
+| ★ | **Decide:** approve, trim or reorder the proposed game-mode **Sprints 23–26** ([plan](game-mode-next-ideas-2026-10-03.md)). One suggestion: start **G14a** (save the game state nightly, so the Chronicle has history) early. **Recommendation:** approve the plan now; build nothing until your walkthrough feedback (C below), except G14a | History cannot be backfilled, and today's snapshots overwrite |
 
 ### B. On your PC
 
@@ -99,12 +100,25 @@ Order: make it trustworthy (18), make the board complete (19), make it fast (20)
 
 | Sprint | Theme | Scope |
 |---|---|---|
-| **18** | **Stabilise and verify (no new features)** ✅ built 2026-10-02, PR #40 open. Left for Faiz: confirm migrations on the Railway deploy log (A above), decide thresholds (A above) | Verify live deploy and all migrations on Supabase. Confirm the smoke test runs green. Remove tracked clutter (`_to_delete/_tmp_bk.zip`, `.nanfix.patch`). Copy the 14 project-only write-ups into `docs/`. Decide whether game-mode thresholds (`market-v1`, `realm-v1`) move to the backend mapping. Fix the react-router `npm audit` warnings. |
+| **18** | **Stabilise and verify (no new features)** ✅ merged 2026-10-02 (PR #40). Left for Faiz: confirm migrations on the Railway deploy log (A above), decide thresholds (A above) | Verify live deploy and all migrations on Supabase. Confirm the smoke test runs green. Remove tracked clutter (`_to_delete/_tmp_bk.zip`, `.nanfix.patch`). Copy the 14 project-only write-ups into `docs/`. Decide whether game-mode thresholds (`market-v1`, `realm-v1`) move to the backend mapping. Fix the react-router `npm audit` warnings. |
 | **19** | **Make the Margin-of-safety board rank everything** | Newsweb fetch for Vår Energi and Salmon Evolution; DCF handling of a loss-making first year; fund annual-report holdings parser for funds that are not Xtrackers or L&G; re-tag the three Norwegian funds; turn on the Tavily fallback. |
 | **20** | **Speed** | Precompute the Margin-of-safety board in the worker; react-query client cache; move first price/beta/research fetches out of GET requests; persist beta/price/FX caches to the DB. |
 | **21** | **Analysis depth and reporting** | Rate sensitivity per holding (old Sprint 15 #3); PDF export / portfolio report (old #6); per-run LLM cost attribution. |
 | **22** | **Alerts and evidence** | Delivery channel for fired tripwires; insider trades and major-shareholder flags from Newsweb; SEC EDGAR full-text citations for US holdings. Sprints 21 and 22 may swap. |
-| **Game mode (F33)** | **Frozen** | Only fixes from your walkthrough feedback (C above). No new game phase planned. |
+| **Game mode (F33)** | **Frozen until your walkthrough** | Only fixes from your walkthrough feedback (C above). New ideas are queued below as proposed Sprints 23–26; none starts without your go. |
+
+### Proposed: game mode phase 2 (Sprints 23–26, not approved)
+
+Brainstormed 2026-10-03. Full table per idea (data, fidelity, size, risks): [game-mode-next-ideas-2026-10-03.md](game-mode-next-ideas-2026-10-03.md). All keep the game rules: read-only, deterministic, no points or streaks, unknown stays unknown.
+
+| Sprint | Theme | Scope |
+|---|---|---|
+| **23** | **Hype and stress** | **G12 Hype Booth:** Sal pitches a tip, the eight gates deflate it if it deserves that. **G13 Siege Simulator:** pick a scenario and watch the siege hit the towers (v1 on the existing stress code) |
+| **24** | **Time and filings** | **G14a** nightly game-state snapshot (small; can go earlier) · **G14 Chronicle** (replay the fortress through time) · **G15 Ravens** (new Newsweb report lands on a tower with what changed) · **G16 Night Watch** morning dispatch |
+| **25** | **Rituals** | **G17 Council Chamber** (quarterly review room) · **G18 Hall of Records** (journal as a library, hindsight not a score) · **G19 Circle of Competence** map (one small additive table) · **G20** advisor lines per holding |
+| **26** | **Depth and polish** | **G21** rooms inside the towers · **G22** rival stalls · **G23** Genie upgrades · **G24** Sal fills the name from the ticker · **G25** real-terms vault · **G26** FX harbour · **G27** redacted postcard export |
+
+Fits with earlier sprints: G14a rides on Sprint 20's worker precompute, G15 on Sprint 22's Newsweb flags, G16 on Sprint 22's delivery channel, and G13's named macro scenarios on Sprint 21's rate sensitivity.
 
 ### Backlog
 
@@ -121,6 +135,7 @@ Order: make it trustworthy (18), make the board complete (19), make it fast (20)
 | Liquidity tier, numismatic premium, gold/silver history, metals in portfolio totals | Small scope cuts from F15 |
 | Dependency audit blocking, mypy in CI | After CI stays green |
 | Watch only: ESAP fund-document coverage (~2027) | Re-check once live |
+| Game mode, parked: tax collector, harvest fields (dividends), historic sieges, advisor debate, illustrated sprites and seasons | Each needs data or a decision first: [reasons](game-mode-next-ideas-2026-10-03.md) |
 
 ### Free data sources in use
 
@@ -156,7 +171,7 @@ Tavily (fallback, needs a key). Details: free-market-data-research-providers-202
 | F29 | Nightly tripwire check | ✅ merged (PR #14) |
 | F30, F31 | Fund look-through (Xtrackers), L&G holdings capture | ✅ merged (PR #13, #15) |
 | F32 | Split-view document reader, Read button | ✅ merged (PR #18–#20) |
-| F33 | Game mode ("Fortress"): top-bar toggle re-presenting the real portfolio as a value-investing fortress | 🔨 **G11 magic lamp + Genie (queue analyses from the Fortress) built 2026-10-02, merged (#39), not checked live.** **G10 Sal the Sales Rep merged (#38), not checked live.** **G9 Marketplace + store deep-dive built 2026-10-01 (branch `feature/fortress-marketplace`, on top of the lamp/connected-fortress branch).** **G1–G7a merged (#23, #25, #27, #28, #29, #30, #31), not yet checked live. G7b (the Oracle and the Partner advisors, study lamp and clock, optional sound) built 2026-10-01, PR open.** ([doc](game-mode-fortress-2026-10-01.md)) |
+| F33 | Game mode ("Fortress"): top-bar toggle re-presenting the real portfolio as a value-investing fortress | 🔨 **Next ideas G12–G27 queued as proposed Sprints 23–26, not approved ([plan](game-mode-next-ideas-2026-10-03.md)).** **G11 magic lamp + Genie (queue analyses from the Fortress) built 2026-10-02, merged (#39), not checked live.** **G10 Sal the Sales Rep merged (#38), not checked live.** **G9 Marketplace + store deep-dive built 2026-10-01 (branch `feature/fortress-marketplace`, on top of the lamp/connected-fortress branch).** **G1–G7a merged (#23, #25, #27, #28, #29, #30, #31), not yet checked live. G7b (the Oracle and the Partner advisors, study lamp and clock, optional sound) built 2026-10-01, PR open.** ([doc](game-mode-fortress-2026-10-01.md)) |
 | — | Valuation guardrails (growth cap, plausibility guard, bank method) | ✅ merged |
 | — | Page-load snapshots + Server-Timing | ✅ merged (PR #17) |
 | — | Ollama adaptive fit | ✅ merged (PR #15, #16) |
@@ -171,6 +186,7 @@ Newest first. One line each; the full write-up of every entry is in
 
 | Date | Change | Summary | Detail |
 |---|---|---|---|
+| 2026-10-03 | **Game mode: next-ideas brainstorm put into the sprint plan** | Brainstormed with Faiz what to add to the Fortress next, grounded in the G1–G11 doc. 22 ideas are now in the plan as **proposed Sprints 23–26** (§4), each with its data source, fidelity (real / partial / missing), size and risk in a new doc; five more are parked with the reason. Top picks: Hype Booth, Chronicle, Council Chamber, Siege Simulator. Checked against the code first: stress scenarios exist (`services/risk/stress.py`), `computed_snapshots` is keyed and overwrites (so Chronicle history must start being saved: **G14a**), there is no dividend model and no ticker-to-name lookup, and `trading_currency` is stored per holding. Also corrected this page: Sprint 18 / PR #40 is merged (`7e80ebd`). Game mode stays frozen until the walkthrough; nothing started, no code change | [plan](game-mode-next-ideas-2026-10-03.md) |
 | 2026-10-02 | **Sprint 18: stabilise and verify (no new features)** | Branch `chore/sprint-18-stabilise`. **Security:** `react-router-dom` 6 → 7.18.4 clears both production advisories (open redirect, constructor injection); `npm audit --omit=dev` now reports **0**. `tsc` clean, 197 frontend tests, ESLint 0 errors, build OK. Remaining advisories (vite, vitest, esbuild, brace-expansion) are dev-server tooling only and need major bumps: backlog. **Clutter:** `_to_delete/_tmp_bk.zip` and `.nanfix.patch` removed from git. **Docs:** 14 project-only write-ups copied into `docs/` (page-load options and snapshots, live verification, local-LLM scaling and fund output fix, both ETF/ETC investigations, UI polish, margin-of-safety data gaps, object-storage alternatives, Newsweb document types, regime-DCF wiring, free data providers, Sprint 15 plan); the token-budget doc was already there. **Verified live:** backend `/health` returns ok (production); the 2026-10-02 smoke-test runs on `main` finished success. **Not verified (needs your Railway log, no database access from here):** migrations `l1d2e3f4a5b6`, `n1f5a6b7c8d9`, `o1a6b7c8d9e0`, `p1b7c8d9e0f1` on Supabase. **Game-mode thresholds:** recommendation recorded (keep in frontend while frozen), decision left to you. Backend untouched | [plan](buffett-munger-rebuild-sprint-plan-2026-09-21.md) |
 | 2026-10-02 | **Game mode G11: magic lamp and Genie queue analyses from the Fortress (F33)** | Frontend only, no backend, no migration. A golden **magic lamp** (the logo) sits fixed in the bottom-right corner of the Fortress. Press it: a short **rubbing animation** (polish cloth, sparkles, smoke puff), then the **Genie** rises and asks which powerful magic to conjure, with **three wishes** that are the Analysis queue's three scopes: *Awaken the Towers* (actual holdings), *Scry the Marketplace* (watchlist), *The Grand Conjuring* (all). A wish makes the same single call as *Queue all ready holdings* (`POST /analysis/queue/ready-holdings?scope=…`), then the Genie reports scrolls queued / already waiting / not ready and whether the PC worker is awake (unknown is stated as unknown), with links to the queue page and *Make another wish*. **Nothing is analysed at that moment**: the run happens later on the worker, and he says so. Invented character with a disclaimer; a test forbids buy/sell/trim/invest wording and promises of gains; demo mode disables the wishes; reduced motion skips the rub and types instantly; Escape closes. New `lib/genie.ts` (13 tests), `MagicLamp.tsx`, `GenieArt.tsx`. tsc, ESLint 0 errors, 197 tests, build; rendered in Chromium against a mock API (idle, rubbing, wishes, queued, error, demo, phone; request sent `?scope=all`). **PR #39 open, not merged, not deployed; not run against the real backend or worker** | [doc](game-mode-fortress-2026-10-01.md) |
 | 2026-10-02 | **Game mode G10: Sal the Sales Rep adds stalls from the Marketplace (F33)** | Frontend only, no backend, no migration (uses the existing `POST /watchlist` and the Newsweb import endpoints). A **booth** at the top of the Marketplace with **Sal**, an invented loud stall-barker (original character: not a real person, no one's name, likeness or catchphrases). *Talk to Sal* opens a game-style pop-up: **ticker + company name** (currency follows the symbol, can be overridden) and a live **Yahoo Finance hint** that Oslo Børs symbols end in `.OL`; it flags EQNR.OSL / EQNR.NO / OSE:EQNR style mistakes and offers the fix, and warns that a bare symbol is read as a US listing. Press *Open the stall* and the company goes on the watchlist (a store opens on the street). Sal then **checks the price** and says so if Yahoo has none for the symbol. For `.OL` companies he offers to **send the runners to Newsweb**: the same annual + half-year report fetch as the holding page, with banter while it runs, then a result (annual / half-year / new counts, notes for anything unusable, plain reasons for not found, not an Oslo issuer, or provider switched off). Duplicates (409) send you to the existing store; demo mode disables the form. Rules kept: the only writes are add-to-watchlist and Newsweb fetch; nothing bought or sold; no points or streaks; a test forbids buy/sell/invest/guarantee wording; typewriter, bob, coin burst and runners are off under reduced motion. New `lib/salesRep.ts` (rules `sal-v1`, 28 tests), `SalesRepArt.tsx`, `SalesRepDialog.tsx`. tsc, ESLint, 184 frontend tests (28 new), build; rendered in Chromium against a mock API (desktop, phone, no-price, duplicate, Newsweb partial failure). **Merged (#38), not checked live; not seen against the real backend or Newsweb** | [doc](game-mode-fortress-2026-10-01.md) |
