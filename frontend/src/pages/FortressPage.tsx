@@ -174,6 +174,16 @@ export default function FortressPage() {
                   Enter the Marketplace{market.count !== null ? ` · ${market.count}` : ""}
                 </button>
               )}
+              {view === "scene" && (
+                <button
+                  type="button"
+                  onClick={() => navigate("/fortress/siege")}
+                  className="rounded-md border border-border px-3 py-1 text-sm font-medium text-ink-muted transition-colors hover:text-ink"
+                  title="A what-if: pick a market fall and see which towers it reaches"
+                >
+                  Siege Simulator
+                </button>
+              )}
               {view === "scene" && state.towers.length > 0 && realm && (
                 <button
                   type="button"

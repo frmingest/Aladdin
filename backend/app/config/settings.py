@@ -234,6 +234,7 @@ class Settings(BaseSettings):
     # Thresholds that turn stored analysis values into fortress properties.
     # Versioned like the valuation assumptions: a change is a new vN.py.
     active_game_mapping_version: str = "v1"
+    active_siege_scenarios_version: str = "v1"
 
     # --- Regime-adjusted DCF (Sprint 14, 2026-09-26, app/domain/regime_adjustments/) ---
     # Off by default: wiring Sprint 12's macro regime (app/services/risk/regime.py)

@@ -48,6 +48,13 @@ _DEMO_WALLS: dict[str, tuple[str, str, str]] = {
     "XOM": ("5000", "70000", "30"),
 }
 
+# Invented betas for the Siege Simulator in demo mode (G13). Illustrative only;
+# one demo ticker (V) is left out on purpose so the "not modelled" path shows.
+DEMO_BETAS: dict[str, Decimal] = {
+    "AAPL": D("1.20"), "MSFT": D("1.05"), "GOOGL": D("1.10"), "JNJ": D("0.55"),
+    "PG": D("0.45"), "KO": D("0.55"), "JPM": D("1.15"), "HD": D("1.00"), "XOM": D("0.90"),
+}
+
 # Financial-sector demo names are judged on equity / total assets.
 _DEMO_FINANCIALS: dict[str, tuple[str, str]] = {
     "JPM": ("320000", "3900000"),

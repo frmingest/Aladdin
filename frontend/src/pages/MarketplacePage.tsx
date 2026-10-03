@@ -7,6 +7,7 @@ import { orderStreet, shopFront, shopPips, storePath } from "../lib/marketplace"
 import { boothLine } from "../lib/salesRep";
 import type { Watchlist, WatchlistRow } from "../lib/types";
 import { Awning, Pip } from "../components/marketplace/MarketArt";
+import HypeBoothDialog from "../components/marketplace/HypeBoothDialog";
 import SalesRepDialog from "../components/marketplace/SalesRepDialog";
 import { SalesRep } from "../components/marketplace/SalesRepArt";
 import { TONE_PAINT } from "../lib/marketplacePaint";
@@ -78,6 +79,8 @@ export default function MarketplacePage() {
   const [loading, setLoading] = useState(true);
   const [restocking, setRestocking] = useState(false);
   const [talking, setTalking] = useState(false);
+  const [hyping, setHyping] = useState(false);
+  const hypeButton = useRef<HTMLButtonElement>(null);
   const [boothSeed] = useState(() => Math.floor(Math.random() * 1000));
   const boothButton = useRef<HTMLButtonElement>(null);
   const { demoMode } = useDemoMode();
@@ -114,6 +117,11 @@ export default function MarketplacePage() {
     boothButton.current?.focus();
   }, []);
 
+  const closeHype = useCallback(() => {
+    setHyping(false);
+    hypeButton.current?.focus();
+  }, []);
+
   const rows = useMemo(() => orderStreet(list?.rows ?? []), [list]);
   const inRange = rows.filter((r) => r.status === "buy_zone").length;
   const near = rows.filter((r) => r.status === "near").length;
@@ -148,6 +156,9 @@ export default function MarketplacePage() {
           <div className="flex flex-wrap items-center gap-3">
             <button ref={boothButton} type="button" className="sal-btn" onClick={() => setTalking(true)}>
               Talk to Sal: open a new stall
+            </button>
+            <button ref={hypeButton} type="button" className="sal-btn-ghost" onClick={() => setHyping(true)} title="Bring a tip from a friend, Reddit or a newsletter and see whether it survives the eight gates">
+              The Hype Booth: test a tip
             </button>
             <span className="text-xs text-[#a8977a]">Add a company by its Yahoo ticker. Oslo Børs symbols end in .OL.</span>
           </div>
@@ -200,6 +211,7 @@ export default function MarketplacePage() {
         </div>
       )}
 
+      {hyping && <HypeBoothDialog demoMode={demoMode === true} rows={list?.rows ?? []} onClose={closeHype} onAdded={setList} />}
       {talking && <SalesRepDialog demoMode={demoMode === true} rows={list?.rows ?? []} onClose={closeBooth} onAdded={setList} />}
     </div>
   );
