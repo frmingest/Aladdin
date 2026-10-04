@@ -41,14 +41,3 @@ class CompanyResearchOut(BaseModel):
     reason: str | None = None
 
 
-class ResearchRunOut(BaseModel):
-    id: UUID
-    type: str
-    sector: str | None
-    holding_id: UUID | None
-    status: str
-    started_at: datetime
-    completed_at: datetime | None
-    methodology_version: str
-    item_count: int
-    error_message: str | None

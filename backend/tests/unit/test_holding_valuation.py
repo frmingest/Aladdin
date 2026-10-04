@@ -54,8 +54,6 @@ class _FakeMarketDataProvider:
             raise MarketDataUnavailableError("no price configured")
         return self._price
 
-    def get_price_history(self, ticker, *, years=5, currency_hint=None):  # pragma: no cover
-        raise NotImplementedError
 
     def get_fx_rate(self, from_currency, to_currency):
         if self._fx is None:

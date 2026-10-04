@@ -12,8 +12,6 @@ import type { StoreData } from "./marketStore";
  * sell; no points, streaks or rewards; Sal and the Partner are invented and not quotations from anyone.
  */
 
-export const HYPE_RULES = "hype-v1";
-
 export const HEARD_FROM = ["a friend", "Reddit", "a newsletter", "social media", "a podcast", "somewhere else"] as const;
 export type HeardFrom = (typeof HEARD_FROM)[number];
 

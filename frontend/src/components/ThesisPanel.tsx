@@ -360,5 +360,3 @@ export function ThesisPanel({ holdingId }: { holdingId: string }) {
     </div>
   );
 }
-
-export default ThesisPanel;

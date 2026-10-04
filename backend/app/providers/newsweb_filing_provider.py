@@ -50,7 +50,7 @@ from __future__ import annotations
 import io
 import zipfile
 from dataclasses import dataclass, field
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timezone
 from typing import Any
 
 import httpx
@@ -156,16 +156,6 @@ def parse_report_list(
         rows.append((str(message_id), title, _parse_time(message.get("publishedTime"))))
     rows.sort(key=lambda r: r[2] or datetime.min.replace(tzinfo=timezone.utc), reverse=True)
     return rows
-
-
-def parse_annual_report_list(payload: Any, *, issuer_sign: str) -> list[tuple[str, str, datetime | None]]:
-    """Back-compat wrapper: annual reports only (category 1001)."""
-    return parse_report_list(payload, issuer_sign=issuer_sign, category_id=ANNUAL_REPORT_CATEGORY_ID)
-
-
-def parse_interim_report_list(payload: Any, *, issuer_sign: str) -> list[tuple[str, str, datetime | None]]:
-    """Half-year/interim reports only (category 1002)."""
-    return parse_report_list(payload, issuer_sign=issuer_sign, category_id=INTERIM_REPORT_CATEGORY_ID)
 
 
 def parse_message_attachments(payload: Any) -> list[NewswebAttachmentRef]:
@@ -286,12 +276,10 @@ class NewswebFilingProvider:
     def __init__(
         self,
         *,
-        lookback_days: int = 730,
         timeout_seconds: float = 30.0,
         max_download_bytes: int = 300 * 1024 * 1024,
         client: httpx.Client | None = None,
     ) -> None:
-        self._lookback_days = lookback_days
         self._timeout = timeout_seconds
         self._max_download_bytes = max_download_bytes
         self._client = client
@@ -327,29 +315,6 @@ class NewswebFilingProvider:
         )
         return parse_report_list(payload, issuer_sign=issuer_sign, category_id=category_id)
 
-    def find_latest_annual_report(
-        self, issuer_sign: str, *, today: date | None = None
-    ) -> NewswebAnnualReportRef | None:
-        """The newest ANNUAL FINANCIAL REPORT announcement for this issuer,
-        with its attachments already fetched — or None if Newsweb has no
-        such announcement in the lookback window (self._lookback_days,
-        e.g. ~2 years — enough to always catch the latest one)."""
-        issuer_sign = issuer_sign.strip().upper()
-        end = today or datetime.now(timezone.utc).date()
-        start = end - timedelta(days=self._lookback_days)
-        rows = self._list_rows(issuer_sign, start=start, end=end)
-        if not rows:
-            return None
-        message_id, title, published_at = rows[0]
-        attachments = self.get_message_attachments(message_id)
-        return NewswebAnnualReportRef(
-            message_id=message_id,
-            message_url=MESSAGE_PAGE_URL.format(message_id=message_id),
-            title=title,
-            published_at=published_at,
-            attachments=attachments,
-        )
-
     def _list_reports(
         self, issuer_sign: str, *, since: date, today: date | None, category_id: int
     ) -> list[NewswebAnnualReportRef]:
@@ -374,9 +339,8 @@ class NewswebFilingProvider:
         ``since`` through today (inclusive), newest first, each with its
         attachments already fetched. Used by the "fetch every available
         year" flow (Faiz's ask, 2026-09-26) — an explicit calendar start
-        date rather than find_latest_annual_report's rolling lookback
-        window, so a company that's been reporting since 2022 keeps
-        showing all of it no matter how far "today" has moved on."""
+        date (not a rolling window), so a company that's been reporting since
+        2022 keeps showing all of it no matter how far "today" has moved on."""
         return self._list_reports(issuer_sign, since=since, today=today, category_id=ANNUAL_REPORT_CATEGORY_ID)
 
     def list_interim_reports(

@@ -55,48 +55,6 @@ export interface HoldingFieldOptions {
   instrument_types: string[];
 }
 
-/** Legacy pre-2026-09-21 whisky/collectibles holdings weren't reset along
- * with the rest of the DB (CLAUDE.md — "the DB is not being reset"), and
- * `GET /holdings` returns every row in the table, so they still show up
- * here individually — one row per bottle/distillery, each with `sector`
- * set to the distillery name (that old app's own categorization hack).
- * There's no instrument-type tag that marks them (`asset_class_raw` is
- * hardcoded to "equity" for everything this rebuild writes, and these
- * predate that column's real use) — the distillery name in `sector` is
- * the only signal available, so this is the exact, real set of distillery
- * names that show up as "Sector Research" chips today. Used by
- * HoldingsListPage to fold these into one "Whisky" group instead of
- * listing each bottle separately (Faiz's request, 2026-09-21) — gold and
- * silver holdings are left as individual rows, per his explicit choice.
- * If a new distillery name shows up that isn't in this list, it'll just
- * list as its own row rather than being silently miscategorized. */
-export const WHISKY_SECTORS = new Set([
-  "Aberfeldy",
-  "Auchroisk",
-  "Berentsens Brygghus",
-  "Bowmore",
-  "Buffalo Trace Distillery",
-  "Caol Ila",
-  "Cardhu",
-  "Craigellachie",
-  "Dumbarton",
-  "Glenfarclas",
-  "Glenfiddich",
-  "Glenlivet",
-  "Glenmorangie",
-  "Johnnie Walker",
-  "Lagavulin",
-  "Loch Lomond",
-  "Longmorn",
-  "Midleton (1975-)",
-  "Port Dundas",
-  "Pulteney",
-  "Tamdhu",
-  "Tomatin",
-  "Wild Turkey Distillery",
-  "Woodford Reserve",
-]);
-
 export interface HoldingCreateInput {
   ticker: string;
   name: string;
@@ -235,15 +193,6 @@ export interface DeletionResult {
   storage_files_deleted: number;
   storage_files_failed: string[];
 }
-
-export const DOCUMENT_TYPES = [
-  "annual_report",
-  "quarterly_report",
-  "presentation",
-  "prospectus",
-  "transcript",
-  "other",
-] as const;
 
 /** Order + display label for every ratio app/services/metrics.py can name,
  * computed or skipped — keeps the metrics table in a stable, meaningful

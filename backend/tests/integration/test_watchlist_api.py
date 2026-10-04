@@ -26,8 +26,6 @@ class _Market:
         return PricePoint(price=Decimal(self.price), currency="NOK",
                           observed_at=datetime.now(timezone.utc), provider="fake")
 
-    def get_price_history(self, ticker, *, years=5, currency_hint=None):  # pragma: no cover
-        raise NotImplementedError
 
     def get_fx_rate(self, from_currency, to_currency):
         raise MarketDataUnavailableError("no fx")
