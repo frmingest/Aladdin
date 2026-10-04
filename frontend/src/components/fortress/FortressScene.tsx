@@ -29,6 +29,7 @@ import type { FortressShantytown, FortressSiegeLevel, FortressWall, GameSiege, G
 import { worldPalette } from "../../lib/fortressArt";
 import { SceneAmbience, SceneBackdrop, SceneDefs, SceneVignette } from "./sceneWorld";
 import MarketSquare, { MARKET_HEIGHT, type MarketSquareProps } from "./MarketSquare";
+import RavenMark from "./RavenMark";
 
 /**
  * The Fortress home scene (F33): a painted 2.5D diorama of the real
@@ -1130,12 +1131,15 @@ function TowerFigure({
   onSelect,
   onHover,
   level,
+  raven = false,
 }: {
   item: PlacedTower;
   selected: boolean;
   onSelect: (id: string) => void;
   onHover: (id: string | null) => void;
   level: FortressSiegeLevel | null;
+  /** G15: a report was captured for this holding and has not been seen yet. */
+  raven?: boolean;
 }) {
   const { tower, x, y, w, h } = item;
   const pad = 26;
@@ -1151,7 +1155,7 @@ function TowerFigure({
       role="button"
       tabIndex={0}
       aria-pressed={selected}
-      aria-label={`${describeTower(tower)}. Press for details.`}
+      aria-label={`${describeTower(tower)}.${raven ? " A new report has landed." : ""} Press for details.`}
       className={`fortress-tower${selected ? " is-selected" : ""}`}
       onClick={() => onSelect(tower.holding_id)}
       onKeyDown={onKey}
@@ -1170,6 +1174,7 @@ function TowerFigure({
         <Weathering item={item} />
         <ThesisMarks item={item} />
         <Ladders item={item} level={level} />
+        {raven && <RavenMark x={x + w / 2 + Math.min(18, w / 3)} y={crown + 2} />}
       </g>
       <NamePlate item={item} />
       <rect
@@ -1296,6 +1301,7 @@ export default function FortressScene({
   onRealmSelect,
   onRealmHover,
   market = null,
+  ravenIds,
 }: {
   layout: FortressLayout;
   shantytown: FortressShantytown;
@@ -1310,6 +1316,8 @@ export default function FortressScene({
   onRealmHover: (on: boolean) => void;
   /** The market square below the walls (G9). Null draws none. */
   market?: MarketSquareProps | null;
+  /** G15: holdings with an unseen raven. */
+  ravenIds?: Set<string>;
 }) {
   // Room below the last terrace only when there is a shantytown to draw there.
   const hasShacks = shantytown !== "none" && drawnShacks(shackCount) > 0;
@@ -1353,6 +1361,7 @@ export default function FortressScene({
                   onSelect={onSelect}
                   onHover={onHover}
                   level={level}
+                  raven={ravenIds?.has(item.tower.holding_id) ?? false}
                 />
               ))}
               {rowItems.map((item) => (

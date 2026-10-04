@@ -213,3 +213,91 @@ def demo_game_state(version: str) -> GameStateOut:
         demo=True,
     )
     return build_game_state(inputs, get_game_mapping(version))
+
+
+# --- Sprint 24 (2026-10-04): invented Chronicle, Ravens and Night Watch ---------
+
+
+def demo_chronicle(version: str, rules_v) -> ChronicleOut:  # noqa: F821
+    """Three invented stored frames built from the demo state, so the replay
+    shows towers joining, a wall weakening and the weather turning. Never
+    touches the database."""
+    from app.services.game.chronicle import build_chronicle_from
+
+    now = datetime.now(timezone.utc)
+    today = demo_game_state(version)
+    towers = list(today.towers)
+    # 60 days ago: two fewer towers, calm weather.
+    early = today.model_copy(update={"towers": towers[:-2]})
+    # 30 days ago: all towers, one with better walls than today, weather gathering.
+    middle_towers = [t.model_copy() for t in towers]
+    if middle_towers:
+        middle_towers[0] = middle_towers[0].model_copy(update={"wall": "granite", "weight_pct": (middle_towers[0].weight_pct or D(0)) + D(3)})
+    siege_mid = today.siege.model_copy(update={"level": "gathering"}) if today.siege is not None else None
+    middle = today.model_copy(update={"towers": middle_towers, "siege": siege_mid})
+    stored = [
+        ((now - timedelta(days=60)).date(), now - timedelta(days=60), early),
+        ((now - timedelta(days=30)).date(), now - timedelta(days=30), middle),
+        (now.date(), now, today),
+    ]
+    return build_chronicle_from(stored, [], rules_v, demo=True)
+
+
+def demo_ravens(version: str, rules_v) -> RavensOut:  # noqa: F821
+    from app.schemas.game import RavenLineOut, RavenOut, RavensOut
+
+    now = datetime.now(timezone.utc)
+    towers = demo_game_state(version).towers
+    ravens: list[RavenOut] = []
+    if towers:
+        t = towers[0]
+        lines = [
+            RavenLineOut(metric="roic", label="Return on invested capital", previous=D("0.112"), current=D("0.140"),
+                         direction="better", text="Return on invested capital rose from 11.2% to 14.0%."),
+            RavenLineOut(metric="net_debt_to_ebitda", label="Net debt / EBITDA", previous=D("1.4"), current=D("2.1"),
+                         direction="worse", text="Net debt / EBITDA rose from 1.4x to 2.1x."),
+            RavenLineOut(metric="operating_margin", label="Operating margin", previous=D("0.21"), current=D("0.215"),
+                         direction="steady", text="Operating margin held steady (21.0% to 21.5%)."),
+        ]
+        ravens.append(
+            RavenOut(id=f"fig:{t.holding_id}:FY-DEMO", kind="figures", holding_id=t.holding_id, ticker=t.ticker,
+                     name=t.name, in_portfolio=True, period="FY-DEMO", previous_period="FY-DEMO-1",
+                     captured_at=now - timedelta(days=2), age_days=2, document_id=None,
+                     summary="Against FY-DEMO-1: 1 better, 1 worse, 1 steady (invented demo figures).",
+                     better=1, worse=1, lines=lines)
+        )
+    if len(towers) > 1:
+        t = towers[1]
+        ravens.append(
+            RavenOut(id=f"doc:demo-{t.holding_id}", kind="text_only", holding_id=t.holding_id, ticker=t.ticker,
+                     name=t.name, in_portfolio=True, period=None, previous_period=None,
+                     captured_at=now - timedelta(days=5), age_days=5, document_id=None,
+                     summary="A new half-year or interim report was captured. No figures were extracted from it "
+                             "(it is read as text evidence only), so there is no comparison.",
+                     better=0, worse=0, lines=[])
+        )
+    return RavensOut(rules_version=rules_v.version, demo=True, as_of=now, window_days=rules_v.raven_window_days,
+                     ravens=ravens, notes=["Demo data: invented figures."])
+
+
+def demo_night_watch(version: str, rules_v) -> NightWatchOut:  # noqa: F821
+    from app.schemas.game import NightWatchFiredOut
+    from app.services.game.night_watch import build_night_watch
+
+    now = datetime.now(timezone.utc)
+    towers = demo_game_state(version).towers
+    firing = []
+    if towers:
+        t = towers[min(6, len(towers) - 1)]
+        firing.append(NightWatchFiredOut(holding_id=t.holding_id, ticker=t.ticker, name=t.name,
+                                         label="Net debt / EBITDA above 2.5x", metric="net_debt_to_ebitda",
+                                         fired_at=now - timedelta(hours=5)))
+    chronicle = demo_chronicle(version, rules_v)
+    return build_night_watch(
+        rules_v=rules_v, now=now, watch_last_at=now - timedelta(hours=6),
+        watch_summary="Demo: 6 tripwire(s) on 4 holding(s), 1 newly fired, 0 cleared",
+        snapshots_last_at=now - timedelta(hours=5), snapshots_summary="Demo: rebuilt risk, performance, board, watchlist",
+        firing=firing, frame_days=[f.day for f in chronicle.frames],
+        changes=[c for c in chronicle.changes if c.day == chronicle.frames[-1].day],
+        ravens_landed=[r.name for r in demo_ravens(version, rules_v).ravens[:1]], demo=True,
+    )

@@ -3,11 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { api, ApiError } from "../lib/api";
 import { layoutTowers } from "../lib/fortress";
 import { formatDecimal, formatNok, formatPct100 } from "../lib/format";
-import type { GameState, Watchlist } from "../lib/types";
+import type { GameState, Ravens, Watchlist } from "../lib/types";
+import { loadSeen, markSeen, ravenHoldingIds, saveSeen } from "../lib/ravens";
 import { MARKET_PATH, orderStreet, shopFront } from "../lib/marketplace";
 import AdvisorsCard from "../components/fortress/AdvisorsCard";
 import FortressLedger from "../components/fortress/FortressLedger";
 import MagicLamp from "../components/fortress/MagicLamp";
+import NightWatchCard from "../components/fortress/NightWatchCard";
+import RavensCard from "../components/fortress/RavensCard";
 import FortressScene, { MarketPeek, RealmPeek, TowerPeek } from "../components/fortress/FortressScene";
 import RealmVerdict from "../components/fortress/RealmVerdict";
 import { REALM_LEVEL_LABEL, summarizeRealm } from "../lib/realmVerdict";
@@ -54,6 +57,9 @@ export default function FortressPage() {
   // The Marketplace (G9) reads the watchlist; the fortress still draws if it cannot load.
   const [watch, setWatch] = useState<Watchlist | null>(null);
   const [marketHot, setMarketHot] = useState(false);
+  // G15: ravens (recently captured reports) and which of them this browser has seen.
+  const [ravens, setRavens] = useState<Ravens | null>(null);
+  const [seenRavens, setSeenRavens] = useState<Set<string>>(() => loadSeen());
   const navigate = useNavigate();
 
   const load = useCallback(() => {
@@ -81,6 +87,22 @@ export default function FortressPage() {
       .then(setWatch)
       .catch(() => setWatch(null));
   }, []);
+
+  useEffect(() => {
+    api
+      .getRavens()
+      .then(setRavens)
+      .catch(() => setRavens(null));
+  }, []);
+
+  const onRavensSeen = useCallback((ids: string[]) => {
+    setSeenRavens((cur) => {
+      const next = markSeen(cur, ids);
+      saveSeen(next);
+      return next;
+    });
+  }, []);
+  const ravenIds = useMemo(() => ravenHoldingIds(ravens?.ravens ?? [], seenRavens), [ravens, seenRavens]);
 
   const market = useMemo(() => {
     const rows = orderStreet(watch?.rows ?? []);
@@ -140,6 +162,7 @@ export default function FortressPage() {
 
       {state && (
         <div className="space-y-4">
+          <NightWatchCard />
           <Card className="p-3 sm:p-4">
             <div className="mb-3 flex items-center justify-between gap-3">
               <div
@@ -182,6 +205,16 @@ export default function FortressPage() {
                   title="A what-if: pick a market fall and see which towers it reaches"
                 >
                   Siege Simulator
+                </button>
+              )}
+              {view === "scene" && (
+                <button
+                  type="button"
+                  onClick={() => navigate("/fortress/chronicle")}
+                  className="rounded-md border border-border px-3 py-1 text-sm font-medium text-ink-muted transition-colors hover:text-ink"
+                  title="Replay the fortress through time: towers joining, walls changing, the weather turning"
+                >
+                  Chronicle
                 </button>
               )}
               {view === "scene" && state.towers.length > 0 && realm && (
@@ -232,6 +265,7 @@ export default function FortressPage() {
                       onRealmSelect={selectRealm}
                       onRealmHover={setRealmHot}
                       market={market}
+                      ravenIds={ravenIds}
                     />
                   </div>
                 </GameFrame>
@@ -278,6 +312,7 @@ export default function FortressPage() {
               </li>
               <li>Cracked wall between towers: they move together</li>
               <li>Fog, a ghost outline or a ?: not surveyed</li>
+              <li>A raven on a roof: a new report was captured for that holding and you have not marked it seen</li>
               <li>Green ring: the tower or fortress part you selected</li>
               <li>Great Keep and walls: the whole portfolio. Towers: single holdings</li>
               <li>The market square below the walls: your watchlist. A lit lantern means that company is in the price range you named</li>
@@ -304,6 +339,8 @@ export default function FortressPage() {
                 or the walls for the verdict on the whole fortress.
               </p>
             ))}
+
+          <RavensCard ravens={ravens} seen={seenRavens} onSeen={onRavensSeen} />
 
           <Card className="py-3">
             <StudyDesk asOf={state.as_of} />

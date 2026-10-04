@@ -33,6 +33,9 @@ import type {
   FundReturn,
   GameState,
   SiegeSim,
+  Chronicle,
+  NightWatch,
+  Ravens,
   Holding,
   HoldingAnnouncements,
   HoldingCreateInput,
@@ -365,6 +368,10 @@ export const api = {
 
   /** Game mode (F33, G1) — the fortress state: a read-only view over stored data, no provider call. */
   getGameState: () => request<GameState>("/game/state"),
+  // Sprint 24: replay of stored fortress frames (G14), recently captured reports (G15), the nightly check as a dispatch (G16). All read-only.
+  getChronicle: () => request<Chronicle>("/game/chronicle"),
+  getRavens: () => request<Ravens>("/game/ravens"),
+  getNightWatch: () => request<NightWatch>("/game/night-watch"),
   // G13 Siege Simulator: a what-if over stored betas, read-only. marketDrop is a fraction (0.3 = 30%).
   getSiegeSim: (marketDrop?: number) =>
     request<SiegeSim>("/game/siege", { query: { market_drop: marketDrop === undefined ? undefined : marketDrop.toFixed(3) } }),
