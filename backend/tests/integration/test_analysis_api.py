@@ -82,8 +82,6 @@ class _FakeMarket:
     def get_current_price(self, ticker, *, currency_hint=None):
         return PricePoint(price=D("100"), currency="USD", observed_at=datetime.now(timezone.utc), provider="fake")
 
-    def get_price_history(self, ticker, *, years=5, currency_hint=None):  # pragma: no cover
-        raise NotImplementedError
 
     def get_fx_rate(self, from_currency, to_currency):
         return FxRate(from_currency=from_currency, to_currency=to_currency, rate=D("1"), observed_at=datetime.now(timezone.utc), provider="fake")

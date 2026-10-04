@@ -50,8 +50,6 @@ export const GLOSSARY = {
     "How much of your holding's value depends on a currency other than NOK moving in your favour — separate from the business actually doing well, since a strong NOK can erase gains made in another currency and vice versa.",
 } as const;
 
-export type GlossaryKey = keyof typeof GLOSSARY;
-
 /** Plain-language one-liners for the deterministic ratio metrics
  * (backend/app/services/calculations.py), keyed exactly like
  * lib/types.ts's METRIC_LABELS so a metrics table can look one up

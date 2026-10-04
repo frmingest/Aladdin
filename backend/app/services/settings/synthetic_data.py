@@ -103,17 +103,6 @@ _TODAY = _NOW.date()
 _FX_USD_NOK = Decimal("10.55")
 
 
-def _uuid(kind: str, n: int) -> uuid.UUID:
-    """Deterministic, readable-in-logs fake UUIDs - stable across calls and
-    across the whole demo dataset (so /holdings/{id}, /valuation/holdings/
-    {id}, /analysis/holdings/{id}, etc. all agree on the same id for the
-    same fabricated ticker)."""
-    return uuid.UUID(f"{kind}0000000-0000-4000-8000-{n:012d}")
-
-
-_HOLDING_KIND = "de111111-11"[: -2]  # unused placeholder removed below
-
-
 def _d(x: str) -> Decimal:
     return Decimal(x)
 

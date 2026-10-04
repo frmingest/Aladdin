@@ -93,10 +93,6 @@ def read_stored_beta(db: Session, ticker: str) -> BetaResult:
     return BetaResult(stored[0], stored[1])
 
 
-def has_stored_beta(db: Session, ticker: str) -> bool:
-    return _read(db, ticker) is not None
-
-
 def get_or_refresh_beta(
     db: Session,
     provider: MarketDataProvider,

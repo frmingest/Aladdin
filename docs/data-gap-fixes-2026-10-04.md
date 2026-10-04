@@ -1,5 +1,7 @@
 # Data-gap fixes, one by one (2026-10-04)
 
+> **Status update 2026-10-04 (housekeeping review):** the code described here is merged to `main` (checked in the repo at `07cf9fb`). The "not merged / PR open" wording below was true when written and is kept as history. Whether it is deployed or behaves correctly live was not checked in that review.
+
 Faiz asked to go through the data gaps found 2026-10-03 and close them. Each item of the build order in
 [pareto-gigante-and-fund-constituents-2026-10-04.md](pareto-gigante-and-fund-constituents-2026-10-04.md) §4 was checked
 against the live app and the code first. **Branch `feature/data-gap-fixes-2026-10-04`, written and tested, not yet merged or deployed.**

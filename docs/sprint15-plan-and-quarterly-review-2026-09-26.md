@@ -1,5 +1,7 @@
 # Sprint 15 plan + economic/mathematical review + doc cleanup (2026-09-26)
 
+> **Status update 2026-10-04:** point-in-time audit and plan. Its Sprint 15 proposals were built (see PROGRESS.md). The "flagged" `cwo-design-redesign.md` in §4 was confirmed obsolete (pre-rebuild, described deleted code) and removed on 2026-10-04.
+
 Full project pass at Faiz's request: re-read the whole build (progress.md, the rebuild sprint plan,
 Sprints 11-14's own docs, and the actual code in `E:\Aladdin`), stress-tested the deterministic
 math/economics an economist would check before calling this "investment-grade," and went through
@@ -117,7 +119,7 @@ means a future session (or Faiz) can accidentally reason from a description of a
 deleted. Recommended deleting all 33 (since deleted from the project; the list is omitted here
 because those docs no longer exist).
 
-**Flagged, not deleted:** `cwo-design-redesign.md` (2026-09-14) reads like it belongs to the
+**Flagged, not deleted (later removed 2026-10-04):** `cwo-design-redesign.md` (2026-09-14) reads like it belongs to the
 *Changing World Order* project, not Aladdin — possibly filed here by mistake. Left alone pending
 confirmation rather than deleted blind.
 

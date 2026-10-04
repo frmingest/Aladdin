@@ -1,6 +1,6 @@
 # Page load: root cause found and options (2026-10-03)
 
-Third look at slow pages ([09-28 investigation](page-load-performance-investigation-2026-09-28.md), [09-30 options](page-load-options-2026-09-30.md), [09-30 snapshots](page-load-snapshots-2026-09-30.md), [Sprint 20](sprint20-speed-2026-10-03.md)). Read-only: no code changed. This time measured on the live app in the browser pane, using the `Server-Timing` header built on 09-30.
+Third look at slow pages (the 09-28 investigation and 09-30 options write-ups, both removed 2026-10-04 and in git history, [09-30 snapshots](page-load-snapshots-2026-09-30.md), [Sprint 20](sprint20-speed-2026-10-03.md)). Read-only: no code changed. This time measured on the live app in the browser pane, using the `Server-Timing` header built on 09-30.
 
 ## 1. Root cause
 

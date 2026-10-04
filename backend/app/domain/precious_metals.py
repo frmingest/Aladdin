@@ -97,10 +97,6 @@ def get_series(code: str) -> CoinSeries:
         raise ValueError(f"Unknown coin series: {code!r}") from exc
 
 
-def series_for_metal(metal: str) -> list[CoinSeries]:
-    return [c for c in COIN_SERIES if c.metal == metal]
-
-
 def display_name(code: str) -> str:
     c = _BY_CODE.get(code)
     return f"{c.name} ({c.country})" if c else code

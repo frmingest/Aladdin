@@ -93,10 +93,8 @@ def _to_out_many(db: Session, holdings: list[Holding]) -> list[HoldingOut]:
     """Batches the document/position counts for every holding into two
     aggregate queries total, not two queries per holding — the page-load-
     speed fix (2026-09-21). `list_holdings` returns every row in the
-    `holdings` table, including the legacy pre-reset ones (individual
-    whisky/precious-metals entries — see CLAUDE.md), so on the real DB this
-    was previously 2N+1 round trips to Postgres for a page load; now it's
-    3 regardless of N.
+    `holdings` table, so this was previously 2N+1 round trips to Postgres
+    for a page load; now it's 3 regardless of N.
     """
     if not holdings:
         return []

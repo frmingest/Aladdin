@@ -19,7 +19,6 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     environment: str = "development"
-    log_level: str = "INFO"
     database_url: str | None = None
 
     app_name: str = "aladdin-backend"
@@ -65,12 +64,10 @@ class Settings(BaseSettings):
     llm_max_output_tokens_fund: int = 16384
     llm_temperature: float = 0.2
 
-    # Free-tier rate limits for llm_model_name. Hand-maintained — no API
-    # exposes a free-tier AI Studio key's quota (see
-    # claude/llm-usage-ledger-and-rate-limit-estimation.md). Defaults match
-    # gemini-3.6-flash's free tier as observed 2026-09-14/17.
+    # Free-tier request limits for llm_model_name (per minute / per day).
+    # Hand-maintained — no API exposes a free-tier AI Studio key's quota.
+    # Defaults match gemini-3.6-flash's free tier as observed 2026-09-14/17.
     llm_rate_limit_rpm: int = 5
-    llm_rate_limit_tpm: int = 250_000
     llm_rate_limit_rpd: int = 20
 
     # Fallback provider, reached once the primary's daily budget is spent
@@ -275,11 +272,8 @@ class Settings(BaseSettings):
     performance_default_benchmark_ticker: str = "OSEBX.OL"
 
     # --- Precious metals (2026-09-26, app/services/precious_metals/) ---
-    # gold-api.com's current-price endpoint is free/keyless with no
-    # documented rate limit, but there's still no reason to hit it on
-    # every page load -- refreshed at most this often, same staleness
-    # discipline as every other live price in the app.
-    precious_metals_price_stale_after_hours: int = 6
+    # gold-api.com's current-price endpoint is free/keyless; staleness is
+    # handled by the shared daily-history helper (app/services/risk/price_history.py).
     # How much accumulated spot-price history to serve on the price chart.
     # There is no backfill (gold-api.com's historical endpoint isn't free)
     # -- this just caps how far back a request looks into what's been
@@ -321,13 +315,11 @@ class Settings(BaseSettings):
     # runs it through the same iXBRL extractor an upload uses, instead of
     # only reading announcement metadata. Keyless, same host as above.
     newsweb_filing_provider: str = "newsweb"  # "newsweb" | "none"
-    newsweb_filing_lookback_days: int = 730  # ~2 years, wide enough to always catch the latest annual report
     newsweb_filing_timeout_seconds: float = 30.0
     newsweb_filing_max_download_mb: int = 300  # the raw .zip/.xhtml attachment as downloaded
     # "Fetch every available year" (2026-09-26, Faiz's ask): an absolute
-    # calendar year, not a rolling day-count like newsweb_filing_lookback_days
-    # above, so the window always reaches this far back no matter how much
-    # later "today" is. 2022 is Faiz's own backstop for "around when ESEF/
+    # calendar year, not a rolling day-count, so the window always reaches
+    # this far back no matter how much later "today" is. 2022 is Faiz's own backstop for "around when ESEF/
     # iXBRL annual-report tagging started in Norway" — Oslo Børs issuers
     # generally began publishing ESEF-tagged annual reports on Newsweb from
     # FY2020/FY2021 onward, so 2022 comfortably covers what's actually there.

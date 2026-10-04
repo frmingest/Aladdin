@@ -208,14 +208,6 @@ class MarketDataProvider(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_price_history(
-        self, ticker: str, *, years: int = 5, currency_hint: str | None = None
-    ) -> list[PricePoint]:
-        """Historical closing prices for `ticker`, oldest first — feeds
-        multiples-over-time (app/services/valuation/multiples.py)."""
-        raise NotImplementedError
-
-    @abstractmethod
     def get_fx_rate(self, from_currency: str, to_currency: str) -> FxRate:
         """The latest from_currency -> to_currency rate. Implementations
         should return rate=1 immediately (no vendor call) when the two
@@ -248,10 +240,8 @@ class MarketDataProvider(ABC):
     ) -> list[PricePoint]:
         """Daily closing prices for `ticker` over roughly the last `days`
         calendar days, oldest first (2026-09-26, Sprint 12 —
-        app/services/risk/). Distinct from `get_price_history` above, which
-        is monthly and feeds multiples-over-time: portfolio risk needs
-        genuine daily returns to compute a correlation matrix and
-        volatility-based stress sizing. Not abstract, same discipline as
+        app/services/risk/): portfolio risk needs genuine daily returns to
+        compute a correlation matrix and volatility-based stress sizing. Not abstract, same discipline as
         `get_shares_outstanding`: a provider with no daily history simply
         raises, and the caller (app/services/risk/price_history.py) falls
         back to a cached observation or excludes the holding with a stated

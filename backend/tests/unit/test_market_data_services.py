@@ -46,8 +46,6 @@ class _FakeMarketDataProvider:
             raise self._error
         return self._fx
 
-    def get_price_history(self, ticker, *, years=5, currency_hint=None):  # pragma: no cover - unused here
-        raise NotImplementedError
 
     def get_beta(self, ticker, *, allow_live_fetch: bool = True):  # pragma: no cover - unused here
         return None

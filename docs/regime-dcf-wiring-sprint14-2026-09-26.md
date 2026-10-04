@@ -1,5 +1,7 @@
 # Sprint 14: regime → DCF discount-rate wiring (2026-09-26)
 
+> **Status update 2026-10-04 (housekeeping review):** the code described here is merged to `main` (checked in the repo at `07cf9fb`). The "not merged / PR open" wording below was true when written and is kept as history. Whether it is deployed or behaves correctly live was not checked in that review.
+
 Backlog item "Regime → DCF factor-weight wiring", deferred at Sprint 12 as Faiz's call: the
 regime classifier (baseline/stagflation/crisis) existed but was surfaced as information only,
 with no effect on any valuation. Faiz picked this item to build next (2026-09-26 session).

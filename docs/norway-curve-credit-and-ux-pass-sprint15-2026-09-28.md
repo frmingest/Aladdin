@@ -1,5 +1,7 @@
 # Sprint 15 #4 — Norway yield curve / credit spread, plus a UX pass (2026-09-28)
 
+> **Status update 2026-10-04 (housekeeping review):** the code described here is merged to `main` (checked in the repo at `07cf9fb`). The "not merged / PR open" wording below was true when written and is kept as history. Whether it is deployed or behaves correctly live was not checked in that review.
+
 Branch `feature/norway-curve-credit-ux`. **Written and tested. Not merged, not deployed, not checked live.**
 
 ## 1. Norway yield curve and credit spread

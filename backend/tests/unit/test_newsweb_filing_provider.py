@@ -12,14 +12,15 @@ import httpx
 import pytest
 
 from app.providers.newsweb_filing_provider import (
+    ANNUAL_REPORT_CATEGORY_ID,
+    INTERIM_REPORT_CATEGORY_ID,
     NewswebAttachmentRef,
     NewswebFilingProvider,
     NewswebFilingUnavailableError,
     ZipHasNoReportError,
     extract_xhtml_from_zip,
-    parse_annual_report_list,
-    parse_interim_report_list,
     parse_message_attachments,
+    parse_report_list,
     pick_esef_attachment,
     pick_report_attachment,
 )
@@ -46,8 +47,8 @@ def _message_payload(mid, attachments):
     return {"header": {}, "data": {"message": {"id": mid, "attachments": attachments}}}
 
 
-def test_parse_annual_report_list_filters_category_issuer_and_attachments():
-    rows = parse_annual_report_list(
+def test_parse_report_list_annual_filters_category_issuer_and_attachments():
+    rows = parse_report_list(
         _list_payload(
             _msg(670839, "Nykode Therapeutics - Annual Report 2025"),
             _msg(666642, "Nykode Therapeutics - Quarterly Report Q4 2025", category_id=1002),
@@ -55,26 +56,28 @@ def test_parse_annual_report_list_filters_category_issuer_and_attachments():
             _msg(2, "No attachment", attachments=0),
         ),
         issuer_sign="NYKD",
+        category_id=ANNUAL_REPORT_CATEGORY_ID,
     )
     assert [r[0] for r in rows] == ["670839"]
     assert rows[0][1] == "Nykode Therapeutics - Annual Report 2025"
     assert rows[0][2].tzinfo is not None
 
 
-def test_parse_annual_report_list_sorts_newest_first():
-    rows = parse_annual_report_list(
+def test_parse_report_list_annual_sorts_newest_first():
+    rows = parse_report_list(
         _list_payload(
             _msg(1, "Older", published="2025-04-01T00:00:00Z"),
             _msg(2, "Newer", published="2026-04-17T07:30:00Z"),
         ),
         issuer_sign="NYKD",
+        category_id=ANNUAL_REPORT_CATEGORY_ID,
     )
     assert [r[0] for r in rows] == ["2", "1"]
 
 
-def test_parse_annual_report_list_malformed_payload_fails_visibly():
+def test_parse_report_list_annual_malformed_payload_fails_visibly():
     with pytest.raises(NewswebFilingUnavailableError):
-        parse_annual_report_list({"nope": 1}, issuer_sign="NYKD")
+        parse_report_list({"nope": 1}, issuer_sign="NYKD", category_id=ANNUAL_REPORT_CATEGORY_ID)
 
 
 def test_parse_message_attachments():
@@ -119,12 +122,13 @@ def test_pick_esef_attachment_none_when_pdf_only():
 
 
 def test_parse_interim_report_list_uses_category_1002():
-    rows = parse_interim_report_list(
+    rows = parse_report_list(
         _list_payload(
             _msg(670839, "Nykode Therapeutics - Annual Report 2025"),
             _msg(666642, "Nykode Therapeutics - Half Year Report H1 2026", category_id=1002),
         ),
         issuer_sign="NYKD",
+        category_id=INTERIM_REPORT_CATEGORY_ID,
     )
     assert [r[0] for r in rows] == ["666642"]
     assert rows[0][1] == "Nykode Therapeutics - Half Year Report H1 2026"
@@ -243,7 +247,7 @@ def test_extract_xhtml_from_zip_over_limit_fails_visibly():
         extract_xhtml_from_zip(data, max_member_bytes=100)
 
 
-def test_provider_find_latest_annual_report_fetches_attachments():
+def test_provider_list_annual_reports_fetches_attachments():
     calls: list[httpx.Request] = []
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -265,19 +269,20 @@ def test_provider_find_latest_annual_report_fetches_attachments():
         )
 
     provider = NewswebFilingProvider(client=httpx.Client(transport=httpx.MockTransport(handler)))
-    ref = provider.find_latest_annual_report(["NYKD", "OL"][0], today=date(2026, 9, 26))
-    assert ref is not None
+    refs = provider.list_annual_reports("NYKD", since=date(2022, 1, 1), today=date(2026, 9, 26))
+    assert len(refs) == 1
+    ref = refs[0]
     assert ref.message_id == "670839"
     assert ref.message_url == "https://newsweb.oslobors.no/message/670839"
     assert [a.name for a in ref.attachments] == ["Report.pdf", "nykode-2025-12-31-0-en.zip"]
     assert len(calls) == 2
 
 
-def test_provider_find_latest_annual_report_none_when_no_rows():
+def test_provider_list_annual_reports_empty_when_no_rows():
     provider = NewswebFilingProvider(
         client=httpx.Client(transport=httpx.MockTransport(lambda r: httpx.Response(200, json=_list_payload())))
     )
-    assert provider.find_latest_annual_report("XXXX") is None
+    assert provider.list_annual_reports("XXXX", since=date(2022, 1, 1)) == []
 
 
 def test_provider_download_attachment():
@@ -304,4 +309,4 @@ def test_provider_http_error_is_unavailable():
         client=httpx.Client(transport=httpx.MockTransport(lambda r: httpx.Response(500)))
     )
     with pytest.raises(NewswebFilingUnavailableError, match="500"):
-        provider.find_latest_annual_report("NYKD")
+        provider.list_annual_reports("NYKD", since=date(2022, 1, 1))

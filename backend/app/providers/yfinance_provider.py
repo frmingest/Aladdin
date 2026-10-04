@@ -147,39 +147,6 @@ class YFinanceMarketDataProvider(MarketDataProvider):
             price=price, currency=currency, observed_at=datetime.now(timezone.utc), provider=self.name
         )
 
-    def get_price_history(
-        self, ticker: str, *, years: int = 5, currency_hint: str | None = None
-    ) -> list[PricePoint]:
-        yf_ticker = self._ticker(ticker)
-        try:
-            history = yf_ticker.history(period=f"{years}y", interval="1mo", auto_adjust=True)
-        except Exception as exc:  # pragma: no cover
-            raise MarketDataUnavailableError(f"yfinance history lookup failed for {ticker!r}: {exc}") from exc
-
-        if history is None or history.empty:
-            raise MarketDataUnavailableError(f"yfinance returned no price history for {ticker!r}")
-
-        try:
-            fast_info = yf_ticker.fast_info
-        except Exception:  # noqa: BLE001 - currency is best-effort here; currency_hint covers the rest
-            fast_info = None
-        currency = _get(fast_info, "currency") or currency_hint
-        currency = str(currency).upper() if currency else "USD"
-
-        points: list[PricePoint] = []
-        for observed_at, row in history.iterrows():
-            close = _to_decimal(row.get("Close"))
-            if close is None:
-                continue
-            ts = observed_at.to_pydatetime()
-            if ts.tzinfo is None:
-                ts = ts.replace(tzinfo=timezone.utc)
-            points.append(PricePoint(price=close, currency=currency, observed_at=ts, provider=self.name))
-
-        if not points:
-            raise MarketDataUnavailableError(f"yfinance history for {ticker!r} had no usable close prices")
-        return points
-
     def get_daily_price_history(
         self, ticker: str, *, days: int = 400, currency_hint: str | None = None
     ) -> list[PricePoint]:

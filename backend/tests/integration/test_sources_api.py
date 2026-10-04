@@ -270,7 +270,7 @@ def _newsweb_zip(xhtml_bytes: bytes, *, xhtml_name: str = "acme-2025-12-31-0-en.
 class FakeNewswebFiling:
     """``refs`` is the full list list_annual_reports() should return (newest
     first) — the "fetch every available year" flow (2026-09-26) always
-    calls that, never find_latest_annual_report. ``interim_refs`` is the
+    calls that. ``interim_refs`` is the
     equivalent list for list_interim_reports() (added 2026-09-27, category
     1002) — kept separate from ``refs`` since a real holding's annual and
     half-year announcements are different Newsweb messages."""

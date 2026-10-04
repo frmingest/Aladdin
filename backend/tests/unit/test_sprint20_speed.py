@@ -83,8 +83,6 @@ class _Market:
             raise MarketDataUnavailableError("no share count")
         return D(self.shares)
 
-    def get_price_history(self, ticker, *, years=5, currency_hint=None):  # pragma: no cover
-        raise NotImplementedError
 
 
 class _Rate:

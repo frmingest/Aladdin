@@ -309,7 +309,6 @@ def get_newsweb_filing_provider_or_none() -> NewswebFilingProvider | None:
     if settings.newsweb_filing_provider != "newsweb":
         return None
     return NewswebFilingProvider(
-        lookback_days=settings.newsweb_filing_lookback_days,
         timeout_seconds=settings.newsweb_filing_timeout_seconds,
         max_download_bytes=settings.newsweb_filing_max_download_mb * 1024 * 1024,
     )

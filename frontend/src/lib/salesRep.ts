@@ -12,8 +12,6 @@ import type { NewswebAnnualReports, WatchlistRow } from "./types";
  * and is not modelled on a real person's name, likeness or catchphrases.
  */
 
-export const SAL_RULES = "sal-v1";
-
 // ---------------------------------------------------------------------------
 // Tickers (Yahoo Finance symbols)
 

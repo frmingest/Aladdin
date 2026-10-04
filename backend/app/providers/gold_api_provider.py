@@ -21,8 +21,8 @@ prices this app didn't itself observe).
 
 Implements the full MarketDataProvider ABC (app/providers/base.py) so it
 can be passed to `get_or_refresh_daily_history()` unchanged; the methods
-metals genuinely don't need (`get_price_history`, `get_fx_rate`,
-`get_beta`) just raise — nothing calls them for a metal "ticker".
+metals genuinely don't need (`get_fx_rate`, `get_beta`) just raise —
+nothing calls them for a metal "ticker".
 """
 from __future__ import annotations
 
@@ -86,11 +86,6 @@ class GoldApiProvider(MarketDataProvider):
         """Only today's spot price — see this module's docstring for why.
         `days` is accepted (interface compatibility) but ignored."""
         return [self.get_current_price(ticker, currency_hint=currency_hint)]
-
-    def get_price_history(
-        self, ticker: str, *, years: int = 5, currency_hint: str | None = None
-    ) -> list[PricePoint]:
-        raise MarketDataUnavailableError(f"{self.name} does not provide monthly price history")
 
     def get_fx_rate(self, from_currency: str, to_currency: str) -> FxRate:
         raise MarketDataUnavailableError(f"{self.name} does not provide FX rates")

@@ -1,5 +1,7 @@
 # Sprint 20: speed (2026-10-03)
 
+> **Status update 2026-10-04 (housekeeping review):** the code described here is merged to `main` (checked in the repo at `07cf9fb`). The "not merged / PR open" wording below was true when written and is kept as history. Whether it is deployed or behaves correctly live was not checked in that review.
+
 Branch `feature/sprint-20-speed`, built in its own worktree off `main` `d7e9f0f` (Sprint 19 / PR #42 already merged).
 Backend plus frontend. **No migration.** Written and tested; **not merged, not deployed, not run on your real data.**
 

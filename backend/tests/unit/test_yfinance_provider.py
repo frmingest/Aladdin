@@ -81,29 +81,6 @@ def test_current_price_raises_when_every_path_fails():
         provider.get_current_price("DELISTED")
 
 
-def test_price_history_returns_oldest_first_points():
-    provider = _provider()
-    mock_ticker = MagicMock()
-    mock_ticker.history.return_value = _history_df([10.0, 11.0, 12.0])
-    mock_ticker.fast_info = {"currency": "USD"}
-    with patch.object(provider, "_ticker", return_value=mock_ticker):
-        points = provider.get_price_history("AAPL", years=1)
-    assert [p.price for p in points] == [Decimal("10.0"), Decimal("11.0"), Decimal("12.0")]
-    assert all(p.currency == "USD" for p in points)
-    assert all(p.observed_at.tzinfo is not None for p in points)
-
-
-def test_price_history_raises_on_empty_dataframe():
-    provider = _provider()
-    mock_ticker = MagicMock()
-    mock_ticker.history.return_value = pd.DataFrame()
-    with (
-        patch.object(provider, "_ticker", return_value=mock_ticker),
-        pytest.raises(MarketDataUnavailableError),
-    ):
-        provider.get_price_history("NOTHING")
-
-
 def test_fx_rate_same_currency_short_circuits_without_a_ticker_call():
     provider = _provider()
     with patch.object(provider, "_ticker") as mock_ticker_fn:

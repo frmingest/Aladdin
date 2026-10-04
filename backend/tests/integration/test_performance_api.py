@@ -22,8 +22,6 @@ class _FakeMarket:
     def get_current_price(self, ticker, *, currency_hint=None):
         raise MarketDataUnavailableError("not configured for this test")
 
-    def get_price_history(self, ticker, *, years=5, currency_hint=None):  # pragma: no cover
-        raise NotImplementedError
 
     def get_fx_rate(self, from_currency, to_currency):
         raise MarketDataUnavailableError("not configured for this test")
