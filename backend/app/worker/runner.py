@@ -289,6 +289,25 @@ class AnalysisWorker:
         except Exception:
             log.exception("nightly snapshot refresh failed")
 
+    def maybe_store_game_state(self) -> None:
+        """Sprint 24 (G14a): store today's Fortress frame once per UTC day
+        (after `game_state_history_hour_utc`), so the Chronicle has history.
+        Database only; never raises."""
+        if not self.settings.game_state_history_enabled:
+            return
+        try:
+            from app.services.game.history import run_if_due
+
+            with self.session_factory() as db:
+                run_if_due(
+                    db,
+                    hour_utc=self.settings.game_state_history_hour_utc,
+                    keep_days=self.settings.game_state_history_keep_days,
+                    version=self.settings.active_game_mapping_version,
+                )
+        except Exception:
+            log.exception("game-state history failed")
+
     def maybe_warm_cold_holdings(self) -> None:
         """Sprint 20: first price / FX / share count / beta for holdings that
         have none (a GET no longer fetches them). A few per pass, a failing
@@ -354,6 +373,7 @@ class AnalysisWorker:
                 outcome = self.run_once()
                 self.maybe_check_tripwires()
                 self.maybe_refresh_snapshots()
+                self.maybe_store_game_state()
                 if outcome != RAN:  # queue idle: now is the cheap moment
                     self.maybe_warm_cold_holdings()
                     self.maybe_keep_snapshots_warm()

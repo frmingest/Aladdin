@@ -204,11 +204,16 @@
   100% { opacity: 0; transform: translate(14px, -70px); }
 }
 @keyframes fortress-rain { to { transform: translate(-12px, 32px); } }
+@keyframes fortress-raven-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
 @keyframes fortress-ring {
   0%, 100% { stroke-opacity: 0.95; }
   50% { stroke-opacity: 0.55; }
 }
 
+.fortress-raven { transform-box: fill-box; }
 .fortress-rise { transform-box: fill-box; transform-origin: bottom center; }
 .fortress-flicker { transform-box: fill-box; transform-origin: bottom center; }
 .fortress-twinkle { transform-box: fill-box; transform-origin: center; opacity: 0.8; }
@@ -221,6 +226,7 @@
   .fortress-banner { animation: fortress-banner 3.2s ease-in-out infinite; }
   .fortress-shimmer { animation: fortress-shimmer 4s linear infinite; }
   .fortress-bob { animation: fortress-bob 2.4s ease-in-out infinite; }
+  .fortress-raven { animation: fortress-raven-bob 3.1s ease-in-out infinite; }
   .fortress-twinkle { animation: fortress-twinkle 2.6s ease-in-out infinite; }
   .fortress-smoke { animation: fortress-smoke 5s ease-in-out infinite; }
   .fortress-firefly { animation: fortress-firefly 6s ease-in-out infinite; }

@@ -154,6 +154,13 @@ class Settings(BaseSettings):
     snapshot_max_age_hours: int = 36
     snapshot_refresh_enabled: bool = True
     snapshot_refresh_hour_utc: int = 4
+    # Sprint 24 (G14a): the worker also stores one game-state frame per UTC
+    # day (app/services/game/history.py), one hour after the page snapshots so
+    # it reads their fresh risk / margin-of-safety rows. Pruned past
+    # `game_state_history_keep_days`. The Chronicle (G14) replays these.
+    game_state_history_enabled: bool = True
+    game_state_history_hour_utc: int = 5
+    game_state_history_keep_days: int = 540
     # Sprint 20: besides the nightly rebuild, the worker rebuilds any stored
     # snapshot whose inputs changed (a new import, a finished analysis, a new
     # watchlist entry) once the analysis queue is idle, so the next page
@@ -232,6 +239,7 @@ class Settings(BaseSettings):
     # Versioned like the valuation assumptions: a change is a new vN.py.
     active_game_mapping_version: str = "v1"
     active_siege_scenarios_version: str = "v1"
+    active_time_and_filings_version: str = "v1"
 
     # --- Regime-adjusted DCF (Sprint 14, 2026-09-26, app/domain/regime_adjustments/) ---
     # Off by default: wiring Sprint 12's macro regime (app/services/risk/regime.py)

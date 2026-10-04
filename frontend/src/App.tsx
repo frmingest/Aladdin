@@ -17,6 +17,8 @@ const DashboardPage = lazy(() => import("./pages/DashboardPage"));
 // Game mode (F33, G2): its own chunk, so default mode downloads nothing for it.
 const FortressPage = lazy(() => import("./pages/FortressPage"));
 const SiegeSimulatorPage = lazy(() => import("./pages/SiegeSimulatorPage"));
+// Sprint 24 (G14): the fortress replayed through time.
+const ChroniclePage = lazy(() => import("./pages/ChroniclePage"));
 // Marketplace (G9): the street of watchlist stores and the deep-dive inside each.
 const MarketplacePage = lazy(() => import("./pages/MarketplacePage"));
 const MarketStorePage = lazy(() => import("./pages/MarketStorePage"));
@@ -64,6 +66,7 @@ export default function App() {
           <Route path="/" element={<DashboardPage />} />
           <Route path="/fortress" element={<FortressPage />} />
           <Route path="/fortress/siege" element={<SiegeSimulatorPage />} />
+          <Route path="/fortress/chronicle" element={<ChroniclePage />} />
           <Route path="/fortress/marketplace" element={<MarketplacePage />} />
           <Route path="/fortress/marketplace/:holdingId" element={<MarketStorePage />} />
           <Route path="/holdings" element={<HoldingsListPage />} />

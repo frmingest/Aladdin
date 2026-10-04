@@ -16,8 +16,24 @@ from app.config.database import get_db
 from app.config.settings import get_settings
 from app.domain.game_mapping import get_game_mapping
 from app.domain.game_mapping.siege_scenarios_v1 import get_siege_scenarios
-from app.schemas.game import GameStateOut, SiegeSimOut
-from app.services.game.demo import DEMO_BETAS, demo_game_state
+from app.domain.game_mapping.time_and_filings_v1 import get_time_and_filings
+from app.schemas.game import (
+    ChronicleOut,
+    GameStateOut,
+    NightWatchOut,
+    RavensOut,
+    SiegeSimOut,
+)
+from app.services.game.chronicle import get_chronicle
+from app.services.game.demo import (
+    DEMO_BETAS,
+    demo_chronicle,
+    demo_game_state,
+    demo_night_watch,
+    demo_ravens,
+)
+from app.services.game.night_watch import get_night_watch
+from app.services.game.ravens import build_ravens
 from app.services.game.siege_view import build_siege_sim, stored_beta_lookup
 from app.services.game.state import get_game_state
 from app.services.settings.demo_mode import is_demo_mode
@@ -61,3 +77,40 @@ def get_siege(
         return build_siege_sim(state, lookup, drop, mapping, scenarios)
     state = get_game_state(db, mapping.version)
     return build_siege_sim(state, stored_beta_lookup(db), drop, mapping, scenarios)
+
+
+@router.get("/chronicle", response_model=ChronicleOut)
+def get_chronicle_route(db: Session = Depends(get_db)) -> ChronicleOut:
+    """G14 The Chronicle: the fortress replayed through time. Frames stored by
+    the worker each night (G14a) carry the real walls, moats and weather of
+    their day; older days are rebuilt from portfolio imports with unsurveyed
+    walls. A replay of stored data: no provider call, no LLM, no write."""
+    settings = get_settings()
+    rules_v = get_time_and_filings(settings.active_time_and_filings_version)
+    if is_demo_mode(db):
+        return demo_chronicle(settings.active_game_mapping_version, rules_v)
+    mapping = get_game_mapping(settings.active_game_mapping_version)
+    return get_chronicle(db, mapping, rules_v)
+
+
+@router.get("/ravens", response_model=RavensOut)
+def get_ravens(db: Session = Depends(get_db)) -> RavensOut:
+    """G15 The Ravens: reports captured recently, each with what changed
+    between the newest stored period and the one before it. Stored data
+    only; information, never a verdict."""
+    settings = get_settings()
+    rules_v = get_time_and_filings(settings.active_time_and_filings_version)
+    if is_demo_mode(db):
+        return demo_ravens(settings.active_game_mapping_version, rules_v)
+    return build_ravens(db, rules_v)
+
+
+@router.get("/night-watch", response_model=NightWatchOut)
+def get_night_watch_route(db: Session = Depends(get_db)) -> NightWatchOut:
+    """G16 Night Watch: last night's tripwire check and what changed, as a
+    morning dispatch. Reads what the worker stored; never runs the check."""
+    settings = get_settings()
+    rules_v = get_time_and_filings(settings.active_time_and_filings_version)
+    if is_demo_mode(db):
+        return demo_night_watch(settings.active_game_mapping_version, rules_v)
+    return get_night_watch(db, rules_v)

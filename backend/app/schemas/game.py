@@ -260,3 +260,145 @@ class SiegeSimOut(BaseModel):
     oldest_beta_at: datetime | None
     holdings: list[SiegeSimHoldingOut]
     notes: list[str]
+
+
+# --- Sprint 24 (2026-10-04): Chronicle (G14), Ravens (G15), Night Watch (G16) ---
+
+ChronicleSource = Literal["stored", "positions_only"]
+ChangeKind = Literal[
+    "tower_added", "tower_removed", "tower_resized", "wall_changed", "moat_changed",
+    "thesis_changed", "weather_changed",
+]
+
+
+class ChronicleTowerOut(BaseModel):
+    holding_id: UUID
+    ticker: str
+    name: str
+    structure: Structure
+    size_class: SizeClass
+    weight_pct: Decimal | None
+    # In a positions-only frame these are "unsurveyed" / "fog" / "not_analyzed":
+    # the walls of a day nobody stored cannot be rebuilt from old positions.
+    wall: WallMaterial
+    moat: MoatTier
+    land: LandState
+    thesis: ThesisState
+
+
+class ChronicleFrameOut(BaseModel):
+    day: date
+    at: datetime
+    source: ChronicleSource
+    total_value_nok: Decimal | None
+    weather: SiegeLevel
+    towers: list[ChronicleTowerOut]
+
+
+class ChronicleChangeOut(BaseModel):
+    """One thing that differs between a frame and the one before it."""
+
+    day: date
+    kind: ChangeKind
+    holding_id: UUID | None = None
+    holding_name: str | None = None
+    text: str
+
+
+class ChronicleOut(BaseModel):
+    rules_version: str
+    demo: bool = False
+    frames: list[ChronicleFrameOut]
+    changes: list[ChronicleChangeOut]
+    stored_frames: int
+    positions_only_frames: int
+    first_stored_day: date | None
+    # Frames older than the newest `chronicle_max_frames` that were left out.
+    hidden_frames: int = 0
+    notes: list[str]
+
+
+RavenDirectionOut = Literal["better", "worse", "steady", "unknown"]
+RavenKindOut = Literal["figures", "text_only"]
+
+
+class RavenLineOut(BaseModel):
+    metric: str
+    label: str
+    previous: Decimal | None
+    current: Decimal | None
+    direction: RavenDirectionOut
+    text: str
+
+
+class RavenOut(BaseModel):
+    id: str  # stable: a raven is "seen" per browser by this id
+    kind: RavenKindOut
+    holding_id: UUID
+    ticker: str
+    name: str
+    in_portfolio: bool
+    period: str | None
+    previous_period: str | None
+    captured_at: datetime
+    age_days: int
+    document_id: UUID | None
+    summary: str
+    better: int
+    worse: int
+    lines: list[RavenLineOut]
+
+
+class RavensOut(BaseModel):
+    rules_version: str
+    demo: bool = False
+    as_of: datetime
+    window_days: int
+    ravens: list[RavenOut]
+    notes: list[str]
+
+
+NightWatchState = Literal["ok", "old", "never"]
+NightWatchTone = Literal["warning", "note", "calm"]
+NightWatchStatus = Literal["attention", "quiet", "unknown"]
+
+
+class NightWatchLineOut(BaseModel):
+    tone: NightWatchTone
+    text: str
+    holding_id: UUID | None = None
+    holding_name: str | None = None
+    facts: list[str] = Field(default_factory=list)
+
+
+class NightWatchFiredOut(BaseModel):
+    holding_id: UUID
+    ticker: str
+    name: str
+    label: str | None
+    metric: str
+    fired_at: datetime
+
+
+class NightWatchOut(BaseModel):
+    """The nightly tripwire check as a morning dispatch. A reading of what the
+    worker stored overnight; it never runs a check and never advises a trade."""
+
+    rules_version: str
+    demo: bool = False
+    as_of: datetime
+    status: NightWatchStatus
+    headline: str
+    watch_state: NightWatchState
+    watch_last_at: datetime | None
+    watch_age_hours: int | None
+    watch_summary: str | None
+    tripwires_firing: int
+    fired_overnight: list[NightWatchFiredOut]
+    snapshots_last_at: datetime | None
+    snapshots_summary: str | None
+    frames_stored: int
+    last_frame_day: date | None
+    ravens_landed: int
+    changes_since_last_frame: list[ChronicleChangeOut]
+    lines: list[NightWatchLineOut]

@@ -2024,3 +2024,137 @@ export interface SiegeSim {
   holdings: SiegeSimHolding[];
   notes: string[];
 }
+
+// --- Sprint 24: Chronicle (G14), Ravens (G15), Night Watch (G16) -------------
+// backend/app/api/game.py GET /game/chronicle, /game/ravens, /game/night-watch
+
+export type ChronicleSource = "stored" | "positions_only";
+export type ChronicleChangeKind =
+  | "tower_added"
+  | "tower_removed"
+  | "tower_resized"
+  | "wall_changed"
+  | "moat_changed"
+  | "thesis_changed"
+  | "weather_changed";
+
+export interface ChronicleTower {
+  holding_id: string;
+  ticker: string;
+  name: string;
+  structure: FortressStructure;
+  size_class: FortressSize;
+  weight_pct: string | null;
+  wall: FortressWall;
+  moat: FortressMoat;
+  land: FortressLand;
+  thesis: FortressThesis;
+}
+
+export interface ChronicleFrame {
+  day: string;
+  at: string;
+  source: ChronicleSource;
+  total_value_nok: string | null;
+  weather: FortressSiegeLevel;
+  towers: ChronicleTower[];
+}
+
+export interface ChronicleChange {
+  day: string;
+  kind: ChronicleChangeKind;
+  holding_id: string | null;
+  holding_name: string | null;
+  text: string;
+}
+
+export interface Chronicle {
+  rules_version: string;
+  demo: boolean;
+  frames: ChronicleFrame[];
+  changes: ChronicleChange[];
+  stored_frames: number;
+  positions_only_frames: number;
+  first_stored_day: string | null;
+  hidden_frames: number;
+  notes: string[];
+}
+
+export type RavenDirection = "better" | "worse" | "steady" | "unknown";
+
+export interface RavenLine {
+  metric: string;
+  label: string;
+  previous: string | null;
+  current: string | null;
+  direction: RavenDirection;
+  text: string;
+}
+
+export interface Raven {
+  id: string;
+  kind: "figures" | "text_only";
+  holding_id: string;
+  ticker: string;
+  name: string;
+  in_portfolio: boolean;
+  period: string | null;
+  previous_period: string | null;
+  captured_at: string;
+  age_days: number;
+  document_id: string | null;
+  summary: string;
+  better: number;
+  worse: number;
+  lines: RavenLine[];
+}
+
+export interface Ravens {
+  rules_version: string;
+  demo: boolean;
+  as_of: string;
+  window_days: number;
+  ravens: Raven[];
+  notes: string[];
+}
+
+export type NightWatchState = "ok" | "old" | "never";
+export type NightWatchStatus = "attention" | "quiet" | "unknown";
+
+export interface NightWatchLine {
+  tone: "warning" | "note" | "calm";
+  text: string;
+  holding_id: string | null;
+  holding_name: string | null;
+  facts: string[];
+}
+
+export interface NightWatchFired {
+  holding_id: string;
+  ticker: string;
+  name: string;
+  label: string | null;
+  metric: string;
+  fired_at: string;
+}
+
+export interface NightWatch {
+  rules_version: string;
+  demo: boolean;
+  as_of: string;
+  status: NightWatchStatus;
+  headline: string;
+  watch_state: NightWatchState;
+  watch_last_at: string | null;
+  watch_age_hours: number | null;
+  watch_summary: string | null;
+  tripwires_firing: number;
+  fired_overnight: NightWatchFired[];
+  snapshots_last_at: string | null;
+  snapshots_summary: string | null;
+  frames_stored: number;
+  last_frame_day: string | null;
+  ravens_landed: number;
+  changes_since_last_frame: ChronicleChange[];
+  lines: NightWatchLine[];
+}
