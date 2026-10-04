@@ -52,7 +52,7 @@ export function Portrait({ who }: { who: GameAdvisorName }) {
   );
 }
 
-function Line({ line }: { line: GameAdvisorLine }) {
+export function Line({ line }: { line: GameAdvisorLine }) {
   return (
     <li className="flex gap-3 py-3">
       <Portrait who={line.advisor} />

@@ -14,6 +14,7 @@ from app.models.analysis import (
 )
 from app.models.app_setting import AppSetting
 from app.models.base import Base
+from app.models.competence import CompetenceMark
 from app.models.document import Document, DocumentChunk, DocumentPage
 from app.models.financial_line_item import FinancialLineItem
 from app.models.fund import (
@@ -52,6 +53,7 @@ __all__ = [
     "AnalysisWorkerHeartbeat",
     "AppSetting",
     "Base",
+    "CompetenceMark",
     "ComputedSnapshot",
     "DecisionJournalEntry",
     "Document",

@@ -2158,3 +2158,126 @@ export interface NightWatch {
   changes_since_last_frame: ChronicleChange[];
   lines: NightWatchLine[];
 }
+
+// --- Game mode Sprint 25: rituals — backend/app/services/game/rituals.py, competence.py
+
+export interface HoldingAdvisors {
+  holding_id: string;
+  lines_version: string;
+  lines: GameAdvisorLine[];
+  disclaimer: string;
+}
+
+export type CouncilKind =
+  | "tripwire"
+  | "thesis_review"
+  | "review_due"
+  | "weak_walls"
+  | "no_moat"
+  | "stale_analysis"
+  | "outside_circle"
+  | "cash";
+
+export interface CouncilHolding {
+  holding_id: string | null;
+  name: string;
+  weight_pct: string | null;
+}
+
+export interface CouncilItem {
+  kind: CouncilKind;
+  tone: "warning" | "note";
+  title: string;
+  text: string;
+  holdings: CouncilHolding[];
+  /** Holdings that matched but were not named. */
+  more: number;
+  facts: string[];
+}
+
+export interface Council {
+  rules_version: string;
+  demo: boolean;
+  as_of: string;
+  items: CouncilItem[];
+  advisors: GameAdvisorLine[];
+  unknowns: string[];
+  summary: string;
+  disclaimer: string;
+}
+
+export type RecordReviewState = "written" | "due" | "not_due";
+
+export interface DecisionRecord {
+  id: string;
+  holding_id: string | null;
+  ticker: string;
+  company_name: string;
+  action: string;
+  decided_on: string;
+  days_since: number;
+  thesis: string;
+  invalidation: string | null;
+  confidence: number | null;
+  verdict_then: string | null;
+  verdict_now: string | null;
+  price_then: string | null;
+  price_now: string | null;
+  price_now_at: string | null;
+  currency: string | null;
+  price_change_pct: string | null;
+  price_note: string | null;
+  review_6m: RecordReviewState;
+  review_12m: RecordReviewState;
+  review_6m_text: string | null;
+  review_12m_text: string | null;
+}
+
+export interface Records {
+  rules_version: string;
+  demo: boolean;
+  records: DecisionRecord[];
+  reviews_due: number;
+  caption: string;
+}
+
+export type CompetenceLevel = "know" | "partly" | "outside";
+export type CompetenceStatus = "inside" | "edge" | "outside" | "unmarked" | "unclassified" | "not_applicable";
+
+export interface CompetenceHeld {
+  holding_id: string;
+  name: string;
+  weight_pct: string | null;
+}
+
+export interface CompetenceSector {
+  sector: string;
+  level: CompetenceLevel | null;
+  note: string | null;
+  marked_at: string | null;
+  weight_pct: string;
+  holdings: CompetenceHeld[];
+}
+
+export interface CompetenceTower {
+  holding_id: string;
+  name: string;
+  sector: string | null;
+  weight_pct: string | null;
+  status: CompetenceStatus;
+}
+
+export interface Competence {
+  rules_version: string;
+  demo: boolean;
+  levels: string[];
+  sectors: CompetenceSector[];
+  towers: CompetenceTower[];
+  inside_weight_pct: string;
+  edge_weight_pct: string;
+  outside_weight_pct: string;
+  unmarked_weight_pct: string;
+  unclassified_weight_pct: string;
+  summary: string;
+  note_max_chars: number;
+}

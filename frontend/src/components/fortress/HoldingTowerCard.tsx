@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { api } from "../../lib/api";
 import { useGameMode } from "../../lib/gameMode";
 import type { GameTower } from "../../lib/types";
+import HoldingAdvisorsCard from "./HoldingAdvisorsCard";
 import TowerSurvey from "./TowerSurvey";
 
 /** Game mode only: the holding's tower survey at the top of its page, so the
@@ -42,6 +43,9 @@ export default function HoldingTowerCard({ holdingId }: { holdingId: string }) {
         </Link>
       </p>
       <TowerSurvey tower={tower} compact />
+      <div className="mt-4">
+        <HoldingAdvisorsCard holdingId={holdingId} />
+      </div>
     </div>
   );
 }

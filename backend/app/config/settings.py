@@ -240,6 +240,7 @@ class Settings(BaseSettings):
     active_game_mapping_version: str = "v1"
     active_siege_scenarios_version: str = "v1"
     active_time_and_filings_version: str = "v1"
+    active_rituals_version: str = "v1"
 
     # --- Regime-adjusted DCF (Sprint 14, 2026-09-26, app/domain/regime_adjustments/) ---
     # Off by default: wiring Sprint 12's macro regime (app/services/risk/regime.py)
