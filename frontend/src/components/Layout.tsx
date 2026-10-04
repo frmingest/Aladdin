@@ -118,7 +118,7 @@ function navSectionsFor(gameMode: boolean): NavSection[] {
   if (!gameMode) return NAV_SECTIONS;
   return NAV_SECTIONS.map((section) =>
     section.title === "Overview"
-      ? { ...section, items: [{ label: "Fortress", to: "/fortress" }, { label: "Marketplace", to: "/fortress/marketplace" }, { label: "Siege Simulator", to: "/fortress/siege" }, { label: "Chronicle", to: "/fortress/chronicle" }, ...section.items] }
+      ? { ...section, items: [{ label: "Fortress", to: "/fortress" }, { label: "Marketplace", to: "/fortress/marketplace" }, { label: "Siege Simulator", to: "/fortress/siege" }, { label: "Chronicle", to: "/fortress/chronicle" }, { label: "Council", to: "/fortress/council" }, { label: "Records", to: "/fortress/records" }, { label: "Circle", to: "/fortress/circle" }, ...section.items] }
       : section,
   );
 }

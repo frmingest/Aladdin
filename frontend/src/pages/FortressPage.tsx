@@ -217,6 +217,36 @@ export default function FortressPage() {
                   Chronicle
                 </button>
               )}
+              {view === "scene" && (
+                <button
+                  type="button"
+                  onClick={() => navigate("/fortress/council")}
+                  className="rounded-md border border-border px-3 py-1 text-sm font-medium text-ink-muted transition-colors hover:text-ink"
+                  title="A quarterly review room: what the rules put on the agenda"
+                >
+                  Council
+                </button>
+              )}
+              {view === "scene" && (
+                <button
+                  type="button"
+                  onClick={() => navigate("/fortress/records")}
+                  className="rounded-md border border-border px-3 py-1 text-sm font-medium text-ink-muted transition-colors hover:text-ink"
+                  title="Your decision journal as a library: hindsight, not a score"
+                >
+                  Records
+                </button>
+              )}
+              {view === "scene" && (
+                <button
+                  type="button"
+                  onClick={() => navigate("/fortress/circle")}
+                  className="rounded-md border border-border px-3 py-1 text-sm font-medium text-ink-muted transition-colors hover:text-ink"
+                  title="Mark the sectors you understand and see your holdings against them"
+                >
+                  Circle
+                </button>
+              )}
               {view === "scene" && state.towers.length > 0 && realm && (
                 <button
                   type="button"

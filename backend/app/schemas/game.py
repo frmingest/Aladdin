@@ -402,3 +402,138 @@ class NightWatchOut(BaseModel):
     ravens_landed: int
     changes_since_last_frame: list[ChronicleChangeOut]
     lines: list[NightWatchLineOut]
+
+
+# --- Sprint 25: rituals (G17 Council, G18 Records, G19 Circle, G20 holding lines) ---
+
+CompetenceLevelOut = Literal["know", "partly", "outside"]
+CompetenceStatus = Literal["inside", "edge", "outside", "unmarked", "unclassified", "not_applicable"]
+AgendaKind = Literal[
+    "tripwire", "thesis_review", "review_due", "weak_walls", "no_moat", "stale_analysis", "outside_circle", "cash"
+]
+RecordReviewState = Literal["written", "due", "not_due"]
+
+
+class HoldingAdvisorsOut(BaseModel):
+    """G20: every advisor line that matches one holding (not cut to the
+    fortress-wide display limit)."""
+
+    holding_id: UUID
+    lines_version: str
+    lines: list[AdvisorLineOut]
+    disclaimer: str
+
+
+class CouncilHoldingOut(BaseModel):
+    holding_id: UUID | None
+    name: str
+    weight_pct: Decimal | None = None
+
+
+class CouncilItemOut(BaseModel):
+    kind: AgendaKind
+    tone: Literal["warning", "note"]
+    title: str
+    text: str
+    holdings: list[CouncilHoldingOut]
+    more: int = 0  # holdings that matched but were not named
+    facts: list[str] = Field(default_factory=list)
+
+
+class CouncilOut(BaseModel):
+    """G17: the quarterly review room. An agenda built from rules the Fortress
+    already uses, plus what the advisors say. Read-only; attending earns
+    nothing and an empty agenda is said plainly, never padded."""
+
+    rules_version: str
+    demo: bool = False
+    as_of: datetime
+    items: list[CouncilItemOut]
+    advisors: list[AdvisorLineOut]
+    unknowns: list[str]
+    summary: str
+    disclaimer: str
+
+
+class RecordOut(BaseModel):
+    id: UUID
+    holding_id: UUID | None
+    ticker: str
+    company_name: str
+    action: str
+    decided_on: date
+    days_since: int
+    thesis: str
+    invalidation: str | None
+    confidence: int | None
+    verdict_then: str | None
+    verdict_now: str | None
+    price_then: Decimal | None
+    price_now: Decimal | None
+    price_now_at: datetime | None
+    currency: str | None
+    price_change_pct: Decimal | None
+    price_note: str | None
+    review_6m: RecordReviewState
+    review_12m: RecordReviewState
+    review_6m_text: str | None
+    review_12m_text: str | None
+
+
+class RecordsOut(BaseModel):
+    """G18: the decision journal as a library. Hindsight, not a score: there is
+    no hit rate and no ranking, only what was written, what the price did and
+    which reviews are still owed."""
+
+    rules_version: str
+    demo: bool = False
+    records: list[RecordOut]
+    reviews_due: int
+    caption: str
+
+
+class CompetenceHeldOut(BaseModel):
+    holding_id: UUID
+    name: str
+    weight_pct: Decimal | None
+
+
+class CompetenceSectorOut(BaseModel):
+    sector: str
+    level: CompetenceLevelOut | None
+    note: str | None
+    marked_at: datetime | None
+    weight_pct: Decimal
+    holdings: list[CompetenceHeldOut]
+
+
+class CompetenceTowerOut(BaseModel):
+    holding_id: UUID
+    name: str
+    sector: str | None
+    weight_pct: Decimal | None
+    status: CompetenceStatus
+
+
+class CompetenceOut(BaseModel):
+    """G19: the user's own marks of how well each sector is known, laid over
+    the holdings. A mark is never inferred; no mark is *unmarked*, which is not
+    the same as inside the circle."""
+
+    rules_version: str
+    demo: bool = False
+    levels: list[str]
+    sectors: list[CompetenceSectorOut]
+    towers: list[CompetenceTowerOut]
+    inside_weight_pct: Decimal
+    edge_weight_pct: Decimal
+    outside_weight_pct: Decimal
+    unmarked_weight_pct: Decimal
+    unclassified_weight_pct: Decimal
+    summary: str
+    note_max_chars: int
+
+
+class CompetenceMarkIn(BaseModel):
+    level: CompetenceLevelOut
+    note: str | None = None

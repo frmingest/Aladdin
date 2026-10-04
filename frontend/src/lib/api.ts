@@ -34,6 +34,11 @@ import type {
   GameState,
   SiegeSim,
   Chronicle,
+  Competence,
+  CompetenceLevel,
+  Council,
+  HoldingAdvisors,
+  Records,
   NightWatch,
   Ravens,
   Holding,
@@ -372,6 +377,19 @@ export const api = {
   getChronicle: () => request<Chronicle>("/game/chronicle"),
   getRavens: () => request<Ravens>("/game/ravens"),
   getNightWatch: () => request<NightWatch>("/game/night-watch"),
+  // Sprint 25 rituals: Council (G17), Hall of Records (G18), Circle of Competence (G19), per-holding advisor lines (G20).
+  getCouncil: () => request<Council>("/game/council"),
+  getRecords: () => request<Records>("/game/records"),
+  getCompetence: () => request<Competence>("/game/competence"),
+  /** The only write of Sprint 25: your own mark for one sector. */
+  putCompetence: (sector: string, level: CompetenceLevel, note: string | null) =>
+    request<Competence>(`/game/competence/${encodeURIComponent(sector)}`, {
+      method: "PUT",
+      body: JSON.stringify({ level, note }),
+    }),
+  deleteCompetence: (sector: string) =>
+    request<Competence>(`/game/competence/${encodeURIComponent(sector)}`, { method: "DELETE" }),
+  getHoldingAdvisors: (holdingId: string) => request<HoldingAdvisors>(`/game/holdings/${holdingId}/advisors`),
   // G13 Siege Simulator: a what-if over stored betas, read-only. marketDrop is a fraction (0.3 = 30%).
   getSiegeSim: (marketDrop?: number) =>
     request<SiegeSim>("/game/siege", { query: { market_drop: marketDrop === undefined ? undefined : marketDrop.toFixed(3) } }),
