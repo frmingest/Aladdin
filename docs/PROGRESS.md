@@ -15,9 +15,9 @@ Architecture and diagram: [architecture.md](architecture.md).
 |---|---|
 | **Phase** | Phase 11: Buffett/Munger single-focus rebuild. **Sprints 18 (#40), 19 (#42), 20 (#43), 23 (#44, game mode G12 + G13) and the data-gap fixes (#46) merged. Next: Sprints 21–22**; game-mode ideas are queued as **proposed Sprints 24–26** (see §4) |
 | **`main`** | `07cf9fb` (PR #46, data-gap fixes; PR #45 progress mirror before it; verified by cloning the repo 2026-10-04). Earlier: `f822d81` (PR #44, Sprint 23), `5e0a7ae` (#43), `d7e9f0f` (#42), `7e80ebd` (#40). Everything built so far is merged, including game mode G1–G13 (#23–#39, #44), CI fixes (#21) and the lamp logo (#34) |
-| **Open PRs** | **Sprint 24** (`feature/game-mode-sprint-24-time-and-filings`: nightly game-state snapshot, Chronicle, Ravens, Night Watch; written and tested, not merged or deployed). **Housekeeping** (`chore/housekeeping-2026-10-04`: dead-code removal, obsolete-doc removal, docs matched to code; written and tested, not merged or deployed). Others: confirm on GitHub |
+| **Open PRs** | **Sprint 24** (`feature/game-mode-sprint-24-time-and-filings`: nightly game-state snapshot, Chronicle, Ravens, Night Watch; written and tested, not merged or deployed). Housekeeping (#47) is merged. Others: confirm on GitHub |
 | **Sprints closed** | 0–15 (16 and 17 / Epic F22 were built and removed 2026-09-29). **Sprints 18, 19, 20 and 23 merged.** Sprint 20 and Sprint 23 not yet checked live |
-| **Backend tests** | 1,456 pass · Ruff clean · frontend 229 tests, tsc clean, ESLint 0 errors, build OK (housekeeping branch, 2026-10-04) |
+| **Backend tests** | 1,496 pass · Ruff clean · frontend 249 tests, tsc clean, ESLint 0 errors, build OK (Sprint 24 branch, 2026-10-04) |
 | **Migration head** | `q1c8d9e0f1a2` (one head; up/down/up checked on Postgres 16 in CI). Not yet confirmed on Supabase: `l1d2e3f4a5b6`, `n1f5a6b7c8d9`, `o1a6b7c8d9e0`, `p1b7c8d9e0f1`, `q1c8d9e0f1a2` |
 | **Live URLs** | Frontend `https://exciting-gratitude-production-71b5.up.railway.app` · Backend `https://aladdin-production-bd25.up.railway.app` |
 | **Deploy** | Railway auto-deploys every push to `main`. Live state not re-verified since 2026-09-27; Sprint 18 does that. **Backend region moved next to Supabase 2026-10-03 (setting, no code)** |
