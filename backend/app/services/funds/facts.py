@@ -280,6 +280,14 @@ def auto_link_exposures(db: Session, fund: Holding, exposures: list[FundExposure
     return linked
 
 
+def relink_latest_holdings(db: Session, fund: Holding) -> int:
+    """Links the unlinked rows of the fund's latest holdings list to holdings
+    added to the app since it was imported (auto-linking otherwise only runs
+    at import time). Hand-set links are never touched. Does not commit."""
+    _as_of, exposures = latest_exposures(db, fund.id, "holding")
+    return auto_link_exposures(db, fund, [e for e in exposures if e.linked_holding_id is None])
+
+
 def set_manual_link(
     db: Session, fund: Holding, exposure_id: uuid.UUID, linked_holding_id: uuid.UUID | None
 ) -> FundExposure:

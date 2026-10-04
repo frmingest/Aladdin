@@ -670,6 +670,10 @@ export interface LookThroughRefresh {
   priced: number;
   unpriced: number;
   no_isin: number;
+  /** Lines linked to companies added to the app since the list was imported. */
+  newly_linked?: number;
+  /** Lines priced through their linked holding because they have no ISIN. */
+  via_link?: number;
   refreshed_at: string;
 }
 

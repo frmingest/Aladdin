@@ -80,6 +80,11 @@ PDF_NO_FACTS_WARNING = (
     "evidence for analysis, but no financial facts could be extracted from it. This is expected: "
     "Norwegian issuers generally don't ESEF-tag half-year reports, only annual ones."
 )
+NO_XBRL_TAGS_WARNING = (
+    "Newsweb's .xhtml for this report carries no XBRL tags (it is a PDF converted to HTML) — the text "
+    "was captured as evidence for analysis, but no financial facts could be extracted from it. Figures "
+    "for this filing need a statement CSV upload."
+)
 
 
 class NewswebImportError(Exception):
@@ -244,6 +249,11 @@ def _import_one(
         )
     except Exception as exc:
         raise NewswebImportError(f"could not process '{filename}': {exc}") from exc
+
+    if is_esef and (intake.document.quality_flags or {}).get("no_ixbrl_tags") is True:
+        # An .xhtml is picked by file extension, so an untagged one still
+        # counts as "ESEF". Say plainly that nothing was captured from it.
+        warnings.append(NO_XBRL_TAGS_WARNING)
 
     imported_at = datetime.now(timezone.utc).isoformat()
     source_flags = {

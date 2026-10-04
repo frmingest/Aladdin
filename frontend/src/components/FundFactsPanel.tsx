@@ -95,7 +95,7 @@ function Summary({ facts }: { facts: FundFacts }) {
   const track = m.track_record;
   const roe = m.look_through.metrics.find((x) => x.key === "roe");
   return (
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
       <StatTile
         label="Ongoing charge"
         value={m.cost.ongoing_charge_pct ? formatPct100(m.cost.ongoing_charge_pct, 2) : "—"}
@@ -137,6 +137,19 @@ function Summary({ facts }: { facts: FundFacts }) {
             ? `${m.concentration.rows_known} known${
                 m.concentration.stated_holdings_count ? ` of ${m.concentration.stated_holdings_count}` : ""
               }, covering ${formatPct100(m.concentration.coverage_pct)}`
+            : "No holdings yet"
+        }
+      />
+      <StatTile
+        label="Linked to the app"
+        value={m.concentration.rows_known > 0 ? formatPct100(m.look_through.linked_weight_pct) : "—"}
+        hint={
+          m.concentration.rows_known > 0
+            ? `${formatPct100(m.look_through.with_financials_weight_pct)} of the fund has figures in the app${
+                Number(m.look_through.linked_weight_pct) < Number(m.concentration.coverage_pct)
+                  ? " · add companies to the watchlist to link more"
+                  : ""
+              }`
             : "No holdings yet"
         }
       />

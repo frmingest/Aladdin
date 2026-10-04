@@ -461,3 +461,46 @@ def test_fetch_lgim_reports_feed_errors_and_refuses_non_funds(client, db_session
     stock = _holding(client, db_session, "NEM", "Newmont Corporation", "stock")
     response = client.post(f"/funds/{stock}/holdings/fetch-lgim", json={"isin": "IE00B3CNHG25"})
     assert response.status_code == 422
+
+
+def _fake_feed(monkeypatch):
+    import json
+    from pathlib import Path
+
+    from app.providers import xtrackers_holdings as xt
+
+    fixture = json.loads((Path(__file__).parent.parent / "fixtures" / "xtrackers_holdings_xdef.json").read_text())
+    monkeypatch.setattr("app.api.funds.fetch_xtrackers_holdings", lambda isin: xt.parse_holdings(fixture, fund_isin=isin))
+
+
+def test_feed_isin_already_fetched_for_another_holding_is_refused(client, db_session, monkeypatch):
+    # 2026-10-03: Xtrackers Defence's basket ended up on L&G Gold Mining.
+    _fake_feed(monkeypatch)
+    xdef = _holding(client, db_session, "XDEF.DE", "Xtrackers Europe Defence", "equity_etf")
+    etlx = _holding(client, db_session, "ETLX.DE", "L&G Gold Mining ETF", "equity_etf")
+    assert client.post(f"/funds/{xdef}/holdings/fetch-xtrackers", json={"isin": "LU3061478973"}).status_code == 201
+
+    response = client.post(f"/funds/{etlx}/holdings/fetch-xtrackers", json={"isin": "lu3061478973"})
+    assert response.status_code == 409
+    assert "Xtrackers Europe Defence" in response.json()["detail"]
+    assert client.get(f"/funds/{etlx}").json()["exposures"]["holding"] == []
+
+
+def test_a_holding_with_a_feed_from_another_fund_is_refused_until_the_old_document_is_deleted(
+    client, db_session, monkeypatch
+):
+    _fake_feed(monkeypatch)
+    xdef = _holding(client, db_session, "XDEF.DE", "Xtrackers Europe Defence", "equity_etf")
+    first = client.post(f"/funds/{xdef}/holdings/fetch-xtrackers", json={"isin": "LU3061478973"})
+    assert first.status_code == 201
+
+    response = client.post(f"/funds/{xdef}/holdings/fetch-xtrackers", json={"isin": "LU0000000008"})
+    assert response.status_code == 409
+    assert "LU3061478973" in response.json()["detail"]
+
+
+def test_refetching_the_same_funds_own_isin_is_allowed(client, db_session, monkeypatch):
+    _fake_feed(monkeypatch)
+    xdef = _holding(client, db_session, "XDEF.DE", "Xtrackers Europe Defence", "equity_etf")
+    assert client.post(f"/funds/{xdef}/holdings/fetch-xtrackers", json={"isin": "LU3061478973"}).status_code == 201
+    assert client.post(f"/funds/{xdef}/holdings/fetch-xtrackers", json={"isin": "LU3061478973"}).status_code == 201

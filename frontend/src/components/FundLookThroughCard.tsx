@@ -73,7 +73,9 @@ export function FundLookThroughCard({
       setNote(
         `Fetched P/E for ${r.priced} of ${r.lines} holdings` +
           (r.unpriced ? ` (${r.unpriced} without a usable P/E)` : "") +
-          (r.no_isin ? ` (${r.no_isin} without an ISIN)` : "") +
+          (r.no_isin ? ` (${r.no_isin} with no ISIN and no linked company)` : "") +
+          (r.newly_linked ? `; linked ${r.newly_linked} to companies in the app` : "") +
+          (r.via_link ? `; ${r.via_link} priced through the linked company` : "") +
           ".",
       );
       load();

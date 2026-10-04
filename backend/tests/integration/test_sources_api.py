@@ -688,3 +688,38 @@ def test_newsweb_interim_report_switched_off_is_422(client, db_session):
     resp = client.post(f"/sources/holdings/{hid}/newsweb-interim-report/import")
     assert resp.status_code == 422 and "switched off" in resp.json()["detail"]
     del app.dependency_overrides[get_newsweb_filing_provider_or_none]
+
+
+def test_untagged_xhtml_from_newsweb_is_imported_with_a_no_xbrl_tags_warning(client, db_session, newsweb_filing):
+    """Pareto Bank (2026-10-04): the .xhtml on Newsweb is a PDF converted to
+    HTML with no ix: tags. It is picked as "ESEF" by file extension, so the
+    fetch must say plainly that nothing was captured from it."""
+    from app.providers.newsweb_filing_provider import (
+        NewswebAnnualReportRef,
+        NewswebAttachmentRef,
+    )
+
+    html = (
+        b'<?xml version="1.0" encoding="utf-8"?><html xmlns="http://www.w3.org/1999/xhtml">'
+        b"<head><title>Untitled</title></head><body><div><p>Statement of income NOK 1 000</p>"
+        b"<p>Net profit 123 456</p></div></body></html>"
+    )
+    newsweb_filing.refs = [
+        NewswebAnnualReportRef(
+            message_id="777001",
+            message_url="https://newsweb.oslobors.no/message/777001",
+            title="ACME ASA - Annual Report 2025",
+            published_at=datetime(2026, 4, 17, 7, 30, tzinfo=timezone.utc),
+            attachments=[NewswebAttachmentRef("900001", "acme-2025-12-31-NO.xhtml")],
+        )
+    ]
+    newsweb_filing.attachment_bytes = {"777001": html}
+    hid = _holding(client, ticker="ACME.OL", name="ACME ASA", currency="NOK")
+
+    resp = client.post(f"/sources/holdings/{hid}/newsweb-annual-report/import")
+    assert resp.status_code == 200, resp.text
+    report = resp.json()["reports"][0]
+    assert report["facts_imported"] == 0
+    assert any("no XBRL tags" in w for w in report["warnings"])
+    doc = client.get(f"/documents/{report['document_id']}").json()
+    assert doc["quality_flags"]["no_ixbrl_tags"] is True

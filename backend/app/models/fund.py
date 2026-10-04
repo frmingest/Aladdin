@@ -160,7 +160,7 @@ class FundConstituentMultiple(Base):
     """Trailing P/E of one constituent of a fund, fetched for the fund
     look-through valuation (app/services/valuation/fund_look_through.py).
 
-    One row per (fund, constituent ISIN), replaced on each refresh. A row
+    One row per (fund, constituent), keyed by ISIN or by `lookup_key`, replaced on each refresh. A row
     with `trailing_pe` NULL is a constituent the provider could not price
     or that has no positive earnings — kept, with `reason`, so the coverage
     figure is honest about what the look-through does NOT cover."""
@@ -170,7 +170,11 @@ class FundConstituentMultiple(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(GUID(), primary_key=True, default=uuid.uuid4)
     holding_id: Mapped[uuid.UUID] = mapped_column(GUID(), ForeignKey("holdings.id"), nullable=False)
-    isin: Mapped[str] = mapped_column(String(12), nullable=False)
+    isin: Mapped[str | None] = mapped_column(String(12), nullable=True)
+    lookup_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    """What was sent to the provider: the line's ISIN, or the ticker of the
+    app holding the line is linked to (lists with no ISINs). NULL on rows
+    stored before 2026-10-04, where the ISIN is the key."""
     label: Mapped[str] = mapped_column(String(255), nullable=False)
     weight_pct: Mapped[Decimal] = mapped_column(Numeric(9, 4), nullable=False)
     resolved_ticker: Mapped[str | None] = mapped_column(String(64), nullable=True)

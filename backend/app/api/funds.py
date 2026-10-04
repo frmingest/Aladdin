@@ -69,6 +69,7 @@ from app.services.funds.facts import (
     set_manual_link,
     upsert_profile,
 )
+from app.services.funds.feed_guard import WrongFundFeedError, check_feed_matches_holding
 from app.services.funds.holdings_import import HoldingsFileError, parse_holdings_file
 from app.services.funds.metrics import compute_fund_metrics
 from app.services.settings.demo_guard import require_not_demo
@@ -335,6 +336,10 @@ def fetch_xtrackers_holdings_endpoint(
     except FundFactsError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     try:
+        check_feed_matches_holding(db, holding, body.isin)
+    except WrongFundFeedError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    try:
         feed = fetch_xtrackers_holdings(body.isin)
     except XtrackersFeedError as exc:
         raise HTTPException(status_code=502, detail=f"Xtrackers holdings feed: {exc}") from exc
@@ -367,6 +372,10 @@ def fetch_lgim_holdings_endpoint(
         require_fund_holding(holding)
     except FundFactsError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    try:
+        check_feed_matches_holding(db, holding, body.isin)
+    except WrongFundFeedError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     try:
         feed = fetch_lgim_holdings(body.isin)
     except LgimFeedError as exc:
@@ -405,4 +414,5 @@ def refresh_look_through(
     return LookThroughRefreshOut(
         lines=result.lines, priced=result.priced, unpriced=result.unpriced,
         no_isin=result.no_isin, refreshed_at=result.refreshed_at,
+        newly_linked=result.newly_linked, via_link=result.via_link,
     )

@@ -156,14 +156,22 @@ def load_constituents(db: Session, fund: Holding) -> tuple[list[tuple[Decimal, D
     stored P/E row at all (never refreshed)."""
     _as_of, exposures = latest_exposures(db, fund.id, "holding")
     stored = {
-        m.isin: m
+        (m.lookup_key or m.isin): m
         for m in db.scalars(select(FundConstituentMultiple).where(FundConstituentMultiple.holding_id == fund.id))
+        if (m.lookup_key or m.isin)
+    }
+    linked_tickers = {
+        h.id: h.ticker
+        for h in db.scalars(
+            select(Holding).where(Holding.id.in_({e.linked_holding_id for e in exposures if e.linked_holding_id}))
+        )
     }
     constituents: list[tuple[Decimal, Decimal | None]] = []
     oldest: datetime | None = None
     unrefreshed = 0
     for exposure in exposures:
-        row = stored.get(exposure.isin) if exposure.isin else None
+        key = exposure.isin or linked_tickers.get(exposure.linked_holding_id)
+        row = stored.get(key) if key else None
         if row is None:
             unrefreshed += 1
             constituents.append((exposure.weight_pct, None))
