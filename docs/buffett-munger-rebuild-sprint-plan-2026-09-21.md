@@ -1,26 +1,19 @@
 # Aladdin → Buffett/Munger Advisor — Rebuild Sprint Plan (from scratch)
 
-**Supersedes** [buffett-munger-redesign-sprint-plan-2026-09-20.md](buffett-munger-redesign-sprint-plan-2026-09-20.md).
-That doc planned an *incremental* redesign (ADR 0019/0020: "continue & consolidate, no rebuild").
-On 2026-09-21 Faiz overrode that decision and had the repo wiped to a clean slate. This doc plans
-the rebuild from that clean slate. **Sprint 0, 1, 2, and 3 are all closed.** **Sprint 4 (the
-Buffett/Munger persona & two-pass analysis engine) has its backend built this session** — evidence
-packet, versioned schema/prompts, blind pass, reconciliation pass, orchestration, per-holding notes,
-and the `/analysis` API are all done and tested against fakes; the frontend is deliberately deferred
-to a follow-up session, same split as Sprint 3.
+**Supersedes** the 2026-09-20 incremental redesign plan (removed in the 2026-09 doc cleanup; Faiz overrode its
+"continue and consolidate" decision on 2026-09-21 and had the repo wiped to a clean slate). This doc is the
+original plan for the rebuild from that clean slate.
 
-## Where things actually stand right now (audited 2026-09-21, eleventh session pass)
-
-| | |
-|---|---|
-| Repo | `main`, verified clean and fully pushed at the start of this session (`f0d71b4`) — this session's own commit(s) for Sprint 4's backend are local only until Faiz pushes, same recurring `could not read Username for 'https://github.com'` credential gap every session has hit. |
-| **Sprint 4 backend built this session.** | New tables `equity_analysis_runs`/`equity_holding_notes` (migration `b5e1a9c3d7f2`, a fresh schema per CLAUDE.md Rule 3, not an extension of the legacy Phase-3 tables); versioned output schema (`app/domain/analysis_schema/v1.py`) and assumptions (`app/domain/analysis_assumptions/v1.py`); versioned prompts (`prompts/analysis/{blind,reconciliation}_v1.md`); the evidence-packet builder (`app/services/analysis/evidence_packet.py`, reusing Sprint 1's calculations, Sprint 2's research, and Sprint 3's valuation unchanged); the blind pass and reconciliation pass (`app/services/analysis/{blind_pass,reconciliation_pass}.py`); the orchestration pipeline (`app/services/analysis/pipeline.py`); per-holding notes CRUD (`app/services/analysis/notes.py`); and the `/analysis` API (`app/api/analysis.py`). |
-| Scope decisions Faiz made before this session's build (all "Recommended", via clarifying questions) | Build the full evidence packet + two-pass pipeline this session, backend only (frontend deferred — Decision 15 below); build both passes now with notes optional rather than shipping the blind pass alone first (Decision 16); don't touch document-extraction quality this session (Decision 17). |
-| Verification before/after building | Fresh Linux venv (this session's own — the repo's checked-in `.venv/` is a Windows venv, incompatible here, same limitation every session hits), 288/288 pre-existing backend tests passing before starting, 307/307 after (19 new), ruff clean on every new/changed file (only the same pre-existing `EXE002` file-permission noise elsewhere). Migration verified both directions via `alembic upgrade/downgrade --sql` against the Postgres dialect offline (no live DB reachable from this session). |
-| **Discovered this session, not fixed** | A holding created through the plain `POST /holdings` endpoint (rather than the CSV-import path) defaults `Holding.asset_class_raw` to `"equity"` — which is **not** in `EQUITY_ANALYZABLE_TYPES` (`stock`, `equity_etf`; see `app/domain/instrument_types.py`). Sprint 4 is the first place that gate is actually enforced (`POST /analysis/holdings/{id}/run` returns 422 for a non-analyzable holding), so a manually-added holding would be rejected until re-tagged. Faiz's real 124 imported positions already carry correct tags via the CSV importer's own classifier, so this doesn't affect existing data — it's a gap for the not-yet-built "add a holding by hand" flow. Left as-is (a Sprint 1 model-default decision, out of this session's scope). |
-| **Also still discovered, still not fixed (three sessions running now)** | The real (gitignored) `backend/.env` still has `MARKET_DATA_PROVIDER=stub` and `RESEARCH_PROVIDER=stub`. This now blocks more than before: Sprint 4's evidence packet calls both the valuation engine and all three research kinds, so the analysis pipeline cannot produce a real result until these are set to real providers (`yfinance`, `gemini_search`) — flagged in `progress.md`'s "Needs from Faiz" table, now with more urgency. |
-| Deployment | Not touched this session — no Railway deploy attempted. Per the prior session's evidence (real screenshots/logs), the app was already confirmed deployed and running against real data before this session started. |
-| Real data | This session's entire Sprint 4 build was tested against fakes only (in-memory SQLite, fake LLM/market-data/risk-free-rate/research providers) — **no real Gemini/Mistral call, no real market data, and no run against any of Faiz's actual 124 real holdings** has happened yet. That's the natural next check once the stub-provider config above is fixed. |
+> **Status as of 2026-10-04 (housekeeping review).** This is a *planning and decision record*, not the live
+> status page. For what is built, in progress and next, read [PROGRESS.md](PROGRESS.md); for how the app is
+> structured today, [architecture.md](architecture.md) (schema in its §6).
+>
+> - Sprints 0–9 below, and every later sprint tracked in PROGRESS.md (to Sprint 23 and the game mode), are
+>   **merged to `main`** (`07cf9fb`). "Not pushed / not deployed" markers in the sprint headings are as of the
+>   day each sprint was written and are kept as history. Nothing in this review was checked live.
+> - The database **was wiped** on 2026-09-21 (migration `e5f6a7b8c9d0`), so decisions 1, 8 and 14 below are superseded.
+> - The "audited 2026-09-21" status table that used to sit here (Sprint 4 backend just built, `.env` still on
+>   stub providers, local-only commits) described one past session and was removed as stale. It is in git history.
 
 ## The Brain's 5 steps — what the rebuild has to deliver
 
@@ -55,7 +48,7 @@ holding's notes), Rule 5 (both prompts explicitly frame evidence/notes as data, 
 
 | # | Question | Decision |
 |---|---|---|
-| 1 | DB schema strategy | **Leave the existing Supabase schema and data exactly as-is.** No migration to strip non-equity tables/columns now. |
+| 1 | DB schema strategy | ~~Leave the existing Supabase schema and data exactly as-is.~~ **Superseded 2026-09-21:** schema kept (legacy tables untouched), but all data wiped at Faiz's explicit request (`e5f6a7b8c9d0`). |
 | 2 | LLM provider | **Reuse Google AI Studio (Gemini) + Mistral** via keys in `backend/.env`/Railway. Rate-limit resilience built in from day one — done. |
 | 3 | Leftover GitHub branches | **Deleted** — confirmed gone from `origin`. |
 | 4 | Portfolio position entry: require a real document, or allow manual entry? | **Require a real uploaded document.** |
@@ -68,7 +61,7 @@ holding's notes), Rule 5 (both prompts explicitly frame evidence/notes as data, 
 | 11 | Sprint 3 discount-rate methodology | **Live risk-free rate + a versioned equity-risk-premium assumption (CAPM).** |
 | 12 | Sprint 3 session scope | **Backend only that session**, frontend as a follow-up (done). |
 | 13 | Snapshot delete FK violation: block, cascade, or two-step force? | **Cascade-delete the legacy analysis_runs chain.** |
-| 14 | Bulk portfolio wipe scope | **Accounts + snapshots + positions only** — Holdings/Documents untouched. |
+| 14 | Bulk portfolio wipe scope | **Accounts + snapshots + positions only** — Holdings/Documents untouched. *(Superseded by #18 and the full wipe.)* |
 | 15 | Sprint 4 session scope | **Full evidence packet + two-pass engine, backend only** (Recommended) — frontend deferred to a follow-up session, mirroring Sprint 3's split. |
 | 16 | Sprint 4 user-notes input: build now or ship blind pass alone first? | **Build both passes now, notes optional** (Recommended) — an empty-notes holding still gets a reconciliation pass, just with less to weigh against the blind evidence-based view. |
 | 17 | Sprint 4 document-extraction quality: fix now or defer? | **Defer** (Recommended) — ship the analysis engine against what Sprint 1's ingestion already extracts; revisit only if real runs show it's actually the bottleneck. |
@@ -79,24 +72,15 @@ holding's notes), Rule 5 (both prompts explicitly frame evidence/notes as data, 
 | 23 | Fund / ETF figures (2026-09-24) | **Typed in on a Fund facts form, each row citing an uploaded document (+ page), plus a deterministic holdings-file (CSV/XLSX) import** — no LLM reads a fund figure out of a PDF. First look-through: weights + holdings linked to the app's companies (with coverage %). Built in Sprint 8, `8847311`. See [fund-etf-analysis-sprint8-2026-09-24.md](fund-etf-analysis-sprint8-2026-09-24.md). |
 | 24 | Numeric macro data (2026-09-24) | **Core set of 13 series (Norges Bank, SSB, FRED) + 3 derived, used on the Macro page, the dashboard and in the analysis** (evidence packet v5 / fund-v2, cited `macro_indicator` items). No prompt or schema change. Built `c4b2ed2`, `551a141`. See [macro-data-and-guardrails-sprint7-2026-09-24.md](macro-data-and-guardrails-sprint7-2026-09-24.md). |
 | 22 | Sprint 6 evidence selection (2026-09-24) | **Deterministic keyword + section rules, ~4,000-token budget** (no embeddings). Uploaded document passages enter the evidence packet (v4) as quoted, cited `document_excerpt` items; prompts v2. Built `71ec23b`. See [evidence-quality-sprint6-2026-09-24.md](evidence-quality-sprint6-2026-09-24.md). |
+| 25 | Thesis tracking (2026-09-26) | **Rebuilt fresh as Sprint 11:** tripwires, "what changed", verdict timeline, Thesis monitor page, nightly check. See [thesis-tracking-sprint11](thesis-tracking-sprint11-2026-09-26.md) |
+| — | Game mode (2026-10-01) | Own decision table D1–D5 in [game-mode-fortress](game-mode-fortress-2026-10-01.md): Fortress home scene, Vault = own cash, journal-driven temperament, hand-written advisor lines, per-browser toggle default off |
 
-## Actual current Supabase schema
+## Current Supabase schema
 
-No non-equity table exists — the old multi-asset design used a discriminator, not separate tables.
-`holdings.asset_class`/`asset_class_raw` are the only non-equity-specific fields, both on otherwise-
-shared tables.
-
-| Table | From phase |
-|---|---|
-| `accounts`, `holdings`, `portfolio_positions`, `portfolio_snapshots`, `documents`, `document_pages`, `document_chunks`, `financial_line_items` | Phase 1 — fully built this rebuild |
-| `market_observations`, `fx_observations` | Phase 2 — built in Sprint 3 |
-| `risk_free_rate_observations` | New table + migration in Sprint 3 |
-| `analysis_runs`, `holding_analyses`, `factor_assessments`, `evidence_references` | Phase 3 — legacy, mapped read/delete-only (`app/models/legacy_analysis.py`) so a snapshot delete can cascade-purge them. **Sprint 4 built its own fresh schema instead** (`equity_analysis_runs`, `equity_holding_notes`) rather than extending these, per CLAUDE.md Rule 3. |
-| `research_runs`, `research_items` | Phase 4 — built in Sprint 2 |
-| `macro_observations` | Phase 4 table, **used since 2026-09-24** for Norges Bank / SSB / FRED series (+ `source_series_id`, migration `a9b0c1d2e3f4`); new `macro_series_status` alongside |
-| `investment_theses`, `valuation_cases`, `portfolio_risk_snapshots` | Phase 5 — still unused; `investment_theses`/`valuation_cases` are natural homes for a future "persist the reconciliation verdict over time" feature, not built this session |
-| `llm_usage_events` | Not yet re-created this rebuild; `app/providers/budget.py`'s in-memory guard is still the placeholder. Sprint 4's LLM calls are not yet logged here either — a natural pairing with the Backlog's "LLM usage ledger" item |
-| `equity_analysis_runs`, `equity_holding_notes` | **New this session (Sprint 4)** — see migration `b5e1a9c3d7f2` |
+The schema table that lived here was written in September 2026 and is out of date (it listed `llm_usage_events` as
+"not yet created" and several tables as "unused"). The current table list by group, and the single Alembic head,
+are in [architecture.md §6](architecture.md). Legacy pre-rebuild tables (`analysis_runs`, `holding_analyses`,
+`factor_assessments`, `evidence_references`) still exist but are empty and never queried.
 
 ## Design & UX direction (researched 2026-09-21; tokens implemented in `frontend/tailwind.config.js`)
 
@@ -294,11 +278,11 @@ evidence packet v6. Migration `b1c2d3e4f5a6` (additive). Detail:
 [roic-roe-multiples-sprint9-2026-09-25.md](roic-roe-multiples-sprint9-2026-09-25.md). Layer D
 (filings.xbrl.org history import) stays in the backlog.
 
-## Backlog — candidate future phases (all planned sprints now built)
+## Backlog — candidate future phases (historical; the live backlog is PROGRESS.md §4)
 
 | Candidate | What it would deliver | Why it's not scheduled yet |
 |---|---|---|
-| **Sprint 4 frontend** | A holding's analysis view (verdict card, moat breakdown, evidence citations, notes editor) on `HoldingDetailPage` | Deliberately deferred this session, mirroring Sprint 3's backend/frontend split |
+| **Sprint 4 frontend** *(since built)* | A holding's analysis view (verdict card, moat breakdown, evidence citations, notes editor) on `HoldingDetailPage` | Deliberately deferred this session, mirroring Sprint 3's backend/frontend split |
 | **Numeric macro data & scheduler** | FRED/Norges Bank central-bank series ingestion, a `MacroDataProvider` interface, optional background scheduler | **✅ Built 2026-09-24** (F10, decision 24) |
 | **Portfolio risk & regime intelligence** | Correlation/factor exposure, drawdown scenarios, rebalancing flags, populating `portfolio_risk_snapshots` | Builds naturally on Sprint 3's valuation numbers, now also Sprint 4's verdicts |
 | **Investment thesis tracking over time** | Persist reconciliation verdicts into `investment_theses`/`valuation_cases` (currently unused tables) and flag when new research/financials suggest an invalidation trigger fired | Sprint 4's verdict schema now exists to build this on top of — the natural next step once real runs validate the schema |

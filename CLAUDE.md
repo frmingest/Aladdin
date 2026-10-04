@@ -4,7 +4,7 @@ Aladdin is Faiz's personal, investment-grade portfolio analysis webapp, being re
 slate (2026-09-21) as a single-focus Warren Buffett / Charlie Munger equity advisor: FastAPI +
 Postgres (Supabase) backend, React/Vite frontend, an evidence-first LLM analysis pipeline (Google AI
 Studio/Gemini + Mistral), deployed to Railway. It handles Faiz's real brokerage holdings and real
-financial documents. See the rebuild sprint plan (Claude project doc
+financial documents. See the rebuild sprint plan (repo `docs/buffett-munger-rebuild-sprint-plan-2026-09-21.md`; Claude project copy
 `claude/buffett-munger-rebuild-sprint-plan-2026-09-21.md`) for the phased build order and the
 analyst prompt ("the Brain") this app exists to operationalize.
 
@@ -37,9 +37,10 @@ Faiz can actually trust with real money):
 
 ## Database
 
-The Supabase database is **not being reset** as part of this rebuild (explicit decision,
-2026-09-21) — it still holds the pre-rebuild schema and real data, including legacy non-equity
-(precious metals/collectibles) rows and columns (e.g. `holdings.asset_class`,
+The Supabase database was **wiped once, at Faiz's explicit request** (migration `e5f6a7b8c9d0`,
+2026-09-21), which superseded the earlier "not being reset" decision. The wipe emptied every table but
+kept the schema, so it still holds the pre-rebuild legacy tables and columns, including legacy non-equity
+(collectibles) columns (e.g. `holdings.asset_class`,
 `portfolio_positions.acquired_at`) from the app's previous multi-asset design. The new equity-only
 app builds fresh models against the equity-relevant tables and simply never queries the legacy
 non-equity ones. Don't write a migration that drops or alters legacy tables/columns without an

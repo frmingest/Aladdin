@@ -1,5 +1,7 @@
 # LLM usage ledger — Sprint 15 #1 (F27), 2026-09-28
 
+> **Status update 2026-10-04 (housekeeping review):** the code described here is merged to `main` (checked in the repo at `07cf9fb`). The "not merged / PR open" wording below was true when written and is kept as history. Whether it is deployed or behaves correctly live was not checked in that review.
+
 **Status:** written and tested on branch `feature/llm-usage-ledger`, PR #10 open for review. Not merged, not deployed, not checked live.
 
 ## Why

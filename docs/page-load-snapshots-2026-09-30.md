@@ -1,6 +1,6 @@
 # Page-load fix: timing header, stored snapshots, no live price fetch in GET (2026-09-30)
 
-Built from the recommendation in [page-load-options-2026-09-30.md](page-load-options-2026-09-30.md)
+Built from the recommendation in the 2026-09-30 page-load options write-up (removed 2026-10-04, in git history; its diagnosis was superseded by [the root cause](page-load-root-cause-2026-10-03.md))
 (options D + B + A, plus the F region check as a checklist below).
 
 ## What changed

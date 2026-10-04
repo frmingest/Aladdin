@@ -4,7 +4,7 @@ import Layout from "./components/Layout";
 
 /**
  * Route-level code-splitting (2026-09-28, page-load-performance
- * investigation — claude/page-load-performance-investigation-2026-09-28.md
+ * investigation (write-up since removed; see docs/page-load-root-cause-2026-10-03.md)
  * P0 fix #2): every page used to be a static import here, so opening any
  * one page downloaded and parsed all 14 pages' code (and their
  * dependencies, e.g. `recharts` used by only a handful) before the first

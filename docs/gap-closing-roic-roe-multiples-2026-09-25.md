@@ -1,5 +1,7 @@
 # Closing the "Not available" gaps: ROIC, ROE and market multiples (2026-09-25)
 
+> **Status update 2026-10-04:** this proposal was built as [roic-roe-multiples-sprint9](roic-roe-multiples-sprint9-2026-09-25.md) and is merged. Read that doc for what exists; this one is kept as the research record.
+
 Faiz asked what Aladdin is missing to fill the **Not available** column on a holding's metrics panel
 (ROIC, ROE, P/E, P/B, P/S, EV/EBITDA, enterprise value — seen on Vår Energi and Salmon Evolution)
 and for the best free, robust way to get it.

@@ -1,5 +1,7 @@
 # Fund look-through valuation via the Xtrackers feed (F30) — 2026-09-29
 
+> **Status update 2026-10-04 (housekeeping review):** the code described here is merged to `main` (checked in the repo at `07cf9fb`). The "not merged / PR open" wording below was true when written and is kept as history. Whether it is deployed or behaves correctly live was not checked in that review.
+
 **Status:** written and tested on branch `feature/fund-look-through` (built on `main` incl. the merged valuation guardrails). Not merged, not deployed, **not run against the live Yahoo/DWS from the build sandbox** (see "Verified vs not"). One additive migration: `m1e3f4a5b6c7`.
 
 ## Problem

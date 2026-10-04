@@ -1,5 +1,7 @@
 # Sprint 6 — Evidence quality: uploaded document text in the analysis
 
+> **Status update 2026-10-04 (housekeeping review):** the code described here is merged to `main` (checked in the repo at `07cf9fb`). The "not merged / PR open" wording below was true when written and is kept as history. Whether it is deployed or behaves correctly live was not checked in that review.
+
 **Date:** 2026-09-24 · **Commit:** `71ec23b` (committed locally, **not pushed, not deployed**)
 **Decision 22:** passages chosen by deterministic keyword + section rules, ~4,000-token budget
 

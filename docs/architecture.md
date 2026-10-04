@@ -117,7 +117,7 @@ backend/app/
   main.py        FastAPI app, middleware, router registration, lifespan (starts the macro scheduler)
   security.py    ApiKeyMiddleware: X-API-Key must equal APP_AUTH_TOKEN (only /health is exempt)
   timing.py      Server-Timing / X-DB-Queries headers on every response
-  api/           19 routers, thin: validate, call a service, shape the response
+  api/           20 routers, thin: validate, call a service, shape the response
   services/      business logic (the only place that orchestrates providers + DB)
   providers/     adapters for every outside system, behind interfaces in providers/base.py
   domain/        pure, versioned definitions: schemas, assumptions, series catalogue, sectors
@@ -141,6 +141,7 @@ backend/app/
 | `funds` | Fund facts, look-through holdings (Xtrackers, L&G), constituent multiples |
 | `macro`, `precious_metals`, `watchlist`, `journal` | Macro series; physical coins; buy-below list; decision journal |
 | `system`, `usage`, `settings` | Status page, LLM usage ledger, demo-mode toggle |
+| `game` | Read-only `GET /game/state` (Fortress) and `GET /game/siege` (Siege Simulator). The Fortress pages write only through existing endpoints (account cash, watchlist buy-below and refresh, queue analyses) |
 
 ### Services (by area)
 
@@ -154,6 +155,8 @@ backend/app/
 | `funds/`, `precious_metals/`, `portfolio_import/` | Fund facts and look-through valuation; coins at spot; broker CSV |
 | `snapshots`, `snapshot_refresh` | Stored page snapshots so slow pages load from the database |
 | `llm_ledger`, `system_status`, `settings/` | LLM usage ledger and daily budget, status page, demo mode guard |
+| `game/` | Fortress state, temperament, hand-written advisor lines, Siege Simulator. Code only, no LLM or market call; see [game-mode-fortress](game-mode-fortress-2026-10-01.md) |
+| `warmup` | Worker warm-up of cold holdings and the keep-warm job (PC worker loop, `worker/runner.py`) |
 
 ### Providers
 
@@ -206,7 +209,7 @@ snapshot with a Refresh button.
 
 ## 6. Data model
 
-Alembic has one head (`o1a6b7c8d9e0`). Tables by group:
+Alembic has one head (`q1c8d9e0f1a2`). Tables by group:
 
 | Group | Tables |
 |---|---|
@@ -217,7 +220,7 @@ Alembic has one head (`o1a6b7c8d9e0`). Tables by group:
 | Research and market data | `research_runs`, `research_items`, `market_observations`, `fx_observations`, `share_count_observations`, `risk_free_rate_observations`, `price_history_observations`, `macro_observations`, `macro_series_status` |
 | Thesis, risk, watchlist | `thesis_tripwires`, `portfolio_risk_snapshots`, `watchlist_items`, `decision_journal_entries` |
 | Speed and settings | `computed_snapshots`, `app_settings` |
-| Legacy (pre-rebuild, never queried) | `analysis_runs`, `holding_analyses`, `factor_assessments`, `evidence_references` |
+| Legacy (pre-rebuild, never queried; all rows removed by the 2026-09-21 wipe migration `e5f6a7b8c9d0`, tables kept) | `analysis_runs`, `holding_analyses`, `factor_assessments`, `evidence_references` |
 
 ---
 
@@ -247,6 +250,7 @@ React 18 + TypeScript, Vite, Tailwind, Recharts, React Router. Pages are lazy-lo
 | Risk and returns | Portfolio risk, Performance, Precious metals |
 | Context | Macro, Sector |
 | Operations | System status, Settings |
+| Game mode | Fortress (`/fortress`), Siege Simulator (`/fortress/siege`), Marketplace and per-holding Market store (`/fortress/marketplace`) |
 
 Shared pieces: `src/lib/api.ts` (typed client, sends `X-API-Key`), `components/DocumentReader.tsx`
 and `StatementsPane.tsx` (split-view reader), `InfoTooltip` + `lib/glossary.ts` (plain-language

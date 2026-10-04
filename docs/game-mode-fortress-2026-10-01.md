@@ -1,5 +1,7 @@
 # Game mode ("Fortress") — feasibility and plan — 2026-10-01
 
+> **Status update 2026-10-04 (housekeeping review):** the code described here is merged to `main` (checked in the repo at `07cf9fb`). The "not merged / PR open" wording below was true when written and is kept as history. Whether it is deployed or behaves correctly live was not checked in that review.
+
 Status: **G1–G7a are merged to `main` (PRs #23, #25, #27 carrying G3 + G4, #28, #29, #30 art pass, #31 quick-look fix), not yet checked live. G7b (advisors, study lamp and clock, optional sound) is built on `feature/game-mode-g7b-advisors`, PR open.** F33 in `PROGRESS.md`.
 
 ## Why

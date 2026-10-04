@@ -1,5 +1,7 @@
 # Sprint 23: Hype and stress (game mode G12 + G13) — 2026-10-03
 
+> **Status update 2026-10-04 (housekeeping review):** the code described here is merged to `main` (checked in the repo at `07cf9fb`). The "not merged / PR open" wording below was true when written and is kept as history. Whether it is deployed or behaves correctly live was not checked in that review.
+
 Status: **built, PR open, not merged, not deployed.** Faiz said "start developing next phase of the game mode", so
 Sprint 23 of the [proposed plan](game-mode-next-ideas-2026-10-03.md) was started (the earlier "frozen until the
 walkthrough" note is superseded by that instruction). Branch `feature/game-mode-sprint-23-hype-and-stress`, off `main` `5e0a7ae`.

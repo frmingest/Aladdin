@@ -2,7 +2,7 @@
 
 One place to answer: **"Is this thing on screen from an LLM, from plain code, or from me?"**
 
-*Written 2026-10-01 against the code on `feature/game-mode-g7b-advisors`. It complements
+*Written 2026-10-01; refreshed 2026-10-04 against `main` (`07cf9fb`). It complements
 [llm-and-technology-overview.md](llm-and-technology-overview.md), which is organised by LLM call
 (provider, local vs API, prompts, quotas). This doc is organised by **output**: each thing you see,
 and where it comes from. Update it when an output starts or stops using an LLM.*
@@ -69,10 +69,12 @@ old runs stay traceable).
 | Temperament meter | Code, from journal, tripwires and snapshot changes (`services/game/temperament.py`) |
 | Advisor lines (the Oracle, the Partner) | **Hand-written** text chosen by fixed rules (`domain/game_mapping/advisor_lines_v1.py`, `services/game/advisors.py`). No model writes them. Not quotations from Buffett or Munger |
 | **Moat width** | Mapped by code from the **LLM's stored moat rating**. This is the one game element that is LLM judgement underneath |
+| **Siege Simulator** (what a stress scenario does to your walls) | Code: existing stress results re-presented (`services/game/siege.py`, `siege_view.py`) |
+| **Hype Booth, Sal the sales rep, Genie** | Front-end rules over stored numbers (`lib/hype.ts`, `lib/salesRep.ts`, `lib/genie.ts`). Hand-written lines, no model |
 | Ambience (rain, clock, sound) | Front-end only |
 
-Game mode is read-only: it never changes an analysis, score or stored row, and it never calls an
-LLM or a market provider (`services/game/state.py`).
+The game backend (`GET /game/state`, `GET /game/siege`) is read-only: it never changes an analysis, score or stored row, and never calls an
+LLM or a market provider (`services/game/`). The Fortress pages themselves can write, but only by calling existing endpoints on your action: edit account cash (vault), set a watchlist buy-below price or refresh the watchlist (Marketplace), and queue analyses (Magic Lamp).
 
 ---
 
