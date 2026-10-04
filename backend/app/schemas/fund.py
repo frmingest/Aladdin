@@ -146,4 +146,6 @@ class LookThroughRefreshOut(BaseModel):
     priced: int
     unpriced: int
     no_isin: int
+    newly_linked: int = 0
+    via_link: int = 0
     refreshed_at: datetime

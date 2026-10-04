@@ -197,3 +197,42 @@ def test_refresh_refuses_non_funds_and_funds_without_holdings(client, db_session
         assert response.status_code == 422 and "no imported holdings" in response.json()["detail"]
     finally:
         _clear()
+
+
+def test_a_fund_list_without_isins_is_priced_through_linked_holdings(client, db_session):
+    """Heimdal Utbytte N (2026-10-04): 45 lines, no ISINs, imported before most of the
+    companies were on the watchlist. Refresh links the lines to the holdings added since
+    and looks them up by that holding's ticker; a line with no ISIN and no link stays
+    uncovered. No ISIN is ever guessed."""
+    from app.services.valuation.fund_look_through import load_constituents
+
+    fund = client.post("/holdings", json={"ticker": "HEIM", "name": "Heimdal Utbytte N", "trading_currency": "NOK"}).json()["id"]
+    holding = db_session.get(Holding, fund)
+    holding.asset_class_raw = "equity_fund"
+    db_session.commit()
+    csv_bytes = b"Name,Weight %\nKongsberg Gruppen,5.12\nDNB Bank,5.02\n"
+    imp = client.post(
+        f"/funds/{fund}/holdings/import", files={"file": ("heimdal.csv", csv_bytes, "text/csv")},
+        data={"as_of_date": "2026-09-25"},
+    )
+    assert imp.status_code == 201, imp.text
+    assert imp.json()["linked"] == 0
+
+    # The company is added to the app AFTER the fund list was imported.
+    assert client.post("/holdings", json={"ticker": "KOG.OL", "name": "Kongsberg Gruppen ASA", "trading_currency": "NOK"}).status_code == 201
+
+    _override({"KOG.OL": "20"})
+    try:
+        refresh = client.post(f"/funds/{fund}/look-through/refresh")
+    finally:
+        _clear()
+    assert refresh.status_code == 200, refresh.text
+    body = refresh.json()
+    assert (body["lines"], body["priced"], body["no_isin"]) == (2, 1, 1)
+    assert body["newly_linked"] == 1 and body["via_link"] == 1
+
+    row = db_session.query(FundConstituentMultiple).one()
+    assert row.isin is None and row.lookup_key == "KOG.OL" and row.trailing_pe == D("20")
+    constituents, _oldest, unrefreshed = load_constituents(db_session, holding)
+    assert sorted((w, pe) for w, pe in constituents if pe is not None) == [(D("5.12"), D("20"))]
+    assert unrefreshed == 1  # DNB Bank: no ISIN, no link

@@ -414,4 +414,5 @@ def refresh_look_through(
     return LookThroughRefreshOut(
         lines=result.lines, priced=result.priced, unpriced=result.unpriced,
         no_isin=result.no_isin, refreshed_at=result.refreshed_at,
+        newly_linked=result.newly_linked, via_link=result.via_link,
     )
