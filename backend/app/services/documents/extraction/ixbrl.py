@@ -94,6 +94,18 @@ _ESEF_PREFERRED_CONCEPTS: dict[str, tuple[str, ...]] = {
 # expense). Cash interest includes capitalised interest, i.e. it is the
 # conservative (larger) choice for interest coverage.
 _PROXY_CONCEPTS: dict[str, tuple[str, ...]] = {
+    # D&A for filers with no "DepreciationAndAmortisationExpense" line
+    # (found 2026-10-04 in the real FY2025 filings): the cash-flow add-back
+    # (Subsea 7), then depreciation alone (Aker BP tags DepreciationExpense;
+    # any amortisation is then not included, hence "proxy").
+    "depreciation_and_amortization": (
+        "ifrs-full:AdjustmentsForDepreciationAndAmortisationExpense",
+        "ifrs-full:DepreciationExpense",
+        "ifrs-full:AdjustmentsForDepreciationExpense",
+    ),
+    # Subsea 7 tags cash generated from operations (before tax and interest
+    # paid) and no "...OperatingActivities" total, so this overstates a bit.
+    "operating_cash_flow": ("ifrs-full:CashFlowsFromUsedInOperations",),
     "interest_expense": (
         "ifrs-full:InterestPaidClassifiedAsOperatingActivities",
         "ifrs-full:InterestPaidClassifiedAsFinancingActivities",
@@ -124,6 +136,14 @@ _CAPEX_COMPONENTS = (
     "ifrs-full:PurchaseOfPropertyPlantAndEquipmentClassifiedAsInvestingActivities",
     "ifrs-full:PurchaseOfExplorationAndEvaluationAssets",
     "ifrs-full:PurchaseOfIntangibleAssetsClassifiedAsInvestingActivities",
+)
+# Company-extension capex lines (Subsea 7: subsea7sa:PurchasesOfPropertyPlantAnd
+# EquipmentAndIntangibleAssets..., Orkla: ORK:PurchaseOfPropertyPlantAnd
+# EquipmentAndPurchaseOfIntangibleAssets...). A name pattern, like the
+# owner's-view lines below, because the prefix and exact wording are the
+# company's own.
+_CAPEX_EXTENSION = re.compile(
+    r"^Purchases?Of\w*(PropertyPlantAndEquipment|IntangibleAssets)\w*ClassifiedAsInvestingActivities$"
 )
 
 # EBITDA inputs (derived in code, never read from a company's own
@@ -451,6 +471,11 @@ def _resolve_metric(
                 parts[0].unit,
                 parts[0].page or None,
             )
+        # Only reached when no standard capex concept is tagged, so a filer
+        # that already extracts correctly is never changed by this.
+        extension = _capex_extension(fy, resolved)
+        if extension is not None:
+            return extension[:3] + (extension[4], extension[5])
         # fall through to the generic concept list
 
     biological = next((get(c) for c in _BIOLOGICAL_FAIR_VALUE if get(c) is not None), None)
@@ -535,6 +560,43 @@ def _resolve_metric(
     if proxy is not None:
         return proxy.value, PROXY_CONFIDENCE, f"proxy: {proxy.concept}", proxy.unit, proxy.page or None
     return None
+
+
+def _capex_extension(
+    fy: str, resolved: dict[tuple[str, str], TaggedFact]
+) -> tuple[Decimal, float, str, str, str | None, int | None] | None:
+    """Capex from company-extension cash-flow lines. (value, confidence,
+    source, kind, unit, page) or None. kind is "combined" when one line buys
+    both PP&E and intangibles (taken as-is, never added to its own parts),
+    else "parts". Ambiguous (several combined lines) is not resolved."""
+    found = sorted(
+        (
+            fact
+            for (concept, year), fact in resolved.items()
+            if year == fy
+            and not concept.startswith("ifrs-full:")
+            and _CAPEX_EXTENSION.match(concept.split(":", 1)[-1])
+            and fact.value != 0
+        ),
+        key=lambda f: f.concept,
+    )
+    if not found or len({f.unit for f in found}) != 1:
+        return None
+
+    def both(fact: TaggedFact) -> bool:
+        name = fact.concept.split(":", 1)[-1]
+        return "PropertyPlantAndEquipment" in name and "IntangibleAssets" in name
+
+    combined = [f for f in found if both(f)]
+    if len(combined) == 1:
+        only = combined[0]
+        return _positive(only), IXBRL_CONFIDENCE, only.concept, "combined", only.unit, only.page or None
+    if combined:
+        return None
+    total = sum((_positive(f) for f in found), Decimal(0))
+    source = found[0].concept if len(found) == 1 else "derived: " + " + ".join(f.concept for f in found)
+    confidence = IXBRL_CONFIDENCE if len(found) == 1 else DERIVED_CONFIDENCE
+    return total, confidence, source, "parts", found[0].unit, found[0].page or None
 
 
 def _hybrid_capital(

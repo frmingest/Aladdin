@@ -366,3 +366,128 @@ def test_minorities_and_raw_materials_are_extracted():
     facts = _facts(extract_ixbrl(_tax_filing()))
     assert facts[("minority_interests", "FY2025")].value == Decimal(12000000)
     assert facts[("raw_materials_used", "FY2025")].value == Decimal(200900000)
+
+
+# --- 2026-10-04: concepts found in the real Aker BP / Subsea 7 / Orkla FY2025
+# filings that the extractor did not list. Invented numbers, same concept names.
+
+_NO_DA_INCOME = (
+    f"<tr><td>Revenue</td><td>{_nf('ifrs-full:Revenue', 'fy25', '8 095.6')}</td></tr>"
+    f"<tr><td>Profit</td><td>{_nf('ifrs-full:ProfitLoss', 'fy25', '132.3')}</td></tr>"
+)
+
+
+def _with(rows: str):
+    return extract_ixbrl(_filing(_NO_DA_INCOME + rows, BALANCE))
+
+
+def _source(result, label: str) -> str:
+    return result.details["ixbrl"]["fact_sources"][label]
+
+
+def test_depreciation_expense_alone_is_a_labelled_proxy_for_da():
+    # Aker BP tags ifrs-full:DepreciationExpense, not ...AndAmortisationExpense.
+    result = _with(f"<tr><td>Depreciation</td><td>{_nf('ifrs-full:DepreciationExpense', 'fy25', '2 574.0')}</td></tr>")
+    fact = _facts(result)[("depreciation_and_amortization", "FY2025")]
+    assert fact.value == Decimal(2574000000)
+    assert fact.confidence < 1.0
+    assert _source(result, "FY2025 depreciation_and_amortization").startswith("proxy:")
+
+
+def test_cash_flow_da_add_back_is_used_when_no_income_statement_da_line():
+    # Subsea 7: only the cash-flow add-back is tagged.
+    rows = (
+        f"<tr><td>D and A add-back</td><td>{_nf('ifrs-full:AdjustmentsForDepreciationAndAmortisationExpense', 'fy25', '679.2')}</td></tr>"
+        f"<tr><td>Depreciation add-back</td><td>{_nf('ifrs-full:AdjustmentsForDepreciationExpense', 'fy25', '500.0')}</td></tr>"
+    )
+    result = _with(rows)
+    fact = _facts(result)[("depreciation_and_amortization", "FY2025")]
+    assert fact.value == Decimal(679200000)  # the full D&A add-back beats depreciation alone
+    assert _source(result, "FY2025 depreciation_and_amortization").startswith("proxy: ifrs-full:AdjustmentsForDepreciationAndAmortisation")
+
+
+def test_a_real_da_line_still_wins_over_the_proxies():
+    rows = f"<tr><td>Depreciation</td><td>{_nf('ifrs-full:DepreciationExpense', 'fy25', '2 574.0')}</td></tr>"
+    fact = _facts(extract_ixbrl(_filing(INCOME + rows, BALANCE)))[("depreciation_and_amortization", "FY2025")]
+    assert fact.value == Decimal(2710100000)
+    assert fact.confidence == 1.0
+
+
+def test_cash_generated_from_operations_is_a_labelled_proxy_for_operating_cash_flow():
+    rows = f"<tr><td>Cash from ops</td><td>{_nf('ifrs-full:CashFlowsFromUsedInOperations', 'fy25', '1 200.0')}</td></tr>"
+    result = _with(rows)
+    fact = _facts(result)[("operating_cash_flow", "FY2025")]
+    assert fact.value == Decimal(1200000000)
+    assert fact.confidence < 1.0
+    assert _source(result, "FY2025 operating_cash_flow").startswith("proxy:")
+
+
+def test_operating_activities_total_beats_the_proxy():
+    rows = (
+        f"<tr><td>Ops total</td><td>{_nf('ifrs-full:CashFlowsFromUsedInOperatingActivities', 'fy25', '900.0')}</td></tr>"
+        f"<tr><td>Cash from ops</td><td>{_nf('ifrs-full:CashFlowsFromUsedInOperations', 'fy25', '1 200.0')}</td></tr>"
+    )
+    fact = _facts(_with(rows))[("operating_cash_flow", "FY2025")]
+    assert fact.value == Decimal(900000000)
+    assert fact.confidence == 1.0
+
+
+def test_company_extension_combined_capex_line_is_taken_as_is():
+    # Subsea 7 and Orkla each tag one combined PP&E + intangibles line.
+    rows = (
+        "<tr><td>Capex</td><td>"
+        + _nf("ACME:PurchasesOfPropertyPlantAndEquipmentAndIntangibleAssetsClassifiedAsInvestingActivities", "fy25", "281.0")
+        + "</td></tr>"
+    )
+    result = _with(rows)
+    fact = _facts(result)[("capital_expenditures", "FY2025")]
+    assert fact.value == Decimal(281000000)
+    assert "PurchasesOfPropertyPlantAndEquipmentAndIntangibleAssets" in _source(result, "FY2025 capital_expenditures")
+
+    orkla = (
+        "<tr><td>Capex</td><td>"
+        + _nf(
+            "ACME:PurchaseOfPropertyPlantAndEquipmentAndPurchaseOfIntangibleAssetsClassifiedAsInvestingActivities",
+            "fy25",
+            "3 100.0",
+        )
+        + "</td></tr>"
+    )
+    assert _facts(_with(orkla))[("capital_expenditures", "FY2025")].value == Decimal(3100000000)
+
+
+def test_single_asset_extension_capex_lines_are_summed_and_marked_derived():
+    rows = (
+        f"<tr><td>PPE</td><td>{_nf('ACME:PurchasesOfPropertyPlantAndEquipmentClassifiedAsInvestingActivities', 'fy25', '200.0')}</td></tr>"
+        f"<tr><td>Intangibles</td><td>{_nf('ACME:PurchasesOfIntangibleAssetsClassifiedAsInvestingActivities', 'fy25', '50.0')}</td></tr>"
+    )
+    result = _with(rows)
+    fact = _facts(result)[("capital_expenditures", "FY2025")]
+    assert fact.value == Decimal(250000000)
+    assert fact.confidence < 1.0
+    assert _source(result, "FY2025 capital_expenditures").startswith("derived:")
+
+
+def test_a_combined_extension_line_is_never_added_to_its_own_parts():
+    rows = (
+        f"<tr><td>Both</td><td>{_nf('ACME:PurchasesOfPropertyPlantAndEquipmentAndIntangibleAssetsClassifiedAsInvestingActivities', 'fy25', '250.0')}</td></tr>"
+        f"<tr><td>PPE</td><td>{_nf('ACME:PurchasesOfPropertyPlantAndEquipmentClassifiedAsInvestingActivities', 'fy25', '200.0')}</td></tr>"
+    )
+    assert _facts(_with(rows))[("capital_expenditures", "FY2025")].value == Decimal(250000000)
+
+
+def test_two_different_combined_extension_lines_are_not_guessed():
+    rows = (
+        f"<tr><td>A</td><td>{_nf('ACME:PurchasesOfPropertyPlantAndEquipmentAndIntangibleAssetsClassifiedAsInvestingActivities', 'fy25', '250.0')}</td></tr>"
+        f"<tr><td>B</td><td>{_nf('ACME:PurchaseOfPropertyPlantAndEquipmentAndPurchaseOfIntangibleAssetsClassifiedAsInvestingActivities', 'fy25', '260.0')}</td></tr>"
+    )
+    assert ("capital_expenditures", "FY2025") not in _facts(_with(rows))
+
+
+def test_standard_capex_concepts_still_win_over_an_extension_line():
+    # A filer that already extracts correctly must not change.
+    rows = (
+        f"<tr><td>PPE</td><td>{_nf('ifrs-full:PurchaseOfPropertyPlantAndEquipmentClassifiedAsInvestingActivities', 'fy25', '2 456.6')}</td></tr>"
+        f"<tr><td>Own</td><td>{_nf('ACME:PurchasesOfPropertyPlantAndEquipmentAndIntangibleAssetsClassifiedAsInvestingActivities', 'fy25', '9 999.0')}</td></tr>"
+    )
+    assert _facts(_with(rows))[("capital_expenditures", "FY2025")].value == Decimal(2456600000)
