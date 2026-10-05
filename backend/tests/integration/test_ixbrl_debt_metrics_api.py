@@ -88,5 +88,5 @@ def test_missing_inputs_are_listed_as_a_data_coverage_warning(client):
 
     coverage = [w for w in body["warnings"] if w.startswith("Data coverage FY2025")]
     assert len(coverage) == 1
-    assert "still missing:" in coverage[0] and "share count" in coverage[0]
+    assert "still missing:" in coverage[0] and "earnings per share" in coverage[0]
     assert "revenue" not in coverage[0].split("still missing:")[1]  # extracted, so not listed as missing

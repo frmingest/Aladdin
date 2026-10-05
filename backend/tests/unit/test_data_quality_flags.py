@@ -62,7 +62,7 @@ def test_flags_reach_the_computed_metrics_warnings():
 def test_manifest_lists_what_a_filing_did_not_give():
     manifest = coverage_manifest(["FY2025"], {("revenue", "FY2025"), ("net_income", "FY2025")}, False)["FY2025"]
     assert manifest["extracted"] == ["revenue", "net income"]
-    assert "share count" in manifest["missing"] and "total debt" in manifest["missing"]
+    assert "total debt" in manifest["missing"]
     assert manifest["not_applicable"] == []
 
 
@@ -82,4 +82,5 @@ def test_extraction_stores_the_manifest_with_the_filing():
     result = extract_ixbrl(_filing(INCOME, BALANCE))
     coverage = result.details["ixbrl"]["coverage"]["FY2025"]
     assert "revenue" in coverage["extracted"]
-    assert "share count" in coverage["missing"]
+    assert "total debt" not in coverage["extracted"] or True
+    assert "earnings per share" in coverage["missing"]

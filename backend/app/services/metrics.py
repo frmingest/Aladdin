@@ -161,6 +161,7 @@ def owner_basis_facts(facts: dict[str, Decimal]) -> tuple[dict[str, Decimal], st
 # to mislead (2026-10-05). Each is a plain sentence naming the figure and why.
 DISCONTINUED_SHARE_FLAG = Decimal("0.10")
 HIGH_TAX_RATE_FLAG = Decimal("0.60")
+IMPAIRMENT_FLAG = Decimal("0.10")
 
 
 def data_quality_warnings(
@@ -197,6 +198,12 @@ def data_quality_warnings(
         warnings.append(
             f"Net income ({_fmt(profit)}) is above operating profit ({_fmt(ebit)}): it includes "
             "non-operating gains (associates, financial income, tax credits) that may not recur"
+        )
+    impairment = reported.get("impairment_loss")
+    if ebit and impairment and ebit > ZERO and impairment > ebit * IMPAIRMENT_FLAG:
+        warnings.append(
+            f"Impairment of {_fmt(impairment)} is {impairment / ebit * 100:.0f}% of operating profit: "
+            "EBIT is after a non-cash write-down (EBITDA adds it back)"
         )
     pre_tax, tax = basis.get("income_before_tax"), basis.get("income_tax_expense")
     if pre_tax and pre_tax > ZERO and tax is not None:

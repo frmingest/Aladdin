@@ -69,6 +69,8 @@ _ESEF_FALLBACK_CONCEPTS: dict[str, tuple[str, ...]] = {
     "eps_basic": ("ifrs-full:BasicAndDilutedEarningsLossPerShare",),
     # Profit walk: a sold business is in the reported profit once, so the
     # measures an owner values the company on must leave it out.
+    # Signed as tagged: positive = impairment loss, negative = reversal.
+    "impairment_loss": ("ifrs-full:ImpairmentLossReversalOfImpairmentLossRecognisedInProfitOrLoss",),
     "profit_continuing_operations": (
         "us-gaap:IncomeLossFromContinuingOperations",
         "ifrs-full:ProfitLossFromContinuingOperations",
@@ -219,6 +221,9 @@ _OWNER_VIEW_EXTENSION: dict[str, re.Pattern] = {
         r"(Dividend|Distribution|Coupon|Interest)\w*(Hybrid|Perpetual)\w*ClassifiedAsFinancingActivities$"
     ),
 }
+# A company-extension financing line for the interest part of lease payments.
+_LEASE_INTEREST = re.compile(r"^(?=\w*Lease)(?=\w*Interest)\w*ClassifiedAsFinancingActivities$")
+
 # Names that are not an outflow to the owner even though the pattern above
 # matches (issues, redemptions, borrowings repaid). "Repayment" is allowed for
 # leases: that IS how many companies name the principal of a lease payment.
@@ -278,7 +283,6 @@ CORE_INPUTS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("operating cash flow", ("operating_cash_flow",)),
     ("capital expenditure", ("capital_expenditures",)),
     ("interest expense", ("interest_expense",)),
-    ("share count", ("shares_outstanding",)),
     ("earnings per share", ("eps_basic",)),
 )
 # A bank has no debt or EBITDA in the industrial sense: not missing, not applicable.
@@ -805,10 +809,14 @@ def _resolve_metric(
             return None
         combined_da = get(_DA_WITH_IMPAIRMENT)
         pure_da = get(_PURE_DA)
+        proxy_da = None
         if combined_da is not None:
             addbacks = [combined_da]
             value = operating.value + _positive(combined_da)
-        elif pure_da is not None:
+        elif pure_da is not None or (
+            pure_da := next((get(c) for c in _PROXY_CONCEPTS["depreciation_and_amortization"] if get(c)), None)
+        ) is not None:
+            proxy_da = pure_da if get(_PURE_DA) is None else None
             addbacks = [pure_da]
             value = operating.value + _positive(pure_da)
             impairment = get(_IMPAIRMENT)
@@ -825,6 +833,9 @@ def _resolve_metric(
         if biological is not None and biological.unit == operating.unit:
             value -= biological.value
             source += f" - {biological.concept}"
+        if proxy_da is not None:
+            # D&A itself is a stand-in (cash-flow add-back, depreciation alone).
+            return (value, PROXY_CONFIDENCE, "proxy: " + source.removeprefix("derived: "), operating.unit, operating.page or None)
         return (value, DERIVED_CONFIDENCE, source, operating.unit, operating.page or None)
 
     if metric == "total_debt":
@@ -845,7 +856,44 @@ def _resolve_metric(
     concepts = CONCEPT_MAP.get(metric, ())
     chosen = next((get(c) for c in concepts if get(c) is not None), None)
     if chosen is not None:
+        if metric == "shares_outstanding" and "WeightedAverage" in chosen.concept:
+            # Not the year-end count: labelled so nothing mistakes it for one.
+            return chosen.value, PROXY_CONFIDENCE, f"proxy: {chosen.concept}", chosen.unit, chosen.page or None
         return chosen.value, IXBRL_CONFIDENCE, chosen.concept, chosen.unit, chosen.page or None
+
+    if metric == "income_before_tax":
+        # Orkla tags profit before tax only as a company-extension line.
+        ext = _tagged_by_local_name(fy, resolved, ("ProfitLossBeforeTaxContinuingOperations",))
+        if ext is not None:
+            return ext.value, DERIVED_CONFIDENCE, ext.concept, ext.unit, ext.page or None
+
+    if metric == "total_liabilities":
+        # Not tagged (Orkla): the balance sheet identity gives it exactly.
+        assets, equity = get("ifrs-full:Assets"), get("ifrs-full:Equity")
+        if assets is not None and equity is not None and assets.unit == equity.unit:
+            return (
+                assets.value - equity.value,
+                DERIVED_CONFIDENCE,
+                "derived: ifrs-full:Assets - ifrs-full:Equity",
+                assets.unit,
+                assets.page or None,
+            )
+
+    if metric == "cost_of_goods_sold":
+        # No cost-of-sales line (Subsea 7 tags operating expense and a gross
+        # profit): revenue less the tagged gross profit IS the cost of sales.
+        gross = get("ifrs-full:GrossProfit") or _tagged_by_local_name(
+            fy, resolved, (), prefix="GrossProfit"
+        )
+        revenue = _resolve_metric("revenue", fy, resolved)
+        if gross is not None and revenue is not None and revenue[3] == gross.unit and revenue[0] >= gross.value:
+            return (
+                revenue[0] - gross.value,
+                DERIVED_CONFIDENCE,
+                f"derived: revenue - {gross.concept}",
+                gross.unit,
+                gross.page or None,
+            )
 
     if metric == "profit_continuing_operations":
         # No continuing-operations line tagged: total profit less the
@@ -878,6 +926,21 @@ def _resolve_metric(
     if proxy is not None:
         return proxy.value, PROXY_CONFIDENCE, f"proxy: {proxy.concept}", proxy.unit, proxy.page or None
     return None
+
+
+def _tagged_by_local_name(
+    fy: str, resolved: dict[tuple[str, str], TaggedFact], names: tuple[str, ...], *, prefix: str = ""
+) -> TaggedFact | None:
+    """A company-extension (non ifrs-full) fact by its local name, or by a
+    name prefix; None when absent or when two different values compete."""
+    found = [
+        fact
+        for (concept, year), fact in sorted(resolved.items())
+        if year == fy
+        and not concept.startswith("ifrs-full:")
+        and (concept.split(":", 1)[-1] in names or (prefix and concept.split(":", 1)[-1].startswith(prefix)))
+    ]
+    return found[0] if found and len({f.value for f in found}) == 1 else None
 
 
 def _capex_extension(
@@ -984,7 +1047,25 @@ def _owner_view_outflow(
         (resolved[(c, fy)] for c in _OWNER_VIEW_STANDARD[metric] if (c, fy) in resolved), None
     )
     if standard is not None:
-        return _positive(standard), IXBRL_CONFIDENCE, standard.concept, standard.unit, standard.page or None
+        value, source, unit, page = _positive(standard), standard.concept, standard.unit, standard.page or None
+        confidence = IXBRL_CONFIDENCE
+        if metric == "interest_paid_financing":
+            # Interest on leases is its own financing line next to the standard
+            # "interest paid" one (Subsea 7: 66.3 + 25.1): both leave the company.
+            extra = [
+                f
+                for (concept, year), f in sorted(resolved.items())
+                if year == fy
+                and not concept.startswith("ifrs-full:")
+                and _LEASE_INTEREST.search(concept.split(":", 1)[-1])
+                and f.unit == standard.unit
+                and f.value != 0
+            ]
+            if extra:
+                value += sum((_positive(f) for f in extra), Decimal(0))
+                source = "derived: " + " + ".join([standard.concept, *(f.concept for f in extra)])
+                confidence = DERIVED_CONFIDENCE
+        return value, confidence, source, unit, page
     pattern = _OWNER_VIEW_EXTENSION[metric]
     parts = sorted(
         (
@@ -1055,25 +1136,43 @@ _CASH_FLOW_TOTALS = (
 )
 _FX_ON_CASH = "ifrs-full:EffectOfExchangeRateChangesOnCashAndCashEquivalents"
 _CASH = "ifrs-full:CashAndCashEquivalents"
+_CASH_CHANGE_BEFORE_FX = "ifrs-full:IncreaseDecreaseInCashAndCashEquivalentsBeforeEffectOfExchangeRateChanges"
 
 
 def _cash_tie(fy: str, resolved: dict[tuple[str, str], TaggedFact]) -> bool | str | None:
-    """Operating + investing + financing cash flow (+ currency effect) must
-    equal the change in cash between two balance sheets. True when it ties,
-    a message when it does not, None when an input is not tagged. A failure
-    means a total was mis-tagged (cash generated from operations used as the
-    operating total, say) or cash is defined differently on the two
-    statements — either way the figure is not to be trusted unseen."""
-    try:
-        prior = f"FY{int(fy.removeprefix('FY')) - 1}"
-    except ValueError:
-        return None
+    """The cash-flow statement must add up. True when it does, a message when
+    it does not, None when an input is not tagged.
+
+    1. Operating + investing + financing = the statement's own "increase
+       (decrease) in cash before currency effect", when that line is tagged:
+       exact, no balance sheet involved. A failure means a total is
+       mis-tagged (cash generated from operations used as the operating
+       total, say).
+    2. Otherwise the three totals (+ currency effect) are compared with the
+       change in balance-sheet cash. Companies define cash a little
+       differently on the two statements (overdrafts, restricted cash:
+       Subsea 7 differs by under 1%), so only a gap above 2% of the change
+       is reported."""
     totals: list[TaggedFact] = []
     for _label, concepts in _CASH_FLOW_TOTALS:
         found = next((resolved[(c, fy)] for c in concepts if (c, fy) in resolved), None)
         if found is None:
             return None
         totals.append(found)
+    flows = sum((f.value for f in totals), Decimal(0))
+    stated = resolved.get((_CASH_CHANGE_BEFORE_FX, fy))
+    if stated is not None and stated.unit == totals[0].unit:
+        used = [*totals, stated]
+        if abs(flows - stated.value) <= _decimals_tolerance(used) * 2:
+            return True
+        return (
+            f"{fy} cash flow adds up: operating + investing + financing = {_fmt(flows)} vs the "
+            f"statement's own change in cash {_fmt(stated.value)}"
+        )
+    try:
+        prior = f"FY{int(fy.removeprefix('FY')) - 1}"
+    except ValueError:
+        return None
     cash_end, cash_start = resolved.get((_CASH, fy)), resolved.get((_CASH, prior))
     if cash_end is None or cash_start is None:
         return None
@@ -1081,9 +1180,9 @@ def _cash_tie(fy: str, resolved: dict[tuple[str, str], TaggedFact]) -> bool | st
     used = [*totals, cash_end, cash_start, *([fx] if fx else [])]
     if len({f.unit for f in used}) != 1:
         return None
-    flows = sum((f.value for f in totals), Decimal(0)) + (fx.value if fx else Decimal(0))
+    flows += fx.value if fx else Decimal(0)
     change = cash_end.value - cash_start.value
-    if abs(flows - change) <= _decimals_tolerance(used) * 2:
+    if abs(flows - change) <= _decimals_tolerance(used) * 2 + abs(change) * Decimal("0.02"):
         return True
     return (
         f"{fy} cash flow ties to the change in cash: operating + investing + financing"

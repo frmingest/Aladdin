@@ -1,6 +1,6 @@
 # ESEF ingestion validated against the printed annual reports: Aker BP, Orkla, Salmon Evolution, Subsea 7 (2026-10-05)
 
-> **Status 2026-10-05 (later):** H1, H2, H3 and the cash-flow tie (G3) are built (PR #53, `feature/owner-basis-profit-walk`); G4 (coverage manifest), G5 and G6 (flags), G7 (golden figures) and G10 (mojibake) are built on `feature/data-quality-flags`, stacked on it. Both written and tested, not merged, not deployed. Still to build: share counts, impairment, gross profit, Orkla pre-tax profit and liabilities, relabels, G9.
+> **Status 2026-10-05 (evening):** H1–H3 and the cash tie are on `main` (#53). #54 (flags, coverage, mojibake, golden tests) was merged into the #53 branch only and ships again in #55, together with the fixes found by running the extractor on the four real files (lease interest, EBITDA with impairment, Orkla pre-tax profit and liabilities, Subsea 7 cost of sales, weighted-average share label, a corrected cash tie). Not merged, not deployed. Open: reader tie-out stamp (G9), Aker BP interest-coverage basis, E&P gross-margin label.
 
 **Status:** read-only validation of the live app after PR #52 (`b056ec7`) was merged and deployed, documents wiped and *Fetch all reports* re-run. **No code or data changed.** Fixes below need Faiz's go.
 
