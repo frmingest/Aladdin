@@ -281,9 +281,13 @@ def import_esef_history(
                 "facts_mapped": len(facts_map.facts),
                 "fact_sources": facts_map.fact_sources,
                 "integrity_checks": facts_map.integrity,
+                "notes": facts_map.notes,
+                "unmapped_candidates": facts_map.unmapped_candidates,
             },
             "import_id": import_id,
         }
+        if facts_map.reporting_bank:
+            flags["reporting_bank"] = True
         if facts_map.other_equity:
             flags["equity_includes_hybrid_capital"] = facts_map.other_equity
         if facts_map.conflicts:

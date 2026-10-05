@@ -26,7 +26,7 @@ disabled (no XXE); scripts/styles/fonts never reach the page text.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal, InvalidOperation
 
@@ -271,6 +271,9 @@ class TaggedFact:
     unit: str | None  # "USD", "shares", "USD/shares", ...
     page: int
     decimals: str | None
+    # True for a balance-sheet (instant) fact. Filled in by
+    # map_tagged_facts from the fact's context; both importers share it.
+    instant: bool = False
 
 
 def _local(tag: object) -> str:
@@ -444,6 +447,210 @@ def _positive(fact: TaggedFact) -> Decimal:
     return abs(fact.value)
 
 
+# ---------------------------------------------------------------------------
+# Total debt: structure first, names second (2026-10-05)
+#
+# ESEF only requires the primary statements to be tagged, so debt has to be
+# read off the face of the balance sheet, where each filer picks its own
+# concept: borrowings (Subsea 7, Telenor, Mowi, Vår Energi), bonds (Aker BP),
+# or a company line that also contains leases (Orkla). Instead of a closed
+# list, the balance-sheet lines are classified by what they ARE, and the
+# result is checked against the filing's own subtotals.
+# ---------------------------------------------------------------------------
+
+# Lines that are interest-bearing borrowing, current or non-current.
+_DEBT_INCLUDE = re.compile(
+    r"(Borrowing|Bonds?(Issued|Payable|Loan)?\b|Bonds?[A-Z]|Debentures?|CommercialPaper|NotesIssued|"
+    r"NotesAndDebentures|LoansReceived|LoansPayable|ConvertibleLoan|ConvertibleBond|"
+    r"InterestBearing(Debt|Liabilit|Loan|Borrowing)|DebtInstrumentsIssued)",
+    re.IGNORECASE,
+)
+# What looks like debt but is not: leases (kept separate), derivatives,
+# deposits, assets held, costs and cash flows, off-balance-sheet items.
+_DEBT_EXCLUDE = re.compile(
+    r"(Lease|Derivative|Deposit|Receivable|Held|Hedg|Guarantee|Undrawn|Facilit|Collateral|Pledge|"
+    r"Fair|Accrued|Provision|Equity|Reserve|Covenant|Investment|Intangible|Interest(Paid|Expense|Income)|"
+    r"Cost|Gain|Loss|Proceeds|Repayment|Adjustments|IncreaseDecrease|Payments)",
+    re.IGNORECASE,
+)
+# A company line that bundles borrowings with lease liabilities (Orkla).
+_DEBT_WITH_LEASES = re.compile(
+    r"(Borrowings?\w*And\w*Lease|Lease\w*And\w*Borrowings?|DebtAndLease|InterestBearingDebtInclLease)",
+    re.IGNORECASE,
+)
+# When a filer tags both a total and its parts, take the total only.
+_DEBT_TOTAL_FORMS = frozenset(
+    {"Borrowings", "BondsIssued", "LoansReceived", "NotesAndDebenturesIssued", "DebtInstrumentsIssued"}
+)
+# Concepts the earlier fixed list already accepted: a sum of these keeps the
+# confidence it always had even if the balance sheet cannot be reconciled.
+_DEBT_STANDARD_PARTS = frozenset(c.split(":", 1)[-1] for c in _DEBT_COMPONENTS)
+DEBT_UNRECONCILED_CONFIDENCE = 0.85
+LEASES_INCLUDED_NOTE = (
+    "includes lease liabilities — this filing's balance sheet does not split them out"
+)
+
+# Boundaries when walking back from a liabilities subtotal to its lines.
+_LIABILITY_BOUNDARY = frozenset(
+    {
+        "ifrs-full:Equity",
+        "ifrs-full:EquityAttributableToOwnersOfParent",
+        "ifrs-full:NoncontrollingInterests",
+        "ifrs-full:NoncurrentLiabilities",
+        "ifrs-full:CurrentLiabilities",
+        "ifrs-full:Liabilities",
+        "ifrs-full:EquityAndLiabilities",
+        "ifrs-full:Assets",
+    }
+)
+
+
+def _local_name(concept: str) -> str:
+    return concept.split(":", 1)[-1]
+
+
+def _balance_sheet_facts(fy: str, resolved: dict[tuple[str, str], TaggedFact]) -> list[TaggedFact]:
+    """The year-end balance-sheet facts, in document order (dicts keep the
+    order the facts were read in)."""
+    return [fact for (_, year), fact in resolved.items() if year == fy and fact.instant]
+
+
+def is_bank_balance_sheet(resolved: dict[tuple[str, str], TaggedFact]) -> bool:
+    """Deposits from customers AND loans to customers on the face of the
+    balance sheet: a bank's funding model, where deposits are the business
+    and 'net debt' or 'debt / equity' mean nothing."""
+    names = {_local_name(c) for (c, _), f in resolved.items() if f.instant}
+    return any(n.startswith("DepositsFromCustomers") for n in names) and any(
+        n.startswith("LoansAndAdvancesToCustomers") for n in names
+    )
+
+
+def _liability_reconciliation(fy: str, resolved: dict[tuple[str, str], TaggedFact]) -> dict[str, str]:
+    """Does the filing's own liabilities side add up? For each of
+    NoncurrentLiabilities and CurrentLiabilities, the lines printed directly
+    above it (same balance-sheet context) must sum to it within the rounding
+    the filing declares. 'ok' / 'mismatch' / 'unchecked' per side."""
+    sequence = _balance_sheet_facts(fy, resolved)
+    verdict: dict[str, str] = {}
+    for side, subtotal_concept in (
+        ("noncurrent", "ifrs-full:NoncurrentLiabilities"),
+        ("current", "ifrs-full:CurrentLiabilities"),
+    ):
+        index = next((i for i, f in enumerate(sequence) if f.concept == subtotal_concept), None)
+        if index is None:
+            verdict[side] = "unchecked"
+            continue
+        subtotal = sequence[index]
+        kids: list[TaggedFact] = []
+        for fact in reversed(sequence[:index]):
+            if fact.concept in _LIABILITY_BOUNDARY:
+                break
+            if fact.context_id == subtotal.context_id:
+                kids.append(fact)
+        if not kids:
+            verdict[side] = "unchecked"
+            continue
+        total = sum((f.value for f in kids), Decimal(0))
+        tolerance = max(_decimals_tolerance([subtotal, *kids]), abs(subtotal.value) * Decimal("0.0005"))
+        verdict[side] = "ok" if abs(total - subtotal.value) <= tolerance else "mismatch"
+    return verdict
+
+
+def _resolve_total_debt(
+    fy: str, resolved: dict[tuple[str, str], TaggedFact]
+) -> tuple[Decimal, float, str, str | None, int | None] | None:
+    """Interest-bearing debt from the balance sheet, leases excluded (they
+    have their own metric). None for a bank. A line that bundles borrowings
+    with leases is accepted with a plain note, since the filing gives no way
+    to split it."""
+    if is_bank_balance_sheet(resolved):
+        return None
+    liabilities = resolved.get(("ifrs-full:Liabilities", fy))
+
+    def plausible(total: Decimal) -> bool:
+        return liabilities is None or total <= liabilities.value * Decimal("1.0001")
+
+    candidates = [
+        f
+        for f in _balance_sheet_facts(fy, resolved)
+        if _DEBT_INCLUDE.search(_local_name(f.concept))
+        and not _DEBT_EXCLUDE.search(_local_name(f.concept))
+        and not _DEBT_WITH_LEASES.search(_local_name(f.concept))
+        and f.value >= 0
+    ]
+    totals = [f for f in candidates if _local_name(f.concept) in _DEBT_TOTAL_FORMS]
+    parts = totals or candidates
+    if parts and len({p.unit for p in parts}) == 1:
+        total = sum((p.value for p in parts), Decimal(0))
+        if not plausible(total):
+            return None
+        recon = _liability_reconciliation(fy, resolved)
+        all_standard = all(_local_name(p.concept) in _DEBT_STANDARD_PARTS for p in parts)
+        reconciled = "ok" in recon.values() and "mismatch" not in recon.values()
+        confidence = DERIVED_CONFIDENCE if (reconciled or all_standard) else DEBT_UNRECONCILED_CONFIDENCE
+        source = " + ".join(p.concept for p in parts)
+        if not reconciled and not all_standard:
+            source += " (balance sheet could not be reconciled to the filing's own subtotals)"
+        return total, confidence, source, parts[0].unit, parts[0].page or None
+
+    bundled = [
+        f
+        for f in _balance_sheet_facts(fy, resolved)
+        if _DEBT_WITH_LEASES.search(_local_name(f.concept)) and f.value >= 0
+    ]
+    if bundled and len({p.unit for p in bundled}) == 1:
+        total = sum((p.value for p in bundled), Decimal(0))
+        if not plausible(total):
+            return None
+        return (
+            total,
+            DEBT_UNRECONCILED_CONFIDENCE,
+            "derived: " + " + ".join(p.concept for p in bundled) + f" ({LEASES_INCLUDED_NOTE})",
+            bundled[0].unit,
+            bundled[0].page or None,
+        )
+    return None
+
+
+# Closest-tag search for a core metric the extractor could not fill.
+_CANDIDATE_PATTERNS: dict[str, tuple[re.Pattern[str], bool]] = {
+    # (name pattern, balance-sheet instants only?)
+    "total_debt": (re.compile(r"Borrow|Bond|Loan|Debt|Debenture|Notes|Lease|InterestBearing", re.IGNORECASE), True),
+    "depreciation_and_amortization": (re.compile(r"Deprec|Amorti", re.IGNORECASE), False),
+    "capital_expenditures": (re.compile(r"Purchase|Acquisition|CapitalExpend|PropertyPlant", re.IGNORECASE), False),
+    "cash_and_equivalents": (re.compile(r"Cash", re.IGNORECASE), True),
+}
+_CANDIDATES_PER_METRIC = 8
+
+
+def _unmapped_candidates(
+    years: list[str], resolved: dict[tuple[str, str], TaggedFact], extracted: set[tuple[str, str]]
+) -> dict[str, dict[str, list[dict[str, str]]]]:
+    """For the latest year only: metrics with no extracted value, and the
+    tagged concepts whose names look closest. Nothing is guessed or stored
+    as a fact; this is the pointer to what a person (or the next mapping
+    change) should look at."""
+    if not years:
+        return {}
+    fy = years[0]
+    bank = is_bank_balance_sheet(resolved)
+    found: dict[str, list[dict[str, str]]] = {}
+    for metric, (pattern, instant_only) in _CANDIDATE_PATTERNS.items():
+        if (metric, fy) in extracted or (bank and metric == "total_debt"):
+            continue
+        rows = [
+            {"concept": f.concept, "value": _fmt(f.value), "unit": f.unit or ""}
+            for (concept, year), f in resolved.items()
+            if year == fy
+            and pattern.search(_local_name(concept))
+            and (f.instant or not instant_only)
+            and f.value != 0
+        ]
+        if rows:
+            found[metric] = rows[:_CANDIDATES_PER_METRIC]
+    return {fy: found} if found else {}
+
+
 def _resolve_metric(
     metric: str, fy: str, resolved: dict[tuple[str, str], TaggedFact]
 ) -> tuple[Decimal, float, str, str | None, int | None] | None:
@@ -528,6 +735,21 @@ def _resolve_metric(
             source += f" - {biological.concept}"
         return (value, DERIVED_CONFIDENCE, source, operating.unit, operating.page or None)
 
+    if metric == "total_debt":
+        # A bank's funding is deposits, not debt: nothing is extracted.
+        if is_bank_balance_sheet(resolved):
+            return None
+        # A lone non-current borrowings line is only half the debt when a
+        # current line exists, so it is left to the classifier below, which
+        # sums both sides.
+        concepts = tuple(
+            c for c in CONCEPT_MAP.get(metric, ()) if c != "ifrs-full:NoncurrentPortionOfNoncurrentBorrowings"
+        )
+        direct = next((get(c) for c in concepts if get(c) is not None), None)
+        if direct is not None:
+            return direct.value, IXBRL_CONFIDENCE, direct.concept, direct.unit, direct.page or None
+        return _resolve_total_debt(fy, resolved)
+
     concepts = CONCEPT_MAP.get(metric, ())
     chosen = next((get(c) for c in concepts if get(c) is not None), None)
     if chosen is not None:
@@ -544,17 +766,6 @@ def _resolve_metric(
                 parts[0].page or None,
             )
         return None
-
-    if metric == "total_debt":
-        parts = [get(c) for c in _DEBT_COMPONENTS if get(c) is not None]
-        if parts and len({p.unit for p in parts}) == 1:
-            return (
-                sum((p.value for p in parts), Decimal(0)),
-                DERIVED_CONFIDENCE,
-                " + ".join(p.concept for p in parts),
-                parts[0].unit,
-                parts[0].page or None,
-            )
 
     proxy = next((get(c) for c in _PROXY_CONCEPTS.get(metric, ()) if get(c) is not None), None)
     if proxy is not None:
@@ -730,6 +941,15 @@ class MappedFacts:
     integrity: dict[str, object]
     other_equity: list[str]
     conflicts: list[str]
+    # Plain-language notes about how a number was built (e.g. Orkla's debt
+    # line that also contains lease liabilities); shown next to the figure.
+    notes: list[str] = field(default_factory=list)
+    # True when the balance sheet is a bank's (deposits from customers and
+    # loans to customers on the face): debt-based measures do not apply.
+    reporting_bank: bool = False
+    # fiscal year -> metric -> closest tagged concepts, for a core metric
+    # that could not be extracted. Makes every gap self-diagnosing.
+    unmapped_candidates: dict[str, dict[str, list[dict[str, str]]]] = field(default_factory=dict)
 
 
 def map_tagged_facts(tagged: list[TaggedFact], contexts: dict[str, _Context]) -> MappedFacts:
@@ -747,6 +967,7 @@ def map_tagged_facts(tagged: list[TaggedFact], contexts: dict[str, _Context]) ->
     by_concept: dict[tuple[str, str], list[TaggedFact]] = {}
     for fact in tagged:
         ctx = contexts[fact.context_id]
+        fact.instant = ctx.is_instant
         if ctx.dimensional:
             continue
         fy = _fy_label(ctx, fiscal_year_ends)
@@ -803,6 +1024,12 @@ def map_tagged_facts(tagged: list[TaggedFact], contexts: dict[str, _Context]) ->
 
     integrity = _integrity_checks(resolved, years)
     other_equity = _other_equity_instruments(resolved, years)
+    notes = [
+        f"{fy}: total debt {LEASES_INCLUDED_NOTE}"
+        for fy in years
+        if LEASES_INCLUDED_NOTE in fact_sources.get(f"{fy} total_debt", "")
+    ]
+    extracted = {(f.metric, f.period) for f in facts_out}
 
     return MappedFacts(
         facts=facts_out,
@@ -812,6 +1039,9 @@ def map_tagged_facts(tagged: list[TaggedFact], contexts: dict[str, _Context]) ->
         integrity=integrity,
         other_equity=other_equity,
         conflicts=conflicts,
+        notes=notes,
+        reporting_bank=is_bank_balance_sheet(resolved),
+        unmapped_candidates=_unmapped_candidates(years, resolved, extracted),
     )
 
 
@@ -828,20 +1058,57 @@ def entity_lei(root) -> str | None:
     return None
 
 
+_STYLE_OR_SCRIPT = re.compile(rb"(<(style|script)\b[^>]*>)(.*?)(</\2\s*>)", re.DOTALL | re.IGNORECASE)
+_BARE_AMPERSAND = re.compile(rb"&(?!(?:#\d+|#x[0-9a-fA-F]+|[A-Za-z][A-Za-z0-9]*);)")
+
+
+def _repair_xhtml(content: bytes) -> bytes:
+    """Fixes the two things that make an otherwise valid ESEF .xhtml fail XML
+    parsing, without touching any tagged value: a '<' or '&' inside embedded
+    CSS/JS (Salmon Evolution 2025: a '<=' in a media query) and bare '&'."""
+
+    def escape(match: re.Match[bytes]) -> bytes:
+        body = match.group(3).replace(b"&", b"&amp;").replace(b"<", b"&lt;")
+        return match.group(1) + body + match.group(4)
+
+    repaired = _STYLE_OR_SCRIPT.sub(escape, content)
+    return _BARE_AMPERSAND.sub(b"&amp;", repaired)
+
+
 def parse_ixbrl(content: bytes):
+    """Strict XML first (the spec). A file that is almost XML is repaired and
+    retried, then read leniently as XML (namespaces and attribute case kept).
+    Only a file with no inline-XBRL elements at all falls to the HTML parser
+    (an old SEC .htm), where tags are matched by name."""
     from lxml import etree
 
-    parser = etree.XMLParser(
-        huge_tree=True, resolve_entities=False, no_network=True, load_dtd=False, recover=False
-    )
-    try:
-        return etree.fromstring(content, parser)
-    except etree.XMLSyntaxError:
-        # A .htm/.html 10-K is sometimes not well-formed XML; the HTML
-        # parser is lenient and still keeps the ix: elements by name.
-        from lxml import html as lxml_html
+    def parser(recover: bool):
+        return etree.XMLParser(
+            huge_tree=True, resolve_entities=False, no_network=True, load_dtd=False, recover=recover
+        )
 
-        return lxml_html.fromstring(content)
+    try:
+        return etree.fromstring(content, parser(False))
+    except etree.XMLSyntaxError:
+        pass
+    repaired = _repair_xhtml(content)
+    try:
+        return etree.fromstring(repaired, parser(False))
+    except etree.XMLSyntaxError:
+        pass
+    try:
+        lenient = etree.fromstring(repaired, parser(True))
+    except etree.XMLSyntaxError:
+        lenient = None
+    if lenient is not None and any(
+        isinstance(el.tag, str) and _local(el.tag) == "nonFraction" for el in lenient.iter()
+    ):
+        return lenient
+    # A .htm/.html 10-K is sometimes not well-formed XML; the HTML
+    # parser is lenient and still keeps the ix: elements by name.
+    from lxml import html as lxml_html
+
+    return lxml_html.fromstring(content)
 
 
 def extract_ixbrl(content: bytes) -> ExtractionResult:
@@ -934,7 +1201,12 @@ def extract_ixbrl(content: bytes) -> ExtractionResult:
     flags: list[str] = []
     details: dict[str, object] = {}
     if not is_ixbrl:
-        flags.append("no_ixbrl_tags")  # plain HTML page: text only, no facts
+        if numeric_elements:
+            # Tagged numbers exist but their contexts could not be read:
+            # a broken file, not an untagged one. Say so.
+            flags.append("ixbrl_tags_unreadable")
+        else:
+            flags.append("no_ixbrl_tags")  # plain HTML page: text only, no facts
     else:
         details["ixbrl"] = {
             "entity_lei": lei,
@@ -944,7 +1216,12 @@ def extract_ixbrl(content: bytes) -> ExtractionResult:
             "unreadable_numbers": unreadable,
             "fact_sources": fact_sources,
             "integrity_checks": integrity,
+            "reporting_bank": mapped.reporting_bank,
+            "notes": mapped.notes,
+            "unmapped_candidates": mapped.unmapped_candidates,
         }
+        if mapped.reporting_bank:
+            flags.append("reporting_bank")
         if integrity["failed"]:
             flags.append("integrity_check_failed")
         if other_equity:
