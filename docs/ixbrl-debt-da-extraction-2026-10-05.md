@@ -1,6 +1,6 @@
 # Total debt and D&A from ESEF filings: audit of 11 real files and the robust extractor (2026-10-05)
 
-**Status:** written and tested on branch `feature/ixbrl-debt-da-robust-extraction`, **not merged, not deployed**.
+**Status:** written and tested on branch `feature/ixbrl-debt-da-robust-extraction` (PR #52), **not merged, not deployed**.
 Faiz saw "Not available" on owner earnings, net debt, net debt / EBITDA, net debt / FCF, debt / equity, ROIC and ROCE
 (missing: `depreciation_and_amortization`, `total_debt`) for many holdings and asked whether this can be extracted from the
 annual-report `.xhtml` with high confidence. **Answer: yes.** The data is in the filings; the extractor read it only through a
