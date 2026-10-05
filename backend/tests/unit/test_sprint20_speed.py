@@ -436,8 +436,9 @@ def _loop_worker(factory, monkeypatch, outcome):
     seen: list[str] = []
     monkeypatch.setattr(worker, "maybe_warm_cold_holdings", lambda: seen.append("warm"))
     monkeypatch.setattr(worker, "maybe_keep_snapshots_warm", lambda: seen.append("keep"))
-    monkeypatch.setattr(worker, "maybe_check_tripwires", lambda: None)
-    monkeypatch.setattr(worker, "maybe_refresh_snapshots", lambda: None)
+    monkeypatch.setattr(worker, "maybe_check_tripwires", lambda: seen.append("tripwires"))
+    monkeypatch.setattr(worker, "maybe_refresh_snapshots", lambda: seen.append("snapshots"))
+    monkeypatch.setattr(worker, "maybe_store_game_state", lambda: seen.append("game"))
     monkeypatch.setattr(worker, "run_once", lambda: outcome)
     return worker, seen
 
@@ -445,10 +446,12 @@ def _loop_worker(factory, monkeypatch, outcome):
 def test_idle_worker_loop_runs_both_passes(monkeypatch):
     worker, seen = _loop_worker(_factory(), monkeypatch, "idle")
     worker.run_forever(once=True)
-    assert seen == ["warm", "keep"]
+    assert seen == ["tripwires", "snapshots", "game", "warm", "keep"]
 
 
 def test_a_busy_worker_loop_stays_out_of_the_way(monkeypatch):
-    worker, seen = _loop_worker(_factory(), monkeypatch, RAN)  # a run just finished: more may be queued
+    # A run just finished: more may be queued, so NO housekeeping (including the
+    # slow daily jobs) may delay claiming the next one.
+    worker, seen = _loop_worker(_factory(), monkeypatch, RAN)
     worker.run_forever(once=True)
     assert seen == []

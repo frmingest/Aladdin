@@ -371,10 +371,17 @@ class AnalysisWorker:
         try:
             while not self._stop.is_set():
                 outcome = self.run_once()
-                self.maybe_check_tripwires()
-                self.maybe_refresh_snapshots()
-                self.maybe_store_game_state()
-                if outcome != RAN:  # queue idle: now is the cheap moment
+                if outcome != RAN:
+                    # 2026-10-05: housekeeping runs only when no run was just
+                    # finished. The daily jobs (tripwires, snapshot refresh,
+                    # game state) are slow (a full refresh took 13+ minutes)
+                    # and run inline, so running them after every analysis
+                    # held up the next queued holding. A finished run skips
+                    # them: the next iteration claims the next run at once,
+                    # and they run when the queue drains.
+                    self.maybe_check_tripwires()
+                    self.maybe_refresh_snapshots()
+                    self.maybe_store_game_state()
                     self.maybe_warm_cold_holdings()
                     self.maybe_keep_snapshots_warm()
                 if once:
