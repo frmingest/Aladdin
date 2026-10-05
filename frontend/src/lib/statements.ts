@@ -27,6 +27,8 @@ const STATEMENT_METRICS: Record<Exclude<StatementKey, "other">, string[]> = {
     "interest_expense",
     "income_before_tax",
     "income_tax_expense",
+    "profit_continuing_operations",
+    "profit_discontinued_operations",
     "net_income",
     "eps_basic",
   ],

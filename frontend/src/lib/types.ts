@@ -277,6 +277,8 @@ export const FACT_LABELS: Record<string, string> = {
   minority_interests: "Minority interests",
   eps_basic: "Basic EPS",
   raw_materials_used: "Raw materials & consumables",
+  profit_continuing_operations: "Profit from continuing operations",
+  profit_discontinued_operations: "Profit from discontinued operations",
 };
 
 export const PERCENT_METRICS = new Set([
