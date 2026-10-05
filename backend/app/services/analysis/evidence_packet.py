@@ -28,7 +28,6 @@ from sqlalchemy.orm import Session
 from app.config.settings import get_settings
 from app.domain.analysis_assumptions import get_analysis_assumptions
 from app.domain.period_dates import extract_year
-from app.domain.sectors import is_financial_sector
 from app.models.financial_line_item import FinancialLineItem
 from app.models.holding import Holding
 from app.providers.base import (
@@ -41,6 +40,7 @@ from app.services.analysis.document_excerpts import (
     add_document_excerpt_evidence,
     select_document_excerpts,
 )
+from app.services.bank_detection import holding_is_financial
 from app.services.filings.announcements import get_holding_announcements
 from app.services.filings.eligibility import newsweb_applies
 from app.services.filings.esef_index import latest_import_summary
@@ -315,7 +315,7 @@ def _add_market_multiples_evidence(
         packet.unavailable_reasons.append(f"market multiples: {context.unavailable_reason}")
         return
     result = compute_holding_metrics(latest.facts, latest.currencies, market=context.inputs)
-    if is_financial_sector(holding.sector):
+    if holding_is_financial(db, holding):
         mark_not_meaningful_for_financials(result)
     currency = context.reporting_currency or ""
     parts: list[str] = []
@@ -546,9 +546,10 @@ def _add_financial_history_evidence(
 
     facts_by_year = {year: facts for year, _period, facts in _financial_history_by_period(db, holding)}
     per_period: list[tuple[int, str, MetricsResult, Decimal | None]] = []
+    is_financial = holding_is_financial(db, holding)
     for year, period, facts in history:
         metrics_result = compute_holding_metrics(facts, prior_facts=facts_by_year.get(year - 1))
-        if is_financial_sector(holding.sector):
+        if is_financial:
             mark_not_meaningful_for_financials(metrics_result)
         per_period.append((year, period, metrics_result, metrics_result.computed.get("roe")))
 

@@ -26,7 +26,7 @@ from sqlalchemy.orm import Session
 
 from app.config.database import get_db
 from app.domain.instrument_types import INSTRUMENT_TYPES, classify_instrument
-from app.domain.sectors import SECTORS, is_financial_sector
+from app.domain.sectors import SECTORS
 from app.models.document import Document
 from app.models.financial_line_item import FinancialLineItem
 from app.models.holding import Holding
@@ -53,6 +53,7 @@ from app.schemas.metrics import (
     ShareCountIn,
     ShareCountOut,
 )
+from app.services.bank_detection import holding_is_financial
 from app.services.deletion import (
     DeletionBlockedError,
     DeletionCounts,
@@ -469,7 +470,7 @@ def get_holding_metrics(
         market=market.inputs,
         market_unavailable_reason=market.unavailable_reason,
     )
-    if is_financial_sector(holding.sector):
+    if holding_is_financial(db, holding):
         mark_not_meaningful_for_financials(result)
     stale_period = latest is not None and latest.period != period
     if stale_period and market.inputs is not None:
@@ -526,6 +527,20 @@ def get_holding_metrics(
     )
     for document in documents.values():
         flags = document.quality_flags or {}
+        ixbrl = flags.get("ixbrl") or flags.get("esef_index") or {}
+        for entry in ixbrl.get("notes") or []:
+            if isinstance(entry, str) and entry.startswith(period):
+                text = entry.split(": ", 1)[-1]
+                for key in ("net_debt", "net_debt_to_ebitda", "net_debt_to_fcf", "debt_to_equity"):
+                    if key in result.computed:
+                        notes[key] = "; ".join(filter(None, [notes.get(key), text]))
+        for metric, rows in ((ixbrl.get("unmapped_candidates") or {}).get(period) or {}).items():
+            if metric not in facts and rows:
+                closest = ", ".join(f"{r['concept']} ({r['value']})" for r in rows[:4])
+                warnings.append(
+                    f"No {metric.replace('_', ' ')} extracted from {document.original_filename}; "
+                    f"closest tagged lines: {closest}"
+                )
         for key, label in (
             ("equity_includes_hybrid_capital", hybrid_label),
             ("facts_differ_from_existing", "Kept an earlier file's value"),
