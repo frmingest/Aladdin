@@ -61,6 +61,7 @@ from app.services.deletion import (
     purge_holding,
     wipe_all_holdings,
 )
+from app.services.documents.extraction.ixbrl import CORE_INPUTS
 from app.services.holding_facts import facts_by_period, latest_period, previous_period
 from app.services.market_data.shares import (
     ShareCountResult,
@@ -534,6 +535,27 @@ def get_holding_metrics(
                 for key in ("net_debt", "net_debt_to_ebitda", "net_debt_to_fcf", "debt_to_equity"):
                     if key in result.computed:
                         notes[key] = "; ".join(filter(None, [notes.get(key), text]))
+        if flags.get("text_encoding_suspect"):
+            warnings.append(
+                f"{document.original_filename}: the stored text looks mis-decoded (for example "
+                "\"Ã¸\" for \"ø\"); the figures come from the tags and are unaffected, but "
+                "quoted text should be checked against the original"
+            )
+        manifest = (ixbrl.get("coverage") or {}).get(period)
+        if manifest:
+            # A figure another document supplies for this period is not missing.
+            metrics_of = dict(CORE_INPUTS)
+            gaps = [
+                label for label in manifest.get("missing", [])
+                if not any(m in facts for m in metrics_of.get(label, ()))
+            ]
+            if gaps:
+                total = len(manifest.get("extracted", [])) + len(manifest["missing"])
+                warnings.append(
+                    f"Data coverage {period} ({document.original_filename}): "
+                    f"{len(manifest.get('extracted', []))} of {total} expected inputs extracted; "
+                    f"still missing: {', '.join(gaps)}"
+                )
         for metric, rows in ((ixbrl.get("unmapped_candidates") or {}).get(period) or {}).items():
             if metric not in facts and rows:
                 closest = ", ".join(f"{r['concept']} ({r['value']})" for r in rows[:4])
@@ -549,7 +571,7 @@ def get_holding_metrics(
             for entry in flags.get(key) or []:
                 if isinstance(entry, str) and entry.startswith(period):
                     warnings.append(f"{label} ({document.original_filename}): {entry}")
-        for entry in ((flags.get("ixbrl") or {}).get("integrity_checks") or {}).get("failed") or []:
+        for entry in (ixbrl.get("integrity_checks") or {}).get("failed") or []:
             if isinstance(entry, str) and entry.startswith(period):
                 warnings.append(
                     f"Statement check failed ({document.original_filename}): {entry}"

@@ -1,6 +1,6 @@
 # ESEF ingestion validated against the printed annual reports: Aker BP, Orkla, Salmon Evolution, Subsea 7 (2026-10-05)
 
-> **Status 2026-10-05 (later):** H1, H2, H3 and the cash-flow tie (G3) are built on branch `feature/owner-basis-profit-walk` (written and tested, not merged, not deployed). G1 is done as continuing/discontinued facts plus continuing-profit basis; the full profit walk check, G4–G8, G10 and the smaller captures are the next PRs.
+> **Status 2026-10-05 (later):** H1, H2, H3 and the cash-flow tie (G3) are built (PR #53, `feature/owner-basis-profit-walk`); G4 (coverage manifest), G5 and G6 (flags), G7 (golden figures) and G10 (mojibake) are built on `feature/data-quality-flags`, stacked on it. Both written and tested, not merged, not deployed. Still to build: share counts, impairment, gross profit, Orkla pre-tax profit and liabilities, relabels, G9.
 
 **Status:** read-only validation of the live app after PR #52 (`b056ec7`) was merged and deployed, documents wiped and *Fetch all reports* re-run. **No code or data changed.** Fixes below need Faiz's go.
 

@@ -78,3 +78,15 @@ def test_a_missing_debt_figure_names_the_closest_tagged_lines(client):
     assert any(
         "No total debt extracted" in w and "ifrs-full:CurrentLeaseLiabilities" in w for w in body["warnings"]
     )
+
+
+def test_missing_inputs_are_listed_as_a_data_coverage_warning(client):
+    holding_id = _holding(client)
+    _upload(client, holding_id, _filing(INCOME, CASH))
+
+    body = _metrics(client, holding_id)
+
+    coverage = [w for w in body["warnings"] if w.startswith("Data coverage FY2025")]
+    assert len(coverage) == 1
+    assert "still missing:" in coverage[0] and "share count" in coverage[0]
+    assert "revenue" not in coverage[0].split("still missing:")[1]  # extracted, so not listed as missing

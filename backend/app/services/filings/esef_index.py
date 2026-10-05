@@ -283,6 +283,7 @@ def import_esef_history(
                 "integrity_checks": facts_map.integrity,
                 "notes": facts_map.notes,
                 "unmapped_candidates": facts_map.unmapped_candidates,
+                "coverage": facts_map.coverage,
             },
             "import_id": import_id,
         }
