@@ -57,6 +57,9 @@ CANONICAL_METRICS = (
     # leave it out. Signed (a discontinued loss is negative).
     "profit_continuing_operations",
     "profit_discontinued_operations",
+    # Impairment recognised in profit or loss (signed: loss positive). EBIT is
+    # after it; EBITDA adds it back; a large one is flagged.
+    "impairment_loss",
 )
 
 # Exact-match (case-insensitive, whitespace-normalized) label -> canonical

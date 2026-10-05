@@ -100,7 +100,7 @@ def test_tagged_facts_become_annual_metrics_in_full_units():
     assert facts[("total_assets", "FY2024")].value == Decimal(21868200000)
     # Comma-decimal format.
     assert facts[("cash_and_equivalents", "FY2025")].value == Decimal(699900000)
-    assert all(f.confidence == 1.0 for f in result.facts if f.metric != "total_debt")
+    assert all(f.confidence == 1.0 for f in result.facts if f.metric not in ("total_debt", "total_liabilities"))
 
 
 def test_dimensional_and_quarterly_facts_are_not_promoted():

@@ -224,7 +224,10 @@ def resolve_share_count(
         result = ShareCountResult(
             shares=filed,
             source=SOURCE_FILING,
-            note=f"year-end count from {latest_period or 'the latest filing'}",
+            note=(
+                f"count from {latest_period or 'the latest filing'} "
+                "(a weighted average when that is all the filer tags, not the year-end count)"
+            ),
         )
         _cross_check(result, facts, latest_period)
         return result

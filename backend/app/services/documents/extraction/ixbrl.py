@@ -69,6 +69,8 @@ _ESEF_FALLBACK_CONCEPTS: dict[str, tuple[str, ...]] = {
     "eps_basic": ("ifrs-full:BasicAndDilutedEarningsLossPerShare",),
     # Profit walk: a sold business is in the reported profit once, so the
     # measures an owner values the company on must leave it out.
+    # Signed as tagged: positive = impairment loss, negative = reversal.
+    "impairment_loss": ("ifrs-full:ImpairmentLossReversalOfImpairmentLossRecognisedInProfitOrLoss",),
     "profit_continuing_operations": (
         "us-gaap:IncomeLossFromContinuingOperations",
         "ifrs-full:ProfitLossFromContinuingOperations",
@@ -219,6 +221,9 @@ _OWNER_VIEW_EXTENSION: dict[str, re.Pattern] = {
         r"(Dividend|Distribution|Coupon|Interest)\w*(Hybrid|Perpetual)\w*ClassifiedAsFinancingActivities$"
     ),
 }
+# A company-extension financing line for the interest part of lease payments.
+_LEASE_INTEREST = re.compile(r"^(?=\w*Lease)(?=\w*Interest)\w*ClassifiedAsFinancingActivities$")
+
 # Names that are not an outflow to the owner even though the pattern above
 # matches (issues, redemptions, borrowings repaid). "Repayment" is allowed for
 # leases: that IS how many companies name the principal of a lease payment.
@@ -256,6 +261,53 @@ _INTEGRITY_CHECKS: tuple[tuple[str, str, tuple[tuple[str, int], ...]], ...] = (
         (("ifrs-full:ProfitLossBeforeTax", 1), ("ifrs-full:IncomeTaxExpenseContinuingOperations", -1)),
     ),
 )
+
+# Inputs every annual report is expected to give (G4 completeness manifest).
+# Each entry is the set of metrics any one of which satisfies it. Optional
+# inputs (hybrid capital, decommissioning, lease lines, minorities ...) are
+# left out on purpose: absent for most companies, so "missing" would be noise.
+CORE_INPUTS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("revenue", ("revenue",)),
+    ("operating profit (EBIT)", ("ebit", "operating_income")),
+    ("net income", ("net_income",)),
+    ("depreciation and amortisation", ("depreciation_and_amortization",)),
+    ("EBITDA", ("ebitda",)),
+    ("cost of sales or materials", ("cost_of_goods_sold", "raw_materials_used")),
+    ("profit before tax", ("income_before_tax",)),
+    ("income tax", ("income_tax_expense",)),
+    ("total assets", ("total_assets",)),
+    ("total equity", ("total_equity",)),
+    ("total liabilities", ("total_liabilities",)),
+    ("total debt", ("total_debt",)),
+    ("cash", ("cash_and_equivalents",)),
+    ("operating cash flow", ("operating_cash_flow",)),
+    ("capital expenditure", ("capital_expenditures",)),
+    ("interest expense", ("interest_expense",)),
+    ("earnings per share", ("eps_basic",)),
+)
+# A bank has no debt or EBITDA in the industrial sense: not missing, not applicable.
+_BANK_NOT_APPLICABLE = frozenset({"total debt", "EBITDA", "cost of sales or materials", "capital expenditure", "interest expense"})
+
+
+def coverage_manifest(
+    years: list[str], extracted: set[tuple[str, str]], reporting_bank: bool
+) -> dict[str, dict[str, list[str]]]:
+    """Per fiscal year: which expected inputs were extracted, which are not
+    applicable (a bank), and which are MISSING. A missing input is reported,
+    never silently dropped — the person sees what the filing did not give."""
+    manifest: dict[str, dict[str, list[str]]] = {}
+    for fy in years:
+        have, missing, na = [], [], []
+        for label, metrics in CORE_INPUTS:
+            if any((m, fy) in extracted for m in metrics):
+                have.append(label)
+            elif reporting_bank and label in _BANK_NOT_APPLICABLE:
+                na.append(label)
+            else:
+                missing.append(label)
+        manifest[fy] = {"extracted": have, "not_applicable": na, "missing": missing}
+    return manifest
+
 
 _SKIP_TEXT_TAGS = {"style", "script", "head", "title", "header", "hidden", "resources", "references"}
 _BREAK = "\ue000"  # private-use char: not whitespace, so it survives collapsing
@@ -441,6 +493,19 @@ def _element_text(element) -> str:
     lines = [line.strip(" |") for line in text.split(_BREAK)]
     lines = [" | ".join(p.strip() for p in line.split(" | ") if p.strip()) for line in lines]
     return "\n".join(line for line in lines if line)
+
+
+# UTF-8 text that was decoded as Latin-1/Windows-1252 shows "Ã¸", "Ã¥", "â€™"
+# for "ø", "å", "’". Norwegian company names and notes make this the most
+# likely silent corruption of the stored text (Salmon Evolution, 2026-10-05).
+_MOJIBAKE = re.compile("Ã[\u0080-\u00bf]|Â[\u0080-\u00bf]|â€")
+MOJIBAKE_THRESHOLD = 3
+
+
+def looks_mojibake(texts: list[str]) -> bool:
+    """True when the extracted text carries the typical double-encoding
+    sequences at least MOJIBAKE_THRESHOLD times — a corrupt copy, not a quirk."""
+    return sum(len(_MOJIBAKE.findall(text)) for text in texts) >= MOJIBAKE_THRESHOLD
 
 
 def _chunk(text: str) -> list[str]:
@@ -744,10 +809,14 @@ def _resolve_metric(
             return None
         combined_da = get(_DA_WITH_IMPAIRMENT)
         pure_da = get(_PURE_DA)
+        proxy_da = None
         if combined_da is not None:
             addbacks = [combined_da]
             value = operating.value + _positive(combined_da)
-        elif pure_da is not None:
+        elif pure_da is not None or (
+            pure_da := next((get(c) for c in _PROXY_CONCEPTS["depreciation_and_amortization"] if get(c)), None)
+        ) is not None:
+            proxy_da = pure_da if get(_PURE_DA) is None else None
             addbacks = [pure_da]
             value = operating.value + _positive(pure_da)
             impairment = get(_IMPAIRMENT)
@@ -764,6 +833,9 @@ def _resolve_metric(
         if biological is not None and biological.unit == operating.unit:
             value -= biological.value
             source += f" - {biological.concept}"
+        if proxy_da is not None:
+            # D&A itself is a stand-in (cash-flow add-back, depreciation alone).
+            return (value, PROXY_CONFIDENCE, "proxy: " + source.removeprefix("derived: "), operating.unit, operating.page or None)
         return (value, DERIVED_CONFIDENCE, source, operating.unit, operating.page or None)
 
     if metric == "total_debt":
@@ -784,7 +856,44 @@ def _resolve_metric(
     concepts = CONCEPT_MAP.get(metric, ())
     chosen = next((get(c) for c in concepts if get(c) is not None), None)
     if chosen is not None:
+        if metric == "shares_outstanding" and "WeightedAverage" in chosen.concept:
+            # Not the year-end count: labelled so nothing mistakes it for one.
+            return chosen.value, PROXY_CONFIDENCE, f"proxy: {chosen.concept}", chosen.unit, chosen.page or None
         return chosen.value, IXBRL_CONFIDENCE, chosen.concept, chosen.unit, chosen.page or None
+
+    if metric == "income_before_tax":
+        # Orkla tags profit before tax only as a company-extension line.
+        ext = _tagged_by_local_name(fy, resolved, ("ProfitLossBeforeTaxContinuingOperations",))
+        if ext is not None:
+            return ext.value, DERIVED_CONFIDENCE, ext.concept, ext.unit, ext.page or None
+
+    if metric == "total_liabilities":
+        # Not tagged (Orkla): the balance sheet identity gives it exactly.
+        assets, equity = get("ifrs-full:Assets"), get("ifrs-full:Equity")
+        if assets is not None and equity is not None and assets.unit == equity.unit:
+            return (
+                assets.value - equity.value,
+                DERIVED_CONFIDENCE,
+                "derived: ifrs-full:Assets - ifrs-full:Equity",
+                assets.unit,
+                assets.page or None,
+            )
+
+    if metric == "cost_of_goods_sold":
+        # No cost-of-sales line (Subsea 7 tags operating expense and a gross
+        # profit): revenue less the tagged gross profit IS the cost of sales.
+        gross = get("ifrs-full:GrossProfit") or _tagged_by_local_name(
+            fy, resolved, (), prefix="GrossProfit"
+        )
+        revenue = _resolve_metric("revenue", fy, resolved)
+        if gross is not None and revenue is not None and revenue[3] == gross.unit and revenue[0] >= gross.value:
+            return (
+                revenue[0] - gross.value,
+                DERIVED_CONFIDENCE,
+                f"derived: revenue - {gross.concept}",
+                gross.unit,
+                gross.page or None,
+            )
 
     if metric == "profit_continuing_operations":
         # No continuing-operations line tagged: total profit less the
@@ -817,6 +926,21 @@ def _resolve_metric(
     if proxy is not None:
         return proxy.value, PROXY_CONFIDENCE, f"proxy: {proxy.concept}", proxy.unit, proxy.page or None
     return None
+
+
+def _tagged_by_local_name(
+    fy: str, resolved: dict[tuple[str, str], TaggedFact], names: tuple[str, ...], *, prefix: str = ""
+) -> TaggedFact | None:
+    """A company-extension (non ifrs-full) fact by its local name, or by a
+    name prefix; None when absent or when two different values compete."""
+    found = [
+        fact
+        for (concept, year), fact in sorted(resolved.items())
+        if year == fy
+        and not concept.startswith("ifrs-full:")
+        and (concept.split(":", 1)[-1] in names or (prefix and concept.split(":", 1)[-1].startswith(prefix)))
+    ]
+    return found[0] if found and len({f.value for f in found}) == 1 else None
 
 
 def _capex_extension(
@@ -923,7 +1047,25 @@ def _owner_view_outflow(
         (resolved[(c, fy)] for c in _OWNER_VIEW_STANDARD[metric] if (c, fy) in resolved), None
     )
     if standard is not None:
-        return _positive(standard), IXBRL_CONFIDENCE, standard.concept, standard.unit, standard.page or None
+        value, source, unit, page = _positive(standard), standard.concept, standard.unit, standard.page or None
+        confidence = IXBRL_CONFIDENCE
+        if metric == "interest_paid_financing":
+            # Interest on leases is its own financing line next to the standard
+            # "interest paid" one (Subsea 7: 66.3 + 25.1): both leave the company.
+            extra = [
+                f
+                for (concept, year), f in sorted(resolved.items())
+                if year == fy
+                and not concept.startswith("ifrs-full:")
+                and _LEASE_INTEREST.search(concept.split(":", 1)[-1])
+                and f.unit == standard.unit
+                and f.value != 0
+            ]
+            if extra:
+                value += sum((_positive(f) for f in extra), Decimal(0))
+                source = "derived: " + " + ".join([standard.concept, *(f.concept for f in extra)])
+                confidence = DERIVED_CONFIDENCE
+        return value, confidence, source, unit, page
     pattern = _OWNER_VIEW_EXTENSION[metric]
     parts = sorted(
         (
@@ -994,25 +1136,43 @@ _CASH_FLOW_TOTALS = (
 )
 _FX_ON_CASH = "ifrs-full:EffectOfExchangeRateChangesOnCashAndCashEquivalents"
 _CASH = "ifrs-full:CashAndCashEquivalents"
+_CASH_CHANGE_BEFORE_FX = "ifrs-full:IncreaseDecreaseInCashAndCashEquivalentsBeforeEffectOfExchangeRateChanges"
 
 
 def _cash_tie(fy: str, resolved: dict[tuple[str, str], TaggedFact]) -> bool | str | None:
-    """Operating + investing + financing cash flow (+ currency effect) must
-    equal the change in cash between two balance sheets. True when it ties,
-    a message when it does not, None when an input is not tagged. A failure
-    means a total was mis-tagged (cash generated from operations used as the
-    operating total, say) or cash is defined differently on the two
-    statements — either way the figure is not to be trusted unseen."""
-    try:
-        prior = f"FY{int(fy.removeprefix('FY')) - 1}"
-    except ValueError:
-        return None
+    """The cash-flow statement must add up. True when it does, a message when
+    it does not, None when an input is not tagged.
+
+    1. Operating + investing + financing = the statement's own "increase
+       (decrease) in cash before currency effect", when that line is tagged:
+       exact, no balance sheet involved. A failure means a total is
+       mis-tagged (cash generated from operations used as the operating
+       total, say).
+    2. Otherwise the three totals (+ currency effect) are compared with the
+       change in balance-sheet cash. Companies define cash a little
+       differently on the two statements (overdrafts, restricted cash:
+       Subsea 7 differs by under 1%), so only a gap above 2% of the change
+       is reported."""
     totals: list[TaggedFact] = []
     for _label, concepts in _CASH_FLOW_TOTALS:
         found = next((resolved[(c, fy)] for c in concepts if (c, fy) in resolved), None)
         if found is None:
             return None
         totals.append(found)
+    flows = sum((f.value for f in totals), Decimal(0))
+    stated = resolved.get((_CASH_CHANGE_BEFORE_FX, fy))
+    if stated is not None and stated.unit == totals[0].unit:
+        used = [*totals, stated]
+        if abs(flows - stated.value) <= _decimals_tolerance(used) * 2:
+            return True
+        return (
+            f"{fy} cash flow adds up: operating + investing + financing = {_fmt(flows)} vs the "
+            f"statement's own change in cash {_fmt(stated.value)}"
+        )
+    try:
+        prior = f"FY{int(fy.removeprefix('FY')) - 1}"
+    except ValueError:
+        return None
     cash_end, cash_start = resolved.get((_CASH, fy)), resolved.get((_CASH, prior))
     if cash_end is None or cash_start is None:
         return None
@@ -1020,9 +1180,9 @@ def _cash_tie(fy: str, resolved: dict[tuple[str, str], TaggedFact]) -> bool | st
     used = [*totals, cash_end, cash_start, *([fx] if fx else [])]
     if len({f.unit for f in used}) != 1:
         return None
-    flows = sum((f.value for f in totals), Decimal(0)) + (fx.value if fx else Decimal(0))
+    flows += fx.value if fx else Decimal(0)
     change = cash_end.value - cash_start.value
-    if abs(flows - change) <= _decimals_tolerance(used) * 2:
+    if abs(flows - change) <= _decimals_tolerance(used) * 2 + abs(change) * Decimal("0.02"):
         return True
     return (
         f"{fy} cash flow ties to the change in cash: operating + investing + financing"
@@ -1098,6 +1258,8 @@ class MappedFacts:
     # fiscal year -> metric -> closest tagged concepts, for a core metric
     # that could not be extracted. Makes every gap self-diagnosing.
     unmapped_candidates: dict[str, dict[str, list[dict[str, str]]]] = field(default_factory=dict)
+    # fiscal year -> {"extracted": [...], "not_applicable": [...], "missing": [...]}
+    coverage: dict[str, dict[str, list[str]]] = field(default_factory=dict)
 
 
 def map_tagged_facts(tagged: list[TaggedFact], contexts: dict[str, _Context]) -> MappedFacts:
@@ -1190,6 +1352,7 @@ def map_tagged_facts(tagged: list[TaggedFact], contexts: dict[str, _Context]) ->
         notes=notes,
         reporting_bank=is_bank_balance_sheet(resolved),
         unmapped_candidates=_unmapped_candidates(years, resolved, extracted),
+        coverage=coverage_manifest(years, extracted, is_bank_balance_sheet(resolved)),
     )
 
 
@@ -1367,6 +1530,7 @@ def extract_ixbrl(content: bytes) -> ExtractionResult:
             "reporting_bank": mapped.reporting_bank,
             "notes": mapped.notes,
             "unmapped_candidates": mapped.unmapped_candidates,
+            "coverage": mapped.coverage,
         }
         if mapped.reporting_bank:
             flags.append("reporting_bank")
@@ -1380,4 +1544,6 @@ def extract_ixbrl(content: bytes) -> ExtractionResult:
         details["fact_conflicts"] = conflicts[:20]
     if not pages or not any(p.text.strip() for p in pages):
         flags.append("no_pages_extracted")
+    if looks_mojibake(page_texts):
+        flags.append("text_encoding_suspect")
     return ExtractionResult(pages=pages, facts=facts_out, quality_flags=flags, details=details)

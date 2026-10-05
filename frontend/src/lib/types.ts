@@ -279,6 +279,7 @@ export const FACT_LABELS: Record<string, string> = {
   raw_materials_used: "Raw materials & consumables",
   profit_continuing_operations: "Profit from continuing operations",
   profit_discontinued_operations: "Profit from discontinued operations",
+  impairment_loss: "Impairment loss",
 };
 
 export const PERCENT_METRICS = new Set([
