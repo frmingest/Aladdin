@@ -257,6 +257,54 @@ _INTEGRITY_CHECKS: tuple[tuple[str, str, tuple[tuple[str, int], ...]], ...] = (
     ),
 )
 
+# Inputs every annual report is expected to give (G4 completeness manifest).
+# Each entry is the set of metrics any one of which satisfies it. Optional
+# inputs (hybrid capital, decommissioning, lease lines, minorities ...) are
+# left out on purpose: absent for most companies, so "missing" would be noise.
+CORE_INPUTS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("revenue", ("revenue",)),
+    ("operating profit (EBIT)", ("ebit", "operating_income")),
+    ("net income", ("net_income",)),
+    ("depreciation and amortisation", ("depreciation_and_amortization",)),
+    ("EBITDA", ("ebitda",)),
+    ("cost of sales or materials", ("cost_of_goods_sold", "raw_materials_used")),
+    ("profit before tax", ("income_before_tax",)),
+    ("income tax", ("income_tax_expense",)),
+    ("total assets", ("total_assets",)),
+    ("total equity", ("total_equity",)),
+    ("total liabilities", ("total_liabilities",)),
+    ("total debt", ("total_debt",)),
+    ("cash", ("cash_and_equivalents",)),
+    ("operating cash flow", ("operating_cash_flow",)),
+    ("capital expenditure", ("capital_expenditures",)),
+    ("interest expense", ("interest_expense",)),
+    ("share count", ("shares_outstanding",)),
+    ("earnings per share", ("eps_basic",)),
+)
+# A bank has no debt or EBITDA in the industrial sense: not missing, not applicable.
+_BANK_NOT_APPLICABLE = frozenset({"total debt", "EBITDA", "cost of sales or materials", "capital expenditure", "interest expense"})
+
+
+def coverage_manifest(
+    years: list[str], extracted: set[tuple[str, str]], reporting_bank: bool
+) -> dict[str, dict[str, list[str]]]:
+    """Per fiscal year: which expected inputs were extracted, which are not
+    applicable (a bank), and which are MISSING. A missing input is reported,
+    never silently dropped — the person sees what the filing did not give."""
+    manifest: dict[str, dict[str, list[str]]] = {}
+    for fy in years:
+        have, missing, na = [], [], []
+        for label, metrics in CORE_INPUTS:
+            if any((m, fy) in extracted for m in metrics):
+                have.append(label)
+            elif reporting_bank and label in _BANK_NOT_APPLICABLE:
+                na.append(label)
+            else:
+                missing.append(label)
+        manifest[fy] = {"extracted": have, "not_applicable": na, "missing": missing}
+    return manifest
+
+
 _SKIP_TEXT_TAGS = {"style", "script", "head", "title", "header", "hidden", "resources", "references"}
 _BREAK = "\ue000"  # private-use char: not whitespace, so it survives collapsing
 _BLOCK_TAGS = {"div", "p", "tr", "li", "h1", "h2", "h3", "h4", "h5", "h6", "table", "br", "section"}
@@ -441,6 +489,19 @@ def _element_text(element) -> str:
     lines = [line.strip(" |") for line in text.split(_BREAK)]
     lines = [" | ".join(p.strip() for p in line.split(" | ") if p.strip()) for line in lines]
     return "\n".join(line for line in lines if line)
+
+
+# UTF-8 text that was decoded as Latin-1/Windows-1252 shows "Ã¸", "Ã¥", "â€™"
+# for "ø", "å", "’". Norwegian company names and notes make this the most
+# likely silent corruption of the stored text (Salmon Evolution, 2026-10-05).
+_MOJIBAKE = re.compile("Ã[\u0080-\u00bf]|Â[\u0080-\u00bf]|â€")
+MOJIBAKE_THRESHOLD = 3
+
+
+def looks_mojibake(texts: list[str]) -> bool:
+    """True when the extracted text carries the typical double-encoding
+    sequences at least MOJIBAKE_THRESHOLD times — a corrupt copy, not a quirk."""
+    return sum(len(_MOJIBAKE.findall(text)) for text in texts) >= MOJIBAKE_THRESHOLD
 
 
 def _chunk(text: str) -> list[str]:
@@ -1098,6 +1159,8 @@ class MappedFacts:
     # fiscal year -> metric -> closest tagged concepts, for a core metric
     # that could not be extracted. Makes every gap self-diagnosing.
     unmapped_candidates: dict[str, dict[str, list[dict[str, str]]]] = field(default_factory=dict)
+    # fiscal year -> {"extracted": [...], "not_applicable": [...], "missing": [...]}
+    coverage: dict[str, dict[str, list[str]]] = field(default_factory=dict)
 
 
 def map_tagged_facts(tagged: list[TaggedFact], contexts: dict[str, _Context]) -> MappedFacts:
@@ -1190,6 +1253,7 @@ def map_tagged_facts(tagged: list[TaggedFact], contexts: dict[str, _Context]) ->
         notes=notes,
         reporting_bank=is_bank_balance_sheet(resolved),
         unmapped_candidates=_unmapped_candidates(years, resolved, extracted),
+        coverage=coverage_manifest(years, extracted, is_bank_balance_sheet(resolved)),
     )
 
 
@@ -1367,6 +1431,7 @@ def extract_ixbrl(content: bytes) -> ExtractionResult:
             "reporting_bank": mapped.reporting_bank,
             "notes": mapped.notes,
             "unmapped_candidates": mapped.unmapped_candidates,
+            "coverage": mapped.coverage,
         }
         if mapped.reporting_bank:
             flags.append("reporting_bank")
@@ -1380,4 +1445,6 @@ def extract_ixbrl(content: bytes) -> ExtractionResult:
         details["fact_conflicts"] = conflicts[:20]
     if not pages or not any(p.text.strip() for p in pages):
         flags.append("no_pages_extracted")
+    if looks_mojibake(page_texts):
+        flags.append("text_encoding_suspect")
     return ExtractionResult(pages=pages, facts=facts_out, quality_flags=flags, details=details)

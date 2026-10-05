@@ -157,6 +157,62 @@ def owner_basis_facts(facts: dict[str, Decimal]) -> tuple[dict[str, Decimal], st
     return adjusted, note
 
 
+# A distortion flag is raised, never hidden, when a headline ratio is likely
+# to mislead (2026-10-05). Each is a plain sentence naming the figure and why.
+DISCONTINUED_SHARE_FLAG = Decimal("0.10")
+HIGH_TAX_RATE_FLAG = Decimal("0.60")
+
+
+def data_quality_warnings(
+    reported: dict[str, Decimal], basis: dict[str, Decimal]
+) -> list[str]:
+    """Deterministic "this number may mislead" flags for one period. `reported`
+    are the facts as stored, `basis` the owner-basis facts (continuing profit).
+
+    - Leases on the balance sheet but no lease payments extracted: IFRS 16
+      moves lease cash out of operating cash flow, so FCF and owner earnings
+      may be overstated (Subsea 7 2025 before its lease lines were read).
+    - Discontinued profit above 10% of reported net income: the headline
+      profit is not what the business earns.
+    - Profit above operating profit (EBIT): it contains non-operating gains
+      (associates, financial income, tax credits) that may not recur.
+    - Effective tax above 60% or a tax credit on a profit: ROIC and margins
+      describe a special tax regime or a one-off, not the run rate."""
+    warnings: list[str] = []
+    leases = reported.get("lease_liabilities")
+    if leases and leases > ZERO and "lease_payments_financing" not in reported:
+        warnings.append(
+            f"Lease liabilities of {_fmt(leases)} are on the balance sheet but no lease payments were "
+            "extracted: free cash flow and owner earnings may be overstated"
+        )
+    discontinued, net_income = reported.get("profit_discontinued_operations"), reported.get("net_income")
+    if discontinued and net_income and abs(discontinued) > abs(net_income) * DISCONTINUED_SHARE_FLAG:
+        warnings.append(
+            f"Profit from discontinued operations ({_fmt(discontinued)}) is "
+            f"{abs(discontinued) / abs(net_income) * 100:.0f}% of reported net income ({_fmt(net_income)}): "
+            "earnings measures use continuing profit"
+        )
+    ebit, profit = basis.get("ebit", basis.get("operating_income")), basis.get("net_income")
+    if ebit and profit and ebit > ZERO and profit > ebit:
+        warnings.append(
+            f"Net income ({_fmt(profit)}) is above operating profit ({_fmt(ebit)}): it includes "
+            "non-operating gains (associates, financial income, tax credits) that may not recur"
+        )
+    pre_tax, tax = basis.get("income_before_tax"), basis.get("income_tax_expense")
+    if pre_tax and pre_tax > ZERO and tax is not None:
+        rate = tax / pre_tax
+        if rate > HIGH_TAX_RATE_FLAG:
+            warnings.append(
+                f"Effective tax rate is {_pct(rate)}: ROIC and net margin reflect a special tax "
+                "regime or a one-off, not a normal rate"
+            )
+        elif rate < ZERO:
+            warnings.append(
+                "Tax is a credit on a pre-tax profit: net income is flattered by a one-off tax item"
+            )
+    return warnings
+
+
 def _get(facts: dict[str, Decimal], *names: str) -> list[Decimal] | None:
     values = []
     missing = []
@@ -301,8 +357,10 @@ def compute_holding_metrics(
             result.skipped[name] = "not computed: mixed currencies"
         return result
 
+    reported_facts = facts
     facts, basis_note = owner_basis_facts(facts)
     facts = dict(facts)
+    result.warnings.extend(data_quality_warnings(reported_facts, facts))
     # EBIT: an IFRS/GAAP operating profit IS EBIT (finance items and tax sit
     # below it). Used only when no explicit EBIT fact exists, and said so.
     if "ebit" not in facts and "operating_income" in facts:
