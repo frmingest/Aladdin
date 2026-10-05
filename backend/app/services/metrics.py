@@ -130,6 +130,33 @@ OWNER_EARNINGS_DEDUCTIONS: tuple[tuple[str, str], ...] = (
 )
 
 
+def owner_basis_facts(facts: dict[str, Decimal]) -> tuple[dict[str, Decimal], str | None]:
+    """Facts restated to the owner's basis: net income WITHOUT the profit of
+    discontinued (sold) operations. A business that was sold earned that
+    profit once; capitalising it as if it recurs overstates owner earnings,
+    P/E, ROE and the DCF growth base (Orkla 2025: 11 473 of profit to the
+    owners, 5 120 of it from discontinued operations).
+
+    Returns (facts, note). The note is None when nothing was adjusted. The
+    discontinued fact is dropped from the returned copy, so applying this
+    twice (the DCF and compute_holding_metrics both call it) cannot subtract
+    twice. All of the discontinued result is assumed to belong to the
+    owners: if some of it was the minorities', owners' continuing profit is
+    understated — the conservative direction."""
+    discontinued = facts.get("profit_discontinued_operations")
+    if discontinued is None:
+        return facts, None
+    adjusted = {k: v for k, v in facts.items() if k != "profit_discontinued_operations"}
+    if not discontinued or "net_income" not in facts:
+        return adjusted, None
+    adjusted["net_income"] = facts["net_income"] - discontinued
+    note = (
+        f"net income excludes profit from discontinued operations of {_fmt(discontinued)} "
+        f"(reported net income {_fmt(facts['net_income'])})"
+    )
+    return adjusted, note
+
+
 def _get(facts: dict[str, Decimal], *names: str) -> list[Decimal] | None:
     values = []
     missing = []
@@ -170,6 +197,7 @@ def owner_earnings_from_facts(facts: dict[str, Decimal]) -> tuple[Decimal, str |
     """(owner earnings, note) or None when an input is missing. Shared by
     GET /holdings/{id}/metrics, the evidence packet and the DCF, so all
     three use the same definition."""
+    facts, basis_note = owner_basis_facts(facts)
     values = _get(facts, "net_income", "depreciation_and_amortization", "capital_expenditures")
     if values is None:
         return None
@@ -178,7 +206,7 @@ def owner_earnings_from_facts(facts: dict[str, Decimal]) -> tuple[Decimal, str |
     # working_capital_change isn't an extracted fact yet — explicitly 0,
     # matching calculations.owner_earnings's own documented convention.
     value = calculations.owner_earnings(net_income, d_and_a, capex, ZERO) - extra
-    parts = []
+    parts = [basis_note] if basis_note else []
     if used:
         parts.append("net income + D&A - capex" + "".join(f" - {label}" for label in used))
     if d_and_a > ZERO and capex > d_and_a * GROWTH_CAPEX_MULTIPLE:
@@ -273,6 +301,7 @@ def compute_holding_metrics(
             result.skipped[name] = "not computed: mixed currencies"
         return result
 
+    facts, basis_note = owner_basis_facts(facts)
     facts = dict(facts)
     # EBIT: an IFRS/GAAP operating profit IS EBIT (finance items and tax sit
     # below it). Used only when no explicit EBIT fact exists, and said so.
@@ -410,6 +439,10 @@ def compute_holding_metrics(
             result.skipped[name] = f"not available: {reason}"
     else:
         _market_multiples(facts, market, net_debt_value, result)
+    if basis_note:
+        for name in ("net_margin", "owner_earnings", "roe", "price_to_earnings"):
+            if name in result.computed:
+                result.notes[name] = "; ".join(filter(None, [result.notes.get(name), basis_note]))
     return result
 
 

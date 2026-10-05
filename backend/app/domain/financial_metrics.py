@@ -50,6 +50,13 @@ CANONICAL_METRICS = (
     "minority_interests",
     "eps_basic",
     "raw_materials_used",
+    # Profit walk (2026-10-05, claude/xhtml-ingestion-validation-2026-10-05.md):
+    # profit from continuing and from discontinued operations. A sold
+    # business (Orkla 2025: NOK 5 120m) is in the reported profit once and
+    # never again, so owner earnings, P/E, ROE and the DCF growth base must
+    # leave it out. Signed (a discontinued loss is negative).
+    "profit_continuing_operations",
+    "profit_discontinued_operations",
 )
 
 # Exact-match (case-insensitive, whitespace-normalized) label -> canonical

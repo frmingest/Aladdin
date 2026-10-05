@@ -67,6 +67,16 @@ _ESEF_FALLBACK_CONCEPTS: dict[str, tuple[str, ...]] = {
     # raw materials and consumables used — feeds "materials margin".
     "raw_materials_used": ("ifrs-full:RawMaterialsAndConsumablesUsed",),
     "eps_basic": ("ifrs-full:BasicAndDilutedEarningsLossPerShare",),
+    # Profit walk: a sold business is in the reported profit once, so the
+    # measures an owner values the company on must leave it out.
+    "profit_continuing_operations": (
+        "us-gaap:IncomeLossFromContinuingOperations",
+        "ifrs-full:ProfitLossFromContinuingOperations",
+    ),
+    "profit_discontinued_operations": (
+        "us-gaap:IncomeLossFromDiscontinuedOperationsNetOfTax",
+        "ifrs-full:ProfitLossFromDiscontinuedOperations",
+    ),
 }
 
 # Lease liabilities are usually tagged as a current and a non-current line
@@ -103,8 +113,12 @@ _PROXY_CONCEPTS: dict[str, tuple[str, ...]] = {
         "ifrs-full:DepreciationExpense",
         "ifrs-full:AdjustmentsForDepreciationExpense",
     ),
-    # Subsea 7 tags cash generated from operations (before tax and interest
-    # paid) and no "...OperatingActivities" total, so this overstates a bit.
+    # Subsea 7 tags its "net cash flows from operating activities" total with
+    # CashFlowsFromUsedInOperations and no "...OperatingActivities" concept
+    # (checked 2026-10-05: 1 470.7 = the printed total, AFTER tax paid). A
+    # filer that really tags cash generated from operations (before tax and
+    # interest) with it would be overstated, hence "proxy" — and the cash
+    # tie below (OCF + investing + financing = change in cash) catches it.
     "operating_cash_flow": ("ifrs-full:CashFlowsFromUsedInOperations",),
     "interest_expense": (
         "ifrs-full:InterestPaidClassifiedAsOperatingActivities",
@@ -187,9 +201,14 @@ _OWNER_VIEW_EXTENSION: dict[str, re.Pattern] = {
     # Salmon Evolution: FinanceCostsPaid... + InterestPaidOnLeaseLiabilities...
     "interest_paid_financing": re.compile(
         r"(InterestPaid|FinanceCostsPaid)\w*ClassifiedAsFinancingActivities$"
+        r"|^(?=\w*Lease)(?=\w*Interest)\w*ClassifiedAsFinancingActivities$"
     ),
+    # Principal of lease liabilities paid in the financing section. The verb
+    # varies by company (Payments / Repayments / Principal ...): Subsea 7's
+    # lease line was missed by the old "PaymentsOf..." only pattern. Interest
+    # on leases has its own pattern below and is excluded here.
     "lease_payments_financing": re.compile(
-        r"^PaymentsOfLeaseLiabilities\w*ClassifiedAsFinancingActivities$"
+        r"^(?!\w*Interest)(Payments?|Repayments?|Principal)\w*Lease\w*ClassifiedAsFinancingActivities$"
     ),
     # Vår Energi: PaymentsForRemovalAndDecommissioningOfOilAndGasFields...
     "decommissioning_payments": re.compile(
@@ -199,6 +218,15 @@ _OWNER_VIEW_EXTENSION: dict[str, re.Pattern] = {
     "hybrid_distributions": re.compile(
         r"(Dividend|Distribution|Coupon|Interest)\w*(Hybrid|Perpetual)\w*ClassifiedAsFinancingActivities$"
     ),
+}
+# Names that are not an outflow to the owner even though the pattern above
+# matches (issues, redemptions, borrowings repaid). "Repayment" is allowed for
+# leases: that IS how many companies name the principal of a lease payment.
+_OWNER_VIEW_EXCLUDE: dict[str, str] = {
+    "interest_paid_financing": r"(Proceeds|Repayment|Redemption|Issue)",
+    "lease_payments_financing": r"(Proceeds|Redemption|Issue|Borrowing|Bond)",
+    "decommissioning_payments": r"(Proceeds|Repayment|Redemption|Issue)",
+    "hybrid_distributions": r"(Proceeds|Repayment|Redemption|Issue)",
 }
 OWNER_VIEW_METRICS = ("hybrid_capital", *_OWNER_VIEW_STANDARD)
 
@@ -704,6 +732,9 @@ def _resolve_metric(
     if metric == "hybrid_capital":
         return _hybrid_capital(fy, resolved)
 
+    if metric == "total_equity":
+        return _owners_equity(fy, resolved)
+
     if metric in _OWNER_VIEW_STANDARD:
         return _owner_view_outflow(metric, fy, resolved)
 
@@ -754,6 +785,21 @@ def _resolve_metric(
     chosen = next((get(c) for c in concepts if get(c) is not None), None)
     if chosen is not None:
         return chosen.value, IXBRL_CONFIDENCE, chosen.concept, chosen.unit, chosen.page or None
+
+    if metric == "profit_continuing_operations":
+        # No continuing-operations line tagged: total profit less the
+        # discontinued result is, by definition, the continuing profit.
+        total = get("ifrs-full:ProfitLoss")
+        discontinued = next((get(c) for c in CONCEPT_MAP["profit_discontinued_operations"] if get(c)), None)
+        if total is not None and discontinued is not None and total.unit == discontinued.unit:
+            return (
+                total.value - discontinued.value,
+                DERIVED_CONFIDENCE,
+                f"derived: {total.concept} - {discontinued.concept}",
+                total.unit,
+                total.page or None,
+            )
+        return None
 
     if metric == "lease_liabilities":
         parts = [get(c) for c in _LEASE_COMPONENTS if get(c) is not None]
@@ -810,6 +856,52 @@ def _capex_extension(
     return total, confidence, source, "parts", found[0].unit, found[0].page or None
 
 
+# Equity concepts that include the minority (non-controlling) holders, and
+# the concepts that hold the minority's share. app/services/metrics.py treats
+# total_equity as the OWNERS' equity and adds minority interests on top for
+# invested capital and EV, so a figure that already includes them would be
+# counted twice (Orkla 2025: 52 147 including 3 483 of minorities).
+_EQUITY_INCLUDING_MINORITIES = (
+    "us-gaap:StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest",
+    "ifrs-full:Equity",
+)
+_MINORITY_CONCEPTS = ("us-gaap:MinorityInterest", "ifrs-full:NoncontrollingInterests")
+
+
+def _owners_equity(
+    fy: str, resolved: dict[tuple[str, str], TaggedFact]
+) -> tuple[Decimal, float, str, str | None, int | None] | None:
+    """Equity attributable to the owners of the parent. Taken from the
+    owners' concept when tagged; when only total equity is tagged, the
+    minorities' share is subtracted (derived, labelled) instead of silently
+    returning a figure that includes it."""
+    chosen = next(
+        (resolved[(c, fy)] for c in CONCEPT_MAP["total_equity"] if (c, fy) in resolved), None
+    )
+    if chosen is None:
+        return None
+    if chosen.concept in _EQUITY_INCLUDING_MINORITIES:
+        minority = next(
+            (
+                resolved[(c, fy)]
+                for c in _MINORITY_CONCEPTS
+                if (c, fy) in resolved
+                and resolved[(c, fy)].unit == chosen.unit
+                and resolved[(c, fy)].value != 0
+            ),
+            None,
+        )
+        if minority is not None:
+            return (
+                chosen.value - minority.value,
+                DERIVED_CONFIDENCE,
+                f"derived: {chosen.concept} - {minority.concept}",
+                chosen.unit,
+                chosen.page or None,
+            )
+    return chosen.value, IXBRL_CONFIDENCE, chosen.concept, chosen.unit, chosen.page or None
+
+
 def _hybrid_capital(
     fy: str, resolved: dict[tuple[str, str], TaggedFact]
 ) -> tuple[Decimal, float, str, str | None, int | None] | None:
@@ -840,7 +932,7 @@ def _owner_view_outflow(
             if year == fy
             and not concept.startswith("ifrs-full:")
             and pattern.search(concept.split(":", 1)[-1])
-            and not re.search(r"(Proceeds|Repayment|Redemption|Issue)", concept.split(":", 1)[-1])
+            and not re.search(_OWNER_VIEW_EXCLUDE[metric], concept.split(":", 1)[-1])
             and (
                 metric == "hybrid_distributions"
                 or not _OTHER_EQUITY_NAME.search(concept.split(":", 1)[-1])
@@ -887,7 +979,55 @@ def _integrity_checks(
                 passed += 1
             else:
                 failed.append(f"{fy} {label}: {_fmt(lhs.value)} vs {_fmt(total)}")
+        outcome = _cash_tie(fy, resolved)
+        if outcome is True:
+            passed += 1
+        elif outcome:
+            failed.append(outcome)
     return {"passed": passed, "failed": failed}
+
+
+_CASH_FLOW_TOTALS = (
+    ("operating", ("ifrs-full:CashFlowsFromUsedInOperatingActivities", "ifrs-full:CashFlowsFromUsedInOperations")),
+    ("investing", ("ifrs-full:CashFlowsFromUsedInInvestingActivities",)),
+    ("financing", ("ifrs-full:CashFlowsFromUsedInFinancingActivities",)),
+)
+_FX_ON_CASH = "ifrs-full:EffectOfExchangeRateChangesOnCashAndCashEquivalents"
+_CASH = "ifrs-full:CashAndCashEquivalents"
+
+
+def _cash_tie(fy: str, resolved: dict[tuple[str, str], TaggedFact]) -> bool | str | None:
+    """Operating + investing + financing cash flow (+ currency effect) must
+    equal the change in cash between two balance sheets. True when it ties,
+    a message when it does not, None when an input is not tagged. A failure
+    means a total was mis-tagged (cash generated from operations used as the
+    operating total, say) or cash is defined differently on the two
+    statements — either way the figure is not to be trusted unseen."""
+    try:
+        prior = f"FY{int(fy.removeprefix('FY')) - 1}"
+    except ValueError:
+        return None
+    totals: list[TaggedFact] = []
+    for _label, concepts in _CASH_FLOW_TOTALS:
+        found = next((resolved[(c, fy)] for c in concepts if (c, fy) in resolved), None)
+        if found is None:
+            return None
+        totals.append(found)
+    cash_end, cash_start = resolved.get((_CASH, fy)), resolved.get((_CASH, prior))
+    if cash_end is None or cash_start is None:
+        return None
+    fx = resolved.get((_FX_ON_CASH, fy))
+    used = [*totals, cash_end, cash_start, *([fx] if fx else [])]
+    if len({f.unit for f in used}) != 1:
+        return None
+    flows = sum((f.value for f in totals), Decimal(0)) + (fx.value if fx else Decimal(0))
+    change = cash_end.value - cash_start.value
+    if abs(flows - change) <= _decimals_tolerance(used) * 2:
+        return True
+    return (
+        f"{fy} cash flow ties to the change in cash: operating + investing + financing"
+        f"{' + currency effect' if fx else ''} = {_fmt(flows)} vs balance-sheet change {_fmt(change)}"
+    )
 
 
 def _other_equity_facts(fy: str, resolved: dict[tuple[str, str], TaggedFact]) -> list[TaggedFact]:
@@ -919,11 +1059,19 @@ def _other_equity_instruments(
     notes: list[str] = []
     for fy in years:
         equity = resolved.get(("ifrs-full:Equity", fy))
+        minority = next(
+            (
+                resolved[(c, fy)].value
+                for c in _MINORITY_CONCEPTS
+                if (c, fy) in resolved and resolved[(c, fy)].unit == equity.unit
+            ),
+            Decimal(0),
+        )
         for fact in _other_equity_facts(fy, resolved):
             notes.append(
                 f"{fy}: total equity {_fmt(equity.value)} {equity.unit} includes "
                 f"{fact.concept} {_fmt(fact.value)} — equity attributable to ordinary "
-                f"shareholders is {_fmt(equity.value - fact.value)}"
+                f"shareholders is {_fmt(equity.value - minority - fact.value)}"
             )
     return notes
 
