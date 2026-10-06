@@ -7,6 +7,7 @@ import type { BoardRow, BoardZone, MarginOfSafetyBoard } from "../lib/types";
 import { Button, Card, EmptyState, PageHeader, SnapshotStamp, VerdictBadge } from "../components/ui";
 import { InfoTooltip } from "../components/InfoTooltip";
 import { GLOSSARY } from "../lib/glossary";
+import { shortReason } from "../lib/unrankable";
 
 /** Feature F3 — every stock you own, ranked by how far its price sits below
  * the DCF value (backend/app/services/valuation/board.py). All numbers are
@@ -151,6 +152,41 @@ function RankedTable({ rows, variant = "portfolio" }: { rows: BoardRow[]; varian
         </tbody>
       </table>
     </div>
+  );
+}
+
+/** One line per holding that has no valuation: its name and a one-word cause. The full sentence from
+ * the backend is one click away, so nothing is hidden, only moved out of the first read. */
+function UnrankableRow({ row, withValue = false }: { row: BoardRow; withValue?: boolean }) {
+  const short = shortReason(row.unavailable_reason);
+  const chip =
+    short.kind === "data"
+      ? "bg-caution-subtle text-caution"
+      : short.kind === "model"
+        ? "bg-border-subtle text-ink-muted"
+        : "bg-border-subtle text-ink-faint";
+  return (
+    <li className="py-2 text-sm">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="min-w-0">
+          <Link to={`/holdings/${row.holding_id}`} className="font-medium text-ink hover:text-accent">
+            {row.name}
+          </Link>
+          <span className="ml-2 text-xs text-ink-faint">{row.ticker}</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className={`rounded-full px-2 py-0.5 text-xs ${chip}`}>{short.label}</span>
+          {withValue && <span className="tabular text-xs text-ink-muted">{formatNok(row.market_value_nok)}</span>}
+        </div>
+      </div>
+      <details className="mt-1 text-xs text-ink-muted">
+        <summary className="cursor-pointer text-ink-faint hover:text-accent">Why</summary>
+        <p className="mt-1">
+          {row.price ? `Price ${formatDecimal(row.price)} ${row.valuation_currency}. ` : ""}
+          {row.unavailable_reason ?? "No DCF yet"}
+        </p>
+      </details>
+    </li>
   );
 }
 
@@ -320,17 +356,16 @@ export default function MarginOfSafetyPage() {
                 </div>
               )}
               {watchUnavailable.length > 0 && (
-                <ul className="mt-3 divide-y divide-border-subtle">
-                  {watchUnavailable.map((row) => (
-                    <li key={row.holding_id} className="py-2 text-sm">
-                      <Link to={`/holdings/${row.holding_id}`} className="font-medium text-ink hover:text-accent">
-                        {row.name}
-                      </Link>
-                      <span className="ml-2 text-xs text-ink-faint">{row.ticker}</span>
-                      <p className="text-xs text-ink-muted">{row.unavailable_reason ?? "No DCF yet"}</p>
-                    </li>
-                  ))}
-                </ul>
+                <details className="mt-3">
+                  <summary className="cursor-pointer text-sm font-medium text-ink hover:text-accent">
+                    Can't value yet ({watchUnavailable.length})
+                  </summary>
+                  <ul className="mt-2 divide-y divide-border-subtle">
+                    {watchUnavailable.map((row) => (
+                      <UnrankableRow key={row.holding_id} row={row} />
+                    ))}
+                  </ul>
+                </details>
               )}
             </Card>
           )}
@@ -346,24 +381,7 @@ export default function MarginOfSafetyPage() {
               </p>
               <ul className="mt-3 divide-y divide-border-subtle">
                 {unavailable.map((row) => (
-                  <li key={row.holding_id} className="flex flex-wrap items-baseline justify-between gap-2 py-2.5 text-sm">
-                    <div className="min-w-0">
-                      <Link to={`/holdings/${row.holding_id}`} className="font-medium text-ink hover:text-accent">
-                        {row.name}
-                      </Link>
-                      <span className="ml-2 text-xs text-ink-faint">{row.ticker}</span>
-                      {/* 2026-09-26: a price fetched despite no DCF now
-                          reads as "No DCF yet", not a bare "no price". */}
-                      {row.price ? (
-                        <p className="text-xs text-ink-muted">
-                          No DCF yet — price {formatDecimal(row.price)} {row.valuation_currency}. {row.unavailable_reason}
-                        </p>
-                      ) : (
-                        <p className="text-xs text-ink-muted">{row.unavailable_reason}</p>
-                      )}
-                    </div>
-                    <span className="tabular text-xs text-ink-muted">{formatNok(row.market_value_nok)}</span>
-                  </li>
+                  <UnrankableRow key={row.holding_id} row={row} withValue />
                 ))}
               </ul>
             </Card>

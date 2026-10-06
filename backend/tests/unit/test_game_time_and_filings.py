@@ -305,3 +305,9 @@ def test_lines_are_sorted_warnings_first_and_never_advise():
     for line in out.lines:
         assert not BANNED.search(line.text), line.text
     assert out.headline == "1 tripwire(s) fired overnight."
+
+
+def test_repeated_report_names_are_grouped_with_a_count():
+    out = watch(ravens_landed=["Subsea 7 S.A"] * 80 + ["Orkla"] * 2 + ["Mowi"])
+    texts = [line.text for line in out.lines]
+    assert "83 new report(s) landed overnight: Subsea 7 S.A ×80, Orkla ×2, Mowi." in texts

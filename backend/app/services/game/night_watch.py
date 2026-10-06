@@ -32,6 +32,17 @@ MAX_FIRED_LINES = 5
 MAX_CHANGE_LINES = 4
 
 
+def _group_names(names: list[str], limit: int = 4) -> str:
+    """One entry per holding, with a count when it repeats ("Subsea 7 S.A ×80"), so a burst of reports on
+    one company reads as one item instead of the same name over and over. Order is first seen."""
+    counts: dict[str, int] = {}
+    for name in names:
+        counts[name] = counts.get(name, 0) + 1
+    items = [f"{name} ×{n}" if n > 1 else name for name, n in counts.items()]
+    shown = ", ".join(items[:limit])
+    return shown + (f" and {len(items) - limit} more" if len(items) > limit else "")
+
+
 def _aware(value: datetime) -> datetime:
     return value if value.tzinfo is not None else value.replace(tzinfo=timezone.utc)
 
@@ -138,7 +149,7 @@ def build_night_watch(
         )
 
     if ravens_landed:
-        shown = ", ".join(ravens_landed[:4]) + (f" and {len(ravens_landed) - 4} more" if len(ravens_landed) > 4 else "")
+        shown = _group_names(ravens_landed)
         lines.append(NightWatchLineOut(tone="note", text=f"{len(ravens_landed)} new report(s) landed overnight: {shown}."))
 
     if not frame_days:

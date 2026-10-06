@@ -5,14 +5,12 @@ import { useCachedQuery } from "../lib/queryCache";
 import { formatDate, formatNok, formatPct100 } from "../lib/format";
 import type {
   AllocationSlice,
-  MacroIndicators,
   MonitorRow,
   OverviewPosition,
   PortfolioOverview,
   RatingSlice,
   SummaryPoint,
 } from "../lib/types";
-import { MacroHeadlineStrip } from "../components/MacroIndicatorsPanel";
 import { EQUITY_ANALYZABLE_TYPES, INSTRUMENT_TYPE_LABELS } from "../lib/types";
 import { Card, EmptyState, PageHeader, SectionTitle, VerdictBadge } from "../components/ui";
 import { TripwireBanner } from "../components/TripwireBanner";
@@ -181,66 +179,23 @@ function ThesisCheckCard({ rows }: { rows: MonitorRow[] }) {
   );
 }
 
-/** Sprint 12 — a plain link, not a data fetch: the risk page's own load
- * (a year of daily price history per holding) is heavier than anything
- * else on this dashboard, so it's not triggered just by opening the
- * dashboard. */
-function PortfolioRiskLinkCard() {
+/** One slim row to the three portfolio views that have their own page. The sidebar has them too;
+ * this is only a shortcut, so it carries no description text. */
+function QuickLinks() {
+  const links = [
+    { to: "/risk", label: "Portfolio risk" },
+    { to: "/performance", label: "Performance" },
+    { to: "/precious-metals", label: "Precious metals" },
+    { to: "/macro", label: "Rates & inflation" },
+  ];
   return (
-    <Card>
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h2 className="text-sm font-semibold text-ink">Portfolio risk</h2>
-          <p className="mt-0.5 text-xs text-ink-muted">
-            Correlation matrix, correlated-risk clusters, stress scenarios and macro regime.
-          </p>
-        </div>
-        <Link to="/risk" className="shrink-0 text-xs font-medium text-accent hover:text-accent-hover">
-          Open →
+    <nav aria-label="More portfolio views" className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
+      {links.map((l) => (
+        <Link key={l.to} to={l.to} className="font-medium text-accent hover:text-accent-hover">
+          {l.label} →
         </Link>
-      </div>
-    </Card>
-  );
-}
-
-/** Sprint 13 — same reasoning as PortfolioRiskLinkCard: a year of daily
- * price history per holding is heavier than the rest of this dashboard. */
-function PerformanceLinkCard() {
-  return (
-    <Card>
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h2 className="text-sm font-semibold text-ink">Performance</h2>
-          <p className="mt-0.5 text-xs text-ink-muted">
-            Daily portfolio value and a benchmark comparison, reindexed from today's positions.
-          </p>
-        </div>
-        <Link to="/performance" className="shrink-0 text-xs font-medium text-accent hover:text-accent-hover">
-          Open →
-        </Link>
-      </div>
-    </Card>
-  );
-}
-
-/** Physical 1oz gold/silver coins (Faiz's request, 2026-09-26) -- valued at
- * gold-api.com spot in NOK. Kept off the equity-only PortfolioOverview and
- * given its own card, same reasoning as PortfolioRiskLinkCard above. */
-function PreciousMetalsLinkCard() {
-  return (
-    <Card>
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h2 className="text-sm font-semibold text-ink">Precious metals</h2>
-          <p className="mt-0.5 text-xs text-ink-muted">
-            Gold and silver coin holdings, valued at today's spot price, with a price-development chart.
-          </p>
-        </div>
-        <Link to="/precious-metals" className="shrink-0 text-xs font-medium text-accent hover:text-accent-hover">
-          Open →
-        </Link>
-      </div>
-    </Card>
+      ))}
+    </nav>
   );
 }
 
@@ -285,13 +240,11 @@ function HeroCard({ overview }: { overview: PortfolioOverview }) {
             </p>
           </div>
           <div>
-            <p className="text-xs font-medium uppercase tracking-wider text-ink-faint">Analysis coverage</p>
+            <p className="text-xs font-medium uppercase tracking-wider text-ink-faint">Analysed</p>
             <p className={`tabular mt-1 text-lg font-semibold ${coverageLow ? "text-caution" : "text-ink"}`}>
-              {formatPct100(coverage ?? null, 0)}
+              {overview.analyzed_equity_count} of {overview.equity_count}
             </p>
-            <p className="text-xs text-ink-faint">
-              {overview.analyzed_equity_count} of {overview.equity_count} equities
-            </p>
+            <p className="text-xs text-ink-faint">{formatPct100(coverage ?? null, 1)} of equity value</p>
           </div>
         </div>
       </div>
@@ -344,11 +297,15 @@ function HoldingCardsRow({ positions }: { positions: OverviewPosition[] }) {
 }
 
 function SummaryCard({ points }: { points: SummaryPoint[] }) {
+  // Plain restatements ("Portfolio value … across 8 holdings") repeat the cards around this one,
+  // so only flags and passed checks are listed.
+  const shown = points.filter((p) => p.tone !== "info");
+  if (shown.length === 0) return null;
   return (
     <Card>
-      <SectionTitle hint="Rule-based, computed from your data. Not model output.">Executive summary</SectionTitle>
+      <SectionTitle hint="Rule-based, computed from your data. Not model output.">Worth a look</SectionTitle>
       <ul className="space-y-2">
-        {points.map((p, i) => (
+        {shown.map((p, i) => (
           <li key={i} className="flex gap-2.5 text-sm text-ink">
             <span
               aria-label={TONE[p.tone].label}
@@ -455,11 +412,6 @@ export default function DashboardPage() {
   });
   const overview = overviewQuery.data;
   const error = overviewQuery.error;
-  // Optional strips: a failure here just hides them.
-  const macro: MacroIndicators | null = useCachedQuery<MacroIndicators>(
-    "macro-indicators",
-    () => api.getMacroIndicators(),
-  ).data;
   const thesisQuery = useCachedQuery<{ rows: MonitorRow[] }>("thesis-monitor", () => api.getThesisMonitor());
   const thesisRows: MonitorRow[] = thesisQuery.data?.rows ?? [];
   const loadThesis = thesisQuery.reload;
@@ -500,23 +452,7 @@ export default function DashboardPage() {
 
           <ThesisCheckCard rows={thesisRows} />
 
-          <PortfolioRiskLinkCard />
-
-          <PerformanceLinkCard />
-
-          <PreciousMetalsLinkCard />
-
-          {macro && macro.indicators.some((i) => i.value !== null) && (
-            <Card>
-              <div className="mb-3 flex items-baseline justify-between gap-3">
-                <SectionTitle hint="Norges Bank, SSB and FRED. Change over 12 months.">Rates &amp; inflation</SectionTitle>
-                <Link to="/macro" className="text-xs font-medium text-accent hover:text-accent-hover">
-                  All series →
-                </Link>
-              </div>
-              <MacroHeadlineStrip data={macro} />
-            </Card>
-          )}
+          <QuickLinks />
 
           <div className="grid gap-6 lg:grid-cols-2">
             <AllocationCard overview={overview} />

@@ -193,8 +193,10 @@ function ReadinessCard({
 }) {
   const [expanded, setExpanded] = useState(false);
   const problems = readiness?.checks.filter((c) => c.status !== "ok") ?? [];
+  // Blockers always show. When the run can go ahead, the warnings (mostly plumbing: Ollama, the PC
+  // worker, quota) stay one click away so they do not push the verdict down the page.
   const showAll = expanded || (readiness !== null && !readiness.ready);
-  const visible = showAll ? readiness?.checks ?? [] : problems;
+  const visible = showAll ? readiness?.checks ?? [] : [];
 
   return (
     <Card>
@@ -267,7 +269,11 @@ function ReadinessCard({
           onClick={() => setExpanded((v) => !v)}
           className="mt-3 text-xs text-accent hover:text-accent-hover"
         >
-          {expanded ? "Hide passed checks" : `Show all ${readiness.checks.length} checks`}
+          {expanded
+            ? "Hide checks"
+            : problems.length > 0
+              ? `Show ${problems.length} warning${problems.length === 1 ? "" : "s"}`
+              : `Show all ${readiness.checks.length} checks`}
         </button>
       )}
     </Card>
@@ -450,7 +456,7 @@ function VerdictCard({
         </div>
       </div>
 
-      {reconciliation && reconciliation.reconciliation_narrative && (
+      {reconciliation && reconciliation.reconciliation_narrative && run.user_notes_snapshot?.trim() && (
         <div className="mt-5 rounded-lg border-l-2 border-accent bg-raised p-4">
           <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-ink-faint">How your notes were weighed</p>
           <Prose text={reconciliation.reconciliation_narrative} clampAfter={2} />
@@ -967,18 +973,23 @@ export function AnalysisPanel({ holdingId }: { holdingId: string }) {
   const verdict = run?.reconciliation?.verdict ?? blind?.verdict ?? null;
   const status = run ? RUN_STATUS_TEXT[run.status] : null;
 
+  const readinessCard = (
+    <ReadinessCard
+      readiness={readiness}
+      error={readinessError}
+      running={running}
+      onRun={() => void handleRun()}
+      hasRun={Boolean(run)}
+      onQueue={handleQueue}
+      queueing={queueing}
+      pending={Boolean(pending)}
+    />
+  );
+
   return (
     <div className="space-y-4">
-      <ReadinessCard
-        readiness={readiness}
-        error={readinessError}
-        running={running}
-        onRun={() => void handleRun()}
-        hasRun={Boolean(run)}
-        onQueue={handleQueue}
-        queueing={queueing}
-        pending={Boolean(pending)}
-      />
+      {/* With no result yet the readiness card leads; once there is a verdict it comes first. */}
+      {!run && readinessCard}
 
       {pending && queue && (
         <PendingRunCard
@@ -1022,6 +1033,8 @@ export function AnalysisPanel({ holdingId }: { holdingId: string }) {
       )}
 
       {run && verdict && <VerdictCard run={run} verdict={verdict} evidence={evidence} />}
+
+      {run && readinessCard}
 
       {run && blind && isFundBlindPass(blind) && (
         <>

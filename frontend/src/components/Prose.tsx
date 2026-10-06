@@ -1,12 +1,12 @@
 import { Fragment, useState } from "react";
-import { mentionsDataGap, paragraphs, segmentFigures, splitSentences } from "../lib/prose";
+import { mentionsDataGap, paragraphs, segmentFigures, splitSentences, stripEvidenceRefs } from "../lib/prose";
 
 /** Figures set in the mono face and brighter than the prose around them,
  * so the numbers a paragraph rests on can be picked out at a glance. */
 export function WithFigures({ text }: { text: string }) {
   return (
     <>
-      {segmentFigures(text).map((seg, i) =>
+      {segmentFigures(stripEvidenceRefs(text)).map((seg, i) =>
         seg.figure ? (
           <span key={i} className="tabular whitespace-nowrap font-mono text-[0.9em] font-medium text-accent">
             {seg.text}
