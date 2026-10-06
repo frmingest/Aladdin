@@ -57,3 +57,11 @@ export function mentionsDataGap(sentence: string): boolean {
 export function dataGapCount(text: string): number {
   return splitSentences(text).filter(mentionsDataGap).length;
 }
+
+/** Evidence references the model puts in its text, e.g. "(EV-003)" or "(EV-010, EV-011)". They are
+ * ids for the code, not for the reader; the section's own "N sources" list still shows every one.
+ * Removes the bracketed forms only, so a sentence that merely names an id is left alone. */
+const EVIDENCE_REF = /\s*[([]\s*EV-\d+(?:\s*[,;&]\s*(?:and\s+)?EV-\d+)*\s*[)\]]/g;
+export function stripEvidenceRefs(text: string): string {
+  return text.replace(EVIDENCE_REF, "").replace(/\s+([.,;:])/g, "$1");
+}

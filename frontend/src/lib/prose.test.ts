@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mentionsDataGap, paragraphs, segmentFigures, splitSentences } from "./prose";
+import { mentionsDataGap, paragraphs, segmentFigures, splitSentences, stripEvidenceRefs } from "./prose";
 
 describe("splitSentences", () => {
   it("splits on sentence ends but not inside decimals", () => {
@@ -39,5 +39,17 @@ describe("mentionsDataGap", () => {
     expect(mentionsDataGap("However, the lack of data on ROIC limits the view.")).toBe(true);
     expect(mentionsDataGap("The valuation synthesis is not possible.")).toBe(true);
     expect(mentionsDataGap("Interest coverage is strong.")).toBe(false);
+  });
+});
+
+describe("stripEvidenceRefs", () => {
+  it("removes bracketed evidence ids and keeps the sentence", () => {
+    expect(stripEvidenceRefs("The fund's fee (EV-003)")).toBe("The fund's fee");
+    expect(stripEvidenceRefs("Exposure to risk (EV-010, EV-011, EV-012).")).toBe("Exposure to risk.");
+    expect(stripEvidenceRefs("A fall in returns [EV-004] is a trigger.")).toBe("A fall in returns is a trigger.");
+  });
+  it("leaves text without references and bare mentions alone", () => {
+    expect(stripEvidenceRefs("No refs here.")).toBe("No refs here.");
+    expect(stripEvidenceRefs("See EV-003 for detail")).toBe("See EV-003 for detail");
   });
 });

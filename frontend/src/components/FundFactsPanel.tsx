@@ -811,6 +811,8 @@ function HoldingsCard({
   const [editing, setEditing] = useState(false);
   const [importNote, setImportNote] = useState<string | null>(null);
   const [linkError, setLinkError] = useState<string | null>(null);
+  // Only the row being edited renders the company list; every other row is plain text.
+  const [pickingId, setPickingId] = useState<string | null>(null);
   const rows = facts.exposures.holding;
   const byExposure = new Map(facts.metrics.look_through.holdings.map((h) => [h.exposure_id, h]));
   const candidates = holdings.filter((h) => h.id !== holdingId).sort((a, b) => a.name.localeCompare(b.name));
@@ -909,19 +911,44 @@ function HoldingsCard({
                     </td>
                     <td className="tabular py-2 text-right">{formatPct100(row.weight_pct, 2)}</td>
                     <td className="py-2 pl-3">
-                      <select
-                        value={row.linked_holding_id ?? ""}
-                        onChange={(e) => void link(row, e.target.value)}
-                        className={`${INPUT} max-w-[12rem] py-1 text-xs`}
-                        title={row.link_method ? `Linked by ${row.link_method}` : "Not linked"}
-                      >
-                        <option value="">— not linked —</option>
-                        {candidates.map((h) => (
-                          <option key={h.id} value={h.id}>
-                            {h.name} ({h.ticker})
-                          </option>
-                        ))}
-                      </select>
+                      {pickingId === row.id ? (
+                        <select
+                          autoFocus
+                          value={row.linked_holding_id ?? ""}
+                          onChange={(e) => {
+                            setPickingId(null);
+                            void link(row, e.target.value);
+                          }}
+                          onBlur={() => setPickingId(null)}
+                          className={`${INPUT} max-w-[12rem] py-1 text-xs`}
+                          aria-label={`Company in the app for ${row.label}`}
+                        >
+                          <option value="">— not linked —</option>
+                          {candidates.map((h) => (
+                            <option key={h.id} value={h.id}>
+                              {h.name} ({h.ticker})
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span className="flex items-center gap-2 text-xs">
+                          {row.linked_holding_id ? (
+                            <span className="text-ink" title={row.link_method ? `Linked by ${row.link_method}` : undefined}>
+                              {candidates.find((h) => h.id === row.linked_holding_id)?.name ?? "Linked"}
+                            </span>
+                          ) : (
+                            <span className="text-ink-faint">not linked</span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setPickingId(row.id)}
+                            className="text-accent hover:underline"
+                            aria-label={`${row.linked_holding_id ? "Change" : "Set"} company for ${row.label}`}
+                          >
+                            {row.linked_holding_id ? "Change" : "Link…"}
+                          </button>
+                        </span>
+                      )}
                     </td>
                     <td className="tabular py-2 text-right text-ink-muted">
                       {look?.roe_pct ? formatPct100(look.roe_pct) : "—"}
