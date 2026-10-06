@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { api, ApiError } from "../lib/api";
 import type {
   CompanyResearch,
@@ -25,7 +25,20 @@ import {
   formatMultiple,
   formatPercent,
 } from "../lib/format";
-import { Button, Card, CollapsibleSection, EmptyState, PageHeader, SectionJumpBar, StatusBadge } from "../components/ui";
+import {
+  Button,
+  Card,
+  CollapsibleSection,
+  Disclosure,
+  EmptyState,
+  PageHeader,
+  StatusBadge,
+  TabBar,
+  TabPanel,
+  type TabItem,
+} from "../components/ui";
+import { WarningStack } from "../components/WarningStack";
+import type { WarningItem } from "../lib/warnings";
 import { AnalysisPanel } from "../components/AnalysisPanel";
 import { ThesisPanel } from "../components/ThesisPanel";
 import { FundFactsPanel } from "../components/FundFactsPanel";
@@ -160,13 +173,13 @@ function MetricsPanel({ holdingId }: { holdingId: string }) {
       </div>
 
       {metrics && metrics.warnings.length > 0 && (
-        <div className="mb-4 rounded-md border border-negative/30 bg-negative/5 px-4 py-3">
-          <p className="mb-1 text-sm font-semibold text-ink">Check before relying on these figures</p>
-          <ul className="list-disc space-y-1 pl-5 text-xs text-ink-muted">
-            {metrics.warnings.map((w) => (
-              <li key={w}>{w}</li>
-            ))}
-          </ul>
+        <div className="mb-4">
+          <p className="mb-2 text-sm font-semibold text-ink">Check before relying on these figures</p>
+          <WarningStack
+            items={metrics.warnings.map(
+              (w): WarningItem => ({ id: w, kind: "data", severity: "medium", title: w }),
+            )}
+          />
         </div>
       )}
 
@@ -240,20 +253,14 @@ function MetricsPanel({ holdingId }: { holdingId: string }) {
  * tag it came from — so any number above can be checked against the
  * filing by hand. */
 function FactSourcesTable({ metrics }: { metrics: HoldingMetrics }) {
-  const [open, setOpen] = useState(false);
   if (metrics.fact_details.length === 0) return null;
   return (
-    <div className="mt-4">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="text-sm text-accent hover:text-accent-hover"
-      >
-        {open ? "Hide" : "Show"} the {metrics.fact_details.length} extracted figures behind these
-        ratios
-      </button>
-      {open && (
-        <Card className="mt-2 overflow-x-auto">
+    <Disclosure
+      className="mt-4"
+      label={`the ${metrics.fact_details.length} extracted figures behind these ratios`}
+    >
+      {(
+        <Card className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-xs uppercase tracking-wide text-ink-muted">
@@ -300,7 +307,7 @@ function FactSourcesTable({ metrics }: { metrics: HoldingMetrics }) {
           </table>
         </Card>
       )}
-    </div>
+    </Disclosure>
   );
 }
 
@@ -593,6 +600,8 @@ export default function HoldingDetailPage() {
   const [holding, setHolding] = useState<Holding | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [metricsKey, setMetricsKey] = useState(0);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get("tab");
 
   useEffect(() => {
     if (!id) return;
@@ -624,7 +633,7 @@ export default function HoldingDetailPage() {
   }
 
   useEffect(() => {
-    if (holding) document.title = `${holding.ticker} · Aladdin`;
+    if (holding) document.title = `${holding.name} · Aladdin`;
   }, [holding]);
 
   if (!id) return null;
@@ -651,15 +660,21 @@ export default function HoldingDetailPage() {
   // Sprint 8: an equity ETF / fund is analysed as a fund — Fund facts
   // replace the company metrics, valuation (DCF) and company research.
   const isFund = FUND_TYPES.has(holding.asset_class_raw);
-  const jumpItems = [
-    { id: "sec-analysis", label: "Analysis" },
-    ...(isFund ? [] : [{ id: "sec-thesis", label: "Thesis" }]),
-    { id: "sec-metrics", label: isFund ? "Fund facts" : "Metrics" },
-    { id: "sec-documents", label: "Documents" },
-    ...(isFund ? [] : [{ id: "sec-valuation", label: "Valuation" }, { id: "sec-research", label: "Research" }]),
-    { id: "sec-journal", label: "Journal" },
-    { id: "sec-sources", label: "Sources" },
+  const tabs: TabItem[] = [
+    { id: "overview", label: "Overview" },
+    { id: "analysis", label: "Analysis" },
+    { id: "numbers", label: isFund ? "Fund facts" : "Financials" },
+    { id: "documents", label: "Documents" },
+    { id: "journal", label: "Journal" },
   ];
+  const active = tabs.some((t) => t.id === tabParam) ? (tabParam as string) : "overview";
+  const selectTab = (tab: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (tab === "overview") next.delete("tab");
+    else next.set("tab", tab);
+    setSearchParams(next, { replace: true });
+  };
+  const bumpMetrics = () => setMetricsKey((k) => k + 1);
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-6 sm:px-8 sm:py-8">
@@ -678,7 +693,8 @@ export default function HoldingDetailPage() {
         }
       />
 
-      {holding.sector && (
+      {/* The sector research page is about companies; a fund has no such page worth a link. */}
+      {holding.sector && !isFund && (
         <Link
           to={`/sectors/${encodeURIComponent(holding.sector)}`}
           className="mb-6 inline-block text-sm text-accent hover:text-accent-hover"
@@ -689,88 +705,96 @@ export default function HoldingDetailPage() {
 
       {error && <p className="mb-4 text-sm text-negative">{error}</p>}
 
-      <HoldingTowerCard holdingId={id} />
+      {/* Faiz asked for this to be easy to find right after opening a position (2026-09-26), so
+          it stays above the tabs; it is one collapsed line and renders nothing off Oslo Børs. */}
+      {!isFund && <NewswebFetchHighlight holdingId={id} onImported={bumpMetrics} />}
 
-      <NewswebFetchHighlight holdingId={id} onImported={() => setMetricsKey((k) => k + 1)} />
+      <TabBar items={tabs} active={active} onChange={selectTab} label="Holding sections" />
 
-      <SectionJumpBar items={jumpItems} />
-
-      <div id="sec-analysis" className="mb-8 scroll-mt-24">
-        <h2 className="section-title">
-          Buffett/Munger analysis
-        </h2>
-        {/* Keyed on metricsKey so readiness re-checks after an upload or
-            EDGAR import adds financial history. */}
-        <AnalysisPanel key={metricsKey} holdingId={id} />
-      </div>
-
-      {!isFund && (
-        <div className="mb-8">
-          <CollapsibleSection
-            id="sec-thesis"
-            title="Thesis tracking"
-            hint="Is my thesis still intact? Tripwires, what's changed, verdict timeline"
-            defaultOpen
-          >
-            <ThesisPanel holdingId={id} />
-          </CollapsibleSection>
-        </div>
-      )}
-
-      {isFund ? (
-        <div id="sec-metrics" className="mb-8 scroll-mt-24">
-          <h2 className="section-title">
-            Fund facts
-          </h2>
-          <FundFactsPanel key={metricsKey} holdingId={id} />
-        </div>
-      ) : (
-        <div id="sec-metrics" className="mb-8 scroll-mt-24">
-          <h2 className="section-title">
-            Deterministic metrics
-          </h2>
-          <MetricsPanel key={metricsKey} holdingId={id} />
-        </div>
-      )}
-
-      <div className="mb-8">
-        <CollapsibleSection id="sec-documents" title="Documents" hint="Uploaded filings and other files">
-          <DocumentsPanel holdingId={id} isFund={isFund} onUploaded={() => setMetricsKey((k) => k + 1)} />
-        </CollapsibleSection>
-      </div>
-
-      {!isFund && (
-        <>
-          <div id="sec-valuation" className="mb-8 scroll-mt-24">
-            <h2 className="section-title">
-              Valuation
-            </h2>
-            <ValuationPanel holdingId={id} ticker={holding.ticker} />
+      {/* Only the active tab is mounted, so a page loads what you are looking at and nothing else. */}
+      {active === "overview" && (
+        <TabPanel id="overview">
+          <div className="space-y-6">
+            <HoldingTowerCard holdingId={id} />
+            {/* Keyed on metricsKey so readiness re-checks after an upload or EDGAR import adds
+                financial history. */}
+            <AnalysisPanel key={metricsKey} holdingId={id} view="summary" onOpenDetail={() => selectTab("analysis")} />
           </div>
-
-          <div id="sec-research" className="mb-8 scroll-mt-24">
-            <h2 className="section-title">
-              Research
-            </h2>
-            <CompanyResearchSection holdingId={id} ticker={holding.ticker} />
-          </div>
-        </>
+        </TabPanel>
       )}
 
-      <div className="mb-8">
-        <CollapsibleSection id="sec-journal" title="Decision journal" hint="Why you bought or sold, and how it turned out">
+      {active === "analysis" && (
+        <TabPanel id="analysis">
+          <div className="space-y-8">
+            <div>
+              <h2 className="section-title">Buffett/Munger analysis</h2>
+              <AnalysisPanel key={metricsKey} holdingId={id} view="detail" />
+            </div>
+
+            {!isFund && (
+              <>
+                <CollapsibleSection
+                  id="sec-thesis"
+                  title="Thesis tracking"
+                  hint="Is my thesis still intact? Tripwires, what's changed, verdict timeline"
+                  defaultOpen
+                >
+                  <ThesisPanel holdingId={id} />
+                </CollapsibleSection>
+                <CollapsibleSection id="sec-research" title="Company research" hint="Cached web research on the company">
+                  <CompanyResearchSection holdingId={id} ticker={holding.ticker} />
+                </CollapsibleSection>
+              </>
+            )}
+          </div>
+        </TabPanel>
+      )}
+
+      {active === "numbers" && (
+        <TabPanel id="numbers">
+          {isFund ? (
+            <div>
+              <h2 className="section-title">Fund facts</h2>
+              <FundFactsPanel key={metricsKey} holdingId={id} />
+            </div>
+          ) : (
+            <div className="space-y-8">
+              <div>
+                <h2 className="section-title">Deterministic metrics</h2>
+                <MetricsPanel key={metricsKey} holdingId={id} />
+              </div>
+              <div>
+                <h2 className="section-title">Valuation</h2>
+                <ValuationPanel holdingId={id} ticker={holding.ticker} />
+              </div>
+            </div>
+          )}
+        </TabPanel>
+      )}
+
+      {active === "documents" && (
+        <TabPanel id="documents">
+          <div className="space-y-8">
+            <div>
+              <h2 className="section-title">Documents</h2>
+              <DocumentsPanel holdingId={id} isFund={isFund} onUploaded={bumpMetrics} />
+            </div>
+            <CollapsibleSection id="sec-sources" title="Primary sources" hint="SEC EDGAR filings · Oslo Børs announcements">
+              <SourcesPanel holdingId={id} onFinancialsChanged={bumpMetrics} />
+            </CollapsibleSection>
+          </div>
+        </TabPanel>
+      )}
+
+      {active === "journal" && (
+        <TabPanel id="journal">
+          <h2 className="section-title">Decision journal</h2>
           <JournalPanel holding={holding} />
-        </CollapsibleSection>
-      </div>
-
-      <div className="mb-10">
-        <CollapsibleSection id="sec-sources" title="Primary sources" hint="SEC EDGAR filings · Oslo Børs announcements">
-          <SourcesPanel holdingId={id} onFinancialsChanged={() => setMetricsKey((k) => k + 1)} />
-        </CollapsibleSection>
-      </div>
+        </TabPanel>
+      )}
 
       {/* Destructive action lives at the very bottom, away from the everyday buttons. */}
-      <Card className="border-negative/40">
+      <Card className="mt-10 border-negative/40">
         <h2 className="text-sm font-semibold text-ink">Delete this holding</h2>
         <p className="mt-1 text-sm text-ink-muted">
           Removes {holding.ticker} with its documents, figures, analyses and notes. You'll be asked to confirm; it

@@ -9,23 +9,18 @@ import type {
   OverviewPosition,
   PortfolioOverview,
   RatingSlice,
-  SummaryPoint,
 } from "../lib/types";
 import { EQUITY_ANALYZABLE_TYPES, INSTRUMENT_TYPE_LABELS } from "../lib/types";
-import { Card, EmptyState, PageHeader, SectionTitle, VerdictBadge } from "../components/ui";
-import { TripwireBanner } from "../components/TripwireBanner";
+import { Card, Disclosure, EmptyState, PageHeader, SectionTitle, VerdictBadge } from "../components/ui";
+import { CheckTripwiresButton } from "../components/TripwireBanner";
+import { WarningStack } from "../components/WarningStack";
+import { buildAttention } from "../lib/attention";
 
 /** Sprint 5 dashboard, the app's home page. Everything comes from
  * GET /portfolio/overview (backend/app/services/portfolio_overview.py),
  * which reads the database only: no price refresh, no LLM call. So this
  * page loads instantly, and every number and summary sentence is computed
  * deterministically on the server. */
-
-const TONE: Record<SummaryPoint["tone"], { icon: string; className: string; label: string }> = {
-  good: { icon: "✓", className: "bg-positive-subtle text-positive", label: "Good" },
-  info: { icon: "i", className: "bg-border-subtle text-ink-muted", label: "Note" },
-  warn: { icon: "!", className: "bg-caution-subtle text-caution", label: "Check" },
-};
 
 type AllocationView = "sector" | "type" | "currency" | "account";
 
@@ -146,39 +141,6 @@ function RatingRows({ slices, kind }: { slices: RatingSlice[]; kind: "verdict" |
   );
 }
 
-/** Sprint 11 — only rendered when something actually needs attention (a
- * firing tripwire or a "something changed" review), never as an empty
- * "all good" card here — the Thesis page itself covers the all-clear
- * case. */
-function ThesisCheckCard({ rows }: { rows: MonitorRow[] }) {
-  const firing = rows.filter((r) => r.status === "tripwire_fired");
-  const review = rows.filter((r) => r.status === "review");
-  if (firing.length === 0 && review.length === 0) return null;
-
-  return (
-    <Card className="border-caution/50">
-      <div className="mb-3 flex items-baseline justify-between gap-3">
-        <SectionTitle hint="Tripwires and analysis changes needing a look.">Thesis check</SectionTitle>
-        <Link to="/thesis" className="text-xs font-medium text-accent hover:text-accent-hover">
-          Open Thesis →
-        </Link>
-      </div>
-      <ul className="space-y-2 text-sm">
-        {[...firing, ...review].slice(0, 6).map((row) => (
-          <li key={row.holding_id} className="flex items-center justify-between gap-3">
-            <Link to={`/holdings/${row.holding_id}`} className="font-medium text-ink hover:text-accent">
-              {row.name}
-            </Link>
-            <span className={row.status === "tripwire_fired" ? "text-negative" : "text-caution"}>
-              {row.status_label}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </Card>
-  );
-}
-
 /** One slim row to the three portfolio views that have their own page. The sidebar has them too;
  * this is only a shortcut, so it carries no description text. */
 function QuickLinks() {
@@ -296,27 +258,52 @@ function HoldingCardsRow({ positions }: { positions: OverviewPosition[] }) {
   );
 }
 
-function SummaryCard({ points }: { points: SummaryPoint[] }) {
-  // Plain restatements ("Portfolio value … across 8 holdings") repeat the cards around this one,
-  // so only flags and passed checks are listed.
-  const shown = points.filter((p) => p.tone !== "info");
-  if (shown.length === 0) return null;
+/** The one place the Dashboard says "look at this" (UX noise audit, Wave 2).
+ * At most three ranked items, "+N more" for the rest. It replaces the rule
+ * summary, the thesis-check card and the tripwire banner, which each said part
+ * of the same thing. Passed checks stay one click away. */
+function NeedsAttentionCard({
+  overview,
+  thesisRows,
+  onChecked,
+}: {
+  overview: PortfolioOverview;
+  thesisRows: MonitorRow[];
+  onChecked: () => void;
+}) {
+  const attention = buildAttention(overview.summary, thesisRows);
+  const { items, passed, tripwireFiring } = attention;
+  if (items.length === 0 && passed.length === 0) return null;
+
   return (
-    <Card>
-      <SectionTitle hint="Rule-based, computed from your data. Not model output.">Worth a look</SectionTitle>
-      <ul className="space-y-2">
-        {shown.map((p, i) => (
-          <li key={i} className="flex gap-2.5 text-sm text-ink">
-            <span
-              aria-label={TONE[p.tone].label}
-              className={`mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${TONE[p.tone].className}`}
-            >
-              {TONE[p.tone].icon}
-            </span>
-            <span>{p.text}</span>
-          </li>
-        ))}
-      </ul>
+    <Card className={tripwireFiring ? "border-negative/50" : ""}>
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+        <SectionTitle hint="Rule-based, computed from your data. Not model output.">Needs attention</SectionTitle>
+        {tripwireFiring && <CheckTripwiresButton onChecked={onChecked} />}
+      </div>
+      {items.length > 0 ? (
+        <WarningStack items={items} />
+      ) : (
+        <p className="text-sm text-ink-muted">Nothing needs attention right now.</p>
+      )}
+      {passed.length > 0 && (
+        <Disclosure
+          level="evidence"
+          label={`${passed.length} passed check${passed.length === 1 ? "" : "s"}`}
+          className="mt-3"
+        >
+          <ul className="space-y-1.5">
+            {passed.map((text) => (
+              <li key={text} className="flex gap-2 text-xs text-ink-muted">
+                <span aria-hidden className="text-positive">
+                  ✓
+                </span>
+                <span>{text}</span>
+              </li>
+            ))}
+          </ul>
+        </Disclosure>
+      )}
     </Card>
   );
 }
@@ -427,8 +414,6 @@ export default function DashboardPage() {
         }
       />
 
-      <TripwireBanner rows={thesisRows} onChecked={loadThesis} />
-
       {error && <p className="text-sm text-negative">{error}</p>}
       {!overview && !error && <p className="text-sm text-ink-muted">Loading…</p>}
 
@@ -448,9 +433,7 @@ export default function DashboardPage() {
 
           <HoldingCardsRow positions={overview.positions} />
 
-          {overview.summary.length > 0 && <SummaryCard points={overview.summary} />}
-
-          <ThesisCheckCard rows={thesisRows} />
+          <NeedsAttentionCard overview={overview} thesisRows={thesisRows} onChecked={loadThesis} />
 
           <QuickLinks />
 
