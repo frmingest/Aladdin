@@ -39,6 +39,9 @@ import { Button, Card, EmptyState } from "./ui";
 // checks describe this server's configuration, not the worker's (mirrors
 // QUEUE_BLOCKING_CHECKS in backend/app/services/analysis/queue.py).
 const LOCAL_BLOCKING_CHECKS = new Set(["instrument_type", "ticker", "financials", "fund_profile"]);
+// Checks about this server's own plumbing (LLM provider, Ollama, quota). They never get the
+// investment warning colour and always sort after the checks about the holding itself.
+const PLUMBING_CHECKS = new Set(["providers", "local_llm", "quota", "worker"]);
 const QUEUE_POLL_MS = 15000;
 
 function errorText(err: unknown): string {
@@ -196,7 +199,11 @@ function ReadinessCard({
   // Blockers always show. When the run can go ahead, the warnings (mostly plumbing: Ollama, the PC
   // worker, quota) stay one click away so they do not push the verdict down the page.
   const showAll = expanded || (readiness !== null && !readiness.ready);
-  const visible = showAll ? readiness?.checks ?? [] : [];
+  const visible = showAll
+    ? [...(readiness?.checks ?? [])].sort(
+        (a, b) => Number(PLUMBING_CHECKS.has(a.key)) - Number(PLUMBING_CHECKS.has(b.key)),
+      )
+    : [];
 
   return (
     <Card>
@@ -248,12 +255,15 @@ function ReadinessCard({
           {visible.map((check) => (
             <li key={check.key} className="flex gap-3 py-2.5 text-sm">
               <span
-                className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${CHECK_DOT[check.status]}`}
+                className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
+                  PLUMBING_CHECKS.has(check.key) && check.status === "warn" ? "bg-ink-faint" : CHECK_DOT[check.status]
+                }`}
                 aria-hidden="true"
               />
               <div className="min-w-0">
                 <p className="text-ink">
                   {check.label}
+                  {PLUMBING_CHECKS.has(check.key) && <span className="ml-2 text-xs text-ink-faint">system</span>}
                   <span className="sr-only"> — {CHECK_TEXT[check.status]}</span>
                 </p>
                 <p className="text-xs text-ink-muted">{check.detail}</p>
@@ -841,7 +851,23 @@ function NotesCard({
 
 // ---------------------------------------------------------------------------
 
-export function AnalysisPanel({ holdingId }: { holdingId: string }) {
+/** The holding page shows the analysis in two tabs: `summary` (status, verdict, readiness)
+ * on Overview and `detail` (moat, the narrative sections, your notes, run details) on Analysis.
+ * `all` is both, in the old order. */
+export type AnalysisView = "all" | "summary" | "detail";
+
+export function AnalysisPanel({
+  holdingId,
+  view = "all",
+  onOpenDetail,
+}: {
+  holdingId: string;
+  view?: AnalysisView;
+  /** Overview only: switches to the Analysis tab. */
+  onOpenDetail?: () => void;
+}) {
+  const showSummary = view !== "detail";
+  const showDetail = view !== "summary";
   const [run, setRun] = useState<AnalysisRun | null | undefined>(undefined);
   const [runError, setRunError] = useState<string | null>(null);
   const [readiness, setReadiness] = useState<AnalysisReadiness | null>(null);
@@ -986,57 +1012,81 @@ export function AnalysisPanel({ holdingId }: { holdingId: string }) {
     />
   );
 
+  if (view === "detail" && run === null && !runError) {
+    // Nothing to detail yet; the run itself is started from Overview.
+    return (
+      <div className="space-y-4">
+        <p className="text-sm text-ink-muted">No analysis yet. Run one from the Overview tab.</p>
+        <NotesCard holdingId={holdingId} usedInLatestRun={undefined} />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
-      {/* With no result yet the readiness card leads; once there is a verdict it comes first. */}
-      {!run && readinessCard}
+      {showSummary && (
+        <>
+          {/* With no result yet the readiness card leads; once there is a verdict it comes first. */}
+          {!run && readinessCard}
 
-      {pending && queue && (
-        <PendingRunCard
-          run={pending}
-          queue={queue}
-          busy={queueing || running}
-          onCancel={() => void handleCancel()}
-          onRunInCloud={() => void handleRunInCloud()}
-          cloudReady={Boolean(readiness?.ready)}
-        />
+          {pending && queue && (
+            <PendingRunCard
+              run={pending}
+              queue={queue}
+              busy={queueing || running}
+              onCancel={() => void handleCancel()}
+              onRunInCloud={() => void handleRunInCloud()}
+              cloudReady={Boolean(readiness?.ready)}
+            />
+          )}
+
+          {runError && <p className="text-sm text-negative">{runError}</p>}
+
+          {run === undefined && <p className="text-sm text-ink-muted">Loading latest analysis…</p>}
+
+          {run === null && !runError && (
+            <EmptyState>
+              No analysis yet. When the readiness checks pass, run one — the verdict, moat breakdown and
+              every piece of evidence behind them will show here.
+            </EmptyState>
+          )}
+
+          {run && status && (
+            <p className="flex flex-wrap items-center gap-2 text-xs text-ink-muted">
+              <span className={`rounded-full px-2 py-0.5 font-medium ${status.style}`}>{status.text}</span>
+              <span>Latest run {formatDate(run.started_at)}</span>
+              {run.engine === "local" && <span>· on {run.claimed_by ?? "your PC"}</span>}
+            </p>
+          )}
+
+          {run?.status === "FAILED" && (
+            <Card className="border-negative/30">
+              <p className="text-sm font-medium text-negative">This run failed</p>
+              <p className="mt-1 text-sm text-ink-muted">{run.error_message ?? "No error message recorded."}</p>
+            </Card>
+          )}
+
+          {run && run.status === "BLIND_ONLY" && run.error_message && (
+            <p className="text-xs text-caution">{run.error_message}</p>
+          )}
+
+          {run && verdict && <VerdictCard run={run} verdict={verdict} evidence={evidence} />}
+
+          {run && readinessCard}
+
+          {view === "summary" && run && blind && onOpenDetail && (
+            <button
+              type="button"
+              onClick={onOpenDetail}
+              className="text-sm font-medium text-accent hover:text-accent-hover"
+            >
+              Moat, evidence and the full reasoning →
+            </button>
+          )}
+        </>
       )}
 
-      {runError && <p className="text-sm text-negative">{runError}</p>}
-
-      {run === undefined && <p className="text-sm text-ink-muted">Loading latest analysis…</p>}
-
-      {run === null && !runError && (
-        <EmptyState>
-          No analysis yet. When the readiness checks pass, run one — the verdict, moat breakdown and
-          every piece of evidence behind them will show here.
-        </EmptyState>
-      )}
-
-      {run && status && (
-        <p className="flex flex-wrap items-center gap-2 text-xs text-ink-muted">
-          <span className={`rounded-full px-2 py-0.5 font-medium ${status.style}`}>{status.text}</span>
-          <span>Latest run {formatDate(run.started_at)}</span>
-          {run.engine === "local" && <span>· on {run.claimed_by ?? "your PC"}</span>}
-        </p>
-      )}
-
-      {run?.status === "FAILED" && (
-        <Card className="border-negative/30">
-          <p className="text-sm font-medium text-negative">This run failed</p>
-          <p className="mt-1 text-sm text-ink-muted">{run.error_message ?? "No error message recorded."}</p>
-        </Card>
-      )}
-
-      {run && run.status === "BLIND_ONLY" && run.error_message && (
-        <p className="text-xs text-caution">{run.error_message}</p>
-      )}
-
-      {run && verdict && <VerdictCard run={run} verdict={verdict} evidence={evidence} />}
-
-      {run && readinessCard}
-
-      {run && blind && isFundBlindPass(blind) && (
+      {showDetail && run && blind && isFundBlindPass(blind) && (
         <>
           <FundMoatCard blind={blind} evidence={evidence} />
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -1049,7 +1099,7 @@ export function AnalysisPanel({ holdingId }: { holdingId: string }) {
         </>
       )}
 
-      {run && blind && !isFundBlindPass(blind) && (
+      {showDetail && run && blind && !isFundBlindPass(blind) && (
         <>
           <MoatCard run={run} evidence={evidence} />
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -1061,9 +1111,11 @@ export function AnalysisPanel({ holdingId }: { holdingId: string }) {
         </>
       )}
 
-      <NotesCard holdingId={holdingId} usedInLatestRun={run ? run.user_notes_snapshot : undefined} />
+      {showDetail && (
+        <NotesCard holdingId={holdingId} usedInLatestRun={run ? run.user_notes_snapshot : undefined} />
+      )}
 
-      {run && <RunDetails run={run} />}
+      {showDetail && run && <RunDetails run={run} />}
     </div>
   );
 }

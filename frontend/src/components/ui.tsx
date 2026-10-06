@@ -303,3 +303,114 @@ export function SnapshotStamp({ at }: { at?: string | null }) {
     </span>
   );
 }
+
+/** The glance → detail → evidence pattern (UX noise audit, principle 2).
+ * A quiet "Show …" link; the body is only mounted while open, so closed
+ * evidence makes no API calls and adds no words to the page. `level="evidence"`
+ * is the most muted version, for sources, raw figures and error text. */
+export function Disclosure({
+  label,
+  children,
+  level = "detail",
+  defaultOpen = false,
+  className = "",
+}: {
+  /** What is inside, finishing "Show …": e.g. "the 22 extracted figures". */
+  label: string;
+  children: React.ReactNode;
+  level?: "detail" | "evidence";
+  defaultOpen?: boolean;
+  className?: string;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className={className}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className={`text-left ${
+          level === "evidence"
+            ? "text-xs text-ink-muted hover:text-ink"
+            : "text-sm text-accent hover:text-accent-hover"
+        }`}
+      >
+        {open ? "Hide" : "Show"} {label}
+      </button>
+      {open && <div className="mt-2">{children}</div>}
+    </div>
+  );
+}
+
+export interface TabItem {
+  id: string;
+  label: string;
+}
+
+/** Real tabs for a long page: only the active tab's content is rendered, so a
+ * page loads what you are looking at and nothing else. Arrow keys, Home and
+ * End move between tabs. The caller owns the active id (the holding page keeps
+ * it in the URL so a tab can be linked to). */
+export function TabBar({
+  items,
+  active,
+  onChange,
+  label,
+}: {
+  items: TabItem[];
+  active: string;
+  onChange: (id: string) => void;
+  label: string;
+}) {
+  const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const index = items.findIndex((t) => t.id === active);
+    let next = index;
+    if (e.key === "ArrowRight") next = (index + 1) % items.length;
+    else if (e.key === "ArrowLeft") next = (index - 1 + items.length) % items.length;
+    else if (e.key === "Home") next = 0;
+    else if (e.key === "End") next = items.length - 1;
+    else return;
+    e.preventDefault();
+    onChange(items[next].id);
+    requestAnimationFrame(() => document.getElementById(`tab-${items[next].id}`)?.focus());
+  };
+  return (
+    <div
+      role="tablist"
+      aria-label={label}
+      onKeyDown={onKeyDown}
+      className="sticky top-0 z-20 -mx-4 mb-6 flex gap-1 overflow-x-auto border-b border-border bg-background/95 px-4 backdrop-blur sm:-mx-8 sm:px-8 lg:top-[41px]"
+    >
+      {items.map((t) => {
+        const selected = t.id === active;
+        return (
+          <button
+            key={t.id}
+            id={`tab-${t.id}`}
+            role="tab"
+            type="button"
+            aria-selected={selected}
+            aria-controls={`panel-${t.id}`}
+            tabIndex={selected ? 0 : -1}
+            onClick={() => onChange(t.id)}
+            className={`shrink-0 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors ${
+              selected
+                ? "border-accent text-ink"
+                : "border-transparent text-ink-muted hover:text-ink"
+            }`}
+          >
+            {t.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+export function TabPanel({ id, children }: { id: string; children: React.ReactNode }) {
+  return (
+    <div role="tabpanel" id={`panel-${id}`} aria-labelledby={`tab-${id}`}>
+      {children}
+    </div>
+  );
+}

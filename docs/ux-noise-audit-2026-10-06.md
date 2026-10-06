@@ -1,7 +1,7 @@
 # Frontend noise audit: end-user UX review (2026-10-06)
 
 **Goal (Faiz):** look at the whole frontend as an end user with a UX designer's eye, and cut the text bombardment.
-**Status:** audit plus Wave 1 built (PR #56, not merged, not deployed). Waves 2 and 3 proposed, not approved.
+**Status:** audit, Wave 1 (PR #56, merged `662f3af`) and Wave 2 built (see §7; PR open, not merged, not deployed, not seen in a browser). Wave 3 proposed, not approved.
 
 **How this was measured:** the live app (`exciting-gratitude-production-71b5…`) in the built-in browser, real data, at a phone-width pane (486 px). Word counts are the visible text of each page (`innerText`: collapsed sections are not counted). I also read the frontend code in `E:\Aladdin\frontend` (about 10,400 words of prose in the page and component files). **Not reviewed:** desktop layout, Macro, Performance, Journal, Marketplace and store pages, and the Settings page. Treat their absence as "unknown", not "fine".
 
@@ -115,3 +115,26 @@
 1. **Wave 1: yes.** Built as PR #56. Two differences from the plan above: evidence IDs are removed from the sentence text rather than shown as chips (the per-section sources list still has them), and the Night Watch fix touched the backend, so Wave 1 is not strictly frontend-only.
 2. **Sidebar "More" group: no for now.** Precious metals stays visible. Revisit in Wave 3.
 3. **Rates tiles off the Dashboard: yes** ("if you think it is good"). They stay on Macro; the Dashboard has a quick link.
+4. **Wave 2: go** (Faiz, 2026-10-06: "loving the new approach … proceed with next phase"). Built, see §7.
+
+---
+
+## 7. Wave 2 built (branch `feature/ux-noise-wave2`, off `main` `662f3af`)
+
+Frontend only, no backend change, no migration. tsc, ESLint (0 errors), 274 frontend tests (11 new), `vite build` pass. **Not seen in a browser** (the browser pane cannot reach a dev server started from the PC shell); the Dashboard and holding page need a first look after deploy.
+
+| # | What | Where | Effect |
+|---|---|---|---|
+| 1 | **Holding page as five tabs:** Overview · Analysis · Financials (Fund facts for a fund) · Documents · Journal. The tab is kept in the URL (`?tab=analysis`) so it can be linked. **Only the active tab is mounted**, so the page loads what you are looking at | Holding page | 19 stacked sections become one at a time; Overview is the tower card (game mode), then status, verdict and readiness |
+| 2 | **Analysis split in two views:** `summary` (verdict, readiness, a link on to the detail) on Overview; `detail` (moat, the narrative sections, your notes, run details) on Analysis, with Thesis tracking and Company research as collapsed sections under it | `AnalysisPanel` | Verdict first, the long reasoning one click away |
+| 3 | **`<WarningStack>` and `lib/warnings.ts`:** at most 3 ranked warnings, "+N more" for the rest; plumbing is never ranked against investment warnings and shows as one muted line linking to System status. Rank: high before medium before low, then investment before data, then input order | Shared | The warning budget (principle 3), with 6 unit tests |
+| 4 | **`<Disclosure>`** (glance → detail → evidence; the body is mounted only when open) and **`<TabBar>`** with arrow-key support | Shared (`ui.tsx`) | One accordion pattern instead of one per page |
+| 5 | **Dashboard "Needs attention"** replaces three lists: the rule summary, the thesis-check card and the tripwire banner. Fired tripwires first, then changed theses, then the overview's own warning sentences; max 3 shown; passed checks behind "Show N passed checks". **Check now** stays in the card while a tripwire is firing | Dashboard | `lib/attention.ts`, 5 unit tests. Nothing recomputed in the browser: the warnings are the backend's |
+| 6 | **Metric warnings** ("Check before relying on these figures") go through the warning budget; the extracted-figures table uses `Disclosure` | Financials tab | Long warning lists stop pushing the numbers down |
+| 7 | **Readiness checks:** plumbing checks (server configuration, local LLM, quota) sort last, carry a small "system" tag and never get the amber dot | Overview | An offline Ollama no longer looks like an investment warning |
+| 8 | Funds no longer show the "sector research" link or the Newsweb reports card (stock-only); the browser tab shows the name, not the raw ticker | Holding page | Findings 2.1 and 2.5 (6) |
+
+**Decisions made while building (say if you want any reversed):**
+- The red tripwire banner is gone; a fired tripwire is the first row of "Needs attention" (red), with Check now beside it. The banner and the card said the same thing.
+- The Newsweb reports card stays **above** the tabs (one collapsed line, Oslo Børs only), because you asked on 2026-09-26 for it to be easy to find right after opening a position.
+- **Not done:** the "key numbers" row on Overview (base value, margin of safety). It needs the valuation data on the Overview tab; left for Wave 3 or a follow-up. The Fund page's 19 sections are now tabs, but the **word count after the change was not measured** (no browser).
