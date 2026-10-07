@@ -1,3 +1,5 @@
+from collections.abc import Sequence
+
 from app.domain.errors import UnsupportedFileTypeError
 from app.services.documents.extraction.base import (
     ExtractedFact,
@@ -5,17 +7,23 @@ from app.services.documents.extraction.base import (
     ExtractionResult,
 )
 from app.services.documents.extraction.csv_statement import extract_csv
-from app.services.documents.extraction.ixbrl import extract_ixbrl
+from app.services.documents.extraction.ixbrl import MappingRule, extract_ixbrl
 from app.services.documents.extraction.pdf import extract_pdf
 from app.services.documents.extraction.pptx import extract_pptx
 from app.services.documents.extraction.xlsx import extract_xlsx
 
-__all__ = ["ExtractedFact", "ExtractedPage", "ExtractionResult", "extract"]
+__all__ = ["ExtractedFact", "ExtractedPage", "ExtractionResult", "MappingRule", "extract"]
 
 IXBRL_EXTENSIONS = (".xhtml", ".html", ".htm")
 
 
-def extract(extension: str, content: bytes, *, filename: str = "") -> ExtractionResult:
+def extract(
+    extension: str,
+    content: bytes,
+    *,
+    filename: str = "",
+    rules: Sequence[MappingRule] = (),
+) -> ExtractionResult:
     if extension == ".pdf":
         return extract_pdf(content)
     if extension == ".pptx":
@@ -27,7 +35,7 @@ def extract(extension: str, content: bytes, *, filename: str = "") -> Extraction
         stem = filename.rsplit(".", 1)[0] if filename else ""
         return extract_csv(content, sheet_name=stem)
     if extension in IXBRL_EXTENSIONS:
-        return extract_ixbrl(content)
+        return extract_ixbrl(content, rules)
     raise UnsupportedFileTypeError(
         f"*{extension}", (".pdf", ".pptx", ".xlsx", ".csv", *IXBRL_EXTENSIONS)
     )

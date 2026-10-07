@@ -26,6 +26,7 @@ disabled (no XXE); scripts/styles/fonts never reach the page text.
 from __future__ import annotations
 
 import re
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal, InvalidOperation
@@ -1236,6 +1237,35 @@ def _other_equity_instruments(
     return notes
 
 
+@dataclass(frozen=True)
+class MappingRule:
+    """A mapping a person accepted in the tag review inbox: read `concept`
+    as `metric` when the built-in mapping finds nothing for that year. Never
+    overrides a built-in result; carries a lower confidence than a built-in
+    tag, and lower again when it was accepted although its check failed."""
+
+    metric: str
+    concept: str
+    check_overridden: bool = False
+
+
+RULE_CONFIDENCE = 0.9
+RULE_OVERRIDE_CONFIDENCE = 0.8
+
+
+def _resolve_by_rule(
+    metric: str, fy: str, resolved: dict[tuple[str, str], TaggedFact], rules: Sequence[MappingRule]
+) -> tuple[Decimal, float, str, str | None, int | None] | None:
+    for rule in rules:
+        if rule.metric != metric:
+            continue
+        fact = resolved.get((rule.concept, fy))
+        if fact is not None:
+            confidence = RULE_OVERRIDE_CONFIDENCE if rule.check_overridden else RULE_CONFIDENCE
+            return fact.value, confidence, f"rule: {rule.concept}", fact.unit, fact.page or None
+    return None
+
+
 @dataclass
 class MappedFacts:
     """Canonical metrics mapped from a filing's tagged facts — the result is
@@ -1263,12 +1293,20 @@ class MappedFacts:
     # Tag review (PR 1): gaps with ranked candidate tags and the largest
     # tagged-but-unused numbers, for the latest year. Read-only pointer.
     tag_review: dict[str, object] = field(default_factory=dict)
+    # Tag review PR 2: "FY metric <- concept" for every figure an accepted
+    # mapping rule supplied (the built-in mapping found nothing).
+    rules_applied: list[str] = field(default_factory=list)
 
 
-def map_tagged_facts(tagged: list[TaggedFact], contexts: dict[str, _Context]) -> MappedFacts:
+def map_tagged_facts(
+    tagged: list[TaggedFact],
+    contexts: dict[str, _Context],
+    rules: Sequence[MappingRule] = (),
+) -> MappedFacts:
     """Group totals on annual periods -> canonical metrics (CLAUDE.md Rule 1:
     deterministic, no inference). Shared by the upload parser and the
-    ESEF-index history import."""
+    ESEF-index history import. `rules` are mappings a person accepted in the
+    tag review inbox; they are read only after the built-in lists."""
     fiscal_year_ends = {
         (c.end.month, c.end.day)
         for c in contexts.values()
@@ -1302,9 +1340,14 @@ def map_tagged_facts(tagged: list[TaggedFact], contexts: dict[str, _Context]) ->
     facts_out: list[ExtractedFact] = []
     mapping_lines: list[str] = []
     fact_sources: dict[str, str] = {}
+    rules_applied: list[str] = []
     for metric in (*CONCEPT_MAP, "ebitda", *OWNER_VIEW_METRICS):
         for fy in years:
             picked = _resolve_metric(metric, fy, resolved)
+            from_rule = False
+            if picked is None and rules:
+                picked = _resolve_by_rule(metric, fy, resolved, rules)
+                from_rule = picked is not None
             if picked is None:
                 continue
             value, confidence, source, unit_raw, page = picked
@@ -1334,6 +1377,8 @@ def map_tagged_facts(tagged: list[TaggedFact], contexts: dict[str, _Context]) ->
             )
             mapping_lines.append(f"{fy} {metric} = {_fmt(value)} {unit} <- {source}")
             fact_sources[f"{fy} {metric}"] = source
+            if from_rule:
+                rules_applied.append(f"{fy} {metric} <- {source.removeprefix('rule: ')}")
 
     integrity = _integrity_checks(resolved, years)
     other_equity = _other_equity_instruments(resolved, years)
@@ -1361,6 +1406,7 @@ def map_tagged_facts(tagged: list[TaggedFact], contexts: dict[str, _Context]) ->
         tag_review=build_tag_review(
             years, resolved, extracted, fact_sources, is_bank_balance_sheet(resolved)
         ),
+        rules_applied=rules_applied,
     )
 
 
@@ -1430,7 +1476,7 @@ def parse_ixbrl(content: bytes):
     return lxml_html.fromstring(content)
 
 
-def extract_ixbrl(content: bytes) -> ExtractionResult:
+def extract_ixbrl(content: bytes, rules: Sequence[MappingRule] = ()) -> ExtractionResult:
     root = parse_ixbrl(content)
     body = next((el for el in root.iter() if isinstance(el.tag, str) and _local(el.tag) == "body"), root)
 
@@ -1482,7 +1528,7 @@ def extract_ixbrl(content: bytes) -> ExtractionResult:
             )
         )
 
-    mapped = map_tagged_facts(tagged, contexts)
+    mapped = map_tagged_facts(tagged, contexts, rules)
     facts_out, mapping_lines, fact_sources = mapped.facts, mapped.mapping_lines, mapped.fact_sources
     years, integrity, other_equity, conflicts = mapped.years, mapped.integrity, mapped.other_equity, mapped.conflicts
     lei = entity_lei(root)
@@ -1540,6 +1586,7 @@ def extract_ixbrl(content: bytes) -> ExtractionResult:
             "unmapped_candidates": mapped.unmapped_candidates,
             "coverage": mapped.coverage,
             "tag_review": mapped.tag_review,
+            "rules_applied": mapped.rules_applied,
         }
         if mapped.reporting_bank:
             flags.append("reporting_bank")

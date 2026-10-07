@@ -2286,8 +2286,9 @@ export interface Competence {
 }
 
 
-/** Tag review inbox (PR 1, read-only): ESEF inputs the extractor could not
- * fill, the closest tagged lines, and big tagged numbers nothing reads. */
+/** Tag review inbox: ESEF inputs the extractor could not fill, the closest
+ * tagged lines, and big tagged numbers nothing reads (PR 1); plus the
+ * decisions made on them: accepted as a mapping rule or rejected (PR 2). */
 export type TagCheck = "ties" | "plausible" | "does_not_tie" | "no_check";
 
 export interface TagCandidate {
@@ -2302,12 +2303,20 @@ export interface TagCandidate {
   check_detail: string;
   warning: string | null;
   score: number;
+  /** "accepted" once a rule exists; the figure appears after the next re-extract. */
+  decision: "accepted" | null;
+  /** Failed its own check or looks implausibly large: needs a second confirmation. */
+  needs_second_confirmation: boolean;
 }
 
 export interface TagGap {
   metric: string;
   fiscal_year: string;
   candidates: TagCandidate[];
+  /** Suggestions hidden because they were rejected for this holding. */
+  rejected_hidden: number;
+  /** A rule is saved but the company has not been re-extracted yet. */
+  rule_pending: boolean;
 }
 
 export interface TagUnused {
@@ -2336,4 +2345,32 @@ export interface TagReview {
   holdings: TagReviewHolding[];
   holdings_needing_review: number;
   total_gaps: number;
+}
+
+export interface TagRule {
+  id: string;
+  status: "accepted" | "rejected";
+  /** Canonical metric key, e.g. "capital_expenditures". */
+  metric: string;
+  /** The input as the inbox shows it, e.g. "capital expenditure". */
+  metric_label: string;
+  concept: string;
+  scope: "all" | "company";
+  ticker: string | null;
+  holding_id: string | null;
+  check_status: TagCheck | null;
+  check_detail: string | null;
+  check_overridden: boolean;
+  fiscal_year: string | null;
+  source_filename: string | null;
+}
+
+export interface TagReextractResult {
+  holding_id: string;
+  ticker: string;
+  documents: number;
+  facts_before: number;
+  facts_after: number;
+  rule_figures: number;
+  notes: string[];
 }
