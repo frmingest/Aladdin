@@ -30,7 +30,7 @@ export default function FortressReports({
     { id: "advisors", label: "Advisors" },
     { id: "weather", label: "Weather" },
     { id: "temperament", label: "Temperament" },
-    { id: "ravens", label: newRavens > 0 ? `Ravens · ${newRavens} new` : "Ravens" },
+    { id: "ravens", label: newRavens > 0 ? `Ravens · ${newRavens} unseen` : "Ravens" },
   ];
   return (
     <section aria-label="Fortress reports" className="space-y-3">

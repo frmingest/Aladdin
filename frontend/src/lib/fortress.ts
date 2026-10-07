@@ -784,3 +784,35 @@ export function clockPoint(deg: number, cx: number, cy: number, r: number): { x:
   const rad = (deg * Math.PI) / 180;
   return { x: cx + r * Math.sin(rad), y: cy - r * Math.cos(rad) };
 }
+
+
+/** Notes under "What the survey could not see" that only repeat something the Vault card already
+ * says on the same page (UX noise audit, game mode). The cash and coin facts stay on the card;
+ * every other note is kept as it is. Pure. */
+export function notesWithoutRepeats(
+  notes: string[],
+  vault: { cash_nok: string | null; gold_oz: string; silver_oz: string },
+): string[] {
+  const coins = Number(vault.gold_oz) > 0 || Number(vault.silver_oz) > 0;
+  return notes.filter((n) => {
+    if (vault.cash_nok === null && n.startsWith("No cash entered")) return false;
+    if (coins && n.startsWith("Physical coins")) return false;
+    return true;
+  });
+}
+
+/** A name a person can read where a raw fund code would otherwise stand (0P0001RFXW.IR, 0P0001VJ4B.IR):
+ * stock tickers are kept without their exchange suffix; a fund code becomes the first word of the name. */
+export function shortLabel(name: string, ticker: string, max = 8): string {
+  const bare = ticker.replace(/\.[A-Z]+$/, "");
+  if (/^0P[0-9A-Z]{6,}$/.test(bare)) {
+    const first = name.trim().split(/\s+/)[0] ?? bare;
+    return first.slice(0, max);
+  }
+  return bare.slice(0, max);
+}
+
+/** True for a fund's data-vendor code (0P0001RFXW.IR) rather than a stock ticker. */
+export function isFundCode(ticker: string): boolean {
+  return /^0P[0-9A-Z]{6,}(\.[A-Z]+)?$/.test(ticker);
+}

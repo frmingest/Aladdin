@@ -4,14 +4,13 @@ import { api, ApiError } from "../lib/api";
 import { useDemoMode } from "../lib/demoMode";
 import { formatPct100, formatPrice } from "../lib/format";
 import { orderStreet, shopFront, shopPips, storePath } from "../lib/marketplace";
-import { boothLine } from "../lib/salesRep";
 import type { Watchlist, WatchlistRow } from "../lib/types";
 import { Awning, Pip } from "../components/marketplace/MarketArt";
 import HypeBoothDialog from "../components/marketplace/HypeBoothDialog";
 import SalesRepDialog from "../components/marketplace/SalesRepDialog";
 import { SalesRep } from "../components/marketplace/SalesRepArt";
 import { TONE_PAINT } from "../lib/marketplacePaint";
-import { Button, Card, EmptyState, PageHeader, SnapshotStamp, VerdictBadge } from "../components/ui";
+import { Button, Card, Disclosure, EmptyState, PageHeader, SnapshotStamp, VerdictBadge } from "../components/ui";
 
 /** The Marketplace street (game mode, G9): one store per watchlist company. The shop window
  * shows only what the watchlist already knows (your price against the quote, the stored moat
@@ -22,6 +21,7 @@ function Stall({ row }: { row: WatchlistRow }) {
   const paint = TONE_PAINT[front.tone];
   const pips = shopPips(row);
   const d = row.distance_to_buy_pct === null ? null : Number(row.distance_to_buy_pct);
+  const analysed = row.verdict_rating !== null || row.moat_rating !== null;
   return (
     <Link
       to={storePath(row.holding_id)}
@@ -60,16 +60,43 @@ function Stall({ row }: { row: WatchlistRow }) {
         </dl>
 
         <div className="flex items-center justify-between gap-2 border-t border-border-subtle pt-3">
-          <div className="flex items-center gap-1" aria-label="Gates the shop window can show">
-            {pips.map((p) => (
-              <Pip key={p.id} gate={p} size={18} />
-            ))}
-          </div>
-          <VerdictBadge rating={row.verdict_rating} title="Stored analyst verdict" />
+          {analysed ? (
+            <>
+              <div className="flex items-center gap-1" aria-label="Gates the shop window can show">
+                {pips.map((p) => (
+                  <Pip key={p.id} gate={p} size={18} />
+                ))}
+              </div>
+              <VerdictBadge rating={row.verdict_rating} title="Stored analyst verdict" />
+            </>
+          ) : (
+            <p className="text-xs text-ink-faint">Not analysed yet</p>
+          )}
         </div>
         <p className="text-xs font-medium text-accent group-hover:underline">Enter the store →</p>
       </div>
     </Link>
+  );
+}
+
+/** A store with no price of yours to compare, as one line: name, what the window knows, the way in. */
+function CompactStall({ row }: { row: WatchlistRow }) {
+  return (
+    <li>
+      <Link
+        to={storePath(row.holding_id)}
+        className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 border-b border-border-subtle py-2 text-sm hover:bg-raised"
+        aria-label={`Enter the ${row.name} store`}
+      >
+        <span className="font-medium text-ink">
+          {row.name} <span className="text-xs font-normal text-ink-faint">{row.ticker}</span>
+        </span>
+        <span className="flex items-center gap-2 text-xs text-ink-muted">
+          {row.verdict_rating ? <VerdictBadge rating={row.verdict_rating} title="Stored analyst verdict" /> : <span className="text-ink-faint">not analysed</span>}
+          <span className="text-accent">Enter →</span>
+        </span>
+      </Link>
+    </li>
   );
 }
 
@@ -81,7 +108,6 @@ export default function MarketplacePage() {
   const [talking, setTalking] = useState(false);
   const [hyping, setHyping] = useState(false);
   const hypeButton = useRef<HTMLButtonElement>(null);
-  const [boothSeed] = useState(() => Math.floor(Math.random() * 1000));
   const boothButton = useRef<HTMLButtonElement>(null);
   const { demoMode } = useDemoMode();
 
@@ -125,7 +151,10 @@ export default function MarketplacePage() {
   const rows = useMemo(() => orderStreet(list?.rows ?? []), [list]);
   const inRange = rows.filter((r) => r.status === "buy_zone").length;
   const near = rows.filter((r) => r.status === "near").length;
-  const unpriced = rows.filter((r) => ["no_target", "no_price", "currency_mismatch"].includes(r.status)).length;
+  const isUnpriced = (r: WatchlistRow) => ["no_target", "no_price", "currency_mismatch"].includes(r.status);
+  const priced = rows.filter((r) => !isUnpriced(r));
+  const unpricedRows = rows.filter(isUnpriced);
+  const unpriced = unpricedRows.length;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
@@ -148,11 +177,8 @@ export default function MarketplacePage() {
       />
 
       <section className="sal-booth mb-4" aria-label="Sal, the sales rep">
-        <SalesRep mood="pitch" size={96} className="sal-figure" />
-        <div className="min-w-0 space-y-2">
-          <div className="market-bubble sal-bubble">
-            <p className="text-[0.95rem] leading-relaxed">{demoMode === true ? "Demo mode is on, so the street is painted scenery. Switch it off in Settings and I'll open real stalls." : boothLine(boothSeed)}</p>
-          </div>
+        <SalesRep mood="pitch" size={64} className="sal-figure" />
+        <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-3">
             <button ref={boothButton} type="button" className="sal-btn" onClick={() => setTalking(true)}>
               Talk to Sal: open a new stall
@@ -160,8 +186,10 @@ export default function MarketplacePage() {
             <button ref={hypeButton} type="button" className="sal-btn-ghost" onClick={() => setHyping(true)} title="Bring a tip from a friend, Reddit or a newsletter and see whether it survives the eight gates">
               The Hype Booth: test a tip
             </button>
-            <span className="text-xs text-[#a8977a]">Add a company by its Yahoo ticker. Oslo Børs symbols end in .OL.</span>
           </div>
+          <p className="mt-1 text-xs text-[#a8977a]">
+            {demoMode === true ? "Demo mode is on: the street is painted scenery." : "Add a company by its Yahoo ticker. Oslo Børs symbols end in .OL."}
+          </p>
         </div>
       </section>
 
@@ -194,20 +222,37 @@ export default function MarketplacePage() {
             ))}
           </dl>
 
-          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {rows.map((r) => (
-              <li key={r.id}>
-                <Stall row={r} />
-              </li>
-            ))}
-          </ul>
+          {priced.length > 0 && (
+            <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {priced.map((r) => (
+                <li key={r.id}>
+                  <Stall row={r} />
+                </li>
+              ))}
+            </ul>
+          )}
 
-          <ul className="flex flex-wrap gap-x-4 gap-y-1 px-1 text-xs text-ink-faint" aria-label="How to read the street">
+          {unpricedRows.length > 0 && (
+            <Disclosure
+              label={`the ${unpricedRows.length} ${unpricedRows.length === 1 ? "store" : "stores"} with no price of yours to compare`}
+              defaultOpen={priced.length === 0}
+            >
+              <ul>
+                {unpricedRows.map((r) => (
+                  <CompactStall key={r.id} row={r} />
+                ))}
+              </ul>
+            </Disclosure>
+          )}
+
+          <Disclosure label="how to read the street" level="evidence" className="px-1">
+          <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-faint" aria-label="How to read the street">
             <li>Gold awning: priced at or below the price you named</li>
             <li>Amber: within 10% of it · Blue: above it · Grey: no price to compare</li>
             <li>Round marks, left to right: moat, fair price, your price, analyst word, freshness</li>
             <li>A tick is open, a half is ajar, a cross is closed, a dashed ring is unknown</li>
           </ul>
+          </Disclosure>
         </div>
       )}
 

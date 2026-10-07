@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api, ApiError } from "../lib/api";
-import { layoutTowers } from "../lib/fortress";
+import { layoutTowers, notesWithoutRepeats } from "../lib/fortress";
 import { formatDecimal, formatNok, formatPct100 } from "../lib/format";
 import type { GameState, Ravens, Watchlist } from "../lib/types";
 import { loadSeen, markSeen, ravenHoldingIds, saveSeen } from "../lib/ravens";
 import { MARKET_PATH, orderStreet, shopFront } from "../lib/marketplace";
+import GameFooter from "../components/fortress/GameFooter";
 import FortressReports from "../components/fortress/FortressReports";
 import FortressLedger from "../components/fortress/FortressLedger";
 import MagicLamp from "../components/fortress/MagicLamp";
@@ -21,6 +22,7 @@ import VaultCard from "../components/fortress/VaultCard";
 import {
   Button,
   Card,
+  Disclosure,
   EmptyState,
   PageHeader,
   SnapshotStamp,
@@ -261,8 +263,9 @@ export default function FortressPage() {
           </Card>
 
           {view === "scene" && state.towers.length > 0 && (
+            <Disclosure label="how to read the picture" level="evidence" className="px-1">
             <ul
-              className="flex flex-wrap gap-x-4 gap-y-1 px-1 text-xs text-ink-faint"
+              className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-faint"
               aria-label="How to read the picture"
             >
               <li>Lit windows and a banner: analysed recently</li>
@@ -288,6 +291,7 @@ export default function FortressPage() {
                 one stretch of one continuous moat
               </li>
             </ul>
+            </Disclosure>
           )}
 
           {view === "scene" &&
@@ -300,12 +304,7 @@ export default function FortressPage() {
               />
             ) : selected ? (
               <TowerSurvey tower={selected} />
-            ) : (
-              <p className="px-1 text-sm text-ink-faint">
-                Press a tower to read that holding's survey, or press the keep
-                or the walls for the verdict on the whole fortress.
-              </p>
-            ))}
+            ) : null)}
 
           <FortressReports state={state} ravens={ravens} seen={seenRavens} onSeen={onRavensSeen} />
 
@@ -341,22 +340,18 @@ export default function FortressPage() {
             </Card>
           </div>
 
-          {state.notes.length > 0 && (
+          {notesWithoutRepeats(state.notes, state.vault).length > 0 && (
             <Card className="bg-raised">
               <h2 className="section-title">What the survey could not see</h2>
               <ul className="list-disc space-y-1 pl-5 text-sm text-ink-muted">
-                {state.notes.map((n) => (
+                {notesWithoutRepeats(state.notes, state.vault).map((n) => (
                   <li key={n}>{n}</li>
                 ))}
               </ul>
             </Card>
           )}
 
-          <p className="px-1 text-xs text-ink-faint">
-            Rules version {state.mapping_version}. Missing or stale data is
-            drawn as scaffolding or fog, never as a guess. Nothing on this page
-            trades, scores or rewards anything.
-          </p>
+          <GameFooter rules={`Rules version ${state.mapping_version}. Missing or stale data is drawn as scaffolding or fog, never as a guess.`} />
         </div>
       )}
       <MagicLamp />

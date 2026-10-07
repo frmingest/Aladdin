@@ -15,9 +15,10 @@ import {
   nextPlayIndex,
 } from "../lib/chronicle";
 import { formatNok, formatPct100 } from "../lib/format";
-import { MOAT_LABEL, SIEGE_LABEL, STRUCTURE_LABEL, THESIS_LABEL, WALL_LABEL } from "../lib/fortress";
+import { MOAT_LABEL, SIEGE_LABEL, STRUCTURE_LABEL, THESIS_LABEL, WALL_LABEL, isFundCode, shortLabel } from "../lib/fortress";
 import type { Chronicle, ChronicleFrame, FortressSiegeLevel } from "../lib/types";
-import { Button, Card, EmptyState, PageHeader } from "../components/ui";
+import { Button, Card, Disclosure, EmptyState, PageHeader } from "../components/ui";
+import GameFooter from "../components/fortress/GameFooter";
 
 /** The Chronicle (game mode G14): the fortress replayed through time. Frames stored nightly by the
  * worker carry the real walls, moats and weather of their day; older days are rebuilt from
@@ -81,7 +82,7 @@ function MiniScene({ frame }: { frame: ChronicleFrame }) {
                 </g>
               )}
               <text x={x + w / 2} y={ground + 14} textAnchor="middle" fontSize="8.5" fill="#cdbb97">
-                {tower.ticker.replace(/\.[A-Z]+$/, "").slice(0, 7)}
+                {shortLabel(tower.name, tower.ticker, 7)}
               </text>
             </g>
           );
@@ -237,6 +238,7 @@ export default function ChroniclePage() {
             )}
           </Card>
 
+          <Disclosure label={`the ${frame.towers.length} towers in this frame`}>
           <Card className="overflow-x-auto">
             <h2 className="section-title">Towers in this frame</h2>
             <table className="w-full min-w-[34rem] text-sm">
@@ -259,7 +261,7 @@ export default function ChroniclePage() {
                           {t.name}
                         </Link>
                         <span className="block text-xs text-ink-faint">
-                          {t.ticker} · {STRUCTURE_LABEL[t.structure]}
+                          {isFundCode(t.ticker) ? "Fund" : t.ticker} · {STRUCTURE_LABEL[t.structure]}
                         </span>
                       </td>
                       <td className="tabular py-1.5 pr-3">{t.weight_pct === null ? "—" : formatPct100(t.weight_pct)}</td>
@@ -271,6 +273,7 @@ export default function ChroniclePage() {
               </tbody>
             </table>
           </Card>
+          </Disclosure>
 
           {chronicle.changes.length > 0 && (
             <Card>
@@ -299,10 +302,7 @@ export default function ChroniclePage() {
             </Card>
           )}
 
-          <p className="px-1 text-xs text-ink-faint">
-            Rules version {chronicle.rules_version}. A replay of stored data: it predicts nothing, scores nothing and
-            rewards nothing. Nothing on this page trades.
-          </p>
+          <GameFooter rules={`Rules version ${chronicle.rules_version}. A replay of stored data: it predicts nothing and scores nothing.`} />
         </div>
       )}
     </div>
