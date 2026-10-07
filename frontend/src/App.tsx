@@ -40,6 +40,7 @@ const JournalPage = lazy(() => import("./pages/JournalPage"));
 const AnalysisQueuePage = lazy(() => import("./pages/AnalysisQueuePage"));
 const SystemStatusPage = lazy(() => import("./pages/SystemStatusPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
+const GlossaryPage = lazy(() => import("./pages/GlossaryPage"));
 
 function RouteLoading() {
   return (
@@ -90,6 +91,7 @@ export default function App() {
           <Route path="/analysis-queue" element={<AnalysisQueuePage />} />
           <Route path="/status" element={<SystemStatusPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/glossary" element={<GlossaryPage />} />
         </Routes>
       </Suspense>
     </Layout>

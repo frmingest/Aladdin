@@ -1,7 +1,7 @@
 # Frontend noise audit: end-user UX review (2026-10-06)
 
 **Goal (Faiz):** look at the whole frontend as an end user with a UX designer's eye, and cut the text bombardment.
-**Status:** audit, Wave 1 (PR #56, merged `662f3af`) and Wave 2 built (see §7; PR open, not merged, not deployed, not seen in a browser). Wave 3 proposed, not approved.
+**Status:** audit, Wave 1 (PR #56, merged), Wave 2 (PR #57, merged `224dad6`) and Wave 3 built (see §8; PR open, not merged, not deployed, not seen in a browser).
 
 **How this was measured:** the live app (`exciting-gratitude-production-71b5…`) in the built-in browser, real data, at a phone-width pane (486 px). Word counts are the visible text of each page (`innerText`: collapsed sections are not counted). I also read the frontend code in `E:\Aladdin\frontend` (about 10,400 words of prose in the page and component files). **Not reviewed:** desktop layout, Macro, Performance, Journal, Marketplace and store pages, and the Settings page. Treat their absence as "unknown", not "fine".
 
@@ -138,3 +138,25 @@ Frontend only, no backend change, no migration. tsc, ESLint (0 errors), 274 fron
 - The red tripwire banner is gone; a fired tripwire is the first row of "Needs attention" (red), with Check now beside it. The banner and the card said the same thing.
 - The Newsweb reports card stays **above** the tabs (one collapsed line, Oslo Børs only), because you asked on 2026-09-26 for it to be easy to find right after opening a position.
 - **Not done:** the "key numbers" row on Overview (base value, margin of safety). It needs the valuation data on the Overview tab; left for Wave 3 or a follow-up. The Fund page's 19 sections are now tabs, but the **word count after the change was not measured** (no browser).
+
+---
+
+## 8. Wave 3 built (branch `feature/ux-noise-wave3`, off `main` `224dad6`)
+
+Faiz, 2026-10-07: "start developing next stage of UX/UI according to plan." Frontend only, no backend, no migration. tsc, ESLint (0 errors), 291 frontend tests (17 new), `vite build` pass. **Not seen in a browser.**
+
+| # | What | Where |
+|---|---|---|
+| 1 | **Sidebar: four primary items plus "More".** Dashboard, Holdings, Margin of safety, Thesis stay on screen. More holds Portfolio (Portfolio, Performance, Portfolio risk, Precious metals), Research (Watchlist, Analysis queue, Macro), Tracking (Journal), System (Settings, Glossary). It opens by itself when you are on a page inside it. Navigation is now data in `lib/nav.ts` | `Layout.tsx`, `lib/nav.ts` |
+| 2 | **Game mode adds one sidebar entry**, the Fortress. Marketplace, Siege Simulator, Chronicle, Council, Records and Circle are a tab strip on every `/fortress` page (the store pages too) and stay in Ctrl+K search. The six room buttons on the Fortress page are removed; the verdict button and the market square stay | `FortressTabs.tsx`, `FortressPage.tsx` |
+| 3 | **Fortress Reports panel:** advisors, weather, temperament and ravens are one tabbed panel under the scene; only the open one is mounted; the Ravens tab says how many are new. Night Watch, the study desk, vault, spread and the "could not see" notes are unchanged | `FortressReports.tsx` |
+| 4 | **Key numbers row on a holding's Overview:** price, base value, margin of safety from the stored valuation (DCF, bank price-to-book or fund look-through base case). A withheld valuation shows "Withheld"; a missing one shows one muted line; a missing margin is "—", never zero | `KeyNumbers.tsx`, `lib/keyNumbers.ts` |
+| 5 | **Glossary page** `/glossary`: the "i" tooltips' own strings, A to Z, searchable, each explanation once | `GlossaryPage.tsx`, `lib/glossary.ts` |
+| 6 | **Word-budget tests** (principle 7): the default sidebar (30 words), the Fortress tab strip (12), the key numbers row (30) and the warning stack with twelve warnings (60) fail the test suite if they grow. `vitest` includes `.test.tsx` | `lib/wordBudget.ts`, `wordBudget.test.tsx` |
+
+**Decisions made while building (say if you want any reversed):**
+- Precious metals, which you asked on 2026-10-06 to keep visible until this wave, now sits under More with the rest. Watchlist and Analysis queue moved there too, as the audit proposed.
+- The Fortress rooms moved out of the sidebar and the page buttons into one tab strip; they are still reachable from Ctrl+K.
+- The key numbers row uses the stored valuation only; it does not refresh anything. The `unavailable_reasons` text is not shown there (it lives on the Financials tab).
+
+**Not done / not measured:** the budgets cover the pieces that decide each default view, not whole pages (a page-level count needs a browser; none was available). The Fortress scene (16,446 words in the audit) and the Ledger tab were not broken down or trimmed. The fund page's word count after Wave 2 was not re-measured. The Overview key numbers are not shown for a holding whose valuation request fails (the row is simply absent).

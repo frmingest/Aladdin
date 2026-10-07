@@ -6,19 +6,16 @@ import { formatDecimal, formatNok, formatPct100 } from "../lib/format";
 import type { GameState, Ravens, Watchlist } from "../lib/types";
 import { loadSeen, markSeen, ravenHoldingIds, saveSeen } from "../lib/ravens";
 import { MARKET_PATH, orderStreet, shopFront } from "../lib/marketplace";
-import AdvisorsCard from "../components/fortress/AdvisorsCard";
+import FortressReports from "../components/fortress/FortressReports";
 import FortressLedger from "../components/fortress/FortressLedger";
 import MagicLamp from "../components/fortress/MagicLamp";
 import NightWatchCard from "../components/fortress/NightWatchCard";
-import RavensCard from "../components/fortress/RavensCard";
 import FortressScene, { MarketPeek, RealmPeek, TowerPeek } from "../components/fortress/FortressScene";
 import RealmVerdict from "../components/fortress/RealmVerdict";
 import { REALM_LEVEL_LABEL, summarizeRealm } from "../lib/realmVerdict";
 import { GameFrame, GameHud } from "../components/fortress/GameFrame";
 import SoundToggle from "../components/fortress/SoundToggle";
 import StudyDesk from "../components/fortress/StudyDesk";
-import SiegeCard from "../components/fortress/SiegeCard";
-import TemperamentCard from "../components/fortress/TemperamentCard";
 import TowerSurvey from "../components/fortress/TowerSurvey";
 import VaultCard from "../components/fortress/VaultCard";
 import {
@@ -187,66 +184,6 @@ export default function FortressPage() {
                   </button>
                 ))}
               </div>
-              {view === "scene" && (
-                <button
-                  type="button"
-                  onClick={() => navigate(MARKET_PATH)}
-                  className="rounded-md border border-border px-3 py-1 text-sm font-medium text-ink-muted transition-colors hover:text-ink"
-                  title="Same as pressing the market square below the walls"
-                >
-                  Enter the Marketplace{market.count !== null ? ` · ${market.count}` : ""}
-                </button>
-              )}
-              {view === "scene" && (
-                <button
-                  type="button"
-                  onClick={() => navigate("/fortress/siege")}
-                  className="rounded-md border border-border px-3 py-1 text-sm font-medium text-ink-muted transition-colors hover:text-ink"
-                  title="A what-if: pick a market fall and see which towers it reaches"
-                >
-                  Siege Simulator
-                </button>
-              )}
-              {view === "scene" && (
-                <button
-                  type="button"
-                  onClick={() => navigate("/fortress/chronicle")}
-                  className="rounded-md border border-border px-3 py-1 text-sm font-medium text-ink-muted transition-colors hover:text-ink"
-                  title="Replay the fortress through time: towers joining, walls changing, the weather turning"
-                >
-                  Chronicle
-                </button>
-              )}
-              {view === "scene" && (
-                <button
-                  type="button"
-                  onClick={() => navigate("/fortress/council")}
-                  className="rounded-md border border-border px-3 py-1 text-sm font-medium text-ink-muted transition-colors hover:text-ink"
-                  title="A quarterly review room: what the rules put on the agenda"
-                >
-                  Council
-                </button>
-              )}
-              {view === "scene" && (
-                <button
-                  type="button"
-                  onClick={() => navigate("/fortress/records")}
-                  className="rounded-md border border-border px-3 py-1 text-sm font-medium text-ink-muted transition-colors hover:text-ink"
-                  title="Your decision journal as a library: hindsight, not a score"
-                >
-                  Records
-                </button>
-              )}
-              {view === "scene" && (
-                <button
-                  type="button"
-                  onClick={() => navigate("/fortress/circle")}
-                  className="rounded-md border border-border px-3 py-1 text-sm font-medium text-ink-muted transition-colors hover:text-ink"
-                  title="Mark the sectors you understand and see your holdings against them"
-                >
-                  Circle
-                </button>
-              )}
               {view === "scene" && state.towers.length > 0 && realm && (
                 <button
                   type="button"
@@ -370,17 +307,11 @@ export default function FortressPage() {
               </p>
             ))}
 
-          <RavensCard ravens={ravens} seen={seenRavens} onSeen={onRavensSeen} />
+          <FortressReports state={state} ravens={ravens} seen={seenRavens} onSeen={onRavensSeen} />
 
           <Card className="py-3">
             <StudyDesk asOf={state.as_of} />
           </Card>
-
-          <AdvisorsCard advisors={state.advisors} />
-
-          <SiegeCard siege={state.siege} />
-
-          <TemperamentCard temperament={state.temperament} />
 
           <div className="grid gap-4 lg:grid-cols-2">
             <VaultCard vault={state.vault} demo={state.demo} onChanged={load} />
