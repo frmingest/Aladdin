@@ -76,7 +76,7 @@ Steps 1–5 of the build order are done and merged (see §6, 2026-10-04). What i
 | ★ | Aker BP, Orkla, Salmon Evolution show no share price: press *Refresh* on each (or let the worker's warm-up pass run) | *Delete all documents & data* also removes the price observations (by the code); Subsea 7 already has its price |
 | ★★ | **After deploy: Heimdal Utbytte N:** press *Refresh look-through* | It now links the 45 lines to companies in the app and prices them; the note says how many. Companies not in the app (e.g. DNB Bank) stay uncovered until added to the watchlist |
 | ★★ | **Pareto Bank:** re-attach the FY2025 report (PDF or `.xhtml`) in chat and I prepare the FY2025 + FY2024 CSV | The file is not available to me in this session; the `.xhtml` is untagged |
-| ★ | Check Equinor's stored price (41.95 USD) and Kongsberg's 5:1 split in per-share history | Possible price/split data errors found in the 2026-10-06 [diagnosis](valuation-data-diagnosis-2026-10-06.md) |
+| ★ | Check Kongsberg's 5:1 split in per-share history | Pre-split years not restated (2026-10-06 [diagnosis](valuation-data-diagnosis-2026-10-06.md)). Equinor's price checked 2026-10-07: stored 402.80 NOK, which is 41.95 USD at 0.10414, so the conversion is right; compare 402.80 with the live Oslo quote |
 | ★ | Type in fund and benchmark yearly returns for the 3 funds from their fact sheets | Track record and tracking difference are empty |
 | ★ | **Decide:** valuation method for loss-making companies (Vend Marketplaces, Salmon Evolution, Vår Energi) and a view for the gold ETC and the two income funds | Cyclical earners now use a median base (v4). Loss-making ones still cannot rank with an owner-earnings DCF |
 

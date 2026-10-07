@@ -99,4 +99,4 @@ Confirms "one profitable year". Capex runs well above D&A, so this is not an ext
 
 **FX duplicates.** NOK→USD was stored 9 times within 70 seconds on 2026-10-05 (rate 0.1041, USD/NOK about 9.60): a refresh loop fetching per holding without using the cache. SEK→NOK 0.9545 on 2026-10-07.
 
-**Not yet answered:** the `market_observations` query for EQNR was not in the pasted results, so the 41.95 USD price is still unchecked.
+**Equinor price (answered 2026-10-07):** stored 402.80 NOK (Yahoo, last observed 2026-10-05); 402.80 x 0.10414 = 41.95 USD, so the earlier figure was the converted price and the conversion is right. Four identical rows within one hour on 2026-10-05 are the same duplicate-refresh issue. Whether 402.80 matches the live Oslo quote is for Faiz to compare.
