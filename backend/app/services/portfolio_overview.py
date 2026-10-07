@@ -28,7 +28,11 @@ from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.domain.instrument_types import EQUITY_ANALYZABLE_TYPES, display_label
+from app.domain.instrument_types import (
+    ANALYZABLE_TYPES,
+    EQUITY_ANALYZABLE_TYPES,
+    display_label,
+)
 from app.models.account import Account
 from app.models.holding import Holding
 from app.models.portfolio import PortfolioSnapshot
@@ -292,6 +296,17 @@ def build_overview(db: Session, *, now: datetime | None = None) -> Overview:
     overview.verdicts = _rating_slices(verdict_groups, VERDICT_ORDER)
     overview.moats = _rating_slices(moat_groups, MOAT_ORDER)
     overview.analyzed_equity_value_pct = _pct(analyzed_value, equity_value)
+
+    # Bond funds, money-market funds and metal ETCs have their own analysis
+    # (2026-10-07). Their verdict and date show in the position table; they stay
+    # out of the equity roll-ups above (counts, verdict and moat mix).
+    other_ids = [
+        hid
+        for hid in value_by_holding
+        if holdings[hid].asset_class_raw in ANALYZABLE_TYPES and holdings[hid].asset_class_raw not in EQUITY_ANALYZABLE_TYPES
+    ]
+    for hid, run in latest_runs_by_holding(db, other_ids).items():
+        ratings[hid] = run_ratings(run)
 
     # Position table, largest first.
     for holding_id, value in ordered:

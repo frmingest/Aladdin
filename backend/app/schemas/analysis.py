@@ -16,7 +16,9 @@ from pydantic import BaseModel
 
 from app.domain.analysis_schema import (
     BlindPassOutputV1,
+    CommodityBlindPassOutputV1,
     FundBlindPassOutputV1,
+    IncomeBlindPassOutputV1,
     ReconciliationOutputV1,
 )
 
@@ -53,7 +55,9 @@ class EquityAnalysisRunOut(BaseModel):
     error_message: str | None
     evidence_unavailable_reasons: list[str]
     # Which one is decided by `schema_version` ("v1" vs "fund_v1", Sprint 8).
-    blind_pass: BlindPassOutputV1 | FundBlindPassOutputV1 | None
+    blind_pass: (
+        BlindPassOutputV1 | FundBlindPassOutputV1 | IncomeBlindPassOutputV1 | CommodityBlindPassOutputV1 | None
+    )
     blind_pass_citation_warnings: list[str] | None
     reconciliation: ReconciliationOutputV1 | None
     reconciliation_citation_warnings: list[str] | None

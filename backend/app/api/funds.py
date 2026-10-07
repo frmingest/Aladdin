@@ -24,6 +24,8 @@ from app.domain.errors import (
     UnreadableFileError,
     UnsupportedFileTypeError,
 )
+from app.domain.instrument_facts import fact_specs_for
+from app.domain.instrument_types import analysis_path
 from app.models.document import Document
 from app.models.holding import Holding
 from app.providers.factory import get_constituent_multiples_provider, get_object_storage
@@ -40,6 +42,7 @@ from app.providers.xtrackers_holdings import (
     to_csv_bytes,
 )
 from app.schemas.fund import (
+    FactSpecOut,
     FundDocumentOut,
     FundExposureOut,
     FundExposuresIn,
@@ -49,6 +52,8 @@ from app.schemas.fund import (
     FundReturnIn,
     FundReturnOut,
     HoldingsImportOut,
+    InstrumentFactOut,
+    InstrumentFactsIn,
     LgimFetchIn,
     LookThroughRefreshOut,
     ManualLinkIn,
@@ -72,6 +77,8 @@ from app.services.funds.facts import (
 from app.services.funds.feed_guard import WrongFundFeedError, check_feed_matches_holding
 from app.services.funds.holdings_import import HoldingsFileError, parse_holdings_file
 from app.services.funds.metrics import compute_fund_metrics
+from app.services.instruments.facts import facts_path, list_facts, replace_facts
+from app.services.instruments.metrics import compute_instrument_metrics
 from app.services.settings.demo_guard import require_not_demo
 
 router = APIRouter(prefix="/funds", tags=["funds"])
@@ -100,6 +107,7 @@ def _facts_out(db: Session, holding: Holding) -> FundFactsOut:
             .order_by(Document.uploaded_at.desc())
         )
     ]
+    path = facts_path(holding)
     return FundFactsOut(
         holding_id=holding.id,
         instrument_type=holding.asset_class_raw,
@@ -108,6 +116,13 @@ def _facts_out(db: Session, holding: Holding) -> FundFactsOut:
         exposures=exposures,
         documents=documents,
         metrics=compute_fund_metrics(db, holding),
+        analysis_path=analysis_path(holding.asset_class_raw),
+        instrument_fact_specs=[
+            FactSpecOut(key=s.key, label=s.label, kind=s.kind, unit=s.unit, help=s.help)
+            for s in fact_specs_for(path)
+        ],
+        instrument_facts=[InstrumentFactOut.model_validate(f) for f in list_facts(db, holding.id)],
+        instrument_metrics=compute_instrument_metrics(db, holding) if path else None,
     )
 
 
@@ -118,6 +133,19 @@ def get_fund_facts(holding_id: UUID, db: Session = Depends(get_db)) -> FundFacts
     try:
         require_fund_holding(holding)
     except FundFactsError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return _facts_out(db, holding)
+
+
+@router.put("/{holding_id}/instrument-facts", response_model=FundFactsOut)
+def put_instrument_facts(holding_id: UUID, body: InstrumentFactsIn, db: Session = Depends(get_db)) -> FundFactsOut:
+    """Replaces the holding's instrument figures (bond / money-market fund, metal ETC) as one table."""
+    require_not_demo(db)
+    holding = _holding(db, holding_id)
+    try:
+        replace_facts(db, holding, [f.model_dump() for f in body.facts])
+    except FundFactsError as exc:  # InstrumentFactsError is a FundFactsError
+        db.rollback()
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return _facts_out(db, holding)
 

@@ -9,6 +9,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 from app.services.funds.metrics import FundMetrics
+from app.services.instruments.metrics import InstrumentMetrics
 
 ManagementStyle = Literal["active", "index"]
 PeriodKind = Literal["calendar_year", "rolling_12m", "trailing", "since_inception"]
@@ -100,6 +101,33 @@ class FundDocumentOut(BaseModel):
     reporting_period: str | None
 
 
+class InstrumentFactIn(BaseModel):
+    fact_key: str = Field(min_length=1, max_length=48)
+    value_number: Decimal | None = None
+    value_text: str | None = Field(default=None, max_length=600)
+    as_of_date: date | None = None
+    source_document_id: UUID
+    source_page: int | None = Field(default=None, ge=1)
+
+
+class InstrumentFactOut(InstrumentFactIn):
+    model_config = {"from_attributes": True}
+
+    id: UUID
+
+
+class InstrumentFactsIn(BaseModel):
+    facts: list[InstrumentFactIn] = Field(max_length=40)
+
+
+class FactSpecOut(BaseModel):
+    key: str
+    label: str
+    kind: str
+    unit: str
+    help: str
+
+
 class FundFactsOut(BaseModel):
     holding_id: UUID
     instrument_type: str
@@ -110,6 +138,13 @@ class FundFactsOut(BaseModel):
     documents: list[FundDocumentOut]
     """This fund's uploaded documents — what a figure can cite."""
     metrics: FundMetrics
+    analysis_path: str | None = None
+    """"stock" | "fund" | "income" | "commodity" — which analysis the type takes."""
+    instrument_fact_specs: list[FactSpecOut] = []
+    """The figures this type asks for beyond the profile (empty for equity funds)."""
+    instrument_facts: list[InstrumentFactOut] = []
+    instrument_metrics: InstrumentMetrics | None = None
+    """Yield / duration / carry figures for a bond fund, money-market fund or metal ETC."""
 
 
 class HoldingsImportOut(BaseModel):

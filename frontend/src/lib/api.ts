@@ -29,6 +29,7 @@ import type {
   FundDimension,
   FundExposureRowInput,
   FundFacts,
+  InstrumentFactInput,
   FundProfileInput,
   FundReturn,
   GameState,
@@ -490,6 +491,11 @@ export const api = {
   getFundFacts: (holdingId: string) => request<FundFacts>(`/funds/${holdingId}`),
   saveFundProfile: (holdingId: string, input: FundProfileInput) =>
     request<FundFacts>(`/funds/${holdingId}/profile`, { method: "PUT", body: JSON.stringify(input) }),
+  saveInstrumentFacts: (holdingId: string, facts: InstrumentFactInput[]) =>
+    request<FundFacts>(`/funds/${holdingId}/instrument-facts`, {
+      method: "PUT",
+      body: JSON.stringify({ facts }),
+    }),
   saveFundReturns: (holdingId: string, rows: FundReturn[]) =>
     request<FundFacts>(`/funds/${holdingId}/returns`, { method: "PUT", body: JSON.stringify(rows) }),
   saveFundExposures: (

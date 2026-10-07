@@ -26,6 +26,7 @@ import {
   METRIC_LABELS,
   MONEY_METRICS,
   PERCENT_METRICS,
+  blindPassNotes,
   isFundBlindPass,
   type AnalysisRun,
   type HoldingMetrics,
@@ -403,7 +404,8 @@ export default function MarketStorePage() {
 // ---------------------------------------------------------------------------
 
 function MoatTour({ analysis, fallback }: { analysis: AnalysisRun | null; fallback: string | null }) {
-  const moat = analysis?.blind_pass?.moat;
+  const blindPass = analysis?.blind_pass;
+  const moat = blindPass && "moat" in blindPass ? blindPass.moat : undefined;
   if (!moat) {
     return (
       <Card>
@@ -510,16 +512,7 @@ function TheCase({ analysis }: { analysis: AnalysisRun | null }) {
   const bp = analysis.blind_pass;
   const notes: { title: string; text: string }[] = [];
   if (bp) {
-    if (isFundBlindPass(bp)) {
-      notes.push(
-        { title: "Costs and stewardship", text: bp.steward_and_costs.summary },
-        { title: "Portfolio construction", text: bp.portfolio_construction.summary },
-        { title: "Role in a portfolio", text: bp.role_in_portfolio.summary },
-      );
-    } else {
-      notes.push({ title: "Capital efficiency", text: bp.capital_efficiency.summary }, { title: "Financial fortress", text: bp.financial_fortress.summary });
-    }
-    notes.push({ title: "Under macro stress", text: bp.macro_stress_test.summary }, { title: "Valuation notes", text: bp.valuation_synthesis.summary });
+    notes.push(...blindPassNotes(bp));
   }
   if (analysis.reconciliation?.reconciliation_narrative) {
     notes.push({ title: "After reconciling with your notes", text: analysis.reconciliation.reconciliation_narrative });

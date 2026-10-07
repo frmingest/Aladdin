@@ -146,7 +146,7 @@ def test_non_fund_holding_is_refused(client, db_session):
     stock = _holding(client, db_session, "NEM", "Newmont Corporation", "stock")
     response = client.get(f"/funds/{stock}")
     assert response.status_code == 422
-    assert "Equity ETF or Equity fund" in response.json()["detail"]
+    assert "funds, ETFs and ETCs" in response.json()["detail"]
 
 
 def test_profile_returns_exposures_roundtrip_and_metrics(client, db_session):

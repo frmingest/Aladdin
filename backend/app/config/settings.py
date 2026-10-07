@@ -367,6 +367,12 @@ class Settings(BaseSettings):
     # schema/prompts or vice versa.
     active_fund_analysis_schema_version: str = "fund_v1"  # app/domain/analysis_schema/fund_v1.py
     active_fund_analysis_prompt_version: str = "fund_v1"  # prompts/analysis/{blind,reconciliation}_fund_v1.md
+    # 2026-10-07: bond / money-market funds ("income") and physical-metal
+    # ETCs ("commodity") take their own paths (app/services/instruments/).
+    active_income_analysis_schema_version: str = "income_v1"  # app/domain/analysis_schema/income_v1.py
+    active_income_analysis_prompt_version: str = "income_v1"  # prompts/analysis/{blind,reconciliation}_income_v1.md
+    active_commodity_analysis_schema_version: str = "commodity_v1"  # app/domain/analysis_schema/commodity_v1.py
+    active_commodity_analysis_prompt_version: str = "commodity_v1"  # prompts/analysis/{blind,reconciliation}_commodity_v1.md
 
 
 @lru_cache

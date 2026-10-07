@@ -8,10 +8,18 @@ from __future__ import annotations
 
 from pydantic import BaseModel
 
+from app.domain.analysis_schema.commodity_v1 import (
+    CommodityBlindPassOutputV1,
+    cited_evidence_ids_commodity_blind,
+)
 from app.domain.analysis_schema.fund_v1 import (
     FundBlindPassOutputV1,
     LookThroughMoat,
     cited_evidence_ids_fund_blind,
+)
+from app.domain.analysis_schema.income_v1 import (
+    IncomeBlindPassOutputV1,
+    cited_evidence_ids_income_blind,
 )
 from app.domain.analysis_schema.v1 import (
     MOAT_SOURCES,
@@ -26,25 +34,38 @@ from app.domain.analysis_schema.v1 import (
 )
 
 # "fund_v1" (Sprint 8): the fund / ETF analysis. Its reconciliation output
-# has the same shape as v1's, so it reuses that class.
+# has the same shape as v1's, so it reuses that class. "income_v1" (bond and
+# money-market funds) and "commodity_v1" (physical-metal ETC) were added
+# 2026-10-07 and reuse it the same way.
 _BLIND_SCHEMAS: dict[str, type[BaseModel]] = {
     "v1": BlindPassOutputV1,
     "fund_v1": FundBlindPassOutputV1,
+    "income_v1": IncomeBlindPassOutputV1,
+    "commodity_v1": CommodityBlindPassOutputV1,
 }
 _RECONCILIATION_SCHEMAS: dict[str, type[BaseModel]] = {
     "v1": ReconciliationOutputV1,
     "fund_v1": ReconciliationOutputV1,
+    "income_v1": ReconciliationOutputV1,
+    "commodity_v1": ReconciliationOutputV1,
 }
 
 
 def is_fund_schema(version: str) -> bool:
-    return version.startswith("fund_")
+    """True for every wrapper (fund / ETF / ETC) schema: they all take the
+    longer output allowance (settings.llm_max_output_tokens_fund) and carry
+    no DCF."""
+    return version.startswith(("fund_", "income_", "commodity_"))
 
 
 def cited_evidence_ids_any_blind(output: BaseModel) -> set[str]:
     """Every evidence_id cited in a blind-pass output of any schema."""
     if isinstance(output, FundBlindPassOutputV1):
         return cited_evidence_ids_fund_blind(output)
+    if isinstance(output, IncomeBlindPassOutputV1):
+        return cited_evidence_ids_income_blind(output)
+    if isinstance(output, CommodityBlindPassOutputV1):
+        return cited_evidence_ids_commodity_blind(output)
     if isinstance(output, BlindPassOutputV1):
         return cited_evidence_ids_blind(output)
     raise TypeError(f"unknown blind-pass output type: {type(output).__name__}")
@@ -67,7 +88,9 @@ def get_reconciliation_schema(version: str) -> type[BaseModel]:
 __all__ = [
     "MOAT_SOURCES",
     "BlindPassOutputV1",
+    "CommodityBlindPassOutputV1",
     "FundBlindPassOutputV1",
+    "IncomeBlindPassOutputV1",
     "LookThroughMoat",
     "MoatAssessment",
     "MoatSourceRating",
@@ -76,7 +99,9 @@ __all__ = [
     "VerdictContent",
     "cited_evidence_ids_any_blind",
     "cited_evidence_ids_blind",
+    "cited_evidence_ids_commodity_blind",
     "cited_evidence_ids_fund_blind",
+    "cited_evidence_ids_income_blind",
     "cited_evidence_ids_reconciliation",
     "get_blind_pass_schema",
     "get_reconciliation_schema",

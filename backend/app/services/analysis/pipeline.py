@@ -22,7 +22,13 @@ from typing import TypeVar
 from sqlalchemy.orm import Session
 
 from app.config.settings import get_settings
-from app.domain.instrument_types import EQUITY_ANALYZABLE_TYPES, is_fund_type
+from app.domain.instrument_types import (
+    PATH_COMMODITY,
+    PATH_FUND,
+    PATH_INCOME,
+    PATH_STOCK,
+    analysis_path,
+)
 from app.models.analysis import EquityAnalysisRun, EquityAnalysisRunStatus
 from app.models.holding import Holding
 from app.providers.base import (
@@ -35,17 +41,13 @@ from app.providers.base import (
 from app.providers.macro_data_providers import MacroDataProvider
 from app.providers.newsweb_provider import NewswebAnnouncementsProvider
 from app.services.analysis.blind_pass import run_blind_pass
-from app.services.analysis.evidence_packet import (
-    EVIDENCE_PACKET_VERSION,
-    build_evidence_packet,
-)
+from app.services.analysis.evidence_packet import build_evidence_packet
 from app.services.analysis.notes import get_holding_note
 from app.services.analysis.packet_budget import apply_token_budget, packet_token_budget
+from app.services.analysis.paths import not_analyzable_message, versions_for
 from app.services.analysis.reconciliation_pass import run_reconciliation_pass
-from app.services.funds.evidence import (
-    FUND_EVIDENCE_PACKET_VERSION,
-    build_fund_evidence_packet,
-)
+from app.services.funds.evidence import build_fund_evidence_packet
+from app.services.instruments.evidence import build_instrument_evidence_packet
 from app.services.macro.evidence import ensure_macro_fresh
 
 T = TypeVar("T")
@@ -114,26 +116,19 @@ def run_full_analysis(
     been polling is the one that gets the result). None = create a new row
     (the synchronous cloud path, unchanged).
     """
-    if holding.asset_class_raw not in EQUITY_ANALYZABLE_TYPES:
-        raise NotEquityAnalyzableError(
-            f"holding {holding.ticker!r} is tagged {holding.asset_class_raw!r}, not analyzable as "
-            f"equity ({', '.join(sorted(EQUITY_ANALYZABLE_TYPES))} only)"
-        )
+    path = analysis_path(holding.asset_class_raw)
+    if path is None:
+        raise NotEquityAnalyzableError(not_analyzable_message(holding.asset_class_raw, holding.ticker))
 
     settings = get_settings()
     # Sprint 8 (F9): an equity ETF / fund takes the fund path — its own
     # evidence packet (look-through, cost, track record), schema and
-    # prompts. Everything else below (passes, fallback, notes, statuses) is
-    # shared.
-    is_fund = is_fund_type(holding.asset_class_raw)
-    if is_fund:
-        schema_version = settings.active_fund_analysis_schema_version
-        prompt_version = settings.active_fund_analysis_prompt_version
-        packet_version = FUND_EVIDENCE_PACKET_VERSION
-    else:
-        schema_version = settings.active_analysis_schema_version
-        prompt_version = settings.active_analysis_prompt_version
-        packet_version = EVIDENCE_PACKET_VERSION
+    # prompts. 2026-10-07: a bond / money-market fund takes the income path
+    # and a physical-metal ETC the commodity path, the same way. Everything
+    # below (passes, fallback, notes, statuses) is shared.
+    is_wrapper = path != PATH_STOCK
+    versions = versions_for(path, settings)
+    schema_version, prompt_version, packet_version = versions.schema, versions.prompt, versions.packet
 
     # Best effort, before the run row exists so nothing of the run is
     # committed or rolled back by it: stale Norges Bank / FRED / SSB series
@@ -164,8 +159,10 @@ def run_full_analysis(
     db.flush()
 
     _report_stage(on_stage, "evidence_packet")
-    if is_fund:
+    if path == PATH_FUND:
         packet = build_fund_evidence_packet(db, holding, research_provider=research_provider)
+    elif path in (PATH_INCOME, PATH_COMMODITY):
+        packet = build_instrument_evidence_packet(db, holding, research_provider=research_provider)
     else:
         packet = build_evidence_packet(
             db,
@@ -235,7 +232,7 @@ def run_full_analysis(
     run.completed_at = datetime.now(timezone.utc)
     run.status = EquityAnalysisRunStatus.COMPLETED.value
 
-    if not is_fund:  # a fund has no DCF, so no price-target range
+    if not is_wrapper:  # a fund, bond fund or metal has no DCF, so no price-target range
         _attach_price_target(run, packet)
 
     db.commit()

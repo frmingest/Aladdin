@@ -35,6 +35,7 @@ from sqlalchemy import (
     Numeric,
     String,
     Text,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -182,3 +183,24 @@ class FundConstituentMultiple(Base):
     reason: Mapped[str | None] = mapped_column(String(255), nullable=True)
     provider: Mapped[str] = mapped_column(String(32), nullable=False)
     observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=_now)
+
+
+class InstrumentFact(Base):
+    """One typed-in figure that only some wrapper types have: yield and
+    duration for a bond / money-market fund, backing and premium inputs for a
+    physical-metal ETC. One row per (holding, fact_key); the allowed keys per
+    type live in app/domain/instrument_facts.py. Like every fund figure it
+    cites a document uploaded to the same holding (never read by an LLM)."""
+
+    __tablename__ = "instrument_facts"
+    __table_args__ = (UniqueConstraint("holding_id", "fact_key", name="uq_instrument_facts_holding_key"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(GUID(), primary_key=True, default=uuid.uuid4)
+    holding_id: Mapped[uuid.UUID] = mapped_column(GUID(), ForeignKey("holdings.id"), nullable=False, index=True)
+    fact_key: Mapped[str] = mapped_column(String(48), nullable=False)
+    value_number: Mapped[Decimal | None] = mapped_column(Numeric(20, 6), nullable=True)
+    value_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    as_of_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    source_document_id: Mapped[uuid.UUID] = mapped_column(GUID(), ForeignKey("documents.id"), nullable=False)
+    source_page: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=_now)

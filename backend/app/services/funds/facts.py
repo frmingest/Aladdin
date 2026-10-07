@@ -2,7 +2,7 @@
 returns and exposures, with the rules that keep them traceable.
 
 Rules enforced here (the API turns FundFactsError into a 422):
-- the holding must be tagged Equity ETF or Equity fund
+- the holding must be a fund, ETF or ETC (any type except Stock)
 - every row cites a processed document uploaded to *this* fund holding
 - weights are 0-100 and one dimension's weights never add up to more
   than 101 % (rounding in provider files; more means a typo)
@@ -22,7 +22,7 @@ from decimal import Decimal
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from app.domain.instrument_types import is_fund_type
+from app.domain.instrument_types import is_wrapper_type
 from app.models.document import Document
 from app.models.fund import FundExposure, FundProfile, FundReturnPeriod
 from app.models.holding import Holding
@@ -63,10 +63,11 @@ def _ticker_root(ticker: str) -> str:
 
 
 def require_fund_holding(holding: Holding) -> None:
-    if not is_fund_type(holding.asset_class_raw):
+    if not is_wrapper_type(holding.asset_class_raw):
         raise FundFactsError(
             f"'{holding.ticker}' is tagged '{holding.asset_class_raw}'. Fund facts are only kept for "
-            "holdings tagged Equity ETF or Equity fund — change Instrument Type on the Holdings page first."
+            "funds, ETFs and ETCs (Equity ETF, Equity fund, Bond fund, Money-market fund, Commodity ETC) — "
+            "change Instrument Type on the Holdings page first."
         )
 
 

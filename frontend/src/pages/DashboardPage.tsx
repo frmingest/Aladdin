@@ -10,7 +10,7 @@ import type {
   PortfolioOverview,
   RatingSlice,
 } from "../lib/types";
-import { EQUITY_ANALYZABLE_TYPES, INSTRUMENT_TYPE_LABELS } from "../lib/types";
+import { ANALYZABLE_TYPES, INSTRUMENT_TYPE_LABELS } from "../lib/types";
 import { Card, Disclosure, EmptyState, PageHeader, SectionTitle, VerdictBadge } from "../components/ui";
 import { CheckTripwiresButton } from "../components/TripwireBanner";
 import { WarningStack } from "../components/WarningStack";
@@ -245,7 +245,7 @@ function HoldingCardsRow({ positions }: { positions: OverviewPosition[] }) {
             </div>
             <div className="mt-3 flex items-end justify-between gap-2">
               <span className="tabular text-base font-semibold text-ink">{formatNok(p.value_nok)}</span>
-              {EQUITY_ANALYZABLE_TYPES.has(p.instrument_type) ? (
+              {ANALYZABLE_TYPES.has(p.instrument_type) ? (
                 <VerdictBadge rating={p.verdict_rating} />
               ) : (
                 <span className="tabular text-xs text-ink-faint">{formatPct100(p.weight_pct)}</span>
@@ -345,7 +345,7 @@ function PositionsCard({ overview }: { overview: PortfolioOverview }) {
                   {p.sector && <> · {p.sector}</>}
                 </td>
                 <td className="py-2.5 pr-4">
-                  {EQUITY_ANALYZABLE_TYPES.has(p.instrument_type) ? (
+                  {ANALYZABLE_TYPES.has(p.instrument_type) ? (
                     <span className="inline-flex items-center gap-1.5">
                       <VerdictBadge
                         rating={p.verdict_rating}

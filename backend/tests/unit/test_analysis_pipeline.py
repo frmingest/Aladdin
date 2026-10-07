@@ -159,7 +159,7 @@ def _with_two_periods(db: Session, holding: Holding) -> None:
 
 def test_rejects_non_equity_holding():
     db = _session()
-    holding = Holding(ticker="BND", name="Bond Fund", trading_currency="USD", asset_class_raw="bond_fund")
+    holding = Holding(ticker="BND", name="Bond Fund", trading_currency="USD", asset_class_raw="collectible")
     db.add(holding)
     db.commit()
 

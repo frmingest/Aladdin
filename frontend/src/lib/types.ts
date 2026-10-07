@@ -21,8 +21,9 @@ export interface Holding {
   /** Instrument type tagged on import (app/domain/instrument_types.py) —
    * "stock" | "equity_etf" | "equity_fund" | "bond_fund" |
    * "money_market_fund" | "commodity_etc". "stock" gets the single-company
-   * analysis; "equity_etf"/"equity_fund" the fund analysis (Sprint 8); the
-   * rest are tracked for portfolio composition only. */
+   * analysis; "equity_etf"/"equity_fund" the fund analysis (Sprint 8);
+   * "bond_fund"/"money_market_fund" the income analysis and "commodity_etc"
+   * the commodity analysis (2026-10-07). */
   asset_class_raw: string;
   created_at: string;
   updated_at: string;
@@ -42,6 +43,14 @@ export const INSTRUMENT_TYPE_LABELS: Record<string, string> = {
 export const EQUITY_ANALYZABLE_TYPES = new Set(["stock", "equity_etf", "equity_fund"]);
 /** Analysed as a fund (look-through, cost, track record) — Sprint 8. */
 export const FUND_TYPES = new Set(["equity_etf", "equity_fund"]);
+/** Bond and money-market funds: yield, credit and rate risk, cost (2026-10-07). */
+export const INCOME_TYPES = new Set(["bond_fund", "money_market_fund"]);
+/** A physical-metal ETC: backing, cost and carry, macro, role (2026-10-07). */
+export const COMMODITY_TYPES = new Set(["commodity_etc"]);
+/** Every type that has an analysis path. */
+export const ANALYZABLE_TYPES = new Set([...EQUITY_ANALYZABLE_TYPES, ...INCOME_TYPES, ...COMMODITY_TYPES]);
+/** Everything that is a fund, ETF or ETC rather than a company: has Fund facts, no financial statements. */
+export const WRAPPER_TYPES = new Set([...FUND_TYPES, ...INCOME_TYPES, ...COMMODITY_TYPES]);
 
 /** Mirrors backend/app/schemas/holding.py's `HoldingFieldOptions` — backs
  * the manual-edit dropdowns for Sector and Instrument Type on
@@ -747,10 +756,82 @@ export interface FundBlindPassOutput {
   verdict: VerdictContent;
 }
 
-export function isFundBlindPass(
-  output: BlindPassOutput | FundBlindPassOutput,
-): output is FundBlindPassOutput {
-  return "role_in_portfolio" in output;
+/** 2026-10-07: bond / money-market fund blind pass (backend schema "income_v1"). */
+export interface IncomeBlindPassOutput {
+  yield_and_alternatives: NarrativeAssessment;
+  credit_and_rate_risk: NarrativeAssessment;
+  steward_and_costs: NarrativeAssessment;
+  portfolio_construction: NarrativeAssessment;
+  macro_stress_test: NarrativeAssessment;
+  role_in_portfolio: NarrativeAssessment;
+  verdict: VerdictContent;
+}
+
+/** 2026-10-07: physical-metal ETC blind pass (backend schema "commodity_v1"). */
+export interface CommodityBlindPassOutput {
+  what_you_own: NarrativeAssessment;
+  cost_and_carry: NarrativeAssessment;
+  macro_stress_test: NarrativeAssessment;
+  role_in_portfolio: NarrativeAssessment;
+  verdict: VerdictContent;
+}
+
+export type AnyBlindPass =
+  | BlindPassOutput
+  | FundBlindPassOutput
+  | IncomeBlindPassOutput
+  | CommodityBlindPassOutput;
+
+// `role_in_portfolio` is shared by three schemas, so each guard tests the one
+// field that only its own schema has.
+export function isFundBlindPass(output: AnyBlindPass): output is FundBlindPassOutput {
+  return "moat" in output && "role_in_portfolio" in output;
+}
+
+export function isIncomeBlindPass(output: AnyBlindPass): output is IncomeBlindPassOutput {
+  return "credit_and_rate_risk" in output;
+}
+
+export function isCommodityBlindPass(output: AnyBlindPass): output is CommodityBlindPassOutput {
+  return "what_you_own" in output;
+}
+
+/** The narrative sections of any blind pass as titled notes, in reading order
+ * (used where a page lists them without a per-schema layout). */
+export function blindPassNotes(output: AnyBlindPass): { title: string; text: string }[] {
+  if (isIncomeBlindPass(output)) {
+    return [
+      { title: "Yield against the alternatives", text: output.yield_and_alternatives.summary },
+      { title: "Credit and rate risk", text: output.credit_and_rate_risk.summary },
+      { title: "Costs and stewardship", text: output.steward_and_costs.summary },
+      { title: "Portfolio construction", text: output.portfolio_construction.summary },
+      { title: "Under macro stress", text: output.macro_stress_test.summary },
+      { title: "Role in a portfolio", text: output.role_in_portfolio.summary },
+    ];
+  }
+  if (isCommodityBlindPass(output)) {
+    return [
+      { title: "What you own", text: output.what_you_own.summary },
+      { title: "Cost and carry", text: output.cost_and_carry.summary },
+      { title: "Under macro stress", text: output.macro_stress_test.summary },
+      { title: "Role in a portfolio", text: output.role_in_portfolio.summary },
+    ];
+  }
+  if (isFundBlindPass(output)) {
+    return [
+      { title: "Costs and stewardship", text: output.steward_and_costs.summary },
+      { title: "Portfolio construction", text: output.portfolio_construction.summary },
+      { title: "Role in a portfolio", text: output.role_in_portfolio.summary },
+      { title: "Under macro stress", text: output.macro_stress_test.summary },
+      { title: "Valuation notes", text: output.valuation_synthesis.summary },
+    ];
+  }
+  return [
+    { title: "Capital efficiency", text: output.capital_efficiency.summary },
+    { title: "Financial fortress", text: output.financial_fortress.summary },
+    { title: "Under macro stress", text: output.macro_stress_test.summary },
+    { title: "Valuation notes", text: output.valuation_synthesis.summary },
+  ];
 }
 
 export interface ReconciliationOutput {
@@ -795,8 +876,8 @@ export interface AnalysisRun {
   completed_at: string | null;
   error_message: string | null;
   evidence_unavailable_reasons: string[];
-  /** Shape depends on schema_version: "v1" (a company) or "fund_v1". */
-  blind_pass: BlindPassOutput | FundBlindPassOutput | null;
+  /** Shape depends on schema_version: "v1" (a company), "fund_v1", "income_v1" or "commodity_v1". */
+  blind_pass: AnyBlindPass | null;
   blind_pass_citation_warnings: string[] | null;
   reconciliation: ReconciliationOutput | null;
   reconciliation_citation_warnings: string[] | null;
@@ -1372,6 +1453,64 @@ export interface FundMetrics {
   gaps: string[];
 }
 
+/** One figure a bond fund, money-market fund or metal ETC is judged on (2026-10-07). */
+export interface InstrumentFactSpec {
+  key: string;
+  label: string;
+  kind: "number" | "text";
+  unit: string;
+  help: string;
+}
+
+export interface InstrumentFact {
+  id: string;
+  fact_key: string;
+  value_number: string | null;
+  value_text: string | null;
+  as_of_date: string | null;
+  source_document_id: string;
+  source_page: number | null;
+}
+
+export type InstrumentFactInput = Omit<InstrumentFact, "id">;
+
+export interface IncomeMetrics {
+  reference_yield_pct: string | null;
+  reference_yield_basis: string | null;
+  ongoing_charge_pct: string | null;
+  fee_share_of_yield_pct: string | null;
+  spread_vs_no_3m_bill_pp: string | null;
+  spread_vs_no_10y_pp: string | null;
+  no_3m_bill_pct: string | null;
+  no_10y_pct: string | null;
+  no_cpi_pct: string | null;
+  real_yield_pp: string | null;
+  effective_duration_years: string | null;
+  rate_shocks: { change_pp: string; price_effect_pct: string }[];
+  breakeven_rate_rise_pp: string | null;
+  high_yield_share_pct: string | null;
+  average_credit_rating: string | null;
+}
+
+export interface CommodityMetrics {
+  metal: string | null;
+  ongoing_charge_pct: string | null;
+  no_3m_bill_pct: string | null;
+  carry_hurdles: { years: number; required_rise_pct: string }[];
+  nav_per_unit: string | null;
+  market_price_per_unit: string | null;
+  premium_discount_pct: string | null;
+}
+
+export interface InstrumentMetrics {
+  path: string;
+  position_value_nok: string | null;
+  portfolio_weight_pct: string | null;
+  income: IncomeMetrics | null;
+  commodity: CommodityMetrics | null;
+  gaps: string[];
+}
+
 export interface FundFacts {
   holding_id: string;
   instrument_type: string;
@@ -1380,6 +1519,11 @@ export interface FundFacts {
   exposures: Record<FundDimension, FundExposure[]>;
   documents: FundDocument[];
   metrics: FundMetrics;
+  /** "stock" | "fund" | "income" | "commodity" — which analysis the type takes. */
+  analysis_path: string | null;
+  instrument_fact_specs: InstrumentFactSpec[];
+  instrument_facts: InstrumentFact[];
+  instrument_metrics: InstrumentMetrics | null;
 }
 
 export interface HoldingsImportResult {

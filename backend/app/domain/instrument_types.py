@@ -14,7 +14,10 @@ type tagged — rather than skipping the non-equity rows or mislabeling them
 as equity. This module is that tagging, using the existing column: no
 migration, no change to `asset_class` itself, and nothing here makes the
 analysis engine branch on it either — Sprint 4 (the Buffett/Munger engine)
-is expected to only ever run against EQUITY_ANALYZABLE_TYPES.
+was expected to only ever run against EQUITY_ANALYZABLE_TYPES. That changed:
+Sprint 8 added the fund path and 2026-10-07 the income and commodity paths
+(see ANALYZABLE_TYPES below); the equity-only roll-ups still use
+EQUITY_ANALYZABLE_TYPES.
 """
 from __future__ import annotations
 
@@ -44,14 +47,61 @@ INSTRUMENT_TYPES: tuple[str, ...] = (
 #   app/services/funds/. An equity ETF went through the single-company
 #   path before Sprint 8, where it could never get financials or a DCF.
 # A bond fund, money-market fund or physical-gold ETC has no businesses
-# underneath to assess and stays out of both.
+# underneath to assess: they take their own paths, defined below.
 STOCK_ANALYSIS_TYPES = frozenset({STOCK})
 FUND_ANALYSIS_TYPES = frozenset({EQUITY_ETF, EQUITY_FUND})
 EQUITY_ANALYZABLE_TYPES = STOCK_ANALYSIS_TYPES | FUND_ANALYSIS_TYPES
 
+# Two more paths (2026-10-07, "analysis for every instrument type"):
+# - INCOME_ANALYSIS_TYPES: bond and money-market funds. What matters is
+#   yield, duration, credit quality and cost, not a business or a moat.
+# - COMMODITY_ANALYSIS_TYPES: a physical-metal ETC. One asset, no cash
+#   flow: cost, carry (what the metal gives up against a risk-free rate),
+#   backing and premium/discount.
+# EQUITY_ANALYZABLE_TYPES stays exactly as it was: the equity-only
+# roll-ups (margin-of-safety board, portfolio risk and performance) must
+# not start counting a bond fund as an equity. Only the analysis gates
+# (readiness, queue, pipeline) use ANALYZABLE_TYPES.
+INCOME_ANALYSIS_TYPES = frozenset({BOND_FUND, MONEY_MARKET_FUND})
+COMMODITY_ANALYSIS_TYPES = frozenset({COMMODITY_ETC})
+ANALYZABLE_TYPES = EQUITY_ANALYZABLE_TYPES | INCOME_ANALYSIS_TYPES | COMMODITY_ANALYSIS_TYPES
+# Everything that is a wrapper (has Fund facts: profile, returns, holdings
+# lists) rather than a single company.
+WRAPPER_TYPES = ANALYZABLE_TYPES - STOCK_ANALYSIS_TYPES
+
+PATH_STOCK = "stock"
+PATH_FUND = "fund"
+PATH_INCOME = "income"
+PATH_COMMODITY = "commodity"
+
 
 def is_fund_type(instrument_type: str) -> bool:
     return instrument_type in FUND_ANALYSIS_TYPES
+
+
+def is_income_type(instrument_type: str) -> bool:
+    return instrument_type in INCOME_ANALYSIS_TYPES
+
+
+def is_commodity_type(instrument_type: str) -> bool:
+    return instrument_type in COMMODITY_ANALYSIS_TYPES
+
+
+def is_wrapper_type(instrument_type: str) -> bool:
+    return instrument_type in WRAPPER_TYPES
+
+
+def analysis_path(instrument_type: str) -> str | None:
+    """Which analysis path a holding of this type takes (None = not analyzable)."""
+    if instrument_type in STOCK_ANALYSIS_TYPES:
+        return PATH_STOCK
+    if instrument_type in FUND_ANALYSIS_TYPES:
+        return PATH_FUND
+    if instrument_type in INCOME_ANALYSIS_TYPES:
+        return PATH_INCOME
+    if instrument_type in COMMODITY_ANALYSIS_TYPES:
+        return PATH_COMMODITY
+    return None
 
 _LABELS: dict[str, str] = {
     STOCK: "Stock",

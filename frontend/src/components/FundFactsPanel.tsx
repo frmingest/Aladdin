@@ -16,6 +16,7 @@ import type {
 import { Button, Card, EmptyState, StatTile, VerdictBadge } from "./ui";
 import { FundLookThroughCard } from "./FundLookThroughCard";
 import { DocumentReadButton } from "./DocumentReader";
+import { InstrumentFactsCard, InstrumentMetricsTiles } from "./InstrumentFactsCard";
 
 /** Sprint 8 (F9): the facts a fund / ETF analysis rests on, and every
  * number computed from them. Backend: app/api/funds.py.
@@ -91,6 +92,10 @@ function sourceName(documents: FundDocument[], id: string, page: number | null):
 
 function Summary({ facts }: { facts: FundFacts }) {
   const m = facts.metrics;
+  const path = facts.analysis_path;
+  // A metal has no holdings and a bond fund no company look-through, so those tiles would only say "—".
+  const showHoldings = path !== "commodity";
+  const showLookThrough = path !== "commodity" && path !== "income";
   const drag20 = m.cost.fee_drag_pct["20"];
   const track = m.track_record;
   const roe = m.look_through.metrics.find((x) => x.key === "roe");
@@ -129,6 +134,7 @@ function Summary({ facts }: { facts: FundFacts }) {
             : "No benchmark returns entered"
         }
       />
+      {showHoldings && (
       <StatTile
         label="Top 10 holdings"
         value={m.concentration.top10_pct ? formatPct100(m.concentration.top10_pct) : "—"}
@@ -140,6 +146,8 @@ function Summary({ facts }: { facts: FundFacts }) {
             : "No holdings yet"
         }
       />
+      )}
+      {showLookThrough && (
       <StatTile
         label="Linked to the app"
         value={m.concentration.rows_known > 0 ? formatPct100(m.look_through.linked_weight_pct) : "—"}
@@ -153,6 +161,8 @@ function Summary({ facts }: { facts: FundFacts }) {
             : "No holdings yet"
         }
       />
+      )}
+      {showLookThrough && (
       <StatTile
         label="Look-through ROE"
         value={roe?.value ? formatPct100(roe.value) : "—"}
@@ -162,6 +172,7 @@ function Summary({ facts }: { facts: FundFacts }) {
             : "Needs holdings linked to companies with figures"
         }
       />
+      )}
     </div>
   );
 }
@@ -1088,6 +1099,14 @@ export function FundFactsPanel({ holdingId, onChanged }: { holdingId: string; on
   if (!facts) return <p className="text-sm text-ink-muted">Loading…</p>;
 
   const overlap = facts.metrics.overlap;
+  const path = facts.analysis_path;
+  const hasInstrumentFigures = facts.instrument_fact_specs.length > 0;
+  // Gaps that cannot apply to this type (a metal has no holdings list, a bond fund no company look-through).
+  const skip = path === "commodity" ? ["holdings", "look-through", "overlap"] : path === "income" ? ["look-through", "overlap"] : [];
+  const gaps = [
+    ...(facts.instrument_metrics?.gaps ?? []),
+    ...facts.metrics.gaps.filter((g) => !skip.some((word) => g.includes(word))),
+  ];
   return (
     <div className="space-y-4">
       {facts.documents.length === 0 && (
@@ -1097,31 +1116,35 @@ export function FundFactsPanel({ holdingId, onChanged }: { holdingId: string; on
         </EmptyState>
       )}
       <Summary facts={facts} />
-      {facts.metrics.gaps.length > 0 && (
+      {gaps.length > 0 && (
         <div className="rounded-md border border-caution/30 bg-caution/5 px-4 py-3">
           <p className="mb-1 text-sm font-semibold text-ink">Not computed yet</p>
           <ul className="list-disc space-y-1 pl-5 text-xs text-ink-muted">
-            {facts.metrics.gaps.map((g) => (
+            {gaps.map((g) => (
               <li key={g}>{g}</li>
             ))}
           </ul>
         </div>
       )}
+      {facts.instrument_metrics && <InstrumentMetricsTiles metrics={facts.instrument_metrics} />}
       <ProfileCard holdingId={holdingId} facts={facts} onSaved={saved} />
+      {hasInstrumentFigures && <InstrumentFactsCard holdingId={holdingId} facts={facts} onSaved={saved} />}
       <ReturnsCard holdingId={holdingId} facts={facts} onSaved={saved} />
-      <HoldingsCard
-        holdingId={holdingId}
-        facts={facts}
-        holdings={holdings}
-        onSaved={saved}
-        reload={() => {
-          load();
-          onChanged?.();
-        }}
-      />
-      <FundLookThroughCard holdingId={holdingId} onChanged={load} />
-      <SplitsCard holdingId={holdingId} facts={facts} onSaved={saved} />
-      {overlap.fund_value_nok !== null && overlap.rows.length > 0 && (
+      {path !== "commodity" && (
+        <HoldingsCard
+          holdingId={holdingId}
+          facts={facts}
+          holdings={holdings}
+          onSaved={saved}
+          reload={() => {
+            load();
+            onChanged?.();
+          }}
+        />
+      )}
+      {path === "fund" && <FundLookThroughCard holdingId={holdingId} onChanged={load} />}
+      {path !== "commodity" && <SplitsCard holdingId={holdingId} facts={facts} onSaved={saved} />}
+      {path === "fund" && overlap.fund_value_nok !== null && overlap.rows.length > 0 && (
         <Card>
           <h3 className="text-sm font-semibold text-ink">Overlap with stocks you own directly</h3>
           <p className="mt-1 text-xs text-ink-muted">
