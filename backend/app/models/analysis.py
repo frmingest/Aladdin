@@ -173,7 +173,7 @@ class AnalysisWorkerHeartbeat(Base):
     hostname: Mapped[str | None] = mapped_column(String(255), nullable=True)
     llm_provider: Mapped[str | None] = mapped_column(String(32), nullable=True)
     model_name: Mapped[str | None] = mapped_column(String(64), nullable=True)
-    # idle | running | waiting_quota | llm_unavailable | stopped
+    # idle | running | background_job | waiting_quota | llm_unavailable | stopped
     state: Mapped[str] = mapped_column(String(32), nullable=False, default="idle")
     detail: Mapped[str | None] = mapped_column(Text, nullable=True)
     current_run_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), nullable=True)

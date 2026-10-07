@@ -835,7 +835,7 @@ export interface QueuedRun {
   verdict: VerdictRating | null;
 }
 
-export type WorkerState = "idle" | "running" | "waiting_quota" | "llm_unavailable" | "stopped";
+export type WorkerState = "idle" | "running" | "background_job" | "waiting_quota" | "llm_unavailable" | "stopped";
 
 export interface AnalysisWorker {
   worker_id: string;
