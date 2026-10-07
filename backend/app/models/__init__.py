@@ -22,6 +22,7 @@ from app.models.fund import (
     FundExposure,
     FundProfile,
     FundReturnPeriod,
+    InstrumentFact,
 )
 from app.models.holding import Holding
 from app.models.journal import DecisionJournalEntry
@@ -72,6 +73,7 @@ __all__ = [
     "FxObservation",
     "Holding",
     "HoldingAnalysis",
+    "InstrumentFact",
     "LlmUsageEvent",
     "MacroObservation",
     "MacroSeriesStatus",

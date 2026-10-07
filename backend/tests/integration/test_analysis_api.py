@@ -181,7 +181,7 @@ def test_run_rejects_non_equity_holding(client, db_session):
     assert response.status_code == 201, response.text
     holding_id = response.json()["id"]
     holding = db_session.get(Holding, holding_id)
-    holding.asset_class_raw = "bond_fund"
+    holding.asset_class_raw = "collectible"
     db_session.commit()
 
     _override_providers()
@@ -294,7 +294,7 @@ def test_pending_local_run_does_not_hide_previous_verdict(client, db_session):
 def test_queue_rejects_non_equity(client, db_session):
     holding_id = _create_stock_holding(client, db_session)
     holding = db_session.get(Holding, holding_id)
-    holding.asset_class_raw = "bond_fund"
+    holding.asset_class_raw = "collectible"
     db_session.commit()
     assert client.post(f"/analysis/holdings/{holding_id}/queue").status_code == 422
 

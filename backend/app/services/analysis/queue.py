@@ -34,7 +34,7 @@ from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app.config.settings import Settings
-from app.domain.instrument_types import EQUITY_ANALYZABLE_TYPES, is_fund_type
+from app.domain.instrument_types import ANALYZABLE_TYPES, analysis_path
 from app.models.analysis import (
     PENDING_RUN_STATUSES,
     AnalysisWorkerHeartbeat,
@@ -43,10 +43,9 @@ from app.models.analysis import (
     EquityAnalysisRunStatus,
 )
 from app.models.holding import Holding
-from app.services.analysis.evidence_packet import EVIDENCE_PACKET_VERSION
+from app.services.analysis.paths import not_analyzable_message, versions_for
 from app.services.analysis.pipeline import NotEquityAnalyzableError
 from app.services.analysis.readiness import check_analysis_readiness
-from app.services.funds.evidence import FUND_EVIDENCE_PACKET_VERSION
 
 QUEUED = EquityAnalysisRunStatus.QUEUED.value
 RUNNING = EquityAnalysisRunStatus.RUNNING.value
@@ -58,7 +57,7 @@ LOCAL = EquityAnalysisEngine.LOCAL.value
 # holding. Provider, quota and local-LLM checks describe *this server's*
 # configuration (Railway's), not the worker's, so they're ignored here; the
 # worker checks its own LLM before claiming anything.
-QUEUE_BLOCKING_CHECKS = frozenset({"instrument_type", "ticker", "financials", "fund_profile"})
+QUEUE_BLOCKING_CHECKS = frozenset({"instrument_type", "ticker", "financials", "fund_profile", "instrument_facts"})
 
 
 class RunNotCancellableError(Exception):
@@ -100,17 +99,15 @@ def enqueue_local_run(
     """Queues a local run for `holding`. Returns (run, created); a holding
     that already has a queued/running local run gets that run back rather
     than a duplicate."""
-    if holding.asset_class_raw not in EQUITY_ANALYZABLE_TYPES:
-        raise NotEquityAnalyzableError(
-            f"holding {holding.ticker!r} is tagged {holding.asset_class_raw!r}, not analyzable as "
-            f"equity ({', '.join(sorted(EQUITY_ANALYZABLE_TYPES))} only)"
-        )
+    path = analysis_path(holding.asset_class_raw)
+    if path is None:
+        raise NotEquityAnalyzableError(not_analyzable_message(holding.asset_class_raw, holding.ticker))
     existing = pending_run_for_holding(db, holding.id)
     if existing is not None:
         return existing, False
 
     now = now or _now()
-    fund = is_fund_type(holding.asset_class_raw)
+    versions = versions_for(path, settings)
     run = EquityAnalysisRun(
         holding_id=holding.id,
         status=QUEUED,
@@ -119,13 +116,9 @@ def enqueue_local_run(
         started_at=now,  # replaced with the claim time when a worker starts it
         # Placeholders: the worker overwrites these with its own code's
         # versions when it executes the run.
-        schema_version=(
-            settings.active_fund_analysis_schema_version if fund else settings.active_analysis_schema_version
-        ),
-        blind_prompt_version=(
-            settings.active_fund_analysis_prompt_version if fund else settings.active_analysis_prompt_version
-        ),
-        evidence_packet_version=FUND_EVIDENCE_PACKET_VERSION if fund else EVIDENCE_PACKET_VERSION,
+        schema_version=versions.schema,
+        blind_prompt_version=versions.prompt,
+        evidence_packet_version=versions.packet,
         evidence_packet_json={},
         evidence_unavailable_reasons=[],
         attempts=0,
@@ -220,8 +213,8 @@ def queue_ready_holdings(db: Session, *, settings: Settings, scope: QueueScope =
     result = QueueAllResult()
     holdings = [db.get(Holding, hid) for hid in holding_ids]
     for holding in sorted((h for h in holdings if h is not None), key=lambda h: (h.name or h.ticker or "")):
-        if holding.asset_class_raw not in EQUITY_ANALYZABLE_TYPES:
-            continue  # bonds, money market, commodities: never analyzable, not worth listing
+        if holding.asset_class_raw not in ANALYZABLE_TYPES:
+            continue  # an unknown instrument tag has no analysis path, not worth listing
         report = check_analysis_readiness(db, holding, settings=settings, budget_guard=None)
         blockers = [c for c in report.checks if c.status == "block" and c.key in QUEUE_BLOCKING_CHECKS]
         if blockers:

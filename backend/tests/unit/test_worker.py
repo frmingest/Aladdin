@@ -167,7 +167,7 @@ def test_holding_retagged_as_non_equity_fails_run():
     factory = _factory()
     holding_id, run_id = _queued_holding(factory)
     with factory() as db:
-        db.get(Holding, holding_id).asset_class_raw = "bond_fund"
+        db.get(Holding, holding_id).asset_class_raw = "collectible"
         db.commit()
     assert _worker(factory).run_once() == RAN
     with factory() as db:

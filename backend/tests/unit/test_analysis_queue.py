@@ -66,7 +66,7 @@ def test_enqueue_twice_returns_the_existing_pending_run():
 
 def test_enqueue_rejects_non_equity():
     db = _session()
-    bond = _holding(db, "BND", asset_class_raw="bond_fund")
+    bond = _holding(db, "BND", asset_class_raw="collectible")
     with pytest.raises(NotEquityAnalyzableError):
         queue.enqueue_local_run(db, bond, settings=SETTINGS)
 
@@ -238,7 +238,7 @@ def test_queue_ready_holdings_skips_blocked_and_already_queued():
     ready = _holding(db, "AAPL")
     _three_years(db, ready)
     no_financials = _holding(db, "MSFT")
-    bond = _holding(db, "BND", asset_class_raw="bond_fund")
+    bond = _holding(db, "BND", asset_class_raw="collectible")
     already = _holding(db, "KO")
     _three_years(db, already)
     _own(db, [ready, no_financials, bond, already])

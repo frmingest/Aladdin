@@ -17,7 +17,7 @@ import type {
   VerdictContent,
   VerdictRating,
 } from "../lib/types";
-import { isFundBlindPass } from "../lib/types";
+import { isCommodityBlindPass, isFundBlindPass, isIncomeBlindPass } from "../lib/types";
 import { dataGapCount } from "../lib/prose";
 import { Prose, WithFigures } from "./Prose";
 import { Button, Card, EmptyState } from "./ui";
@@ -39,7 +39,9 @@ import { Button, Card, EmptyState } from "./ui";
 // Readiness checks that matter for a run on the PC. Provider/quota/Ollama
 // checks describe this server's configuration, not the worker's (mirrors
 // QUEUE_BLOCKING_CHECKS in backend/app/services/analysis/queue.py).
-const LOCAL_BLOCKING_CHECKS = new Set(["instrument_type", "ticker", "financials", "fund_profile"]);
+/** Schema versions that carry no DCF and so no price-target range. */
+const WRAPPER_SCHEMA_PREFIXES = ["fund", "income", "commodity"];
+const LOCAL_BLOCKING_CHECKS = new Set(["instrument_type", "ticker", "financials", "fund_profile", "instrument_facts"]);
 // Checks about this server's own plumbing (LLM provider, Ollama, quota). They never get the
 // investment warning colour and always sort after the checks about the holding itself.
 const PLUMBING_CHECKS = new Set(["providers", "local_llm", "quota", "worker"]);
@@ -449,8 +451,8 @@ function VerdictCard({
         </div>
         <div className="md:text-right">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-faint">Price target range</p>
-          {run.schema_version.startsWith("fund") ? (
-            <p className="mt-1 text-sm text-ink-faint">Not applicable to a fund (no DCF)</p>
+          {WRAPPER_SCHEMA_PREFIXES.some((prefix) => run.schema_version.startsWith(prefix)) ? (
+            <p className="mt-1 text-sm text-ink-faint">Not applicable (no DCF)</p>
           ) : run.price_target_warning ? (
             <div className="mt-1.5 rounded-md border border-negative/30 bg-negative-subtle px-3 py-2 text-left text-xs text-negative">
               <p className="font-semibold">Price target not reliable</p>
@@ -553,7 +555,7 @@ function FundMoatCard({
 function MoatCard({ run, evidence }: { run: AnalysisRun; evidence: Map<string, EvidenceItem> }) {
   const [open, setOpen] = useState(false);
   const blind = run.blind_pass;
-  if (!blind || isFundBlindPass(blind)) return null;
+  if (!blind || !("capital_efficiency" in blind)) return null; // only a company has this moat card
   const moat = blind.moat;
   return (
     <Card>
@@ -1107,7 +1109,31 @@ export function AnalysisPanel({
         </>
       )}
 
-      {showDetail && run && blind && !isFundBlindPass(blind) && (
+      {showDetail && run && blind && isIncomeBlindPass(blind) && (
+        <>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <NarrativeCard title="Yield against the alternatives" icon="valuation" section={blind.yield_and_alternatives} evidence={evidence} />
+            <NarrativeCard title="Credit & rate risk" icon="fortress" section={blind.credit_and_rate_risk} evidence={evidence} />
+            <NarrativeCard title="Steward & costs" icon="steward" section={blind.steward_and_costs} evidence={evidence} />
+            <NarrativeCard title="Portfolio construction" icon="portfolio" section={blind.portfolio_construction} evidence={evidence} />
+            <NarrativeCard title="Macro & industry stress test" icon="macro" section={blind.macro_stress_test} evidence={evidence} />
+          </div>
+          <NarrativeCard title="Role in your portfolio" icon="role" section={blind.role_in_portfolio} evidence={evidence} />
+        </>
+      )}
+
+      {showDetail && run && blind && isCommodityBlindPass(blind) && (
+        <>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <NarrativeCard title="What you own" icon="fortress" section={blind.what_you_own} evidence={evidence} />
+            <NarrativeCard title="Cost & carry" icon="steward" section={blind.cost_and_carry} evidence={evidence} />
+            <NarrativeCard title="Macro & industry stress test" icon="macro" section={blind.macro_stress_test} evidence={evidence} />
+            <NarrativeCard title="Role in your portfolio" icon="role" section={blind.role_in_portfolio} evidence={evidence} />
+          </div>
+        </>
+      )}
+
+      {showDetail && run && blind && "capital_efficiency" in blind && (
         <>
           <MoatCard run={run} evidence={evidence} />
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

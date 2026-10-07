@@ -10,7 +10,7 @@ import type {
 } from "../lib/types";
 import {
   FACT_LABELS,
-  FUND_TYPES,
+  WRAPPER_TYPES,
   MARKET_METRICS,
   METRIC_LABELS,
   METRIC_ORDER,
@@ -658,9 +658,10 @@ export default function HoldingDetailPage() {
     );
   }
 
-  // Sprint 8: an equity ETF / fund is analysed as a fund — Fund facts
+  // Sprint 8: an equity ETF / fund is analysed as a fund (2026-10-07: so are bond / money-market funds and
+  // metal ETCs, with their own figures) — Fund facts
   // replace the company metrics, valuation (DCF) and company research.
-  const isFund = FUND_TYPES.has(holding.asset_class_raw);
+  const isFund = WRAPPER_TYPES.has(holding.asset_class_raw);
   const tabs: TabItem[] = [
     { id: "overview", label: "Overview" },
     { id: "analysis", label: "Analysis" },

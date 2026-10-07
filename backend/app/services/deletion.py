@@ -33,6 +33,7 @@ from app.models.fund import (
     FundExposure,
     FundProfile,
     FundReturnPeriod,
+    InstrumentFact,
 )
 from app.models.holding import Holding
 from app.models.journal import DecisionJournalEntry
@@ -108,7 +109,7 @@ def _delete_document_rows(
     )
     # Sprint 8: fund figures cite the document they were read from; they
     # go with it (the same as a document's extracted facts).
-    for model in (FundExposure, FundReturnPeriod, FundProfile):
+    for model in (FundExposure, FundReturnPeriod, FundProfile, InstrumentFact):
         counts.fund_rows += (
             db.query(model).filter(model.source_document_id.in_(document_ids)).delete(synchronize_session=False)
         )
@@ -177,7 +178,7 @@ def _purge_holding_rows(db: Session, holding_ids: list[uuid.UUID], counts: Delet
         .filter(FinancialLineItem.holding_id.in_(holding_ids))
         .delete(synchronize_session=False)
     )
-    for model in (FundConstituentMultiple, FundExposure, FundReturnPeriod, FundProfile):
+    for model in (FundConstituentMultiple, FundExposure, FundReturnPeriod, FundProfile, InstrumentFact):
         counts.fund_rows += (
             db.query(model).filter(model.holding_id.in_(holding_ids)).delete(synchronize_session=False)
         )

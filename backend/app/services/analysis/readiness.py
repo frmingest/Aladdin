@@ -37,9 +37,12 @@ from sqlalchemy.orm import Session
 
 from app.config.settings import Settings
 from app.domain.instrument_types import (
-    EQUITY_ANALYZABLE_TYPES,
+    PATH_COMMODITY,
+    PATH_FUND,
+    PATH_INCOME,
+    PATH_STOCK,
+    analysis_path,
     display_label,
-    is_fund_type,
 )
 from app.domain.period_dates import extract_year
 from app.models.analysis import AnalysisWorkerHeartbeat
@@ -51,6 +54,7 @@ from app.models.research import ResearchRunType
 from app.providers.budget import DailyBudgetGuard
 from app.providers.ollama_provider import check_ollama_health
 from app.services.funds.facts import get_profile, latest_exposures, list_returns
+from app.services.instruments.facts import list_facts
 from app.services.macro.indicators import get_macro_indicators
 from app.services.portfolio_import.ingestion import looks_like_placeholder_ticker
 from app.services.research.common import is_stale, latest_completed_run
@@ -143,21 +147,36 @@ def _check_macro_data(db: Session, settings: Settings) -> ReadinessCheck:
 
 def _check_instrument_type(holding: Holding) -> ReadinessCheck:
     label = display_label(holding.asset_class_raw)
-    if is_fund_type(holding.asset_class_raw):
+    path = analysis_path(holding.asset_class_raw)
+    if path == PATH_FUND:
         return ReadinessCheck(
             "instrument_type",
             "Instrument type",
             "ok",
             f"{label} — analyzed as a fund: look-through to its holdings, cost and track record.",
         )
-    if holding.asset_class_raw in EQUITY_ANALYZABLE_TYPES:
+    if path == PATH_INCOME:
+        return ReadinessCheck(
+            "instrument_type",
+            "Instrument type",
+            "ok",
+            f"{label} — analyzed as an income fund: yield against safe alternatives, credit and rate risk, cost.",
+        )
+    if path == PATH_COMMODITY:
+        return ReadinessCheck(
+            "instrument_type",
+            "Instrument type",
+            "ok",
+            f"{label} — analyzed as a physical-metal holding: backing, cost and carry, macro stress, role.",
+        )
+    if path == PATH_STOCK:
         return ReadinessCheck("instrument_type", "Instrument type", "ok", f"{label} — analyzable.")
     return ReadinessCheck(
         "instrument_type",
         "Instrument type",
         "block",
-        f"Tagged '{label}'. Only Stock, Equity ETF and Equity fund can be analyzed. "
-        "If the tag is wrong, change Instrument Type on the Holdings page.",
+        f"Tagged '{label}', which has no analysis path. If the tag is wrong, change Instrument Type on the "
+        "Holdings page.",
     )
 
 
@@ -355,8 +374,9 @@ def _check_research(db: Session, holding: Holding) -> tuple[ReadinessCheck, int]
     scopes: list[tuple[str, object]] = [
         ("macro", latest_completed_run(db, type_=ResearchRunType.MACRO.value)),
     ]
-    # A fund run does no company research (app/services/funds/evidence.py).
-    if not is_fund_type(holding.asset_class_raw):
+    # A fund / bond fund / metal run does no company research
+    # (app/services/funds/evidence.py, app/services/instruments/evidence.py).
+    if analysis_path(holding.asset_class_raw) == PATH_STOCK:
         scopes.append(
             ("company", latest_completed_run(db, type_=ResearchRunType.COMPANY.value, holding_id=holding.id))
         )
@@ -430,7 +450,39 @@ def _check_quota(
     )
 
 
-def _check_fund_facts(db: Session, holding: Holding) -> list[ReadinessCheck]:
+def _check_instrument_facts(db: Session, holding: Holding, path: str) -> ReadinessCheck:
+    """2026-10-07: the typed-in figures a bond / money-market fund or a metal ETC is judged on."""
+    rows = {row.fact_key: row for row in list_facts(db, holding.id)}
+    if not rows:
+        what = (
+            "yield, duration and credit quality" if path == PATH_INCOME else "backing, custody and delivery right"
+        )
+        return ReadinessCheck(
+            "instrument_facts",
+            "Instrument figures",
+            "block",
+            f"None entered. Fill in Fund facts → Instrument figures ({what}), citing the fact sheet, KID or "
+            "issuer page — without them the verdict would be guesswork.",
+        )
+    if path == PATH_INCOME:
+        missing = [
+            label
+            for key, label in (("yield_to_maturity_pct", "yield"), ("effective_duration_years", "duration"))
+            if key not in rows and not (key == "yield_to_maturity_pct" and "distribution_yield_pct" in rows)
+        ]
+    else:
+        missing = [label for key, label in (("backing", "backing"), ("redemption_right", "delivery right")) if key not in rows]
+    if missing:
+        return ReadinessCheck(
+            "instrument_facts",
+            "Instrument figures",
+            "warn",
+            f"{len(rows)} entered; missing {', '.join(missing)} — that part of the analysis will be marked unknown.",
+        )
+    return ReadinessCheck("instrument_facts", "Instrument figures", "ok", f"{len(rows)} entered, each citing a document.")
+
+
+def _check_fund_facts(db: Session, holding: Holding, *, path: str | None = None) -> list[ReadinessCheck]:
     """Sprint 8: what a fund analysis needs instead of financial statements."""
     checks: list[ReadinessCheck] = []
     documents = db.scalar(select(Document.id).where(Document.holding_id == holding.id).limit(1))
@@ -478,6 +530,8 @@ def _check_fund_facts(db: Session, holding: Holding) -> list[ReadinessCheck]:
             )
         )
 
+    if path == PATH_COMMODITY:
+        return checks  # a metal has no holdings list
     _as_of, rows = latest_exposures(db, holding.id, "holding")
     if not rows:
         checks.append(
@@ -507,7 +561,8 @@ def check_analysis_readiness(
     budget_guard: DailyBudgetGuard | None,
 ) -> ReadinessReport:
     report = ReadinessReport(holding_id=holding.id)
-    fund = is_fund_type(holding.asset_class_raw)
+    path = analysis_path(holding.asset_class_raw)
+    fund = path in (PATH_FUND, PATH_INCOME, PATH_COMMODITY)  # a wrapper: no market data, no DCF
     report.checks.append(_check_instrument_type(holding))
     report.checks.append(_check_providers(settings, fund=fund))
     local_llm_check = _check_local_llm(settings)
@@ -517,7 +572,9 @@ def check_analysis_readiness(
     if local_worker_check is not None:
         report.checks.append(local_worker_check)
     if fund:
-        report.checks.extend(_check_fund_facts(db, holding))
+        report.checks.extend(_check_fund_facts(db, holding, path=path))
+        if path in (PATH_INCOME, PATH_COMMODITY):
+            report.checks.append(_check_instrument_facts(db, holding, path))
     else:
         report.checks.extend(_check_ticker_and_price(db, holding, settings))
         report.checks.append(_check_financial_history(db, holding))

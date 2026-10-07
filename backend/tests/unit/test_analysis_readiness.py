@@ -158,7 +158,7 @@ def test_macro_data_current_is_ok():
 
 def test_non_equity_instrument_blocks():
     db = _session()
-    holding = _holding(db, ticker="BND", name="Some Bond Fund", asset_class_raw="bond_fund")
+    holding = _holding(db, ticker="BND", name="Some Collectible", asset_class_raw="collectible")
     report = check_analysis_readiness(db, holding, settings=_settings(), budget_guard=None)
     assert not report.ready
     assert _check(report, "instrument_type").status == "block"

@@ -374,7 +374,9 @@ export function analystVerdict(analysis: AnalysisRun | null, row: WatchlistRow |
 }
 
 export function analystMoat(analysis: AnalysisRun | null, row: WatchlistRow | null): MoatRating | null {
-  return analysis?.blind_pass?.moat?.overall_rating ?? row?.moat_rating ?? null;
+  const blind = analysis?.blind_pass;
+  const moat = blind && "moat" in blind ? blind.moat.overall_rating : null; // bond funds and metals have no moat
+  return moat ?? row?.moat_rating ?? null;
 }
 
 export function buildGates(input: StoreInput): Gate[] {

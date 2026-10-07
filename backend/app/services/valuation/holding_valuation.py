@@ -31,7 +31,12 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config.settings import get_settings
-from app.domain.instrument_types import FUND_ANALYSIS_TYPES
+from app.domain.instrument_types import (
+    COMMODITY_ANALYSIS_TYPES,
+    FUND_ANALYSIS_TYPES,
+    INCOME_ANALYSIS_TYPES,
+    display_label,
+)
 from app.domain.period_dates import extract_year
 from app.domain.regime_adjustments import get_regime_adjustments
 from app.domain.valuation_assumptions import get_valuation_assumptions
@@ -534,6 +539,16 @@ def compute_holding_valuation(
     result = HoldingValuationResult(
         holding_id=holding.id, ticker=holding.ticker, assumptions_version=assumptions.version
     )
+
+    if holding.asset_class_raw in INCOME_ANALYSIS_TYPES | COMMODITY_ANALYSIS_TYPES:
+        # A bond fund, money-market fund or metal ETC has no earnings to
+        # capitalise and no basket of companies to look through; its analysis
+        # (yield, carry, cost) is in the evidence packet, not a valuation.
+        result.unavailable_reasons.append(
+            f"No intrinsic-value model for a {display_label(holding.asset_class_raw).lower()}: see its analysis "
+            "(yield, rate and credit risk, or cost and carry) instead."
+        )
+        return result
 
     is_fund = holding.asset_class_raw in FUND_ANALYSIS_TYPES
     if not is_fund:
