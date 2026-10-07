@@ -39,15 +39,16 @@ function ThemeToggle() {
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useGameMode } from "../lib/gameMode";
 import CommandPalette from "./CommandPalette";
+import FortressTabs from "./fortress/FortressTabs";
+import { allNavSections, isFortressPath, MORE_NAV, moreContainsPath, primaryNavFor, type NavItem } from "../lib/nav";
 
 /**
  * Left nav + content area — Design & UX direction's "left-nav information
  * architecture" principle (claude/buffett-munger-rebuild-sprint-plan-2026-09-21.md).
  * Fixed sidebar on lg+ screens; below that it collapses behind a hamburger
  * into a slide-in drawer (2026-09-26 mobile pass) so the 13-item nav never
- * eats the viewport on a phone. "Thesis" (Sprint 11's tracking-over-time
- * page) went live 2026-09-26 — previously a visible-but-disabled
- * placeholder. Sector research is reached from within Macro / a holding's
+ * eats the viewport on a phone. Wave 3 (2026-10-07): four primary
+ * items plus a "More" group (lib/nav.ts). Sector research is reached from within Macro / a holding's
  * sector link rather than getting its own top-level nav item.
  */
 
@@ -73,54 +74,6 @@ function useBackendHealth(): HealthState {
   }, []);
 
   return state;
-}
-
-type NavItem = { label: string; to: string; disabled?: boolean };
-type NavSection = { title: string; items: NavItem[] };
-
-/** Grouped 2026-09-27 (13 flat links had become a wall of text). Order
- * inside each group is the old flat order, so nothing muscle-memory
- * depended on moved further than a section up or down. */
-const NAV_SECTIONS: NavSection[] = [
-  { title: "Overview", items: [{ label: "Dashboard", to: "/" }] },
-  {
-    title: "Portfolio",
-    items: [
-      { label: "Holdings", to: "/holdings" },
-      { label: "Portfolio", to: "/portfolio" },
-      { label: "Performance", to: "/performance" },
-      { label: "Portfolio risk", to: "/risk" },
-      { label: "Margin of safety", to: "/margin-of-safety" },
-      { label: "Precious metals", to: "/precious-metals" },
-    ],
-  },
-  {
-    title: "Research",
-    items: [
-      { label: "Analysis queue", to: "/analysis-queue" },
-      { label: "Watchlist", to: "/watchlist" },
-      { label: "Macro", to: "/macro" },
-    ],
-  },
-  {
-    title: "Tracking",
-    items: [
-      { label: "Journal", to: "/journal" },
-      { label: "Thesis", to: "/thesis" },
-    ],
-  },
-  { title: "System", items: [{ label: "Settings", to: "/settings" }] },
-];
-
-/** Game mode (F33, G2) adds one entry, the Fortress home, to the top of the
- * Overview group; with game mode off the nav is exactly the old one. */
-function navSectionsFor(gameMode: boolean): NavSection[] {
-  if (!gameMode) return NAV_SECTIONS;
-  return NAV_SECTIONS.map((section) =>
-    section.title === "Overview"
-      ? { ...section, items: [{ label: "Fortress", to: "/fortress" }, { label: "Marketplace", to: "/fortress/marketplace" }, { label: "Siege Simulator", to: "/fortress/siege" }, { label: "Chronicle", to: "/fortress/chronicle" }, { label: "Council", to: "/fortress/council" }, { label: "Records", to: "/fortress/records" }, { label: "Circle", to: "/fortress/circle" }, ...section.items] }
-      : section,
-  );
 }
 
 /** The top-bar switch. A view preference only: it changes how the app is
@@ -212,9 +165,36 @@ function Brand() {
 /** The nav list + footer (theme toggle, status link) shared by the fixed
  * desktop sidebar and the mobile drawer. `onNavigate` closes the drawer
  * when a link is tapped on mobile; it's a no-op on desktop. */
+function NavLinkItem({ item, onNavigate }: { item: NavItem; onNavigate?: () => void }) {
+  return (
+    <li>
+      <NavLink
+        to={item.to}
+        end={item.to === "/" || item.to === "/fortress"}
+        onClick={onNavigate}
+        className={({ isActive }) =>
+          `block rounded-md border-l-2 px-3 py-2 text-sm font-medium transition-colors ${
+            isActive
+              ? "border-accent bg-accent-subtle text-ink"
+              : "border-transparent text-ink-muted hover:bg-border-subtle hover:text-ink"
+          }`
+        }
+      >
+        {item.label}
+      </NavLink>
+    </li>
+  );
+}
+
 function NavContents({ onNavigate, onSearch }: { onNavigate?: () => void; onSearch: () => void }) {
   const { gameMode } = useGameMode();
-  const sections = navSectionsFor(gameMode);
+  const { pathname } = useLocation();
+  const primary = primaryNavFor(gameMode);
+  // "More" opens by itself when you land on a page inside it, and stays as you left it otherwise.
+  const [moreOpen, setMoreOpen] = useState(() => moreContainsPath(pathname));
+  useEffect(() => {
+    if (moreContainsPath(pathname)) setMoreOpen(true);
+  }, [pathname]);
   return (
     <>
       <button
@@ -228,44 +208,37 @@ function NavContents({ onNavigate, onSearch }: { onNavigate?: () => void; onSear
         <span>Search…</span>
         <kbd className="rounded border border-border px-1.5 text-[10px] text-ink-faint">Ctrl K</kbd>
       </button>
-      <div className="flex flex-col gap-4">
-        {sections.map((section) => (
-          <div key={section.title}>
-            <p className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-faint">
-              {section.title}
-            </p>
-            <ul className="flex flex-col gap-1">
-              {section.items.map((item) =>
-                item.disabled ? (
-                  <li
-                    key={item.to}
-                    className="cursor-not-allowed rounded-md px-3 py-2 text-sm text-ink-faint"
-                    title="Not built yet"
-                  >
-                    {item.label}
-                  </li>
-                ) : (
-                  <li key={item.to}>
-                    <NavLink
-                      to={item.to}
-                      end={item.to === "/" || item.to === "/fortress"}
-                      onClick={onNavigate}
-                      className={({ isActive }) =>
-                        `block rounded-md border-l-2 px-3 py-2 text-sm font-medium transition-colors ${
-                          isActive
-                            ? "border-accent bg-accent-subtle text-ink"
-                            : "border-transparent text-ink-muted hover:bg-border-subtle hover:text-ink"
-                        }`
-                      }
-                    >
-                      {item.label}
-                    </NavLink>
-                  </li>
-                ),
-              )}
-            </ul>
-          </div>
+      <ul className="flex flex-col gap-1">
+        {primary.map((item) => (
+          <NavLinkItem key={item.to} item={item} onNavigate={onNavigate} />
         ))}
+      </ul>
+      <div className="mt-4">
+        <button
+          type="button"
+          onClick={() => setMoreOpen((o) => !o)}
+          aria-expanded={moreOpen}
+          className="flex w-full items-center justify-between rounded-md px-3 py-2 text-sm font-medium text-ink-muted transition-colors hover:bg-border-subtle hover:text-ink"
+        >
+          <span>More</span>
+          <span aria-hidden className="text-xs">{moreOpen ? "▾" : "▸"}</span>
+        </button>
+        {moreOpen && (
+          <div className="mt-2 flex flex-col gap-3">
+            {MORE_NAV.map((section) => (
+              <div key={section.title}>
+                <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-faint">
+                  {section.title}
+                </p>
+                <ul className="flex flex-col gap-1">
+                  {section.items.map((item) => (
+                    <NavLinkItem key={item.to} item={item} onNavigate={onNavigate} />
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
       <div className="mt-auto space-y-1 pt-6">
         <ThemeToggle />
@@ -320,7 +293,7 @@ function useRouteTitle() {
   const { gameMode } = useGameMode();
   useEffect(() => {
     if (/^\/(holdings|fortress\/marketplace)\/[^/]+/.test(pathname)) return;
-    const item = navSectionsFor(gameMode).flatMap((s) => s.items).find((i) => i.to === pathname);
+    const item = allNavSections(gameMode).flatMap((s) => s.items).find((i) => i.to === pathname);
     const base = "/" + pathname.split("/")[1];
     const label = item?.label ?? PAGE_TITLES[pathname] ?? PAGE_TITLES[base];
     document.title = label && pathname !== "/" ? `${label} · Aladdin` : "Aladdin";
@@ -333,9 +306,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   useRouteTitle();
   const { gameMode } = useGameMode();
 
-  const paletteRoutes = navSectionsFor(gameMode).flatMap((s) =>
-    s.items.filter((i) => !i.disabled).map((i) => ({ label: i.label, to: i.to, group: s.title })),
+  const paletteRoutes = allNavSections(gameMode).flatMap((s) =>
+    s.items.map((i) => ({ label: i.label, to: i.to, group: s.title })),
   );
+  const { pathname } = useLocation();
 
   // Ctrl/⌘+K opens quick search from anywhere.
   useEffect(() => {
@@ -441,6 +415,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <div className="hidden items-center justify-end border-b border-border bg-surface px-6 py-2 lg:flex">
             <GameModeToggle />
           </div>
+          {gameMode && isFortressPath(pathname) && <FortressTabs />}
           <main id="main" tabIndex={-1} className="min-w-0 flex-1 overflow-y-auto focus:outline-none">
             {children}
           </main>

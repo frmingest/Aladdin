@@ -78,3 +78,52 @@ export const METRIC_INFO: Record<string, string> = {
   ev_to_ebitda: GLOSSARY.evEbitda,
   fcf_yield: "Free cash flow as a percentage of what you'd pay for the company (market cap or enterprise value) — the cash equivalent of P/E, and higher generally means cheaper.",
 };
+
+
+export interface GlossaryEntry {
+  id: string;
+  title: string;
+  text: string;
+}
+
+const GLOSSARY_TITLES: Record<string, string> = {
+  marginOfSafety: "Margin of safety",
+  bearBaseBull: "Bear, base and bull value",
+  dcf: "DCF (discounted cash flow)",
+  discountRate: "Discount rate",
+  beta: "Beta",
+  reverseDcf: "Reverse DCF",
+  roic: "ROIC",
+  roe: "ROE",
+  ownerEarnings: "Owner earnings",
+  peRatio: "P/E ratio",
+  evEbitda: "EV/EBITDA",
+  correlation: "Correlation",
+  concentrationCluster: "Concentration cluster",
+  macroRegime: "Macro regime",
+  regimeDcfAddon: "Regime add-on to the discount rate",
+  stressScenario: "Stress scenario",
+  realReturn: "Real return",
+  benchmarkComparison: "Benchmark comparison",
+  thesisTripwire: "Thesis tripwire",
+  verdict: "Verdict",
+  fxExposure: "Currency exposure",
+};
+
+/** One flat, A to Z list of every plain-language explanation the "i" tooltips
+ * use: the glossary page is these same strings, so the wording cannot drift.
+ * Metric entries that repeat a glossary entry word for word are listed once. */
+export function glossaryEntries(metricLabels: Record<string, string>): GlossaryEntry[] {
+  const entries: GlossaryEntry[] = Object.entries(GLOSSARY).map(([key, text]) => ({
+    id: key,
+    title: GLOSSARY_TITLES[key] ?? key,
+    text,
+  }));
+  const seen = new Set(entries.map((e) => e.text));
+  for (const [key, text] of Object.entries(METRIC_INFO)) {
+    if (seen.has(text)) continue;
+    seen.add(text);
+    entries.push({ id: key, title: metricLabels[key] ?? key.replace(/_/g, " "), text });
+  }
+  return entries.sort((a, b) => a.title.localeCompare(b.title));
+}

@@ -47,6 +47,7 @@ import { DocumentFlagsNote } from "../components/DocumentFlagsNote";
 import { DocumentReadButton } from "../components/DocumentReader";
 import { ResearchPanel } from "../components/ResearchPanel";
 import { NewswebAllReportsCard, SourcesPanel } from "../components/SourcesPanel";
+import KeyNumbers from "../components/KeyNumbers";
 import { ValuationPanel } from "../components/ValuationPanel";
 import WatchButton from "../components/WatchButton";
 import HoldingTowerCard from "../components/fortress/HoldingTowerCard";
@@ -716,6 +717,7 @@ export default function HoldingDetailPage() {
         <TabPanel id="overview">
           <div className="space-y-6">
             <HoldingTowerCard holdingId={id} />
+            <KeyNumbers holdingId={id} />
             {/* Keyed on metricsKey so readiness re-checks after an upload or EDGAR import adds
                 financial history. */}
             <AnalysisPanel key={metricsKey} holdingId={id} view="summary" onOpenDetail={() => selectTab("analysis")} />
