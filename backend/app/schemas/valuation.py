@@ -113,6 +113,14 @@ class HoldingValuationOut(BaseModel):
     # withheld as implausible. For display as "rejected" only — never a
     # valuation, never a margin of safety.
     rejected_values: dict[str, Decimal] | None = None
+    # 2026-10-07: the holding's own (trading) currency and the stored FX rate
+    # valuation_currency -> trading_currency, so the UI can show a NOK
+    # equivalent next to a figure in the filing's reporting currency (e.g.
+    # Equinor reports in USD). Display only: the valuation itself stays in
+    # valuation_currency. Both are None when the two currencies are the same;
+    # the rate alone is None when none is stored yet.
+    trading_currency: str | None = None
+    trading_currency_fx_rate: Decimal | None = None
 
 
 class BoardRowOut(BaseModel):

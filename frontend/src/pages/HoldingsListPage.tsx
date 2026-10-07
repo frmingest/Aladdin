@@ -100,7 +100,7 @@ function NewHoldingForm({
   );
 }
 
-/** Ticker / Type / Sector are editable in place (Faiz's request,
+/** Ticker / Type / Sector / Currency are editable in place (Faiz's request,
  * 2026-09-21 — the CSV importer can only ever guess at both: a slugified
  * placeholder ticker, and a name-based instrument-type/sector guess).
  * One "Edit" toggle per row rather than per-cell — the three fields are
@@ -118,6 +118,7 @@ function HoldingRow({
   const [ticker, setTicker] = useState(holding.ticker);
   const [sector, setSector] = useState(holding.sector ?? "");
   const [assetClassRaw, setAssetClassRaw] = useState(holding.asset_class_raw);
+  const [currency, setCurrency] = useState(holding.trading_currency);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -125,6 +126,7 @@ function HoldingRow({
     setTicker(holding.ticker);
     setSector(holding.sector ?? "");
     setAssetClassRaw(holding.asset_class_raw);
+    setCurrency(holding.trading_currency);
     setError(null);
     setEditing(true);
   }
@@ -136,6 +138,7 @@ function HoldingRow({
       ticker: ticker.trim(),
       sector: sector || null,
       asset_class_raw: assetClassRaw,
+      trading_currency: currency,
     };
     try {
       const updated = await api.updateHolding(holding.id, input);
@@ -213,7 +216,20 @@ function HoldingRow({
           ))}
         </select>
       </td>
-      <td className="px-4 py-2 tabular text-ink-muted">{holding.trading_currency}</td>
+      <td className="px-4 py-2">
+        <select
+          value={currency}
+          onChange={(e) => setCurrency(e.target.value)}
+          aria-label="Currency"
+          className="rounded-md border border-border px-2 py-1 text-sm focus:border-accent focus:outline-none"
+        >
+          {(CURRENCIES.includes(currency) ? CURRENCIES : [currency, ...CURRENCIES]).map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
+      </td>
       <td className="px-4 py-2 text-right tabular text-ink-muted">{holding.document_count}</td>
       <td className="px-2 py-2">
         <div className="flex justify-end gap-1.5">

@@ -39,6 +39,17 @@ function baseScenario(v: HoldingValuation): Scenario | null {
   return null;
 }
 
+/** "≈ NOK 427.00" — a valuation-currency figure shown in the holding's own
+ * currency using the stored FX rate. Display only; undefined when the currencies
+ * match or no rate is stored. */
+function tradingEquivalent(v: HoldingValuation, value: string | null): string | undefined {
+  const rate = Number(v.trading_currency_fx_rate);
+  if (value === null || !v.trading_currency || !v.trading_currency_fx_rate || !Number.isFinite(rate)) return undefined;
+  const converted = Number(value) * rate;
+  if (!Number.isFinite(converted)) return undefined;
+  return `≈ ${formatPrice(String(converted), v.trading_currency)}`;
+}
+
 export function buildKeyNumbers(v: HoldingValuation): KeyNumbers {
   const currency = v.valuation_currency;
   const price: KeyNumberTile = {
@@ -46,6 +57,7 @@ export function buildKeyNumbers(v: HoldingValuation): KeyNumbers {
     label: "Price",
     value: v.current_price_per_share ? formatPrice(v.current_price_per_share, currency) : "Not fetched",
     tone: v.current_price_per_share ? "neutral" : "unknown",
+    hint: tradingEquivalent(v, v.current_price_per_share),
   };
 
   if (v.valuation_status === "implausible") {
@@ -72,7 +84,7 @@ export function buildKeyNumbers(v: HoldingValuation): KeyNumbers {
   return {
     tiles: [
       price,
-      { id: "base", label: "Base value", value: currency ? `${currency} ${formatDecimal(base.value)}` : formatDecimal(base.value), tone: "neutral" },
+      { id: "base", label: "Base value", value: currency ? `${currency} ${formatDecimal(base.value)}` : formatDecimal(base.value), tone: "neutral", hint: tradingEquivalent(v, base.value) },
       {
         id: "margin",
         label: "Margin of safety",
