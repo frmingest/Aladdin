@@ -75,6 +75,26 @@ shows current state too — not just claude.ai. Don't update one and skip the ot
 doesn't have a file the project doc list does, that's a signal to add it, not a reason to skip the
 repo copy.
 
+## Progress file rules (`progress.md` / `docs/PROGRESS.md`)
+
+The progress file is a rolling log, not a history. These rules apply to both copies (the Claude
+project's `claude/progress.md` and the repo's `docs/PROGRESS.md`), which stay in sync per
+"Documentation sync" above.
+
+1. **Rolling log.** The main file holds only Active Status and the Current Sprint/Milestone.
+   Completed tasks never accumulate in it.
+2. **Four sections only, in this order, each short:**
+   - **Current Objective:** 1-2 sentences on what is being built or fixed right now.
+   - **Active Tasks:** a checklist of at most 5-7 immediate pending steps. Delete or check off items as they finish.
+   - **Recent Blockers / Open Questions:** temporary notes on current roadblocks that need resolution.
+   - **Archive Pointer:** a brief note, e.g. "Completed milestones moved to `/docs/archive/progress-archive.md`".
+3. **Mandatory archiving.** When a major milestone or sprint completes, move its finished task
+   blocks out of `progress.md` and append them to `docs/archive/progress-archive.md` *before*
+   writing new updates. Summarize completed work; don't carry granular historical logs in the active file.
+4. **Overwrite, don't append.** Update by overwriting or pruning completed lines, not by adding text
+   at the bottom. Keep the whole file under 100 lines (hard ceiling); if an update would exceed it,
+   archive first.
+
 ## Git discipline
 
 - Commit each completed, tested unit of work before moving to the next one.
