@@ -33,6 +33,7 @@ from app.schemas.valuation import (
     MarginOfSafetyBoardOut,
     PeriodMultiplesOut,
 )
+from app.services.market_data.fx import get_or_refresh_fx
 from app.services.settings.demo_guard import require_not_demo
 from app.services.settings.demo_mode import is_demo_mode
 from app.services.settings.synthetic_data import demo_valuation, demo_valuation_board
@@ -51,6 +52,32 @@ def _get_holding_or_404(db: Session, holding_id: UUID) -> Holding:
     if holding is None:
         raise HTTPException(status_code=404, detail="holding not found")
     return holding
+
+
+def _with_trading_currency(
+    db: Session,
+    provider: MarketDataProvider,
+    holding: Holding,
+    out: HoldingValuationOut,
+    *,
+    force_refresh: bool = False,
+) -> HoldingValuationOut:
+    """Adds the holding's trading currency and the FX rate from the valuation
+    currency into it. Display only: the valuation stays in the filing's
+    currency. A plain GET only reads a stored rate (never a first-ever vendor
+    call); the refresh endpoint may fetch one."""
+    trading = (holding.trading_currency or "").upper()
+    valuation = (out.valuation_currency or "").upper()
+    if not trading or not valuation or trading == valuation:
+        return out
+    snapshot = get_or_refresh_fx(
+        db, provider, from_currency=valuation, to_currency=trading,
+        force=force_refresh, refresh_live=force_refresh,
+    )
+    out.trading_currency = trading
+    if snapshot.available and snapshot.value is not None:
+        out.trading_currency_fx_rate = snapshot.value.rate
+    return out
 
 
 def _to_out(result: HoldingValuationResult) -> HoldingValuationOut:
@@ -184,7 +211,7 @@ def get_holding_valuation(
         return demo
     holding = _get_holding_or_404(db, holding_id)
     result = compute_holding_valuation(db, holding, market_data_provider, risk_free_rate_provider)
-    return _to_out(result)
+    return _with_trading_currency(db, market_data_provider, holding, _to_out(result))
 
 
 @router.post("/holdings/{holding_id}/refresh", response_model=HoldingValuationOut)
@@ -199,7 +226,7 @@ def refresh_holding_valuation(
     result = compute_holding_valuation(
         db, holding, market_data_provider, risk_free_rate_provider, force_refresh=True
     )
-    return _to_out(result)
+    return _with_trading_currency(db, market_data_provider, holding, _to_out(result), force_refresh=True)
 
 
 def build_board_out(

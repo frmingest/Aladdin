@@ -33,6 +33,27 @@ const dcf = (mos: string | null) => ({
 });
 
 describe("buildKeyNumbers", () => {
+  it("shows the holding's own currency under price and base value when an FX rate is stored", () => {
+    const k = buildKeyNumbers(
+      base({
+        valuation_currency: "USD",
+        trading_currency: "NOK",
+        trading_currency_fx_rate: "10",
+        current_price_per_share: "42.57",
+        valuation_status: "ok",
+        dcf: dcf("0.3333"),
+      }),
+    );
+    expect(k.tiles[0].hint).toBe("≈ NOK 425.70");
+    expect(k.tiles[1].hint).toBe("≈ NOK 1,500.00");
+  });
+
+  it("adds no equivalent when no FX rate is stored", () => {
+    const k = buildKeyNumbers(base({ valuation_currency: "USD", trading_currency: "NOK", valuation_status: "ok", dcf: dcf("0.3") }));
+    expect(k.tiles[0].hint).toBeUndefined();
+    expect(k.tiles[1].hint).toBeUndefined();
+  });
+
   it("shows price, base value and margin from the stored base scenario", () => {
     const k = buildKeyNumbers(base({ valuation_status: "ok", dcf: dcf("0.3333") }));
     expect(k.tiles.map((t) => t.id)).toEqual(["price", "base", "margin"]);

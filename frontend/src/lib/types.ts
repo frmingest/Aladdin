@@ -642,6 +642,11 @@ export interface HoldingValuation {
   holding_id: string;
   ticker: string;
   valuation_currency: string | null;
+  /** The holding's own (trading) currency and the stored FX rate
+   * valuation_currency -> trading_currency. Display only; both null/absent when
+   * the two currencies match, and the rate alone is null until one is stored. */
+  trading_currency?: string | null;
+  trading_currency_fx_rate?: string | null;
   as_of: string | null;
   base_growth_rate: string | null;
   discount_rate: string | null;
