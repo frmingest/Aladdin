@@ -49,7 +49,8 @@ from app.services.game.ritual_inputs import (
     demo_journal_entries,
     journal_entries,
 )
-from app.services.game.siege_view import build_siege_sim, stored_beta_lookup
+from app.services.game.sensitivity import METHOD_DEMO, Sensitivity
+from app.services.game.siege_view import build_siege_sim, stored_sensitivity_lookup
 from app.services.game.state import get_game_state
 from app.services.settings.demo_guard import require_not_demo
 from app.services.settings.demo_mode import is_demo_mode
@@ -76,8 +77,10 @@ def get_siege(
     db: Session = Depends(get_db),
 ) -> SiegeSimOut:
     """Siege Simulator (G13): a chosen market fall pushed through each
-    holding's stored beta. A what-if over stored data: no provider call, no
-    LLM, no write. Holdings with no stored beta are listed as not modelled."""
+    holding's beta (v2: measured from its stored price history against the
+    benchmark, Yahoo's beta as a marked fallback). A what-if over stored data:
+    no provider call, no LLM, no write. Holdings with no usable beta are
+    listed as not modelled."""
     settings = get_settings()
     mapping = get_game_mapping(settings.active_game_mapping_version)
     scenarios = get_siege_scenarios(settings.active_siege_scenarios_version)
@@ -89,10 +92,10 @@ def get_siege(
         )
     if is_demo_mode(db):
         state = demo_game_state(mapping.version)
-        lookup = lambda ticker: (DEMO_BETAS.get(ticker), None)
-        return build_siege_sim(state, lookup, drop, mapping, scenarios)
+        demo_lookup = lambda ticker: Sensitivity(DEMO_BETAS.get(ticker), METHOD_DEMO)
+        return build_siege_sim(state, demo_lookup, drop, mapping, scenarios)
     state = get_game_state(db, mapping.version)
-    return build_siege_sim(state, stored_beta_lookup(db), drop, mapping, scenarios)
+    return build_siege_sim(state, stored_sensitivity_lookup(db, scenarios), drop, mapping, scenarios)
 
 
 @router.get("/chronicle", response_model=ChronicleOut)

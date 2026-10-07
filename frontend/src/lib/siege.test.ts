@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   allSiegeLines,
+  betaSourceLine,
   clampDrop,
   coverageLine,
   damageWidth,
@@ -15,7 +16,8 @@ import type { SiegeSim, SiegeSimHolding } from "./types";
 const holding = (over: Partial<SiegeSimHolding> = {}): SiegeSimHolding => ({
   holding_id: "h1", ticker: "AAA.OL", name: "Alpha", structure: "keep", size_class: "medium", wall: "granite",
   value_nok: "400", weight_pct: "40", beta: "1.2", beta_as_of: null, modelled: true, shock_pct: "-0.24",
-  loss_nok: "-96", exposure: "exposed", stored_shock_pct: null, reason: null, ...over,
+  loss_nok: "-96", exposure: "exposed", stored_shock_pct: null, reason: null, method: "price_history", observations: 87,
+  r_squared: "0.5400", caution: null, ...over,
 });
 
 const sim = (over: Partial<SiegeSim> = {}): SiegeSim => ({
@@ -23,7 +25,7 @@ const sim = (over: Partial<SiegeSim> = {}): SiegeSim => ({
   drop_step: "0.05", level: "gathering", level_reason: "", portfolio_shock_pct: "-0.27", portfolio_loss_nok: "-270",
   covered_value_nok: "1000", total_value_nok: "1000", coverage: "1.0000", weighted_beta: "0.90", gathering_line: "-0.25",
   besieged_line: "-0.40", drop_to_gathering: "0.278", drop_to_besieged: "0.444", reach_note_gathering: "", reach_note_besieged: "",
-  counts: {}, oldest_beta_at: null, holdings: [holding()], notes: [], ...over,
+  counts: {}, oldest_beta_at: null, holdings: [holding()], notes: [], benchmark_ticker: "OSEBX.OL", ...over,
 });
 
 describe("slider helpers", () => {
@@ -74,6 +76,24 @@ describe("damage bars and lines", () => {
   });
 });
 
+describe("where a beta came from", () => {
+  it("says what it was measured against, over how many days, and how well it fits", () => {
+    expect(betaSourceLine(holding(), "OSEBX.OL")).toBe(
+      "Beta 1.20, measured from its own prices against OSEBX.OL on the 87 days it fell, fit 54%.",
+    );
+  });
+
+  it("labels Yahoo's figure and passes the backend's caution on", () => {
+    const line = betaSourceLine(holding({ method: "vendor_beta", caution: "Price history could not be used (x)." }), "OSEBX.OL");
+    expect(line).toBe("Beta 1.20 from Yahoo. Price history could not be used (x).");
+  });
+
+  it("labels sample data and says nothing for a holding that is not modelled", () => {
+    expect(betaSourceLine(holding({ method: "demo" }), "")).toBe("Beta 1.20 (sample data).");
+    expect(betaSourceLine(holding({ modelled: false, beta: null }), "OSEBX.OL")).toBe("");
+  });
+});
+
 describe("headline", () => {
   it("states the fall, the book loss and the level", () => {
     const h = headline(sim());
@@ -85,7 +105,7 @@ describe("headline", () => {
   it("never gives a book number when the backend withheld it", () => {
     const h = headline(sim({ level: "unsurveyed", portfolio_shock_pct: null }));
     expect(h).not.toMatch(/\d+\.\d%/);
-    expect(h).toContain("stored beta");
+    expect(h).toContain("usable beta");
   });
 
   it("reports coverage honestly", () => {

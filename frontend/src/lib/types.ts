@@ -2158,6 +2158,13 @@ export interface SiegeSimHolding {
   /** The Fortress's own stored stress shock for the same holding. */
   stored_shock_pct: string | null;
   reason: string | null;
+  /** Where the beta came from (Siege v2): measured from price history, Yahoo's figure, or sample data. */
+  method: "price_history" | "vendor_beta" | "demo" | null;
+  /** Days the benchmark fell that the measurement used. */
+  observations: number | null;
+  /** Share (0-1) of the holding's moves on those days that the benchmark explains. */
+  r_squared: string | null;
+  caution: string | null;
 }
 
 export interface SiegeSim {
@@ -2187,6 +2194,8 @@ export interface SiegeSim {
   oldest_beta_at: string | null;
   holdings: SiegeSimHolding[];
   notes: string[];
+  /** What the betas are measured against; empty for the v1 scenarios. */
+  benchmark_ticker: string;
 }
 
 // --- Sprint 24: Chronicle (G14), Ravens (G15), Night Watch (G16) -------------

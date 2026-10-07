@@ -229,6 +229,11 @@ class SiegeSimHoldingOut(BaseModel):
     # The Fortress's own stored stress shock for the same holding, for comparison.
     stored_shock_pct: Decimal | None
     reason: str | None
+    # Where the beta came from (Siege v2): "price_history", "vendor_beta", "demo" or None.
+    method: str | None = None
+    observations: int | None = None
+    r_squared: Decimal | None = None
+    caution: str | None = None
 
 
 class SiegeSimOut(BaseModel):
@@ -260,6 +265,8 @@ class SiegeSimOut(BaseModel):
     oldest_beta_at: datetime | None
     holdings: list[SiegeSimHoldingOut]
     notes: list[str]
+    # Siege v2: what the betas are measured against ("" for v1, which used vendor betas only).
+    benchmark_ticker: str = ""
 
 
 # --- Sprint 24 (2026-10-04): Chronicle (G14), Ravens (G15), Night Watch (G16) ---

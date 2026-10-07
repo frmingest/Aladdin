@@ -20,7 +20,7 @@ export const SIM_LEVEL_TEXT: Record<FortressSiegeLevel, string> = {
   calm: "At this fall the modelled book stays inside the game's storm line.",
   gathering: "At this fall the modelled book crosses the storm line.",
   besieged: "At this fall the modelled book crosses the siege line.",
-  unsurveyed: "Too little of the book has a stored beta to give a portfolio result.",
+  unsurveyed: "Too little of the book has a usable beta to give a portfolio result.",
 };
 
 export const SIM_EXPOSURE_LABEL: Record<SiegeSimExposure, string> = {
@@ -71,6 +71,25 @@ export function holdingLine(h: SiegeSimHolding): string {
   const shock = Number(h.shock_pct);
   const pct = `${(Math.abs(shock) * 100).toFixed(1)}%`;
   return shock < 0 ? `Falls ${pct} in this what-if (${SIM_EXPOSURE_LABEL[h.exposure].toLowerCase()}).` : `Gains ${pct} in this what-if.`;
+}
+
+/** Where one holding's beta came from, in a plain sentence, plus any caution the backend attached. */
+export function betaSourceLine(h: SiegeSimHolding, benchmark: string): string {
+  if (!h.modelled || h.beta === null) return "";
+  const beta = Number(h.beta).toFixed(2);
+  let line: string;
+  if (h.method === "price_history") {
+    const fit = h.r_squared === null ? "" : `, fit ${(Number(h.r_squared) * 100).toFixed(0)}%`;
+    const days = h.observations === null ? "" : ` on the ${h.observations} days it fell`;
+    line = `Beta ${beta}, measured from its own prices against ${benchmark || "the benchmark"}${days}${fit}.`;
+  } else if (h.method === "vendor_beta") {
+    line = `Beta ${beta} from Yahoo.`;
+  } else if (h.method === "demo") {
+    line = `Beta ${beta} (sample data).`;
+  } else {
+    line = `Beta ${beta}.`;
+  }
+  return h.caution ? `${line} ${h.caution}` : line;
 }
 
 /** One plain sentence about the whole book at the chosen fall. */

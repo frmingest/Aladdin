@@ -239,7 +239,11 @@ class Settings(BaseSettings):
     # Thresholds that turn stored analysis values into fortress properties.
     # Versioned like the valuation assumptions: a change is a new vN.py.
     active_game_mapping_version: str = "v1"
-    active_siege_scenarios_version: str = "v1"
+    active_siege_scenarios_version: str = "v2"
+    # The worker stores daily price history for every holding, the benchmark and the FX pairs
+    # the Siege Simulator (v2) measures betas from. Cheap when the stored history is fresh.
+    siege_history_refresh_enabled: bool = True
+    siege_history_refresh_interval_seconds: int = 6 * 3600
     active_time_and_filings_version: str = "v1"
     active_rituals_version: str = "v1"
 

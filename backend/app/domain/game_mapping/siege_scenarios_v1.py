@@ -34,6 +34,16 @@ class SiegeScenarios:
     drop_default: Decimal
     min_beta_coverage: Decimal
     reverse_search_step: Decimal
+    # --- added with v2 (2026-10-07); v1 keeps these defaults and so behaves exactly as before ---
+    # Where each holding's sensitivity comes from. v1: the stored vendor beta only.
+    # v2: the holding's own stored price history against `benchmark_ticker`.
+    sensitivity_method: str = "vendor_beta"
+    benchmark_ticker: str = ""
+    history_lookback_days: int = 0
+    min_observations: int = 0
+    min_down_days: int = 0
+    weak_fit_r_squared: Decimal = Decimal(0)
+    flat_share_warning: Decimal = Decimal(1)
 
 
 SIEGE_SCENARIOS_V1 = SiegeScenarios(
@@ -46,11 +56,12 @@ SIEGE_SCENARIOS_V1 = SiegeScenarios(
     reverse_search_step=Decimal("0.001"),
 )
 
-_VERSIONS: dict[str, SiegeScenarios] = {"v1": SIEGE_SCENARIOS_V1}
-
-
 def get_siege_scenarios(version: str) -> SiegeScenarios:
+    # Imported here: v2 builds on the SiegeScenarios class above.
+    from app.domain.game_mapping.siege_scenarios_v2 import SIEGE_SCENARIOS_V2
+
+    versions: dict[str, SiegeScenarios] = {"v1": SIEGE_SCENARIOS_V1, "v2": SIEGE_SCENARIOS_V2}
     try:
-        return _VERSIONS[version]
+        return versions[version]
     except KeyError as exc:
         raise ValueError(f"Unknown siege scenarios version: {version!r}") from exc

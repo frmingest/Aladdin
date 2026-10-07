@@ -18,6 +18,7 @@ def _stub_jobs(worker, monkeypatch, seen, *, slow=None):
         "maybe_refresh_snapshots": "snapshots",
         "maybe_store_game_state": "game",
         "maybe_warm_cold_holdings": "warm",
+        "maybe_refresh_siege_history": "siege",
         "maybe_keep_snapshots_warm": "keep",
     }
     for method, label in names.items():
@@ -103,7 +104,7 @@ def test_no_job_starts_after_a_finished_run_or_while_a_run_is_active(monkeypatch
     assert seen == []
     worker._analysis_active.clear()
     worker.run_background_jobs()
-    assert seen == ["tripwires", "snapshots", "game", "warm", "keep"]
+    assert seen == ["tripwires", "snapshots", "game", "warm", "siege", "keep"]
 
 
 def test_jobs_still_run_while_waiting_for_quota(monkeypatch):
@@ -112,7 +113,7 @@ def test_jobs_still_run_while_waiting_for_quota(monkeypatch):
     _stub_jobs(worker, monkeypatch, seen)
     worker._last_outcome = WAITING_QUOTA
     worker.run_background_jobs()
-    assert len(seen) == 5
+    assert len(seen) == 6
 
 
 def test_a_pass_stops_starting_jobs_once_a_run_is_claimed(monkeypatch):
@@ -121,7 +122,7 @@ def test_a_pass_stops_starting_jobs_once_a_run_is_claimed(monkeypatch):
     _stub_jobs(worker, monkeypatch, seen, slow=worker._analysis_active.set)
     worker._last_outcome = IDLE
     worker.run_background_jobs()
-    assert seen == ["tripwires", "snapshots"]  # no game / warm / keep after the claim
+    assert seen == ["tripwires", "snapshots"]  # no game / warm / siege / keep after the claim
 
 
 def test_a_crashing_job_is_contained(monkeypatch):
@@ -134,5 +135,5 @@ def test_a_crashing_job_is_contained(monkeypatch):
 
     monkeypatch.setattr(worker, "maybe_refresh_snapshots", boom)
     worker.run_background_jobs()
-    assert seen == ["tripwires", "game", "warm", "keep"]
+    assert seen == ["tripwires", "game", "warm", "siege", "keep"]
     assert worker._bg_job is None
