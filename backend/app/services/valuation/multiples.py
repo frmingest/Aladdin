@@ -34,6 +34,7 @@ from sqlalchemy.orm import Session
 from app.domain.period_dates import period_end_date
 from app.models.holding import Holding
 from app.models.market import FxObservation, MarketObservation
+from app.services.bank_detection import holding_is_financial
 from app.services.holding_facts import facts_by_period
 from app.services.market_data.shares import eps_implied_range
 from app.services.metrics import MarketInputs, compute_holding_metrics
@@ -103,6 +104,7 @@ def multiples_over_time(
     )
     fx_rows = list(db.scalars(select(FxObservation)))
 
+    is_financial = holding_is_financial(db, holding)
     results: list[PeriodMultiples] = []
     for period, entry in sorted(facts_by_period(db, holding.id).items()):
         result = PeriodMultiples(period=period)
@@ -148,7 +150,10 @@ def multiples_over_time(
             result.notes.append(shares_note)
 
         metrics = compute_holding_metrics(
-            entry.facts, entry.currencies, market=MarketInputs(price=price, shares=shares)
+            entry.facts,
+            entry.currencies,
+            market=MarketInputs(price=price, shares=shares),
+            financial=is_financial,
         )
         for key in HISTORY_KEYS:
             if key in metrics.computed:

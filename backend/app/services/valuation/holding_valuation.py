@@ -45,6 +45,7 @@ from app.services.market_data.price import get_or_refresh_price
 from app.services.market_data.risk_free_rate import get_or_refresh_risk_free_rate
 from app.services.market_data.shares import resolve_share_count
 from app.services.metrics import (
+    certificate_holder_share,
     compute_holding_metrics,
     ordinary_equity,
     owner_earnings_from_facts,
@@ -64,7 +65,11 @@ from app.services.valuation.fund_look_through import (
     compute_look_through,
     load_constituents,
 )
-from app.services.valuation.growth import historical_cagr, profitable_run_cagr
+from app.services.valuation.growth import (
+    historical_cagr,
+    normalised_base,
+    profitable_run_cagr,
+)
 from app.services.valuation.multiples import PeriodMultiples, multiples_over_time
 
 OWNER_EARNINGS_DCF = "owner_earnings_dcf"
@@ -378,6 +383,20 @@ def _value_financials(
         result.unavailable_reasons.append(f"{what} unavailable: no positive ordinary equity in {latest.period}")
         return
     book_value_per_share = equity / shares
+    certificate_share = certificate_holder_share(latest.facts, shares)
+    if certificate_share is not None:
+        # An equity-certificate savings bank: the certificates are only part of
+        # the bank's equity (the rest is the savings-bank reserve). Total equity
+        # over the certificate count would overstate book value per certificate.
+        book_value_per_share = equity * certificate_share / shares
+        result.unavailable_reasons[:] = [
+            w for w in result.unavailable_reasons if w not in share_count.warnings
+        ]
+        result.unavailable_reasons.append(
+            f"Equity-certificate bank: certificate holders own about {certificate_share * 100:.1f}% of the "
+            "profit and equity (EPS × certificates ÷ net income), so book value per certificate is that "
+            "share of equity, not total equity ÷ certificates."
+        )
 
     ke = _resolve_cost_of_equity(
         db, holding, market_data_provider, risk_free_rate_provider, result, assumptions,
@@ -394,7 +413,9 @@ def _value_financials(
             continue
         seen_years.add(year)
         prior = previous_period(periods, entry.period)
-        roe = compute_holding_metrics(entry.facts, prior_facts=prior.facts if prior else None).computed.get("roe")
+        roe = compute_holding_metrics(
+            entry.facts, prior_facts=prior.facts if prior else None, financial=True
+        ).computed.get("roe")
         if roe is not None:
             roes.append(roe)
 
@@ -563,21 +584,48 @@ def compute_holding_valuation(
         return result
 
     _latest_year, latest_period, base_owner_earnings = history[-1]
-    try:
-        if assumptions.growth_base_method == "profitable_run":
-            run = profitable_run_cagr([(row[0], row[2]) for row in history])
-            raw_growth_rate = run.rate
-            if run.skipped_years:
-                skipped = ", ".join(f"FY{y}" for y in run.skipped_years)
-                result.unavailable_reasons.append(
-                    f"Growth measured over FY{run.start_year}-FY{run.end_year}, the latest run of "
-                    f"profitable years; earlier loss-making years ({skipped}) are left out of the base."
-                )
-        else:
-            raw_growth_rate = historical_cagr([row[2] for row in history])
-    except ValueError as exc:
-        result.unavailable_reasons.append(f"DCF unavailable: {exc}")
-        return result
+    normalised = None
+    if assumptions.base_earnings_method == "normalised_median":
+        normalised = normalised_base(
+            [(row[0], row[2]) for row in history],
+            window_years=assumptions.normalisation_window_years,
+            min_years=assumptions.normalisation_min_years,
+            dispersion=assumptions.normalisation_dispersion,
+        )
+    if normalised is not None and normalised.volatile:
+        # Uneven earnings (a cycle, a windfall, a disposal gain): start from the
+        # median and do not extrapolate an endpoint-to-endpoint trend.
+        if normalised.base <= 0:
+            result.unavailable_reasons.append(
+                f"DCF unavailable: owner earnings are volatile and their {len(normalised.years)}-year "
+                f"median is not positive (FY{normalised.years[0]}-FY{normalised.years[-1]}), so there is "
+                "no normal level to value"
+            )
+            return result
+        base_owner_earnings = normalised.base
+        raw_growth_rate = assumptions.terminal_growth_rate
+        result.unavailable_reasons.append(
+            f"Owner earnings are uneven across FY{normalised.years[0]}-FY{normalised.years[-1]}, so the DCF "
+            f"starts from their median ({normalised.base:,.0f}), not the latest year "
+            f"({normalised.latest:,.0f}), and grows it at the {raw_growth_rate * 100:.1f}% terminal rate "
+            "with no extrapolated trend (assumptions " + assumptions.version + ")."
+        )
+    else:
+        try:
+            if assumptions.growth_base_method == "profitable_run":
+                run = profitable_run_cagr([(row[0], row[2]) for row in history])
+                raw_growth_rate = run.rate
+                if run.skipped_years:
+                    skipped = ", ".join(f"FY{y}" for y in run.skipped_years)
+                    result.unavailable_reasons.append(
+                        f"Growth measured over FY{run.start_year}-FY{run.end_year}, the latest run of "
+                        f"profitable years; earlier loss-making years ({skipped}) are left out of the base."
+                    )
+            else:
+                raw_growth_rate = historical_cagr([row[2] for row in history])
+        except ValueError as exc:
+            result.unavailable_reasons.append(f"DCF unavailable: {exc}")
+            return result
     base_growth_rate = raw_growth_rate
     cap = assumptions.max_base_growth
     if cap is not None and raw_growth_rate > cap:

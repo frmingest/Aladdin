@@ -84,3 +84,15 @@ class ValuationAssumptions:
     # profitable_run_cagr), so one early loss year no longer blocks a company
     # that is profitable now.
     growth_base_method: str = "earliest_period"
+
+    # --- v4 (2026-10-07): where the DCF starts when earnings are uneven -----
+    # "latest_year" (v1-v3): start from the latest year's owner earnings.
+    # "normalised_median" (v4): when the latest `normalisation_window_years`
+    # fiscal years are volatile (any year above `normalisation_dispersion` x
+    # the median or below 1/that of it), start from their median and grow it
+    # at the terminal rate; stable histories behave exactly as in v3.
+    # Needs at least `normalisation_min_years` years of complete inputs.
+    base_earnings_method: str = "latest_year"
+    normalisation_window_years: int = 5
+    normalisation_min_years: int = 3
+    normalisation_dispersion: Decimal = Decimal(2)
