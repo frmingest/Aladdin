@@ -1260,6 +1260,9 @@ class MappedFacts:
     unmapped_candidates: dict[str, dict[str, list[dict[str, str]]]] = field(default_factory=dict)
     # fiscal year -> {"extracted": [...], "not_applicable": [...], "missing": [...]}
     coverage: dict[str, dict[str, list[str]]] = field(default_factory=dict)
+    # Tag review (PR 1): gaps with ranked candidate tags and the largest
+    # tagged-but-unused numbers, for the latest year. Read-only pointer.
+    tag_review: dict[str, object] = field(default_factory=dict)
 
 
 def map_tagged_facts(tagged: list[TaggedFact], contexts: dict[str, _Context]) -> MappedFacts:
@@ -1340,6 +1343,8 @@ def map_tagged_facts(tagged: list[TaggedFact], contexts: dict[str, _Context]) ->
         if LEASES_INCLUDED_NOTE in fact_sources.get(f"{fy} total_debt", "")
     ]
     extracted = {(f.metric, f.period) for f in facts_out}
+    # Imported here: tag_review reads this module's helpers (no import cycle).
+    from app.services.documents.extraction.tag_review import build_tag_review
 
     return MappedFacts(
         facts=facts_out,
@@ -1353,6 +1358,9 @@ def map_tagged_facts(tagged: list[TaggedFact], contexts: dict[str, _Context]) ->
         reporting_bank=is_bank_balance_sheet(resolved),
         unmapped_candidates=_unmapped_candidates(years, resolved, extracted),
         coverage=coverage_manifest(years, extracted, is_bank_balance_sheet(resolved)),
+        tag_review=build_tag_review(
+            years, resolved, extracted, fact_sources, is_bank_balance_sheet(resolved)
+        ),
     )
 
 
@@ -1531,6 +1539,7 @@ def extract_ixbrl(content: bytes) -> ExtractionResult:
             "notes": mapped.notes,
             "unmapped_candidates": mapped.unmapped_candidates,
             "coverage": mapped.coverage,
+            "tag_review": mapped.tag_review,
         }
         if mapped.reporting_bank:
             flags.append("reporting_bank")

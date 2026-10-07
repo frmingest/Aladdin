@@ -39,6 +39,7 @@ export const MORE_NAV: NavSection[] = [
     title: "System",
     items: [
       { label: "Settings", to: "/settings" },
+      { label: "Tag review", to: "/tag-review" },
       { label: "Glossary", to: "/glossary" },
     ],
   },

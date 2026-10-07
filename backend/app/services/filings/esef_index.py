@@ -284,6 +284,7 @@ def import_esef_history(
                 "notes": facts_map.notes,
                 "unmapped_candidates": facts_map.unmapped_candidates,
                 "coverage": facts_map.coverage,
+                "tag_review": facts_map.tag_review,
             },
             "import_id": import_id,
         }

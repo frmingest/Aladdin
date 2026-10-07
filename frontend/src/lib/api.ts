@@ -77,6 +77,7 @@ import type {
   SnapshotDeleteResult,
   SourceEligibility,
   SystemStatus,
+  TagReview,
   UsageSummary,
   DemoModeState,
   LookThroughRefresh,
@@ -369,6 +370,9 @@ export const api = {
   getSystemStatus: () => request<SystemStatus>("/system/status"),
 
   /** LLM usage ledger (Sprint 15 #1) — per-day, per-provider request counts. Database only. */
+  /** Tag review inbox (read-only): gaps with closest tagged lines. Optional single holding. */
+  getTagReview: (holdingId?: string) =>
+    request<TagReview>(holdingId ? `/tag-review?holding_id=${encodeURIComponent(holdingId)}` : "/tag-review"),
   getUsageSummary: (days = 7) => request<UsageSummary>(`/usage/summary?days=${days}`),
 
   /** Game mode (F33, G1) — the fortress state: a read-only view over stored data, no provider call. */

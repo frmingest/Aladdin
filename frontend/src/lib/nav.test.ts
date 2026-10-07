@@ -40,6 +40,9 @@ describe("sidebar navigation", () => {
     expect(moreContainsPath("/sectors/Energy")).toBe(true);
     expect(moreContainsPath("/")).toBe(false);
     expect(moreContainsPath("/holdings/123")).toBe(false);
-    expect(MORE_NAV.flatMap((s) => s.items).length).toBe(10);
+    // Tag review (2026-10-07) is the 11th page under More; the sidebar itself stays at four.
+    expect(MORE_NAV.flatMap((s) => s.items).length).toBe(11);
+    expect(moreContainsPath("/tag-review")).toBe(true);
+    expect(primaryNavFor(false).map((i) => i.to)).not.toContain("/tag-review");
   });
 });
