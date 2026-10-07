@@ -27,7 +27,7 @@ import traceback
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.orm import Session
 
@@ -58,6 +58,11 @@ RAN = "ran"
 IDLE = "idle"
 WAITING_QUOTA = "waiting_quota"
 LLM_UNAVAILABLE = "llm_unavailable"
+# Heartbeat state (not a run_once outcome): no run is being analysed, but the
+# housekeeping thread is busy with a background job. The queue is still polled.
+BACKGROUND_JOB = "background_job"
+# A background job slower than this gets a warning in the log, with its name.
+SLOW_JOB_SECONDS = 60.0
 
 # Display text for each pipeline._report_stage() marker (queue progress UI,
 # Sprint 15). Percentages come from pipeline.STAGE_PROGRESS so the backend
@@ -126,6 +131,12 @@ class AnalysisWorker:
         # Sprint 20: warm-up retry bookkeeping and the keep-warm throttle.
         self._warm_attempts: dict[uuid.UUID, float] = {}
         self._last_keepwarm = float("-inf")
+        # 2026-10-07: the housekeeping jobs run on their own thread so a slow
+        # one (a snapshot refresh took 13+ minutes) can never stop the queue
+        # from being polled. `_bg_job` is (name, started_at) while one runs.
+        self._bg_job: tuple[str, datetime] | None = None
+        self._analysis_active = threading.Event()
+        self._last_outcome: str | None = None
 
     # --- heartbeat ---------------------------------------------------------
 
@@ -135,6 +146,23 @@ class AnalysisWorker:
             self._state, self._detail, self._current_run_id = state, detail, run_id
         if changed:
             self.beat()
+
+    def _effective_state(self) -> tuple[str, str | None, uuid.UUID | None]:
+        """What the heartbeat reports. The analysis loop's own state wins;
+        only an otherwise idle worker reports that it is busy with a
+        background job, so the Queue page never shows a false "Idle"."""
+        with self._lock:
+            state, detail, run_id = self._state, self._detail, self._current_run_id
+            job = self._bg_job
+        if state == IDLE and job is not None:
+            name, since = job
+            return BACKGROUND_JOB, f"Background job: {name} (since {since:%H:%M} UTC)", None
+        return state, detail, run_id
+
+    def _set_bg_job(self, job: tuple[str, datetime] | None) -> None:
+        with self._lock:
+            self._bg_job = job
+        self.beat()
 
     def _on_stage(self, label: str, run_id: uuid.UUID, stage: str) -> None:
         """Called from inside run_full_analysis (same thread) at each
@@ -147,8 +175,7 @@ class AnalysisWorker:
         self._set_state(queue.RUNNING.lower(), f"Analyzing {label} — {stage_label} ({pct}%)", run_id)
 
     def beat(self, *, started: bool = False) -> None:
-        with self._lock:
-            state, detail, run_id = self._state, self._detail, self._current_run_id
+        state, detail, run_id = self._effective_state()
         try:
             with self.session_factory() as db:
                 queue.record_heartbeat(
@@ -214,6 +241,7 @@ class AnalysisWorker:
             run_id = run.id
             holding = db.get(Holding, run.holding_id)
             label = holding.ticker if holding is not None else str(run.holding_id)
+            self._analysis_active.set()
             self._set_state(queue.RUNNING.lower(), f"Analyzing {label} — Starting (0%)", run_id)
             log.info("claimed run %s (%s), attempt %s", run_id, label, run.attempts)
             try:
@@ -249,6 +277,7 @@ class AnalysisWorker:
                 tb = traceback.format_exception_only(type(exc), exc)
                 self._fail(run_id, f"worker error: {''.join(tb).strip()}")
             finally:
+                self._analysis_active.clear()
                 self._set_state(IDLE, None)
         return RAN
 
@@ -359,6 +388,51 @@ class AnalysisWorker:
         with self.session_factory() as db:
             queue.fail_run(db, run_id, message=message)
 
+    # --- background jobs ---------------------------------------------------
+
+    def _background_jobs(self) -> list[tuple[str, Callable[[], None]]]:
+        return [
+            ("tripwire check", self.maybe_check_tripwires),
+            ("snapshot refresh", self.maybe_refresh_snapshots),
+            ("Fortress history", self.maybe_store_game_state),
+            ("holding warm-up", self.maybe_warm_cold_holdings),
+            ("keep pages warm", self.maybe_keep_snapshots_warm),
+        ]
+
+    def _may_start_background_job(self) -> bool:
+        """Jobs only start while the queue is not being worked (2026-10-05
+        rule, kept). After a finished run more may be queued, so wait for the
+        analysis loop to say it is idle, waiting or without an LLM."""
+        if self._stop.is_set() or self._analysis_active.is_set():
+            return False
+        return self._last_outcome != RAN
+
+    def run_background_jobs(self) -> None:
+        """One pass over the housekeeping jobs. Starts no new job once the
+        analysis loop has work. Each job already catches its own errors; this
+        also times it, so a slow one is named in the log."""
+        for name, job in self._background_jobs():
+            if not self._may_start_background_job():
+                return
+            started = time.monotonic()
+            self._set_bg_job((name, datetime.now(timezone.utc)))
+            try:
+                job()
+            except Exception:  # defence in depth: the jobs never raise
+                log.exception("background job %s crashed", name)
+            finally:
+                self._set_bg_job(None)
+            took = time.monotonic() - started
+            if took >= SLOW_JOB_SECONDS:
+                log.warning("background job '%s' took %.0f s (the queue was polled meanwhile)", name, took)
+            else:
+                log.debug("background job '%s' took %.1f s", name, took)
+
+    def _background_loop(self) -> None:
+        while not self._stop.is_set():
+            self.run_background_jobs()
+            self._stop.wait(self.settings.worker_poll_seconds)
+
     # --- main loop ---------------------------------------------------------
 
     def stop(self) -> None:
@@ -373,23 +447,18 @@ class AnalysisWorker:
         self.beat(started=True)
         heartbeat = threading.Thread(target=self._heartbeat_loop, name="worker-heartbeat", daemon=True)
         heartbeat.start()
+        if not once:
+            # 2026-10-07: the jobs run on their own thread. Run inline, one
+            # slow job (a snapshot refresh took 13+ minutes) held up a run
+            # queued while it was going, and the Queue page still said "Idle".
+            threading.Thread(target=self._background_loop, name="worker-background", daemon=True).start()
         try:
             while not self._stop.is_set():
                 outcome = self.run_once()
-                if outcome != RAN:
-                    # 2026-10-05: housekeeping runs only when no run was just
-                    # finished. The daily jobs (tripwires, snapshot refresh,
-                    # game state) are slow (a full refresh took 13+ minutes)
-                    # and run inline, so running them after every analysis
-                    # held up the next queued holding. A finished run skips
-                    # them: the next iteration claims the next run at once,
-                    # and they run when the queue drains.
-                    self.maybe_check_tripwires()
-                    self.maybe_refresh_snapshots()
-                    self.maybe_store_game_state()
-                    self.maybe_warm_cold_holdings()
-                    self.maybe_keep_snapshots_warm()
+                self._last_outcome = outcome
                 if once:
+                    if outcome != RAN:
+                        self.run_background_jobs()  # tests and --once: inline
                     break
                 if outcome != RAN:
                     self._stop.wait(self.settings.worker_poll_seconds)

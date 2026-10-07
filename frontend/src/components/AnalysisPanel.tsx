@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, ApiError } from "../lib/api";
 import { formatDate, formatDecimal, formatRelative } from "../lib/format";
+import { stallFor } from "../lib/queueStall";
 import type {
   AnalysisQueue,
   AnalysisReadiness,
@@ -312,6 +313,7 @@ function PendingRunCard({
     queue.workers.find((w) => w.worker_id === run.claimed_by) ??
     queue.workers.find((w) => w.online) ??
     queue.workers[0];
+  const stall = run.status === "QUEUED" ? stallFor(run, queue.workers, Date.now()) : null;
   const position = queue.pending.filter((r) => r.status === "QUEUED").findIndex((r) => r.id === run.id);
 
   let workerLine: string;
@@ -319,6 +321,7 @@ function PendingRunCard({
   else if (!worker.online) workerLine = `Worker '${worker.worker_id}' is offline (last seen ${formatRelative(worker.last_seen_at)}). The run waits until it's started.`;
   else if (worker.state === "llm_unavailable") workerLine = `Worker '${worker.worker_id}' is online, but its LLM is unavailable: ${worker.detail ?? "unknown"}.`;
   else if (worker.state === "waiting_quota") workerLine = worker.detail ?? "Waiting for Gemini quota.";
+  else if (worker.state === "background_job") workerLine = `Worker '${worker.worker_id}' is online and doing a background job (${worker.detail ?? "details unavailable"}); it checks the queue meanwhile.`;
   else workerLine = `Worker '${worker.worker_id}'${worker.model_name ? ` (${worker.model_name})` : ""} online, seen ${formatRelative(worker.last_seen_at)}.`;
 
   return (
@@ -331,6 +334,11 @@ function PendingRunCard({
               : `Queued for your PC ${formatRelative(run.queued_at)}${position > 0 ? ` · ${position} ahead in the queue` : ""}`}
           </p>
           <p className="mt-1 text-xs text-ink-muted">{workerLine}</p>
+          {stall && (
+            <p role="alert" className="mt-1 text-xs text-caution">
+              {stall.message}
+            </p>
+          )}
           {run.error_message && <p className="mt-1 text-xs text-caution">{run.error_message}</p>}
           <p className="mt-1 text-xs text-ink-faint">
             The previous result below stays until this run finishes. This page checks every 15 s;

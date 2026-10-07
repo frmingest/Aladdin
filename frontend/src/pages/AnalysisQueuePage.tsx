@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, ApiError } from "../lib/api";
 import { formatDate, formatDuration, formatRelative } from "../lib/format";
+import { queueStall, type QueueStall } from "../lib/queueStall";
 import type { AnalysisQueue, AnalysisWorker, QueuedRun, QueueReadyHoldingsResult, QueueScope } from "../lib/types";
 import { Button, Card, EmptyState, Modal, PageHeader, SectionTitle } from "../components/ui";
 
@@ -23,6 +24,7 @@ const QUEUE_SCOPE_OPTIONS: { value: QueueScope; label: string; hint: string }[] 
 const WORKER_STATE: Record<string, string> = {
   idle: "Idle, waiting for work",
   running: "Running an analysis",
+  background_job: "Background job (still checking the queue)",
   waiting_quota: "Waiting for Gemini quota",
   llm_unavailable: "LLM unavailable",
   stopped: "Stopped",
@@ -82,6 +84,14 @@ function StatusPill({ status }: { status: string }) {
     <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLE[status] ?? "bg-border-subtle text-ink"}`}>
       {status.charAt(0) + status.slice(1).toLowerCase().replace("_", " ")}
     </span>
+  );
+}
+
+function StallBanner({ stall }: { stall: QueueStall }) {
+  return (
+    <p role="alert" className="mb-3 rounded-lg border border-caution/40 bg-caution-subtle px-3 py-2 text-sm text-caution">
+      {stall.message}
+    </p>
   );
 }
 
@@ -276,6 +286,7 @@ export default function AnalysisQueuePage() {
   }
 
   const online = queue?.workers.filter((w) => w.online) ?? [];
+  const stall = queue ? queueStall(queue, Date.now()) : null;
   const avgRunSeconds = averageRunSeconds(queue?.recent ?? []);
 
   return (
@@ -363,6 +374,7 @@ export default function AnalysisQueuePage() {
             )}
             {queue && queue.workers.length > 0 && (
               <>
+                {stall && <StallBanner stall={stall} />}
                 {online.length === 0 && (
                   <p className="mb-2 text-sm text-caution">
                     No worker online. Queued runs wait until the worker is started on your PC.
