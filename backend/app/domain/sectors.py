@@ -47,3 +47,9 @@ FINANCIAL_SECTOR_KEYWORDS: tuple[str, ...] = ("financ", "bank", "insur")
 def is_financial_sector(sector: str | None) -> bool:
     lowered = (sector or "").lower()
     return bool(lowered) and any(keyword in lowered for keyword in FINANCIAL_SECTOR_KEYWORDS)
+
+
+def is_energy_sector(sector: str | None) -> bool:
+    """GICS "Energy" (producers, but also oil services and refiners). On its
+    own it does not say upstream: see app/services/upstream_detection.py."""
+    return "energy" in (sector or "").lower()

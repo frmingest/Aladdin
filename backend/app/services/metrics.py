@@ -269,10 +269,31 @@ def free_cash_flow_to_owners(facts: dict[str, Decimal]) -> tuple[Decimal, str | 
     return value, note
 
 
-def owner_earnings_from_facts(facts: dict[str, Decimal]) -> tuple[Decimal, str | None] | None:
+def owner_earnings_from_facts(
+    facts: dict[str, Decimal], *, cash_basis: bool = False
+) -> tuple[Decimal, str | None] | None:
     """(owner earnings, note) or None when an input is missing. Shared by
     GET /holdings/{id}/metrics, the evidence packet and the DCF, so all
-    three use the same definition."""
+    three use the same definition.
+
+    `cash_basis=True` is for upstream oil and gas (assumptions v5): operating
+    cash flow - capex - decommissioning, lease and financing-interest payments,
+    because most of a Norwegian producer's tax expense is deferred and net
+    income + D&A therefore understates the cash it generates. The note says
+    what the net income basis would have given. None when operating cash flow
+    or capex is missing (the caller keeps the net income basis then)."""
+    if cash_basis:
+        cash = free_cash_flow_to_owners(facts)
+        if cash is None:
+            return None
+        classic = owner_earnings_from_facts(facts)
+        note = "upstream oil and gas, cash basis: " + (cash[1] or "operating cash flow - capex")
+        if classic is not None:
+            note += (
+                f"; the net income basis (net income + D&A - capex, less payments) would give "
+                f"{_fmt(classic[0])} because most of the tax expense is deferred, not paid in cash"
+            )
+        return cash[0], note
     facts, basis_note = owner_basis_facts(facts)
     values = _get(facts, "net_income", "depreciation_and_amortization", "capital_expenditures")
     if values is None:
@@ -352,6 +373,7 @@ def compute_holding_metrics(
     market: MarketInputs | None = None,
     market_unavailable_reason: str | None = None,
     financial: bool = False,
+    upstream: bool = False,
 ) -> MetricsResult:
     """`facts` maps canonical metric name (app/domain/financial_metrics.py's
     CANONICAL_METRICS) -> value, for a single holding and a single period.
@@ -363,6 +385,10 @@ def compute_holding_metrics(
     `financial` marks a bank or insurer: thin equity-to-assets is structural
     there, so ROE and P/B are not refused for it, and an equity-certificate
     bank's P/E and P/B use the certificate holders' share of profit and equity.
+
+    `upstream` marks an upstream oil and gas producer: owner earnings are then
+    built from cash flow (owner_earnings_from_facts, cash_basis) when it and capex
+    are on file, and fall back to the net income basis otherwise.
 
     `prior_facts` (the previous fiscal year, same holding) turns year-end
     denominators into averages for ROE / ROIC / ROCE. `market` enables the
@@ -434,7 +460,9 @@ def compute_holding_metrics(
         if fcf[1]:
             result.notes["free_cash_flow"] = fcf[1]
 
-    owner = owner_earnings_from_facts(facts)
+    owner = owner_earnings_from_facts(facts, cash_basis=True) if upstream else None
+    if owner is None:
+        owner = owner_earnings_from_facts(facts)
     if owner is None:
         missing = [
             name

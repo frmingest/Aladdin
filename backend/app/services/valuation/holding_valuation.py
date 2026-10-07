@@ -51,6 +51,7 @@ from app.services.metrics import (
     owner_earnings_from_facts,
 )
 from app.services.risk.regime import classify_regime
+from app.services.upstream_detection import holding_is_upstream
 from app.services.valuation.dcf import (
     DCFScenarioResult,
     dcf_scenarios,
@@ -157,7 +158,9 @@ class HoldingValuationResult:
         return None
 
 
-def _owner_earnings_history(db: Session, holding: Holding) -> list[tuple[int, str, Decimal]]:
+def _owner_earnings_history(
+    db: Session, holding: Holding, *, cash_basis: bool = False
+) -> list[tuple[int, str, Decimal]]:
     """(year, period, owner_earnings) triples, oldest first, for every
     period with a complete owner-earnings input set and a parseable year.
     """
@@ -178,7 +181,9 @@ def _owner_earnings_history(db: Session, holding: Holding) -> list[tuple[int, st
         # Same owner's-view definition as GET /holdings/{id}/metrics and the
         # evidence packet (decommissioning and lease payments deducted when
         # extracted) — app/services/metrics.py owns it.
-        owner = owner_earnings_from_facts(facts)
+        owner = owner_earnings_from_facts(facts, cash_basis=True) if cash_basis else None
+        if owner is None:
+            owner = owner_earnings_from_facts(facts)
         if owner is None:
             continue
         history.append((year, period, owner[0]))
@@ -575,7 +580,15 @@ def compute_holding_valuation(
         )
         return result
 
-    history = _owner_earnings_history(db, holding)
+    cash_basis = assumptions.upstream_owner_earnings_basis == "cash" and holding_is_upstream(db, holding)
+    history = _owner_earnings_history(db, holding, cash_basis=cash_basis)
+    if cash_basis:
+        result.unavailable_reasons.append(
+            "Upstream oil and gas: owner earnings are built from operating cash flow - capex - "
+            "decommissioning, lease and financing-interest payments, not net income + D&A - capex, "
+            "because most of the tax expense is deferred and not paid in cash "
+            f"(assumptions {assumptions.version})."
+        )
     if len(history) < 2:
         result.unavailable_reasons.append(
             "DCF unavailable: fewer than two periods with complete owner-earnings inputs "

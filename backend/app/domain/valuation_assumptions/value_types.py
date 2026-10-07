@@ -96,3 +96,9 @@ class ValuationAssumptions:
     normalisation_window_years: int = 5
     normalisation_min_years: int = 3
     normalisation_dispersion: Decimal = Decimal(2)
+    # v5: how owner earnings are built for upstream oil and gas (an Energy
+    # holding that reports decommissioning payments). "net_income" is the
+    # classic net income + D&A - capex basis; "cash" uses operating cash flow -
+    # capex - decommissioning/lease/financing-interest payments, because
+    # Norwegian petroleum tax makes most of the tax expense deferred.
+    upstream_owner_earnings_basis: str = "net_income"

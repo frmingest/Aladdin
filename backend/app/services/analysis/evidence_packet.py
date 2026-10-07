@@ -58,6 +58,7 @@ from app.services.research.common import ResearchSnapshot
 from app.services.research.company import get_company_research
 from app.services.research.macro import get_macro_research
 from app.services.research.sector import get_sector_research
+from app.services.upstream_detection import holding_is_upstream
 from app.services.valuation.holding_valuation import (
     HoldingValuationResult,
     compute_holding_valuation,
@@ -316,7 +317,8 @@ def _add_market_multiples_evidence(
         return
     is_financial = holding_is_financial(db, holding)
     result = compute_holding_metrics(
-        latest.facts, latest.currencies, market=context.inputs, financial=is_financial
+        latest.facts, latest.currencies, market=context.inputs, financial=is_financial,
+        upstream=holding_is_upstream(db, holding),
     )
     if is_financial:
         mark_not_meaningful_for_financials(result)
@@ -550,9 +552,11 @@ def _add_financial_history_evidence(
     facts_by_year = {year: facts for year, _period, facts in _financial_history_by_period(db, holding)}
     per_period: list[tuple[int, str, MetricsResult, Decimal | None]] = []
     is_financial = holding_is_financial(db, holding)
+    is_upstream = holding_is_upstream(db, holding)
     for year, period, facts in history:
         metrics_result = compute_holding_metrics(
-            facts, prior_facts=facts_by_year.get(year - 1), financial=is_financial
+            facts, prior_facts=facts_by_year.get(year - 1), financial=is_financial,
+            upstream=is_upstream,
         )
         if is_financial:
             mark_not_meaningful_for_financials(metrics_result)

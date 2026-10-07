@@ -169,8 +169,8 @@ def test_v2_turns_the_guardrails_on_and_keeps_v1_market_inputs():
     assert v2.min_cost_of_equity > v2.terminal_growth_rate
 
 
-def test_default_settings_use_v4():
-    assert Settings(_env_file=None).active_valuation_assumptions_version == "v4"
+def test_default_settings_use_v5():
+    assert Settings(_env_file=None).active_valuation_assumptions_version == "v5"
 
 
 def test_v3_changes_only_the_growth_base_method():
@@ -639,3 +639,128 @@ def test_an_ordinary_bank_keeps_total_equity_over_shares(monkeypatch):
         result = _value(db, holding, price="150", monkeypatch=monkeypatch)
     assert result.financials.book_value_per_share == D("120")
     assert not any("Equity-certificate bank" in r for r in result.unavailable_reasons)
+
+
+# ------------------------- v5: cash-based owner earnings for upstream oil and gas
+
+
+def test_v5_differs_from_v4_only_in_the_upstream_basis():
+    import dataclasses
+
+    v4, v5 = get_valuation_assumptions("v4"), get_valuation_assumptions("v5")
+    differing = {
+        f.name for f in dataclasses.fields(v4) if getattr(v4, f.name) != getattr(v5, f.name)
+    }
+    assert differing == {"version", "upstream_owner_earnings_basis"}
+    assert v4.upstream_owner_earnings_basis == "net_income"
+    assert v5.upstream_owner_earnings_basis == "cash"
+
+
+# Vår Energi, USD millions FY2021-FY2025 (from the 2026-10-07 queries).
+_VAR = {
+    "FY2021": {"ni": "654.4", "da": "1704.6", "capex": "2584.9", "ocf": "4579.9", "lease": "43.8", "decom": "70.4"},
+    "FY2022": {"ni": "936.4", "da": "1448.0", "capex": "2593.1", "ocf": "5681.9", "lease": "110.4", "decom": "70.3"},
+    "FY2023": {"ni": "610.2", "da": "1422.6", "capex": "2641.0", "ocf": "3420.3", "lease": "94.3", "decom": "40.7"},
+    "FY2024": {"ni": "311.5", "da": "1915.9", "capex": "2874.5", "ocf": "3407.9", "lease": "82.7", "decom": "66.8"},
+    "FY2025": {"ni": "785.2", "da": "2710.1", "capex": "2819.7", "ocf": "4607.1", "lease": "125.6", "decom": "116.4"},
+}
+
+
+def _producer(db, *, sector="Energy", with_decommissioning=True, ticker="PROD.OL"):
+    holding = Holding(ticker=ticker, name="Producer", trading_currency="NOK", sector=sector)
+    document = _document(holding)
+    db.add_all([holding, document])
+    db.flush()
+    for period, v in _VAR.items():
+        facts = {
+            "net_income": v["ni"], "depreciation_and_amortization": v["da"],
+            "capital_expenditures": v["capex"], "operating_cash_flow": v["ocf"],
+            "lease_payments_financing": v["lease"], "shares_outstanding": "2500",
+        }
+        if with_decommissioning:
+            facts["decommissioning_payments"] = v["decom"]
+        _add(db, document, holding, period, facts)
+    db.commit()
+    return holding
+
+
+def test_an_energy_holding_with_decommissioning_payments_is_upstream():
+    from app.services.upstream_detection import holding_is_upstream
+
+    with _session() as db:
+        assert holding_is_upstream(db, _producer(db))
+
+
+def test_energy_without_decommissioning_payments_is_not_upstream():
+    from app.services.upstream_detection import holding_is_upstream
+
+    with _session() as db:
+        assert not holding_is_upstream(db, _producer(db, with_decommissioning=False))
+
+
+def test_decommissioning_payments_outside_energy_do_not_make_a_holding_upstream():
+    from app.services.upstream_detection import holding_is_upstream
+
+    for sector in ("Utilities", None):
+        with _session() as db:
+            assert not holding_is_upstream(db, _producer(db, sector=sector))
+
+
+def test_cash_basis_owner_earnings_and_the_note_show_both_bases():
+    from app.services.metrics import owner_earnings_from_facts
+
+    v = _VAR["FY2025"]
+    facts = {
+        "net_income": D(v["ni"]), "depreciation_and_amortization": D(v["da"]),
+        "capital_expenditures": D(v["capex"]), "operating_cash_flow": D(v["ocf"]),
+        "lease_payments_financing": D(v["lease"]), "decommissioning_payments": D(v["decom"]),
+    }
+    cash, note = owner_earnings_from_facts(facts, cash_basis=True)
+    assert cash == D("4607.1") - D("2819.7") - D("125.6") - D("116.4")
+    classic = owner_earnings_from_facts(facts)[0]
+    assert classic == D("785.2") + D("2710.1") - D("2819.7") - D("116.4") - D("125.6")
+    assert "cash basis" in note and "net income basis" in note and "deferred" in note
+
+
+def test_cash_basis_without_operating_cash_flow_returns_none_so_callers_fall_back():
+    from app.services.metrics import owner_earnings_from_facts
+
+    assert owner_earnings_from_facts(
+        {"net_income": D("1"), "depreciation_and_amortization": D("1"), "capital_expenditures": D("1")},
+        cash_basis=True,
+    ) is None
+
+
+def test_v4_leaves_the_producer_unranked_and_v5_values_it(monkeypatch):
+    with _session() as db:
+        holding = _producer(db)
+        v4 = _value(db, holding, price="10", monkeypatch=monkeypatch, settings=_v("v4"))
+        v5 = _value(db, holding, price="10", monkeypatch=monkeypatch, settings=_v("v5"))
+    assert v4.dcf is None
+    assert any("median is not positive" in r for r in v4.unavailable_reasons)
+    assert v5.dcf is not None, (v5.valuation_status, v5.unavailable_reasons)
+    assert any("operating cash flow - capex" in r and "v5" in r for r in v5.unavailable_reasons)
+    # Median of cash-basis FY2021-25 (about 1.7bn after leases and decommissioning).
+    assert any("median" in r for r in v5.unavailable_reasons)
+
+
+def test_v5_does_not_touch_a_non_upstream_holding(monkeypatch):
+    with _session() as db:
+        holding = _ramp_up(db, ["-80", "120", "150", "180"])
+        v4 = _value(db, holding, price="40", monkeypatch=monkeypatch, settings=_v("v4"))
+        v5 = _value(db, holding, price="40", monkeypatch=monkeypatch, settings=_v("v5"))
+    assert v5.dcf == v4.dcf
+    assert not any("Upstream" in r for r in v5.unavailable_reasons)
+
+
+def test_compute_holding_metrics_uses_cash_basis_only_when_told_upstream():
+    v = _VAR["FY2025"]
+    facts = {
+        "net_income": D(v["ni"]), "depreciation_and_amortization": D(v["da"]),
+        "capital_expenditures": D(v["capex"]), "operating_cash_flow": D(v["ocf"]),
+    }
+    plain = compute_holding_metrics(facts)
+    upstream = compute_holding_metrics(facts, upstream=True)
+    assert plain.computed["owner_earnings"] == D("785.2") + D("2710.1") - D("2819.7")
+    assert upstream.computed["owner_earnings"] == D("4607.1") - D("2819.7")
+    assert "cash basis" in upstream.notes["owner_earnings"]

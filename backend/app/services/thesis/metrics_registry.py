@@ -39,6 +39,7 @@ from app.services.thesis.prices import (
     latest_stored_price,
     stored_price_at_or_before,
 )
+from app.services.upstream_detection import holding_is_upstream
 
 
 @dataclass(frozen=True)
@@ -132,6 +133,7 @@ def _fundamentals(
         market=market_inputs,
         market_unavailable_reason=market_reason,
         financial=holding_is_financial(db, holding),
+        upstream=holding_is_upstream(db, holding),
     )
     return result, latest, prior
 
