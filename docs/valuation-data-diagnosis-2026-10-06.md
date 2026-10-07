@@ -79,3 +79,24 @@ select h.ticker, m.* from market_observations m join holdings h on h.id=m.holdin
 where h.ticker='EQNR.OL' order by 1 desc limit 5;
 select * from fx_observations order by created_at desc limit 10;
 ```
+
+## 6. Follow-up query results (2026-10-07)
+
+**Vår Energi (USD m).** Owner earnings = net income + D&A - capex - decommissioning - leases:
+
+| FY | NI | D&A | Capex | Decom | Leases | Owner earnings |
+|---|---|---|---|---|---|---|
+| 2020 | -1,626.6 | 1,706.7 | 1,811.9 | 101.7 | 43.7 | -1,877.2 |
+| 2021 | 654.4 | 1,704.6 | 2,584.9 | 70.4 | 43.8 | -340.1 |
+| 2022 | 936.4 | 1,448.0 | 2,593.1 | 70.3 | 110.4 | -389.4 |
+| 2023 | 610.2 | 1,422.6 | 2,641.0 | 40.7 | 94.3 | -743.2 |
+| 2024 | 311.5 | 1,915.9 | 2,874.5 | 66.8 | 82.7 | -796.6 |
+| 2025 | 785.2 | 2,710.1 | 2,819.7 | 116.4 | 125.6 | +433.6 |
+
+Confirms "one profitable year". Capex runs well above D&A, so this is not an extraction gap. Under v4 the 5-year median is negative, so the DCF stays unavailable (correctly). Treating capex as equal to D&A would give a median near 540m, but for an upstream producer capex is largely reserve replacement, so that would flatter it. Left as a method decision.
+
+**Salmon Evolution scale error confirmed.** FY2021 net income (-26,445), capex (798,840), operating cash flow (-66,710) and revenue (12,047) and FY2020 total equity (788,442) are stored as raw thousands, not multiplied up, while FY2021 equity (1,297,530,000) and every FY2020 flow (capex 165,961,000) are full NOK. Scaled by 1,000 the series is smooth (capex 166m, 799m, 767m). All rows confidence 0.95-1, created 2026-10-05: a confidence score does not catch it. Needs a correction and a scale-jump check at import.
+
+**FX duplicates.** NOK→USD was stored 9 times within 70 seconds on 2026-10-05 (rate 0.1041, USD/NOK about 9.60): a refresh loop fetching per holding without using the cache. SEK→NOK 0.9545 on 2026-10-07.
+
+**Not yet answered:** the `market_observations` query for EQNR was not in the pasted results, so the 41.95 USD price is still unchecked.
