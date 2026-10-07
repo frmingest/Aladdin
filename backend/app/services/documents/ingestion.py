@@ -27,7 +27,11 @@ from app.domain.errors import FileTooLargeError, UnsupportedFileTypeError
 from app.domain.period_dates import extract_year
 from app.models.document import Document, DocumentChunk, DocumentPage
 from app.models.financial_line_item import FinancialLineItem
-from app.providers.object_storage import ObjectStorageProvider
+from app.models.holding import Holding
+from app.providers.object_storage import (
+    ObjectStorageProvider,
+    ObjectStorageUnavailableError,
+)
 from app.services.documents.extraction import extract
 from app.services.documents.extraction.ixbrl_slim import strip_embedded_media
 from app.services.documents.hashing import (
@@ -39,6 +43,7 @@ from app.services.documents.hashing import (
 )
 from app.services.documents.quality import evaluate_quality
 from app.services.documents.sectioning import split_into_section_chunks
+from app.services.tag_rules import ReextractResult, rules_for_holding
 
 # A factsheet rounded to whole millions vs the annual report's 0.1 million
 # is not a disagreement worth reporting; a restatement usually is bigger.
@@ -51,14 +56,17 @@ def _differs_beyond_rounding(a: Decimal, b: Decimal) -> bool:
 
 
 def _existing_facts_by_year(
-    db: Session, document: Document
+    db: Session, document: Document, also_exclude: frozenset[uuid.UUID] = frozenset()
 ) -> dict[tuple[str, int | None], tuple[Decimal, str]]:
     """(metric, fiscal year) -> (value, source file name) already stored for
     this holding from other documents."""
     rows = db.execute(
         select(FinancialLineItem.metric, FinancialLineItem.period, FinancialLineItem.value, Document.original_filename)
         .join(Document, Document.id == FinancialLineItem.document_id)
-        .where(FinancialLineItem.holding_id == document.holding_id, FinancialLineItem.document_id != document.id)
+        .where(
+            FinancialLineItem.holding_id == document.holding_id,
+            FinancialLineItem.document_id.not_in({document.id, *also_exclude}),
+        )
     ).all()
     found: dict[tuple[str, int | None], tuple[Decimal, str]] = {}
     for metric, period, value, filename in rows:
@@ -146,6 +154,52 @@ def intake_raw_file(
     return IntakeResult(document=document, was_duplicate=False, content=stored)
 
 
+def _store_facts(
+    db: Session,
+    document: Document,
+    facts: list,
+    existing: dict[tuple[str, int | None], tuple[Decimal, str]],
+) -> tuple[list[str], bool]:
+    """Persist extracted facts for a document. First source wins: a year
+    already on file from another document is never silently replaced; a
+    differing value is reported. Returns (notes about kept values, whether any
+    fact had no holding to belong to). `existing` is updated as facts are
+    added."""
+    skipped_existing: list[str] = []
+    no_holding = False
+    for fact in facts:
+        if document.holding_id is None:
+            no_holding = True
+            continue
+        year = extract_year(fact.period)
+        prior = existing.get((fact.metric, year)) if year is not None else None
+        if prior is not None:
+            # A differing value (a restatement, or a different line chosen)
+            # is reported so it can be checked by hand.
+            prior_value, prior_file = prior
+            if _differs_beyond_rounding(prior_value, fact.value):
+                skipped_existing.append(
+                    f"{fact.period} {fact.metric}: this file {fact.value.normalize():f} vs "
+                    f"{prior_value.normalize():f} from '{prior_file}' (kept)"
+                )
+            continue
+        existing[(fact.metric, year)] = (fact.value, document.original_filename)
+        db.add(
+            FinancialLineItem(
+                document_id=document.id,
+                holding_id=document.holding_id,
+                metric=fact.metric,
+                value=fact.value,
+                unit=fact.unit,
+                currency=fact.currency,
+                period=fact.period,
+                source_page=fact.source_page,
+                confidence=fact.confidence,
+            )
+        )
+    return skipped_existing, no_holding
+
+
 def process_document(db: Session, document: Document, content: bytes) -> None:
     """Runs type-specific extraction and persists pages/chunks/facts.
 
@@ -160,8 +214,10 @@ def process_document(db: Session, document: Document, content: bytes) -> None:
     }
 
     ext = extension_of(document.original_filename)
+    # Mapping rules accepted in the tag review inbox apply to every new fetch.
+    rules = rules_for_holding(db, document.holding_id) if document.holding_id and ext in IXBRL_EXTENSIONS else ()
     try:
-        result = extract(ext, content, filename=document.original_filename)
+        result = extract(ext, content, filename=document.original_filename, rules=rules)
     except Exception as exc:  # noqa: BLE001 — any extractor failure is a FAILED document, not a 500
         document.status = DOCUMENT_STATUS_FAILED
         document.quality_flags = {**kept_flags, "extraction_failed": True, "extraction_error": str(exc)}
@@ -209,39 +265,8 @@ def process_document(db: Session, document: Document, content: bytes) -> None:
     if facts_skipped_fund_document:
         result.facts = []
     existing = _existing_facts_by_year(db, document) if document.holding_id is not None else {}
-    skipped_existing: list[str] = []
-    for fact in result.facts:
-        if document.holding_id is None:
-            facts_skipped_no_holding = True
-            continue
-        year = extract_year(fact.period)
-        prior = existing.get((fact.metric, year)) if year is not None else None
-        if prior is not None:
-            # First source wins (the same rule SEC EDGAR imports follow): a
-            # second upload never silently replaces a year already on file.
-            # A differing value (a restatement, or a different line chosen)
-            # is reported so it can be checked by hand.
-            prior_value, prior_file = prior
-            if _differs_beyond_rounding(prior_value, fact.value):
-                skipped_existing.append(
-                    f"{fact.period} {fact.metric}: this file {fact.value.normalize():f} vs "
-                    f"{prior_value.normalize():f} from '{prior_file}' (kept)"
-                )
-            continue
-        existing[(fact.metric, year)] = (fact.value, document.original_filename)
-        db.add(
-            FinancialLineItem(
-                document_id=document.id,
-                holding_id=document.holding_id,
-                metric=fact.metric,
-                value=fact.value,
-                unit=fact.unit,
-                currency=fact.currency,
-                period=fact.period,
-                source_page=fact.source_page,
-                confidence=fact.confidence,
-            )
-        )
+    skipped_existing, no_holding = _store_facts(db, document, result.facts, existing)
+    facts_skipped_no_holding = facts_skipped_no_holding or no_holding
 
     flags = evaluate_quality(result.pages)
     flags.update(kept_flags)
@@ -259,6 +284,86 @@ def process_document(db: Session, document: Document, content: bytes) -> None:
         DOCUMENT_STATUS_FAILED if flags.get("no_pages_extracted") else DOCUMENT_STATUS_PROCESSED
     )
     db.commit()
+
+
+# Flags the figure extraction itself sets; a re-read replaces exactly these
+# and leaves the text-quality flags alone (the pages are not touched).
+_EXTRACTOR_FLAGS = (
+    "ixbrl",
+    "reporting_bank",
+    "integrity_check_failed",
+    "equity_includes_hybrid_capital",
+    "fact_conflicts",
+    "facts_differ_from_existing",
+)
+
+
+def _stored_bytes(storage: ObjectStorageProvider, document: Document) -> bytes | None:
+    for key in (f"{document.sha256}/{document.original_filename}", document.storage_path):
+        try:
+            return storage.retrieve(key)
+        except ObjectStorageUnavailableError:
+            continue
+    return None
+
+
+def refresh_document_facts(db: Session, storage: ObjectStorageProvider, holding: Holding) -> ReextractResult:
+    """Re-read a holding's stored tagged reports with the current mapping
+    rules and replace their figures. Pages, chunks and text are not touched,
+    so nothing the analysis cites moves. Every report is read first; one that
+    cannot be read keeps its old figures. Reports are written oldest first and
+    a year another document already supplies stays with that document (the
+    same first-source-wins rule as an upload)."""
+    result = ReextractResult(holding_id=holding.id, ticker=holding.ticker)
+    result.facts_before = db.query(FinancialLineItem).filter(FinancialLineItem.holding_id == holding.id).count()
+    rules = rules_for_holding(db, holding.id)
+    documents = [
+        d
+        for d in db.scalars(
+            select(Document)
+            .where(Document.holding_id == holding.id, Document.status == DOCUMENT_STATUS_PROCESSED)
+            .order_by(Document.uploaded_at)
+        )
+        if extension_of(d.original_filename) in IXBRL_EXTENSIONS and (d.quality_flags or {}).get("ixbrl")
+    ]
+    reread: list[tuple[Document, object]] = []
+    for document in documents:
+        content = _stored_bytes(storage, document)
+        if content is None:
+            result.notes.append(f"{document.original_filename}: the stored file is not available, figures kept")
+            continue
+        try:
+            extracted = extract(
+                extension_of(document.original_filename), content, filename=document.original_filename, rules=rules
+            )
+        except Exception as exc:  # noqa: BLE001 — a bad file keeps its old figures
+            result.notes.append(f"{document.original_filename}: could not be read again ({exc}), figures kept")
+            continue
+        if "ixbrl" not in extracted.details:
+            result.notes.append(f"{document.original_filename}: no readable tags, figures kept")
+            continue
+        reread.append((document, extracted))
+
+    ids = frozenset(d.id for d, _ in reread)
+    if ids:
+        db.query(FinancialLineItem).filter(FinancialLineItem.document_id.in_(ids)).delete(synchronize_session=False)
+        db.flush()
+        existing = _existing_facts_by_year(db, reread[0][0], also_exclude=ids)
+        for document, extracted in reread:
+            skipped, _ = _store_facts(db, document, extracted.facts, existing)
+            flags = {k: v for k, v in (document.quality_flags or {}).items() if k not in _EXTRACTOR_FLAGS}
+            for flag in extracted.quality_flags:
+                if flag in _EXTRACTOR_FLAGS:
+                    flags[flag] = True
+            flags.update(extracted.details)
+            if skipped:
+                flags["facts_differ_from_existing"] = skipped[:20]
+            document.quality_flags = flags  # a new dict, so the JSON column is saved
+            result.rule_figures += len(extracted.details.get("ixbrl", {}).get("rules_applied", []))
+    result.documents = len(reread)
+    db.commit()
+    result.facts_after = db.query(FinancialLineItem).filter(FinancialLineItem.holding_id == holding.id).count()
+    return result
 
 
 def ingest_holding_document(

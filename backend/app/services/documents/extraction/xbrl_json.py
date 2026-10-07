@@ -22,12 +22,14 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Sequence
 from datetime import date, timedelta
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from app.services.documents.extraction.ixbrl import (
     MappedFacts,
+    MappingRule,
     TaggedFact,
     _Context,
     map_tagged_facts,
@@ -118,6 +120,6 @@ def tagged_facts_from_xbrl_json(data: dict[str, Any]) -> tuple[list[TaggedFact],
     return tagged, contexts
 
 
-def map_xbrl_json(data: dict[str, Any]) -> MappedFacts:
+def map_xbrl_json(data: dict[str, Any], rules: Sequence[MappingRule] = ()) -> MappedFacts:
     tagged, contexts = tagged_facts_from_xbrl_json(data)
-    return map_tagged_facts(tagged, contexts)
+    return map_tagged_facts(tagged, contexts, rules)

@@ -49,6 +49,7 @@ from app.providers.esef_index_provider import (
 from app.providers.object_storage import ObjectStorageProvider
 from app.services.documents.extraction.xbrl_json import entity_leis, map_xbrl_json
 from app.services.documents.hashing import sha256_hex
+from app.services.tag_rules import rules_for_holding
 
 ESEF_INDEX_SOURCE = "filings.xbrl.org"
 _LEI_IN_TEXT = re.compile(r"(?<![A-Z0-9])([A-Z0-9]{18}[0-9]{2})(?![A-Z0-9])")
@@ -213,7 +214,8 @@ def import_esef_history(
     )
 
     # Map every filing, then pick one source filing per fiscal year.
-    mapped = {ref: map_xbrl_json(data) for ref, data, _raw in fetched}
+    rules = rules_for_holding(db, holding.id)
+    mapped = {ref: map_xbrl_json(data, rules) for ref, data, _raw in fetched}
     chosen: dict[str, EsefFilingRef] = {}
     for ref, _data, _raw in fetched:  # own year first
         if any(f.period == _fy_of(ref.period_end) for f in mapped[ref].facts):

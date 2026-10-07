@@ -45,6 +45,7 @@ from app.models.llm_usage import LlmUsageEvent
 from app.models.market import MarketObservation, ShareCountObservation
 from app.models.portfolio import PortfolioPosition, PortfolioSnapshot
 from app.models.research import ResearchItem, ResearchRun
+from app.models.tag_mapping_rule import TagMappingRule
 from app.models.thesis import ThesisTripwire
 from app.models.watchlist import WatchlistItem
 from app.providers.object_storage import ObjectStorageProvider
@@ -255,6 +256,18 @@ def detach_holding_rows(db: Session, holding_ids: list[uuid.UUID], counts: Delet
     )
     counts.tripwires += (
         db.query(ThesisTripwire).filter(ThesisTripwire.holding_id.in_(holding_ids)).delete(synchronize_session=False)
+    )
+    # Tag review decisions: company rules and remembered rejections belong to
+    # the holding and go with it; an all-companies rule is kept (it is a
+    # general mapping) and only loses its provenance link. Deleting just a
+    # holding's documents never reaches here, so those decisions survive a
+    # delete-and-re-fetch.
+    db.query(TagMappingRule).filter(
+        TagMappingRule.holding_id.in_(holding_ids),
+        (TagMappingRule.scope == "company") | (TagMappingRule.status == "rejected"),
+    ).delete(synchronize_session=False)
+    db.query(TagMappingRule).filter(TagMappingRule.holding_id.in_(holding_ids)).update(
+        {"holding_id": None}, synchronize_session=False
     )
     counts.journal_entries_unlinked += (
         db.query(DecisionJournalEntry)

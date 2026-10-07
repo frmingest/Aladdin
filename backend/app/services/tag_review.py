@@ -1,9 +1,11 @@
-"""Tag review inbox (PR 1): the tag-review blocks stored with each ESEF
-filing at extraction time, gathered per holding.
+"""Tag review inbox: the tag-review blocks stored with each ESEF filing at
+extraction time, gathered per holding.
 
-Read-only. Looks at each holding's newest tagged annual report only, and
-drops a gap when another document already supplies that figure for the same
-year (the same rule the metrics page uses for its coverage warning)."""
+Looks at each holding's newest tagged annual report only, and drops a gap
+when another document already supplies that figure for the same year (the
+same rule the metrics page uses for its coverage warning). PR 2 adds the
+decisions made on the suggestions: rejected ones are hidden, accepted ones are
+marked (the gap closes once the company is re-extracted)."""
 from __future__ import annotations
 
 from typing import Any
@@ -26,6 +28,22 @@ def _review_of(document: Document) -> dict[str, Any] | None:
     return review if isinstance(review, dict) and review.get("fiscal_year") else None
 
 
+def newest_review(db: Session, holding_id: UUID) -> tuple[Document, dict[str, Any]] | None:
+    """The tag review of a holding's newest processed tagged report."""
+    best: tuple[Document, dict[str, Any]] | None = None
+    for document in db.scalars(
+        select(Document).where(Document.holding_id == holding_id, Document.status == "processed")
+    ):
+        review = _review_of(document)
+        if review is None:
+            continue
+        if best is None or (review["fiscal_year"], document.uploaded_at) > (
+            best[1]["fiscal_year"], best[0].uploaded_at
+        ):
+            best = (document, review)
+    return best
+
+
 def _chat_summary(ticker: str, name: str, filename: str, review: dict[str, Any]) -> str:
     lines = [f"Tag review: {name} ({ticker}), {review['fiscal_year']}, file {filename}"]
     for gap in review["gaps"]:
@@ -41,6 +59,13 @@ def _chat_summary(ticker: str, name: str, filename: str, review: dict[str, Any])
 
 
 def build_tag_review(db: Session, holding_id: UUID | None = None) -> dict[str, Any]:
+    # Imported here: tag_rules reads newest_review from this module.
+    from app.services.tag_rules import (
+        accepted_for,
+        needs_second_confirmation,
+        rejected_concepts,
+    )
+
     query = select(Document).where(Document.holding_id.is_not(None), Document.status == "processed")
     if holding_id is not None:
         query = query.where(Document.holding_id == holding_id)
@@ -68,10 +93,29 @@ def build_tag_review(db: Session, holding_id: UUID | None = None) -> dict[str, A
                 )
             )
         }
-        gaps = [
-            g for g in review["gaps"]
-            if not any(m in supplied for m in _METRICS_OF.get(g["metric"], ()))
-        ]
+        rejected = rejected_concepts(db, hid)
+        accepted = accepted_for(db, hid)
+        gaps = []
+        for g in review["gaps"]:
+            if any(m in supplied for m in _METRICS_OF.get(g["metric"], ())):
+                continue
+            offered = [c for c in g["candidates"] if (g["metric"], c["concept"]) not in rejected]
+            candidates = [
+                {
+                    **c,
+                    "decision": "accepted" if (g["metric"], c["concept"]) in accepted else None,
+                    "needs_second_confirmation": needs_second_confirmation(c),
+                }
+                for c in offered
+            ]
+            gaps.append(
+                {
+                    **g,
+                    "candidates": candidates,
+                    "rejected_hidden": len(g["candidates"]) - len(offered),
+                    "rule_pending": any(c["decision"] for c in candidates),
+                }
+            )
         if not gaps and not review["unused"]:
             continue
         shown = {**review, "gaps": gaps}

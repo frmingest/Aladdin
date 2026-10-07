@@ -77,7 +77,9 @@ import type {
   SnapshotDeleteResult,
   SourceEligibility,
   SystemStatus,
+  TagReextractResult,
   TagReview,
+  TagRule,
   UsageSummary,
   DemoModeState,
   LookThroughRefresh,
@@ -373,6 +375,20 @@ export const api = {
   /** Tag review inbox (read-only): gaps with closest tagged lines. Optional single holding. */
   getTagReview: (holdingId?: string) =>
     request<TagReview>(holdingId ? `/tag-review?holding_id=${encodeURIComponent(holdingId)}` : "/tag-review"),
+  /** Tag review PR 2: accept a suggestion as a mapping rule (the server decides the scope and
+   * answers 409 until `confirm_failed_check` is true for a suggestion that failed its check),
+   * reject one, remove a rule, and re-read a company's stored reports with the rules. */
+  getTagRules: () => request<{ rules: TagRule[] }>("/tag-review/rules"),
+  acceptTagRule: (input: { holding_id: string; metric: string; concept: string; confirm_failed_check?: boolean }) =>
+    request<TagRule>("/tag-review/rules", { method: "POST", body: JSON.stringify(input) }),
+  rejectTagSuggestion: (input: { holding_id: string; metric: string; concept: string }) =>
+    request<TagRule>("/tag-review/rejections", { method: "POST", body: JSON.stringify(input) }),
+  removeTagRule: (id: string) => request<void>(`/tag-review/rules/${id}`, { method: "DELETE" }),
+  reextractHolding: (holdingId: string) =>
+    request<TagReextractResult>("/tag-review/re-extract", {
+      method: "POST",
+      body: JSON.stringify({ holding_id: holdingId }),
+    }),
   getUsageSummary: (days = 7) => request<UsageSummary>(`/usage/summary?days=${days}`),
 
   /** Game mode (F33, G1) — the fortress state: a read-only view over stored data, no provider call. */
