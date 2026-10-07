@@ -32,6 +32,7 @@ from app.api.risk import router as risk_router
 from app.api.settings import router as settings_router
 from app.api.sources import router as sources_router
 from app.api.system import router as system_router
+from app.api.tag_review import router as tag_review_router
 from app.api.thesis import router as thesis_router
 from app.api.usage import router as usage_router
 from app.api.valuation import router as valuation_router
@@ -129,6 +130,7 @@ app.include_router(precious_metals_router)
 app.include_router(settings_router)
 app.include_router(usage_router)
 app.include_router(game_router)
+app.include_router(tag_review_router)
 
 
 @app.get("/health")

@@ -2284,3 +2284,56 @@ export interface Competence {
   summary: string;
   note_max_chars: number;
 }
+
+
+/** Tag review inbox (PR 1, read-only): ESEF inputs the extractor could not
+ * fill, the closest tagged lines, and big tagged numbers nothing reads. */
+export type TagCheck = "ties" | "plausible" | "does_not_tie" | "no_check";
+
+export interface TagCandidate {
+  concept: string;
+  prefix: string;
+  extension: boolean;
+  suggested_scope: "all" | "company";
+  value: string;
+  unit: string;
+  prior_year_value: string | null;
+  check: TagCheck;
+  check_detail: string;
+  warning: string | null;
+  score: number;
+}
+
+export interface TagGap {
+  metric: string;
+  fiscal_year: string;
+  candidates: TagCandidate[];
+}
+
+export interface TagUnused {
+  concept: string;
+  extension: boolean;
+  statement: string;
+  value: string;
+  unit: string;
+  share_of_base: string;
+  prior_year_value: string | null;
+}
+
+export interface TagReviewHolding {
+  holding_id: string;
+  ticker: string;
+  name: string;
+  document_id: string;
+  filename: string;
+  fiscal_year: string;
+  gaps: TagGap[];
+  unused: TagUnused[];
+  chat_summary: string;
+}
+
+export interface TagReview {
+  holdings: TagReviewHolding[];
+  holdings_needing_review: number;
+  total_gaps: number;
+}

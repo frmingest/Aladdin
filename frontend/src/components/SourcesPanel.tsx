@@ -11,6 +11,7 @@ import type {
   SourceEligibility,
 } from "../lib/types";
 import { Button, Card, EmptyState } from "./ui";
+import { TagReviewBanner } from "./TagReviewBanner";
 import { ResearchPanel } from "./ResearchPanel";
 
 /** Primary-source data for one holding (backend/app/api/sources.py):
@@ -369,6 +370,8 @@ export function NewswebAllReportsCard({ holdingId, onImported }: { holdingId: st
       {loadError && <p className="mb-3 text-sm text-negative">{loadError}</p>}
       {!loaded && !loadError && <p className="text-sm text-ink-muted">Loading…</p>}
       {loaded && reports.length === 0 && !loadError && <EmptyState>Nothing fetched yet.</EmptyState>}
+
+      <TagReviewBanner holdingId={holdingId} refreshKey={lastRun} />
 
       {lastRun && (
         <p className="mb-3 text-xs text-ink-faint">
