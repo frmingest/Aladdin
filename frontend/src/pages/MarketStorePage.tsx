@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { api, ApiError } from "../lib/api";
 import { loadStore, type StoreData } from "../lib/marketStore";
 import { formatDate, formatMoney, formatMultiple, formatPercent, formatRelative } from "../lib/format";
@@ -37,7 +37,9 @@ import { Awning, DecisionScales, DoorIcon, Merchant } from "../components/market
 import { LEVEL_PAINT, TONE_PAINT } from "../lib/marketplacePaint";
 import PriceBoard from "../components/marketplace/PriceBoard";
 import { InfoTooltip } from "../components/InfoTooltip";
-import { Button, Card, EmptyState, SectionJumpBar, VerdictBadge } from "../components/ui";
+import { Button, Card, EmptyState, TabBar, TabPanel, VerdictBadge } from "../components/ui";
+import GameFooter from "../components/fortress/GameFooter";
+import { STORE_TABS, storeTab, type StoreTabId } from "../lib/marketStoreTabs";
 
 /** A store in the Marketplace (game mode, G9): the deep-dive on one watchlist company, built
  * to help decide whether to look further, wait or pass. Read-only: it shows what the app has
@@ -93,6 +95,14 @@ export default function MarketStorePage() {
   const { holdingId = "" } = useParams();
   const [data, setData] = useState<StoreData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const active: StoreTabId = storeTab(searchParams.get("tab"));
+  const selectTab = (id: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (id === "decision") next.delete("tab");
+    else next.set("tab", id);
+    setSearchParams(next, { replace: true });
+  };
 
   const load = useCallback(() => {
     setLoading(true);
@@ -193,7 +203,7 @@ export default function MarketStorePage() {
           </div>
           <div className="flex items-end gap-3">
             <Merchant level={verdict.level} />
-            <p className="market-bubble max-w-[16rem] text-sm">{MERCHANT_LINE[verdict.level]}</p>
+            <p className="market-bubble hidden max-w-[16rem] text-sm md:block">{MERCHANT_LINE[verdict.level]}</p>
           </div>
         </div>
         <dl className="game-hud mx-3 mb-3" aria-label="The store at a glance">
@@ -220,22 +230,13 @@ export default function MarketStorePage() {
       )}
 
       <div className="mt-6">
-        <SectionJumpBar
-          items={[
-            { id: "market-verdict", label: "Decision" },
-            { id: "market-gates", label: "Gates" },
-            { id: "market-price", label: "Price board" },
-            { id: "market-moat", label: "Moat tour" },
-            { id: "market-shelves", label: "Numbers" },
-            { id: "market-case", label: "The case" },
-            { id: "market-tripwires", label: "Tripwires" },
-            { id: "market-haggle", label: "Your price" },
-          ]}
-        />
+        <TabBar items={[...STORE_TABS]} active={active} onChange={selectTab} label="Store sections" />
       </div>
 
+      <TabPanel id={active}>
       <div className="space-y-6">
         {/* The decision */}
+        {active === "decision" && (
         <section id="market-verdict" className="scroll-mt-24">
           <Card>
             <div className="grid items-center gap-6 md:grid-cols-2">
@@ -269,13 +270,14 @@ export default function MarketStorePage() {
               </div>
             </div>
             <p className="mt-4 text-xs text-ink-faint">
-              A reading aid, not advice and not a score. It reports which gates stand open; the decision, and the homework behind it, stay with you.
-              Nothing here trades.
+              A reading aid, not advice and not a score: the decision stays with you.
             </p>
           </Card>
         </section>
+        )}
 
         {/* The gates */}
+        {active === "gates" && (
         <section id="market-gates" className="scroll-mt-24">
           <h2 className="section-title">The gates</h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -318,8 +320,10 @@ export default function MarketStorePage() {
             </ul>
           </details>
         </section>
+        )}
 
         {/* The price board */}
+        {active === "decision" && (
         <section id="market-price" className="scroll-mt-24">
           <h2 className="section-title">The price board</h2>
           <Card>
@@ -339,36 +343,47 @@ export default function MarketStorePage() {
             )}
           </Card>
         </section>
+        )}
 
         {/* Moat tour */}
+        {active === "moat" && (
         <section id="market-moat" className="scroll-mt-24">
           <h2 className="section-title">The moat tour</h2>
           <MoatTour analysis={analysis} fallback={analystMoat(analysis, row)} />
         </section>
+        )}
 
         {/* Shelves */}
+        {active === "numbers" && (
         <section id="market-shelves" className="scroll-mt-24">
           <h2 className="section-title">The numbers on the shelves</h2>
           <Shelves metrics={metrics} />
         </section>
+        )}
 
         {/* The case */}
+        {active === "numbers" && (
         <section id="market-case" className="scroll-mt-24">
           <h2 className="section-title">The case, from the stored analysis</h2>
           <TheCase analysis={analysis} />
         </section>
+        )}
 
         {/* Tripwires */}
+        {active === "tripwires" && (
         <section id="market-tripwires" className="scroll-mt-24">
           <h2 className="section-title">Tripwires and changes</h2>
           <Tripwires thesis={thesis} holdingId={holding.id} />
         </section>
+        )}
 
         {/* Your price */}
+        {active === "decision" && (
         <section id="market-haggle" className="scroll-mt-24">
           <h2 className="section-title">Name your price</h2>
           <NameYourPrice row={row} currency={currency} cushion={cushion} bear={scenarioPoints(valuation).find((p) => p.label.toLowerCase().includes("bear"))?.value ?? null} onSaved={load} />
         </section>
+        )}
 
         <Card className="bg-raised">
           <p className="text-sm text-ink-muted">
@@ -377,12 +392,10 @@ export default function MarketStorePage() {
             <Link className="text-accent hover:underline" to="/journal">decision journal</Link> to write down what you decide and why, or back to the{" "}
             <Link className="text-accent hover:underline" to={MARKET_PATH}>street</Link>.
           </p>
-          <p className="mt-2 text-xs text-ink-faint">
-            Rules {MARKET_RULES_VERSION}. Shown only from stored data
-            {analysis ? ` · analysis ${formatRelative(analysis.completed_at ?? analysis.started_at)}` : ""}. Missing data is drawn as unknown, never as a guess. Nothing on this page trades, scores or rewards anything.
-          </p>
         </Card>
+        <GameFooter rules={`Rules ${MARKET_RULES_VERSION}. Shown only from stored data${analysis ? ` · analysis ${formatRelative(analysis.completed_at ?? analysis.started_at)}` : ""}.`} />
       </div>
+      </TabPanel>
     </div>
   );
 }

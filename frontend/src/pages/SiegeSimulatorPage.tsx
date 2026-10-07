@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, ApiError } from "../lib/api";
 import { formatNok } from "../lib/format";
-import { WALL_LABEL, formatShock } from "../lib/fortress";
+import { WALL_LABEL, formatShock, isFundCode, shortLabel } from "../lib/fortress";
 import {
   SIEGE_SIM_RULES,
   SIM_EXPOSURE_LABEL,
@@ -18,6 +18,7 @@ import {
 } from "../lib/siege";
 import type { SiegeSim, SiegeSimExposure, SiegeSimHolding } from "../lib/types";
 import { Card, EmptyState, PageHeader } from "../components/ui";
+import GameFooter from "../components/fortress/GameFooter";
 
 /** The Siege Simulator (game mode, G13): pick how far the market falls and watch it reach each
  * tower. A what-if over stored data: each holding's stored beta scales the fall, and the result is
@@ -65,7 +66,7 @@ function SiegeStrip({ rows }: { rows: SiegeSimHolding[] }) {
               </text>
             )}
             <text x={x + w / 2} y={height + 14} textAnchor="middle" fontSize="8.5" fill="#cdbb97">
-              {h.ticker.replace(/\.[A-Z]+$/, "").slice(0, 7)}
+              {shortLabel(h.name, h.ticker, 7)}
             </text>
           </g>
         );
@@ -82,7 +83,7 @@ function Row({ h }: { h: SiegeSimHolding }) {
           {h.name}
         </Link>
         <p className="truncate text-xs text-ink-faint">
-          {h.ticker} · {WALL_LABEL[h.wall]}
+          {isFundCode(h.ticker) ? "Fund" : h.ticker} · {WALL_LABEL[h.wall]}
           {h.weight_pct ? ` · ${Number(h.weight_pct).toFixed(1)}% of the book` : ""}
         </p>
       </div>
@@ -201,13 +202,15 @@ export default function SiegeSimulatorPage() {
             <p className={`text-base font-semibold ${LEVEL_CLASS[sim.level]}`}>{SIM_LEVEL_LABEL[sim.level]}</p>
             <p className="text-sm text-ink-muted">{headline(sim)}</p>
             {sim.level_reason && <p className="mt-1 text-xs text-ink-faint">{sim.level_reason}</p>}
+            {sim.portfolio_shock_pct !== null && (
             <dl className="tabular mt-3 grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-4">
               <div><dt className="text-ink-faint">Modelled book</dt><dd className="text-ink">{formatShock(sim.portfolio_shock_pct)}</dd></div>
               <div><dt className="text-ink-faint">What-if loss</dt><dd className="text-ink">{formatNok(sim.portfolio_loss_nok)}</dd></div>
               <div><dt className="text-ink-faint">Weighted beta</dt><dd className="text-ink">{sim.weighted_beta ?? "—"}</dd></div>
               <div><dt className="text-ink-faint">Coverage</dt><dd className="text-ink">{sim.coverage === null ? "—" : `${(Number(sim.coverage) * 100).toFixed(0)}%`}</dd></div>
             </dl>
-            <p className="mt-2 text-xs text-ink-faint">{coverageLine(sim)}</p>
+            )}
+            {sim.portfolio_shock_pct !== null && <p className="mt-2 text-xs text-ink-faint">{coverageLine(sim)}</p>}
             {sim.level !== "unsurveyed" && (
               <ul className="mt-2 list-disc space-y-0.5 pl-5 text-xs text-ink-muted">
                 <li>{sim.reach_note_gathering}</li>
@@ -226,7 +229,28 @@ export default function SiegeSimulatorPage() {
                 The filled part of each wall is the share lost in this what-if. Grey with a question mark: not modelled.
                 {sim.holdings.length > 18 ? ` Showing the 18 worst-hit of ${sim.holdings.length}.` : ""}
               </p>
-              <ul>{sim.holdings.map((h) => <Row key={h.holding_id} h={h} />)}</ul>
+              <ul>{sim.holdings.filter((h) => h.modelled).map((h) => <Row key={h.holding_id} h={h} />)}</ul>
+              {sim.holdings.some((h) => !h.modelled) && (
+                <div className="mt-3 text-sm text-ink-muted">
+                  <p className="font-medium text-ink">
+                    Not modelled ({sim.holdings.filter((h) => !h.modelled).length}): no stored beta, so they are left out of
+                    the total, not given a default.
+                  </p>
+                  <p className="mt-1 text-xs">
+                    {sim.holdings
+                      .filter((h) => !h.modelled)
+                      .map((h, i, all) => (
+                        <span key={h.holding_id}>
+                          <Link to={`/holdings/${h.holding_id}`} className="text-accent hover:underline">
+                            {h.name}
+                          </Link>
+                          {i < all.length - 1 ? ", " : "."}
+                        </span>
+                      ))}{" "}
+                    Open the holding or the Watchlist once so its beta is stored.
+                  </p>
+                </div>
+              )}
             </Card>
           )}
 
@@ -234,15 +258,15 @@ export default function SiegeSimulatorPage() {
 
           <Card className="text-sm text-ink-muted">
             <p>{SIM_LIMITS}</p>
-            {sim.notes.filter((n) => !n.startsWith("This is a what-if")).map((n) => (
-              <p key={n} className="mt-1">{n}</p>
-            ))}
-            <p className="mt-2 text-xs text-ink-faint">
-              Lines: storm at {formatShock(sim.gathering_line)}, siege at {formatShock(sim.besieged_line)} for the book (Fortress mapping {sim.mapping_version}).
-              Slider range and coverage floor: scenarios {sim.scenarios_version}. Reading rules {SIEGE_SIM_RULES}.
-              {sim.oldest_beta_at ? ` Oldest beta stored ${sim.oldest_beta_at.slice(0, 10)}.` : ""}
-            </p>
+            {sim.notes
+              .filter((n) => !n.startsWith("This is a what-if") && !n.startsWith("Not modelled"))
+              .map((n) => (
+                <p key={n} className="mt-1">{n}</p>
+              ))}
           </Card>
+          <GameFooter
+            rules={`Lines: storm at ${formatShock(sim.gathering_line)}, siege at ${formatShock(sim.besieged_line)} for the book (Fortress mapping ${sim.mapping_version}). Slider range and coverage floor: scenarios ${sim.scenarios_version}. Reading rules ${SIEGE_SIM_RULES}.${sim.oldest_beta_at ? ` Oldest beta stored ${sim.oldest_beta_at.slice(0, 10)}.` : ""}`}
+          />
         </div>
       )}
     </div>

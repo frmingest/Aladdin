@@ -27,4 +27,6 @@ export const WORD_BUDGET = {
   keyNumbers: 30,
   warningStack: 60,
   fortressReportsBar: 12,
+  gameFooter: 30,
+  storeTabs: 10,
 } as const;

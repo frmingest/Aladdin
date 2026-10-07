@@ -64,7 +64,7 @@ export default function VaultCard({
           <p className="font-semibold text-ink">{VAULT_LABEL[vault.level]}</p>
           {vault.cash_nok === null ? (
             <p className="mt-1 text-ink-muted">
-              No cash entered yet. Use Enter cash below and the vault fills from your own figure.
+              Not entered yet. Enter your cash below and the vault fills from your own figure.
             </p>
           ) : (
             <p className="mt-1 text-ink-muted">
@@ -77,10 +77,12 @@ export default function VaultCard({
               .
             </p>
           )}
-          <p className="mt-1 text-xs text-ink-faint">
-            {vault.accounts_with_cash} of {vault.accounts_total} accounts have a cash figure
-            {vault.cash_oldest_as_of ? `; oldest entered ${formatDate(vault.cash_oldest_as_of)}` : ""}.
-          </p>
+          {vault.accounts_with_cash > 0 && (
+            <p className="mt-1 text-xs text-ink-faint">
+              {vault.accounts_with_cash} of {vault.accounts_total} accounts have a cash figure
+              {vault.cash_oldest_as_of ? `; oldest entered ${formatDate(vault.cash_oldest_as_of)}` : ""}.
+            </p>
+          )}
           {vault.cash_stale && (
             <p className="mt-1 text-xs text-caution">
               Some cash figures are more than a month old. Update them so the vault is not drawn from an old number.
