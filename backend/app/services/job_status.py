@@ -165,6 +165,7 @@ def build_background_jobs(
     )
     warm_at, warm_summary = read_job_run(db, "warmup")
     keep_at, keep_summary = read_job_run(db, "keepwarm")
+    siege_at, siege_summary = read_job_run(db, "siege_history")
 
     jobs = [
         _daily("tripwire_check", "Tripwire check", enabled=settings.tripwire_check_enabled,
@@ -182,6 +183,9 @@ def build_background_jobs(
         _event("keepwarm", "Keep pages warm", "when inputs change, at most every "
                f"{settings.snapshot_keepwarm_min_interval_seconds // 60} min", enabled=settings.snapshot_keepwarm_enabled,
                last_at=keep_at, summary=keep_summary),
+        _event("siege_history", "Siege Simulator price history",
+               f"every {settings.siege_history_refresh_interval_seconds // 3600} h",
+               enabled=settings.siege_history_refresh_enabled, last_at=siege_at, summary=siege_summary),
     ]
     jobs.append(_macro(db, settings, now))
     return jobs

@@ -14,6 +14,7 @@ import {
   formatDrop,
   headline,
   holdingLine,
+  betaSourceLine,
   presetDrop,
 } from "../lib/siege";
 import type { SiegeSim, SiegeSimExposure, SiegeSimHolding } from "../lib/types";
@@ -21,7 +22,7 @@ import { Card, EmptyState, PageHeader } from "../components/ui";
 import GameFooter from "../components/fortress/GameFooter";
 
 /** The Siege Simulator (game mode, G13): pick how far the market falls and watch it reach each
- * tower. A what-if over stored data: each holding's stored beta scales the fall, and the result is
+ * tower. A what-if over stored data: each holding's beta scales the fall, and the result is
  * read with the same storm and siege lines the Fortress already uses. Read-only; it never trades,
  * scores or forecasts anything. */
 
@@ -75,7 +76,7 @@ function SiegeStrip({ rows }: { rows: SiegeSimHolding[] }) {
   );
 }
 
-function Row({ h }: { h: SiegeSimHolding }) {
+function Row({ h, benchmark }: { h: SiegeSimHolding; benchmark: string }) {
   return (
     <li className="grid gap-x-4 gap-y-1 border-b border-border-subtle py-3 sm:grid-cols-[minmax(0,14rem)_1fr_auto] sm:items-center">
       <div className="min-w-0">
@@ -93,7 +94,7 @@ function Row({ h }: { h: SiegeSimHolding }) {
         </div>
         <p className="mt-1 text-xs text-ink-muted">
           {holdingLine(h)}
-          {h.modelled && h.beta !== null && ` Beta ${Number(h.beta).toFixed(2)}.`}
+          {h.modelled && h.beta !== null && ` ${betaSourceLine(h, benchmark)}`}
           {h.modelled && h.stored_shock_pct !== null && ` The Fortress's own stress case for it: ${formatShock(h.stored_shock_pct)}.`}
         </p>
       </div>
@@ -152,7 +153,7 @@ export default function SiegeSimulatorPage() {
       </nav>
       <PageHeader
         title="The Siege Simulator"
-        subtitle="Choose how far the market falls and see which towers it reaches first. Each holding moves by its stored beta; the result is read with the same storm and siege lines as the Fortress. A what-if over stored data: nothing here is a forecast, and nothing is bought or sold."
+        subtitle="Choose how far the market falls and see which towers it reaches first. Each holding moves by its own beta; the result is read with the same storm and siege lines as the Fortress. A what-if over stored data: nothing here is a forecast, and nothing is bought or sold."
         actions={sim?.demo ? <span className="rounded-full bg-accent-subtle px-2.5 py-0.5 text-xs font-medium text-ink">Demo data</span> : null}
       />
 
@@ -229,26 +230,25 @@ export default function SiegeSimulatorPage() {
                 The filled part of each wall is the share lost in this what-if. Grey with a question mark: not modelled.
                 {sim.holdings.length > 18 ? ` Showing the 18 worst-hit of ${sim.holdings.length}.` : ""}
               </p>
-              <ul>{sim.holdings.filter((h) => h.modelled).map((h) => <Row key={h.holding_id} h={h} />)}</ul>
+              <ul>{sim.holdings.filter((h) => h.modelled).map((h) => <Row key={h.holding_id} h={h} benchmark={sim.benchmark_ticker} />)}</ul>
               {sim.holdings.some((h) => !h.modelled) && (
                 <div className="mt-3 text-sm text-ink-muted">
                   <p className="font-medium text-ink">
-                    Not modelled ({sim.holdings.filter((h) => !h.modelled).length}): no stored beta, so they are left out of
+                    Not modelled ({sim.holdings.filter((h) => !h.modelled).length}): no usable beta, so they are left out of
                     the total, not given a default.
                   </p>
-                  <p className="mt-1 text-xs">
+                  <ul className="mt-1 space-y-1 text-xs">
                     {sim.holdings
                       .filter((h) => !h.modelled)
-                      .map((h, i, all) => (
-                        <span key={h.holding_id}>
+                      .map((h) => (
+                        <li key={h.holding_id}>
                           <Link to={`/holdings/${h.holding_id}`} className="text-accent hover:underline">
                             {h.name}
                           </Link>
-                          {i < all.length - 1 ? ", " : "."}
-                        </span>
-                      ))}{" "}
-                    Open the holding or the Watchlist once so its beta is stored.
-                  </p>
+                          {h.reason ? `: ${h.reason}` : ""}
+                        </li>
+                      ))}
+                  </ul>
                 </div>
               )}
             </Card>

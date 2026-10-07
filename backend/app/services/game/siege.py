@@ -46,6 +46,12 @@ class SiegeHolding:
     beta_as_of: datetime | None = None
     # The Fortress's own stored scenario shock, shown beside the simulated one.
     stored_shock_pct: Decimal | None = None
+    # Where `beta` came from (v2): see app/services/game/sensitivity.py.
+    method: str | None = None
+    observations: int | None = None
+    r_squared: Decimal | None = None
+    caution: str | None = None
+    unmodelled_reason: str | None = None
 
 
 @dataclass
@@ -124,7 +130,9 @@ def simulate(
             result.holdings.append(HoldingResult(h, False, reason="no value stored for this holding"))
             continue
         if h.beta is None:
-            result.holdings.append(HoldingResult(h, False, reason="no stored beta, so it is not modelled"))
+            result.holdings.append(
+                HoldingResult(h, False, reason=h.unmodelled_reason or "no stored beta, so it is not modelled")
+            )
             continue
         shock = holding_shock(market_drop, h.beta).quantize(_PCT4)
         result.holdings.append(
@@ -155,7 +163,7 @@ def simulate(
         have = _pct(result.coverage) if result.coverage is not None else "none"
         result.level = "unsurveyed"
         result.level_reason = (
-            f"only {have} of the portfolio value has a stored beta; at least "
+            f"only {have} of the portfolio value has a usable beta; at least "
             f"{_pct(scenarios.min_beta_coverage)} is needed before a portfolio result is shown"
         )
         return result

@@ -131,6 +131,7 @@ class AnalysisWorker:
         # Sprint 20: warm-up retry bookkeeping and the keep-warm throttle.
         self._warm_attempts: dict[uuid.UUID, float] = {}
         self._last_keepwarm = float("-inf")
+        self._last_siege_history = float("-inf")
         # 2026-10-07: the housekeeping jobs run on their own thread so a slow
         # one (a snapshot refresh took 13+ minutes) can never stop the queue
         # from being polled. `_bg_job` is (name, started_at) while one runs.
@@ -359,6 +360,32 @@ class AnalysisWorker:
         except Exception:
             log.exception("holding warm-up failed")
 
+    def maybe_refresh_siege_history(self) -> None:
+        """2026-10-07: store daily price history for every holding you own, the
+        benchmark and the FX pairs, so the Siege Simulator can measure betas
+        for funds, ETFs and metal ETCs too. At most once per
+        `siege_history_refresh_interval_seconds`. Never raises."""
+        market_data = self.providers.market_data
+        if market_data is None or not self.settings.siege_history_refresh_enabled:
+            return
+        now = time.monotonic()
+        if now - self._last_siege_history < self.settings.siege_history_refresh_interval_seconds:
+            return
+        self._last_siege_history = now
+        try:
+            from app.domain.game_mapping.siege_scenarios_v1 import get_siege_scenarios
+            from app.services.risk.sensitivity_history import (
+                refresh_sensitivity_history,
+            )
+
+            scenarios = get_siege_scenarios(self.settings.active_siege_scenarios_version)
+            with self.session_factory() as db:
+                result = refresh_sensitivity_history(db, market_data, scenarios)
+                if result.fetched or result.problems:
+                    record_job_run(db, "siege_history", result.summary())
+        except Exception:
+            log.exception("siege price history refresh failed")
+
     def maybe_keep_snapshots_warm(self) -> None:
         """Sprint 20: rebuild stored pages whose inputs changed (an import, a
         finished analysis, a watchlist change), at most once per
@@ -396,6 +423,7 @@ class AnalysisWorker:
             ("snapshot refresh", self.maybe_refresh_snapshots),
             ("Fortress history", self.maybe_store_game_state),
             ("holding warm-up", self.maybe_warm_cold_holdings),
+            ("siege price history", self.maybe_refresh_siege_history),
             ("keep pages warm", self.maybe_keep_snapshots_warm),
         ]
 

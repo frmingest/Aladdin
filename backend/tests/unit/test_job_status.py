@@ -99,6 +99,7 @@ def test_game_state_reads_the_latest_stored_frame(db):
 def test_event_jobs_report_last_work_and_never_warn(db):
     jobs = _jobs(db)
     assert jobs["warmup"].status == "off" and jobs["keepwarm"].status == "off"
+    assert jobs["siege_history"].status == "off" and "not needed" in jobs["siege_history"].detail
     record_job_run(db, "warmup", "AAPL: fetched price", now=NOW)
     when, summary = read_job_run(db, "warmup")
     assert when == NOW and summary == "AAPL: fetched price"

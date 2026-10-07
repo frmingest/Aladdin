@@ -58,6 +58,23 @@ def _aware(value: datetime) -> datetime:
     return value if value.tzinfo is not None else value.replace(tzinfo=timezone.utc)
 
 
+def read_stored_history(db: Session, ticker: str, *, since: date) -> TickerHistory:
+    """The stored closes since `since`, exactly as saved. Never calls a
+    vendor and never waits on one (read-only views such as the Siege
+    Simulator)."""
+    rows = _stored_points(db, ticker, since=since)
+    if not rows:
+        return TickerHistory(ticker=ticker, available=False, reason="no price history stored yet")
+    newest = _newest_fetch(db, ticker)
+    return TickerHistory(
+        ticker=ticker,
+        available=True,
+        currency=rows[-1].currency,
+        points=[(r.observed_on, r.close) for r in rows],
+        as_of=_aware(newest) if newest else None,
+    )
+
+
 def get_or_refresh_daily_history(
     db: Session,
     provider: MarketDataProvider,
