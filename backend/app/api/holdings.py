@@ -83,6 +83,7 @@ from app.services.settings.synthetic_data import (
     demo_holdings,
     demo_share_count,
 )
+from app.services.upstream_detection import holding_is_upstream
 
 router = APIRouter(prefix="/holdings", tags=["holdings"])
 
@@ -472,6 +473,7 @@ def get_holding_metrics(
         market=market.inputs,
         market_unavailable_reason=market.unavailable_reason,
         financial=is_financial,
+        upstream=holding_is_upstream(db, holding),
     )
     if is_financial:
         mark_not_meaningful_for_financials(result)

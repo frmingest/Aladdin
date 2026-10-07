@@ -21,6 +21,7 @@ from app.domain.valuation_assumptions.v1 import VALUATION_ASSUMPTIONS_V1
 from app.domain.valuation_assumptions.v2 import VALUATION_ASSUMPTIONS_V2
 from app.domain.valuation_assumptions.v3 import VALUATION_ASSUMPTIONS_V3
 from app.domain.valuation_assumptions.v4 import VALUATION_ASSUMPTIONS_V4
+from app.domain.valuation_assumptions.v5 import VALUATION_ASSUMPTIONS_V5
 from app.domain.valuation_assumptions.value_types import ValuationAssumptions
 
 _VERSIONS: dict[str, ValuationAssumptions] = {
@@ -28,6 +29,7 @@ _VERSIONS: dict[str, ValuationAssumptions] = {
     "v2": VALUATION_ASSUMPTIONS_V2,
     "v3": VALUATION_ASSUMPTIONS_V3,
     "v4": VALUATION_ASSUMPTIONS_V4,
+    "v5": VALUATION_ASSUMPTIONS_V5,
 }
 
 
