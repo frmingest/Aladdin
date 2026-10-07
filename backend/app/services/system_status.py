@@ -40,6 +40,8 @@ from app.models.portfolio import PortfolioSnapshot
 from app.models.research import ResearchRun, ResearchRunStatus
 from app.models.thesis import ThesisTripwire
 from app.providers.budget import DailyBudgetGuard
+from app.services.job_status import WARN as JOB_WARN
+from app.services.job_status import JobItem, build_background_jobs
 from app.services.risk.regime import classify_regime
 
 OK, WARN, ERROR, OFF = "ok", "warn", "error", "off"
@@ -93,6 +95,7 @@ class SystemStatus:
     analysis: list[StatusItem] = field(default_factory=list)
     counts: dict[str, int] = field(default_factory=dict)
     issues: list[str] = field(default_factory=list)
+    jobs: list[JobItem] = field(default_factory=list)
 
 
 def _last_check_text(db) -> str:
@@ -412,6 +415,11 @@ def build_system_status(
         f"{active_tripwires} active, {firing_tripwires} firing"
         + (f" · nightly check {_last_check_text(db)}" if active_tripwires else "")))
 
+    worker_online = beat is not None and beat.state != "stopped" and (
+        now - _aware(beat.last_seen_at) <= timedelta(seconds=settings.worker_online_seconds)
+    )
+    status.jobs = build_background_jobs(db, settings, worker_online=worker_online, now=now)
+
     status.counts = {
         "holdings": db.scalar(select(func.count(Holding.id))) or 0,
         "accounts": db.scalar(select(func.count(Account.id))) or 0,
@@ -425,6 +433,14 @@ def build_system_status(
             f"Database is at migration {status.migration_current}, code expects {status.migration_head}. Run alembic upgrade head."
         )
     issues += [f"{a.label}: {a.value}. {a.detail}".strip() for a in status.analysis if a.status == ERROR]
+    # A never-run job is a warning on its own row, not a headline problem on a
+    # fresh deployment; it is one only when the job has run before or the
+    # worker is up and still hasn't done it.
+    issues += [
+        f"Background job: {j.label}. {j.detail}"
+        for j in status.jobs
+        if j.status == JOB_WARN and (j.last_at is not None or worker_online)
+    ]
     if status.llm_calls_remaining_today == 0 and settings.llm_provider == "google_ai_studio":
         issues.append("Gemini daily budget used up (counted from the usage ledger, so restarts don't reset it); it resets at 00:00 UTC.")
     status.issues = issues

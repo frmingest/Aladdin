@@ -1030,6 +1030,17 @@ export interface FreshnessItem {
   detail: string;
 }
 
+/** One background job (backend/app/services/job_status.py). */
+export interface JobItem {
+  key: string;
+  label: string;
+  runs_on: string;
+  schedule: string;
+  last_at: string | null;
+  status: StatusLevel;
+  detail: string;
+}
+
 /** GET /usage/summary — the LLM usage ledger (backend/app/services/llm_ledger.py). */
 export interface UsageDay {
   date: string;
@@ -1072,6 +1083,7 @@ export interface SystemStatus {
   analysis: StatusItem[];
   counts: Record<string, number>;
   issues: string[];
+  jobs?: JobItem[];
   demo_mode: boolean;
 }
 

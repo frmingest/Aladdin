@@ -25,6 +25,16 @@ class FreshnessItemOut(BaseModel):
     detail: str
 
 
+class JobItemOut(BaseModel):
+    key: str
+    label: str
+    runs_on: str
+    schedule: str
+    last_at: datetime | None
+    status: Status
+    detail: str
+
+
 class SystemStatusOut(BaseModel):
     generated_at: datetime
     version: str
@@ -41,6 +51,8 @@ class SystemStatusOut(BaseModel):
     analysis: list[StatusItemOut]
     counts: dict[str, int]
     issues: list[str]
+    # Background jobs (2026-10-07); empty for older payloads and in demo mode.
+    jobs: list[JobItemOut] = []
     # Set true only while demo mode is on (app/services/settings/demo_mode.py)
     # so the System status page always shows it — never inferred elsewhere.
     demo_mode: bool = False
