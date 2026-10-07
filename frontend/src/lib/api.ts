@@ -80,6 +80,7 @@ import type {
   TagReextractResult,
   TagReview,
   TagRule,
+  TagRuleExport,
   UsageSummary,
   DemoModeState,
   LookThroughRefresh,
@@ -384,6 +385,8 @@ export const api = {
   rejectTagSuggestion: (input: { holding_id: string; metric: string; concept: string }) =>
     request<TagRule>("/tag-review/rejections", { method: "POST", body: JSON.stringify(input) }),
   removeTagRule: (id: string) => request<void>(`/tag-review/rules/${id}`, { method: "DELETE" }),
+  /** Tag review PR 3: an accepted rule as a code change (read-only; nothing is written). */
+  getTagRuleExport: (id: string) => request<TagRuleExport>(`/tag-review/rules/${id}/export`),
   reextractHolding: (holdingId: string) =>
     request<TagReextractResult>("/tag-review/re-extract", {
       method: "POST",

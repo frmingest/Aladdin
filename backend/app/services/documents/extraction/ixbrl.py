@@ -33,6 +33,7 @@ from decimal import Decimal, InvalidOperation
 
 from app.domain.financial_metrics import PER_SHARE_METRICS, POSITIVE_MAGNITUDE_METRICS
 from app.providers.sec_edgar_provider import CONCEPT_MAP as EDGAR_CONCEPT_MAP
+from app.services.documents.extraction.accepted_tag_rules import concepts_by_metric
 from app.services.documents.extraction.base import (
     ExtractedFact,
     ExtractedPage,
@@ -317,8 +318,13 @@ _BLOCK_TAGS = {"div", "p", "tr", "li", "h1", "h2", "h3", "h4", "h5", "h6", "tabl
 
 def _concept_map() -> dict[str, tuple[str, ...]]:
     merged: dict[str, tuple[str, ...]] = {}
+    # Tag rules promoted to code (tag review inbox PR 3) come last, so they
+    # only ever fill what the lists above leave empty, like a database rule.
+    accepted = concepts_by_metric()
     metrics = list(EDGAR_CONCEPT_MAP) + [
-        m for m in (*_ESEF_PREFERRED_CONCEPTS, *_ESEF_FALLBACK_CONCEPTS) if m not in EDGAR_CONCEPT_MAP
+        m
+        for m in (*_ESEF_PREFERRED_CONCEPTS, *_ESEF_FALLBACK_CONCEPTS, *accepted)
+        if m not in EDGAR_CONCEPT_MAP
     ]
     for metric in metrics:
         concepts = tuple(EDGAR_CONCEPT_MAP.get(metric, ()))
@@ -329,6 +335,7 @@ def _concept_map() -> dict[str, tuple[str, ...]]:
             + _ESEF_PREFERRED_CONCEPTS.get(metric, ())
             + ifrs
             + _ESEF_FALLBACK_CONCEPTS.get(metric, ())
+            + accepted.get(metric, ())
         )
     return merged
 

@@ -85,6 +85,7 @@ class TagRuleOut(BaseModel):
     check_overridden: bool
     fiscal_year: str | None
     source_filename: str | None
+    in_code: bool = False  # the extractor's own lists already read this tag (PR 3): the rule is redundant
 
     model_config = {"from_attributes": True}
 
@@ -104,4 +105,21 @@ class ReextractOut(BaseModel):
     facts_before: int
     facts_after: int
     rule_figures: int
+    notes: list[str]
+
+
+class RuleExportOut(BaseModel):
+    """A rule as a code change (PR 3): one table row, a git patch, a commit message."""
+
+    rule_id: UUID
+    ticker: str | None
+    metric_label: str
+    scope: str
+    verified: bool  # the extractor reads the figure from the generated fixture
+    problems: list[str]
+    row_line: str
+    patch: str | None
+    commit_message: str
+    table_path: str
+    test_path: str
     notes: list[str]

@@ -2,8 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   acceptScopeText,
   bannerText,
+  canExport,
   checkLabel,
   checkTone,
+  exportForChat,
+  exportHeadline,
   pendingHoldings,
   reextractSummary,
   ruleScopeLabel,
@@ -11,7 +14,7 @@ import {
   scopeLabel,
   secondConfirmationText,
 } from "./tagReview";
-import type { TagReview } from "./types";
+import type { TagReview, TagRuleExport } from "./types";
 
 const review = (metrics: string[]): TagReview => ({
   holdings_needing_review: metrics.length ? 1 : 0,
@@ -102,5 +105,59 @@ describe("accepting a suggestion (PR 2)", () => {
     expect(reextractSummary({ ...base, documents: 0, facts_before: 5, facts_after: 5, notes: ["file missing"] })).toMatch(
       /no stored tagged report.*file missing/,
     );
+  });
+});
+
+// --- PR 3: export as code ----------------------------------------------------
+
+const exported = (over: Partial<TagRuleExport> = {}): TagRuleExport => ({
+  rule_id: "r1",
+  ticker: "ORK.OL",
+  metric_label: "capital expenditure",
+  scope: "company",
+  verified: true,
+  problems: [],
+  row_line: '    AcceptedTagRule("capital_expenditures", "ORK:Capex", "300000000", "NOK", False, "ORK.OL FY2025"),',
+  patch: "--- a/x\n+++ b/x\n+row",
+  commit_message: "Read ORK:Capex as capital expenditure (ORK.OL only (its own tag))\n\nbody",
+  table_path: "backend/app/services/documents/extraction/accepted_tag_rules.py",
+  test_path: "backend/tests/unit/test_accepted_tag_rules.py",
+  notes: [],
+  ...over,
+});
+
+describe("export as code", () => {
+  it("only an accepted rule the code does not already read can be exported", () => {
+    expect(canExport({ status: "accepted", in_code: false })).toBe(true);
+    expect(canExport({ status: "accepted" })).toBe(true);
+    expect(canExport({ status: "accepted", in_code: true })).toBe(false);
+    expect(canExport({ status: "rejected", in_code: false })).toBe(false);
+  });
+
+  it("says a rule already in the code is no longer needed", () => {
+    expect(ruleStatusLabel({ status: "accepted", check_overridden: false, in_code: true })).toMatch(/already in the code/);
+    expect(ruleStatusLabel({ status: "accepted", check_overridden: false, in_code: false })).toBe("Rule");
+  });
+
+  it("tells the person not to apply an export that failed its own check", () => {
+    expect(exportHeadline(exported())).toMatch(/Checked/);
+    const bad = exportHeadline(exported({ verified: false, problems: ["read 5 instead of 7"] }));
+    expect(bad).toMatch(/Do not apply/);
+    expect(bad).toMatch(/read 5 instead of 7/);
+  });
+
+  it("falls back to the row when the server could not read the table", () => {
+    expect(exportHeadline(exported({ patch: null }))).toMatch(/only the table row/);
+  });
+
+  it("builds a chat block with the row, the patch and the commit message", () => {
+    const text = exportForChat(exported());
+    expect(text).toMatch(/ORK\.OL only/);
+    expect(text).toContain("AcceptedTagRule(");
+    expect(text).toContain("git apply --ignore-whitespace");
+    expect(text).toContain("+row");
+    expect(text).toContain("Commit message:");
+    expect(exportForChat(exported({ scope: "all", patch: null }))).toMatch(/all companies/);
+    expect(exportForChat(exported({ patch: null }))).toContain("patch not available");
   });
 });
