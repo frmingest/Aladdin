@@ -114,6 +114,19 @@ NON_MONETARY_FACTS = frozenset({"shares_outstanding"})
 # Ordinary equity below this share of total assets is "depleted": ROE and
 # P/B over it describe the payout history, not the business.
 DEPLETED_EQUITY_SHARE_OF_ASSETS = Decimal("0.05")
+# Not applied to a bank or insurer (2026-10-07): their balance sheets are
+# mostly customer money (deposits, policy and unit-linked assets), so equity of
+# 3-8% of assets is structural, not "depleted by distributions". Storebrand's
+# 3.3% made ROE "n/m" and ruled it out of the justified-P/B valuation.
+
+# A savings bank with equity certificates (Sparebanken Øst, SpareBank 1):
+# certificate holders own only part of the bank (the rest is the savings-bank
+# reserve), and EPS is per certificate on THEIR part of the profit. When
+# certificates x EPS ÷ net income is between these bounds, the certificates
+# are that fraction of the bank. Above the upper bound the gap is more likely a
+# buyback or issue than a structure, so nothing is adjusted.
+CERTIFICATE_SHARE_MIN = Decimal("0.05")
+CERTIFICATE_SHARE_MAX = Decimal("0.85")
 
 # (fact, label) — cash outflows subtracted from FCF when extracted.
 FCF_DEDUCTIONS: tuple[tuple[str, str], ...] = (
@@ -338,6 +351,7 @@ def compute_holding_metrics(
     prior_facts: dict[str, Decimal] | None = None,
     market: MarketInputs | None = None,
     market_unavailable_reason: str | None = None,
+    financial: bool = False,
 ) -> MetricsResult:
     """`facts` maps canonical metric name (app/domain/financial_metrics.py's
     CANONICAL_METRICS) -> value, for a single holding and a single period.
@@ -345,6 +359,10 @@ def compute_holding_metrics(
     monetary facts of one period come in more than one currency (e.g. a
     NOK factsheet and a USD annual report), nothing is computed — a ratio
     across currencies is wrong, not approximately right.
+
+    `financial` marks a bank or insurer: thin equity-to-assets is structural
+    there, so ROE and P/B are not refused for it, and an equity-certificate
+    bank's P/E and P/B use the certificate holders' share of profit and equity.
 
     `prior_facts` (the previous fiscal year, same holding) turns year-end
     denominators into averages for ROE / ROIC / ROCE. `market` enables the
@@ -496,14 +514,14 @@ def compute_holding_metrics(
 
     _materials_margin(facts, result)
     prior = _with_ebit(prior_facts) if prior_facts else None
-    _return_on_equity(facts, prior, result)
+    _return_on_equity(facts, prior, result, financial=financial)
     _returns_on_capital(facts, prior, result)
     if market is None:
         reason = market_unavailable_reason or "needs a share price and a share count"
         for name in MARKET_RATIOS:
             result.skipped[name] = f"not available: {reason}"
     else:
-        _market_multiples(facts, market, net_debt_value, result)
+        _market_multiples(facts, market, net_debt_value, result, financial=financial)
     if basis_note:
         for name in ("net_margin", "owner_earnings", "roe", "price_to_earnings"):
             if name in result.computed:
@@ -532,11 +550,34 @@ def _averaged(
     return (current + prior) / 2, f"average {what} {_fmt(prior)} → {_fmt(current)}"
 
 
-def _depleted(equity: Decimal, facts: dict[str, Decimal], what: str = "ordinary equity") -> str | None:
-    """Reason text when ordinary equity is too thin to divide by, else None."""
+def certificate_holder_share(facts: dict[str, Decimal], shares: Decimal) -> Decimal | None:
+    """The fraction of a savings bank's profit and equity that belongs to its
+    equity-certificate holders: current certificates x basic EPS ÷ net income.
+    None when the inputs are missing, or the figure is outside the range a real
+    certificate structure gives (see CERTIFICATE_SHARE_MIN / _MAX), which means
+    an ordinary share structure.
+
+    Only meaningful for a bank (callers check). EPS is rounded to 2 decimals, so
+    the fraction is good to about 0.1%, far inside the 15% needed to trigger."""
+    net_income, eps = facts.get("net_income"), facts.get("eps_basic")
+    if net_income is None or eps is None or shares <= ZERO or net_income <= ZERO or eps <= ZERO:
+        return None
+    share = shares * eps / net_income
+    if CERTIFICATE_SHARE_MIN <= share <= CERTIFICATE_SHARE_MAX:
+        return share
+    return None
+
+
+def _depleted(
+    equity: Decimal, facts: dict[str, Decimal], what: str = "ordinary equity", *, financial: bool = False
+) -> str | None:
+    """Reason text when ordinary equity is too thin to divide by, else None.
+    A bank or insurer is only refused when equity is not positive."""
     assets = facts.get("total_assets")
     if equity <= ZERO:
         return _not_meaningful(what, equity)
+    if financial:
+        return None
     if assets and assets > ZERO and equity < assets * DEPLETED_EQUITY_SHARE_OF_ASSETS:
         return (
             f"not meaningful: {what} ({_fmt(equity)}) is only {_pct(equity / assets)} "
@@ -566,7 +607,11 @@ def _materials_margin(facts: dict[str, Decimal], result: MetricsResult) -> None:
 
 
 def _return_on_equity(
-    facts: dict[str, Decimal], prior: dict[str, Decimal] | None, result: MetricsResult
+    facts: dict[str, Decimal],
+    prior: dict[str, Decimal] | None,
+    result: MetricsResult,
+    *,
+    financial: bool = False,
 ) -> None:
     equity = ordinary_equity(facts)
     if "net_income" not in facts or equity is None:
@@ -575,7 +620,10 @@ def _return_on_equity(
         return
     prior_equity = ordinary_equity(prior) if prior else None
     average, note = _averaged(equity, prior_equity, "ordinary equity")
-    reason = _depleted(average, facts, "average ordinary equity" if prior_equity is not None else "ordinary equity")
+    reason = _depleted(
+        average, facts, "average ordinary equity" if prior_equity is not None else "ordinary equity",
+        financial=financial,
+    )
     if reason:
         result.skipped["roe"] = reason
         return
@@ -667,6 +715,8 @@ def _market_multiples(
     market: MarketInputs,
     net_debt_value: Decimal | None,
     result: MetricsResult,
+    *,
+    financial: bool = False,
 ) -> None:
     if market.shares <= ZERO or market.price <= ZERO:
         for name in MARKET_RATIOS:
@@ -725,13 +775,30 @@ def _market_multiples(
     if equity is None:
         result.skipped["price_to_book"] = "missing: total_equity"
     else:
-        reason = _depleted(equity, facts)
+        reason = _depleted(equity, facts, financial=financial)
         if reason:
             result.skipped["price_to_book"] = reason.replace("; judge on ROIC", "")
         else:
             result.computed["price_to_book"] = calculations.price_to_book(market_cap, equity)
             if facts.get("hybrid_capital"):
                 result.notes["price_to_book"] = "on ordinary equity (hybrid capital excluded)"
+
+    certificate_share = certificate_holder_share(facts, market.shares) if financial else None
+    if certificate_share is not None:
+        # Equity-certificate bank: market cap is only the certificates, so set it
+        # against the certificate holders' part of profit and equity.
+        note = (
+            f"equity-certificate bank: certificate holders own about {_pct(certificate_share)} of "
+            "profit and equity (EPS × certificates ÷ net income)"
+        )
+        if "price_to_earnings" in result.computed and facts.get("net_income", ZERO) > ZERO:
+            result.computed["price_to_earnings"] = market_cap / (facts["net_income"] * certificate_share)
+            result.notes["price_to_earnings"] = note
+        if "price_to_book" in result.computed and equity is not None and equity > ZERO:
+            result.computed["price_to_book"] = market_cap / (equity * certificate_share)
+            result.notes["price_to_book"] = "; ".join(
+                filter(None, [result.notes.get("price_to_book"), note])
+            )
 
     if "free_cash_flow" in result.computed:
         result.computed["fcf_yield"] = result.computed["free_cash_flow"] / market_cap

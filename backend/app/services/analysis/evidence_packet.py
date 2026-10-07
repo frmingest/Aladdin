@@ -314,8 +314,11 @@ def _add_market_multiples_evidence(
         add("valuation", label, f"Not available: {context.unavailable_reason}.")
         packet.unavailable_reasons.append(f"market multiples: {context.unavailable_reason}")
         return
-    result = compute_holding_metrics(latest.facts, latest.currencies, market=context.inputs)
-    if holding_is_financial(db, holding):
+    is_financial = holding_is_financial(db, holding)
+    result = compute_holding_metrics(
+        latest.facts, latest.currencies, market=context.inputs, financial=is_financial
+    )
+    if is_financial:
         mark_not_meaningful_for_financials(result)
     currency = context.reporting_currency or ""
     parts: list[str] = []
@@ -548,7 +551,9 @@ def _add_financial_history_evidence(
     per_period: list[tuple[int, str, MetricsResult, Decimal | None]] = []
     is_financial = holding_is_financial(db, holding)
     for year, period, facts in history:
-        metrics_result = compute_holding_metrics(facts, prior_facts=facts_by_year.get(year - 1))
+        metrics_result = compute_holding_metrics(
+            facts, prior_facts=facts_by_year.get(year - 1), financial=is_financial
+        )
         if is_financial:
             mark_not_meaningful_for_financials(metrics_result)
         per_period.append((year, period, metrics_result, metrics_result.computed.get("roe")))
