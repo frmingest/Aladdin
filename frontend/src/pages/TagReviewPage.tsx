@@ -3,8 +3,11 @@ import { Link } from "react-router-dom";
 import { api, ApiError } from "../lib/api";
 import {
   acceptScopeText,
+  canExport,
   checkLabel,
   checkTone,
+  exportForChat,
+  exportHeadline,
   pendingHoldings,
   reextractSummary,
   ruleScopeLabel,
@@ -12,7 +15,7 @@ import {
   scopeLabel,
   secondConfirmationText,
 } from "../lib/tagReview";
-import type { TagCandidate, TagGap, TagReview, TagReviewHolding, TagRule } from "../lib/types";
+import type { TagCandidate, TagGap, TagReview, TagReviewHolding, TagRule, TagRuleExport } from "../lib/types";
 import { Button, Card, EmptyState, PageHeader } from "../components/ui";
 
 /** Tag review inbox. After a Newsweb fetch, lists the inputs the ESEF extractor
@@ -20,7 +23,9 @@ import { Button, Card, EmptyState, PageHeader } from "../components/ui";
  * be saved as a mapping rule (a standard tag for all companies, a company's own
  * tag for that company only) or rejected; a suggestion that failed its own check
  * needs a second confirmation. A rule changes no figure until the company is
- * re-extracted. Backend: app/services/tag_rules.py. */
+ * re-extracted. PR 3: an accepted rule can be exported as a code change (a patch
+ * for the rule table plus its commit message), so the repo stays the long-term
+ * source of truth. Backend: app/services/tag_rules.py, app/services/tag_export.py. */
 
 const TONE_STYLE = {
   good: "bg-positive-subtle text-positive",
@@ -221,6 +226,96 @@ function HoldingCard({
   );
 }
 
+function RuleRow({ rule, busy, onRemove }: { rule: TagRule; busy: boolean; onRemove: (r: TagRule) => void }) {
+  const [exported, setExported] = useState<TagRuleExport | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
+  const [copied, setCopied] = useState<"chat" | "patch" | null>(null);
+
+  async function openExport() {
+    setLoading(true);
+    setProblem(null);
+    try {
+      setExported(await api.getTagRuleExport(rule.id));
+    } catch (e) {
+      setProblem(errorText(e));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function copy(kind: "chat" | "patch", text: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(kind);
+      setTimeout(() => setCopied(null), 2000);
+    } catch {
+      setProblem("Could not copy. Select the text and copy it by hand.");
+    }
+  }
+
+  return (
+    <li className="py-2 text-sm">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <code className="break-all text-xs text-ink">{rule.concept}</code>{" "}
+          <span className="text-ink">→ {rule.metric_label}</span>
+          <p className="text-xs text-ink-faint">
+            {ruleStatusLabel(rule)} · {ruleScopeLabel(rule)}
+            {rule.fiscal_year ? ` · from ${rule.fiscal_year}` : ""}
+            {rule.check_overridden && rule.check_detail ? ` · ${rule.check_detail}` : ""}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {canExport(rule) && !exported && (
+            <Button
+              variant="secondary"
+              disabled={busy || loading}
+              onClick={openExport}
+              title="Builds a code change for this rule: one table row, a patch and a commit message. Nothing is written."
+            >
+              {loading ? "Checking…" : "Export as code"}
+            </Button>
+          )}
+          <Button variant="secondary" disabled={busy} onClick={() => onRemove(rule)}>
+            {rule.status === "rejected" ? "Bring back" : "Remove rule"}
+          </Button>
+        </div>
+      </div>
+      {problem && <p className="mt-2 text-xs text-negative">{problem}</p>}
+      {exported && (
+        <div className="mt-2 space-y-2 rounded-md border border-border bg-border-subtle p-3">
+          <p className={`text-xs ${exported.verified ? "text-positive" : "text-negative"}`}>{exportHeadline(exported)}</p>
+          <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-all text-xs text-ink">
+            {exported.patch ?? exported.row_line}
+          </pre>
+          <p className="text-xs text-ink-faint">
+            Commit message: <span className="text-ink">{exported.commit_message.split("\n")[0]}</span>
+          </p>
+          {exported.notes.map((n) => (
+            <p key={n} className="text-xs text-ink-faint">
+              {n}
+            </p>
+          ))}
+          <div className="flex flex-wrap gap-2">
+            <Button variant="secondary" onClick={() => copy("chat", exportForChat(exported))}>
+              {copied === "chat" ? "Copied" : "Copy for chat"}
+            </Button>
+            {exported.patch && (
+              <Button variant="secondary" onClick={() => copy("patch", exported.patch ?? "")}>
+                {copied === "patch" ? "Copied" : "Copy patch"}
+              </Button>
+            )}
+            <Button variant="secondary" onClick={() => setExported(null)}>
+              Close
+            </Button>
+          </div>
+        </div>
+      )}
+    </li>
+  );
+}
+
 function RulesCard({ rules, busy, onRemove }: { rules: TagRule[]; busy: boolean; onRemove: (r: TagRule) => void }) {
   if (rules.length === 0) return null;
   return (
@@ -228,24 +323,12 @@ function RulesCard({ rules, busy, onRemove }: { rules: TagRule[]; busy: boolean;
       <h3 className="text-base font-semibold text-ink">Saved rules</h3>
       <p className="text-xs text-ink-faint">
         A rule is read only when the built-in mapping finds nothing for that input, and its figures show their source as
-        &quot;rule: …&quot;. Removing one changes nothing until the company is re-extracted.
+        &quot;rule: …&quot;. Removing one changes nothing until the company is re-extracted. A rule that has proved itself
+        can be exported as code, so the repo keeps it.
       </p>
       <ul className="divide-y divide-border">
         {rules.map((r) => (
-          <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
-            <div>
-              <code className="break-all text-xs text-ink">{r.concept}</code>{" "}
-              <span className="text-ink">→ {r.metric_label}</span>
-              <p className="text-xs text-ink-faint">
-                {ruleStatusLabel(r)} · {ruleScopeLabel(r)}
-                {r.fiscal_year ? ` · from ${r.fiscal_year}` : ""}
-                {r.check_overridden && r.check_detail ? ` · ${r.check_detail}` : ""}
-              </p>
-            </div>
-            <Button variant="secondary" disabled={busy} onClick={() => onRemove(r)}>
-              {r.status === "rejected" ? "Bring back" : "Remove rule"}
-            </Button>
-          </li>
+          <RuleRow key={r.id} rule={r} busy={busy} onRemove={onRemove} />
         ))}
       </ul>
     </Card>

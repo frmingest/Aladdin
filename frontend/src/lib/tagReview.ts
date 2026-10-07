@@ -1,4 +1,12 @@
-import type { TagCandidate, TagCheck, TagReextractResult, TagReview, TagReviewHolding, TagRule } from "./types";
+import type {
+  TagCandidate,
+  TagCheck,
+  TagReextractResult,
+  TagReview,
+  TagReviewHolding,
+  TagRule,
+  TagRuleExport,
+} from "./types";
 
 /** Plain-language labels for the tag review page. */
 
@@ -62,9 +70,40 @@ export function ruleScopeLabel(rule: Pick<TagRule, "scope" | "ticker">): string 
   return rule.scope === "all" ? "All companies" : `${rule.ticker ?? "One company"} only`;
 }
 
-export function ruleStatusLabel(rule: Pick<TagRule, "status" | "check_overridden">): string {
+export function ruleStatusLabel(rule: Pick<TagRule, "status" | "check_overridden" | "in_code">): string {
   if (rule.status === "rejected") return "Rejected suggestion";
+  if (rule.in_code) return "Rule (already in the code, no longer needed)";
   return rule.check_overridden ? "Rule (accepted after a failed check)" : "Rule";
+}
+
+// --- PR 3: export as code ------------------------------------------------------
+
+/** Only an accepted rule the code does not already read can be exported. */
+export function canExport(rule: Pick<TagRule, "status" | "in_code">): boolean {
+  return rule.status === "accepted" && !rule.in_code;
+}
+
+/** What to do with the export, in order. Says plainly when the check did not pass. */
+export function exportHeadline(e: Pick<TagRuleExport, "verified" | "problems" | "patch">): string {
+  if (!e.verified) return `Do not apply: the extractor could not read the figure from the generated test. ${e.problems.join(" ")}`;
+  if (!e.patch) return "The rule table could not be read on the server, so only the table row is given. Paste it between the markers.";
+  return "Checked: the extractor reads the figure from the generated test. Paste the patch into a chat, or apply it with git.";
+}
+
+/** The block a person pastes into a chat to have the change applied and a PR opened. */
+export function exportForChat(e: TagRuleExport): string {
+  const lines = [
+    `Promote this tag rule to code (${e.metric_label}, ${e.scope === "all" ? "all companies" : `${e.ticker ?? "one company"} only`}).`,
+    `Add this row to ${e.table_path}:`,
+    e.row_line,
+    "",
+    "Patch (git apply --ignore-whitespace):",
+    e.patch ?? "(patch not available; use the row above)",
+    "",
+    "Commit message:",
+    e.commit_message,
+  ];
+  return lines.join("\n");
 }
 
 /** One line per re-extracted company. Says what changed and never claims a figure was added unless the count rose. */

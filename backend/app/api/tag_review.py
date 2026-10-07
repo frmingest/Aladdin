@@ -5,7 +5,10 @@ largest tagged numbers nothing reads (PR 1, read-only).
 PR 2 adds the decisions: accept a suggestion as a mapping rule, reject it,
 remove a rule, and re-read a company's stored reports with the rules. A rule
 is data read by the extractor after its built-in lists; nothing is written to
-a figure until a re-extract. No LLM. Hidden / blocked while demo mode is on."""
+a figure until a re-extract.
+
+PR 3 adds the export of an accepted rule as a code change (a patch, read-only).
+No LLM. Hidden / blocked while demo mode is on."""
 from __future__ import annotations
 
 from uuid import UUID
@@ -18,6 +21,7 @@ from app.providers.factory import get_object_storage
 from app.schemas.tag_review import (
     ReextractOut,
     ReextractRequest,
+    RuleExportOut,
     TagRejectionCreate,
     TagReviewOut,
     TagRuleCreate,
@@ -26,6 +30,7 @@ from app.schemas.tag_review import (
 )
 from app.services.settings.demo_guard import require_not_demo
 from app.services.settings.demo_mode import is_demo_mode
+from app.services.tag_export import export_rule, in_code
 from app.services.tag_review import build_tag_review
 from app.services.tag_rules import (
     RuleError,
@@ -43,6 +48,12 @@ def _fail(err: RuleError) -> HTTPException:
     return HTTPException(status_code=err.status, detail=err.message)
 
 
+def _out(rule) -> TagRuleOut:
+    out = TagRuleOut.model_validate(rule)
+    out.in_code = rule.status == "accepted" and in_code(rule)
+    return out
+
+
 @router.get("", response_model=TagReviewOut)
 def get_tag_review(holding_id: UUID | None = None, db: Session = Depends(get_db)) -> TagReviewOut:
     if is_demo_mode(db):
@@ -54,7 +65,7 @@ def get_tag_review(holding_id: UUID | None = None, db: Session = Depends(get_db)
 def get_rules(db: Session = Depends(get_db)) -> TagRulesOut:
     if is_demo_mode(db):
         return TagRulesOut(rules=[])
-    return TagRulesOut(rules=[TagRuleOut.model_validate(r) for r in list_rules(db)])
+    return TagRulesOut(rules=[_out(r) for r in list_rules(db)])
 
 
 @router.post("/rules", response_model=TagRuleOut, status_code=201)
@@ -64,9 +75,7 @@ def create_rule(body: TagRuleCreate, db: Session = Depends(get_db)) -> TagRuleOu
     until `confirm_failed_check` is true when the suggestion failed its check."""
     require_not_demo(db)
     try:
-        return TagRuleOut.model_validate(
-            accept_rule(db, body.holding_id, body.metric, body.concept, body.confirm_failed_check)
-        )
+        return _out(accept_rule(db, body.holding_id, body.metric, body.concept, body.confirm_failed_check))
     except RuleError as err:
         raise _fail(err) from err
 
@@ -76,9 +85,36 @@ def create_rejection(body: TagRejectionCreate, db: Session = Depends(get_db)) ->
     """Remember a suggestion as wrong for this holding so it is not offered again."""
     require_not_demo(db)
     try:
-        return TagRuleOut.model_validate(reject_rule(db, body.holding_id, body.metric, body.concept))
+        return _out(reject_rule(db, body.holding_id, body.metric, body.concept))
     except RuleError as err:
         raise _fail(err) from err
+
+
+@router.get("/rules/{rule_id}/export", response_model=RuleExportOut)
+def get_rule_export(rule_id: UUID, db: Session = Depends(get_db)) -> RuleExportOut:
+    """An accepted rule as a code change: one row for `accepted_tag_rules.py`
+    (concept, value, unit), a `git apply` patch, and a commit message. The row
+    is checked against the extractor first. Read-only: nothing is written."""
+    if is_demo_mode(db):
+        raise HTTPException(status_code=404, detail="not available in demo mode")
+    try:
+        result = export_rule(db, rule_id)
+    except RuleError as err:
+        raise _fail(err) from err
+    return RuleExportOut(
+        rule_id=result.rule_id,
+        ticker=result.ticker,
+        metric_label=result.metric_label,
+        scope=result.scope,
+        verified=result.verified,
+        problems=result.problems,
+        row_line=result.row_line,
+        patch=result.patch,
+        commit_message=result.commit_message,
+        table_path=result.table_path,
+        test_path=result.test_path,
+        notes=result.notes,
+    )
 
 
 @router.delete("/rules/{rule_id}", status_code=204)

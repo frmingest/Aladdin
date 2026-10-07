@@ -2363,6 +2363,25 @@ export interface TagRule {
   check_overridden: boolean;
   fiscal_year: string | null;
   source_filename: string | null;
+  /** PR 3: the extractor's own lists already read this tag, so the rule is redundant. */
+  in_code?: boolean;
+}
+
+/** PR 3: an accepted rule as a code change (one table row, a git patch, a commit message). */
+export interface TagRuleExport {
+  rule_id: string;
+  ticker: string | null;
+  metric_label: string;
+  scope: "all" | "company";
+  /** The extractor reads the figure from the generated fixture. */
+  verified: boolean;
+  problems: string[];
+  row_line: string;
+  patch: string | null;
+  commit_message: string;
+  table_path: string;
+  test_path: string;
+  notes: string[];
 }
 
 export interface TagReextractResult {

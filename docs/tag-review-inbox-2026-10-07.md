@@ -1,6 +1,6 @@
 # Tag review inbox: see missing ESEF inputs and the closest tags after a Newsweb fetch (2026-10-07)
 
-**Status:** PR 1 is **merged (#60, `65aaed1`)**, not checked on real filings or the live app. **PR 2 is written and tested on branch `feature/tag-review-rules` (PR #61), not merged, not deployed, not run on real filings.** PR 3 is designed, not started.
+**Status:** PR 1 is **merged (#60, `65aaed1`)**, not checked on real filings or the live app. **PR 2 is merged (#61, `bdde1c1`)**, its migration `s1e0f1a2b3c4` not yet confirmed on Supabase. **PR 3 (export a rule as code) is written and tested on branch `feature/tag-review-export`, not merged, not deployed, not run on real filings.**
 
 ## 1. The ask and the decisions
 
@@ -74,6 +74,31 @@ Code: `models/tag_mapping_rule.py`, `services/tag_rules.py`, `api/tag_review.py`
 
 **After merge and deploy (Faiz):** check the Railway log shows migration `s1e0f1a2b3c4`; `git pull` in `E:\Aladdin`; open More, System, Tag review (press *Fetch all reports* on a holding first if it shows nothing); *Use this tag* on a suggestion that ties, *Re-extract*, and check the figure shows with source `rule: ...`.
 
-## 8. PR 3 (not started)
+## 8. PR 3: export an accepted rule as a code change
 
-Export an accepted rule as a code change (the concept added to the built-in list) plus a test fixture with concept names and values only, so the repo stays the long-term source of truth. Needs Faiz's go.
+Built on `main` `bdde1c1` (PR #61 already merged). No migration, no new table.
+
+**The idea.** A rule is a database row. Once it has proved itself, one press turns it into **one row of data in the repo** plus **the test that proves it**, so a fresh database needs nothing and the code stays the source of truth.
+
+| Piece | Behaviour |
+|---|---|
+| Rule table | New module `extraction/accepted_tag_rules.py`: one row per promoted rule (metric, concept, the tagged value, unit, point-in-time or year, a note such as `ORK.OL FY2025`). The extractor appends these concepts to its built-in list **last**, so, like a database rule, they only fill what the built-in lists leave empty. Empty at first |
+| Scope | Unchanged: standard tag, every company. A company's own tag (`ORK:...`) can only occur in that company's reports, so it is company-only by its name |
+| Export | `GET /tag-review/rules/{id}/export` (read-only, hidden in demo mode): builds the row, **runs the extractor on a tiny synthetic filing made from it**, and returns the row, a `git apply` patch for the one file, a commit message, and notes. `verified: false` says "do not apply" and why |
+| Value | Taken from the inbox's own suggestion while it is listed, else from the figure the rule filled in that report. If neither exists (documents deleted) the export says to re-fetch first |
+| Permanent test | `tests/unit/test_accepted_tag_rules.py` builds a fixture from **every** row and requires the extractor to read the figure with **no** database rule and `rules_applied` empty. A row cannot be added without this passing. A guard test also checks every exportable metric really reads a concept appended to its list |
+| Refused | Not accepted (409); the tag is already in the code (409, and the rule is flagged *already in the code*); a metric with its own reader, today only **lease payments** (422); no stored value (409); a unit a fixture cannot express (422) |
+| UI | *Export as code* on each saved accepted rule: shows the patch, the first line of the commit message, *Copy for chat*, *Copy patch*. A rule the code already reads is labelled "already in the code, no longer needed" |
+| Data rule | Concept names and one value per row, never filing text or statements (CLAUDE.md: no real documents in the repo) |
+
+**How a rule gets into the repo.** Press *Export as code*, then either paste *Copy for chat* to Claude (it applies the patch on a branch and opens a PR) or run `git apply --ignore-whitespace` in the repo. After the PR is merged and deployed, press *Remove rule* on the database copy: figures it filled stay until the next re-extract, and the code now reads the tag.
+
+**Verification:** Ruff clean; unit tests for the fixture (flow, balance sheet, per-share, share count, negative value, standard namespace), the guard over every exportable metric, rendering and parsing the block back, a `git apply --check` of the real patch in a scratch repo, a full round trip (patched table loaded, concept lists rebuilt, extractor reads the figure with no rule), and the API (before and after a re-extract, read-only, demo, already-in-code). Frontend tsc, ESLint 0 errors, 305 tests (5 new), build.
+
+**Limits.** A promoted rule fills one metric from one tag (no sums of several tags); it cannot be made from a *tagged but unused* line; for a share count the choice between year-end and average is inferred from the tag name (the notes say so); the fixture proves the tag name maps to the metric, not that the company's real filing uses the same context. A promoted standard tag applies to every company, so it is only as safe as its check: promote ones that tied.
+
+**After merge and deploy (Faiz):** nothing is needed until you export a rule. Open More, System, Tag review, press *Export as code* on a saved rule, and check the headline says *Checked*.
+
+## 9. What is left
+
+The tag review inbox is complete as planned (PR 1 #60, PR 2 #61, PR 3). Open ideas, none started: rules for *tagged but unused* lines, a rule that sums several tags, a re-extract for ESEF-index history imports, lease payments in the exportable set.
