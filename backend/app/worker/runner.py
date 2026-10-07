@@ -49,6 +49,7 @@ from app.services.analysis.pipeline import (
     run_full_analysis,
 )
 from app.services.analysis.readiness import research_refreshes_needed
+from app.services.job_status import record_job_run
 
 log = logging.getLogger("aladdin.worker")
 
@@ -324,6 +325,8 @@ class AnalysisWorker:
                 )
             if any(r.fetched for r in results):
                 self._last_keepwarm = float("-inf")  # new prices: rebuild the pages now
+                with self.session_factory() as db:
+                    record_job_run(db, "warmup", "; ".join(r.summary() for r in results if r.fetched))
         except Exception:
             log.exception("holding warm-up failed")
 
@@ -342,11 +345,13 @@ class AnalysisWorker:
             from app.services.snapshot_refresh import rebuild_stale_snapshots
 
             with self.session_factory() as db:
-                rebuild_stale_snapshots(
+                rebuilt = rebuild_stale_snapshots(
                     db,
                     market_data_provider=self.providers.market_data,
                     risk_free_rate_provider=self.providers.risk_free_rate,
                 )
+                if rebuilt:
+                    record_job_run(db, "keepwarm", f"rebuilt {', '.join(rebuilt)}")
         except Exception:
             log.exception("keep-warm snapshot rebuild failed")
 

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, ApiError } from "../lib/api";
-import type { FreshnessItem, StatusItem, StatusLevel, SystemStatus, UsageSummary } from "../lib/types";
+import type { FreshnessItem, JobItem, StatusItem, StatusLevel, SystemStatus, UsageSummary } from "../lib/types";
 import { Button, Card, PageHeader, SectionTitle } from "../components/ui";
 
 /** Feature F4. Everything comes from GET /system/status
@@ -65,6 +65,31 @@ function FreshnessRows({ items }: { items: FreshnessItem[] }) {
               {item.last_at ? relative(item.last_at) : item.detail || "Never"}
             </span>
             {item.last_at && item.detail && <span className="block text-xs text-ink-muted">{item.detail}</span>}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** Background jobs: what runs without anyone opening a page, where, and
+ * when it last did. A warning means a daily job is late (see
+ * backend/app/services/job_status.py). */
+export function JobRows({ items }: { items: JobItem[] }) {
+  return (
+    <ul className="divide-y divide-border-subtle">
+      {items.map((job) => (
+        <li key={job.key} className="flex items-start gap-3 py-2.5 text-sm">
+          <Level status={job.status} />
+          <span className="w-44 shrink-0 text-ink">{job.label}</span>
+          <span className="min-w-0 flex-1">
+            <span className="tabular text-ink" title={job.last_at ?? undefined}>
+              {job.last_at ? `Last ran ${relative(job.last_at)}` : "Never ran"}
+            </span>
+            <span className="block text-xs text-ink-faint">
+              {job.runs_on} · {job.schedule}
+            </span>
+            {job.detail && <span className="block text-xs text-ink-muted">{job.detail}</span>}
           </span>
         </li>
       ))}
@@ -253,6 +278,15 @@ export default function SystemStatusPage() {
             </SectionTitle>
             <ItemRows items={status.providers} />
           </Card>
+
+          {status.jobs && status.jobs.length > 0 && (
+            <Card>
+              <SectionTitle hint="Jobs that run without anyone opening a page. The daily ones run on your PC worker when the analysis queue is idle.">
+                Background jobs
+              </SectionTitle>
+              <JobRows items={status.jobs} />
+            </Card>
+          )}
 
           <div className="grid gap-6 lg:grid-cols-2">
             <Card>
