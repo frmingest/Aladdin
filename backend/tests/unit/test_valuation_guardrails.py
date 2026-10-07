@@ -169,8 +169,8 @@ def test_v2_turns_the_guardrails_on_and_keeps_v1_market_inputs():
     assert v2.min_cost_of_equity > v2.terminal_growth_rate
 
 
-def test_default_settings_use_v3():
-    assert Settings(_env_file=None).active_valuation_assumptions_version == "v3"
+def test_default_settings_use_v4():
+    assert Settings(_env_file=None).active_valuation_assumptions_version == "v4"
 
 
 def test_v3_changes_only_the_growth_base_method():
@@ -473,3 +473,169 @@ def test_v3_does_not_guess_from_a_single_profitable_year(monkeypatch):
         result = _value(db, holding, price="40", monkeypatch=monkeypatch, settings=_v("v3"))
     assert result.dcf is None
     assert any("only one profitable year" in r for r in result.unavailable_reasons)
+
+
+# ---------------- v4 (2026-10-07): normalised earnings for volatile histories
+
+
+def test_v4_changes_only_the_base_earnings_method():
+    import dataclasses
+
+    v3, v4 = get_valuation_assumptions("v3"), get_valuation_assumptions("v4")
+    differing = {f.name for f in dataclasses.fields(v3) if getattr(v3, f.name) != getattr(v4, f.name)}
+    assert differing == {"version", "base_earnings_method"}
+    assert (v4.normalisation_window_years, v4.normalisation_min_years) == (5, 3)
+    assert v4.normalisation_dispersion == D(2)
+    assert v3.base_earnings_method == "latest_year"
+    assert v4.base_earnings_method == "normalised_median"
+
+
+def test_normalised_base_is_the_median_and_flags_a_windfall():
+    from app.services.valuation.growth import normalised_base
+
+    # Equinor-shaped (USD m): a windfall year then a slide to a trough.
+    history = [(2021, D("11004")), (2022, D("25013")), (2023, D("10522")), (2024, D("4973")), (2025, D("1908"))]
+    result = normalised_base(history, window_years=5, min_years=3, dispersion=D(2))
+    assert result.base == D("10522") and result.latest == D("1908")
+    assert result.volatile and result.years == (2021, 2022, 2023, 2024, 2025)
+
+
+def test_normalised_base_uses_the_mean_of_the_middle_pair_for_an_even_window():
+    from app.services.valuation.growth import normalised_base
+
+    history = [(2022, D("34657")), (2023, D("10072")), (2024, D("16417")), (2025, D("7284"))]
+    result = normalised_base(history, window_years=5, min_years=3, dispersion=D(2))
+    assert result.base == (D("10072") + D("16417")) / 2
+    assert result.volatile  # 34,657 is more than twice the median
+
+
+def test_normalised_base_calls_a_steady_history_stable_and_needs_three_years():
+    from app.services.valuation.growth import normalised_base
+
+    steady = [(2021, D("100")), (2022, D("110")), (2023, D("121")), (2024, D("133"))]
+    assert not normalised_base(steady, window_years=5, min_years=3, dispersion=D(2)).volatile
+    assert normalised_base(steady[:2], window_years=5, min_years=3, dispersion=D(2)) is None
+
+
+def test_normalised_base_treats_a_loss_year_as_volatile():
+    from app.services.valuation.growth import normalised_base
+
+    history = [(2021, D("100")), (2022, D("-20")), (2023, D("105")), (2024, D("110"))]
+    assert normalised_base(history, window_years=5, min_years=3, dispersion=D(2)).volatile
+
+
+def test_v3_extrapolates_a_decline_but_v4_values_the_median(monkeypatch):
+    earnings = ["110", "250", "105", "50", "19"]  # NOK m, 100m shares: the Equinor shape
+    with _session() as db:
+        holding = _ramp_up(db, earnings)
+        r3 = _value(db, holding, price="20", monkeypatch=monkeypatch, settings=_v("v3"))
+        r4 = _value(db, holding, price="20", monkeypatch=monkeypatch, settings=_v("v4"))
+    assert r3.raw_base_growth_rate < D("-0.3")  # 110 -> 19: the projected collapse
+    assert r3.valuation_status == "implausible"  # which is why the board showed nothing
+    assert r4.assumptions_version == "v4"
+    assert r4.raw_base_growth_rate == D("0.025") and not r4.growth_capped
+    assert r4.valuation_status == "ok" and r4.dcf is not None
+    assert any("median (105)" in reason and "FY2021-FY2025" in reason for reason in r4.unavailable_reasons)
+
+
+def test_v4_leaves_a_steady_grower_exactly_as_v3(monkeypatch):
+    with _session() as db:
+        holding = _ramp_up(db, ["100", "110", "121", "133", "146"])
+        r3 = _value(db, holding, price="40", monkeypatch=monkeypatch, settings=_v("v3"))
+        r4 = _value(db, holding, price="40", monkeypatch=monkeypatch, settings=_v("v4"))
+    assert r3.dcf.scenario("base").intrinsic_value_per_share == r4.dcf.scenario("base").intrinsic_value_per_share
+    assert r3.base_growth_rate == r4.base_growth_rate
+
+
+def test_v4_does_not_value_a_volatile_history_with_no_positive_median(monkeypatch):
+    with _session() as db:
+        holding = _ramp_up(db, ["-50", "-20", "10", "-5", "20"])
+        result = _value(db, holding, price="40", monkeypatch=monkeypatch, settings=_v("v4"))
+    assert result.dcf is None
+    assert any("median is not positive" in reason for reason in result.unavailable_reasons)
+
+
+def test_v4_with_two_years_of_history_keeps_the_v3_method(monkeypatch):
+    with _session() as db:
+        holding = _ramp_up(db, ["100", "130"])
+        r3 = _value(db, holding, price="40", monkeypatch=monkeypatch, settings=_v("v3"))
+        r4 = _value(db, holding, price="40", monkeypatch=monkeypatch, settings=_v("v4"))
+    assert r3.base_growth_rate == r4.base_growth_rate
+    assert r3.dcf.scenario("base").intrinsic_value_per_share == r4.dcf.scenario("base").intrinsic_value_per_share
+
+
+# ------------- insurer ROE and equity-certificate banks (2026-10-07)
+
+
+def test_thin_equity_is_structural_for_an_insurer_not_depletion():
+    # Storebrand: ordinary equity 32.5bn is 3.3% of total assets.
+    facts = {"net_income": D("5018"), "total_equity": D("33588"), "hybrid_capital": D("353"),
+             "total_assets": D("1000000")}
+    prior = {"net_income": D("5494"), "total_equity": D("32113"), "hybrid_capital": D("353"),
+             "total_assets": D("950000")}
+    industrial = compute_holding_metrics(facts, prior_facts=prior)
+    assert "roe" not in industrial.computed and "depleted by distributions" in industrial.skipped["roe"]
+    insurer = compute_holding_metrics(facts, prior_facts=prior, financial=True)
+    assert round(insurer.computed["roe"], 3) == round(D("5018") / ((D("33235") + D("31760")) / 2), 3)
+
+
+def test_a_financial_with_non_positive_equity_is_still_refused():
+    facts = {"net_income": D("100"), "total_equity": D("-5"), "total_assets": D("1000")}
+    result = compute_holding_metrics(facts, financial=True)
+    assert "roe" not in result.computed and "not meaningful" in result.skipped["roe"]
+
+
+def test_certificate_share_is_certificates_times_eps_over_net_income():
+    from app.services.metrics import certificate_holder_share
+
+    facts = {"net_income": D("494.3"), "eps_basic": D("6.82")}
+    # Sparebanken Øst: 20.7m certificates vs 72.5m implied by net income / EPS
+    assert round(certificate_holder_share(facts, D("20700000") / D("1000000")), 3) == D("0.286")
+    assert certificate_holder_share(facts, D("72.5")) is None  # ordinary shares: ratio ~1
+    assert certificate_holder_share({"net_income": D("100")}, D("10")) is None
+    assert certificate_holder_share({"net_income": D("100"), "eps_basic": D("-1")}, D("10")) is None
+    assert certificate_holder_share({"net_income": D("160"), "eps_basic": D("15.2")}, D("10")) is None  # 0.95
+
+
+def test_a_certificate_banks_pe_and_pb_use_the_holders_share():
+    from app.services.metrics import MarketInputs
+
+    facts = {"net_income": D("160"), "eps_basic": D("6.4"), "total_equity": D("1200"), "total_assets": D("20000")}
+    market = MarketInputs(price=D("50"), shares=D("10"))
+    naive = compute_holding_metrics(facts, market=market, financial=False)
+    assert naive.computed["price_to_earnings"] == D("500") / D("160")  # 3.1x: the bug
+    cert = compute_holding_metrics(facts, market=market, financial=True)
+    assert cert.computed["price_to_earnings"] == D("50") / D("6.4")  # price / EPS
+    assert round(cert.computed["price_to_book"], 4) == round(D("50") / D("48"), 4)  # 1,200 x 0.4 / 10 = 48
+    assert "equity-certificate bank" in cert.notes["price_to_earnings"]
+
+
+def _certificate_bank(db, eps):
+    holding = Holding(ticker="CERT.OL", name="Cert Bank", trading_currency="NOK", sector="Financials")
+    document = _document(holding)
+    db.add_all([holding, document])
+    db.flush()
+    for year, equity in _BANK_EQUITY.items():
+        facts = {"net_income": _BANK_NET_INCOME[year], "total_equity": equity, "shares_outstanding": "10"}
+        if year == "2025":
+            facts["eps_basic"] = eps
+        _add(db, document, holding, f"FY{year}", facts)
+    db.commit()
+    return holding
+
+
+def test_a_certificate_bank_gets_book_value_per_certificate_not_per_implied_share(monkeypatch):
+    with _session() as db:
+        holding = _certificate_bank(db, "6.4")  # 10m certificates x 6.4 / 160 = 40%
+        result = _value(db, holding, price="80", monkeypatch=monkeypatch)
+    assert result.valuation_method == "financials_price_to_book"
+    assert result.financials.book_value_per_share == D("48")  # 1,200 x 0.4 / 10, not 120
+    assert any("Equity-certificate bank" in r and "40.0%" in r for r in result.unavailable_reasons)
+
+
+def test_an_ordinary_bank_keeps_total_equity_over_shares(monkeypatch):
+    with _session() as db:
+        holding = _certificate_bank(db, "15.2")  # 10m x 15.2 / 160 = 95%: no certificate structure
+        result = _value(db, holding, price="150", monkeypatch=monkeypatch)
+    assert result.financials.book_value_per_share == D("120")
+    assert not any("Equity-certificate bank" in r for r in result.unavailable_reasons)

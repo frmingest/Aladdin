@@ -464,14 +464,16 @@ def get_holding_metrics(
         refresh_live=False,
         currency_unknown_not_mixed=no_currency,
     )
+    is_financial = holding_is_financial(db, holding)
     result = compute_holding_metrics(
         facts,
         currencies,
         prior_facts=prior.facts if prior else None,
         market=market.inputs,
         market_unavailable_reason=market.unavailable_reason,
+        financial=is_financial,
     )
-    if holding_is_financial(db, holding):
+    if is_financial:
         mark_not_meaningful_for_financials(result)
     stale_period = latest is not None and latest.period != period
     if stale_period and market.inputs is not None:

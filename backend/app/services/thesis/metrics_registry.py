@@ -26,6 +26,7 @@ from sqlalchemy.orm import Session
 from app.models.holding import Holding
 from app.services import metrics as metrics_service
 from app.services.analysis.latest import latest_runs_by_holding
+from app.services.bank_detection import holding_is_financial
 from app.services.holding_facts import (
     PeriodFacts,
     facts_by_period,
@@ -130,6 +131,7 @@ def _fundamentals(
         prior_facts=prior.facts if prior else None,
         market=market_inputs,
         market_unavailable_reason=market_reason,
+        financial=holding_is_financial(db, holding),
     )
     return result, latest, prior
 
