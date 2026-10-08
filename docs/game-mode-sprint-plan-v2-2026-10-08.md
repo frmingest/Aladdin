@@ -1,6 +1,6 @@
 # Game mode: review and updated sprint plan (v2) — 2026-10-08
 
-Status: **approved by Faiz 2026-10-08; G28 Phase A and G29 are built in one PR (see section 9), the rest is not built.** Written after reading the Fortress doc (G1–G11), the
+Status: **approved by Faiz 2026-10-08; G28 Phase A, G29 (no code needed), G30 and G31 are built (sections 9–11); the G1–G20 walkthrough is done (section 12); the rest is not built.** Written after reading the Fortress doc (G1–G11), the
 next-ideas doc (G12–G27), the Sprint 25 doc, the 2026-10-07 noise audit, the split-view reader doc, `progress.md`,
 and the code in `E:\Aladdin` (`frontend/src/components/fortress`, `pages/*`, `lib/*`, `DocumentReader.tsx`,
 `backend/app/services/game`, the Newsweb provider). Ids continue from G27 (G28 onward). Nothing was run in a browser.
@@ -177,3 +177,10 @@ Faiz asked (2026-10-08) to redesign the Documents tab as a library, rename it "S
 - **Backend (additive):** `RavenOut` gains `document_filename` and `document_type` (both optional), filled for figures and text-only ravens. No schema, migration or rule-version change.
 - **Frontend:** pure helper `ravenReadable` (tests: reader shape, demo/old payload gives nothing, missing type) and the button in `RavensCard`.
 - **Verified:** ruff clean; backend suite 1,765 passed, 2 skipped; frontend tsc clean, ESLint 0 errors (the 2 existing warnings), 365 tests, build. **Not seen in a browser**; not tried with a real raven or report.
+
+## 12. Sprint 26a walkthrough done (2026-10-08, branch `docs/game-mode-walkthrough-g1-g20`)
+
+Faiz walked G1–G20 on the live frontend with his real data and confirmed every gate. Results, what was checked from screenshots, a
+nine-point polish list (ravens too noisy first) and what was not covered: [game-mode-walkthrough-g1-g20-2026-10-08.md](game-mode-walkthrough-g1-g20-2026-10-08.md).
+Still open in Sprint 26a: game pages in the read-only smoke test and word budgets for Circle, the Ledger tab and the dialogs. Under
+D6, Sprint 28 (fog of war) is no longer held by the walkthrough.
