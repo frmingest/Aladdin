@@ -369,33 +369,13 @@ def import_all_interim_reports_from_newsweb(
     storage: ObjectStorageProvider,
     *,
     since: date,
-    quarterly_category_ids: tuple[int, ...] = (),
 ) -> NewswebBulkImportResult:
     """Fetch every HALF YEAR FINANCIAL REPORT announcement on Newsweb for
     this holding from ``since`` through today, skipping any already on
     file. Same shape as import_all_annual_reports_from_newsweb, but a PDF
     attachment is accepted (Norwegian issuers essentially never ESEF-tag
     interim reports) — ingested as text evidence only, no financial facts
-    (see PDF_NO_FACTS_WARNING and the module docstring).
-
-    ``quarterly_category_ids`` (settings.newsweb_quarterly_category_ids) adds Q1/Q3 reports from
-    those categories to the same run (G29): same document type, same dedup by message id, same
-    no-facts rule. Empty = exactly the half-year fetch as before."""
-
-    def list_refs(issuer_sign: str, since_date: date) -> list[NewswebAnnualReportRef]:
-        refs = provider.list_interim_reports(issuer_sign, since=since_date)
-        if quarterly_category_ids:
-            seen = {r.message_id for r in refs}
-            refs = refs + [
-                r
-                for r in provider.list_quarterly_reports(
-                    issuer_sign, since=since_date, category_ids=quarterly_category_ids
-                )
-                if r.message_id not in seen
-            ]
-            refs.sort(key=lambda r: r.published_at or datetime.min.replace(tzinfo=timezone.utc), reverse=True)
-        return refs
-
+    (see PDF_NO_FACTS_WARNING and the module docstring)."""
     return _import_all_reports_from_newsweb(
         db,
         holding,
@@ -404,6 +384,6 @@ def import_all_interim_reports_from_newsweb(
         since=since,
         document_type=INTERIM_REPORT_DOCUMENT_TYPE,
         allow_pdf_fallback=True,
-        report_label="HALF YEAR or QUARTERLY FINANCIAL REPORT" if quarterly_category_ids else "HALF YEAR FINANCIAL REPORT",
-        list_refs=list_refs,
+        report_label="HALF YEAR FINANCIAL REPORT",
+        list_refs=lambda issuer_sign, since_date: provider.list_interim_reports(issuer_sign, since=since_date),
     )

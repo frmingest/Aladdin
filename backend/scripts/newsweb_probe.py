@@ -1,15 +1,15 @@
-"""Which Newsweb category carries an issuer's quarterly (Q1/Q3) reports?
+"""Which Newsweb categories does an issuer publish under, and with what titles?
 
-Newsweb's category ids are Oslo Børs' own and this repo only knows the annual (1001) and half-year
-(1002) ones. Run this once on the machine that runs the backend (it needs normal internet access to
-api3.oslo.oslobors.no), then put the right id(s) in NEWSWEB_QUARTERLY_CATEGORY_IDS:
+A read-only diagnostic: one GET to the Newsweb list endpoint WITHOUT a category filter, printed per
+category (id, English and Norwegian name, count, up to five sample titles). Run it on a machine with
+normal internet access to api3.oslo.oslobors.no:
 
     cd backend
     python scripts/newsweb_probe.py EQNR --since 2025-01-01
 
-It lists the issuer's announcements WITHOUT a category filter and prints, per category, the id, its
-names, a count and up to five sample titles. Read-only: one GET request. Look for the category whose
-titles are "Q1 2026", "Third quarter 2026" and so on.
+First run 2026-10-08 for EQNR: category 1001 = annual reports, 1002 = "HALF YEAR FINANCIAL REPORT"
+and it also carries the Q1, Q2 and Q4/full-year results, so the existing interim fetch already
+covers quarterly reports. Categories 1008 and 1101 only mention "quarter" in dividend notices.
 """
 from __future__ import annotations
 

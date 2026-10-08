@@ -355,9 +355,9 @@ export function NewswebAllReportsCard({ holdingId, onImported }: { holdingId: st
         <div>
           <h3 className="text-sm font-semibold text-ink">Reports from Newsweb</h3>
           <p className="mt-0.5 text-xs text-ink-faint">
-            Fetches every annual and half-year report the company has published on Oslo Børs Newsweb, back to{" "}
+            Fetches every annual report and every quarterly or half-year report (Q1, Q2, Q3 and full-year results) the company has published on Oslo Børs Newsweb, back to{" "}
             {historyYear ?? "2022"}, instead of you downloading and re-uploading them one by one. Annual ESEF reports
-            feed the metrics, DCF and ratios; half-year reports are almost always plain PDFs, so they&apos;re
+            feed the metrics, DCF and ratios; quarterly and half-year reports are almost always plain PDFs, so they&apos;re
             captured as citable evidence text only — they do <strong>not</strong> add any new numbers (CLAUDE.md
             Rule 1). Already-fetched reports aren&apos;t re-downloaded. Free, no key.
           </p>
@@ -400,7 +400,7 @@ export function NewswebAllReportsCard({ holdingId, onImported }: { holdingId: st
                     report.kind === "annual" ? "bg-accent/15 text-accent" : "bg-ink-faint/15 text-ink-muted"
                   }`}
                 >
-                  {report.kind === "annual" ? "Annual" : "Half-year"}
+                  {report.kind === "annual" ? "Annual" : "Quarterly / half-year"}
                 </span>
                 {report.message_url ? (
                   <a
