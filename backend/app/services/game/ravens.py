@@ -217,6 +217,7 @@ def build_ravens(db: Session, rules_v: TimeAndFilingsRules, *, now: datetime | N
                 .distinct()
             )
         )
+        source_doc = db.get(Document, newest.document_id) if newest.document_id else None
         previous = previous_period(periods, latest.period)
         if previous is None:
             lines: list[RavenLineOut] = []
@@ -241,6 +242,8 @@ def build_ravens(db: Session, rules_v: TimeAndFilingsRules, *, now: datetime | N
                 captured_at=captured,
                 age_days=max((now - captured).days, 0),
                 document_id=newest.document_id,
+                document_filename=source_doc.original_filename if source_doc else None,
+                document_type=source_doc.type if source_doc else None,
                 summary=summary,
                 better=better,
                 worse=worse,
@@ -287,6 +290,8 @@ def build_ravens(db: Session, rules_v: TimeAndFilingsRules, *, now: datetime | N
                 captured_at=captured,
                 age_days=max((now - captured).days, 0),
                 document_id=doc.id,
+                document_filename=doc.original_filename,
+                document_type=doc.type,
                 summary=(
                     f"A new {kind_word} report was captured. No figures were extracted from it "
                     "(it is read as text evidence only), so there is no comparison."

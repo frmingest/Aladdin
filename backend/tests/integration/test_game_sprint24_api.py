@@ -177,6 +177,8 @@ def test_a_new_period_raises_a_raven_with_the_changes(client, db_session):
     assert raven["kind"] == "figures" and raven["period"] == "FY2025" and raven["previous_period"] == "FY2024"
     assert raven["id"] == f"fig:{holding.id}:FY2025" and raven["in_portfolio"] is True
     assert raven["document_id"] == str(new_doc.id) and raven["age_days"] == 2
+    # G31: the raven carries what the reader needs to open its report
+    assert raven["document_filename"] == "fy25.xhtml" and raven["document_type"] == new_doc.type
     by_metric = {line["metric"]: line for line in raven["lines"]}
     assert by_metric["operating_margin"]["direction"] == "better"      # 10% -> 25%
     assert "rose from 10.0% to 25.0%" in by_metric["operating_margin"]["text"]
@@ -222,6 +224,7 @@ def test_a_report_without_figures_is_a_text_only_raven(client, db_session):
     (raven,) = client.get("/game/ravens").json()["ravens"]
     assert raven["kind"] == "text_only" and raven["lines"] == [] and raven["period"] is None
     assert "No figures were extracted" in raven["summary"] and "half-year or interim" in raven["summary"]
+    assert raven["document_filename"] == "h1.pdf" and raven["document_type"] == "quarterly_report"
 
 
 def test_a_bank_is_not_compared_on_industrial_measures(client, db_session):

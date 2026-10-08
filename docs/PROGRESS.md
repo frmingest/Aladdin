@@ -4,9 +4,9 @@
 
 ## Current Objective
 
-Phase 11, the Buffett/Munger rebuild, is in a stable, merged state. Game mode sprint plan v2 is approved ([plan](game-mode-sprint-plan-v2-2026-10-08.md)); #72 (scroll reader) is merged. **In flight: PR #73** (quarterly-wording cleanup) **and one PR, `feature/scrolls-library-g30`** (G30 Scrolls library: the Documents tab becomes "Scrolls", three shelves, sealed scrolls; annual XHTML reports keep the side-by-side reader). Written and tested, **not merged, not deployed, seen only on headless Chromium test pages, never on real documents.** **Also in flight: PR #76** (own-year fact ownership: each fiscal year is owned by the report that reports it; written and tested, not merged, not deployed; [doc](own-year-fact-ownership-2026-10-08.md)). Next: your walkthrough (Sprint 26a), then raven-to-scroll (G31) and Sprint 28.
+Phase 11, the Buffett/Munger rebuild, is in a stable, merged state. Game mode sprint plan v2 is approved ([plan](game-mode-sprint-plan-v2-2026-10-08.md)); the scroll reader (G28), the Scrolls library (G30) and own-year fact ownership (#76) are merged on `main`. **In flight: one PR, `feature/raven-to-scroll-g31`** (G31: each raven gets a *Read the report* button that opens its report in the usual reader; written and tested, **not merged, not deployed, never seen in a browser**). Next: your walkthrough (Sprint 26a); Sprint 28 (fog of war) waits for its feedback (decision D6).
 
-State (checked against git 2026-10-08): `main` = `3304026` (#75). Repo migration head `t1f2a3b4c5d6`; last head **confirmed on Supabase** was `r1d9e0f1a2b3` (2026-10-05). **Deploy of everything since is not verified** ("merged, not checked live"). Live URLs: frontend `https://exciting-gratitude-production-71b5.up.railway.app`, backend `https://aladdin-production-bd25.up.railway.app`.
+State (checked against git 2026-10-08): `main` = `eb57da6` (#76). Repo migration head `t1f2a3b4c5d6`; last head **confirmed on Supabase** was `r1d9e0f1a2b3` (2026-10-05). **Deploy of everything since is not verified** ("merged, not checked live"). Live URLs: frontend `https://exciting-gratitude-production-71b5.up.railway.app`, backend `https://aladdin-production-bd25.up.railway.app`.
 
 ## Active Tasks
 

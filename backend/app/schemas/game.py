@@ -350,6 +350,9 @@ class RavenOut(BaseModel):
     captured_at: datetime
     age_days: int
     document_id: UUID | None
+    # G31: what the reader needs to open the report this raven came from (None for demo ravens).
+    document_filename: str | None = None
+    document_type: str | None = None
     summary: str
     better: int
     worse: int
