@@ -16,7 +16,7 @@ import {
   type ScrollPhase,
 } from "../lib/scroll";
 import { readsAsScroll } from "../lib/scrolls";
-import { factKey, jumpablePage } from "../lib/statements";
+import { factKey, jumpablePage, ownPeriodOf } from "../lib/statements";
 import type { DocumentFact } from "../lib/types";
 import { ScrollRollers, ScrollSeal } from "./ScrollStage";
 import { StatementsPane } from "./StatementsPane";
@@ -135,6 +135,7 @@ export function DocumentReader({
   // Figures stored from this file, shown beside it. null = still loading.
   const expectsFigures = kind !== "download" && (doc.fact_count === undefined || doc.fact_count > 0);
   const [facts, setFacts] = useState<DocumentFact[] | null>(null);
+  const [ownPeriod, setOwnPeriod] = useState<string | null>(null);
   const [factsError, setFactsError] = useState(false);
   const [paneOpen, setPaneOpen] = useState(true);
   const [mobileTab, setMobileTab] = useState<"document" | "figures">("document");
@@ -152,6 +153,7 @@ export function DocumentReader({
       .then((detail) => {
         if (cancelled) return;
         setFacts(detail.facts);
+        setOwnPeriod(ownPeriodOf(detail.quality_flags));
         // Opened from one figure: mark it as the one the filing is showing.
         const opened = initialPage
           ? detail.facts.find(
@@ -486,6 +488,7 @@ export function DocumentReader({
                     facts={facts}
                     activeKey={activeKey}
                     focusMetric={focusMetric}
+                    ownPeriod={ownPeriod}
                     canJump={blobUrl !== null}
                     onJump={jumpTo}
                   />

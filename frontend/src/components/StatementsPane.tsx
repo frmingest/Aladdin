@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { factKey, formatFactValue, groupStatements, jumpablePage } from "../lib/statements";
+import { factKey, formatFactValue, groupStatements, isComparativePeriod, jumpablePage } from "../lib/statements";
 import type { DocumentFact } from "../lib/types";
 
 /** The figures stored from a filing, laid out as statement tables. Each
@@ -9,6 +9,7 @@ export function StatementsPane({
   facts,
   activeKey,
   focusMetric,
+  ownPeriod,
   canJump,
   onJump,
 }: {
@@ -17,6 +18,8 @@ export function StatementsPane({
   activeKey: string | null;
   /** Emphasised row when the reader was opened from one figure. */
   focusMetric?: string;
+  /** The filing's own fiscal year; older columns are labelled as its prior-year comparatives. */
+  ownPeriod?: string | null;
   canJump: boolean;
   onJump: (fact: DocumentFact) => void;
 }) {
@@ -48,6 +51,14 @@ export function StatementsPane({
                 {group.periods.map((p) => (
                   <th key={p} className="py-1 pl-2 font-medium">
                     {p}
+                    {isComparativePeriod(p, ownPeriod) && (
+                      <span
+                        className="block text-[9px] font-normal normal-case leading-none text-ink-faint"
+                        title="This filing shows this year as the comparative column next to its own year"
+                      >
+                        prior year
+                      </span>
+                    )}
                   </th>
                 ))}
               </tr>

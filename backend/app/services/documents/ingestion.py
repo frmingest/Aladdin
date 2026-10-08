@@ -55,22 +55,73 @@ def _differs_beyond_rounding(a: Decimal, b: Decimal) -> bool:
     return scale != 0 and abs(a - b) > scale * ROUNDING_TOLERANCE
 
 
+@dataclass
+class _OwnedFact:
+    """A stored figure that currently "owns" a (metric, fiscal year) for a
+    holding, with what is needed to rank it against another source."""
+
+    value: Decimal
+    filename: str
+    own_year: int | None  # the filing's own fiscal year; None = not an iXBRL/ESEF filing
+    item: FinancialLineItem | None  # the stored row (None only for in-memory test doubles)
+
+
+ExistingFacts = dict[tuple[str, int | None], _OwnedFact]
+
+
+def own_year_from_details(details: dict | None) -> int | None:
+    """A tagged filing's own fiscal year = the latest year it reports.
+    Reads the extractor's `ixbrl` details or an ESEF-index import's
+    `esef_index` details; anything else (PDF, CSV, a factsheet) has none."""
+    for key in ("ixbrl", "esef_index"):
+        block = (details or {}).get(key)
+        if isinstance(block, dict):
+            years = [y for y in (extract_year(str(p)) for p in block.get("fiscal_years") or []) if y is not None]
+            if years:
+                return max(years)
+    return None
+
+
+def _source_rank(own_year: int | None, year: int | None) -> tuple[int, int] | None:
+    """Lower is better. A filing's own year beats a comparative; among
+    comparatives the nearest later report wins (it is the earliest to restate
+    the year). None = unknown (not a tagged filing): never ranked against
+    anything, so the old "first source wins" applies between such files."""
+    if own_year is None or year is None:
+        return None
+    if own_year == year:
+        return (0, 0)
+    if own_year > year:
+        return (1, own_year - year)
+    return (2, year - own_year)  # a figure from a year after the filing's own: should not happen
+
+
+def _outranks(new: tuple[int, int] | None, old: tuple[int, int] | None) -> bool:
+    return new is not None and old is not None and new < old
+
+
 def _existing_facts_by_year(
     db: Session, document: Document, also_exclude: frozenset[uuid.UUID] = frozenset()
-) -> dict[tuple[str, int | None], tuple[Decimal, str]]:
-    """(metric, fiscal year) -> (value, source file name) already stored for
-    this holding from other documents."""
+) -> ExistingFacts:
+    """(metric, fiscal year) -> the stored figure already on file for this
+    holding from other documents. If legacy data holds the same year twice,
+    the better-ranked source is the one reported."""
     rows = db.execute(
-        select(FinancialLineItem.metric, FinancialLineItem.period, FinancialLineItem.value, Document.original_filename)
+        select(FinancialLineItem, Document.original_filename, Document.quality_flags)
         .join(Document, Document.id == FinancialLineItem.document_id)
         .where(
             FinancialLineItem.holding_id == document.holding_id,
             FinancialLineItem.document_id.not_in({document.id, *also_exclude}),
         )
     ).all()
-    found: dict[tuple[str, int | None], tuple[Decimal, str]] = {}
-    for metric, period, value, filename in rows:
-        found.setdefault((metric, extract_year(period)), (value, filename))
+    found: ExistingFacts = {}
+    for item, filename, flags in rows:
+        year = extract_year(item.period)
+        key = (item.metric, year)
+        owned = _OwnedFact(item.value, filename, own_year_from_details(flags), item)
+        current = found.get(key)
+        if current is None or _outranks(_source_rank(owned.own_year, year), _source_rank(current.own_year, year)):
+            found[key] = owned
     return found
 
 
@@ -158,12 +209,21 @@ def _store_facts(
     db: Session,
     document: Document,
     facts: list,
-    existing: dict[tuple[str, int | None], tuple[Decimal, str]],
+    existing: ExistingFacts,
+    own_year: int | None = None,
 ) -> tuple[list[str], bool]:
-    """Persist extracted facts for a document. First source wins: a year
-    already on file from another document is never silently replaced; a
-    differing value is reported. Returns (notes about kept values, whether any
-    fact had no holding to belong to). `existing` is updated as facts are
+    """Persist extracted facts for a document, deciding who owns each
+    (metric, fiscal year) the same way whatever order files arrive in:
+
+    * a filing's own year beats a later filing's comparative column;
+    * between comparatives the nearest later filing wins;
+    * files without a known own year (PDF, CSV) keep "first source wins" and
+      are never displaced.
+
+    A figure that loses is not stored; one that displaces a stored figure
+    replaces it. A differing value (a restatement, or a different line
+    chosen) is reported so it can be checked by hand. Returns (notes, whether
+    any fact had no holding to belong to). `existing` is updated as facts are
     added."""
     skipped_existing: list[str] = []
     no_holding = False
@@ -174,29 +234,38 @@ def _store_facts(
         year = extract_year(fact.period)
         prior = existing.get((fact.metric, year)) if year is not None else None
         if prior is not None:
-            # A differing value (a restatement, or a different line chosen)
-            # is reported so it can be checked by hand.
-            prior_value, prior_file = prior
-            if _differs_beyond_rounding(prior_value, fact.value):
+            differs = _differs_beyond_rounding(prior.value, fact.value)
+            if not _outranks(_source_rank(own_year, year), _source_rank(prior.own_year, year)):
+                if differs:
+                    skipped_existing.append(
+                        f"{fact.period} {fact.metric}: this file {fact.value.normalize():f} vs "
+                        f"{prior.value.normalize():f} from '{prior.filename}' (kept)"
+                    )
+                continue
+            # This filing is the better source for the year: replace.
+            if differs:
                 skipped_existing.append(
-                    f"{fact.period} {fact.metric}: this file {fact.value.normalize():f} vs "
-                    f"{prior_value.normalize():f} from '{prior_file}' (kept)"
+                    f"{fact.period} {fact.metric}: this file {fact.value.normalize():f} replaces "
+                    f"{prior.value.normalize():f} from '{prior.filename}' (this filing reports the year itself)"
                 )
-            continue
-        existing[(fact.metric, year)] = (fact.value, document.original_filename)
-        db.add(
-            FinancialLineItem(
-                document_id=document.id,
-                holding_id=document.holding_id,
-                metric=fact.metric,
-                value=fact.value,
-                unit=fact.unit,
-                currency=fact.currency,
-                period=fact.period,
-                source_page=fact.source_page,
-                confidence=fact.confidence,
-            )
+            if prior.item is not None:
+                if prior.item in db.new:  # added earlier in this same pass, not yet flushed
+                    db.expunge(prior.item)
+                else:
+                    db.delete(prior.item)
+        item = FinancialLineItem(
+            document_id=document.id,
+            holding_id=document.holding_id,
+            metric=fact.metric,
+            value=fact.value,
+            unit=fact.unit,
+            currency=fact.currency,
+            period=fact.period,
+            source_page=fact.source_page,
+            confidence=fact.confidence,
         )
+        db.add(item)
+        existing[(fact.metric, year)] = _OwnedFact(fact.value, document.original_filename, own_year, item)
     return skipped_existing, no_holding
 
 
@@ -265,7 +334,9 @@ def process_document(db: Session, document: Document, content: bytes) -> None:
     if facts_skipped_fund_document:
         result.facts = []
     existing = _existing_facts_by_year(db, document) if document.holding_id is not None else {}
-    skipped_existing, no_holding = _store_facts(db, document, result.facts, existing)
+    skipped_existing, no_holding = _store_facts(
+        db, document, result.facts, existing, own_year=own_year_from_details(result.details)
+    )
     facts_skipped_no_holding = facts_skipped_no_holding or no_holding
 
     flags = evaluate_quality(result.pages)
@@ -350,7 +421,9 @@ def refresh_document_facts(db: Session, storage: ObjectStorageProvider, holding:
         db.flush()
         existing = _existing_facts_by_year(db, reread[0][0], also_exclude=ids)
         for document, extracted in reread:
-            skipped, _ = _store_facts(db, document, extracted.facts, existing)
+            skipped, _ = _store_facts(
+                db, document, extracted.facts, existing, own_year=own_year_from_details(extracted.details)
+            )
             flags = {k: v for k, v in (document.quality_flags or {}).items() if k not in _EXTRACTOR_FLAGS}
             for flag in extracted.quality_flags:
                 if flag in _EXTRACTOR_FLAGS:

@@ -128,3 +128,25 @@ export function jumpablePage(fact: DocumentFact): number | null {
 export function factKey(fact: Pick<DocumentFact, "metric" | "period">): string {
   return `${fact.metric}|${fact.period}`;
 }
+
+/** The filing's own fiscal year, e.g. "FY2021": the latest year its tags report
+ * (`ixbrl` for an uploaded/fetched report, `esef_index` for an index import).
+ * null for anything else (PDF, CSV, a factsheet), where no column is a comparative. */
+export function ownPeriodOf(qualityFlags: Record<string, unknown> | null | undefined): string | null {
+  for (const key of ["ixbrl", "esef_index"]) {
+    const block = qualityFlags?.[key];
+    const years = block && typeof block === "object" ? (block as { fiscal_years?: unknown }).fiscal_years : undefined;
+    if (!Array.isArray(years)) continue;
+    const numbers = years.map((y) => /(\d{4})/.exec(String(y))?.[1]).filter((y): y is string => !!y);
+    if (numbers.length) return `FY${numbers.reduce((a, b) => (a > b ? a : b))}`;
+  }
+  return null;
+}
+
+/** A column is a prior-year comparative when it is older than the filing's own year. */
+export function isComparativePeriod(period: string, ownPeriod: string | null | undefined): boolean {
+  if (!ownPeriod) return false;
+  const year = /(\d{4})/.exec(period)?.[1];
+  const own = /(\d{4})/.exec(ownPeriod)?.[1];
+  return !!year && !!own && year < own;
+}
