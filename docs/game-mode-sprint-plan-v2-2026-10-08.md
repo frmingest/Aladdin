@@ -177,3 +177,7 @@ Faiz asked (2026-10-08) to redesign the Documents tab as a library, rename it "S
 - **Backend (additive):** `RavenOut` gains `document_filename` and `document_type` (both optional), filled for figures and text-only ravens. No schema, migration or rule-version change.
 - **Frontend:** pure helper `ravenReadable` (tests: reader shape, demo/old payload gives nothing, missing type) and the button in `RavensCard`.
 - **Verified:** ruff clean; backend suite 1,765 passed, 2 skipped; frontend tsc clean, ESLint 0 errors (the 2 existing warnings), 365 tests, build. **Not seen in a browser**; not tried with a real raven or report.
+
+## 13. Sprint 28 built (2026-10-08, branch `feature/fog-of-war-sprint28`, PR open, not merged, not deployed)
+
+G34 (survey level, `survey-v1`), G35 (Cartographer's table, Fortress → Map), G36 (Codex on the Glossary page) and G37 (time capsules on the Hall of Records) are written and tested, frontend only. Details, checks run and a look-and-judge list: [fog-of-war-sprint28-2026-10-08.md](fog-of-war-sprint28-2026-10-08.md). Not seen in a browser.

@@ -2,9 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, ApiError } from "../lib/api";
 import { formatDate } from "../lib/format";
+import { CAPSULE_CLASS, CAPSULE_MARK, capsuleLabel, capsuleState } from "../lib/capsules";
 import {
-  REVIEW_CLASS,
-  REVIEW_LABEL,
   actionLabel,
   daysText,
   filterRecords,
@@ -19,12 +18,15 @@ import { Card, EmptyState, PageHeader } from "../components/ui";
  * wrote then, the analyst verdict then and now, the price then and now, and which written reviews
  * are owed. Read-only; to write a review or a new entry, open the Journal. */
 
-function Review({ label, state, text }: { label: string; state: DecisionRecord["review_6m"]; text: string | null }) {
+function Review({ months, state, text }: { months: 6 | 12; state: DecisionRecord["review_6m"]; text: string | null }) {
+  const capsule = capsuleState(state);
   return (
     <div className="min-w-0">
-      <p className="flex items-center gap-2 text-xs">
-        <span className="font-semibold text-ink-muted">{label} review</span>
-        <span className={`rounded-full px-2 py-0.5 font-semibold ${REVIEW_CLASS[state]}`}>{REVIEW_LABEL[state]}</span>
+      <p className="text-xs">
+        <span className={`rounded-full px-2 py-0.5 font-semibold ${CAPSULE_CLASS[capsule]}`}>
+          <span aria-hidden="true">{CAPSULE_MARK[capsule]} </span>
+          {capsuleLabel(months, state)}
+        </span>
       </p>
       {text && <p className="mt-1 whitespace-pre-wrap text-sm text-ink">{text}</p>}
     </div>
@@ -65,8 +67,8 @@ function RecordCard({ r }: { r: DecisionRecord }) {
       <p className="mt-3 text-sm text-ink-muted">{priceLine(r)}</p>
       <p className="text-sm text-ink-muted">{verdictLine(r)}</p>
       <div className="mt-3 grid gap-3 border-t border-border-subtle pt-3 sm:grid-cols-2">
-        <Review label="6-month" state={r.review_6m} text={r.review_6m_text} />
-        <Review label="12-month" state={r.review_12m} text={r.review_12m_text} />
+        <Review months={6} state={r.review_6m} text={r.review_6m_text} />
+        <Review months={12} state={r.review_12m} text={r.review_12m_text} />
       </div>
     </Card>
   );
