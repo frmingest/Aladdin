@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { DocumentFact } from "./types";
-import { factKey, formatFactValue, groupStatements, jumpablePage, statementOf } from "./statements";
+import {
+  factKey,
+  formatFactValue,
+  groupStatements,
+  isComparativePeriod,
+  jumpablePage,
+  ownPeriodOf,
+  statementOf,
+} from "./statements";
 
 function fact(metric: string, period: string, value: string, page: number | null = 2, extra: Partial<DocumentFact> = {}): DocumentFact {
   return { metric, period, value, unit: "USD", currency: "USD", source_page: page, confidence: 1, ...extra };
@@ -65,5 +73,24 @@ describe("formatFactValue / jumpablePage / factKey", () => {
   });
   it("identifies a cell by metric and period", () => {
     expect(factKey(fact("revenue", "FY2025", "1"))).toBe("revenue|FY2025");
+  });
+});
+
+describe("ownPeriodOf / isComparativePeriod", () => {
+  it("reads the latest year an iXBRL filing reports", () => {
+    expect(ownPeriodOf({ ixbrl: { fiscal_years: ["FY2020", "FY2021", "FY2019"] } })).toBe("FY2021");
+    expect(ownPeriodOf({ esef_index: { fiscal_years: ["FY2024", "FY2023"] } })).toBe("FY2024");
+  });
+
+  it("is null for files without tags", () => {
+    expect(ownPeriodOf({ page_count: 3 })).toBeNull();
+    expect(ownPeriodOf(null)).toBeNull();
+    expect(ownPeriodOf({ ixbrl: { fiscal_years: "FY2021" } })).toBeNull();
+  });
+
+  it("marks only years older than the filing's own as comparatives", () => {
+    expect(isComparativePeriod("FY2020", "FY2021")).toBe(true);
+    expect(isComparativePeriod("FY2021", "FY2021")).toBe(false);
+    expect(isComparativePeriod("FY2020", null)).toBe(false);
   });
 });
