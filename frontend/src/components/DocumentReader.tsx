@@ -15,6 +15,7 @@ import {
   skipToOpen,
   type ScrollPhase,
 } from "../lib/scroll";
+import { readsAsScroll } from "../lib/scrolls";
 import { factKey, jumpablePage } from "../lib/statements";
 import type { DocumentFact } from "../lib/types";
 import { ScrollRollers, ScrollSeal } from "./ScrollStage";
@@ -121,7 +122,9 @@ export function DocumentReader({
   // Game mode G28: the report opens as a parchment scroll. Off = this reader exactly as before.
   const { gameMode } = useGameMode();
   const [scrollOff, setScrollOff] = useState(false); // "Plain reader": back to the ordinary reader
-  const scroll = gameMode && !scrollOff;
+  // An annual report in XHTML keeps the side-by-side reader (filing + stored figures, press a figure to
+  // jump to that exact number); every other document opens as a scroll (G30, readsAsScroll).
+  const scroll = gameMode && !scrollOff && readsAsScroll(doc);
   const reducedMotion =
     typeof window !== "undefined" && typeof window.matchMedia === "function"
       ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
