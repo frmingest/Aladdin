@@ -154,13 +154,13 @@ mode first, the "no buy/sell/reward" wording test extended to new text, and the 
 | D5 | Q1/Q3 Newsweb fetch | **Yes** |
 | D6 | Order | Left to Claude: **Sprint 27 work starts in parallel** with the walkthrough; Sprints 28+ wait for the walkthrough feedback |
 
-## 9. Built so far (2026-10-08, branch `feature/scriptorium-scroll-reader-and-quarterly-fetch`, PR open, not merged, not deployed)
+## 9. Built so far (2026-10-08, branch `feature/scriptorium-scroll-reader-and-quarterly-fetch`, PR #79, not merged, not deployed)
 
 - **G28 Phase A:** in game mode a report opens as a parchment scroll (seal, rollers, unroll, about 1.2 s; any key skips; reduced motion starts open; "Plain reader" button; game off = unchanged reader). Parchment tint multiplies HTML filings onto the paper (off by default for PDFs). Frontend only; tests in `lib/scroll.test.tsx`. Seen only in a headless Chromium test page (desktop and phone width) with a synthetic HTML filing. **Not seen with a real report or a PDF in Chrome's viewer**, which is the known unknown in section 6.
 - **G29 (resolved by the probe, no code needed):** Faiz ran `backend/scripts/newsweb_probe.py EQNR` on 2026-10-08. Newsweb category **1002 ("HALF YEAR FINANCIAL REPORT") already carries the quarterly results** (Equinor Q1, Q2 and Q4/full-year 2026 and 2025 titles), so the existing interim fetch already covers Q1/Q3. The extra-category setting built first was reverted as unnecessary (categories 1008 and 1101 also have "quarter" in dividend titles and would have pulled noise). What changed: the probe script stays, and the Sources panel now says "quarterly and half-year". Not yet checked: whether the Equinor Q1/Q3 PDFs are already on file in Faiz's database (re-press the Newsweb fetch on the holding; already-fetched reports are skipped).
 - **Verified:** backend suite and ruff passed before the G29 revert (the revert only removes code and tests added in the same PR); frontend tsc clean, ESLint 0 errors (the 2 existing warnings), 342 tests, build.
 
-## 10. G30 built (2026-10-08, branch `feature/scrolls-library-g30`, PR open, not merged, not deployed)
+## 10. G30 built (2026-10-08, branch `feature/scrolls-library-g30`, PR #79, not merged, not deployed)
 
 Faiz asked (2026-10-08) to redesign the Documents tab as a library, rename it "Scrolls", organise it by category, and then restore the old reader for annual XHTML reports.
 
@@ -170,10 +170,14 @@ Faiz asked (2026-10-08) to redesign the Documents tab as a library, rename it "S
 - **Reader rule (commit after G30, as asked):** every document opens as a parchment scroll **except an annual report in .xhtml**, which opens in the original side-by-side reader (filing beside the stored figures, press a figure to jump to that exact number). Annual PDFs and quarterly XHTML files still open as scrolls. The eye next to a figure in Metrics passes no document type; an XHTML file opened that way keeps the side-by-side reader. Pure helper `readsAsScroll` with tests.
 - **Verified:** tsc clean, ESLint 0 errors (2 existing warnings), 354 frontend tests (12 new for shelves, ordering, opened state, reader rule and library markup), build. Rendered in headless Chromium at desktop and phone width with sample documents: the library, and the reader for an annual XHTML (side-by-side with figures, no scroll) and a quarterly XHTML (scroll). **Not seen with real documents, not seen in the real Holding page, a PDF not tried.**
 
-## 11. G31 built (2026-10-08, branch `feature/raven-to-scroll-g31`, PR open, not merged, not deployed)
+## 11. G31 built (2026-10-08, branch `feature/raven-to-scroll-g31`, PR #79, not merged, not deployed)
 
 - **What it does:** every raven that came from a stored report (Ravens tab, game mode) has a **Read the report** button next to *Mark as seen*. It opens that report in the same reader as everywhere else, so the G30 rule applies unchanged: a scroll for most files, the side-by-side reader for an annual XHTML. Demo ravens have no stored report and show no button.
 - **Deliberately not built: the page jump.** The plan said to reuse the page anchoring. A raven compares *computed* measures (margins, return on capital, leverage), which are not printed on one page, so no honest page exists to jump to; a guessed page would mislead. The report opens at its start. A real jump would need a metric-to-source-fact mapping, which is a separate decision.
 - **Backend (additive):** `RavenOut` gains `document_filename` and `document_type` (both optional), filled for figures and text-only ravens. No schema, migration or rule-version change.
 - **Frontend:** pure helper `ravenReadable` (tests: reader shape, demo/old payload gives nothing, missing type) and the button in `RavensCard`.
 - **Verified:** ruff clean; backend suite 1,765 passed, 2 skipped; frontend tsc clean, ESLint 0 errors (the 2 existing warnings), 365 tests, build. **Not seen in a browser**; not tried with a real raven or report.
+
+## 13. Sprint 28 built (2026-10-08, branch `feature/fog-of-war-sprint28`, PR #79, not merged, not deployed)
+
+G34 (survey level, `survey-v1`), G35 (Cartographer's table, Fortress → Map), G36 (Codex on the Glossary page) and G37 (time capsules on the Hall of Records) are written and tested, frontend only. Details, checks run and a look-and-judge list: [fog-of-war-sprint28-2026-10-08.md](fog-of-war-sprint28-2026-10-08.md). Not seen in a browser.
