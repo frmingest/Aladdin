@@ -169,15 +169,19 @@ export default function SiegeSimulatorPage() {
                 <p className="tabular font-display text-4xl text-ink" aria-live="polite">{formatDrop(drop ?? sim.market_drop)}</p>
               </div>
               <div className="flex flex-wrap gap-2 text-sm">
-                {toStorm !== null && (
-                  <button type="button" className="rounded-md border border-border px-3 py-1 text-ink-muted hover:text-ink" onClick={() => setDrop(toStorm)} title={sim.reach_note_gathering}>
-                    Reach the storm line: {formatDrop(toStorm)}
-                  </button>
-                )}
-                {toSiege !== null && (
-                  <button type="button" className="rounded-md border border-border px-3 py-1 text-ink-muted hover:text-ink" onClick={() => setDrop(toSiege)} title={sim.reach_note_besieged}>
-                    Reach the siege line: {formatDrop(toSiege)}
-                  </button>
+                {[
+                  { target: toStorm, label: "Reach the storm line", note: sim.reach_note_gathering },
+                  { target: toSiege, label: "Reach the siege line", note: sim.reach_note_besieged },
+                ].map(({ target, label, note }) =>
+                  target !== null ? (
+                    <button key={label} type="button" className="rounded-md border border-border px-3 py-1 text-ink-muted hover:text-ink" onClick={() => setDrop(target)} title={note}>
+                      {label}: {formatDrop(target)}
+                    </button>
+                  ) : (
+                    <button key={label} type="button" disabled className="cursor-not-allowed rounded-md border border-dashed border-border px-3 py-1 text-ink-faint" title="No fall within the slider range reaches this line.">
+                      {label}: not reached
+                    </button>
+                  ),
                 )}
               </div>
             </div>

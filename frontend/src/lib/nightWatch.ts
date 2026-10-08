@@ -17,9 +17,9 @@ export const STATUS_CLASS: Record<NightWatchStatus, string> = {
 };
 
 export const WATCH_STATE_LABEL: Record<NightWatchState, string> = {
-  ok: "Reported in",
-  old: "Report is old",
-  never: "Never reported",
+  ok: "Watch reported on time",
+  old: "Watch report is old",
+  never: "Watch has never reported",
 };
 
 export const TONE_CLASS: Record<NightWatchLine["tone"], string> = {

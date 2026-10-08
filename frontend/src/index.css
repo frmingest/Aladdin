@@ -267,9 +267,18 @@
 /* Hover card over the scene: dark translucent panel, thin gilded rule, the
    name in the display face — the classic strategy-game tooltip. */
 .fortress-peek-slot {
-  /* reserved so the page below does not jump as the quick look comes and goes */
-  min-height: 9.5rem;
+  /* One line is reserved; the quick-look card floats over the space below it, so the
+     page neither jumps when it appears nor leaves a large empty panel when it is idle. */
+  position: relative;
+  min-height: 1.75rem;
   margin-top: 0.75rem;
+}
+.fortress-peek-slot > :not(p) {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 5;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.45);
 }
 .fortress-tip {
   width: 100%;
