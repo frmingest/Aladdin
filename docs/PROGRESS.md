@@ -11,6 +11,7 @@ State (checked against git 2026-10-08): `main` = `7d2d88b` (#71). Repo migration
 ## Active Tasks
 
 - [ ] **Deploy check (Faiz):** confirm Railway deployed `main`; run `select version_num from alembic_version;` in Supabase, expect `t1f2a3b4c5d6` (adds `s1e0f1a2b3c4` tag rules and `t1f2a3b4c5d6` instrument facts)
+- [ ] **Quarterly reports (Faiz):** on the PC run `python scripts/newsweb_probe.py EQNR` in `backend/`, tell Claude which category lists Q1/Q3 titles, then set `NEWSWEB_QUARTERLY_CATEGORY_IDS` (Railway and `backend/.env`); until then the fetch is unchanged ([plan](game-mode-sprint-plan-v2-2026-10-08.md))
 - [ ] **PC (Faiz):** `git pull` in `E:\Aladdin`, restart backend and worker (needed for #51 and #66 worker fixes). **Siege PR (#71) is merged:** wait for More, System, System status to show "Siege Simulator price history" has run, then reload `/fortress/siege` ([doc](siege-instrument-sensitivity-2026-10-07.md))
 - [ ] **First look at merged, never-seen work:** holding currency Edit and `≈ NOK` ([#68](currency-edit-and-nok-equivalent-2026-10-07.md)), Background jobs card ([#65](background-jobs-status-2026-10-07.md)), tag review inbox ([#60–62](tag-review-inbox-2026-10-07.md)), game-mode noise pass ([#64](game-mode-noise-audit-2026-10-07.md)), game mode G1–G20 walkthrough ([doc](game-mode-fortress-2026-10-01.md))
 - [ ] **Enter figures for the 3 non-equity holdings** (Alfred Berg Nordic High Yield II R, Heimdal Høyrente Pluss B, Xetra-Gold), Macro → Refresh data, run the three analyses ([#67](all-instrument-analysis-2026-10-07.md))
