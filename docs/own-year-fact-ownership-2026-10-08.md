@@ -1,6 +1,6 @@
 # Own-year fact ownership (2026-10-08)
 
-**Status: written and tested, not yet deployed.** PR: PRNUM.
+**Status: written and tested, not yet deployed.** PR: [#76](https://github.com/frmingest/Aladdin/pull/76).
 
 ## What Faiz saw
 
