@@ -236,6 +236,8 @@
 @media (prefers-reduced-motion: reduce) {
   .fortress-firefly, .fortress-ember, .fortress-rain { display: none; }
 }
+/* G41: the scene sets data-paused while the tab is hidden or the scene is off screen. */
+[data-paused="true"] * { animation-play-state: paused !important; }
 
 /* Study lamp glow (G7b): a slow breath, switched off under reduced motion. */
 @keyframes study-lamp-breathe {

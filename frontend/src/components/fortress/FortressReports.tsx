@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { unseen } from "../../lib/ravens";
+import { ravensTabLabel, splitRavens } from "../../lib/ravens";
 import type { GameState, Ravens } from "../../lib/types";
 import AdvisorsCard from "./AdvisorsCard";
 import RavensCard from "./RavensCard";
@@ -9,7 +9,7 @@ import TemperamentCard from "./TemperamentCard";
 /** The reports under the Fortress scene as one tabbed panel (UX noise audit,
  * Wave 3): four cards used to stack under the picture and compete with it. Only
  * the open report is mounted. Nothing is hidden for good; each report is one
- * click away and the tab for the ravens shows how many you have not seen. */
+ * click away and the tab for the ravens shows how many landed in the last 48 hours. */
 
 type ReportId = "advisors" | "weather" | "temperament" | "ravens";
 
@@ -25,12 +25,12 @@ export default function FortressReports({
   onSeen: (ids: string[]) => void;
 }) {
   const [active, setActive] = useState<ReportId>("advisors");
-  const newRavens = ravens ? unseen(ravens.ravens, seen).length : 0;
+  const newRavens = ravens ? splitRavens(ravens.ravens, seen, ravens.as_of).recent.length : 0;
   const tabs: { id: ReportId; label: string }[] = [
     { id: "advisors", label: "Advisors" },
     { id: "weather", label: "Weather" },
     { id: "temperament", label: "Temperament" },
-    { id: "ravens", label: newRavens > 0 ? `Ravens · ${newRavens} unseen` : "Ravens" },
+    { id: "ravens", label: ravensTabLabel(newRavens) },
   ];
   return (
     <section aria-label="Fortress reports" className="space-y-3">
