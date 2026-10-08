@@ -101,3 +101,69 @@ export function ravenReadable(
     reporting_period: r.period,
   };
 }
+
+/** The ravens tab leads with what landed in the last RECENT_HOURS; everything older waits, grouped per
+ * company, behind a fold. The cut-off uses the server's own `as_of` clock, not the browser's. */
+export const RECENT_HOURS = 48;
+
+export type RavenScope = "all" | "portfolio" | "watchlist";
+
+export interface RavenGroup {
+  holding_id: string;
+  name: string;
+  in_portfolio: boolean;
+  /** Newest first. */
+  ravens: Raven[];
+}
+
+export interface RavenSplit {
+  /** Unseen, captured within RECENT_HOURS, newest first. */
+  recent: Raven[];
+  /** Unseen, older: one group per company, the company with the newest raven first. */
+  earlier: RavenGroup[];
+  earlierCount: number;
+}
+
+function capturedMs(r: Raven): number {
+  const t = Date.parse(r.captured_at);
+  return Number.isNaN(t) ? 0 : t;
+}
+
+export function inScope(r: Raven, scope: RavenScope): boolean {
+  return scope === "all" || (scope === "portfolio" ? r.in_portfolio : !r.in_portfolio);
+}
+
+/** Split the unseen ravens into the recent ones and the older ones grouped per company. Pure. */
+export function splitRavens(
+  ravens: Raven[],
+  seen: Set<string>,
+  nowIso: string | null | undefined,
+  scope: RavenScope = "all",
+  hours: number = RECENT_HOURS,
+): RavenSplit {
+  const parsed = nowIso ? Date.parse(nowIso) : NaN;
+  const now = Number.isNaN(parsed) ? Date.now() : parsed;
+  const cutoff = now - hours * 3_600_000;
+  const pool = unseen(ravens, seen)
+    .filter((r) => inScope(r, scope))
+    .sort((a, b) => capturedMs(b) - capturedMs(a) || a.name.localeCompare(b.name));
+  const recent = pool.filter((r) => capturedMs(r) >= cutoff);
+  const older = pool.filter((r) => capturedMs(r) < cutoff);
+  const groups = new Map<string, RavenGroup>();
+  for (const r of older) {
+    const g = groups.get(r.holding_id);
+    if (g) g.ravens.push(r);
+    else groups.set(r.holding_id, { holding_id: r.holding_id, name: r.name, in_portfolio: r.in_portfolio, ravens: [r] });
+  }
+  return { recent, earlier: [...groups.values()], earlierCount: older.length };
+}
+
+/** Tab label: only what is new in the last RECENT_HOURS is a number worth showing. */
+export function ravensTabLabel(recentCount: number): string {
+  return recentCount > 0 ? `Ravens · ${recentCount} new` : "Ravens";
+}
+
+export function groupSummary(g: RavenGroup): string {
+  const n = g.ravens.length;
+  return `${n} ${n === 1 ? "report" : "reports"} · newest ${ageText(g.ravens[0].age_days)}`;
+}

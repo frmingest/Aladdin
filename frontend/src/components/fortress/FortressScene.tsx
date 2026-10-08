@@ -1,4 +1,6 @@
-import { useMemo, type KeyboardEvent } from "react";
+import { useMemo, useRef, type KeyboardEvent } from "react";
+import { isNavKey, nextTower } from "../../lib/sceneNav";
+import { useSceneRunning } from "./useScenePause";
 import {
   CURTAIN_HEIGHT,
   FRESHNESS_LABEL,
@@ -1132,11 +1134,14 @@ function TowerFigure({
   onHover,
   level,
   raven = false,
+  onNavigate,
 }: {
   item: PlacedTower;
   selected: boolean;
   onSelect: (id: string) => void;
   onHover: (id: string | null) => void;
+  /** G42: an arrow key, Home or End was pressed on this tower. */
+  onNavigate?: (fromId: string, key: string) => void;
   level: FortressSiegeLevel | null;
   /** G15: a report was captured for this holding and has not been seen yet. */
   raven?: boolean;
@@ -1147,6 +1152,9 @@ function TowerFigure({
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       onSelect(tower.holding_id);
+    } else if (isNavKey(e.key) && onNavigate) {
+      e.preventDefault();
+      onNavigate(tower.holding_id, e.key);
     }
   };
   const crown = crownY(item);
@@ -1154,8 +1162,9 @@ function TowerFigure({
     <g
       role="button"
       tabIndex={0}
+      data-tower-id={tower.holding_id}
       aria-pressed={selected}
-      aria-label={`${describeTower(tower)}.${raven ? " A new report has landed." : ""} Press for details.`}
+      aria-label={`${describeTower(tower)}.${raven ? " A new report has landed." : ""} Press for details. Arrow keys move to the next tower.`}
       className={`fortress-tower${selected ? " is-selected" : ""}`}
       onClick={() => onSelect(tower.holding_id)}
       onKeyDown={onKey}
@@ -1330,12 +1339,20 @@ export default function FortressScene({
   const runs = useMemo(() => moatRuns(layout), [layout]);
   const rowCount = Math.max(1, layout.rows);
   const handlers: RealmHandlers = { realm, onRealmSelect, onRealmHover };
+  const rootRef = useRef<HTMLDivElement>(null);
+  const running = useSceneRunning(rootRef);
+  const onNavigate = (fromId: string, key: string) => {
+    if (!isNavKey(key)) return;
+    const target = nextTower(layout.items, fromId, key);
+    if (!target) return;
+    rootRef.current?.querySelector<SVGGElement>(`[data-tower-id="${CSS.escape(target)}"]`)?.focus();
+  };
   const anyFresh = layout.items.some((i) => i.tower.freshness === "fresh");
   const summary = `${SIEGE_LABEL[level ?? "unsurveyed"]}. One fortress with a Great Keep for the whole portfolio and ${layout.items.length} ${
     layout.items.length === 1 ? "tower" : "towers"
   }, each a holding. ${layout.items.map((i) => `${i.tower.name}: ${MOAT_LABEL[i.tower.moat].toLowerCase()}`).join("; ")}`;
   return (
-    <div className="relative min-w-[720px]">
+    <div ref={rootRef} data-paused={running ? undefined : "true"} className="relative min-w-[720px]">
       <svg viewBox={`0 0 ${SCENE_WIDTH} ${height}`} className="block h-auto w-full" role="group" aria-label={summary}>
         <SceneDefs palette={palette} />
         <SceneBackdrop layout={layout} sky={sky} palette={palette} height={height} />
@@ -1362,6 +1379,7 @@ export default function FortressScene({
                   onHover={onHover}
                   level={level}
                   raven={ravenIds?.has(item.tower.holding_id) ?? false}
+                  onNavigate={onNavigate}
                 />
               ))}
               {rowItems.map((item) => (

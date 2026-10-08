@@ -9,7 +9,10 @@ import {
   ravenHoldingIds,
   ravenOneLine,
   ravenReadable,
+  ravensTabLabel,
+  groupSummary,
   saveSeen,
+  splitRavens,
   unseen,
 } from "./ravens";
 import type { Raven } from "./types";
@@ -98,5 +101,54 @@ describe("ravenReadable (G31)", () => {
   });
   it("leaves the type undefined when the API did not send one", () => {
     expect(ravenReadable(raven("c", { document_id: "d3", document_filename: "x.pdf" }))?.type).toBeUndefined();
+  });
+});
+
+describe("recent first (48 hours)", () => {
+  const NOW = "2026-10-08T18:00:00Z";
+  const at = (hoursAgo: number) => new Date(Date.parse(NOW) - hoursAgo * 3_600_000).toISOString();
+  const r = (id: string, hoursAgo: number, over: Partial<Raven> = {}) =>
+    raven(id, { captured_at: at(hoursAgo), age_days: Math.floor(hoursAgo / 24), ...over });
+
+  it("puts the last 48 hours first and groups everything older per company", () => {
+    const list = [
+      r("old-a1", 100, { holding_id: "A", name: "Alpha" }),
+      r("new-b", 3, { holding_id: "B", name: "Beta" }),
+      r("old-a2", 120, { holding_id: "A", name: "Alpha" }),
+      r("old-c", 90, { holding_id: "C", name: "Gamma" }),
+      r("new-a", 47, { holding_id: "A", name: "Alpha" }),
+    ];
+    const split = splitRavens(list, new Set(), NOW);
+    expect(split.recent.map((x) => x.id)).toEqual(["new-b", "new-a"]);
+    expect(split.earlierCount).toBe(3);
+    expect(split.earlier.map((g) => g.name)).toEqual(["Gamma", "Alpha"]);
+    expect(split.earlier[1].ravens.map((x) => x.id)).toEqual(["old-a1", "old-a2"]);
+    expect(groupSummary(split.earlier[1])).toBe("2 reports · newest 4 days ago");
+  });
+
+  it("drops seen ravens and honours the portfolio / watchlist filter", () => {
+    const list = [
+      r("a", 1, { in_portfolio: true }),
+      r("b", 2, { in_portfolio: false }),
+      r("c", 200, { in_portfolio: false, holding_id: "W" }),
+    ];
+    expect(splitRavens(list, new Set(["a"]), NOW).recent.map((x) => x.id)).toEqual(["b"]);
+    expect(splitRavens(list, new Set(), NOW, "portfolio").recent.map((x) => x.id)).toEqual(["a"]);
+    const watch = splitRavens(list, new Set(), NOW, "watchlist");
+    expect(watch.recent.map((x) => x.id)).toEqual(["b"]);
+    expect(watch.earlierCount).toBe(1);
+  });
+
+  it("counts a raven exactly at the cut-off as recent, and survives a bad clock or date", () => {
+    expect(splitRavens([r("edge", 48)], new Set(), NOW).recent).toHaveLength(1);
+    expect(splitRavens([r("just-over", 48.01)], new Set(), NOW).recent).toHaveLength(0);
+    expect(() => splitRavens([r("x", 1)], new Set(), "junk")).not.toThrow();
+    expect(splitRavens([raven("bad", { captured_at: "nope" })], new Set(), NOW).earlierCount).toBe(1);
+    expect(splitRavens([], new Set(), null)).toEqual({ recent: [], earlier: [], earlierCount: 0 });
+  });
+
+  it("labels the tab with new ravens only", () => {
+    expect(ravensTabLabel(0)).toBe("Ravens");
+    expect(ravensTabLabel(4)).toBe("Ravens · 4 new");
   });
 });
