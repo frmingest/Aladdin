@@ -44,6 +44,8 @@ import { ThesisPanel } from "../components/ThesisPanel";
 import { FundFactsPanel } from "../components/FundFactsPanel";
 import { MarketMultiplesCard } from "../components/MarketMultiplesCard";
 import { DocumentFlagsNote } from "../components/DocumentFlagsNote";
+import ScrollsLibrary from "../components/ScrollsLibrary";
+import { useGameMode } from "../lib/gameMode";
 import { DocumentReadButton } from "../components/DocumentReader";
 import { ResearchPanel } from "../components/ResearchPanel";
 import { NewswebAllReportsCard, SourcesPanel } from "../components/SourcesPanel";
@@ -321,6 +323,7 @@ function DocumentsPanel({
   onUploaded: () => void;
   isFund?: boolean;
 }) {
+  const { gameMode } = useGameMode();
   const [documents, setDocuments] = useState<DocumentSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -416,7 +419,7 @@ function DocumentsPanel({
 
   return (
     <Card>
-      <h3 className="mb-3 text-sm font-semibold text-ink">Filings</h3>
+      <h3 className="mb-3 text-sm font-semibold text-ink">{gameMode ? "The library" : "Filings"}</h3>
 
       <div className="mb-4 flex flex-wrap items-end gap-3 border-b border-border-subtle pb-4">
         <label className="flex flex-col gap-1 text-sm">
@@ -490,11 +493,20 @@ function DocumentsPanel({
 
       {documents === null && <p className="text-sm text-ink-muted">Loading…</p>}
 
-      {documents !== null && documents.length === 0 && (
+      {documents !== null && documents.length === 0 && !gameMode && (
         <p className="text-sm text-ink-muted">No filings uploaded yet.</p>
       )}
 
-      {documents !== null && documents.length > 0 && (
+      {documents !== null && gameMode && (
+        <ScrollsLibrary
+          documents={documents}
+          deletingId={deletingId}
+          onDelete={(d) => void handleDeleteDocument(d)}
+          renderMeta={(d) => <DocumentFlagsNote document={d} />}
+        />
+      )}
+
+      {documents !== null && documents.length > 0 && !gameMode && (
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
@@ -602,6 +614,7 @@ export default function HoldingDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [metricsKey, setMetricsKey] = useState(0);
   const [searchParams, setSearchParams] = useSearchParams();
+  const { gameMode } = useGameMode();
   const tabParam = searchParams.get("tab");
 
   useEffect(() => {
@@ -666,7 +679,7 @@ export default function HoldingDetailPage() {
     { id: "overview", label: "Overview" },
     { id: "analysis", label: "Analysis" },
     { id: "numbers", label: isFund ? "Fund facts" : "Financials" },
-    { id: "documents", label: "Documents" },
+    { id: "documents", label: gameMode ? "Scrolls" : "Documents" },
     { id: "journal", label: "Journal" },
   ];
   const active = tabs.some((t) => t.id === tabParam) ? (tabParam as string) : "overview";
@@ -779,7 +792,7 @@ export default function HoldingDetailPage() {
         <TabPanel id="documents">
           <div className="space-y-8">
             <div>
-              <h2 className="section-title">Documents</h2>
+              <h2 className="section-title">{gameMode ? "Scrolls" : "Documents"}</h2>
               <DocumentsPanel holdingId={id} isFund={isFund} onUploaded={bumpMetrics} />
             </div>
             <CollapsibleSection id="sec-sources" title="Primary sources" hint="SEC EDGAR filings · Oslo Børs announcements">

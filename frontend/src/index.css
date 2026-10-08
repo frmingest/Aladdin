@@ -831,3 +831,37 @@
 @media (prefers-reduced-motion: reduce) {
   .scroll-paper, .scroll-paper > *, .scroll-roller, .scroll-seal, .scroll-caption { transition: none !important; }
 }
+
+/* Scrolls library (game mode G30): documents as rolled scrolls on wooden shelves. */
+.library { display: flex; flex-direction: column; gap: 1.25rem; }
+.library-lead { font-size: 0.8rem; color: rgb(var(--c-ink-muted)); }
+.library-shelf { position: relative; padding: 0.6rem 0.75rem 0; border-left: 6px solid #4a331b; border-right: 6px solid #4a331b; border-radius: 6px 6px 0 0;
+  background: linear-gradient(to bottom, rgba(20, 12, 6, 0.55), rgba(56, 38, 20, 0.3)); box-shadow: inset 0 10px 24px rgba(0, 0, 0, 0.45); }
+.library-plaque { display: inline-flex; align-items: center; gap: 0.5rem; margin-bottom: 0.6rem; padding: 0.15rem 0.7rem; font-family: "Marcellus", Georgia, serif; font-size: 0.85rem; letter-spacing: 0.04em;
+  color: #2b1d0e; background: linear-gradient(to bottom, #e8c480, #c79a46); border-radius: 3px; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 245, 210, 0.6); }
+.library-count { padding: 0 0.4rem; border-radius: 999px; font-size: 0.7rem; background: rgba(43, 29, 14, 0.18); }
+.library-empty { padding: 1rem 0.25rem 1.25rem; font-size: 0.8rem; font-style: italic; color: rgb(var(--c-ink-faint)); }
+.library-row { display: flex; flex-wrap: wrap; gap: 1rem 1.25rem; padding: 0.25rem 0 1rem; list-style: none; margin: 0; }
+.library-plank { height: 14px; margin: 0 -0.75rem; border-radius: 0 0 4px 4px; background: linear-gradient(to bottom, #8a5a26, #5a3512 60%, #3d230c);
+  box-shadow: 0 8px 14px -4px rgba(0, 0, 0, 0.65), inset 0 2px 0 rgba(255, 220, 160, 0.3); }
+.library-tile { position: relative; display: flex; flex-direction: column; width: 9.5rem; }
+.library-scroll { position: relative; display: flex; flex-direction: column; align-items: stretch; width: 100%; padding: 0; border: 0; background: none; cursor: pointer; transition: transform 140ms ease; }
+.library-scroll:hover, .library-scroll:focus-visible { transform: translateY(-3px); }
+.library-scroll:focus-visible { outline: 2px solid #f2c94c; outline-offset: 4px; border-radius: 6px; }
+.library-roller { display: block; height: 14px; margin: 0 -5px; border-radius: 7px; background: linear-gradient(to bottom, #8a5a26, #5a3512 55%, #3d230c); box-shadow: 0 3px 6px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 220, 160, 0.35); z-index: 1; }
+.library-paper { padding: 0 2rem 0 0.5rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.3rem; min-height: 4.2rem; color: #2b1d0e;
+  background-color: #efe2c0; background-image: radial-gradient(ellipse at 50% 0%, rgba(255, 248, 222, 0.7), transparent 60%), radial-gradient(ellipse at 50% 100%, rgba(120, 80, 30, 0.22), transparent 55%);
+  box-shadow: inset 0 0 18px rgba(120, 80, 30, 0.3); }
+.library-period { font-family: "Marcellus", Georgia, serif; font-size: 0.95rem; }
+.library-tag { padding: 0 0.4rem; border-radius: 3px; font-size: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase; background: rgba(43, 29, 14, 0.14); }
+.library-seal { position: absolute; right: 8px; top: 50%; width: 24px; height: 24px; margin: -12px 0 0 0; border-radius: 50%; z-index: 2; pointer-events: none;
+  background: radial-gradient(circle at 35% 30%, #c0392b, #8e1f14 60%, #5e120b); box-shadow: 0 2px 5px rgba(0, 0, 0, 0.55), inset 0 -2px 4px rgba(0, 0, 0, 0.35); }
+.library-seal[data-opened="true"] { opacity: 0.35; filter: grayscale(0.6); clip-path: polygon(0 0, 55% 0, 45% 40%, 60% 55%, 50% 100%, 0 100%); transform: rotate(-12deg); }
+.library-scroll[data-opened="true"] .library-paper { background-color: #e3d4ae; }
+.library-name { margin-top: 0.45rem; font-size: 0.7rem; color: rgb(var(--c-ink)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.library-facts { font-size: 0.65rem; color: rgb(var(--c-ink-muted)); }
+.library-delete { align-self: flex-start; margin-top: 0.15rem; padding: 0; border: 0; background: none; font-size: 0.65rem; color: rgb(var(--c-negative)); cursor: pointer; }
+.library-delete:hover { text-decoration: underline; }
+.library-delete:disabled { opacity: 0.5; }
+@media (prefers-reduced-motion: reduce) { .library-scroll { transition: none; } .library-scroll:hover, .library-scroll:focus-visible { transform: none; } }
+@media (max-width: 480px) { .library-row { gap: 0.9rem 0.8rem; } .library-tile { width: calc(50% - 0.4rem); } }
