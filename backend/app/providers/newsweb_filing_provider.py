@@ -48,7 +48,6 @@ guessing.
 from __future__ import annotations
 
 import io
-import re
 import zipfile
 from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
@@ -87,18 +86,6 @@ _REPORT_EXTENSIONS = (".xhtml", ".htm", ".html")
 # in the list" when a differently-named one is clearly the presentation,
 # not the report.
 _PRESENTATION_PDF_KEYWORDS = ("presentation", "presentasjon", "webcast", "invitation", "invitasjon")
-
-
-# Quarterly (Q1/Q3) reports. Oslo Børs cut its disclosure categories to 25 (2017) and Newsweb has
-# no category id this code can assume for them, so the ids are configuration
-# (NEWSWEB_QUARTERLY_CATEGORY_IDS, empty by default). A configured category can be a broad one, so
-# a row is only kept when its title reads like a periodic report.
-_QUARTERLY_TITLE_RE = re.compile(r"\bq[1-4]\b|quarter|kvartal|interim|delår", re.IGNORECASE)
-
-
-def looks_like_quarterly_report(title: str) -> bool:
-    """True when an announcement title reads like a quarterly or interim report."""
-    return bool(_QUARTERLY_TITLE_RE.search(title or ""))
 
 
 class NewswebFilingUnavailableError(ResearchUnavailableError):
@@ -364,42 +351,6 @@ class NewswebFilingProvider:
         list_annual_reports, category 1002 instead of 1001 (Faiz's ask,
         2026-09-26, following the document-sources investigation)."""
         return self._list_reports(issuer_sign, since=since, today=today, category_id=INTERIM_REPORT_CATEGORY_ID)
-
-    def list_quarterly_reports(
-        self,
-        issuer_sign: str,
-        *,
-        since: date,
-        category_ids: tuple[int, ...],
-        today: date | None = None,
-    ) -> list[NewswebAnnualReportRef]:
-        """Quarterly/interim announcements for this issuer from the configured category ids, kept only
-        when the title reads like a periodic report (see ``looks_like_quarterly_report``), newest
-        first, de-duplicated by message id. Empty when no category id is configured."""
-        issuer_sign = issuer_sign.strip().upper()
-        end = today or datetime.now(timezone.utc).date()
-        picked: dict[str, tuple[str, datetime | None]] = {}
-        for category_id in category_ids:
-            for message_id, title, published_at in self._list_rows(
-                issuer_sign, start=since, end=end, category_id=category_id
-            ):
-                if looks_like_quarterly_report(title):
-                    picked.setdefault(message_id, (title, published_at))
-        rows = sorted(
-            picked.items(),
-            key=lambda item: item[1][1] or datetime.min.replace(tzinfo=timezone.utc),
-            reverse=True,
-        )
-        return [
-            NewswebAnnualReportRef(
-                message_id=message_id,
-                message_url=MESSAGE_PAGE_URL.format(message_id=message_id),
-                title=title,
-                published_at=published_at,
-                attachments=self.get_message_attachments(message_id),
-            )
-            for message_id, (title, published_at) in rows
-        ]
 
     def get_message_attachments(self, message_id: str) -> list[NewswebAttachmentRef]:
         payload = self._get_json(MESSAGE_URL, {"messageId": str(message_id)})
