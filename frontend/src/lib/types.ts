@@ -2276,6 +2276,9 @@ export interface Raven {
   captured_at: string;
   age_days: number;
   document_id: string | null;
+  /** G31: what the reader needs to open the report the raven came from. */
+  document_filename?: string | null;
+  document_type?: string | null;
   summary: string;
   better: number;
   worse: number;

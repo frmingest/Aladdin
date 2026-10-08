@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { DIRECTION_CLASS, DIRECTION_LABEL, ageText, ravenHeading, ravenOneLine, unseen } from "../../lib/ravens";
+import { DIRECTION_CLASS, DIRECTION_LABEL, ageText, ravenHeading, ravenOneLine, ravenReadable, unseen } from "../../lib/ravens";
 import type { Raven, Ravens } from "../../lib/types";
+import { DocumentReadButton } from "../DocumentReader";
 import { Button, Card } from "../ui";
 
 /** Game mode G15, the Ravens: a raven lands on a tower when a new report is captured and says what
@@ -9,6 +10,7 @@ import { Button, Card } from "../ui";
  * says what to do. "Seen" is kept per browser; it never changes a stored value. */
 
 function RavenRow({ raven, onSeen }: { raven: Raven; onSeen: (id: string) => void }) {
+  const readable = ravenReadable(raven);
   return (
     <li className="py-3">
       <p className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
@@ -39,13 +41,16 @@ function RavenRow({ raven, onSeen }: { raven: Raven; onSeen: (id: string) => voi
           </ul>
         </details>
       )}
-      <button
-        type="button"
-        onClick={() => onSeen(raven.id)}
-        className="mt-1 text-xs text-ink-faint underline-offset-2 hover:text-ink-muted hover:underline"
-      >
-        Mark as seen
-      </button>
+      <div className="mt-1 flex flex-wrap items-center gap-x-3">
+        {readable && <DocumentReadButton document={readable} label="Read the report" className="-ml-1.5" />}
+        <button
+          type="button"
+          onClick={() => onSeen(raven.id)}
+          className="text-xs text-ink-faint underline-offset-2 hover:text-ink-muted hover:underline"
+        >
+          Mark as seen
+        </button>
+      </div>
     </li>
   );
 }

@@ -8,6 +8,7 @@ import {
   ravenHeading,
   ravenHoldingIds,
   ravenOneLine,
+  ravenReadable,
   saveSeen,
   unseen,
 } from "./ravens";
@@ -81,5 +82,21 @@ describe("wording", () => {
   it("never gives advice in any label", () => {
     const text = [ageText(3), ravenHeading(raven("a")), ravenOneLine(raven("a"))].join(" ");
     expect(text).not.toMatch(/\b(buy|sell|add|trim|invest|purchase)\b/i);
+  });
+});
+
+describe("ravenReadable (G31)", () => {
+  it("gives the reader what it needs to open the raven's report", () => {
+    const r = raven("a", { document_id: "d1", document_filename: "fy25.xhtml", document_type: "annual_report" });
+    expect(ravenReadable(r)).toEqual({
+      id: "d1", original_filename: "fy25.xhtml", type: "annual_report", reporting_period: "FY2025",
+    });
+  });
+  it("has nothing to open for a raven without a stored report (demo) or an old payload", () => {
+    expect(ravenReadable(raven("a"))).toBeNull();
+    expect(ravenReadable(raven("b", { document_id: "d2" }))).toBeNull();
+  });
+  it("leaves the type undefined when the API did not send one", () => {
+    expect(ravenReadable(raven("c", { document_id: "d3", document_filename: "x.pdf" }))?.type).toBeUndefined();
   });
 });

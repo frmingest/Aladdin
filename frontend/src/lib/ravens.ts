@@ -85,3 +85,19 @@ export function ravenOneLine(r: Raven): string {
   }
   return r.summary;
 }
+
+/** G31: the report a raven came from, in the shape the reader opens. Null when the raven has no stored
+ * report to open (the demo ravens). The reader decides scroll or side-by-side from the file name and type,
+ * exactly as everywhere else. No page is passed: a raven compares computed measures, which are not
+ * printed on one page, so it opens the report at its start. */
+export function ravenReadable(
+  r: Raven,
+): { id: string; original_filename: string; type?: string; reporting_period?: string | null } | null {
+  if (!r.document_id || !r.document_filename) return null;
+  return {
+    id: r.document_id,
+    original_filename: r.document_filename,
+    type: r.document_type ?? undefined,
+    reporting_period: r.period,
+  };
+}
