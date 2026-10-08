@@ -816,3 +816,29 @@ export function shortLabel(name: string, ticker: string, max = 8): string {
 export function isFundCode(ticker: string): boolean {
   return /^0P[0-9A-Z]{6,}(\.[A-Z]+)?$/.test(ticker);
 }
+
+const WALL_INPUT_LABEL: Record<string, string> = {
+  ebitda: "EBITDA",
+  net_debt_to_ebitda: "net debt / EBITDA",
+  interest_coverage: "EBIT / interest",
+};
+
+/** One wall input as readable text: ratios as "1.40×", large amounts compacted
+ * ("6.04 bn", currency unknown so none is shown), anything unparseable left as given. */
+export function formatWallInput(key: string, value: string): string {
+  const label = WALL_INPUT_LABEL[key] ?? key.replace(/_/g, " ");
+  const n = Number(value);
+  if (!Number.isFinite(n)) return `${label}: ${value}`;
+  const abs = Math.abs(n);
+  let text: string;
+  if (key.includes("_to_") || key.endsWith("coverage")) {
+    text = `${n.toFixed(2)}×`;
+  } else if (abs >= 1e9) {
+    text = `${(n / 1e9).toFixed(2)} bn`;
+  } else if (abs >= 1e6) {
+    text = `${(n / 1e6).toFixed(1)} m`;
+  } else {
+    text = n.toLocaleString("en-US", { maximumFractionDigits: 2 });
+  }
+  return `${label}: ${text}`;
+}

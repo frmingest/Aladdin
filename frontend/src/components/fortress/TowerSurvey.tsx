@@ -8,8 +8,9 @@ import {
   THESIS_LABEL,
   WALL_LABEL,
   describeSiegeExposure,
+  formatWallInput,
 } from "../../lib/fortress";
-import { formatDecimal, formatNok, formatPct100 } from "../../lib/format";
+import { formatNok, formatPct100 } from "../../lib/format";
 import type { GameTower } from "../../lib/types";
 import { Card, VerdictBadge } from "../ui";
 
@@ -50,7 +51,7 @@ export default function TowerSurvey({ tower, compact = false }: { tower: GameTow
           <dd className="text-ink-muted">{tower.wall_reason}</dd>
           {inputs.length > 0 && (
             <dd className="tabular mt-1 text-xs text-ink-faint">
-              {inputs.map(([k, v]) => `${k.replace(/_/g, " ")}: ${formatDecimal(v)}`).join(" · ")}
+              {inputs.map(([k, v]) => formatWallInput(k, v)).join(" · ")}
             </dd>
           )}
         </div>

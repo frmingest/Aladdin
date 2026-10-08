@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  formatWallInput,
   ADVISOR_NAME,
   ADVISOR_ROLE,
   ADVISOR_TONE_LABEL,
@@ -577,5 +578,19 @@ describe("clock geometry (G7b)", () => {
     expect(right.y).toBeCloseTo(22);
     expect(bottom.x).toBeCloseTo(22);
     expect(bottom.y).toBeCloseTo(32);
+  });
+});
+
+describe("formatWallInput", () => {
+  it("shows ratios with a multiplication sign", () => {
+    expect(formatWallInput("net_debt_to_ebitda", "1.4")).toBe("net debt / EBITDA: 1.40×");
+    expect(formatWallInput("interest_coverage", "5.236")).toBe("EBIT / interest: 5.24×");
+  });
+  it("compacts large amounts instead of printing raw digits", () => {
+    expect(formatWallInput("ebitda", "6041500000.00")).toBe("EBITDA: 6.04 bn");
+    expect(formatWallInput("ebitda", "-2500000")).toBe("EBITDA: -2.5 m");
+  });
+  it("leaves unparseable values as given", () => {
+    expect(formatWallInput("ebitda", "n/a")).toBe("EBITDA: n/a");
   });
 });
