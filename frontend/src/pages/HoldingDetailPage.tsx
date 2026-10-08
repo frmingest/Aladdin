@@ -502,7 +502,6 @@ function DocumentsPanel({
           documents={documents}
           deletingId={deletingId}
           onDelete={(d) => void handleDeleteDocument(d)}
-          renderMeta={(d) => <DocumentFlagsNote document={d} />}
         />
       )}
 

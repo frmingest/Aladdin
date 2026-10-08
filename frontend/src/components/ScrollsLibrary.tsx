@@ -1,7 +1,5 @@
 import { useState } from "react";
-import type { ReactNode } from "react";
-import { formatBytes } from "../lib/format";
-import { formatTag, groupScrolls, loadOpened, saveOpened, unopenedCount, withOpened } from "../lib/scrolls";
+import { formatTag, groupScrolls, scrollLabel, loadOpened, saveOpened, unopenedCount, withOpened } from "../lib/scrolls";
 import type { DocumentSummary } from "../lib/types";
 import { DocumentReader } from "./DocumentReader";
 
@@ -16,18 +14,16 @@ function ScrollTile({
   onOpen,
   onDelete,
   deleting,
-  meta,
 }: {
   doc: DocumentSummary;
   opened: boolean;
   onOpen: () => void;
   onDelete: () => void;
   deleting: boolean;
-  meta?: ReactNode;
 }) {
   const [reading, setReading] = useState(false);
   const [origin, setOrigin] = useState("50% 50%");
-  const period = doc.reporting_period ?? "undated";
+  const period = scrollLabel(doc);
   return (
     <li className="library-tile">
       <button
@@ -50,15 +46,13 @@ function ScrollTile({
         <span className="library-roller" aria-hidden="true" />
         <span className="library-seal" data-opened={opened} aria-hidden="true" />
       </button>
-      <p className="library-name" title={doc.original_filename}>
-        {doc.original_filename}
-      </p>
-      <p className="library-facts">
-        {doc.fact_count > 0 ? `${doc.fact_count} figures · ` : ""}
-        {formatBytes(doc.size_bytes)}
-        {doc.status !== "processed" ? ` · ${doc.status}` : ""}
-      </p>
-      {meta}
+      {(doc.fact_count > 0 || doc.status !== "processed") && (
+        <p className="library-facts">
+          {[doc.fact_count > 0 ? `${doc.fact_count} figures` : "", doc.status !== "processed" ? doc.status : ""]
+            .filter(Boolean)
+            .join(" · ")}
+        </p>
+      )}
       <button type="button" className="library-delete" disabled={deleting} onClick={onDelete}>
         {deleting ? "Deleting…" : "Delete"}
       </button>
@@ -71,12 +65,10 @@ export default function ScrollsLibrary({
   documents,
   deletingId,
   onDelete,
-  renderMeta,
 }: {
   documents: DocumentSummary[];
   deletingId: string | null;
   onDelete: (doc: DocumentSummary) => void;
-  renderMeta?: (doc: DocumentSummary) => ReactNode;
 }) {
   const [opened, setOpened] = useState<Set<string>>(() => loadOpened());
   const shelves = groupScrolls(documents);
@@ -116,7 +108,6 @@ export default function ScrollsLibrary({
                   onOpen={() => markOpened(d.id)}
                   onDelete={() => onDelete(d)}
                   deleting={deletingId === d.id}
-                  meta={renderMeta?.(d)}
                 />
               ))}
             </ul>

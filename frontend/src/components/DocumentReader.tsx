@@ -188,9 +188,20 @@ export function DocumentReader({
   function jumpTo(fact: DocumentFact) {
     const frame = frameRef.current;
     if (!jumpablePage(fact) || !frame || !blobUrl) return;
-    frame.src = `${blobUrl}${factFragment(kind, fact)}`;
+    const target = `${blobUrl}${factFragment(kind, fact)}`;
     setActiveKey(factKey(fact));
-    setMobileTab("document"); // on a narrow screen, show what was asked for
+    if (mobileTab === "figures") {
+      // Narrow screen: the filing is display:none, and a hidden iframe can't scroll to a fragment (it
+      // would land on page 1). Show it first, then navigate once it has a layout.
+      setMobileTab("document");
+      window.requestAnimationFrame(() =>
+        window.requestAnimationFrame(() => {
+          if (frameRef.current) frameRef.current.src = target;
+        }),
+      );
+      return;
+    }
+    frame.src = target;
   }
 
   function startDrag(e: ReactPointerEvent<HTMLDivElement>) {
@@ -356,7 +367,7 @@ export function DocumentReader({
               type="button"
               onClick={() => setPaneOpen((v) => !v)}
               aria-pressed={paneOpen}
-              className="hidden rounded-md px-2 py-1 text-xs font-medium text-accent hover:bg-accent-subtle lg:inline-block"
+              className="hidden rounded-md px-2 py-1 text-xs font-medium text-accent hover:bg-accent-subtle md:inline-block"
             >
               {paneOpen ? "Hide figures" : "Show figures"}
             </button>
@@ -379,7 +390,7 @@ export function DocumentReader({
         </header>
 
         {paneVisible && (
-          <div role="tablist" aria-label="Reader view" className="flex border-b border-border-subtle lg:hidden">
+          <div role="tablist" aria-label="Reader view" className="flex border-b border-border-subtle md:hidden">
             {(["document", "figures"] as const).map((tab) => (
               <button
                 key={tab}
@@ -400,11 +411,11 @@ export function DocumentReader({
         <div
           ref={splitRef}
           style={{ "--pane-w": `${paneWidth}px` } as CSSProperties}
-          className={`relative flex min-h-0 flex-1 flex-col motion-reduce:animate-none lg:flex-row ${
+          className={`relative flex min-h-0 flex-1 flex-col motion-reduce:animate-none md:flex-row ${
             scroll ? "" : "bg-background animate-reader-content-in"
           }`}
         >
-          <div className={`relative min-h-0 min-w-0 flex-1 ${paneVisible && mobileTab === "figures" ? "hidden lg:block" : ""}`}>
+          <div className={`relative min-h-0 min-w-0 flex-1 ${paneVisible && mobileTab === "figures" ? "hidden md:block" : ""}`}>
             {kind === "download" ? (
               <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
                 <p className="text-sm text-ink">This file type can&apos;t be shown in the browser.</p>
@@ -456,14 +467,14 @@ export function DocumentReader({
                 onPointerUp={() => setDragging(false)}
                 onPointerCancel={() => setDragging(false)}
                 onKeyDown={dragKey}
-                className={`hidden w-1.5 shrink-0 cursor-col-resize touch-none transition-colors hover:bg-accent focus-visible:bg-accent lg:block ${
+                className={`hidden w-1.5 shrink-0 cursor-col-resize touch-none transition-colors hover:bg-accent focus-visible:bg-accent md:block ${
                   dragging ? "bg-accent" : "bg-border-subtle"
                 }`}
               />
               <aside
                 aria-label="Figures from this filing"
-                className={`min-h-0 lg:w-[var(--pane-w)] lg:shrink-0 ${scroll ? "scroll-paper-margin" : "bg-surface"} ${
-                  mobileTab === "figures" ? "block flex-1 lg:flex-none" : "hidden lg:block"
+                className={`min-h-0 md:w-[var(--pane-w)] md:shrink-0 ${scroll ? "scroll-paper-margin" : "bg-surface"} ${
+                  mobileTab === "figures" ? "block flex-1 md:flex-none" : "hidden md:block"
                 }`}
               >
                 {factsError ? (
