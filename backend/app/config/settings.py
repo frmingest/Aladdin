@@ -338,6 +338,20 @@ class Settings(BaseSettings):
     # generally began publishing ESEF-tagged annual reports on Newsweb from
     # FY2020/FY2021 onward, so 2022 comfortably covers what's actually there.
     newsweb_filing_history_start_year: int = 2022
+    # Quarterly (Q1/Q3) reports: comma-separated Newsweb category ids to search IN ADDITION to the
+    # half-year category (game mode G29, 2026-10-08). Empty = off (nothing changes). Find the ids
+    # with `python -m scripts.newsweb_probe <ISSUER>`; rows are kept only when the title reads
+    # like a quarterly or interim report. Reading material only: no facts are promoted from PDFs.
+    newsweb_quarterly_category_ids: str = ""
+
+    @property
+    def newsweb_quarterly_category_id_list(self) -> tuple[int, ...]:
+        ids: list[int] = []
+        for part in self.newsweb_quarterly_category_ids.split(","):
+            part = part.strip()
+            if part.isdigit() and int(part) not in ids:
+                ids.append(int(part))
+        return tuple(ids)
 
     # --- Analysis engine (Sprint 4, see app/services/analysis/) ---
     # Two-pass Buffett/Munger analysis: a blind pass (evidence only, no

@@ -310,3 +310,65 @@ def test_provider_http_error_is_unavailable():
     )
     with pytest.raises(NewswebFilingUnavailableError, match="500"):
         provider.list_annual_reports("NYKD", since=date(2022, 1, 1))
+
+
+# --- Quarterly (Q1/Q3) reports, game mode G29 ------------------------------------
+# The category ids are configuration (no Newsweb id is assumed), so these tests use a made-up id.
+
+
+def test_looks_like_quarterly_report_reads_titles():
+    from app.providers.newsweb_filing_provider import looks_like_quarterly_report
+
+    for title in (
+        "ACME ASA - Q3 2026 results",
+        "Acme: Third quarter 2026",
+        "Acme 1. kvartal 2026",
+        "Interim report Q1 2026",
+        "Delårsrapport 3. kvartal",
+    ):
+        assert looks_like_quarterly_report(title), title
+    for title in ("Acme - Annual Report 2025", "Acme: Notice of Annual General Meeting", "Acme - Mandatory notification of trade", ""):
+        assert not looks_like_quarterly_report(title), title
+
+
+def test_provider_list_quarterly_reports_filters_titles_and_dedups_across_categories():
+    seen_categories: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if "list" in str(request.url):
+            cat = dict(request.url.params)["category"]
+            seen_categories.append(cat)
+            category_id = int(cat)
+            return httpx.Response(
+                200,
+                json=_list_payload(
+                    _msg(11, "Nykode - Q3 2026 results", category_id=category_id, published="2026-10-30T07:00:00Z"),
+                    _msg(12, "Nykode - Notice of AGM", category_id=category_id, published="2026-04-01T07:00:00Z"),
+                    _msg(13, "Nykode - First quarter 2026", category_id=category_id, published="2026-04-29T07:00:00Z"),
+                ),
+            )
+        mid = dict(request.url.params)["messageId"]
+        return httpx.Response(200, json=_message_payload(int(mid), [{"id": 1, "name": "Report.pdf"}]))
+
+    provider = NewswebFilingProvider(client=httpx.Client(transport=httpx.MockTransport(handler)))
+    refs = provider.list_quarterly_reports(
+        "NYKD", since=date(2026, 1, 1), category_ids=(1099, 1098), today=date(2026, 11, 1)
+    )
+    assert seen_categories == ["1099", "1098"]
+    assert [r.message_id for r in refs] == ["11", "13"]  # AGM notice dropped, duplicates merged, newest first
+    assert refs[0].attachments[0].name == "Report.pdf"
+
+
+def test_provider_list_quarterly_reports_with_no_category_makes_no_request():
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise AssertionError("no category configured: nothing should be requested")
+
+    provider = NewswebFilingProvider(client=httpx.Client(transport=httpx.MockTransport(handler)))
+    assert provider.list_quarterly_reports("NYKD", since=date(2026, 1, 1), category_ids=()) == []
+
+
+def test_quarterly_category_setting_parses_a_comma_list_and_ignores_junk():
+    from app.config.settings import Settings
+
+    assert Settings(newsweb_quarterly_category_ids="").newsweb_quarterly_category_id_list == ()
+    assert Settings(newsweb_quarterly_category_ids=" 1003, x ,1004,1003").newsweb_quarterly_category_id_list == (1003, 1004)
