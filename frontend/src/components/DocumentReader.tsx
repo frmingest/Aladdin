@@ -97,7 +97,7 @@ export function DocumentReadButton({
   );
 }
 
-function DocumentReader({
+export function DocumentReader({
   document: doc,
   origin,
   initialPage,
