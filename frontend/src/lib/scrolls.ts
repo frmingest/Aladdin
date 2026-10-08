@@ -48,6 +48,27 @@ export function groupScrolls(documents: DocumentSummary[]): Shelf[] {
   }));
 }
 
+/**
+ * What a scroll is called on its face: the stored reporting period when there is one, otherwise a
+ * year / quarter read from the file name ("Q2 2026", "FY2025", "2025"), otherwise the first 20
+ * characters of the file name. Never "undated".
+ */
+export function scrollLabel(
+  doc: Pick<DocumentSummary, "original_filename" | "reporting_period" | "uploaded_at" | "quality_flags">,
+): string {
+  if (doc.reporting_period) return doc.reporting_period;
+  const name = doc.original_filename.replace(/\.[A-Za-z0-9]{2,5}$/, "");
+  const year = name.match(/(?:^|[^0-9])((?:19|20)\d{2})(?![0-9])/)?.[1];
+  const quarter = name.match(/(?:^|[^A-Za-z0-9])(?:Q([1-4])|([1-4])Q|([1-4])(?:st|nd|rd|th)[ _-]?quarter)(?![0-9])/i);
+  const q = quarter?.[1] ?? quarter?.[2] ?? quarter?.[3];
+  const half = /(?:^|[^A-Za-z0-9])(?:H([12])|half[ _-]?year)/i.test(name);
+  if (q && year) return `Q${q} ${year}`;
+  if (half && year) return `H1/H2 ${year}`.replace("H1/H2", "Half-year");
+  if (year) return /annual/i.test(name) ? `FY${year}` : year;
+  const text = name.replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim() || doc.original_filename;
+  return text.length > 20 ? `${text.slice(0, 20).trimEnd()}…` : text;
+}
+
 /** A plain label for the file format on a scroll's tag. */
 export function formatTag(filename: string): string {
   const name = filename.toLowerCase();
