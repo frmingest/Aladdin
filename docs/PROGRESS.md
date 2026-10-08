@@ -4,14 +4,14 @@
 
 ## Current Objective
 
-Phase 11, the Buffett/Munger single-focus rebuild, is in a stable, merged state (Sprints 18–20 and 23–25, valuation v4, noise waves, Background jobs, all-instrument analysis, currency edit, Siege instrument sensitivity #71). **In flight: one PR, `feature/scriptorium-scroll-reader-and-quarterly-fetch`** (game mode G28 scroll reader Phase A and G29 optional Q1/Q3 Newsweb reports; written and tested, **not merged, not deployed, scroll seen only in a headless Chromium test page, never on real reports**; [plan](game-mode-sprint-plan-v2-2026-10-08.md)). Faiz approved the plan on 2026-10-08 (reward knowing, never trading; scroll Phase A first; Q1/Q3 fetch yes). Next: your walkthrough (Sprint 26a), then Sprint 27 (library room, raven to scroll).
+Phase 11, the Buffett/Munger single-focus rebuild, is in a stable, merged state (Sprints 18–20 and 23–25, valuation v4, noise waves, Background jobs, all-instrument analysis, currency edit, Siege instrument sensitivity #71). **In flight: one PR, `feature/scriptorium-scroll-reader-and-quarterly-fetch`** (game mode G28 scroll reader Phase A and a Sources-panel wording fix (quarterly reports were already covered by category 1002); written and tested, **not merged, not deployed, scroll seen only in a headless Chromium test page, never on real reports**; [plan](game-mode-sprint-plan-v2-2026-10-08.md)). Faiz approved the plan on 2026-10-08 (reward knowing, never trading; scroll Phase A first; Q1/Q3 fetch yes). Next: your walkthrough (Sprint 26a), then Sprint 27 (library room, raven to scroll).
 
 State (checked against git 2026-10-08): `main` = `7d2d88b` (#71). Repo migration head `t1f2a3b4c5d6`; last head **confirmed on Supabase** was `r1d9e0f1a2b3` (2026-10-05). **Deploy of everything since is not verified** ("merged, not checked live"). Live URLs: frontend `https://exciting-gratitude-production-71b5.up.railway.app`, backend `https://aladdin-production-bd25.up.railway.app`.
 
 ## Active Tasks
 
 - [ ] **Deploy check (Faiz):** confirm Railway deployed `main`; run `select version_num from alembic_version;` in Supabase, expect `t1f2a3b4c5d6` (adds `s1e0f1a2b3c4` tag rules and `t1f2a3b4c5d6` instrument facts)
-- [ ] **Quarterly reports (Faiz):** on the PC run `python scripts/newsweb_probe.py EQNR` in `backend/`, tell Claude which category lists Q1/Q3 titles, then set `NEWSWEB_QUARTERLY_CATEGORY_IDS` (Railway and `backend/.env`); until then the fetch is unchanged ([plan](game-mode-sprint-plan-v2-2026-10-08.md))
+- [ ] **Quarterly reports (Faiz):** the probe showed Newsweb category 1002 already carries Q1/Q2/Q3 results, so re-press *Fetch reports* on each Oslo holding to pull any missing quarterly PDFs (already-fetched ones are skipped); no setting needed
 - [ ] **PC (Faiz):** `git pull` in `E:\Aladdin`, restart backend and worker (needed for #51 and #66 worker fixes). **Siege PR (#71) is merged:** wait for More, System, System status to show "Siege Simulator price history" has run, then reload `/fortress/siege` ([doc](siege-instrument-sensitivity-2026-10-07.md))
 - [ ] **First look at merged, never-seen work:** holding currency Edit and `≈ NOK` ([#68](currency-edit-and-nok-equivalent-2026-10-07.md)), Background jobs card ([#65](background-jobs-status-2026-10-07.md)), tag review inbox ([#60–62](tag-review-inbox-2026-10-07.md)), game-mode noise pass ([#64](game-mode-noise-audit-2026-10-07.md)), game mode G1–G20 walkthrough ([doc](game-mode-fortress-2026-10-01.md))
 - [ ] **Enter figures for the 3 non-equity holdings** (Alfred Berg Nordic High Yield II R, Heimdal Høyrente Pluss B, Xetra-Gold), Macro → Refresh data, run the three analyses ([#67](all-instrument-analysis-2026-10-07.md))
@@ -22,7 +22,6 @@ State (checked against git 2026-10-08): `main` = `7d2d88b` (#71). Repo migration
 ## Recent Blockers / Open Questions
 
 - **Pareto Bank FY2025:** the `.xhtml` is untagged; re-attach the report so Claude can prepare the FY2025 + FY2024 CSV ([doc](pareto-gigante-and-fund-constituents-2026-10-04.md))
-- **Quarterly category unknown:** Oslo Børs has no quarterly category this repo can assume (only 1001 annual, 1002 half-year are confirmed); the probe script finds it ([plan](game-mode-sprint-plan-v2-2026-10-08.md))
 - **Siege benchmark:** the Siege Simulator measures against OSEBX only; a global ETF such as XDEF is understated by it. Decide whether to add a global benchmark option ([doc](siege-instrument-sensitivity-2026-10-07.md))
 - **Loss-making valuation** (Vend Marketplaces, Salmon Evolution, Vår Energi) cannot rank with an owner-earnings DCF; method undecided
 - **Possible price/split data errors:** Equinor stored price 41.95 USD; Kongsberg 5:1 split not restated ([diagnosis](valuation-data-diagnosis-2026-10-06.md))
