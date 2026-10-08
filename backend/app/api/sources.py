@@ -371,7 +371,12 @@ def import_newsweb_interim_reports(
         raise HTTPException(status_code=422, detail="the Newsweb filing fetch is switched off (NEWSWEB_FILING_PROVIDER)")
     try:
         bulk = import_all_interim_reports_from_newsweb(
-            db, holding, provider, storage, since=_newsweb_history_since()
+            db,
+            holding,
+            provider,
+            storage,
+            since=_newsweb_history_since(),
+            quarterly_category_ids=get_settings().newsweb_quarterly_category_id_list,
         )
     except NewswebImportError as exc:
         db.rollback()

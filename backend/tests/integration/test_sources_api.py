@@ -280,6 +280,8 @@ class FakeNewswebFiling:
     def __init__(self, *, refs=None, interim_refs=None, attachment_bytes=None, fail=None):
         self.refs = refs or []
         self.interim_refs = interim_refs or []
+        self.quarterly_refs = []
+        self.quarterly_category_ids_seen = None
         # message_id -> bytes, so different years can return different content.
         self.attachment_bytes = attachment_bytes or {}
         self.fail = fail
@@ -306,6 +308,10 @@ class FakeNewswebFiling:
 
             raise NewswebFilingUnavailableError(self.fail)
         return self.interim_refs
+
+    def list_quarterly_reports(self, issuer_sign, *, since, category_ids, today=None):
+        self.quarterly_category_ids_seen = tuple(category_ids)
+        return self.quarterly_refs
 
     def download_attachment(self, message_id, attachment_id):
         self.downloaded.append((message_id, attachment_id))
@@ -723,3 +729,63 @@ def test_untagged_xhtml_from_newsweb_is_imported_with_a_no_xbrl_tags_warning(cli
     assert any("no XBRL tags" in w for w in report["warnings"])
     doc = client.get(f"/documents/{report['document_id']}").json()
     assert doc["quality_flags"]["no_ixbrl_tags"] is True
+
+
+def test_newsweb_quarterly_reports_join_the_interim_fetch_only_when_a_category_is_configured(
+    client, db_session, newsweb_filing, monkeypatch
+):
+    """G29: Q1/Q3 reports from the configured category ids are fetched in the same run as the
+    half-year reports, as reading material only (same type, no facts, de-duplicated by message id)."""
+    from types import SimpleNamespace
+
+    from app.providers.newsweb_filing_provider import (
+        NewswebAnnualReportRef,
+        NewswebAttachmentRef,
+    )
+
+    newsweb_filing.interim_refs = [
+        NewswebAnnualReportRef(
+            message_id="900001",
+            message_url="https://newsweb.oslobors.no/message/900001",
+            title="ACME ASA - Half Year Report Q2 2026",
+            published_at=datetime(2026, 8, 14, tzinfo=timezone.utc),
+            attachments=[NewswebAttachmentRef("111", "Half year.pdf")],
+        )
+    ]
+    newsweb_filing.quarterly_refs = [
+        NewswebAnnualReportRef(
+            message_id="900002",
+            message_url="https://newsweb.oslobors.no/message/900002",
+            title="ACME ASA - Q3 2026",
+            published_at=datetime(2026, 10, 30, tzinfo=timezone.utc),
+            attachments=[NewswebAttachmentRef("222", "Q3 2026.pdf")],
+        )
+    ]
+    newsweb_filing.attachment_bytes = {
+        "900001": _make_pdf("Half year results for ACME ASA."),
+        "900002": _make_pdf("Third quarter results for ACME ASA."),
+    }
+    hid = _holding(client, ticker="ACME.OL", name="ACME ASA", currency="NOK")
+
+    # Off by default: only the half-year report is fetched and the quarterly lister is never called.
+    resp = client.post(f"/sources/holdings/{hid}/newsweb-interim-report/import")
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["newly_imported_this_run"] == 1
+    assert newsweb_filing.quarterly_category_ids_seen is None
+
+    # Configured: the quarterly report joins, and the half-year one is not fetched twice.
+    from app.config import settings as settings_module
+
+    real = settings_module.get_settings()
+    patched = SimpleNamespace(
+        newsweb_filing_history_start_year=real.newsweb_filing_history_start_year,
+        newsweb_quarterly_category_id_list=(1099,),
+    )
+    monkeypatch.setattr("app.api.sources.get_settings", lambda: patched)
+    resp = client.post(f"/sources/holdings/{hid}/newsweb-interim-report/import")
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert newsweb_filing.quarterly_category_ids_seen == (1099,)
+    assert body["newly_imported_this_run"] == 1
+    assert {r["message_id"] for r in body["reports"]} == {"900001", "900002"}
+    assert all(r["facts_imported"] == 0 for r in body["reports"])

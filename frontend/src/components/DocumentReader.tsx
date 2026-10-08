@@ -3,8 +3,21 @@ import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, PointerEvent a
 import { createPortal } from "react-dom";
 import { ApiError, api, fetchDocumentFile } from "../lib/api";
 import { factFragment, pageFragment, viewKindOf } from "../lib/documents";
+import { useGameMode } from "../lib/gameMode";
+import {
+  SCROLL_MS,
+  defaultTint,
+  initialPhase,
+  isOpening,
+  nextPhase,
+  phaseDelay,
+  scrollHeading,
+  skipToOpen,
+  type ScrollPhase,
+} from "../lib/scroll";
 import { factKey, jumpablePage } from "../lib/statements";
 import type { DocumentFact } from "../lib/types";
+import { ScrollRollers, ScrollSeal } from "./ScrollStage";
 import { StatementsPane } from "./StatementsPane";
 
 /** Minimum a stored-document reference has to carry to be readable. */
@@ -105,6 +118,17 @@ function DocumentReader({
   const [closing, setClosing] = useState(false);
   const closeTimer = useRef<number | undefined>(undefined);
 
+  // Game mode G28: the report opens as a parchment scroll. Off = this reader exactly as before.
+  const { gameMode } = useGameMode();
+  const [scrollOff, setScrollOff] = useState(false); // "Plain reader": back to the ordinary reader
+  const scroll = gameMode && !scrollOff;
+  const reducedMotion =
+    typeof window !== "undefined" && typeof window.matchMedia === "function"
+      ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      : false;
+  const [phase, setPhase] = useState<ScrollPhase>(() => (scroll ? initialPhase(reducedMotion) : "open"));
+  const [tint, setTint] = useState(() => defaultTint(kind));
+
   // Figures stored from this file, shown beside it. null = still loading.
   const expectsFigures = kind !== "download" && (doc.fact_count === undefined || doc.fact_count > 0);
   const [facts, setFacts] = useState<DocumentFact[] | null>(null);
@@ -185,8 +209,27 @@ function DocumentReader({
 
   const close = useCallback(() => {
     setClosing(true);
-    closeTimer.current = window.setTimeout(onClosed, EXIT_MS);
-  }, [onClosed]);
+    if (scroll && !reducedMotion) setPhase("rolling");
+    closeTimer.current = window.setTimeout(onClosed, scroll && !reducedMotion ? SCROLL_MS.roll : EXIT_MS);
+  }, [onClosed, scroll, reducedMotion]);
+
+  // The scroll opens by itself: seal, crack, unroll. It never blocks reading (any key skips it).
+  useEffect(() => {
+    if (!scroll) return;
+    const delay = phaseDelay(phase);
+    if (delay === null || phase === "rolling") return;
+    const t = window.setTimeout(() => setPhase((p) => nextPhase(p)), delay);
+    return () => window.clearTimeout(t);
+  }, [scroll, phase]);
+
+  useEffect(() => {
+    if (!scroll || !isOpening(phase)) return;
+    const onAnyKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") setPhase((p) => skipToOpen(p));
+    };
+    window.addEventListener("keydown", onAnyKey);
+    return () => window.removeEventListener("keydown", onAnyKey);
+  }, [scroll, phase]);
 
   // Fetch with the API key (a bare link can't send the header) and show it
   // from a blob. Nothing loads for download-only types.
@@ -239,6 +282,7 @@ function DocumentReader({
     }
   }
 
+  const heading = scrollHeading(doc);
   const subtitle = [doc.type?.replace(/_/g, " "), doc.reporting_period].filter(Boolean).join(" · ");
 
   return createPortal(
@@ -251,10 +295,16 @@ function DocumentReader({
           closing ? "animate-reader-backdrop-out" : "animate-reader-backdrop-in"
         }`}
       />
+      <div className={`relative mx-auto h-full w-full ${paneVisible ? "max-w-[96rem]" : "max-w-6xl"}`}>
       <div
         style={{ transformOrigin: origin }}
-        className={`relative mx-auto flex h-full ${paneVisible ? "max-w-[96rem]" : "max-w-6xl"} flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-card motion-reduce:animate-none ${
-          closing ? "animate-reader-panel-out" : "animate-reader-panel-in"
+        data-phase={scroll ? phase : undefined}
+        className={`relative flex h-full w-full flex-col overflow-hidden motion-reduce:animate-none ${
+          scroll
+            ? "scroll-paper rounded-lg pt-7 pb-7"
+            : `rounded-xl border border-border bg-surface shadow-card ${
+                closing ? "animate-reader-panel-out" : scrollOff ? "" : "animate-reader-panel-in"
+              }`
         }`}
       >
         <header className="flex items-center gap-3 border-b border-border-subtle px-4 py-3">
@@ -274,6 +324,29 @@ function DocumentReader({
             >
               Open in new tab ↗
             </a>
+          )}
+          {scroll && kind !== "download" && (
+            <button
+              type="button"
+              onClick={() => setTint((v) => !v)}
+              aria-pressed={tint}
+              title="Show the page on parchment (multiplies the page onto the paper)"
+              className="hidden rounded-md px-2 py-1 text-xs font-medium text-accent hover:bg-accent-subtle sm:inline-block"
+            >
+              Parchment tint
+            </button>
+          )}
+          {scroll && (
+            <button
+              type="button"
+              onClick={() => {
+                setScrollOff(true);
+                setPhase("open");
+              }}
+              className="hidden rounded-md px-2 py-1 text-xs font-medium text-ink-muted hover:bg-border-subtle hover:text-ink sm:inline-block"
+            >
+              Plain reader
+            </button>
           )}
           {expectsFigures && (facts === null || facts.length > 0) && (
             <button
@@ -324,7 +397,9 @@ function DocumentReader({
         <div
           ref={splitRef}
           style={{ "--pane-w": `${paneWidth}px` } as CSSProperties}
-          className="relative flex min-h-0 flex-1 flex-col bg-background motion-reduce:animate-none animate-reader-content-in lg:flex-row"
+          className={`relative flex min-h-0 flex-1 flex-col motion-reduce:animate-none lg:flex-row ${
+            scroll ? "" : "bg-background animate-reader-content-in"
+          }`}
         >
           <div className={`relative min-h-0 min-w-0 flex-1 ${paneVisible && mobileTab === "figures" ? "hidden lg:block" : ""}`}>
             {kind === "download" ? (
@@ -348,7 +423,7 @@ function DocumentReader({
                 ref={frameRef}
                 title={doc.original_filename}
                 src={`${blobUrl}${initialFragment}`}
-                className={`h-full w-full border-0 ${dragging ? "pointer-events-none" : ""}`}
+                className={`h-full w-full border-0 ${scroll && tint ? "mix-blend-multiply" : ""} ${dragging ? "pointer-events-none" : ""}`}
               />
             ) : (
               // Empty sandbox: no scripts, forms, popups or same-origin access.
@@ -358,7 +433,7 @@ function DocumentReader({
                 title={doc.original_filename}
                 src={`${blobUrl}${initialFragment}`}
                 sandbox=""
-                className={`h-full w-full border-0 bg-white ${dragging ? "pointer-events-none" : ""}`}
+                className={`h-full w-full border-0 bg-white ${scroll && tint ? "mix-blend-multiply" : ""} ${dragging ? "pointer-events-none" : ""}`}
               />
             )}
           </div>
@@ -384,7 +459,7 @@ function DocumentReader({
               />
               <aside
                 aria-label="Figures from this filing"
-                className={`min-h-0 bg-surface lg:w-[var(--pane-w)] lg:shrink-0 ${
+                className={`min-h-0 lg:w-[var(--pane-w)] lg:shrink-0 ${scroll ? "scroll-paper-margin" : "bg-surface"} ${
                   mobileTab === "figures" ? "block flex-1 lg:flex-none" : "hidden lg:block"
                 }`}
               >
@@ -405,6 +480,16 @@ function DocumentReader({
             </>
           )}
         </div>
+      </div>
+      {scroll && <ScrollRollers phase={phase} />}
+      {scroll && (
+        <ScrollSeal
+          phase={phase}
+          kicker={heading.kicker}
+          title={heading.title}
+          onBreak={() => setPhase((p) => nextPhase(p))}
+        />
+      )}
       </div>
     </div>,
     window.document.body,
