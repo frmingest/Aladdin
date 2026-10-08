@@ -150,3 +150,15 @@ describe("scrolls library markup", () => {
     expect(empty).toContain("No annual report on this shelf yet.");
   });
 });
+
+import { scrollLabel } from "./scrolls";
+describe("scrollLabel", () => {
+  const base = { reporting_period: null, uploaded_at: "2026-01-01", quality_flags: null } as never;
+  const label = (original_filename: string, reporting_period: string | null = null) =>
+    scrollLabel({ ...(base as object), original_filename, reporting_period } as never);
+  it("prefers the stored period", () => expect(label("x.pdf", "FY2025")).toBe("FY2025"));
+  it("reads a quarter and year", () => expect(label("Equinor_Q2_2026_report.pdf")).toBe("Q2 2026"));
+  it("reads a year", () => expect(label("Annual report 2025.xhtml")).toBe("FY2025"));
+  it("falls back to 20 characters", () => expect(label("Presentation of the company strategy.pdf")).toBe("Presentation of the…"));
+  it("is never undated", () => expect(label("a.pdf")).toBe("a"));
+});
