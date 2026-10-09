@@ -876,3 +876,37 @@
 .library-delete:disabled { opacity: 0.5; }
 @media (prefers-reduced-motion: reduce) { .library-scroll { transition: none; } .library-scroll:hover, .library-scroll:focus-visible { transform: none; } }
 @media (max-width: 480px) { .library-row { gap: 0.9rem 0.8rem; } .library-tile { width: calc(50% - 0.4rem); } }
+
+/* Page-scene kit (game mode, identity pass). Static parchment folio, header banner, bubble tail on the
+   right, fog hatch. No filters, no animation here: the only loop in the kit is the torch flame, which
+   uses the shared reduced-motion-aware .fortress-flicker. */
+.parchment {
+  --c-surface: 241 230 204;
+  --c-raised: 250 243 224;
+  --c-border: 190 168 128;
+  --c-border-subtle: 214 194 156;
+  --c-ink: 43 29 14;
+  --c-ink-muted: 100 80 52;
+  --c-ink-faint: 112 92 62;
+  --c-accent: 110 64 10;
+  --c-accent-hover: 84 46 4;
+  --c-accent-subtle: 232 214 172;
+  color: rgb(var(--c-ink));
+  background-color: #efe2c0;
+  background-image:
+    radial-gradient(ellipse at 50% 0%, rgba(255, 248, 222, 0.7), transparent 60%),
+    radial-gradient(ellipse at 50% 100%, rgba(120, 80, 30, 0.2), transparent 55%);
+  box-shadow: 0 10px 24px -14px rgba(0, 0, 0, 0.7), inset 0 0 0 1px rgba(150, 110, 50, 0.45), inset 0 0 36px rgba(120, 80, 30, 0.22);
+}
+.game-banner {
+  background: linear-gradient(180deg, #2b1c10, #1b1109);
+  box-shadow: inset 0 0 0 1px #8a6a32, inset 0 0 0 3px #1b1109, inset 0 0 0 4px rgba(217, 169, 62, 0.45), 0 12px 24px -16px #000;
+}
+.market-bubble-right::before { left: auto; right: -7px; box-shadow: 1px -1px 0 0 #8a6a32; }
+.fog-panel {
+  background-image: repeating-linear-gradient(135deg, rgb(var(--c-ink-faint) / 0.07) 0 6px, transparent 6px 14px);
+  background-color: rgb(var(--c-surface));
+}
+.chamber { background: linear-gradient(180deg, #241710, #170f09); box-shadow: inset 0 0 0 1px #8a6a32, inset 0 0 40px rgba(0, 0, 0, 0.6); }
+.chamber-seat { position: absolute; transform: translate(-50%, -50%); width: 104px; }
+.chamber-seat:focus-visible { outline: 2px solid #f2d27a; outline-offset: 2px; }
