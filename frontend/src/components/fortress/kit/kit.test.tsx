@@ -47,9 +47,19 @@ describe("page-scene kit", () => {
   it("the chamber with an empty agenda has eight neutral seats, no buttons, no celebration", () => {
     const html = renderToStaticMarkup(<CouncilChamber seats={councilSeats({ items: [] })} onJump={() => {}} />);
     expect(html).not.toContain("<button");
-    expect((html.match(/nothing found/g) ?? []).length).toBeGreaterThanOrEqual(8);
+    expect((html.match(/none found/g) ?? []).length).toBeGreaterThanOrEqual(8);
+    expect(html).not.toContain("not proof of nothing");
     expect(html).not.toMatch(/\b(all clear|well done|complete|reward|points?|streak|score|\d of 8)\b/i);
-    expect(html).not.toMatch(/(positive|#2e7d32|#3a8f4b|green)/i);
+    // No fill or stroke in the chamber may be in the green family (g clearly above r and b).
+    for (const hex of html.match(/#[0-9a-fA-F]{6}\b/g) ?? []) {
+      const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+      expect(g > r + 12 && g > b + 12, `${hex} reads as green`).toBe(false);
+    }
+  });
+
+  it("when some rules could not be checked, the chamber says an empty chair is not proof of nothing", () => {
+    const html = renderToStaticMarkup(<CouncilChamber seats={councilSeats({ items: [] })} onJump={() => {}} unresolved />);
+    expect(html).toContain("not proof of nothing");
   });
 
   it("an occupied seat is a button carrying the real count", () => {

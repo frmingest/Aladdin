@@ -1,6 +1,6 @@
 # Game identity: page-scene kit and Council Chamber — 2026-10-09
 
-Status: **written and tested, not merged, not deployed. Seen only in headless Chromium with a synthetic fixture (desktop 1280 px and phone 390 px), never with real data.** Frontend only, no backend change, no migration, no new dependency. Design: [circle-council-design-2026-10-09.md](circle-council-design-2026-10-09.md); standard: `.claude/standards/game-visual-identity.md`.
+Status: **written and tested, not merged, not deployed. Seen only in headless Chromium with a synthetic fixture (desktop 1280 px and phone 390 px), never with real data.** Frontend only, no backend change, no migration, no new dependency. Design: [circle-council-design-2026-10-09.md](circle-council-design-2026-10-09.md); standard: `.claude/standards/game-visual-identity.md` (added by PR #88).
 
 ## What changed
 
@@ -12,11 +12,15 @@ Status: **written and tested, not merged, not deployed. Seen only in headless Ch
 
 ## What it deliberately does not do
 
-No gavel (nothing is decided here), no hourglass or timer, no "x of 8", no tick or fanfare for an empty agenda, no green anywhere. An empty chair is neutral, not "all clear". Seals never rely on colour. No new data: every picture repeats a field the list below already shows.
+No gavel (nothing is decided here), no hourglass or timer, no "x of 8", no tick or fanfare for an empty agenda, no green anywhere. An empty chair is neutral, says "none found" and is not "all clear": when the council lists things it could not check, the chamber adds "Some rules could not be checked (see below). An empty chair is not proof of nothing." Seals never rely on colour. No new data: every picture repeats a field the list below already shows.
 
 ## Verified
 
 `tsc` clean, ESLint 0 errors (the 2 existing warnings), vitest all passing (new: seals, council seats, crest, kit render tests including the empty agenda, no-colour-only status and the chamber's word budget), build. Chromium screenshots of the Council in game mode, Plain view and normal mode at desktop and phone width: no horizontal overflow.
+
+## Independent review (read-only agent) and what it changed
+
+One blocker, fixed: an empty chair read "nothing found" even where the council also listed that the rule could not be checked. Fixed with the "none found" wording and the unresolved note above, tested. Also fixed: contrast of banner links and parchment fine print (>= 4.5:1), focus returns to the toggle after Plain view is switched, 44 px target on the Plain view button, a decorative seal no longer announces a different word than the chip beside it, tests for the banner choice (`components/ui.test.tsx`).
 
 ## Not verified / look-and-judge for Faiz
 

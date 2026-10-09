@@ -37,3 +37,13 @@ export function usePlainView(): [boolean, (on: boolean) => void] {
   }, []);
   return [plain, set];
 }
+
+/** Both the banner button and the way back share this id, so focus can follow the toggle when one replaces the other. */
+export const PLAIN_TOGGLE_ID = "plain-view-toggle";
+
+export function togglePlain(current: boolean, set: (on: boolean) => void): void {
+  set(!current);
+  if (typeof requestAnimationFrame === "function") {
+    requestAnimationFrame(() => document.getElementById(PLAIN_TOGGLE_ID)?.focus());
+  }
+}

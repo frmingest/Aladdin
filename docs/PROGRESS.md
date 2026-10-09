@@ -1,12 +1,14 @@
 # Aladdin — Progress
 
-**Last updated:** 2026-10-09 (A1 Knife-edge). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
+**Last updated:** 2026-10-09 (game visual identity). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
 
 ## Current Objective
 
 Phase 11, the Buffett/Munger rebuild, is stable and merged; game mode follows the [team review](game-mode-team-review-2026-10-09.md) order. Merged on `main` (`33fc93f`, CI green): the scroll reader, Scrolls library, Sprint 28 fog of war (#79, #80), ravens (#81), integrity fixes (#84), the Fortress art pass (#85) and Long Memory B1 (#86; [write-up](long-memory-b1-2026-10-09.md)). Faiz confirmed the earlier review and deploy tasks OK on 2026-10-09 ([archive](archive/progress-archive.md)). **In flight: `feature/knife-edge-a1`** (A1 Knife-edge: distance to the next wall tier on the survey card and a hairline crack on towers close to a weaker line; [write-up](knife-edge-a1-2026-10-09.md); written and tested, **not merged, not deployed, never seen in a browser**). Next in order: C1 Siege back-test, D1 Plain lens, D2 Camera, B2 Then and Now; also the rest of Sprint 29 (G40 tour, G38 sounds) and Sprint 26a (game pages in the smoke test, word budgets).
 
 State (checked against git 2026-10-09): `main` = `33fc93f` (#86). Repo migration head `t1f2a3b4c5d6`, confirmed on Supabase by Faiz. Whether #84–#86 are deployed is not verified. Live URLs: frontend `https://exciting-gratitude-production-71b5.up.railway.app`, backend `https://aladdin-production-bd25.up.railway.app`.
+
+**Game visual identity (2026-10-09):** PR #88 (standard, agents, checklist, design docs; docs only), #89 (kit + Council, [write-up](game-identity-kit-council-2026-10-09.md)), and stacked #90 (Map) and #91 (Circle) are open, not merged, not deployed, never seen on real data.
 
 ## Active Tasks
 
