@@ -1,18 +1,22 @@
 # Aladdin — Progress
 
-**Last updated:** 2026-10-09 (A1 Knife-edge). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
+**Last updated:** 2026-10-09 (game visual identity review). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
 
 ## Current Objective
 
-Phase 11, the Buffett/Munger rebuild, is stable and merged; game mode follows the [team review](game-mode-team-review-2026-10-09.md) order. Merged on `main` (`33fc93f`, CI green): the scroll reader, Scrolls library, Sprint 28 fog of war (#79, #80), ravens (#81), integrity fixes (#84), the Fortress art pass (#85) and Long Memory B1 (#86; [write-up](long-memory-b1-2026-10-09.md)). Faiz confirmed the earlier review and deploy tasks OK on 2026-10-09 ([archive](archive/progress-archive.md)). **In flight: `feature/knife-edge-a1`** (A1 Knife-edge: distance to the next wall tier on the survey card and a hairline crack on towers close to a weaker line; [write-up](knife-edge-a1-2026-10-09.md); written and tested, **not merged, not deployed, never seen in a browser**). Next in order: C1 Siege back-test, D1 Plain lens, D2 Camera, B2 Then and Now; also the rest of Sprint 29 (G40 tour, G38 sounds) and Sprint 26a (game pages in the smoke test, word budgets).
+Phase 11, the Buffett/Munger rebuild, is stable and merged; game mode follows the [team review](game-mode-team-review-2026-10-09.md) order. Merged on `main` (through `d4d0a70`, #87): the scroll reader, Scrolls library, Sprint 28 fog of war (#79, #80), ravens (#81), integrity fixes (#84), the Fortress art pass (#85), Long Memory B1 (#86; [write-up](long-memory-b1-2026-10-09.md)) and Knife-edge A1 (#87; [write-up](knife-edge-a1-2026-10-09.md)). Faiz confirmed the earlier review and deploy tasks OK on 2026-10-09 ([archive](archive/progress-archive.md)). Nothing else in flight. Next in order: C1 Siege back-test, D1 Plain lens, D2 Camera, B2 Then and Now; also the rest of Sprint 29 (G40 tour, G38 sounds) and Sprint 26a (game pages in the smoke test, word budgets).
 
-State (checked against git 2026-10-09): `main` = `33fc93f` (#86). Repo migration head `t1f2a3b4c5d6`, confirmed on Supabase by Faiz. Whether #84–#86 are deployed is not verified. Live URLs: frontend `https://exciting-gratitude-production-71b5.up.railway.app`, backend `https://aladdin-production-bd25.up.railway.app`.
+**Game visual identity (2026-10-09, proposed, nothing built):** Faiz noticed Circle and Council look like normal mode. Code audit confirms 5 of 8 fortress rooms score 0–1 on game identity; causes are process (only the home scene was ever scoped as art, the noise audit made the plain pages the benchmark, no reviewer asks "does it feel like the game"). Quick wins, a shared page-scene kit and drafted agent/standard/checklist changes: [overview](game-visual-identity-2026-10-09.md), [Circle and Council design](circle-council-design-2026-10-09.md), [Map design](map-design-2026-10-09.md), [page audit](game-pages-identity-audit-2026-10-09.md), [process changes](game-identity-process-changes-2026-10-09.md).
+
+State (checked against git 2026-10-09): `origin/main` = `d4d0a70` (#87 Knife-edge merged); the local checkout `E:\Aladdin` is stale (on `feature/currency-edit-and-nok-equivalent`, with uncommitted edits), so build from fresh `main`. Repo migration head `t1f2a3b4c5d6`, confirmed on Supabase by Faiz. Whether #84–#87 are deployed is not verified. Live URLs: frontend `https://exciting-gratitude-production-71b5.up.railway.app`, backend `https://aladdin-production-bd25.up.railway.app`.
 
 ## Active Tasks
 
-- [ ] **Review the Knife-edge PR (Faiz):** after deploy click a stock tower on Fortress: the Walls block lists the distance to the next tier; a tower within 10% of a weaker line shows a thin crack and "Close to the line" ([write-up](knife-edge-a1-2026-10-09.md))
-- [ ] **Review the Long Memory result (Faiz):** after #86 deploys open Fortress → Chronicle; any day since 2026-10-07 the worker was off should appear under "What the record cannot show" ([write-up](long-memory-b1-2026-10-09.md))
-- [ ] **Decide (Faiz):** next slice from the team review: C1 Siege back-test, D1 Plain lens or D2 Camera; and whether a knife-edge tower may appear on the Council agenda
+- [ ] **Decide (Faiz):** go-ahead to build the identity slice (Map decisions D1, D4, D7 and smaller calls approved 2026-10-09) (page-scene kit + header, Council chamber, Circle ring map, Map wins 1–4; about 3–4 days) and merge the agent-team PR plus the identity standard/checklist first; five decisions are listed in the [overview](game-visual-identity-2026-10-09.md), section 5
+- [ ] **Review the Knife-edge result (Faiz):** merged as #87 (git log checked 2026-10-09), still never seen in a browser; after deploy click a stock tower on Fortress: the Walls block lists the distance to the next tier and a tower within 10% of a weaker line shows a thin crack ([write-up](knife-edge-a1-2026-10-09.md))
+- [ ] **Review the Long Memory result (Faiz):** open Fortress → Chronicle; any day since 2026-10-07 the worker was off should appear under "What the record cannot show" ([write-up](long-memory-b1-2026-10-09.md))
+- [ ] **Decide (Faiz):** next mechanics slice from the team review: C1 Siege back-test, D1 Plain lens or D2 Camera; and whether a knife-edge tower may appear on the Council agenda
+- [ ] **Re-score identity with screenshots:** the page scores are inferred from code, not seen in a browser
 
 ## Recent Blockers / Open Questions
 

@@ -147,3 +147,11 @@ From a cloud session the `gh` CLI is usually absent: use the GitHub REST API wit
 is blocked by the proxy; read failures from `/actions/runs/{id}/jobs`, check-run annotations, or by
 reproducing the check locally. Changes pushed from a cloud session reach `E:\Aladdin` only after a
 `git pull` there.
+
+## Game mode visual identity
+
+Game mode must look like a game on every tab (painted fortress, scrolls, ravens, seals), not like the normal app re-skinned. Standard: `.claude/standards/game-visual-identity.md`; method: skill `game-visual-identity`; sprint gate: `docs/game-sprint-checklist.md`.
+- Every game page has an identity score 0-3. A new or changed page below 2 (scene header or bespoke illustration, shared kit, one real fact encoded visually, Plain view) is a review blocker. "A Card with a list" is not done.
+- Every game spec and idea carries a "visual verb + scene" line; every game sprint plan and review answers the checklist (pages touched, identity before/after, visual wins, look-and-judge screenshots).
+- Visuals replace words (noise-audit word budgets still apply) and never cost truth (unknown stays fog), colour-blind safety, reduced motion or phone performance.
+- The shared page-scene kit is owned by `game-feel-engineer`; add missing pieces there, do not inline one-off art or hex.
