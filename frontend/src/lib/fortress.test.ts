@@ -36,6 +36,10 @@ import {
   WALL_EDGE,
   sortTowers,
   towerDimensions,
+  weightScale,
+  siegeCamp,
+  WEIGHT_SCALE_MIN,
+  WEIGHT_SCALE_MAX,
 } from "./fortress";
 import type { GameTower } from "./types";
 
@@ -592,5 +596,43 @@ describe("formatWallInput", () => {
   });
   it("leaves unparseable values as given", () => {
     expect(formatWallInput("ebitda", "n/a")).toBe("EBITDA: n/a");
+  });
+});
+
+describe("weightScale (option D)", () => {
+  it("is neutral when the weight is unknown or not a number", () => {
+    expect(weightScale(null)).toBe(1);
+    expect(weightScale("abc")).toBe(1);
+  });
+  it("grows with weight and stays inside its bounds", () => {
+    expect(weightScale("22")).toBeGreaterThan(weightScale("10"));
+    expect(weightScale("10")).toBeGreaterThan(weightScale("2"));
+    expect(weightScale("0")).toBe(WEIGHT_SCALE_MIN);
+    expect(weightScale("-5")).toBe(WEIGHT_SCALE_MIN);
+    expect(weightScale("90")).toBe(WEIGHT_SCALE_MAX);
+  });
+  it("changes height only, never width", () => {
+    const heavy = towerDimensions(tower({ size_class: "medium", weight_pct: "30" }));
+    const light = towerDimensions(tower({ size_class: "medium", weight_pct: "1" }));
+    expect(heavy.w).toBe(light.w);
+    expect(heavy.h).toBeGreaterThan(light.h);
+  });
+});
+
+describe("siegeCamp (option C)", () => {
+  it("draws no enemy in calm or unsurveyed weather", () => {
+    for (const lvl of ["calm", "unsurveyed", null, undefined] as const) {
+      expect(siegeCamp(lvl)).toEqual({ tents: 0, soldiers: 0, engines: 0, arrows: 0 });
+    }
+  });
+  it("shows scouts while gathering and engines and arrows only when besieged", () => {
+    const g = siegeCamp("gathering");
+    const b = siegeCamp("besieged");
+    expect(g.tents).toBeGreaterThan(0);
+    expect(g.engines).toBe(0);
+    expect(g.arrows).toBe(0);
+    expect(b.tents).toBeGreaterThan(g.tents);
+    expect(b.engines).toBeGreaterThan(0);
+    expect(b.arrows).toBeGreaterThan(0);
   });
 });

@@ -295,6 +295,16 @@ function MoatRuns({ runs }: { runs: MoatRun[] }) {
                 strokeDasharray="6 9"
               />
             ))}
+            {run.segs.map((sg) => {
+              const w = sg.x1 - sg.x0;
+              return (
+                <g key={`rip-${sg.holdingId}`} stroke="#eaf6ff" strokeLinecap="round" fill="none">
+                  <path d={`M${sg.x0 + w * 0.18} ${run.y + 9} q6 -2 12 0 t12 0`} strokeOpacity={0.3} strokeWidth={1} />
+                  <path d={`M${sg.x0 + w * 0.55} ${run.y + 12} q5 -2 10 0 t10 0`} strokeOpacity={0.24} strokeWidth={1} />
+                  <path d={`M${sg.x0 + w * 0.8} ${run.y + 8} q4 -1.5 8 0 t8 0`} strokeOpacity={0.2} strokeWidth={1} />
+                </g>
+              );
+            })}
             <path d={`M${run.x0 + 4} ${run.y + 4} H${run.x1 - 4}`} stroke="#000" strokeOpacity={0.35} strokeWidth={2} />
           </g>
         );
@@ -1355,7 +1365,7 @@ export default function FortressScene({
     <div ref={rootRef} data-paused={running ? undefined : "true"} className="relative min-w-[720px]">
       <svg viewBox={`0 0 ${SCENE_WIDTH} ${height}`} className="block h-auto w-full" role="group" aria-label={summary}>
         <SceneDefs palette={palette} />
-        <SceneBackdrop layout={layout} sky={sky} palette={palette} height={height} />
+        <SceneBackdrop layout={layout} sky={sky} palette={palette} height={height} level={level} />
         {Array.from({ length: rowCount }, (_, r) => {
           const rowItems = layout.items.filter((i) => i.row === r);
           const y = groundY(r);
