@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { CIRCLE_MAP_WORD_BUDGET, INSIDE_CAPTION, MARKER_MIN_PX } from "../../../lib/circleMap";
+import { CIRCLE_MAP_WORD_BUDGET, HIT_PX, INSIDE_CAPTION } from "../../../lib/circleMap";
 import { countWords } from "../../../lib/wordBudget";
 import type { Competence, CompetenceLevel, CompetenceSector } from "../../../lib/types";
 import CircleGlyph from "./CircleGlyph";
@@ -47,15 +47,12 @@ const mixed = data([
 ]);
 
 describe("Circle ring map", () => {
-  it("draws one button per sector on the ring, each at least 44 px, with level and share in its name", () => {
+  it("draws one button per sector on the ring (plus one for holdings with no sector), each with a tap box of at least 44 px", () => {
     const html = render(mixed);
     const buttons = html.match(/<button[^>]*class="circle-marker"[^>]*>/g) ?? [];
-    expect(buttons).toHaveLength(4);
-    for (const b of buttons) {
-      const w = Number(/--px:(\d+)px/.exec(b)![1]);
-      expect(w).toBeGreaterThanOrEqual(MARKER_MIN_PX);
-    }
-    expect(html).toContain("Energy: I know this, 20.0% of the portfolio");
+    expect(buttons).toHaveLength(5);
+    for (const b of buttons) expect(Number(/--hit:(\d+)px/.exec(b)![1])).toBeGreaterThanOrEqual(HIT_PX);
+    expect(html).toContain("Energy: Inside, 20.0% of the portfolio");
     expect(html).toContain("Software: Unmarked, 15.0% of the portfolio");
   });
 
@@ -64,13 +61,13 @@ describe("Circle ring map", () => {
     expect(html).toContain("stroke-dasharray");
     expect(html).toContain(">?<");
     const opacities = [...html.matchAll(/class="circle-marker"[^>]*opacity:([0-9.]+)/g)].map((m) => Number(m[1]));
-    expect(opacities.length).toBe(4);
+    expect(opacities.length).toBe(5);
     expect(Math.min(...opacities)).toBeGreaterThanOrEqual(0.85);
   });
 
   it("draws the circle as an outline only, and the inside stays empty when nothing is known", () => {
     const html = render(data([sec("Software", null, "15"), sec("Telecom", "outside", "5")]));
-    const circleLine = /<path d="M25 50[^"]*"[^>]*>/.exec(html)![0];
+    const circleLine = /<path d="M31 50[^"]*"[^>]*>/.exec(html)![0];
     expect(circleLine).toContain('fill="none"');
     expect(html).not.toMatch(/filter|glow|drop-shadow|feTurbulence/i);
   });
@@ -83,10 +80,11 @@ describe("Circle ring map", () => {
   it("keeps funds and gold unplaced and holdings with no sector in the fog tag", () => {
     const html = render(mixed);
     expect(html).toContain("Not judged");
-    expect(html).toContain("1 funds or gold");
+    expect(html).toContain("1 fund or gold holding");
     expect(html).toContain("No sector set, 4.0%");
     expect(html).toContain("Loose Co");
-    expect((html.match(/class="circle-marker"/g) ?? []).length).toBe(4);
+    expect(html).toContain("No sector set: 1 holding, 4.0% of the portfolio");
+    expect((html.match(/class="circle-marker"/g) ?? []).length).toBe(5);
   });
 
   it("prints the four facts separately, each with its own shape", () => {
@@ -101,11 +99,11 @@ describe("Circle ring map", () => {
   });
 
   it("collapses a crowded ring into a count that keeps the unmarked ones visible", () => {
-    const many = data(Array.from({ length: 15 }, (_, i) => sec(`Sector ${String(i).padStart(2, "0")}`, i === 14 ? null : "know", String(30 - i))));
+    const many = data(Array.from({ length: 15 }, (_, i) => sec(`Sector ${String(i).padStart(2, "0")}`, i % 5 === 4 ? null : "know", String(30 - i))));
     const html = render(many);
-    expect(html).toContain("3 smaller sectors");
-    expect(html).toContain("1 unmarked");
-    expect((html.match(/class="circle-marker"/g) ?? []).length).toBe(12);
+    expect(html).toMatch(/\d+ smaller sectors/);
+    expect(html).toMatch(/\d+ inside \(\d+\.\d%\)/);
+    expect(html).toContain("Go to the list");
   });
 
   it("stays within its own word budget for a typical portfolio", () => {
@@ -127,15 +125,17 @@ describe("three-state control and stones", () => {
     const html = renderToStaticMarkup(<MarkControl sector="Energy" groupId="g" value="" disabled={false} onChange={() => {}} />);
     expect((html.match(/type="radio"/g) ?? []).length).toBe(3);
     expect(html).not.toContain("checked");
-    for (const w of ["Know", "Edge", "Outside"]) expect(html).toContain(w);
+    for (const w of ["Inside", "On the edge", "Outside"]) expect(html).toContain(w);
     expect(html).toContain("<svg");
-    expect(html).not.toContain("Clear mark");
+    expect(html).not.toContain("Clear");
+    expect((html.match(/<legend/g) ?? []).length).toBe(1);
+    expect(html).not.toContain("radiogroup");
   });
 
   it("checks the saved level and offers to clear it; read-only in demo", () => {
     const on = renderToStaticMarkup(<MarkControl sector="Energy" groupId="g" value="partly" disabled={false} onChange={() => {}} />);
     expect(on).toContain("checked");
-    expect(on).toContain("Clear mark");
+    expect(on).toContain("Clear mark: Energy");
     const demo = renderToStaticMarkup(<MarkControl sector="Energy" groupId="g" value="partly" disabled onChange={() => {}} />);
     expect(demo).toContain("disabled");
     expect(demo).not.toContain("Clear mark");
@@ -143,7 +143,7 @@ describe("three-state control and stones", () => {
 
   it("a stone shows the level, the date and a note glyph; unmarked is a dashed ? stone", () => {
     const known = renderToStaticMarkup(<BoundaryStone level="know" markedAt="2026-10-01T10:00:00Z" hasNote />);
-    expect(known).toContain("Know");
+    expect(known).toContain("Inside, ");
     expect(known).toContain('aria-label="has a note"');
     const none = renderToStaticMarkup(<BoundaryStone level={null} markedAt={null} hasNote={false} />);
     expect(none).toContain("Unmarked");

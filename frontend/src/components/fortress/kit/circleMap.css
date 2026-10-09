@@ -22,9 +22,12 @@
   left: calc(50% + var(--dx) * 1%);
   top: calc(50% + var(--dy) * 1%);
   transform: translate(-50%, -50%);
-  width: var(--px);
-  height: var(--px);
+  width: var(--hit);
+  height: var(--hit);
   z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 0;
   border: 0;
   border-radius: 9999px;
@@ -37,14 +40,8 @@
     left: 50%;
     top: 50%;
     transform: translate(-50%, -50%) translate(calc(var(--dx) * 1cqw), calc(var(--dy) * 1cqw));
-    width: max(44px, min(calc(var(--s) * 1cqw), var(--px)));
-    height: max(44px, min(calc(var(--s) * 1cqw), var(--px)));
     transition: transform 300ms ease;
   }
-}
-/* On a narrow map only the three heaviest names stay; the numbers match the list. */
-@container (max-width: 440px) {
-  .circle-name:not([data-rank="0"]):not([data-rank="1"]):not([data-rank="2"]) { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .circle-marker { transition: none; }
@@ -60,8 +57,8 @@
   box-shadow: 0 0 0 3px #f2d27a;
 }
 .circle-marker-disc {
-  width: 100%;
-  height: 100%;
+  position: relative;
+  flex: none;
   display: block;
   border-radius: 9999px;
   background: #f4e9cb;
@@ -69,8 +66,8 @@
 }
 .circle-pin {
   position: absolute;
-  top: -5px;
-  right: -5px;
+  top: -8px;
+  right: -8px;
   min-width: 19px;
   height: 19px;
   padding: 0 4px;
@@ -207,3 +204,7 @@
 .mark-save:focus-visible { outline: 3px solid #2a1a06; outline-offset: 3px; box-shadow: 0 0 0 3px #f2d27a; }
 .circle-marker:focus-visible, .circle-tag-button:focus-visible { z-index: 3; }
 .circle-hud .game-hud-label { font-size: 0.6875rem; }
+/* On a narrow map no names print, only the numbers that match the list; names would cover markers. */
+@container (max-width: 479px) {
+  .circle-name { display: none; }
+}

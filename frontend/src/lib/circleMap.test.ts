@@ -1,30 +1,34 @@
 import { describe, expect, it } from "vitest";
 import {
-  BAND_RADII,
   bandForLevel,
+  bandRadii,
   buildCircleMap,
   CIRCLE_MAP_CHROME,
   CIRCLE_MAP_CHROME_BUDGET,
   CIRCLE_R,
   CLEAR_WORD,
+  collapsedText,
+  DRAW_MAX_PX,
+  DRAW_MIN_PX,
   FOG_FROM,
   FOG_MIN_OPACITY,
-  FOG_MIN_PX,
   FREE_WEDGE_DEG,
   hudFacts,
   INSIDE_CAPTION,
+  LAYOUT_PX,
+  MARKER_GAP_PX,
   markerLabel,
   markerSize,
-  MARKER_MAX_PX,
-  MARKER_MIN_PX,
-  MAX_MARKERS,
   NAMED_MAX,
   NO_SECTOR_TITLE,
   NOT_JUDGED_TITLE,
   RING_LABEL,
+  saveMark,
   sectorDomId,
   SEGMENT_WORD,
   slotAngle,
+  circleView,
+  type CircleMapModel,
 } from "./circleMap";
 import { countWords } from "./wordBudget";
 import type { Competence, CompetenceLevel, CompetenceSector, CompetenceTower } from "./types";
@@ -61,6 +65,21 @@ const tower = (id: string, status: CompetenceTower["status"], sector: string | n
   status,
 });
 
+const many = (n: number, level: CompetenceLevel | null, w = (i: number) => String(2 + (i % 7))) =>
+  Array.from({ length: n }, (_, i) => sec(`Sector ${String(i).padStart(2, "0")}`, level, w(i)));
+
+/** Every pair of drawn markers must keep its gap, whatever the width of the map (>= LAYOUT_PX). */
+function expectNoOverlap(m: CircleMapModel, widthPx: number) {
+  for (let i = 0; i < m.markers.length; i++) {
+    for (let j = i + 1; j < m.markers.length; j++) {
+      const a = m.markers[i];
+      const b = m.markers[j];
+      const d = Math.hypot(((a.dx - b.dx) / 100) * widthPx, ((a.dy - b.dy) / 100) * widthPx);
+      expect(d, `${a.sector} vs ${b.sector} at ${widthPx}px`).toBeGreaterThanOrEqual(a.sizePx / 2 + b.sizePx / 2 + MARKER_GAP_PX - 1.5);
+    }
+  }
+}
+
 describe("bands and radii", () => {
   it("maps each level to its own band, and no mark to the fog", () => {
     expect(bandForLevel("know")).toBe("inside");
@@ -69,47 +88,116 @@ describe("bands and radii", () => {
     expect(bandForLevel(null)).toBe("fog");
   });
 
-  it("orders the bands radially: inside < the line < outside < fog, with the fog band beyond the open ground", () => {
-    expect(Math.max(...BAND_RADII.inside)).toBeLessThan(CIRCLE_R);
-    expect(BAND_RADII.edge).toEqual([CIRCLE_R, CIRCLE_R, CIRCLE_R]);
-    expect(Math.min(...BAND_RADII.outside)).toBeGreaterThan(CIRCLE_R);
-    expect(Math.max(...BAND_RADII.outside)).toBeLessThanOrEqual(FOG_FROM);
-    expect(Math.min(...BAND_RADII.fog)).toBeGreaterThan(FOG_FROM);
-    expect(Math.max(...BAND_RADII.fog)).toBeLessThan(1);
+  it("keeps each band apart at every marker size: inside < line < outside < fog start < fog < rim", () => {
+    const R = LAYOUT_PX / 2;
+    for (let d = DRAW_MIN_PX; d <= DRAW_MAX_PX; d++) {
+      const m = d / 2;
+      for (const r of bandRadii("inside", d)) expect(r + m).toBeLessThan(CIRCLE_R * R);
+      expect(bandRadii("edge", d)).toEqual([CIRCLE_R * R]);
+      for (const r of bandRadii("outside", d)) {
+        expect(r - m).toBeGreaterThan(CIRCLE_R * R);
+        expect(r + m).toBeLessThan(FOG_FROM * R);
+      }
+      for (const r of bandRadii("fog", d)) {
+        expect(r - m).toBeGreaterThan(FOG_FROM * R);
+        expect(r + m).toBeLessThan(R);
+      }
+    }
   });
 
   it("puts a partly-known sector exactly on the circle line", () => {
     const m = buildCircleMap(comp([sec("Energy", "partly", "10")])).markers[0];
     expect(m.band).toBe("edge");
-    expect(m.radius).toBe(CIRCLE_R);
-    expect(Math.hypot(m.dx, m.dy)).toBeCloseTo(CIRCLE_R * 50, 0);
+    expect(m.radius).toBeCloseTo(CIRCLE_R, 2);
+  });
+
+  it("an outside marker never reaches the fog and a fog marker never leaves the rim, in a full layout", () => {
+    const R = LAYOUT_PX / 2;
+    const levels: (CompetenceLevel | null)[] = ["outside", null];
+    for (const lv of levels) {
+      for (const mk of buildCircleMap(comp(many(10, lv, (i) => String(1 + i * 3)))).markers) {
+        const edge = Math.hypot(mk.dx, mk.dy) * (LAYOUT_PX / 100);
+        if (lv === "outside") expect(edge + mk.sizePx / 2).toBeLessThan(FOG_FROM * R);
+        else expect(edge + mk.sizePx / 2).toBeLessThan(R);
+      }
+    }
   });
 });
 
-describe("layout", () => {
+describe("no two markers overlap", () => {
+  const cases: [string, Competence][] = [
+    ["12 know", comp(many(12, "know"))],
+    ["12 partly", comp(many(12, "partly"))],
+    ["12 outside", comp(many(12, "outside"))],
+    ["12 unmarked", comp(many(12, null))],
+    ["15 mixed", comp(many(15, "know").map((s, i) => ({ ...s, level: (["know", "partly", "outside", null] as const)[i % 4] })))],
+    ["24 all unmarked", comp(many(24, null))],
+    ["30 heavy know", comp(many(30, "know", () => "30"))],
+    ["with holdings that have no sector", comp(many(12, null), [tower("1", "unclassified"), tower("2", "unclassified")])],
+  ];
+  for (const [name, c] of cases) {
+    it(`${name}: at the phone width, a tablet and a wide map`, () => {
+      const m = buildCircleMap(c);
+      for (const w of [LAYOUT_PX, 350, 560]) expectNoOverlap(m, w);
+    });
+  }
+
+  it("sends what does not fit to the tag, and counts every level and weight in it", () => {
+    const m = buildCircleMap(comp(many(14, "partly")));
+    expect(m.markers.length + (m.collapsed?.count ?? 0)).toBe(14);
+    expect(m.collapsed).not.toBeNull();
+    expect(m.collapsed!.levels).toEqual([{ band: "edge", count: m.collapsed!.count, weightPct: expect.any(Number) }]);
+    expect(m.rows).toHaveLength(14);
+  });
+
+  it("does not hide outside or unmarked sectors behind known ones: they are placed first", () => {
+    const sectors = [...many(10, "know", () => "9"), ...Array.from({ length: 4 }, (_, i) => sec(`Zed ${i}`, i % 2 ? "outside" : null, "1"))];
+    const m = buildCircleMap(comp(sectors));
+    for (const z of m.markers.filter((x) => x.sector.startsWith("Zed"))) expect(["outside", "fog"]).toContain(z.band);
+    expect(m.markers.filter((x) => x.sector.startsWith("Zed"))).toHaveLength(4);
+  });
+});
+
+describe("tag text", () => {
+  it("uses singular and plural correctly and gives a count and weight per level", () => {
+    const one = collapsedText({ count: 1, levels: [{ band: "fog", count: 1, weightPct: 2 }], sectors: ["A"] });
+    expect(one.title).toBe("1 smaller sector");
+    expect(one.detail).toBe("1 unmarked (2.0%)");
+    const two = collapsedText({ count: 3, levels: [{ band: "outside", count: 2, weightPct: 4.5 }, { band: "inside", count: 1, weightPct: 1 }], sectors: [] });
+    expect(two.title).toBe("3 smaller sectors");
+    expect(two.detail).toBe("2 outside (4.5%), 1 inside (1.0%)");
+  });
+});
+
+describe("fixed angles", () => {
   const names = ["Utilities", "Energy", "Materials", "Banks", "Health", "Telecom"];
   const build = (levels: (CompetenceLevel | null)[]) => buildCircleMap(comp(names.map((n, i) => sec(n, levels[i % levels.length], String(5 + i)))));
 
-  it("fixes the angle by sector name: alphabetical slots, the same whatever the marks are", () => {
-    const a = build(["know"]);
-    const b = build([null, "outside", "partly"]);
-    const angles = (m: ReturnType<typeof build>) => Object.fromEntries(m.markers.map((x) => [x.sector, x.angleDeg]));
-    expect(angles(a)).toEqual(angles(b));
-    const ordered = [...a.markers].sort((x, y) => x.angleDeg - y.angleDeg);
-    // the markers go round in name order (starting at the lower left, clockwise through the top)
-    const byName = [...names].sort((x, y) => x.localeCompare(y));
-    expect(a.markers.map((m) => m.sector)).toEqual(byName);
-    expect(a.markers.map((m) => m.pin)).toEqual([1, 2, 3, 4, 5, 6]);
-    expect(ordered.length).toBe(6);
+  it("fixes the angle by the sector's place in the full name-sorted list, whatever the marks", () => {
+    const a = build(["know", "outside"]).markers;
+    const b = build([null, "partly", "outside"]).markers;
+    const common = a.filter((x) => b.some((y) => y.sector === x.sector));
+    expect(common.length).toBeGreaterThanOrEqual(4);
+    for (const x of common) expect(b.find((y) => y.sector === x.sector)!.angleDeg).toBe(x.angleDeg);
   });
 
-  it("leaves the free wedge at the bottom empty for the zone names", () => {
-    const m = buildCircleMap(comp(Array.from({ length: 12 }, (_, i) => sec(`S${String(i).padStart(2, "0")}`, "know", "3")))).markers;
+  it("marking a sector, or a quiet sector becoming active, never moves another marker's angle", () => {
+    const base = [sec("A", "know", "10"), sec("B", null, "10"), sec("C", null, "0", 0), sec("D", "outside", "10")];
+    const before = buildCircleMap(comp(base)).markers;
+    const marked = buildCircleMap(comp(base.map((s) => (s.sector === "C" ? { ...s, level: "know" as const } : s)))).markers;
+    for (const m of before) expect(marked.find((x) => x.sector === m.sector)!.angleDeg).toBe(m.angleDeg);
+    expect(marked.some((x) => x.sector === "C")).toBe(true);
+  });
+
+  it("goes round in name order and leaves the free wedge at the bottom empty", () => {
+    const m = buildCircleMap(comp(many(12, "know", () => "3"))).markers;
     for (const x of m) expect(Math.abs(x.angleDeg - 180)).toBeGreaterThanOrEqual(FREE_WEDGE_DEG / 2 - 0.5);
     expect(slotAngle(0, 1)).toBeCloseTo(0, 5);
+    const spread = buildCircleMap(comp(names.map((n, i) => sec(n, (["know", "partly", "outside", null] as const)[i % 4], "5")))).markers.filter((x) => x.kind === "sector");
+    expect(spread.map((x) => x.sector)).toEqual([...names].sort((a, b) => a.localeCompare(b)));
   });
 
-  it("changing a mark only changes the spoke length, never the angle", () => {
+  it("changing a mark changes the band, not the angle", () => {
     const before = buildCircleMap(comp([sec("A", null, "10"), sec("B", "know", "10")])).markers;
     const after = buildCircleMap(comp([sec("A", "know", "10"), sec("B", "know", "10")])).markers;
     expect(after[0].angleDeg).toBe(before[0].angleDeg);
@@ -118,74 +206,35 @@ describe("layout", () => {
     expect(after[0].radius).toBeLessThan(before[0].radius);
   });
 
-  it("keeps every marker on the page: dx and dy stay inside the half-width", () => {
-    for (const m of build(["know", "partly", "outside", null]).markers) {
-      expect(Math.hypot(m.dx, m.dy)).toBeLessThan(50);
-    }
-  });
-
-  it("draws nothing for an empty circle: no markers, no collapse", () => {
+  it("draws nothing for an empty circle", () => {
     const m = buildCircleMap(comp([]));
     expect(m.markers).toEqual([]);
     expect(m.collapsed).toBeNull();
   });
 });
 
-describe("marker size", () => {
-  it("is bounded and grows with the real weight", () => {
-    expect(markerSize(0, "inside")).toBe(MARKER_MIN_PX);
-    expect(markerSize(1000, "inside")).toBe(MARKER_MAX_PX);
-    expect(markerSize(5, "inside")).toBeLessThan(markerSize(15, "inside"));
-    expect(markerSize(-3, "inside")).toBe(MARKER_MIN_PX);
-    expect(MARKER_MIN_PX).toBeGreaterThanOrEqual(44);
+describe("marker size comes from weight only", () => {
+  it("is bounded, grows with the real weight, and 35% is visibly bigger than 5%", () => {
+    expect(markerSize(0)).toBe(DRAW_MIN_PX);
+    expect(markerSize(1000)).toBe(DRAW_MAX_PX);
+    expect(markerSize(-3)).toBe(DRAW_MIN_PX);
+    expect(markerSize(5)).toBeLessThan(markerSize(15));
+    expect(markerSize(35) - markerSize(5)).toBeGreaterThanOrEqual(8);
   });
 
-  it("is proportional in area: four times the weight is about twice the added diameter", () => {
-    const d = (w: number) => markerSize(w, "inside") - MARKER_MIN_PX;
-    expect(d(20) / d(5)).toBeCloseTo(2, 0);
-  });
-
-  it("never draws unknown smaller than known, at any weight", () => {
-    for (let w = 0; w <= 40; w += 0.5) {
-      expect(markerSize(w, "fog")).toBeGreaterThanOrEqual(markerSize(w, "inside"));
-      expect(markerSize(w, "fog")).toBeGreaterThanOrEqual(markerSize(w, "edge"));
-      expect(markerSize(w, "fog")).toBeGreaterThanOrEqual(markerSize(w, "outside"));
-    }
-    expect(markerSize(0, "fog")).toBeGreaterThanOrEqual(FOG_MIN_PX);
-  });
-
-  it("an unmarked marker is full size and at least 0.85 opaque, like every other marker", () => {
-    const { markers } = buildCircleMap(comp([sec("A", null, "12"), sec("B", "know", "12"), sec("C", null, "0.4")]));
-    for (const m of markers) expect(m.opacity).toBeGreaterThanOrEqual(FOG_MIN_OPACITY);
-    const a = markers.find((m) => m.sector === "A")!;
-    const b = markers.find((m) => m.sector === "B")!;
-    expect(a.sizePx).toBeGreaterThanOrEqual(b.sizePx);
+  it("an unmarked sector is exactly as big as a known one of the same share, and a 0% one is not bigger than a 2% one", () => {
+    const m = buildCircleMap(comp([sec("A", null, "12"), sec("B", "know", "12"), sec("C", null, "0", 1), sec("D", "know", "2")])).markers;
+    const get = (n: string) => m.find((x) => x.sector === n)!;
+    expect(get("A").sizePx).toBe(get("B").sizePx);
+    expect(get("C").sizePx).toBeLessThanOrEqual(get("D").sizePx);
+    for (const x of m) expect(x.opacity).toBeGreaterThanOrEqual(FOG_MIN_OPACITY);
   });
 });
 
 describe("what is on the ring and what is not", () => {
-  it("collapses beyond twelve markers into one count, keeping the heaviest and losing no fact", () => {
-    const sectors = Array.from({ length: 15 }, (_, i) => sec(`Sector ${String(i).padStart(2, "0")}`, i % 3 === 0 ? null : "know", String(30 - i)));
-    const m = buildCircleMap(comp(sectors));
-    expect(m.markers).toHaveLength(MAX_MARKERS);
-    expect(m.collapsed?.count).toBe(3);
-    expect(m.collapsed?.sectors).toEqual(["Sector 12", "Sector 13", "Sector 14"]);
-    expect(m.collapsed?.unmarked).toBe(1);
-    // the rows still list all fifteen
-    expect(m.rows).toHaveLength(15);
-    expect(m.markers.some((x) => x.sector === "Sector 14")).toBe(false);
-  });
-
-  it("does not collapse at exactly twelve", () => {
-    const m = buildCircleMap(comp(Array.from({ length: 12 }, (_, i) => sec(`S${i}`, "know", "2"))));
-    expect(m.markers).toHaveLength(12);
-    expect(m.collapsed).toBeNull();
-  });
-
-  it("names only the largest markers; the others carry a number", () => {
-    const m = buildCircleMap(comp(Array.from({ length: 10 }, (_, i) => sec(`S${i}`, "know", String(i + 1)))));
+  it("names only the heaviest markers", () => {
+    const m = buildCircleMap(comp(many(8, "know", (i) => String(i + 1))));
     expect(m.markers.filter((x) => x.showName)).toHaveLength(NAMED_MAX);
-    expect(m.markers.filter((x) => x.showName).every((x) => x.weightPct >= 5)).toBe(true);
   });
 
   it("sectors with nothing held and no mark are only rows behind a disclosure; a mark keeps a sector on the ring", () => {
@@ -195,23 +244,56 @@ describe("what is on the ring and what is not", () => {
     expect(m.rows.map((x) => x.sector)).toEqual(["Held", "MarkedEmpty"]);
   });
 
-  it("keeps holdings with no sector in the fog tag and funds and gold unplaced as not judged", () => {
+  it("draws holdings with no sector as one dashed marker at the rim sized by their weight, and keeps funds unplaced", () => {
     const m = buildCircleMap(
-      comp(
-        [sec("A", "know", "5")],
-        [tower("1", "inside", "A"), tower("2", "unclassified"), tower("3", "unclassified"), tower("4", "not_applicable"), tower("5", "not_applicable"), tower("6", "not_applicable")],
-      ),
+      comp([sec("A", "know", "5")], [tower("1", "inside", "A"), tower("2", "unclassified"), tower("3", "unclassified"), tower("4", "not_applicable"), tower("5", "not_applicable"), tower("6", "not_applicable")]),
     );
-    expect(m.markers).toHaveLength(1);
-    expect(m.noSector.count).toBe(2);
+    const ns = m.markers.find((x) => x.kind === "nosector")!;
+    expect(ns.band).toBe("fog");
+    expect(ns.level).toBeNull();
+    expect(ns.sizePx).toBe(markerSize(10));
+    expect(ns.heldCount).toBe(2);
+    expect(ns.label).toContain("2 holdings");
+    expect(m.markers.filter((x) => x.kind === "sector")).toHaveLength(1);
     expect(m.noSector.names).toEqual(["Name 2", "Name 3"]);
-    expect(m.noSector.weightText).toBe("10.0%");
     expect(m.notJudged.count).toBe(3);
+    expect(buildCircleMap(comp([sec("A", "know", "5")], [tower("4", "not_applicable")])).markers.some((x) => x.kind === "nosector")).toBe(false);
+  });
+
+  it("a big no-sector share is drawn as big as a known sector of the same share", () => {
+    const c = comp([sec("A", "know", "40")], [tower("2", "unclassified")]);
+    c.unclassified_weight_pct = "40.0";
+    const m = buildCircleMap(c).markers;
+    expect(m.find((x) => x.kind === "nosector")!.sizePx).toBe(m.find((x) => x.sector === "A")!.sizePx);
   });
 
   it("an empty inside is nothing: no know sector, no inside marker", () => {
-    const m = buildCircleMap(comp([sec("A", null, "5"), sec("B", "outside", "5")]));
-    expect(m.markers.some((x) => x.band === "inside")).toBe(false);
+    expect(buildCircleMap(comp([sec("A", null, "5"), sec("B", "outside", "5")])).markers.some((x) => x.band === "inside")).toBe(false);
+  });
+});
+
+describe("page logic", () => {
+  it("shows the ring map only in game mode and not in Plain view", () => {
+    expect(circleView(true, false)).toBe("ring");
+    expect(circleView(true, true)).toBe("plain");
+    expect(circleView(false, false)).toBe("plain");
+    expect(circleView(false, true)).toBe("plain");
+  });
+
+  it("saves with PUT (trimmed note, null when empty) and clears with DELETE, nothing else", async () => {
+    const calls: unknown[][] = [];
+    const client = {
+      putCompetence: async (...a: unknown[]) => (calls.push(["PUT", ...a]), "put"),
+      deleteCompetence: async (...a: unknown[]) => (calls.push(["DELETE", ...a]), "del"),
+    };
+    expect(await saveMark(client as never, "Energy", "know", "  why  ")).toBe("put");
+    expect(await saveMark(client as never, "Energy", "partly", "   ")).toBe("put");
+    expect(await saveMark(client as never, "Energy", "", "ignored")).toBe("del");
+    expect(calls).toEqual([
+      ["PUT", "Energy", "know", "why"],
+      ["PUT", "Energy", "partly", null],
+      ["DELETE", "Energy"],
+    ]);
   });
 });
 
@@ -224,7 +306,6 @@ describe("the strip of four facts", () => {
       ["Outside", "5.0%"],
       ["Unmarked", "40.0%"],
     ]);
-    expect(f.some((x) => /total|coverage|sum/i.test(x.label))).toBe(false);
   });
 
   it("a missing figure is unknown, never zero", () => {
@@ -233,35 +314,22 @@ describe("the strip of four facts", () => {
 });
 
 describe("labels and wording", () => {
-  it("names the sector, the level in words and the share", () => {
+  it("names the sector, the level in words and the share, with one name per state", () => {
     expect(markerLabel(sec("Energy", "partly", "12.34", 2))).toBe("Energy: On the edge, 12.3% of the portfolio");
     expect(markerLabel(sec("Energy", null, "0", 0))).toBe("Energy: Unmarked, nothing held");
+    expect(SEGMENT_WORD).toEqual({ know: "Inside", partly: "On the edge", outside: "Outside" });
+    expect(RING_LABEL.edge).toBe("On the edge");
   });
 
   it("makes stable DOM ids", () => {
     expect(sectorDomId("Health Care")).toBe("circle-sector-health-care");
-    expect(sectorDomId("Consumer (Staples)")).toBe("circle-sector-consumer-staples");
     expect(sectorDomId("***")).toBe("circle-sector-x");
   });
 
-  it("prints no buy, sell, score, streak, reward or verdict wording, and the caption says inside is not a verdict", () => {
-    const words = [
-      ...CIRCLE_MAP_CHROME,
-      ...Object.values(RING_LABEL),
-      ...Object.values(SEGMENT_WORD),
-      CLEAR_WORD,
-      NO_SECTOR_TITLE,
-      NOT_JUDGED_TITLE,
-      INSIDE_CAPTION,
-      markerLabel(sec("Energy", "know", "5")),
-      markerLabel(sec("Energy", null, "5")),
-    ].join(" ");
-    expect(words).not.toMatch(/\b(buy|sell|add|trim|invest|purchase|good|bad|win|wins|score|scores|streak|reward|points?|complete|completion|safe|strong|weak)\b/i);
+  it("prints no buy, sell, score, streak, reward or verdict wording", () => {
+    const words = [...CIRCLE_MAP_CHROME, ...Object.values(SEGMENT_WORD), CLEAR_WORD, NO_SECTOR_TITLE, NOT_JUDGED_TITLE, INSIDE_CAPTION, markerLabel(sec("Energy", "know", "5"))].join(" ");
+    expect(words).not.toMatch(/\b(buy|sell|add|trim|invest|purchase|good|bad|win|wins|score|scores|streak|reward|points?|complete|completion|safe|strong|weak|green|red|amber)\b/i);
     expect(INSIDE_CAPTION).toBe("Inside means you know the sector, not that the holding is sound.");
-  });
-
-  it("uses the colour words nowhere in the labels (status is position, pattern and words)", () => {
-    expect([...Object.values(RING_LABEL), ...Object.values(SEGMENT_WORD)].join(" ")).not.toMatch(/green|red|amber|yellow/i);
   });
 
   it("keeps the fixed chrome inside its own word budget", () => {

@@ -4,7 +4,7 @@ import { api, ApiError } from "../lib/api";
 import { formatDate } from "../lib/format";
 import { LEVEL_LABEL, STATUS_CLASS, STATUS_LABEL, circleSegments, weightText } from "../lib/rituals";
 import type { Competence, CompetenceLevel, CompetenceSector, CompetenceStatus } from "../lib/types";
-import { sectorDomId, buildCircleMap } from "../lib/circleMap";
+import { buildCircleMap, circleView, focusSectorControl, saveMark, sectorDomId } from "../lib/circleMap";
 import { useGameMode } from "../lib/gameMode";
 import { usePlainView } from "../lib/plainView";
 import { Button, Card, Disclosure, EmptyState, PageHeader } from "../components/ui";
@@ -53,7 +53,7 @@ function SectorRow({
     setBusy(true);
     setError(null);
     try {
-      onSaved(level === "" ? await api.deleteCompetence(sector.sector) : await api.putCompetence(sector.sector, level, note.trim() || null));
+      onSaved(await saveMark(api, sector.sector, level, note));
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Could not save.");
     } finally {
@@ -141,7 +141,7 @@ function SectorRow({
 
 /** Everything the page showed before the ring map: the bar legend, the holdings list, the select per
  * sector. Plain view and normal mode keep showing exactly this, with the same facts. */
-function PlainBody({ data, segments, onSaved }: { data: Competence; segments: ReturnType<typeof circleSegments>; onSaved: (c: Competence) => void }) {
+export function PlainBody({ data, segments, onSaved }: { data: Competence; segments: ReturnType<typeof circleSegments>; onSaved: (c: Competence) => void }) {
   return (
     <div className="space-y-4">
           <Card>
@@ -215,19 +215,11 @@ function statusGlyph(status: CompetenceStatus): CompetenceLevel | null | undefin
 /** The ring map body (game mode, not Plain view). The map is the picture; the marks list under it is
  * the same facts as rows, and the holdings list and the sectors with nothing held sit behind a
  * disclosure. Neutral palette: statuses are shape plus word, never green, amber or red. */
-function RingBody({ data, onSaved }: { data: Competence; onSaved: (c: Competence) => void }) {
+export function RingBody({ data, onSaved }: { data: Competence; onSaved: (c: Competence) => void }) {
   const model = useMemo(() => buildCircleMap(data), [data]);
   const pins = useMemo(() => new Map(model.markers.map((m) => [m.sector, m.pin])), [model]);
 
-  function focusRow(sector: string | null) {
-    const el = document.getElementById(sector ? sectorDomId(sector) : "circle-marks");
-    if (!el) return;
-    const reduce = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    el.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "center" });
-    const control =
-      el.querySelector<HTMLElement>('input[type="radio"]:checked:not(:disabled)') ?? el.querySelector<HTMLElement>('input[type="radio"]:not(:disabled)');
-    (control ?? el).focus({ preventScroll: true });
-  }
+  const focusRow = (sector: string | null) => focusSectorControl(document, sector);
 
   const row = (s: CompetenceSector) => (
     <SectorRow
@@ -295,11 +287,20 @@ function RingBody({ data, onSaved }: { data: Competence; onSaved: (c: Competence
   );
 }
 
+/** Ring map in game mode, the old page in Plain view and normal mode; the same facts either way. */
+export function CompetenceView({ data, onSaved }: { data: Competence; onSaved: (c: Competence) => void }) {
+  const { gameMode } = useGameMode();
+  const [plain] = usePlainView();
+  return circleView(gameMode, plain) === "ring" ? (
+    <RingBody data={data} onSaved={onSaved} />
+  ) : (
+    <PlainBody data={data} segments={circleSegments(data)} onSaved={onSaved} />
+  );
+}
+
 export default function CompetencePage() {
   const [data, setData] = useState<Competence | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const { gameMode } = useGameMode();
-  const [plain] = usePlainView();
 
   useEffect(() => {
     let live = true;
@@ -312,21 +313,20 @@ export default function CompetencePage() {
     };
   }, []);
 
-  const segments = data ? circleSegments(data) : [];
   return (
     <div>
       <PageHeader
         title="Circle of Competence"
         subtitle="Mark the sectors you really understand. The page lays your marks over what you own."
         actions={
-          <Link to="/fortress" className="inline-block py-2 text-sm text-accent hover:underline">
+          <Link to="/fortress" className="inline-flex min-h-[44px] items-center text-sm text-accent hover:underline">
             Back to the Fortress
           </Link>
         }
       />
       {error && <EmptyState>{error}</EmptyState>}
       {!error && !data && <p className="text-sm text-ink-muted">Drawing the circle…</p>}
-      {data && (gameMode && !plain ? <RingBody data={data} onSaved={setData} /> : <PlainBody data={data} segments={segments} onSaved={setData} />)}
+      {data && <CompetenceView data={data} onSaved={setData} />}
     </div>
   );
 }

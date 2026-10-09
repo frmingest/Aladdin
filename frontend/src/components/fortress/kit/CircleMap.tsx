@@ -5,11 +5,12 @@ import {
   FOG_FROM,
   hudFacts,
   INSIDE_CAPTION,
-  MAP_REF_PX,
+  collapsedText,
+  HIT_PX,
   NO_SECTOR_TITLE,
   NOT_JUDGED_TITLE,
   RING_LABEL,
-  ringLabelTop,
+  ringLabelPos,
   type CircleBand,
   type CircleMarker,
 } from "../../../lib/circleMap";
@@ -50,29 +51,32 @@ function Ground() {
   );
 }
 
-function Marker({ m, onPress }: { m: CircleMarker; onPress: (sector: string) => void }) {
-  const style = { "--dx": m.dx, "--dy": m.dy, "--px": `${m.sizePx}px`, "--s": Math.round((m.sizePx / MAP_REF_PX) * 1000) / 10, opacity: m.opacity } as CSSProperties;
+function Marker({ m, onPress }: { m: CircleMarker; onPress: (sector: string | null) => void }) {
+  const style = { "--dx": m.dx, "--dy": m.dy, "--hit": `${Math.max(HIT_PX, m.sizePx)}px`, opacity: m.opacity } as CSSProperties;
   return (
     <button
       type="button"
       className="circle-marker"
       data-band={m.band}
+      data-kind={m.kind}
       style={style}
-      aria-label={`${m.label}. Go to its mark control`}
+      aria-label={m.kind === "sector" ? `${m.label}. Go to its mark control` : `${m.label}. Go to the list`}
       title={m.label}
-      onClick={() => onPress(m.sector)}
+      onClick={() => onPress(m.kind === "sector" ? m.sector : null)}
     >
-      <span className="circle-marker-disc">
-        <CircleGlyph level={m.level} size={m.sizePx} fluid rotate={m.angleDeg} />
+      <span className="circle-marker-disc" style={{ width: m.sizePx, height: m.sizePx }}>
+        <CircleGlyph level={m.level} size={m.sizePx} rotate={m.angleDeg} />
+        {m.pin > 0 && (
+          <span className="circle-pin" aria-hidden>
+            {m.pin}
+          </span>
+        )}
+        {m.showName && (
+          <span className="circle-name" data-rank={m.nameRank ?? undefined} aria-hidden>
+            {m.sector}
+          </span>
+        )}
       </span>
-      <span className="circle-pin" aria-hidden>
-        {m.pin}
-      </span>
-      {m.showName && (
-        <span className="circle-name" data-rank={m.nameRank ?? undefined} aria-hidden>
-          {m.sector}
-        </span>
-      )}
     </button>
   );
 }
@@ -106,7 +110,7 @@ function Tent() {
 export default function CircleMap({ data, onPress }: { data: Competence; onPress: (sector: string | null) => void }) {
   const model = useMemo(() => buildCircleMap(data), [data]);
   const { noSector, notJudged, collapsed } = model;
-  const bands = (Object.keys(RING_LABEL) as CircleBand[]).map((b) => ({ b, top: ringLabelTop(b) }));
+  const bands = (Object.keys(RING_LABEL) as CircleBand[]).map((b) => ({ b, pos: ringLabelPos(b) }));
   const fogLines = noSector.names.length > 0 ? noSector.names : [];
   return (
     <div>
@@ -115,8 +119,8 @@ export default function CircleMap({ data, onPress }: { data: Competence; onPress
         <ParchmentPanel className="circle-stage">
           <div className="circle-map" role="group" aria-label="Circle of competence: one marker per sector">
             <Ground />
-            {bands.map(({ b, top }) => (
-              <span key={b} className="circle-ring-label" style={{ top: `${top}%` }} data-band={b}>
+            {bands.map(({ b, pos }) => (
+              <span key={b} className="circle-ring-label" style={{ left: `${pos.left}%`, top: `${pos.top}%` }} data-band={b}>
                 {RING_LABEL[b]}
               </span>
             ))}
@@ -135,7 +139,7 @@ export default function CircleMap({ data, onPress }: { data: Competence; onPress
                   <Tent />
                   <span>
                     <span className="font-semibold">{NOT_JUDGED_TITLE}</span>
-                    <span className="block text-xs text-ink-muted">{notJudged.count} funds or gold</span>
+                    <span className="block text-xs text-ink-muted">{notJudged.count} {notJudged.count === 1 ? "fund or gold holding" : "funds or gold"}</span>
                   </span>
                 </div>
               )}
@@ -143,13 +147,13 @@ export default function CircleMap({ data, onPress }: { data: Competence; onPress
                 <button
                   type="button"
                   className="circle-tag circle-tag-button"
-                  data-fog={collapsed.unmarked > 0 ? "true" : undefined}
+                  data-fog={collapsed.levels.some((l) => l.band === "fog") ? "true" : undefined}
                   onClick={() => onPress(null)}
-                  aria-label={`${collapsed.count} smaller sectors${collapsed.unmarked > 0 ? `, ${collapsed.unmarked} unmarked` : ""}. Go to the list`}
+                  aria-label={`${collapsedText(collapsed).title}: ${collapsedText(collapsed).detail}. Go to the list`}
                 >
                   <span>
-                    <span className="font-semibold">{collapsed.count} smaller sectors</span>
-                    {collapsed.unmarked > 0 && <span className="block text-xs text-ink-muted">{collapsed.unmarked} unmarked</span>}
+                    <span className="font-semibold">{collapsedText(collapsed).title}</span>
+                    <span className="block text-xs text-ink-muted">{collapsedText(collapsed).detail}</span>
                   </span>
                 </button>
               )}

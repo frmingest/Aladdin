@@ -1,4 +1,4 @@
-import { CLEAR_WORD, SEGMENT_WORD } from "../../../lib/circleMap";
+import { CLEAR_WORD, RING_LABEL, SEGMENT_WORD } from "../../../lib/circleMap";
 import { formatDate } from "../../../lib/format";
 import type { CompetenceLevel } from "../../../lib/types";
 import CircleGlyph from "./CircleGlyph";
@@ -26,7 +26,7 @@ export default function MarkControl({
   return (
     <fieldset className="flex min-w-0 flex-wrap items-center gap-x-3">
       <legend className="sr-only">{sector}: how well you know it</legend>
-      <div className="mark-seg" role="radiogroup" aria-label={`${sector}: how well you know it`}>
+      <div className="mark-seg">
         {levels.map((l) => (
           <label key={l} className="mark-seg-item">
             <input
@@ -56,7 +56,7 @@ export default function MarkControl({
 /** The boundary stone beside a sector's name: the saved mark as a small pebble with its shape, the
  * date it was set, and a scroll glyph when a note is written. Unmarked is a dashed stone with a "?". */
 export function BoundaryStone({ level, markedAt, hasNote }: { level: CompetenceLevel | null; markedAt: string | null; hasNote: boolean }) {
-  const word = level === null ? "Unmarked" : SEGMENT_WORD[level];
+  const word = level === null ? RING_LABEL.fog : SEGMENT_WORD[level];
   return (
     <span className="circle-stone" data-unmarked={level === null ? "true" : undefined}>
       <CircleGlyph level={level} size={18} />
