@@ -16,7 +16,7 @@ export const SEAL_LOOK: Record<SealKind, SealLook> = {
   alert: { kind: "alert", shape: "triangle", glyph: "!", label: "Warning" },
   notice: { kind: "notice", shape: "circle", glyph: "i", label: "Note" },
   unknown: { kind: "unknown", shape: "dashed-circle", glyph: "?", label: "Unknown" },
-  none: { kind: "none", shape: "ring", glyph: "", label: "Nothing found" },
+  none: { kind: "none", shape: "ring", glyph: "", label: "None found" },
 };
 
 /** Council tone ("warning" | "note") to a seal. Anything else is a plain note, never a calm look. */

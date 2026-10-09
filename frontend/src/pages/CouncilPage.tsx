@@ -131,7 +131,7 @@ export default function CouncilPage() {
       {!error && !council && <p className="text-sm text-ink-muted">The council is gathering…</p>}
       {council && (
         <div className="space-y-4">
-          {!plain && <CouncilChamber seats={seats} onJump={jump} />}
+          {!plain && <CouncilChamber seats={seats} onJump={jump} unresolved={council.unknowns.length > 0} />}
           <Card>
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="section-title mb-0">The agenda</h2>
@@ -164,7 +164,7 @@ export default function CouncilPage() {
                     side={line.advisor === "partner" ? "right" : "left"}
                   >
                     {line.holding_id && line.holding_name && (
-                      <Link to={`/holdings/${line.holding_id}`} className="mb-1 inline-block text-accent hover:underline">
+                      <Link to={`/holdings/${line.holding_id}`} className="mb-1 inline-block text-[#f2d27a] hover:underline">
                         {line.holding_name}
                       </Link>
                     )}

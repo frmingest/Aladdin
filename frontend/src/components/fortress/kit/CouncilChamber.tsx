@@ -30,15 +30,24 @@ function SeatBody({ s }: { s: Seat }) {
         {s.occupied && <Papers n={s.papers} />}
         {s.count !== null && <span className="text-xs font-bold text-[#f6e6bd]">{s.count}</span>}
       </span>
-      <span className={`mt-0.5 block text-center text-[11px] leading-tight ${s.occupied ? "font-semibold text-[#f6e6bd]" : "text-[#a8977a]"}`}>
+      <span className={`mt-0.5 block text-center text-xs leading-tight ${s.occupied ? "font-semibold text-[#f6e6bd]" : "text-[#a8977a]"}`}>
         {s.label}
-        {!s.occupied && <span className="block text-[10px] font-normal">nothing found</span>}
+        {!s.occupied && <span className="block text-[11px] font-normal">none found</span>}
       </span>
     </>
   );
 }
 
-export default function CouncilChamber({ seats, onJump }: { seats: Seat[]; onJump: (kind: Seat["kind"]) => void }) {
+export default function CouncilChamber({
+  seats,
+  onJump,
+  unresolved = false,
+}: {
+  seats: Seat[];
+  onJump: (kind: Seat["kind"]) => void;
+  /** True when the council lists things it could not check: an empty chair is then not proof of nothing. */
+  unresolved?: boolean;
+}) {
   const id = useId().replace(/:/g, "");
   const seatClass = (s: Seat) =>
     `rounded-md border px-1.5 py-1.5 ${s.occupied ? "border-[#d9a93e] bg-[#3a2414]" : "border-dashed border-[#6b5a3c] bg-transparent"}`;
@@ -88,7 +97,7 @@ export default function CouncilChamber({ seats, onJump }: { seats: Seat[]; onJum
         {seats.map((s) => (
           <li key={s.kind}>
             {s.occupied ? (
-              <button type="button" className={`min-h-[44px] w-full ${seatClass(s)}`} aria-label={seatLabel(s)} onClick={() => onJump(s.kind)}>
+              <button type="button" className={`chamber-btn min-h-[44px] w-full ${seatClass(s)}`} aria-label={seatLabel(s)} onClick={() => onJump(s.kind)}>
                 <SeatBody s={s} />
               </button>
             ) : (
@@ -99,6 +108,11 @@ export default function CouncilChamber({ seats, onJump }: { seats: Seat[]; onJum
           </li>
         ))}
       </ul>
+      {unresolved && (
+        <p className="relative border-t border-dashed border-[#6b5a3c] px-3 py-2 text-xs text-[#cdb98c]">
+          Some rules could not be checked (see below). An empty chair is not proof of nothing.
+        </p>
+      )}
     </div>
   );
 }

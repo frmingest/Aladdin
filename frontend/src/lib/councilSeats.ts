@@ -66,7 +66,7 @@ export function councilSeats(council: Pick<Council, "items">): Seat[] {
 
 /** Accessible name of a seat. */
 export function seatLabel(s: Seat): string {
-  if (!s.occupied) return `${s.label}: nothing found`;
+  if (!s.occupied) return `${s.label}: none found`;
   const what = s.count === null ? "on the agenda" : `${s.count} ${s.count === 1 ? "holding" : "holdings"}`;
   return `${s.label}: ${what}. Press to jump to the item`;
 }

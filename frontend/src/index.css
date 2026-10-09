@@ -887,7 +887,7 @@
   --c-border-subtle: 214 194 156;
   --c-ink: 43 29 14;
   --c-ink-muted: 100 80 52;
-  --c-ink-faint: 112 92 62;
+  --c-ink-faint: 88 70 44;
   --c-accent: 110 64 10;
   --c-accent-hover: 84 46 4;
   --c-accent-subtle: 232 214 172;
@@ -898,6 +898,7 @@
     radial-gradient(ellipse at 50% 100%, rgba(120, 80, 30, 0.2), transparent 55%);
   box-shadow: 0 10px 24px -14px rgba(0, 0, 0, 0.7), inset 0 0 0 1px rgba(150, 110, 50, 0.45), inset 0 0 36px rgba(120, 80, 30, 0.22);
 }
+.game-banner-actions { --c-accent: 242 210 122; --c-accent-hover: 255 232 160; --c-ink-muted: 205 185 140; }
 .game-banner {
   background: linear-gradient(180deg, #2b1c10, #1b1109);
   box-shadow: inset 0 0 0 1px #8a6a32, inset 0 0 0 3px #1b1109, inset 0 0 0 4px rgba(217, 169, 62, 0.45), 0 12px 24px -16px #000;
@@ -909,4 +910,4 @@
 }
 .chamber { background: linear-gradient(180deg, #241710, #170f09); box-shadow: inset 0 0 0 1px #8a6a32, inset 0 0 40px rgba(0, 0, 0, 0.6); }
 .chamber-seat { position: absolute; transform: translate(-50%, -50%); width: 104px; }
-.chamber-seat:focus-visible { outline: 2px solid #f2d27a; outline-offset: 2px; }
+.chamber-seat:focus-visible, .chamber-btn:focus-visible { outline: 2px solid #f2d27a; outline-offset: 2px; }
