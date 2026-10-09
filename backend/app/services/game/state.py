@@ -498,9 +498,28 @@ def build_game_state(
     )
 
 
+def _stress_coverage(risk: RiskFacts | None, towers: list[TowerOut]) -> Decimal | None:
+    """Share (0-1) of the book's weight whose holding has a stored scenario shock."""
+    if risk is None:
+        return None
+    total = sum((t.weight_pct for t in towers if t.weight_pct is not None), Decimal(0))
+    if total <= 0:
+        return None
+    covered = sum(
+        (
+            t.weight_pct
+            for t in towers
+            if t.weight_pct is not None
+            and (risk.holding_shocks.get(t.holding_id) or (None,))[0] is not None
+        ),
+        Decimal(0),
+    )
+    return covered / total
+
+
 def _build_siege(inputs: GameInputs, towers: list[TowerOut], mapping: GameMapping, now: datetime) -> SiegeOut:
     risk = inputs.risk
-    level, reasons = rules.siege_level(risk, mapping)
+    level, reasons = rules.siege_level(risk, mapping, _stress_coverage(risk, towers))
     risk_age = rules.snapshot_age_days(risk.snapshot_at if risk else None, now)
     land_age = rules.snapshot_age_days(inputs.land_snapshot_at, now)
     return SiegeOut(

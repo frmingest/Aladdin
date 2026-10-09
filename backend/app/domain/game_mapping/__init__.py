@@ -8,9 +8,10 @@ shown.
 from __future__ import annotations
 
 from app.domain.game_mapping.v1 import GAME_MAPPING_V1
+from app.domain.game_mapping.v2 import GAME_MAPPING_V2
 from app.domain.game_mapping.value_types import GameMapping
 
-_VERSIONS: dict[str, GameMapping] = {"v1": GAME_MAPPING_V1}
+_VERSIONS: dict[str, GameMapping] = {"v1": GAME_MAPPING_V1, "v2": GAME_MAPPING_V2}
 
 
 def get_game_mapping(version: str) -> GameMapping:

@@ -102,7 +102,10 @@ def compute_stress(
         price, bear = dcf_by_ticker.get(ticker, (None, None))
         if price is not None and bear is not None and price > 0:
             row.method = METHOD_DCF_BEAR
-            row.shock_pct = ((bear - price) / price).quantize(Decimal("0.0001"))
+            # A stress scenario is never a gain: when the stored bear case sits
+            # above the price (a bargain tower) the shock is 0, not positive,
+            # or it would offset real losses elsewhere and keep the sky calm.
+            row.shock_pct = min((bear - price) / price, ZERO).quantize(Decimal("0.0001"))
         else:
             shock = _volatility_shock_pct(histories.get(ticker), std_devs)
             if shock is not None:

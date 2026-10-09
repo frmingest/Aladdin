@@ -12,7 +12,13 @@ from app.models.account import Account
 from app.models.market import MarketObservation
 from app.models.portfolio import PortfolioPosition, PortfolioSnapshot
 from app.models.snapshot import ComputedSnapshot
-from app.schemas.risk import CorrelationOut, PortfolioRiskOut, RegimeOut, StressOut
+from app.schemas.risk import (
+    CorrelationOut,
+    HoldingStressOut,
+    PortfolioRiskOut,
+    RegimeOut,
+    StressOut,
+)
 from app.services.snapshots import RISK_KEY
 
 D = Decimal
@@ -64,13 +70,22 @@ def test_the_advisors_say_what_the_stored_state_shows_and_nothing_more(client, d
     assert "not quotations" in advisors["disclaimer"]
 
 
-def _calm_risk() -> PortfolioRiskOut:
+def _stress_rows(*holdings) -> list[HoldingStressOut]:
+    return [
+        HoldingStressOut(holding_id=str(h.id), ticker=h.ticker, name=h.name, method="volatility",
+                         value_nok=D(500), weight_pct=D(50), shock_pct=D("-0.05"), contribution_nok=D(-25), reason=None)
+        for h in holdings
+    ]
+
+
+def _calm_risk(*holdings) -> PortfolioRiskOut:
     return PortfolioRiskOut(
         as_of=None, equity_value_nok=D(1000), lookback_days=252, cluster_threshold=D("0.8"),
         correlation=CorrelationOut(lookback_days=252, tickers=[], ticker_names={}, pairs=[], excluded=[]),
         clusters=[],
         stress=StressOut(std_devs=D(2), horizon_note="", portfolio_shock_pct=D("-0.05"),
-                         portfolio_drawdown_nok=D(-50), total_value_considered_nok=D(1000), holdings=[]),
+                         portfolio_drawdown_nok=D(-50), total_value_considered_nok=D(1000),
+                         holdings=_stress_rows(*holdings)),
         regime=RegimeOut(regime="baseline", home_market_series_included=True, curve_and_credit_are_us_only=True,
                          explanation="Invented test explanation.", method_note="", inputs=[],
                          data_complete=True, missing=[]),
@@ -90,10 +105,10 @@ def test_unknown_weather_never_gets_the_calm_line(client, db_session):
 
 
 def test_a_quiet_realm_gets_the_calm_line_only_with_a_stored_calm_reading(client, db_session):
-    _seed(db_session)
+    alpha, beta = _seed(db_session)
     account = db_session.query(Account).one()
     assert client.patch(f"/accounts/{account.id}", json={"cash_nok": "250000"}).status_code == 200
-    db_session.add(ComputedSnapshot(key=RISK_KEY, payload=_calm_risk().model_dump_json(),
+    db_session.add(ComputedSnapshot(key=RISK_KEY, payload=_calm_risk(alpha, beta).model_dump_json(),
                                     fingerprint="not-the-current-fingerprint", computed_at=NOW))
     db_session.commit()
     body = client.get("/game/state").json()
@@ -126,3 +141,17 @@ def test_demo_mode_advisors_come_from_the_invented_state_only(client, db_session
     names = {line["holding_name"] for line in body["advisors"]["lines"] if line["holding_name"]}
     assert not names & {"Alpha", "Beta"}
     assert body["advisors"]["lines"], "the demo should show the advisors speaking"
+
+
+def test_a_calm_stress_that_covers_too_little_of_the_book_is_mist_not_calm(client, db_session):
+    # Beta (30% of the book) has a scenario, Alpha (70%) has none: 30% < the 50% floor.
+    _, beta = _seed(db_session)
+    account = db_session.query(Account).one()
+    assert client.patch(f"/accounts/{account.id}", json={"cash_nok": "250000"}).status_code == 200
+    db_session.add(ComputedSnapshot(key=RISK_KEY, payload=_calm_risk(beta).model_dump_json(),
+                                    fingerprint="not-the-current-fingerprint", computed_at=NOW))
+    db_session.commit()
+    body = client.get("/game/state").json()
+    assert body["siege"]["level"] == "unsurveyed"
+    assert "before the sky can read calm" in body["siege"]["reasons"][-1]
+    assert "all_quiet" not in [line["rule"] for line in body["advisors"]["lines"]]

@@ -21,7 +21,10 @@ from app.schemas.journal import (
     JournalOut,
     JournalOutcomeOut,
 )
-from app.services.analysis.latest import latest_runs_by_holding, run_ratings
+from app.services.analysis.latest import (
+    run_in_force,
+    run_ratings,
+)
 from app.services.journal import outcomes_for
 from app.services.settings.demo_guard import require_not_demo
 from app.services.settings.demo_mode import is_demo_mode
@@ -79,7 +82,7 @@ def create_entry(payload: JournalEntryCreate, db: Session = Depends(get_db)) -> 
     holding = db.get(Holding, payload.holding_id)
     if holding is None:
         raise HTTPException(status_code=404, detail="holding not found")
-    run = latest_runs_by_holding(db, [holding.id]).get(holding.id)
+    run = run_in_force(db, holding.id, payload.decided_on)
     entry = DecisionJournalEntry(
         holding_id=holding.id,
         ticker=holding.ticker,
@@ -113,6 +116,9 @@ def update_entry(entry_id: UUID, payload: JournalEntryUpdate, db: Session = Depe
         if value is None and name in ("thesis", "action", "decided_on"):
             raise HTTPException(status_code=422, detail=f"{name} can't be empty")
         setattr(entry, name, value)
+    if "decided_on" in payload.model_fields_set:
+        run = run_in_force(db, entry.holding_id, entry.decided_on)
+        entry.verdict_at_decision = run_ratings(run)[0] if run else None
     db.commit()
     db.refresh(entry)
     return _out(db, [entry])[0]

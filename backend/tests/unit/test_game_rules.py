@@ -371,3 +371,36 @@ def test_cash_staleness_boundaries():
     assert rules.cash_is_stale(Decimal(10), None, now, mapping) is False
     # A naive timestamp from the database is read as UTC.
     assert rules.cash_is_stale(Decimal(10), old.replace(tzinfo=None), now, mapping) is True
+
+
+# --- v2: the sky cannot read calm on a partial book --------------------------------
+
+M2 = get_game_mapping("v2")
+
+
+def test_v2_changes_only_the_coverage_floor():
+    from dataclasses import replace
+    assert replace(M2, version="v1", min_stress_coverage=None) == M
+    assert M.min_stress_coverage is None and M2.min_stress_coverage == D("0.5")
+
+
+@pytest.mark.parametrize(("coverage", "expected"), [
+    (D("0.625"), "calm"),
+    (D("0.5"), "calm"),            # exactly the floor is enough
+    (D("0.499"), "unsurveyed"),
+    (None, "unsurveyed"),          # unknown coverage is not coverage
+])
+def test_v2_calm_needs_stress_coverage(coverage, expected):
+    level, reasons = rules.siege_level(_risk(regime="baseline", shock="-0.05"), M2, coverage)
+    assert level == expected
+    if expected == "unsurveyed":
+        assert "before the sky can read calm" in reasons[-1]
+
+
+def test_v2_low_coverage_does_not_hide_a_real_storm():
+    assert rules.siege_level(_risk(regime="baseline", shock="-0.30"), M2, D("0.2"))[0] == "gathering"
+    assert rules.siege_level(_risk(regime="crisis", shock="-0.05"), M2, D("0.2"))[0] == "besieged"
+
+
+def test_v1_ignores_coverage_so_old_frames_read_the_same():
+    assert rules.siege_level(_risk(regime="baseline", shock="-0.05"), M, D("0.1"))[0] == "calm"

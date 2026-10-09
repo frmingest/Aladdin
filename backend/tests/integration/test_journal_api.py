@@ -19,6 +19,7 @@ def test_create_list_update_delete(client, db_session):
         holding_id=uuid.UUID(hid), status="COMPLETED",
         schema_version="v1", blind_prompt_version="v1", evidence_packet_version="v3", evidence_packet_json=[],
         evidence_unavailable_reasons=[], blind_pass_json={"verdict": {"rating": "Buy"}, "moat": {"overall_rating": "Wide"}},
+        started_at=datetime(2026, 1, 10, tzinfo=timezone.utc), completed_at=datetime(2026, 1, 10, tzinfo=timezone.utc),
     ))
     db_session.add(MarketObservation(holding_id=uuid.UUID(hid), price=Decimal(330), currency="NOK",
                                      provider="fake", observed_at=datetime.now(timezone.utc)))
@@ -68,3 +69,43 @@ def test_entries_survive_holding_delete(client):
     assert len(entries) == 1
     assert entries[0]["holding_id"] is None
     assert entries[0]["company_name"] == "Equinor ASA"
+
+
+def _run(db_session, hid, rating, when):
+    db_session.add(EquityAnalysisRun(
+        holding_id=uuid.UUID(hid), status="COMPLETED",
+        schema_version="v1", blind_prompt_version="v1", evidence_packet_version="v3", evidence_packet_json=[],
+        evidence_unavailable_reasons=[], blind_pass_json={"verdict": {"rating": rating}, "moat": {"overall_rating": "Wide"}},
+        started_at=when, completed_at=when,
+    ))
+    db_session.commit()
+
+
+def test_back_dated_entry_records_the_verdict_in_force_then_not_today_s(client, db_session):
+    hid = _holding(client)
+    _run(db_session, hid, "Buy", datetime(2026, 1, 10, tzinfo=timezone.utc))
+    _run(db_session, hid, "Avoid", datetime(2026, 9, 1, tzinfo=timezone.utc))
+    base = {"holding_id": hid, "action": "buy", "thesis": "x"}
+
+    old = client.post("/journal", json={**base, "decided_on": "2026-02-01"}).json()
+    assert old["verdict_at_decision"] == "Buy"  # not today's "Avoid"
+    # The day the run finished counts as in force that day.
+    same_day = client.post("/journal", json={**base, "decided_on": "2026-01-10"}).json()
+    assert same_day["verdict_at_decision"] == "Buy"
+    # Before any analysis existed there was no verdict to record.
+    before = client.post("/journal", json={**base, "decided_on": "2026-01-09"}).json()
+    assert before["verdict_at_decision"] is None
+    recent = client.post("/journal", json={**base, "decided_on": "2026-10-01"}).json()
+    assert recent["verdict_at_decision"] == "Avoid"
+
+
+def test_changing_decided_on_recomputes_the_verdict_at_decision(client, db_session):
+    hid = _holding(client)
+    _run(db_session, hid, "Buy", datetime(2026, 1, 10, tzinfo=timezone.utc))
+    _run(db_session, hid, "Avoid", datetime(2026, 9, 1, tzinfo=timezone.utc))
+    entry = client.post("/journal", json={
+        "holding_id": hid, "action": "buy", "thesis": "x", "decided_on": "2026-10-01",
+    }).json()
+    assert entry["verdict_at_decision"] == "Avoid"
+    moved = client.patch(f"/journal/{entry['id']}", json={"decided_on": "2026-02-01"}).json()
+    assert moved["verdict_at_decision"] == "Buy"
