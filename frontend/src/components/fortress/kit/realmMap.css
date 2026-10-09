@@ -1,0 +1,69 @@
+/* Cartographer's table (game mode, identity pass wins 1 to 4). Static: nothing moves and nothing is
+   filtered, so nothing here needs a reduced-motion rule. Neutral parchment tones only; gilt is ornament. */
+
+.map-tower {
+  display: flex;
+  width: 100%;
+  min-height: 44px;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  position: relative;
+  border-radius: 6px;
+  border: 1px solid #b9a26e;
+  background: rgba(250, 243, 224, 0.55);
+  padding: 8px 6px;
+  color: #2b1d0e;
+  text-align: center;
+  cursor: pointer;
+}
+.map-tower:hover { background: rgba(250, 243, 224, 0.9); }
+/* Selected = a heavier double frame (shape), plus aria-pressed; never colour alone. */
+.map-tower[aria-pressed="true"] {
+  border: 3px double #2b2118;
+  padding: 6px 4px;
+  background: rgba(250, 243, 224, 0.95);
+}
+.map-tower:focus-visible,
+.map-seal-btn:focus-visible {
+  outline: 2px solid #2b2118;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 3px #f2c94c;
+}
+.map-tower-name {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  font-size: 0.875rem;
+  line-height: 1.2;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.map-tower-weight { font-size: 0.75rem; color: #5a4630; }
+
+.map-seal-btn {
+  display: inline-flex;
+  height: 44px;
+  width: 44px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+}
+.map-seal-btn:hover { background: rgba(120, 80, 30, 0.12); }
+.map-seal-btn[aria-pressed="true"] { border: 2px solid #2b2118; background: rgba(250, 243, 224, 0.8); }
+
+/* Disclosure buttons on this page are real touch targets. */
+.map-disc > button { display: inline-flex; min-height: 44px; align-items: center; }
+
+.map-slate {
+  border: 2px solid #2b2118;
+  border-radius: 6px;
+  background: rgba(250, 243, 224, 0.8);
+}
+
+.map-foot footer button { display: inline-flex; min-height: 44px; align-items: center; }
