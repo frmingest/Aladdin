@@ -911,3 +911,31 @@
 .chamber { background: linear-gradient(180deg, #241710, #170f09); box-shadow: inset 0 0 0 1px #8a6a32, inset 0 0 40px rgba(0, 0, 0, 0.6); }
 .chamber-seat { position: absolute; transform: translate(-50%, -50%); width: 104px; }
 .chamber-seat:focus-visible, .chamber-btn:focus-visible { outline: 2px solid #f2d27a; outline-offset: 2px; }
+
+/* Night panel (game mode): the dark counterpart of .parchment for the Circle page. Re-points the same
+   tokens to light ink on deep umber, so it sits with the candlelit study instead of glaring against it.
+   Static: a few painted star dots and a warm vignette, no filter, no animation. */
+.nightpanel {
+  --c-surface: 27 20 14;
+  --c-raised: 41 31 22;
+  --c-border: 122 94 52;
+  --c-border-subtle: 74 57 36;
+  --c-ink: 241 231 212;
+  --c-ink-muted: 204 189 162;
+  --c-ink-faint: 172 155 126;
+  --c-accent: 234 198 128;
+  --c-accent-hover: 248 218 152;
+  --c-accent-subtle: 58 44 24;
+  color: rgb(var(--c-ink));
+  background-color: #150f0a;
+  background-image:
+    radial-gradient(1.2px 1.2px at 12% 18%, rgba(246, 220, 150, 0.55), transparent 60%),
+    radial-gradient(1px 1px at 82% 12%, rgba(246, 220, 150, 0.45), transparent 60%),
+    radial-gradient(1.4px 1.4px at 91% 71%, rgba(246, 220, 150, 0.5), transparent 60%),
+    radial-gradient(1px 1px at 7% 80%, rgba(246, 220, 150, 0.4), transparent 60%),
+    radial-gradient(1px 1px at 38% 6%, rgba(246, 220, 150, 0.35), transparent 60%),
+    radial-gradient(1.2px 1.2px at 64% 93%, rgba(246, 220, 150, 0.4), transparent 60%),
+    radial-gradient(ellipse at 50% 42%, rgba(120, 82, 30, 0.34), transparent 66%),
+    linear-gradient(180deg, #1e150d, #0f0a06);
+  box-shadow: 0 10px 24px -14px rgba(0, 0, 0, 0.8), inset 0 0 0 1px rgba(214, 168, 90, 0.4), inset 0 0 44px rgba(0, 0, 0, 0.55);
+}

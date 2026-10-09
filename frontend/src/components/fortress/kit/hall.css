@@ -1,0 +1,105 @@
+/* The Hall of Records (game mode, identity pass). Dark stone and leather to sit with the study skin.
+   Static: the only motion in the hall is the torch flame (reduced-motion aware), nothing is filtered.
+   Colour is ornament; every state is also a shape and a printed word. */
+.hall {
+  --c-surface: 27 20 14;
+  --c-raised: 41 31 22;
+  --c-border: 122 94 52;
+  --c-border-subtle: 74 57 36;
+  --c-ink: 241 231 212;
+  --c-ink-muted: 204 189 162;
+  --c-ink-faint: 172 155 126;
+  --c-accent: 234 198 128;
+  position: relative;
+  overflow: hidden;
+  border-radius: 14px;
+  color: rgb(var(--c-ink));
+  background:
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.18) 0 2px, transparent 2px 46px),
+    repeating-linear-gradient(90deg, rgba(255, 220, 150, 0.025) 0 2px, transparent 2px 92px),
+    linear-gradient(180deg, #2a1f16, #17100a 55%, #0f0a06);
+  box-shadow: inset 0 0 0 1px #8a6a32, inset 0 0 0 4px #120c07, inset 0 0 0 5px rgba(217, 169, 62, 0.4), 0 14px 30px -18px #000;
+  padding-bottom: 1rem;
+}
+.hall-cornice { position: relative; height: 44px; border-bottom: 2px solid #8a6a32; background: #120c07; overflow: hidden; }
+.hall-cornice > svg:last-child { position: absolute; left: 0; right: 0; bottom: 0; }
+.hall-torches { position: absolute; inset: 0 0 auto 0; height: 28px; width: 100%; opacity: 0.9; z-index: 1; }
+.hall-plaque { margin: 1rem 1rem 0.5rem; padding: 0.75rem 1rem; border: 1px solid rgba(217, 169, 62, 0.45); border-radius: 8px; background: rgba(15, 10, 6, 0.55); }
+.hall-toggle {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1.5px solid rgb(var(--c-border));
+  border-radius: 8px;
+  background: rgb(var(--c-raised));
+  color: rgb(var(--c-ink));
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.hall-toggle[aria-pressed="true"] { background: rgb(var(--c-accent)); border-color: rgb(var(--c-accent)); color: #1a1209; }
+.hall-shelf { display: flex; flex-wrap: wrap; gap: 0; margin: 0.75rem 0.75rem 0; padding: 0; list-style: none; }
+.hall-niche { position: relative; width: 148px; padding: 12px 6px 0; flex: 0 0 auto; }
+.hall-niche::before {
+  content: "";
+  position: absolute;
+  inset: 4px 6px 12px;
+  border-radius: 74px 74px 0 0;
+  background: radial-gradient(ellipse at 50% 30%, rgba(214, 150, 60, 0.22), transparent 70%), #0c0805;
+  box-shadow: inset 0 0 0 2px #3a2a18, inset 0 6px 14px rgba(0, 0, 0, 0.8);
+}
+.hall-tome {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  width: 100%;
+  min-height: 44px;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 0 2px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  transition: transform 160ms ease;
+}
+.hall-tome:hover { transform: translateY(-3px); }
+.hall-tome[aria-pressed="true"] { transform: translateY(-6px); }
+.hall-tome[aria-pressed="true"] .hall-tome-art { filter: none; outline: 2px solid #f2d27a; outline-offset: 3px; border-radius: 6px; }
+.hall-tome:focus-visible { outline: 3px solid #f2d27a; outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .hall-tome { transition: none; } .hall-tome:hover, .hall-tome[aria-pressed="true"] { transform: none; } }
+.hall-label { display: block; max-width: 132px; text-align: center; }
+.hall-label-name { display: block; font-size: 0.8125rem; font-weight: 600; line-height: 1.15; color: #f6e6bd; overflow-wrap: anywhere; }
+.hall-label-meta { display: block; margin-top: 1px; font-size: 0.6875rem; color: #cdb98c; }
+.hall-plank {
+  position: relative;
+  z-index: 1;
+  display: block;
+  height: 14px;
+  margin: 6px -3px 14px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #7a5330, #4a301a 60%, #2e1d0f);
+  box-shadow: 0 6px 8px -4px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 220, 160, 0.3);
+}
+.hall-hint { margin: 0 1rem; font-size: 0.75rem; color: rgb(var(--c-ink-muted)); }
+.hall-desk { margin: 0.75rem 1rem 0; scroll-margin-top: 1rem; }
+.hall-book {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 14px minmax(0, 1fr);
+  border-radius: 6px 6px 10px 10px;
+  background: #3a2615;
+  padding: 8px;
+  box-shadow: 0 12px 22px -14px #000, inset 0 0 0 1px #8a6a32;
+}
+.hall-page { padding: 1rem 1.1rem; background: linear-gradient(180deg, #2a2016, #211810); min-width: 0; }
+.hall-page:first-child { border-radius: 4px 0 0 4px; }
+.hall-page:last-child { border-radius: 0 4px 4px 0; }
+.hall-spine { background: linear-gradient(90deg, #120c07, #3a2615 50%, #120c07); }
+@media (max-width: 640px) {
+  .hall-book { grid-template-columns: minmax(0, 1fr); }
+  .hall-spine { display: none; }
+  .hall-page:first-child, .hall-page:last-child { border-radius: 4px; }
+  .hall-page + .hall-spine + .hall-page { margin-top: 6px; }
+  .hall-niche { width: 50%; }
+}

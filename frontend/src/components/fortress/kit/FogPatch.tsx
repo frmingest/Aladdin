@@ -85,15 +85,25 @@ function Silhouette() {
   );
 }
 
-/** A tower with its five patch slots. Sockets are drawn first so a cloud lies over a neighbour. */
-export function TowerPicture({ slots, hatchId, className = "" }: { slots: FogSlot[]; hatchId: string; className?: string }) {
+/** The tower and its five patch slots as plain SVG content (no wrapping <svg>), so the world map can
+ * place many of them. Sockets are drawn first so a cloud lies over a neighbour. */
+export function TowerFigure({ slots, hatchId }: { slots: FogSlot[]; hatchId: string }) {
   const ordered = [...slots.filter((s) => s.state !== "fog"), ...slots.filter((s) => s.state === "fog")];
   return (
-    <svg viewBox={`0 0 ${VIEW.w} ${VIEW.h}`} width={VIEW.w} height={VIEW.h} aria-hidden focusable="false" className={className}>
+    <>
       <Silhouette />
       {ordered.map((s) => (
         <Patch key={s.id} state={s.state} cx={s.cx} cy={s.cy} r={s.r} hatchId={hatchId} />
       ))}
+    </>
+  );
+}
+
+/** A tower with its five patch slots. */
+export function TowerPicture({ slots, hatchId, className = "" }: { slots: FogSlot[]; hatchId: string; className?: string }) {
+  return (
+    <svg viewBox={`0 0 ${VIEW.w} ${VIEW.h}`} width={VIEW.w} height={VIEW.h} aria-hidden focusable="false" className={className}>
+      <TowerFigure slots={slots} hatchId={hatchId} />
     </svg>
   );
 }

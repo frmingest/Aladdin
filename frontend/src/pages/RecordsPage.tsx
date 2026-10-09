@@ -12,6 +12,11 @@ import {
 } from "../lib/rituals";
 import type { DecisionRecord, Records } from "../lib/types";
 import { Card, EmptyState, PageHeader } from "../components/ui";
+import { useGameMode } from "../lib/gameMode";
+import { usePlainView } from "../lib/plainView";
+import GameFooter from "../components/fortress/GameFooter";
+import HallOfRecords from "../components/fortress/kit/HallOfRecords";
+import { HALL_COPY } from "../lib/hall";
 
 /** The Hall of Records (game mode G18): the decision journal as a library. Hindsight, not a score:
  * there is no hit rate, no ranking and no "good or bad decision" label. Each record shows what you
@@ -90,13 +95,16 @@ export default function RecordsPage() {
     };
   }, []);
 
+  const { gameMode } = useGameMode();
+  const [plain] = usePlainView();
+  const painted = gameMode && !plain;
   const shown = useMemo(() => (records ? filterRecords(records.records, onlyOwed) : []), [records, onlyOwed]);
 
   return (
     <div>
       <PageHeader
         title="Hall of Records"
-        subtitle="Your decision journal as a library: what you wrote, what the price did, which reviews are owed."
+        subtitle={painted ? HALL_COPY.subtitle : "Your decision journal as a library: what you wrote, what the price did, which reviews are owed."}
         actions={
           <span className="flex gap-3 text-sm">
             <Link to="/journal" className="text-accent hover:underline">
@@ -110,7 +118,13 @@ export default function RecordsPage() {
       />
       {error && <EmptyState>{error}</EmptyState>}
       {!error && !records && <p className="text-sm text-ink-muted">Opening the archive…</p>}
-      {records && (
+      {records && painted && (
+        <div className="space-y-4">
+          <HallOfRecords records={records} />
+          <GameFooter rules={`Records ${records.rules_version}. Read-only: nothing here grades a decision.`} />
+        </div>
+      )}
+      {records && !painted && (
         <div className="space-y-4">
           <Card>
             <p className="text-sm text-ink">{records.caption}</p>

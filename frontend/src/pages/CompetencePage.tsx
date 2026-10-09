@@ -12,7 +12,7 @@ import GameFooter from "../components/fortress/GameFooter";
 import CircleGlyph from "../components/fortress/kit/CircleGlyph";
 import CircleMap from "../components/fortress/kit/CircleMap";
 import MarkControl, { BoundaryStone } from "../components/fortress/kit/MarkControl";
-import ParchmentPanel from "../components/fortress/kit/ParchmentPanel";
+import NightPanel from "../components/fortress/kit/NightPanel";
 
 /** The Circle of Competence (game mode G19, after Munger): you mark how well you know each sector and
  * the page lays your marks over the holdings. The app never infers a mark: no mark is "unmarked", which
@@ -245,7 +245,7 @@ export function RingBody({ data, onSaved }: { data: Competence; onSaved: (c: Com
 
       <CircleMap data={data} onPress={focusRow} />
 
-      <ParchmentPanel id="circle-marks" tabIndex={-1}>
+      <NightPanel id="circle-marks" tabIndex={-1}>
         <h2 className="section-title">Your marks</h2>
         <ul className="divide-y divide-border-subtle">{model.rows.map(row)}</ul>
         {model.quiet.length > 0 && (
@@ -253,7 +253,7 @@ export function RingBody({ data, onSaved }: { data: Competence; onSaved: (c: Com
             <ul className="divide-y divide-border-subtle">{model.quiet.map(row)}</ul>
           </Disclosure>
         )}
-      </ParchmentPanel>
+      </NightPanel>
 
       <Disclosure label="the holdings as a list" className="[&>button]:min-h-[44px]">
         {data.towers.length === 0 ? (

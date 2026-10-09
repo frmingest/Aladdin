@@ -18,7 +18,7 @@ import type { Competence, CompetenceLevel } from "../../../lib/types";
 import { GameFrame } from "../GameFrame";
 import CircleGlyph from "./CircleGlyph";
 import FogPanel from "./FogPanel";
-import ParchmentPanel from "./ParchmentPanel";
+import NightPanel from "./NightPanel";
 import "./circleMap.css";
 
 /** The Circle of Competence drawn as a ring map (game mode, Circle page hero). The layout is the pure
@@ -39,7 +39,7 @@ function Ground() {
         </pattern>
       </defs>
       {/* open ground beyond the line */}
-      <path d={ring(50)} fill="rgb(120 80 30 / 0.08)" />
+      <path d={ring(50)} fill="rgb(214 168 90 / 0.05)" />
       {/* the fog band at the rim */}
       <path d={`${ring(50)} ${ring(FOG_FROM * 50)}`} fillRule="evenodd" fill={`url(#cm-fog-${id})`} />
       <path d={ring(FOG_FROM * 50)} fill="none" stroke="rgb(var(--c-ink-faint))" strokeWidth="0.45" strokeDasharray="1.6 1.4" />
@@ -47,6 +47,8 @@ function Ground() {
       {/* the circle itself: an outline only, whatever is or is not inside it */}
       <path d={ring(CIRCLE_R * 50)} fill="none" stroke="rgb(var(--c-ink))" strokeWidth="0.9" />
       <path d="M50 22 v-3 M50 78 v3 M22 50 h-3 M78 50 h3" stroke="rgb(var(--c-ink))" strokeWidth="0.7" strokeLinecap="round" />
+      {/* astrolabe ticks on the rim: decoration only, they carry no data */}
+      <path d={Array.from({ length: 72 }, (_, k) => { const a = (k * 5 * Math.PI) / 180; const r1 = k % 6 === 0 ? 47.2 : 48.4; return `M${(50 + r1 * Math.cos(a)).toFixed(2)} ${(50 + r1 * Math.sin(a)).toFixed(2)} L${(50 + 49.6 * Math.cos(a)).toFixed(2)} ${(50 + 49.6 * Math.sin(a)).toFixed(2)}`; }).join(" ")} stroke="rgb(var(--c-accent))" strokeOpacity="0.55" strokeWidth="0.3" />
     </svg>
   );
 }
@@ -116,7 +118,7 @@ export default function CircleMap({ data, onPress }: { data: Competence; onPress
     <div>
       <Hud data={data} />
       <GameFrame>
-        <ParchmentPanel className="circle-stage">
+        <NightPanel className="circle-stage">
           <div className="circle-map" role="group" aria-label="Circle of competence: one marker per sector">
             <Ground />
             {bands.map(({ b, pos }) => (
@@ -159,7 +161,7 @@ export default function CircleMap({ data, onPress }: { data: Competence; onPress
               )}
             </div>
           )}
-        </ParchmentPanel>
+        </NightPanel>
       </GameFrame>
     </div>
   );

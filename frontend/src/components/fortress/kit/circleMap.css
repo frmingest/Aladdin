@@ -1,6 +1,5 @@
 /* Circle of Competence ring map (game mode, identity pass). Own file so it cannot collide with other
-   pages' CSS. Everything sits on the `.parchment` panel, which re-points the colour tokens to dark ink on
-   paper. Palette is neutral on purpose: nothing here is green, red or amber, because knowing a sector is
+   pages' CSS. Everything sits on the dark `.nightpanel`, which re-points the colour tokens to light ink on umber. Palette is neutral on purpose: nothing here is green, red or amber, because knowing a sector is
    not a verdict on the holding. No filters; the only motion is a marker's transform glide, and none at
    all when the reader asked for reduced motion. */
 
@@ -52,17 +51,18 @@
 .mark-seg input:focus-visible + .mark-seg-chip,
 .mark-clear:focus-visible,
 .circle-tag-button:focus-visible {
-  outline: 3px solid #2a1a06;
+  outline: 3px solid #f2d27a;
   outline-offset: 3px;
-  box-shadow: 0 0 0 3px #f2d27a;
+  box-shadow: 0 0 0 6px #120c07;
 }
 .circle-marker-disc {
   position: relative;
   flex: none;
   display: block;
   border-radius: 9999px;
-  background: #f4e9cb;
-  box-shadow: 0 1px 3px rgba(43, 29, 14, 0.4);
+  background: #2b2016;
+  color: #f1e3c0;
+  box-shadow: 0 0 0 1.5px #c9a255, 0 2px 6px rgba(0, 0, 0, 0.7);
 }
 .circle-pin {
   position: absolute;
@@ -71,18 +71,19 @@
   min-width: 19px;
   height: 19px;
   padding: 0 4px;
-  border: 1.5px solid #2b1d0e;
+  border: 1.5px solid #c9a255;
   border-radius: 10px;
-  background: #f6eccf;
-  color: #2b1d0e;
+  background: #120c07;
+  color: #f6dc9a;
   font-size: 11px;
   font-weight: 700;
   line-height: 16px;
   text-align: center;
 }
 .circle-name, .circle-ring-label {
-  background: rgba(246, 236, 207, 0.92);
-  color: #2b1d0e;
+  background: rgba(16, 11, 7, 0.9);
+  box-shadow: 0 0 0 1px rgba(201, 162, 85, 0.5);
+  color: #f3e4bf;
   font-size: 11px;
   font-weight: 600;
   line-height: 15px;
@@ -155,9 +156,9 @@
   cursor: pointer;
 }
 .mark-seg-item input:checked + .mark-seg-chip {
-  border: 2px solid rgb(var(--c-ink));
-  background: rgb(var(--c-ink));
-  color: #f6eccf;
+  border: 2px solid rgb(var(--c-accent));
+  background: rgb(var(--c-accent));
+  color: #1a1209;
 }
 .mark-seg-item input:disabled + .mark-seg-chip { cursor: not-allowed; }
 .mark-clear {
@@ -192,7 +193,7 @@
 .mark-save {
   min-height: 44px;
   padding: 0 16px;
-  border: 2px solid rgb(var(--c-ink));
+  border: 2px solid rgb(var(--c-accent));
   border-radius: 8px;
   background: rgb(var(--c-raised));
   color: rgb(var(--c-ink));
@@ -201,7 +202,7 @@
   cursor: pointer;
 }
 .mark-save:disabled { opacity: 0.55; cursor: not-allowed; }
-.mark-save:focus-visible { outline: 3px solid #2a1a06; outline-offset: 3px; box-shadow: 0 0 0 3px #f2d27a; }
+.mark-save:focus-visible { outline: 3px solid #f2d27a; outline-offset: 3px; box-shadow: 0 0 0 6px #120c07; }
 .circle-marker:focus-visible, .circle-tag-button:focus-visible { z-index: 3; }
 .circle-hud .game-hud-label { font-size: 0.6875rem; }
 /* On a narrow map no names print, only the numbers that match the list; names would cover markers. */

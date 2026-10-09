@@ -266,7 +266,7 @@ export function flagsFor(commissions: ReadonlyArray<Pick<Commission, "id" | "hol
 export const MAP_COPY = {
   subtitle: "Which parts of the realm are surveyed, and which are still in fog.",
   intro: "Five facts per tower. Clear means looked at, not sound; fog comes back when an analysis ages.",
-  hint: "Press a tower for its five checks.",
+  hint: "Drag to explore. Press a tower.",
   hintSeal: "Press a numbered seal to flag its towers.",
   noFlag: "No tower to flag.",
   demo: "Demo data",
