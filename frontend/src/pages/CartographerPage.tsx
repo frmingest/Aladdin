@@ -75,6 +75,7 @@ export default function CartographerPage() {
     [state, docs, compQ.data, recQ.data, opened],
   );
   const commissions = useMemo(() => (state && towers ? commissionsFor(towers, state) : []), [state, towers]);
+  const sectors = useMemo(() => Object.fromEntries((compQ.data?.towers ?? []).map((t) => [t.holding_id, t.sector])), [compQ.data]);
   const error = stateQ.error;
 
   return (
@@ -92,7 +93,7 @@ export default function CartographerPage() {
       {!error && !towers && <p className="text-sm text-ink-muted">Unrolling the map…</p>}
       {state && towers && (
         <div className="space-y-4">
-          <RealmMapBody towers={towers} commissions={commissions} demo={state.demo} painted={gameMode && !plain} />
+          <RealmMapBody towers={towers} commissions={commissions} demo={state.demo} painted={gameMode && !plain} sectors={sectors} sectorsKnown={!!compQ.data} />
           <div className="map-foot">
             <GameFooter rules={`Rules ${SURVEY_VERSION}. Finishing a commission earns nothing.`} />
           </div>

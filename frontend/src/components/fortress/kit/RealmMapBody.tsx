@@ -1,12 +1,13 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { MAP_COPY, PATCH_LOOK, flagsFor, fogSlots, gridMove, isGridKey, commissionShape, towerAriaLabel } from "../../../lib/realmMap";
+import { MAP_COPY, PATCH_LOOK, flagsFor, commissionShape } from "../../../lib/realmMap";
 import { weightText } from "../../../lib/rituals";
 import type { Commission, SurveyState, TowerFog } from "../../../lib/survey";
 import { Card, Disclosure, EmptyState } from "../../ui";
-import CommissionSeal, { FlagMark } from "./CommissionSeal";
-import { FogDefs, PatchMark, TowerPicture } from "./FogPatch";
-import ParchmentPanel from "./ParchmentPanel";
+import CommissionSeal from "./CommissionSeal";
+import { FogDefs, PatchMark } from "./FogPatch";
+import WorldMap from "./WorldMap";
+import NightPanel from "./NightPanel";
 import TowerSlate from "./TowerSlate";
 import "./realmMap.css";
 
@@ -102,19 +103,27 @@ function Key({ hatchId }: { hatchId: string }) {
   );
 }
 
-function PaintedBody({ towers, commissions, demo }: { towers: TowerFog[]; commissions: Commission[]; demo: boolean }) {
+function PaintedBody({
+  towers,
+  commissions,
+  demo,
+  sectors,
+  sectorsKnown,
+}: {
+  towers: TowerFog[];
+  commissions: Commission[];
+  demo: boolean;
+  sectors: Record<string, string | null>;
+  sectorsKnown: boolean;
+}) {
   const hatchId = `fog-hatch-${useId().replace(/:/g, "")}`;
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [commissionId, setCommissionId] = useState<string | null>(null);
-  const [stopIdx, setStopIdx] = useState(0);
-  const gridRef = useRef<HTMLUListElement | null>(null);
-  const btnRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const slateRef = useRef<HTMLDivElement | null>(null);
 
   const selected = towers.find((t) => t.holdingId === selectedId) ?? null;
   const flags = useMemo(() => flagsFor(commissions, commissionId, towers.map((t) => t.holdingId)), [commissions, commissionId, towers]);
   const flagByTower = useMemo(() => new Map(flags.map((f) => [f.target, f])), [flags]);
-  const stop = Math.min(stopIdx, Math.max(0, towers.length - 1));
 
   useEffect(() => {
     if (!selected || !slateRef.current || typeof slateRef.current.scrollIntoView !== "function") return;
@@ -122,30 +131,16 @@ function PaintedBody({ towers, commissions, demo }: { towers: TowerFog[]; commis
     slateRef.current.scrollIntoView({ block: "nearest", behavior: reduce ? "auto" : "smooth" });
   }, [selected]);
 
-  function onKey(e: React.KeyboardEvent, index: number) {
-    if (e.key === "Escape" && selectedId !== null) {
-      e.preventDefault();
-      closeSlate();
-      return;
-    }
-    if (!isGridKey(e.key)) return;
-    e.preventDefault();
-    const cols = gridRef.current ? getComputedStyle(gridRef.current).gridTemplateColumns.split(" ").length : 1;
-    const next = gridMove(index, e.key, towers.length, cols);
-    setStopIdx(next);
-    btnRefs.current[next]?.focus();
-  }
-
   function closeSlate() {
-    const at = towers.findIndex((t) => t.holdingId === selectedId);
+    const id = selectedId;
     setSelectedId(null);
-    if (at >= 0) btnRefs.current[at]?.focus();
+    if (id) document.getElementById(`wm-btn-${id}`)?.focus();
   }
 
   return (
     <div className="space-y-4">
       <FogDefs id={hatchId} />
-      <ParchmentPanel>
+      <NightPanel>
         <div className="flex flex-wrap items-center gap-2">
           <h2 className="section-title mb-0">The map</h2>
           {demo && <DemoPill />}
@@ -159,37 +154,18 @@ function PaintedBody({ towers, commissions, demo }: { towers: TowerFog[]; commis
               <Key hatchId={hatchId} />
               <p className="mt-1 text-xs text-ink-muted">{MAP_COPY.hint} {MAP_COPY.hintSeal}</p>
             </div>
-            <ul ref={gridRef} aria-label="Towers" className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-              {towers.map((t, i) => {
-                const flag = flagByTower.get(t.holdingId);
-                return (
-                  <li key={t.holdingId}>
-                    <button
-                      type="button"
-                      ref={(el) => {
-                        btnRefs.current[i] = el;
-                      }}
-                      className="map-tower"
-                      aria-pressed={selectedId === t.holdingId}
-                      aria-controls="map-slate"
-                      aria-label={towerAriaLabel(t, weightOf(t))}
-                      title={`${weightOf(t)} of the book`}
-                      tabIndex={i === stop ? 0 : -1}
-                      onClick={() => {
-                        setStopIdx(i);
-                        setSelectedId((cur) => (cur === t.holdingId ? null : t.holdingId));
-                      }}
-                      onKeyDown={(e) => onKey(e, i)}
-                    >
-                      <TowerPicture slots={fogSlots(t)} hatchId={hatchId} className="max-w-full" />
-                      <span className="map-tower-name">{t.name}</span>
-                      <span className="map-tower-weight">{weightOf(t)}</span>
-                      {flag && <FlagMark shape={flag.shape} n={flag.number} />}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
+            <div className="mt-3">
+              <WorldMap
+                towers={towers}
+                sectors={sectors}
+                sectorsKnown={sectorsKnown}
+                hatchId={hatchId}
+                selectedId={selectedId}
+                flags={flagByTower}
+                onSelect={(id) => setSelectedId((cur) => (cur === id ? null : id))}
+                onEscape={() => selectedId !== null && closeSlate()}
+              />
+            </div>
             <div id="map-slate" ref={slateRef} className="mt-3 scroll-mt-4" aria-live="polite">
               {selected && <TowerSlate tower={selected} hatchId={hatchId} onClose={closeSlate} />}
             </div>
@@ -198,9 +174,9 @@ function PaintedBody({ towers, commissions, demo }: { towers: TowerFog[]; commis
             </Disclosure>
           </>
         )}
-      </ParchmentPanel>
+      </NightPanel>
 
-      <ParchmentPanel>
+      <NightPanel>
         <h2 className="section-title">Commissions</h2>
         {commissions.length === 0 ? (
           <p className="text-sm text-ink-muted">{MAP_COPY.commissionsEmpty}</p>
@@ -212,10 +188,16 @@ function PaintedBody({ towers, commissions, demo }: { towers: TowerFog[]; commis
               return (
                 <li key={c.id} className="flex items-start gap-2 py-2">
                   {c.id === "vault" ? (
-                    // The cash commission would stand on the Keep, which is drawn with the realm map (a later change).
-                    <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center opacity-90" title={MAP_COPY.noFlag}>
-                      <CommissionSeal shape={shape} n={i + 1} />
-                    </span>
+                    // The cash commission plants its flag on the Great Keep at the capital.
+                    <button
+                      type="button"
+                      className="map-seal-btn"
+                      aria-pressed={planted}
+                      aria-label={`Show on the map: ${c.title}`}
+                      onClick={() => setCommissionId((cur) => (cur === c.id ? null : c.id))}
+                    >
+                      <CommissionSeal shape={shape} n={i + 1} size={34} pressed={planted} />
+                    </button>
                   ) : (
                     <button
                       type="button"
@@ -230,7 +212,6 @@ function PaintedBody({ towers, commissions, demo }: { towers: TowerFog[]; commis
                   <div className="min-w-0 flex-1">
                     <h3 className="pt-2.5 text-sm font-semibold text-ink">{c.title}</h3>
                     <p className="mt-1 text-sm text-ink-muted">{c.text}</p>
-                    {c.id === "vault" && <p className="text-xs text-ink-muted">{MAP_COPY.noFlag}</p>}
                     {c.holdings.length > 0 && (
                       <div className="mt-2">
                         <HoldingChips commission={c} />
@@ -243,7 +224,7 @@ function PaintedBody({ towers, commissions, demo }: { towers: TowerFog[]; commis
             })}
           </ol>
         )}
-      </ParchmentPanel>
+      </NightPanel>
     </div>
   );
 }
@@ -297,14 +278,19 @@ export default function RealmMapBody({
   commissions,
   demo,
   painted,
+  sectors = {},
+  sectorsKnown = false,
 }: {
   towers: TowerFog[];
   commissions: Commission[];
   demo: boolean;
   painted: boolean;
+  /** holding id -> sector, from the Circle of Competence; empty when it could not be read. */
+  sectors?: Record<string, string | null>;
+  sectorsKnown?: boolean;
 }) {
   return painted ? (
-    <PaintedBody towers={towers} commissions={commissions} demo={demo} />
+    <PaintedBody towers={towers} commissions={commissions} demo={demo} sectors={sectors} sectorsKnown={sectorsKnown} />
   ) : (
     <PlainBody towers={towers} commissions={commissions} demo={demo} />
   );

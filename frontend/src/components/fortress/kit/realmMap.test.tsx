@@ -8,6 +8,7 @@ import type { Competence, DecisionRecord, GameState, GameTower } from "../../../
 import { countWords } from "../../../lib/wordBudget";
 import page from "../../../pages/CartographerPage.tsx?raw";
 import bodySource from "./RealmMapBody.tsx?raw";
+import mapSource from "./WorldMap.tsx?raw";
 import realmMapCss from "./realmMap.css?raw";
 import CommissionSeal, { FlagMark } from "./CommissionSeal";
 import { FogDefs, PatchMark, TowerPicture } from "./FogPatch";
@@ -98,7 +99,7 @@ describe("Cartographer's table pieces", () => {
 describe("Cartographer's table body", () => {
   it("painted: patches, one tower button per holding with a roving tab stop, no flags until pressed", () => {
     const html = body(true);
-    expect((html.match(/class="map-tower"/g) ?? []).length).toBe(3);
+    expect((html.match(/class="wm-tower"/g) ?? []).length).toBe(3);
     expect((html.match(/tabindex="0"/g) ?? []).length).toBe(1);
     expect(html).toContain("data-patch=\"fog\"");
     expect(html).not.toContain("data-flag");
@@ -115,11 +116,10 @@ describe("Cartographer's table body", () => {
     for (const c of commissions) expect(html).toContain(c.title);
   });
 
-  it("the cash commission is a seal without a button (the Keep is drawn with the realm map later)", () => {
+  it("the cash commission is a seal button that plants its flag on the Keep", () => {
     const html = body(true);
     expect(commissions.some((c) => c.id === "vault")).toBe(true);
-    expect(html).not.toContain("Show on the map: Enter or update the cash figure");
-    expect(html).toContain("Enter or update the cash figure");
+    expect(html).toContain("Show on the map: Enter or update the cash figure");
   });
 
   it("plain view shows the same facts as ordinary cards: every check with its word and reason", () => {
@@ -180,17 +180,17 @@ describe("links and keys", () => {
     expect(bodySource).toMatch(/inline-flex min-h-\[44px\] items-center text-sm font-semibold/);
   });
 
-  it("the cash seal is not a button and says why; the hint names the seals", () => {
+  it("the hint names the seals", () => {
     const html = body(true);
-    expect(html).toContain(MAP_COPY.noFlag);
     expect(html).toContain(MAP_COPY.hintSeal);
   });
 
   it("pressed state and Escape-with-focus-return are wired (source guard)", () => {
-    expect(bodySource).toMatch(/aria-pressed=\{selectedId === t\.holdingId\}/);
+    expect(mapSource).toMatch(/aria-pressed=\{selectedId === st\.id\}/);
     expect(bodySource).toMatch(/aria-pressed=\{planted\}/);
-    expect(bodySource).toMatch(/e\.key === "Escape"[\s\S]{0,120}closeSlate\(\)/);
-    expect(bodySource).toMatch(/function closeSlate\(\)[\s\S]{0,200}btnRefs\.current\[at\]\?\.focus\(\)/);
+    expect(mapSource).toMatch(/e\.key === "Escape"[\s\S]{0,80}onEscape\(\)/);
+    expect(bodySource).toMatch(/onEscape=\{\(\) => selectedId !== null && closeSlate\(\)\}/);
+    expect(bodySource).toMatch(/function closeSlate\(\)[\s\S]{0,200}wm-btn-\$\{id\}[\s\S]{0,20}focus\(\)/);
   });
 });
 

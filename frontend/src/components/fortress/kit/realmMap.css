@@ -26,9 +26,9 @@
 }
 .map-tower:focus-visible,
 .map-seal-btn:focus-visible {
-  outline: 2px solid #2b2118;
-  outline-offset: 3px;
-  box-shadow: 0 0 0 3px #f2c94c;
+  outline: 3px solid #f2d27a;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 6px #120c07;
 }
 .map-tower-name {
   display: -webkit-box;
@@ -54,16 +54,16 @@
   background: transparent;
   cursor: pointer;
 }
-.map-seal-btn:hover { background: rgba(120, 80, 30, 0.12); }
-.map-seal-btn[aria-pressed="true"] { border: 2px solid #2b2118; background: rgba(250, 243, 224, 0.8); }
+.map-seal-btn:hover { background: rgba(255, 236, 180, 0.1); }
+.map-seal-btn[aria-pressed="true"] { border: 2px solid #f6dc9a; background: rgba(255, 236, 180, 0.14); }
 
 /* Disclosure buttons on this page are real touch targets. */
 .map-disc > button { display: inline-flex; min-height: 44px; align-items: center; }
 
 .map-slate {
-  border: 2px solid #2b2118;
+  border: 2px solid #8a6a32;
   border-radius: 6px;
-  background: rgba(250, 243, 224, 0.8);
+  background: rgba(14, 10, 6, 0.55);
 }
 
 .map-foot footer button { display: inline-flex; min-height: 44px; align-items: center; }

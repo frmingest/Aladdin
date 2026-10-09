@@ -1,0 +1,107 @@
+/* The Cartographer's world map (game mode). The painting is fixed colour, like the other painted
+   pieces. The only motion is the sea drifting, two ships, the Keep's banner, the torch flames and the
+   serpent: all transform or opacity, all off for reduced motion and while the map is off screen
+   (data-motion="off"). Nothing is filtered. Colour is scenery; every fog state is shape + hatch + glyph. */
+.wm-wrap { position: relative; }
+.wm-box {
+  position: relative;
+  width: 100%;
+  height: clamp(420px, 68vh, 720px);
+  overflow: hidden;
+  border-radius: 10px;
+  background: #0d222d;
+  box-shadow: inset 0 0 0 2px #2b2118, inset 0 0 0 4px #8a6a32, inset 0 0 60px rgba(0, 0, 0, 0.55);
+  cursor: grab;
+  touch-action: pan-y pinch-zoom;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.wm-box[data-zoomed="true"] { touch-action: none; }
+.wm-box:active { cursor: grabbing; }
+.wm-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+@media (max-width: 640px) { .wm-box { height: clamp(440px, 74vh, 640px); } }
+
+.wm-tower {
+  position: absolute;
+  z-index: 3;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+}
+.wm-tower:hover { background: rgba(255, 236, 180, 0.12); }
+/* Pressed = a double gilt frame (a shape), plus aria-pressed. Never colour alone. */
+.wm-tower[aria-pressed="true"] { border: 3px double #f6dc9a; background: rgba(255, 236, 180, 0.14); box-shadow: 0 0 0 1px #120c07; }
+.wm-tower:focus-visible { outline: 3px solid #f2d27a; outline-offset: 2px; box-shadow: 0 0 0 6px #120c07; }
+.wm-tower > span { right: 2px; top: -26px; }
+
+.wm-name, .wm-prov { position: absolute; pointer-events: none; z-index: 2; white-space: nowrap; }
+.wm-name {
+  height: 17px;
+  padding: 0 5px;
+  border-radius: 4px;
+  background: rgba(16, 11, 7, 0.86);
+  box-shadow: 0 0 0 1px rgba(201, 162, 85, 0.55);
+  color: #f6e6bd;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 17px;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  z-index: 4;
+}
+.wm-name[data-hot="true"] { background: #f6dc9a; color: #1a1209; box-shadow: 0 0 0 2px #120c07; z-index: 5; }
+.wm-prov {
+  transform: translate(-50%, -50%);
+  z-index: 1;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: rgba(24, 17, 10, 0.5);
+  color: #fbeccb;
+  font-family: "Marcellus", "Palatino Linotype", Georgia, serif;
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  text-shadow: 0 1px 2px #000;
+}
+.wm-prov[data-unsorted="true"] { border: 1px dashed #d8dde8; letter-spacing: 0.1em; }
+.wm-keep-flag { position: absolute; z-index: 3; pointer-events: none; transform: translate(-50%, -100%); }
+
+.wm-controls { position: absolute; right: 10px; top: 10px; z-index: 6; display: flex; flex-direction: column; gap: 6px; }
+.wm-controls button {
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid #8a6a32;
+  border-radius: 8px;
+  background: rgba(20, 14, 9, 0.9);
+  color: #f2d27a;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+.wm-controls button:hover:not(:disabled) { background: #3a2a18; }
+.wm-controls button:disabled { opacity: 0.45; cursor: not-allowed; }
+.wm-controls button:focus-visible { outline: 3px solid #f2d27a; outline-offset: 2px; }
+
+.wm-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 8px 2px 0; padding: 0; list-style: none; font-size: 0.75rem; color: rgb(var(--c-ink)); }
+.wm-legend li { display: inline-flex; align-items: center; gap: 6px; }
+
+/* Motion: only while the box says so. */
+.wm-drift, .wm-banner, .wm-flame, .wm-serpent { transform-box: fill-box; }
+@media (prefers-reduced-motion: no-preference) {
+  .wm-box[data-motion="on"] .wm-drift-a { animation: wm-drift-a 26s linear infinite; }
+  .wm-box[data-motion="on"] .wm-drift-b { animation: wm-drift-b 9s ease-in-out infinite alternate; }
+  .wm-box[data-motion="on"] .wm-banner { transform-origin: left center; animation: fortress-banner 3.2s ease-in-out infinite; }
+  .wm-box[data-motion="on"] .wm-flame { animation: wm-flame 1.5s ease-in-out infinite; }
+  .wm-box[data-motion="on"] .wm-serpent { animation: wm-serpent 7s ease-in-out infinite; }
+}
+@keyframes wm-drift-a { from { transform: translateX(0); } to { transform: translateX(-46px); } }
+@keyframes wm-drift-b { from { transform: translate(-6px, 0); } to { transform: translate(8px, 3px); } }
+@keyframes wm-flame { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+@keyframes wm-serpent { 0%, 100% { transform: translateY(5px); } 50% { transform: translateY(-3px); } }

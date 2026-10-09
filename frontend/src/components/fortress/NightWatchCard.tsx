@@ -2,8 +2,11 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, ApiError } from "../../lib/api";
 import { STATUS_CLASS, STATUS_LABEL, TONE_CLASS, TONE_MARK, WATCH_STATE_LABEL, stampLine } from "../../lib/nightWatch";
+import { useGameMode } from "../../lib/gameMode";
+import { usePlainView } from "../../lib/plainView";
 import type { NightWatch } from "../../lib/types";
 import { Card, Disclosure } from "../ui";
+import DispatchDisclosure from "./DispatchDisclosure";
 
 /** Game mode G16, Night Watch: the nightly tripwire check as a morning dispatch. It reads what the
  * worker stored overnight (GET /game/night-watch) and never runs a check, calls a provider or tells
@@ -11,6 +14,8 @@ import { Card, Disclosure } from "../ui";
 export default function NightWatchCard() {
   const [watch, setWatch] = useState<NightWatch | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { gameMode } = useGameMode();
+  const [plain] = usePlainView();
 
   useEffect(() => {
     let live = true;
@@ -38,6 +43,14 @@ export default function NightWatchCard() {
   const reportLines = quiet ? watch.lines.filter((l) => l.text.includes("new report")) : [];
   const detailLines = quiet ? watch.lines.filter((l) => !l.text.includes("new report")) : watch.lines;
 
+  const details = (
+    <>
+      <p className="text-sm font-medium text-ink">{watch.headline}</p>
+      <LineList lines={detailLines} />
+      <DispatchNote />
+    </>
+  );
+
   return (
     <Card aria-label="Night Watch dispatch">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -54,11 +67,13 @@ export default function NightWatchCard() {
         <>
           <p className="mt-1 text-xs text-ink-faint">{stampLine(watch)}</p>
           <LineList lines={reportLines} />
-          <Disclosure label="the dispatch details" level="evidence" className="mt-2">
-            <p className="text-sm font-medium text-ink">{watch.headline}</p>
-            <LineList lines={detailLines} />
-            <DispatchNote />
-          </Disclosure>
+          {gameMode && !plain ? (
+            <DispatchDisclosure lineCount={detailLines.length}>{details}</DispatchDisclosure>
+          ) : (
+            <Disclosure label="the dispatch details" level="evidence" className="mt-2">
+              {details}
+            </Disclosure>
+          )}
         </>
       ) : (
         <>
