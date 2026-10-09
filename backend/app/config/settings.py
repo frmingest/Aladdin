@@ -156,10 +156,12 @@ class Settings(BaseSettings):
     snapshot_refresh_hour_utc: int = 4
     # Sprint 24 (G14a): the worker also stores one game-state frame per UTC
     # day (app/services/game/history.py), one hour after the page snapshots so
-    # it reads their fresh risk / margin-of-safety rows. Pruned past
-    # `game_state_history_keep_days`. The Chronicle (G14) replays these.
+    # it reads their fresh risk / margin-of-safety rows. Thinned by
+    # retention_v1 (daily 90 days, weekly 2 years, monthly for ever). The Chronicle (G14) replays these.
     game_state_history_enabled: bool = True
     game_state_history_hour_utc: int = 5
+    # Unused since B1 (retention_v1 thins by age tier instead); kept so an old
+    # env var is accepted.
     game_state_history_keep_days: int = 540
     # Sprint 20: besides the nightly rebuild, the worker rebuilds any stored
     # snapshot whose inputs changed (a new import, a finished analysis, a new

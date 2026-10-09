@@ -13,6 +13,7 @@ import {
   miniLayout,
   newestIndex,
   nextPlayIndex,
+  recordLimits,
 } from "../lib/chronicle";
 import { formatNok, formatPct100 } from "../lib/format";
 import { MOAT_LABEL, SIEGE_LABEL, STRUCTURE_LABEL, THESIS_LABEL, WALL_LABEL, isFundCode, shortLabel } from "../lib/fortress";
@@ -291,11 +292,11 @@ export default function ChroniclePage() {
             </Card>
           )}
 
-          {chronicle.notes.length > 0 && (
+          {recordLimits(chronicle).length > 0 && (
             <Card className="bg-raised">
               <h2 className="section-title">What the record cannot show</h2>
               <ul className="list-disc space-y-1 pl-5 text-sm text-ink-muted">
-                {chronicle.notes.map((n) => (
+                {recordLimits(chronicle).map((n) => (
                   <li key={n}>{n}</li>
                 ))}
               </ul>

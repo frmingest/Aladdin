@@ -25,6 +25,7 @@ from itertools import pairwise
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.domain.game_mapping.retention_v1 import RETENTION_V1, missing_ranges
 from app.domain.game_mapping.time_and_filings_v1 import TimeAndFilingsRules
 from app.domain.game_mapping.value_types import GameMapping
 from app.models.holding import Holding
@@ -32,6 +33,7 @@ from app.models.portfolio import PortfolioPosition, PortfolioSnapshot
 from app.schemas.game import (
     ChronicleChangeOut,
     ChronicleFrameOut,
+    ChronicleGapOut,
     ChronicleOut,
     ChronicleTowerOut,
     GameStateOut,
@@ -237,6 +239,7 @@ def build_chronicle_from(
     rules_v: TimeAndFilingsRules,
     *,
     demo: bool = False,
+    today: date | None = None,
 ) -> ChronicleOut:
     """Pure assembly (tested without a database)."""
     stored_frames = [frame_from_state(day, at, state) for day, at, state in stored]
@@ -269,6 +272,24 @@ def build_chronicle_from(
             f"{n_pos} older frame(s) are rebuilt from portfolio imports: the towers and their sizes are real, "
             "the walls, moats and weather of those days cannot be rebuilt and are shown as unsurveyed."
         )
+    gaps: list[ChronicleGapOut] = []
+    if today is not None:
+        for g in missing_ranges([f.day for f in stored_frames], today=today):
+            span = (
+                g.first_day.isoformat() if g.days == 1 else f"{g.first_day.isoformat()} to {g.last_day.isoformat()}"
+            )
+            gaps.append(
+                ChronicleGapOut(
+                    first_day=g.first_day, last_day=g.last_day, days=g.days,
+                    text=f"Nothing was recorded on {span} ({g.days} day{'s' if g.days != 1 else ''}): "
+                    "the worker was off. Nothing is known about those days, not even that they were calm.",
+                )
+            )
+        if any((today - f.day).days > RETENTION_V1.daily_days for f in stored_frames):
+            notes.append(
+                f"Frames older than {RETENTION_V1.daily_days} days are kept one per week (up to two years) and then "
+                "one per month, so a change between two of them is dated at the later frame."
+            )
     if hidden:
         notes.append(f"{hidden} older frame(s) are not shown (the newest {rules_v.chronicle_max_frames} are).")
     return ChronicleOut(
@@ -280,6 +301,7 @@ def build_chronicle_from(
         positions_only_frames=n_pos,
         first_stored_day=first_stored,
         hidden_frames=hidden,
+        gaps=gaps,
         notes=notes,
     )
 
@@ -288,4 +310,4 @@ def get_chronicle(db: Session, mapping: GameMapping, rules_v: TimeAndFilingsRule
     stored = history.load_frames(db)
     first_stored = stored[0][0] if stored else None
     position_frames = gather_position_frames(db, mapping, before_day=first_stored)
-    return build_chronicle_from(stored, position_frames, rules_v)
+    return build_chronicle_from(stored, position_frames, rules_v, today=datetime.now(timezone.utc).date())

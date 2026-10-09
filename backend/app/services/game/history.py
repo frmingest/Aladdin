@@ -9,18 +9,24 @@ the Chronicle (G14) replays.
   `game_state:YYYY-MM-DD` (UTC day). **No migration.** A stored frame is a
   record of what the fortress looked like; it is never read back as live state.
 * Written by the worker, never by a page load; demo mode is never stored.
-* Pruned past `game_state_history_keep_days` (default 540).
+* Thinned, not cut off, by `retention_v1`: every daily frame for 90 days, then
+  one per week to 2 years, then one per calendar month for ever (B1 Long Memory).
 * One failing write never breaks the worker or the live Fortress.
 """
 from __future__ import annotations
 
 import logging
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timezone
 
 from pydantic import ValidationError
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
+from app.domain.game_mapping.retention_v1 import (
+    RETENTION_V1,
+    RetentionRules,
+    frames_to_keep,
+)
 from app.models.snapshot import ComputedSnapshot
 from app.schemas.game import GameStateOut
 
@@ -77,12 +83,15 @@ def store_frame(db: Session, state: GameStateOut, *, day: date, now: datetime | 
         return False
 
 
-def prune(db: Session, *, today: date, keep_days: int) -> int:
-    """Delete frames older than `keep_days`. Returns how many were removed."""
-    cutoff = today - timedelta(days=keep_days)
+def prune(db: Session, *, today: date, rules: RetentionRules = RETENTION_V1) -> int:
+    """Thin stored frames per `rules` (retention_v1). Returns how many were
+    removed. Never removes the newest frame, and never a frame that is the
+    only one left of its week or month."""
     try:
         keys = [k for (k,) in db.execute(select(ComputedSnapshot.key).where(ComputedSnapshot.key.like(f"{KEY_PREFIX}%")))]
-        old = [k for k in keys if (d := day_of(k)) is not None and d < cutoff]
+        by_day = {d: k for k in keys if (d := day_of(k)) is not None}
+        keep = frames_to_keep(by_day, today=today, rules=rules)
+        old = [k for d, k in by_day.items() if d not in keep]
         if not old:
             return 0
         db.execute(delete(ComputedSnapshot).where(ComputedSnapshot.key.in_(old)))
@@ -135,7 +144,6 @@ def run_if_due(
     db: Session,
     *,
     hour_utc: int,
-    keep_days: int,
     version: str,
     now: datetime | None = None,
 ) -> bool:
@@ -151,6 +159,6 @@ def run_if_due(
     state = get_game_state(db, version, now=now)
     stored = store_frame(db, state, day=now.astimezone(timezone.utc).date(), now=now)
     if stored:
-        removed = prune(db, today=now.astimezone(timezone.utc).date(), keep_days=keep_days)
+        removed = prune(db, today=now.astimezone(timezone.utc).date(), rules=RETENTION_V1)
         log.info("game-state frame stored for %s (pruned %d)", now.date(), removed)
     return stored
