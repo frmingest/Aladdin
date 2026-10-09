@@ -1,7 +1,7 @@
 import Crest from "./Crest";
 import type { CrestKind } from "../../../lib/crest";
 import TorchPair from "./TorchPair";
-import { usePlainView } from "../../../lib/plainView";
+import { PLAIN_TOGGLE_ID, togglePlain, usePlainView } from "../../../lib/plainView";
 
 /** The banner at the top of every game room (page-scene kit): a crest for the room, the title on a
  * gilded plate, the subtitle, the page's actions and two wall torches. It replaces PageHeader's plain
@@ -29,13 +29,14 @@ export default function GamePageHeader({
             {subtitle && <p className="mt-0.5 text-sm text-[#cdb98c]">{subtitle}</p>}
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="game-banner-actions flex flex-wrap items-center gap-3">
           {actions}
           <button
+            id={PLAIN_TOGGLE_ID}
             type="button"
-            onClick={() => setPlain(!plain)}
+            onClick={() => togglePlain(plain, setPlain)}
             aria-pressed={plain}
-            className="min-h-[44px] rounded-md border border-[#8a6a32] px-3 text-xs font-semibold text-[#f2d27a] hover:bg-black/20 sm:min-h-0 sm:py-1"
+            className="min-h-[44px] whitespace-nowrap rounded-md border border-[#8a6a32] px-3 text-xs font-semibold text-[#f2d27a] hover:bg-black/20"
           >
             Plain view
           </button>

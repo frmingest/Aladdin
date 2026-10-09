@@ -3,7 +3,7 @@ import { useInRouterContext, useLocation } from "react-router-dom";
 import { formatRelative } from "../lib/format";
 import { useGameMode } from "../lib/gameMode";
 import { isFortressPath } from "../lib/nav";
-import { usePlainView } from "../lib/plainView";
+import { PLAIN_TOGGLE_ID, togglePlain, usePlainView } from "../lib/plainView";
 import { crestForPath } from "../lib/crest";
 import GamePageHeader from "./fortress/kit/GamePageHeader";
 import { InfoTooltip } from "./InfoTooltip";
@@ -66,10 +66,10 @@ function RoutedPageHeader(props: PageHeaderProps) {
 
 /** Small way back from Plain view, so a reader is never stuck in it. */
 function PlainViewSwitch() {
-  const [, setPlain] = usePlainView();
+  const [plain, setPlain] = usePlainView();
   return (
     <p className="-mt-4 mb-4 text-xs">
-      <button type="button" onClick={() => setPlain(false)} className="text-accent hover:underline">
+      <button id={PLAIN_TOGGLE_ID} type="button" onClick={() => togglePlain(plain, setPlain)} className="inline-block min-h-[44px] text-accent hover:underline">
         Back to the painted view
       </button>
     </p>

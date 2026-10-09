@@ -7,11 +7,14 @@ export default function SealMark({
   kind,
   size = 28,
   showLabel = false,
+  decorative = false,
   className = "",
 }: {
   kind: SealKind;
   size?: number;
   showLabel?: boolean;
+  /** True when a printed word beside it already says the same thing. */
+  decorative?: boolean;
   className?: string;
 }) {
   const look = SEAL_LOOK[kind];
@@ -24,9 +27,9 @@ export default function SealMark({
         viewBox="0 0 28 28"
         width={size}
         height={size}
-        role={showLabel ? undefined : "img"}
-        aria-label={showLabel ? undefined : look.label}
-        aria-hidden={showLabel ? true : undefined}
+        role={showLabel || decorative ? undefined : "img"}
+        aria-label={showLabel || decorative ? undefined : look.label}
+        aria-hidden={showLabel || decorative ? true : undefined}
       >
         {look.shape === "triangle" ? (
           <path d="M14 3 L26 24 H2 Z" fill={wax} stroke={rim} strokeWidth="1.6" strokeLinejoin="round" />

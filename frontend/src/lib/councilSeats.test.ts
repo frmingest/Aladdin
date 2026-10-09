@@ -22,7 +22,7 @@ describe("council seats", () => {
       expect(s.count).toBeNull();
       expect(s.papers).toBe(0);
       expect(s.tone).toBeNull();
-      expect(seatLabel(s)).toContain("nothing found");
+      expect(seatLabel(s)).toContain("none found");
     }
   });
 
