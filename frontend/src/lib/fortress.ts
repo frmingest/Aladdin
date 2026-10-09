@@ -101,9 +101,22 @@ export function sortTowers(towers: GameTower[]): GameTower[] {
   return [...towers].sort((a, b) => weightOf(b) - weightOf(a) || a.name.localeCompare(b.name));
 }
 
+/** How much taller or shorter than its size class a tower is drawn, from its
+ * weight in the portfolio (option D, 2026-10-09). Bounded so a heavy holding
+ * never outgrows the Great Keep and a light one stays clickable. Height only:
+ * widths decide the layout, and an unknown weight draws at the class height. */
+export const WEIGHT_SCALE_MIN = 0.9;
+export const WEIGHT_SCALE_MAX = 1.15;
+export function weightScale(weightPct: string | null): number {
+  if (weightPct === null) return 1;
+  const w = Number(weightPct);
+  if (!Number.isFinite(w)) return 1;
+  return Math.min(WEIGHT_SCALE_MAX, Math.max(WEIGHT_SCALE_MIN, 0.9 + 0.0125 * w));
+}
+
 export function towerDimensions(t: GameTower): { w: number; h: number } {
   const base = SIZE_DIMENSIONS[t.size_class];
-  return { w: base.w, h: Math.round(base.h * STRUCTURE_HEIGHT[t.structure]) };
+  return { w: base.w, h: Math.round(base.h * STRUCTURE_HEIGHT[t.structure] * weightScale(t.weight_pct)) };
 }
 
 /** Lay the towers out as one fortress. The first (top) terrace has the Great
@@ -442,6 +455,26 @@ export function siegeSky(level: FortressSiegeLevel | null | undefined): SiegeSky
       return { top: "#141b29", bottom: "#2a3850", clouds: 0, fires: 0, mist: true };
     default:
       return { top: "#141b29", bottom: "#2a3850", clouds: 0, fires: 0, mist: false };
+  }
+}
+
+/** The besieging army, from the siege level only (option C). Calm and
+ * unsurveyed weather draw no enemy at all. */
+export interface SiegeCamp {
+  tents: number;
+  soldiers: number;
+  engines: number;
+  arrows: number;
+}
+
+export function siegeCamp(level: FortressSiegeLevel | null | undefined): SiegeCamp {
+  switch (level) {
+    case "gathering":
+      return { tents: 3, soldiers: 7, engines: 0, arrows: 0 };
+    case "besieged":
+      return { tents: 7, soldiers: 20, engines: 3, arrows: 5 };
+    default:
+      return { tents: 0, soldiers: 0, engines: 0, arrows: 0 };
   }
 }
 

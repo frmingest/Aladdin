@@ -1,4 +1,5 @@
-import { ROW_HEIGHT, SCENE_TOP, SCENE_WIDTH, type FortressLayout, type SiegeSky } from "../../lib/fortress";
+import { ROW_HEIGHT, SCENE_TOP, SCENE_WIDTH, siegeCamp, type FortressLayout, type SiegeSky } from "../../lib/fortress";
+import type { FortressSiegeLevel } from "../../lib/types";
 import { HORIZON, type WorldPalette } from "../../lib/fortressArt";
 
 /**
@@ -201,7 +202,7 @@ export function SceneDefs({ palette }: { palette: WorldPalette }) {
         <feColorMatrix
           in="noise"
           type="matrix"
-          values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -1.4 0.95"
+          values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -1.15 0.72"
           result="speck"
         />
         <feComposite in="speck" in2="SourceAlpha" operator="in" result="specks" />
@@ -336,6 +337,111 @@ function SiegeFires({ count, y }: { count: number; y: number }) {
   );
 }
 
+
+/** The besieging army on the far hills (option C, 2026-10-09). Drawn only from
+ * the backend's siege level: nothing in calm weather or when the weather was
+ * not surveyed, scouts and tents while the enemy gathers, a full camp with
+ * engines and fire arrows when the realm is besieged. Static: the only motion
+ * is the camp fires above. */
+function SiegeArmy({ level, y }: { level: FortressSiegeLevel | null | undefined; y: number }) {
+  const camp = siegeCamp(level);
+  if (camp.tents === 0) return null;
+  const tentXs = [96, 214, 330, 566, 690, 812, 902].slice(0, camp.tents);
+  const soldierXs = Array.from({ length: camp.soldiers }, (_, i) => 40 + ((i * 53) % 900) + (i % 3) * 5);
+  const engineXs = [150, 450, 760].slice(0, camp.engines);
+  const arrowTargets: [number, number, number][] = [
+    [236, 300, 120], [410, 292, 330], [560, 286, 590], [700, 292, 790], [820, 300, 880],
+  ];
+  return (
+    <g aria-hidden>
+      {tentXs.map((x, i) => (
+        <g key={`t${x}`}>
+          <path d={`M${x - 11} ${y + 8} L${x} ${y - 6 - (i % 2) * 2} L${x + 11} ${y + 8} Z`} fill="#241518" stroke="#000" strokeOpacity={0.4} />
+          <path d={`M${x} ${y + 8} L${x} ${y - 6 - (i % 2) * 2} L${x + 11} ${y + 8} Z`} fill="#000" opacity={0.28} />
+          <path d={`M${x} ${y - 6 - (i % 2) * 2} v-9 l6 2.5 l-6 2.5`} stroke="#6b1c1c" fill="#a52a2a" strokeWidth={1} />
+        </g>
+      ))}
+      {soldierXs.map((x, i) => (
+        <g key={`s${i}`} transform={`translate(${x} ${y + 12 + (i % 4) * 3})`}>
+          <rect x={-1.6} y={-7} width={3.2} height={7} fill="#160d10" />
+          <circle cx={0} cy={-9} r={1.9} fill="#160d10" />
+          <path d="M3 0 V-14" stroke="#2c1a1e" strokeWidth={0.9} />
+          <path d="M3 -14 l-1.5 3 h3 Z" fill="#8c8c96" opacity={0.8} />
+        </g>
+      ))}
+      {engineXs.map((x) => (
+        <g key={`e${x}`} stroke="#120a0c" strokeWidth={2} fill="none" strokeLinecap="round">
+          <path d={`M${x - 12} ${y + 14} L${x - 4} ${y + 2} L${x + 12} ${y + 14}`} />
+          <path d={`M${x - 8} ${y + 10} L${x + 14} ${y - 12}`} />
+          <path d={`M${x + 14} ${y - 12} q5 -2 7 3`} />
+          <circle cx={x - 9} cy={y + 15} r={2.6} fill="#120a0c" />
+          <circle cx={x + 9} cy={y + 15} r={2.6} fill="#120a0c" />
+        </g>
+      ))}
+      {arrowTargets.slice(0, camp.arrows).map(([tx, ty, sx], i) => (
+        <g key={`a${i}`}>
+          <path d={`M${sx} ${y - 8} Q${(sx + tx) / 2} ${y - 70} ${tx} ${ty}`} stroke="#ffb15a" strokeOpacity={0.45} strokeWidth={1} strokeDasharray="2 4" fill="none" />
+          <circle cx={tx} cy={ty} r={1.8} fill="#ffd27a" />
+        </g>
+      ))}
+    </g>
+  );
+}
+
+/** Quiet life on the lower terraces: a track, a well, hay and trees. Pure
+ * decoration, the same whatever the portfolio looks like (it must never make
+ * a weak book look better), and static. Rows below the first only. */
+function TerraceLife({ layout }: { layout: FortressLayout }) {
+  const rows = Math.max(1, layout.rows);
+  const out: JSX.Element[] = [];
+  for (let r = 1; r < rows; r += 1) {
+    const top = SCENE_TOP + (r - 1) * ROW_HEIGHT + 170 + 70 + 26 + 18;
+    const flip = r % 2 === 0 ? 1 : -1;
+    const x0 = flip > 0 ? 70 : SCENE_WIDTH - 70;
+    out.push(
+      <g key={`life-${r}`}>
+        <path
+          d={`M${SCENE_WIDTH / 2 - 40} ${top - 12} Q${SCENE_WIDTH / 2 + 60 * flip} ${top + 18} ${SCENE_WIDTH / 2 - 20 * flip} ${top + 56}`}
+          stroke="#8a7650" strokeOpacity={0.5} strokeWidth={7} strokeLinecap="round" fill="none"
+        />
+        {/* a well */}
+        <g transform={`translate(${x0 + 60 * flip} ${top + 36})`}>
+          <ellipse cx={4} cy={4} rx={13} ry={3.5} fill="#000" opacity={0.3} />
+          <rect x={-8} y={-6} width={16} height={9} rx={2} fill="#7d7468" stroke="#3a352d" strokeWidth={0.8} />
+          <path d="M-9 -6 L0 -14 L9 -6 Z" fill="#6b3a22" />
+          <path d="M-7 -6 V0 M7 -6 V0" stroke="#4a2a16" strokeWidth={1.2} />
+        </g>
+        {/* hay bales */}
+        {[0, 1, 2].map((k) => (
+          <g key={k} transform={`translate(${x0 + (130 + k * 26) * flip} ${top + 40 + (k % 2) * 6})`}>
+            <ellipse cx={2} cy={5} rx={9} ry={2.6} fill="#000" opacity={0.28} />
+            <ellipse cx={0} cy={0} rx={8} ry={6.5} fill="#c9a24a" stroke="#6b4e1a" strokeWidth={0.8} />
+            <path d="M-6 -2 q6 3 12 0 M-6 2 q6 3 12 0" stroke="#8a6a24" strokeWidth={0.8} fill="none" />
+          </g>
+        ))}
+        {/* a fenced furrowed field */}
+        <g transform={`translate(${SCENE_WIDTH / 2 + 190 * flip} ${top + 18})`}>
+          <path d="M-46 0 L46 0 L58 30 L-58 30 Z" fill="#5a4a2a" opacity={0.8} />
+          {[6, 12, 18, 24].map((dy) => (
+            <path key={dy} d={`M${-46 - dy * 0.4} ${dy} H${46 + dy * 0.4}`} stroke="#8aa04a" strokeOpacity={0.5} strokeWidth={1.4} strokeDasharray="3 2" />
+          ))}
+          <path d="M-58 30 H58 M-46 0 V-5 M0 0 V-5 M46 0 V-5" stroke="#3a2a16" strokeWidth={1.4} />
+        </g>
+        {/* round trees */}
+        {[x0 + 20 * flip, SCENE_WIDTH - x0 - 40 * flip].map((tx, k) => (
+          <g key={`tr${k}`} transform={`translate(${tx} ${top + 52})`}>
+            <ellipse cx={5} cy={2} rx={15} ry={4} fill="#000" opacity={0.3} />
+            <rect x={-2} y={-12} width={4} height={14} fill="#3a2614" />
+            <circle cx={0} cy={-22} r={14} fill="#2f5a2a" />
+            <circle cx={-5} cy={-26} r={8} fill="#4a7a38" opacity={0.7} />
+          </g>
+        ))}
+      </g>,
+    );
+  }
+  return <g aria-hidden>{out}</g>;
+}
+
 /** Each row of towers stands on its own terrace; the lip and cliff face in
  * front of it step the hillside down towards the viewer. */
 function Terrace({ groundY, index }: { groundY: number; index: number }) {
@@ -414,11 +520,13 @@ export function SceneBackdrop({
   sky,
   palette,
   height,
+  level = null,
 }: {
   layout: FortressLayout;
   sky: SiegeSky;
   palette: WorldPalette;
   height: number;
+  level?: FortressSiegeLevel | null;
 }) {
   const rows = Math.max(1, layout.rows);
   const stars: [number, number][] = [
@@ -439,6 +547,7 @@ export function SceneBackdrop({
       <SnowCaps color={palette.snow} />
       <rect x={0} y={HORIZON - 130} width={SCENE_WIDTH} height={140} fill="url(#fs-haze)" />
       <path d={ridge(NEAR_PEAKS, HORIZON + 4)} fill={palette.nearHills} />
+      <SiegeArmy level={level} y={HORIZON - 22} />
       <SiegeFires count={sky.fires} y={HORIZON - 26} />
       <Treeline color={palette.forest} y={HORIZON + 10} />
 
@@ -447,6 +556,7 @@ export function SceneBackdrop({
         <Terrace key={r} groundY={SCENE_TOP + r * ROW_HEIGHT + 170} index={r} />
       ))}
       <Tufts layout={layout} />
+      <TerraceLife layout={layout} />
       <EdgePines layout={layout} color={palette.forest} />
       {sky.mist && (
         <g>
