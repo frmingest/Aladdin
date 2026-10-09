@@ -29,4 +29,6 @@ export const WORD_BUDGET = {
   fortressReportsBar: 12,
   gameFooter: 30,
   storeTabs: 10,
+  /** Council chamber seat labels (8 existing agenda labels + "nothing found" on empty chairs). */
+  councilChamberChrome: 40,
 } as const;

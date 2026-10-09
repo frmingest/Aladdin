@@ -1,5 +1,11 @@
 import { useEffect, useState } from "react";
+import { useInRouterContext, useLocation } from "react-router-dom";
 import { formatRelative } from "../lib/format";
+import { useGameMode } from "../lib/gameMode";
+import { isFortressPath } from "../lib/nav";
+import { PLAIN_TOGGLE_ID, togglePlain, usePlainView } from "../lib/plainView";
+import { crestForPath } from "../lib/crest";
+import GamePageHeader from "./fortress/kit/GamePageHeader";
 import { InfoTooltip } from "./InfoTooltip";
 
 /** Small shared building blocks used by both holding pages — kept here
@@ -20,15 +26,13 @@ export function Card({
   );
 }
 
-export function PageHeader({
-  title,
-  subtitle,
-  actions,
-}: {
+type PageHeaderProps = {
   title: React.ReactNode;
   subtitle?: string;
   actions?: React.ReactNode;
-}) {
+};
+
+function PlainPageHeader({ title, subtitle, actions }: PageHeaderProps) {
   return (
     <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
       <div>
@@ -40,6 +44,43 @@ export function PageHeader({
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>
   );
+}
+
+/** In game mode, on the fortress rooms, the header is the painted banner (page-scene kit) unless Plain
+ * view is on. Everywhere else, and with game mode off, it is exactly the plain header. */
+function RoutedPageHeader(props: PageHeaderProps) {
+  const { pathname } = useLocation();
+  const [plain] = usePlainView();
+  // The Fortress home and the Marketplace already carry their own painted identity (scene, awnings).
+  const banner = isFortressPath(pathname) && pathname !== "/fortress" && !pathname.startsWith("/fortress/marketplace");
+  if (!banner) return <PlainPageHeader {...props} />;
+  return plain ? (
+    <>
+      <PlainPageHeader {...props} />
+      <PlainViewSwitch />
+    </>
+  ) : (
+    <GamePageHeader {...props} crest={crestForPath(pathname)} />
+  );
+}
+
+/** Small way back from Plain view, so a reader is never stuck in it. */
+function PlainViewSwitch() {
+  const [plain, setPlain] = usePlainView();
+  return (
+    <p className="-mt-4 mb-4 text-xs">
+      <button id={PLAIN_TOGGLE_ID} type="button" onClick={() => togglePlain(plain, setPlain)} className="inline-block min-h-[44px] text-accent hover:underline">
+        Back to the painted view
+      </button>
+    </p>
+  );
+}
+
+export function PageHeader(props: PageHeaderProps) {
+  const { gameMode } = useGameMode();
+  const inRouter = useInRouterContext();
+  if (gameMode && inRouter) return <RoutedPageHeader {...props} />;
+  return <PlainPageHeader {...props} />;
 }
 
 /** A section with the same uppercase heading style as the holding page's

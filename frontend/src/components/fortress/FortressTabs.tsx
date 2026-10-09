@@ -8,7 +8,7 @@ export default function FortressTabs() {
   return (
     <nav
       aria-label="Fortress rooms"
-      className="mx-auto flex max-w-6xl gap-1 overflow-x-auto border-b border-border px-4 sm:px-6"
+      className="mx-auto flex w-full max-w-6xl gap-1 overflow-x-auto border-b border-border px-4 sm:px-6"
     >
       {FORTRESS_NAV.map((item) => (
         <NavLink

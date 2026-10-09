@@ -1,6 +1,6 @@
 # Aladdin — Progress
 
-**Last updated:** 2026-10-09 (game visual identity review). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
+**Last updated:** 2026-10-09 (game visual identity). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
 
 ## Current Objective
 
@@ -9,6 +9,8 @@ Phase 11, the Buffett/Munger rebuild, is stable and merged; game mode follows th
 **Game visual identity (2026-10-09, written, not merged, not deployed):** Faiz noticed Circle, Council and Map look like normal mode; he approved building it. Four PRs open, all CI checked green on GitHub except #90's backend/migration jobs still running at the last check: #88 process (identity standard, agent lanes, checklist, CLAUDE.md lines), #89 page-scene kit + Council chamber, #90 Map fog patches/slate/commission flags (stacked on #89), #91 Circle ring map (stacked on #89). Merge #88 and #89 first, then retarget #90 and #91 to `main`. Never seen in a browser; identity scores are still inferred from code. Designs: [overview](game-visual-identity-2026-10-09.md), [Circle and Council](circle-council-design-2026-10-09.md), [Map](map-design-2026-10-09.md), [audit](game-pages-identity-audit-2026-10-09.md), [process](game-identity-process-changes-2026-10-09.md).
 
 State (checked against git 2026-10-09): `origin/main` = `d4d0a70` (#87 Knife-edge merged); the local checkout `E:\Aladdin` is stale (on `feature/currency-edit-and-nok-equivalent`, with uncommitted edits), so build from fresh `main`. Repo migration head `t1f2a3b4c5d6`, confirmed on Supabase by Faiz. Whether #84–#87 are deployed is not verified. Live URLs: frontend `https://exciting-gratitude-production-71b5.up.railway.app`, backend `https://aladdin-production-bd25.up.railway.app`.
+
+**Game visual identity (2026-10-09):** PR #88 (standard, agents, checklist, design docs; docs only), #89 (kit + Council, [write-up](game-identity-kit-council-2026-10-09.md)), and stacked #90 (Map) and #91 (Circle) are open, not merged, not deployed, never seen on real data.
 
 ## Active Tasks
 
