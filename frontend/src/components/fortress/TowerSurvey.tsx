@@ -54,6 +54,22 @@ export default function TowerSurvey({ tower, compact = false }: { tower: GameTow
               {inputs.map(([k, v]) => formatWallInput(k, v)).join(" · ")}
             </dd>
           )}
+          {(tower.wall_margins ?? []).length > 0 && (
+            <dd className="mt-2">
+              <p className="text-xs uppercase tracking-wide text-ink-faint">Distance to the next tier</p>
+              <ul className="mt-1 space-y-0.5 text-xs text-ink-muted">
+                {(tower.wall_margins ?? []).map((m) => (
+                  <li key={`${m.metric}-${m.direction}`}>
+                    {m.near && <span className="font-semibold text-ink">Close to the line: </span>}
+                    {m.text}
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-1 text-xs text-ink-faint">
+                From the last stored statements; a new report can move it either way. A distance, not a goal.
+              </p>
+            </dd>
+          )}
         </div>
         <div>
           <dt className="text-xs uppercase tracking-wide text-ink-faint">Analysis</dt>

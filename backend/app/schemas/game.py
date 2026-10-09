@@ -22,6 +22,20 @@ ThesisState = Literal["intact", "review", "breached", "not_analyzed", "not_appli
 TemperamentLevel = Literal["composed", "steady", "restless", "rash", "unsurveyed"]
 
 
+class MarginOut(BaseModel):
+    """A1 Knife-edge: how far one wall input sits from the next tier boundary."""
+
+    metric: str
+    label: str
+    value: Decimal
+    boundary: Decimal
+    direction: Literal["weaker", "stronger"]
+    to_tier: str
+    distance: Decimal
+    near: bool = False
+    text: str
+
+
 class TowerOut(BaseModel):
     holding_id: UUID
     ticker: str
@@ -38,6 +52,8 @@ class TowerOut(BaseModel):
     # The deterministic numbers the wall was decided from, so the Ledger
     # view can show them next to the picture.
     wall_inputs: dict[str, Decimal] = Field(default_factory=dict)
+    # A1: distance to the next wall tier on each side. Empty when no ratio decides the wall.
+    wall_margins: list[MarginOut] = Field(default_factory=list)
     freshness: Freshness
     analysis_age_days: int | None
     verdict_rating: str | None

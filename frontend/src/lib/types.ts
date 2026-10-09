@@ -1962,6 +1962,20 @@ export type FortressThesis = "intact" | "review" | "breached" | "not_analyzed" |
 export type FortressSiegeExposure = "sheltered" | "exposed" | "breach_risk" | "unsurveyed";
 export type FortressSiegeLevel = "calm" | "gathering" | "besieged" | "unsurveyed";
 
+/** A1 Knife-edge: distance from one wall input to a neighbouring tier line. */
+export interface GameMargin {
+  metric: string;
+  label: string;
+  value: string;
+  boundary: string;
+  direction: "weaker" | "stronger";
+  to_tier: string;
+  distance: string;
+  /** True only for the weaker side, within the margins_v1 band. */
+  near: boolean;
+  text: string;
+}
+
 export interface GameTower {
   holding_id: string;
   ticker: string;
@@ -1976,6 +1990,8 @@ export interface GameTower {
   wall: FortressWall;
   wall_reason: string;
   wall_inputs: Record<string, string>;
+  /** Absent on frames stored before A1. */
+  wall_margins?: GameMargin[];
   freshness: FortressFreshness;
   analysis_age_days: number | null;
   verdict_rating: string | null;

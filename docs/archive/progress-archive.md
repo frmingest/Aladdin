@@ -3,6 +3,27 @@
 Completed milestones and retired status, moved out of `docs/PROGRESS.md` under the rolling-log rules
 in `CLAUDE.md` ("Progress file rules"). Newest snapshot first. Older: [PROGRESS-full-2026-09-30.md](PROGRESS-full-2026-09-30.md).
 
+## Closed 2026-10-09 — Faiz's review and deploy tasks (all confirmed OK)
+
+Faiz confirmed on 2026-10-09 that every item below is done and OK; they were checked off and moved here from `docs/PROGRESS.md`. Status words are Faiz's, not re-verified by Claude.
+
+- **Art-pass PR (#85):** Fortress in calm and besieged weather looked at; ravens on their towers, enemy camp only when gathering or besieged, tall holdings read taller. Not done and still open as ideas: sector building shapes (option B), marketplace/character art (E). [write-up](../fortress-art-pass-2026-10-09.md)
+- **Integrity PR (#84):** no `ACTIVE_GAME_MAPPING_VERSION=v1` override on Railway; the sky may show mist where it showed calm. [write-up](../game-integrity-fixes-2026-10-09.md)
+- **PR #80 and Sprint 28:** Fortress → Map, Glossary Codex, Records seals and the polish items judged OK. [checklist](../fog-of-war-sprint28-2026-10-08.md)
+- **Deploy check:** Railway deployed `main`; Supabase `alembic_version` = `t1f2a3b4c5d6`.
+- **Quarterly reports:** *Fetch reports* re-pressed on each Oslo holding (Newsweb category 1002 carries Q1–Q3).
+- **PC:** `git pull` in `E:\Aladdin`, backend and worker restarted; Siege price history ran; `/fortress/siege` reloaded. Old worktrees under `E:\Aladdin\.claude-wt` hold disk space. [doc](../siege-instrument-sensitivity-2026-10-07.md)
+- **First look at merged work:** currency Edit and `≈ NOK` (#68), Background jobs card (#65), tag review inbox (#60–62), game-mode noise pass (#64), scroll reader (G28), Scrolls library (G30), raven button (G31).
+- **Non-equity holdings:** figures entered for Alfred Berg Nordic High Yield II R, Heimdal Høyrente Pluss B, Xetra-Gold; Macro refreshed; three analyses run (#67). [doc](../all-instrument-analysis-2026-10-07.md)
+- **Valuation v4 re-check:** Margin of safety refreshed (Aker Solutions, Equinor, Telenor, Sparebanken Øst, Storebrand); reports re-fetched for Aker BP, Orkla, Salmon Evolution, Subsea 7; Tag review → Re-extract after #76. [doc](../valuation-v4-normalised-base-certificates-2026-10-07.md)
+- **Ravens:** "Ravens · N new", "Earlier" folds, Portfolio/Watchlist filter, "Mark all earlier as seen", Tab and arrow keys judged OK (#81).
+- **Credentials rotated** (Supabase, Google AI Studio, Mistral, FRED).
+- **Docs PR (#83) and agent-team setup (#82):** [what Ollama reads](../ollama-what-it-reads-2026-10-09.md) reviewed; `/game-review` and `/ship-pr` available. [assessment](../claude-setup-assessment-2026-10-09.md)
+
+**Merged since the last snapshot (checked against git 2026-10-09):** #84 game integrity, #85 Fortress art pass, #86 Long Memory (B1). `main` = `33fc93f`. CI on that commit: all checks green (smoke skipped). Whether #86 is deployed is not verified.
+
+---
+
 ## Snapshot 2026-10-07 — full previous `docs/PROGRESS.md` (413 lines), moved here verbatim
 
 Status lines inside this snapshot are as of when each was written. **Corrections found when archiving
