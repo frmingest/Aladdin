@@ -371,9 +371,13 @@ def build_game_state(
             )
             if wall == "unsurveyed":
                 no_walls += 1
+            margins = rules.wall_margin_views(
+                wall_inputs, financial=is_financial_sector(p.sector), mapping=mapping
+            )
         else:
             wall, reason = rules.wall_for_non_stock(p.instrument_type)
             wall_inputs = {}
+            margins = []
         if analyzable and p.analyzed_at is None:
             unanalyzed += 1
         land, land_reason = rules.land_for_sale(inputs.land.get(p.holding_id))
@@ -397,6 +401,7 @@ def build_game_state(
                 wall=wall,
                 wall_reason=reason,
                 wall_inputs=wall_inputs,
+                wall_margins=margins,
                 freshness=fresh,
                 analysis_age_days=age,
                 verdict_rating=p.verdict_rating,

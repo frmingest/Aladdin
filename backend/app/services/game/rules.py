@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from decimal import Decimal
 
+from app.domain.game_mapping.margins_v1 import Margin, wall_margins
 from app.domain.game_mapping.value_types import GameMapping
 from app.domain.instrument_types import (
     BOND_FUND,
@@ -21,6 +22,7 @@ from app.domain.instrument_types import (
     MONEY_MARKET_FUND,
     STOCK,
 )
+from app.schemas.game import MarginOut
 
 ZERO = Decimal(0)
 
@@ -155,6 +157,46 @@ def _wall_for_non_financial(facts: WallFacts, mapping: GameMapping) -> tuple[str
             reason += f"; interest cover only {cover.quantize(Decimal('0.1'))}x, so one tier weaker ({weaker})"
             wall = weaker
     return wall, reason, inputs
+
+
+def _fmt_margin_num(value: Decimal, unit: str) -> str:
+    if unit == "%":
+        return f"{(value * 100).quantize(Decimal('0.1'))}%"
+    return f"{value.quantize(Decimal('0.1'))}x"
+
+
+def margin_text(m: Margin) -> str:
+    """Plain words for one margin. Never a verb for the owner; the stronger
+    side is a distance, not a goal."""
+    now = _fmt_margin_num(m.value, m.unit)
+    line = _fmt_margin_num(m.boundary, m.unit)
+    gap = _fmt_margin_num(m.distance, m.unit)
+    if m.metric == "interest_coverage":
+        if m.direction == "weaker":
+            return f"{m.label} is {now}; below {line} the wall counts one tier weaker ({gap} of room)."
+        return f"{m.label} is {now}; at {line} or more the wall is no longer pulled down ({gap} away)."
+    if m.metric == "net_debt_to_ebitda":
+        if m.direction == "weaker":
+            return f"{m.label} is {now}; {m.to_tier} begins above {line} ({gap} of room)."
+        if m.to_tier == "basalt":
+            return f"{m.label} is {now}; basalt means net cash, no net debt at all."
+        return f"{m.label} is {now}; {m.to_tier} needs {line} or less ({gap} away)."
+    if m.direction == "weaker":
+        return f"{m.label} is {now}; {m.to_tier} begins below {line} ({gap} of room)."
+    return f"{m.label} is {now}; {m.to_tier} needs {line} or more ({gap} away)."
+
+
+def wall_margin_views(
+    wall_inputs: dict[str, Decimal], *, financial: bool, mapping: GameMapping
+) -> list[MarginOut]:
+    """A1 Knife-edge: the distance to each neighbouring tier (margins_v1)."""
+    return [
+        MarginOut(
+            metric=m.metric, label=m.label, value=m.value, boundary=m.boundary, direction=m.direction,  # type: ignore[arg-type]
+            to_tier=m.to_tier, distance=m.distance, near=m.near, text=margin_text(m),
+        )
+        for m in wall_margins(wall_inputs, financial=financial, mapping=mapping)
+    ]
 
 
 def wall_for_non_stock(instrument_type: str) -> tuple[str, str]:

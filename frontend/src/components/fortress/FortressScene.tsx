@@ -12,6 +12,8 @@ import {
   WALL_EDGE,
   groundY,
   moatRuns,
+  nearMargins,
+  knifeEdgeSummary,
   THESIS_LABEL,
   WALL_LABEL,
   describeTower,
@@ -701,6 +703,40 @@ function Flames({ x, y, scale = 1 }: { x: number; y: number; scale?: number }) {
   );
 }
 
+/** A1 Knife-edge: a hairline crack in the wall when a stored number sits
+ * within the margins_v1 band of the next weaker tier. A shape, not a colour,
+ * so it reads without colour; static (no motion), and drawn only for towers
+ * that have a real ratio. It does not change the wall: it marks the edge. */
+function KnifeEdgeCrack({ item }: { item: PlacedTower }) {
+  const { tower, x, y, w, h } = item;
+  if (nearMargins(tower).length === 0) return null;
+  const top = y - h;
+  const cx = x + w * 0.36;
+  const y0 = top + h * 0.5;
+  return (
+    <g aria-hidden>
+      <path
+        d={`M${cx} ${y0} l5 7 l-4 6 l6 8 l-3 7 l4 9`}
+        fill="none"
+        stroke="#0b0705"
+        strokeOpacity={0.75}
+        strokeWidth={1.1}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d={`M${cx + 1} ${y0} l5 7 l-4 6 l6 8 l-3 7 l4 9`}
+        fill="none"
+        stroke="#f3e4bf"
+        strokeOpacity={0.18}
+        strokeWidth={0.6}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </g>
+  );
+}
+
 /** A fired tripwire sets the tower alight and breaches the wall; a thesis
  * flagged for review is an amber notice. Both carry a symbol, so colour is
  * never the only cue. */
@@ -1191,6 +1227,7 @@ function TowerFigure({
         <Drawbridge item={item} />
         <TowerBody item={item} />
         <Weathering item={item} />
+        <KnifeEdgeCrack item={item} />
         <ThesisMarks item={item} />
         <Ladders item={item} level={level} />
         {raven && <RavenMark x={x + w / 2 + Math.min(18, w / 3)} y={crown + 2} />}
@@ -1271,6 +1308,7 @@ export function TowerPeek({ tower: t }: { tower: GameTower }) {
         {t.freshness !== "not_applicable" && <li>{FRESHNESS_LABEL[t.freshness]}</li>}
         <li className={LAND_TONE[t.land] ?? ""}>{LAND_LABEL[t.land]}</li>
         {t.thesis !== "not_applicable" && <li className={THESIS_TONE[t.thesis] ?? ""}>{THESIS_LABEL[t.thesis]}</li>}
+        {knifeEdgeSummary(t) && <li>On a knife-edge: {knifeEdgeSummary(t)}</li>}
       </ul>
       <p className="fortress-tip-hint">Click to read the full survey</p>
     </div>

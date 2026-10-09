@@ -8,6 +8,7 @@ import type {
   FortressStructure,
   FortressTemperamentLevel,
   GameAdvisorName,
+  GameMargin,
   GameAdvisorTone,
   FortressThesis,
   FortressVaultLevel,
@@ -368,6 +369,7 @@ export function describeTower(t: GameTower): string {
   if (t.wall !== "not_applicable") parts.push(WALL_LABEL[t.wall].toLowerCase());
   if (t.thesis === "breached") parts.push("a tripwire has fired");
   else if (t.thesis === "review") parts.push("thesis flagged for review");
+  if (nearMargins(t).length > 0) parts.push("close to the line of a weaker wall");
   if (t.land === "bargain" || t.land === "discount") parts.push(LAND_SHORT[t.land].toLowerCase());
   return parts.join(", ");
 }
@@ -515,6 +517,18 @@ const METHOD_LABEL: Record<string, string> = {
   dcf_bear: "price falling to the bear-case value",
   volatility: "a two-standard-deviation price move",
 };
+
+/** A1: the weaker-side margins that are within the band. Drives the hairline
+ * crack and the "close to the line" wording. Never a sign of progress. */
+export function nearMargins(t: GameTower): GameMargin[] {
+  return (t.wall_margins ?? []).filter((m) => m.direction === "weaker" && m.near);
+}
+
+export function knifeEdgeSummary(t: GameTower): string | null {
+  const near = nearMargins(t);
+  if (near.length === 0) return null;
+  return near.map((m) => m.text).join(" ");
+}
 
 export function describeSiegeExposure(t: GameTower): string {
   if (t.siege_exposure === "unsurveyed" || t.siege_shock_pct === null) return EXPOSURE_LABEL.unsurveyed;
