@@ -8,6 +8,7 @@ import {
   headline,
   miniLayout,
   newestIndex,
+  recordLimits,
   nextPlayIndex,
 } from "./chronicle";
 import type { Chronicle, ChronicleFrame, ChronicleTower } from "./types";
@@ -99,5 +100,19 @@ describe("miniLayout", () => {
 
   it("copes with an empty frame", () => {
     expect(miniLayout(frame("d", []))).toEqual([]);
+  });
+});
+
+describe("recordLimits", () => {
+  it("lists days the worker stored nothing before the standing notes", () => {
+    const c = chronicle([]);
+    c.notes = ["A standing note."];
+    c.gaps = [{ first_day: "2026-10-01", last_day: "2026-10-03", days: 3, text: "Nothing was recorded." }];
+    expect(recordLimits(c)).toEqual(["Nothing was recorded.", "A standing note."]);
+  });
+  it("copes with an older payload that has no gaps", () => {
+    const c = chronicle([]);
+    c.notes = ["Only a note."];
+    expect(recordLimits(c)).toEqual(["Only a note."]);
   });
 });

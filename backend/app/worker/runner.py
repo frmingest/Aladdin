@@ -333,7 +333,6 @@ class AnalysisWorker:
                 run_if_due(
                     db,
                     hour_utc=self.settings.game_state_history_hour_utc,
-                    keep_days=self.settings.game_state_history_keep_days,
                     version=self.settings.active_game_mapping_version,
                 )
         except Exception:

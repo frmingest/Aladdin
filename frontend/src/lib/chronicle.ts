@@ -105,3 +105,9 @@ export function headline(chronicle: Chronicle): string {
   const last = chronicle.frames[chronicle.frames.length - 1];
   return `${chronicle.frames.length} frames from ${frameTitle(first)} to ${frameTitle(last)}: ${chronicle.stored_frames} stored, ${chronicle.positions_only_frames} rebuilt from imports.`;
 }
+
+/** Everything the record cannot show, in reading order: days the worker stored nothing (never read
+ * as calm), then the standing notes. Older payloads have no gaps. */
+export function recordLimits(chronicle: Chronicle): string[] {
+  return [...(chronicle.gaps ?? []).map((g) => g.text), ...chronicle.notes];
+}

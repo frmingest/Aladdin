@@ -312,6 +312,16 @@ class ChronicleChangeOut(BaseModel):
     text: str
 
 
+class ChronicleGapOut(BaseModel):
+    """A run of recent days with no stored frame (the worker was off). Nothing
+    is known about those days, not even that they were calm."""
+
+    first_day: date
+    last_day: date
+    days: int
+    text: str
+
+
 class ChronicleOut(BaseModel):
     rules_version: str
     demo: bool = False
@@ -322,6 +332,8 @@ class ChronicleOut(BaseModel):
     first_stored_day: date | None
     # Frames older than the newest `chronicle_max_frames` that were left out.
     hidden_frames: int = 0
+    # Recent days with no stored frame; older days are thinned by retention_v1.
+    gaps: list[ChronicleGapOut] = []
     notes: list[str]
 
 

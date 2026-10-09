@@ -2241,6 +2241,13 @@ export interface ChronicleChange {
   text: string;
 }
 
+export interface ChronicleGap {
+  first_day: string;
+  last_day: string;
+  days: number;
+  text: string;
+}
+
 export interface Chronicle {
   rules_version: string;
   demo: boolean;
@@ -2250,6 +2257,8 @@ export interface Chronicle {
   positions_only_frames: number;
   first_stored_day: string | null;
   hidden_frames: number;
+  /** Recent days with no stored frame (the worker was off). Absent on older payloads. */
+  gaps?: ChronicleGap[];
   notes: string[];
 }
 

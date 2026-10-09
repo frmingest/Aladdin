@@ -3,7 +3,7 @@ Chronicle, G15 Ravens, G16 Night Watch (2026-10-04). Read-only, demo mode
 wins, unknown stays unknown."""
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 
 from app.models import Document, Holding
@@ -32,7 +32,7 @@ def test_run_if_due_stores_one_frame_per_day_and_not_before_the_hour(db_session)
     _seed(db_session)
     early = NOW.replace(hour=2, minute=0)
     late = NOW.replace(hour=6, minute=0)
-    kwargs = {"hour_utc": 5, "keep_days": 540, "version": "v1"}
+    kwargs = {"hour_utc": 5, "version": "v1"}
     assert history.run_if_due(db_session, now=early, **kwargs) is False
     assert history.stored_days(db_session) == []
     assert history.run_if_due(db_session, now=late, **kwargs) is True
@@ -54,24 +54,33 @@ def test_stored_frame_round_trips_the_real_state(db_session):
     assert day == NOW.date() and {t.ticker for t in loaded.towers} == {t.ticker for t in state.towers}
 
 
-def test_old_frames_are_pruned_and_unreadable_ones_skipped(db_session):
+def test_old_frames_are_thinned_not_cut_off_and_unreadable_ones_skipped(db_session):
     _seed(db_session)
     state = get_game_state(db_session, "v1", now=NOW)
-    today = NOW.date()
-    for age in (0, 10, 600):
+    today = date(2026, 10, 9)  # fixed: week and month boundaries must not depend on the clock
+    # 600 days old: past any daily/weekly need but alone in its month, so kept for ever.
+    # 200 and 199 days old fall in one ISO week and month (2026-03-23/24): only the later survives.
+    for age in (0, 10, 600, 200, 199):
         history.store_frame(db_session, state, day=today - timedelta(days=age), now=NOW)
     db_session.add(ComputedSnapshot(key=history.frame_key(today - timedelta(days=5)), payload="{not json",
                                     fingerprint="x", computed_at=NOW))
     db_session.commit()
-    assert history.prune(db_session, today=today, keep_days=540) == 1
-    assert history.stored_days(db_session) == [today - timedelta(days=10), today - timedelta(days=5), today]
-    assert [d for d, _, _ in history.load_frames(db_session)] == [today - timedelta(days=10), today]
+    assert history.prune(db_session, today=today) == 1
+    assert history.prune(db_session, today=today) == 0  # idempotent
+    assert history.stored_days(db_session) == [
+        today - timedelta(days=600), today - timedelta(days=199), today - timedelta(days=10),
+        today - timedelta(days=5), today,
+    ]
+    # the unreadable frame is kept on disk but never replayed
+    assert [d for d, _, _ in history.load_frames(db_session)] == [
+        today - timedelta(days=600), today - timedelta(days=199), today - timedelta(days=10), today,
+    ]
 
 
 def test_demo_mode_is_never_stored(client, db_session):
     _seed(db_session)
     assert client.put("/settings/demo-mode", json={"enabled": True}).status_code == 200
-    assert history.run_if_due(db_session, now=NOW.replace(hour=6), hour_utc=5, keep_days=540, version="v1") is False
+    assert history.run_if_due(db_session, now=NOW.replace(hour=6), hour_utc=5, version="v1") is False
     assert history.stored_days(db_session) == []
 
 
