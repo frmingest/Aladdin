@@ -159,12 +159,21 @@ export function checksInFog(t: Pick<TowerFog, "checks">): SurveyCheck[] {
   return t.checks.filter((c) => c.state === "fog");
 }
 
-/** Accessible name of a tower button. Built only from the checks and the weight text; no new fact, and
- * no "n of 5" count. */
+/** Fog phrased as what is missing, so a screen reader never hears a fog check as a positive fact. */
+export const MISSING_PHRASE: Record<SurveyCheckId, string> = {
+  report: "latest report not opened",
+  analysis: "analysis not fresh",
+  thesis: "invalidation not written",
+  circle: "circle not marked",
+  valuation: "valuation not available",
+};
+
+/** Accessible name of a tower button. Built only from the checks and the weight; fog is said as what is
+ * missing. No new fact and no "n of 5" count. The weight is a share of the portfolio, not a survey figure. */
 export function towerAriaLabel(t: Pick<TowerFog, "name" | "checks">, weight: string): string {
   const fog = checksInFog(t);
-  const tail = fog.length === 0 ? "no checks in fog" : `in fog: ${fog.map((c) => c.label).join(", ")}`;
-  return `${t.name}, weight ${weight}, ${tail}`;
+  const tail = fog.length === 0 ? "no checks in fog" : `in fog: ${fog.map((c) => MISSING_PHRASE[c.id]).join(", ")}`;
+  return `${t.name}, ${weight} of the book, ${tail}`;
 }
 
 // --- Keyboard: one tab stop for the whole map, arrows move between towers ---------------------------
@@ -258,6 +267,8 @@ export const MAP_COPY = {
   subtitle: "Which parts of the realm are surveyed, and which are still in fog.",
   intro: "Five facts per tower. Clear means looked at, not sound; fog comes back when an analysis ages.",
   hint: "Press a tower for its five checks.",
+  hintSeal: "Press a numbered seal to flag its towers.",
+  noFlag: "No tower to flag.",
   demo: "Demo data",
   /** Plain view and normal mode only: the browser-only note the short intro leaves out. */
   browserNote: "Opened reports are remembered on this browser only.",
@@ -267,6 +278,6 @@ export const MAP_COPY = {
 
 /** Words of the default view's chrome: subtitle, intro, key, hint and the demo pill. Budget 45. */
 export const CARTOGRAPHER_CHROME_BUDGET = 45;
-/** Words of the whole default body (measured 153 with three towers, five commissions, names excluded): the chrome,
+/** Words of the whole default body (measured 161 with three towers and five commissions, tower names printed once excluded; the chips repeat names, so it grows with the realm): the chrome,
  * the commission titles, their one-line reasons and their links (the per-tower text list is closed). */
-export const CARTOGRAPHER_BODY_BUDGET = 160;
+export const CARTOGRAPHER_BODY_BUDGET = 180;

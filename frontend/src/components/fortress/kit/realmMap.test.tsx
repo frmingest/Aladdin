@@ -7,6 +7,8 @@ import type { SurveyInputs, TowerFog } from "../../../lib/survey";
 import type { Competence, DecisionRecord, GameState, GameTower } from "../../../lib/types";
 import { countWords } from "../../../lib/wordBudget";
 import page from "../../../pages/CartographerPage.tsx?raw";
+import bodySource from "./RealmMapBody.tsx?raw";
+import realmMapCss from "./realmMap.css?raw";
 import CommissionSeal, { FlagMark } from "./CommissionSeal";
 import { FogDefs, PatchMark, TowerPicture } from "./FogPatch";
 import RealmMapBody from "./RealmMapBody";
@@ -105,11 +107,11 @@ describe("Cartographer's table body", () => {
     expect(html).toContain('aria-pressed="false"');
   });
 
-  it("painted: the text list and the holdings chips stay closed, the commission list stays the truth", () => {
+  it("painted: the text list stays closed, the holdings chips are always visible, the commission list stays the truth", () => {
     const html = body(true);
     expect(html).not.toContain('aria-label="Fog by tower"');
     expect(html).toContain("Show the survey as a list");
-    expect(html).toContain("Show which towers");
+    expect(html).not.toContain("Show which towers");
     for (const c of commissions) expect(html).toContain(c.title);
   });
 
@@ -149,6 +151,49 @@ describe("Cartographer's table body", () => {
   });
 });
 
+describe("links and keys", () => {
+  it("every link the old page rendered is still in the painted and plain markup", () => {
+    const want = new Set<string>();
+    for (const t of surveyed) want.add(`/holdings/${t.holdingId}`);
+    for (const c of commissions) {
+      for (const h of c.holdings) {
+        if (!h.holdingId) continue;
+        want.add(c.id === "report" ? `/holdings/${h.holdingId}?tab=documents` : c.id === "valuation" ? `/holdings/${h.holdingId}?tab=analysis` : `/holdings/${h.holdingId}`);
+      }
+      if (c.to) want.add(c.to);
+    }
+    want.add("/fortress");
+    const plainHtml = body(false);
+    for (const href of want) expect(plainHtml, href).toContain(`href="${href.replace(/&/g, "&amp;")}"`);
+    const painted = body(true);
+    for (const c of commissions) {
+      if (c.to) expect(painted).toContain(`href="${c.to}"`);
+      for (const h of c.holdings) {
+        const to = c.id === "report" ? `?tab=documents` : c.id === "valuation" ? `?tab=analysis` : "";
+        expect(painted).toContain(`href="/holdings/${h.holdingId}${to}"`);
+      }
+    }
+  });
+
+  it("holding links and chips are 44 px targets", () => {
+    expect(bodySource).toMatch(/holdingTo\(commission\.id, h\.holdingId\)\} className="inline-flex min-h-\[44px\]/);
+    expect(bodySource).toMatch(/inline-flex min-h-\[44px\] items-center text-sm font-semibold/);
+  });
+
+  it("the cash seal is not a button and says why; the hint names the seals", () => {
+    const html = body(true);
+    expect(html).toContain(MAP_COPY.noFlag);
+    expect(html).toContain(MAP_COPY.hintSeal);
+  });
+
+  it("pressed state and Escape-with-focus-return are wired (source guard)", () => {
+    expect(bodySource).toMatch(/aria-pressed=\{selectedId === t\.holdingId\}/);
+    expect(bodySource).toMatch(/aria-pressed=\{planted\}/);
+    expect(bodySource).toMatch(/e\.key === "Escape"[\s\S]{0,120}closeSlate\(\)/);
+    expect(bodySource).toMatch(/function closeSlate\(\)[\s\S]{0,200}btnRefs\.current\[at\]\?\.focus\(\)/);
+  });
+});
+
 describe("word budget", () => {
   it("the chrome (subtitle, intro, key, hint, demo pill) stays within its own budget", () => {
     const key = Object.values(PATCH_LOOK).map((l) => l.word).join(" ");
@@ -171,6 +216,21 @@ describe("source guard", () => {
       expect(src, name).not.toMatch(/bg-positive|text-positive|border-positive/);
     }
     expect(Object.keys(kitSources).some((k) => k.endsWith("FogPatch.tsx"))).toBe(true);
+  });
+
+  it("no green colour value in the new kit, CSS or map palette", () => {
+    const isGreen = (r: number, g: number, b: number) => g > r + 15 && g > b + 15;
+    const all = { ...kitSources, css: realmMapCss, page };
+    for (const [name, src] of Object.entries(all)) {
+      if (name.endsWith(".test.tsx")) continue;
+      for (const m of src.matchAll(/#([0-9a-fA-F]{6})\b/g)) {
+        const n = parseInt(m[1], 16);
+        expect(isGreen((n >> 16) & 255, (n >> 8) & 255, n & 255), `${name} ${m[0]}`).toBe(false);
+      }
+      for (const m of src.matchAll(/rgba?\(\s*(\d+)[ ,]+(\d+)[ ,]+(\d+)/g)) {
+        expect(isGreen(+m[1], +m[2], +m[3]), `${name} ${m[0]}`).toBe(false);
+      }
+    }
   });
 
   it("the page no longer imports fogLevel or surveyText (the bar and the count are gone)", () => {

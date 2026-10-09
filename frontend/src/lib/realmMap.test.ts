@@ -4,6 +4,7 @@ import {
   COMMISSION_SHAPE,
   FOG_OPACITY,
   KEEP_ID,
+  MISSING_PHRASE,
   MAP_COLORS,
   MAP_COPY,
   MIN_PATCH_R,
@@ -193,11 +194,23 @@ describe("tower button label", () => {
     const t = tower({ freshness: "weathered" });
     const s = surveyTower(t, inputs(t, { records: [rec(null)] }));
     const label = towerAriaLabel(s, "40.0%");
-    expect(label).toBe("Alpha, weight 40.0%, in fog: Analysis fresh, Invalidation written");
+    expect(label).toBe("Alpha, 40.0% of the book, in fog: analysis not fresh, invalidation not written");
     expect(checksInFog(s).map((c) => c.id)).toEqual(["analysis", "thesis"]);
     const clearLabel = towerAriaLabel(surveyTower(tower(), inputs(tower())), "40.0%");
-    expect(clearLabel).toBe("Alpha, weight 40.0%, no checks in fog");
+    expect(clearLabel).toBe("Alpha, 40.0% of the book, no checks in fog");
     expect(`${label} ${clearLabel}`).not.toMatch(/\bof \d\b|surveyed|%\s*(clear|surveyed|revealed)/i);
+  });
+});
+
+describe("fog is spoken as what is missing", () => {
+  it("no fog check's phrase reads as the positive fact", () => {
+    for (const c of SURVEY_CHECKS) {
+      const phrase = MISSING_PHRASE[c.id];
+      expect(phrase).toMatch(/\bnot\b/);
+      expect(phrase.toLowerCase()).not.toBe(c.label.toLowerCase());
+    }
+    const label = towerAriaLabel({ name: "A", checks: SURVEY_CHECKS.map((c) => ({ ...c, state: "fog" as const, reason: "r" })) }, "1.0%");
+    for (const c of SURVEY_CHECKS) expect(label).not.toContain(c.label);
   });
 });
 

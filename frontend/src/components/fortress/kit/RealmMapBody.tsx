@@ -33,7 +33,7 @@ function SurveyList({ towers }: { towers: TowerFog[] }) {
       {towers.map((t) => (
         <li key={t.holdingId} className="rounded-md border border-border p-3">
           <div className="flex items-baseline justify-between gap-2">
-            <Link to={`/holdings/${t.holdingId}`} className="inline-block py-1 text-sm font-semibold text-accent hover:underline">
+            <Link to={`/holdings/${t.holdingId}`} className="inline-flex min-h-[44px] items-center text-sm font-semibold text-accent hover:underline">
               {t.name}
             </Link>
             <span className="text-xs text-ink-muted">{weightOf(t)}</span>
@@ -58,13 +58,13 @@ function HoldingChips({ commission }: { commission: Commission }) {
   return (
     <ul className="flex flex-wrap gap-2 text-sm">
       {commission.holdings.map((h) => (
-        <li key={h.holdingId ?? h.name} className="rounded-md border border-border px-2 py-1">
+        <li key={h.holdingId ?? h.name} className="inline-flex min-h-[44px] items-center rounded-md border border-border">
           {h.holdingId ? (
-            <Link to={holdingTo(commission.id, h.holdingId)} className="text-accent hover:underline">
+            <Link to={holdingTo(commission.id, h.holdingId)} className="inline-flex min-h-[44px] items-center px-3 text-accent hover:underline">
               {h.name}
             </Link>
           ) : (
-            h.name
+            <span className="px-3">{h.name}</span>
           )}
         </li>
       ))}
@@ -123,6 +123,11 @@ function PaintedBody({ towers, commissions, demo }: { towers: TowerFog[]; commis
   }, [selected]);
 
   function onKey(e: React.KeyboardEvent, index: number) {
+    if (e.key === "Escape" && selectedId !== null) {
+      e.preventDefault();
+      closeSlate();
+      return;
+    }
     if (!isGridKey(e.key)) return;
     e.preventDefault();
     const cols = gridRef.current ? getComputedStyle(gridRef.current).gridTemplateColumns.split(" ").length : 1;
@@ -152,7 +157,7 @@ function PaintedBody({ towers, commissions, demo }: { towers: TowerFog[]; commis
           <>
             <div className="mt-3">
               <Key hatchId={hatchId} />
-              <p className="mt-1 text-xs text-ink-muted">{MAP_COPY.hint}</p>
+              <p className="mt-1 text-xs text-ink-muted">{MAP_COPY.hint} {MAP_COPY.hintSeal}</p>
             </div>
             <ul ref={gridRef} aria-label="Towers" className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
               {towers.map((t, i) => {
@@ -168,6 +173,7 @@ function PaintedBody({ towers, commissions, demo }: { towers: TowerFog[]; commis
                       aria-pressed={selectedId === t.holdingId}
                       aria-controls="map-slate"
                       aria-label={towerAriaLabel(t, weightOf(t))}
+                      title={`${weightOf(t)} of the book`}
                       tabIndex={i === stop ? 0 : -1}
                       onClick={() => {
                         setStopIdx(i);
@@ -207,7 +213,7 @@ function PaintedBody({ towers, commissions, demo }: { towers: TowerFog[]; commis
                 <li key={c.id} className="flex items-start gap-2 py-2">
                   {c.id === "vault" ? (
                     // The cash commission would stand on the Keep, which is drawn with the realm map (a later change).
-                    <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center">
+                    <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center opacity-90" title={MAP_COPY.noFlag}>
                       <CommissionSeal shape={shape} n={i + 1} />
                     </span>
                   ) : (
@@ -224,10 +230,11 @@ function PaintedBody({ towers, commissions, demo }: { towers: TowerFog[]; commis
                   <div className="min-w-0 flex-1">
                     <h3 className="pt-2.5 text-sm font-semibold text-ink">{c.title}</h3>
                     <p className="mt-1 text-sm text-ink-muted">{c.text}</p>
+                    {c.id === "vault" && <p className="text-xs text-ink-muted">{MAP_COPY.noFlag}</p>}
                     {c.holdings.length > 0 && (
-                      <Disclosure label="which towers" level="evidence" className="map-disc mt-1">
+                      <div className="mt-2">
                         <HoldingChips commission={c} />
-                      </Disclosure>
+                      </div>
                     )}
                     <CommissionEnd commission={c} />
                   </div>
