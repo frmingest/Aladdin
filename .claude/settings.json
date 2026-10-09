@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "deny": ["Read(./backend/.env)", "Read(./**/*.pdf)", "Bash(git push --force*)", "Bash(git push -f*)", "Bash(git reset --hard*)"]
+  },
+  "hooks": {
+    "PreToolUse": [
+      { "matcher": "Edit|Write", "hooks": [{ "type": "command", "command": "python .claude/hooks/block_used_prompt_edit.py" }] }
+    ]
+  }
+}
