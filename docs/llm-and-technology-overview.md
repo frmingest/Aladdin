@@ -3,7 +3,7 @@
 A simple overview of what information the app handles, **where an LLM is involved (API or local)**,
 what everything else runs on, and why each technology was chosen.
 
-*Written 2026-09-23; refreshed 2026-10-04 against `main` (`07cf9fb`). Update this doc whenever a provider,
+*Written 2026-09-23; refreshed 2026-10-09 against `main` (`53bf98a`; adds the bond/money-market/commodity prompts, the packet token budget and the link to [ollama-what-it-reads-2026-10-09.md](ollama-what-it-reads-2026-10-09.md)). Update this doc whenever a provider,
 prompt or data source changes. The structure of the app (services, deployment, jobs, diagrams) is in
 [architecture.md](architecture.md). For a per-output view (which thing on screen is code, LLM or your input) see
 [AI-VS-DETERMINISTIC.md](AI-VS-DETERMINISTIC.md).*
@@ -42,7 +42,13 @@ There are only **three** places.
 
 Prompts and schemas are versioned files: `prompts/research/*_v1.md`, `prompts/analysis/blind_v2.md` and
 `reconciliation_v2.md` (the active equity version; `v1` is kept for old runs), `blind_fund_v1.md` and
-`reconciliation_fund_v1.md` for funds, and `app/domain/analysis_schema/` (`v1.py`, `fund_v1.py`).
+`reconciliation_fund_v1.md` for funds, `blind_income_v1.md` / `reconciliation_income_v1.md` for bond and money-market funds,
+`blind_commodity_v1.md` / `reconciliation_commodity_v1.md` for physical commodity ETCs (2026-10-07), and
+`app/domain/analysis_schema/` (`v1.py`, `fund_v1.py`, `income_v1.py`, `commodity_v1.py`).
+
+**Exactly what the analysis passes read, per holding type:** [ollama-what-it-reads-2026-10-09.md](ollama-what-it-reads-2026-10-09.md).
+Packet size is capped by `services/analysis/packet_budget.py` (default 18,000 estimated tokens; see
+[evidence-packet-token-budget-2026-10-02.md](evidence-packet-token-budget-2026-10-02.md)).
 
 ### When is it local, and when is it an API?
 
@@ -60,11 +66,12 @@ API.
 
 | Included | Not included |
 |---|---|
-| Holding name, ticker, sector, trading currency | Your position size, quantity, cost basis or portfolio value |
+| Holding name, ticker, sector, trading currency | Quantity, cost basis, total portfolio value |
 | Financial history already **computed by code** (margins, FCF, ROE, debt ratios…) | Whole uploaded documents, or table rows as figures |
 | Where the figures came from (e.g. SEC filing numbers) | Your notes (blind pass). They go **only** to the reconciliation pass. |
 | DCF valuation range (computed by code) | API keys, account names |
 | Research items with source URLs; latest Oslo Børs announcements | |
+| **Funds, ETFs, bond/money-market funds, commodity ETCs only:** your position value in NOK, overlap with stocks you own directly, and (bond/commodity) its portfolio weight. Equity packets carry no position data | |
 | Short **passages** from your uploaded filings, picked by keyword scoring within a token budget (quoted as untrusted data; `services/analysis/document_excerpts.py`) | |
 
 ---
