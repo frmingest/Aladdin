@@ -238,7 +238,7 @@ class Settings(BaseSettings):
     # --- Game mode (2026-10-01, app/domain/game_mapping/) ---
     # Thresholds that turn stored analysis values into fortress properties.
     # Versioned like the valuation assumptions: a change is a new vN.py.
-    active_game_mapping_version: str = "v1"
+    active_game_mapping_version: str = "v2"
     active_siege_scenarios_version: str = "v2"
     # The worker stores daily price history for every holding, the benchmark and the FX pairs
     # the Siege Simulator (v2) measures betas from. Cheap when the stored history is fresh.

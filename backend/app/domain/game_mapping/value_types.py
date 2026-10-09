@@ -83,3 +83,6 @@ class GameMapping:
     composed_min_pct: Decimal
     steady_min_pct: Decimal
     restless_min_pct: Decimal
+    # Share (0-1) of the book's weight that the stored stress scenario must
+    # cover before the sky may read "calm". None = no floor (v1 behaviour).
+    min_stress_coverage: Decimal | None = None

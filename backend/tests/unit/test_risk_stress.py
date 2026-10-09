@@ -85,3 +85,19 @@ def test_portfolio_drawdown_is_value_weighted_across_mixed_holdings():
     assert result.total_value_considered_nok == D("80000")
     assert result.portfolio_shock_pct == D("-0.2")
     assert result.portfolio_drawdown_nok == D("-16000")
+
+
+def test_bear_case_above_price_is_a_zero_shock_never_a_gain():
+    """A bargain tower (bear case above the price) must not offset real losses."""
+    cheap, other = uuid.uuid4(), uuid.uuid4()
+    positions = [
+        (cheap, "CHEAP", "Cheap", D("100000"), D("50")),
+        (other, "OTHER", "Other", D("100000"), D("50")),
+    ]
+    dcf_by_ticker = {"CHEAP": (D("100"), D("120")), "OTHER": (D("100"), D("70"))}
+    result = compute_stress(positions=positions, histories={}, dcf_by_ticker=dcf_by_ticker, std_devs=D("2"))
+    rows = {h.ticker: h for h in result.holdings}
+    assert rows["CHEAP"].shock_pct == D("0")
+    assert rows["CHEAP"].contribution_nok == D("0")
+    assert rows["OTHER"].shock_pct == D("-0.3")
+    assert result.portfolio_shock_pct == D("-0.15")  # -30000 over 200000, not -5000 / ...

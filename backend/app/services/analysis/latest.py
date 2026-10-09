@@ -9,7 +9,7 @@ made a holding look "Not analyzed".
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime, time, timezone
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -34,6 +34,30 @@ def latest_runs_by_holding(
         if run.blind_pass_json:
             latest.setdefault(run.holding_id, run)
     return latest
+
+
+def run_in_force(db: Session, holding_id: uuid.UUID, as_of: date) -> EquityAnalysisRun | None:
+    """The newest usable run that had finished by the end of `as_of` (UTC).
+
+    A journal entry back-dated to `as_of` must record the verdict that existed
+    then, not today's: reading a later run would leak hindsight into the
+    temperament rules. None = no analysis existed yet.
+    """
+    cutoff = datetime.combine(as_of, time.max, tzinfo=timezone.utc)
+    runs = db.scalars(
+        select(EquityAnalysisRun)
+        .where(EquityAnalysisRun.holding_id == holding_id)
+        .order_by(EquityAnalysisRun.started_at.desc())
+    ).all()
+    for run in runs:
+        if not run.blind_pass_json:
+            continue
+        analyzed_at = run.completed_at or run.blind_completed_at or run.started_at
+        if analyzed_at is not None and analyzed_at.tzinfo is None:
+            analyzed_at = analyzed_at.replace(tzinfo=timezone.utc)
+        if analyzed_at is not None and analyzed_at <= cutoff:
+            return run
+    return None
 
 
 def run_ratings(run: EquityAnalysisRun) -> tuple[str | None, str | None, datetime | None]:

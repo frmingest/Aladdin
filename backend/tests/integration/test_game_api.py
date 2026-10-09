@@ -71,7 +71,7 @@ def _by_ticker(body):
 def test_empty_database_gives_an_empty_labelled_fortress(client):
     body = client.get("/game/state").json()
     assert body["towers"] == []
-    assert body["mapping_version"] == "v1"
+    assert body["mapping_version"] == "v2"
     assert body["vault"]["level"] == "unsurveyed"
     assert any("No portfolio snapshot" in n for n in body["notes"])
 

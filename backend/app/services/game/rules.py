@@ -259,13 +259,19 @@ class ThesisFacts:
     firing_count: int = 0
 
 
-def siege_level(risk: RiskFacts | None, mapping: GameMapping) -> tuple[str, list[str]]:
+def siege_level(
+    risk: RiskFacts | None, mapping: GameMapping, coverage: Decimal | None = None
+) -> tuple[str, list[str]]:
     """(level, reasons). Level is calm / gathering / besieged / unsurveyed.
 
     Besieged: the macro regime is "crisis", or the stored stress scenario
     costs the equity book `besieged_portfolio_shock` or more. Gathering:
     regime "stagflation" or a scenario loss of `gathering_portfolio_shock`.
     With neither input stored the answer is "unsurveyed", never "calm".
+    `coverage` is the share (0-1) of the book's weight the stored scenario
+    covers. When the mapping sets `min_stress_coverage` and the coverage is
+    below it (or unknown), the sky cannot read calm: a partial book proves
+    nothing about the rest. Gathering and besieged still stand.
     """
     if risk is None:
         return "unsurveyed", ["no stored portfolio-risk snapshot yet"]
@@ -302,6 +308,14 @@ def siege_level(risk: RiskFacts | None, mapping: GameMapping) -> tuple[str, list
         return "besieged", reasons
     if gathering:
         return "gathering", reasons
+    floor = mapping.min_stress_coverage
+    if floor is not None and shock is not None and (coverage is None or coverage < floor):
+        have = "unknown" if coverage is None else f"{(coverage * 100).quantize(Decimal(1))}%"
+        reasons.append(
+            f"the stress scenario covers {have} of the book; {(floor * 100).quantize(Decimal(1))}% "
+            "is needed before the sky can read calm"
+        )
+        return "unsurveyed", reasons
     return "calm", reasons
 
 
