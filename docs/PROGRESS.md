@@ -1,6 +1,6 @@
 # Aladdin — Progress
 
-**Last updated:** 2026-10-08. Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
+**Last updated:** 2026-10-09. Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
 
 ## Current Objective
 
@@ -19,6 +19,7 @@ State (checked against git 2026-10-08): `main` = `7c27bfa` (#80). Repo migration
 - [ ] **Re-check valuation v4** after deploy: Margin of safety → Refresh; Aker Solutions, Equinor, Telenor, Sparebanken Øst, Storebrand ([doc](valuation-v4-normalised-base-certificates-2026-10-07.md)); also re-fetch reports for Aker BP, Orkla, Salmon Evolution, Subsea 7; **after #76 deploys: Tag review → Re-extract each company with several annual reports** (fixes which report holds which year; then reopen the DNO FY2021 report)
 - [ ] **Ravens, look and judge (Faiz):** after deploy open Fortress → Ravens: the tab should say "Ravens · N new" (last 48 hours only), older reports sit under "Earlier" per company; try Portfolio / Watchlist and "Mark all earlier as seen"; then press Tab on the scene and move with the arrow keys
 - [ ] **Rotate credentials pasted into chat** (Supabase DB password and storage keys, Google AI Studio, Mistral, FRED; the FRED key is also in the worker log)
+- [ ] **Review the Claude agent-team PR (Faiz):** adds `.claude/` (8 agents, standards, 3 game skills, `/ship-pr`, `/game-review`, a Rule 3 hook). Written, not merged, not tried in a real session ([assessment](claude-setup-assessment-2026-10-09.md))
 
 ## Recent Blockers / Open Questions
 
