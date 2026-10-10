@@ -13,13 +13,14 @@ import {
   miniLayout,
   newestIndex,
   nextPlayIndex,
-  recordLimits,
+  strata,
 } from "../lib/chronicle";
 import { formatNok, formatPct100 } from "../lib/format";
 import { MOAT_LABEL, SIEGE_LABEL, STRUCTURE_LABEL, THESIS_LABEL, WALL_LABEL, isFundCode, shortLabel } from "../lib/fortress";
 import type { Chronicle, ChronicleFrame, FortressSiegeLevel } from "../lib/types";
 import { Button, Card, Disclosure, EmptyState, PageHeader } from "../components/ui";
 import GameFooter from "../components/fortress/GameFooter";
+import TimeStrata, { TimeStrip } from "../components/fortress/kit/TimeStrata";
 
 /** The Chronicle (game mode G14): the fortress replayed through time. Frames stored nightly by the
  * worker carry the real walls, moats and weather of their day; older days are rebuilt from
@@ -199,6 +200,7 @@ export default function ChroniclePage() {
               </label>
             </div>
 
+            <TimeStrip chronicle={chronicle} />
             <div className="mb-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
               <h2 className="text-lg font-semibold text-ink">{frameTitle(frame)}</h2>
               <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${frame.source === "stored" ? "bg-positive-subtle text-positive" : "bg-raised text-ink-muted"}`}>
@@ -276,27 +278,23 @@ export default function ChroniclePage() {
           </Card>
           </Disclosure>
 
-          {chronicle.changes.length > 0 && (
+          {strata(chronicle).length > 0 && (
             <Card>
-              <details>
+              {/* Open when days are unrecorded: a gap is never tucked away as if it were a quiet day. */}
+              <details open={(chronicle.gaps ?? []).length > 0}>
                 <summary className="section-title cursor-pointer select-none">Every change, newest first</summary>
-                <ul className="mt-2 divide-y divide-border-subtle text-sm">
-                  {[...chronicle.changes].reverse().map((c, n) => (
-                    <li key={`${c.day}-${c.kind}-${n}`} className="flex gap-3 py-1.5">
-                      <span className="tabular w-24 shrink-0 text-xs text-ink-faint">{c.day}</span>
-                      <span className="text-ink-muted">{c.text}</span>
-                    </li>
-                  ))}
-                </ul>
+                <div className="mt-3">
+                  <TimeStrata chronicle={chronicle} />
+                </div>
               </details>
             </Card>
           )}
 
-          {recordLimits(chronicle).length > 0 && (
+          {chronicle.notes.length > 0 && (
             <Card className="bg-raised">
               <h2 className="section-title">What the record cannot show</h2>
               <ul className="list-disc space-y-1 pl-5 text-sm text-ink-muted">
-                {recordLimits(chronicle).map((n) => (
+                {chronicle.notes.map((n) => (
                   <li key={n}>{n}</li>
                 ))}
               </ul>
