@@ -5,6 +5,7 @@ import App from "./App";
 import { DemoModeProvider } from "./lib/demoMode";
 import { GameModeProvider } from "./lib/gameMode";
 import "./index.css";
+import "./stitch-skin.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

@@ -1,0 +1,181 @@
+/* "Stitch pass" (game mode, 2026-10-10). The Stitch screens (docs: Stitch hand-off pack, PR #96) share this
+   app's palette, so nothing here changes a colour token. It ports their component language onto the shared
+   UI pieces: gilded primary button, iron-bound secondary, recessed inputs with a gold focus glow, riveted
+   panels, a lozenge rule under section and page titles, a room tab strip with lozenge dividers, a candle
+   vignette on the canvas. Pure CSS, scoped to the study skin, no new words, no data, no looping motion.
+   Sizes are not reduced anywhere (12 px floor, 44 px targets stay as the components set them). */
+
+/* Level 0: the deep room, a faint candle glow high on the canvas (dark theme only). */
+:root[data-skin="study"]:not([data-theme="light"]) body {
+  background-image: radial-gradient(circle at 50% 18%, rgb(var(--c-accent) / 0.05) 0%, transparent 62%);
+  background-attachment: fixed;
+}
+
+/* Level 2 panels: overhead lantern light on the top edge, and four small cast rivets in the corners. */
+:root[data-skin="study"] .ui-card {
+  position: relative;
+  border-radius: 6px;
+  border-top-color: rgb(var(--c-accent) / 0.55);
+  box-shadow:
+    inset 0 1px 0 rgb(var(--c-ink) / 0.07),
+    inset 0 0 0 1px rgb(0 0 0 / 0.25),
+    0 4px 16px -2px rgb(0 0 0 / 0.55);
+}
+:root[data-skin="study"] .ui-card::before {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  pointer-events: none;
+  --stud: radial-gradient(circle at center, rgb(var(--c-accent)) 0 1.5px, rgb(42 26 6 / 0.9) 1.6px 2.4px, transparent 2.6px);
+  background:
+    var(--stud) 0 0 / 6px 6px no-repeat,
+    var(--stud) 100% 0 / 6px 6px no-repeat,
+    var(--stud) 0 100% / 6px 6px no-repeat,
+    var(--stud) 100% 100% / 6px 6px no-repeat;
+  opacity: 0.75;
+}
+/* The painted frames, banners and parchment kit carry their own corners. */
+:root[data-skin="study"] .game-frame .ui-card::before,
+:root[data-skin="study"] .parchment.ui-card::before,
+:root[data-skin="study"] .nightpanel.ui-card::before { content: none; }
+
+/* Section titles: the gilded lozenge (already there) now leads a fine rule that runs to the edge. */
+:root[data-skin="study"] .section-title::after {
+  content: "";
+  flex: 1 1 auto;
+  height: 1px;
+  background: linear-gradient(90deg, rgb(var(--c-border)), transparent);
+}
+
+/* Page title: a hairline with a centred lozenge, the Stitch divider. */
+:root[data-skin="study"] .ui-page-header {
+  position: relative;
+  padding-bottom: 1.1rem;
+  border-bottom: 1px solid rgb(var(--c-border));
+}
+:root[data-skin="study"] .ui-page-header::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -4px;
+  width: 7px;
+  height: 7px;
+  transform: translateX(-50%) rotate(45deg);
+  background: linear-gradient(135deg, #f6dc8c, rgb(var(--c-accent)) 55%, #7a5418);
+  box-shadow: 0 0 0 2px rgb(var(--c-background));
+}
+
+/* Buttons. Primary: forged gold with dark ink. Secondary: iron bound, gold edge on hover. Danger: outline. */
+:root[data-skin="study"] .ui-btn { border-radius: 2px; letter-spacing: 0.02em; }
+:root[data-skin="study"] .ui-btn-primary {
+  color: rgb(var(--c-onfill));
+  background-image: linear-gradient(180deg, rgb(var(--c-accent-hover)), rgb(var(--c-accent)));
+  border: 1px solid rgb(var(--c-accent-hover));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.35), 0 1px 2px rgb(0 0 0 / 0.5);
+}
+:root[data-skin="study"][data-theme="light"] .ui-btn-primary {
+  background-image: linear-gradient(180deg, rgb(var(--c-accent)), rgb(var(--c-accent-hover)));
+  border-color: rgb(var(--c-accent-hover));
+}
+:root[data-skin="study"] .ui-btn-primary:hover:not(:disabled) {
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.4), 0 0 12px rgb(var(--c-accent) / 0.35);
+}
+:root[data-skin="study"] .ui-btn-primary:active:not(:disabled) { transform: translateY(1px); }
+:root[data-skin="study"] .ui-btn-secondary {
+  background-color: rgb(var(--c-raised));
+  border-color: rgb(var(--c-border));
+}
+:root[data-skin="study"] .ui-btn-secondary:hover:not(:disabled) {
+  border-color: rgb(var(--c-accent));
+  background-color: rgb(var(--c-border-subtle));
+}
+:root[data-skin="study"] .ui-btn-danger {
+  background-color: transparent;
+  color: rgb(var(--c-negative));
+  border: 1px solid rgb(var(--c-negative));
+}
+:root[data-skin="study"] .ui-btn-danger:hover:not(:disabled) { background-color: rgb(var(--c-negative) / 0.15); }
+
+/* Inputs: recessed shell, gold focus glow instead of a bare ring. */
+:root[data-skin="study"] input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]),
+:root[data-skin="study"] select,
+:root[data-skin="study"] textarea {
+  background-color: rgb(var(--c-background));
+  border-color: rgb(var(--c-border));
+  border-radius: 2px;
+  box-shadow: inset 0 2px 4px rgb(0 0 0 / 0.45);
+}
+:root[data-skin="study"] input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):focus,
+:root[data-skin="study"] select:focus,
+:root[data-skin="study"] textarea:focus {
+  border-color: rgb(var(--c-accent));
+  box-shadow: inset 0 2px 4px rgb(0 0 0 / 0.45), 0 0 8px rgb(var(--c-accent) / 0.25);
+}
+:root[data-skin="study"] input::placeholder,
+:root[data-skin="study"] textarea::placeholder { color: rgb(var(--c-ink-faint)); font-style: italic; }
+:root[data-skin="study"] input[type="checkbox"],
+:root[data-skin="study"] input[type="radio"] { accent-color: rgb(var(--c-accent)); }
+
+/* Tab strips (page tabs and the eight rooms): display face, gold underline with a soft glow, and on the
+   room strip a small lozenge between rooms. */
+:root[data-skin="study"] .ui-tab {
+  font-family: "Marcellus", "Palatino Linotype", Palatino, Georgia, serif;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+}
+:root[data-skin="study"] .ui-tab[aria-selected="true"],
+:root[data-skin="study"] .ui-tab[aria-current="page"] {
+  color: rgb(var(--c-accent));
+  box-shadow: 0 6px 10px -8px rgb(var(--c-accent) / 0.7);
+}
+:root[data-skin="study"] .ui-rooms { align-items: stretch; }
+:root[data-skin="study"] .ui-rooms .ui-tab + .ui-tab { position: relative; }
+:root[data-skin="study"] .ui-rooms .ui-tab + .ui-tab::before {
+  content: "";
+  position: absolute;
+  left: -3px;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  margin-top: -2px;
+  transform: rotate(45deg);
+  background: rgb(var(--c-border));
+}
+
+/* Sidebar rooms: the active room is lit by a gold bar and a faint amber pool. */
+:root[data-skin="study"] .ui-navitem {
+  border-radius: 2px;
+  font-family: "Marcellus", "Palatino Linotype", Palatino, Georgia, serif;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+}
+:root[data-skin="study"] .ui-navitem.border-accent {
+  box-shadow: inset 0 0 18px rgb(var(--c-accent) / 0.1);
+}
+
+/* Stat tiles: a gilded top rule. */
+:root[data-skin="study"] .ui-stat { border-top: 2px solid rgb(var(--c-accent) / 0.7); }
+
+/* Level 3: dialogs get a gold edge and a warm glow. */
+:root[data-skin="study"] .ui-modal {
+  border-radius: 4px;
+  border-color: rgb(var(--c-accent) / 0.5);
+  box-shadow: 0 12px 32px -4px rgb(0 0 0 / 0.85), 0 0 24px rgb(var(--c-accent) / 0.08);
+}
+
+/* Ledgers: small-caps column heads in the muted face, an amber wash on the row under the pointer. */
+:root[data-skin="study"] thead th { letter-spacing: 0.06em; color: rgb(var(--c-ink-muted)); }
+:root[data-skin="study"] tbody tr:hover { background-color: rgb(var(--c-accent-subtle) / 0.45); }
+
+/* Iron scrollbars. */
+:root[data-skin="study"] * { scrollbar-color: rgb(var(--c-border)) rgb(var(--c-background)); }
+
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-skin="study"] .ui-btn,
+  :root[data-skin="study"] .ui-tab { transition: box-shadow 140ms, border-color 140ms, background-color 140ms, color 140ms, transform 80ms; }
+}
+
+/* Light theme: the recessed shadow is softer on parchment. */
+:root[data-skin="study"][data-theme="light"] input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]),
+:root[data-skin="study"][data-theme="light"] select,
+:root[data-skin="study"][data-theme="light"] textarea { box-shadow: inset 0 1px 3px rgb(0 0 0 / 0.14); }

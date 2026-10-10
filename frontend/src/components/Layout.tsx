@@ -173,7 +173,7 @@ function NavLinkItem({ item, onNavigate }: { item: NavItem; onNavigate?: () => v
         end={item.to === "/" || item.to === "/fortress"}
         onClick={onNavigate}
         className={({ isActive }) =>
-          `block rounded-md border-l-2 px-3 py-2 text-sm font-medium transition-colors ${
+          `ui-navitem block rounded-md border-l-2 px-3 py-2 text-sm font-medium transition-colors ${
             isActive
               ? "border-accent bg-accent-subtle text-ink"
               : "border-transparent text-ink-muted hover:bg-border-subtle hover:text-ink"

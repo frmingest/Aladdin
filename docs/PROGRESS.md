@@ -12,7 +12,7 @@ State (checked against git 2026-10-09): `origin/main` = `d4d0a70` (#87 Knife-edg
 
 ## Active Tasks
 
-- [ ] **Stitch redesign (Faiz, optional):** the AI art was dropped (#94 merged, reverted by #95; `main` has no AI art). Use the [hand-off pack](stitch-handoff-2026-10-10.md) to re-prompt Stitch with the round-2 fixes, or port only the iron-panel corners and resource-bar layout; all-images work is only on unmerged branch `feature/art-pack-trial` ([record](art-pack-trial-2026-10-10.md))
+- [ ] **Stitch design pass (Faiz, review):** PR open (branch `feature/stitch-design-pass`), not merged, not deployed. Component language from the 7 Stitch screens ported as CSS under game mode ([write-up](stitch-design-pass-2026-10-10.md)); look at it in the real app, light and dark, phone width. Per-room follow-ups (Records tomes, Chronicle spine, booth plates) wait on your OK.
 - [ ] **Review and merge (Faiz):** the game design challenge PR; then look at Records, Circle, Map and the Night Watch seal on real data, at phone width, in Plain view and with reduced motion
 - [ ] **Review the Knife-edge result (Faiz):** merged as #87 (git log checked 2026-10-09), still never seen in a browser; after deploy click a stock tower on Fortress: the Walls block lists the distance to the next tier and a tower within 10% of a weaker line shows a thin crack ([write-up](knife-edge-a1-2026-10-09.md))
 - [ ] **Review the Long Memory result (Faiz):** open Fortress → Chronicle; any day since 2026-10-07 the worker was off should appear under "What the record cannot show" ([write-up](long-memory-b1-2026-10-09.md))

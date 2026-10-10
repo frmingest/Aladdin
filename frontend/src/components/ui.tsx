@@ -34,7 +34,7 @@ type PageHeaderProps = {
 
 function PlainPageHeader({ title, subtitle, actions }: PageHeaderProps) {
   return (
-    <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <div className="ui-page-header mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
       <div>
         <h1 className="font-display text-xl font-semibold tracking-tight text-ink sm:text-2xl">
           {title}
@@ -164,11 +164,11 @@ export function Button({
   variant = "primary",
   ...props
 }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "secondary" | "danger" }) {
-  const base = "rounded-md px-3 py-2 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
+  const base = "ui-btn rounded-md px-3 py-2 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
   const styles = {
-    primary: "bg-accent text-onfill hover:bg-accent-hover",
-    secondary: "border border-border bg-surface text-ink hover:bg-border-subtle",
-    danger: "bg-negative text-onfill hover:bg-negative/90",
+    primary: "ui-btn-primary bg-accent text-onfill hover:bg-accent-hover",
+    secondary: "ui-btn-secondary border border-border bg-surface text-ink hover:bg-border-subtle",
+    danger: "ui-btn-danger bg-negative text-onfill hover:bg-negative/90",
   } as const;
   return (
     <button className={`${base} ${styles[variant]}`} {...props}>
@@ -241,7 +241,7 @@ export function StatTile({
   info?: string;
 }) {
   return (
-    <Card>
+    <Card className="ui-stat">
       <p className="inline-flex items-center gap-1 text-xs font-medium uppercase tracking-wider text-ink-faint">
         {label}
         {info && <InfoTooltip text={info} />}
@@ -284,7 +284,7 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="relative w-full max-w-sm rounded-xl border border-border bg-surface p-5 shadow-card"
+        className="ui-modal relative w-full max-w-sm rounded-xl border border-border bg-surface p-5 shadow-card"
       >
         <div className="mb-4 flex items-start justify-between gap-3">
           <h2 className="font-display text-base font-semibold tracking-tight text-ink">{title}</h2>
@@ -420,7 +420,7 @@ export function TabBar({
       role="tablist"
       aria-label={label}
       onKeyDown={onKeyDown}
-      className="sticky top-0 z-20 -mx-4 mb-6 flex gap-1 overflow-x-auto border-b border-border bg-background/95 px-4 backdrop-blur sm:-mx-8 sm:px-8 lg:top-[41px]"
+      className="ui-tabbar sticky top-0 z-20 -mx-4 mb-6 flex gap-1 overflow-x-auto border-b border-border bg-background/95 px-4 backdrop-blur sm:-mx-8 sm:px-8 lg:top-[41px]"
     >
       {items.map((t) => {
         const selected = t.id === active;
@@ -434,7 +434,7 @@ export function TabBar({
             aria-controls={`panel-${t.id}`}
             tabIndex={selected ? 0 : -1}
             onClick={() => onChange(t.id)}
-            className={`shrink-0 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors ${
+            className={`ui-tab shrink-0 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors ${
               selected
                 ? "border-accent text-ink"
                 : "border-transparent text-ink-muted hover:text-ink"
