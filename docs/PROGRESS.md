@@ -12,7 +12,7 @@ State (checked against git 2026-10-09): `origin/main` = `d4d0a70` (#87 Knife-edg
 
 ## Active Tasks
 
-- [ ] **Stitch design pass (Faiz, review):** pass 1 merged (#97). Room looks are open PRs, not merged, not deployed: Chronicle spine (#98) and Marketplace stall plates (`feature/stitch-marketplace`) ([write-up](stitch-design-pass-2026-10-10.md)); check them on real data, dark/light, phone. Next: Circle plate, Map legend, on your OK.
+- [ ] **Stitch design pass (Faiz, review):** pass 1 merged (#97). Open PRs, not merged, not deployed: Chronicle spine (#98), Marketplace stall plates (#99), Map legend weights (`feature/stitch-circle-map`); Circle needed no change ([write-up](stitch-design-pass-2026-10-10.md)). Check each on real data, dark/light, phone.
 - [ ] **Review and merge (Faiz):** the game design challenge PR; then look at Records, Circle, Map and the Night Watch seal on real data, at phone width, in Plain view and with reduced motion
 - [ ] **Review the Knife-edge result (Faiz):** merged as #87 (git log checked 2026-10-09), still never seen in a browser; after deploy click a stock tower on Fortress: the Walls block lists the distance to the next tier and a tower within 10% of a weaker line shows a thin crack ([write-up](knife-edge-a1-2026-10-09.md))
 - [ ] **Review the Long Memory result (Faiz):** open Fortress → Chronicle; any day since 2026-10-07 the worker was off should appear under "What the record cannot show" ([write-up](long-memory-b1-2026-10-09.md))

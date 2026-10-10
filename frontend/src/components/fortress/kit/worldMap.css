@@ -91,6 +91,13 @@
 
 .wm-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 8px 2px 0; padding: 0; list-style: none; font-size: 0.75rem; color: rgb(var(--c-ink)); }
 .wm-legend li { display: inline-flex; align-items: center; gap: 6px; }
+/* Province weight (Stitch "tally of the realm"): a small meter and the figure. A dashed meter and "at least"
+   mean a holding in the province has no weight on file, so the figure is a floor, never the whole. */
+.wm-meter { position: relative; display: inline-block; width: 56px; height: 8px; border: 1px solid rgb(var(--c-border)); border-radius: 1px; background: rgb(var(--c-background)); box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.4); }
+.wm-meter > span { display: block; height: 100%; background: linear-gradient(180deg, rgb(var(--c-accent-hover)), rgb(var(--c-accent))); }
+.wm-meter[data-partial="true"] { border-style: dashed; }
+.wm-meter[data-partial="true"] > span { background: repeating-linear-gradient(135deg, rgb(var(--c-accent)) 0 3px, rgb(var(--c-accent) / 0.45) 3px 6px); }
+.wm-legend-pct { color: rgb(var(--c-ink-muted)); }
 
 /* Motion: only while the box says so. */
 .wm-drift, .wm-banner, .wm-flame, .wm-serpent { transform-box: fill-box; }

@@ -353,6 +353,10 @@ export interface Province {
   label: Pt;
   anchor: Pt;
   towerIds: string[];
+  /** Share of the realm in this province, in percent. A floor when `weightComplete` is false. */
+  weightPct: number;
+  /** False when a holding in the province has no known weight (the legend then shows "at least"). */
+  weightComplete: boolean;
 }
 
 export interface Realm {
@@ -388,18 +392,22 @@ function rayToCoast(world: World, from: Pt, angle: number): number {
 export function groupSectors(
   items: readonly PlaceInput[],
   nullName: string = NO_SECTOR_NAME,
-): { name: string; unsorted: boolean; ids: string[]; weight: number }[] {
-  const by = new Map<string, { ids: string[]; weight: number }>();
-  const none: { ids: string[]; weight: number } = { ids: [], weight: 0 };
+): { name: string; unsorted: boolean; ids: string[]; weight: number; complete: boolean }[] {
+  // `complete` is false when any holding in the group has no known weight: the sum is then a floor, never the whole.
+  const by = new Map<string, { ids: string[]; weight: number; complete: boolean }>();
+  const none: { ids: string[]; weight: number; complete: boolean } = { ids: [], weight: 0, complete: true };
   for (const it of items) {
     const w = it.weightPct ?? 0;
+    const known = it.weightPct !== null && Number.isFinite(it.weightPct);
     if (it.sector === null || it.sector.trim() === "") {
       none.ids.push(it.id);
       none.weight += w;
+      none.complete = none.complete && known;
     } else {
-      const g = by.get(it.sector) ?? { ids: [], weight: 0 };
+      const g = by.get(it.sector) ?? { ids: [], weight: 0, complete: true };
       g.ids.push(it.id);
       g.weight += w;
+      g.complete = g.complete && known;
       by.set(it.sector, g);
     }
   }
@@ -408,7 +416,7 @@ export function groupSectors(
   let out = named;
   if (named.length > cap) {
     const rest = named.slice(cap - 1);
-    out = [...named.slice(0, cap - 1), { name: OTHER_SECTORS_NAME, unsorted: false, ids: rest.flatMap((g) => g.ids), weight: rest.reduce((a, g) => a + g.weight, 0) }];
+    out = [...named.slice(0, cap - 1), { name: OTHER_SECTORS_NAME, unsorted: false, ids: rest.flatMap((g) => g.ids), weight: rest.reduce((a, g) => a + g.weight, 0), complete: rest.every((g) => g.complete) }];
   }
   if (none.ids.length > 0) out = [...out, { name: nullName, unsorted: true, ...none }];
   return out;
@@ -513,6 +521,8 @@ export function placeRealm(items: readonly PlaceInput[], nullName: string = NO_S
       label,
       anchor: finalAnchors[gi],
       towerIds: g.ids,
+      weightPct: g.weight,
+      weightComplete: g.complete,
     });
   });
 
