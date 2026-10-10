@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  boothNumeral,
   MARKET_RULES,
   MERCHANT_LINE,
   STORE_LEVEL_LABEL,
@@ -453,5 +454,14 @@ describe("analysis age", () => {
     expect(analysisAgeDays(analysis({ completed_at: "2026-12-01T00:00:00Z" }), null, NOW)).toBe(0);
     expect(analysisAgeDays(null, null, NOW)).toBeNull();
     expect(analysisAgeDays(null, "2026-09-21T12:00:00Z", NOW)).toBe(10);
+  });
+});
+
+describe("boothNumeral", () => {
+  it("writes the place on the street as a roman numeral", () => {
+    expect([1, 4, 9, 14, 40, 1994].map(boothNumeral)).toEqual(["I", "IV", "IX", "XIV", "XL", "MCMXCIV"]);
+  });
+  it("falls back to the plain number outside 1-3999 or for a non-integer", () => {
+    expect([0, 4000, 2.5, -1].map(boothNumeral)).toEqual(["0", "4000", "2.5", "-1"]);
   });
 });

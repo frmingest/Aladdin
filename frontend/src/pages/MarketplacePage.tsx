@@ -3,20 +3,21 @@ import { Link } from "react-router-dom";
 import { api, ApiError } from "../lib/api";
 import { useDemoMode } from "../lib/demoMode";
 import { formatPct100, formatPrice } from "../lib/format";
-import { orderStreet, shopFront, shopPips, storePath } from "../lib/marketplace";
+import { boothNumeral, orderStreet, shopFront, shopPips, storePath } from "../lib/marketplace";
 import type { Watchlist, WatchlistRow } from "../lib/types";
 import { Awning, Pip } from "../components/marketplace/MarketArt";
 import HypeBoothDialog from "../components/marketplace/HypeBoothDialog";
 import SalesRepDialog from "../components/marketplace/SalesRepDialog";
 import { SalesRep } from "../components/marketplace/SalesRepArt";
 import { TONE_PAINT } from "../lib/marketplacePaint";
+import "../components/marketplace/stall.css";
 import { Button, Card, Disclosure, EmptyState, PageHeader, SnapshotStamp, VerdictBadge } from "../components/ui";
 
 /** The Marketplace street (game mode, G9): one store per watchlist company. The shop window
  * shows only what the watchlist already knows (your price against the quote, the stored moat
  * and verdict, the age of the analysis). Open a store for the full appraisal. Read-only. */
 
-function Stall({ row }: { row: WatchlistRow }) {
+function Stall({ row, place }: { row: WatchlistRow; place: number }) {
   const front = shopFront(row);
   const paint = TONE_PAINT[front.tone];
   const pips = shopPips(row);
@@ -26,24 +27,29 @@ function Stall({ row }: { row: WatchlistRow }) {
     <Link
       to={storePath(row.holding_id)}
       className="market-stall group block overflow-hidden rounded-lg border border-border bg-surface transition-transform hover:-translate-y-0.5 focus-visible:-translate-y-0.5"
+      style={{ "--stall-tone": paint.a } as React.CSSProperties}
       aria-label={`Enter the ${row.name} store. ${front.tag}.`}
     >
       <Awning a={paint.a} b={paint.b} stripes={8} className="market-awning-sm" />
-      <div className="space-y-3 p-4">
-        <div>
+      <div className="stall-plate">
+        <span className="stall-numeral" aria-hidden>
+          {boothNumeral(place)}
+        </span>
+        <div className="min-w-0 flex-1">
           <p className="font-display text-lg leading-tight text-ink">{row.name}</p>
           <p className="text-xs text-ink-faint">
             {row.ticker}
             {row.sector ? ` · ${row.sector}` : ""}
           </p>
         </div>
-
+      </div>
+      <div className="space-y-3 p-4">
         <div className="flex flex-wrap items-center gap-1.5 text-xs">
-          <span className="rounded-full bg-border-subtle px-2 py-0.5 text-ink-muted">{front.tag}</span>
+          <span className="stall-tag">{front.tag}</span>
           {row.owned && <span className="rounded-full bg-accent-subtle px-2 py-0.5 font-medium text-ink">In your fortress</span>}
         </div>
 
-        <dl className="tabular grid grid-cols-2 gap-x-3 gap-y-1 text-sm">
+        <dl className="stall-ledger tabular grid grid-cols-2 gap-x-3 gap-y-1 text-sm">
           <dt className="text-ink-faint">Price</dt>
           <dd className="text-right text-ink">{row.price ? formatPrice(row.price, row.price_currency) : "—"}</dd>
           <dt className="text-ink-faint">Your price</dt>
@@ -73,7 +79,7 @@ function Stall({ row }: { row: WatchlistRow }) {
             <p className="text-xs text-ink-faint">Not analysed yet</p>
           )}
         </div>
-        <p className="text-xs font-medium text-accent group-hover:underline">Enter the store →</p>
+        <p className="stall-enter">Enter the store →</p>
       </div>
     </Link>
   );
@@ -226,7 +232,7 @@ export default function MarketplacePage() {
             <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {priced.map((r) => (
                 <li key={r.id}>
-                  <Stall row={r} />
+                  <Stall row={r} place={rows.indexOf(r) + 1} />
                 </li>
               ))}
             </ul>
