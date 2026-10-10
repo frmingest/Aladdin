@@ -1,6 +1,6 @@
 # Aladdin — Progress
 
-**Last updated:** 2026-10-10 (art pack trial). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
+**Last updated:** 2026-10-10 (art pack dropped). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
 
 ## Current Objective
 
@@ -12,7 +12,7 @@ State (checked against git 2026-10-09): `origin/main` = `d4d0a70` (#87 Knife-edg
 
 ## Active Tasks
 
-- [ ] **Try the art pack (Faiz):** branch `feature/art-pack-trial` (PR open, not merged, not deployed). Three Stitch images (header plate, Map table edge, dark-panel grain) behind a **Painted art** button in each room banner (or `?art=off`); never seen on real data. Keep, tweak or drop ([write-up](art-pack-trial-2026-10-10.md))
+- [ ] **Merge the art-pack revert (Faiz):** Faiz dropped the AI art. PR #94 (batch 1 only) was already merged to `main`; the revert PR `fix/revert-art-pack` removes it. Not merged yet, so production still has the art until it is. The unmerged all-images work stays on branch `feature/art-pack-trial` (commit `4e72e91`)
 - [ ] **Review and merge (Faiz):** the game design challenge PR; then look at Records, Circle, Map and the Night Watch seal on real data, at phone width, in Plain view and with reduced motion
 - [ ] **Review the Knife-edge result (Faiz):** merged as #87 (git log checked 2026-10-09), still never seen in a browser; after deploy click a stock tower on Fortress: the Walls block lists the distance to the next tier and a tower within 10% of a weaker line shows a thin crack ([write-up](knife-edge-a1-2026-10-09.md))
 - [ ] **Review the Long Memory result (Faiz):** open Fortress → Chronicle; any day since 2026-10-07 the worker was off should appear under "What the record cannot show" ([write-up](long-memory-b1-2026-10-09.md))
