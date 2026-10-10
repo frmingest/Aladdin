@@ -7,7 +7,6 @@ import CouncilChamber from "./CouncilChamber";
 import Crest from "./Crest";
 import FogPanel from "./FogPanel";
 import SealMark from "./SealMark";
-import TableEdge from "./TableEdge";
 import TorchPair from "./TorchPair";
 
 const item = (kind: CouncilItem["kind"], tone: CouncilItem["tone"]): CouncilItem => ({
@@ -78,14 +77,5 @@ describe("page-scene kit", () => {
   it("crest and torches are decorative (aria-hidden)", () => {
     expect(renderToStaticMarkup(<Crest kind="council" />)).toContain('aria-hidden="true"');
     expect(renderToStaticMarkup(<TorchPair />)).toContain('aria-hidden="true"');
-  });
-});
-
-describe("art pack", () => {
-  it("the table edge is a decorative strip: hidden from screen readers, no text, no facts", () => {
-    const html = renderToStaticMarkup(<TableEdge />);
-    expect(html).toContain('aria-hidden="true"');
-    expect(html).toContain("table-edge");
-    expect(html.replace(/<[^>]*>/g, "")).toBe("");
   });
 });

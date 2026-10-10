@@ -10,7 +10,6 @@ import { SURVEY_VERSION, commissionsFor, surveyRealm } from "../lib/survey";
 import type { Competence, DocumentSummary, GameState, Records } from "../lib/types";
 import GameFooter from "../components/fortress/GameFooter";
 import RealmMapBody from "../components/fortress/kit/RealmMapBody";
-import TableEdge from "../components/fortress/kit/TableEdge";
 import { EmptyState, PageHeader } from "../components/ui";
 
 /** The Cartographer's table (game mode G34 and G35): the realm as a map of fog. Each tower shows
@@ -90,7 +89,6 @@ export default function CartographerPage() {
           </Link>
         }
       />
-      {gameMode && <TableEdge />}
       {error && !state && <EmptyState>{error}</EmptyState>}
       {!error && !towers && <p className="text-sm text-ink-muted">Unrolling the map…</p>}
       {state && towers && (
