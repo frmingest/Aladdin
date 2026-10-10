@@ -903,6 +903,36 @@
   background: linear-gradient(180deg, #2b1c10, #1b1109);
   box-shadow: inset 0 0 0 1px #8a6a32, inset 0 0 0 3px #1b1109, inset 0 0 0 4px rgba(217, 169, 62, 0.45), 0 12px 24px -16px #000;
 }
+/* Art pack (trial, see lib/artPack.ts). Every rule keys off html[data-art="on"], so switching the pack
+   off restores exactly the rules above. Static images only: no filter, no animation. */
+.game-banner-art {
+  background: #17100a url("/art/banner-page-dark.webp") center / cover no-repeat;
+}
+.table-edge {
+  height: 72px;
+  margin: -8px 0 16px;
+  border-radius: 12px;
+  background: #1b1109 url("/art/table-edge.webp") center / cover no-repeat;
+  box-shadow: inset 0 0 0 1px #8a6a32, 0 12px 24px -16px #000;
+  -webkit-mask-image: linear-gradient(180deg, #000 55%, transparent);
+  mask-image: linear-gradient(180deg, #000 55%, transparent);
+}
+@media (min-width: 640px) { .table-edge { height: 104px; } }
+/* Grain over the dark Night panel: the tile is mid-grey, so soft-light only adds texture. */
+html[data-art="on"] .nightpanel {
+  background-image:
+    url("/art/grain-tile.webp"),
+    radial-gradient(1.2px 1.2px at 12% 18%, rgba(246, 220, 150, 0.55), transparent 60%),
+    radial-gradient(1px 1px at 82% 12%, rgba(246, 220, 150, 0.45), transparent 60%),
+    radial-gradient(1.4px 1.4px at 91% 71%, rgba(246, 220, 150, 0.5), transparent 60%),
+    radial-gradient(1px 1px at 7% 80%, rgba(246, 220, 150, 0.4), transparent 60%),
+    radial-gradient(1px 1px at 38% 6%, rgba(246, 220, 150, 0.35), transparent 60%),
+    radial-gradient(1.2px 1.2px at 64% 93%, rgba(246, 220, 150, 0.4), transparent 60%),
+    radial-gradient(ellipse at 50% 42%, rgba(120, 82, 30, 0.34), transparent 66%),
+    linear-gradient(180deg, #1e150d, #0f0a06);
+  background-size: 248px 248px, auto, auto, auto, auto, auto, auto, auto, auto;
+  background-blend-mode: soft-light, normal, normal, normal, normal, normal, normal, normal, normal;
+}
 .market-bubble-right::before { left: auto; right: -7px; box-shadow: 1px -1px 0 0 #8a6a32; }
 .fog-panel {
   background-image: repeating-linear-gradient(135deg, rgb(var(--c-ink-faint) / 0.07) 0 6px, transparent 6px 14px);
