@@ -30,11 +30,15 @@ export const WALL_FILL: Record<FortressWall, string> = {
   not_applicable: "#7b828d",
 };
 
-export function frameTitle(frame: ChronicleFrame): string {
-  const d = new Date(`${frame.day}T00:00:00Z`);
+export function dayLabel(day: string): string {
+  const d = new Date(`${day}T00:00:00Z`);
   return Number.isNaN(d.getTime())
-    ? frame.day
+    ? day
     : d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+}
+
+export function frameTitle(frame: ChronicleFrame): string {
+  return dayLabel(frame.day);
 }
 
 /** The changes that arrived with this frame (the diff from the frame before it). */
@@ -110,4 +114,51 @@ export function headline(chronicle: Chronicle): string {
  * as calm), then the standing notes. Older payloads have no gaps. */
 export function recordLimits(chronicle: Chronicle): string[] {
   return [...(chronicle.gaps ?? []).map((g) => g.text), ...chronicle.notes];
+}
+
+// --- Time strata (game mode, Stitch room look): the replay as a spine, gaps drawn as gaps ---
+
+export type StrataEntry =
+  | { kind: "change"; day: string; changes: ChronicleChange[] }
+  | { kind: "gap"; day: string; first_day: string; last_day: string; days: number; text: string };
+
+/** Changes grouped by day and the days the worker stored nothing, in one list, newest first. A gap is
+ * placed at its last day so it sits between the changes either side of it, never as an empty "quiet" row. */
+export function strata(chronicle: Chronicle): StrataEntry[] {
+  const byDay = new Map<string, ChronicleChange[]>();
+  for (const c of chronicle.changes) byDay.set(c.day, [...(byDay.get(c.day) ?? []), c]);
+  const entries: StrataEntry[] = [...byDay.entries()].map(([day, changes]) => ({ kind: "change", day, changes }));
+  for (const g of chronicle.gaps ?? []) entries.push({ kind: "gap", day: g.last_day, ...g });
+  // Newest first; on the same day the gap (the missing days before it) sorts after the change.
+  return entries.sort((a, b) => (a.day === b.day ? (a.kind === b.kind ? 0 : a.kind === "gap" ? 1 : -1) : a.day < b.day ? 1 : -1));
+}
+
+const dayNumber = (day: string): number => Date.parse(`${day}T00:00:00Z`) / 86_400_000;
+
+export interface TimeStrip {
+  /** Stored and rebuilt frames as 0-100 positions along the span. */
+  ticks: { at: number; source: ChronicleSource }[];
+  /** Days with nothing stored, as 0-100 left and width. */
+  gaps: { left: number; width: number }[];
+}
+
+/** Where the frames and the gaps fall between the first and last day on record. Null when there is no span to draw. */
+export function timeStrip(chronicle: Chronicle): TimeStrip | null {
+  const days = [
+    ...chronicle.frames.map((f) => dayNumber(f.day)),
+    ...(chronicle.gaps ?? []).flatMap((g) => [dayNumber(g.first_day), dayNumber(g.last_day)]),
+  ].filter(Number.isFinite);
+  if (days.length < 2) return null;
+  const start = Math.min(...days);
+  const span = Math.max(...days) - start;
+  if (span <= 0) return null;
+  const pos = (d: number) => ((d - start) / span) * 100;
+  return {
+    ticks: chronicle.frames.map((f) => ({ at: pos(dayNumber(f.day)), source: f.source })),
+    // A gap covers its whole last day, so the block runs from first day to the end of last day.
+    gaps: (chronicle.gaps ?? []).map((g) => {
+      const left = pos(dayNumber(g.first_day));
+      return { left, width: Math.max(1.5, Math.min(100, pos(dayNumber(g.last_day) + 1)) - left) };
+    }),
+  };
 }

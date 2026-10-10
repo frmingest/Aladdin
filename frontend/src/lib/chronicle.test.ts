@@ -10,6 +10,8 @@ import {
   newestIndex,
   recordLimits,
   nextPlayIndex,
+  strata,
+  timeStrip,
 } from "./chronicle";
 import type { Chronicle, ChronicleFrame, ChronicleTower } from "./types";
 
@@ -114,5 +116,38 @@ describe("recordLimits", () => {
     const c = chronicle([]);
     c.notes = ["Only a note."];
     expect(recordLimits(c)).toEqual(["Only a note."]);
+  });
+});
+
+describe("time strata", () => {
+  const withData = (over: Partial<Chronicle>): Chronicle => ({
+    ...chronicle([frame("2026-10-01", []), frame("2026-10-10", [])]), ...over,
+  });
+  const change = (day: string, text: string) => ({ day, kind: "tower_added" as const, holding_id: null, holding_name: null, text });
+
+  it("groups changes by day and puts a gap between the changes either side of it, newest first", () => {
+    const c = withData({
+      changes: [change("2026-10-01", "a"), change("2026-10-10", "b"), change("2026-10-10", "c")],
+      gaps: [{ first_day: "2026-10-05", last_day: "2026-10-07", days: 3, text: "Nothing stored." }],
+    });
+    const out = strata(c);
+    expect(out.map((e) => e.kind)).toEqual(["change", "gap", "change"]);
+    expect(out[0]).toMatchObject({ day: "2026-10-10" });
+    expect(out[0].kind === "change" && out[0].changes).toHaveLength(2);
+    expect(out[1]).toMatchObject({ kind: "gap", day: "2026-10-07", days: 3 });
+  });
+
+  it("never invents an entry: no changes and no gaps is an empty list", () => {
+    expect(strata(withData({}))).toEqual([]);
+  });
+
+  it("places ticks and gap blocks along the span, and returns null when there is no span", () => {
+    const strip = timeStrip(withData({ gaps: [{ first_day: "2026-10-04", last_day: "2026-10-05", days: 2, text: "x" }] }));
+    expect(strip?.ticks.map((t) => Math.round(t.at))).toEqual([0, 100]);
+    expect(strip?.gaps).toHaveLength(1);
+    expect(strip!.gaps[0].left).toBeCloseTo((3 / 9) * 100, 5);
+    expect(strip!.gaps[0].width).toBeCloseTo((2 / 9) * 100, 5);
+    expect(timeStrip(chronicle([frame("2026-10-01", [])]))).toBeNull();
+    expect(timeStrip(chronicle([]))).toBeNull();
   });
 });
