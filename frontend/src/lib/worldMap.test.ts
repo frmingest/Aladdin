@@ -213,3 +213,18 @@ describe("keyboard and labels", () => {
     expect(pinned).toContain("b");
   });
 });
+
+describe("province weights for the legend", () => {
+  const item = (id: string, sector: string | null, weightPct: number | null) => ({ id, sector, weightPct } as never);
+  it("sums known weights per province and calls the sum complete", () => {
+    const r = placeRealm([item("a", "Energy", 30), item("b", "Energy", 12), item("c", "Tech", 10)]);
+    const energy = r.provinces.find((p) => p.name === "Energy")!;
+    expect(energy.weightPct).toBe(42);
+    expect(energy.weightComplete).toBe(true);
+  });
+  it("marks a province incomplete when a holding has no weight, so the figure is a floor", () => {
+    const r = placeRealm([item("a", "Energy", 30), item("b", "Energy", null), item("c", null, null)]);
+    expect(r.provinces.find((p) => p.name === "Energy")).toMatchObject({ weightPct: 30, weightComplete: false });
+    expect(r.provinces.find((p) => p.unsorted)).toMatchObject({ weightPct: 0, weightComplete: false });
+  });
+});

@@ -492,7 +492,14 @@ export default function WorldMap({ towers, sectors, sectorsKnown, hatchId, selec
               <rect x="1" y="1" width="14" height="14" rx="2" fill={p.unsorted ? "#a4aab7" : PROVINCE_TINT[p.index % PROVINCE_TINT.length]} fillOpacity={p.unsorted ? 1 : 0.55} stroke="currentColor" strokeWidth="1.4" strokeDasharray={p.unsorted ? "2 2" : undefined} />
               {p.unsorted && <path d="M2 14 L14 2 M2 9 L9 2 M7 14 L14 7" stroke="#3a3f4a" strokeWidth="1.2" />}
             </svg>
-            <span>{p.name}</span>
+            <span className="wm-legend-name">{p.name}</span>
+            <span className="wm-meter" data-partial={p.weightComplete ? undefined : "true"} aria-hidden>
+              <span style={{ width: `${Math.min(100, Math.max(0, p.weightPct))}%` }} />
+            </span>
+            <span className="wm-legend-pct tabular" title={p.weightComplete ? undefined : "At least this much: a holding here has no weight on file"}>
+              {p.weightComplete ? "" : "≥ "}
+              {Math.round(p.weightPct)}%
+            </span>
           </li>
         ))}
       </ul>
