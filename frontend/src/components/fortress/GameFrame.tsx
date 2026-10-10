@@ -1,3 +1,5 @@
+import { FRAME_CORNER_URL } from "../../lib/artAssets";
+import { useArtPack } from "../../lib/artPack";
 import { SIEGE_LABEL, TEMPERAMENT_LABEL, VAULT_LABEL } from "../../lib/fortress";
 import { formatNok } from "../../lib/format";
 import type { GameState } from "../../lib/types";
@@ -11,6 +13,10 @@ import type { GameState } from "../../lib/types";
  */
 
 function Corner({ className }: { className: string }) {
+  const [art] = useArtPack();
+  if (art) {
+    return <img src={FRAME_CORNER_URL} alt="" aria-hidden="true" className={`game-frame-corner game-frame-corner-art ${className}`} />;
+  }
   return (
     <svg viewBox="0 0 30 30" className={`game-frame-corner ${className}`} aria-hidden>
       <defs>

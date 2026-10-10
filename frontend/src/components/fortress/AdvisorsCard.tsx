@@ -6,6 +6,9 @@ import {
   advisorRuleLabel,
 } from "../../lib/fortress";
 import type { GameAdvisorLine, GameAdvisorName, GameAdvisors, GameAdvisorTone } from "../../lib/types";
+import { PORTRAIT_URL } from "../../lib/artAssets";
+import { useArtPack } from "../../lib/artPack";
+import { usePlainView } from "../../lib/plainView";
 import { Card } from "../ui";
 
 /** Game mode G7b: the two advisors. Every line is hand-written text chosen by a
@@ -23,6 +26,20 @@ const TONE_CLASS: Record<GameAdvisorTone, string> = {
 /** Small generic busts, drawn for this app: an owner with a lamp-lit scholar's
  * look, and a sharp-eyed sceptic. Not likenesses of any real person. */
 export function Portrait({ who }: { who: GameAdvisorName }) {
+  const [art] = useArtPack();
+  const [plain] = usePlainView();
+  if (art && !plain) {
+    return (
+      <img
+        src={PORTRAIT_URL[who]}
+        alt={ADVISOR_NAME[who]}
+        width={44}
+        height={44}
+        className="h-11 w-11 shrink-0 rounded-full object-cover"
+        style={{ boxShadow: `0 0 0 2px ${who === "oracle" ? "#d9a93e" : "#9aa4b8"}` }}
+      />
+    );
+  }
   const ring = who === "oracle" ? "#d9a93e" : "#9aa4b8";
   return (
     <svg viewBox="0 0 44 44" className="h-11 w-11 shrink-0" role="img" aria-label={ADVISOR_NAME[who]}>

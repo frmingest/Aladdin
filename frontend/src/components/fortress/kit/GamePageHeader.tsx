@@ -2,6 +2,7 @@ import Crest from "./Crest";
 import type { CrestKind } from "../../../lib/crest";
 import TorchPair from "./TorchPair";
 import { useArtPack } from "../../../lib/artPack";
+import { bannerArtFor } from "../../../lib/artAssets";
 import { PLAIN_TOGGLE_ID, togglePlain, usePlainView } from "../../../lib/plainView";
 
 /** The banner at the top of every game room (page-scene kit): a crest for the room, the title on a
@@ -20,22 +21,26 @@ export default function GamePageHeader({
 }) {
   const [plain, setPlain] = usePlainView();
   const [art, setArt] = useArtPack();
+  const scene = art ? bannerArtFor(crest) : null;
   return (
-    <header className={`game-banner${art ? " game-banner-art" : ""} relative mb-6 overflow-hidden rounded-xl`}>
+    <header
+      className={`game-banner${art ? " game-banner-art" : ""}${scene ? " game-banner-scene" : ""} relative mb-6 overflow-hidden rounded-xl`}
+      style={scene ? { backgroundImage: `linear-gradient(rgba(14,9,5,0.5), rgba(14,9,5,0.62)), url("${scene.url}")`, backgroundPosition: `center, ${scene.position}` } : undefined}
+    >
       {!art && <TorchPair className="pointer-events-none absolute inset-x-0 top-0 h-7 w-full opacity-90" />}
       <div
         className={`relative flex flex-col gap-3 ${
-          art ? "items-center px-[12%] py-5 sm:px-[27%]" : "px-4 pb-3 pt-6 sm:flex-row sm:items-center sm:justify-between sm:px-6"
+          art && !scene ? "items-center px-[12%] py-5 sm:px-[27%]" : "px-4 pb-3 pt-6 sm:flex-row sm:items-center sm:justify-between sm:px-6"
         }`}
       >
-        <div className={`flex min-w-0 items-center gap-3${art ? " justify-center" : ""}`}>
+        <div className={`flex min-w-0 items-center gap-3${art && !scene ? " justify-center" : ""}`}>
           <Crest kind={crest} />
           <div className="min-w-0">
             <h1 className="font-display text-xl font-semibold tracking-tight text-[#f6e6bd] sm:text-2xl">{title}</h1>
             {subtitle && <p className="mt-0.5 text-sm text-[#cdb98c]">{subtitle}</p>}
           </div>
         </div>
-        <div className={`game-banner-actions flex flex-wrap items-center gap-3${art ? " justify-center" : ""}`}>
+        <div className={`game-banner-actions flex flex-wrap items-center gap-3${art && !scene ? " justify-center" : ""}`}>
           {actions}
           <button
             type="button"
