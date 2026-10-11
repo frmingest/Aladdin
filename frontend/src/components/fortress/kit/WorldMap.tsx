@@ -3,7 +3,7 @@ import { TOWER_BOX, fogSlots, towerAriaLabel } from "../../../lib/realmMap";
 import type { MapFlag } from "../../../lib/realmMap";
 import { compassRect, hillArtId, hillRect, mountainArtId, mountainRect, placeLandmarks, placeMapKeep, placeSettlementArt, pineRect, serpentRect, settlementArtId, shipRect, type ArtRect, type SettlementKind } from "../../../lib/mapArt";
 import { weightText } from "../../../lib/rituals";
-import { useArtMode } from "../../../lib/stitchArt";
+import { getObjectArt, useArtMode } from "../../../lib/stitchArt";
 import type { TowerFog } from "../../../lib/survey";
 import {
   CAPITAL,
@@ -89,6 +89,46 @@ function ArtImage({ r, onFail }: { r: ArtRect; onFail: (id: string) => void }) {
 interface MapArt {
   ok: (id: string) => boolean;
   fail: (id: string) => void;
+}
+
+/** The brass frame around the table (Design Master Sprint 13, Object art on): one corner picture mirrored to all
+ * four corners. Decoration: it ignores pointers, so panning, zooming and every settlement still work. */
+function MapFrame({ art }: { art: MapArt }) {
+  const id = "map-frame-corner";
+  const corner = art.ok(id) ? getObjectArt(id) : null;
+  if (!corner) return null;
+  return (
+    <>
+      {(["tl", "tr", "bl", "br"] as const).map((c) => (
+        <img
+          key={c}
+          src={corner.src}
+          alt=""
+          aria-hidden="true"
+          width={corner.width}
+          height={corner.height}
+          loading="lazy"
+          decoding="async"
+          className={`wm-frame wm-frame-${c}`}
+          onError={() => art.fail(id)}
+        />
+      ))}
+    </>
+  );
+}
+
+/** The cartographer's dividers and a rolled map beside the legend (Sprint 13, Object art on). Decoration only. */
+function MapTools({ art }: { art: MapArt }) {
+  const ids = ["map-dividers", "map-rolled"].filter((id) => art.ok(id));
+  if (ids.length === 0) return null;
+  return (
+    <div className="wm-tools" aria-hidden="true">
+      {ids.map((id) => {
+        const p = getObjectArt(id);
+        return p ? <img key={id} src={p.src} alt="" width={p.width} height={p.height} loading="lazy" decoding="async" onError={() => art.fail(id)} /> : null;
+      })}
+    </div>
+  );
 }
 
 function Keep({ at }: { at: Pt }) {
@@ -411,6 +451,7 @@ export default function WorldMap({ towers, sectors, sectorsKnown, hatchId, selec
         className="wm-box"
         data-zoomed={view.z > 1.05 ? "true" : "false"}
         data-motion={motion ? "on" : "off"}
+        data-frame={art.ok("map-frame-corner") ? "on" : undefined}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
@@ -546,7 +587,9 @@ export default function WorldMap({ towers, sectors, sectorsKnown, hatchId, selec
             <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden focusable="false"><path d="M3 9 L10 3 L17 9 V17 H12 V12 H8 V17 H3 Z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" /></svg>
           </button>
         </div>
+        <MapFrame art={art} />
       </div>
+      <div className="wm-foot">
       <ul className="wm-legend" aria-label="Provinces">
         {realm.provinces.map((p) => (
           <li key={p.index}>
@@ -565,6 +608,8 @@ export default function WorldMap({ towers, sectors, sectorsKnown, hatchId, selec
           </li>
         ))}
       </ul>
+      <MapTools art={art} />
+      </div>
     </div>
   );
 }

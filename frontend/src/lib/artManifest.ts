@@ -74,6 +74,9 @@ import roomLectern from "../assets/art/room-lectern.webp";
 import roomHourglass from "../assets/art/room-hourglass.webp";
 import strataBlock from "../assets/art/strata-block.webp";
 import roomSconce from "../assets/art/room-sconce.webp";
+import mapFrameCorner from "../assets/art/map-frame-corner.webp";
+import mapDividers from "../assets/art/map-dividers.webp";
+import mapRolled from "../assets/art/map-rolled.webp";
 
 export interface PackedArt {
   src: string;
@@ -159,4 +162,7 @@ export const ART_MANIFEST = {
   "room-hourglass": { src: roomHourglass, width: 170, height: 320, alt: "" },
   "strata-block": { src: strataBlock, width: 114, height: 128, alt: "" },
   "room-sconce": { src: roomSconce, width: 119, height: 160, alt: "" },
+  "map-frame-corner": { src: mapFrameCorner, width: 158, height: 160, alt: "" },
+  "map-dividers": { src: mapDividers, width: 94, height: 160, alt: "" },
+  "map-rolled": { src: mapRolled, width: 192, height: 130, alt: "" },
 } as const satisfies Record<string, PackedArt>;

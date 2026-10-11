@@ -810,6 +810,21 @@
    "id": "room-sconce",
    "source": "cartoon_fantasy_medieval_dungeon_archive_prop_asset_unlit_wall_torch_vibrant_2d",
    "max_side": 160
+  },
+  {
+   "id": "map-frame-corner",
+   "source": "cartoon_fantasy_map_ui_prop_asset_map_frame_corner_bracket_vibrant_2d_casual",
+   "max_side": 160
+  },
+  {
+   "id": "map-dividers",
+   "source": "cartoon_fantasy_cartographer_tool_asset_cartographer_s_dividers_compasses",
+   "max_side": 160
+  },
+  {
+   "id": "map-rolled",
+   "source": "cartoon_fantasy_map_prop_asset_rolled_map_vibrant_2d_casual_mobile_game_art",
+   "max_side": 192
   }
  ]
 }
