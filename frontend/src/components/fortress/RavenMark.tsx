@@ -1,7 +1,27 @@
+import { useState } from "react";
+import { ravenSprite } from "../../lib/sceneArt";
+import { useArtMode } from "../../lib/stitchArt";
+
 /** A small drawn raven perched on a tower roof (game mode G15). It marks "a new report was
  * captured for this holding and you have not seen it yet". Decoration for a fact the Ravens card
  * also states in words; the bob is off under reduced motion. */
 export default function RavenMark({ x, y }: { x: number; y: number }) {
+  const artOn = useArtMode() === "stitch";
+  const [failed, setFailed] = useState(false);
+  if (artOn && !failed) {
+    // Design Master Sprint 3: the Stitch raven, same meaning and place. The
+    // outer group places it, the inner group bobs (see the note below).
+    const r = ravenSprite(0, 0);
+    return (
+      <g transform={`translate(${x} ${y})`} pointerEvents="none">
+        <g className="fortress-raven">
+          <title>A new report has landed on this tower</title>
+          <ellipse cx="0" cy={-r.height / 2} rx={r.width * 0.75} ry={r.height * 0.7} fill="#e9e1f2" opacity={0.2} />
+          <image href={r.src} x={r.left} y={r.top} width={r.width} height={r.height} preserveAspectRatio="none" onError={() => setFailed(true)} aria-hidden />
+        </g>
+      </g>
+    );
+  }
   return (
     // The position lives on the outer group: the bob animation sets a CSS
     // transform, which would replace a transform attribute on the same element
