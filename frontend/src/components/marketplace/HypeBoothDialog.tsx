@@ -19,7 +19,7 @@ import { CURRENCIES, checkTicker, hintText, normalizeTicker, summariseCapture, t
 import type { Watchlist, WatchlistRow } from "../../lib/types";
 import { Portrait } from "../fortress/AdvisorsCard";
 import { Pip } from "./MarketArt";
-import { SalesRep } from "./SalesRepArt";
+import SalPortrait from "./SalPortrait";
 import { Bubble } from "./SalesRepDialog";
 
 /**
@@ -247,7 +247,7 @@ export default function HypeBoothDialog({
         <div className="grid gap-3 p-4 sm:grid-cols-[130px_1fr] sm:gap-5 sm:p-5">
           <div className="mx-auto w-[100px] sm:w-[130px]">
             <div className="sal-figure">
-              <SalesRep mood={phase === "verdict" && reading && reading.key !== "ready" ? "think" : "pitch"} size={130} className="h-auto w-full" />
+              <SalPortrait mood={phase === "verdict" && reading && reading.key !== "ready" ? "think" : "pitch"} size={130} className="h-auto w-full" />
             </div>
           </div>
 

@@ -23,7 +23,8 @@ import {
   type Mood,
 } from "../../lib/salesRep";
 import type { Watchlist, WatchlistRow } from "../../lib/types";
-import { CoinBurst, RunnerStrip, SalesRep } from "./SalesRepArt";
+import { CoinBurst, RunnerStrip } from "./SalesRepArt";
+import SalPortrait from "./SalPortrait";
 
 /**
  * Sal's booth as a pop-up (game mode, Marketplace). One short conversation:
@@ -268,7 +269,7 @@ export default function SalesRepDialog({
         <div className="grid gap-3 p-4 sm:grid-cols-[150px_1fr] sm:gap-5 sm:p-5">
           <div className="relative mx-auto w-[120px] sm:w-[150px]">
             <div className="sal-figure">
-              <SalesRep mood={mood} size={150} className="h-auto w-full" />
+              <SalPortrait mood={mood} size={150} className="h-auto w-full" />
             </div>
             {burstKey > 0 && (phase === "added" || phase === "done") && <CoinBurst key={burstKey} />}
           </div>
