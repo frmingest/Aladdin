@@ -795,6 +795,21 @@
    "id": "room-lectern",
    "source": "cartoon_fantasy_medieval_archive_prop_asset_reading_lectern_vibrant_2d_casual",
    "max_side": 320
+  },
+  {
+   "id": "room-hourglass",
+   "source": "cartoon_fantasy_medieval_archive_prop_asset_hourglass_vibrant_2d_casual_mobile",
+   "max_side": 320
+  },
+  {
+   "id": "strata-block",
+   "source": "cartoon_fantasy_geological_prop_asset_time_strata_stone_block_vibrant_2d_casual",
+   "max_side": 128
+  },
+  {
+   "id": "room-sconce",
+   "source": "cartoon_fantasy_medieval_dungeon_archive_prop_asset_unlit_wall_torch_vibrant_2d",
+   "max_side": 160
   }
  ]
 }

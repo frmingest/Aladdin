@@ -71,6 +71,9 @@ import casketClosed from "../assets/art/casket-closed.webp";
 import casketOpen from "../assets/art/casket-open.webp";
 import roomBookshelf from "../assets/art/room-bookshelf.webp";
 import roomLectern from "../assets/art/room-lectern.webp";
+import roomHourglass from "../assets/art/room-hourglass.webp";
+import strataBlock from "../assets/art/strata-block.webp";
+import roomSconce from "../assets/art/room-sconce.webp";
 
 export interface PackedArt {
   src: string;
@@ -153,4 +156,7 @@ export const ART_MANIFEST = {
   "casket-open": { src: casketOpen, width: 222, height: 256, alt: "" },
   "room-bookshelf": { src: roomBookshelf, width: 218, height: 384, alt: "" },
   "room-lectern": { src: roomLectern, width: 230, height: 320, alt: "" },
+  "room-hourglass": { src: roomHourglass, width: 170, height: 320, alt: "" },
+  "strata-block": { src: strataBlock, width: 114, height: 128, alt: "" },
+  "room-sconce": { src: roomSconce, width: 119, height: 160, alt: "" },
 } as const satisfies Record<string, PackedArt>;

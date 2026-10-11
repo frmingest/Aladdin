@@ -20,6 +20,13 @@ describe("Records art (Sprint 10)", () => {
   });
 });
 
+describe("Chronicle art (Sprint 12)", () => {
+  it("stands the hourglass in the Chronicle banner and packs the strata block and the sconce", () => {
+    expect(roomPropIds("chronicle")).toEqual(["room-hourglass"]);
+    expect(Object.keys(ART_MANIFEST)).toEqual(expect.arrayContaining(["strata-block", "room-sconce"]));
+  });
+});
+
 describe("room art ids", () => {
   it("gives Records and Chronicle a banner backdrop that is really packed", () => {
     for (const room of ["records", "chronicle"] as const) {

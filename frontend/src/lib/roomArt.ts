@@ -30,6 +30,7 @@ export function roomCrestId(room: CrestKind): string | null {
 /** Furniture and tools that stand in a room's banner (Sprints 10 to 13), in the order they are drawn. */
 const PROPS_OF: Partial<Record<CrestKind, readonly string[]>> = {
   records: ["room-bookshelf", "room-lectern"],
+  chronicle: ["room-hourglass"],
 };
 
 /** The banner props for a room: only pictures that are really packed. */
