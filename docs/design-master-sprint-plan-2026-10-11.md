@@ -211,6 +211,14 @@ Same rules as Sprints 1 to 6: one branch and one PR per sprint off fresh `main`,
 - Code: `lib/roomArt.ts` (pure, tested): `roomCrestId(room)` and `sealId(state)` (whole or broken). `PageHeader` game branch: a 56 to 80 px banner strip with the room's crest, decorative, same words as today. `FortressTabs`: crest per tab and a lozenge active state, `aria-current` kept (shape and `aria-current`, not colour alone). Export `Corner` from `GameFrame` for banners.
 - Cut line: the tab strip crests.
 
+**Sprint 8 result (2026-10-11, written, not deployed; the room objects Faiz generated so far, not the crests).**
+- The first room-art set that arrived (`frontend/public/art/latest`, 25 pictures) holds no crests, wax seals, quill, candle stand, table, chairs, scroll, gavel, standing stones, brazier, lantern, telescope or fog stake, so those slots stay on their SVG (see "Still missing" in the Sprint 13 result). Records, Chronicle and Map table objects and two backdrops did arrive, so Sprint 8 ships the kit those rooms need.
+- `pack.py` gained key mode `none` (opaque, no crop) for backdrops; `backdrop-records` and `backdrop-chronicle` are packed at 960 px wide (37 and 43 KB). `artAssets.test.ts` allows a backdrop up to 120 KB, at most five, and the total is 2000 KB (was 1700).
+- `lib/roomArt.ts` (tested): `roomBackdropId()`, `roomCrestId()`, `sealId()`; each returns null unless the picture is really packed, so a missing crest or seal never becomes a broken image. `RoomBackdrop` sits behind the banner (`GamePageHeader`), art mode only, lazy, empty alt text, with a dark wash so the title and the Plain view button stay readable; a failed load removes it. Records and Chronicle wear one.
+- `FortressTabs`: the open room carries a small lozenge as well as the colour (`aria-current` was already set by the router). `GameFrame` exports `Corner` for the Map table frame (Sprint 13).
+- Not done: crest per tab and crest in the banner (no crest pictures yet).
+- Checks: tsc and eslint (0 errors) pass; vitest: all 633 tests pass except the local-only guard that no image over 150 KB sits in `frontend/public/` (the untracked masters in `public/art` trip it; CI has no such folder). Not rendered in a browser: banner wash strength and backdrop crop need Faiz's eye.
+
 **Sprint 9: Council (M).** Visual verb "convene", scene "a round table under candlelight".
 - Needs: table, two chairs, agenda scroll, gavel (Part 6b).
 - Code: the two advisors seated at the table (the Oracle and Partner busts already exist), agenda items on parchment (`.scroll-paper`) with a seal per item: whole seal for a note, broken seal plus the existing label pill for a warning; candle flames drawn by code, constant. Stagger-in only without reduced motion.

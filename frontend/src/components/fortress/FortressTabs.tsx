@@ -21,7 +21,13 @@ export default function FortressTabs() {
             }`
           }
         >
-          {item.label}
+          {({ isActive }) => (
+            <>
+              {/* A small lozenge marks the open room, so the active tab is told by shape as well as colour. */}
+              {isActive && <span aria-hidden="true" className="mr-1.5 inline-block h-1.5 w-1.5 rotate-45 bg-accent align-middle" />}
+              {item.label}
+            </>
+          )}
         </NavLink>
       ))}
     </nav>

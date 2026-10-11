@@ -23,6 +23,8 @@ Key modes (manifest "key"):
                 a flood fill would leave a halo around (the fire arrow).
   erase-shadow  white key plus removal of a pale neutral cast shadow that
                 touches the background (the trading port).
+  none          no keying and no crop: the picture stays an opaque rectangle
+                (room backdrops, Sprint 8). Budget: each at most 120 KB.
 
 Needs: pip install pillow numpy scipy
 
@@ -56,7 +58,7 @@ ENCLOSED_MIN_AREA = 700  # px at 1024; ignores glints and small highlights
 SAMPLED_TOL = 22  # max channel distance from the sampled border colour
 SHADOW_MIN = 170  # erase-shadow: lightest-channel floor for a "pale" pixel
 SHADOW_SAT_MAX = 0.14  # erase-shadow: max saturation for a neutral grey
-KEY_MODES = ("white", "sampled", "glow", "erase-shadow")
+KEY_MODES = ("white", "sampled", "glow", "erase-shadow", "none")
 
 
 def _soft_alpha(opaque: np.ndarray) -> Image.Image:
@@ -138,9 +140,14 @@ def pack(src: Path, spec: dict, max_side: int) -> tuple[Image.Image, dict]:
     trim = int(spec.get("crop_bottom_px", 0))
     if trim:
         img = img.crop((0, 0, img.width, img.height - trim))
-    keyed = key_image(img, spec)
-    bbox = keyed.getchannel("A").point(lambda v: 255 if v > 20 else 0).getbbox()
-    keyed = keyed.crop(bbox)
+    if spec.get("key", "white") == "none":
+        # Backdrop: keep every pixel; anchors, if any, are fractions of the whole picture.
+        keyed = img.convert("RGB")
+        bbox = (0, 0, keyed.width, keyed.height)
+    else:
+        keyed = key_image(img, spec)
+        bbox = keyed.getchannel("A").point(lambda v: 255 if v > 20 else 0).getbbox()
+        keyed = keyed.crop(bbox)
     keyed.thumbnail((spec.get("max_side", max_side),) * 2, Image.LANCZOS)
     anchors = anchors_to_fractions(spec.get("anchors_px", {}), bbox)
     anchors.update(spec.get("anchors_frac", {}))  # already fractions of the packed picture

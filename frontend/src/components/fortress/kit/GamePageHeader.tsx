@@ -1,6 +1,7 @@
 import Crest from "./Crest";
 import type { CrestKind } from "../../../lib/crest";
 import TorchPair from "./TorchPair";
+import RoomBackdrop from "./RoomBackdrop";
 import { PLAIN_TOGGLE_ID, togglePlain, usePlainView } from "../../../lib/plainView";
 
 /** The banner at the top of every game room (page-scene kit): a crest for the room, the title on a
@@ -20,6 +21,7 @@ export default function GamePageHeader({
   const [plain, setPlain] = usePlainView();
   return (
     <header className="game-banner relative mb-6 overflow-hidden rounded-xl">
+      <RoomBackdrop room={crest} />
       <TorchPair className="pointer-events-none absolute inset-x-0 top-0 h-7 w-full opacity-90" />
       <div className="relative flex flex-col gap-3 px-4 pb-3 pt-6 sm:flex-row sm:items-center sm:justify-between sm:px-6">
         <div className="flex min-w-0 items-center gap-3">

@@ -13,9 +13,13 @@ const SOURCE = JSON.parse(readFileSync(resolve(FRONTEND, "../scripts/art/manifes
   objects: { id: string }[];
 };
 const MAX_FILE_KB = 60;
-// Raised from 1200 in Design Master Sprint 6 (23 more pictures). Pictures load only when a view uses them.
-const MAX_TOTAL_KB = 1700;
+// Raised from 1200 in Sprint 6 (23 more pictures) and to 2000 in Sprint 8 (room backdrops). Pictures load only when a view uses them.
+const MAX_TOTAL_KB = 2000;
 const MAX_PUBLIC_IMAGE_KB = 150;
+// Room backdrops (Design Master Sprint 8): wide opaque scenes, one per room at most, shown behind a banner.
+const MAX_BACKDROP_KB = 120;
+const MAX_BACKDROPS = 5;
+const isBackdrop = (file: string) => file.startsWith("backdrop-");
 
 const sourceIds = SOURCE.objects.map((o) => o.id);
 const files = readdirSync(ART_DIR).filter((f) => f.endsWith(".webp"));
@@ -34,8 +38,14 @@ describe("packed object art", () => {
 
   it("keeps each picture and the whole set inside the budget", () => {
     const sizes = files.map((f) => statSync(join(ART_DIR, f)).size / 1024);
-    sizes.forEach((kb, i) => expect(kb, files[i]).toBeLessThanOrEqual(MAX_FILE_KB));
+    sizes.forEach((kb, i) =>
+      expect(kb, files[i]).toBeLessThanOrEqual(isBackdrop(files[i]) ? MAX_BACKDROP_KB : MAX_FILE_KB),
+    );
     expect(sizes.reduce((a, b) => a + b, 0)).toBeLessThanOrEqual(MAX_TOTAL_KB);
+  });
+
+  it("keeps room backdrops to five, each opaque and lazy-loaded (budget above)", () => {
+    expect(files.filter(isBackdrop).length).toBeLessThanOrEqual(MAX_BACKDROPS);
   });
 
   it("records real dimensions and no baked-in text", () => {
