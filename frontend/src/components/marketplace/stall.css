@@ -55,3 +55,14 @@
   background: rgb(var(--c-accent) / 0.18);
   border-color: rgb(var(--c-accent));
 }
+
+/* Art mode (Design Master Sprint 5): the stall picture replaces the striped awning. It is decoration chosen by a
+   stable hash of the company, so the tone of the store stays in the plate edge below and the printed tag. */
+.stall-art {
+  margin: 0.6rem auto 0;
+  max-height: 96px;
+  width: auto;
+}
+.market-stall:has(.stall-art) .stall-plate {
+  border-top: 4px solid var(--stall-tone);
+}

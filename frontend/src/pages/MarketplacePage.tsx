@@ -11,6 +11,7 @@ import SalesRepDialog from "../components/marketplace/SalesRepDialog";
 import { SalesRep } from "../components/marketplace/SalesRepArt";
 import ObjectArtImage from "../components/ObjectArtImage";
 import { TONE_PAINT } from "../lib/marketplacePaint";
+import { stallArtId } from "../lib/marketArt";
 import "../components/marketplace/stall.css";
 import { Button, Card, Disclosure, EmptyState, PageHeader, SnapshotStamp, VerdictBadge } from "../components/ui";
 
@@ -31,7 +32,12 @@ function Stall({ row, place }: { row: WatchlistRow; place: number }) {
       style={{ "--stall-tone": paint.a } as React.CSSProperties}
       aria-label={`Enter the ${row.name} store. ${front.tag}.`}
     >
-      <Awning a={paint.a} b={paint.b} stripes={8} className="market-awning-sm" />
+      <ObjectArtImage
+        id={stallArtId(row.holding_id)}
+        width={104}
+        className="stall-art"
+        fallback={<Awning a={paint.a} b={paint.b} stripes={8} className="market-awning-sm" />}
+      />
       <div className="stall-plate">
         <span className="stall-numeral" aria-hidden>
           {boothNumeral(place)}

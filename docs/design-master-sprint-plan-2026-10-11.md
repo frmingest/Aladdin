@@ -173,6 +173,12 @@ Every sprint is one branch off fresh `main` and one PR, behind `?art=stitch|svg`
 - Sal busts in the Sal and Hype dialogs by mood (pitch, oops, think; cheer stays SVG until generated). The store shopkeeper stays SVG until its faces exist.
 - Cut line: stalls (Sal first).
 
+**Sprint 5 result (2026-10-11, written, not deployed).**
+- `lib/marketArt.ts` (tested): `stallArtId()` gives each company one of the four stalls by a stable hash of its holding id (decoration, labelled as such); `salBustId()` maps pitch, oops and think to their busts and cheer to none.
+- Marketplace street, art mode only: the stall picture replaces the striped awning on each plate; the store's tone stays in a 4 px top edge on the plate (`--stall-tone`) and the printed tag, per decision 6a. Sal's strip and the empty street were already art (Phase A). `SalPortrait` swaps the SVG Sal for the bust in the Sal and Hype dialogs; the SVG is the fallback (art off, cheer, failed load).
+- Not done, by design: the vault as a reserve (no slot exists on the Marketplace today), the store shopkeeper (SVG until its faces exist), Sal cheer (M14).
+- Checks: new unit and render tests, eslint (0 errors) and `tsc` (only the old `artAssets.test.ts` Node-types gap) pass. Not rendered in a browser; stall size and the tone edge need Faiz's eye.
+
 **Sprint 6: Second Stitch batch, then wire (M, depends on you).**
 Generate Part 8 batch 1 (wall segment, corner bastion, genie, terrace props) and batch 2 (map pieces, Oracle, Partner, Sal cheer, shopkeeper faces); I pack and wire them. Closes groups A, C, D and E.
 
