@@ -10,7 +10,8 @@ import type { GameState } from "../../lib/types";
  * points: nothing here goes up because you opened the app or traded.
  */
 
-function Corner({ className }: { className: string }) {
+/** The brass frame corner (also used by room banners, Design Master Sprint 8). */
+export function Corner({ className }: { className: string }) {
   return (
     <svg viewBox="0 0 30 30" className={`game-frame-corner ${className}`} aria-hidden>
       <defs>

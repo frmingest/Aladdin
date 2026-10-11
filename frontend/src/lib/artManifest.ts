@@ -65,6 +65,8 @@ import shopkeeperPromising from "../assets/art/shopkeeper-promising.webp";
 import shopkeeperWait from "../assets/art/shopkeeper-wait.webp";
 import shopkeeperPass from "../assets/art/shopkeeper-pass.webp";
 import shopkeeperUnknown from "../assets/art/shopkeeper-unknown.webp";
+import backdropRecords from "../assets/art/backdrop-records.webp";
+import backdropChronicle from "../assets/art/backdrop-chronicle.webp";
 
 export interface PackedArt {
   src: string;
@@ -141,4 +143,6 @@ export const ART_MANIFEST = {
   "shopkeeper-wait": { src: shopkeeperWait, width: 329, height: 384, alt: "" },
   "shopkeeper-pass": { src: shopkeeperPass, width: 370, height: 384, alt: "" },
   "shopkeeper-unknown": { src: shopkeeperUnknown, width: 384, height: 351, alt: "" },
+  "backdrop-records": { src: backdropRecords, width: 960, height: 536, alt: "" },
+  "backdrop-chronicle": { src: backdropChronicle, width: 960, height: 536, alt: "" },
 } as const satisfies Record<string, PackedArt>;

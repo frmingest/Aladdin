@@ -761,6 +761,20 @@
    "source": "cartoon_fantasy_medieval_character_bust_portrait_of_the_exact_same_store_4",
    "key": "sampled",
    "tol": 9
+  },
+  {
+   "id": "backdrop-records",
+   "source": "cartoon_fantasy_medieval_stone_archive_hall_interior_backdrop_vibrant_2d_casual",
+   "key": "none",
+   "max_side": 960,
+   "quality": 80
+  },
+  {
+   "id": "backdrop-chronicle",
+   "source": "cartoon_fantasy_medieval_stone_timeline_archive_wall_backdrop_vibrant_2d_casual",
+   "key": "none",
+   "max_side": 960,
+   "quality": 80
   }
  ]
 }
