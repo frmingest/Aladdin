@@ -527,6 +527,9 @@
   box-shadow: 0 0 0 1px #6e4a12;
   opacity: 0;
 }
+/* Stitch Master object pictures (static, decorative). */
+.object-art { display: block; height: auto; max-width: 100%; }
+.sal-counter-art { filter: drop-shadow(0 6px 6px rgb(0 0 0 / 0.45)); }
 /* The booth card on the Marketplace page. */
 .sal-booth {
   display: grid;

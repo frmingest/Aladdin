@@ -1,10 +1,12 @@
 # Aladdin — Progress
 
-**Last updated:** 2026-10-10 (Stitch room looks). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
+**Last updated:** 2026-10-11 (Stitch Master object art, Phase A). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
 
 ## Current Objective
 
 Phase 11, the Buffett/Munger rebuild, is stable and merged; game mode follows the [team review](game-mode-team-review-2026-10-09.md) order. Merged on `main` (through `d4d0a70`, #87): the scroll reader, Scrolls library, Sprint 28 fog of war (#79, #80), ravens (#81), integrity fixes (#84), the Fortress art pass (#85), Long Memory B1 (#86; [write-up](long-memory-b1-2026-10-09.md)) and Knife-edge A1 (#87; [write-up](knife-edge-a1-2026-10-09.md)). Faiz confirmed the earlier review and deploy tasks OK on 2026-10-09 ([archive](archive/progress-archive.md)). Nothing else in flight. Next in order: C1 Siege back-test, D1 Plain lens, D2 Camera, B2 Then and Now; also the rest of Sprint 29 (G40 tour, G38 sounds) and Sprint 26a (game pages in the smoke test, word budgets).
+
+**Stitch Master object art (2026-10-11, Phase A written, PR open, not merged, not deployed):** Faiz decided: allow teal and ink-outline object art, objects only (not the Stitch UI system), Sal's stall in teal and cream, raster behind a switch with SVG fallback, start with the Marketplace. Reading `main` showed the stall awnings and shopkeeper carry data, so only Sal's strip and the empty street got pictures (`?art=stitch`, default SVG). Branch `feature/stitch-objects-booths`. Next: Faiz generates S2-S9 (tower kit) and S13 (real Sal counter) in Stitch. Write-up: [stitch-master-object-art-2026-10-11.md](stitch-master-object-art-2026-10-11.md).
 
 **Game design challenge (2026-10-09, written, PR open, not merged, not deployed):** Faiz challenged the design team on three tabs and the dispatch details. Branch `feature/game-design-challenge`: Records is a stone hall of tomes with wax seals and a reading desk; Circle moved to a dark night-chart palette; Map is a generated fantasy continent (provinces = sectors, settlements = holdings, fog patches on top, pan/zoom, ships and sea drift); Night Watch "Break the seal: dispatch details" is a gilded sealed-letter button. Seen only in a headless browser against fake data, not on real data. Write-up: [game-design-challenge-2026-10-09.md](game-design-challenge-2026-10-09.md). Identity PRs #88-#92 are on `main` per git log (deploy not verified).
 
@@ -12,6 +14,7 @@ State (checked against git 2026-10-09): `origin/main` = `d4d0a70` (#87 Knife-edg
 
 ## Active Tasks
 
+- [ ] **Review Stitch objects Phase A (Faiz):** after deploy open the Marketplace with `?art=stitch` (dark, light, phone); then generate S2-S9 and S13 in Stitch from the write-up's prompts
 - [ ] **Stitch design pass (Faiz, review):** pass 1 merged (#97). Open PRs, not merged, not deployed: Chronicle spine (#98), Marketplace stall plates (#99), Map legend weights (`feature/stitch-circle-map`); Circle needed no change ([write-up](stitch-design-pass-2026-10-10.md)). Check each on real data, dark/light, phone.
 - [ ] **Review and merge (Faiz):** the game design challenge PR; then look at Records, Circle, Map and the Night Watch seal on real data, at phone width, in Plain view and with reduced motion
 - [ ] **Review the Knife-edge result (Faiz):** merged as #87 (git log checked 2026-10-09), still never seen in a browser; after deploy click a stock tower on Fortress: the Walls block lists the distance to the next tier and a tower within 10% of a weaker line shows a thin crack ([write-up](knife-edge-a1-2026-10-09.md))
