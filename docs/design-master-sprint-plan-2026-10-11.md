@@ -1,6 +1,6 @@
 # Design Master: review and sprint plan (2026-10-11)
 
-Status: **approved by Faiz 2026-10-11 (all nine decisions, Part 5). Sprint 0 is merged (#103); Sprint 1 is written (PR #104 open, not merged, not deployed); Sprint 2 is next.** Written from a fresh clone of `main` (`e939577`, PR #101 merged), all 52 object images and 10 screen mocks in `frontend/public/art/Design_master`, the Stitch `DESIGN.md`, and a read of the scene, map and marketplace code. `E:\Aladdin` is stale (branch `feature/currency-edit-and-nok-equivalent`, older than `main`); pull `main` before any build.
+Status: **approved by Faiz 2026-10-11 (all nine decisions, Part 5). Sprint 0 is merged (#103); Sprint 1 is merged (#104); Sprint 2 is written (PR open, not merged, not deployed); Sprint 3 is next.** Written from a fresh clone of `main` (`e939577`, PR #101 merged), all 52 object images and 10 screen mocks in `frontend/public/art/Design_master`, the Stitch `DESIGN.md`, and a read of the scene, map and marketplace code. `E:\Aladdin` is stale (branch `feature/currency-edit-and-nok-equivalent`, older than `main`); pull `main` before any build.
 
 Related: [stitch-master-object-art-2026-10-11.md](stitch-master-object-art-2026-10-11.md) (style, rules, prompts for what is still missing), [game-sprint-checklist.md](game-sprint-checklist.md) (section A is answered in Part 7).
 
@@ -134,6 +134,15 @@ Every sprint is one branch off fresh `main` and one PR, behind `?art=stitch|svg`
 - Outpost, granary, gold store (vault-1/2/3 by size class), shack in the Shantytown, Great Keep (`keep-granite`) with the realm-verdict banner as a code overlay and the "THE REALM" plate unchanged.
 - Curtain wall and corner bastion stay code, restyled to the new palette, until the Stitch pieces exist (Part 8, batch 1); this keeps the scene coherent in the meantime.
 - Cut line: gold store fullness variants (use one vault).
+
+**Sprint 2 result (2026-10-11, written, not deployed).**
+- `towerArtId()` now returns a picture for every structure: fund = `outpost`, cash-like fund = `granary`, gold store = `vault-3` (great), `vault-2` (medium), `vault-1` (small, tiny, unknown); keeps as in Sprint 1. `placeTowerArt()` sizes the low structures from the layout box with a per-picture height factor, stands them on the ground line and never wider than the box plus 14 px. Anchors (body box, door) for outpost, granary, the three vaults and `keep-granite` are new in `manifest.json` (`anchors_frac`, measured on the packed picture) and mirrored in `artManifest.ts`; `pack.py` passes them through.
+- The old overlays (ivy, scaffolding, crack, thesis marks, ladders, drawbridge) take the picture's body box, as for keeps. Door glow follows freshness; torches stay on keeps and the Great Keep only. The code pennant on a fresh outpost is dropped in art mode (the picture has its own).
+- Great Keep: `placeGreatKeep()` (236 px wide, centred on the keep box, standing on its ground). The picture carries no fact: the realm verdict is a flag on a pole in the forecourt (`TONE_BANNER`), the "THE REALM" plate and click target are unchanged, door glow and torches follow "any tower fresh". Weather grade applies to it.
+- Shantytown: the shack picture replaces the code shacks (height varies by index, smoke on heavy), one picture for many shacks.
+- Not done, by design: curtain wall and corner bastions stay code (Sprint 6, Stitch batch 1); gold store fullness variants beyond the three size classes.
+- Window light (Faiz, 2026-10-11, towers were far too lit): the glow and pane drawn over keeps are now 20% of the old light (`WINDOW_LIGHT`). How many windows are lit follows freshness: fresh 3-5 of 5, weathered 1-2, others none; which ones is a stable hash of the holding id (`litWindows()`), so a tower never changes between loads and fresh always shows more than weathered. Door glow and torches are unchanged.
+- Limits of this check: tests, tsc and lint pass; the scene was not rendered in a browser in this session, so placement of the verdict flag, door glow and vault height needs Faiz's eye on real data. Anchors were measured by eye on the packed pictures and may need a nudge.
 
 **Sprint 3: Siege camp and scene life (M).**
 - Camp built from the sprites by the existing `siegeCamp()` counts (3 tents and 7 soldiers when gathering; 7 tents, 20 soldiers, 3 engines, 5 arrows when besieged); nothing in calm or unsurveyed weather. Engines are one trebuchet, one ram, one siege tower. Fire arrows use the glow cut.

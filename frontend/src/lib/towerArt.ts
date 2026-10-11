@@ -13,16 +13,35 @@ import type { FortressSize, FortressStructure, FortressWall, GameTower } from ".
  * already a fact a tower shows by its size, so the silhouette adds no meaning. */
 const SPIRE_SIZES: ReadonlySet<FortressSize> = new Set<FortressSize>(["great", "medium"]);
 
+const VAULT_BY_SIZE: Record<FortressSize, ObjectArtId> = {
+  great: "vault-3",
+  medium: "vault-2",
+  small: "vault-1",
+  tiny: "vault-1",
+  unknown: "vault-1",
+};
+
 type PictureWall = Exclude<FortressWall, "unsurveyed" | "not_applicable">;
 
 /**
- * The picture for a tower, or null when the SVG must draw it: not a keep
- * (outposts, granaries and gold stores are Sprint 2), or the walls were never
- * surveyed (always the code ghost keep, never a guessed material).
- * `not_applicable` uses granite, as the plan says.
+ * The picture for a tower, or null when the SVG must draw it: a keep whose
+ * walls were never surveyed (always the code ghost keep, never a guessed
+ * material). `not_applicable` uses granite, as the plan says. Sprint 2 adds the
+ * other structures: a fund is the outpost, a cash-like fund the granary, a gold
+ * store one of three vaults by size class (a fuller hoard for a bigger holding;
+ * size is already a fact the tower shows).
  */
 export function towerArtId(t: Pick<GameTower, "structure" | "size_class" | "wall">): ObjectArtId | null {
-  if (t.structure !== ("keep" satisfies FortressStructure)) return null;
+  switch (t.structure satisfies FortressStructure) {
+    case "outpost":
+      return "outpost";
+    case "granary":
+      return "granary";
+    case "bullion":
+      return VAULT_BY_SIZE[t.size_class];
+    case "keep":
+      break;
+  }
   if (t.wall === "unsurveyed") return null;
   const wall: PictureWall = t.wall === "not_applicable" ? "granite" : t.wall;
   return `${SPIRE_SIZES.has(t.size_class) ? "spire" : "bastion"}-${wall}` as ObjectArtId;
@@ -48,6 +67,15 @@ export interface TowerArtPlacement {
 
 /** Keep roof height the old SVG used for a body of width w; sizes the picture. */
 const roofHeight = (w: number) => Math.min(66, Math.round(w * 0.62));
+/** Picture height as a multiple of the layout box height, for the low
+ * structures (their boxes are drawn shorter than a keep of the same size). */
+const LOW_HEIGHT: Partial<Record<ObjectArtId, number>> = {
+  outpost: 1.35,
+  granary: 1.25,
+  "vault-1": 1.7,
+  "vault-2": 1.7,
+  "vault-3": 1.7,
+};
 /** Allowed overhang past the layout box, as the old parapet had. */
 const OVERHANG = 14;
 const GROUND_DROP = 2;
@@ -58,7 +86,8 @@ export function placeTowerArt(
   art: ObjectArt = OBJECT_ART[id],
 ): TowerArtPlacement {
   const aspect = art.width / art.height;
-  const wantH = box.h + roofHeight(box.w) + OVERHANG;
+  const low = LOW_HEIGHT[id];
+  const wantH = low ? box.h * low : box.h + roofHeight(box.w) + OVERHANG;
   const width = Math.min(box.w + OVERHANG, wantH * aspect);
   const height = width / aspect;
   const cx = box.x + box.w / 2;
@@ -100,4 +129,82 @@ export function overlayBox(
   item: { y: number },
 ): { x: number; y: number; w: number; h: number } {
   return { x: p.body.x, y: item.y, w: p.body.w, h: item.y - p.body.top };
+}
+
+/** The Great Keep picture: wider than its layout box (the old drawing had
+ * turrets and a donjon), standing on the keep's ground line. */
+const KEEP_PICTURE_WIDTH = 236;
+
+export interface GreatKeepPlacement {
+  src: string;
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+  ground: number;
+  door: { cx: number; bottom: number; w: number; h: number } | null;
+}
+
+export function placeGreatKeep(
+  keep: { x: number; y: number; w: number },
+  art: ObjectArt = OBJECT_ART["keep-granite"],
+): GreatKeepPlacement {
+  const aspect = art.width / art.height;
+  const width = KEEP_PICTURE_WIDTH;
+  const height = width / aspect;
+  const left = keep.x + keep.w / 2 - width / 2;
+  const top = keep.y + GROUND_DROP - height;
+  const a = art.anchors ?? {};
+  const door =
+    a.door && a["door-size"]
+      ? {
+          cx: left + a.door[0] * width,
+          bottom: top + a.door[1] * height,
+          w: a["door-size"][0] * width,
+          h: a["door-size"][1] * height,
+        }
+      : null;
+  return { src: art.src, left, top, width, height, ground: keep.y + GROUND_DROP, door };
+}
+
+/** Share of the old window light that code now draws (2026-10-11: the towers were far too lit). */
+export const WINDOW_LIGHT = 0.2;
+
+/** A small stable hash, so the same tower always lights the same windows. */
+function hashId(id: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < id.length; i++) {
+    h ^= id.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+/**
+ * Which of a picture's windows are lit. Light is the freshness fact, so the
+ * COUNT follows freshness and only WHICH windows is varied (by a stable hash of
+ * the holding id, so a tower never flickers between loads): fresh lights more
+ * than half of them (3-5 of 5), weathered one or two, and the rest none. A
+ * fresh tower always shows more light than a weathered one.
+ */
+export function litWindows(holdingId: string, windowCount: number, freshness: string): Set<number> {
+  const n = windowCount;
+  if (n <= 0) return new Set();
+  const h = hashId(holdingId);
+  let count = 0;
+  if (freshness === "fresh") {
+    const min = Math.min(n, Math.floor(n / 2) + 1);
+    count = min + (h % (n - min + 1));
+  } else if (freshness === "weathered") {
+    const max = Math.max(1, Math.floor((n - 1) / 2));
+    count = 1 + ((h >>> 3) % max);
+  }
+  const order = Array.from({ length: n }, (_, i) => i);
+  let r = h || 1;
+  for (let i = n - 1; i > 0; i--) {
+    r = Math.imul(r, 1664525) + 1013904223;
+    const j = (r >>> 0) % (i + 1);
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+  return new Set(order.slice(0, count));
 }

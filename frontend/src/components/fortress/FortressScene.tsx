@@ -31,8 +31,8 @@ import type { RealmLevel } from "../../lib/realmVerdict";
 import LampLogo from "../LampLogo";
 import type { FortressShantytown, FortressSiegeLevel, FortressWall, GameSiege, GameTower } from "../../lib/types";
 import { worldPalette } from "../../lib/fortressArt";
-import { useArtMode } from "../../lib/stitchArt";
-import { overlayBox, placeTowerArt, towerArtId, type TowerArtPlacement } from "../../lib/towerArt";
+import { OBJECT_ART, useArtMode } from "../../lib/stitchArt";
+import { WINDOW_LIGHT, litWindows, overlayBox, placeGreatKeep, placeTowerArt, towerArtId, type GreatKeepPlacement, type TowerArtPlacement } from "../../lib/towerArt";
 import { SceneAmbience, SceneBackdrop, SceneDefs, SceneVignette } from "./sceneWorld";
 import MarketSquare, { MARKET_HEIGHT, type MarketSquareProps } from "./MarketSquare";
 import RavenMark from "./RavenMark";
@@ -474,8 +474,8 @@ function ArtWindow({ cx, cy, w, h }: { cx: number; cy: number; w: number; h: num
   const d = `M${x} ${top + h} V${top + w / 2} A${w / 2} ${w / 2} 0 0 1 ${x + w} ${top + w / 2} V${top + h} Z`;
   return (
     <g>
-      <circle cx={cx} cy={cy} r={Math.max(w, h) * 1.5} fill="url(#fs-glow)" />
-      <path d={d} fill="url(#fs-window)" stroke="#26253B" strokeWidth={1} strokeLinejoin="round" />
+      <circle cx={cx} cy={cy} r={Math.max(w, h) * 1.5} fill="url(#fs-glow)" opacity={WINDOW_LIGHT} />
+      <path d={d} fill="url(#fs-window)" fillOpacity={0.45} stroke="#26253B" strokeWidth={1} strokeLinejoin="round" />
       <line x1={cx} y1={top + 1} x2={cx} y2={top + h} stroke="#26253B" strokeOpacity={0.45} strokeWidth={0.8} />
     </g>
   );
@@ -501,6 +501,7 @@ function TowerArtBody({
 }) {
   const lit = tower.freshness === "fresh";
   const someLit = lit || tower.freshness === "weathered";
+  const litSet = litWindows(tower.holding_id, placement.windows.length, tower.freshness);
   const { door } = placement;
   return (
     <g>
@@ -515,14 +516,14 @@ function TowerArtBody({
         onError={onFail}
         aria-hidden
       />
-      {placement.windows.map((win, i) => (lit || (someLit && i === 0) ? <ArtWindow key={i} {...win} /> : null))}
+      {placement.windows.map((win, i) => (litSet.has(i) ? <ArtWindow key={i} {...win} /> : null))}
       {someLit && door && (
         <g aria-hidden>
           <ellipse cx={door.cx} cy={door.bottom + 1} rx={door.w * 0.85} ry={4.5} fill="url(#fs-glow)" />
           <rect x={door.cx - door.w * 0.34} y={door.bottom - 2} width={door.w * 0.68} height={2} rx={1} fill="url(#fs-window)" opacity={0.9} />
         </g>
       )}
-      {lit && door && placement.width >= 64 && (
+      {lit && door && tower.structure === "keep" && placement.width >= 64 && (
         <>
           <Torch x={door.cx - door.w / 2 - 9} y={door.bottom - door.h * 0.55} />
           <Torch x={door.cx + door.w / 2 + 9} y={door.bottom - door.h * 0.55} />
@@ -1076,6 +1077,54 @@ function Causeway({ keep }: { keep: PlacedKeep }) {
   );
 }
 
+/**
+ * The Stitch picture for the Great Keep. Its baked pennants are decoration
+ * (decision 3); the realm verdict is a separate flag on a pole in the
+ * forecourt, coloured by `TONE_BANNER`, so the picture still carries no fact.
+ * Fresh light (door glow and torches) follows `lit`, as on the towers.
+ */
+function GreatKeepArt({
+  art,
+  level,
+  lit,
+  grade,
+  onFail,
+}: {
+  art: GreatKeepPlacement;
+  level: RealmLevel;
+  lit: boolean;
+  grade: string;
+  onFail: () => void;
+}) {
+  const { door } = art;
+  const poleX = art.left + art.width * 0.9;
+  return (
+    <g>
+      <image
+        href={art.src}
+        x={art.left}
+        y={art.top}
+        width={art.width}
+        height={art.height}
+        preserveAspectRatio="none"
+        style={{ filter: grade }}
+        onError={onFail}
+        aria-hidden
+      />
+      {lit && door && (
+        <g aria-hidden>
+          <ellipse cx={door.cx} cy={door.bottom + 1} rx={door.w * 0.9} ry={5} fill="url(#fs-glow)" />
+          <Torch x={door.cx - door.w / 2 - 10} y={door.bottom - door.h * 0.5} />
+          <Torch x={door.cx + door.w / 2 + 10} y={door.bottom - door.h * 0.5} />
+        </g>
+      )}
+      <g transform={`translate(${poleX} ${art.ground - 4}) scale(1.5) translate(${-poleX} ${-(art.ground - 4)})`}>
+        <Banner x={poleX} y={art.ground - 4} color={TONE_BANNER[level]} />
+      </g>
+    </g>
+  );
+}
+
 /** The Great Keep: the whole portfolio, in the middle of the top terrace. It
  * has no wall material, moat or size of its own (those belong to the towers);
  * the banner on its roof only follows the verdict on the whole fortress. */
@@ -1084,11 +1133,15 @@ function GreatKeep({
   level,
   lit,
   count,
+  grade,
   realm,
   onRealmSelect,
   onRealmHover,
-}: { keep: PlacedKeep; level: RealmLevel; lit: boolean; count: number } & RealmHandlers) {
+}: { keep: PlacedKeep; level: RealmLevel; lit: boolean; count: number; grade: string } & RealmHandlers) {
   const { x, y, w } = keep;
+  const artOn = useArtMode() === "stitch";
+  const [artFailed, setArtFailed] = useState(false);
+  const art = artOn && !artFailed ? placeGreatKeep(keep) : null;
   const cx = x + w / 2;
   const hallW = 150;
   const hallH = 96;
@@ -1142,7 +1195,9 @@ function GreatKeep({
       <ellipse className="fortress-ring" cx={cx} cy={y + 10} rx={w / 2 + 34} ry={16} fill="none" strokeWidth={2.5} />
       <ellipse className="fortress-ring-inner" cx={cx} cy={y + 10} rx={w / 2 + 26} ry={12} fill="none" strokeWidth={1} />
       <g className="fortress-rise">
-        <GroundShadow x={x} y={y} w={w} />
+        <GroundShadow x={art ? art.left + 10 : x} y={y} w={art ? art.width - 20 : w} />
+        {art && <GreatKeepArt art={art} level={level} lit={lit} grade={grade} onFail={() => setArtFailed(true)} />}
+        {!art && (<>
         {/* the donjon, behind everything else */}
         <ConeRoof cx={cx} base={donTop - 6} half={donW / 2 + 12} height={donRoof} fill="fs-roof-slate" trim="url(#fs-gold)" />
         <Banner x={cx} y={donTop - 6 - donRoof - 9} color={TONE_BANNER[level]} />
@@ -1197,6 +1252,7 @@ function GreatKeep({
             <Torch x={cx + 32} y={y - 30} />
           </>
         )}
+        </>)}
       </g>
       {/* name plate */}
       <g>
@@ -1208,7 +1264,7 @@ function GreatKeep({
           {count} {count === 1 ? "holding" : "holdings"}
         </text>
       </g>
-      <rect x={x - 40} y={donTop - 80} width={w + 80} height={donH + 150} fill="transparent" />
+      <rect x={x - 40} y={(art ? art.top : donTop) - 80} width={w + 80} height={(art ? art.height : donH) + 150} fill="transparent" />
     </g>
   );
 }
@@ -1337,8 +1393,11 @@ function TowerFigure({
   );
 }
 
-function Shantytown({ level, count, y }: { level: FortressShantytown; count: number; y: number }) {
+function Shantytown({ level, count, y, grade }: { level: FortressShantytown; count: number; y: number; grade: string }) {
   const drawn = drawnShacks(count);
+  const artOn = useArtMode() === "stitch";
+  const [artFailed, setArtFailed] = useState(false);
+  const shack = artOn && !artFailed ? OBJECT_ART.shack : null;
   if (level === "none" || drawn === 0) return null;
   const span = SCENE_WIDTH - 200;
   const step = drawn > 1 ? span / (drawn - 1) : 0;
@@ -1352,6 +1411,29 @@ function Shantytown({ level, count, y }: { level: FortressShantytown; count: num
         const hx = 100 + i * step;
         const hh = 12 + ((i * 37) % 5);
         const tilt = ((i * 13) % 7) - 3;
+        if (shack) {
+          // One picture, many shacks: height varies a little by index, as the code shacks do.
+          const sh = 34 + ((i * 37) % 5) * 2;
+          const sw = sh * (shack.width / shack.height);
+          return (
+            <g key={i} transform={`rotate(${tilt} ${hx} ${y})`}>
+              <ellipse cx={hx + 4} cy={y + 1} rx={sw * 0.5} ry={3} fill="#000" opacity={0.35} />
+              <image
+                href={shack.src}
+                x={hx - sw / 2}
+                y={y - sh + 2}
+                width={sw}
+                height={sh}
+                preserveAspectRatio="none"
+                style={{ filter: grade }}
+                onError={() => setArtFailed(true)}
+              />
+              {level === "heavy" && i % 3 === 0 && (
+                <path className="fortress-smoke" d={`M${hx + 8} ${y - sh - 2} q4 -8 0 -14 q-4 -6 1 -12`} stroke="#b9c0cc" strokeOpacity={0.4} strokeWidth={2} fill="none" />
+              )}
+            </g>
+          );
+        }
         return (
           <g key={i} transform={`rotate(${tilt} ${hx} ${y})`}>
             <ellipse cx={hx + 4} cy={y + 1} rx={15} ry={3} fill="#000" opacity={0.35} />
@@ -1508,7 +1590,7 @@ export default function FortressScene({
               <Bastion x={6} y={y} {...handlers} />
               <Bastion x={SCENE_WIDTH - 52} y={y} {...handlers} />
               {r === 0 && (
-                <GreatKeep keep={layout.keep} level={realmLevel} lit={anyFresh} count={layout.items.length} {...handlers} />
+                <GreatKeep keep={layout.keep} level={realmLevel} lit={anyFresh} count={layout.items.length} grade={palette.grade} {...handlers} />
               )}
               <SharedWalls layout={layout} siege={siege} row={r} />
               {rowItems.map((item) => (
@@ -1529,7 +1611,7 @@ export default function FortressScene({
             </g>
           );
         })}
-        <Shantytown level={shantytown} count={shackCount} y={layout.height + 24} />
+        <Shantytown level={shantytown} count={shackCount} y={layout.height + 24} grade={palette.grade} />
         {market && <MarketSquare y={marketTop} {...market} />}
         <SceneAmbience palette={palette} height={height} />
         <SceneVignette height={height} />
