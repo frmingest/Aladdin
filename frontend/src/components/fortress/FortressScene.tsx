@@ -1,4 +1,4 @@
-import { useMemo, useRef, type KeyboardEvent } from "react";
+import { useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { isNavKey, nextTower } from "../../lib/sceneNav";
 import { useSceneRunning } from "./useScenePause";
 import {
@@ -31,6 +31,8 @@ import type { RealmLevel } from "../../lib/realmVerdict";
 import LampLogo from "../LampLogo";
 import type { FortressShantytown, FortressSiegeLevel, FortressWall, GameSiege, GameTower } from "../../lib/types";
 import { worldPalette } from "../../lib/fortressArt";
+import { useArtMode } from "../../lib/stitchArt";
+import { overlayBox, placeTowerArt, towerArtId, type TowerArtPlacement } from "../../lib/towerArt";
 import { SceneAmbience, SceneBackdrop, SceneDefs, SceneVignette } from "./sceneWorld";
 import MarketSquare, { MARKET_HEIGHT, type MarketSquareProps } from "./MarketSquare";
 import RavenMark from "./RavenMark";
@@ -48,6 +50,10 @@ import RavenMark from "./RavenMark";
  * The wall material decides both the masonry and the roof (slate for stone,
  * shingle for timber, a holed roof for rot), so quality reads twice.
  */
+
+/** Stitch Master ink outline: the one dark every picture is drawn with. Overlays
+ * drawn over a picture (art mode) use it so they look inked, not pasted on. */
+const INK = "#26253B";
 
 const SERIF = '"Marcellus", "Palatino Linotype", Palatino, Georgia, serif';
 
@@ -217,7 +223,7 @@ function Torch({ x, y }: { x: number; y: number }) {
 // Moats
 
 /** The drawbridge over a water moat, at the foot of its tower. */
-function Drawbridge({ item }: { item: PlacedTower }) {
+function Drawbridge({ item, art = false }: { item: PlacedTower; art?: boolean }) {
   const { tower, x, y, w } = item;
   if (tower.moat !== "wide" && tower.moat !== "narrow") return null;
   const wide = tower.moat === "wide";
@@ -226,7 +232,7 @@ function Drawbridge({ item }: { item: PlacedTower }) {
   const cx = x + w / 2;
   return (
     <g>
-      <rect x={cx - bw / 2} y={y - 2} width={bw} height={depth + 5} fill="#7a5128" stroke="#2a1a0b" strokeOpacity={0.7} />
+      <rect x={cx - bw / 2} y={y - 2} width={bw} height={depth + 5} fill={art ? "#8A5432" : "#7a5128"} stroke={art ? INK : "#2a1a0b"} strokeWidth={art ? 1.6 : 1} strokeOpacity={art ? 1 : 0.7} />
       <rect x={cx - bw / 2} y={y - 2} width={bw} height={depth + 5} fill="url(#fs-planks)" />
       <rect x={cx - bw / 2} y={y - 2} width={bw} height={depth + 5} fill="url(#fs-shade-flat)" />
       {wide && (
@@ -460,6 +466,72 @@ function Keep({ item }: { item: PlacedTower }) {
   );
 }
 
+/** An arched window lit from inside, at a point on a picture. Windows in the
+ * pictures are dark; light is a fact (fresh analysis), so code draws it. */
+function ArtWindow({ cx, cy, w, h }: { cx: number; cy: number; w: number; h: number }) {
+  const x = cx - w / 2;
+  const top = cy - h / 2;
+  const d = `M${x} ${top + h} V${top + w / 2} A${w / 2} ${w / 2} 0 0 1 ${x + w} ${top + w / 2} V${top + h} Z`;
+  return (
+    <g>
+      <circle cx={cx} cy={cy} r={Math.max(w, h) * 1.5} fill="url(#fs-glow)" />
+      <path d={d} fill="url(#fs-window)" stroke="#26253B" strokeWidth={1} strokeLinejoin="round" />
+      <line x1={cx} y1={top + 1} x2={cx} y2={top + h} stroke="#26253B" strokeOpacity={0.45} strokeWidth={0.8} />
+    </g>
+  );
+}
+
+/**
+ * The Stitch picture for a keep, with the facts drawn on top by code: light in
+ * the windows and at the door (fresh = all, weathered = one), torches on a big
+ * fresh tower. The picture's own pennant stays as decoration (decision 3);
+ * freshness is the light, never the flag. Graded per weather so a fixed-light
+ * picture sits in the scene's sky.
+ */
+function TowerArtBody({
+  placement,
+  tower,
+  grade,
+  onFail,
+}: {
+  placement: TowerArtPlacement;
+  tower: GameTower;
+  grade: string;
+  onFail: () => void;
+}) {
+  const lit = tower.freshness === "fresh";
+  const someLit = lit || tower.freshness === "weathered";
+  const { door } = placement;
+  return (
+    <g>
+      <image
+        href={placement.src}
+        x={placement.left}
+        y={placement.top}
+        width={placement.width}
+        height={placement.height}
+        preserveAspectRatio="none"
+        style={{ filter: grade }}
+        onError={onFail}
+        aria-hidden
+      />
+      {placement.windows.map((win, i) => (lit || (someLit && i === 0) ? <ArtWindow key={i} {...win} /> : null))}
+      {someLit && door && (
+        <g aria-hidden>
+          <ellipse cx={door.cx} cy={door.bottom + 1} rx={door.w * 0.85} ry={4.5} fill="url(#fs-glow)" />
+          <rect x={door.cx - door.w * 0.34} y={door.bottom - 2} width={door.w * 0.68} height={2} rx={1} fill="url(#fs-window)" opacity={0.9} />
+        </g>
+      )}
+      {lit && door && placement.width >= 64 && (
+        <>
+          <Torch x={door.cx - door.w / 2 - 9} y={door.bottom - door.h * 0.55} />
+          <Torch x={door.cx + door.w / 2 + 9} y={door.bottom - door.h * 0.55} />
+        </>
+      )}
+    </g>
+  );
+}
+
 /** Walls not surveyed: a translucent building plan with stakes and rope,
  * like a site marked out but never built. Never a guessed material. */
 function GhostKeep({ item }: { item: PlacedTower }) {
@@ -587,7 +659,7 @@ function Granary({ item }: { item: PlacedTower }) {
 // ---------------------------------------------------------------------------
 // Overlays: age, thesis, siege
 
-function Ivy({ x, y, top, w, heavy }: { x: number; y: number; top: number; w: number; heavy: boolean }) {
+function Ivy({ x, y, top, w, heavy, art = false }: { x: number; y: number; top: number; w: number; heavy: boolean; art?: boolean }) {
   const h = y - top;
   const vines: [number, number][] = heavy
     ? [[0.08, 0.15], [0.3, 0.45], [0.86, 0.1], [0.62, 0.55], [0.95, 0.4]]
@@ -600,15 +672,15 @@ function Ivy({ x, y, top, w, heavy }: { x: number; y: number; top: number; w: nu
         const d = `M${vx} ${y} C${vx + 6} ${y - h * 0.25} ${vx - 6} ${endY + h * 0.2} ${vx + 2} ${endY}`;
         return (
           <g key={i}>
-            <path d={d} stroke="#2a4a22" strokeWidth={1.6} fill="none" />
+            <path d={d} stroke={art ? INK : "#2a4a22"} strokeWidth={art ? 2 : 1.6} fill="none" strokeLinecap="round" />
             {Array.from({ length: heavy ? 7 : 5 }, (_, k) => {
               const t = (k + 1) / (heavy ? 8 : 6);
               const ly = y - (y - endY) * t;
               const lx = vx + Math.sin(k * 1.7 + i) * 4;
               return (
                 <g key={k}>
-                  <ellipse cx={lx - 2} cy={ly} rx={3.6} ry={2.4} fill="#3f7a35" transform={`rotate(${-30 + k * 13} ${lx} ${ly})`} />
-                  <ellipse cx={lx + 2.5} cy={ly - 2} rx={3} ry={2} fill="#5f9a45" transform={`rotate(${20 - k * 9} ${lx} ${ly})`} />
+                  <ellipse cx={lx - 2} cy={ly} rx={3.6} ry={2.4} fill={art ? "#4d8f2c" : "#3f7a35"} stroke={art ? INK : undefined} strokeWidth={art ? 0.8 : undefined} transform={`rotate(${-30 + k * 13} ${lx} ${ly})`} />
+                  <ellipse cx={lx + 2.5} cy={ly - 2} rx={3} ry={2} fill={art ? "#76B82A" : "#5f9a45"} stroke={art ? INK : undefined} strokeWidth={art ? 0.8 : undefined} transform={`rotate(${20 - k * 9} ${lx} ${ly})`} />
                 </g>
               );
             })}
@@ -619,16 +691,25 @@ function Ivy({ x, y, top, w, heavy }: { x: number; y: number; top: number; w: nu
   );
 }
 
-function Scaffolding({ x, y, top, w }: { x: number; y: number; top: number; w: number }) {
+function Scaffolding({ x, y, top, w, art = false }: { x: number; y: number; top: number; w: number; art?: boolean }) {
   const levels = [top + 6, top + (y - top) * 0.45, y - 14];
   return (
-    <g aria-hidden stroke="#a07a44" strokeWidth={2} strokeLinecap="round">
+    <g aria-hidden stroke={art ? "#8A5432" : "#a07a44"} strokeWidth={2} strokeLinecap="round">
+      {art && (
+        <g stroke={INK} strokeWidth={4.6}>
+          <line x1={x - 7} y1={y} x2={x - 7} y2={top - 4} />
+          <line x1={x + w + 7} y1={y} x2={x + w + 7} y2={top - 4} />
+          {levels.map((ly) => (
+            <line key={ly} x1={x - 10} y1={ly} x2={x + w + 10} y2={ly} />
+          ))}
+        </g>
+      )}
       <line x1={x - 7} y1={y} x2={x - 7} y2={top - 4} />
       <line x1={x + w + 7} y1={y} x2={x + w + 7} y2={top - 4} />
       {levels.map((ly) => (
         <g key={ly}>
-          <line x1={x - 10} y1={ly} x2={x + w + 10} y2={ly} stroke="#8a6438" strokeWidth={3} />
-          <line x1={x - 10} y1={ly + 1.5} x2={x + w + 10} y2={ly + 1.5} stroke="#3a2510" strokeWidth={0.8} />
+          <line x1={x - 10} y1={ly} x2={x + w + 10} y2={ly} stroke={art ? "#8A5432" : "#8a6438"} strokeWidth={3} />
+          <line x1={x - 10} y1={ly + 1.5} x2={x + w + 10} y2={ly + 1.5} stroke={art ? "#58321C" : "#3a2510"} strokeWidth={0.8} />
         </g>
       ))}
       <line x1={x - 7} y1={levels[2]} x2={x + w * 0.4} y2={levels[1]} strokeWidth={1.3} />
@@ -637,15 +718,15 @@ function Scaffolding({ x, y, top, w }: { x: number; y: number; top: number; w: n
   );
 }
 
-function Weathering({ item }: { item: PlacedTower }) {
+function Weathering({ item, art = false }: { item: PlacedTower; art?: boolean }) {
   const { tower, x, y, w, h } = item;
   const top = y - h;
   if (tower.freshness === "weathered" || tower.freshness === "overgrown") {
     const heavy = tower.freshness === "overgrown";
     return (
       <g>
-        <Ivy x={x} y={y} top={top} w={w} heavy={heavy} />
-        {heavy && <Scaffolding x={x} y={y} top={top} w={w} />}
+        <Ivy x={x} y={y} top={top} w={w} heavy={heavy} art={art} />
+        {heavy && <Scaffolding x={x} y={y} top={top} w={w} art={art} />}
       </g>
     );
   }
@@ -707,7 +788,7 @@ function Flames({ x, y, scale = 1 }: { x: number; y: number; scale?: number }) {
  * within the margins_v1 band of the next weaker tier. A shape, not a colour,
  * so it reads without colour; static (no motion), and drawn only for towers
  * that have a real ratio. It does not change the wall: it marks the edge. */
-function KnifeEdgeCrack({ item }: { item: PlacedTower }) {
+function KnifeEdgeCrack({ item, art = false }: { item: PlacedTower; art?: boolean }) {
   const { tower, x, y, w, h } = item;
   if (nearMargins(tower).length === 0) return null;
   const top = y - h;
@@ -718,9 +799,9 @@ function KnifeEdgeCrack({ item }: { item: PlacedTower }) {
       <path
         d={`M${cx} ${y0} l5 7 l-4 6 l6 8 l-3 7 l4 9`}
         fill="none"
-        stroke="#0b0705"
-        strokeOpacity={0.75}
-        strokeWidth={1.1}
+        stroke={art ? INK : "#0b0705"}
+        strokeOpacity={art ? 0.95 : 0.75}
+        strokeWidth={art ? 1.7 : 1.1}
         strokeLinecap="round"
         strokeLinejoin="round"
       />
@@ -740,7 +821,7 @@ function KnifeEdgeCrack({ item }: { item: PlacedTower }) {
 /** A fired tripwire sets the tower alight and breaches the wall; a thesis
  * flagged for review is an amber notice. Both carry a symbol, so colour is
  * never the only cue. */
-function ThesisMarks({ item }: { item: PlacedTower }) {
+function ThesisMarks({ item, art = false }: { item: PlacedTower; art?: boolean }) {
   const { tower, x, y, w, h } = item;
   if (tower.thesis !== "breached" && tower.thesis !== "review") return null;
   const top = y - h;
@@ -764,10 +845,10 @@ function ThesisMarks({ item }: { item: PlacedTower }) {
       {/* the breach */}
       <path
         d={`M${gapX} ${top + h * 0.2} l9 8 l-5 7 l8 9 l-6 8 l5 10 l-14 0 l-3 -12 l6 -8 l-7 -9 Z`}
-        fill="#0b0705"
-        stroke="#ff7a3a"
-        strokeOpacity={0.85}
-        strokeWidth={1.3}
+        fill={art ? INK : "#0b0705"}
+        stroke={art ? "#ff9a4a" : "#ff7a3a"}
+        strokeOpacity={art ? 0.55 : 0.85}
+        strokeWidth={art ? 1 : 1.3}
       />
       {[[3, 5, 9], [w - 14, 7, 11], [w * 0.35, 4, 7]].map(([dx, hh, ww], i) => (
         <rect key={i} x={x + dx} y={y - hh} width={ww} height={hh} fill={i === 1 ? "#6b6155" : "#5c5348"} stroke="#000" strokeOpacity={0.4} />
@@ -801,7 +882,7 @@ function ThesisMarks({ item }: { item: PlacedTower }) {
 
 /** Siege ladders against the wall, only while the weather is gathering or
  * worse and only for towers the stored stress scenario hits hard. */
-function Ladders({ item, level }: { item: PlacedTower; level: FortressSiegeLevel | null }) {
+function Ladders({ item, level, art = false }: { item: PlacedTower; level: FortressSiegeLevel | null; art?: boolean }) {
   const count = ladderCount(item.tower.siege_exposure, level);
   if (count === 0) return null;
   const { x, y, w, h } = item;
@@ -816,10 +897,10 @@ function Ladders({ item, level }: { item: PlacedTower; level: FortressSiegeLevel
     }));
     return (
       <g key={side} strokeLinecap="round">
-        <line x1={baseX - 3} y1={y} x2={topX - 3} y2={topY} stroke="#2a1a0b" strokeWidth={3.2} />
-        <line x1={baseX + 3} y1={y} x2={topX + 3} y2={topY} stroke="#2a1a0b" strokeWidth={3.2} />
-        <line x1={baseX - 3} y1={y} x2={topX - 3} y2={topY} stroke="#a57a42" strokeWidth={1.8} />
-        <line x1={baseX + 3} y1={y} x2={topX + 3} y2={topY} stroke="#a57a42" strokeWidth={1.8} />
+        <line x1={baseX - 3} y1={y} x2={topX - 3} y2={topY} stroke={art ? INK : "#2a1a0b"} strokeWidth={art ? 3.8 : 3.2} />
+        <line x1={baseX + 3} y1={y} x2={topX + 3} y2={topY} stroke={art ? INK : "#2a1a0b"} strokeWidth={art ? 3.8 : 3.2} />
+        <line x1={baseX - 3} y1={y} x2={topX - 3} y2={topY} stroke={art ? "#8A5432" : "#a57a42"} strokeWidth={1.8} />
+        <line x1={baseX + 3} y1={y} x2={topX + 3} y2={topY} stroke={art ? "#8A5432" : "#a57a42"} strokeWidth={1.8} />
         {rungs.map((r, i) => (
           <line key={i} x1={r.cx - 3.5} y1={r.cy} x2={r.cx + 3.5} y2={r.cy} stroke="#8a6438" strokeWidth={1.6} />
         ))}
@@ -1194,6 +1275,14 @@ function TowerFigure({
 }) {
   const { tower, x, y, w, h } = item;
   const pad = 26;
+  const artOn = useArtMode() === "stitch";
+  const [artFailed, setArtFailed] = useState(false);
+  const artId = artOn && !artFailed ? towerArtId(tower) : null;
+  const placement = artId ? placeTowerArt(artId, item) : null;
+  // Overlays (ivy, crack, breach, ladders, bridge) were drawn against the old
+  // body box; hand them the picture's walls so they land on the picture.
+  const body: PlacedTower = placement ? { ...item, ...overlayBox(placement, item) } : item;
+  const grade = worldPalette(level).grade;
   const onKey = (e: KeyboardEvent<SVGGElement>) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
@@ -1203,7 +1292,7 @@ function TowerFigure({
       onNavigate(tower.holding_id, e.key);
     }
   };
-  const crown = crownY(item);
+  const crown = placement ? placement.top : crownY(item);
   return (
     <g
       role="button"
@@ -1223,13 +1312,17 @@ function TowerFigure({
       <ellipse className="fortress-ring" cx={x + w / 2} cy={y + 8} rx={w / 2 + 20} ry={14} fill="none" strokeWidth={2.5} />
       <ellipse className="fortress-ring-inner" cx={x + w / 2} cy={y + 8} rx={w / 2 + 14} ry={10} fill="none" strokeWidth={1} />
       <g className="fortress-rise" style={{ animationDelay: `${item.index * 70}ms` }}>
-        <GroundShadow x={x} y={y} w={w} />
-        <Drawbridge item={item} />
-        <TowerBody item={item} />
-        <Weathering item={item} />
-        <KnifeEdgeCrack item={item} />
-        <ThesisMarks item={item} />
-        <Ladders item={item} level={level} />
+        {placement ? <GroundShadow x={placement.left} y={y} w={placement.width} /> : <GroundShadow x={x} y={y} w={w} />}
+        <Drawbridge item={body} art={!!placement} />
+        {placement ? (
+          <TowerArtBody placement={placement} tower={tower} grade={grade} onFail={() => setArtFailed(true)} />
+        ) : (
+          <TowerBody item={item} />
+        )}
+        <Weathering item={body} art={!!placement} />
+        <KnifeEdgeCrack item={body} art={!!placement} />
+        <ThesisMarks item={body} art={!!placement} />
+        <Ladders item={body} level={level} art={!!placement} />
         {raven && <RavenMark x={x + w / 2 + Math.min(18, w / 3)} y={crown + 2} />}
       </g>
       <NamePlate item={item} />
