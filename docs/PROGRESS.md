@@ -1,26 +1,24 @@
 # Aladdin — Progress
 
-**Last updated:** 2026-10-11 (Stitch Master object art, Phase A). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
+**Last updated:** 2026-10-11 (Design Master review and sprint plan). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
 
 ## Current Objective
 
-Phase 11, the Buffett/Munger rebuild, is stable and merged; game mode follows the [team review](game-mode-team-review-2026-10-09.md) order. Merged on `main` (through `d4d0a70`, #87): the scroll reader, Scrolls library, Sprint 28 fog of war (#79, #80), ravens (#81), integrity fixes (#84), the Fortress art pass (#85), Long Memory B1 (#86; [write-up](long-memory-b1-2026-10-09.md)) and Knife-edge A1 (#87; [write-up](knife-edge-a1-2026-10-09.md)). Faiz confirmed the earlier review and deploy tasks OK on 2026-10-09 ([archive](archive/progress-archive.md)). Nothing else in flight. Next in order: C1 Siege back-test, D1 Plain lens, D2 Camera, B2 Then and Now; also the rest of Sprint 29 (G40 tour, G38 sounds) and Sprint 26a (game pages in the smoke test, word budgets).
+Waiting for Faiz to approve the **Design Master sprint plan**: how the 52 new Stitch objects replace the drawn ones in the app, behind `?art=stitch|svg`, in Sprints 0-7. Nothing from it is built; the plan covers 41 of 56 object slots on the pages that can use pictures (73%) and lists what to generate next. Plan: [design-master-sprint-plan-2026-10-11.md](design-master-sprint-plan-2026-10-11.md); style, rules and prompts for the missing objects: [stitch-master-object-art-2026-10-11.md](stitch-master-object-art-2026-10-11.md).
 
-**Stitch Master object art (2026-10-11, Phase A written, PR open, not merged, not deployed):** Faiz decided: allow teal and ink-outline object art, objects only (not the Stitch UI system), Sal's stall in teal and cream, raster behind a switch with SVG fallback, start with the Marketplace. Reading `main` showed the stall awnings and shopkeeper carry data, so only Sal's strip and the empty street got pictures (`?art=stitch`, default SVG). Branch `feature/stitch-objects-booths`. Next: Faiz generates S2-S9 (tower kit) and S13 (real Sal counter) in Stitch. Write-up: [stitch-master-object-art-2026-10-11.md](stitch-master-object-art-2026-10-11.md).
+Phase 11 (the Buffett/Munger rebuild) is stable. Game mode follows the [team review](game-mode-team-review-2026-10-09.md) order. Merged on `main` (checked against git 2026-10-11, head `e939577`): #84-#87 (integrity, Fortress art pass, Long Memory, Knife-edge), #88-#93 (identity and the game design challenge), #97-#100 (Stitch design passes), #101 (Stitch objects, Phase A). Deploy of any of them is not verified. Nothing else in flight. Next mechanics in order: C1 Siege back-test, D1 Plain lens, D2 Camera, B2 Then and Now; also the rest of Sprint 29 (G40 tour, G38 sounds) and Sprint 26a (game pages in the smoke test, word budgets).
 
-**Game design challenge (2026-10-09, written, PR open, not merged, not deployed):** Faiz challenged the design team on three tabs and the dispatch details. Branch `feature/game-design-challenge`: Records is a stone hall of tomes with wax seals and a reading desk; Circle moved to a dark night-chart palette; Map is a generated fantasy continent (provinces = sectors, settlements = holdings, fog patches on top, pan/zoom, ships and sea drift); Night Watch "Break the seal: dispatch details" is a gilded sealed-letter button. Seen only in a headless browser against fake data, not on real data. Write-up: [game-design-challenge-2026-10-09.md](game-design-challenge-2026-10-09.md). Identity PRs #88-#92 are on `main` per git log (deploy not verified).
-
-State (checked against git 2026-10-09): `origin/main` = `d4d0a70` (#87 Knife-edge merged); the local checkout `E:\Aladdin` is stale (on `feature/currency-edit-and-nok-equivalent`, with uncommitted edits), so build from fresh `main`. Repo migration head `t1f2a3b4c5d6`, confirmed on Supabase by Faiz. Whether #84–#87 are deployed is not verified. Live URLs: frontend `https://exciting-gratitude-production-71b5.up.railway.app`, backend `https://aladdin-production-bd25.up.railway.app`.
+State: the local checkout `E:\Aladdin` is stale (on `feature/currency-edit-and-nok-equivalent`, uncommitted edits, and 103 MB of untracked art under `frontend/public/art/`, not git-ignored); build from fresh `main`. Repo migration head `t1f2a3b4c5d6`, confirmed on Supabase by Faiz. Live URLs: frontend `https://exciting-gratitude-production-71b5.up.railway.app`, backend `https://aladdin-production-bd25.up.railway.app`.
 
 ## Active Tasks
 
-- [ ] **Review Stitch objects Phase A (Faiz):** after deploy open the Marketplace with `?art=stitch` (dark, light, phone); then generate S2-S9 and S13 in Stitch from the write-up's prompts
-- [ ] **Stitch design pass (Faiz, review):** pass 1 merged (#97). Open PRs, not merged, not deployed: Chronicle spine (#98), Marketplace stall plates (#99), Map legend weights (`feature/stitch-circle-map`); Circle needed no change ([write-up](stitch-design-pass-2026-10-10.md)). Check each on real data, dark/light, phone.
-- [ ] **Review and merge (Faiz):** the game design challenge PR; then look at Records, Circle, Map and the Night Watch seal on real data, at phone width, in Plain view and with reduced motion
-- [ ] **Review the Knife-edge result (Faiz):** merged as #87 (git log checked 2026-10-09), still never seen in a browser; after deploy click a stock tower on Fortress: the Walls block lists the distance to the next tier and a tower within 10% of a weaker line shows a thin crack ([write-up](knife-edge-a1-2026-10-09.md))
-- [ ] **Review the Long Memory result (Faiz):** open Fortress → Chronicle; any day since 2026-10-07 the worker was off should appear under "What the record cannot show" ([write-up](long-memory-b1-2026-10-09.md))
-- [ ] **Decide (Faiz):** next mechanics slice from the team review: C1 Siege back-test, D1 Plain lens or D2 Camera; and whether a knife-edge tower may appear on the Council agenda
-- [ ] **Re-score identity with screenshots:** the page scores are inferred from code, not seen in a browser
+- [ ] **Approve the Design Master plan (Faiz):** the nine decisions in Part 5 of the plan (silhouette rule, baked pennants, map markers, stalls, default, cleanup, other rooms)
+- [ ] **Generate the missing objects in Stitch (Faiz), after approval:** batch 1 (wall segment, corner bastion, genie, well, haystack, bush) and batch 2 (map pieces, Oracle, Partner, Sal cheer, shopkeeper faces); prompts in the master doc, Part 6
+- [ ] **Clean up art folders (Faiz or Claude with delete permission):** `frontend/public/art/stitch_master` and `new` are retired copies; masters move out of `public/` in Sprint 0
+- [ ] **Look at the merged game PRs on real data (Faiz):** Records, Circle, Map, Night Watch seal, Chronicle spine, Marketplace plates and Phase A (`?art=stitch`); dark and light, phone, Plain view, reduced motion
+- [ ] **Check Knife-edge and Long Memory after deploy (Faiz):** click a stock tower on Fortress (distance to the next tier, thin crack within 10%); Chronicle shows days the worker was off under "What the record cannot show" ([knife-edge](knife-edge-a1-2026-10-09.md), [long memory](long-memory-b1-2026-10-09.md))
+- [ ] **Decide (Faiz):** next mechanics slice (C1 Siege back-test, D1 Plain lens or D2 Camera) and whether a knife-edge tower may appear on the Council agenda
+- [ ] **Re-score identity with screenshots:** page scores are inferred from code, not seen in a browser (first step of Sprint 7)
 
 ## Recent Blockers / Open Questions
 
@@ -31,8 +29,7 @@ State (checked against git 2026-10-09): `origin/main` = `d4d0a70` (#87 Knife-edg
 - **Holding currency:** whether any holding was saved with a wrong currency is unchecked; if the Holdings column shows USD/EUR for a NOK holding, the CSV "Valuta" import is the cause
 - **Housekeeping decisions:** remove 4 unused manual snapshot/position endpoints; drop the legacy analysis tables (empty since the wipe; CLAUDE.md says leave them until Faiz asks)
 - **Known data gaps** (Kongsberg/Bouvet D&A, Salmon FY2020–21 scale, duplicate market observations, stale EUR rate, Risk and Performance cover 5 of 8 holdings): see [overview](data-gaps-overview-2026-10-03.md); fund yearly returns still to be typed in
-- **Manual:** the claude.ai project instructions still hold the older, shorter progress rules; paste the new ones in by hand
 
 ## Archive Pointer
 
-Completed milestones moved to [`/docs/archive/progress-archive.md`](archive/progress-archive.md) (full 2026-10-07 snapshot: needs, known issues, roadmap, feature index and the dated change history, verbatim). Older: [`archive/PROGRESS-full-2026-09-30.md`](archive/PROGRESS-full-2026-09-30.md). Per-topic write-ups live in `docs/` and are linked above.
+Completed milestones moved to [`/docs/archive/progress-archive.md`](archive/progress-archive.md) (newest first: 2026-10-11 design passes and Phase A, 2026-10-09 review tasks, then the full 2026-10-07 snapshot). Older: [`archive/PROGRESS-full-2026-09-30.md`](archive/PROGRESS-full-2026-09-30.md). Per-topic write-ups live in `docs/` and are linked above.
