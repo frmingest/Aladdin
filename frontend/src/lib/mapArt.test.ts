@@ -1,11 +1,18 @@
 import { describe, expect, it } from "vitest";
 import {
+  COMPASS_SIZE,
   MAP_KEEP_H,
   SETTLEMENT_MAX,
   pineRect,
   placeLandmarks,
   placeMapKeep,
   placeSettlementArt,
+  compassRect,
+  hillArtId,
+  hillRect,
+  mountainArtId,
+  mountainRect,
+  serpentRect,
   propOnGround,
   rockRect,
   settlementArtId,
@@ -130,5 +137,47 @@ describe("placeLandmarks", () => {
     expect(bare.island).toBeNull();
     expect(bare.palms).toEqual([]);
     expect(bare.port).not.toBeNull();
+  });
+});
+
+describe("map scenery pictures (Sprint 6)", () => {
+  const g = (v: number, s = 1) => ({ x: 100, y: 200, s, v });
+
+  it("picks a mountain picture from the glyph's own number: bare for low, snow-capped for high, always stable", () => {
+    expect(mountainArtId(g(0))).toBe("map-mountain-bare-a");
+    expect(mountainArtId(g(0.3))).toBe("map-mountain-bare-b");
+    expect(mountainArtId(g(0.6))).toBe("map-mountain-snow-a");
+    expect(mountainArtId(g(0.999))).toBe("map-mountain-snow-b");
+    expect(mountainArtId(g(1))).toBe("map-mountain-snow-b");
+    expect(mountainArtId(g(0.42))).toBe(mountainArtId(g(0.42)));
+  });
+
+  it("stands a mountain on its glyph, keeping the picture's proportions", () => {
+    const r = mountainRect(g(0.6, 1.2));
+    const art = OBJECT_ART[r.id];
+    expect(r.width / r.height).toBeCloseTo(art.width / art.height, 5);
+    expect(r.x + r.width / 2).toBeCloseTo(100, 5);
+    expect(r.y + r.height).toBeGreaterThan(200);
+  });
+
+  it("uses the grassy mound for most hills and rocks for the rest", () => {
+    expect(hillArtId(g(0.1))).toBe("prop-rocks");
+    expect(hillArtId(g(0.9))).toBe("map-hill");
+    expect(hillRect(g(0.9)).id).toBe("map-hill");
+    expect(hillRect(g(0.1)).id).toBe("prop-rocks");
+  });
+
+  it("centres the compass rose on its water spot and keeps it round", () => {
+    const r = compassRect({ x: 800, y: 500 });
+    expect(r.id).toBe("map-compass");
+    expect(r.width).toBe(COMPASS_SIZE);
+    expect(r.x + r.width / 2).toBeCloseTo(800, 5);
+    expect(r.y + r.height / 2).toBeCloseTo(500, 5);
+  });
+
+  it("puts the serpent's coils on the water spot", () => {
+    const r = serpentRect({ x: 200, y: 600 });
+    expect(r.id).toBe("map-serpent");
+    expect(r.x + r.width / 2).toBeCloseTo(200, 5);
   });
 });

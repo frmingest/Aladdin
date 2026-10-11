@@ -43,6 +43,28 @@ import boothGoods from "../assets/art/booth-goods.webp";
 import salPitch from "../assets/art/sal-pitch.webp";
 import salOops from "../assets/art/sal-oops.webp";
 import salThink from "../assets/art/sal-think.webp";
+import wallSegment from "../assets/art/wall-segment.webp";
+import cornerBastion from "../assets/art/corner-bastion.webp";
+import genieHappy from "../assets/art/genie-happy.webp";
+import genieWow from "../assets/art/genie-wow.webp";
+import genieSorry from "../assets/art/genie-sorry.webp";
+import propWell from "../assets/art/prop-well.webp";
+import propHaystack from "../assets/art/prop-haystack.webp";
+import propBush from "../assets/art/prop-bush.webp";
+import mapMountainSnowA from "../assets/art/map-mountain-snow-a.webp";
+import mapMountainSnowB from "../assets/art/map-mountain-snow-b.webp";
+import mapMountainBareA from "../assets/art/map-mountain-bare-a.webp";
+import mapMountainBareB from "../assets/art/map-mountain-bare-b.webp";
+import mapHill from "../assets/art/map-hill.webp";
+import mapSerpent from "../assets/art/map-serpent.webp";
+import mapCompass from "../assets/art/map-compass.webp";
+import bustOracle from "../assets/art/bust-oracle.webp";
+import bustPartner from "../assets/art/bust-partner.webp";
+import salCheer from "../assets/art/sal-cheer.webp";
+import shopkeeperPromising from "../assets/art/shopkeeper-promising.webp";
+import shopkeeperWait from "../assets/art/shopkeeper-wait.webp";
+import shopkeeperPass from "../assets/art/shopkeeper-pass.webp";
+import shopkeeperUnknown from "../assets/art/shopkeeper-unknown.webp";
 
 export interface PackedArt {
   src: string;
@@ -97,4 +119,26 @@ export const ART_MANIFEST = {
   "sal-pitch": { src: salPitch, width: 383, height: 384, alt: "" },
   "sal-oops": { src: salOops, width: 332, height: 384, alt: "" },
   "sal-think": { src: salThink, width: 384, height: 368, alt: "" },
+  "wall-segment": { src: wallSegment, width: 512, height: 212, alt: "" },
+  "corner-bastion": { src: cornerBastion, width: 384, height: 350, alt: "" },
+  "genie-happy": { src: genieHappy, width: 273, height: 384, alt: "" },
+  "genie-wow": { src: genieWow, width: 228, height: 384, alt: "" },
+  "genie-sorry": { src: genieSorry, width: 231, height: 384, alt: "" },
+  "prop-well": { src: propWell, width: 275, height: 384, alt: "" },
+  "prop-haystack": { src: propHaystack, width: 383, height: 384, alt: "" },
+  "prop-bush": { src: propBush, width: 384, height: 298, alt: "" },
+  "map-mountain-snow-a": { src: mapMountainSnowA, width: 384, height: 267, alt: "" },
+  "map-mountain-snow-b": { src: mapMountainSnowB, width: 384, height: 284, alt: "" },
+  "map-mountain-bare-a": { src: mapMountainBareA, width: 384, height: 261, alt: "" },
+  "map-mountain-bare-b": { src: mapMountainBareB, width: 384, height: 260, alt: "" },
+  "map-hill": { src: mapHill, width: 384, height: 214, alt: "" },
+  "map-serpent": { src: mapSerpent, width: 384, height: 281, alt: "" },
+  "map-compass": { src: mapCompass, width: 384, height: 384, alt: "" },
+  "bust-oracle": { src: bustOracle, width: 321, height: 384, alt: "" },
+  "bust-partner": { src: bustPartner, width: 288, height: 384, alt: "" },
+  "sal-cheer": { src: salCheer, width: 384, height: 368, alt: "" },
+  "shopkeeper-promising": { src: shopkeeperPromising, width: 367, height: 384, alt: "" },
+  "shopkeeper-wait": { src: shopkeeperWait, width: 329, height: 384, alt: "" },
+  "shopkeeper-pass": { src: shopkeeperPass, width: 370, height: 384, alt: "" },
+  "shopkeeper-unknown": { src: shopkeeperUnknown, width: 384, height: 351, alt: "" },
 } as const satisfies Record<string, PackedArt>;

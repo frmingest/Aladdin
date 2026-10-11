@@ -1034,12 +1034,40 @@ function Crenels({ x, top, w, step = 18, mw = 11, mh = 10, base = "#8a909a", pat
   );
 }
 
+/** Art mode: merlon height the wall picture adds above the old wall top, the bastion picture's height,
+ * where its tower sits across it (fraction of width) and how far its foot sinks below the ground line. */
+const WALL_MERLON_H = 10;
+const BASTION_ART_H = 100;
+const BASTION_ART_CX = 0.5;
+const BASTION_ART_SINK = 6;
+
 /** The curtain wall that joins every tower of a row into one rampart. */
-function CurtainWall({ row, ...handlers }: { row: number } & RealmHandlers) {
+function CurtainWall({ row, grade, ...handlers }: { row: number; grade: string } & RealmHandlers) {
   const y = groundY(row);
   const x0 = WALL_EDGE;
   const w = SCENE_WIDTH - WALL_EDGE * 2;
   const top = y - CURTAIN_HEIGHT;
+  const artOn = useArtMode() === "stitch";
+  const [artFailed, setArtFailed] = useState(false);
+  if (artOn && !artFailed) {
+    // Sprint 6: the Stitch wall segment tiled along the row. The picture carries its own merlons
+    // (WALL_MERLON_H above the old top edge) and no fact. Two pixels are trimmed off each side of
+    // the tile so the keyed edges never show as a seam.
+    const art = OBJECT_ART["wall-segment"];
+    const tileH = CURTAIN_HEIGHT + WALL_MERLON_H;
+    const tileW = (tileH * art.width) / art.height;
+    const pid = `fs-wall-tile-${row}`;
+    return (
+      <RealmPart {...handlers}>
+        <defs>
+          <pattern id={pid} x={x0} y={top - WALL_MERLON_H} width={tileW - 4} height={tileH} patternUnits="userSpaceOnUse">
+            <image href={art.src} x={-2} y={0} width={tileW} height={tileH} preserveAspectRatio="none" onError={() => setArtFailed(true)} />
+          </pattern>
+        </defs>
+        <rect x={x0} y={top - WALL_MERLON_H} width={w} height={tileH} fill={`url(#${pid})`} style={{ filter: grade }} />
+      </RealmPart>
+    );
+  }
   return (
     <RealmPart {...handlers}>
       <g filter="url(#fs-grain)">
@@ -1061,11 +1089,36 @@ function CurtainWall({ row, ...handlers }: { row: number } & RealmHandlers) {
 }
 
 /** A round corner bastion at each end of a curtain wall. */
-function Bastion({ x, y, ...handlers }: { x: number; y: number } & RealmHandlers) {
+function Bastion({ x, y, mirror = false, grade, ...handlers }: { x: number; y: number; mirror?: boolean; grade: string } & RealmHandlers) {
   const w = 46;
   const h = 86;
   const top = y - h;
   const cx = x + w / 2;
+  const artOn = useArtMode() === "stitch";
+  const [artFailed, setArtFailed] = useState(false);
+  if (artOn && !artFailed) {
+    // Sprint 6: the Stitch corner bastion (round tower with a wall stub each side), standing on the
+    // row's ground line, centred on the old bastion. The right-hand one is mirrored.
+    const art = OBJECT_ART["corner-bastion"];
+    const ph = BASTION_ART_H;
+    const pw = (ph * art.width) / art.height;
+    return (
+      <RealmPart {...handlers}>
+        <GroundShadow x={x} y={y} w={w} />
+        <image
+          href={art.src}
+          x={cx - pw * BASTION_ART_CX}
+          y={y - ph + BASTION_ART_SINK}
+          width={pw}
+          height={ph}
+          preserveAspectRatio="none"
+          transform={mirror ? `translate(${2 * cx} 0) scale(-1 1)` : undefined}
+          style={{ filter: grade }}
+          onError={() => setArtFailed(true)}
+        />
+      </RealmPart>
+    );
+  }
   return (
     <RealmPart {...handlers}>
       <GroundShadow x={x} y={y} w={w} />
@@ -1613,9 +1666,9 @@ export default function FortressScene({
             <g key={r}>
               <MoatRuns runs={runs.filter((run) => run.row === r)} />
               {r === 0 && <Causeway keep={layout.keep} />}
-              <CurtainWall row={r} {...handlers} />
-              <Bastion x={6} y={y} {...handlers} />
-              <Bastion x={SCENE_WIDTH - 52} y={y} {...handlers} />
+              <CurtainWall row={r} grade={palette.grade} {...handlers} />
+              <Bastion x={6} y={y} grade={palette.grade} {...handlers} />
+              <Bastion x={SCENE_WIDTH - 52} y={y} mirror grade={palette.grade} {...handlers} />
               {r === 0 && (
                 <GreatKeep keep={layout.keep} level={realmLevel} lit={anyFresh} count={layout.items.length} grade={palette.grade} {...handlers} />
               )}

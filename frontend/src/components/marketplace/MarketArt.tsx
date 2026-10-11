@@ -3,6 +3,8 @@ import type { Gate, GateStatus } from "../../lib/marketplace";
 import { GATE_STATUS_LABEL } from "../../lib/marketplace";
 import { STATUS_PAINT } from "../../lib/marketplacePaint";
 import type { StoreLevel } from "../../lib/marketplace";
+import { shopkeeperFaceId } from "../../lib/marketArt";
+import ObjectArtImage from "../ObjectArtImage";
 
 /**
  * Painted pieces for the Marketplace (game mode, G9): awnings, the merchant,
@@ -45,8 +47,15 @@ export function Awning({ a, b, stripes = 10, className = "" }: { a: string; b: s
   );
 }
 
-/** The merchant: a generic drawn shopkeeper, not anyone's likeness. */
+/** The merchant: the Stitch face for the verdict when art is on (four of the five), else a generic drawn shopkeeper, not anyone's likeness. */
 export function Merchant({ level, size = 84 }: { level: StoreLevel; size?: number }) {
+  const face = shopkeeperFaceId(level);
+  const svg = <MerchantSvg level={level} size={size} />;
+  if (!face) return svg;
+  return <ObjectArtImage id={face} width={Math.round(size * 1.15)} fallback={svg} />;
+}
+
+function MerchantSvg({ level, size }: { level: StoreLevel; size: number }) {
   const mouth =
     level === "ready"
       ? "M30 56 Q42 66 54 56"

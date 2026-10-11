@@ -13,7 +13,8 @@ const SOURCE = JSON.parse(readFileSync(resolve(FRONTEND, "../scripts/art/manifes
   objects: { id: string }[];
 };
 const MAX_FILE_KB = 60;
-const MAX_TOTAL_KB = 1200;
+// Raised from 1200 in Design Master Sprint 6 (23 more pictures). Pictures load only when a view uses them.
+const MAX_TOTAL_KB = 1700;
 const MAX_PUBLIC_IMAGE_KB = 150;
 
 const sourceIds = SOURCE.objects.map((o) => o.id);

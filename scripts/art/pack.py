@@ -15,7 +15,8 @@ art-masters/Design_master (gitignored; Vite never sees it). Never under public/.
 
 Key modes (manifest "key"):
   white         flood-fill from the border over near-white; white INSIDE the
-                object (a cream awning stripe) is kept. Default.
+                object (a cream awning stripe) is kept. Default. "enclosed": false
+                also keeps big pure-white regions inside (the genie's white cloud).
   sampled       like white, but the background colour is sampled from the
                 border (Sal's busts sit on a pale lavender or cream tint).
   glow          soft alpha from the distance to white, for glow and smoke that
@@ -69,13 +70,13 @@ def _border_labels(mask: np.ndarray) -> np.ndarray:
     return np.isin(lab, list(border))
 
 
-def key_white(img: Image.Image, white_min: int = WHITE_MIN) -> Image.Image:
+def key_white(img: Image.Image, white_min: int = WHITE_MIN, enclosed: bool = True) -> Image.Image:
     a = np.asarray(img.convert("RGB")).astype(int)
     bg = _border_labels(a.min(axis=2) >= white_min)
     # Pure-white openings enclosed by the object (e.g. the open back of a stall)
     # are background too; cream and parchment stay because their min channel is lower.
     pure = a.min(axis=2) >= ENCLOSED_WHITE_MIN
-    plab, pn = ndi.label(pure)
+    plab, pn = ndi.label(pure) if enclosed else (None, 0)
     if pn:
         sizes = ndi.sum(pure, plab, range(1, pn + 1))
         bg |= np.isin(plab, [i + 1 for i, z in enumerate(sizes) if z >= ENCLOSED_MIN_AREA])
@@ -121,7 +122,7 @@ def key_erase_shadow(img: Image.Image) -> Image.Image:
 def key_image(img: Image.Image, spec: dict) -> Image.Image:
     mode = spec.get("key", "white")
     if mode == "white":
-        return key_white(img, spec.get("white_min", WHITE_MIN))
+        return key_white(img, spec.get("white_min", WHITE_MIN), spec.get("enclosed", True))
     if mode == "sampled":
         return key_sampled(img, spec.get("tol", SAMPLED_TOL))
     if mode == "glow":

@@ -656,6 +656,111 @@
    "master": 19,
    "source": "cartoon_fantasy_medieval_character_bust_portrait_of_sal_the_merchant_clerk_1",
    "key": "sampled"
+  },
+  {
+   "id": "wall-segment",
+   "source": "cartoon_fantasy_medieval_straight_stone_curtain_wall_segment_the_connecting",
+   "max_side": 512
+  },
+  {
+   "id": "corner-bastion",
+   "source": "cartoon_fantasy_medieval_defensive_corner_bastion_tower_asset_vibrant_2d_casual"
+  },
+  {
+   "id": "genie-happy",
+   "source": "stylized_2d_video_game_character_art_of_a_friendly_blue_elemental_sky_creature",
+   "enclosed": false
+  },
+  {
+   "id": "genie-wow",
+   "source": "same_character_as_data_image_image_74_stylized_2d_video_game_character_art_of_2",
+   "enclosed": false
+  },
+  {
+   "id": "genie-sorry",
+   "source": "same_character_as_data_image_image_74_stylized_2d_video_game_character_art_of_1",
+   "enclosed": false
+  },
+  {
+   "id": "prop-well",
+   "source": "cartoon_fantasy_medieval_prop_asset_a_small_round_stone_water_well_vibrant_2d"
+  },
+  {
+   "id": "prop-haystack",
+   "source": "cartoon_fantasy_medieval_prop_asset_a_round_haystack_with_a_wooden_pitchfork"
+  },
+  {
+   "id": "prop-bush",
+   "source": "cartoon_fantasy_medieval_terrain_prop_asset_a_low_lush_bush_with_small_flowers"
+  },
+  {
+   "id": "map-mountain-snow-a",
+   "source": "cartoon_fantasy_map_terrain_prop_asset_mountain_range_with_snow_caps_variant_a"
+  },
+  {
+   "id": "map-mountain-snow-b",
+   "source": "cartoon_fantasy_map_terrain_prop_asset_mountain_range_with_snow_caps_vibrant_2d"
+  },
+  {
+   "id": "map-mountain-bare-a",
+   "source": "cartoon_fantasy_map_terrain_prop_asset_mountain_range_bare_variant_no_snow"
+  },
+  {
+   "id": "map-mountain-bare-b",
+   "source": "modify_data_image_image_17_cartoon_fantasy_map_terrain_prop_asset_mountain_2"
+  },
+  {
+   "id": "map-hill",
+   "source": "cartoon_fantasy_map_terrain_prop_asset_hill_rounded_grassy_mound_with_a_few"
+  },
+  {
+   "id": "map-serpent",
+   "source": "cartoon_fantasy_map_sea_monster_asset_sea_serpent_coiled_in_water_ripples"
+  },
+  {
+   "id": "map-compass",
+   "source": "cartoon_fantasy_map_ornament_asset_compass_rose_decoration_vibrant_2d_casual"
+  },
+  {
+   "id": "bust-oracle",
+   "source": "cartoon_fantasy_medieval_character_bust_portrait_of_an_oracle_vibrant_2d_casual",
+   "key": "sampled",
+   "tol": 9
+  },
+  {
+   "id": "bust-partner",
+   "source": "cartoon_fantasy_medieval_character_bust_portrait_of_a_partner_vibrant_2d_casual",
+   "key": "sampled",
+   "tol": 9
+  },
+  {
+   "id": "sal-cheer",
+   "source": "modify_data_image_image_20_cartoon_fantasy_medieval_character_bust_portrait_of",
+   "key": "sampled"
+  },
+  {
+   "id": "shopkeeper-promising",
+   "source": "cartoon_fantasy_medieval_character_bust_portrait_of_the_exact_same_store_2",
+   "key": "sampled",
+   "tol": 9
+  },
+  {
+   "id": "shopkeeper-wait",
+   "source": "cartoon_fantasy_medieval_character_bust_portrait_of_the_exact_same_store_1",
+   "key": "sampled",
+   "tol": 9
+  },
+  {
+   "id": "shopkeeper-pass",
+   "source": "cartoon_fantasy_medieval_character_bust_portrait_of_the_exact_same_store_3",
+   "key": "sampled",
+   "tol": 9
+  },
+  {
+   "id": "shopkeeper-unknown",
+   "source": "cartoon_fantasy_medieval_character_bust_portrait_of_the_exact_same_store_4",
+   "key": "sampled",
+   "tol": 9
   }
  ]
 }

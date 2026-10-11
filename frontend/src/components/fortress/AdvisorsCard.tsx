@@ -7,6 +7,7 @@ import {
 } from "../../lib/fortress";
 import type { GameAdvisorLine, GameAdvisorName, GameAdvisors, GameAdvisorTone } from "../../lib/types";
 import { Card } from "../ui";
+import ObjectArtImage from "../ObjectArtImage";
 
 /** Game mode G7b: the two advisors. Every line is hand-written text chosen by a
  * fixed rule over the stored state (backend/app/services/game/advisors.py);
@@ -24,6 +25,18 @@ const TONE_CLASS: Record<GameAdvisorTone, string> = {
  * look, and a sharp-eyed sceptic. Not likenesses of any real person. */
 export function Portrait({ who }: { who: GameAdvisorName }) {
   const ring = who === "oracle" ? "#d9a93e" : "#9aa4b8";
+  const svg = <PortraitSvg who={who} ring={ring} />;
+  return (
+    <ObjectArtImage
+      id={who === "oracle" ? "bust-oracle" : "bust-partner"}
+      width={44}
+      className={`portrait-art${who === "oracle" ? " portrait-art-oracle" : ""}`}
+      fallback={svg}
+    />
+  );
+}
+
+function PortraitSvg({ who, ring }: { who: GameAdvisorName; ring: string }) {
   return (
     <svg viewBox="0 0 44 44" className="h-11 w-11 shrink-0" role="img" aria-label={ADVISOR_NAME[who]}>
       <circle cx="22" cy="22" r="20.5" fill="#20170e" stroke={ring} strokeWidth="2" />
