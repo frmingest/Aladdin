@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { OBJECT_ART } from "./stitchArt";
-import { overlayBox, placeGreatKeep, placeTowerArt, towerArtId } from "./towerArt";
+import { litWindows, overlayBox, placeGreatKeep, placeTowerArt, towerArtId } from "./towerArt";
 import type { FortressSize, FortressStructure, FortressWall } from "./types";
 
 const WALLS: FortressWall[] = ["granite", "basalt", "brick", "timber", "rotted", "unsurveyed", "not_applicable"];
@@ -130,5 +130,44 @@ describe("structure and Great Keep placement", () => {
     expect(p.left + p.width / 2).toBeCloseTo(500, 5);
     expect(p.top + p.height).toBeCloseTo(p.ground, 5);
     expect(p.door?.cx).toBeCloseTo(500, 0);
+  });
+});
+
+describe("litWindows", () => {
+  const ids = Array.from({ length: 60 }, (_, i) => `holding-${i}`);
+
+  it("is stable for the same tower", () => {
+    for (const id of ids) expect([...litWindows(id, 5, "fresh")]).toEqual([...litWindows(id, 5, "fresh")]);
+  });
+
+  it("lights 3-5 of 5 windows when fresh, 1-2 when weathered, none otherwise", () => {
+    for (const id of ids) {
+      const f = litWindows(id, 5, "fresh").size;
+      const w = litWindows(id, 5, "weathered").size;
+      expect(f).toBeGreaterThanOrEqual(3);
+      expect(f).toBeLessThanOrEqual(5);
+      expect(w).toBeGreaterThanOrEqual(1);
+      expect(w).toBeLessThanOrEqual(2);
+      expect(f).toBeGreaterThan(w);
+      for (const fr of ["overgrown", "unsurveyed", "not_applicable"]) expect(litWindows(id, 5, fr).size).toBe(0);
+    }
+  });
+
+  it("varies which windows and how many across towers", () => {
+    expect(new Set(ids.map((id) => litWindows(id, 5, "fresh").size)).size).toBeGreaterThan(1);
+    expect(new Set(ids.map((id) => [...litWindows(id, 5, "fresh")].sort().join())).size).toBeGreaterThan(3);
+  });
+
+  it("keeps fresh above weathered and indexes in range for any window count", () => {
+    for (const n of [0, 1, 2, 3, 4, 5]) {
+      for (const id of ids) {
+        const f = litWindows(id, n, "fresh");
+        const w = litWindows(id, n, "weathered");
+        expect(f.size).toBeLessThanOrEqual(n);
+        if (n >= 3) expect(f.size).toBeGreaterThan(w.size);
+        if (n >= 1) expect(f.size).toBeGreaterThanOrEqual(1);
+        for (const i of f) expect(i).toBeLessThan(n);
+      }
+    }
   });
 });

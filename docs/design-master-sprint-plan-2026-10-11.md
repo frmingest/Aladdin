@@ -141,6 +141,7 @@ Every sprint is one branch off fresh `main` and one PR, behind `?art=stitch|svg`
 - Great Keep: `placeGreatKeep()` (236 px wide, centred on the keep box, standing on its ground). The picture carries no fact: the realm verdict is a flag on a pole in the forecourt (`TONE_BANNER`), the "THE REALM" plate and click target are unchanged, door glow and torches follow "any tower fresh". Weather grade applies to it.
 - Shantytown: the shack picture replaces the code shacks (height varies by index, smoke on heavy), one picture for many shacks.
 - Not done, by design: curtain wall and corner bastions stay code (Sprint 6, Stitch batch 1); gold store fullness variants beyond the three size classes.
+- Window light (Faiz, 2026-10-11, towers were far too lit): the glow and pane drawn over keeps are now 20% of the old light (`WINDOW_LIGHT`). How many windows are lit follows freshness: fresh 3-5 of 5, weathered 1-2, others none; which ones is a stable hash of the holding id (`litWindows()`), so a tower never changes between loads and fresh always shows more than weathered. Door glow and torches are unchanged.
 - Limits of this check: tests, tsc and lint pass; the scene was not rendered in a browser in this session, so placement of the verdict flag, door glow and vault height needs Faiz's eye on real data. Anchors were measured by eye on the packed pictures and may need a nudge.
 
 **Sprint 3: Siege camp and scene life (M).**

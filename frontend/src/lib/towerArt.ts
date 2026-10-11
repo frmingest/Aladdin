@@ -166,3 +166,45 @@ export function placeGreatKeep(
       : null;
   return { src: art.src, left, top, width, height, ground: keep.y + GROUND_DROP, door };
 }
+
+/** Share of the old window light that code now draws (2026-10-11: the towers were far too lit). */
+export const WINDOW_LIGHT = 0.2;
+
+/** A small stable hash, so the same tower always lights the same windows. */
+function hashId(id: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < id.length; i++) {
+    h ^= id.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+/**
+ * Which of a picture's windows are lit. Light is the freshness fact, so the
+ * COUNT follows freshness and only WHICH windows is varied (by a stable hash of
+ * the holding id, so a tower never flickers between loads): fresh lights more
+ * than half of them (3-5 of 5), weathered one or two, and the rest none. A
+ * fresh tower always shows more light than a weathered one.
+ */
+export function litWindows(holdingId: string, windowCount: number, freshness: string): Set<number> {
+  const n = windowCount;
+  if (n <= 0) return new Set();
+  const h = hashId(holdingId);
+  let count = 0;
+  if (freshness === "fresh") {
+    const min = Math.min(n, Math.floor(n / 2) + 1);
+    count = min + (h % (n - min + 1));
+  } else if (freshness === "weathered") {
+    const max = Math.max(1, Math.floor((n - 1) / 2));
+    count = 1 + ((h >>> 3) % max);
+  }
+  const order = Array.from({ length: n }, (_, i) => i);
+  let r = h || 1;
+  for (let i = n - 1; i > 0; i--) {
+    r = Math.imul(r, 1664525) + 1013904223;
+    const j = (r >>> 0) % (i + 1);
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+  return new Set(order.slice(0, count));
+}

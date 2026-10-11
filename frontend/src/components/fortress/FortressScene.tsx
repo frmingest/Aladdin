@@ -32,7 +32,7 @@ import LampLogo from "../LampLogo";
 import type { FortressShantytown, FortressSiegeLevel, FortressWall, GameSiege, GameTower } from "../../lib/types";
 import { worldPalette } from "../../lib/fortressArt";
 import { OBJECT_ART, useArtMode } from "../../lib/stitchArt";
-import { overlayBox, placeGreatKeep, placeTowerArt, towerArtId, type GreatKeepPlacement, type TowerArtPlacement } from "../../lib/towerArt";
+import { WINDOW_LIGHT, litWindows, overlayBox, placeGreatKeep, placeTowerArt, towerArtId, type GreatKeepPlacement, type TowerArtPlacement } from "../../lib/towerArt";
 import { SceneAmbience, SceneBackdrop, SceneDefs, SceneVignette } from "./sceneWorld";
 import MarketSquare, { MARKET_HEIGHT, type MarketSquareProps } from "./MarketSquare";
 import RavenMark from "./RavenMark";
@@ -474,8 +474,8 @@ function ArtWindow({ cx, cy, w, h }: { cx: number; cy: number; w: number; h: num
   const d = `M${x} ${top + h} V${top + w / 2} A${w / 2} ${w / 2} 0 0 1 ${x + w} ${top + w / 2} V${top + h} Z`;
   return (
     <g>
-      <circle cx={cx} cy={cy} r={Math.max(w, h) * 1.5} fill="url(#fs-glow)" />
-      <path d={d} fill="url(#fs-window)" stroke="#26253B" strokeWidth={1} strokeLinejoin="round" />
+      <circle cx={cx} cy={cy} r={Math.max(w, h) * 1.5} fill="url(#fs-glow)" opacity={WINDOW_LIGHT} />
+      <path d={d} fill="url(#fs-window)" fillOpacity={0.45} stroke="#26253B" strokeWidth={1} strokeLinejoin="round" />
       <line x1={cx} y1={top + 1} x2={cx} y2={top + h} stroke="#26253B" strokeOpacity={0.45} strokeWidth={0.8} />
     </g>
   );
@@ -501,6 +501,7 @@ function TowerArtBody({
 }) {
   const lit = tower.freshness === "fresh";
   const someLit = lit || tower.freshness === "weathered";
+  const litSet = litWindows(tower.holding_id, placement.windows.length, tower.freshness);
   const { door } = placement;
   return (
     <g>
@@ -515,7 +516,7 @@ function TowerArtBody({
         onError={onFail}
         aria-hidden
       />
-      {placement.windows.map((win, i) => (lit || (someLit && i === 0) ? <ArtWindow key={i} {...win} /> : null))}
+      {placement.windows.map((win, i) => (litSet.has(i) ? <ArtWindow key={i} {...win} /> : null))}
       {someLit && door && (
         <g aria-hidden>
           <ellipse cx={door.cx} cy={door.bottom + 1} rx={door.w * 0.85} ry={4.5} fill="url(#fs-glow)" />
