@@ -248,6 +248,13 @@ Same rules as Sprints 1 to 6: one branch and one PR per sprint off fresh `main`,
 - Code: the existing time-strata spine drawn with the strata block; the hourglass in the banner; a dark sconce marks each day the worker was off ("what the record cannot show"), a gap is never drawn as an ordinary day. Weather stays code (`worldPalette`) from the stored siege level; no weather pictures.
 - Cut line: sundial, weathervane, cairn.
 
+**Sprint 12 result (2026-10-11, written, not deployed).**
+- Packed (3 new ids): `room-hourglass`, `strata-block`, `room-sconce` (32 KB). The sundial, weathervane, cairn and chronicle-book pictures stay in the masters (the cut line), and no weather pictures were added: weather is data and stays code (`worldPalette` from the stored siege level).
+- Chronicle, art mode only: the spine's mark for a change is the strata block (22 px, beside the day), a gap keeps its ring-with-a-slash mark, its hatched block and its own words and gains the unlit sconce, so "the worker was off" is never drawn as an ordinary day. The hourglass stands in the banner (`RoomProps`), over the Sprint 8 backdrop. The time strip, frames, mini-towers, "What the record cannot show" and Plain view are unchanged.
+- Tests: `TimeStrata` with art off renders three lozenge marks, no picture and the gap's words; `roomPropIds("chronicle")` is the hourglass.
+- Not done, by design: sundial, weathervane, cairn, chronicle book (cut line); the time strip itself is not redrawn with the block (22 px tall, too small to read).
+- Checks: tsc (only the known `artAssets.test.ts` Node-types gap), eslint (0 errors) and the room, kit and chronicle tests pass. Not rendered in a browser: block size on the spine, the sconce inside the gap box and the hourglass in the banner need Faiz's eye.
+
 **Sprint 13: Map table (S-M).** Visual verb "survey", scene "the cartographer's table".
 - Needs: frame corner, dividers, rolled map, pin, wave tile (Part 6b).
 - Code: a brass frame (corner mirrored four times), dividers and the rolled map beside the legend; wave tile on open water. Settlements, fog patches, commission flags and the keep are unchanged (Sprints 4 and 6).

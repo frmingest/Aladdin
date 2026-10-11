@@ -1,7 +1,19 @@
 import { Link } from "react-router-dom";
 import { dayLabel, strata, timeStrip } from "../../../lib/chronicle";
 import type { Chronicle } from "../../../lib/types";
+import ObjectArtImage from "../../ObjectArtImage";
 import "./strata.css";
+
+/** A change on the spine: a lozenge, or (Object art on) a block of strata, one layer per day on record. */
+function ChangeMark() {
+  return <ObjectArtImage id="strata-block" width={22} className="strata-mark-img" fallback={<span className="strata-mark" aria-hidden />} />;
+}
+
+/** Beside a gap (Object art on): a wall sconce whose torch is out. The ring with a slash and the hatched
+ * block stay, so a gap is told by shape and by its words; the sconce only says "no light was kept". */
+function GapSconce() {
+  return <ObjectArtImage id="room-sconce" width={36} className="strata-sconce" fallback={null} />;
+}
 
 /** The Chronicle as time strata (game mode, Stitch room look): a strip that shows where the stored frames
  * and the unrecorded days fall, and a spine of what changed. A gap is drawn as a hatched gap, never as a
@@ -33,6 +45,7 @@ export default function TimeStrata({ chronicle }: { chronicle: Chronicle }) {
           <li key={`gap-${e.first_day}`} className="strata-node strata-node-gap">
             <span className="strata-mark" aria-hidden />
             <div className="strata-gap">
+              <GapSconce />
               <span className="strata-day">
                 {dayLabel(e.first_day)} – {dayLabel(e.last_day)}
               </span>
@@ -41,7 +54,7 @@ export default function TimeStrata({ chronicle }: { chronicle: Chronicle }) {
           </li>
         ) : (
           <li key={`chg-${e.day}`} className="strata-node">
-            <span className="strata-mark" aria-hidden />
+            <ChangeMark />
             <div className="strata-entry">
               <span className="strata-day">{dayLabel(e.day)}</span>
               <ul>

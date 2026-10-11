@@ -41,6 +41,12 @@
   border: 2px solid rgb(var(--c-negative));
   box-shadow: 0 0 0 3px rgb(var(--c-surface));
 }
+/* Object art: a strata block on the spine for a change, a dark sconce inside a gap. Static pictures. */
+.strata-mark-img { position: absolute; left: -1.9rem; top: 0.05rem; width: 22px; height: auto; max-width: none; }
+.strata-gap { position: relative; }
+.strata-sconce { position: absolute; right: 0.5rem; top: 0.3rem; width: 36px; height: auto; max-width: none; }
+.strata-gap:has(.strata-sconce) { padding-right: 3.6rem; }
+@media (max-width: 480px) { .strata-sconce { display: none; } .strata-gap:has(.strata-sconce) { padding-right: 0.75rem; } }
 .strata-day { display: block; font-size: 0.75rem; letter-spacing: 0.06em; text-transform: uppercase; color: rgb(var(--c-ink-faint)); font-variant-numeric: tabular-nums; }
 .strata-entry ul { margin: 0.2rem 0 0; padding: 0; list-style: none; font-size: 0.875rem; color: rgb(var(--c-ink)); }
 .strata-entry li + li { margin-top: 0.2rem; }
