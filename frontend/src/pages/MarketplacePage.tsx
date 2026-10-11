@@ -9,6 +9,7 @@ import { Awning, Pip } from "../components/marketplace/MarketArt";
 import HypeBoothDialog from "../components/marketplace/HypeBoothDialog";
 import SalesRepDialog from "../components/marketplace/SalesRepDialog";
 import { SalesRep } from "../components/marketplace/SalesRepArt";
+import ObjectArtImage from "../components/ObjectArtImage";
 import { TONE_PAINT } from "../lib/marketplacePaint";
 import "../components/marketplace/stall.css";
 import { Button, Card, Disclosure, EmptyState, PageHeader, SnapshotStamp, VerdictBadge } from "../components/ui";
@@ -183,7 +184,7 @@ export default function MarketplacePage() {
       />
 
       <section className="sal-booth mb-4" aria-label="Sal, the sales rep">
-        <SalesRep mood="pitch" size={64} className="sal-figure" />
+        <ObjectArtImage id="sal-counter" width={96} className="sal-counter-art" fallback={<SalesRep mood="pitch" size={64} className="sal-figure" />} />
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-3">
             <button ref={boothButton} type="button" className="sal-btn" onClick={() => setTalking(true)}>
@@ -204,6 +205,7 @@ export default function MarketplacePage() {
 
       {list && rows.length === 0 && (
         <EmptyState>
+          <ObjectArtImage id="booth-goods" width={120} className="mx-auto mb-3" fallback={null} />
           The street is empty. Talk to Sal above to open the first stall, or add companies on the <Link className="text-accent hover:underline" to="/watchlist">Watchlist</Link> page, and a store will open for each.
         </EmptyState>
       )}
