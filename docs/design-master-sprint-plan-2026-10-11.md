@@ -1,6 +1,6 @@
 # Design Master: review and sprint plan (2026-10-11)
 
-Status: **approved by Faiz 2026-10-11 (all nine decisions, Part 5). Sprint 0 is merged (#103); Sprint 1 is merged (#104); Sprint 2 is merged (#105); Sprint 3 is merged (#106); Sprint 4 is merged (#107); Sprint 5 is merged (#108); Sprint 6 is written (PR open, not merged, not deployed); Sprint 7 is next.** Written from a fresh clone of `main` (`e939577`, PR #101 merged), all 52 object images and 10 screen mocks in `frontend/public/art/Design_master`, the Stitch `DESIGN.md`, and a read of the scene, map and marketplace code. `E:\Aladdin` is stale (branch `feature/currency-edit-and-nok-equivalent`, older than `main`); pull `main` before any build.
+Status: **approved by Faiz 2026-10-11 (all nine decisions, Part 5). Sprint 0 is merged (#103); Sprint 1 is merged (#104); Sprint 2 is merged (#105); Sprint 3 is merged (#106); Sprint 4 is merged (#107); Sprint 5 is merged (#108); Sprint 6 is written (PR #109 open, not merged, not deployed); Sprint 7 is next. Sprints 8 to 13 (the rooms: Council, Records, Circle, Chronicle, Map table, and the shared crests) are proposed on Faiz's request of 2026-10-11, waiting for his OK on decisions 10 to 13 (Part 5) and for the Stitch sets (Part 8, batches 3 to 8).** Written from a fresh clone of `main` (`e939577`, PR #101 merged), all 52 object images and 10 screen mocks in `frontend/public/art/Design_master`, the Stitch `DESIGN.md`, and a read of the scene, map and marketplace code. `E:\Aladdin` is stale (branch `feature/currency-edit-and-nok-equivalent`, older than `main`); pull `main` before any build.
 
 Related: [stitch-master-object-art-2026-10-11.md](stitch-master-object-art-2026-10-11.md) (style, rules, prompts for what is still missing), [game-sprint-checklist.md](game-sprint-checklist.md) (section A is answered in Part 7).
 
@@ -61,7 +61,7 @@ R = ready, F = ready after a fix or rework, M = missing.
 | D Map | 10 | 4 | 1 | 5 | mountain range, hill, sea serpent, compass rose, planted flag; port shadow |
 | E Marketplace and people | 12 | 4 | 4 | 4 | Sal "cheer", store shopkeeper (5 verdict faces), Oracle, Partner; four stalls need the awning decision |
 | **Core total** | **56** | **35** | **6** | **15** | |
-| F Room objects (optional) | 10 | 0 | 0 | 10 | council table and chairs, tomes, bookshelf, wax seal, scroll, sealed letter, hourglass, candle stand, study desk, 8 room crests |
+| F Room objects (proposed, Sprints 8 to 13) | 40 | 0 | 0 | 40 | shared 9 (crests x5, wax seal intact and broken, quill and inkwell, candle stand); Council 5 (table, two chairs, agenda scroll, gavel); Records 7 (casket, bookshelf, three tomes, lectern, pigeonholes); Circle 7 (standing stone x2, brazier, lantern post, signpost, telescope, fog stake); Chronicle 7 (hourglass, strata block, sundial, book on stand, sconce, weathervane, cairn); Map table 5 (frame corner, dividers, rolled map, pin, wave tile); plus 5 optional room backdrops |
 
 ## 4. Review findings
 
@@ -105,6 +105,13 @@ Tower boxes are w 48-118 px, h 62-156 px (about 3:4); spire art is about 0.37 wi
 7. **Default:** art stays opt-in (`?art=stitch`, plus a Settings toggle added in Sprint 0) until you have seen Sprints 1-5 on real data; flipping the default is Sprint 7. SVG stays as the fallback permanently.
 8. **Cleanup:** delete the retired folders `stitch_master` and `new` from `frontend/public/art`, and the retired docs in Part 9. *Recommended: yes; I will ask once more for the delete permission when I get there.*
 9. **Other rooms:** do not convert Council, Records, Chronicle, Circle, Night Watch to art unless you want it; they already score 2-3 and the pictures would be a second visual language there. *Recommended: no.*
+
+**Decisions 10 to 13 (proposed 2026-10-11, Faiz asked to extend the plan to the other rooms; each needs his OK).**
+
+10. **Decision 9 is superseded for the rooms.** Council, Records, Circle, Chronicle and the Map table get object art in the same Stitch Master look, because the 2026-10-09 audit scored Council 1, Records 1, Circle 0 and Chronicle 2 (Map 2 after Sprints 4 to 6), and the standard says a page below 2 is a review blocker. Night Watch, Siege Simulator and the Fortress ledger are not in scope. *Recommended: yes.*
+11. **Order.** Sprint 7 (default and hardening) stays where it is; Sprints 8 to 13 follow it. Alternative: do 8 to 10 first and flip the default once, after seeing every room. *Recommended: Sprint 7 first, but the default flip waits until after Sprint 9 if you prefer one look at everything.*
+12. **Red wax seals are the one new red.** The seal pair (intact and broken) is a small red object; the shape (whole or cracked) carries the meaning and the page keeps its existing label, so colour is never the only signal. Everything else stays in the object palette. *Recommended: yes.*
+13. **Room backdrops are optional and not keyed.** One wide scene per room (about 100 KB WebP, lazy) behind the banner, from a new pack mode `none`. If Stitch's wide crops look off, the banner is crest plus the page's own colour. *Recommended: try Council and Records first, drop the rest if they disappoint.*
 
 ## 6. Sprint plan
 
@@ -194,6 +201,53 @@ Generate Part 8 batch 1 (wall segment, corner bastion, genie, terrace props) and
 **Sprint 7: Default and hardening (S-M).**
 Look at Sprints 1-5 on real data, dark and light, desktop and phone; then decide whether `?art=stitch` becomes the default. Phone performance at 4x CPU throttle, colour-blind pass, reduced motion, screenshots for the look-and-judge list. Update section 4 of the visual-identity standard (look changed: object pictures are default).
 
+### Sprints 8 to 13: the rooms (proposed, not started)
+
+Same rules as Sprints 1 to 6: one branch and one PR per sprint off fresh `main`, behind the Settings "Object art" switch, SVG (or today's plain layout) always the fallback, the Plain view unchanged, no new words, no new looping motion, never merged by me, "written, not yet deployed" until verified. Pictures are objects; every fact (seal state, ring, fog, gap day, due date, warning) is decided by code and drawn on top. Prompts for every picture are in the master doc, Part 6b. Each sprint ends with a side-by-side screenshot of the room next to the Fortress, and the room's identity score re-checked against the standard (target 3, never below 2).
+
+**Sprint 8: Crests, banner and seals (S-M, the foundation for the rooms).**
+- Needs: crest set (5), wax seal pair, quill and inkwell, candle stand (Part 6b, "Shared").
+- Pack: add the nine ids to `manifest.json`; add pack mode `none` (opaque, for backdrops) and a backdrop budget (each at most 120 KB, five at most) to `check_image_sizes.py` and `artAssets.test.ts`.
+- Code: `lib/roomArt.ts` (pure, tested): `roomCrestId(room)` and `sealId(state)` (whole or broken). `PageHeader` game branch: a 56 to 80 px banner strip with the room's crest, decorative, same words as today. `FortressTabs`: crest per tab and a lozenge active state, `aria-current` kept (shape and `aria-current`, not colour alone). Export `Corner` from `GameFrame` for banners.
+- Cut line: the tab strip crests.
+
+**Sprint 9: Council (M).** Visual verb "convene", scene "a round table under candlelight".
+- Needs: table, two chairs, agenda scroll, gavel (Part 6b).
+- Code: the two advisors seated at the table (the Oracle and Partner busts already exist), agenda items on parchment (`.scroll-paper`) with a seal per item: whole seal for a note, broken seal plus the existing label pill for a warning; candle flames drawn by code, constant. Stagger-in only without reduced motion.
+- Truth: item order, tone and text come from the existing rules; the table and chairs carry nothing; no new words.
+- Cut line: gavel and backdrop.
+
+**Sprint 10: Records (M).** Visual verb "seal", scene "the archive".
+- Needs: casket, bookshelf, tomes (3), lectern, pigeonholes (Part 6b).
+- Code: each entry stays one row in the existing list (Plain view); a time capsule is a casket with a whole seal, drawn broken when its review is due or open, plus today's label. The bookshelf and lectern frame the header. Keeps the caption "a decision is not its outcome"; no streaks or rewards.
+- Cut line: pigeonholes and lectern.
+
+**Sprint 11: Circle (M).** Visual verb "draw", scene "a clearing in a ring of stones".
+- Needs: standing stones (2), brazier, lantern post, signpost, telescope, fog stake (Part 6b).
+- Code: concentric rings drawn by code (know, partly, outside); a tower pin sits in the ring its status says, size from its real weight; unclassified towers sit outside the stones in dashed fog with stakes. Standing stones mark the ring edges, the brazier is the constant centre. The existing list stays as the accessible table; `role="img"` summary from `data.summary`.
+- Truth: unknown stays outside and dashed, never inside by default; ring position, shape and label carry the status, not colour.
+- Cut line: telescope, signpost, lantern.
+
+**Sprint 12: Chronicle (M).** Visual verb "layer", scene "a wall of strata".
+- Needs: strata block, hourglass, sundial, chronicle book, sconce, weathervane, cairn (Part 6b).
+- Code: the existing time-strata spine drawn with the strata block; the hourglass in the banner; a dark sconce marks each day the worker was off ("what the record cannot show"), a gap is never drawn as an ordinary day. Weather stays code (`worldPalette`) from the stored siege level; no weather pictures.
+- Cut line: sundial, weathervane, cairn.
+
+**Sprint 13: Map table (S-M).** Visual verb "survey", scene "the cartographer's table".
+- Needs: frame corner, dividers, rolled map, pin, wave tile (Part 6b).
+- Code: a brass frame (corner mirrored four times), dividers and the rolled map beside the legend; wave tile on open water. Settlements, fog patches, commission flags and the keep are unchanged (Sprints 4 and 6).
+- Cut line: pin and wave tile.
+
+**Section A for Sprints 8 to 13 (checklist answers, targets inferred from code, none re-scored with screenshots).**
+1. Pages touched: every room header and tab strip (S8); Council (S9); Records (S10); Circle (S11); Chronicle (S12); Map table (S13). Not touched: Siege Simulator, Night Watch, Ledger.
+2. Identity before to after (target): Council 1 to 3, Records 1 to 3, Circle 0 to 3, Chronicle 2 to 3, Map 2 to 3, tab strip 0 to 2. No touched page ends below 2.
+3. Visual win per sprint: S8 a crest for every room; S9 a table with two chairs; S10 a sealed casket; S11 the circle actually drawn; S12 strata and the dark sconce for a gap; S13 the table frame.
+4. Visual verbs: convene, seal, draw, layer, survey.
+5. Words: no added words; alt text empty; word budgets unchanged.
+6. Kit: `roomArt.ts`, `PageHeader` banner, `Corner` export; owner game-feel-engineer.
+7. Cut lines: per sprint; never the Plain view, the SVG or plain fallback, the unknown state or the screenshots.
+8. Rules: truth (seals, rings, fog and gaps are code), colour-blind (shape plus label), reduced motion, phone performance (lazy backdrops, each at most 120 KB).
+
 ## 7. Game sprint checklist, section A
 
 1. **Pages touched:** Fortress (scene, Great Keep, siege camp, ravens, lamp), Map (Cartographer), Marketplace and Store, Sal and Hype dialogs. Chronicle, Council, Records, Circle, Siege Simulator, Night Watch are not touched.
@@ -214,6 +268,8 @@ Same shared block as before (white background, no text, no shadow, outline `#262
 - **Only if decisions go that way:** flagless towers and keep (decision 3), awning-less stalls (decision 6), ivy cluster, scaffolding frame, ladder, torch as sprites to replace restyled code overlays.
 - **Optional room objects:** group F in Part 3, only if you want rooms converted (decision 9).
 
+**Rooms (Sprints 8 to 13, proposed):** batches 3 to 8 in the master doc, Part 6b: shared crests and seals first (batch 3), then Council, Records, Circle, Chronicle, Map table (batches 4 to 8). Order by priority: the starred items in each batch.
+
 ## 9. Documentation changes made with this plan
 
 - New: this plan (repo `docs/` and Claude project).
@@ -222,3 +278,4 @@ Same shared block as before (white background, no text, no shadow, outline `#262
 - Kept: `stitch-design-pass-2026-10-10.md` (component skin, still current; its status line is corrected: #97, #98, #99, #100 are merged).
 - `progress.md` and `docs/PROGRESS.md` corrected: #93, #97-#101 are merged on `main` (git log, 2026-10-11); deploy not verified. Finished items moved to the archive.
 - The visual-identity standard's art addendum gets one line pointing at this plan.
+- 2026-10-11 (rooms): Part 5 decisions 10 to 13, Sprints 8 to 13, Section A for them and the group F slot register are new; the Stitch prompts live in the master doc, Part 6b.
