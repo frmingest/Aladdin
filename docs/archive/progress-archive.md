@@ -3,6 +3,16 @@
 Completed milestones and retired status, moved out of `docs/PROGRESS.md` under the rolling-log rules
 in `CLAUDE.md` ("Progress file rules"). Newest snapshot first. Older: [PROGRESS-full-2026-09-30.md](PROGRESS-full-2026-09-30.md).
 
+## Closed 2026-10-11 — game design challenge and the Stitch design passes (merged, deploy not verified)
+
+Checked against `git log` on `main` (`e939577`) on 2026-10-11. All of these are merged; whether they are deployed, and how they look on real data, has not been checked.
+
+- **Game design challenge (#93):** Records as a stone hall of tomes with wax seals and a reading desk, Circle on a night-chart palette, the Map as a generated continent (provinces = sectors, settlements = holdings, fog patches on top, pan and zoom), Night Watch "Break the seal" button. [write-up](../game-design-challenge-2026-10-09.md)
+- **Identity PRs #88-#92:** visual-identity process, Map fog patches, Circle ring map, page kit and Council.
+- **Stitch design pass:** pass 1 component skin (#97), Chronicle time-strata spine (#98), Marketplace stall plates (#99), Map legend weights (#100). [write-up](../stitch-design-pass-2026-10-10.md)
+- **Stitch object art, Phase A (#101):** Sal's strip and the empty street on the Marketplace, `?art=stitch`, SVG default. Plan for the rest: [design-master-sprint-plan-2026-10-11.md](../design-master-sprint-plan-2026-10-11.md).
+- **Retired:** the painted art pack trial (merged as #94, reverted by #95, dropped by Faiz 2026-10-10) and its docs (`art-pack-trial-2026-10-10`, `stitch-art-prompts-2026-10-09`, `stitch-handoff-2026-10-10`), removed 2026-10-11; lessons live in [stitch-master-object-art-2026-10-11.md](../stitch-master-object-art-2026-10-11.md).
+
 ## Closed 2026-10-09 — Faiz's review and deploy tasks (all confirmed OK)
 
 Faiz confirmed on 2026-10-09 that every item below is done and OK; they were checked off and moved here from `docs/PROGRESS.md`. Status words are Faiz's, not re-verified by Claude.

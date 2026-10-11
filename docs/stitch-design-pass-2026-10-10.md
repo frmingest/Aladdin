@@ -1,6 +1,6 @@
 # Stitch design pass (2026-10-10)
 
-Status: pass 1 (component language) merged as #97, deploy not verified. Pass 2 (room looks) in progress on `feature/stitch-room-looks`: **written, PR open, not merged, not deployed**.
+Status: all passes merged on `main` (checked against git 2026-10-11): pass 1 component language #97, Chronicle spine #98, Marketplace stall plates #99, Map legend #100. Deploy not verified; not yet looked at on real data.
 
 ## What was reviewed
 Faiz's seven Stitch exports in `frontend/public/art/new/` (untracked, not committed): Fortress, Council, Circle, Chronicle, Records, Marketplace, Map. Each has `screen.png` and `code.html`; six have a `DESIGN.md` (Council, Chronicle, Records, Marketplace carry the same 13.7 KB file; Map has its own). One painted citadel image sits in the Fortress folder.
