@@ -141,7 +141,9 @@ def pack(src: Path, spec: dict, max_side: int) -> tuple[Image.Image, dict]:
     bbox = keyed.getchannel("A").point(lambda v: 255 if v > 20 else 0).getbbox()
     keyed = keyed.crop(bbox)
     keyed.thumbnail((spec.get("max_side", max_side),) * 2, Image.LANCZOS)
-    return keyed, anchors_to_fractions(spec.get("anchors_px", {}), bbox)
+    anchors = anchors_to_fractions(spec.get("anchors_px", {}), bbox)
+    anchors.update(spec.get("anchors_frac", {}))  # already fractions of the packed picture
+    return keyed, anchors
 
 
 def anchors_to_fractions(anchors_px: dict, bbox: tuple[int, int, int, int]) -> dict:
