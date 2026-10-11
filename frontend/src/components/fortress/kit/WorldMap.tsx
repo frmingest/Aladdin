@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { TOWER_BOX, fogSlots, towerAriaLabel } from "../../../lib/realmMap";
 import type { MapFlag } from "../../../lib/realmMap";
+import { placeLandmarks, placeMapKeep, placeSettlementArt, pineRect, rockRect, settlementArtId, shipRect, type ArtRect, type SettlementKind } from "../../../lib/mapArt";
 import { weightText } from "../../../lib/rituals";
+import { useArtMode } from "../../../lib/stitchArt";
 import type { TowerFog } from "../../../lib/survey";
 import {
   CAPITAL,
@@ -78,6 +80,17 @@ function Tree({ g }: { g: Glyph }) {
   );
 }
 
+/** A picture drawn into the map's SVG. A failed load reports its id so the caller falls back to the SVG. */
+function ArtImage({ r, onFail }: { r: ArtRect; onFail: (id: string) => void }) {
+  return <image href={r.src} x={r.x} y={r.y} width={r.width} height={r.height} preserveAspectRatio="none" onError={() => onFail(r.id)} aria-hidden />;
+}
+
+/** Which pictures to use: art on, and the picture has not failed to load. */
+interface MapArt {
+  ok: (id: string) => boolean;
+  fail: (id: string) => void;
+}
+
 function Keep({ at }: { at: Pt }) {
   return (
     <g transform={`translate(${at.x} ${at.y})`}>
@@ -100,7 +113,8 @@ function Keep({ at }: { at: Pt }) {
   );
 }
 
-function Ship() {
+function Ship({ art }: { art: MapArt }) {
+  if (art.ok("prop-ship")) return <ArtImage r={shipRect()} onFail={art.fail} />;
   return (
     <g>
       <path d="M-9 0 Q0 7 9 0 L7 -3 H-7 Z" fill="#5a3d1a" stroke="#1a1209" strokeWidth="1" strokeLinejoin="round" />
@@ -136,7 +150,7 @@ function Compass({ at }: { at: Pt }) {
   );
 }
 
-function Scenery({ world, realm, hatchProv }: { world: ReturnType<typeof buildWorld>; realm: ReturnType<typeof placeRealm>; hatchProv: string }) {
+function Scenery({ world, realm, hatchProv, art }: { world: ReturnType<typeof buildWorld>; realm: ReturnType<typeof placeRealm>; hatchProv: string; art: MapArt }) {
   return (
     <>
       <path d={world.landPath} fill="#cdb078" />
@@ -153,9 +167,9 @@ function Scenery({ world, realm, hatchProv }: { world: ReturnType<typeof buildWo
         {realm.roads.map((d, k) => (
           <path key={k} d={d} fill="none" stroke="#5a3d1a" strokeWidth="1.8" strokeDasharray="1 6" strokeLinecap="round" strokeOpacity="0.85" />
         ))}
-        {realm.hills.map((g, k) => <Hill key={k} g={g} />)}
+        {realm.hills.map((g, k) => (art.ok("prop-rocks") ? <ArtImage key={k} r={rockRect(g)} onFail={art.fail} /> : <Hill key={k} g={g} />))}
         {realm.mountains.map((g, k) => <Mountain key={k} g={g} />)}
-        {realm.forests.map((g, k) => <Tree key={k} g={g} />)}
+        {realm.forests.map((g, k) => (art.ok("prop-pines") ? <ArtImage key={k} r={pineRect(g)} onFail={art.fail} /> : <Tree key={k} g={g} />))}
       </g>
       <path d={world.landPath} fill="none" stroke="#2b2118" strokeWidth="2.4" strokeLinejoin="round" />
     </>
@@ -173,6 +187,8 @@ export interface WorldMapProps {
   hatchId: string;
   selectedId: string | null;
   flags: Map<string, MapFlag>;
+  /** holding id -> what it is (structure, size class), to choose its picture when art is on. */
+  kinds?: Record<string, SettlementKind>;
   onSelect: (id: string) => void;
   onEscape: () => void;
 }
@@ -180,13 +196,24 @@ export interface WorldMapProps {
 const weightOf = (t: TowerFog) => weightText(t.weightPct === null ? null : String(t.weightPct));
 const SPRITE_BASE_Y = TOWER_BOX.y + TOWER_BOX.h;
 
-export default function WorldMap({ towers, sectors, sectorsKnown, hatchId, selectedId, flags, onSelect, onEscape }: WorldMapProps) {
+export default function WorldMap({ towers, sectors, sectorsKnown, hatchId, selectedId, flags, kinds = {}, onSelect, onEscape }: WorldMapProps) {
   const uid = useId().replace(/:/g, "");
   const hatchProv = `wm-hatch-${uid}`;
   const boxRef = useRef<HTMLDivElement | null>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const reduce = usePrefersReducedMotion();
   const running = useSceneRunning(boxRef);
+  // Object art (Settings switch, off by default). A picture that fails to load falls back to the SVG for
+  // every place that id is used, so the map is never half missing.
+  const artMode = useArtMode();
+  const [failedArt, setFailedArt] = useState<ReadonlySet<string>>(() => new Set());
+  const art = useMemo<MapArt>(
+    () => ({
+      ok: (id) => artMode === "stitch" && !failedArt.has(id),
+      fail: (id) => setFailedArt((cur) => (cur.has(id) ? cur : new Set(cur).add(id))),
+    }),
+    [artMode, failedArt],
+  );
   const [size, setSize] = useState({ cw: 1000, ch: 640 });
   const [view, setViewRaw] = useState<View>({ cx: WORLD.w / 2, cy: WORLD.h / 2, z: 1 });
   const viewRef = useRef(view);
@@ -205,6 +232,8 @@ export default function WorldMap({ towers, sectors, sectorsKnown, hatchId, selec
   const realm = useMemo(() => placeRealm(items, sectorsKnown ? undefined : "Sector unknown"), [items, sectorsKnown]);
   const towerById = useMemo(() => new Map(towers.map((t) => [t.holdingId, t])), [towers]);
   const placed = useMemo(() => realm.settlements.map((s) => ({ s, t: towerById.get(s.id) as TowerFog })).filter((x) => x.t), [realm, towerById]);
+  // Port, island sanctuary and island palms: scenery only (no name, no button, no fog), drawn in art mode.
+  const landmarks = useMemo(() => placeLandmarks(world, realm.settlements), [world, realm]);
 
   // Measure the box; the first measure picks the starting view (phones start zoomed on the capital).
   useEffect(() => {
@@ -344,6 +373,14 @@ export default function WorldMap({ towers, sectors, sectorsKnown, hatchId, selec
   const keepSp = toScreen(CAPITAL, view, cw, ch);
   const keepFlag = flags.get("keep");
   const motion = !reduce && running;
+  /** The settlement's picture (decision 5), or undefined for the SVG tower: art off, no kind known, or a failed load. */
+  const settlementBody = (id: string) => {
+    const kind = kinds[id];
+    if (!kind) return undefined;
+    const artId = settlementArtId(kind);
+    return art.ok(artId) ? <ArtImage r={placeSettlementArt(artId)} onFail={art.fail} /> : undefined;
+  };
+  const keepArt = art.ok("keep-granite") ? placeMapKeep(CAPITAL) : null;
 
   useEffect(() => {
     const svg = svgRef.current as (SVGSVGElement & { pauseAnimations?: () => void; unpauseAnimations?: () => void }) | null;
@@ -398,21 +435,31 @@ export default function WorldMap({ towers, sectors, sectorsKnown, hatchId, selec
           </g>
           <Compass at={world.compass} />
           <Serpent at={world.serpent} />
-          <Scenery world={world} realm={realm} hatchProv={hatchProv} />
+          <Scenery world={world} realm={realm} hatchProv={hatchProv} art={art} />
+          {landmarks.palms.map((r, k) => art.ok(r.id) && <ArtImage key={k} r={r} onFail={art.fail} />)}
+          {landmarks.island && art.ok(landmarks.island.id) && <ArtImage r={landmarks.island} onFail={art.fail} />}
+          {landmarks.port && art.ok(landmarks.port.id) && <ArtImage r={landmarks.port} onFail={art.fail} />}
           <rect x="-1500" y="-1500" width="4000" height="3720" fill={`url(#wm-glow-${uid})`} pointerEvents="none" />
           {placed.map(({ s: st, t }) => (
             <g key={st.id} transform={`translate(${st.x} ${st.y})`}>
               <ellipse cx="0" cy="2" rx={44 * st.scale * 1.5} ry={9 * st.scale * 1.5} fill="#2b2118" fillOpacity="0.4" />
               <g transform={`scale(${st.scale}) translate(${-(TOWER_BOX.x + TOWER_BOX.w / 2)} ${-SPRITE_BASE_Y})`}>
-                <TowerFigure slots={fogSlots(t)} hatchId={hatchId} />
+                <TowerFigure slots={fogSlots(t)} hatchId={hatchId} body={settlementBody(st.id)} />
               </g>
             </g>
           ))}
-          <Keep at={CAPITAL} />
+          {keepArt ? (
+            <g>
+              <ellipse cx={CAPITAL.x} cy={CAPITAL.y + 5} rx={38} ry={9} fill="#2b2118" fillOpacity="0.35" />
+              <ArtImage r={keepArt} onFail={art.fail} />
+            </g>
+          ) : (
+            <Keep at={CAPITAL} />
+          )}
           {motion &&
             world.shipLoops.map((d, k) => (
               <g key={k}>
-                <Ship />
+                <Ship art={art} />
                 <animateMotion dur={`${90 + k * 40}s`} repeatCount="indefinite" path={d} begin={`-${k * 31}s`} />
               </g>
             ))}
@@ -421,7 +468,7 @@ export default function WorldMap({ towers, sectors, sectorsKnown, hatchId, selec
               const p = world.coast[(k * 41 + 9) % world.coast.length];
               const x = Math.min(985, Math.max(15, CAPITAL.x + (p.x - CAPITAL.x) * (1.12 + k * 0.08)));
               const y = Math.min(705, Math.max(15, CAPITAL.y + (p.y - CAPITAL.y) * (1.12 + k * 0.08)));
-              return <g key={k} transform={`translate(${x} ${y})`}><Ship /></g>;
+              return <g key={k} transform={`translate(${x} ${y})`}><Ship art={art} /></g>;
             })}
         </svg>
 
@@ -440,7 +487,7 @@ export default function WorldMap({ towers, sectors, sectorsKnown, hatchId, selec
         ))}
 
         {keepFlag && (
-          <span className="wm-keep-flag" style={{ left: keepSp.x + 22, top: keepSp.y - 74 * s }} aria-hidden>
+          <span className="wm-keep-flag" style={{ left: keepSp.x + (keepArt ? 30 : 22), top: keepSp.y - (keepArt ? keepArt.height + 6 : 74) * s }} aria-hidden>
             <FlagMark shape={keepFlag.shape} n={keepFlag.number} />
           </span>
         )}

@@ -76,6 +76,11 @@ export default function CartographerPage() {
   );
   const commissions = useMemo(() => (state && towers ? commissionsFor(towers, state) : []), [state, towers]);
   const sectors = useMemo(() => Object.fromEntries((compQ.data?.towers ?? []).map((t) => [t.holding_id, t.sector])), [compQ.data]);
+  // What each holding is, so the map can pick its picture (art mode only; the facts do not change).
+  const kinds = useMemo(
+    () => Object.fromEntries((state?.towers ?? []).map((t) => [t.holding_id, { structure: t.structure, size_class: t.size_class }])),
+    [state],
+  );
   const error = stateQ.error;
 
   return (
@@ -93,7 +98,7 @@ export default function CartographerPage() {
       {!error && !towers && <p className="text-sm text-ink-muted">Unrolling the map…</p>}
       {state && towers && (
         <div className="space-y-4">
-          <RealmMapBody towers={towers} commissions={commissions} demo={state.demo} painted={gameMode && !plain} sectors={sectors} sectorsKnown={!!compQ.data} />
+          <RealmMapBody towers={towers} commissions={commissions} demo={state.demo} painted={gameMode && !plain} sectors={sectors} sectorsKnown={!!compQ.data} kinds={kinds} />
           <div className="map-foot">
             <GameFooter rules={`Rules ${SURVEY_VERSION}. Finishing a commission earns nothing.`} />
           </div>

@@ -1,5 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import type { SettlementKind } from "../../../lib/mapArt";
 import { MAP_COPY, PATCH_LOOK, flagsFor, commissionShape } from "../../../lib/realmMap";
 import { weightText } from "../../../lib/rituals";
 import type { Commission, SurveyState, TowerFog } from "../../../lib/survey";
@@ -109,12 +110,14 @@ function PaintedBody({
   demo,
   sectors,
   sectorsKnown,
+  kinds,
 }: {
   towers: TowerFog[];
   commissions: Commission[];
   demo: boolean;
   sectors: Record<string, string | null>;
   sectorsKnown: boolean;
+  kinds?: Record<string, SettlementKind>;
 }) {
   const hatchId = `fog-hatch-${useId().replace(/:/g, "")}`;
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -159,6 +162,7 @@ function PaintedBody({
                 towers={towers}
                 sectors={sectors}
                 sectorsKnown={sectorsKnown}
+                kinds={kinds}
                 hatchId={hatchId}
                 selectedId={selectedId}
                 flags={flagByTower}
@@ -280,6 +284,7 @@ export default function RealmMapBody({
   painted,
   sectors = {},
   sectorsKnown = false,
+  kinds,
 }: {
   towers: TowerFog[];
   commissions: Commission[];
@@ -288,9 +293,11 @@ export default function RealmMapBody({
   /** holding id -> sector, from the Circle of Competence; empty when it could not be read. */
   sectors?: Record<string, string | null>;
   sectorsKnown?: boolean;
+  /** holding id -> structure and size class, to pick each settlement's picture when art is on. */
+  kinds?: Record<string, SettlementKind>;
 }) {
   return painted ? (
-    <PaintedBody towers={towers} commissions={commissions} demo={demo} sectors={sectors} sectorsKnown={sectorsKnown} />
+    <PaintedBody towers={towers} commissions={commissions} demo={demo} sectors={sectors} sectorsKnown={sectorsKnown} kinds={kinds} />
   ) : (
     <PlainBody towers={towers} commissions={commissions} demo={demo} />
   );

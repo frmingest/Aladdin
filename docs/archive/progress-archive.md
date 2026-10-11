@@ -3,6 +3,10 @@
 Completed milestones and retired status, moved out of `docs/PROGRESS.md` under the rolling-log rules
 in `CLAUDE.md` ("Progress file rules"). Newest snapshot first. Older: [PROGRESS-full-2026-09-30.md](PROGRESS-full-2026-09-30.md).
 
+## Closed 2026-10-11 — Design Master Sprints 0 to 3 (merged, deploy not verified)
+
+Sprint 0 foundation (#103), Sprint 1 tower kit (#104), Sprint 2 structures and Great Keep (#105), Sprint 3 siege camp and scene life (#106). Results are written at the end of each sprint in [design-master-sprint-plan-2026-10-11.md](../design-master-sprint-plan-2026-10-11.md). All behind the Settings "Object art" switch, off by default.
+
 ## Closed 2026-10-11 — game design challenge and the Stitch design passes (merged, deploy not verified)
 
 Checked against `git log` on `main` (`e939577`) on 2026-10-11. All of these are merged; whether they are deployed, and how they look on real data, has not been checked.
