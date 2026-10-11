@@ -1,6 +1,6 @@
 # Design Master: review and sprint plan (2026-10-11)
 
-Status: **approved by Faiz 2026-10-11 (all nine decisions, Part 5). Sprint 0 is written (PR #103 open, not merged, not deployed); Sprint 1 is next.** Written from a fresh clone of `main` (`e939577`, PR #101 merged), all 52 object images and 10 screen mocks in `frontend/public/art/Design_master`, the Stitch `DESIGN.md`, and a read of the scene, map and marketplace code. `E:\Aladdin` is stale (branch `feature/currency-edit-and-nok-equivalent`, older than `main`); pull `main` before any build.
+Status: **approved by Faiz 2026-10-11 (all nine decisions, Part 5). Sprint 0 is merged (#103); Sprint 1 is written (PR #104 open, not merged, not deployed); Sprint 2 is next.** Written from a fresh clone of `main` (`e939577`, PR #101 merged), all 52 object images and 10 screen mocks in `frontend/public/art/Design_master`, the Stitch `DESIGN.md`, and a read of the scene, map and marketplace code. `E:\Aladdin` is stale (branch `feature/currency-edit-and-nok-equivalent`, older than `main`); pull `main` before any build.
 
 Related: [stitch-master-object-art-2026-10-11.md](stitch-master-object-art-2026-10-11.md) (style, rules, prompts for what is still missing), [game-sprint-checklist.md](game-sprint-checklist.md) (section A is answered in Part 7).
 
@@ -123,6 +123,12 @@ Every sprint is one branch off fresh `main` and one PR, behind `?art=stitch|svg`
 - Code, restyled to the new look (ink outline `#26253B`, flat cel): lit windows and torch glow when fresh, banner, crack, ivy, scaffolding, thesis marks, ladders, drawbridge, moat, name plate, raven perch. Weather grade per `worldPalette`.
 - Tests: selection table for all 7 walls x 5 size classes; unsurveyed; fresh versus stale produce different overlays but the same picture.
 - Cut line: the weather grade polish.
+
+**Sprint 1 result (2026-10-11, written, not deployed).**
+- Spike (go): three weathers plus calm, ten towers across every wall and size, on the real layout. The grade sits the pictures in storm and siege skies. Baked pennants do not fight freshness because the lit windows and door glow carry it; the code banner is dropped in art mode (two flags on one roof clash).
+- `lib/towerArt.ts`: `towerArtId()` (spire for great and medium, bastion for small, tiny and unknown; `not_applicable` uses granite; `unsurveyed` and non-keeps return null) and `placeTowerArt()` (picture sized from the layout box, never wider than the box plus 14 px; ground line, body box, door and window points in scene px). Anchors are measured once per pose in master pixels in `manifest.json` (`anchors_px`) and packed as fractions of each crop. Rotted pictures have no window anchors (nothing to light).
+- `Keep()` itself is untouched; `TowerFigure` swaps the body and hands the old overlays the picture's body box. Overlays restyled for art mode only (ink `#26253B`, palette moss and timber): crack, breach, ivy, scaffolding, ladders, drawbridge. `worldPalette().grade` is a CSS filter per weather.
+- Not done, by design: window and torch glow is not graded (it is light, not paint); outposts, granaries and gold stores wait for Sprint 2; the SVG body is the fallback if a picture fails to load.
 
 **Sprint 2: Structures, Great Keep, walls (M).**
 - Outpost, granary, gold store (vault-1/2/3 by size class), shack in the Shantytown, Great Keep (`keep-granite`) with the realm-verdict banner as a code overlay and the "THE REALM" plate unchanged.

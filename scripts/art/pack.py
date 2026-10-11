@@ -131,7 +131,8 @@ def key_image(img: Image.Image, spec: dict) -> Image.Image:
     raise ValueError(f"unknown key mode {mode!r} for {spec['id']}")
 
 
-def pack(src: Path, spec: dict, max_side: int) -> Image.Image:
+def pack(src: Path, spec: dict, max_side: int) -> tuple[Image.Image, dict]:
+    """Returns the packed picture and its anchors as fractions of that picture."""
     img = Image.open(src).convert("RGB")
     trim = int(spec.get("crop_bottom_px", 0))
     if trim:
@@ -140,7 +141,24 @@ def pack(src: Path, spec: dict, max_side: int) -> Image.Image:
     bbox = keyed.getchannel("A").point(lambda v: 255 if v > 20 else 0).getbbox()
     keyed = keyed.crop(bbox)
     keyed.thumbnail((spec.get("max_side", max_side),) * 2, Image.LANCZOS)
-    return keyed
+    return keyed, anchors_to_fractions(spec.get("anchors_px", {}), bbox)
+
+
+def anchors_to_fractions(anchors_px: dict, bbox: tuple[int, int, int, int]) -> dict:
+    """Master-pixel anchors -> fractions [x, y] of the cropped picture.
+
+    Points ("door", "w1") are measured from the crop's top-left; names ending in
+    "-size" are scaled only. Measured once per pose in master pixels, so every
+    material that shares a pose can share one set even though each crops differently.
+    """
+    x0, y0, x1, y1 = bbox
+    out = {}
+    for name, (px, py) in anchors_px.items():
+        if name.endswith("-size"):
+            out[name] = [round(px / (x1 - x0), 4), round(py / (y1 - y0), 4)]
+        else:
+            out[name] = [round((px - x0) / (x1 - x0), 4), round((py - y0) / (y1 - y0), 4)]
+    return out
 
 
 def load_manifest() -> tuple[dict, list[dict]]:
@@ -178,7 +196,7 @@ def write_ts(entries: list[dict]) -> None:
     for e in entries:
         parts = [f'src: {camel(e["id"])}', f'width: {e["width"]}', f'height: {e["height"]}', 'alt: ""']
         if e.get("anchors"):
-            anchors = ", ".join(f'{k}: [{v[0]}, {v[1]}] as const' for k, v in e["anchors"].items())
+            anchors = ", ".join(f'"{k}": [{v[0]}, {v[1]}] as const' for k, v in e["anchors"].items())
             parts.append(f"anchors: {{ {anchors} }}")
         lines.append(f'  "{e["id"]}": {{ {", ".join(parts)} }},')
     lines += ["} as const satisfies Record<string, PackedArt>;", ""]
@@ -202,7 +220,7 @@ def contact_sheet(entries: list[dict]) -> None:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--masters", type=Path, default=DEFAULT_MASTERS)
-    ap.add_argument("--only", help="comma-separated ids; the generated manifest still lists every id")
+    ap.add_argument("--only", help="comma-separated ids to rewrite; the generated manifest still lists every id")
     args = ap.parse_args()
 
     defaults, objects = load_manifest()
@@ -218,17 +236,18 @@ def main() -> int:
     entries: list[dict] = []
     for spec in objects:
         dest = OUT_DIR / f'{spec["id"]}.webp'
+        src = args.masters / spec["source"] / "screen.png"
+        if not src.exists():
+            print(f'missing master for {spec["id"]}: {src}', file=sys.stderr)
+            return 1
+        # Always packed (cheap) so the generated manifest keeps every anchor;
+        # --only just limits which files are rewritten.
+        img, anchors = pack(src, spec, max_side)
+        if anchors:
+            spec = {**spec, "anchors": anchors}
         if only is None or spec["id"] in only:
-            src = args.masters / spec["source"] / "screen.png"
-            if not src.exists():
-                print(f'missing master for {spec["id"]}: {src}', file=sys.stderr)
-                return 1
-            img = pack(src, spec, max_side)
             img.save(dest, "WEBP", quality=int(spec.get("quality", quality)), method=6)
             print(f'{spec["id"]:20s} {img.size[0]:4d}x{img.size[1]:<4d} {dest.stat().st_size / 1024:5.1f} KB')
-        elif not dest.exists():
-            print(f'--only skipped {spec["id"]} but {dest.name} does not exist yet', file=sys.stderr)
-            return 1
         with Image.open(dest) as packed:
             entries.append({**spec, "width": packed.width, "height": packed.height})
 

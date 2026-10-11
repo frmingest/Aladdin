@@ -8,52 +8,380 @@
   {
    "id": "spire-granite",
    "master": 37,
-   "source": "cartoon_fantasy_medieval_tall_round_stone_watchtower_in_grey_granite_blocks"
+   "source": "cartoon_fantasy_medieval_tall_round_stone_watchtower_in_grey_granite_blocks",
+   "anchors_px": {
+    "body-tl": [
+     372,
+     322
+    ],
+    "body-br": [
+     654,
+     856
+    ],
+    "door": [
+     513,
+     856
+    ],
+    "door-size": [
+     80,
+     100
+    ],
+    "w1": [
+     440,
+     533
+    ],
+    "w2": [
+     513,
+     533
+    ],
+    "w3": [
+     588,
+     533
+    ],
+    "w4": [
+     432,
+     656
+    ],
+    "w5": [
+     596,
+     656
+    ],
+    "window-size": [
+     42,
+     54
+    ]
+   }
   },
   {
    "id": "spire-rotted",
    "master": 38,
-   "source": "cartoon_fantasy_medieval_tall_round_timber_watchtower_same_silhouette_and"
+   "source": "cartoon_fantasy_medieval_tall_round_timber_watchtower_same_silhouette_and",
+   "anchors_px": {
+    "body-tl": [
+     385,
+     380
+    ],
+    "body-br": [
+     650,
+     880
+    ],
+    "door": [
+     512,
+     900
+    ],
+    "door-size": [
+     60,
+     90
+    ]
+   }
   },
   {
    "id": "spire-basalt",
    "master": 39,
-   "source": "cartoon_fantasy_medieval_tall_round_watchtower_with_the_exact_same_silhouette_1"
+   "source": "cartoon_fantasy_medieval_tall_round_watchtower_with_the_exact_same_silhouette_1",
+   "anchors_px": {
+    "body-tl": [
+     372,
+     322
+    ],
+    "body-br": [
+     654,
+     856
+    ],
+    "door": [
+     513,
+     856
+    ],
+    "door-size": [
+     80,
+     100
+    ],
+    "w1": [
+     440,
+     533
+    ],
+    "w2": [
+     513,
+     533
+    ],
+    "w3": [
+     588,
+     533
+    ],
+    "w4": [
+     432,
+     656
+    ],
+    "w5": [
+     596,
+     656
+    ],
+    "window-size": [
+     42,
+     54
+    ]
+   }
   },
   {
    "id": "spire-brick",
    "master": 40,
-   "source": "cartoon_fantasy_medieval_tall_round_watchtower_with_the_exact_same_silhouette_2"
+   "source": "cartoon_fantasy_medieval_tall_round_watchtower_with_the_exact_same_silhouette_2",
+   "anchors_px": {
+    "body-tl": [
+     372,
+     322
+    ],
+    "body-br": [
+     654,
+     856
+    ],
+    "door": [
+     513,
+     856
+    ],
+    "door-size": [
+     80,
+     100
+    ],
+    "w1": [
+     440,
+     533
+    ],
+    "w2": [
+     513,
+     533
+    ],
+    "w3": [
+     588,
+     533
+    ],
+    "w4": [
+     432,
+     656
+    ],
+    "w5": [
+     596,
+     656
+    ],
+    "window-size": [
+     42,
+     54
+    ]
+   }
   },
   {
    "id": "spire-timber",
    "master": 41,
-   "source": "cartoon_fantasy_medieval_tall_round_watchtower_with_the_exact_same_silhouette_3"
+   "source": "cartoon_fantasy_medieval_tall_round_watchtower_with_the_exact_same_silhouette_3",
+   "anchors_px": {
+    "body-tl": [
+     372,
+     322
+    ],
+    "body-br": [
+     654,
+     856
+    ],
+    "door": [
+     513,
+     856
+    ],
+    "door-size": [
+     80,
+     100
+    ],
+    "w1": [
+     440,
+     533
+    ],
+    "w2": [
+     513,
+     533
+    ],
+    "w3": [
+     588,
+     533
+    ],
+    "w4": [
+     432,
+     656
+    ],
+    "w5": [
+     596,
+     656
+    ],
+    "window-size": [
+     42,
+     54
+    ]
+   }
   },
   {
    "id": "bastion-granite",
    "master": 26,
-   "source": "cartoon_fantasy_medieval_defensive_stone_bastion_rampart_tower_in_grey_granite"
+   "source": "cartoon_fantasy_medieval_defensive_stone_bastion_rampart_tower_in_grey_granite",
+   "anchors_px": {
+    "body-tl": [
+     300,
+     304
+    ],
+    "body-br": [
+     712,
+     880
+    ],
+    "door": [
+     597,
+     752
+    ],
+    "door-size": [
+     70,
+     130
+    ],
+    "w1": [
+     381,
+     472
+    ],
+    "w2": [
+     608,
+     475
+    ],
+    "w3": [
+     360,
+     616
+    ],
+    "window-size": [
+     44,
+     66
+    ]
+   }
   },
   {
    "id": "bastion-rotted",
    "master": 22,
-   "source": "cartoon_fantasy_medieval_defensive_bastion_rampart_tower_same_silhouette_pose"
+   "source": "cartoon_fantasy_medieval_defensive_bastion_rampart_tower_same_silhouette_pose",
+   "anchors_px": {
+    "body-tl": [
+     300,
+     330
+    ],
+    "body-br": [
+     705,
+     880
+    ],
+    "door": [
+     600,
+     752
+    ],
+    "door-size": [
+     70,
+     130
+    ]
+   }
   },
   {
    "id": "bastion-basalt",
    "master": 23,
-   "source": "cartoon_fantasy_medieval_defensive_bastion_rampart_tower_with_the_exact_same_1"
+   "source": "cartoon_fantasy_medieval_defensive_bastion_rampart_tower_with_the_exact_same_1",
+   "anchors_px": {
+    "body-tl": [
+     300,
+     304
+    ],
+    "body-br": [
+     705,
+     880
+    ],
+    "door": [
+     600,
+     752
+    ],
+    "door-size": [
+     70,
+     130
+    ],
+    "w1": [
+     381,
+     475
+    ],
+    "w2": [
+     659,
+     461
+    ],
+    "window-size": [
+     48,
+     64
+    ]
+   }
   },
   {
    "id": "bastion-brick",
    "master": 24,
-   "source": "cartoon_fantasy_medieval_defensive_bastion_rampart_tower_with_the_exact_same_2"
+   "source": "cartoon_fantasy_medieval_defensive_bastion_rampart_tower_with_the_exact_same_2",
+   "anchors_px": {
+    "body-tl": [
+     300,
+     304
+    ],
+    "body-br": [
+     705,
+     880
+    ],
+    "door": [
+     600,
+     752
+    ],
+    "door-size": [
+     70,
+     130
+    ],
+    "w1": [
+     381,
+     475
+    ],
+    "w2": [
+     659,
+     461
+    ],
+    "window-size": [
+     48,
+     64
+    ]
+   }
   },
   {
    "id": "bastion-timber",
    "master": 25,
-   "source": "cartoon_fantasy_medieval_defensive_bastion_rampart_tower_with_the_exact_same_3"
+   "source": "cartoon_fantasy_medieval_defensive_bastion_rampart_tower_with_the_exact_same_3",
+   "anchors_px": {
+    "body-tl": [
+     300,
+     304
+    ],
+    "body-br": [
+     705,
+     880
+    ],
+    "door": [
+     600,
+     752
+    ],
+    "door-size": [
+     70,
+     130
+    ],
+    "w1": [
+     381,
+     475
+    ],
+    "w2": [
+     659,
+     461
+    ],
+    "window-size": [
+     48,
+     64
+    ]
+   }
   },
   {
    "id": "outpost",

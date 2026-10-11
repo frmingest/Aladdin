@@ -19,3 +19,15 @@ describe("worldPalette", () => {
     expect(HORIZON).toBeLessThan(96 + 170);
   });
 });
+
+describe("object picture grade", () => {
+  it("grades pictures per weather, and storm weather is darker than calm", () => {
+    const bright = (level: Parameters<typeof worldPalette>[0]) =>
+      Number(/brightness\(([\d.]+)\)/.exec(worldPalette(level).grade)?.[1]);
+    for (const level of ["calm", "gathering", "besieged", "unsurveyed", null] as const) {
+      expect(worldPalette(level).grade).toMatch(/brightness/);
+    }
+    expect(bright("gathering")).toBeLessThan(bright("calm"));
+    expect(bright("besieged")).toBeLessThan(bright("calm"));
+  });
+});

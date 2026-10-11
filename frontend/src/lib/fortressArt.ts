@@ -22,6 +22,9 @@ export interface WorldPalette {
   rim: string;
   rimOpacity: number;
   motes: "fireflies" | "embers" | "rain" | "none";
+  /** CSS filter for raster object pictures, so a picture with fixed light sits
+   * in this weather instead of staying sunlit under a storm sky. */
+  grade: string;
 }
 
 export const HORIZON = SCENE_TOP + 118;
@@ -40,6 +43,7 @@ export function worldPalette(level: FortressSiegeLevel | null): WorldPalette {
         rim: "#d8d2c0",
         rimOpacity: 0.08,
         motes: "rain",
+        grade: "brightness(0.8) saturate(0.78) contrast(1.04)",
       };
     case "besieged":
       return {
@@ -53,6 +57,7 @@ export function worldPalette(level: FortressSiegeLevel | null): WorldPalette {
         rim: "#ff8a4a",
         rimOpacity: 0.16,
         motes: "embers",
+        grade: "brightness(0.76) saturate(0.95) sepia(0.22) contrast(1.04)",
       };
     case "unsurveyed":
     case null:
@@ -67,6 +72,7 @@ export function worldPalette(level: FortressSiegeLevel | null): WorldPalette {
         rim: "#c9d8f0",
         rimOpacity: 0.08,
         motes: "none",
+        grade: "brightness(0.88) saturate(0.85)",
       };
     default:
       return {
@@ -80,6 +86,7 @@ export function worldPalette(level: FortressSiegeLevel | null): WorldPalette {
         rim: "#ffc070",
         rimOpacity: 0.16,
         motes: "fireflies",
+        grade: "brightness(0.97) saturate(1.04) sepia(0.06)",
       };
   }
 }
