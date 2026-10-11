@@ -1,3 +1,4 @@
+import type { CapsuleState } from "./capsules";
 import type { CrestKind } from "./crest";
 import { getObjectArt } from "./stitchArt";
 
@@ -24,6 +25,25 @@ export function roomBackdropId(room: CrestKind): string | null {
 export function roomCrestId(room: CrestKind): string | null {
   const id = `crest-${room}`;
   return getObjectArt(id) ? id : null;
+}
+
+/** Furniture and tools that stand in a room's banner (Sprints 10 to 13), in the order they are drawn. */
+const PROPS_OF: Partial<Record<CrestKind, readonly string[]>> = {
+  records: ["room-bookshelf", "room-lectern"],
+};
+
+/** The banner props for a room: only pictures that are really packed. */
+export function roomPropIds(room: CrestKind): string[] {
+  return (PROPS_OF[room] ?? []).filter((id) => getObjectArt(id) !== null);
+}
+
+/**
+ * The time-capsule picture for a review (Records, Sprint 10): sealed = a closed casket, owed = a closed
+ * casket that code draws a cracked seal on (`broken`), written = an open casket. Null when not packed.
+ */
+export function capsuleArt(state: CapsuleState): { id: string; broken: boolean } | null {
+  const look = state === "opened" ? { id: "casket-open", broken: false } : { id: "casket-closed", broken: state === "unsealed" };
+  return getObjectArt(look.id) ? look : null;
 }
 
 export type SealState = "whole" | "broken";

@@ -67,6 +67,10 @@ import shopkeeperPass from "../assets/art/shopkeeper-pass.webp";
 import shopkeeperUnknown from "../assets/art/shopkeeper-unknown.webp";
 import backdropRecords from "../assets/art/backdrop-records.webp";
 import backdropChronicle from "../assets/art/backdrop-chronicle.webp";
+import casketClosed from "../assets/art/casket-closed.webp";
+import casketOpen from "../assets/art/casket-open.webp";
+import roomBookshelf from "../assets/art/room-bookshelf.webp";
+import roomLectern from "../assets/art/room-lectern.webp";
 
 export interface PackedArt {
   src: string;
@@ -145,4 +149,8 @@ export const ART_MANIFEST = {
   "shopkeeper-unknown": { src: shopkeeperUnknown, width: 384, height: 351, alt: "" },
   "backdrop-records": { src: backdropRecords, width: 960, height: 536, alt: "" },
   "backdrop-chronicle": { src: backdropChronicle, width: 960, height: 536, alt: "" },
+  "casket-closed": { src: casketClosed, width: 256, height: 256, alt: "" },
+  "casket-open": { src: casketOpen, width: 222, height: 256, alt: "" },
+  "room-bookshelf": { src: roomBookshelf, width: 218, height: 384, alt: "" },
+  "room-lectern": { src: roomLectern, width: 230, height: 320, alt: "" },
 } as const satisfies Record<string, PackedArt>;

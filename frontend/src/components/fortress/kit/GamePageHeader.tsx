@@ -2,6 +2,7 @@ import Crest from "./Crest";
 import type { CrestKind } from "../../../lib/crest";
 import TorchPair from "./TorchPair";
 import RoomBackdrop from "./RoomBackdrop";
+import RoomProps from "./RoomProps";
 import { PLAIN_TOGGLE_ID, togglePlain, usePlainView } from "../../../lib/plainView";
 
 /** The banner at the top of every game room (page-scene kit): a crest for the room, the title on a
@@ -31,6 +32,7 @@ export default function GamePageHeader({
             {subtitle && <p className="mt-0.5 text-sm text-[#cdb98c]">{subtitle}</p>}
           </div>
         </div>
+        <RoomProps room={crest} />
         <div className="game-banner-actions flex flex-wrap items-center gap-3">
           {actions}
           <button
