@@ -89,6 +89,20 @@
 .wm-controls button:disabled { opacity: 0.45; cursor: not-allowed; }
 .wm-controls button:focus-visible { outline: 3px solid #f2d27a; outline-offset: 2px; }
 
+/* Brass table frame (Object art): the corner is drawn top-left and mirrored; pointer-events none so the map stays draggable. */
+.wm-frame { position: absolute; z-index: 5; width: 52px; height: auto; pointer-events: none; }
+.wm-frame-tl { left: 0; top: 0; }
+.wm-frame-tr { right: 0; top: 0; transform: scaleX(-1); }
+.wm-frame-bl { left: 0; bottom: 0; transform: scaleY(-1); }
+.wm-frame-br { right: 0; bottom: 0; transform: scale(-1, -1); }
+@media (max-width: 640px) { .wm-frame { width: 38px; } }
+/* The zoom buttons move down a little so the top-right corner piece does not sit behind them. */
+.wm-box[data-frame="on"] .wm-controls { top: 50px; right: 8px; }
+@media (max-width: 640px) { .wm-box[data-frame="on"] .wm-controls { top: 38px; } }
+.wm-foot { display: block; }
+.wm-foot:has(.wm-tools) { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.wm-tools { display: flex; flex: 0 0 auto; align-items: flex-end; gap: 6px; margin-top: 6px; }
+.wm-tools img { display: block; height: 44px; width: auto; }
 .wm-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 8px 2px 0; padding: 0; list-style: none; font-size: 0.75rem; color: rgb(var(--c-ink)); }
 .wm-legend li { display: inline-flex; align-items: center; gap: 6px; }
 /* Province weight (Stitch "tally of the realm"): a small meter and the figure. A dashed meter and "at least"

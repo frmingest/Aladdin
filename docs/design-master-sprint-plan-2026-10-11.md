@@ -1,6 +1,6 @@
 # Design Master: review and sprint plan (2026-10-11)
 
-Status: **approved by Faiz 2026-10-11 (all nine decisions, Part 5). Sprint 0 is merged (#103); Sprint 1 is merged (#104); Sprint 2 is merged (#105); Sprint 3 is merged (#106); Sprint 4 is merged (#107); Sprint 5 is merged (#108); Sprint 6 is merged (#109, deploy not verified); Sprint 7 is next. Sprints 8 to 13 (the rooms: Council, Records, Circle, Chronicle, Map table, and the shared crests) are proposed on Faiz's request of 2026-10-11, waiting for his OK on decisions 10 to 13 (Part 5) and for the Stitch sets (Part 8, batches 3 to 8).** Written from a fresh clone of `main` (`e939577`, PR #101 merged), all 52 object images and 10 screen mocks in `frontend/public/art/Design_master`, the Stitch `DESIGN.md`, and a read of the scene, map and marketplace code. `E:\Aladdin` is stale (branch `feature/currency-edit-and-nok-equivalent`, older than `main`); pull `main` before any build.
+Status: **approved by Faiz 2026-10-11 (all nine decisions, Part 5). Sprint 0 is merged (#103); Sprint 1 is merged (#104); Sprint 2 is merged (#105); Sprint 3 is merged (#106); Sprint 4 is merged (#107); Sprint 5 is merged (#108); Sprint 6 is merged (#109, deploy not verified); Sprint 7 is next. Sprints 8, 10, 12 and 13 (room banners, Records, Chronicle, Map table) are written on 2026-10-11 as Faiz asked (rooms first, Sprint 7 last), using the first set of room pictures; Sprints 9 (Council) and 11 (Circle) wait for the crests, seals, Council furniture and Circle stones, which are not generated yet (see the Sprint 13 result). Decisions 10 to 13 (Part 5) are treated as approved by that request.** Written from a fresh clone of `main` (`e939577`, PR #101 merged), all 52 object images and 10 screen mocks in `frontend/public/art/Design_master`, the Stitch `DESIGN.md`, and a read of the scene, map and marketplace code. `E:\Aladdin` is stale (branch `feature/currency-edit-and-nok-equivalent`, older than `main`); pull `main` before any build.
 
 Related: [stitch-master-object-art-2026-10-11.md](stitch-master-object-art-2026-10-11.md) (style, rules, prompts for what is still missing), [game-sprint-checklist.md](game-sprint-checklist.md) (section A is answered in Part 7).
 
@@ -259,6 +259,18 @@ Same rules as Sprints 1 to 6: one branch and one PR per sprint off fresh `main`,
 - Needs: frame corner, dividers, rolled map, pin, wave tile (Part 6b).
 - Code: a brass frame (corner mirrored four times), dividers and the rolled map beside the legend; wave tile on open water. Settlements, fog patches, commission flags and the keep are unchanged (Sprints 4 and 6).
 - Cut line: pin and wave tile.
+
+**Sprint 13 result (2026-10-11, written, not deployed).**
+- Packed (3 new ids): `map-frame-corner`, `map-dividers`, `map-rolled` (23 KB). The brass pin and the wave tile stay in the masters (the cut line).
+- Cartographer's table, art mode only: the corner picture is mirrored into all four corners of the map box (`MapFrame`; pointer events off, so panning, zooming and every settlement behave as before); the zoom buttons sit a little lower so the top-right corner does not hide behind them. The dividers and the rolled map stand beside the province legend (`MapTools`). Settlements, fog patches, commission flags, the keep, the key and the legend are unchanged. A corner that fails to load removes the whole frame.
+- Not done, by design: pin and wave tile (cut line).
+- Checks: tsc (only the known `artAssets.test.ts` gap), eslint (0 errors), the kit and map tests pass (art off draws no frame, tools or image). Not rendered in a browser: corner size over settlements near the edge, and the zoom button position, need Faiz's eye.
+
+**Still missing for the rooms (what blocks Sprints 9 and 11 and the crest work in Sprint 8; prompts are in the master doc, Part 6b).**
+- **Shared (batch 3):** the five room crests (council, records, circle, chronicle, map), wax seal intact and broken, quill and inkwell, candle stand.
+- **Council (batch 4, Sprint 9):** round table, two chairs, agenda scroll, gavel. The Oracle and Partner busts already exist.
+- **Circle (batch 6, Sprint 11):** standing stone (and a low variant), brazier, lantern post, telescope, fog stake. The signpost arrived (kept in the masters, unused until the rest exists).
+- Left unused in the masters from the first room set: pigeonholes, tomes, sundial, weathervane, cairn, chronicle book, brass pin, wave tile.
 
 **Section A for Sprints 8 to 13 (checklist answers, targets inferred from code, none re-scored with screenshots).**
 1. Pages touched: every room header and tab strip (S8); Council (S9); Records (S10); Circle (S11); Chronicle (S12); Map table (S13). Not touched: Siege Simulator, Night Watch, Ledger.
