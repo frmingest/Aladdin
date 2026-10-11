@@ -1,0 +1,225 @@
+{
+ "_note": "Source of truth for packed object art. master = image number in docs/design-master-sprint-plan-2026-10-11.md Part 2; source = folder name inside Design_master. Run scripts/art/pack.py after editing.",
+ "defaults": {
+  "max_side": 384,
+  "quality": 80
+ },
+ "objects": [
+  {
+   "id": "spire-granite",
+   "master": 37,
+   "source": "cartoon_fantasy_medieval_tall_round_stone_watchtower_in_grey_granite_blocks"
+  },
+  {
+   "id": "spire-rotted",
+   "master": 38,
+   "source": "cartoon_fantasy_medieval_tall_round_timber_watchtower_same_silhouette_and"
+  },
+  {
+   "id": "spire-basalt",
+   "master": 39,
+   "source": "cartoon_fantasy_medieval_tall_round_watchtower_with_the_exact_same_silhouette_1"
+  },
+  {
+   "id": "spire-brick",
+   "master": 40,
+   "source": "cartoon_fantasy_medieval_tall_round_watchtower_with_the_exact_same_silhouette_2"
+  },
+  {
+   "id": "spire-timber",
+   "master": 41,
+   "source": "cartoon_fantasy_medieval_tall_round_watchtower_with_the_exact_same_silhouette_3"
+  },
+  {
+   "id": "bastion-granite",
+   "master": 26,
+   "source": "cartoon_fantasy_medieval_defensive_stone_bastion_rampart_tower_in_grey_granite"
+  },
+  {
+   "id": "bastion-rotted",
+   "master": 22,
+   "source": "cartoon_fantasy_medieval_defensive_bastion_rampart_tower_same_silhouette_pose"
+  },
+  {
+   "id": "bastion-basalt",
+   "master": 23,
+   "source": "cartoon_fantasy_medieval_defensive_bastion_rampart_tower_with_the_exact_same_1"
+  },
+  {
+   "id": "bastion-brick",
+   "master": 24,
+   "source": "cartoon_fantasy_medieval_defensive_bastion_rampart_tower_with_the_exact_same_2"
+  },
+  {
+   "id": "bastion-timber",
+   "master": 25,
+   "source": "cartoon_fantasy_medieval_defensive_bastion_rampart_tower_with_the_exact_same_3"
+  },
+  {
+   "id": "outpost",
+   "master": 15,
+   "source": "cartoon_fantasy_medieval_allied_outpost_structure_vibrant_2d_mobile_game_art"
+  },
+  {
+   "id": "granary",
+   "master": 27,
+   "source": "cartoon_fantasy_medieval_granary_building_structure_vibrant_2d_casual_mobile"
+  },
+  {
+   "id": "vault-1",
+   "master": 35,
+   "source": "cartoon_fantasy_medieval_stone_and_timber_vault_house_building_structure_for_a"
+  },
+  {
+   "id": "vault-2",
+   "master": 50,
+   "source": "modify_data_image_image_2_cartoon_fantasy_medieval_stone_and_timber_vault_house_1"
+  },
+  {
+   "id": "vault-3",
+   "master": 51,
+   "source": "modify_data_image_image_2_cartoon_fantasy_medieval_stone_and_timber_vault_house_2"
+  },
+  {
+   "id": "keep-granite",
+   "master": 17,
+   "source": "cartoon_fantasy_medieval_castle_fortress_great_keep_structure_exact_same",
+   "crop_bottom_px": 6
+  },
+  {
+   "id": "shack",
+   "master": 34,
+   "source": "cartoon_fantasy_medieval_shanty_shack_building_structure_for_tiny_positions"
+  },
+  {
+   "id": "siege-tent",
+   "master": 6,
+   "source": "cartoon_fantasy_enemy_siege_camp_sprite_vibrant_2d_casual_mobile_game_art_style"
+  },
+  {
+   "id": "siege-soldier",
+   "master": 5,
+   "source": "cartoon_fantasy_enemy_siege_camp_soldier_sprite_vibrant_2d_casual_mobile_game"
+  },
+  {
+   "id": "siege-trebuchet",
+   "master": 7,
+   "source": "cartoon_fantasy_enemy_siege_camp_trebuchet_engine_sprite_vibrant_2d_casual"
+  },
+  {
+   "id": "siege-ram",
+   "master": 3,
+   "source": "cartoon_fantasy_enemy_siege_camp_battering_ram_sprite_vibrant_2d_casual_mobile"
+  },
+  {
+   "id": "siege-tower",
+   "master": 4,
+   "source": "cartoon_fantasy_enemy_siege_camp_siege_tower_sprite_vibrant_2d_casual_mobile"
+  },
+  {
+   "id": "siege-arrow",
+   "master": 8,
+   "source": "cartoon_fantasy_enemy_siege_weapon_projectile_sprite_vibrant_2d_casual_mobile",
+   "key": "glow"
+  },
+  {
+   "id": "prop-pines",
+   "master": 10,
+   "source": "cartoon_fantasy_map_terrain_prop_sprite_vibrant_2d_casual_mobile_game_art_style_1"
+  },
+  {
+   "id": "prop-palms",
+   "master": 11,
+   "source": "cartoon_fantasy_map_terrain_prop_sprite_vibrant_2d_casual_mobile_game_art_style_2"
+  },
+  {
+   "id": "prop-rocks",
+   "master": 12,
+   "source": "cartoon_fantasy_map_terrain_prop_sprite_vibrant_2d_casual_mobile_game_art_style_3"
+  },
+  {
+   "id": "prop-bridge",
+   "master": 13,
+   "source": "cartoon_fantasy_map_terrain_prop_sprite_vibrant_2d_casual_mobile_game_art_style_4"
+  },
+  {
+   "id": "prop-ship",
+   "master": 14,
+   "source": "cartoon_fantasy_map_terrain_prop_sprite_vibrant_2d_casual_mobile_game_art_style_5"
+  },
+  {
+   "id": "raven",
+   "master": 32,
+   "source": "cartoon_fantasy_medieval_messenger_raven_bird_sprite_vibrant_2d_casual_mobile"
+  },
+  {
+   "id": "lamp",
+   "master": 16,
+   "source": "cartoon_fantasy_medieval_brass_oil_lamp_sprite_vibrant_2d_casual_mobile_game"
+  },
+  {
+   "id": "map-town",
+   "master": 33,
+   "source": "cartoon_fantasy_medieval_settlement_town_castle_fortress_outpost_with_stone"
+  },
+  {
+   "id": "map-citadel",
+   "master": 43,
+   "source": "cartoon_fantasy_stone_mountain_citadel_stronghold_settlement_with_teal_banners"
+  },
+  {
+   "id": "map-port",
+   "master": 2,
+   "source": "cartoon_fantasy_coastal_trading_port_settlement_with_small_stone_lighthouse",
+   "key": "erase-shadow"
+  },
+  {
+   "id": "map-island",
+   "master": 9,
+   "source": "cartoon_fantasy_island_archipelago_sanctuary_outpost_with_tiny_stone_fortress"
+  },
+  {
+   "id": "sal-counter",
+   "master": 52,
+   "source": "modify_data_image_image_43_cartoon_friendly_fantasy_merchant_counter_asset"
+  },
+  {
+   "id": "stall-smithy",
+   "master": 28,
+   "source": "cartoon_fantasy_medieval_market_stall_booth_vibrant_2d_casual_mobile_game_art_1"
+  },
+  {
+   "id": "stall-armoury",
+   "master": 29,
+   "source": "cartoon_fantasy_medieval_market_stall_booth_vibrant_2d_casual_mobile_game_art_2"
+  },
+  {
+   "id": "stall-provisions",
+   "master": 30,
+   "source": "cartoon_fantasy_medieval_market_stall_booth_vibrant_2d_casual_mobile_game_art_3"
+  },
+  {
+   "id": "booth-goods",
+   "master": 31,
+   "source": "cartoon_fantasy_medieval_merchant_market_stall_booth_with_striped_teal_and_wood"
+  },
+  {
+   "id": "sal-pitch",
+   "master": 20,
+   "source": "cartoon_fantasy_medieval_character_bust_portrait_of_sal_the_merchant_clerk_2",
+   "key": "sampled"
+  },
+  {
+   "id": "sal-oops",
+   "master": 21,
+   "source": "cartoon_fantasy_medieval_character_bust_portrait_of_sal_the_merchant_clerk_3",
+   "key": "sampled"
+  },
+  {
+   "id": "sal-think",
+   "master": 19,
+   "source": "cartoon_fantasy_medieval_character_bust_portrait_of_sal_the_merchant_clerk_1",
+   "key": "sampled"
+  }
+ ]
+}

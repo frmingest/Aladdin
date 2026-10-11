@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { OBJECT_ART, readArtMode, type ObjectArtId } from "../lib/stitchArt";
+import { getObjectArt, useArtMode, type ObjectArtId } from "../lib/stitchArt";
 
 /**
- * One Stitch Master object picture, with the SVG as the fallback (art off, or
- * the file failed to load). Static: no animation. The mode is read once per
- * mount, so a page reload picks up a changed ?art= choice.
+ * One Stitch Master object picture, with the SVG as the fallback: art off,
+ * an id with no picture, or the file failed to load. Static: no animation.
+ * The mode is live (Settings switch), so no reload is needed.
  */
 export default function ObjectArtImage({
   id,
@@ -18,10 +18,10 @@ export default function ObjectArtImage({
   /** Rendered width in CSS px; height follows the picture's ratio. */
   width: number;
 }) {
-  const [on] = useState(() => readArtMode() === "stitch");
+  const mode = useArtMode();
   const [failed, setFailed] = useState(false);
-  if (!on || failed) return <>{fallback}</>;
-  const art = OBJECT_ART[id];
+  const art = getObjectArt(id);
+  if (mode !== "stitch" || failed || !art) return <>{fallback}</>;
   return (
     <img
       src={art.src}

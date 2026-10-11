@@ -44,3 +44,9 @@ repos:
         language: fail
         files: \.(pdf|pptx|xlsx|xhtml|xbrl|zip)$
         exclude: ^docs/
+      - id: no-stray-images
+        name: no image over 150 KB outside frontend/src/assets/art (masters stay in art-masters/)
+        entry: python scripts/art/check_image_sizes.py
+        language: system
+        files: \.(png|jpe?g|webp|gif)$
+        exclude: ^(docs/|frontend/src/assets/art/)
