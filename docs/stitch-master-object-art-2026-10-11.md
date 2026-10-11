@@ -79,6 +79,48 @@ Each says where it is used. Acceptance is the checklist in section 3.
 - Awning-less stalls (four kinds): the same stall with "no awning, open timber frame at the top".
 - Overlay sprites: ivy cluster, scaffolding frame, ladder, torch.
 
+## 6b. Prompts for the rooms (Sprints 8 to 13, proposed)
+
+Same shared block and review checklist as above. One object per image; for a set, generate the first image, then attach it as the reference for the rest so outline and light stay identical. A star marks the pieces that give a room the most identity for the least effort. Code draws every fact (seal state, ring, fog, gap, due date) over the neutral object.
+
+**Batch 3, shared**
+- ★ **Room crests** (one per room: council, records, circle, chronicle, map; later two more). `[Shared block] Subject: a round gilded medallion crest, brass rim with a teal enamel centre, one simple raised symbol in cream: [council = a round table seen from above with five small dots / records = a closed book with a ribbon / circle = three concentric rings / chronicle = an hourglass / map = an eight-point compass star]. No letters, no numbers.`
+- ★ **Wax seal, intact** and **broken** (two prompts). `Subject: a round red wax seal pressed on a short parchment tab, intact, a plain star imprint` / `the same seal broken in two halves, a crack through the middle`. Red is the one deliberate exception (decision 12); shape carries the meaning.
+- **Quill and inkwell.** `Subject: a brass inkwell with a white goose quill standing in it, no ink spill.`
+- **Candle stand.** `Subject: a tall wrought-iron candle stand with three unlit white candles.` Code draws flames.
+
+**Batch 4, Council**
+- ★ **Round table.** `Subject: an empty round oak table in a three-quarter view, a teal cloth runner across the centre, iron-bound edge, nothing on it, no chairs.`
+- ★ **Two chairs** (two prompts): `a tall high-backed chair in dark timber with gold studs and a teal cushion` and `a plain iron-framed chair with a straight back and a brown leather seat` (different silhouettes tell the advisors apart).
+- **Agenda scroll:** `a half-unrolled blank parchment scroll with two wooden rollers, flat blank face, no lines, no writing.` **Gavel:** `a small wooden gavel resting on a round block.`
+- Backdrop (optional, not keyed): `a wide candlelit stone council chamber interior, an arched window, a banner pole with a plain teal banner, an empty round table in the centre, no people, no text, 3:1 wide.`
+
+**Batch 5, Records**
+- ★ **Time-capsule casket.** `Subject: a small round-lidded iron-banded wooden casket with a leather strap, closed, no lock detail.`
+- ★ **Bookshelf.** `Subject: a tall oak bookshelf with five shelves of closed books in slate, brown and teal spines, no lettering on spines, a few shelves partly empty.`
+- **Tomes** (three prompts): a stack of three closed leather books with iron corners and a ribbon bookmark; a single closed book; a book lying open with blank pages.
+- **Lectern:** `a slanted wooden reading desk on a turned post, a blank open book on it.` **Pigeonholes:** `a wooden pigeonhole cabinet of 3x4 small compartments, some holding rolled blank scrolls.`
+- Backdrop (optional): `a stone archive hall, shelves along the wall, one long reading table, warm lamplight from the left, no people, no text.`
+
+**Batch 6, Circle**
+- ★ **Standing stone** (and a low leaning variant): `Subject: a single tall rough standing stone with a flat top and a faint teal moss line at the base, no carvings.`
+- ★ **Brazier:** `a round iron fire basin on three legs, filled with dark unlit coals.`
+- **Lantern post:** `a wooden post with an iron hook and a brass lantern, unlit, glass dark.` **Signpost:** `a two-armed wooden signpost with both arms blank, planted in a small mound.` **Telescope:** `a brass telescope on a wooden tripod, pointed up and to the right.` **Fog stake:** `a short wooden stake with a frayed rope tied around it.`
+- Backdrop (optional): `a circular flagstone clearing at dusk seen from above at 45 degrees, empty, mist at the outer edge, no rings, no figures.`
+
+**Batch 7, Chronicle**
+- ★ **Hourglass:** `Subject: a brass-framed hourglass on a short wooden base, sand evenly split, no spill.`
+- ★ **Strata block:** `a stone cross-section block showing five flat horizontal rock layers in slate, tan and teal-grey with a thin moss top, flat sides.` (tiles into the spine)
+- **Sundial:** `a round stone sundial on a short pillar, a plain brass gnomon, no numerals.` **Chronicle book:** `a large closed book on a slanted brass stand, a quill lying beside it.` **Sconce:** `an iron wall sconce with an unlit torch` (dark by code for gap days). **Weathervane:** `a plain iron weathervane with an arrow pointing right, no letters.` **Cairn:** `a small cairn of five stacked flat stones.`
+- No weather pictures (clouds, sun, rain): weather is data and stays code.
+- Backdrop (optional): `a long stone timeline wall with five arched alcoves in a row, empty, soft light, no text, 4:1 wide.`
+
+**Batch 8, Map table**
+- ★ **Frame corner:** `Subject: an ornate brass corner bracket for a map frame with a small teal gem, flat inner edges, one corner only.` (mirrored four times by code)
+- ★ **Dividers:** `brass drawing dividers (compasses) standing open.`
+- **Rolled map:** `a rolled parchment map tied with a teal ribbon, one end slightly open.` **Pin:** `a round-headed brass map pin standing upright, no flag.` **Wave tile:** `a small cluster of stylised sea waves in teal and cream, flat on white, no boat.`
+- The planted flag already exists (Sprint 6, unused): commission flags are data and stay code.
+
 ## 7. Pipeline (built in Phase A, generalised in Sprint 0)
 
 `scripts/art/pack.py`: key the white background from the border (min channel at least 232) plus enclosed pure-white openings, crop to the object, shrink to 512 px at most, save WebP q82. Tested on all 52 Design_master images: 46 key cleanly at 18-65 KB. Four extra modes arrive in Sprint 0: sampled background (Sal busts), glow cut (fire arrow), erase shadow (port, first vault) and a lower threshold for the rotted keep. Masters stay out of `frontend/public/` (Vite ships everything in it); packed art lives in `frontend/src/assets/art/` with hashed names.
