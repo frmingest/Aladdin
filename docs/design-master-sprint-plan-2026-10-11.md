@@ -1,6 +1,6 @@
 # Design Master: review and sprint plan (2026-10-11)
 
-Status: **approved by Faiz 2026-10-11 (all nine decisions, Part 5). Sprint 0 is merged (#103); Sprint 1 is merged (#104); Sprint 2 is written (PR open, not merged, not deployed); Sprint 3 is next.** Written from a fresh clone of `main` (`e939577`, PR #101 merged), all 52 object images and 10 screen mocks in `frontend/public/art/Design_master`, the Stitch `DESIGN.md`, and a read of the scene, map and marketplace code. `E:\Aladdin` is stale (branch `feature/currency-edit-and-nok-equivalent`, older than `main`); pull `main` before any build.
+Status: **approved by Faiz 2026-10-11 (all nine decisions, Part 5). Sprint 0 is merged (#103); Sprint 1 is merged (#104); Sprint 2 is merged (#105); Sprint 3 is written (PR open, not merged, not deployed); Sprint 4 is next.** Written from a fresh clone of `main` (`e939577`, PR #101 merged), all 52 object images and 10 screen mocks in `frontend/public/art/Design_master`, the Stitch `DESIGN.md`, and a read of the scene, map and marketplace code. `E:\Aladdin` is stale (branch `feature/currency-edit-and-nok-equivalent`, older than `main`); pull `main` before any build.
 
 Related: [stitch-master-object-art-2026-10-11.md](stitch-master-object-art-2026-10-11.md) (style, rules, prompts for what is still missing), [game-sprint-checklist.md](game-sprint-checklist.md) (section A is answered in Part 7).
 
@@ -149,6 +149,12 @@ Every sprint is one branch off fresh `main` and one PR, behind `?art=stitch|svg`
 - Terrace life uses pines, palms, rocks; the raven art replaces `RavenMark` (same "new report" meaning, same position); lamp art for `MagicLamp`.
 - Static; no new looping motion; reduced motion unchanged.
 - Cut line: raven and lamp swap.
+
+**Sprint 3 result (2026-10-11, written, not deployed).**
+- `lib/sceneArt.ts` (tested): `siegeCampSprites()` places tents, soldiers and the three engines from the same `siegeCamp()` counts as the code camp (calm and unsurveyed draw nothing; gathering 3 tents and 7 soldiers; besieged 7, 20, 3 engines, 5 arrows). `fireArrowSprites()` lands each arrow on its target, rotated along the last stretch of the dotted arc. `ravenSprite()` perches the raven. All pictures keep their proportions and stand on a ground line.
+- `sceneWorld.tsx`: in art mode the camp uses the pictures, graded per weather like the towers (the fire arrows are light and not graded; the dotted arcs stay code). Terrace pines at the edges, the round trees on the lower terraces and the scattered stones use `prop-pines` and `prop-rocks`. One failed picture turns its whole group back to the SVG. `RavenMark` swaps its drawing for the raven picture; position, bob and the "new report" meaning are unchanged.
+- Fix (Faiz, 2026-10-11, towers looked as if on pikes): the cause was the code drawbridge, a narrow dark plank under each picture tower. In art mode it is now a stone causeway that widens towards the viewer (wider and longer for a wide moat); the SVG drawbridge is unchanged.
+- Not done, by design: the lamp swap (the cut line; `MagicLamp` stays SVG), palms (a tropical prop in a northern realm; kept for the map), well and hay (no art until Stitch batch 1). Anchors and sizes were set by eye; the scene was not rendered in a browser in this session, so camp scale on the far hills and the causeway width need Faiz's eye on real data.
 
 **Sprint 4: Map (M).**
 - Settlement art by decision 5; the Great Keep art at the capital; props (pine, palm, rocks, ship) replace glyphs; bridge on roads where one crosses a province edge; port and island as landmarks. Fog patches and the five survey patches stay code, drawn over the picture, so unknown stays fog.

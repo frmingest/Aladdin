@@ -230,6 +230,33 @@ function Drawbridge({ item, art = false }: { item: PlacedTower; art?: boolean })
   const depth = wide ? 26 : 12;
   const bw = wide ? 24 : 16;
   const cx = x + w / 2;
+  if (art) {
+    // Art mode: a narrow dark plank under a picture tower read as a stake it
+    // stood on. A stone causeway that widens toward the viewer and meets the
+    // bank reads as an approach road instead.
+    const topW = wide ? 34 : 26;
+    const botW = wide ? 54 : 38;
+    const y0 = y - 2;
+    const y1 = y + depth + 5;
+    const rows = wide ? [0.33, 0.66] : [0.5];
+    return (
+      <g aria-hidden="true">
+        <path
+          d={`M${cx - topW / 2} ${y0} L${cx + topW / 2} ${y0} L${cx + botW / 2} ${y1} L${cx - botW / 2} ${y1} Z`}
+          fill="#B7AE9B"
+          stroke={INK}
+          strokeWidth={1.6}
+          strokeLinejoin="round"
+        />
+        {rows.map((f) => {
+          const yy = y0 + (y1 - y0) * f;
+          const half = (topW + (botW - topW) * f) / 2;
+          return <path key={f} d={`M${cx - half + 1} ${yy} L${cx + half - 1} ${yy}`} stroke={INK} strokeOpacity={0.35} strokeWidth={1} />;
+        })}
+        <path d={`M${cx - botW / 2 - 1} ${y1} L${cx + botW / 2 + 1} ${y1}`} stroke={INK} strokeOpacity={0.5} strokeWidth={1.2} />
+      </g>
+    );
+  }
   return (
     <g>
       <rect x={cx - bw / 2} y={y - 2} width={bw} height={depth + 5} fill={art ? "#8A5432" : "#7a5128"} stroke={art ? INK : "#2a1a0b"} strokeWidth={art ? 1.6 : 1} strokeOpacity={art ? 1 : 0.7} />

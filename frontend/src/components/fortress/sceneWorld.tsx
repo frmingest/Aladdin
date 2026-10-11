@@ -1,6 +1,9 @@
 import { ROW_HEIGHT, SCENE_TOP, SCENE_WIDTH, siegeCamp, type FortressLayout, type SiegeSky } from "../../lib/fortress";
 import type { FortressSiegeLevel } from "../../lib/types";
-import { HORIZON, type WorldPalette } from "../../lib/fortressArt";
+import { HORIZON, worldPalette, type WorldPalette } from "../../lib/fortressArt";
+import { fireArrowSprites, siegeCampSprites, spriteOnGround, type SpriteRect } from "../../lib/sceneArt";
+import { useArtMode } from "../../lib/stitchArt";
+import { useState } from "react";
 
 /**
  * The world around the towers (F33, G7 art pass): sky, light, mountains,
@@ -9,6 +12,35 @@ import { HORIZON, type WorldPalette } from "../../lib/fortressArt";
  * Fixed colours on purpose: the scene is a painting in a frame and reads the
  * same in the dark and light themes.
  */
+
+/** Art mode for a group of scene pictures: on only while every picture loads.
+ * One failed picture turns the whole group back to its SVG (the permanent fallback). */
+function useSceneArt() {
+  const on = useArtMode() === "stitch";
+  const [failed, setFailed] = useState(false);
+  return { art: on && !failed, fail: () => setFailed(true) };
+}
+
+/** Pictures as SVG images, optionally rotated about their own centre. */
+function Sprites({ rects, grade, onFail }: { rects: SpriteRect[]; grade?: string; onFail: () => void }) {
+  return (
+    <g aria-hidden style={grade ? { filter: grade } : undefined}>
+      {rects.map((r, i) => (
+        <image
+          key={i}
+          href={r.src}
+          x={r.left}
+          y={r.top}
+          width={r.width}
+          height={r.height}
+          preserveAspectRatio="none"
+          transform={r.rotate ? `rotate(${r.rotate.toFixed(1)} ${(r.left + r.width / 2).toFixed(1)} ${(r.top + r.height / 2).toFixed(1)})` : undefined}
+          onError={onFail}
+        />
+      ))}
+    </g>
+  );
+}
 
 export function SceneDefs({ palette }: { palette: WorldPalette }) {
   return (
@@ -343,9 +375,26 @@ function SiegeFires({ count, y }: { count: number; y: number }) {
  * not surveyed, scouts and tents while the enemy gathers, a full camp with
  * engines and fire arrows when the realm is besieged. Static: the only motion
  * is the camp fires above. */
-function SiegeArmy({ level, y }: { level: FortressSiegeLevel | null | undefined; y: number }) {
+function SiegeArmy({ level, y, grade }: { level: FortressSiegeLevel | null | undefined; y: number; grade: string }) {
   const camp = siegeCamp(level);
+  const { art, fail } = useSceneArt();
   if (camp.tents === 0) return null;
+  if (art) {
+    // Pictures for tents, soldiers and engines (same counts as the code camp).
+    // The fire arrows are light, so they are not graded; the dotted arcs stay code.
+    const arcs: [number, number, number][] = [
+      [236, 300, 120], [410, 292, 330], [560, 286, 590], [700, 292, 790], [820, 300, 880],
+    ];
+    return (
+      <g aria-hidden>
+        <Sprites rects={siegeCampSprites(camp, y)} grade={grade} onFail={fail} />
+        {arcs.slice(0, camp.arrows).map(([tx, ty, sx], i) => (
+          <path key={i} d={`M${sx} ${y - 8} Q${(sx + tx) / 2} ${y - 70} ${tx} ${ty}`} stroke="#ffb15a" strokeOpacity={0.45} strokeWidth={1} strokeDasharray="2 4" fill="none" />
+        ))}
+        <Sprites rects={fireArrowSprites(camp, y)} onFail={fail} />
+      </g>
+    );
+  }
   const tentXs = [96, 214, 330, 566, 690, 812, 902].slice(0, camp.tents);
   const soldierXs = Array.from({ length: camp.soldiers }, (_, i) => 40 + ((i * 53) % 900) + (i % 3) * 5);
   const engineXs = [150, 450, 760].slice(0, camp.engines);
@@ -391,8 +440,9 @@ function SiegeArmy({ level, y }: { level: FortressSiegeLevel | null | undefined;
 /** Quiet life on the lower terraces: a track, a well, hay and trees. Pure
  * decoration, the same whatever the portfolio looks like (it must never make
  * a weak book look better), and static. Rows below the first only. */
-function TerraceLife({ layout }: { layout: FortressLayout }) {
+function TerraceLife({ layout, grade }: { layout: FortressLayout; grade: string }) {
   const rows = Math.max(1, layout.rows);
+  const { art, fail } = useSceneArt();
   const out: JSX.Element[] = [];
   for (let r = 1; r < rows; r += 1) {
     const top = SCENE_TOP + (r - 1) * ROW_HEIGHT + 170 + 70 + 26 + 18;
@@ -428,7 +478,14 @@ function TerraceLife({ layout }: { layout: FortressLayout }) {
           <path d="M-58 30 H58 M-46 0 V-5 M0 0 V-5 M46 0 V-5" stroke="#3a2a16" strokeWidth={1.4} />
         </g>
         {/* round trees */}
-        {[x0 + 20 * flip, SCENE_WIDTH - x0 - 40 * flip].map((tx, k) => (
+        {art && (
+          <Sprites
+            rects={[x0 + 20 * flip, SCENE_WIDTH - x0 - 40 * flip].map((tx) => spriteOnGround("prop-pines", tx, top + 54, 56))}
+            grade={grade}
+            onFail={fail}
+          />
+        )}
+        {!art && [x0 + 20 * flip, SCENE_WIDTH - x0 - 40 * flip].map((tx, k) => (
           <g key={`tr${k}`} transform={`translate(${tx} ${top + 52})`}>
             <ellipse cx={5} cy={2} rx={15} ry={4} fill="#000" opacity={0.3} />
             <rect x={-2} y={-12} width={4} height={14} fill="#3a2614" />
@@ -467,14 +524,20 @@ function Terrace({ groundY, index }: { groundY: number; index: number }) {
 }
 
 /** Grass tufts and stones scattered on the terraces, to give the ground scale. */
-function Tufts({ layout }: { layout: FortressLayout }) {
+function Tufts({ layout, grade }: { layout: FortressLayout; grade: string }) {
   const rows = Math.max(1, layout.rows);
+  const { art, fail } = useSceneArt();
   const out: JSX.Element[] = [];
+  const rocks: SpriteRect[] = [];
   for (let r = 0; r < rows; r += 1) {
     const gy = SCENE_TOP + r * ROW_HEIGHT + 170;
     for (let i = 0; i < 22; i += 1) {
       const x = 14 + i * 46 + ((i * 29 + r * 13) % 21);
       const y = gy + 52 + ((i * 11) % 14);
+      if (art && i % 4 === 0) {
+        rocks.push(spriteOnGround("prop-rocks", x, y + 3, 11 + (i % 3) * 2));
+        continue;
+      }
       out.push(
         i % 4 === 0 ? (
           <ellipse key={`${r}-${i}`} cx={x} cy={y} rx={4} ry={2.4} fill="#6f6a5e" opacity={0.7} />
@@ -484,12 +547,26 @@ function Tufts({ layout }: { layout: FortressLayout }) {
       );
     }
   }
-  return <g aria-hidden>{out}</g>;
+  return (
+    <g aria-hidden>
+      {out}
+      {rocks.length > 0 && <Sprites rects={rocks} grade={grade} onFail={fail} />}
+    </g>
+  );
 }
 
 /** A pine at the edge of each terrace, framing the scene. */
-function EdgePines({ layout, color }: { layout: FortressLayout; color: string }) {
+function EdgePines({ layout, color, grade }: { layout: FortressLayout; color: string; grade: string }) {
   const rows = Math.max(1, layout.rows);
+  const { art, fail } = useSceneArt();
+  if (art) {
+    const rects: SpriteRect[] = [];
+    for (let r = 0; r < rows; r += 1) {
+      const gy = SCENE_TOP + r * ROW_HEIGHT + 170 + 40;
+      [24, SCENE_WIDTH - 26].forEach((x) => rects.push(spriteOnGround("prop-pines", x, gy + 2, 84)));
+    }
+    return <Sprites rects={rects} grade={grade} onFail={fail} />;
+  }
   return (
     <g aria-hidden>
       {Array.from({ length: rows }, (_, r) => {
@@ -547,7 +624,7 @@ export function SceneBackdrop({
       <SnowCaps color={palette.snow} />
       <rect x={0} y={HORIZON - 130} width={SCENE_WIDTH} height={140} fill="url(#fs-haze)" />
       <path d={ridge(NEAR_PEAKS, HORIZON + 4)} fill={palette.nearHills} />
-      <SiegeArmy level={level} y={HORIZON - 22} />
+      <SiegeArmy level={level} y={HORIZON - 22} grade={worldPalette(level).grade} />
       <SiegeFires count={sky.fires} y={HORIZON - 26} />
       <Treeline color={palette.forest} y={HORIZON + 10} />
 
@@ -555,9 +632,9 @@ export function SceneBackdrop({
       {Array.from({ length: rows }, (_, r) => (
         <Terrace key={r} groundY={SCENE_TOP + r * ROW_HEIGHT + 170} index={r} />
       ))}
-      <Tufts layout={layout} />
-      <TerraceLife layout={layout} />
-      <EdgePines layout={layout} color={palette.forest} />
+      <Tufts layout={layout} grade={worldPalette(level).grade} />
+      <TerraceLife layout={layout} grade={worldPalette(level).grade} />
+      <EdgePines layout={layout} color={palette.forest} grade={worldPalette(level).grade} />
       {sky.mist && (
         <g>
           <rect x={0} y={HORIZON - 60} width={SCENE_WIDTH} height={120} fill="url(#fs-mist)" />
