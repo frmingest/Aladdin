@@ -21,6 +21,10 @@
   box-shadow: inset 0 0 0 1px #8a6a32, inset 0 0 0 4px #120c07, inset 0 0 0 5px rgba(217, 169, 62, 0.4), 0 14px 30px -18px #000;
   padding-bottom: 1rem;
 }
+/* Time-capsule casket beside a review (art mode): the picture is the state's shape, the cracked seal is code. */
+.hall-casket { position: relative; display: inline-block; flex: 0 0 auto; width: 40px; line-height: 0; }
+.hall-casket img { display: block; width: 40px; height: auto; max-height: 40px; object-fit: contain; }
+.hall-casket-seal { position: absolute; right: -8px; bottom: -4px; }
 .hall-cornice { position: relative; height: 44px; border-bottom: 2px solid #8a6a32; background: #120c07; overflow: hidden; }
 .hall-cornice > svg:last-child { position: absolute; left: 0; right: 0; bottom: 0; }
 .hall-torches { position: absolute; inset: 0 0 auto 0; height: 28px; width: 100%; opacity: 0.9; z-index: 1; }

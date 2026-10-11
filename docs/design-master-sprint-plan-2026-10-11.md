@@ -230,6 +230,13 @@ Same rules as Sprints 1 to 6: one branch and one PR per sprint off fresh `main`,
 - Code: each entry stays one row in the existing list (Plain view); a time capsule is a casket with a whole seal, drawn broken when its review is due or open, plus today's label. The bookshelf and lectern frame the header. Keeps the caption "a decision is not its outcome"; no streaks or rewards.
 - Cut line: pigeonholes and lectern.
 
+**Sprint 10 result (2026-10-11, written, not deployed).**
+- Packed (4 new ids; the earlier pictures repack byte-identical): `casket-closed`, `casket-open`, `room-bookshelf`, `room-lectern` (63 KB together). The pigeonholes, the three tomes and the lectern-free tome stack are kept in the masters, not packed (the cut line; the Hall already draws its own tomes, one per record, because each tome carries the action letter and the owed ribbon).
+- `lib/roomArt.ts`: `capsuleArt(state)` (sealed = closed casket, owed = closed casket plus a cracked seal that code draws, written = open casket) and `roomPropIds(room)`. Tested: the three states differ by picture or seal, and every id is packed.
+- Hall of Records, art mode only: each review line (month 6 and month 12 in the reading desk) shows the casket instead of the small wax seal; the printed label ("Month 6: sealed until it is due", "unsealed, review owed", "opened, review written") is unchanged, so the state is shape plus words, never colour alone. The bookshelf and lectern stand in the banner between the title and the buttons (`RoomProps`, hidden on phones). The tomes, shelf, desk, Plain view, the caption "a decision is not its outcome" and every figure are untouched; no streak, no reward.
+- Not done, by design: pigeonholes and the lectern as a reading desk (cut line), the tome pictures.
+- Checks: tsc (only the known `artAssets.test.ts` Node-types gap), eslint (0 errors) and the room, hall and kit tests pass. Not rendered in a browser: casket size beside the label and the banner props need Faiz's eye.
+
 **Sprint 11: Circle (M).** Visual verb "draw", scene "a clearing in a ring of stones".
 - Needs: standing stones (2), brazier, lantern post, signpost, telescope, fog stake (Part 6b).
 - Code: concentric rings drawn by code (know, partly, outside); a tower pin sits in the ring its status says, size from its real weight; unclassified towers sit outside the stones in dashed fog with stakes. Standing stones mark the ring edges, the brazier is the constant centre. The existing list stays as the accessible table; `role="img"` summary from `data.summary`.

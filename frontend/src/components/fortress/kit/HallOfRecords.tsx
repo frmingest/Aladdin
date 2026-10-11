@@ -6,6 +6,8 @@ import { HALL_COPY, SEAL_LOOK, defaultOpenId, tomeAria, tomeFor, type Tome } fro
 import type { CapsuleState } from "../../../lib/capsules";
 import { actionLabel, daysText, filterRecords, priceLine, verdictLine } from "../../../lib/rituals";
 import type { DecisionRecord, Records } from "../../../lib/types";
+import { capsuleArt } from "../../../lib/roomArt";
+import { getObjectArt, useArtMode } from "../../../lib/stitchArt";
 import { EmptyState } from "../../ui";
 import TorchPair from "./TorchPair";
 import "./hall.css";
@@ -70,14 +72,39 @@ function TomePicture({ t, id }: { t: Tome; id: string }) {
   );
 }
 
+/** One review's mark. With "Object art" on it is a time-capsule casket: closed while sealed, closed with a
+ * cracked seal when the review is owed, open once it is written (the shape tells the state; the printed
+ * label beside it says it in words). Otherwise, or if the picture fails, the painted wax seal. */
+function CapsuleMark({ state, months }: { state: CapsuleState; months: 6 | 12 }) {
+  const mode = useArtMode();
+  const [failed, setFailed] = useState(false);
+  const look = capsuleArt(state);
+  const art = look ? getObjectArt(look.id) : null;
+  if (mode !== "stitch" || failed || !look || !art) {
+    return (
+      <svg viewBox="0 0 28 28" width="28" height="28" aria-hidden focusable="false" className="shrink-0">
+        <SealGlyph state={state} months={months} cx={14} cy={14} r={11} />
+      </svg>
+    );
+  }
+  return (
+    <span className="hall-casket" aria-hidden="true">
+      <img src={art.src} alt="" width={40} height={Math.round((40 * art.height) / art.width)} loading="lazy" decoding="async" onError={() => setFailed(true)} />
+      {look.broken && (
+        <svg viewBox="0 0 28 28" width="22" height="22" focusable="false" className="hall-casket-seal">
+          <SealGlyph state="unsealed" months={months} cx={14} cy={14} r={11} />
+        </svg>
+      )}
+    </span>
+  );
+}
+
 function Review({ months, state, text }: { months: 6 | 12; state: DecisionRecord["review_6m"]; text: string | null }) {
   const c = capsuleState(state);
   return (
     <div className="min-w-0">
       <p className="flex items-center gap-2 text-sm font-semibold text-ink">
-        <svg viewBox="0 0 28 28" width="28" height="28" aria-hidden focusable="false" className="shrink-0">
-          <SealGlyph state={c} months={months} cx={14} cy={14} r={11} />
-        </svg>
+        <CapsuleMark state={c} months={months} />
         <span>{capsuleLabel(months, state)}</span>
       </p>
       {text && <p className="mt-1 whitespace-pre-wrap text-sm text-ink">{text}</p>}
