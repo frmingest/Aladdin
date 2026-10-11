@@ -1,10 +1,20 @@
 import { useId } from "react";
 import type { Wish } from "../../lib/genie";
+import { OBJECT_ART } from "../../lib/stitchArt";
+import ObjectArtImage from "../ObjectArtImage";
 
 /** Hand-drawn SVG for the Genie of the Lamp (G11). An invented, generic genie: no likeness of any
  * film or TV character. Fixed colours on purpose, like the lamp logo and the other painted pieces. */
 
+/** The Genie: the Stitch picture for the mood when art is on, else the drawn SVG. */
 export function GenieFigure({ mood = "happy", className = "h-44 w-36" }: { mood?: "happy" | "wow" | "sorry"; className?: string }) {
+  const id = `genie-${mood}` as const;
+  // The picture keeps its own ratio: the caller's height stands, its width becomes automatic.
+  const artClass = `${className.replace(/(^|\s|:)w-\S+/g, "$1w-auto")} object-contain`;
+  return <ObjectArtImage id={id} width={Math.round(144 * (OBJECT_ART[id].width / OBJECT_ART[id].height) * 1.2)} className={artClass} fallback={<GenieSvg mood={mood} className={className} />} />;
+}
+
+function GenieSvg({ mood, className }: { mood: "happy" | "wow" | "sorry"; className: string }) {
   const p = `gn${useId().replace(/:/g, "")}`;
   return (
     <svg aria-hidden viewBox="0 0 140 180" className={`genie-figure ${className}`} xmlns="http://www.w3.org/2000/svg">

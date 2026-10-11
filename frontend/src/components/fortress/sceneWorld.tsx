@@ -454,21 +454,33 @@ function TerraceLife({ layout, grade }: { layout: FortressLayout; grade: string 
           d={`M${SCENE_WIDTH / 2 - 40} ${top - 12} Q${SCENE_WIDTH / 2 + 60 * flip} ${top + 18} ${SCENE_WIDTH / 2 - 20 * flip} ${top + 56}`}
           stroke="#8a7650" strokeOpacity={0.5} strokeWidth={7} strokeLinecap="round" fill="none"
         />
-        {/* a well */}
-        <g transform={`translate(${x0 + 60 * flip} ${top + 36})`}>
-          <ellipse cx={4} cy={4} rx={13} ry={3.5} fill="#000" opacity={0.3} />
-          <rect x={-8} y={-6} width={16} height={9} rx={2} fill="#7d7468" stroke="#3a352d" strokeWidth={0.8} />
-          <path d="M-9 -6 L0 -14 L9 -6 Z" fill="#6b3a22" />
-          <path d="M-7 -6 V0 M7 -6 V0" stroke="#4a2a16" strokeWidth={1.2} />
-        </g>
-        {/* hay bales */}
-        {[0, 1, 2].map((k) => (
-          <g key={k} transform={`translate(${x0 + (130 + k * 26) * flip} ${top + 40 + (k % 2) * 6})`}>
-            <ellipse cx={2} cy={5} rx={9} ry={2.6} fill="#000" opacity={0.28} />
-            <ellipse cx={0} cy={0} rx={8} ry={6.5} fill="#c9a24a" stroke="#6b4e1a" strokeWidth={0.8} />
-            <path d="M-6 -2 q6 3 12 0 M-6 2 q6 3 12 0" stroke="#8a6a24" strokeWidth={0.8} fill="none" />
-          </g>
-        ))}
+        {/* a well and hay: pictures in art mode, drawn shapes otherwise */}
+        {art ? (
+          <Sprites
+            rects={[
+              spriteOnGround("prop-well", x0 + 60 * flip, top + 40, 30),
+              ...[0, 1, 2].map((k) => spriteOnGround("prop-haystack", x0 + (130 + k * 28) * flip, top + 46 + (k % 2) * 6, 17)),
+            ]}
+            grade={grade}
+            onFail={fail}
+          />
+        ) : (
+          <>
+            <g transform={`translate(${x0 + 60 * flip} ${top + 36})`}>
+              <ellipse cx={4} cy={4} rx={13} ry={3.5} fill="#000" opacity={0.3} />
+              <rect x={-8} y={-6} width={16} height={9} rx={2} fill="#7d7468" stroke="#3a352d" strokeWidth={0.8} />
+              <path d="M-9 -6 L0 -14 L9 -6 Z" fill="#6b3a22" />
+              <path d="M-7 -6 V0 M7 -6 V0" stroke="#4a2a16" strokeWidth={1.2} />
+            </g>
+            {[0, 1, 2].map((k) => (
+              <g key={k} transform={`translate(${x0 + (130 + k * 26) * flip} ${top + 40 + (k % 2) * 6})`}>
+                <ellipse cx={2} cy={5} rx={9} ry={2.6} fill="#000" opacity={0.28} />
+                <ellipse cx={0} cy={0} rx={8} ry={6.5} fill="#c9a24a" stroke="#6b4e1a" strokeWidth={0.8} />
+                <path d="M-6 -2 q6 3 12 0 M-6 2 q6 3 12 0" stroke="#8a6a24" strokeWidth={0.8} fill="none" />
+              </g>
+            ))}
+          </>
+        )}
         {/* a fenced furrowed field */}
         <g transform={`translate(${SCENE_WIDTH / 2 + 190 * flip} ${top + 18})`}>
           <path d="M-46 0 L46 0 L58 30 L-58 30 Z" fill="#5a4a2a" opacity={0.8} />
@@ -529,6 +541,7 @@ function Tufts({ layout, grade }: { layout: FortressLayout; grade: string }) {
   const { art, fail } = useSceneArt();
   const out: JSX.Element[] = [];
   const rocks: SpriteRect[] = [];
+  const bushes: SpriteRect[] = [];
   for (let r = 0; r < rows; r += 1) {
     const gy = SCENE_TOP + r * ROW_HEIGHT + 170;
     for (let i = 0; i < 22; i += 1) {
@@ -536,6 +549,10 @@ function Tufts({ layout, grade }: { layout: FortressLayout; grade: string }) {
       const y = gy + 52 + ((i * 11) % 14);
       if (art && i % 4 === 0) {
         rocks.push(spriteOnGround("prop-rocks", x, y + 3, 11 + (i % 3) * 2));
+        continue;
+      }
+      if (art && i % 7 === 3) {
+        bushes.push(spriteOnGround("prop-bush", x, y + 3, 10 + (i % 3) * 2));
         continue;
       }
       out.push(
@@ -551,6 +568,7 @@ function Tufts({ layout, grade }: { layout: FortressLayout; grade: string }) {
     <g aria-hidden>
       {out}
       {rocks.length > 0 && <Sprites rects={rocks} grade={grade} onFail={fail} />}
+      {bushes.length > 0 && <Sprites rects={bushes} grade={grade} onFail={fail} />}
     </g>
   );
 }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { STALL_ART_IDS, salBustId, stallArtId } from "./marketArt";
+import { STALL_ART_IDS, salBustId, shopkeeperFaceId, stallArtId } from "./marketArt";
+import type { StoreLevel } from "./marketplace";
 import type { Mood } from "./salesRep";
 import { OBJECT_ART } from "./stitchArt";
 
@@ -34,7 +35,20 @@ describe("salBustId", () => {
     }
   });
 
-  it("leaves cheer as the SVG until its picture is generated", () => {
-    expect(salBustId("cheer")).toBeNull();
+  it("has a bust for cheer too (Sprint 6): every Sal mood is a picture", () => {
+    expect(salBustId("cheer")).toBe("sal-cheer");
+    for (const mood of ["pitch", "oops", "think", "cheer"] as Mood[]) {
+      expect(OBJECT_ART[salBustId(mood)!]).toBeDefined();
+    }
+  });
+});
+
+describe("shopkeeperFaceId", () => {
+  it("gives four verdicts a face that exists, and leaves 'ready' to the SVG merchant until it has a smiling one", () => {
+    const faces: StoreLevel[] = ["promising", "wait", "pass", "unknown"];
+    const ids = faces.map((l) => shopkeeperFaceId(l));
+    for (const id of ids) expect(OBJECT_ART[id!]).toBeDefined();
+    expect(new Set(ids).size).toBe(4);
+    expect(shopkeeperFaceId("ready")).toBeNull();
   });
 });

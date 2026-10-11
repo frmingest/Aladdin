@@ -1,3 +1,4 @@
+import type { StoreLevel } from "./marketplace";
 import type { Mood } from "./salesRep";
 import type { ObjectArtId } from "./stitchArt";
 
@@ -26,13 +27,31 @@ export function stallArtId(holdingId: string): (typeof STALL_ART_IDS)[number] {
   return STALL_ART_IDS[hash32(holdingId) % STALL_ART_IDS.length]!;
 }
 
-/** Sal's busts by mood. "cheer" has no picture until Stitch batch 2 (M14), so it stays SVG. */
+/** Sal's busts by mood: all four moods have a Stitch bust since Sprint 6. */
 const SAL_BUST: Partial<Record<Mood, ObjectArtId>> = {
   pitch: "sal-pitch",
   oops: "sal-oops",
   think: "sal-think",
+  cheer: "sal-cheer",
 };
 
 export function salBustId(mood: Mood): ObjectArtId | null {
   return SAL_BUST[mood] ?? null;
+}
+
+/**
+ * The shopkeeper's face for a store verdict. Four faces exist (Sprint 6): thoughtful = wait,
+ * level gaze = promising, raised hand = pass, shrug = unknown. "ready" has no face yet (it needs a
+ * smiling one), so it stays the SVG merchant. The face is the merchant's mood, never the tone
+ * colour: the verdict is still written on the page beside it.
+ */
+const SHOPKEEPER_FACE: Partial<Record<StoreLevel, ObjectArtId>> = {
+  promising: "shopkeeper-promising",
+  wait: "shopkeeper-wait",
+  pass: "shopkeeper-pass",
+  unknown: "shopkeeper-unknown",
+};
+
+export function shopkeeperFaceId(level: StoreLevel): ObjectArtId | null {
+  return SHOPKEEPER_FACE[level] ?? null;
 }

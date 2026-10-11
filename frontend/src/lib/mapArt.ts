@@ -88,6 +88,11 @@ const PINES_H = 20;
 const ROCKS_H = 11;
 const PALM_H = 24;
 const SHIP_H = 26;
+const MOUNTAIN_H = 20;
+const HILL_H = 11;
+const SERPENT_H = 36;
+/** The compass rose picture is round: its diameter in world units (the old drawing was 88 across). */
+export const COMPASS_SIZE = 84;
 const PORT_H = 40;
 const ISLAND_H = 36;
 
@@ -99,6 +104,39 @@ export function pineRect(g: Glyph): ArtRect {
 /** Rocks stand for the low hills. */
 export function rockRect(g: Glyph): ArtRect {
   return propOnGround("prop-rocks", g.x, g.y + 4, ROCKS_H * g.s);
+}
+
+/** Four mountain pictures (two bare, two snow-capped), chosen by the glyph's own random number so the
+ * same mountain is always the same picture. Scenery only. */
+const MOUNTAIN_IDS = ["map-mountain-bare-a", "map-mountain-bare-b", "map-mountain-snow-a", "map-mountain-snow-b"] as const satisfies readonly ObjectArtId[];
+
+export function mountainArtId(g: Glyph): (typeof MOUNTAIN_IDS)[number] {
+  return MOUNTAIN_IDS[Math.min(MOUNTAIN_IDS.length - 1, Math.floor(g.v * MOUNTAIN_IDS.length))]!;
+}
+
+export function mountainRect(g: Glyph): ArtRect {
+  return propOnGround(mountainArtId(g), g.x, g.y + 7, MOUNTAIN_H * g.s);
+}
+
+/** Rocks or a grassy mound for a low hill: the mound for about 60% of them, by the glyph's random number. */
+export function hillArtId(g: Glyph): "map-hill" | "prop-rocks" {
+  return g.v > 0.4 ? "map-hill" : "prop-rocks";
+}
+
+export function hillRect(g: Glyph): ArtRect {
+  return hillArtId(g) === "map-hill" ? propOnGround("map-hill", g.x, g.y + 5, HILL_H * g.s) : rockRect(g);
+}
+
+/** The sea serpent, its coils on the water at (x, y). */
+export function serpentRect(at: Pt): ArtRect {
+  return propOnGround("map-serpent", at.x, at.y + 10, SERPENT_H);
+}
+
+/** The compass rose, centred on the open-water spot. It carries no letters: the "N" is drawn by code. */
+export function compassRect(at: Pt): ArtRect {
+  const art = OBJECT_ART["map-compass"];
+  const height = (COMPASS_SIZE * art.height) / art.width;
+  return { id: "map-compass", src: art.src, x: at.x - COMPASS_SIZE / 2, y: at.y - height / 2, width: COMPASS_SIZE, height };
 }
 
 /** A ship afloat with its keel on (0, 0), for the sailing and the resting ship alike. */

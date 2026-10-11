@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { TOWER_BOX, fogSlots, towerAriaLabel } from "../../../lib/realmMap";
 import type { MapFlag } from "../../../lib/realmMap";
-import { placeLandmarks, placeMapKeep, placeSettlementArt, pineRect, rockRect, settlementArtId, shipRect, type ArtRect, type SettlementKind } from "../../../lib/mapArt";
+import { compassRect, hillArtId, hillRect, mountainArtId, mountainRect, placeLandmarks, placeMapKeep, placeSettlementArt, pineRect, serpentRect, settlementArtId, shipRect, type ArtRect, type SettlementKind } from "../../../lib/mapArt";
 import { weightText } from "../../../lib/rituals";
 import { useArtMode } from "../../../lib/stitchArt";
 import type { TowerFog } from "../../../lib/survey";
@@ -125,7 +125,14 @@ function Ship({ art }: { art: MapArt }) {
   );
 }
 
-function Serpent({ at }: { at: Pt }) {
+function Serpent({ at, art }: { at: Pt; art: MapArt }) {
+  if (art.ok("map-serpent")) {
+    return (
+      <g className="wm-serpent">
+        <ArtImage r={serpentRect(at)} onFail={art.fail} />
+      </g>
+    );
+  }
   return (
     <g transform={`translate(${at.x} ${at.y})`} className="wm-serpent">
       <path d="M-34 6 q8 -22 17 0 q8 -22 17 0 q8 -22 17 0" fill="none" stroke="#0b1a22" strokeWidth="6" strokeLinecap="round" />
@@ -136,7 +143,15 @@ function Serpent({ at }: { at: Pt }) {
   );
 }
 
-function Compass({ at }: { at: Pt }) {
+function Compass({ at, art }: { at: Pt; art: MapArt }) {
+  if (art.ok("map-compass")) {
+    return (
+      <g opacity="0.92">
+        <ArtImage r={compassRect(at)} onFail={art.fail} />
+        <text x={at.x} y={at.y - 48} textAnchor="middle" fontSize="13" fontWeight="700" fontFamily="Georgia, serif" fill="#f6dc9a">N</text>
+      </g>
+    );
+  }
   const pts = (r: number, rr: number) => Array.from({ length: 8 }, (_, k) => { const a = (k * Math.PI) / 4 - Math.PI / 2; const q = k % 2 === 0 ? r : rr; return `${(Math.cos(a) * q).toFixed(1)},${(Math.sin(a) * q).toFixed(1)}`; }).join(" ");
   return (
     <g transform={`translate(${at.x} ${at.y})`} opacity="0.92">
@@ -167,8 +182,8 @@ function Scenery({ world, realm, hatchProv, art }: { world: ReturnType<typeof bu
         {realm.roads.map((d, k) => (
           <path key={k} d={d} fill="none" stroke="#5a3d1a" strokeWidth="1.8" strokeDasharray="1 6" strokeLinecap="round" strokeOpacity="0.85" />
         ))}
-        {realm.hills.map((g, k) => (art.ok("prop-rocks") ? <ArtImage key={k} r={rockRect(g)} onFail={art.fail} /> : <Hill key={k} g={g} />))}
-        {realm.mountains.map((g, k) => <Mountain key={k} g={g} />)}
+        {realm.hills.map((g, k) => (art.ok(hillArtId(g)) ? <ArtImage key={k} r={hillRect(g)} onFail={art.fail} /> : <Hill key={k} g={g} />))}
+        {realm.mountains.map((g, k) => (art.ok(mountainArtId(g)) ? <ArtImage key={k} r={mountainRect(g)} onFail={art.fail} /> : <Mountain key={k} g={g} />))}
         {realm.forests.map((g, k) => (art.ok("prop-pines") ? <ArtImage key={k} r={pineRect(g)} onFail={art.fail} /> : <Tree key={k} g={g} />))}
       </g>
       <path d={world.landPath} fill="none" stroke="#2b2118" strokeWidth="2.4" strokeLinejoin="round" />
@@ -433,8 +448,8 @@ export default function WorldMap({ towers, sectors, sectorsKnown, hatchId, selec
               <path key={k} d={`M${p.x} ${p.y} q4 -4 8 0 t8 0 t8 0`} fill="none" stroke="#a5d0d8" strokeOpacity="0.4" strokeWidth="1.2" strokeLinecap="round" />
             ))}
           </g>
-          <Compass at={world.compass} />
-          <Serpent at={world.serpent} />
+          <Compass at={world.compass} art={art} />
+          <Serpent at={world.serpent} art={art} />
           <Scenery world={world} realm={realm} hatchProv={hatchProv} art={art} />
           {landmarks.palms.map((r, k) => art.ok(r.id) && <ArtImage key={k} r={r} onFail={art.fail} />)}
           {landmarks.island && art.ok(landmarks.island.id) && <ArtImage r={landmarks.island} onFail={art.fail} />}
