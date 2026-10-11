@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ApiError } from "../lib/api";
 import { useDemoMode } from "../lib/demoMode";
+import { setArtMode, useArtMode } from "../lib/stitchArt";
 import { Card, PageHeader, SectionTitle } from "../components/ui";
 
 /**
@@ -14,6 +15,8 @@ import { Card, PageHeader, SectionTitle } from "../components/ui";
  */
 export default function SettingsPage() {
   const { demoMode, setDemoMode } = useDemoMode();
+  const artMode = useArtMode();
+  const artOn = artMode === "stitch";
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -83,6 +86,48 @@ export default function SettingsPage() {
         </p>
 
         {error && <p className="mt-3 text-sm text-negative">{error}</p>}
+      </Card>
+
+      <Card className="mt-6">
+        <SectionTitle hint="Illustrated pictures for game-mode objects, on this device only">
+          Object art
+        </SectionTitle>
+
+        <div className="flex items-start justify-between gap-6">
+          <div className="max-w-md space-y-2 text-sm text-ink-muted">
+            <p>
+              Swaps the hand-drawn game-mode objects (towers, stalls, Sal) for illustrated
+              pictures where a picture exists. It changes how things look, never what they say:
+              every figure, status and verdict stays exactly as it is.
+            </p>
+            <p>
+              Remembered in this browser only. Off is the default; a picture that fails to load
+              falls back to the drawn version.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            role="switch"
+            aria-checked={artOn}
+            onClick={() => setArtMode(artOn ? "svg" : "stitch")}
+            className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors ${
+              artOn ? "bg-accent" : "bg-border"
+            }`}
+            title={artOn ? "Turn object art off" : "Turn object art on"}
+          >
+            <span
+              aria-hidden
+              className={`inline-block h-5 w-5 rounded-full bg-onfill shadow transition-transform ${
+                artOn ? "translate-x-6" : "translate-x-1"
+              }`}
+            />
+          </button>
+        </div>
+
+        <p className="mt-4 text-xs font-medium uppercase tracking-wider text-ink-faint">
+          Currently <span className={artOn ? "text-positive" : "text-ink-muted"}>{artOn ? "ON" : "OFF"}</span>
+        </p>
       </Card>
     </div>
   );

@@ -49,3 +49,10 @@ uploads/
 # --- Playwright smoke test output ---
 frontend/playwright-report/
 frontend/test-results/
+
+# --- Stitch art masters (Sprint 0, 2026-10-11) ---
+# 49 MB of 1024px PNG masters live OUTSIDE anything Vite ships. Only the packed
+# WebPs in frontend/src/assets/art are committed (scripts/art/pack.py).
+/art-masters/
+frontend/public/art/
+scripts/art/contact-sheet.png
