@@ -1,6 +1,6 @@
 # Design Master: review and sprint plan (2026-10-11)
 
-Status: **plan for Faiz to approve. Nothing in this plan is built.** Written from a fresh clone of `main` (`e939577`, PR #101 merged), all 52 object images and 10 screen mocks in `frontend/public/art/Design_master`, the Stitch `DESIGN.md`, and a read of the scene, map and marketplace code. `E:\Aladdin` is stale (branch `feature/currency-edit-and-nok-equivalent`, older than `main`); pull `main` before any build.
+Status: **approved by Faiz 2026-10-11 (all nine decisions, Part 5). Nothing in this plan is built yet; Sprint 0 is next.** Written from a fresh clone of `main` (`e939577`, PR #101 merged), all 52 object images and 10 screen mocks in `frontend/public/art/Design_master`, the Stitch `DESIGN.md`, and a read of the scene, map and marketplace code. `E:\Aladdin` is stale (branch `feature/currency-edit-and-nok-equivalent`, older than `main`); pull `main` before any build.
 
 Related: [stitch-master-object-art-2026-10-11.md](stitch-master-object-art-2026-10-11.md) (style, rules, prompts for what is still missing), [game-sprint-checklist.md](game-sprint-checklist.md) (section A is answered in Part 7).
 
@@ -92,9 +92,9 @@ Same conclusion as 2026-10-11: they break standing rules (XP, level, gold, gems,
 **Sizing facts the sprints depend on**
 Tower boxes are w 48-118 px, h 62-156 px (about 3:4); spire art is about 0.37 wide-to-high, bastion about 0.8. The scene is 1000 px wide with 290 px rows. At most about 30 towers, so a full Fortress costs roughly 10 tower images plus keep, siege and props: about 400 KB.
 
-## 5. Decisions needed from Faiz
+## 5. Decisions (Faiz, 2026-10-11)
 
-Each has a recommendation; "approve the plan" accepts all of them.
+**Answers:** 1 OK. 2 OK (size class). 3 Accepted: baked pennants stay (the Sprint 1 spike still checks scale and weather, not pennants). 4 OK (keep variants unused). 5 Yes (map markers by structure plus weight band). 6 Keep the teal stalls for now. 7 OK (opt-in until Sprint 7). 8 Yes (delete retired folders and docs). 9 Yes for now; Faiz will generate more design later. The text below is the original proposal.
 
 1. **Order and scope** of Sprints 0-7 (Part 6).
 2. **Silhouette rule:** spire for `great` and `medium` size classes, bastion for `small`, `tiny`, `unknown`. Size class is already a fact the tower shows by size, so it adds no new meaning. Alternative: by structure type. *Recommended: size class.*

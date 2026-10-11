@@ -4,7 +4,7 @@
 
 ## Current Objective
 
-Waiting for Faiz to approve the **Design Master sprint plan**: how the 52 new Stitch objects replace the drawn ones in the app, behind `?art=stitch|svg`, in Sprints 0-7. Nothing from it is built; the plan covers 41 of 56 object slots on the pages that can use pictures (73%) and lists what to generate next. Plan: [design-master-sprint-plan-2026-10-11.md](design-master-sprint-plan-2026-10-11.md); style, rules and prompts for the missing objects: [stitch-master-object-art-2026-10-11.md](stitch-master-object-art-2026-10-11.md).
+**Design Master sprint plan approved** (all nine decisions, 2026-10-11): the 52 new Stitch objects replace the drawn ones behind `?art=stitch|svg`, in Sprints 0-7. Sprint 0 (foundation) is next; nothing from it is built; the plan covers 41 of 56 object slots on the pages that can use pictures (73%) and lists what to generate next. Plan: [design-master-sprint-plan-2026-10-11.md](design-master-sprint-plan-2026-10-11.md); style, rules and prompts for the missing objects: [stitch-master-object-art-2026-10-11.md](stitch-master-object-art-2026-10-11.md).
 
 Phase 11 (the Buffett/Munger rebuild) is stable. Game mode follows the [team review](game-mode-team-review-2026-10-09.md) order. Merged on `main` (checked against git 2026-10-11, head `e939577`): #84-#87 (integrity, Fortress art pass, Long Memory, Knife-edge), #88-#93 (identity and the game design challenge), #97-#100 (Stitch design passes), #101 (Stitch objects, Phase A). Deploy of any of them is not verified. Nothing else in flight. Next mechanics in order: C1 Siege back-test, D1 Plain lens, D2 Camera, B2 Then and Now; also the rest of Sprint 29 (G40 tour, G38 sounds) and Sprint 26a (game pages in the smoke test, word budgets).
 
@@ -12,8 +12,8 @@ State: the local checkout `E:\Aladdin` is stale (on `feature/currency-edit-and-n
 
 ## Active Tasks
 
-- [ ] **Approve the Design Master plan (Faiz):** the nine decisions in Part 5 of the plan (silhouette rule, baked pennants, map markers, stalls, default, cleanup, other rooms)
-- [ ] **Generate the missing objects in Stitch (Faiz), after approval:** batch 1 (wall segment, corner bastion, genie, well, haystack, bush) and batch 2 (map pieces, Oracle, Partner, Sal cheer, shopkeeper faces); prompts in the master doc, Part 6
+- [ ] **Build Sprint 0 (Claude):** masters out of `public/`, manifest and batch `pack.py`, Settings toggle, real S13; then Sprint 1 tower kit
+- [ ] **Generate the missing objects in Stitch (Faiz, any time; needed by Sprint 6):** batch 1 (wall segment, corner bastion, genie, well, haystack, bush) and batch 2 (map pieces, Oracle, Partner, Sal cheer, shopkeeper faces); prompts in the master doc, Part 6
 - [ ] **Clean up art folders (Faiz or Claude with delete permission):** `frontend/public/art/stitch_master` and `new` are retired copies; masters move out of `public/` in Sprint 0
 - [ ] **Look at the merged game PRs on real data (Faiz):** Records, Circle, Map, Night Watch seal, Chronicle spine, Marketplace plates and Phase A (`?art=stitch`); dark and light, phone, Plain view, reduced motion
 - [ ] **Check Knife-edge and Long Memory after deploy (Faiz):** click a stock tower on Fortress (distance to the next tier, thin crack within 10%); Chronicle shows days the worker was off under "What the record cannot show" ([knife-edge](knife-edge-a1-2026-10-09.md), [long memory](long-memory-b1-2026-10-09.md))
