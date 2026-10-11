@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import {
   CLEAR_RING_R,
   FOG_OPACITY,
@@ -86,12 +87,13 @@ function Silhouette() {
 }
 
 /** The tower and its five patch slots as plain SVG content (no wrapping <svg>), so the world map can
- * place many of them. Sockets are drawn first so a cloud lies over a neighbour. */
-export function TowerFigure({ slots, hatchId }: { slots: FogSlot[]; hatchId: string }) {
+ * place many of them. Sockets are drawn first so a cloud lies over a neighbour. `body` swaps the fixed
+ * silhouette for a picture (map art); the patches are always code, drawn over it. */
+export function TowerFigure({ slots, hatchId, body }: { slots: FogSlot[]; hatchId: string; body?: ReactNode }) {
   const ordered = [...slots.filter((s) => s.state !== "fog"), ...slots.filter((s) => s.state === "fog")];
   return (
     <>
-      <Silhouette />
+      {body ?? <Silhouette />}
       {ordered.map((s) => (
         <Patch key={s.id} state={s.state} cx={s.cx} cy={s.cy} r={s.r} hatchId={hatchId} />
       ))}
