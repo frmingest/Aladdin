@@ -17,6 +17,7 @@ import {
 import type { Competence, CompetenceLevel } from "../../../lib/types";
 import { GameFrame } from "../GameFrame";
 import CircleGlyph from "./CircleGlyph";
+import CircleRingArt, { FogStake } from "./CircleRingArt";
 import FogPanel from "./FogPanel";
 import NightPanel from "./NightPanel";
 import "./circleMap.css";
@@ -73,6 +74,7 @@ function Marker({ m, onPress }: { m: CircleMarker; onPress: (sector: string | nu
             {m.pin}
           </span>
         )}
+        {m.kind === "nosector" && <FogStake />}
         {m.showName && (
           <span className="circle-name" data-rank={m.nameRank ?? undefined} aria-hidden>
             {m.sector}
@@ -121,6 +123,7 @@ export default function CircleMap({ data, onPress }: { data: Competence; onPress
         <NightPanel className="circle-stage">
           <div className="circle-map" role="group" aria-label="Circle of competence: one marker per sector">
             <Ground />
+            <CircleRingArt />
             {bands.map(({ b, pos }) => (
               <span key={b} className="circle-ring-label" style={{ left: `${pos.left}%`, top: `${pos.top}%` }} data-band={b}>
                 {RING_LABEL[b]}

@@ -84,6 +84,10 @@ import roomScroll from "../assets/art/room-scroll.webp";
 import roomInkwell from "../assets/art/room-inkwell.webp";
 import sealWhole from "../assets/art/seal-whole.webp";
 import sealBroken from "../assets/art/seal-broken.webp";
+import circleStone from "../assets/art/circle-stone.webp";
+import circleStoneLow from "../assets/art/circle-stone-low.webp";
+import circleBrazier from "../assets/art/circle-brazier.webp";
+import circleStake from "../assets/art/circle-stake.webp";
 
 export interface PackedArt {
   src: string;
@@ -179,4 +183,8 @@ export const ART_MANIFEST = {
   "room-inkwell": { src: roomInkwell, width: 99, height: 160, alt: "" },
   "seal-whole": { src: sealWhole, width: 105, height: 128, alt: "", anchors: { "mark": [0.49, 0.44] as const } },
   "seal-broken": { src: sealBroken, width: 128, height: 96, alt: "", anchors: { "mark": [0.5, 0.43] as const } },
+  "circle-stone": { src: circleStone, width: 84, height: 192, alt: "" },
+  "circle-stone-low": { src: circleStoneLow, width: 138, height: 160, alt: "" },
+  "circle-brazier": { src: circleBrazier, width: 160, height: 145, alt: "" },
+  "circle-stake": { src: circleStake, width: 88, height: 128, alt: "" },
 } as const satisfies Record<string, PackedArt>;
