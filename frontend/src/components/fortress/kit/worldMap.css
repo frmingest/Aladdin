@@ -15,6 +15,9 @@
   touch-action: pan-y pinch-zoom;
   user-select: none;
   -webkit-user-select: none;
+  /* The brass corners scale with the table: cqw is a share of this box's own width. */
+  container-type: inline-size;
+  --wm-corner: clamp(38px, 6.5cqw, 170px);
 }
 .wm-box[data-zoomed="true"] { touch-action: none; }
 .wm-box:active { cursor: grabbing; }
@@ -79,15 +82,13 @@
 .wm-controls button:focus-visible { outline: 3px solid #f2d27a; outline-offset: 2px; }
 
 /* Brass table frame (Object art): the corner is drawn top-left and mirrored; pointer-events none so the map stays draggable. */
-.wm-frame { position: absolute; z-index: 5; width: 52px; height: auto; pointer-events: none; }
+.wm-frame { position: absolute; z-index: 5; width: var(--wm-corner); height: auto; pointer-events: none; }
 .wm-frame-tl { left: 0; top: 0; }
 .wm-frame-tr { right: 0; top: 0; transform: scaleX(-1); }
 .wm-frame-bl { left: 0; bottom: 0; transform: scaleY(-1); }
 .wm-frame-br { right: 0; bottom: 0; transform: scale(-1, -1); }
-@media (max-width: 640px) { .wm-frame { width: 38px; } }
 /* The zoom buttons move down a little so the top-right corner piece does not sit behind them. */
-.wm-box[data-frame="on"] .wm-controls { top: 50px; right: 8px; }
-@media (max-width: 640px) { .wm-box[data-frame="on"] .wm-controls { top: 38px; } }
+.wm-box[data-frame="on"] .wm-controls { top: calc(var(--wm-corner) - 2px); right: 8px; }
 .wm-foot { display: block; }
 .wm-foot:has(.wm-tools) { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .wm-tools { display: flex; flex: 0 0 auto; align-items: flex-end; gap: 6px; margin-top: 6px; }

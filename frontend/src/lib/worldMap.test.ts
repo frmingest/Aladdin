@@ -20,6 +20,7 @@ import {
   nearestInDirection,
   panBy,
   placeRealm,
+  pointInPolygon,
   toScreen,
   toWorld,
   viewBox,
@@ -242,5 +243,25 @@ describe("map names", () => {
     expect(provinceLines("Energy")).toEqual(["Energy"]);
     expect(provinceLines("Consumer Discretionary")).toEqual(["Consumer", "Discretionary"]);
     expect(provinceLines("Verylongsinglewordname")).toEqual(["Verylongsinglewordname"]);
+  });
+});
+
+describe("province names stay on land", () => {
+  const names = ["Energy", "Industrials", "Financials", "Materials", "Consumer Staples", "Consumer Discretionary", "Information Technology", "Health Care"];
+  const cases = [3, 5, 6, 8].map((n) => names.slice(0, n));
+  it.each(cases)("every name's whole box is inside the coast (%#)", (...secs) => {
+    const items: PlaceInput[] = secs.flatMap((sec, k) => [0, 1].map((j) => ({ id: `h${k}-${j}`, weightPct: 10 - k, sector: sec })));
+    const world = buildWorld();
+    const realm = placeRealm(items);
+    for (const p of realm.provinces) {
+      const lines = provinceLines(p.name);
+      const w = Math.max(...lines.map((l) => l.length)) * p.labelFs * 0.9;
+      const h = lines.length * p.labelFs * 1.1;
+      for (const fx of [-0.5, 0, 0.5]) {
+        for (const fy of [-0.5, 0, 0.5]) {
+          expect(pointInPolygon({ x: p.label.x + fx * w, y: p.label.y + fy * h }, world.coast), `${p.name} at ${fx},${fy}`).toBe(true);
+        }
+      }
+    }
   });
 });
