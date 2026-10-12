@@ -825,6 +825,67 @@
    "id": "map-rolled",
    "source": "cartoon_fantasy_map_prop_asset_rolled_map_vibrant_2d_casual_mobile_game_art",
    "max_side": 192
+  },
+  {
+   "id": "council-table",
+   "source": "a_single_standalone_fantasy_game_furniture_prop_asset_an_empty_round_oak_table",
+   "max_side": 320
+  },
+  {
+   "id": "council-chair",
+   "source": "a_single_standalone_fantasy_game_furniture_prop_asset_a_plain_iron_framed_chair",
+   "max_side": 256
+  },
+  {
+   "id": "council-candles",
+   "source": "a_single_standalone_fantasy_game_prop_asset_a_tall_wrought_iron_candle_stand",
+   "max_side": 256,
+   "anchors_frac": {
+    "f1": [
+     0.505,
+     0.012
+    ],
+    "f2": [
+     0.18,
+     0.145
+    ],
+    "f3": [
+     0.815,
+     0.205
+    ]
+   }
+  },
+  {
+   "id": "room-scroll",
+   "source": "a_single_standalone_fantasy_game_prop_asset_a_half_unrolled_blank_cream",
+   "max_side": 192
+  },
+  {
+   "id": "room-inkwell",
+   "source": "a_single_standalone_fantasy_game_prop_asset_a_small_brass_inkwell_with_a_white",
+   "max_side": 160
+  },
+  {
+   "id": "seal-whole",
+   "source": "a_single_standalone_fantasy_game_prop_asset_a_round_red_wax_seal_pressed_on_a",
+   "max_side": 128,
+   "anchors_frac": {
+    "mark": [
+     0.49,
+     0.44
+    ]
+   }
+  },
+  {
+   "id": "seal-broken",
+   "source": "a_single_standalone_fantasy_game_prop_asset_a_round_red_wax_seal_on_a_short",
+   "max_side": 128,
+   "anchors_frac": {
+    "mark": [
+     0.5,
+     0.43
+    ]
+   }
   }
  ]
 }

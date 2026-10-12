@@ -1,9 +1,12 @@
-import { useId } from "react";
+import { useId, useState } from "react";
 import { seatLabel, type Seat } from "../../../lib/councilSeats";
 import { Portrait } from "../AdvisorsCard";
-import SealMark from "./SealMark";
+import ChamberFurniture from "./ChamberFurniture";
+import SealArt from "./SealArt";
 import TorchPair from "./TorchPair";
 import { sealForTone } from "../../../lib/seals";
+import { councilFurniture } from "../../../lib/roomArt";
+import { useArtMode } from "../../../lib/stitchArt";
 
 /** The Council chamber (game mode, Council page hero): a round table with eight chairs, one per agenda
  * kind, in the fixed backend order (lib/councilSeats.ts). A lit seat holds a seal and a stack of papers
@@ -26,7 +29,7 @@ function SeatBody({ s }: { s: Seat }) {
   return (
     <>
       <span className="flex items-center justify-center gap-1.5">
-        {s.occupied && s.tone ? <SealMark kind={sealForTone(s.tone)} size={22} /> : <SealMark kind="none" size={22} />}
+        <SealArt kind={s.occupied && s.tone ? sealForTone(s.tone) : "none"} size={22} />
         {s.occupied && <Papers n={s.papers} />}
         {s.count !== null && <span className="text-xs font-bold text-[#f6e6bd]">{s.count}</span>}
       </span>
@@ -49,6 +52,9 @@ export default function CouncilChamber({
   unresolved?: boolean;
 }) {
   const id = useId().replace(/:/g, "");
+  // Object art (Sprint 9): the table, chairs and candle stands replace the painted table; a failed picture puts it back.
+  const [artFailed, setArtFailed] = useState(false);
+  const art = useArtMode() === "stitch" && !artFailed && councilFurniture() !== null;
   const seatClass = (s: Seat) =>
     `rounded-md border px-1.5 py-1.5 ${s.occupied ? "border-[#d9a93e] bg-[#3a2414]" : "border-dashed border-[#6b5a3c] bg-transparent"}`;
   return (
@@ -64,15 +70,23 @@ export default function CouncilChamber({
         {[90, 270, 450, 630].map((x) => (
           <path key={x} d={`M${x - 40} 0 V40 Q${x} 8 ${x + 40} 40 V0`} fill="#120b06" stroke="#6b5a3c" strokeWidth="1.2" />
         ))}
-        <ellipse cx="360" cy="140" rx="150" ry="50" fill="#5a3a1e" stroke="#d9a93e" strokeWidth="2" />
-        <ellipse cx="360" cy="140" rx="132" ry="40" fill="none" stroke="#7a5418" strokeWidth="1" />
+        {!art && (
+          <>
+            <ellipse cx="360" cy="140" rx="150" ry="50" fill="#5a3a1e" stroke="#d9a93e" strokeWidth="2" />
+            <ellipse cx="360" cy="140" rx="132" ry="40" fill="none" stroke="#7a5418" strokeWidth="1" />
+          </>
+        )}
       </svg>
       <TorchPair className="pointer-events-none absolute inset-x-0 top-0 hidden h-7 w-full sm:block" />
       <div className="relative hidden h-[340px] sm:block">
-        <div className="absolute left-1/2 top-[50%] flex -translate-x-1/2 -translate-y-1/2 gap-2 opacity-95">
-          <Portrait who="oracle" />
-          <Portrait who="partner" />
-        </div>
+        {art ? (
+          <ChamberFurniture oracle={<Portrait who="oracle" />} partner={<Portrait who="partner" />} onError={() => setArtFailed(true)} />
+        ) : (
+          <div className="absolute left-1/2 top-[50%] flex -translate-x-1/2 -translate-y-1/2 gap-2 opacity-95">
+            <Portrait who="oracle" />
+            <Portrait who="partner" />
+          </div>
+        )}
         {seats.map((s) => {
           const style = { left: `${s.leftPct}%`, top: `${s.topPct}%` };
           return s.occupied ? (

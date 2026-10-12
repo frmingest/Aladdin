@@ -2,7 +2,7 @@ import { ADVISOR_NAME } from "../../../lib/fortress";
 import type { GameAdvisorName } from "../../../lib/types";
 import type { SealKind } from "../../../lib/seals";
 import { Portrait } from "../AdvisorsCard";
-import SealMark from "./SealMark";
+import SealArt from "./SealArt";
 
 /** A character with a speech bubble (page-scene kit): the portrait beside a bubble whose tail points
  * at it. The tone is a seal glyph plus a printed word on the bubble. The bubble carries the same hand-
@@ -28,7 +28,7 @@ export default function Speaker({
       <div className={`market-bubble min-w-0 flex-1 text-sm ${right ? "market-bubble-right" : ""}`}>
         <p className="mb-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-semibold">
           <span>{ADVISOR_NAME[who]}</span>
-          <SealMark kind={seal} size={18} decorative />
+          <SealArt kind={seal} size={18} decorative />
           <span className="rounded-full border border-current px-2 py-0.5">{toneLabel}</span>
         </p>
         {children}
