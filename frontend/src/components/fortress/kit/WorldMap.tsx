@@ -499,7 +499,7 @@ export default function WorldMap({ towers, sectors, sectorsKnown, hatchId, selec
           {landmarks.port && art.ok(landmarks.port.id) && <ArtImage r={landmarks.port} onFail={art.fail} />}
           {realm.provinces.map((p) => {
             const lines = provinceLines(p.name);
-            const fs = 17;
+            const fs = p.labelFs;
             return (
               <text key={p.index} className="wm-prov-text" data-unsorted={p.unsorted ? "true" : undefined} x={p.label.x} y={p.label.y - ((lines.length - 1) * fs * 1.1) / 2 + fs * 0.35} fontSize={fs} textAnchor="middle" aria-hidden>
                 {lines.map((ln, k) => (

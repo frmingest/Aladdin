@@ -351,6 +351,8 @@ export interface Province {
   cell: Pt[];
   path: string;
   label: Pt;
+  /** Font size (world units) the name is painted at: shrunk when the full size will not fit on land. */
+  labelFs: number;
   anchor: Pt;
   towerIds: string[];
   /** Share of the realm in this province, in percent. A floor when `weightComplete` is false. */
@@ -422,25 +424,60 @@ export function groupSectors(
   return out;
 }
 
-/** Where a province's name goes: the open land of its cell furthest from every building and from the
- * names already placed. Distances are stretched sideways because a name is wide. */
-function labelSpot(world: World, cell: Pt[], anchor: Pt, avoid: readonly Pt[]): Pt {
-  let best = anchor;
-  let bestScore = -1;
-  for (let x = 40; x < WORLD.w - 40; x += 12) {
-    for (let y = 40; y < WORLD.h - 40; y += 12) {
+/** Full size of a province name, and the smallest it may shrink to before it is allowed past its border. */
+export const PROV_LABEL_FS = 17;
+const PROV_LABEL_SIZES = [PROV_LABEL_FS, 15, 13, 12];
+/** Width of one painted capital incl. its letter spacing, in font sizes (the CSS uses 0.16em spacing). */
+const PROV_CHAR_EM = 0.9;
+
+/** The box a province name covers when painted centred on `at`, padded so it clears the coast. */
+function labelBox(at: Pt, lines: readonly string[], fs: number): { x0: number; x1: number; y0: number; y1: number } {
+  const w = Math.max(...lines.map((l) => l.length)) * fs * PROV_CHAR_EM + 10;
+  const h = lines.length * fs * 1.1 + 8;
+  return { x0: at.x - w / 2, x1: at.x + w / 2, y0: at.y - h / 2, y1: at.y + h / 2 };
+}
+
+/** True when every sample point of the name's box is on the mainland (and, if asked, in its own cell). */
+function labelFits(world: World, cell: Pt[], box: ReturnType<typeof labelBox>, inCell: boolean): boolean {
+  const nx = Math.max(2, Math.ceil((box.x1 - box.x0) / 12));
+  const ny = Math.max(1, Math.ceil((box.y1 - box.y0) / 10));
+  for (let i = 0; i <= nx; i++) {
+    for (let j = 0; j <= ny; j++) {
+      const p = { x: box.x0 + ((box.x1 - box.x0) * i) / nx, y: box.y0 + ((box.y1 - box.y0) * j) / ny };
+      if (!pointInPolygon(p, world.coast)) return false;
+      if (inCell && !pointInPolygon(p, cell)) return false;
+    }
+  }
+  return true;
+}
+
+/** Where a province's name goes: open land of its cell, far from every building and from the names
+ * already placed (distances are stretched sideways because a name is wide), and where the WHOLE name
+ * stays on land. The biggest size that fits inside its own cell wins; the name shrinks before it ever
+ * leaves the land. `blockers` are settlement points whose picture a name must not cover. */
+function labelSpot(world: World, cell: Pt[], anchor: Pt, avoid: readonly Pt[], lines: readonly string[], blockers: readonly Pt[]): { at: Pt; fs: number } {
+  const cands: { p: Pt; score: number }[] = [];
+  for (let x = 40; x < WORLD.w - 40; x += 10) {
+    for (let y = 40; y < WORLD.h - 40; y += 10) {
       const p = { x, y };
-      if (!pointInPolygon(p, world.coast) || coastDistance(world, p) < 26 || !pointInPolygon(p, cell)) continue;
+      if (!pointInPolygon(p, world.coast) || !pointInPolygon(p, cell)) continue;
       let near = 999;
       for (const q of avoid) near = Math.min(near, Math.hypot((p.x - q.x) / 1.7, p.y - q.y));
-      const score = near + Math.min(coastDistance(world, p), 40) * 0.3 - dist(p, anchor) * 0.1;
-      if (score > bestScore) {
-        bestScore = score;
-        best = p;
+      cands.push({ p, score: near + Math.min(coastDistance(world, p), 40) * 0.3 - dist(p, anchor) * 0.1 });
+    }
+  }
+  cands.sort((a, b) => b.score - a.score);
+  const clear = (box: ReturnType<typeof labelBox>) => !blockers.some((q) => q.x > box.x0 - 26 && q.x < box.x1 + 26 && q.y > box.y0 - 20 && q.y < box.y1 + 64);
+  for (const inCell of [true, false]) {
+    for (const fs of PROV_LABEL_SIZES) {
+      for (const c of cands) {
+        const box = labelBox(c.p, lines, fs);
+        if (clear(box) && labelFits(world, cell, box, inCell)) return { at: c.p, fs };
       }
     }
   }
-  return best;
+  // Nowhere fits (a tiny sliver of land): the old choice, at the smallest size.
+  return { at: cands[0]?.p ?? anchor, fs: PROV_LABEL_SIZES[PROV_LABEL_SIZES.length - 1] };
 }
 
 /**
@@ -510,8 +547,11 @@ export function placeRealm(items: readonly PlaceInput[], nullName: string = NO_S
   const settlements = items.map((i) => placed.get(i.id)).filter((s): s is Settlement => !!s);
   const avoidPts: Pt[] = [CAPITAL as Pt, ...settlements, ...settlements.map((q) => ({ x: q.x, y: q.y + 20 }))];
   groups.forEach((g, gi) => {
-    const label = labelSpot(world, cells[gi], finalAnchors[gi], avoidPts);
-    avoidPts.push(label, { x: label.x - 50, y: label.y }, { x: label.x + 50, y: label.y });
+    const lines = provinceLines(g.name);
+    const spot = labelSpot(world, cells[gi], finalAnchors[gi], avoidPts, lines, settlements);
+    const label = spot.at;
+    const halfW = (Math.max(...lines.map((l) => l.length)) * spot.fs * PROV_CHAR_EM) / 2;
+    avoidPts.push(label, { x: label.x - halfW, y: label.y }, { x: label.x + halfW, y: label.y });
     provinces.push({
       index: gi,
       name: g.name,
@@ -519,6 +559,7 @@ export function placeRealm(items: readonly PlaceInput[], nullName: string = NO_S
       cell: cells[gi],
       path: `${cells[gi].map((p, k) => `${k === 0 ? "M" : "L"}${r1(p.x)} ${r1(p.y)}`).join(" ")} Z`,
       label,
+      labelFs: spot.fs,
       anchor: finalAnchors[gi],
       towerIds: g.ids,
       weightPct: g.weight,
