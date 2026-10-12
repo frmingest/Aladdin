@@ -20,6 +20,8 @@ import {
 import type { SiegeSim, SiegeSimExposure, SiegeSimHolding } from "../lib/types";
 import { Card, EmptyState, PageHeader } from "../components/ui";
 import GameFooter from "../components/fortress/GameFooter";
+import SiegeArtStrip from "../components/fortress/kit/SiegeArtStrip";
+import { useArtMode } from "../lib/stitchArt";
 
 /** The Siege Simulator (game mode, G13): pick how far the market falls and watch it reach each
  * tower. A what-if over stored data: each holding's beta scales the fall, and the result is
@@ -107,6 +109,7 @@ function Row({ h, benchmark }: { h: SiegeSimHolding; benchmark: string }) {
 }
 
 export default function SiegeSimulatorPage() {
+  const artMode = useArtMode();
   const [sim, setSim] = useState<SiegeSim | null>(null);
   const [drop, setDrop] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -228,10 +231,10 @@ export default function SiegeSimulatorPage() {
             <Card>
               <h2 className="section-title">The towers under attack</h2>
               <div className="mb-2 overflow-x-auto rounded-md bg-[#1c1812] p-3">
-                <SiegeStrip rows={sim.holdings} />
+                {artMode === "stitch" ? <SiegeArtStrip rows={sim.holdings} level={sim.level} /> : <SiegeStrip rows={sim.holdings} />}
               </div>
               <p className="mb-1 text-xs text-ink-faint">
-                The filled part of each wall is the share lost in this what-if. Grey with a question mark: not modelled.
+                {artMode === "stitch" ? "The scorched, cracked part of each wall is the share lost in this what-if. Faded with a question mark: not modelled." : "The filled part of each wall is the share lost in this what-if. Grey with a question mark: not modelled."}
                 {sim.holdings.length > 18 ? ` Showing the 18 worst-hit of ${sim.holdings.length}.` : ""}
               </p>
               <ul>{sim.holdings.filter((h) => h.modelled).map((h) => <Row key={h.holding_id} h={h} benchmark={sim.benchmark_ticker} />)}</ul>
