@@ -8,7 +8,7 @@ import {
   SCENE_H,
   arrowHits,
   breachHole,
-  crackShape,
+  flameTongues,
   rubbleStones,
   rampartTiles,
   sceneWidth,
@@ -16,7 +16,7 @@ import {
   siegeTowers,
 } from "../../../lib/siegeArt";
 import { OBJECT_ART } from "../../../lib/stitchArt";
-import type { SiegeTowerArt } from "../../../lib/siegeArt";
+import type { Flame as SiegeFlame, SiegeTowerArt } from "../../../lib/siegeArt";
 import type { FortressSiegeLevel, SiegeSimHolding } from "../../../lib/types";
 
 const WALL_SEGMENT_SRC = OBJECT_ART["wall-segment"].src;
@@ -24,7 +24,7 @@ const WALL_SEGMENT_SRC = OBJECT_ART["wall-segment"].src;
 /**
  * The Siege Simulator's row of towers drawn with the Stitch pictures (Design Master Sprint 14), used only
  * when the Settings "Object art" switch is on; the page keeps its hand-drawn SVG strip otherwise. The
- * pictures carry no fact. Code draws a scorched band that rises with the share of the wall lost, cracks that
+ * pictures carry no fact. Code draws soot, fallen stones, stuck fire arrows and a column of flames that climbs the wall as the share lost
  * grow with it, a grey "?" over towers that are not modelled, and the besieging camp (the same camp the
  * Fortress draws for the same siege level). The list below the strip says every number in words.
  */
@@ -58,6 +58,15 @@ export default function SiegeArtStrip({ rows, level }: { rows: SiegeSimHolding[]
           <stop offset="0" stopColor="#1d120b" stopOpacity="0.78" />
           <stop offset="0.55" stopColor="#1d120b" stopOpacity="0.4" />
           <stop offset="1" stopColor="#1d120b" stopOpacity="0" />
+        </radialGradient>
+        <linearGradient id={`${uid}-flame`} x1="0" y1="1" x2="0" y2="0">
+          <stop offset="0" stopColor="#f7c85a" stopOpacity="0.95" />
+          <stop offset="0.5" stopColor="#e8812e" stopOpacity="0.9" />
+          <stop offset="1" stopColor="#c2491f" stopOpacity="0.35" />
+        </linearGradient>
+        <radialGradient id={`${uid}-glow`}>
+          <stop offset="0" stopColor="#f09a3a" stopOpacity="0.32" />
+          <stop offset="1" stopColor="#f09a3a" stopOpacity="0" />
         </radialGradient>
         <radialGradient id={`${uid}-hole`} cx="0.5" cy="0.45" r="0.6">
           <stop offset="0" stopColor="#050303" />
@@ -140,8 +149,9 @@ const ARROW_ART = OBJECT_ART["siege-arrow"];
 
 /**
  * What the siege does to one tower, all drawn by code from the backend's numbers: a soft soot stain that
- * climbs the wall (fading out at its top edge), chiselled cracks, a ragged hole where the backend says the
- * wall is at risk of breach (with smoke), fallen stones at the foot and fire arrows stuck in the stone.
+ * climbs the wall (fading out at its top edge), a ragged hole where the backend says the wall is at risk of
+ * breach (with smoke), fallen stones at the foot, fire arrows stuck in the stone and animated flames whose
+ * column climbs the wall as the loss deepens (still under reduced motion).
  * Shape carries the meaning; nothing here depends on colour alone.
  */
 function DamageLayer({
@@ -160,7 +170,7 @@ function DamageLayer({
   scorchTop: number;
 }) {
   const k = t.scale;
-  const cracks = Array.from({ length: t.cracks }, (_, n) => crackShape(body, scorchTop, footY, index, n));
+  const flames = flameTongues(body, scorchTop, footY, t.damagePct, index, k);
   const stones = rubbleStones(body, footY, t.damagePct, index, k);
   const hits = arrowHits(body, scorchTop, footY, t.damagePct, index);
   const hole = t.breach ? breachHole(body, scorchTop, footY, index) : null;
@@ -170,13 +180,6 @@ function DamageLayer({
     <g aria-hidden="true">
       <g clipPath={`url(#${uid}-c${index})`}>
         <rect x={body.x} y={scorchTop} width={body.w} height={footY - scorchTop} fill={`url(#${uid}-soot)`} />
-        {cracks.map((c, n) => (
-          <g key={n} fill="none" strokeLinecap="round" strokeLinejoin="round">
-            <path d={c.edge} stroke="#eadfc4" strokeWidth={0.8} opacity={0.28} />
-            <path d={c.main} stroke="#0f0a07" strokeWidth={1.2 * Math.max(1, k * 0.8)} opacity={0.9} />
-            <path d={c.branch} stroke="#0f0a07" strokeWidth={0.8 * Math.max(1, k * 0.8)} opacity={0.8} />
-          </g>
-        ))}
         {hole && (
           <g>
             <polygon points={hole.points} fill={`url(#${uid}-hole)`} stroke="#b8aa90" strokeWidth={0.9} strokeOpacity={0.55} strokeLinejoin="miter" />
@@ -191,6 +194,32 @@ function DamageLayer({
       {stones.map((st, n) => (
         <polygon key={n} points={st.points} fill={STONE_TONES[st.tone]} stroke="#1a1410" strokeWidth={0.5} strokeOpacity={0.6} />
       ))}
+      {flames.length > 0 && (
+        <g opacity={0.9}>
+          <ellipse
+            cx={body.x + body.w / 2}
+            cy={footY - (footY - scorchTop) * 0.4}
+            rx={body.w * 0.75}
+            ry={(footY - scorchTop) * 0.62}
+            fill={`url(#${uid}-glow)`}
+          />
+          {flames.map((f, n) => (
+            <Flame key={n} f={f} uid={uid} />
+          ))}
+          {t.damagePct >= 40 &&
+            [0, 1].map((n) => (
+              <circle
+                key={n}
+                className="fortress-ember"
+                cx={body.x + body.w * (0.35 + 0.3 * n)}
+                cy={scorchTop + 4}
+                r={1.3 * k}
+                fill="#ffd27a"
+                style={{ animationDelay: `${-n * 1.7}s` }}
+              />
+            ))}
+        </g>
+      )}
       {hits.map((h, n) => {
         // The picture's flaming tip is its upper-left corner; after turning it, put that tip on the hit point.
         const rad = (h.rotate * Math.PI) / 180;
@@ -210,6 +239,20 @@ function DamageLayer({
           />
         );
       })}
+    </g>
+  );
+}
+
+/** One tongue of fire: an outer orange flame with a pale core. Its flicker is CSS (stills under reduced motion). */
+function Flame({ f, uid }: { f: SiegeFlame; uid: string }) {
+  const { w, h } = f;
+  const outer = `M0 0 C${-w / 2} 0 ${-w / 2} ${-h * 0.45} ${-w * 0.12} ${-h * 0.72} C${-w * 0.05} ${-h * 0.86} 0 ${-h * 0.9} 0 ${-h} C0 ${-h * 0.9} ${w * 0.05} ${-h * 0.86} ${w * 0.12} ${-h * 0.72} C${w / 2} ${-h * 0.45} ${w / 2} 0 0 0 Z`;
+  return (
+    <g transform={`translate(${f.x.toFixed(1)} ${f.y.toFixed(1)})`}>
+      <g className="siege-flame" style={{ animationDuration: `${f.dur.toFixed(2)}s`, animationDelay: `${f.delay.toFixed(2)}s` }}>
+        <path d={outer} fill={`url(#${uid}-flame)`} />
+        <path d={outer} fill="#ffe7a0" opacity={0.7} transform="scale(0.45 0.6)" />
+      </g>
     </g>
   );
 }

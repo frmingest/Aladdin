@@ -203,6 +203,12 @@
   20% { opacity: 1; }
   100% { opacity: 0; transform: translate(14px, -70px); }
 }
+@keyframes siege-flicker {
+  0%, 100% { transform: scale(1, 1) skewX(0deg); opacity: 0.95; }
+  25% { transform: scale(0.9, 1.14) skewX(4deg); opacity: 0.85; }
+  50% { transform: scale(1.07, 0.9) skewX(-3deg); opacity: 1; }
+  75% { transform: scale(0.95, 1.1) skewX(2deg); opacity: 0.88; }
+}
 @keyframes fortress-rain { to { transform: translate(-12px, 32px); } }
 @keyframes fortress-raven-bob {
   0%, 100% { transform: translateY(0); }
@@ -213,6 +219,7 @@
   50% { stroke-opacity: 0.55; }
 }
 
+.siege-flame { transform-box: fill-box; transform-origin: 50% 100%; }
 .fortress-raven { transform-box: fill-box; }
 .fortress-rise { transform-box: fill-box; transform-origin: bottom center; }
 .fortress-flicker { transform-box: fill-box; transform-origin: bottom center; }
@@ -232,6 +239,7 @@
   .fortress-firefly { animation: fortress-firefly 6s ease-in-out infinite; }
   .fortress-ember { animation: fortress-ember 5s linear infinite; }
   .fortress-rain { animation: fortress-rain 0.6s linear infinite; }
+  .siege-flame { animation: siege-flicker 1.2s ease-in-out infinite; }
 }
 @media (prefers-reduced-motion: reduce) {
   .fortress-firefly, .fortress-ember, .fortress-rain { display: none; }
