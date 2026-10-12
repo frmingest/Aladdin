@@ -1,5 +1,5 @@
 """Regression tests for the 2026-09-29 valuation guardrails
-(docs/sb1no-implausible-dcf-investigation-2026-09-29.md).
+(docs/valuation/sb1no-implausible-dcf-investigation-2026-09-29.md).
 
 SB1NO.OL — a Norwegian bank — showed a DCF base value of 3,953 NOK against
 a 229.50 NOK price ("Strong Buy", price target 3,170-4,899 NOK). These tests

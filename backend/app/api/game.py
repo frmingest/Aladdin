@@ -1,4 +1,4 @@
-"""Game mode API (2026-10-01, docs/game-mode-fortress-2026-10-01.md).
+"""Game mode API (2026-10-01, docs/game/game-mode-fortress-2026-10-01.md).
 
 Read-only endpoints. It is a pure view over stored data: no provider call,
 no LLM, no write. With demo mode on, the fabricated demo state is returned

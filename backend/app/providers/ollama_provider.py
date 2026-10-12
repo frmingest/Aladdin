@@ -4,7 +4,7 @@ Why: Google AI Studio's free tier (20 requests/day) can't carry the heavy,
 long-prompt analysis passes. The analysis work (blind + reconciliation pass)
 moves to a self-hosted Ollama server; Gemini stays for the light,
 search-grounded research calls (app/providers/gemini_research_provider.py),
-which have no local equivalent. Setup guide: docs/local-llm-ollama-setup.md.
+which have no local equivalent. Setup guide: docs/reference/local-llm-ollama-setup.md.
 
 Talks to Ollama's native REST API (``POST /api/chat``) over httpx — already
 a dependency, so no new package. Structured output uses Ollama's

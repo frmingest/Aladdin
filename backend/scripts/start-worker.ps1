@@ -4,7 +4,7 @@
 # them here on Ollama. Needs backend\.env with the same DATABASE_URL as Railway.
 #
 # Manual:            powershell -ExecutionPolicy Bypass -File E:\Aladdin\backend\scripts\start-worker.ps1
-# At log-on (once):  see docs/local-llm-ollama-setup.md, "Run analyses queued from Railway".
+# At log-on (once):  see docs/reference/local-llm-ollama-setup.md, "Run analyses queued from Railway".
 #
 # Restarts the worker if it exits with an error (e.g. database briefly unreachable).
 

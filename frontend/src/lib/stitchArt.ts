@@ -4,7 +4,7 @@
  * top bar) and off with it. Pure view preference, like game mode: it never changes a fact, a score
  * or a stored row.
  *
- * Rules for every slot that uses a picture (docs/stitch-master-object-art-2026-10-11.md):
+ * Rules for every slot that uses a picture (docs/game/stitch-master-object-art-2026-10-11.md):
  * the picture must carry NO fact (no status colour, no count, no text); a slot
  * whose look encodes data stays SVG; the SVG is always the fallback.
  */

@@ -1,2 +1,2 @@
 """Local analysis worker (Sprint 5B: F8 + F5). Run with `python -m app.worker`.
-See app/worker/runner.py and docs/local-llm-ollama-setup.md."""
+See app/worker/runner.py and docs/reference/local-llm-ollama-setup.md."""

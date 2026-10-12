@@ -8,7 +8,7 @@ writes judgement, citing evidence IDs.
 |---|---|
 | [docs/architecture.md](docs/architecture.md) | System diagram, analysis flow, deployment, jobs, data model |
 | [docs/PROGRESS.md](docs/PROGRESS.md) | Current status, what needs your attention, history |
-| [docs/llm-and-technology-overview.md](docs/llm-and-technology-overview.md) | Where an LLM is used and which technology does what |
+| [docs/reference/llm-and-technology-overview.md](docs/reference/llm-and-technology-overview.md) | Where an LLM is used and which technology does what |
 | [CLAUDE.md](CLAUDE.md) | The rules every AI agent working in this repo follows |
 
 ## Run it locally

@@ -1,5 +1,5 @@
 """GET /game/state, G6 layer: the journal-driven temperament meter
-(docs/game-mode-fortress-2026-10-01.md). Reads the decision journal, the
+(docs/game/game-mode-fortress-2026-10-01.md). Reads the decision journal, the
 thesis tripwires and stored portfolio snapshots; writes nothing."""
 from __future__ import annotations
 

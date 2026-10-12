@@ -1,5 +1,5 @@
 {
- "_note": "Source of truth for packed object art. master = image number in docs/design-master-sprint-plan-2026-10-11.md Part 2; source = folder name inside Design_master. Run scripts/art/pack.py after editing. anchors_frac = anchors already as fractions of the packed picture (measured on the packed image); anchors_px = master pixels.",
+ "_note": "Source of truth for packed object art. master = image number in docs/game/design-master-sprint-plan-2026-10-11.md Part 2; source = folder name inside Design_master. Run scripts/art/pack.py after editing. anchors_frac = anchors already as fractions of the packed picture (measured on the packed image); anchors_px = master pixels.",
  "defaults": {
   "max_side": 384,
   "quality": 80
