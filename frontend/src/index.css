@@ -929,6 +929,9 @@
 .chamber-art-chair-left { left: calc(50% - 124px); transform: translate(-50%, -50%); }
 .chamber-art-chair-right { left: calc(50% + 124px); transform: translate(-50%, -50%); }
 .chamber-art-chair-right > img { transform: scaleX(-1); }
+.chamber-art-sit { position: absolute; top: 52%; transform: translate(-50%, -50%); pointer-events: none; height: 170px; width: auto; }
+.chamber-art-sit-left { left: calc(50% - 150px); }
+.chamber-art-sit-right { left: calc(50% + 150px); }
 .chamber-art-sitter { position: absolute; left: 50%; top: 4%; transform: translateX(-50%); }
 
 /* Night panel (game mode): the dark counterpart of .parchment for the Circle page. Re-points the same

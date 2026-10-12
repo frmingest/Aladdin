@@ -1,7 +1,8 @@
-import type { KeyboardEvent } from "react";
+import { useState, type KeyboardEvent } from "react";
 import { SCENE_WIDTH } from "../../lib/fortress";
 import type { ShopTone } from "../../lib/marketplace";
 import { TONE_PAINT } from "../../lib/marketplacePaint";
+import { getObjectArt, useArtMode } from "../../lib/stitchArt";
 
 /**
  * The market square at the foot of the fortress (game mode, G9): a timber
@@ -15,6 +16,27 @@ import { TONE_PAINT } from "../../lib/marketplacePaint";
 export const MARKET_HEIGHT = 178;
 const SERIF = '"Marcellus", "Palatino Linotype", Palatino, Georgia, serif';
 const MAX_STALLS = 6;
+
+/** Object art: the main building and three smaller booths (2026-10-12). A booth's tone is still shown by code
+ * (the plate under it and the lit lantern), because a picture must carry no fact. */
+const BOOTH_ART = ["market-booth-1", "market-booth-2", "market-booth-produce"] as const;
+const HALL_W = 190;
+const BOOTH_W = 62;
+
+function ArtBooth({ x, y, tone, index, onError }: { x: number; y: number; tone: ShopTone; index: number; onError: () => void }) {
+  const pic = getObjectArt(BOOTH_ART[index % BOOTH_ART.length]!);
+  if (!pic) return null;
+  const p = TONE_PAINT[tone];
+  const h = Math.round((BOOTH_W * pic.height) / pic.width);
+  return (
+    <g transform={`translate(${x} ${y})`}>
+      <ellipse cx={BOOTH_W / 2} cy="3" rx="36" ry="5" fill="#000" opacity="0.35" />
+      <image href={pic.src} x="0" y={-h + 4} width={BOOTH_W} height={h} preserveAspectRatio="none" onError={onError} aria-hidden />
+      <rect x={BOOTH_W / 2 - 17} y="7" width="34" height="5" rx="2" fill={p.a} stroke="#2a1a0a" strokeWidth=".8" />
+      {tone === "gold" && <circle cx={BOOTH_W / 2} cy={-h * 0.45} r="14" fill="url(#fs-glow)" opacity="0.9" />}
+    </g>
+  );
+}
 
 export interface MarketSquareProps {
   /** Watchlist size, or null when it has not loaded (the square is still drawn). */
@@ -62,8 +84,13 @@ function Stall({ x, y, tone, index }: { x: number; y: number; tone: ShopTone; in
 
 export default function MarketSquare({ y, count, inRange, tones, hot, onOpen, onHover }: MarketSquareProps & { y: number }) {
   const drawn = tones.slice(0, MAX_STALLS);
-  const lefts = [338, 262, 186];
-  const rights = [598, 674, 750];
+  const [artFailed, setArtFailed] = useState(false);
+  const hallPic = useArtMode() === "stitch" && !artFailed ? getObjectArt("market-hall") : null;
+  const boothsOk = hallPic !== null && BOOTH_ART.every((id) => getObjectArt(id) !== null);
+  const useArt = hallPic !== null && boothsOk;
+  // The picture hall is wider than the drawn one, so the booths stand a little further out.
+  const lefts = useArt ? [312, 238, 164] : [338, 262, 186];
+  const rights = useArt ? [626, 700, 774] : [598, 674, 750];
   const slots = drawn.map((t, i) => ({ tone: t, x: i % 2 === 0 ? lefts[Math.floor(i / 2)] : rights[Math.floor(i / 2)] }));
   const label =
     count === null
@@ -98,11 +125,26 @@ export default function MarketSquare({ y, count, inRange, tones, hot, onOpen, on
         <ellipse key={i} cx={130 + i * 35 + ((i * 17) % 11)} cy={ground + 2 + ((i * 7) % 9)} rx="7" ry="2.4" fill="#948770" opacity="0.7" />
       ))}
 
-      {slots.map((s, i) => (
-        <Stall key={i} x={s.x} y={ground} tone={s.tone} index={i} />
-      ))}
+      {slots.map((s, i) =>
+        useArt ? <ArtBooth key={i} x={s.x} y={ground} tone={s.tone} index={i} onError={() => setArtFailed(true)} /> : <Stall key={i} x={s.x} y={ground} tone={s.tone} index={i} />,
+      )}
 
-      {/* the Market Hall */}
+      {useArt && hallPic ? (
+        <g>
+          <ellipse cx={SCENE_WIDTH / 2} cy={ground + 5} rx={HALL_W / 2 + 6} ry="8" fill="#000" opacity="0.4" />
+          <image
+            href={hallPic.src}
+            x={SCENE_WIDTH / 2 - HALL_W / 2}
+            y={ground + 5 - Math.round((HALL_W * hallPic.height) / hallPic.width)}
+            width={HALL_W}
+            height={Math.round((HALL_W * hallPic.height) / hallPic.width)}
+            preserveAspectRatio="none"
+            onError={() => setArtFailed(true)}
+            aria-hidden
+          />
+        </g>
+      ) : (
+      /* the Market Hall */
       <g transform={`translate(${SCENE_WIDTH / 2 - 84} 0)`}>
         <ellipse cx="84" cy={ground + 4} rx="100" ry="8" fill="#000" opacity="0.4" />
         <rect x="8" y="64" width="152" height={ground - 64} fill="#8d6436" stroke="#2a1a0a" />
@@ -133,6 +175,7 @@ export default function MarketSquare({ y, count, inRange, tones, hot, onOpen, on
           </text>
         </g>
       </g>
+      )}
 
       {/* label plate */}
       <g>
