@@ -14,7 +14,8 @@ const SOURCE = JSON.parse(readFileSync(resolve(FRONTEND, "../scripts/art/manifes
 };
 const MAX_FILE_KB = 60;
 // Raised from 1200 in Sprint 6 (23 more pictures) and to 2000 in Sprint 8 (room backdrops). Pictures load only when a view uses them.
-const MAX_TOTAL_KB = 2000;
+// Raised to 2800 in the hardening sprint (2026-10-12): the set stood at 1996 of 2000 KB, so no new picture fit. Each later raise needs its reason here and a check that the heaviest page still loads well on a phone.
+const MAX_TOTAL_KB = 2800;
 const MAX_PUBLIC_IMAGE_KB = 150;
 // Room backdrops (Design Master Sprint 8): wide opaque scenes, one per room at most, shown behind a banner.
 const MAX_BACKDROP_KB = 120;
