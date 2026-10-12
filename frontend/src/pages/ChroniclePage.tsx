@@ -21,6 +21,8 @@ import type { Chronicle, ChronicleFrame, FortressSiegeLevel } from "../lib/types
 import { Button, Card, Disclosure, EmptyState, PageHeader } from "../components/ui";
 import GameFooter from "../components/fortress/GameFooter";
 import TimeStrata, { TimeStrip } from "../components/fortress/kit/TimeStrata";
+import { towerArtId } from "../lib/towerArt";
+import { OBJECT_ART, useArtMode } from "../lib/stitchArt";
 
 /** The Chronicle (game mode G14): the fortress replayed through time. Frames stored nightly by the
  * worker carry the real walls, moats and weather of their day; older days are rebuilt from
@@ -34,8 +36,33 @@ const SKY: Record<FortressSiegeLevel, [string, string]> = {
   unsurveyed: ["#2a303a", "#59606c"],
 };
 
+/** Picture height as a multiple of the old box height: the picture carries its own roof, and the low
+ * structures (fund, cash, gold) are drawn shorter than a keep of the same weight. */
+const ART_SCALE: Record<string, number> = { outpost: 1.35, granary: 1.25, "vault-1": 1.5, "vault-2": 1.5, "vault-3": 1.5 };
+const ART_SCALE_KEEP = 1.45;
+const ART_MAX_H = 150;
+
+/** The same pictures the Fortress uses (lib/towerArt.ts), standing on the ground line. Material and size
+ * come from the stored frame, so the picture adds no fact. Ghost keeps (walls never stored) and anything
+ * without a picture stay the code-drawn SVG, so an unsurveyed wall is never given a guessed material. */
+function artFor(tower: ChronicleFrame["towers"][number], x: number, w: number, h: number, ground: number) {
+  const id = towerArtId(tower);
+  if (!id) return null;
+  const art = OBJECT_ART[id];
+  let ph = Math.min(ART_MAX_H, h * (ART_SCALE[id] ?? ART_SCALE_KEEP));
+  let pw = (ph * art.width) / art.height;
+  const maxW = w * 1.6;
+  if (pw > maxW) {
+    pw = maxW;
+    ph = (pw * art.height) / art.width;
+  }
+  return { src: art.src, x: x + w / 2 - pw / 2, y: ground - ph + 4, w: pw, h: ph, top: ground - ph };
+}
+
 function MiniScene({ frame }: { frame: ChronicleFrame }) {
   const placed = useMemo(() => miniLayout(frame, 760), [frame]);
+  const artOn = useArtMode() === "stitch";
+  const [artFailed, setArtFailed] = useState(false);
   const [top, bottom] = SKY[frame.source === "stored" ? frame.weather : "unsurveyed"];
   const ground = 168;
   return (
@@ -55,14 +82,17 @@ function MiniScene({ frame }: { frame: ChronicleFrame }) {
       <rect y={ground} width="800" height="42" fill="#2a2418" />
       <g transform="translate(20 0)">
         {placed.map(({ tower, x, w, h, ghost }) => {
-          const y = ground - h;
+          const pic = artOn && !artFailed && !ghost ? artFor(tower, x, w, h, ground) : null;
+          const y = pic ? pic.top : ground - h;
           const breached = tower.thesis === "breached";
           const fill = ghost ? "none" : WALL_FILL[tower.wall];
           const stroke = ghost ? "#a8977a" : "#14110b";
           return (
             <g key={tower.holding_id}>
               <title>{`${tower.name}: ${tower.weight_pct === null ? "weight unknown" : formatPct100(tower.weight_pct)} of the realm`}</title>
-              {tower.structure === "bullion" ? (
+              {pic ? (
+                <image href={pic.src} x={pic.x} y={pic.y} width={pic.w} height={pic.h} preserveAspectRatio="none" onError={() => setArtFailed(true)} />
+              ) : tower.structure === "bullion" ? (
                 <rect x={x} y={ground - h * 0.55} width={w} height={h * 0.55} fill={ghost ? "none" : "#c9a24a"} stroke={stroke} strokeWidth={ghost ? 1.5 : 1} strokeDasharray={ghost ? "4 3" : undefined} />
               ) : (
                 <>
