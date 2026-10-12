@@ -4,7 +4,7 @@
 Decision 10 of the sprint plan put object art into Council, Records, Circle, Chronicle and the Map table and left the Siege Simulator, Night Watch and the Ledger out. The 2026-10-09 audit scored the Siege Simulator 2 because its tower row was generic SVG boxes in its own colours. Faiz asked why the new Stitch pictures were not used there.
 
 ## What changed (frontend only, behind Settings > Object art)
-- `lib/siegeArt.ts` (pure): picks each tower's picture with `towerArtId` (same wall material and size classes as the Fortress), places it, and works out the scorched band height, crack count, camp and rampart tiles.
+- `lib/siegeArt.ts` (pure): picks each tower's picture with `towerArtId` (same wall material and size classes as the Fortress), places it, and works out the soot height, flame rows, rubble, arrow hits, camp and rampart tiles.
 - `components/fortress/kit/SiegeArtStrip.tsx`: draws the strip in weather paint (`worldPalette`, from the backend's siege level).
 - `SiegeSimulatorPage.tsx`: shows the art strip with art on, the old `SiegeStrip` otherwise.
 
