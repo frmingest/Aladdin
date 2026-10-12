@@ -929,7 +929,7 @@
   background-color: rgb(var(--c-surface));
 }
 .chamber { background: linear-gradient(180deg, #241710, #170f09); box-shadow: inset 0 0 0 1px #8a6a32, inset 0 0 40px rgba(0, 0, 0, 0.6); }
-.chamber-seat { position: absolute; transform: translate(-50%, -50%); width: 104px; }
+.chamber-seat { position: absolute; transform: translate(-50%, -50%) scale(0.8); width: 104px; }
 .chamber-seat:focus-visible, .chamber-btn:focus-visible { outline: 2px solid #f2d27a; outline-offset: 2px; }
 /* Object art (Sprint 9): table, chairs and the advisors seated on them. Decoration under the seat buttons. */
 .chamber-art-table { position: absolute; left: 50%; top: 55%; transform: translate(-50%, -50%); pointer-events: none; }

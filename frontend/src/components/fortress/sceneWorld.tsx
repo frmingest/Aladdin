@@ -573,22 +573,26 @@ function Tufts({ layout, grade }: { layout: FortressLayout; grade: string }) {
   );
 }
 
-/** A pine at the edge of each terrace, framing the scene. */
+/** A pine at the edge of each terrace, framing the scene. It stands in front of the corner bastion's
+ * foot (below the row's ground line, at the very edge), never over the bastion itself. */
+const EDGE_PINE_DROP = 66;
+const EDGE_PINE_H = 52;
+const EDGE_PINE_X = 16;
 function EdgePines({ layout, color, grade }: { layout: FortressLayout; color: string; grade: string }) {
   const rows = Math.max(1, layout.rows);
   const { art, fail } = useSceneArt();
   if (art) {
     const rects: SpriteRect[] = [];
     for (let r = 0; r < rows; r += 1) {
-      const gy = SCENE_TOP + r * ROW_HEIGHT + 170 + 40;
-      [24, SCENE_WIDTH - 26].forEach((x) => rects.push(spriteOnGround("prop-pines", x, gy + 2, 84)));
+      const gy = SCENE_TOP + r * ROW_HEIGHT + 170 + EDGE_PINE_DROP;
+      [EDGE_PINE_X, SCENE_WIDTH - EDGE_PINE_X].forEach((x) => rects.push(spriteOnGround("prop-pines", x, gy, EDGE_PINE_H)));
     }
     return <Sprites rects={rects} grade={grade} onFail={fail} />;
   }
   return (
     <g aria-hidden>
       {Array.from({ length: rows }, (_, r) => {
-        const gy = SCENE_TOP + r * ROW_HEIGHT + 170 + 40;
+        const gy = SCENE_TOP + r * ROW_HEIGHT + 170 + EDGE_PINE_DROP;
         return [12, SCENE_WIDTH - 14].map((x, side) => (
           <g key={`${r}-${side}`}>
             <ellipse cx={x + 6} cy={gy + 2} rx={18} ry={5} fill="#000" opacity={0.35} filter="url(#fs-blur)" />

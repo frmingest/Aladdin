@@ -1,6 +1,6 @@
 # Aladdin — Progress
 
-**Last updated:** 2026-10-12 (game-mode master toggle and map pass). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
+**Last updated:** 2026-10-12 (fortress edge pines, Chronicle tower pictures, Council seat size). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
 
 ## Current Objective
 
@@ -12,6 +12,7 @@ State: local checkout `E:\Aladdin`; masters live in git-ignored `art-masters/`. 
 
 - [ ] **Review and merge the docs reorganization PR (Faiz):** `docs/` regrouped into topic folders with an index at `docs/README.md`; all references updated; written, not merged. Untracked clutter left alone for you to keep or delete: `docs/zioa0Vh0`, `docs/drawing-code-export*`, `docs/game-identity-2026-10-09/`, `sprint29.patch`, `.s5tmp/`, `.sync-backup-2026-10-11/`, root `game-mode-noise-audit-2026-10-07.local-copy.md`
 - [ ] **Review the game-mode master toggle and map pass (Faiz):** merged into `hardening-sprint` (#120), reaching `main` via PR #121, written, not merged, not deployed. The top Game mode switch now also turns the pictures on (Settings "Object art" card and every "Plain view" button removed); resolution scaling (root font 16px up to 1920 wide, 21px at 2560, 32px at 3840); map taller, province names painted on the ground (IM Fell English SC), holding names cut to 15 characters, bluer sea. New pictures (packed with `scripts/art`, 2098 KB of the 2800 KB budget): the stocked vault on the Fortress Vault card (only for a stocked or deep vault), the two advisers each sitting on a chair in the Council chamber, and the new main building with smaller booths in the Fortress market square
+- [ ] **Review the fortress pine, Chronicle and Council fixes (Faiz):** PR `fix/fortress-pines-chronicle-art-council-seats`, written, not merged, not deployed. Fortress: the edge pines now stand at the very edge below each corner bastion instead of growing into it. Chronicle: the replay scene now uses the same tower pictures as the Fortress (wall material and size from the stored frame; unsurveyed days stay the dashed ghost keeps; no new art). Council: the eight seat boxes are 20% smaller. Look at all three with Game mode on, laptop and 2560 wide
 - [ ] **Review the map name and corner fix (Faiz):** PR `fix/map-labels-and-corners`, written, not merged, not deployed. Sector names on the Map tab now stay fully on land (shrinking from 17 to 12 before crossing a coast or border); the brass corner pieces scale with the map width. Look at Map with Game mode on at laptop and at 2560 wide
 - [ ] **Finish the hardening sprint (Claude):** error and empty states, LLM-failure messages, upload edge cases, Lighthouse and phone-width pass; then open the PR
 - [ ] **Merge PR #121 (Faiz):** brings Sprint 11, hardening and the master toggle / art pass to `main`; a merge is a production deploy
