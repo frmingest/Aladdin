@@ -8,6 +8,8 @@ import {
   WORLD,
   buildWorld,
   chooseLabels,
+  mapName,
+  provinceLines,
   clampView,
   coastDistance,
   dist,
@@ -226,5 +228,19 @@ describe("province weights for the legend", () => {
     const r = placeRealm([item("a", "Energy", 30), item("b", "Energy", null), item("c", null, null)]);
     expect(r.provinces.find((p) => p.name === "Energy")).toMatchObject({ weightPct: 30, weightComplete: false });
     expect(r.provinces.find((p) => p.unsorted)).toMatchObject({ weightPct: 0, weightComplete: false });
+  });
+});
+
+describe("map names", () => {
+  it("cuts a holding name to its first 15 characters", () => {
+    expect(mapName("Apple")).toBe("Apple");
+    expect(mapName("Berkshire Hathaway Inc")).toBe("Berkshire Hatha…");
+    expect(mapName("123456789012345")).toBe("123456789012345");
+  });
+
+  it("splits a long province name over two lines, a short one stays whole", () => {
+    expect(provinceLines("Energy")).toEqual(["Energy"]);
+    expect(provinceLines("Consumer Discretionary")).toEqual(["Consumer", "Discretionary"]);
+    expect(provinceLines("Verylongsinglewordname")).toEqual(["Verylongsinglewordname"]);
   });
 });

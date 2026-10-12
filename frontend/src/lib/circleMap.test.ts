@@ -273,11 +273,9 @@ describe("what is on the ring and what is not", () => {
 });
 
 describe("page logic", () => {
-  it("shows the ring map only in game mode and not in Plain view", () => {
-    expect(circleView(true, false)).toBe("ring");
-    expect(circleView(true, true)).toBe("plain");
-    expect(circleView(false, false)).toBe("plain");
-    expect(circleView(false, true)).toBe("plain");
+  it("shows the ring map only in game mode", () => {
+    expect(circleView(true)).toBe("ring");
+    expect(circleView(false)).toBe("plain");
   });
 
   it("saves with PUT (trimmed note, null when empty) and clears with DELETE, nothing else", async () => {

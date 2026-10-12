@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../lib/api";
 import { useGameMode } from "../lib/gameMode";
-import { usePlainView } from "../lib/plainView";
 import { useCachedQuery } from "../lib/queryCache";
 import { MAP_COPY } from "../lib/realmMap";
 import { loadOpened } from "../lib/scrolls";
@@ -20,7 +19,7 @@ import { EmptyState, PageHeader } from "../components/ui";
  *
  * Identity pass (wins 1 to 4): fog patches instead of a bar, the painted banner and parchment, a
  * slate for the tower you press, numbered commission seals that plant flags. The drawn realm map is a
- * later change. Plain view and game mode off show the same facts as ordinary cards. */
+ * later change. Game mode off shows the same facts as ordinary cards. */
 
 function useRealmDocuments(state: GameState | null): Record<string, DocumentSummary[] | null> | null {
   const [docs, setDocs] = useState<Record<string, DocumentSummary[] | null> | null>(null);
@@ -54,7 +53,6 @@ export default function CartographerPage() {
   const docs = useRealmDocuments(stateQ.data);
   const opened = useMemo(() => loadOpened(), []);
   const { gameMode } = useGameMode();
-  const [plain] = usePlainView();
 
   useEffect(() => {
     document.title = "Cartographer's table · Aladdin";
@@ -98,7 +96,7 @@ export default function CartographerPage() {
       {!error && !towers && <p className="text-sm text-ink-muted">Unrolling the map…</p>}
       {state && towers && (
         <div className="space-y-4">
-          <RealmMapBody towers={towers} commissions={commissions} demo={state.demo} painted={gameMode && !plain} sectors={sectors} sectorsKnown={!!compQ.data} kinds={kinds} />
+          <RealmMapBody towers={towers} commissions={commissions} demo={state.demo} painted={gameMode} sectors={sectors} sectorsKnown={!!compQ.data} kinds={kinds} />
           <div className="map-foot">
             <GameFooter rules={`Rules ${SURVEY_VERSION}. Finishing a commission earns nothing.`} />
           </div>

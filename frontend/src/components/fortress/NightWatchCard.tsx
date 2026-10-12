@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { api, ApiError } from "../../lib/api";
 import { STATUS_CLASS, STATUS_LABEL, TONE_CLASS, TONE_MARK, WATCH_STATE_LABEL, stampLine } from "../../lib/nightWatch";
 import { useGameMode } from "../../lib/gameMode";
-import { usePlainView } from "../../lib/plainView";
 import type { NightWatch } from "../../lib/types";
 import { Card, Disclosure } from "../ui";
 import DispatchDisclosure from "./DispatchDisclosure";
@@ -15,7 +14,6 @@ export default function NightWatchCard() {
   const [watch, setWatch] = useState<NightWatch | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { gameMode } = useGameMode();
-  const [plain] = usePlainView();
 
   useEffect(() => {
     let live = true;
@@ -67,7 +65,7 @@ export default function NightWatchCard() {
         <>
           <p className="mt-1 text-xs text-ink-faint">{stampLine(watch)}</p>
           <LineList lines={reportLines} />
-          {gameMode && !plain ? (
+          {gameMode ? (
             <DispatchDisclosure lineCount={detailLines.length}>{details}</DispatchDisclosure>
           ) : (
             <Disclosure label="the dispatch details" level="evidence" className="mt-2">

@@ -332,9 +332,9 @@ export function focusSectorControl(doc: Pick<Document, "getElementById">, sector
   return target;
 }
 
-/** Which body the Circle page shows: the ring map only in game mode and not in Plain view. */
-export function circleView(gameMode: boolean, plain: boolean): "ring" | "plain" {
-  return gameMode && !plain ? "ring" : "plain";
+/** Which body the Circle page shows: the ring map only in game mode. */
+export function circleView(gameMode: boolean): "ring" | "plain" {
+  return gameMode ? "ring" : "plain";
 }
 
 /** The page's one write, unchanged: a mark is PUT, clearing it is DELETE. */
