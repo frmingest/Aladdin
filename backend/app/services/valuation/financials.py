@@ -5,7 +5,7 @@ all profit can be paid out. A bank cannot: its regulators require it to
 retain capital in proportion to its balance sheet, so most of what it earns
 while growing stays in the business. Applying the DCF to SB1NO.OL gave
 ~1.8x the share price *before* any growth was assumed
-(docs/sb1no-implausible-dcf-investigation-2026-09-29.md).
+(docs/valuation/sb1no-implausible-dcf-investigation-2026-09-29.md).
 
 The standard replacement is the justified price-to-book ratio from the
 Gordon-growth / residual-income framework:

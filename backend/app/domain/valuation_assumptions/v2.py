@@ -3,7 +3,7 @@
 Same market inputs as v1 (equity risk premium, terminal growth, scenario
 offsets, default beta) plus the guardrails that keep a deterministic model
 from publishing a number nobody should trust. Why each one exists is in
-docs/sb1no-implausible-dcf-investigation-2026-09-29.md; in short, SB1NO.OL
+docs/valuation/sb1no-implausible-dcf-investigation-2026-09-29.md; in short, SB1NO.OL
 (a Norwegian bank) showed a DCF value of 3,953 NOK against a 229.50 NOK
 price — a 31.5% historical CAGR compounded for 10 years, on earnings that
 a bank cannot distribute.

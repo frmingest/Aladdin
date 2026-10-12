@@ -155,7 +155,7 @@ backend/app/
 | `funds/`, `precious_metals/`, `portfolio_import/` | Fund facts and look-through valuation; coins at spot; broker CSV |
 | `snapshots`, `snapshot_refresh` | Stored page snapshots so slow pages load from the database |
 | `llm_ledger`, `system_status`, `settings/` | LLM usage ledger and daily budget, status page, demo mode guard |
-| `game/` | Fortress state, temperament, hand-written advisor lines, Siege Simulator. Code only, no LLM or market call; see [game-mode-fortress](game-mode-fortress-2026-10-01.md) |
+| `game/` | Fortress state, temperament, hand-written advisor lines, Siege Simulator. Code only, no LLM or market call; see [game-mode-fortress](game/game-mode-fortress-2026-10-01.md) |
 | `warmup` | Worker warm-up of cold holdings and the keep-warm job (PC worker loop, `worker/runner.py`) |
 
 ### Providers

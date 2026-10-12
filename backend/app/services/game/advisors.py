@@ -4,7 +4,7 @@ Pure and deterministic: given the already-computed fortress it picks which
 hand-written lines (app/domain/game_mapping/advisor_lines_v1.py) apply. No
 database, no provider, no model, no clock. Same input, same lines.
 
-Rules it keeps (docs/game-mode-fortress-2026-10-01.md, CLAUDE.md):
+Rules it keeps (docs/game/game-mode-fortress-2026-10-01.md, CLAUDE.md):
 - It only reads values the endpoint already derived from stored data, so an
   advisor can never say something the Ledger cannot back up. Each line
   carries the `facts` that triggered it.

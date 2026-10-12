@@ -1,7 +1,7 @@
 """v1 advisor lines (2026-10-01, G7b) — the hand-written words the two game-mode
 advisors say, one template per rule.
 
-Decision D4 (docs/game-mode-fortress-2026-10-01.md): lines are written by
+Decision D4 (docs/game/game-mode-fortress-2026-10-01.md): lines are written by
 hand and chosen by fixed rules (app/services/game/advisors.py); no model
 writes them. They are original wording in the spirit of a patient owner-
 operator (the Oracle) and a blunt "invert, always invert" sceptic (the

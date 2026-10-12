@@ -66,14 +66,14 @@ holding's notes), Rule 5 (both prompts explicitly frame evidence/notes as data, 
 | 16 | Sprint 4 user-notes input: build now or ship blind pass alone first? | **Build both passes now, notes optional** (Recommended) — an empty-notes holding still gets a reconciliation pass, just with less to weigh against the blind evidence-based view. |
 | 17 | Sprint 4 document-extraction quality: fix now or defer? | **Defer** (Recommended) — ship the analysis engine against what Sprint 1's ingestion already extracts; revisit only if real runs show it's actually the bottleneck. |
 | 18 | Deleting documents/holdings (2026-09-23, supersedes #14's "Documents untouched") | **Allowed, always `confirm=true`:** one document, all of a holding's data, cascade holding delete, and a holdings clean slate that requires the portfolio wiped first. Stored files removed after the DB commit. Spend history (`llm_usage_events`) and FX/rate reference data are never deleted. |
-| 19 | Metric definitions (2026-09-23) | **Owner's view (Buffett/Munger):** hybrid capital is debt (net debt, D/E on ordinary equity); FCF = CFO − capex − decommissioning − financing-classified interest − lease payments − hybrid coupons; owner earnings also deduct decommissioning + lease payments (shared by panel, evidence packet and DCF); EBIT/EBITDA exclude biological fair-value changes; a ratio over a denominator ≤ 0 is *n/m*. See [owner-view-metrics-and-local-worker-plan-2026-09-23.md](owner-view-metrics-and-local-worker-plan-2026-09-23.md). |
+| 19 | Metric definitions (2026-09-23) | **Owner's view (Buffett/Munger):** hybrid capital is debt (net debt, D/E on ordinary equity); FCF = CFO − capex − decommissioning − financing-classified interest − lease payments − hybrid coupons; owner earnings also deduct decommissioning + lease payments (shared by panel, evidence packet and DCF); EBIT/EBITDA exclude biological fair-value changes; a ratio over a denominator ≤ 0 is *n/m*. See [docs/valuation/owner-view-metrics-and-local-worker-plan-2026-09-23.md](valuation/owner-view-metrics-and-local-worker-plan-2026-09-23.md). |
 | 20 | Using the local LLM from Railway (2026-09-23) | **Recommended: a worker on Faiz's PC pulls queued runs from the shared database** (no tunnel, no inbound port). Built in Sprint 5B (F8, with F5), `18e8a4e`. |
 | 21 | Where research runs for a local run (2026-09-23) | **On the PC.** The worker does research (Gemini), the evidence packet and both passes (Ollama) in one place, so a run is never half-done across two machines. |
-| 23 | Fund / ETF figures (2026-09-24) | **Typed in on a Fund facts form, each row citing an uploaded document (+ page), plus a deterministic holdings-file (CSV/XLSX) import** — no LLM reads a fund figure out of a PDF. First look-through: weights + holdings linked to the app's companies (with coverage %). Built in Sprint 8, `8847311`. See [fund-etf-analysis-sprint8-2026-09-24.md](fund-etf-analysis-sprint8-2026-09-24.md). |
-| 24 | Numeric macro data (2026-09-24) | **Core set of 13 series (Norges Bank, SSB, FRED) + 3 derived, used on the Macro page, the dashboard and in the analysis** (evidence packet v5 / fund-v2, cited `macro_indicator` items). No prompt or schema change. Built `c4b2ed2`, `551a141`. See [macro-data-and-guardrails-sprint7-2026-09-24.md](macro-data-and-guardrails-sprint7-2026-09-24.md). |
-| 22 | Sprint 6 evidence selection (2026-09-24) | **Deterministic keyword + section rules, ~4,000-token budget** (no embeddings). Uploaded document passages enter the evidence packet (v4) as quoted, cited `document_excerpt` items; prompts v2. Built `71ec23b`. See [evidence-quality-sprint6-2026-09-24.md](evidence-quality-sprint6-2026-09-24.md). |
-| 25 | Thesis tracking (2026-09-26) | **Rebuilt fresh as Sprint 11:** tripwires, "what changed", verdict timeline, Thesis monitor page, nightly check. See [thesis-tracking-sprint11](thesis-tracking-sprint11-2026-09-26.md) |
-| — | Game mode (2026-10-01) | Own decision table D1–D5 in [game-mode-fortress](game-mode-fortress-2026-10-01.md): Fortress home scene, Vault = own cash, journal-driven temperament, hand-written advisor lines, per-browser toggle default off |
+| 23 | Fund / ETF figures (2026-09-24) | **Typed in on a Fund facts form, each row citing an uploaded document (+ page), plus a deterministic holdings-file (CSV/XLSX) import** — no LLM reads a fund figure out of a PDF. First look-through: weights + holdings linked to the app's companies (with coverage %). Built in Sprint 8, `8847311`. See [docs/valuation/fund-etf-analysis-sprint8-2026-09-24.md](valuation/fund-etf-analysis-sprint8-2026-09-24.md). |
+| 24 | Numeric macro data (2026-09-24) | **Core set of 13 series (Norges Bank, SSB, FRED) + 3 derived, used on the Macro page, the dashboard and in the analysis** (evidence packet v5 / fund-v2, cited `macro_indicator` items). No prompt or schema change. Built `c4b2ed2`, `551a141`. See [docs/ops/macro-data-and-guardrails-sprint7-2026-09-24.md](ops/macro-data-and-guardrails-sprint7-2026-09-24.md). |
+| 22 | Sprint 6 evidence selection (2026-09-24) | **Deterministic keyword + section rules, ~4,000-token budget** (no embeddings). Uploaded document passages enter the evidence packet (v4) as quoted, cited `document_excerpt` items; prompts v2. Built `71ec23b`. See [docs/llm-local/evidence-quality-sprint6-2026-09-24.md](llm-local/evidence-quality-sprint6-2026-09-24.md). |
+| 25 | Thesis tracking (2026-09-26) | **Rebuilt fresh as Sprint 11:** tripwires, "what changed", verdict timeline, Thesis monitor page, nightly check. See [thesis-tracking-sprint11](features/thesis-tracking-sprint11-2026-09-26.md) |
+| — | Game mode (2026-10-01) | Own decision table D1–D5 in [game-mode-fortress](game/game-mode-fortress-2026-10-01.md): Fortress home scene, Vault = own cash, journal-driven temperament, hand-written advisor lines, per-browser toggle default off |
 
 ## Current Supabase schema
 
@@ -185,7 +185,7 @@ moat/verdict roll-up dashboard and the deterministic executive summary.
 sector/instrument/currency/account, HHI + effective holdings + top-1/5/10 share, value-weighted
 verdict and moat roll-up, and a rule-based executive summary with named thresholds) and a new
 **Dashboard** home page (`/`; Holdings moved to `/holdings`). Detail:
-[dashboard-status-watchlist-journal-2026-09-23.md](dashboard-status-watchlist-journal-2026-09-23.md).
+[docs/features/dashboard-status-watchlist-journal-2026-09-23.md](features/dashboard-status-watchlist-journal-2026-09-23.md).
 
 ### Shipped alongside Sprint 5 (2026-09-23): F4 status page, F6 journal, F7 watchlist — ✅
 
@@ -213,7 +213,7 @@ Decision at sprint start: **research runs on the PC** (decision 21).
 | 5 | Safety | No listener on the PC; the worker writes only what the run endpoint writes |
 | 6 | Tests + guide | 29 new tests (586), Postgres migration + concurrency check, setup guide section |
 
-Detail: [local-worker-queue-sprint5b-2026-09-23.md](local-worker-queue-sprint5b-2026-09-23.md).
+Detail: [docs/llm-local/local-worker-queue-sprint5b-2026-09-23.md](llm-local/local-worker-queue-sprint5b-2026-09-23.md).
 
 ### Sprint 6 — Evidence quality — ✅ built 2026-09-24 (`71ec23b`, not deployed)
 
@@ -227,7 +227,7 @@ Found at sprint start: uploaded document **text** never reached the evidence pac
 | 4 | Old uploads | Re-sectioned in memory; no re-upload needed |
 | 5 | Tests | 33 new (619) |
 
-Decision 22. Detail: [evidence-quality-sprint6-2026-09-24.md](evidence-quality-sprint6-2026-09-24.md).
+Decision 22. Detail: [docs/llm-local/evidence-quality-sprint6-2026-09-24.md](llm-local/evidence-quality-sprint6-2026-09-24.md).
 
 ### Sprint 8 — Fund & ETF analysis (F9) — ✅ built 2026-09-24 (`8847311`, not deployed)
 
@@ -245,7 +245,7 @@ role in the portfolio. Decision 23.
 | 6 | UI | Fund facts section, fund analysis view |
 | 7 | Tests | 30 new (649), migration checked on Postgres 16 |
 
-Detail: [fund-etf-analysis-sprint8-2026-09-24.md](fund-etf-analysis-sprint8-2026-09-24.md).
+Detail: [docs/valuation/fund-etf-analysis-sprint8-2026-09-24.md](valuation/fund-etf-analysis-sprint8-2026-09-24.md).
 
 ### Sprint 7 — Guardrail tooling — ✅ built 2026-09-24 (`f81a824`, not pushed)
 
@@ -257,7 +257,7 @@ Detail: [fund-etf-analysis-sprint8-2026-09-24.md](fund-etf-analysis-sprint8-2026
 | 4 | Frontend test framework | vitest, first formatter tests |
 | 5 | F4 smoke test | Read-only Playwright suite (16 checks) + `smoke.yml` after each Railway deploy, daily, on demand |
 
-Detail: [macro-data-and-guardrails-sprint7-2026-09-24.md](macro-data-and-guardrails-sprint7-2026-09-24.md) §5.
+Detail: [docs/ops/macro-data-and-guardrails-sprint7-2026-09-24.md](ops/macro-data-and-guardrails-sprint7-2026-09-24.md) §5.
 
 ### Numeric macro data (F10) — ✅ built 2026-09-24 (`c4b2ed2`, `551a141`, not pushed)
 
@@ -265,17 +265,17 @@ Pulled from the Backlog at Faiz's request (decision 24). Norges Bank policy rate
 10y, USD/NOK, EUR/NOK; SSB CPI; FRED fed funds, 10y, 10y−2y, CPI, unemployment, HY spread; derived
 real policy rates and NO−US 10y. Background refresh + refresh before each run; evidence packet v5 /
 fund-v2; Macro page card and dashboard strip. Detail:
-[macro-data-and-guardrails-sprint7-2026-09-24.md](macro-data-and-guardrails-sprint7-2026-09-24.md).
+[docs/ops/macro-data-and-guardrails-sprint7-2026-09-24.md](ops/macro-data-and-guardrails-sprint7-2026-09-24.md).
 
 ### Sprint 9 — ROIC, ROE, ROCE and market multiples — ✅ built 2026-09-25 (not deployed)
 
-Layers A–C of [gap-closing-roic-roe-multiples-2026-09-25.md](gap-closing-roic-roe-multiples-2026-09-25.md):
+Layers A–C of [docs/valuation/gap-closing-roic-roe-multiples-2026-09-25.md](valuation/gap-closing-roic-roe-multiples-2026-09-25.md):
 tax, pre-tax profit, leases, minorities, EPS and raw materials stored from ESEF/SEC; ROE on average
 ordinary equity (n/m when depleted), ROIC on the effective tax rate, ROCE; share counts (manual >
 SEC cover page > Yahoo > filing, EPS cross-check); market cap, owner's-view EV, P/E, P/B, P/S,
 EV/EBITDA, FCF yield; DCF uses the current share count; price converted into the filing currency;
 evidence packet v6. Migration `b1c2d3e4f5a6` (additive). Detail:
-[roic-roe-multiples-sprint9-2026-09-25.md](roic-roe-multiples-sprint9-2026-09-25.md). Layer D
+[docs/valuation/roic-roe-multiples-sprint9-2026-09-25.md](valuation/roic-roe-multiples-sprint9-2026-09-25.md). Layer D
 (filings.xbrl.org history import) stays in the backlog.
 
 ## Backlog — candidate future phases (historical; the live backlog is PROGRESS.md §4)
@@ -290,7 +290,7 @@ evidence packet v6. Migration `b1c2d3e4f5a6` (additive). Detail:
 | **LLM usage ledger & cost observability** | Persist real `llm_usage_events` rows (including Sprint 4's own blind/reconciliation calls, which aren't logged there yet) instead of the in-memory placeholder guard | Low-risk, pullable any time; now slightly more valuable since Sprint 4 adds real LLM spend |
 | **Alerts & notifications** | Notify when a thesis-invalidation trigger fires or research goes stale | Needs thesis tracking built first |
 | **Reporting & export** | One-holding or whole-portfolio PDF/print view of an analysis run | Sprint 4's analysis output now exists to export |
-| **More primary sources** | Brønnøysund accounts register (Norwegian financials), VFF fund NAVs, Newsweb announcement body text | SEC EDGAR + Newsweb built 2026-09-22 (see `primary-sources-sec-edgar-newsweb-2026-09-22.md`); these are the next-cheapest gaps |
+| **More primary sources** | Brønnøysund accounts register (Norwegian financials), VFF fund NAVs, Newsweb announcement body text | SEC EDGAR + Newsweb built 2026-09-22 (see `docs/reference/primary-sources-sec-edgar-newsweb-2026-09-22.md`); these are the next-cheapest gaps |
 | **F5 Overnight analysis queue** (agreed 2026-09-22) | Queue holdings and run them within the daily Gemini budget, resuming the next day | **✅ Built 2026-09-23 in Sprint 5B** (`18e8a4e`), together with F8 |
 | **F6 Decision journal** (agreed 2026-09-22) | Record buy/sell reasoning, price and "what would prove me wrong"; show the outcome after 6/12 months | **✅ Built 2026-09-23** (`bc28502`), see Sprint 5 |
 | **F7 Watchlist** (agreed 2026-09-22) | Analyze non-held companies; flag when the price drops below a buy-below level | **✅ Built 2026-09-23** (`ebe4a49`), see Sprint 5 |
@@ -302,22 +302,22 @@ evidence packet v6. Migration `b1c2d3e4f5a6` (additive). Detail:
 
 | Date | Summary |
 |---|---|
-| 2026-09-25 | **Sprint 9 built: ROIC / ROE / ROCE + market multiples.** Effective-tax ROIC, averaged ROE with the depleted-equity rule, share-count service (migration `b1c2d3e4f5a6`), FX-correct multiples, evidence packet v6, Market multiples card. 725 tests (40 new). Not deployed. See [roic-roe-multiples-sprint9-2026-09-25.md](roic-roe-multiples-sprint9-2026-09-25.md). |
-| 2026-09-24 | **Sprint 7 built: guardrail tooling + F4 smoke test.** CI (ruff, pytest, migrations on Postgres 16, tsc/eslint/vitest/build, gitleaks, dependency audit), pre-commit hooks, `.gitleaks.toml`, read-only Playwright smoke test + `smoke.yml`. `f81a824`, not pushed. See [macro-data-and-guardrails-sprint7-2026-09-24.md](macro-data-and-guardrails-sprint7-2026-09-24.md). |
+| 2026-09-25 | **Sprint 9 built: ROIC / ROE / ROCE + market multiples.** Effective-tax ROIC, averaged ROE with the depleted-equity rule, share-count service (migration `b1c2d3e4f5a6`), FX-correct multiples, evidence packet v6, Market multiples card. 725 tests (40 new). Not deployed. See [docs/valuation/roic-roe-multiples-sprint9-2026-09-25.md](valuation/roic-roe-multiples-sprint9-2026-09-25.md). |
+| 2026-09-24 | **Sprint 7 built: guardrail tooling + F4 smoke test.** CI (ruff, pytest, migrations on Postgres 16, tsc/eslint/vitest/build, gitleaks, dependency audit), pre-commit hooks, `.gitleaks.toml`, read-only Playwright smoke test + `smoke.yml`. `f81a824`, not pushed. See [docs/ops/macro-data-and-guardrails-sprint7-2026-09-24.md](ops/macro-data-and-guardrails-sprint7-2026-09-24.md). |
 | 2026-09-24 | **Numeric macro data built (F10, decision 24).** 13 Norges Bank / SSB / FRED series + 3 derived; migration `a9b0c1d2e3f4` (additive); evidence packet v5 / fund-v2; Macro page + dashboard. 678 tests (29 new). `c4b2ed2`, `551a141`, not pushed. |
-| 2026-09-24 | **Sprint 8 built (decision 23): fund & ETF analysis (F9).** `equity_fund` type; Fund facts typed in with citations or imported from a holdings file; deterministic fee drag, benchmark gap, concentration, look-through and overlap; evidence packet `fund-v1`, schema + prompts `fund_v1`. Migration `f8a9b0c1d2e3` (additive). 649 tests (30 new). `8847311`, not pushed. See [fund-etf-analysis-sprint8-2026-09-24.md](fund-etf-analysis-sprint8-2026-09-24.md). |
-| 2026-09-24 | **Sprint 6 built (decision 22).** Uploaded document text now reaches the analysis: section-aware chunking, deterministic topic scoring within a ~4,000-token budget, evidence packet v4 (`document_excerpt`), prompts v2. No migration. 619 tests (33 new). `71ec23b`, not pushed. See [evidence-quality-sprint6-2026-09-24.md](evidence-quality-sprint6-2026-09-24.md). |
-| 2026-09-23 | **Sprint 5B built (F8 + F5), decision 21: research runs on the PC.** "Run on my PC" queues a run in the shared DB; `python -m app.worker` claims it and runs research + both passes on Ollama. Migration `e6f7a8b9c0d1` (additive), 4 new endpoints, Analysis queue page. 586 tests (29 new). `18e8a4e`, not pushed. See [local-worker-queue-sprint5b-2026-09-23.md](local-worker-queue-sprint5b-2026-09-23.md). |
-| 2026-09-23 | **Sprint 5 closed; F4 status page, F6 journal, F7 watchlist shipped.** Dashboard with `GET /portfolio/overview` (database-only roll-up and a rule-based executive summary); `/system/status`; `watchlist_items` + `decision_journal_entries` (additive migrations `c4d5e6f7a8b9`, `d5e6f7a8b9c0`). Fixes: a failed run hid an older verdict on the board; provider errors now return 503 instead of 500; yfinance `KeyError`. 557 tests (41 new). Not pushed. See [dashboard-status-watchlist-journal-2026-09-23.md](dashboard-status-watchlist-journal-2026-09-23.md). |
-| 2026-09-23 | **Owner's-view metric definitions (decision 19) + Sprint 5B planned (decision 20).** Hybrid capital as debt; FCF and owner earnings net of decommissioning, leases, financing-classified interest and hybrid coupons; EBIT/EBITDA without biological fair value; *n/m* for negative denominators; the DCF uses the same owner earnings; evidence packet v3. 5 new extracted facts, 12 new tests (514/516, 2 pre-existing local-only). Sprint 5B: local worker pulls queued runs from the shared DB (F8 + F5). See [owner-view-metrics-and-local-worker-plan-2026-09-23.md](owner-view-metrics-and-local-worker-plan-2026-09-23.md). |
-| 2026-09-23 | **Upload validation + deletes.** Vår Energi's FY2025 ESEF filing was checked figure by figure: every tag was read correctly, but net income, revenue, capex, EBIT/EBITDA and interest are now mapped the way a shareholder needs them. Statement integrity checks, a hybrid-equity warning, a mixed-currency guard and per-figure provenance were added. New document/holding delete endpoints and UI (decision 18). `be4b7e7`, not pushed. See [upload-validation-var-energi-and-deletes-2026-09-23.md](upload-validation-var-energi-and-deletes-2026-09-23.md). |
+| 2026-09-24 | **Sprint 8 built (decision 23): fund & ETF analysis (F9).** `equity_fund` type; Fund facts typed in with citations or imported from a holdings file; deterministic fee drag, benchmark gap, concentration, look-through and overlap; evidence packet `fund-v1`, schema + prompts `fund_v1`. Migration `f8a9b0c1d2e3` (additive). 649 tests (30 new). `8847311`, not pushed. See [docs/valuation/fund-etf-analysis-sprint8-2026-09-24.md](valuation/fund-etf-analysis-sprint8-2026-09-24.md). |
+| 2026-09-24 | **Sprint 6 built (decision 22).** Uploaded document text now reaches the analysis: section-aware chunking, deterministic topic scoring within a ~4,000-token budget, evidence packet v4 (`document_excerpt`), prompts v2. No migration. 619 tests (33 new). `71ec23b`, not pushed. See [docs/llm-local/evidence-quality-sprint6-2026-09-24.md](llm-local/evidence-quality-sprint6-2026-09-24.md). |
+| 2026-09-23 | **Sprint 5B built (F8 + F5), decision 21: research runs on the PC.** "Run on my PC" queues a run in the shared DB; `python -m app.worker` claims it and runs research + both passes on Ollama. Migration `e6f7a8b9c0d1` (additive), 4 new endpoints, Analysis queue page. 586 tests (29 new). `18e8a4e`, not pushed. See [docs/llm-local/local-worker-queue-sprint5b-2026-09-23.md](llm-local/local-worker-queue-sprint5b-2026-09-23.md). |
+| 2026-09-23 | **Sprint 5 closed; F4 status page, F6 journal, F7 watchlist shipped.** Dashboard with `GET /portfolio/overview` (database-only roll-up and a rule-based executive summary); `/system/status`; `watchlist_items` + `decision_journal_entries` (additive migrations `c4d5e6f7a8b9`, `d5e6f7a8b9c0`). Fixes: a failed run hid an older verdict on the board; provider errors now return 503 instead of 500; yfinance `KeyError`. 557 tests (41 new). Not pushed. See [docs/features/dashboard-status-watchlist-journal-2026-09-23.md](features/dashboard-status-watchlist-journal-2026-09-23.md). |
+| 2026-09-23 | **Owner's-view metric definitions (decision 19) + Sprint 5B planned (decision 20).** Hybrid capital as debt; FCF and owner earnings net of decommissioning, leases, financing-classified interest and hybrid coupons; EBIT/EBITDA without biological fair value; *n/m* for negative denominators; the DCF uses the same owner earnings; evidence packet v3. 5 new extracted facts, 12 new tests (514/516, 2 pre-existing local-only). Sprint 5B: local worker pulls queued runs from the shared DB (F8 + F5). See [docs/valuation/owner-view-metrics-and-local-worker-plan-2026-09-23.md](valuation/owner-view-metrics-and-local-worker-plan-2026-09-23.md). |
+| 2026-09-23 | **Upload validation + deletes.** Vår Energi's FY2025 ESEF filing was checked figure by figure: every tag was read correctly, but net income, revenue, capex, EBIT/EBITDA and interest are now mapped the way a shareholder needs them. Statement integrity checks, a hybrid-equity warning, a mixed-currency guard and per-figure provenance were added. New document/holding delete endpoints and UI (decision 18). `be4b7e7`, not pushed. See [docs/ingestion/upload-validation-var-energi-and-deletes-2026-09-23.md](ingestion/upload-validation-var-energi-and-deletes-2026-09-23.md). |
 | 2026-09-23 | **Reverted LLM-assisted PDF figure extraction** (`8e1c1fb` reverts `9a0db96`) — Faiz decided against it. PDFs stay text-only; ESEF `.xhtml`/CSV uploads are the figure sources for non-US holdings. |
-| 2026-09-23 | **Financial-statement uploads: ESEF `.xhtml` + CSV.** Inline-XBRL parser (tagged annual facts → canonical metrics via the EDGAR concept map, readable pages, tagged-facts evidence page) and a shared statement-table parser for IR CSV/Excel (annual columns only, scale/currency from the unit line). First source wins per metric/year; differences reported. Fixes a latent `GET /documents` 500. 486 tests (63 new). See [financial-statement-uploads-xhtml-csv-2026-09-23.md](financial-statement-uploads-xhtml-csv-2026-09-23.md). |
-| 2026-09-23 | **Local LLM engine (Ollama) + ticker convention + UI tweaks.** `OllamaProvider` behind the factory (`LLM_PROVIDER=ollama`): analysis passes on the local RTX 3060, research stays on Gemini. Readiness gains a "Local LLM" check. Ticker rule: home-exchange Yahoo symbol (`VAR.OL`), never an unsponsored OTC ADR. Primary sources collapsible at the bottom; darker palette (Design & UX tokens updated). 423 tests (20 new). See [local-llm-tickers-ui-2026-09-23.md](local-llm-tickers-ui-2026-09-23.md). |
+| 2026-09-23 | **Financial-statement uploads: ESEF `.xhtml` + CSV.** Inline-XBRL parser (tagged annual facts → canonical metrics via the EDGAR concept map, readable pages, tagged-facts evidence page) and a shared statement-table parser for IR CSV/Excel (annual columns only, scale/currency from the unit line). First source wins per metric/year; differences reported. Fixes a latent `GET /documents` 500. 486 tests (63 new). See [docs/ingestion/financial-statement-uploads-xhtml-csv-2026-09-23.md](ingestion/financial-statement-uploads-xhtml-csv-2026-09-23.md). |
+| 2026-09-23 | **Local LLM engine (Ollama) + ticker convention + UI tweaks.** `OllamaProvider` behind the factory (`LLM_PROVIDER=ollama`): analysis passes on the local RTX 3060, research stays on Gemini. Readiness gains a "Local LLM" check. Ticker rule: home-exchange Yahoo symbol (`VAR.OL`), never an unsponsored OTC ADR. Primary sources collapsible at the bottom; darker palette (Design & UX tokens updated). 423 tests (20 new). See [docs/llm-local/local-llm-tickers-ui-2026-09-23.md](llm-local/local-llm-tickers-ui-2026-09-23.md). |
 | 2026-09-22 | **F3 Margin-of-safety board built.** `GET /valuation/board` ranks owned equities by base-case margin of safety with zone, value, weight and latest verdict; `/margin-of-safety` page. yfinance beta cached 24h. 403 tests (11 new). Sprint 5 otherwise still open. |
 | 2026-09-22 | **Sprint 4 closed: F1 Analysis view + F2 Readiness check.** `GET /analysis/holdings/{id}/readiness` (instrument type, provider config, ticker/price, financial history, sector, research cache, Gemini quota; no side effects). Run output gains `evidence_items` + `user_notes_snapshot`. Manual holdings now classified by name instead of `equity`. `AnalysisPanel` on the holding page. 392 tests (28 new). Not yet run against a real LLM. |
 | 2026-09-22 | **Feature plan F1–F7 agreed.** F1/F2 attached to the Sprint 4 follow-up, F3 to Sprint 5, F4 to Sprint 7, F5–F7 added to the Backlog. Docs only. |
-| 2026-09-22 | **Primary sources: SEC EDGAR + Oslo Børs Newsweb.** EDGAR XBRL annual facts → `financial_line_items` (traceable to accession numbers, never overwrites uploaded periods); Newsweb announcements cached via the research tables (no migration); evidence packet v2 cites both; new `/sources/*` API and a Primary sources section on the holding page. 364/364 tests. Not yet run against the live SEC/Newsweb hosts. See `primary-sources-sec-edgar-newsweb-2026-09-22.md`. |
+| 2026-09-22 | **Primary sources: SEC EDGAR + Oslo Børs Newsweb.** EDGAR XBRL annual facts → `financial_line_items` (traceable to accession numbers, never overwrites uploaded periods); Newsweb announcements cached via the research tables (no migration); evidence packet v2 cites both; new `/sources/*` API and a Primary sources section on the holding page. 364/364 tests. Not yet run against the live SEC/Newsweb hosts. See `docs/reference/primary-sources-sec-edgar-newsweb-2026-09-22.md`. |
 | 2026-09-21 | **Sprint 4 backend: the two-pass Buffett/Munger analysis engine.** Built the evidence packet (reusing Sprints 1-3 unchanged), versioned output schema/assumptions/prompts, the blind pass, the reconciliation pass (notes-aware, notes optional), the orchestration pipeline (equity-type gating, LLM fallback, deterministic DCF-derived price target, blind-result preserved if only reconciliation fails), per-holding notes CRUD, and the `/analysis` API. New tables via migration `b5e1a9c3d7f2` — a fresh schema, not an extension of the legacy Phase-3 tables. 19 new tests (307 total), ruff clean. Discovered: manually-created holdings default to a non-analyzable `asset_class_raw` (flagged, not fixed); `MARKET_DATA_PROVIDER`/`RESEARCH_PROVIDER` are still `stub` in `backend/.env`, now blocking the analysis engine specifically. Frontend deliberately deferred. Not run against a real LLM call, real market data, or real holdings this session. |
 | 2026-09-21 | Portfolio delete fixes, page-load speed, first portfolio-level chart, whisky grouping (out-of-sequence). See `progress.md`. |
 | 2026-09-21 | Sprint 3 fully closed: frontend valuation UI. See `progress.md`. |

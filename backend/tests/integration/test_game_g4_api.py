@@ -1,5 +1,5 @@
 """GET /game/state, G4 layers: sieges, land for sale, tripwire breaches
-(docs/game-mode-fortress-2026-10-01.md). Every layer reads *stored* data
+(docs/game/game-mode-fortress-2026-10-01.md). Every layer reads *stored* data
 (risk snapshot, margin-of-safety snapshot, thesis monitor) and must never
 rebuild one or invent a value that was not stored."""
 from __future__ import annotations

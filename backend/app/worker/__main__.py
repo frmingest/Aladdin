@@ -6,7 +6,7 @@ the same DATABASE_URL as Railway):
     python -m app.worker            # run until Ctrl+C
     python -m app.worker --once     # one iteration, then exit (testing)
 
-See docs/local-llm-ollama-setup.md, "Run analyses queued from Railway".
+See docs/reference/local-llm-ollama-setup.md, "Run analyses queued from Railway".
 """
 from __future__ import annotations
 

@@ -1,5 +1,5 @@
 """v1 game mapping (2026-10-01) — how stored, deterministic values become
-fortress properties in game mode (docs/game-mode-fortress-2026-10-01.md).
+fortress properties in game mode (docs/game/game-mode-fortress-2026-10-01.md).
 
 These are judgment calls, not fetched data, and they decide what Faiz sees
 about his real holdings. CLAUDE.md Rule 3: never edit these numbers once

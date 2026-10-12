@@ -1,4 +1,4 @@
-"""GET /game/state, G7b layer: the two advisors (docs/game-mode-fortress-2026-10-01.md).
+"""GET /game/state, G7b layer: the two advisors (docs/game/game-mode-fortress-2026-10-01.md).
 They are a pure view over the state the endpoint has already derived, so the
 tests check that the lines come through the API, name the right holding, carry
 their facts, respect demo mode, and write nothing."""

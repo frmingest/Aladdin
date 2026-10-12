@@ -75,6 +75,15 @@ shows current state too — not just claude.ai. Don't update one and skip the ot
 doesn't have a file the project doc list does, that's a signal to add it, not a reason to skip the
 repo copy.
 
+## Docs layout
+
+`docs/README.md` is the index: start there, or `grep -ril <term> docs/`. Docs are grouped by topic folder
+(`reference/`, `game/`, `ingestion/`, `valuation/`, `llm-local/`, `ops/`, `features/`, `sprints/`, `archive/`);
+only `PROGRESS.md`, `architecture.md` and the active sprint plan sit at the docs root. A new doc goes in its
+topic folder with its dated filename, gets one line in `docs/README.md` in the same change, and is referenced
+by full path (`docs/game/...`). Claude project docs under `claude/` stay flat: `claude/<name>.md` mirrors
+`docs/<folder>/<name>.md`.
+
 ## Progress file rules (`progress.md` / `docs/PROGRESS.md`)
 
 The progress file is a rolling log, not a history. These rules apply to both copies (the Claude
@@ -150,7 +159,7 @@ reproducing the check locally. Changes pushed from a cloud session reach `E:\Ala
 
 ## Game mode visual identity
 
-Game mode must look like a game on every tab (painted fortress, scrolls, ravens, seals), not like the normal app re-skinned. Standard: `.claude/standards/game-visual-identity.md`; method: skill `game-visual-identity`; sprint gate: `docs/game-sprint-checklist.md`.
+Game mode must look like a game on every tab (painted fortress, scrolls, ravens, seals), not like the normal app re-skinned. Standard: `.claude/standards/game-visual-identity.md`; method: skill `game-visual-identity`; sprint gate: `docs/game/game-sprint-checklist.md`.
 - Every game page has an identity score 0-3. A new or changed page below 2 (scene header or bespoke illustration, shared kit, one real fact encoded visually, Plain view) is a review blocker. "A Card with a list" is not done.
 - Every game spec and idea carries a "visual verb + scene" line; every game sprint plan and review answers the checklist (pages touched, identity before/after, visual wins, look-and-judge screenshots).
 - Visuals replace words (noise-audit word budgets still apply) and never cost truth (unknown stays fog), colour-blind safety, reduced motion or phone performance.

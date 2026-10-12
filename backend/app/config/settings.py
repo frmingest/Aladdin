@@ -80,7 +80,7 @@ class Settings(BaseSettings):
     mistral_rate_limit_rpm: int = 30  # conservative default, not vendor-confirmed
 
     # --- Local LLM via Ollama (2026-09-23, app/providers/ollama_provider.py,
-    # docs/local-llm-ollama-setup.md). Used when LLM_PROVIDER=ollama: the
+    # docs/reference/local-llm-ollama-setup.md). Used when LLM_PROVIDER=ollama: the
     # heavy analysis passes run on your own GPU; Gemini keeps the light,
     # search-grounded research. Defaults are sized for a 12GB card
     # (RTX 3060 12GB) running qwen3:14b with OLLAMA_KV_CACHE_TYPE=q8_0.
@@ -91,7 +91,7 @@ class Settings(BaseSettings):
     # Ollama's *combined* prompt+generation budget -- 16384 left no room
     # for a real evidence-packet prompt alongside a full-length fund
     # output. Still comfortable on a 12GB card with OLLAMA_KV_CACHE_TYPE=
-    # q8_0 (see docs/local-llm-ollama-setup.md).
+    # q8_0 (see docs/reference/local-llm-ollama-setup.md).
     ollama_num_ctx: int = 24576
     ollama_keep_alive: str = "30m"
     # Calls stream (2026-09-25): OLLAMA_TIMEOUT_SECONDS caps one whole pass
