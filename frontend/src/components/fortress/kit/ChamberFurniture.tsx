@@ -58,7 +58,7 @@ export default function ChamberFurniture({
     <>
       <CandleStand side="left" />
       <CandleStand side="right" />
-      <img src={table.src} alt="" aria-hidden="true" width={220} height={Math.round((220 * table.height) / table.width)} loading="lazy" decoding="async" className="chamber-art-table object-art" onError={onError} />
+      <img src={table.src} alt="" aria-hidden="true" width={170} height={Math.round((170 * table.height) / table.width)} loading="lazy" decoding="async" className="chamber-art-table object-art" onError={onError} />
       {([["left", oracle], ["right", partner]] as const).map(([side, who]) => (
         <div key={side} className={`chamber-art-chair chamber-art-chair-${side}`} aria-hidden="true">
           <img src={chair.src} alt="" width={74} height={Math.round((74 * chair.height) / chair.width)} loading="lazy" decoding="async" className="object-art block" onError={onError} />
