@@ -77,6 +77,13 @@ import roomSconce from "../assets/art/room-sconce.webp";
 import mapFrameCorner from "../assets/art/map-frame-corner.webp";
 import mapDividers from "../assets/art/map-dividers.webp";
 import mapRolled from "../assets/art/map-rolled.webp";
+import councilTable from "../assets/art/council-table.webp";
+import councilChair from "../assets/art/council-chair.webp";
+import councilCandles from "../assets/art/council-candles.webp";
+import roomScroll from "../assets/art/room-scroll.webp";
+import roomInkwell from "../assets/art/room-inkwell.webp";
+import sealWhole from "../assets/art/seal-whole.webp";
+import sealBroken from "../assets/art/seal-broken.webp";
 
 export interface PackedArt {
   src: string;
@@ -165,4 +172,11 @@ export const ART_MANIFEST = {
   "map-frame-corner": { src: mapFrameCorner, width: 158, height: 160, alt: "" },
   "map-dividers": { src: mapDividers, width: 94, height: 160, alt: "" },
   "map-rolled": { src: mapRolled, width: 192, height: 130, alt: "" },
+  "council-table": { src: councilTable, width: 320, height: 310, alt: "" },
+  "council-chair": { src: councilChair, width: 164, height: 256, alt: "" },
+  "council-candles": { src: councilCandles, width: 87, height: 256, alt: "", anchors: { "f1": [0.505, 0.012] as const, "f2": [0.18, 0.145] as const, "f3": [0.815, 0.205] as const } },
+  "room-scroll": { src: roomScroll, width: 192, height: 130, alt: "" },
+  "room-inkwell": { src: roomInkwell, width: 99, height: 160, alt: "" },
+  "seal-whole": { src: sealWhole, width: 105, height: 128, alt: "", anchors: { "mark": [0.49, 0.44] as const } },
+  "seal-broken": { src: sealBroken, width: 128, height: 96, alt: "", anchors: { "mark": [0.5, 0.43] as const } },
 } as const satisfies Record<string, PackedArt>;

@@ -1,5 +1,6 @@
 import type { CapsuleState } from "./capsules";
 import type { CrestKind } from "./crest";
+import { SEAL_LOOK, type SealKind } from "./seals";
 import { getObjectArt } from "./stitchArt";
 
 /**
@@ -31,6 +32,7 @@ export function roomCrestId(room: CrestKind): string | null {
 const PROPS_OF: Partial<Record<CrestKind, readonly string[]>> = {
   records: ["room-bookshelf", "room-lectern"],
   chronicle: ["room-hourglass"],
+  council: ["room-inkwell", "room-scroll"],
 };
 
 /** The banner props for a room: only pictures that are really packed. */
@@ -53,4 +55,34 @@ export type SealState = "whole" | "broken";
 export function sealId(state: SealState): string | null {
   const id = state === "whole" ? "seal-whole" : "seal-broken";
   return getObjectArt(id) ? id : null;
+}
+
+/**
+ * The picture and printed mark for a Council seal kind (Sprint 9). A note is a whole seal, a warning is a
+ * broken one: the shape carries the tone, and the glyph and word of the page's own seal (lib/seals.ts) are
+ * drawn over it by code, so colour is never the only signal. Unknown and none have no picture: their
+ * dashed ring and "?" stay SVG so unknown never looks like a smaller known state.
+ */
+export function sealArtFor(kind: SealKind): { id: string; glyph: string; label: string } | null {
+  if (kind !== "alert" && kind !== "notice") return null;
+  const id = sealId(kind === "alert" ? "broken" : "whole");
+  return id ? { id, glyph: SEAL_LOOK[kind].glyph, label: SEAL_LOOK[kind].label } : null;
+}
+
+export interface CouncilFurniture {
+  table: string;
+  chair: string;
+  candles: string;
+}
+
+/** The Council chamber's furniture, or null unless all three pictures are packed (then the SVG table stays). */
+export function councilFurniture(): CouncilFurniture | null {
+  const f = { table: "council-table", chair: "council-chair", candles: "council-candles" };
+  return Object.values(f).every((id) => getObjectArt(id) !== null) ? f : null;
+}
+
+/** Where the three unlit candles stand on the candle-stand picture, as fractions [x, y] (flames are drawn by code). */
+export function candleTops(): (readonly [number, number])[] {
+  const a = getObjectArt("council-candles")?.anchors;
+  return a ? (["f1", "f2", "f3"] as const).flatMap((k) => (a[k] ? [a[k]] : [])) : [];
 }

@@ -1,6 +1,6 @@
 # Design Master: review and sprint plan (2026-10-11)
 
-Status: **approved by Faiz 2026-10-11 (all nine decisions, Part 5). Sprint 0 is merged (#103); Sprint 1 is merged (#104); Sprint 2 is merged (#105); Sprint 3 is merged (#106); Sprint 4 is merged (#107); Sprint 5 is merged (#108); Sprint 6 is merged (#109, deploy not verified); Sprint 7 is next. Sprints 8, 10, 12 and 13 (room banners, Records, Chronicle, Map table) are written on 2026-10-11 as Faiz asked (rooms first, Sprint 7 last), using the first set of room pictures; Sprints 9 (Council) and 11 (Circle) wait for the crests, seals, Council furniture and Circle stones, which are not generated yet (see the Sprint 13 result). Decisions 10 to 13 (Part 5) are treated as approved by that request.** Written from a fresh clone of `main` (`e939577`, PR #101 merged), all 52 object images and 10 screen mocks in `frontend/public/art/Design_master`, the Stitch `DESIGN.md`, and a read of the scene, map and marketplace code. `E:\Aladdin` is stale (branch `feature/currency-edit-and-nok-equivalent`, older than `main`); pull `main` before any build.
+Status: **approved by Faiz 2026-10-11 (all nine decisions, Part 5). Sprint 0 is merged (#103); Sprint 1 is merged (#104); Sprint 2 is merged (#105); Sprint 3 is merged (#106); Sprint 4 is merged (#107); Sprint 5 is merged (#108); Sprint 6 is merged (#109, deploy not verified); Sprints 8, 10, 12 and 13 (room banners, Records, Chronicle, Map table) are merged (#111 to #114, checked against `git log` on `main` `32be2dd` on 2026-10-12, deploy not verified); Sprint 9 (Council) is written on 2026-10-12 as `feature/design-sprint-9-council`, using the second set of room pictures (`frontend/public/art/latest`); Sprint 11 (Circle) follows on its own branch; Sprint 7 is last, as Faiz asked. Decisions 10 to 13 (Part 5) are treated as approved by that request.** Written from a fresh clone of `main` (`e939577`, PR #101 merged), all 52 object images and 10 screen mocks in `frontend/public/art/Design_master`, the Stitch `DESIGN.md`, and a read of the scene, map and marketplace code. `E:\Aladdin` is stale (branch `feature/currency-edit-and-nok-equivalent`, older than `main`); pull `main` before any build.
 
 Related: [stitch-master-object-art-2026-10-11.md](stitch-master-object-art-2026-10-11.md) (style, rules, prompts for what is still missing), [game-sprint-checklist.md](game-sprint-checklist.md) (section A is answered in Part 7).
 
@@ -225,6 +225,13 @@ Same rules as Sprints 1 to 6: one branch and one PR per sprint off fresh `main`,
 - Truth: item order, tone and text come from the existing rules; the table and chairs carry nothing; no new words.
 - Cut line: gavel and backdrop.
 
+**Sprint 9 result (2026-10-12, written, not deployed).**
+- Packed (7 new ids, 64 KB): `council-table`, `council-chair`, `council-candles`, `room-scroll`, `room-inkwell`, `seal-whole`, `seal-broken` (the candle holders and the two seals carry anchors in `manifest.json`). The tall wooden "chair" that arrived is a reading lectern, not a chair, so the two advisors share one chair picture (the Partner's mirrored). The gavel stays in the masters on purpose: the chamber's own rule is that nothing is decided there. The crest that arrived is a tower on a teal disc, not the Council table, so no crest is packed.
+- `lib/roomArt.ts` (tested): `sealArtFor(kind)` (note = `seal-whole`, warning = `seal-broken`, unknown and none = null so their dashed ring and "?" stay SVG), `councilFurniture()`, `candleTops()`, and the Council banner props (`room-inkwell`, `room-scroll`).
+- Council chamber, art mode only (`CouncilChamber`, `ChamberFurniture`, `SealArt`): the oak table replaces the painted ellipse, the Oracle and the Partner sit on the two chairs, two candle stands stand in the bottom corners with flames drawn by code (constant: no flicker, no count). Each seat shows the wax picture with the page's own glyph ("i" or "!") drawn over it and the same accessible word, so a tone is shape plus glyph plus word, never colour alone; the agenda bubbles (`Speaker`) use the same seal as decoration beside their printed tone pill. A picture that fails to load puts the painted table back. The eight seats, their counts, the empty-chair rule ("none found", "not proof of nothing"), the list and the Plain view are unchanged; no word is added.
+- Not done, by design: gavel (nothing is decided here), backdrop, agenda scroll as a seat or list item (it stands in the banner), crest.
+- Checks: tsc (only the known `artAssets.test.ts` Node-types gap), eslint (0 errors) and the kit and room tests pass (art off: no picture, painted table, same seats). Rendered in headless Chromium on a fixture (art on, desktop and 390 px): table, chairs, advisors, seals, candles and banner props show. Real data, light theme and besieged weather were not checked: the broken seal's crack runs through its glyph at 33 px and needs Faiz's eye.
+
 **Sprint 10: Records (M).** Visual verb "seal", scene "the archive".
 - Needs: casket, bookshelf, tomes (3), lectern, pigeonholes (Part 6b).
 - Code: each entry stays one row in the existing list (Plain view); a time capsule is a casket with a whole seal, drawn broken when its review is due or open, plus today's label. The bookshelf and lectern frame the header. Keeps the caption "a decision is not its outcome"; no streaks or rewards.
@@ -266,11 +273,12 @@ Same rules as Sprints 1 to 6: one branch and one PR per sprint off fresh `main`,
 - Not done, by design: pin and wave tile (cut line).
 - Checks: tsc (only the known `artAssets.test.ts` gap), eslint (0 errors), the kit and map tests pass (art off draws no frame, tools or image). Not rendered in a browser: corner size over settlements near the edge, and the zoom button position, need Faiz's eye.
 
-**Still missing for the rooms (what blocks Sprints 9 and 11 and the crest work in Sprint 8; prompts are in the master doc, Part 6b).**
-- **Shared (batch 3):** the five room crests (council, records, circle, chronicle, map), wax seal intact and broken, quill and inkwell, candle stand.
-- **Council (batch 4, Sprint 9):** round table, two chairs, agenda scroll, gavel. The Oracle and Partner busts already exist.
-- **Circle (batch 6, Sprint 11):** standing stone (and a low variant), brazier, lantern post, telescope, fog stake. The signpost arrived (kept in the masters, unused until the rest exists).
-- Left unused in the masters from the first room set: pigeonholes, tomes, sundial, weathervane, cairn, chronicle book, brass pin, wave tile.
+**Still missing for the rooms (updated 2026-10-12; prompts are in the master doc, Part 6b).**
+- **Crests (Sprint 8, batch 3):** the five room crests (council, records, circle, chronicle, map). One medallion arrived on 2026-10-12, a tower on a teal disc: it fits the Fortress, not a room, and is kept in the masters.
+- **Council:** a second, differently shaped advisor chair (the high-backed one arrived as a lectern). Optional council backdrop.
+- **Left unused in the masters:** pigeonholes, tomes, sundial, weathervane, cairn, chronicle book, brass pin, wave tile, gavel, the lectern that looks like a chair, the tower crest.
+- **Circle (Sprint 11):** the stones, brazier, lantern post, telescope, signpost and stake arrived on 2026-10-12 and are not wired yet.
+- Not needed any more: wax seals, quill and inkwell, candle stand, table, scroll (all packed in Sprint 9).
 
 **Section A for Sprints 8 to 13 (checklist answers, targets inferred from code, none re-scored with screenshots).**
 1. Pages touched: every room header and tab strip (S8); Council (S9); Records (S10); Circle (S11); Chronicle (S12); Map table (S13). Not touched: Siege Simulator, Night Watch, Ledger.

@@ -3,6 +3,10 @@
 Completed milestones and retired status, moved out of `docs/PROGRESS.md` under the rolling-log rules
 in `CLAUDE.md` ("Progress file rules"). Newest snapshot first. Older: [PROGRESS-full-2026-09-30.md](PROGRESS-full-2026-09-30.md).
 
+## Closed 2026-10-12 — Design Master Sprints 8, 10, 12 and 13 (merged, deploy not verified)
+
+Sprint 8 room banners and backdrops (#111), Sprint 10 Records caskets and banner furniture (#112), Sprint 12 Chronicle strata blocks and dark sconce (#113), Sprint 13 Map table frame, dividers and rolled map (#114); merged on `main` (`32be2dd`, checked with `git log` on 2026-10-12). Results are written at the end of each sprint in [design-master-sprint-plan-2026-10-11.md](../design-master-sprint-plan-2026-10-11.md). All behind the Settings "Object art" switch, off by default.
+
 ## Closed 2026-10-11 — Design Master Sprints 0 to 5 (merged, deploy not verified)
 
 Sprint 0 foundation (#103), Sprint 1 tower kit (#104), Sprint 2 structures and Great Keep (#105), Sprint 3 siege camp and scene life (#106), Sprint 4 the map (#107), Sprint 5 marketplace stalls and Sal busts (#108). Results are written at the end of each sprint in [design-master-sprint-plan-2026-10-11.md](../design-master-sprint-plan-2026-10-11.md). All behind the Settings "Object art" switch, off by default.
