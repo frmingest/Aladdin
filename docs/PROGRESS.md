@@ -1,10 +1,12 @@
 # Aladdin — Progress
 
-**Last updated:** 2026-10-12 (Sprint 9 written). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
+**Last updated:** 2026-10-12 (Siege Simulator art written). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
 
 ## Current Objective
 
-**Design Master Sprint 9 (Council) is written, not merged, not deployed:** `feature/design-sprint-9-council` (off `main` `32be2dd`). Council chamber, art mode: oak table, the Oracle and the Partner seated on two chairs, wax seals (whole = note, broken = warning, glyph and word kept) and candle stands; inkwell and agenda scroll in the banner. Behind the Settings "Object art" switch. Sprint 11 (Circle) follows on its own branch; Sprint 7 (default and hardening) is last, as Faiz asked. Plan: [design-master-sprint-plan-2026-10-11.md](design-master-sprint-plan-2026-10-11.md).
+**Design Master Sprint 14 (Siege Simulator art) is written, not merged, not deployed:** `feature/siege-simulator-art` (off `main` `608e830`). The Siege Simulator was left out of the room art passes (decision 10), so it still drew generic boxes. In art mode its tower row now uses the real tower pictures (wall material and size as on the Fortress), a scorched band and cracks that grow with the share of the wall lost, a faded "?" for towers that are not modelled, the rampart tile along the foot, and the besieging camp for the same siege level the Fortress uses (none when calm). Behind the Settings "Object art" switch; the SVG strip stays as the fallback. Frontend only. Doc: [siege-simulator-art-2026-10-12.md](siege-simulator-art-2026-10-12.md).
+
+Design Master Sprint 9 (Council) is merged (#115). Sprint 11 (Circle) follows on its own branch; Sprint 7 (default and hardening) is last, as Faiz asked. Plan: [design-master-sprint-plan-2026-10-11.md](design-master-sprint-plan-2026-10-11.md).
 
 Phase 11 (the Buffett/Munger rebuild) is stable. Game mode follows the [team review](game-mode-team-review-2026-10-09.md) order. Merged on `main` (checked against git 2026-10-11, head `32be2dd`): #84-#87 (integrity, Fortress art pass, Long Memory, Knife-edge), #88-#93 (identity and the game design challenge), #97-#100 (Stitch design passes), #101 (Stitch objects, Phase A), #102 (design plan), #103 (Design Master Sprint 0), #104 (Sprint 1, tower kit), #105 (Sprint 2, structures and Great Keep), #106 (Sprint 3, siege camp and scene life), #107 (Sprint 4, the map), #108 (Sprint 5, marketplace stalls and Sal busts), #109 (Sprint 6, second Stitch batch), #111 to #114 (Sprints 8, 10, 12, 13: room banners, Records, Chronicle, Map table). Deploy of any of them is not verified. Nothing else in flight. Next mechanics in order: C1 Siege back-test, D1 Plain lens, D2 Camera, B2 Then and Now; also the rest of Sprint 29 (G40 tour, G38 sounds) and Sprint 26a (game pages in the smoke test, word budgets).
 
@@ -12,6 +14,7 @@ State: the local checkout `E:\Aladdin` is on `feature/design-sprint-6-second-bat
 
 ## Active Tasks
 
+- [ ] **Review the Siege Simulator art on real data (Faiz):** Settings, Object art on, `/fortress/siege`: do the scorched bands and cracks read as damage at 10%, 30% and 50% falls; is the camp right for calm, storm and siege; towers still readable at 18 holdings and at phone width
 - [ ] **Review the Sprint 1 to 4 art on real data (Faiz):** Settings, Object art on. Fortress in calm, gathering and besieged: a fresh, a weathered and an overgrown tower, an outpost, granary, gold store, the Great Keep with its verdict flag, shacks, the siege camp, causeways, pines and the raven. Cartographer's table: each settlement's picture and fog patches, the keep and its commission flag, pines, rocks, ships, the port, island and palms; phone width
 - [ ] **Review Sprints 5 and 6 on real data (Faiz):** Sprint 6: Fortress wall and corner bastions (both rows, besieged weather), terraces, the Genie, Cartographer mountains/hills/serpent/compass, Council busts, Sal cheer, store shopkeeper faces. Sprint 5: Settings, Object art on; Marketplace street (stall picture and tone edge on each plate, phone width), Talk to Sal and Hype Booth (busts)
 - [ ] **Review the room art on real data (Faiz):** Settings, Object art on. Council (table, advisors on chairs, seals: does the broken seal still read as a warning at 33 px, candles), Records (caskets), Chronicle (strata blocks, sconce), Map table (frame)
