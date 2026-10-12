@@ -234,7 +234,7 @@ export default function SiegeSimulatorPage() {
                 {artMode === "stitch" ? <SiegeArtStrip rows={sim.holdings} level={sim.level} /> : <SiegeStrip rows={sim.holdings} />}
               </div>
               <p className="mb-1 text-xs text-ink-faint">
-                {artMode === "stitch" ? "The scorched, cracked part of each wall is the share lost in this what-if. Faded with a question mark: not modelled." : "The filled part of each wall is the share lost in this what-if. Grey with a question mark: not modelled."}
+                {artMode === "stitch" ? "The sooty, burning part of each wall is the share lost in this what-if: the higher the fire climbs, the more is lost. Faded with a question mark: not modelled." : "The filled part of each wall is the share lost in this what-if. Grey with a question mark: not modelled."}
                 {sim.holdings.length > 18 ? ` Showing the 18 worst-hit of ${sim.holdings.length}.` : ""}
               </p>
               <ul>{sim.holdings.filter((h) => h.modelled).map((h) => <Row key={h.holding_id} h={h} benchmark={sim.benchmark_ticker} />)}</ul>

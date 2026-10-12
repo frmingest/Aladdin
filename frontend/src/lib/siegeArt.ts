@@ -9,8 +9,8 @@ import type { FortressSiegeLevel, FortressSize, SiegeSimHolding } from "./types"
  * The Siege Simulator's towers as pictures (Design Master Sprint 14). Pure placement, no React.
  * The picture carries no fact: which tower, how big, how much of the wall is lost, which towers are not
  * modelled and how big the besieging camp is are all decided by code from the backend's numbers and drawn
- * over or around the picture. Damage is read from shape (a dark scorched band that rises with the loss,
- * and cracks that grow with it), never from colour alone.
+ * over or around the picture. Damage is read from shape (soot, fallen stones, stuck arrows and a column of
+ * flames that climbs the wall as the loss deepens), never from colour alone.
  */
 
 /** Most towers drawn; the page says when there are more (the backend sorts worst-hit first). */
@@ -51,15 +51,11 @@ export interface SiegeTowerArt {
   damagePct: number;
   /** Height of the scorched band in scene px, measured from the foot of the wall. */
   scorchPx: number;
-  /** Cracks to draw: 0 when untouched, up to 3 as the loss deepens. Shape, not colour, says "hurt". */
-  cracks: number;
+  /** Exposure is the backend's "wall at risk of breach": drawn as a broken hole (shape, not colour). */
+  breach: boolean;
+  /** Picture scale against the base size, so rubble, flames and arrows scale with the tower. */
+  scale: number;
   modelled: boolean;
-}
-
-/** How many cracks a loss earns: none below 10%, then one per 20% up to three. */
-export function crackCount(damagePct: number): number {
-  if (damagePct < 10) return 0;
-  return Math.min(3, 1 + Math.floor((damagePct - 10) / 20));
 }
 
 export function siegeTowers(rows: SiegeSimHolding[], sceneW: number = sceneWidth(rows.length)): SiegeTowerArt[] {
@@ -82,26 +78,134 @@ export function siegeTowers(rows: SiegeSimHolding[], sceneW: number = sceneWidth
       cx,
       damagePct,
       scorchPx: Math.round((damagePct / 100) * wallH),
-      cracks: crackCount(damagePct),
+      breach: h.modelled && h.exposure === "breach_risk",
+      scale: k,
       modelled: h.modelled,
     };
   });
 }
 
+/** Small deterministic pseudo-random in [0, 1): the same tower always breaks the same way. */
+export function rand(seed: number, i: number): number {
+  let h = Math.imul(seed + 1, 2654435761) ^ Math.imul(i + 7, 40503);
+  h = Math.imul(h ^ (h >>> 15), 2246822519);
+  h = Math.imul(h ^ (h >>> 13), 3266489917);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
+
+export interface Flame {
+  /** Centre x and the y of the flame's base, scene px. */
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  /** Seconds for one flicker, and a negative start offset so the flames never move in step. */
+  dur: number;
+  delay: number;
+  /** 0 = the row at the foot of the wall. */
+  tier: number;
+}
+
+/** Rows of fire up the wall: none under 10% lost, then one row per 20% (1 to 5). */
+export function flameTiers(damagePct: number): number {
+  if (damagePct < 10) return 0;
+  return Math.min(5, 1 + Math.floor(damagePct / 20));
+}
+
 /**
- * A crack as a zigzag path from the top of the scorched band downward, in scene px. Deterministic from the
- * tower's index and the crack number so a tower never changes its cracks between renders.
+ * The fire licking up a wall as the loss deepens. Row 0 burns at the foot (three flames); each further row
+ * sits higher up the wall (two flames), so the column of fire climbs towards the top of the damaged part as
+ * the loss grows. Deterministic from the tower's index, so a tower always burns the same way.
  */
-export function crackPath(body: { x: number; w: number }, topY: number, footY: number, seed: number, n: number): string {
-  const x0 = body.x + body.w * (0.22 + 0.28 * ((seed * 3 + n * 2) % 3));
-  const steps = 4;
-  const dy = Math.max(2, (footY - topY) / steps);
-  let d = `M${x0.toFixed(1)} ${topY.toFixed(1)}`;
-  for (let s = 1; s <= steps; s += 1) {
-    const x = x0 + (s % 2 === 0 ? -1 : 1) * (2 + ((seed + n + s) % 3));
-    d += ` L${x.toFixed(1)} ${(topY + dy * s).toFixed(1)}`;
+export function flameTongues(body: { x: number; w: number }, topY: number, footY: number, damagePct: number, seed: number, scale: number): Flame[] {
+  const tiers = flameTiers(damagePct);
+  const band = Math.max(8, footY - topY);
+  const out: Flame[] = [];
+  for (let j = 0; j < tiers; j += 1) {
+    const n = j === 0 ? 3 : 2;
+    // Higher rows are a little smaller, so the column tapers like a fire does.
+    const h = Math.max(8 * scale, Math.min((band / tiers) * 1.6, 30 * scale)) * (1 - 0.1 * j);
+    const base = footY - (band * 0.85 * j) / tiers;
+    for (let m = 0; m < n; m += 1) {
+      const dur = 0.9 + 0.8 * rand(seed, 300 + j * 7 + m);
+      out.push({
+        x: body.x + body.w * ((m + 0.5) / n) + (rand(seed, 320 + j * 7 + m) - 0.5) * body.w * 0.12,
+        y: base,
+        w: h * 0.42,
+        h: h * (0.85 + 0.3 * rand(seed, 340 + j * 7 + m)),
+        dur,
+        delay: -dur * rand(seed, 360 + j * 7 + m),
+        tier: j,
+      });
+    }
   }
-  return d;
+  return out;
+}
+
+/** Stones fallen at the foot of a wall: none under 10% lost, then three and one more per 10%, at most 12. */
+export function rubbleCount(damagePct: number): number {
+  if (damagePct < 10) return 0;
+  return Math.min(12, 3 + Math.floor(damagePct / 10));
+}
+
+export interface Stone {
+  points: string;
+  tone: 0 | 1 | 2;
+}
+
+/** The fallen stones as small polygons around the foot of the tower (scene px), sized with the tower. */
+export function rubbleStones(body: { x: number; w: number }, footY: number, damagePct: number, seed: number, scale: number): Stone[] {
+  const out: Stone[] = [];
+  const n = rubbleCount(damagePct);
+  for (let i = 0; i < n; i += 1) {
+    const cx = body.x + body.w * (-0.18 + 1.36 * rand(seed, i * 3 + 1));
+    const r = (2.2 + 3.2 * rand(seed, i * 3 + 2)) * Math.max(0.9, scale * 0.9);
+    const cy = footY - r * 0.4 + 1 + 3 * rand(seed, i * 3 + 3);
+    const pts = [
+      [cx - r, cy],
+      [cx - r * 0.55, cy - r * 0.95],
+      [cx + r * 0.5, cy - r],
+      [cx + r, cy - r * 0.1],
+      [cx + r * 0.7, cy + r * 0.35],
+      [cx - r * 0.6, cy + r * 0.4],
+    ];
+    out.push({ points: pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" "), tone: (i % 3) as 0 | 1 | 2 });
+  }
+  return out;
+}
+
+/** A ragged hole knocked through the wall: where it is, drawn as a jagged polygon (scene px). */
+export function breachHole(body: { x: number; w: number }, topY: number, footY: number, seed: number): { points: string; cx: number; cy: number; r: number } {
+  const band = Math.max(8, footY - topY);
+  const cx = body.x + body.w * (0.35 + 0.3 * rand(seed, 91));
+  const cy = footY - band * 0.52;
+  const r = Math.min(body.w * 0.24, band * 0.3);
+  const verts = 12;
+  const pts: string[] = [];
+  for (let i = 0; i < verts; i += 1) {
+    const a = (Math.PI * 2 * i) / verts;
+    // Alternate near and far points, with noise, so the edge reads as broken stone rather than a round hole.
+    const j = (i % 2 === 0 ? 1.05 : 0.6) + 0.3 * rand(seed, 100 + i);
+    pts.push(`${(cx + Math.cos(a) * r * j * 0.9).toFixed(1)},${(cy + Math.sin(a) * r * j * 1.1).toFixed(1)}`);
+  }
+  return { points: pts.join(" "), cx, cy, r };
+}
+
+/** Fire arrows stuck in the wall: one from 25% lost, two from 45%. Hit point, in scene px, and rotation. */
+export function arrowHits(
+  body: { x: number; w: number },
+  topY: number,
+  footY: number,
+  damagePct: number,
+  seed: number,
+): { x: number; y: number; rotate: number }[] {
+  const n = damagePct >= 45 ? 2 : damagePct >= 25 ? 1 : 0;
+  const band = Math.max(8, footY - topY);
+  return Array.from({ length: n }, (_, i) => ({
+    x: body.x + body.w * (0.25 + 0.5 * rand(seed, 200 + i)),
+    y: topY + band * (0.15 + 0.5 * rand(seed, 210 + i)),
+    rotate: 165 + 30 * rand(seed, 220 + i),
+  }));
 }
 
 /**

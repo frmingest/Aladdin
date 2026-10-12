@@ -36,8 +36,14 @@ describe("SiegeArtStrip", () => {
     const html = renderToStaticMarkup(<SiegeArtStrip rows={rows} level="besieged" />);
     expect(html).toContain("<image");
     expect(html).toContain("clip-path");
+    expect(html).toContain("siege-flame");
     expect(html).toContain("?");
     expect(html).toContain('role="img"');
+  });
+
+  it("draws no flames for towers that are not modelled or lost nothing", () => {
+    const none = [{ ...rows[1] }, { ...rows[0], shock_pct: "0.04" }] as unknown as SiegeSimHolding[];
+    expect(renderToStaticMarkup(<SiegeArtStrip rows={none} level="calm" />)).not.toContain("siege-flame");
   });
 
   it("draws no camp when calm", () => {
