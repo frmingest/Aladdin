@@ -886,6 +886,26 @@
      0.43
     ]
    }
+  },
+  {
+   "id": "circle-stone",
+   "source": "a_single_standalone_fantasy_game_environmental_prop_asset_a_single_tall_rough",
+   "max_side": 192
+  },
+  {
+   "id": "circle-stone-low",
+   "source": "a_single_standalone_fantasy_game_environmental_prop_asset_a_low_leaning_stone",
+   "max_side": 160
+  },
+  {
+   "id": "circle-brazier",
+   "source": "a_single_standalone_fantasy_game_environmental_prop_asset_a_round_iron_fire",
+   "max_side": 160
+  },
+  {
+   "id": "circle-stake",
+   "source": "a_single_standalone_fantasy_game_environmental_prop_asset_a_short_wooden_stake",
+   "max_side": 128
   }
  ]
 }

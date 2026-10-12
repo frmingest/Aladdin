@@ -1,4 +1,5 @@
 import type { CapsuleState } from "./capsules";
+import { CIRCLE_R } from "./circleMap";
 import type { CrestKind } from "./crest";
 import { SEAL_LOOK, type SealKind } from "./seals";
 import { getObjectArt } from "./stitchArt";
@@ -85,4 +86,46 @@ export function councilFurniture(): CouncilFurniture | null {
 export function candleTops(): (readonly [number, number])[] {
   const a = getObjectArt("council-candles")?.anchors;
   return a ? (["f1", "f2", "f3"] as const).flatMap((k) => (a[k] ? [a[k]] : [])) : [];
+}
+
+/** A picture standing on the Circle map: its base point and width, in percent of the map's width. */
+export interface RingPiece {
+  id: string;
+  left: number;
+  top: number;
+  width: number;
+}
+
+/** Clockwise from the top. The bottom spoke (180 degrees) is left empty: it carries the zone names. */
+const STONE_SLOTS: readonly { deg: number; id: string; width: number }[] = [
+  { deg: 0, id: "circle-stone", width: 5 },
+  { deg: 45, id: "circle-stone-low", width: 6 },
+  { deg: 90, id: "circle-stone", width: 5 },
+  { deg: 135, id: "circle-stone-low", width: 6 },
+  { deg: 225, id: "circle-stone-low", width: 6 },
+  { deg: 270, id: "circle-stone", width: 5 },
+  { deg: 315, id: "circle-stone-low", width: 6 },
+];
+
+const r1 = (n: number) => Math.round(n * 10) / 10;
+
+/**
+ * Standing stones on the circle line (Sprint 11): constant decoration, the same seven stones whatever the
+ * data says. They mark where the line is, they never say what is inside it. Only pictures that are packed.
+ */
+export function circleStones(): RingPiece[] {
+  return STONE_SLOTS.filter((s) => getObjectArt(s.id) !== null).map((s) => {
+    const a = (s.deg * Math.PI) / 180;
+    return { id: s.id, left: r1(50 + CIRCLE_R * 50 * Math.sin(a)), top: r1(50 - CIRCLE_R * 50 * Math.cos(a)), width: s.width };
+  });
+}
+
+/** The brazier at the centre of the circle: always there, never lit by data. Null unless packed. */
+export function circleBrazier(): RingPiece | null {
+  return getObjectArt("circle-brazier") ? { id: "circle-brazier", left: 50, top: 50, width: 9 } : null;
+}
+
+/** The fog stake that stands beside the "No sector set" marker (only drawn when holdings have no sector). */
+export function fogStakeId(): string | null {
+  return getObjectArt("circle-stake") ? "circle-stake" : null;
 }
