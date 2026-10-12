@@ -10,7 +10,7 @@ Decision 10 of the sprint plan put object art into Council, Records, Circle, Chr
 
 ## Rules kept
 - A picture carries no fact. Damage is the share lost from the backend's `shock_pct`; gains draw none.
-- Shape, not colour, says "hurt": a scorched band that rises with the loss, plus 0 to 3 cracks (none under 10%, one per 20% after).
+- Shape, not colour, says "hurt" (all drawn by code over the picture): a soft soot stain that climbs the wall with the loss, 0 to 3 chiselled cracks (none under 10%, one per 20% after), fallen stones at the foot (3 to 12), one fire arrow stuck in the wall from 25% lost and two from 45%, and a ragged hole with smoke only where the backend says "wall at risk of breach". The first version (a black band with white zigzags) looked crude on a phone and was replaced the same day.
 - Not modelled: faded picture with "?". Unsurveyed walls: dashed ghost keep, never a guessed material.
 - The camp is the Fortress's own `siegeCamp(level)`: none when calm or unsurveyed. No fire arrows (their targets are fixed to the Fortress scene).
 - The list below the strip still says every number in words.
