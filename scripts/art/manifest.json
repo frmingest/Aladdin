@@ -886,6 +886,61 @@
      0.43
     ]
    }
+  },
+  {
+   "id": "circle-stone",
+   "source": "a_single_standalone_fantasy_game_environmental_prop_asset_a_single_tall_rough",
+   "max_side": 192
+  },
+  {
+   "id": "circle-stone-low",
+   "source": "a_single_standalone_fantasy_game_environmental_prop_asset_a_low_leaning_stone",
+   "max_side": 160
+  },
+  {
+   "id": "circle-brazier",
+   "source": "a_single_standalone_fantasy_game_environmental_prop_asset_a_round_iron_fire",
+   "max_side": 160
+  },
+  {
+   "id": "circle-stake",
+   "source": "a_single_standalone_fantasy_game_environmental_prop_asset_a_short_wooden_stake",
+   "max_side": 128
+  },
+  {
+   "id": "vault-stocked",
+   "source": "a_single_standalone_fantasy_game_building_prop_asset_a_gold_stocked_vault_seen",
+   "max_side": 256
+  },
+  {
+   "id": "market-hall",
+   "source": "modify_data_image_image_5_keep_the_exact_same_building_architecture_conical",
+   "max_side": 384
+  },
+  {
+   "id": "market-booth-1",
+   "source": "a_single_standalone_fantasy_game_market_stall_booth_asset_an_individual_1",
+   "max_side": 160
+  },
+  {
+   "id": "market-booth-2",
+   "source": "a_single_standalone_fantasy_game_market_stall_booth_asset_an_individual_2",
+   "max_side": 160
+  },
+  {
+   "id": "market-booth-produce",
+   "source": "a_single_standalone_fantasy_game_market_stall_booth_asset_an_individual_produce",
+   "max_side": 160
+  },
+  {
+   "id": "council-sit-partner",
+   "source": "standalone_2d_fantasy_game_character_asset_the_sharp_eyed_financial_partner",
+   "max_side": 256
+  },
+  {
+   "id": "council-sit-oracle",
+   "source": "standalone_2d_fantasy_game_character_asset_the_wise_scholar_oracle_from_data",
+   "max_side": 256
   }
  ]
 }

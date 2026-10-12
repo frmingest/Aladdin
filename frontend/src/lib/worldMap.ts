@@ -684,6 +684,26 @@ export interface LabelBox {
   h: number;
 }
 
+/** Longest holding name printed on the map; longer names are cut so a label never covers the land. */
+export const MAP_NAME_MAX = 15;
+
+/** A holding's name as printed on the map: its first 15 characters, with an ellipsis when it was cut. */
+export function mapName(name: string): string {
+  const t = name.trim();
+  return t.length > MAP_NAME_MAX ? `${t.slice(0, MAP_NAME_MAX).trimEnd()}…` : t;
+}
+
+/** A province (sector) name split over at most two lines at the space nearest the middle, so a long
+ * name such as "Consumer Discretionary" fits the ground it is painted on. */
+export function provinceLines(name: string): string[] {
+  const t = name.trim();
+  if (t.length <= 13 || !t.includes(" ")) return [t];
+  const mid = t.length / 2;
+  let best = -1;
+  for (let i = 0; i < t.length; i++) if (t[i] === " " && (best < 0 || Math.abs(i - mid) < Math.abs(best - mid))) best = i;
+  return [t.slice(0, best), t.slice(best + 1)];
+}
+
 export function labelWidth(text: string): number {
   return Math.round(text.length * 6.4 + 14);
 }

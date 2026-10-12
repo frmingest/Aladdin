@@ -6,7 +6,6 @@ import { LEVEL_LABEL, STATUS_CLASS, STATUS_LABEL, circleSegments, weightText } f
 import type { Competence, CompetenceLevel, CompetenceSector, CompetenceStatus } from "../lib/types";
 import { buildCircleMap, circleView, focusSectorControl, saveMark, sectorDomId } from "../lib/circleMap";
 import { useGameMode } from "../lib/gameMode";
-import { usePlainView } from "../lib/plainView";
 import { Button, Card, Disclosure, EmptyState, PageHeader } from "../components/ui";
 import GameFooter from "../components/fortress/GameFooter";
 import CircleGlyph from "../components/fortress/kit/CircleGlyph";
@@ -140,7 +139,7 @@ function SectorRow({
 }
 
 /** Everything the page showed before the ring map: the bar legend, the holdings list, the select per
- * sector. Plain view and normal mode keep showing exactly this, with the same facts. */
+ * sector. Normal mode keeps showing exactly this, with the same facts. */
 export function PlainBody({ data, segments, onSaved }: { data: Competence; segments: ReturnType<typeof circleSegments>; onSaved: (c: Competence) => void }) {
   return (
     <div className="space-y-4">
@@ -212,7 +211,7 @@ function statusGlyph(status: CompetenceStatus): CompetenceLevel | null | undefin
   return status === "inside" ? "know" : status === "edge" ? "partly" : status === "outside" ? "outside" : status === "unmarked" ? null : undefined;
 }
 
-/** The ring map body (game mode, not Plain view). The map is the picture; the marks list under it is
+/** The ring map body (game mode). The map is the picture; the marks list under it is
  * the same facts as rows, and the holdings list and the sectors with nothing held sit behind a
  * disclosure. Neutral palette: statuses are shape plus word, never green, amber or red. */
 export function RingBody({ data, onSaved }: { data: Competence; onSaved: (c: Competence) => void }) {
@@ -287,11 +286,10 @@ export function RingBody({ data, onSaved }: { data: Competence; onSaved: (c: Com
   );
 }
 
-/** Ring map in game mode, the old page in Plain view and normal mode; the same facts either way. */
+/** Ring map in game mode, the old page in normal mode; the same facts either way. */
 export function CompetenceView({ data, onSaved }: { data: Competence; onSaved: (c: Competence) => void }) {
   const { gameMode } = useGameMode();
-  const [plain] = usePlainView();
-  return circleView(gameMode, plain) === "ring" ? (
+  return circleView(gameMode) === "ring" ? (
     <RingBody data={data} onSaved={onSaved} />
   ) : (
     <PlainBody data={data} segments={circleSegments(data)} onSaved={onSaved} />

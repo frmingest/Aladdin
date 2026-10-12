@@ -13,7 +13,6 @@ import {
 import type { DecisionRecord, Records } from "../lib/types";
 import { Card, EmptyState, PageHeader } from "../components/ui";
 import { useGameMode } from "../lib/gameMode";
-import { usePlainView } from "../lib/plainView";
 import GameFooter from "../components/fortress/GameFooter";
 import HallOfRecords from "../components/fortress/kit/HallOfRecords";
 import { HALL_COPY } from "../lib/hall";
@@ -96,8 +95,7 @@ export default function RecordsPage() {
   }, []);
 
   const { gameMode } = useGameMode();
-  const [plain] = usePlainView();
-  const painted = gameMode && !plain;
+  const painted = gameMode;
   const shown = useMemo(() => (records ? filterRecords(records.records, onlyOwed) : []), [records, onlyOwed]);
 
   return (

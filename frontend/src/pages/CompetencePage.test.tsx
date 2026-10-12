@@ -18,17 +18,17 @@ const data = (demo = false): Competence => ({
   summary: "s", note_max_chars: 280,
 });
 
-function stub(game: boolean, plain: boolean) {
+function stub(game: boolean) {
   (globalThis as unknown as { localStorage: Storage }).localStorage = {
-    getItem: (k: string) => (k === "aladdin-game-mode" ? (game ? "on" : "off") : k === "aladdin-plain-view" ? (plain ? "on" : "off") : null),
+    getItem: (k: string) => (k === "aladdin-game-mode" ? (game ? "on" : "off") : null),
     setItem: () => {}, removeItem: () => {}, clear: () => {}, key: () => null, length: 0,
   };
 }
 afterEach(() => {
   delete (globalThis as unknown as { localStorage?: Storage }).localStorage;
 });
-const render = (game: boolean, plain: boolean, demo = false) => {
-  stub(game, plain);
+const render = (game: boolean, demo = false) => {
+  stub(game);
   return renderToStaticMarkup(
     <GameModeProvider>
       <MemoryRouter>
@@ -40,14 +40,14 @@ const render = (game: boolean, plain: boolean, demo = false) => {
 
 describe("Circle page views", () => {
   it("game mode shows the ring map with the three-state control and no select", () => {
-    const html = render(true, false);
+    const html = render(true);
     expect(html).toContain("circle-marker");
     expect(html).toContain('type="radio"');
     expect(html).not.toContain("<select");
   });
 
-  it("Plain view and normal mode show the old content: bar legend, selects, holdings list, no map", () => {
-    for (const html of [render(true, true), render(false, false)]) {
+  it("Normal mode shows the old content: bar legend, selects, holdings list, no map", () => {
+    for (const html of [render(false)]) {
       expect(html).toContain("<select");
       expect(html).toContain("Your stock holdings against your marks");
       expect(html).toContain("Energy Co");
@@ -57,7 +57,7 @@ describe("Circle page views", () => {
   });
 
   it("demo data is read-only in the ring view: radios and Save disabled, no Clear", () => {
-    const html = render(true, false, true);
+    const html = render(true, true);
     expect(html).toContain("Demo data");
     expect(html).not.toMatch(/<input type="radio"(?![^>]*disabled)/);
     expect(html).not.toContain("Clear mark");

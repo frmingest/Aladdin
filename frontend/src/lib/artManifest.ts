@@ -84,6 +84,17 @@ import roomScroll from "../assets/art/room-scroll.webp";
 import roomInkwell from "../assets/art/room-inkwell.webp";
 import sealWhole from "../assets/art/seal-whole.webp";
 import sealBroken from "../assets/art/seal-broken.webp";
+import circleStone from "../assets/art/circle-stone.webp";
+import circleStoneLow from "../assets/art/circle-stone-low.webp";
+import circleBrazier from "../assets/art/circle-brazier.webp";
+import circleStake from "../assets/art/circle-stake.webp";
+import vaultStocked from "../assets/art/vault-stocked.webp";
+import marketHall from "../assets/art/market-hall.webp";
+import marketBooth1 from "../assets/art/market-booth-1.webp";
+import marketBooth2 from "../assets/art/market-booth-2.webp";
+import marketBoothProduce from "../assets/art/market-booth-produce.webp";
+import councilSitPartner from "../assets/art/council-sit-partner.webp";
+import councilSitOracle from "../assets/art/council-sit-oracle.webp";
 
 export interface PackedArt {
   src: string;
@@ -179,4 +190,15 @@ export const ART_MANIFEST = {
   "room-inkwell": { src: roomInkwell, width: 99, height: 160, alt: "" },
   "seal-whole": { src: sealWhole, width: 105, height: 128, alt: "", anchors: { "mark": [0.49, 0.44] as const } },
   "seal-broken": { src: sealBroken, width: 128, height: 96, alt: "", anchors: { "mark": [0.5, 0.43] as const } },
+  "circle-stone": { src: circleStone, width: 84, height: 192, alt: "" },
+  "circle-stone-low": { src: circleStoneLow, width: 138, height: 160, alt: "" },
+  "circle-brazier": { src: circleBrazier, width: 160, height: 145, alt: "" },
+  "circle-stake": { src: circleStake, width: 88, height: 128, alt: "" },
+  "vault-stocked": { src: vaultStocked, width: 256, height: 254, alt: "" },
+  "market-hall": { src: marketHall, width: 384, height: 317, alt: "" },
+  "market-booth-1": { src: marketBooth1, width: 119, height: 160, alt: "" },
+  "market-booth-2": { src: marketBooth2, width: 123, height: 160, alt: "" },
+  "market-booth-produce": { src: marketBoothProduce, width: 132, height: 160, alt: "" },
+  "council-sit-partner": { src: councilSitPartner, width: 192, height: 256, alt: "" },
+  "council-sit-oracle": { src: councilSitOracle, width: 160, height: 256, alt: "" },
 } as const satisfies Record<string, PackedArt>;

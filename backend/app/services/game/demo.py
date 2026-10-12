@@ -10,7 +10,7 @@ from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 from app.domain.game_mapping import get_game_mapping
-from app.schemas.game import GameStateOut
+from app.schemas.game import ChronicleOut, GameStateOut, NightWatchOut, RavensOut
 from app.services.game.rules import (
     ClusterFact,
     LandFacts,
@@ -218,7 +218,7 @@ def demo_game_state(version: str) -> GameStateOut:
 # --- Sprint 24 (2026-10-04): invented Chronicle, Ravens and Night Watch ---------
 
 
-def demo_chronicle(version: str, rules_v) -> ChronicleOut:  # noqa: F821
+def demo_chronicle(version: str, rules_v) -> ChronicleOut:
     """Three invented stored frames built from the demo state, so the replay
     shows towers joining, a wall weakening and the weather turning. Never
     touches the database."""
@@ -243,7 +243,7 @@ def demo_chronicle(version: str, rules_v) -> ChronicleOut:  # noqa: F821
     return build_chronicle_from(stored, [], rules_v, demo=True)
 
 
-def demo_ravens(version: str, rules_v) -> RavensOut:  # noqa: F821
+def demo_ravens(version: str, rules_v) -> RavensOut:
     from app.schemas.game import RavenLineOut, RavenOut, RavensOut
 
     now = datetime.now(timezone.utc)
@@ -280,7 +280,7 @@ def demo_ravens(version: str, rules_v) -> RavensOut:  # noqa: F821
                      ravens=ravens, notes=["Demo data: invented figures."])
 
 
-def demo_night_watch(version: str, rules_v) -> NightWatchOut:  # noqa: F821
+def demo_night_watch(version: str, rules_v) -> NightWatchOut:
     from app.schemas.game import NightWatchFiredOut
     from app.services.game.night_watch import build_night_watch
 
