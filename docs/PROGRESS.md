@@ -14,7 +14,7 @@ State: local checkout `E:\Aladdin`; masters live in git-ignored `art-masters/`. 
 - [ ] **Merge in order (Faiz):** Sprint 9, Sprint 11, then the hardening PR
 - [ ] **Run `npm ci` in `frontend/` on Windows (Faiz):** the local `node_modules` lacks `@types/node`, so a local `tsc` shows false errors
 - [x] **Art budget raised (2026-10-12):** limit 2000 to 2800 KB in `artAssets.test.ts` (set was at 1996 KB); next step is a phone check of the heaviest page with Lighthouse
-- [ ] **Run the game-pages smoke test on the live site:** `SMOKE_FRONTEND_URL` and `SMOKE_API_URL`, then `npm run smoke`
+- [ ] **Run the game-pages smoke test on the live site:** a manual check of all 8 pages at 375 px (game mode off and on) found no problems; the Playwright spec itself, desktop width and Object art are still unchecked (`SMOKE_FRONTEND_URL`, `SMOKE_API_URL`, then `npm run smoke`)
 - [ ] **Review the art on real data (Faiz):** Settings, Object art on; Fortress (all weathers), Cartographer, Marketplace, Council, Records, Chronicle, Circle; phone width, dark and light, reduced motion. Optional Stitch gaps: smiling shopkeeper, curtain-wall variants, five room crests, second advisor chair (plan, Part 8)
 - [ ] **Decide the next mechanics slice (Faiz):** C1 Siege back-test, D1 Plain lens or D2 Camera; and whether a knife-edge tower may appear on the Council agenda
 

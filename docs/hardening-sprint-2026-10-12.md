@@ -34,6 +34,14 @@ Left, with reason
 
 - `frontend/e2e/game-pages.spec.ts`: all 8 game pages at 360 px and 1280 px with game mode on, each also with `?art=stitch`, plus a reload/switch-off check of game mode. It fails on an uncaught error, an API 5xx, a missing heading, a stuck "Loading…" or a sideways scroll. Lists 41 tests with the existing smoke file. **Not yet run against the live site** (needs `SMOKE_FRONTEND_URL`, `SMOKE_API_URL` and Playwright browsers).
 
+## 3b. Live check (2026-10-12, built-in browser, phone width 375 px)
+
+Opened the deployed frontend and visited all 8 game pages (`/fortress`, `/siege`, `/chronicle`, `/council`, `/records`, `/circle`, `/map`, `/marketplace`).
+- Game mode off: every page shows its heading, no "Loading…" left, no sideways scroll.
+- Game mode on (the `aladdin-game-mode` switch, then removed again): every page shows its heading, the study skin is applied, no sideways scroll.
+- Console: no errors on the Siege page or on the Marketplace page.
+- Not checked: desktop width, Object art on (`?art=stitch` would change the stored setting), the Playwright spec itself (needs `SMOKE_API_URL`, a key if `APP_AUTH_TOKEN` is set, and Playwright browsers), and which sprint's code is deployed.
+
 ## 4. Still to do in this sprint
 
 - Empty, loading and error states: walk each game page with the API down.
@@ -41,6 +49,7 @@ Left, with reason
 - Upload edge cases (bad encoding, empty file, duplicate).
 - Lighthouse run, phone-width visual check, reduced-motion and contrast check on the art pages.
 - Visual-regression baselines (needs the live site and real data).
+- Run `e2e/game-pages.spec.ts` against the live site, and the desktop and Object-art cases.
 
 ## 5. Graphics guidelines
 
