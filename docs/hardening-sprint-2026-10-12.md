@@ -44,4 +44,4 @@ Left, with reason
 
 ## 5. Graphics guidelines
 
-Written: [GRAPHICS_GUIDELINES.md](GRAPHICS_GUIDELINES.md). Key point: the art budget is full, so the next graphics sprint needs a budget decision first.
+Written: [GRAPHICS_GUIDELINES.md](GRAPHICS_GUIDELINES.md). The art budget was full (1996 of 2000 KB) and is now 2800 KB (`MAX_TOTAL_KB` in `artAssets.test.ts`), room for about 30 more pictures at the current 23 KB average.

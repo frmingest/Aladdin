@@ -9,13 +9,11 @@ hardening sprint found missing.
 | Limit | Value | State on 2026-10-12 |
 |---|---|---|
 | One picture | 60 KB (room backdrop: 120 KB) | largest is 46 KB |
-| Whole packed set | 2000 KB | **1996 KB used: about 4 KB free** |
+| Whole packed set | 2800 KB (was 2000) | 1996 KB used, about 800 KB free |
 | Room backdrops | at most 5 | 2 in use |
 | Any image in `public/` | 150 KB | masters live in git-ignored `art-masters/` |
 
-**The set is full.** The next graphics sprint cannot add a picture without either
-raising `MAX_TOTAL_KB` (a decision for Faiz, with the reason recorded in the test comment)
-or re-packing existing pictures smaller. Decide this before the sprint starts.
+The limit was raised from 2000 to 2800 KB in the hardening sprint because the set stood at 1996 KB and no picture fit. At about 25 KB a picture that is room for roughly 30 more. Each future raise needs its reason in the test comment and a phone check of the heaviest page.
 
 ## Rules for each new graphic
 
