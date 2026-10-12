@@ -6,7 +6,8 @@ import { expect, test, type Page } from "@playwright/test";
  * The default-mode smoke test (smoke.spec.ts) never opens the Fortress or its
  * rooms. This one turns game mode on in the browser (a view preference kept in
  * localStorage, see src/lib/gameMode.tsx), visits every game page at phone and
- * desktop width, and also once with ?art=stitch (Object art on). It fails on
+ * desktop width, and at 2560 and 3840 wide (resolution scaling). Pictures are on whenever game
+ * mode is on (no separate art switch). It fails on
  * an uncaught page error, an API 5xx (503 "provider not configured" is
  * reported, not failed), a missing heading, a stuck "Loading…", or a page
  * that scrolls sideways. Like smoke.spec.ts it aborts every non-GET request.
@@ -28,6 +29,8 @@ const GAME_PAGES: { path: string; heading: string }[] = [
 const VIEWPORTS = [
   { name: "phone", width: 360, height: 800 },
   { name: "desktop", width: 1280, height: 800 },
+  { name: "1440p", width: 2560, height: 1440 },
+  { name: "4K", width: 3840, height: 2160 },
 ];
 
 test.beforeAll(() => {
@@ -93,12 +96,6 @@ test.describe("game pages", () => {
     }
   }
 
-  for (const { path, heading } of GAME_PAGES) {
-    test(`${path} renders with Object art on (phone)`, async ({ page }) => {
-      await page.setViewportSize({ width: 360, height: 800 });
-      await checkPage(page, `${path}?art=stitch`, heading);
-    });
-  }
 });
 
 test("game mode survives a reload and switches off cleanly", async ({ page }) => {

@@ -16,8 +16,8 @@ import "./realmMap.css";
  * fog patches, a slate for the tower you press, and the commissions as numbered seals that plant flags
  * on the towers they cover. Read-only: nothing here trades, scores or rewards anything. The numbered
  * list of commissions and the closed text list of towers are the accessible source of truth; the
- * painting only repeats what they say. `painted` false renders the same facts as ordinary cards (Plain
- * view, or game mode off). */
+ * painting only repeats what they say. `painted` false renders the same facts as ordinary cards (game
+ * mode off). */
 
 const weightOf = (t: TowerFog) => weightText(t.weightPct === null ? null : String(t.weightPct));
 

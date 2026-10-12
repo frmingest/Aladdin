@@ -3,6 +3,7 @@ import { candleTops, councilFurniture } from "../../../lib/roomArt";
 import { getObjectArt } from "../../../lib/stitchArt";
 
 const STAND_H = 92;
+const SIT_H = 170;
 
 function Flame({ left, top }: { left: number; top: number }) {
   return (
@@ -54,12 +55,32 @@ export default function ChamberFurniture({
   const table = f && getObjectArt(f.table);
   const chair = f && getObjectArt(f.chair);
   if (!f || !table || !chair) return null;
+  // Consolidated pictures (2026-10-12): each adviser already sits on a chair in one picture. The partner
+  // sits to the left of the table and the oracle to the right, both turned toward it.
+  const sitP = getObjectArt("council-sit-partner");
+  const sitO = getObjectArt("council-sit-oracle");
+  const sitters = sitP && sitO ? ([["left", sitP], ["right", sitO]] as const) : null;
   return (
     <>
       <CandleStand side="left" />
       <CandleStand side="right" />
       <img src={table.src} alt="" aria-hidden="true" width={170} height={Math.round((170 * table.height) / table.width)} loading="lazy" decoding="async" className="chamber-art-table object-art" onError={onError} />
-      {([["left", oracle], ["right", partner]] as const).map(([side, who]) => (
+      {sitters
+        ? sitters.map(([side, pic]) => (
+            <img
+              key={side}
+              src={pic.src}
+              alt=""
+              aria-hidden="true"
+              width={Math.round((SIT_H * pic.width) / pic.height)}
+              height={SIT_H}
+              loading="lazy"
+              decoding="async"
+              className={`chamber-art-sit chamber-art-sit-${side} object-art`}
+              onError={onError}
+            />
+          ))
+        : ([["left", oracle], ["right", partner]] as const).map(([side, who]) => (
         <div key={side} className={`chamber-art-chair chamber-art-chair-${side}`} aria-hidden="true">
           <img src={chair.src} alt="" width={74} height={Math.round((74 * chair.height) / chair.width)} loading="lazy" decoding="async" className="object-art block" onError={onError} />
           <div className="chamber-art-sitter">{who}</div>

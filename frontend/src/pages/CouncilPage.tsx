@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { api, ApiError } from "../lib/api";
 import { councilSeats } from "../lib/councilSeats";
 import { ADVISOR_TONE_LABEL, advisorRuleLabel } from "../lib/fortress";
-import { usePlainView } from "../lib/plainView";
 import { COUNCIL_LABEL, weightText } from "../lib/rituals";
 import { sealForTone } from "../lib/seals";
 import type { Council, CouncilItem, CouncilKind } from "../lib/types";
@@ -23,7 +22,7 @@ import { Card, EmptyState, PageHeader } from "../components/ui";
  *
  * Identity pass (page-scene kit): a round-table chamber with one seat per rule, parchment folios with
  * wax seals (shape + glyph + word), advisors with speech bubbles and a fog panel for what cannot be
- * seen. The painting only repeats facts the list below already states; Plain view drops it. */
+ * seen. The painting only repeats facts the list below already states; game mode off drops it. */
 
 function Pennant() {
   return (
@@ -93,7 +92,6 @@ function Folio({ item, n }: { item: CouncilItem; n: number }) {
 export default function CouncilPage() {
   const [council, setCouncil] = useState<Council | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [plain] = usePlainView();
 
   useEffect(() => {
     let live = true;
@@ -131,7 +129,7 @@ export default function CouncilPage() {
       {!error && !council && <p className="text-sm text-ink-muted">The council is gathering…</p>}
       {council && (
         <div className="space-y-4">
-          {!plain && <CouncilChamber seats={seats} onJump={jump} unresolved={council.unknowns.length > 0} />}
+          {<CouncilChamber seats={seats} onJump={jump} unresolved={council.unknowns.length > 0} />}
           <Card>
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="section-title mb-0">The agenda</h2>

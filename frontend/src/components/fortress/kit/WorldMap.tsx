@@ -14,6 +14,8 @@ import {
   ensureVisible,
   initialView,
   isDirKey,
+  mapName,
+  provinceLines,
   nearestInDirection,
   panBy,
   placeRealm,
@@ -258,7 +260,7 @@ export default function WorldMap({ towers, sectors, sectorsKnown, hatchId, selec
   const svgRef = useRef<SVGSVGElement | null>(null);
   const reduce = usePrefersReducedMotion();
   const running = useSceneRunning(boxRef);
-  // Object art (Settings switch, off by default). A picture that fails to load falls back to the SVG for
+  // Object art (follows the Game mode switch). A picture that fails to load falls back to the SVG for
   // every place that id is used, so the map is never half missing.
   const artMode = useArtMode();
   const [failedArt, setFailedArt] = useState<ReadonlySet<string>>(() => new Set());
@@ -421,7 +423,7 @@ export default function WorldMap({ towers, sectors, sectorsKnown, hatchId, selec
   const pinned = useMemo(() => new Set([selectedId, hot].filter((x): x is string => !!x)), [selectedId, hot]);
   const labelItems = placed.map(({ s: st, t }) => {
     const sp = toScreen({ x: st.x, y: st.y }, view, cw, ch);
-    return { id: st.id, text: t.name, sx: sp.x, sy: sp.y, weight: t.weightPct ?? 0 };
+    return { id: st.id, text: mapName(t.name), sx: sp.x, sy: sp.y, weight: t.weightPct ?? 0 };
   });
   const labels = chooseLabels(labelItems, pinned, cw, ch, 4);
 
@@ -462,11 +464,11 @@ export default function WorldMap({ towers, sectors, sectorsKnown, hatchId, selec
         <svg ref={svgRef} className="wm-svg" viewBox={`${vb.x} ${vb.y} ${vb.w} ${vb.h}`} preserveAspectRatio="none" aria-hidden focusable="false">
           <defs>
             <linearGradient id={`wm-sea-${uid}`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stopColor="#1d4351" />
-              <stop offset="1" stopColor="#0d222d" />
+              <stop offset="0" stopColor="#2f86bd" />
+              <stop offset="1" stopColor="#1a5c8f" />
             </linearGradient>
             <pattern id={`wm-wave-${uid}`} width="46" height="22" patternUnits="userSpaceOnUse">
-              <path d="M4 12 q5 -5 10 0 t10 0 t10 0" fill="none" stroke="#7fb2bd" strokeOpacity="0.34" strokeWidth="1.2" strokeLinecap="round" />
+              <path d="M4 12 q5 -5 10 0 t10 0 t10 0" fill="none" stroke="#cfeaf8" strokeOpacity="0.38" strokeWidth="1.2" strokeLinecap="round" />
             </pattern>
             <pattern id={hatchProv} width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
               <rect width="9" height="9" fill="#a4aab7" />
@@ -481,12 +483,12 @@ export default function WorldMap({ towers, sectors, sectorsKnown, hatchId, selec
           <rect x="-1500" y="-1500" width="4000" height="3720" fill={`url(#wm-sea-${uid})`} />
           <g className="wm-drift wm-drift-a"><rect x="-1500" y="-1500" width="4046" height="3744" fill={`url(#wm-wave-${uid})`} /></g>
           {[11, 20, 29].map((k) => (
-            <path key={k} d={world.landPath} fill="none" stroke="#6fa7b2" strokeOpacity={0.34 - k * 0.008} strokeWidth={k * 2} strokeLinejoin="round" />
+            <path key={k} d={world.landPath} fill="none" stroke="#9fd6f0" strokeOpacity={0.34 - k * 0.008} strokeWidth={k * 2} strokeLinejoin="round" />
           ))}
-          {world.islands.flatMap((i, n) => [9, 17].map((k) => <path key={`${n}-${k}`} d={i.path} fill="none" stroke="#6fa7b2" strokeOpacity={0.3 - k * 0.008} strokeWidth={k * 2} strokeLinejoin="round" />))}
+          {world.islands.flatMap((i, n) => [9, 17].map((k) => <path key={`${n}-${k}`} d={i.path} fill="none" stroke="#9fd6f0" strokeOpacity={0.3 - k * 0.008} strokeWidth={k * 2} strokeLinejoin="round" />))}
           <g className="wm-drift wm-drift-b">
             {world.waves.map((p, k) => (
-              <path key={k} d={`M${p.x} ${p.y} q4 -4 8 0 t8 0 t8 0`} fill="none" stroke="#a5d0d8" strokeOpacity="0.4" strokeWidth="1.2" strokeLinecap="round" />
+              <path key={k} d={`M${p.x} ${p.y} q4 -4 8 0 t8 0 t8 0`} fill="none" stroke="#d6eefb" strokeOpacity="0.5" strokeWidth="1.2" strokeLinecap="round" />
             ))}
           </g>
           <Compass at={world.compass} art={art} />
@@ -495,6 +497,17 @@ export default function WorldMap({ towers, sectors, sectorsKnown, hatchId, selec
           {landmarks.palms.map((r, k) => art.ok(r.id) && <ArtImage key={k} r={r} onFail={art.fail} />)}
           {landmarks.island && art.ok(landmarks.island.id) && <ArtImage r={landmarks.island} onFail={art.fail} />}
           {landmarks.port && art.ok(landmarks.port.id) && <ArtImage r={landmarks.port} onFail={art.fail} />}
+          {realm.provinces.map((p) => {
+            const lines = provinceLines(p.name);
+            const fs = 17;
+            return (
+              <text key={p.index} className="wm-prov-text" data-unsorted={p.unsorted ? "true" : undefined} x={p.label.x} y={p.label.y - ((lines.length - 1) * fs * 1.1) / 2 + fs * 0.35} fontSize={fs} textAnchor="middle" aria-hidden>
+                {lines.map((ln, k) => (
+                  <tspan key={k} x={p.label.x} dy={k === 0 ? 0 : fs * 1.1}>{ln}</tspan>
+                ))}
+              </text>
+            );
+          })}
           <rect x="-1500" y="-1500" width="4000" height="3720" fill={`url(#wm-glow-${uid})`} pointerEvents="none" />
           {placed.map(({ s: st, t }) => (
             <g key={st.id} transform={`translate(${st.x} ${st.y})`}>
@@ -528,17 +541,9 @@ export default function WorldMap({ towers, sectors, sectorsKnown, hatchId, selec
             })}
         </svg>
 
-        {realm.provinces.map((p) => {
-          const sp = toScreen(p.label, view, cw, ch);
-          return (
-            <span key={p.index} className="wm-prov" data-unsorted={p.unsorted ? "true" : undefined} style={{ left: sp.x, top: sp.y }} aria-hidden>
-              {p.name}
-            </span>
-          );
-        })}
         {labels.map((l) => (
           <span key={l.id} className="wm-name" data-hot={pinned.has(l.id) ? "true" : undefined} style={{ left: l.x, top: l.y, width: l.w }} aria-hidden>
-            {towerById.get(l.id)?.name}
+            {mapName(towerById.get(l.id)?.name ?? "")}
           </span>
         ))}
 

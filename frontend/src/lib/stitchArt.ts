@@ -1,22 +1,18 @@
 /**
- * Stitch Master object art (Phase A, decided 2026-10-11): raster pictures of
- * objects, shown only when the viewer switches them on. Pure view preference,
- * like game mode: it never changes a fact, a score or a stored row.
- *
- *   ?art=stitch   switch on (remembered in this browser)
- *   ?art=svg      switch off (back to the hand-coded SVG, the default)
+ * Object art (Stitch Master, Phase A): raster pictures of objects. Since 2026-10-12 the picture
+ * layer is not a separate switch: it is on exactly when Game mode is on (the master toggle in the
+ * top bar) and off with it. Pure view preference, like game mode: it never changes a fact, a score
+ * or a stored row.
  *
  * Rules for every slot that uses a picture (docs/stitch-master-object-art-2026-10-11.md):
  * the picture must carry NO fact (no status colour, no count, no text); a slot
  * whose look encodes data stays SVG; the SVG is always the fallback.
  */
 
-import { useSyncExternalStore } from "react";
 import { ART_MANIFEST } from "./artManifest";
+import { useGameMode } from "./gameMode";
 
 export type ArtMode = "stitch" | "svg";
-
-export const ART_STORAGE_KEY = "aladdin-art-stitch";
 
 export interface ObjectArt {
   src: string;
@@ -41,67 +37,7 @@ export function getObjectArt(id: string): ObjectArt | null {
   return Object.prototype.hasOwnProperty.call(OBJECT_ART, id) ? OBJECT_ART[id as ObjectArtId] : null;
 }
 
-/** `?art=stitch|svg` from a query string, or null when absent or unknown. */
-export function parseArtParam(search: string): ArtMode | null {
-  const value = new URLSearchParams(search).get("art");
-  return value === "stitch" || value === "svg" ? value : null;
-}
-
-/** URL choice wins, then the remembered choice, then SVG. */
-export function resolveArtMode(search: string, stored: string | null): ArtMode {
-  const fromUrl = parseArtParam(search);
-  if (fromUrl) return fromUrl;
-  return stored === "stitch" ? "stitch" : "svg";
-}
-
-/** Read the mode in the browser. Storage can be blocked, so every access is guarded. */
-export function readArtMode(): ArtMode {
-  let stored: string | null = null;
-  try {
-    stored = localStorage.getItem(ART_STORAGE_KEY);
-  } catch {
-    /* blocked storage: the choice just isn't remembered */
-  }
-  const mode = resolveArtMode(typeof window === "undefined" ? "" : window.location.search, stored);
-  if (parseArtParam(typeof window === "undefined" ? "" : window.location.search)) {
-    try {
-      localStorage.setItem(ART_STORAGE_KEY, mode);
-    } catch {
-      /* ignore */
-    }
-  }
-  return mode;
-}
-
-// --- live preference store ---------------------------------------------------
-// One shared value so the Settings switch changes every picture on screen at
-// once, without a reload. Same storage key as ?art=, so both routes agree.
-
-const listeners = new Set<() => void>();
-let current: ArtMode | null = null;
-
-function currentMode(): ArtMode {
-  if (current === null) current = readArtMode();
-  return current;
-}
-
-/** Switch the art on or off and remember it in this browser. */
-export function setArtMode(mode: ArtMode): void {
-  current = mode;
-  try {
-    localStorage.setItem(ART_STORAGE_KEY, mode);
-  } catch {
-    /* blocked storage: the choice just isn't remembered */
-  }
-  listeners.forEach((l) => l());
-}
-
-function subscribe(listener: () => void): () => void {
-  listeners.add(listener);
-  return () => listeners.delete(listener);
-}
-
-/** The current art mode, live. Server and test renders show the SVG default. */
+/** The current art mode: pictures ("stitch") while Game mode is on, the drawn SVG otherwise. */
 export function useArtMode(): ArtMode {
-  return useSyncExternalStore(subscribe, currentMode, () => "svg");
+  return useGameMode().gameMode ? "stitch" : "svg";
 }

@@ -3,7 +3,6 @@ import { useInRouterContext, useLocation } from "react-router-dom";
 import { formatRelative } from "../lib/format";
 import { useGameMode } from "../lib/gameMode";
 import { isFortressPath } from "../lib/nav";
-import { PLAIN_TOGGLE_ID, togglePlain, usePlainView } from "../lib/plainView";
 import { crestForPath } from "../lib/crest";
 import GamePageHeader from "./fortress/kit/GamePageHeader";
 import { InfoTooltip } from "./InfoTooltip";
@@ -46,33 +45,15 @@ function PlainPageHeader({ title, subtitle, actions }: PageHeaderProps) {
   );
 }
 
-/** In game mode, on the fortress rooms, the header is the painted banner (page-scene kit) unless Plain
- * view is on. Everywhere else, and with game mode off, it is exactly the plain header. */
+/** In game mode, on the fortress rooms, the header is the painted banner (page-scene kit).
+ * Everywhere else, and with game mode off, it is exactly the plain header. */
 function RoutedPageHeader(props: PageHeaderProps) {
   const { pathname } = useLocation();
-  const [plain] = usePlainView();
   // The Fortress home and the Marketplace already carry their own painted identity (scene, awnings).
   const banner = isFortressPath(pathname) && pathname !== "/fortress" && !pathname.startsWith("/fortress/marketplace");
   if (!banner) return <PlainPageHeader {...props} />;
-  return plain ? (
-    <>
-      <PlainPageHeader {...props} />
-      <PlainViewSwitch />
-    </>
-  ) : (
-    <GamePageHeader {...props} crest={crestForPath(pathname)} />
-  );
-}
-
-/** Small way back from Plain view, so a reader is never stuck in it. */
-function PlainViewSwitch() {
-  const [plain, setPlain] = usePlainView();
   return (
-    <p className="-mt-4 mb-4 text-xs">
-      <button id={PLAIN_TOGGLE_ID} type="button" onClick={() => togglePlain(plain, setPlain)} className="inline-block min-h-[44px] text-accent hover:underline">
-        Back to the painted view
-      </button>
-    </p>
+    <GamePageHeader {...props} crest={crestForPath(pathname)} />
   );
 }
 

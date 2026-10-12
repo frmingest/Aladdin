@@ -52,15 +52,15 @@ describe("Council art (Design Master Sprint 9)", () => {
     }
   });
 
-  it("builds the furniture as decoration only: a table, two chairs for the two advisors, two candle stands, constant flames, no words", () => {
+  it("builds the furniture as decoration only: a table, the two advisors seated on chairs, two candle stands, constant flames, no words", () => {
     const html = renderToStaticMarkup(<ChamberFurniture oracle={<i>O</i>} partner={<i>P</i>} />);
-    expect((html.match(/<img /g) ?? []).length).toBe(5); // table, two chairs, two candle stands
+    expect((html.match(/<img /g) ?? []).length).toBe(5); // table, two seated advisers (chair included), two candle stands
     expect((html.match(/<svg /g) ?? []).length).toBe(6); // three flames on each stand
-    expect(html).toContain("chamber-art-chair-left");
-    expect(html).toContain("chamber-art-chair-right");
+    expect(html).toContain("chamber-art-sit-left");
+    expect(html).toContain("chamber-art-sit-right");
     expect(html).not.toMatch(/<(button|a)\b/);
     expect(html).not.toMatch(/animation|animate|flicker/i);
-    expect(html.replace(/<[^>]+>/g, "").trim()).toBe("OP"); // the only text is the two advisors passed in
+    expect(html.replace(/<[^>]+>/g, "").trim()).toBe(""); // no words: the advisers are in the pictures
   });
 
   it("leaves the chamber exactly as it was with Object art off (the default): no picture, the painted table, the same seats", () => {

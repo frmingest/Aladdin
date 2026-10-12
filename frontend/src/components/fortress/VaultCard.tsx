@@ -3,6 +3,7 @@ import { VAULT_LABEL } from "../../lib/fortress";
 import { formatDate, formatNok, formatPct100 } from "../../lib/format";
 import type { FortressVaultLevel, GameVault } from "../../lib/types";
 import { Button, Card } from "../ui";
+import ObjectArtImage from "../ObjectArtImage";
 import VaultEditor from "./VaultEditor";
 
 /** How full the vault picture is drawn. Chosen by the backend's level, never
@@ -43,6 +44,16 @@ function VaultPicture({ level }: { level: FortressVaultLevel }) {
   );
 }
 
+/** The stocked-vault picture (game mode). It shows a full vault, so it is only used for the two levels that
+ * are stocked; thin, empty and "cash not entered" keep the drawn vault so a picture never claims money. */
+function VaultView({ level }: { level: FortressVaultLevel }) {
+  const drawn = <VaultPicture level={level} />;
+  if (level !== "stocked" && level !== "deep") return drawn;
+  return (
+    <ObjectArtImage id="vault-stocked" width={128} className="shrink-0" fallback={drawn} />
+  );
+}
+
 export default function VaultCard({
   vault,
   demo = false,
@@ -59,7 +70,7 @@ export default function VaultCard({
     <Card>
       <h2 className="section-title">Vault</h2>
       <div className="flex items-center gap-4">
-        <VaultPicture level={vault.level} />
+        <VaultView level={vault.level} />
         <div className="min-w-0 text-sm">
           <p className="font-semibold text-ink">{VAULT_LABEL[vault.level]}</p>
           {vault.cash_nok === null ? (
