@@ -201,6 +201,13 @@ Generate Part 8 batch 1 (wall segment, corner bastion, genie, terrace props) and
 **Sprint 7: Default and hardening (S-M).**
 Look at Sprints 1-5 on real data, dark and light, desktop and phone; then decide whether `?art=stitch` becomes the default. Phone performance at 4x CPU throttle, colour-blind pass, reduced motion, screenshots for the look-and-judge list. Update section 4 of the visual-identity standard (look changed: object pictures are default).
 
+**Sprint 7 result (2026-10-13, written, not deployed).**
+- Phone speed: the Fortress scene (about 1,300 drawn shapes) used to block the first paint. `useAfterFirstPaint` now draws the sky first and the towers, walls and ambience one frame later, in the same reserved space (no layout shift). Lab numbers (Lighthouse mobile, production build, demo data, game mode on): blocking time 130-160 ms to 30-50 ms; score 87-89 to 88-91 (the earlier 73-82 was not reproduced; this lab is a different machine). Filters and looping animations were tested as suspects and each cost only about 10 percent. Under tests the hook is true at once. Not measured on a real phone or the live site.
+- Looks: all eight game pages rendered light and dark at 390 and 1280 px with game mode on: no sideways page scroll, no broken picture, no page error, no 5xx. Reduced motion: 0 looping animations on all eight pages (2 to 36 per page with it on, Marketplace 0). Greyscale and deuteranopia simulations of the Fortress: every fact still readable by shape and word (signs, flames, badges, plates).
+- Identity re-scored by eye: Siege Simulator 2, every other game page 3. The standard's section 4 is updated (pictures show whenever Game mode is on; no separate art switch).
+- Default: pictures follow Game mode since 2026-10-12, so "flip the default" means starting Game mode on for a fresh browser. Not flipped; left to Faiz.
+- Found, not changed: on a 390 px phone the Fortress scene (720 px wide) shows only its left part until you scroll sideways inside the frame.
+
 ### Sprints 8 to 13: the rooms (proposed, not started)
 
 Same rules as Sprints 1 to 6: one branch and one PR per sprint off fresh `main`, behind the Settings "Object art" switch, SVG (or today's plain layout) always the fallback, the Plain view unchanged, no new words, no new looping motion, never merged by me, "written, not yet deployed" until verified. Pictures are objects; every fact (seal state, ring, fog, gap day, due date, warning) is decided by code and drawn on top. Prompts for every picture are in the master doc, Part 6b. Each sprint ends with a side-by-side screenshot of the room next to the Fortress, and the room's identity score re-checked against the standard (target 3, never below 2).
