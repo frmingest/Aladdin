@@ -42,8 +42,13 @@ export default function MacroPage() {
     }
   }
 
+  // "Diversified Fund" is a fund bucket, not a company sector: it has no research page.
   const sectors = Array.from(
-    new Set((holdings ?? []).map((h) => h.sector).filter((s): s is string => Boolean(s))),
+    new Set(
+      (holdings ?? [])
+        .map((h) => h.sector)
+        .filter((s): s is string => Boolean(s) && s !== "Diversified Fund"),
+    ),
   ).sort();
 
   return (
