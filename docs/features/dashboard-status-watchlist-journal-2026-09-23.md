@@ -74,3 +74,7 @@ next deploy.
 | Gemini "calls left today" is per server process | Resets on restart, same as before. The LLM usage ledger (with F5) fixes it |
 | Post-deploy Playwright smoke test (other half of F4) | Still Sprint 7 |
 | Journal returns use only prices the app has stored | Prices are stored whenever a valuation, board or watchlist view refreshes. A holding nobody opened has no price history |
+
+## Editing entries (2026-10-13)
+
+Each entry has an Edit link beside Delete (`frontend/src/components/Journal.tsx`, `JournalEntryForm` in edit mode). It changes the decision, date, price, quantity, reasons, invalidation, confidence and both reviews through the existing `PATCH /journal/{id}`. The company is fixed. Changing the date re-reads the verdict in force that day; returns and review-due dates are recomputed from the stored prices. Journal data feeds no LLM prompt: outcomes are plain code, and game mode (temperament, rituals) reads entries in code only.

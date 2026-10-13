@@ -25,26 +25,38 @@ function today(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+/** "123.4500" -> "123.45" for editing; the API returns fixed-scale decimals. */
+function plainDecimal(value: string | null): string {
+  if (!value) return "";
+  return value.includes(".") ? value.replace(/\.?0+$/, "") : value;
+}
+
 export function JournalEntryForm({
   holdings,
   fixedHolding,
+  entry,
   onSaved,
   onCancel,
 }: {
-  /** Choices for the holding picker; ignored when fixedHolding is set. */
+  /** Choices for the holding picker; ignored when fixedHolding or entry is set. */
   holdings?: Holding[];
   fixedHolding?: Holding;
+  /** Edit mode: prefilled from this entry and saved with a PATCH. The company cannot change. */
+  entry?: JournalEntry;
   onSaved: () => void;
   onCancel?: () => void;
 }) {
-  const [holdingId, setHoldingId] = useState(fixedHolding?.id ?? "");
-  const [action, setAction] = useState<JournalAction>("buy");
-  const [decidedOn, setDecidedOn] = useState(today());
-  const [price, setPrice] = useState("");
-  const [quantity, setQuantity] = useState("");
-  const [thesis, setThesis] = useState("");
-  const [invalidation, setInvalidation] = useState("");
-  const [confidence, setConfidence] = useState<number | null>(null);
+  const editing = entry !== undefined;
+  const [holdingId, setHoldingId] = useState(fixedHolding?.id ?? entry?.holding_id ?? "");
+  const [action, setAction] = useState<JournalAction>(entry?.action ?? "buy");
+  const [decidedOn, setDecidedOn] = useState(entry?.decided_on ?? today());
+  const [price, setPrice] = useState(plainDecimal(entry?.price ?? null));
+  const [quantity, setQuantity] = useState(plainDecimal(entry?.quantity ?? null));
+  const [thesis, setThesis] = useState(entry?.thesis ?? "");
+  const [invalidation, setInvalidation] = useState(entry?.invalidation ?? "");
+  const [confidence, setConfidence] = useState<number | null>(entry?.confidence ?? null);
+  const [review6m, setReview6m] = useState(entry?.review_6m ?? "");
+  const [review12m, setReview12m] = useState(entry?.review_12m ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -52,10 +64,25 @@ export function JournalEntryForm({
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!holdingId || !thesis.trim()) return;
+    if ((!editing && !holdingId) || !thesis.trim()) return;
     setBusy(true);
     setError(null);
     try {
+      if (entry) {
+        await api.updateJournalEntry(entry.id, {
+          action,
+          decided_on: decidedOn,
+          price: price.trim() || null,
+          quantity: quantity.trim() || null,
+          thesis,
+          invalidation: invalidation.trim() || null,
+          confidence,
+          review_6m: review6m.trim() || null,
+          review_12m: review12m.trim() || null,
+        });
+        onSaved();
+        return;
+      }
       await api.createJournalEntry({
         holding_id: holdingId,
         action,
@@ -77,7 +104,7 @@ export function JournalEntryForm({
   return (
     <form onSubmit={submit} className="space-y-3">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        {!fixedHolding && (
+        {!fixedHolding && !editing && (
           <label className="flex flex-col gap-1 text-xs text-ink-muted lg:col-span-2">
             Company
             <select className={input} value={holdingId} onChange={(e) => setHoldingId(e.target.value)} required>
@@ -105,7 +132,7 @@ export function JournalEntryForm({
           <input type="date" className={input} value={decidedOn} max={today()} onChange={(e) => setDecidedOn(e.target.value)} required />
         </label>
         <label className="flex flex-col gap-1 text-xs text-ink-muted">
-          Price {selected && <span className="text-ink-faint">({selected.trading_currency})</span>}
+          Price {(selected || entry) && <span className="text-ink-faint">({selected?.trading_currency ?? entry?.currency})</span>}
           <input className={input} inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value.replace(",", "."))} />
         </label>
         <label className="flex flex-col gap-1 text-xs text-ink-muted">
@@ -126,6 +153,23 @@ export function JournalEntryForm({
           onChange={(e) => setInvalidation(e.target.value)}
         />
       </label>
+      {editing && (
+        <div className="grid gap-3 md:grid-cols-2">
+          <label className="flex flex-col gap-1 text-xs text-ink-muted">
+            6-month review
+            <textarea className={`${input} min-h-[3rem]`} value={review6m} onChange={(e) => setReview6m(e.target.value)} />
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-ink-muted">
+            12-month review
+            <textarea className={`${input} min-h-[3rem]`} value={review12m} onChange={(e) => setReview12m(e.target.value)} />
+          </label>
+        </div>
+      )}
+      {editing && (
+        <p className="text-xs text-ink-faint">
+          Changing the date also refreshes the verdict recorded for that day; returns and review-due dates are recalculated.
+        </p>
+      )}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-xs text-ink-muted">
           Confidence
@@ -151,8 +195,8 @@ export function JournalEntryForm({
               Cancel
             </Button>
           )}
-          <Button type="submit" disabled={busy || !holdingId || !thesis.trim()}>
-            {busy ? "Saving…" : "Save entry"}
+          <Button type="submit" disabled={busy || (!editing && !holdingId) || !thesis.trim()}>
+            {busy ? "Saving…" : editing ? "Save changes" : "Save entry"}
           </Button>
         </div>
       </div>
@@ -224,11 +268,30 @@ export function JournalEntryCard({
   showCompany?: boolean;
 }) {
   const o = entry.outcome;
+  const [editing, setEditing] = useState(false);
 
   async function remove() {
     if (!window.confirm("Delete this journal entry? This can't be undone.")) return;
     await api.deleteJournalEntry(entry.id);
     onChanged();
+  }
+
+  if (editing) {
+    return (
+      <Card>
+        <p className="mb-3 text-sm font-medium text-ink">
+          Edit decision{showCompany ? `: ${entry.company_name}` : ""} <span className="text-xs text-ink-faint">({entry.ticker})</span>
+        </p>
+        <JournalEntryForm
+          entry={entry}
+          onSaved={() => {
+            setEditing(false);
+            onChanged();
+          }}
+          onCancel={() => setEditing(false)}
+        />
+      </Card>
+    );
   }
 
   return (
@@ -307,7 +370,10 @@ export function JournalEntryCard({
       {o.review_6m_due && <ReviewField entry={entry} which="review_6m" onSaved={onChanged} />}
       {!o.review_6m_due && o.review_12m_due && <ReviewField entry={entry} which="review_12m" onSaved={onChanged} />}
 
-      <div className="mt-3 text-right">
+      <div className="mt-3 flex justify-end gap-4">
+        <button onClick={() => setEditing(true)} className="text-xs text-ink-faint hover:text-accent">
+          Edit
+        </button>
         <button onClick={remove} className="text-xs text-ink-faint hover:text-negative">
           Delete
         </button>
