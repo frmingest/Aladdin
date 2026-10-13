@@ -76,7 +76,7 @@ export function Line({ line }: { line: GameAdvisorLine }) {
             {ADVISOR_TONE_LABEL[line.tone]}
           </span>
           {line.holding_id && line.holding_name && (
-            <Link to={`/holdings/${line.holding_id}`} className="text-accent hover:underline">
+            <Link to={`/holdings/${line.holding_id}`} className="text-accent underline underline-offset-2">
               {line.holding_name}
             </Link>
           )}

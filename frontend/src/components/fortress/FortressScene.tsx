@@ -1263,7 +1263,7 @@ function GreatKeep({
       role="button"
       tabIndex={0}
       aria-pressed={realm.selected}
-      aria-label={`The whole fortress: ${count} ${count === 1 ? "holding" : "holdings"}. Press for the summary verdict on all of them.`}
+      aria-label={`The realm: the whole fortress, ${count} ${count === 1 ? "holding" : "holdings"}. Press for the summary verdict on all of them.`}
       className={`fortress-tower fortress-realm-keep${realm.selected ? " is-selected" : ""}${realm.hot ? " is-hot" : ""}`}
       onClick={onRealmSelect}
       onKeyDown={onKey}
@@ -1435,7 +1435,7 @@ function TowerFigure({
       tabIndex={0}
       data-tower-id={tower.holding_id}
       aria-pressed={selected}
-      aria-label={`${describeTower(tower)}.${raven ? " A new report has landed." : ""} Press for details. Arrow keys move to the next tower.`}
+      aria-label={`${describeTower(tower)}${tower.weight_pct === null ? "" : `, ${Number(tower.weight_pct).toFixed(1)}% of the portfolio`}.${raven ? " A new report has landed." : ""} Press for details. Arrow keys move to the next tower.`}
       className={`fortress-tower${selected ? " is-selected" : ""}`}
       onClick={() => onSelect(tower.holding_id)}
       onKeyDown={onKey}

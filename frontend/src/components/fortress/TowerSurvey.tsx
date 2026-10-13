@@ -109,7 +109,7 @@ export default function TowerSurvey({ tower, compact = false }: { tower: GameTow
       </dl>
       {!compact && (
         <p className="mt-4 text-sm">
-          <Link to={`/holdings/${tower.holding_id}`} className="font-medium text-accent hover:underline">
+          <Link to={`/holdings/${tower.holding_id}`} className="font-medium text-accent underline underline-offset-2">
             Open the holding page →
           </Link>
         </p>

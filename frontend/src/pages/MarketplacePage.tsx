@@ -31,7 +31,6 @@ function Stall({ row, place }: { row: WatchlistRow; place: number }) {
       to={storePath(row.holding_id)}
       className="market-stall group block overflow-hidden rounded-lg border border-border bg-surface transition-transform hover:-translate-y-0.5 focus-visible:-translate-y-0.5"
       style={{ "--stall-tone": paint.a } as React.CSSProperties}
-      aria-label={`Enter the ${row.name} store. ${front.tag}.`}
     >
       <ObjectArtImage
         id={stallArtId(row.holding_id)}
@@ -100,7 +99,6 @@ function CompactStall({ row }: { row: WatchlistRow }) {
       <Link
         to={storePath(row.holding_id)}
         className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 border-b border-border-subtle py-2 text-sm hover:bg-raised"
-        aria-label={`Enter the ${row.name} store`}
       >
         <span className="font-medium text-ink">
           {row.name} <span className="text-xs font-normal text-ink-faint">{row.ticker}</span>
@@ -217,7 +215,7 @@ export default function MarketplacePage() {
       {list && rows.length === 0 && (
         <EmptyState>
           <ObjectArtImage id="booth-goods" width={120} className="mx-auto mb-3" fallback={null} />
-          The street is empty. Talk to Sal above to open the first stall, or add companies on the <Link className="text-accent hover:underline" to="/watchlist">Watchlist</Link> page, and a store will open for each.
+          The street is empty. Talk to Sal above to open the first stall, or add companies on the <Link className="text-accent underline underline-offset-2" to="/watchlist">Watchlist</Link> page, and a store will open for each.
         </EmptyState>
       )}
 
@@ -231,12 +229,10 @@ export default function MarketplacePage() {
               { label: "No price to compare", value: String(unpriced) },
             ].map((i) => (
               <div key={i.label} className="game-hud-item">
-                <div className="min-w-0">
-                  <dt className="game-hud-label">{i.label}</dt>
-                  <dd className="game-hud-value tabular" style={i.color ? { color: i.color } : undefined}>
-                    {i.value}
-                  </dd>
-                </div>
+                <dt className="game-hud-label">{i.label}</dt>
+                <dd className="game-hud-value tabular" style={i.color ? { color: i.color } : undefined}>
+                  {i.value}
+                </dd>
               </div>
             ))}
           </dl>

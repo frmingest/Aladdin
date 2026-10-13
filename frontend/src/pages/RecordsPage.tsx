@@ -42,7 +42,7 @@ function RecordCard({ r }: { r: DecisionRecord }) {
   return (
     <Card>
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <h3 className="text-base font-semibold text-ink">
+        <h2 className="text-base font-semibold text-ink">
           {actionLabel(r.action)}{" "}
           {r.holding_id ? (
             <Link to={`/holdings/${r.holding_id}`} className="text-accent hover:underline">
@@ -51,7 +51,7 @@ function RecordCard({ r }: { r: DecisionRecord }) {
           ) : (
             r.company_name
           )}
-        </h3>
+        </h2>
         <span className="text-xs text-ink-faint">
           {formatDate(r.decided_on)} · {daysText(r.days_since)}
           {r.confidence !== null && ` · confidence ${r.confidence} of 5`}
@@ -108,7 +108,7 @@ export default function RecordsPage() {
         subtitle={painted ? HALL_COPY.subtitle : "Your decision journal as a library: what you wrote, what the price did, which reviews are owed."}
         actions={
           <span className="flex gap-3 text-sm">
-            <Link to="/journal" className="text-accent hover:underline">
+            <Link to="/journal" className="text-accent underline underline-offset-2">
               Open the Journal
             </Link>
             <Link to="/fortress" className="text-accent hover:underline">

@@ -31,7 +31,7 @@ export const REVIEW_LABEL: Record<RecordReviewState, string> = {
 export const REVIEW_CLASS: Record<RecordReviewState, string> = {
   written: "bg-positive-subtle text-positive",
   due: "bg-caution-subtle text-caution",
-  not_due: "bg-raised text-ink-faint",
+  not_due: "bg-raised text-ink-muted",
 };
 
 export const LEVEL_LABEL: Record<CompetenceLevel, string> = {
@@ -54,8 +54,8 @@ export const STATUS_CLASS: Record<CompetenceStatus, string> = {
   edge: "bg-caution-subtle text-caution",
   outside: "bg-negative-subtle text-negative",
   unmarked: "bg-raised text-ink-muted",
-  unclassified: "bg-raised text-ink-faint",
-  not_applicable: "bg-raised text-ink-faint",
+  unclassified: "bg-raised text-ink-muted",
+  not_applicable: "bg-raised text-ink-muted",
 };
 
 export const ACTION_LABEL: Record<string, string> = {

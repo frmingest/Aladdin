@@ -91,12 +91,10 @@ function Hud({ data }: { data: Competence }) {
   return (
     <dl className="game-hud circle-hud" aria-label="Your holdings against your marks">
       {facts.map((f) => (
-        <div key={f.key} className="game-hud-item">
+        <div key={f.key} className="game-hud-item has-icon">
           <CircleGlyph level={level[f.key]} size={22} className="circle-hud-glyph" />
-          <div className="min-w-0">
-            <dt className="game-hud-label">{f.label}</dt>
-            <dd className="game-hud-value tabular">{f.value}</dd>
-          </div>
+          <dt className="game-hud-label">{f.label}</dt>
+          <dd className="game-hud-value tabular">{f.value}</dd>
         </div>
       ))}
     </dl>

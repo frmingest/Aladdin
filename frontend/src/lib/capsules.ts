@@ -25,7 +25,7 @@ export function capsuleLabel(months: 6 | 12, review: RecordReviewState): string 
 }
 
 export const CAPSULE_CLASS: Record<CapsuleState, string> = {
-  sealed: "bg-raised text-ink-faint",
+  sealed: "bg-raised text-ink-muted",
   unsealed: "bg-caution-subtle text-caution",
   opened: "bg-positive-subtle text-positive",
 };

@@ -72,11 +72,11 @@ export default function SiegeCard({ siege }: { siege: GameSiege | null }) {
       )}
       <p className="mt-3 text-xs text-ink-faint">
         Read from the stored risk and margin-of-safety snapshots; refresh{" "}
-        <Link to="/risk" className="text-accent hover:underline">
+        <Link to="/risk" className="text-accent underline underline-offset-2">
           Portfolio risk
         </Link>{" "}
         and{" "}
-        <Link to="/margin-of-safety" className="text-accent hover:underline">
+        <Link to="/margin-of-safety" className="text-accent underline underline-offset-2">
           Margin of safety
         </Link>{" "}
         to update them. A stored what-if, not a forecast.

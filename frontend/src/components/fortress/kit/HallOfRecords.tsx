@@ -193,7 +193,7 @@ export default function HallOfRecords({ records }: { records: Records }) {
 
       {count === 0 ? (
         <EmptyState>
-          The shelves are bare. Decisions you log in the <Link to="/journal" className="text-accent hover:underline">Journal</Link> are shelved here.
+          The shelves are bare. Decisions you log in the <Link to="/journal" className="text-accent underline underline-offset-2">Journal</Link> are shelved here.
         </EmptyState>
       ) : shown.length === 0 ? (
         <EmptyState>{HALL_COPY.noneOwed}</EmptyState>
