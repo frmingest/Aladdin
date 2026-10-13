@@ -1,31 +1,21 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { ART_MANIFEST } from "../../../lib/artManifest";
-import { CIRCLE_R } from "../../../lib/circleMap";
-import { circleBrazier, circleStones, fogStakeId } from "../../../lib/roomArt";
+import * as roomArt from "../../../lib/roomArt";
+import { circleBrazier, fogStakeId } from "../../../lib/roomArt";
 import type { Competence } from "../../../lib/types";
 import CircleMap from "./CircleMap";
 import CircleRingArt, { FogStake } from "./CircleRingArt";
 
 describe("Circle art (Design Master Sprint 11)", () => {
-  it("stands seven stones on the circle line, every picture packed, the bottom spoke left for the zone names", () => {
-    const stones = circleStones();
-    expect(stones).toHaveLength(7);
-    for (const s of stones) {
-      expect(Object.keys(ART_MANIFEST)).toContain(s.id);
-      const d = Math.hypot(s.left - 50, s.top - 50);
-      expect(Math.abs(d - CIRCLE_R * 50)).toBeLessThan(0.2);
-      // nothing on the bottom spoke (left 50, below the centre)
-      expect(s.left === 50 && s.top > 50).toBe(false);
-    }
-    expect(stones.filter((s) => s.id === "circle-stone")).toHaveLength(3);
-    expect(stones.filter((s) => s.id === "circle-stone-low")).toHaveLength(4);
+  it("draws no standing stones: they distracted from the markers and were removed", () => {
+    expect(roomArt).not.toHaveProperty("circleStones");
+    const html = renderToStaticMarkup(<CircleRingArt />);
+    expect(html).not.toContain("circle-stone");
   });
 
-  it("is constant: the stones and the brazier take no data, so no mark can move or add one", () => {
-    expect(circleStones.length).toBe(0);
+  it("is constant: the brazier takes no data, so no mark can move or add one", () => {
     expect(circleBrazier.length).toBe(0);
-    expect(circleStones()).toEqual(circleStones());
     expect(circleBrazier()).toEqual({ id: "circle-brazier", left: 50, top: 50, width: 9 });
   });
 
