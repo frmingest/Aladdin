@@ -84,6 +84,8 @@ import type {
   TagReview,
   TagRule,
   TagRuleExport,
+  PromptLogDetail,
+  PromptLogList,
   UsageSummary,
   DemoModeState,
   LookThroughRefresh,
@@ -399,6 +401,13 @@ export const api = {
       body: JSON.stringify({ holding_id: holdingId }),
     }),
   getUsageSummary: (days = 7) => request<UsageSummary>(`/usage/summary?days=${days}`),
+  /** System status > Prompt log: the exact prompts sent to Gemini / the local model. Database only. */
+  getPromptLog: (params: { provider?: string; outcome?: string; search?: string; limit?: number; offset?: number } = {}) => {
+    const q = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) if (v !== undefined && v !== "") q.set(k, String(v));
+    return request<PromptLogList>(`/system/prompt-log?${q.toString()}`);
+  },
+  getPromptLogDetail: (id: string) => request<PromptLogDetail>(`/system/prompt-log/${id}`),
 
   /** Game mode (F33, G1) — the fortress state: a read-only view over stored data, no provider call. */
   getGameState: () => request<GameState>("/game/state"),

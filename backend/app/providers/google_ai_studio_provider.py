@@ -8,6 +8,8 @@ this, update `LLM_MODEL_NAME`/`settings.llm_model_name`, not this file.
 """
 from __future__ import annotations
 
+import time
+
 from google import genai
 from google.genai import errors as genai_errors
 from google.genai import types as genai_types
@@ -21,6 +23,8 @@ from app.providers.base import (
 )
 from app.providers.budget import DailyBudgetGuard
 from app.providers.gemini_retry import DailyBudgetExceededError, call_with_retry
+from app.services.llm_ledger import SessionFactory
+from app.services.llm_prompt_log import record_prompt
 
 
 def _usage_tokens(response: genai_types.GenerateContentResponse) -> tuple[int | None, int | None]:
@@ -32,6 +36,8 @@ def _usage_tokens(response: genai_types.GenerateContentResponse) -> tuple[int | 
 
 class GoogleAIStudioProvider(LLMProvider):
     name = "google_ai_studio"
+    # Injected by the provider factory; None (unit tests) makes the prompt log a no-op.
+    prompt_log_session_factory: SessionFactory | None = None
 
     def __init__(
         self,
@@ -54,7 +60,7 @@ class GoogleAIStudioProvider(LLMProvider):
         self._rpm = rpm
         self._budget_guard = budget_guard
 
-    def generate_structured(
+    def _generate_structured(
         self,
         *,
         system_prompt: str,
@@ -114,3 +120,37 @@ class GoogleAIStudioProvider(LLMProvider):
                 total_tokens=(usage.total_token_count or 0) if usage else 0,
             ),
         )
+
+    def generate_structured(
+        self,
+        *,
+        system_prompt: str,
+        user_prompt: str,
+        response_schema: type[BaseModel],
+        max_output_tokens: int | None = None,
+    ) -> LLMResponse:
+        """Run the call and write one prompt-log row (one per logical call;
+        the retry ladder and quota accounting stay in gemini_retry.py)."""
+        started = time.monotonic()
+        try:
+            response = self._generate_structured(
+                system_prompt=system_prompt, user_prompt=user_prompt,
+                response_schema=response_schema, max_output_tokens=max_output_tokens,
+            )
+        except Exception as exc:
+            record_prompt(
+                self.prompt_log_session_factory, provider=self.name, model_name=self._model,
+                call_type="structured", schema_name=response_schema.__name__,
+                system_prompt=system_prompt, user_prompt=user_prompt, outcome="error",
+                error_detail=f"{type(exc).__name__}: {exc}",
+                latency_ms=(time.monotonic() - started) * 1000,
+            )
+            raise
+        record_prompt(
+            self.prompt_log_session_factory, provider=self.name, model_name=self._model,
+            call_type="structured", schema_name=response_schema.__name__,
+            system_prompt=system_prompt, user_prompt=user_prompt, response_text=response.content,
+            outcome="success", latency_ms=(time.monotonic() - started) * 1000,
+            input_tokens=response.usage.input_tokens, output_tokens=response.usage.output_tokens,
+        )
+        return response

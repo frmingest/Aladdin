@@ -160,6 +160,7 @@ Feature and UI notes: dashboard, watchlist, thesis tracking, performance, reader
 - [precious-metals-tracking-2026-09-26.md](features/precious-metals-tracking-2026-09-26.md) — Precious metals tracking — 2026-09-26
 - [real-return-reporting-sprint15-2026-09-27.md](features/real-return-reporting-sprint15-2026-09-27.md) — Real (CPI-deflated) return reporting on Performance (Sprint 15 quarterly-review plan, item #2)
 - [split-view-reader-2026-09-30.md](features/split-view-reader-2026-09-30.md) — Split-view document reader — 2026-09-30
+- [llm-prompt-log-2026-10-13.md](features/llm-prompt-log-2026-10-13.md) — System status Prompt log: the exact prompts sent to Gemini and the local model (2026-10-13)
 - [thesis-tracking-sprint11-2026-09-26.md](features/thesis-tracking-sprint11-2026-09-26.md) — Sprint 11: thesis tracking over time (2026-09-26)
 - [ui-polish-sidebar-queue-progress-2026-09-27.md](features/ui-polish-sidebar-queue-progress-2026-09-27.md) — UI polish: sidebar, queue progress, correlation names, logo, collapsible holdings — 2026-09-27
 - [ux-noise-audit-2026-10-06.md](features/ux-noise-audit-2026-10-06.md) — Frontend noise audit: end-user UX review (2026-10-06)

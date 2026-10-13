@@ -56,3 +56,38 @@ class SystemStatusOut(BaseModel):
     # Set true only while demo mode is on (app/services/settings/demo_mode.py)
     # so the System status page always shows it — never inferred elsewhere.
     demo_mode: bool = False
+
+
+class PromptLogItemOut(BaseModel):
+    """One row of the prompt log list — sizes and outcome, no prompt bodies."""
+
+    model_config = {"protected_namespaces": ()}
+
+    id: str
+    occurred_at: datetime
+    provider: str
+    model_name: str
+    call_type: str
+    schema_name: str | None
+    outcome: str
+    error_detail: str | None
+    input_tokens: int | None
+    output_tokens: int | None
+    latency_ms: float | None
+    prompt_chars: int
+    preview: str
+
+
+class PromptLogListOut(BaseModel):
+    total: int
+    items: list[PromptLogItemOut]
+    providers: list[str]
+    retention_days: int
+    enabled: bool
+    demo_mode: bool = False
+
+
+class PromptLogDetailOut(PromptLogItemOut):
+    system_prompt: str | None
+    user_prompt: str
+    response_text: str | None

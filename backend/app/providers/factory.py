@@ -60,7 +60,7 @@ def _ledger_session_factory():
 
 def _build_provider(name: str, settings: Settings) -> LLMProvider:
     if name == "google_ai_studio":
-        return GoogleAIStudioProvider(
+        gemini = GoogleAIStudioProvider(
             api_key=settings.google_ai_studio_api_key or "",
             model=settings.llm_model_name,
             temperature=settings.llm_temperature,
@@ -73,6 +73,8 @@ def _build_provider(name: str, settings: Settings) -> LLMProvider:
             # see gemini_retry.py's module docstring).
             budget_guard=get_primary_budget_guard(),
         )
+        gemini.prompt_log_session_factory = _ledger_session_factory()
+        return gemini
     if name == "mistral":
         provider: LLMProvider = MistralProvider(
             api_key=settings.mistral_api_key or "",
@@ -177,7 +179,7 @@ def get_object_storage() -> ObjectStorageProvider:
 
 def _build_research_provider(name: str, settings: Settings) -> ResearchProvider:
     if name == "gemini_search":
-        return GeminiResearchProvider(
+        research = GeminiResearchProvider(
             api_key=settings.google_ai_studio_api_key or "",
             model=settings.llm_model_name,
             prompt_version=settings.active_research_prompt_version,
@@ -186,6 +188,8 @@ def _build_research_provider(name: str, settings: Settings) -> ResearchProvider:
             rpm=settings.llm_rate_limit_rpm,
             budget_guard=get_primary_budget_guard(),
         )
+        research.prompt_log_session_factory = _ledger_session_factory()
+        return research
     if name == "tavily":
         return TavilyResearchProvider(api_key=settings.tavily_api_key or "")
     raise ResearchUnavailableError(f"Unknown research provider: {name!r}")

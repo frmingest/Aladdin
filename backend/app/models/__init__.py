@@ -32,6 +32,7 @@ from app.models.legacy_analysis import (
     FactorAssessment,
     HoldingAnalysis,
 )
+from app.models.llm_prompt_log import LlmPromptLog
 from app.models.llm_usage import LlmUsageEvent
 from app.models.macro import MacroObservation, MacroSeriesStatus
 from app.models.market import (
@@ -74,6 +75,7 @@ __all__ = [
     "Holding",
     "HoldingAnalysis",
     "InstrumentFact",
+    "LlmPromptLog",
     "LlmUsageEvent",
     "MacroObservation",
     "MacroSeriesStatus",

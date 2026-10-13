@@ -6,11 +6,12 @@
 
 **Trust slice: D1 Plain lens is written and waits for review.** Branch `feature/d1-plain-lens` (PR to review, not merged, not deployed): the Fortress gets a third view, **Plain**, that keeps the Scene's arrangement but draws every holding as a labelled block with its numbers, plus a print form and a remembered view (a data-saving browser starts on Plain) ([doc](game/plain-lens-d1-2026-10-13.md)). C1 and its wording fix are merged (#134, #135). Decided by Faiz 2026-10-13: the art default stays opt-in, the phone Fortress keeps its sideways scroll, and a knife-edge tower stays off the Council agenda.
 
-State: `main` is at `3ab3b1b` (#135 merged; the live site answers but Claude could not confirm which build it serves). Repo migration head `t1f2a3b4c5d6` (D1 adds none). Live URLs: frontend `https://exciting-gratitude-production-71b5.up.railway.app`, backend `https://aladdin-production-bd25.up.railway.app`.
+State: `main` is at `3ab3b1b` (#135 merged; the live site answers but Claude could not confirm which build it serves). Repo migration head `t1f2a3b4c5d6` (D1 adds none; the prompt-log branch adds `u1a2b3c4d5e6`). Live URLs: frontend `https://exciting-gratitude-production-71b5.up.railway.app`, backend `https://aladdin-production-bd25.up.railway.app`.
 
 ## Active Tasks
 
 - [ ] **Review and merge the D1 PR (Faiz):** then press Plain on the Fortress, compare a few holdings with the Ledger, open a survey from a block, try Print this view (steps in the [doc](game/plain-lens-d1-2026-10-13.md)); merging is a production deploy. No browser or print check was done by Claude
+- [ ] **Review and merge the prompt-log PR (Faiz):** `feature/llm-prompt-log` (written, not deployed): System status gets a Prompt log card showing the exact prompts sent to Gemini and the local model. Adds migration `u1a2b3c4d5e6`, so run the migration on deploy; merging is a production deploy ([doc](features/llm-prompt-log-2026-10-13.md))
 - [ ] **D2 Camera (Claude):** zoom, pan and fit for the painted scene, labels floor at 11 px, survey docked beside the scene on wide screens; after D1 is merged
 
 ## Recent Blockers / Open Questions

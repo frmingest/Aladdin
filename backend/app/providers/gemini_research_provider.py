@@ -36,6 +36,7 @@ than a spurious failure.
 """
 from __future__ import annotations
 
+import time
 from datetime import datetime, timezone
 from typing import Any
 
@@ -47,6 +48,8 @@ from app.config.paths import PROMPTS_DIR
 from app.providers.base import ResearchItem, ResearchProvider, ResearchUnavailableError
 from app.providers.budget import DailyBudgetGuard
 from app.providers.gemini_retry import DailyBudgetExceededError, call_with_retry
+from app.services.llm_ledger import SessionFactory
+from app.services.llm_prompt_log import record_prompt
 
 MACRO_SOURCE_TYPE = "macro_news"
 SECTOR_SOURCE_TYPE = "sector_research"
@@ -62,6 +65,8 @@ def _usage_tokens(response: genai_types.GenerateContentResponse) -> tuple[int | 
 
 class GeminiResearchProvider(ResearchProvider):
     name = "gemini_search"
+    # Injected by the provider factory; None (unit tests) makes the prompt log a no-op.
+    prompt_log_session_factory: SessionFactory | None = None
 
     def __init__(
         self,
@@ -123,6 +128,17 @@ class GeminiResearchProvider(ResearchProvider):
                 config=config,
             )
 
+        started = time.monotonic()
+
+        def _log(outcome: str, *, response_text: str | None = None, error: str | None = None,
+                 usage: tuple[int | None, int | None] = (None, None)) -> None:
+            record_prompt(
+                self.prompt_log_session_factory, provider="google_ai_studio", model_name=self._model,
+                call_type="grounded_research", user_prompt=prompt, response_text=response_text,
+                outcome=outcome, error_detail=error, input_tokens=usage[0], output_tokens=usage[1],
+                latency_ms=(time.monotonic() - started) * 1000,
+            )
+
         try:
             response = call_with_retry(
                 _call,
@@ -133,13 +149,16 @@ class GeminiResearchProvider(ResearchProvider):
                 usage_of=_usage_tokens,
             )
         except DailyBudgetExceededError as exc:
+            _log("error", error=f"{type(exc).__name__}: {exc}")
             raise ResearchUnavailableError(
                 f"Gemini daily request budget exhausted (model={self._model}): {exc}"
             ) from exc
         except genai_errors.APIError as exc:
+            _log("error", error=f"{type(exc).__name__}: {exc}")
             raise ResearchUnavailableError(
                 f"Gemini grounded search call failed (model={self._model}): {exc}"
             ) from exc
+        _log("success", response_text=getattr(response, "text", None), usage=_usage_tokens(response))
 
         candidates = getattr(response, "candidates", None) or []
         if not candidates:

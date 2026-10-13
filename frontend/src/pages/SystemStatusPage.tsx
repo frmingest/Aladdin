@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api, ApiError } from "../lib/api";
 import type { FreshnessItem, JobItem, StatusItem, StatusLevel, SystemStatus, UsageSummary } from "../lib/types";
 import { Button, Card, PageHeader, SectionTitle } from "../components/ui";
+import PromptLogCard from "../components/PromptLogCard";
 
 /** Feature F4. Everything comes from GET /system/status
  * (backend/app/services/system_status.py), which reads configuration and
@@ -271,6 +272,8 @@ export default function SystemStatusPage() {
           </div>
 
           {usage && <UsageCard usage={usage} />}
+
+          <PromptLogCard />
 
           <Card>
             <SectionTitle hint="What each data source is set to. Keys show only as set or missing.">
