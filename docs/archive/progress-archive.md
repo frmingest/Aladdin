@@ -3,6 +3,16 @@
 Completed milestones and retired status, moved out of `docs/PROGRESS.md` under the rolling-log rules
 in `CLAUDE.md` ("Progress file rules"). Newest snapshot first. Older: [PROGRESS-full-2026-09-30.md](PROGRESS-full-2026-09-30.md).
 
+## Closed 2026-10-13 — review and housekeeping tasks (checked OK by Faiz)
+
+Faiz marked these done on 2026-10-13; the repo (`git log` on `origin/main`, 2026-10-13) shows #121 to #124 merged.
+
+- **Merged:** docs reorganization (#122), hardening branch with the master toggle and map art pass (#121, #120), map name and corner fix (#123), Fortress pines, Chronicle tower pictures and Council seat size (#124).
+- **Reviewed on real data (Faiz):** Siege Simulator art, Sprint 1 to 6 art, the room art (Council, Records, Chronicle, Map table), the merged game PRs, Knife-edge and Long Memory after deploy.
+- **Housekeeping (Faiz):** `npm ci` on Windows; the game-pages smoke test (a manual phone-width check had found no problems).
+- **Optional, closed without work:** more Stitch pictures (smiling shopkeeper, curtain-wall variants, five room crests, a second advisor chair).
+- **Hardening sprint:** marked done; only the baseline had merged, so the remainder was done on 2026-10-13 (see [the sprint doc](../sprints/hardening-sprint-2026-10-12.md)).
+
 ## Closed 2026-10-12 — Design Master Sprints 8, 10, 12 and 13 (merged, deploy not verified)
 
 Sprint 8 room banners and backdrops (#111), Sprint 10 Records caskets and banner furniture (#112), Sprint 12 Chronicle strata blocks and dark sconce (#113), Sprint 13 Map table frame, dividers and rolled map (#114); merged on `main` (`32be2dd`, checked with `git log` on 2026-10-12). Results are written at the end of each sprint in [docs/game/design-master-sprint-plan-2026-10-11.md](../game/design-master-sprint-plan-2026-10-11.md). All behind the Settings "Object art" switch, off by default.
