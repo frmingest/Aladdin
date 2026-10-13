@@ -14,7 +14,26 @@ import { getObjectArt } from "./stitchArt";
 const BACKDROP_OF: Partial<Record<CrestKind, string>> = {
   records: "backdrop-records",
   chronicle: "backdrop-chronicle",
+  council: "backdrop-council",
+  circle: "backdrop-circle",
+  map: "backdrop-map",
 };
+
+/**
+ * Which band of a wide backdrop the banner strip shows (CSS object-position). Council sits on the
+ * table row, above the faint empty panels baked into the bottom of that picture; Circle shows the
+ * standing stones on the horizon; Map shows the instruments on the desk.
+ */
+const BACKDROP_POSITION: Partial<Record<CrestKind, string>> = {
+  council: "50% 62%",
+  circle: "50% 45%",
+  map: "50% 22%",
+};
+
+/** The CSS object-position for a room's backdrop (centred when the room has no override). */
+export function roomBackdropPosition(room: CrestKind): string {
+  return BACKDROP_POSITION[room] ?? "50% 50%";
+}
 
 /** The banner backdrop for a room, or null (no picture packed, or the room has none). */
 export function roomBackdropId(room: CrestKind): string | null {

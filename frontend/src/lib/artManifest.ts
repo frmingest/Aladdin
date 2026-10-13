@@ -67,6 +67,9 @@ import shopkeeperPass from "../assets/art/shopkeeper-pass.webp";
 import shopkeeperUnknown from "../assets/art/shopkeeper-unknown.webp";
 import backdropRecords from "../assets/art/backdrop-records.webp";
 import backdropChronicle from "../assets/art/backdrop-chronicle.webp";
+import backdropCouncil from "../assets/art/backdrop-council.webp";
+import backdropCircle from "../assets/art/backdrop-circle.webp";
+import backdropMap from "../assets/art/backdrop-map.webp";
 import casketClosed from "../assets/art/casket-closed.webp";
 import casketOpen from "../assets/art/casket-open.webp";
 import roomBookshelf from "../assets/art/room-bookshelf.webp";
@@ -179,6 +182,9 @@ export const ART_MANIFEST = {
   "shopkeeper-unknown": { src: shopkeeperUnknown, width: 384, height: 351, alt: "" },
   "backdrop-records": { src: backdropRecords, width: 960, height: 536, alt: "" },
   "backdrop-chronicle": { src: backdropChronicle, width: 960, height: 536, alt: "" },
+  "backdrop-council": { src: backdropCouncil, width: 960, height: 536, alt: "" },
+  "backdrop-circle": { src: backdropCircle, width: 960, height: 536, alt: "" },
+  "backdrop-map": { src: backdropMap, width: 960, height: 536, alt: "" },
   "casket-closed": { src: casketClosed, width: 256, height: 256, alt: "" },
   "casket-open": { src: casketOpen, width: 222, height: 256, alt: "" },
   "room-bookshelf": { src: roomBookshelf, width: 218, height: 384, alt: "" },
