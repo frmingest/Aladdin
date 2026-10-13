@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { CrestKind } from "../../../lib/crest";
-import { roomBackdropId } from "../../../lib/roomArt";
+import { roomBackdropId, roomBackdropPosition } from "../../../lib/roomArt";
 import { getObjectArt, useArtMode } from "../../../lib/stitchArt";
 
 /**
@@ -22,6 +22,7 @@ export default function RoomBackdrop({ room }: { room: CrestKind }) {
         aria-hidden="true"
         width={art.width}
         height={art.height}
+        style={{ objectPosition: roomBackdropPosition(room) }}
         loading="lazy"
         decoding="async"
         className="room-backdrop pointer-events-none absolute inset-0 h-full w-full object-cover"

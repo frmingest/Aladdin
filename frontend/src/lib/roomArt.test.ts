@@ -28,8 +28,8 @@ describe("Chronicle art (Sprint 12)", () => {
 });
 
 describe("room art ids", () => {
-  it("gives Records and Chronicle a banner backdrop that is really packed", () => {
-    for (const room of ["records", "chronicle"] as const) {
+  it("gives Records, Chronicle, Council, Circle and Map a banner backdrop that is really packed", () => {
+    for (const room of ["records", "chronicle", "council", "circle", "map"] as const) {
       const id = roomBackdropId(room);
       expect(id).not.toBeNull();
       expect(Object.keys(ART_MANIFEST)).toContain(id);
@@ -37,7 +37,7 @@ describe("room art ids", () => {
   });
 
   it("gives no backdrop to rooms that have none", () => {
-    for (const room of ["council", "circle", "map", "siege", "market", "fortress"] as const) {
+    for (const room of ["siege", "market", "fortress"] as const) {
       expect(roomBackdropId(room)).toBeNull();
     }
   });

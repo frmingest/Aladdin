@@ -777,6 +777,27 @@
    "quality": 80
   },
   {
+   "id": "backdrop-council",
+   "source": "a_wide_panoramic_atmospheric_backdrop_scene_for_a_fantasy_game_ui_council",
+   "key": "none",
+   "max_side": 960,
+   "quality": 78
+  },
+  {
+   "id": "backdrop-circle",
+   "source": "a_wide_panoramic_atmospheric_backdrop_scene_for_a_fantasy_game_ui_circle_of",
+   "key": "none",
+   "max_side": 960,
+   "quality": 78
+  },
+  {
+   "id": "backdrop-map",
+   "source": "a_wide_panoramic_atmospheric_backdrop_scene_for_a_fantasy_game_ui_cartographer",
+   "key": "none",
+   "max_side": 960,
+   "quality": 78
+  },
+  {
    "id": "casket-closed",
    "source": "cartoon_fantasy_medieval_prop_asset_time_capsule_casket_closed_vibrant_2d",
    "max_side": 256
