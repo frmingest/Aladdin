@@ -1,6 +1,6 @@
 # Design: closing plan and last Stitch objects (2026-10-13)
 
-Status: **closed 2026-10-13.** The seven pictures are merged (#129) and the last three backdrops are wired on `feature/design-backdrops` (PR to review, not merged). Supersedes "Still missing for the rooms" in [design-master-sprint-plan-2026-10-11.md](design-master-sprint-plan-2026-10-11.md).
+Status: **closed 2026-10-13.** The seven pictures are merged (#129) and the last three backdrops are merged (#132). Supersedes "Still missing for the rooms" in [design-master-sprint-plan-2026-10-11.md](design-master-sprint-plan-2026-10-11.md).
 
 ## Standing rule
 
