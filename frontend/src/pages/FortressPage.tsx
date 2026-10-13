@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { api, ApiError } from "../lib/api";
+import { api } from "../lib/api";
 import { layoutTowers, notesWithoutRepeats } from "../lib/fortress";
 import { formatDecimal, formatNok, formatPct100 } from "../lib/format";
 import type { GameState, Ravens, Watchlist } from "../lib/types";
@@ -24,9 +24,11 @@ import {
   Card,
   Disclosure,
   EmptyState,
+  LoadError,
   PageHeader,
   SnapshotStamp,
 } from "../components/ui";
+import { describeError } from "../lib/errors";
 
 /** Game mode home (F33, G2). A read-only picture of the real portfolio built
  * from GET /game/state — stored data only, no provider or LLM call. It never
@@ -45,7 +47,7 @@ const SHANTY_TEXT = {
 
 export default function FortressPage() {
   const [state, setState] = useState<GameState | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ message: string; retryable: boolean } | null>(null);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<View>("scene");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -67,11 +69,7 @@ export default function FortressPage() {
     api
       .getGameState()
       .then(setState)
-      .catch((e: unknown) =>
-        setError(
-          e instanceof ApiError ? e.message : "Could not load the fortress.",
-        ),
-      )
+      .catch((e: unknown) => setError(describeError(e, "the fortress")))
       .finally(() => setLoading(false));
   }, []);
 
@@ -152,9 +150,9 @@ export default function FortressPage() {
       />
 
       {error && (
-        <Card className="mb-4 border-negative/40 bg-negative-subtle text-sm text-negative">
-          {error}
-        </Card>
+        <div className="mb-4">
+          <LoadError message={error.message} retryable={error.retryable} onRetry={load} />
+        </div>
       )}
 
       {!state && loading && <EmptyState>Raising the walls…</EmptyState>}

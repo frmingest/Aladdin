@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { api, ApiError } from "../lib/api";
+import { api } from "../lib/api";
 import { useDemoMode } from "../lib/demoMode";
 import { formatPct100, formatPrice } from "../lib/format";
 import { boothNumeral, orderStreet, shopFront, shopPips, storePath } from "../lib/marketplace";
@@ -13,7 +13,8 @@ import ObjectArtImage from "../components/ObjectArtImage";
 import { TONE_PAINT } from "../lib/marketplacePaint";
 import { stallArtId } from "../lib/marketArt";
 import "../components/marketplace/stall.css";
-import { Button, Card, Disclosure, EmptyState, PageHeader, SnapshotStamp, VerdictBadge } from "../components/ui";
+import { Button, Disclosure, EmptyState, LoadError, PageHeader, SnapshotStamp, VerdictBadge } from "../components/ui";
+import { describeError } from "../lib/errors";
 
 /** The Marketplace street (game mode, G9): one store per watchlist company. The shop window
  * shows only what the watchlist already knows (your price against the quote, the stored moat
@@ -115,7 +116,7 @@ function CompactStall({ row }: { row: WatchlistRow }) {
 
 export default function MarketplacePage() {
   const [list, setList] = useState<Watchlist | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ message: string; retryable: boolean } | null>(null);
   const [loading, setLoading] = useState(true);
   const [restocking, setRestocking] = useState(false);
   const [talking, setTalking] = useState(false);
@@ -130,7 +131,7 @@ export default function MarketplacePage() {
     api
       .getWatchlist()
       .then(setList)
-      .catch((e: unknown) => setError(e instanceof ApiError ? e.message : "Could not load the street."))
+      .catch((e: unknown) => setError(describeError(e, "the street")))
       .finally(() => setLoading(false));
   }, []);
 
@@ -145,7 +146,7 @@ export default function MarketplacePage() {
     try {
       setList(await api.refreshWatchlist());
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Could not restock the shelves.");
+      setError(describeError(e, "the shelves (restock)"));
     } finally {
       setRestocking(false);
     }
@@ -206,7 +207,11 @@ export default function MarketplacePage() {
         </div>
       </section>
 
-      {error && <Card className="mb-4 border-negative/40 bg-negative-subtle text-sm text-negative">{error}</Card>}
+      {error && (
+        <div className="mb-4">
+          <LoadError message={error.message} retryable={error.retryable} onRetry={load} />
+        </div>
+      )}
       {!list && loading && <EmptyState>Setting up the stalls…</EmptyState>}
 
       {list && rows.length === 0 && (

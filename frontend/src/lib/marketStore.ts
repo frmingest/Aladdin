@@ -16,7 +16,7 @@ export interface StoreData {
 }
 
 export const errText = (e: unknown, what: string): string =>
-  `${what}: ${e instanceof ApiError ? e.message : "could not be loaded."}`;
+  `${what}: ${e instanceof ApiError ? e.message : "could not be loaded (the server may be unreachable)."}`;
 
 export async function loadStore(id: string): Promise<StoreData> {
   const [h, w, v, a, t, p] = await Promise.allSettled([

@@ -9,7 +9,8 @@ import { SURVEY_VERSION, commissionsFor, surveyRealm } from "../lib/survey";
 import type { Competence, DocumentSummary, GameState, Records } from "../lib/types";
 import GameFooter from "../components/fortress/GameFooter";
 import RealmMapBody from "../components/fortress/kit/RealmMapBody";
-import { EmptyState, PageHeader } from "../components/ui";
+import { LoadError, PageHeader } from "../components/ui";
+import { describeError } from "../lib/errors";
 
 /** The Cartographer's table (game mode G34 and G35): the realm as a map of fog. Each tower shows
  * five plain facts as fog patches, clear or still in fog; the commissions are the same fog grouped by
@@ -47,7 +48,9 @@ function useRealmDocuments(state: GameState | null): Record<string, DocumentSumm
 }
 
 export default function CartographerPage() {
-  const stateQ = useCachedQuery<GameState>("game-state", () => api.getGameState());
+  const stateQ = useCachedQuery<GameState>("game-state", () => api.getGameState(), {
+    describeError: (e) => describeError(e, "the map").message,
+  });
   const compQ = useCachedQuery<Competence>("game-competence", () => api.getCompetence());
   const recQ = useCachedQuery<Records>("game-records", () => api.getRecords());
   const docs = useRealmDocuments(stateQ.data);
@@ -92,7 +95,7 @@ export default function CartographerPage() {
           </Link>
         }
       />
-      {error && !state && <EmptyState>{error}</EmptyState>}
+      {error && !state && <LoadError message={error} onRetry={stateQ.reload} />}
       {!error && !towers && <p className="text-sm text-ink-muted">Unrolling the map…</p>}
       {state && towers && (
         <div className="space-y-4">

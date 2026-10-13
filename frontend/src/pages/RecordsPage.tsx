@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { api, ApiError } from "../lib/api";
+import { api } from "../lib/api";
 import { formatDate } from "../lib/format";
 import { CAPSULE_CLASS, CAPSULE_MARK, capsuleLabel, capsuleState } from "../lib/capsules";
 import {
@@ -11,7 +11,8 @@ import {
   verdictLine,
 } from "../lib/rituals";
 import type { DecisionRecord, Records } from "../lib/types";
-import { Card, EmptyState, PageHeader } from "../components/ui";
+import { Card, EmptyState, LoadError, PageHeader } from "../components/ui";
+import { describeError } from "../lib/errors";
 import { useGameMode } from "../lib/gameMode";
 import GameFooter from "../components/fortress/GameFooter";
 import HallOfRecords from "../components/fortress/kit/HallOfRecords";
@@ -80,19 +81,21 @@ function RecordCard({ r }: { r: DecisionRecord }) {
 
 export default function RecordsPage() {
   const [records, setRecords] = useState<Records | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ message: string; retryable: boolean } | null>(null);
+  const [attempt, setAttempt] = useState(0);
   const [onlyOwed, setOnlyOwed] = useState(false);
 
   useEffect(() => {
     let live = true;
+    setError(null);
     api
       .getRecords()
       .then((r) => live && setRecords(r))
-      .catch((e: unknown) => live && setError(e instanceof ApiError ? e.message : "Could not load the records."));
+      .catch((e: unknown) => live && setError(describeError(e, "the records")));
     return () => {
       live = false;
     };
-  }, []);
+  }, [attempt]);
 
   const { gameMode } = useGameMode();
   const painted = gameMode;
@@ -114,7 +117,7 @@ export default function RecordsPage() {
           </span>
         }
       />
-      {error && <EmptyState>{error}</EmptyState>}
+      {error && <LoadError message={error.message} retryable={error.retryable} onRetry={() => setAttempt((n) => n + 1)} />}
       {!error && !records && <p className="text-sm text-ink-muted">Opening the archive…</p>}
       {records && painted && (
         <div className="space-y-4">

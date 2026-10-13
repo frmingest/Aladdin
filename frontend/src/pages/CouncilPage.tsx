@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { api, ApiError } from "../lib/api";
+import { api } from "../lib/api";
 import { councilSeats } from "../lib/councilSeats";
 import { ADVISOR_TONE_LABEL, advisorRuleLabel } from "../lib/fortress";
 import { COUNCIL_LABEL, weightText } from "../lib/rituals";
@@ -12,7 +12,8 @@ import ParchmentPanel from "../components/fortress/kit/ParchmentPanel";
 import SealMark from "../components/fortress/kit/SealMark";
 import Speaker from "../components/fortress/kit/Speaker";
 import GameFooter from "../components/fortress/GameFooter";
-import { Card, EmptyState, PageHeader } from "../components/ui";
+import { Card, LoadError, PageHeader } from "../components/ui";
+import { describeError } from "../lib/errors";
 
 /** The Council Chamber (game mode G17): a quarterly review room. The agenda is built by fixed rules
  * from stored facts the Fortress already uses (fired tripwires, weak walls, old analyses, reviews
@@ -91,18 +92,20 @@ function Folio({ item, n }: { item: CouncilItem; n: number }) {
 
 export default function CouncilPage() {
   const [council, setCouncil] = useState<Council | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ message: string; retryable: boolean } | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let live = true;
+    setError(null);
     api
       .getCouncil()
       .then((c) => live && setCouncil(c))
-      .catch((e: unknown) => live && setError(e instanceof ApiError ? e.message : "Could not load the Council."));
+      .catch((e: unknown) => live && setError(describeError(e, "the Council")));
     return () => {
       live = false;
     };
-  }, []);
+  }, [attempt]);
 
   const seats = useMemo(() => (council ? councilSeats(council) : []), [council]);
 
@@ -125,7 +128,7 @@ export default function CouncilPage() {
           </Link>
         }
       />
-      {error && <EmptyState>{error}</EmptyState>}
+      {error && <LoadError message={error.message} retryable={error.retryable} onRetry={() => setAttempt((n) => n + 1)} />}
       {!error && !council && <p className="text-sm text-ink-muted">The council is gathering…</p>}
       {council && (
         <div className="space-y-4">

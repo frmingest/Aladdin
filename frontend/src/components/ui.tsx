@@ -124,6 +124,36 @@ export function EmptyState({ children }: { children: React.ReactNode }) {
   );
 }
 
+/**
+ * A failed load: what happened, in words, and a way to try again.
+ * `role="alert"` so a screen reader announces it. The retry button is shown
+ * only when trying again can plausibly help (see lib/errors.ts).
+ */
+export function LoadError({
+  message,
+  onRetry,
+  retryable = true,
+}: {
+  message: string;
+  onRetry?: () => void;
+  retryable?: boolean;
+}) {
+  return (
+    <div role="alert" className="rounded-lg border border-negative/40 bg-negative-subtle px-5 py-4 text-sm text-negative">
+      <p>{message}</p>
+      {onRetry && retryable && (
+        <button
+          type="button"
+          onClick={onRetry}
+          className="mt-3 inline-flex min-h-[44px] items-center rounded-md border border-negative/50 px-4 text-sm font-medium hover:bg-negative/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+        >
+          Try again
+        </button>
+      )}
+    </div>
+  );
+}
+
 const STATUS_STYLES: Record<string, string> = {
   processed: "bg-positive-subtle text-positive",
   failed: "bg-negative-subtle text-negative",

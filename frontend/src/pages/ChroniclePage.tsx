@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { api, ApiError } from "../lib/api";
+import { api } from "../lib/api";
 import {
   SOURCE_LABEL,
   SOURCE_NOTE,
@@ -18,7 +18,8 @@ import {
 import { formatNok, formatPct100 } from "../lib/format";
 import { MOAT_LABEL, SIEGE_LABEL, STRUCTURE_LABEL, THESIS_LABEL, WALL_LABEL, isFundCode, shortLabel } from "../lib/fortress";
 import type { Chronicle, ChronicleFrame, FortressSiegeLevel } from "../lib/types";
-import { Button, Card, Disclosure, EmptyState, PageHeader } from "../components/ui";
+import { Button, Card, Disclosure, EmptyState, LoadError, PageHeader } from "../components/ui";
+import { describeError } from "../lib/errors";
 import GameFooter from "../components/fortress/GameFooter";
 import TimeStrata, { TimeStrip } from "../components/fortress/kit/TimeStrata";
 import { towerArtId } from "../lib/towerArt";
@@ -126,7 +127,8 @@ function MiniScene({ frame }: { frame: ChronicleFrame }) {
 
 export default function ChroniclePage() {
   const [chronicle, setChronicle] = useState<Chronicle | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ message: string; retryable: boolean } | null>(null);
+  const [attempt, setAttempt] = useState(0);
   const [loading, setLoading] = useState(true);
   const [index, setIndex] = useState(-1);
   const [playing, setPlaying] = useState(false);
@@ -135,6 +137,8 @@ export default function ChroniclePage() {
   useEffect(() => {
     document.title = "Chronicle · Aladdin";
     let live = true;
+    setError(null);
+    setLoading(true);
     api
       .getChronicle()
       .then((c) => {
@@ -142,12 +146,12 @@ export default function ChroniclePage() {
         setChronicle(c);
         setIndex(newestIndex(c));
       })
-      .catch((e: unknown) => live && setError(e instanceof ApiError ? e.message : "Could not load the Chronicle."))
+      .catch((e: unknown) => live && setError(describeError(e, "the Chronicle")))
       .finally(() => live && setLoading(false));
     return () => {
       live = false;
     };
-  }, []);
+  }, [attempt]);
 
   // Playing steps one frame per second and stops at the newest frame.
   useEffect(() => {
@@ -193,7 +197,7 @@ export default function ChroniclePage() {
         }
       />
 
-      {error && <Card className="mb-4 border-negative/40 bg-negative-subtle text-sm text-negative">{error}</Card>}
+      {error && <LoadError message={error.message} retryable={error.retryable} onRetry={() => setAttempt((n) => n + 1)} />}
       {loading && <EmptyState>Opening the chronicle…</EmptyState>}
 
       {chronicle && !frame && !loading && (

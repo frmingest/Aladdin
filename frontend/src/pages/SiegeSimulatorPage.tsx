@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { api, ApiError } from "../lib/api";
+import { api } from "../lib/api";
 import { formatNok } from "../lib/format";
 import { WALL_LABEL, formatShock, isFundCode, shortLabel } from "../lib/fortress";
 import {
@@ -18,7 +18,8 @@ import {
   presetDrop,
 } from "../lib/siege";
 import type { SiegeSim, SiegeSimExposure, SiegeSimHolding } from "../lib/types";
-import { Card, EmptyState, PageHeader } from "../components/ui";
+import { Card, EmptyState, LoadError, PageHeader } from "../components/ui";
+import { describeError } from "../lib/errors";
 import GameFooter from "../components/fortress/GameFooter";
 import SiegeArtStrip from "../components/fortress/kit/SiegeArtStrip";
 import { useArtMode } from "../lib/stitchArt";
@@ -112,7 +113,8 @@ export default function SiegeSimulatorPage() {
   const artMode = useArtMode();
   const [sim, setSim] = useState<SiegeSim | null>(null);
   const [drop, setDrop] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ message: string; retryable: boolean } | null>(null);
+  const [retry, setRetry] = useState(0);
   const [loading, setLoading] = useState(true);
   const latest = useRef(0);
 
@@ -132,14 +134,14 @@ export default function SiegeSimulatorPage() {
           if (drop === null) setDrop(Number(s.market_drop));
         })
         .catch((e: unknown) => {
-          if (id === latest.current) setError(e instanceof ApiError ? e.message : "Could not run the siege.");
+          if (id === latest.current) setError(describeError(e, "the siege"));
         })
         .finally(() => {
           if (id === latest.current) setLoading(false);
         });
     }, wait);
     return () => window.clearTimeout(t);
-  }, [drop]);
+  }, [drop, retry]);
 
   const min = sim ? Number(sim.drop_min) : 0.05;
   const max = sim ? Number(sim.drop_max) : 0.6;
@@ -160,7 +162,11 @@ export default function SiegeSimulatorPage() {
         actions={sim?.demo ? <span className="rounded-full bg-accent-subtle px-2.5 py-0.5 text-xs font-medium text-ink">Demo data</span> : null}
       />
 
-      {error && <Card className="mb-4 border-negative/40 bg-negative-subtle text-sm text-negative">{error}</Card>}
+      {error && (
+        <div className="mb-4">
+          <LoadError message={error.message} retryable={error.retryable} onRetry={() => setRetry((n) => n + 1)} />
+        </div>
+      )}
       {!sim && loading && <EmptyState>Raising the siege engines…</EmptyState>}
 
       {sim && (

@@ -13,6 +13,7 @@
  */
 
 import { invalidateAll } from "./queryCache";
+import { readableDetail } from "./errorText";
 import type {
   Account,
   AnalysisQueue,
@@ -135,12 +136,15 @@ export class ApiError extends Error {
   detail: unknown;
 
   constructor(status: number, detail: unknown) {
-    const message =
+    // A proxy or gateway error comes back as an HTML page and a server fault can
+    // carry a stack trace: neither is a message. Those fall back to the status line.
+    const raw =
       typeof detail === "string"
         ? detail
         : detail && typeof detail === "object" && "detail" in detail
           ? String((detail as { detail: unknown }).detail)
-          : `request failed with status ${status}`;
+          : "";
+    const message = readableDetail(raw) ?? `request failed with status ${status}`;
     super(message);
     this.status = status;
     this.detail = detail;
