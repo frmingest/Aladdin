@@ -3,6 +3,11 @@
 Completed milestones and retired status, moved out of `docs/PROGRESS.md` under the rolling-log rules
 in `CLAUDE.md` ("Progress file rules"). Newest snapshot first. Older: [PROGRESS-full-2026-09-30.md](PROGRESS-full-2026-09-30.md).
 
+## Closed 2026-10-13 — C1 Siege back-test and review tasks
+
+- **Merged:** C1 Siege back-test and the unmodelled share in the Siege headline (PR #134); back-test rows say the gap once and never show -0.0% (PR #135). Deploys not verified by Claude.
+- **Closed by Faiz 2026-10-13:** review and merge of the C1 PR, the Council banner look on the live site, and the live browser specs (smoke and game-pages) are all done.
+
 ## Closed 2026-10-13 — design plan
 
 - **Merged:** Sprint 7 hardening (#131) and the Council, Circle and Map banner backdrops (#132), which closed the design plan; progress log refreshed (#133). Deploys not verified by Claude.

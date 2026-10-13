@@ -9,6 +9,9 @@ import { MARKET_PATH, orderStreet, shopFront } from "../lib/marketplace";
 import GameFooter from "../components/fortress/GameFooter";
 import FortressReports from "../components/fortress/FortressReports";
 import FortressLedger from "../components/fortress/FortressLedger";
+import PlainFortress from "../components/fortress/PlainFortress";
+import { FORTRESS_VIEWS, FORTRESS_VIEW_LABEL, initialFortressView, saveFortressView } from "../lib/fortressView";
+import type { FortressView } from "../lib/fortressView";
 import MagicLamp from "../components/fortress/MagicLamp";
 import NightWatchCard from "../components/fortress/NightWatchCard";
 import FortressScene, { MarketPeek, RealmPeek, TowerPeek } from "../components/fortress/FortressScene";
@@ -35,8 +38,6 @@ import { describeError } from "../lib/errors";
  * changes an analysis, a score or a stored row, and it rewards nothing:
  * there are no points, streaks or buy buttons. */
 
-type View = "scene" | "ledger";
-
 const dec = (v: string | null): string => (v === null ? "—" : formatDecimal(v));
 
 const SHANTY_TEXT = {
@@ -49,7 +50,11 @@ export default function FortressPage() {
   const [state, setState] = useState<GameState | null>(null);
   const [error, setError] = useState<{ message: string; retryable: boolean } | null>(null);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState<View>("scene");
+  const [view, setViewState] = useState<FortressView>(() => initialFortressView());
+  const setView = (v: FortressView) => {
+    setViewState(v);
+    saveFortressView(v);
+  };
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [hoverId, setHoverId] = useState<string | null>(null);
   // The Great Keep and the walls stand for the whole fortress.
@@ -159,7 +164,9 @@ export default function FortressPage() {
 
       {state && (
         <div className="space-y-4">
-          <NightWatchCard />
+          <div className="print:hidden">
+            <NightWatchCard />
+          </div>
           <Card className="p-3 sm:p-4">
             <div className="mb-3 flex items-center justify-between gap-3">
               <div
@@ -167,7 +174,7 @@ export default function FortressPage() {
                 aria-label="Fortress view"
                 className="inline-flex rounded-md border border-border p-0.5"
               >
-                {(["scene", "ledger"] as const).map((v) => (
+                {FORTRESS_VIEWS.map((v) => (
                   <button
                     key={v}
                     type="button"
@@ -180,7 +187,7 @@ export default function FortressPage() {
                         : "text-ink-muted hover:text-ink"
                     }`}
                   >
-                    {v === "scene" ? "Scene" : "Ledger"}
+                    {FORTRESS_VIEW_LABEL[v]}
                   </button>
                 ))}
               </div>
@@ -255,6 +262,31 @@ export default function FortressPage() {
                   )}
                 </div>
               </>
+            ) : view === "plain" ? (
+              <>
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-ink-faint">
+                  <p>
+                    The same arrangement as the Scene, as labelled blocks: no pictures, no motion. Every figure is the
+                    stored one.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    className="rounded-md border border-border px-3 py-1 text-sm font-medium text-ink-muted hover:text-ink print:hidden"
+                  >
+                    Print this view
+                  </button>
+                </div>
+                <PlainFortress
+                  layout={layout}
+                  totalValueNok={state.total_value_nok}
+                  realmLevel={realm?.level ?? "unknown"}
+                  realmSelected={realmSelected}
+                  onRealmSelect={selectRealm}
+                  selectedId={selectedId}
+                  onSelect={selectHolding}
+                />
+              </>
             ) : (
               <FortressLedger towers={state.towers} />
             )}
@@ -292,7 +324,7 @@ export default function FortressPage() {
             </Disclosure>
           )}
 
-          {view === "scene" &&
+          {view !== "ledger" &&
             state.towers.length > 0 &&
             (realmSelected && realm ? (
               <RealmVerdict
@@ -304,9 +336,11 @@ export default function FortressPage() {
               <TowerSurvey tower={selected} />
             ) : null)}
 
-          <FortressReports state={state} ravens={ravens} seen={seenRavens} onSeen={onRavensSeen} />
+          <div className="print:hidden">
+            <FortressReports state={state} ravens={ravens} seen={seenRavens} onSeen={onRavensSeen} />
+          </div>
 
-          <Card className="py-3">
+          <Card className="py-3 print:hidden">
             <StudyDesk asOf={state.as_of} />
           </Card>
 
@@ -352,7 +386,9 @@ export default function FortressPage() {
           <GameFooter rules={`Rules version ${state.mapping_version}. Missing or stale data is drawn as scaffolding or fog, never as a guess.`} />
         </div>
       )}
-      <MagicLamp />
+      <div className="print:hidden">
+        <MagicLamp />
+      </div>
     </div>
   );
 }

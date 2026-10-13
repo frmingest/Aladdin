@@ -353,7 +353,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <DemoModeBanner />
 
       {/* Mobile top bar (< lg): hamburger + logo, replaces the fixed sidebar. */}
-      <div className="flex items-center justify-between border-b border-border bg-surface px-3 py-2.5 lg:hidden">
+      <div className="flex items-center justify-between border-b border-border bg-surface px-3 py-2.5 lg:hidden print:hidden">
         <IconButton label="Open navigation" onClick={() => setMobileNavOpen(true)}>
           <svg
             aria-hidden
@@ -404,7 +404,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
       <div className="flex min-h-0 flex-1">
         {/* Desktop fixed sidebar (lg+). */}
-        <nav className="hidden w-56 shrink-0 flex-col border-r border-border bg-surface px-4 py-6 lg:flex">
+        <nav className="hidden w-56 shrink-0 flex-col border-r border-border bg-surface px-4 py-6 lg:flex print:hidden">
           <div className="mb-8">
             <Brand />
           </div>
@@ -412,11 +412,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </nav>
         <div className="flex min-w-0 flex-1 flex-col">
           {/* Slim top bar (lg+): the game-mode switch. Below lg the switch sits in the mobile bar. */}
-          <div className="hidden items-center justify-end border-b border-border bg-surface px-6 py-2 lg:flex">
+          <div className="hidden items-center justify-end border-b border-border bg-surface px-6 py-2 lg:flex print:hidden">
             <GameModeToggle />
           </div>
-          {gameMode && isFortressPath(pathname) && <FortressTabs />}
-          <main id="main" tabIndex={-1} className="min-w-0 flex-1 overflow-y-auto focus:outline-none">
+          {gameMode && isFortressPath(pathname) && (
+            <div className="print:hidden">
+              <FortressTabs />
+            </div>
+          )}
+          <main id="main" tabIndex={-1} className="min-w-0 flex-1 overflow-y-auto focus:outline-none print:overflow-visible">
             {children}
           </main>
         </div>
