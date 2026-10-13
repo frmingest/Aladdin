@@ -3,6 +3,10 @@
 Completed milestones and retired status, moved out of `docs/PROGRESS.md` under the rolling-log rules
 in `CLAUDE.md` ("Progress file rules"). Newest snapshot first. Older: [PROGRESS-full-2026-09-30.md](PROGRESS-full-2026-09-30.md).
 
+## Closed 2026-10-13 — Diversified Fund sector
+
+- **Merged:** new "Diversified Fund" sector for multi-sector funds such as Heimdal Utbytte (PR #127, `origin/main`, 2026-10-13); deploy not verified. Funds stay out of the Circle of Competence and sector research.
+
 ## Closed 2026-10-13 — review and housekeeping tasks (checked OK by Faiz)
 
 Faiz marked these done on 2026-10-13; the repo (`git log` on `origin/main`, 2026-10-13) shows #121 to #124 merged.
