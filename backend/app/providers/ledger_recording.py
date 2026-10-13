@@ -6,7 +6,8 @@ real attempt (retries included) through LedgerBudgetGuard, and recording here
 too would double-count. A provider using this mixin implements
 `_generate_structured` instead of `generate_structured`; the ledger session
 factory is injected by the provider factory and is None in unit tests, which
-turns recording into a no-op.
+turns recording into a no-op. The same wrapper also writes the prompt log
+(app/services/llm_prompt_log.py): the exact prompts and the raw reply.
 """
 from __future__ import annotations
 
@@ -18,6 +19,7 @@ from pydantic import BaseModel
 from app.models.llm_usage import OUTCOME_ERROR, OUTCOME_SUCCESS
 from app.providers.base import LLMResponse
 from app.services.llm_ledger import SessionFactory, record_event
+from app.services.llm_prompt_log import record_prompt
 
 
 class LedgerRecordingMixin:
@@ -51,7 +53,21 @@ class LedgerRecordingMixin:
                 latency_ms=(time.monotonic() - started) * 1000,
                 error_detail=f"{type(exc).__name__}: {exc}",
             )
+            record_prompt(
+                self.ledger_session_factory, provider=self.name, model_name=self._model,
+                call_type="structured", schema_name=response_schema.__name__,
+                system_prompt=system_prompt, user_prompt=user_prompt, outcome=OUTCOME_ERROR,
+                error_detail=f"{type(exc).__name__}: {exc}",
+                latency_ms=(time.monotonic() - started) * 1000,
+            )
             raise
+        record_prompt(
+            self.ledger_session_factory, provider=self.name, model_name=self._model,
+            call_type="structured", schema_name=response_schema.__name__,
+            system_prompt=system_prompt, user_prompt=user_prompt, response_text=response.content,
+            outcome=OUTCOME_SUCCESS, latency_ms=(time.monotonic() - started) * 1000,
+            input_tokens=response.usage.input_tokens, output_tokens=response.usage.output_tokens,
+        )
         record_event(
             self.ledger_session_factory, provider=self.name, model_name=self._model,
             call_type="structured", outcome=OUTCOME_SUCCESS,

@@ -2664,3 +2664,35 @@ export interface TagReextractResult {
   rule_figures: number;
   notes: string[];
 }
+
+/** System status > Prompt log: one prompt sent to an LLM (GET /system/prompt-log). */
+export interface PromptLogItem {
+  id: string;
+  occurred_at: string;
+  provider: string;
+  model_name: string;
+  call_type: string;
+  schema_name: string | null;
+  outcome: string;
+  error_detail: string | null;
+  input_tokens: number | null;
+  output_tokens: number | null;
+  latency_ms: number | null;
+  prompt_chars: number;
+  preview: string;
+}
+
+export interface PromptLogList {
+  total: number;
+  items: PromptLogItem[];
+  providers: string[];
+  retention_days: number;
+  enabled: boolean;
+  demo_mode: boolean;
+}
+
+export interface PromptLogDetail extends PromptLogItem {
+  system_prompt: string | null;
+  user_prompt: string;
+  response_text: string | null;
+}

@@ -64,6 +64,12 @@ class Settings(BaseSettings):
     llm_max_output_tokens_fund: int = 16384
     llm_temperature: float = 0.2
 
+    # Prompt log (System status): store the exact prompts sent to the LLM and
+    # the raw reply, so they can be opened later. Rows hold real portfolio
+    # evidence, hence the retention cap (0 = keep forever).
+    llm_prompt_log_enabled: bool = True
+    llm_prompt_log_retention_days: int = 30
+
     # Free-tier request limits for llm_model_name (per minute / per day).
     # Hand-maintained — no API exposes a free-tier AI Studio key's quota.
     # Defaults match gemini-3.6-flash's free tier as observed 2026-09-14/17.
