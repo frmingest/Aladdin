@@ -186,7 +186,7 @@ export default function TemperamentCard({ temperament }: { temperament: GameTemp
 
       <p className="mt-3 text-xs text-ink-faint">
         Only what you log in the{" "}
-        <Link to="/journal" className="text-accent hover:underline">
+        <Link to="/journal" className="text-accent underline underline-offset-2">
           decision journal
         </Link>{" "}
         and what stored snapshots show is read; it cannot see feelings. Informational only — nothing here blocks or

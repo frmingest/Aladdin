@@ -51,7 +51,7 @@ from app.models.document import Document
 from app.models.holding import Holding
 from app.models.portfolio import PortfolioPosition, PortfolioSnapshot
 from app.providers.object_storage import ObjectStorageProvider
-from app.services.documents.hashing import sha256_hex
+from app.services.documents.hashing import safe_filename, sha256_hex
 from app.services.portfolio_import.csv_parser import (
     CsvParseError,
     extract_account_number_from_filename,
@@ -195,6 +195,7 @@ def import_portfolio_csv(
     if not filename.lower().endswith(CSV_EXTENSION):
         raise UnsupportedFileTypeError(filename, (CSV_EXTENSION,))
 
+    filename = safe_filename(filename, default="upload.csv")
     settings = get_settings()
     max_bytes = settings.max_upload_size_mb * 1024 * 1024
     if len(content) > max_bytes:

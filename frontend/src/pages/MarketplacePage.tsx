@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { api, ApiError } from "../lib/api";
+import { api } from "../lib/api";
 import { useDemoMode } from "../lib/demoMode";
 import { formatPct100, formatPrice } from "../lib/format";
 import { boothNumeral, orderStreet, shopFront, shopPips, storePath } from "../lib/marketplace";
@@ -13,7 +13,8 @@ import ObjectArtImage from "../components/ObjectArtImage";
 import { TONE_PAINT } from "../lib/marketplacePaint";
 import { stallArtId } from "../lib/marketArt";
 import "../components/marketplace/stall.css";
-import { Button, Card, Disclosure, EmptyState, PageHeader, SnapshotStamp, VerdictBadge } from "../components/ui";
+import { Button, Disclosure, EmptyState, LoadError, PageHeader, SnapshotStamp, VerdictBadge } from "../components/ui";
+import { describeError } from "../lib/errors";
 
 /** The Marketplace street (game mode, G9): one store per watchlist company. The shop window
  * shows only what the watchlist already knows (your price against the quote, the stored moat
@@ -30,7 +31,6 @@ function Stall({ row, place }: { row: WatchlistRow; place: number }) {
       to={storePath(row.holding_id)}
       className="market-stall group block overflow-hidden rounded-lg border border-border bg-surface transition-transform hover:-translate-y-0.5 focus-visible:-translate-y-0.5"
       style={{ "--stall-tone": paint.a } as React.CSSProperties}
-      aria-label={`Enter the ${row.name} store. ${front.tag}.`}
     >
       <ObjectArtImage
         id={stallArtId(row.holding_id)}
@@ -99,7 +99,6 @@ function CompactStall({ row }: { row: WatchlistRow }) {
       <Link
         to={storePath(row.holding_id)}
         className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 border-b border-border-subtle py-2 text-sm hover:bg-raised"
-        aria-label={`Enter the ${row.name} store`}
       >
         <span className="font-medium text-ink">
           {row.name} <span className="text-xs font-normal text-ink-faint">{row.ticker}</span>
@@ -115,7 +114,7 @@ function CompactStall({ row }: { row: WatchlistRow }) {
 
 export default function MarketplacePage() {
   const [list, setList] = useState<Watchlist | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ message: string; retryable: boolean } | null>(null);
   const [loading, setLoading] = useState(true);
   const [restocking, setRestocking] = useState(false);
   const [talking, setTalking] = useState(false);
@@ -130,7 +129,7 @@ export default function MarketplacePage() {
     api
       .getWatchlist()
       .then(setList)
-      .catch((e: unknown) => setError(e instanceof ApiError ? e.message : "Could not load the street."))
+      .catch((e: unknown) => setError(describeError(e, "the street")))
       .finally(() => setLoading(false));
   }, []);
 
@@ -145,7 +144,7 @@ export default function MarketplacePage() {
     try {
       setList(await api.refreshWatchlist());
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Could not restock the shelves.");
+      setError(describeError(e, "the shelves (restock)"));
     } finally {
       setRestocking(false);
     }
@@ -206,13 +205,17 @@ export default function MarketplacePage() {
         </div>
       </section>
 
-      {error && <Card className="mb-4 border-negative/40 bg-negative-subtle text-sm text-negative">{error}</Card>}
+      {error && (
+        <div className="mb-4">
+          <LoadError message={error.message} retryable={error.retryable} onRetry={load} />
+        </div>
+      )}
       {!list && loading && <EmptyState>Setting up the stalls…</EmptyState>}
 
       {list && rows.length === 0 && (
         <EmptyState>
           <ObjectArtImage id="booth-goods" width={120} className="mx-auto mb-3" fallback={null} />
-          The street is empty. Talk to Sal above to open the first stall, or add companies on the <Link className="text-accent hover:underline" to="/watchlist">Watchlist</Link> page, and a store will open for each.
+          The street is empty. Talk to Sal above to open the first stall, or add companies on the <Link className="text-accent underline underline-offset-2" to="/watchlist">Watchlist</Link> page, and a store will open for each.
         </EmptyState>
       )}
 
@@ -226,12 +229,10 @@ export default function MarketplacePage() {
               { label: "No price to compare", value: String(unpriced) },
             ].map((i) => (
               <div key={i.label} className="game-hud-item">
-                <div className="min-w-0">
-                  <dt className="game-hud-label">{i.label}</dt>
-                  <dd className="game-hud-value tabular" style={i.color ? { color: i.color } : undefined}>
-                    {i.value}
-                  </dd>
-                </div>
+                <dt className="game-hud-label">{i.label}</dt>
+                <dd className="game-hud-value tabular" style={i.color ? { color: i.color } : undefined}>
+                  {i.value}
+                </dd>
               </div>
             ))}
           </dl>

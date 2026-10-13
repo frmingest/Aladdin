@@ -115,14 +115,12 @@ export function GameHud({ state }: { state: GameState }) {
   return (
     <dl className="game-hud" aria-label="Realm at a glance">
       {items.map((i) => (
-        <div key={i.label} className="game-hud-item">
+        <div key={i.label} className="game-hud-item has-icon">
           <HudIcon kind={i.kind} />
-          <div className="min-w-0">
-            <dt className="game-hud-label">{i.label}</dt>
-            <dd className="game-hud-value tabular" style={i.color ? { color: i.color } : undefined}>
-              {i.value}
-            </dd>
-          </div>
+          <dt className="game-hud-label">{i.label}</dt>
+          <dd className="game-hud-value tabular" style={i.color ? { color: i.color } : undefined}>
+            {i.value}
+          </dd>
         </div>
       ))}
     </dl>

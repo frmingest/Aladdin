@@ -6,7 +6,8 @@ import { LEVEL_LABEL, STATUS_CLASS, STATUS_LABEL, circleSegments, weightText } f
 import type { Competence, CompetenceLevel, CompetenceSector, CompetenceStatus } from "../lib/types";
 import { buildCircleMap, circleView, focusSectorControl, saveMark, sectorDomId } from "../lib/circleMap";
 import { useGameMode } from "../lib/gameMode";
-import { Button, Card, Disclosure, EmptyState, PageHeader } from "../components/ui";
+import { Button, Card, Disclosure, LoadError, PageHeader } from "../components/ui";
+import { describeError } from "../lib/errors";
 import GameFooter from "../components/fortress/GameFooter";
 import CircleGlyph from "../components/fortress/kit/CircleGlyph";
 import CircleMap from "../components/fortress/kit/CircleMap";
@@ -298,18 +299,20 @@ export function CompetenceView({ data, onSaved }: { data: Competence; onSaved: (
 
 export default function CompetencePage() {
   const [data, setData] = useState<Competence | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ message: string; retryable: boolean } | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let live = true;
+    setError(null);
     api
       .getCompetence()
       .then((c) => live && setData(c))
-      .catch((e: unknown) => live && setError(e instanceof ApiError ? e.message : "Could not load the circle."));
+      .catch((e: unknown) => live && setError(describeError(e, "the circle")));
     return () => {
       live = false;
     };
-  }, []);
+  }, [attempt]);
 
   return (
     <div>
@@ -322,7 +325,7 @@ export default function CompetencePage() {
           </Link>
         }
       />
-      {error && <EmptyState>{error}</EmptyState>}
+      {error && <LoadError message={error.message} retryable={error.retryable} onRetry={() => setAttempt((n) => n + 1)} />}
       {!error && !data && <p className="text-sm text-ink-muted">Drawing the circle…</p>}
       {data && <CompetenceView data={data} onSaved={setData} />}
     </div>

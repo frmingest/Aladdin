@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { api, ApiError } from "../../lib/api";
+import { api } from "../../lib/api";
+import { describeError } from "../../lib/errors";
 import { STATUS_CLASS, STATUS_LABEL, TONE_CLASS, TONE_MARK, WATCH_STATE_LABEL, stampLine } from "../../lib/nightWatch";
 import { useGameMode } from "../../lib/gameMode";
 import type { NightWatch } from "../../lib/types";
@@ -20,7 +21,7 @@ export default function NightWatchCard() {
     api
       .getNightWatch()
       .then((w) => live && setWatch(w))
-      .catch((e: unknown) => live && setError(e instanceof ApiError ? e.message : "Could not load the dispatch."));
+      .catch((e: unknown) => live && setError(describeError(e, "the dispatch").message));
     return () => {
       live = false;
     };
@@ -34,7 +35,18 @@ export default function NightWatchCard() {
       </Card>
     );
   }
-  if (!watch) return null;
+  // Reserve the room a quiet night takes while the dispatch loads: this card sits above the
+  // scene, so popping in later used to push the whole scene down (layout shift 0.35 on a phone).
+  if (!watch) {
+    return (
+      <Card className="min-h-[6.5rem] py-3">
+        <div aria-busy="true">
+          <h2 className="section-title">Night Watch</h2>
+          <p className="text-xs text-ink-faint">Reading the overnight dispatch…</p>
+        </div>
+      </Card>
+    );
+  }
 
   // A quiet night is one line plus the new-report line; the rest is one click away (UX noise audit).
   const quiet = watch.status === "quiet" && !watch.lines.some((l) => l.tone === "warning");
@@ -89,7 +101,7 @@ function DispatchNote() {
   return (
     <p className="mt-2 text-xs text-ink-faint">
       A reading of what the worker stored. It never runs the check itself and never says what to do.{" "}
-      <Link to="/fortress/chronicle" className="text-accent hover:underline">
+      <Link to="/fortress/chronicle" className="text-accent underline underline-offset-2">
         Open the Chronicle
       </Link>
     </p>
@@ -109,7 +121,7 @@ function LineList({ lines }: { lines: NightWatch["lines"] }) {
             <p className={line.tone === "warning" ? "font-medium text-ink" : "text-ink-muted"}>
               {line.holding_id && line.holding_name ? (
                 <>
-                  <Link to={`/holdings/${line.holding_id}`} className="text-accent hover:underline">
+                  <Link to={`/holdings/${line.holding_id}`} className="text-accent underline underline-offset-2">
                     {line.holding_name}
                   </Link>
                   {": "}

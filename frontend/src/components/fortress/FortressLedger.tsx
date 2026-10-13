@@ -98,7 +98,7 @@ export default function FortressLedger({ towers }: { towers: GameTower[] }) {
           {rows.map((t) => (
             <tr key={t.holding_id} className="border-b border-border-subtle align-top">
               <td className="py-2 pr-3">
-                <Link to={`/holdings/${t.holding_id}`} className="font-medium text-accent hover:underline">
+                <Link to={`/holdings/${t.holding_id}`} className="font-medium text-accent underline underline-offset-2">
                   {t.name}
                 </Link>
                 <p className="text-xs text-ink-faint">{t.ticker}</p>

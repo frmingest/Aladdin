@@ -48,6 +48,7 @@ from app.services.analysis.paths import not_analyzable_message, versions_for
 from app.services.analysis.reconciliation_pass import run_reconciliation_pass
 from app.services.funds.evidence import build_fund_evidence_packet
 from app.services.instruments.evidence import build_instrument_evidence_packet
+from app.services.llm_errors import explain_llm_failure
 from app.services.macro.evidence import ensure_macro_fresh
 
 T = TypeVar("T")
@@ -189,7 +190,7 @@ def run_full_analysis(
         )
     except LLMUnavailableError as exc:
         run.status = EquityAnalysisRunStatus.FAILED.value
-        run.error_message = f"blind pass failed: {exc}"
+        run.error_message = f"blind pass failed: {explain_llm_failure(exc)}"
         db.commit()
         db.refresh(run)
         return run
@@ -221,7 +222,7 @@ def run_full_analysis(
             ),
         )
     except LLMUnavailableError as exc:
-        run.error_message = f"reconciliation pass failed (blind pass result kept): {exc}"
+        run.error_message = f"reconciliation pass failed (blind pass result kept): {explain_llm_failure(exc)}"
         db.commit()
         db.refresh(run)
         return run

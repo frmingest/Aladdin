@@ -39,6 +39,7 @@ from app.services.documents.hashing import (
     IXBRL_EXTENSIONS,
     check_basic_readability,
     extension_of,
+    safe_filename,
     sha256_hex,
 )
 from app.services.documents.quality import evaluate_quality
@@ -156,6 +157,7 @@ def intake_raw_file(
     Raises UnsupportedFileTypeError / FileTooLargeError / UnreadableFileError
     (see app.domain.errors) rather than silently accepting a bad upload.
     """
+    filename = safe_filename(filename)
     ext = extension_of(filename)
     if ext not in HOLDING_DOCUMENT_EXTENSIONS:
         raise UnsupportedFileTypeError(filename, HOLDING_DOCUMENT_EXTENSIONS)

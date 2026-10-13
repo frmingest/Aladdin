@@ -46,6 +46,7 @@ from app.providers.base import (
     RiskFreeRateUnavailableError,
 )
 from app.security import ApiKeyMiddleware
+from app.services.llm_errors import explain_llm_failure
 from app.services.macro.scheduler import MacroRefreshScheduler
 from app.services.settings.demo_guard import DemoModeWriteBlockedError
 from app.timing import TimingMiddleware
@@ -89,7 +90,6 @@ app.add_middleware(
 )
 
 
-@app.exception_handler(LLMUnavailableError)
 @app.exception_handler(ResearchUnavailableError)
 @app.exception_handler(MarketDataUnavailableError)
 @app.exception_handler(RiskFreeRateUnavailableError)
@@ -100,6 +100,14 @@ async def provider_unavailable(_request: Request, exc: Exception) -> JSONRespons
     2026-09-23, opening a holding with no Gemini key 500'd the research
     panel with no message. Errors only; nothing here contains a secret."""
     return JSONResponse(status_code=503, content={"detail": str(exc)})
+
+
+@app.exception_handler(LLMUnavailableError)
+async def llm_unavailable(_request: Request, exc: Exception) -> JSONResponse:
+    """Same 503 as above, but the AI provider's own text (a quota dump, a
+    connection error) is turned into a plain sentence first
+    (app/services/llm_errors.py), with the start of the original after it."""
+    return JSONResponse(status_code=503, content={"detail": explain_llm_failure(exc)})
 
 
 @app.exception_handler(DemoModeWriteBlockedError)
