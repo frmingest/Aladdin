@@ -24,6 +24,8 @@ export function pct(fraction: string | number | null, digits = 1): string {
   const n = Number(fraction);
   if (!Number.isFinite(n)) return "—";
   const v = (n * 100).toFixed(digits);
+  // A value that rounds to zero is shown as plain 0.0%, never "-0.0%" or "+0.0%".
+  if (Number(v) === 0) return `${(0).toFixed(digits)}%`;
   return `${n > 0 ? "+" : ""}${v}%`;
 }
 
@@ -51,7 +53,8 @@ export function gapWords(error: string | null): string {
 
 export function holdingBacktestLine(h: SiegeBacktestHolding): string {
   if (!h.tested) return h.reason ?? "Not tested.";
-  return `The page would have said ${pct(h.predicted)}; it did ${pct(h.actual)}. ${gapWords(h.error)}.`;
+  // The gap itself sits on the verdict line above this one, so it is not repeated here.
+  return `The page would have said ${pct(h.predicted)}; it did ${pct(h.actual)}.`;
 }
 
 export function summaryLine(bt: SiegeBacktest): string {

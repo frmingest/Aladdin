@@ -30,6 +30,8 @@ describe("formatting", () => {
     expect(pct("-0.183")).toBe("-18.3%");
     expect(pct("0.04")).toBe("+4.0%");
     expect(pct(null)).toBe("—");
+    expect(pct("-0.0002")).toBe("0.0%");
+    expect(pct("0.0004")).toBe("0.0%");
     expect(pct("x")).toBe("—");
   });
   it("words a date", () => {
@@ -49,7 +51,8 @@ describe("gap and rows", () => {
     expect(gapWords(null)).toBe("");
   });
   it("words a tested and an untested row", () => {
-    expect(holdingBacktestLine(row())).toContain("would have said -9.2%; it did -33.5%");
+    expect(holdingBacktestLine(row())).toBe("The page would have said -9.2%; it did -33.5%.");
+    expect(holdingBacktestLine(row())).not.toContain("points");
     expect(holdingBacktestLine(row({ tested: false, reason: "no price history stored for this holding" }))).toBe("no price history stored for this holding");
   });
   it("summarises counts and coverage", () => {
