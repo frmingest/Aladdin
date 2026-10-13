@@ -3,6 +3,10 @@
 Completed milestones and retired status, moved out of `docs/PROGRESS.md` under the rolling-log rules
 in `CLAUDE.md` ("Progress file rules"). Newest snapshot first. Older: [PROGRESS-full-2026-09-30.md](PROGRESS-full-2026-09-30.md).
 
+## Closed 2026-10-13 — design plan
+
+- **Merged:** Sprint 7 hardening (#131) and the Council, Circle and Map banner backdrops (#132), which closed the design plan; progress log refreshed (#133). Deploys not verified by Claude.
+
 ## Closed 2026-10-13 — Circle and Siege redesign, journal edit
 
 - **Merged:** Circle drag-to-place and Siege short rows (PR #126); journal entries editable after saving (PR #128). Deploys not verified.

@@ -283,6 +283,76 @@ class SiegeSimOut(BaseModel):
     notes: list[str]
     # Siege v2: what the betas are measured against ("" for v1, which used vendor betas only).
     benchmark_ticker: str = ""
+    # Siege v3: the part of the book that could not be modelled, stated next to the headline number.
+    unmodelled_share: Decimal | None = None
+    unmodelled_count: int = 0
+    unmodelled_note: str = ""
+
+
+class SiegeBacktestEpisodeOut(BaseModel):
+    peak_date: date
+    trough_date: date
+    fall: Decimal  # negative fraction
+    trading_days: int
+    recovered: bool
+    significant: bool
+
+
+class SiegeBacktestHoldingOut(BaseModel):
+    holding_id: UUID
+    ticker: str
+    name: str
+    weight_pct: Decimal | None
+    tested: bool
+    verdict: Literal["close", "fell_more", "fell_less", "not_tested"]
+    beta: Decimal | None = None
+    beta_basis: Literal["without_episode", "all_days"] | None = None
+    predicted: Decimal | None = None
+    actual: Decimal | None = None
+    error: Decimal | None = None  # actual - predicted; negative = fell more than the page said
+    reason: str | None = None
+    caution: str | None = None
+
+
+class SiegeBacktestBookOut(BaseModel):
+    holdings_used: int
+    value_share: Decimal
+    days: int
+    predicted_fall: Decimal
+    actual_fall: Decimal | None
+    error: Decimal | None
+    max_drawdown: Decimal
+    max_drawdown_peak: date
+    max_drawdown_trough: date
+    longest_under_water_days: int
+    under_water_now_days: int
+
+
+class SiegeBacktestOut(BaseModel):
+    """A check on the Siege Simulator's own method over the benchmark's worst
+    stored fall. Never a forecast, never a recommendation."""
+
+    backtest_version: str
+    scenarios_version: str
+    demo: bool = False
+    benchmark_ticker: str
+    status: Literal["ok", "no_history", "no_episode", "demo"]
+    status_reason: str = ""
+    window_start: date | None = None
+    window_end: date | None = None
+    episode: SiegeBacktestEpisodeOut | None = None
+    holdings: list[SiegeBacktestHoldingOut] = []
+    tested_count: int = 0
+    total_count: int = 0
+    tested_value_share: Decimal | None = None
+    close_count: int = 0
+    fell_more_count: int = 0
+    fell_less_count: int = 0
+    mean_abs_error: Decimal | None = None
+    close_points: Decimal
+    book: SiegeBacktestBookOut | None = None
+    book_reason: str | None = None
+    notes: list[str] = []
 
 
 # --- Sprint 24 (2026-10-04): Chronicle (G14), Ravens (G15), Night Watch (G16) ---

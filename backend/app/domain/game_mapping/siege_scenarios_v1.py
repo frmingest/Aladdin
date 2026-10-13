@@ -44,6 +44,9 @@ class SiegeScenarios:
     min_down_days: int = 0
     weak_fit_r_squared: Decimal = Decimal(0)
     flat_share_warning: Decimal = Decimal(1)
+    # --- added with v3 (2026-10-13); v1 and v2 keep the default and so behave exactly as before ---
+    # v3: the share of the book that could not be modelled is stated in the result itself.
+    name_unmodelled_in_headline: bool = False
 
 
 SIEGE_SCENARIOS_V1 = SiegeScenarios(
@@ -57,10 +60,15 @@ SIEGE_SCENARIOS_V1 = SiegeScenarios(
 )
 
 def get_siege_scenarios(version: str) -> SiegeScenarios:
-    # Imported here: v2 builds on the SiegeScenarios class above.
+    # Imported here: v2 and v3 build on the SiegeScenarios class above.
     from app.domain.game_mapping.siege_scenarios_v2 import SIEGE_SCENARIOS_V2
+    from app.domain.game_mapping.siege_scenarios_v3 import SIEGE_SCENARIOS_V3
 
-    versions: dict[str, SiegeScenarios] = {"v1": SIEGE_SCENARIOS_V1, "v2": SIEGE_SCENARIOS_V2}
+    versions: dict[str, SiegeScenarios] = {
+        "v1": SIEGE_SCENARIOS_V1,
+        "v2": SIEGE_SCENARIOS_V2,
+        "v3": SIEGE_SCENARIOS_V3,
+    }
     try:
         return versions[version]
     except KeyError as exc:

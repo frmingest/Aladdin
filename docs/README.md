@@ -55,6 +55,7 @@ Game mode (Fortress): concept, sprint plans and reviews, visual identity, art pa
 - [game-sprint-checklist.md](game/game-sprint-checklist.md) — Game sprint checklist
 - [game-visual-identity-2026-10-09.md](game/game-visual-identity-2026-10-09.md) — Game mode visual identity: why Circle and Council look plain, and the fix — 2026-10-09
 - [knife-edge-a1-2026-10-09.md](game/knife-edge-a1-2026-10-09.md) — A1 Knife-edge — 2026-10-09
+- [siege-backtest-c1-2026-10-13.md](game/siege-backtest-c1-2026-10-13.md) — C1 Siege back-test and the unmodelled share in the headline — 2026-10-13
 - [long-memory-b1-2026-10-09.md](game/long-memory-b1-2026-10-09.md) — B1 Long Memory — 2026-10-09
 - [map-design-2026-10-09.md](game/map-design-2026-10-09.md) — Map (Cartographer's table): making fog look like fog
 - [siege-instrument-sensitivity-2026-10-07.md](game/siege-instrument-sensitivity-2026-10-07.md) — Siege Simulator: a beta for every instrument (2026-10-07)

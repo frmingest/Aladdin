@@ -82,6 +82,10 @@ class SiegeResult:
     reach_note_besieged: str = ""
     counts: dict[str, int] = field(default_factory=dict)
     oldest_beta_at: datetime | None = None
+    # v3: the part of the book left out of the result (None / 0 / "" under v1 and v2).
+    unmodelled_share: Decimal | None = None
+    unmodelled_count: int = 0
+    unmodelled_note: str = ""
 
 
 def holding_shock(market_drop: Decimal, beta: Decimal) -> Decimal:
@@ -147,6 +151,19 @@ def simulate(
     result.covered_value_nok = sum((r.holding.value_nok for r in modelled), ZERO)  # type: ignore[misc]
     if result.total_value_nok > 0:
         result.coverage = (result.covered_value_nok / result.total_value_nok).quantize(_PCT4)
+
+    if scenarios.name_unmodelled_in_headline and result.total_value_nok > 0:
+        gap = result.total_value_nok - result.covered_value_nok
+        result.unmodelled_count = sum(1 for r in result.holdings if not r.modelled and r.holding.value_nok)
+        if gap > 0:
+            result.unmodelled_share = (gap / result.total_value_nok).quantize(_PCT4)
+            noun = "holding" if result.unmodelled_count == 1 else "holdings"
+            result.unmodelled_note = (
+                f"{_pct(result.unmodelled_share)} of the book's value ({result.unmodelled_count} {noun}) "
+                "is not modelled and is left out of this result; it could fall more or less."
+            )
+        else:
+            result.unmodelled_share = ZERO
 
     result.counts = {"sheltered": 0, "exposed": 0, "breach_risk": 0, "unmodelled": 0}
     for r in result.holdings:

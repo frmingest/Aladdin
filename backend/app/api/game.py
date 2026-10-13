@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from app.config.database import get_db
 from app.config.settings import get_settings
 from app.domain.game_mapping import get_game_mapping
+from app.domain.game_mapping.backtest_v1 import get_backtest_rules
 from app.domain.game_mapping.rituals_v1 import get_rituals
 from app.domain.game_mapping.siege_scenarios_v1 import get_siege_scenarios
 from app.domain.game_mapping.time_and_filings_v1 import get_time_and_filings
@@ -30,10 +31,16 @@ from app.schemas.game import (
     NightWatchOut,
     RavensOut,
     RecordsOut,
+    SiegeBacktestOut,
     SiegeSimOut,
 )
 from app.services.game import competence as competence_svc
 from app.services.game import rituals as rituals_svc
+from app.services.game.backtest_view import (
+    build_backtest,
+    demo_backtest,
+    stored_backtest_inputs,
+)
 from app.services.game.chronicle import get_chronicle
 from app.services.game.demo import (
     DEMO_BETAS,
@@ -96,6 +103,24 @@ def get_siege(
         return build_siege_sim(state, demo_lookup, drop, mapping, scenarios)
     state = get_game_state(db, mapping.version)
     return build_siege_sim(state, stored_sensitivity_lookup(db, scenarios), drop, mapping, scenarios)
+
+
+@router.get("/siege/backtest", response_model=SiegeBacktestOut)
+def get_siege_backtest(db: Session = Depends(get_db)) -> SiegeBacktestOut:
+    """Siege back-test (C1): the benchmark's worst fall inside the stored price
+    history, with what the Siege method would have said about each holding
+    beside what it really did, and a constant-weight replay of the book. A
+    check on the page, over stored data only: no provider call, no LLM, no
+    write."""
+    settings = get_settings()
+    mapping = get_game_mapping(settings.active_game_mapping_version)
+    scenarios = get_siege_scenarios(settings.active_siege_scenarios_version)
+    rules = get_backtest_rules(settings.active_siege_backtest_version)
+    if is_demo_mode(db):
+        return demo_backtest(demo_game_state(mapping.version), scenarios, rules)
+    state = get_game_state(db, mapping.version)
+    bench, holdings = stored_backtest_inputs(db, state, scenarios)
+    return build_backtest(state, bench, holdings, scenarios, rules)
 
 
 @router.get("/chronicle", response_model=ChronicleOut)

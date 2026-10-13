@@ -1,19 +1,19 @@
 # Aladdin — Progress
 
-**Last updated:** 2026-10-13 (design plan closed: Sprint 7 merged as #131, the last three backdrops merged as #132). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
+**Last updated:** 2026-10-13 (C1 Siege back-test written on `feature/c1-siege-backtest`, PR to review). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
 
 ## Current Objective
 
-**Trust slice: C1 Siege back-test next.** The design plan is closed: every sprint and picture is merged (#131, #132). Decided by Faiz 2026-10-13: the art default stays opt-in, the phone Fortress keeps its sideways scroll, no more feature contest until C1 is done, and a knife-edge tower stays off the Council agenda. Plans: [design-remaining-objects-2026-10-13.md](game/design-remaining-objects-2026-10-13.md), [design-master-sprint-plan-2026-10-11.md](game/design-master-sprint-plan-2026-10-11.md).
+**Trust slice: C1 Siege back-test is written and waits for review.** Branch `feature/c1-siege-backtest` (PR to review, not merged, not deployed): the Siege page now names the unmodelled share in its headline (`siege_scenarios_v3`) and has a "Looking back" card that checks the page's method against the benchmark's worst stored fall ([doc](game/siege-backtest-c1-2026-10-13.md)). Decided by Faiz 2026-10-13: the art default stays opt-in, the phone Fortress keeps its sideways scroll, no more feature contest until C1 is done, and a knife-edge tower stays off the Council agenda.
 
-State: `main` is at `00ff4e4` (#132 merged by Faiz 2026-10-13; #131 redeployed per Faiz; the live site answers but Claude could not confirm which build it serves); masters live in git-ignored `art-masters/`. Repo migration head `t1f2a3b4c5d6`. Live URLs: frontend `https://exciting-gratitude-production-71b5.up.railway.app`, backend `https://aladdin-production-bd25.up.railway.app`.
+State: `main` is at `bdc512f` (#132 backdrops and #133 docs merged; the live site answers but Claude could not confirm which build it serves). Repo migration head `t1f2a3b4c5d6` (C1 adds none). Live URLs: frontend `https://exciting-gratitude-production-71b5.up.railway.app`, backend `https://aladdin-production-bd25.up.railway.app`.
 
 ## Active Tasks
 
+- [ ] **Review and merge the C1 PR (Faiz):** review and merge the C1 PR; then open Siege Simulator and the "Looking back" card (steps in the [doc](game/siege-backtest-c1-2026-10-13.md)); merging is a production deploy
 - [ ] **Look at the Council banner on the live site (Faiz):** the darkest of the five backdrops under the wash; Game mode on, open Council
 - [ ] **Run the live browser specs (Claude):** `SMOKE_FRONTEND_URL`, `SMOKE_API_URL`, then `npm run smoke` and `npx playwright test e2e/game-pages.spec.ts` (both passed only against a local demo stack)
-- [ ] **C1 Siege back-test (Claude):** with the `siege_scenarios_v3` fix so the unmodelled share shows in the headline (finding 3 of [the team review](game/game-mode-team-review-2026-10-09.md)); new versioned file, no migration
-- [ ] **D1 Plain lens, then D2 Camera (Claude):** trust and first-glance legibility, after C1
+- [ ] **D1 Plain lens, then D2 Camera (Claude):** trust and first-glance legibility, after C1 is merged
 
 ## Recent Blockers / Open Questions
 
