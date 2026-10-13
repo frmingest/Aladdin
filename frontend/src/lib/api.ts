@@ -34,6 +34,7 @@ import type {
   FundProfileInput,
   FundReturn,
   GameState,
+  SiegeBacktest,
   SiegeSim,
   Chronicle,
   Competence,
@@ -421,6 +422,9 @@ export const api = {
   // G13 Siege Simulator: a what-if over stored betas, read-only. marketDrop is a fraction (0.3 = 30%).
   getSiegeSim: (marketDrop?: number) =>
     request<SiegeSim>("/game/siege", { query: { market_drop: marketDrop === undefined ? undefined : marketDrop.toFixed(3) } }),
+
+  // C1 Siege back-test: the Siege method checked against the benchmark's worst stored fall. Read-only.
+  getSiegeBacktest: () => request<SiegeBacktest>("/game/siege/backtest"),
 
   /** Demo mode (2026-09-26) — backend/app/api/settings.py. Turning it on
    * makes every page show a fixed set of fabricated data; real portfolio

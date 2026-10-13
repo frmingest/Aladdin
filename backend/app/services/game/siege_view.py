@@ -189,4 +189,7 @@ def build_siege_sim(
         ],
         notes=notes,
         benchmark_ticker=scenarios.benchmark_ticker,
+        unmodelled_share=result.unmodelled_share,
+        unmodelled_count=result.unmodelled_count,
+        unmodelled_note=result.unmodelled_note,
     )

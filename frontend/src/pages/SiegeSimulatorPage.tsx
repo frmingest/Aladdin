@@ -24,6 +24,7 @@ import type { SiegeSim, SiegeSimExposure, SiegeSimHolding } from "../lib/types";
 import { Card, EmptyState, LoadError, PageHeader } from "../components/ui";
 import { describeError } from "../lib/errors";
 import GameFooter from "../components/fortress/GameFooter";
+import SiegeBacktestCard from "../components/fortress/SiegeBacktestCard";
 import SiegeArtStrip from "../components/fortress/kit/SiegeArtStrip";
 import { useArtMode } from "../lib/stitchArt";
 
@@ -308,6 +309,8 @@ export default function SiegeSimulatorPage() {
           )}
 
           {sim.holdings.length === 0 && <EmptyState>No holdings to put under siege yet.</EmptyState>}
+
+          {sim.holdings.length > 0 && <SiegeBacktestCard />}
 
           <Card className="text-sm text-ink-muted">
             <p>{SIM_LIMITS}</p>

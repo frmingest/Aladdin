@@ -2212,6 +2212,79 @@ export interface SiegeSim {
   notes: string[];
   /** What the betas are measured against; empty for the v1 scenarios. */
   benchmark_ticker: string;
+  /** Scenarios v3: the part of the book left out of the result, stated beside the headline number. */
+  unmodelled_share?: string | null;
+  unmodelled_count?: number;
+  unmodelled_note?: string;
+}
+
+// --- C1 Siege back-test: backend/app/api/game.py GET /game/siege/backtest --------------
+
+export type SiegeBacktestVerdict = "close" | "fell_more" | "fell_less" | "not_tested";
+
+export interface SiegeBacktestEpisode {
+  peak_date: string;
+  trough_date: string;
+  /** Negative fraction. */
+  fall: string;
+  trading_days: number;
+  recovered: boolean;
+  significant: boolean;
+}
+
+export interface SiegeBacktestHolding {
+  holding_id: string;
+  ticker: string;
+  name: string;
+  weight_pct: string | null;
+  tested: boolean;
+  verdict: SiegeBacktestVerdict;
+  beta: string | null;
+  beta_basis: "without_episode" | "all_days" | null;
+  predicted: string | null;
+  actual: string | null;
+  /** actual - predicted; negative means it fell more than the page would have said. */
+  error: string | null;
+  reason: string | null;
+  caution: string | null;
+}
+
+export interface SiegeBacktestBook {
+  holdings_used: number;
+  value_share: string;
+  days: number;
+  predicted_fall: string;
+  actual_fall: string | null;
+  error: string | null;
+  max_drawdown: string;
+  max_drawdown_peak: string;
+  max_drawdown_trough: string;
+  longest_under_water_days: number;
+  under_water_now_days: number;
+}
+
+export interface SiegeBacktest {
+  backtest_version: string;
+  scenarios_version: string;
+  demo: boolean;
+  benchmark_ticker: string;
+  status: "ok" | "no_history" | "no_episode" | "demo";
+  status_reason: string;
+  window_start: string | null;
+  window_end: string | null;
+  episode: SiegeBacktestEpisode | null;
+  holdings: SiegeBacktestHolding[];
+  tested_count: number;
+  total_count: number;
+  tested_value_share: string | null;
+  close_count: number;
+  fell_more_count: number;
+  fell_less_count: number;
+  mean_abs_error: string | null;
+  close_points: string;
+  book: SiegeBacktestBook | null;
+  book_reason: string | null;
+  notes: string[];
 }
 
 // --- Sprint 24: Chronicle (G14), Ravens (G15), Night Watch (G16) -------------

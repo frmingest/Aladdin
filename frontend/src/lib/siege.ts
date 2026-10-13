@@ -149,10 +149,14 @@ export function rowFacts(h: SiegeSimHolding, benchmark: string, formatShock: (s:
 /** One plain sentence about the whole book at the chosen fall. */
 export function headline(sim: SiegeSim): string {
   const fall = formatDrop(sim.market_drop);
-  if (sim.level === "unsurveyed" || sim.portfolio_shock_pct === null) return `A ${fall} market fall: ${SIM_LEVEL_TEXT.unsurveyed.toLowerCase()}`;
+  if (sim.level === "unsurveyed" || sim.portfolio_shock_pct === null) {
+    const gap = sim.unmodelled_note ? ` ${sim.unmodelled_note}` : "";
+    return `A ${fall} market fall: ${SIM_LEVEL_TEXT.unsurveyed.toLowerCase()}${gap}`;
+  }
   const book = (Math.abs(Number(sim.portfolio_shock_pct)) * 100).toFixed(1);
   const dir = Number(sim.portfolio_shock_pct) < 0 ? "costs" : "adds to";
-  return `A ${fall} market fall ${dir} the modelled book ${book}%. ${SIM_LEVEL_TEXT[sim.level]}`;
+  const gap = sim.unmodelled_note ? ` ${sim.unmodelled_note}` : "";
+  return `A ${fall} market fall ${dir} the modelled book ${book}%. ${SIM_LEVEL_TEXT[sim.level]}${gap}`;
 }
 
 export function coverageLine(sim: SiegeSim): string {

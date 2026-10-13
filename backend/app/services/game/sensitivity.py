@@ -77,20 +77,24 @@ def to_nok(points: Points, fx: Points | None) -> Points:
     return out
 
 
-def _aligned_returns(asset: Points, bench: Points) -> list[tuple[Decimal, Decimal]]:
-    """(holding return, benchmark return) between consecutive days that both
-    series have a close for, so two exchanges' different holidays do not
-    shift one series against the other."""
+def _aligned_dated_returns(asset: Points, bench: Points) -> list[tuple[date, Decimal, Decimal]]:
+    """(date the return ends on, holding return, benchmark return) between
+    consecutive days that both series have a close for, so two exchanges'
+    different holidays do not shift one series against the other."""
     a = dict(asset)
     b = dict(bench)
     days = sorted(set(a) & set(b))
-    pairs: list[tuple[Decimal, Decimal]] = []
+    rows: list[tuple[date, Decimal, Decimal]] = []
     for prev, cur in itertools.pairwise(days):
         pa, pb = a[prev], b[prev]
         if pa <= ZERO or pb <= ZERO:
             continue  # a bad close is skipped, not turned into a return
-        pairs.append(((a[cur] - pa) / pa, (b[cur] - pb) / pb))
-    return pairs
+        rows.append((cur, (a[cur] - pa) / pa, (b[cur] - pb) / pb))
+    return rows
+
+
+def _aligned_returns(asset: Points, bench: Points) -> list[tuple[Decimal, Decimal]]:
+    return [(y, x) for _, y, x in _aligned_dated_returns(asset, bench)]
 
 
 def estimate_downside_beta(
@@ -99,9 +103,17 @@ def estimate_downside_beta(
     *,
     min_observations: int,
     min_down_days: int,
+    exclude: tuple[date, date] | None = None,
 ) -> tuple[HistoryEstimate | None, str | None]:
-    """(estimate, None) or (None, why there is none)."""
-    pairs = _aligned_returns(asset, bench)
+    """(estimate, None) or (None, why there is none).
+
+    `exclude` (first, last) leaves out every return that ends on a day in that
+    closed range; the Siege back-test (C1) uses it to measure a beta without
+    the very fall it then checks."""
+    rows = _aligned_dated_returns(asset, bench)
+    if exclude is not None:
+        rows = [r for r in rows if not (exclude[0] <= r[0] <= exclude[1])]
+    pairs = [(y, x) for _, y, x in rows]
     if len(pairs) < min_observations:
         return None, (
             f"only {len(pairs)} days of price history overlap the benchmark; at least {min_observations} are needed"

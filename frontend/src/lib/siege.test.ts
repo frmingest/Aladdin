@@ -174,3 +174,21 @@ describe("the short row and its detail", () => {
     expect(stressGapNote(holding({ modelled: false, shock_pct: null, stored_shock_pct: "-0.3" }))).toBeNull();
   });
 });
+
+describe("scenarios v3 headline", () => {
+  it("names the unmodelled share beside the number it qualifies", () => {
+    const text = headline(sim({ unmodelled_note: "40.0% of the book's value (1 holding) is not modelled and is left out of this result; it could fall more or less." }));
+    expect(text).toContain("40.0% of the book's value");
+    expect(text.indexOf("costs the modelled book")).toBeLessThan(text.indexOf("not modelled"));
+  });
+
+  it("says nothing extra when nothing is unmodelled or under older scenarios", () => {
+    expect(headline(sim())).not.toContain("not modelled");
+    expect(headline(sim({ unmodelled_note: "" }))).not.toContain("not modelled");
+  });
+
+  it("keeps the gap in the headline when no portfolio result can be given", () => {
+    const text = headline(sim({ level: "unsurveyed", portfolio_shock_pct: null, unmodelled_note: "90.0% of the book's value (3 holdings) is not modelled." }));
+    expect(text).toContain("90.0%");
+  });
+});

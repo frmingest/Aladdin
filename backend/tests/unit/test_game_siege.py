@@ -139,3 +139,29 @@ def test_scenarios_file_is_versioned_and_loader_rejects_unknown():
     with pytest.raises(ValueError):
         get_siege_scenarios("v9")
     assert S.drop_min <= S.drop_default <= S.drop_max
+
+
+def test_v3_names_the_unmodelled_share_next_to_the_headline_number():
+    from app.domain.game_mapping.siege_scenarios_v3 import SIEGE_SCENARIOS_V3
+
+    items = [_h("A", 600, "1.0"), _h("B", 400, None)]
+    r = simulate(items, D("0.20"), M, SIEGE_SCENARIOS_V3)
+    assert r.unmodelled_share == D("0.4000") and r.unmodelled_count == 1
+    assert "40.0%" in r.unmodelled_note and "1 holding)" in r.unmodelled_note
+    assert "could fall more or less" in r.unmodelled_note
+
+
+def test_v3_has_no_note_when_everything_is_modelled_and_v2_never_has_one():
+    from app.domain.game_mapping.siege_scenarios_v3 import SIEGE_SCENARIOS_V3
+
+    full = simulate([_h("A", 600, "1.0")], D("0.20"), M, SIEGE_SCENARIOS_V3)
+    assert full.unmodelled_share == D(0) and full.unmodelled_note == ""
+    v2 = simulate([_h("A", 600, "1.0"), _h("B", 400, None)], D("0.20"), M, get_siege_scenarios("v2"))
+    assert v2.unmodelled_share is None and v2.unmodelled_note == ""
+
+
+def test_v3_states_the_gap_even_when_coverage_is_too_low_for_a_result():
+    from app.domain.game_mapping.siege_scenarios_v3 import SIEGE_SCENARIOS_V3
+
+    r = simulate([_h("A", 100, "1.0"), _h("B", 900, None)], D("0.20"), M, SIEGE_SCENARIOS_V3)
+    assert r.level == "unsurveyed" and r.unmodelled_share == D("0.9000")
