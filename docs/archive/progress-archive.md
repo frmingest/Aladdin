@@ -3,6 +3,10 @@
 Completed milestones and retired status, moved out of `docs/PROGRESS.md` under the rolling-log rules
 in `CLAUDE.md` ("Progress file rules"). Newest snapshot first. Older: [PROGRESS-full-2026-09-30.md](PROGRESS-full-2026-09-30.md).
 
+## Closed 2026-10-13 — Circle and Siege redesign, journal edit
+
+- **Merged:** Circle drag-to-place and Siege short rows (PR #126); journal entries editable after saving (PR #128). Deploys not verified.
+
 ## Closed 2026-10-13 — Diversified Fund sector
 
 - **Merged:** new "Diversified Fund" sector for multi-sector funds such as Heimdal Utbytte (PR #127, `origin/main`, 2026-10-13); deploy not verified. Funds stay out of the Circle of Competence and sector research.

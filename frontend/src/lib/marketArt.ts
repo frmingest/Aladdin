@@ -40,12 +40,12 @@ export function salBustId(mood: Mood): ObjectArtId | null {
 }
 
 /**
- * The shopkeeper's face for a store verdict. Four faces exist (Sprint 6): thoughtful = wait,
- * level gaze = promising, raised hand = pass, shrug = unknown. "ready" has no face yet (it needs a
- * smiling one), so it stays the SVG merchant. The face is the merchant's mood, never the tone
- * colour: the verdict is still written on the page beside it.
+ * The shopkeeper's face for a store verdict. Five faces exist: thoughtful = wait, level gaze = promising,
+ * raised hand = pass, shrug = unknown, and a welcoming smile = ready (added 2026-10-13). The face is the
+ * merchant's mood, never the tone colour: the verdict is still written on the page beside it.
  */
 const SHOPKEEPER_FACE: Partial<Record<StoreLevel, ObjectArtId>> = {
+  ready: "shopkeeper-ready",
   promising: "shopkeeper-promising",
   wait: "shopkeeper-wait",
   pass: "shopkeeper-pass",

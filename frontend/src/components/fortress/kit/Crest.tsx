@@ -1,4 +1,7 @@
 import type { CrestKind } from "../../../lib/crest";
+import { roomCrestId } from "../../../lib/roomArt";
+import type { ObjectArtId } from "../../../lib/stitchArt";
+import ObjectArtImage from "../../ObjectArtImage";
 
 /** Heraldic crest for a game page header (page-scene kit). One small painted shield per room; the
  * glyph is decoration that names the room, it never encodes a status. Fixed colours, like the other
@@ -72,11 +75,16 @@ function Glyph({ kind }: { kind: CrestKind }) {
 }
 
 export default function Crest({ kind, className = "h-11 w-11" }: { kind: CrestKind; className?: string }) {
-  return (
+  const shield = (
     <svg viewBox="0 0 40 44" className={`shrink-0 ${className}`} aria-hidden>
       <path d="M3 3 H37 V24 Q37 37 20 42 Q3 37 3 24 Z" fill="#3a2414" stroke="#d9a93e" strokeWidth="1.6" />
       <path d="M6 6 H34 V24 Q34 34 20 39 Q6 34 6 24 Z" fill="none" stroke="#7a5418" strokeWidth="0.8" />
       <Glyph kind={kind} />
     </svg>
   );
+  // Object art on: the room's round medallion replaces the shield. It is decoration (the title names the
+  // room), and the shield is the fallback when art is off, not yet generated, or fails to load.
+  const id = roomCrestId(kind);
+  if (!id) return shield;
+  return <ObjectArtImage id={id as ObjectArtId} width={44} className={`shrink-0 ${className}`} fallback={shield} />;
 }
