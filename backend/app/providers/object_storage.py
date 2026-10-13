@@ -56,15 +56,25 @@ class LocalObjectStorageProvider(ObjectStorageProvider):
         self.base_path = base_path
         os.makedirs(base_path, exist_ok=True)
 
-    def store(self, key: str, content: bytes) -> str:
+    def _inside(self, key: str) -> str:
+        """The path for `key`, refusing anything that resolves outside base_path
+        (a key with '..' segments). Callers already sanitise filenames; this is
+        the second lock."""
+        base = os.path.realpath(self.base_path)
         path = os.path.join(self.base_path, key)
+        if os.path.commonpath([base, os.path.realpath(path)]) != base:
+            raise ObjectStorageUnavailableError(f"Refusing a storage key outside the storage folder: '{key}'")
+        return path
+
+    def store(self, key: str, content: bytes) -> str:
+        path = self._inside(key)
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, "wb") as f:
             f.write(content)
         return path
 
     def retrieve(self, key: str) -> bytes:
-        path = os.path.join(self.base_path, key)
+        path = self._inside(key)
         try:
             with open(path, "rb") as f:
                 return f.read()

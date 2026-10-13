@@ -30,6 +30,29 @@ def sha256_hex(content: bytes) -> str:
     return hashlib.sha256(content).hexdigest()
 
 
+MAX_FILENAME_CHARS = 150
+
+
+def safe_filename(filename: str | None, default: str = "upload") -> str:
+    """The name an upload is stored and shown under (hardening sprint, 2026-10-13).
+
+    Storage keys are built as ``<sha256>/<filename>``, so a name such as
+    ``../../x.pdf`` must never reach them. This keeps only the last path
+    segment (either separator), drops control characters, trims blanks and dots
+    at the ends, and shortens a very long name while keeping its extension.
+    An ordinary name (spaces, accents, dashes) comes back unchanged.
+    """
+    name = (filename or "").replace("\\", "/").rsplit("/", 1)[-1]
+    name = "".join(ch for ch in name if ch >= " " and ch != "\x7f").strip().strip(".").strip()
+    if not name:
+        return default
+    if len(name) > MAX_FILENAME_CHARS:
+        idx = name.rfind(".")
+        ext = name[idx:] if 0 < idx and len(name) - idx <= 12 else ""
+        name = name[: MAX_FILENAME_CHARS - len(ext)] + ext
+    return name
+
+
 def extension_of(filename: str) -> str:
     idx = filename.rfind(".")
     return filename[idx:].lower() if idx != -1 else ""
