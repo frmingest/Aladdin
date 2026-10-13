@@ -54,6 +54,9 @@ export const RING_LABEL: Record<CircleBand, string> = {
 export const SEGMENT_WORD: Record<CompetenceLevel, string> = { know: "Inside", partly: "On the edge", outside: "Outside" };
 export const CLEAR_WORD = "Clear mark";
 export const NO_SECTOR_TITLE = "No sector set";
+/** Said once, above the map. The fog is where unmarked sectors live, so dropping there clears a mark. */
+export const DRAG_HINT = "Drag a sector to where you know it. Drag it to the fog to clear it.";
+export const TRAY_TITLE = "Not on the map";
 export const NOT_JUDGED_TITLE = "Not judged";
 
 /** Fixed words the map prints besides data (sector names, figures). Counted against its own budget. */
@@ -63,9 +66,13 @@ export const CIRCLE_MAP_CHROME: string[] = [
   NO_SECTOR_TITLE,
   NOT_JUDGED_TITLE,
   "smaller sectors",
+  DRAG_HINT,
+  TRAY_TITLE,
 ];
-/** Words of fixed chrome the map may add to the page (the old bar legend and headings are gone). */
-export const CIRCLE_MAP_CHROME_BUDGET = 40;
+/** Words of fixed chrome the map may add to the page (the old bar legend and headings are gone). Raised
+ * from 40 to 48 when placement moved onto the circle: the drag hint and the tray title replace the three
+ * buttons and a Save button that every sector row used to print, which is far more words on the page. */
+export const CIRCLE_MAP_CHROME_BUDGET = 48;
 /** Whole map block (chrome plus the data it prints for a typical portfolio), words, default view. */
 export const CIRCLE_MAP_WORD_BUDGET = 130;
 
@@ -203,6 +210,46 @@ export function overlaps(a: Placed, b: Placed): boolean {
   return Math.hypot(a.x - b.x, a.y - b.y) < a.r + b.r + MARKER_GAP_PX;
 }
 
+interface Box {
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+}
+const hit = (a: Box, b: Box): boolean => a.x0 < b.x1 + 2 && b.x0 < a.x1 + 2 && a.y0 < b.y1 + 1 && b.y0 < a.y1 + 1;
+const NAME_H = 16;
+const NAME_MAX_W = 104;
+/** Rough printed width of a sector name, px (11 px bold type). The CSS caps it at NAME_MAX_W. */
+const nameWidth = (name: string): number => Math.min(NAME_MAX_W, Math.round(name.length * 6.3) + 8);
+
+/** Which markers print their name: the heaviest first, at most NAMED_MAX, and only where the printed
+ * name would not cover another printed name or a zone label, or run off the map. A name that does not fit
+ * is simply not printed; its number still matches the list. */
+export function pickNames(candidates: CircleMarker[]): CircleMarker[] {
+  const half = LAYOUT_PX / 2;
+  const taken: Box[] = (Object.keys(RING_LABEL) as CircleBand[]).map((b) => {
+    const pos = ringLabelPos(b);
+    const x = ((pos.left - 50) / 100) * LAYOUT_PX;
+    const y = ((pos.top - 50) / 100) * LAYOUT_PX;
+    const w = RING_LABEL[b].length * 6.6 + 10;
+    return { x0: x - w / 2, y0: y - 8, x1: x + w / 2, y1: y + 8 };
+  });
+  const chosen: CircleMarker[] = [];
+  const ranked = [...candidates].sort((a, b) => b.weightPct - a.weightPct || nameOrder(a.sector, b.sector));
+  for (const m of ranked) {
+    if (chosen.length >= NAMED_MAX) break;
+    const x = (m.dx / 100) * LAYOUT_PX;
+    const w = nameWidth(m.sector);
+    const y0 = (m.dy / 100) * LAYOUT_PX + m.sizePx / 2 + 1;
+    const box: Box = { x0: x - w / 2, y0, x1: x + w / 2, y1: y0 + NAME_H };
+    if (box.x0 < -half || box.x1 > half || box.y1 > half) continue;
+    if (taken.some((b) => hit(box, b))) continue;
+    chosen.push(m);
+    taken.push(box);
+  }
+  return chosen;
+}
+
 export function buildCircleMap(c: Competence): CircleMapModel {
   const all = [...c.sectors].sort((a, b) => nameOrder(a.sector, b.sector));
   const slot = new Map(all.map((s, i) => [s.sector, i]));
@@ -290,10 +337,12 @@ export function buildCircleMap(c: Competence): CircleMapModel {
     });
   }
   const byName = onRing.sort((a, b) => nameOrder(a.sector, b.sector));
-  const heaviest = [...byName].sort((a, b) => b.weightPct - a.weightPct || nameOrder(a.sector, b.sector)).slice(0, NAMED_MAX);
   byName.forEach((m, i) => {
     m.pin = i + 1;
-    const rank = heaviest.indexOf(m);
+  });
+  const named = pickNames(byName);
+  byName.forEach((m) => {
+    const rank = named.indexOf(m);
     m.showName = rank >= 0;
     m.nameRank = rank >= 0 ? rank : null;
   });
@@ -369,4 +418,54 @@ export function ringLabelPos(band: CircleBand): { left: number; top: number } {
   if (band === "fog") return { left: 34, top: 93 };
   const r = band === "inside" ? 0.26 : band === "edge" ? CIRCLE_R : (CIRCLE_R + FOG_FROM) / 2;
   return { left: 50, top: round1(50 + 50 * r) };
+}
+
+// ---------------------------------------------------------------------------------------------------
+// Placing a mark by dragging a marker onto the circle. Pure, so the hit-test is unit-tested; the
+// component only feeds it pointer positions and calls the page's one write (saveMark) on a drop.
+// ---------------------------------------------------------------------------------------------------
+
+/** Where the drop zones end, as fractions of the half-width from the centre. Inside is the middle of the
+ * circle, "on the edge" is a wide band around the drawn line (the line itself is too thin to hit), and
+ * outside runs to where the fog band starts. Everything beyond that, to the rim, is the fog = unmarked. */
+export const ZONE_EDGES = { inside: 0.31, edge: 0.45, outside: FOG_FROM } as const;
+/** A press that moves less than this is a tap (select), not a drag. */
+export const DRAG_START_PX = 6;
+/** Past this fraction of the half-width (just beyond the rim) a drop is cancelled, not placed. */
+export const DROP_LIMIT = 1.12;
+
+/** The zone under a point given as percent of the map's width from its centre (the same unit as a
+ * marker's dx and dy), or null when the point is clear of the map. */
+export function zoneAt(dxPct: number, dyPct: number): CircleBand | null {
+  if (!Number.isFinite(dxPct) || !Number.isFinite(dyPct)) return null;
+  const r = Math.hypot(dxPct, dyPct) / 50;
+  if (r > DROP_LIMIT) return null;
+  if (r < ZONE_EDGES.inside) return "inside";
+  if (r < ZONE_EDGES.edge) return "edge";
+  if (r < ZONE_EDGES.outside) return "outside";
+  return "fog";
+}
+
+/** A pointer position on screen as percent of the map's width from its centre. */
+export function pointerToPct(clientX: number, clientY: number, rect: { left: number; top: number; width: number; height: number }): { dx: number; dy: number } {
+  if (!(rect.width > 0)) return { dx: Number.NaN, dy: Number.NaN };
+  return {
+    dx: ((clientX - (rect.left + rect.width / 2)) / rect.width) * 100,
+    dy: ((clientY - (rect.top + rect.height / 2)) / rect.width) * 100,
+  };
+}
+
+/** The level a zone stands for. The fog is "no mark", which the page writes as clearing the mark. */
+export function levelForBand(band: CircleBand): CompetenceLevel | "" {
+  return band === "inside" ? "know" : band === "edge" ? "partly" : band === "outside" ? "outside" : "";
+}
+
+/** Dropping a marker where it already is changes nothing and writes nothing. */
+export function isMove(current: CompetenceLevel | null, band: CircleBand): boolean {
+  return levelForBand(band) !== (current ?? "");
+}
+
+/** What the page says after a drop, in the same words as the map's zone names. */
+export function placedText(sector: string, band: CircleBand): string {
+  return band === "fog" ? `${sector}: mark cleared, now ${RING_LABEL.fog.toLowerCase()}.` : `${sector}: ${RING_LABEL[band]}.`;
 }

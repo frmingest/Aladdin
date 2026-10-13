@@ -9,7 +9,11 @@ import {
   formatDrop,
   headline,
   holdingLine,
+  isRoughGuide,
   presetDrop,
+  rowFacts,
+  rowStatus,
+  stressGapNote,
 } from "./siege";
 import type { SiegeSim, SiegeSimHolding } from "./types";
 
@@ -124,5 +128,49 @@ describe("wording rules", () => {
 
   it("always says it is a what-if and not a forecast", () => {
     expect(allSiegeLines().some((l) => /what-if, not a forecast/i.test(l))).toBe(true);
+  });
+});
+
+describe("the short row and its detail", () => {
+  const shock = (s: string | null) => (s === null ? "—" : `${(Number(s) * 100).toFixed(1)}%`);
+
+  it("gives each row one short status word", () => {
+    expect(rowStatus(holding())).toBe("Exposed");
+    expect(rowStatus(holding({ exposure: "breach_risk" }))).toBe("Wall at risk of breach");
+    expect(rowStatus(holding({ shock_pct: "0.07", exposure: "sheltered" }))).toBe("Gains");
+    expect(rowStatus(holding({ modelled: false, exposure: "unmodelled", shock_pct: null }))).toBe("Not modelled");
+  });
+
+  it("flags a rough guide only when the backend attached a caution to a modelled holding", () => {
+    expect(isRoughGuide(holding())).toBe(false);
+    expect(isRoughGuide(holding({ caution: "The benchmark explains only 0% of this holding's moves on those days, so the number is a rough guide." }))).toBe(true);
+    expect(isRoughGuide(holding({ modelled: false, caution: "x" }))).toBe(false);
+  });
+
+  it("lists the facts as labelled values: beta, fit, days, benchmark, the what-if and the stress case", () => {
+    const facts = rowFacts(holding({ stored_shock_pct: "-0.209" }), "OSEBX.OL", shock);
+    expect(facts).toEqual([
+      { label: "Beta", value: "1.20" },
+      { label: "Fit", value: "54%" },
+      { label: "Falling days used", value: "87" },
+      { label: "Measured against", value: "OSEBX.OL" },
+      { label: "This what-if", value: "-24.0%" },
+      { label: "Fortress stress case", value: "-20.9%" },
+    ]);
+  });
+
+  it("says where a Yahoo or sample beta came from, and lists nothing for a holding that is not modelled", () => {
+    expect(rowFacts(holding({ method: "vendor_beta" }), "OSEBX.OL", shock).map((f) => f.label)).toEqual(["Beta", "Beta from", "This what-if"]);
+    expect(rowFacts(holding({ method: "demo" }), "", shock).find((f) => f.label === "Beta from")?.value).toBe("Sample data");
+    expect(rowFacts(holding({ modelled: false }), "OSEBX.OL", shock)).toEqual([]);
+  });
+
+  it("explains a big gap between the what-if and the Fortress's stress case, once, and stays quiet otherwise", () => {
+    expect(stressGapNote(holding({ shock_pct: "0.07", stored_shock_pct: "-0.619" }))).toContain("different questions");
+    expect(stressGapNote(holding({ shock_pct: "0.107", stored_shock_pct: "-0.014" }))).not.toBeNull(); // sign flip, 12 points
+    expect(stressGapNote(holding({ shock_pct: "-0.10", stored_shock_pct: "-0.053" }))).toBeNull();
+    expect(stressGapNote(holding({ shock_pct: "-0.024", stored_shock_pct: "-0.168" }))).toBeNull(); // 14 points, same sign
+    expect(stressGapNote(holding({ shock_pct: "-0.436", stored_shock_pct: null }))).toBeNull();
+    expect(stressGapNote(holding({ modelled: false, shock_pct: null, stored_shock_pct: "-0.3" }))).toBeNull();
   });
 });

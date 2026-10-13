@@ -92,6 +92,60 @@ export function betaSourceLine(h: SiegeSimHolding, benchmark: string): string {
   return h.caution ? `${line} ${h.caution}` : line;
 }
 
+/** One short word for a row: how the holding fares in this what-if. Colour on the bar repeats it. */
+export function rowStatus(h: SiegeSimHolding): string {
+  if (!h.modelled) return SIM_EXPOSURE_LABEL.unmodelled;
+  return Number(h.shock_pct) < 0 ? SIM_EXPOSURE_LABEL[h.exposure] : "Gains";
+}
+
+/** A row carries a "Rough guide" badge when the backend attached a caution to its beta (a weak fit, a
+ * slowly updating NAV, or a fallback to Yahoo's figure). The caution itself is in the detail. */
+export function isRoughGuide(h: SiegeSimHolding): boolean {
+  return h.modelled && !!h.caution;
+}
+
+/** How far apart the what-if and the Fortress's stored stress case may be, in percentage points, before the
+ * row says so. A sign flip counts from a smaller gap, because "gains" against "falls" is the bigger surprise. */
+export const GAP_POINTS = 20;
+export const GAP_POINTS_SIGN_FLIP = 10;
+
+/** The two numbers answer different questions: the what-if scales one market fall by the holding's beta,
+ * the stress case is the Fortress's own stored scenario. When they disagree a lot, say so once in the detail. */
+export function stressGapNote(h: SiegeSimHolding): string | null {
+  if (!h.modelled || h.shock_pct === null || h.stored_shock_pct === null) return null;
+  const now = Number(h.shock_pct) * 100;
+  const stored = Number(h.stored_shock_pct) * 100;
+  if (!Number.isFinite(now) || !Number.isFinite(stored)) return null;
+  const gap = Math.abs(now - stored);
+  const flipped = Math.sign(now) !== Math.sign(stored) && now !== 0 && stored !== 0;
+  if (gap < GAP_POINTS && !(flipped && gap >= GAP_POINTS_SIGN_FLIP)) return null;
+  return "The what-if scales this fall by the holding's beta; the stress case comes from the Fortress's stored stress scenario. They answer different questions, so they can differ a lot.";
+}
+
+export interface SiegeFact {
+  label: string;
+  value: string;
+}
+
+/** The detail behind a row as small labelled values instead of a sentence. Only what exists is listed. */
+export function rowFacts(h: SiegeSimHolding, benchmark: string, formatShock: (s: string | null) => string): SiegeFact[] {
+  if (!h.modelled) return [];
+  const facts: SiegeFact[] = [];
+  if (h.beta !== null) facts.push({ label: "Beta", value: Number(h.beta).toFixed(2) });
+  if (h.method === "price_history") {
+    if (h.r_squared !== null) facts.push({ label: "Fit", value: `${(Number(h.r_squared) * 100).toFixed(0)}%` });
+    if (h.observations !== null) facts.push({ label: "Falling days used", value: String(h.observations) });
+    facts.push({ label: "Measured against", value: benchmark || "the benchmark" });
+  } else if (h.method === "vendor_beta") {
+    facts.push({ label: "Beta from", value: "Yahoo" });
+  } else if (h.method === "demo") {
+    facts.push({ label: "Beta from", value: "Sample data" });
+  }
+  facts.push({ label: "This what-if", value: formatShock(h.shock_pct) });
+  if (h.stored_shock_pct !== null) facts.push({ label: "Fortress stress case", value: formatShock(h.stored_shock_pct) });
+  return facts;
+}
+
 /** One plain sentence about the whole book at the chosen fall. */
 export function headline(sim: SiegeSim): string {
   const fall = formatDrop(sim.market_drop);

@@ -215,3 +215,75 @@
 .circle-ring-art { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
 .circle-piece { position: absolute; height: auto; pointer-events: none; }
 .circle-stake { position: absolute; right: -16px; bottom: -2px; width: 22px; height: auto; pointer-events: none; }
+
+/* Direct placement (Sprint 14): drag a marker onto a zone. Zones show only while dragging; the zone under
+   the pointer is outlined solid and lightly filled, and its name in the ring label turns to ink on gold,
+   so it never relies on colour alone. Touch drags need touch-action: none on the thing being dragged. */
+.circle-hint { margin: 0 0 0.5rem; text-align: center; font-size: 0.8125rem; color: rgb(var(--c-ink)); }
+.circle-zones { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; opacity: 0; transition: opacity 150ms ease; }
+.circle-map[data-dragging="true"] .circle-zones { opacity: 1; }
+.circle-zone { fill: transparent; stroke: rgb(var(--c-ink-muted)); stroke-width: 0.35; stroke-dasharray: 1.2 1.2; }
+.circle-zone[data-hot="true"] { fill: rgba(242, 210, 122, 0.22); stroke: #f2d27a; stroke-width: 0.8; stroke-dasharray: none; }
+.circle-ring-label[data-hot="true"] { background: #f2d27a; color: #1a1209; box-shadow: none; }
+.circle-marker[data-draggable="true"], .circle-chip[data-draggable="true"] { cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
+.circle-marker[data-dragging="true"] .circle-marker-disc { opacity: 0.35; }
+.circle-chip[data-dragging="true"] { opacity: 0.35; }
+.circle-marker[data-selected="true"] .circle-marker-disc { box-shadow: 0 0 0 3px #f2d27a, 0 0 0 5px #120c07, 0 2px 6px rgba(0, 0, 0, 0.7); }
+.circle-status { min-height: 1.5rem; margin: 0.25rem 0 0; text-align: center; font-size: 0.8125rem; color: rgb(var(--c-ink)); }
+
+.circle-tray { margin-top: 0.75rem; }
+.circle-tray-title { margin: 0 0 0.25rem; font-size: 0.75rem; color: rgb(var(--c-ink-muted)); }
+.circle-tray-list { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0; padding: 0; list-style: none; }
+.circle-chip {
+  min-height: 44px;
+  padding: 0 0.75rem;
+  border: 1.5px dashed rgb(var(--c-ink-faint));
+  border-radius: 9999px;
+  background: rgb(var(--c-raised));
+  color: rgb(var(--c-ink));
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.circle-chip[data-selected="true"] { border: 2px solid #f2d27a; }
+.circle-chip:focus-visible { outline: 3px solid #f2d27a; outline-offset: 3px; box-shadow: 0 0 0 6px #120c07; }
+
+/* The copy that follows the pointer (rendered in <body>, so it uses literal colours). On a touch screen it
+   rides above the fingertip so the finger does not hide it. */
+.circle-ghost {
+  position: fixed;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translate(-50%, -50%);
+  border-radius: 9999px;
+  background: #2b2016;
+  color: #f1e3c0;
+  box-shadow: 0 0 0 2px #f2d27a, 0 6px 16px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+}
+.circle-ghost-word {
+  position: absolute;
+  bottom: 100%;
+  margin-bottom: 6px;
+  padding: 0 6px;
+  border-radius: 3px;
+  background: rgba(16, 11, 7, 0.95);
+  box-shadow: 0 0 0 1px rgba(201, 162, 85, 0.7);
+  color: #f3e4bf;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 16px;
+  white-space: nowrap;
+}
+@media (pointer: coarse) {
+  .circle-ghost { transform: translate(-50%, calc(-50% - 44px)); }
+}
+
+/* The selected sector's panel under the map. */
+.mark-panel-note { min-width: 0; flex: 1; min-height: 44px; padding: 0.5rem; border: 1px solid rgb(var(--c-border)); border-radius: 6px; background: rgb(var(--c-surface)); color: rgb(var(--c-ink)); font-size: 0.875rem; }
+.mark-panel-note:disabled { opacity: 0.6; }
+.mark-row-name { min-height: 44px; padding: 0; background: none; border: 0; text-align: left; font-size: 0.875rem; font-weight: 600; color: rgb(var(--c-ink)); cursor: pointer; }
+.mark-row-name:hover { text-decoration: underline; }
+.mark-row-name:focus-visible { outline: 3px solid #f2d27a; outline-offset: 3px; box-shadow: 0 0 0 6px #120c07; }
