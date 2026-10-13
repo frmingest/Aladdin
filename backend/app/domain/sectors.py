@@ -9,7 +9,11 @@ app/schemas/holding.py reject anything not in it), so the two can't drift
 the way `asset_class_raw`'s free-text heuristic classification already has
 (see app/domain/instrument_types.py).
 
-Standard GICS-11 sectors. `sector` stays nullable — "not yet classified"
+Standard GICS-11 sectors plus one non-GICS entry, "Diversified Fund" (2026-10-13):
+a multi-sector fund (e.g. Heimdal Utbytte) has no sector of its own, only a
+look-through exposure, and forcing it into one GICS sector misplaces it on the
+Map. It is deliberately spelled without a slash because the sector name travels
+in URL paths (`/research/sectors/{sector}`). `sector` stays nullable — "not yet classified"
 is still a valid, honest state; it's a free-text drift into ten spellings
 of "Energy" that this closes off.
 """
@@ -27,7 +31,15 @@ SECTORS: tuple[str, ...] = (
     "Communication Services",
     "Utilities",
     "Real Estate",
+    "Diversified Fund",
 )
+
+FUND_SECTOR = "Diversified Fund"
+"""Funds only: not a company sector, so it is never a Circle of Competence row
+and has no sector research page."""
+
+STOCK_SECTORS: tuple[str, ...] = tuple(s for s in SECTORS if s != FUND_SECTOR)
+"""The GICS-11 company sectors (everything in SECTORS except FUND_SECTOR)."""
 
 _SECTOR_SET = frozenset(SECTORS)
 

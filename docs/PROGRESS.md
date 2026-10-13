@@ -1,6 +1,6 @@
 # Aladdin — Progress
 
-**Last updated:** 2026-10-13 (Circle drag-to-place and Siege short rows built on a branch, not merged). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
+**Last updated:** 2026-10-13 (Diversified Fund sector PR open; Circle drag-to-place and Siege short rows built on a branch, not merged). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
 
 ## Current Objective
 
@@ -10,6 +10,7 @@ State: local checkout `E:\Aladdin` was 8 commits behind `main` on 2026-10-13 and
 
 ## Active Tasks
 
+- [ ] **Try the "Diversified Fund" sector (Faiz):** new sector value for multi-sector funds such as Heimdal Utbytte; set it in the Holdings sector dropdown and check it gets its own province on the Map in normal and game mode. PR open, not merged, not deployed; the full backend test suite passes; the one-line frontend change is not tested. Funds stay out of the Circle of Competence and sector research
 - [ ] **Review the Circle and Siege redesign (Faiz):** Circle: drag a sector marker onto Inside, On the edge or Outside and it saves on the drop (fog = clear, Undo offered); tap a marker for its note and a keyboard choice; no per-row buttons; sector names no longer collide. Siege: each tower is one short row, beta/fit/days and the stress case behind Details, with Rough guide and Differs from stress case badges. Not merged, not deployed, not tried by hand on a phone
 - [ ] **Confirm the hardening deploy (Faiz):** PR #125 is merged, and a merge deploys. What it holds: friendly load errors with Try again on all 8 game pages, plain-language LLM failure reasons, upload filename guard, accessibility fixes (Lighthouse a11y 100 on the pages re-run), Night Watch no longer pushes the scene down. A merge is a production deploy
 - [ ] **After the deploy, run the browser specs on the live site (Faiz or Claude):** `SMOKE_FRONTEND_URL`, `SMOKE_API_URL`, then `npm run smoke` and `npx playwright test e2e/game-pages.spec.ts`. Both game specs passed only against a local demo stack (33 of 33 and 16 of 16), never against the live site

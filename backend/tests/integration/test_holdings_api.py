@@ -114,6 +114,7 @@ def test_holding_field_options(client):
     body = response.json()
     assert "Energy" in body["sectors"]
     assert "Information Technology" in body["sectors"]
+    assert "Diversified Fund" in body["sectors"]
     assert "stock" in body["instrument_types"]
     assert "equity_etf" in body["instrument_types"]
 

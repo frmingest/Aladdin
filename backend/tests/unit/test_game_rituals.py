@@ -132,6 +132,17 @@ def test_competence_statuses_and_weights():
     assert len(out.sectors) == 11
 
 
+def test_fund_sector_is_never_a_circle_row_or_markable():
+    from app.domain.sectors import FUND_SECTOR, SECTORS, is_valid_sector
+
+    assert is_valid_sector(FUND_SECTOR) and FUND_SECTOR in SECTORS
+    out = comp.build_competence([tower("Heimdal", instrument_type="equity_fund", sector=FUND_SECTOR, weight_pct=D(40), structure="outpost")], {}, RITUALS_V1)
+    assert FUND_SECTOR not in [s.sector for s in out.sectors]
+    assert out.towers[0].status == "not_applicable"
+    with pytest.raises(ValueError):
+        comp.set_mark(None, FUND_SECTOR, "know", None, RITUALS_V1)  # refused before the database is touched
+
+
 def test_competence_never_infers_a_mark():
     t = tower("Alpha", sector="Industrials", weight_pct=D(50))
     out = comp.build_competence([t], {}, RITUALS_V1)

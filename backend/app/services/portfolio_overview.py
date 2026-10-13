@@ -33,6 +33,7 @@ from app.domain.instrument_types import (
     EQUITY_ANALYZABLE_TYPES,
     display_label,
 )
+from app.domain.sectors import FUND_SECTOR
 from app.models.account import Account
 from app.models.holding import Holding
 from app.models.portfolio import PortfolioSnapshot
@@ -363,7 +364,7 @@ def executive_summary(o: Overview) -> list[SummaryPoint]:
         )))
 
     for s in o.by_sector:
-        if s.key != UNCLASSIFIED and s.weight_pct > SECTOR_WARN_PCT:
+        if s.key not in (UNCLASSIFIED, FUND_SECTOR) and s.weight_pct > SECTOR_WARN_PCT:
             points.append(SummaryPoint("warn", (
                 f"{s.label} is {_fmt_pct(s.weight_pct)} of the portfolio, above the "
                 f"{_fmt_pct(SECTOR_WARN_PCT)} sector flag level."

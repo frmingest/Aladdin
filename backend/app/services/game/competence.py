@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 
 from app.domain.game_mapping.rituals_v1 import RitualsRules
 from app.domain.instrument_types import STOCK
-from app.domain.sectors import SECTORS, is_valid_sector
+from app.domain.sectors import STOCK_SECTORS, is_valid_sector
 from app.models.competence import CompetenceMark
 from app.schemas.game import (
     CompetenceHeldOut,
@@ -37,7 +37,7 @@ def load_marks(db: Session) -> dict[str, CompetenceMark]:
 
 
 def set_mark(db: Session, sector: str, level: str, note: str | None, rules: RitualsRules, *, now: datetime | None = None) -> CompetenceMark:
-    if not is_valid_sector(sector):
+    if not is_valid_sector(sector) or sector not in STOCK_SECTORS:
         raise ValueError(f"{sector!r} is not one of the standard sectors.")
     if level not in rules.competence_levels:
         raise ValueError(f"level must be one of {', '.join(rules.competence_levels)}.")
@@ -94,7 +94,7 @@ def build_competence(
         for t in sorted(towers, key=lambda t: _w(t.weight_pct), reverse=True)
     ]
     sectors: list[CompetenceSectorOut] = []
-    for sector in SECTORS:
+    for sector in STOCK_SECTORS:
         held = [
             CompetenceHeldOut(holding_id=t.holding_id, name=t.name, weight_pct=t.weight_pct)
             for t in towers
