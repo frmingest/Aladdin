@@ -1,18 +1,18 @@
 # Aladdin — Progress
 
-**Last updated:** 2026-10-13 (the seven last pictures are wired on a branch, PR to review; Circle/Siege redesign #126 and journal edit #128 are merged). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
+**Last updated:** 2026-10-13 (the last-seven pictures are merged, #129; the Circle's standing stones are removed on `fix/circle-remove-stones`, PR to review; Sprint 7 close-out is next). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
 
 ## Current Objective
 
-**Close the design plan, then the trust slice.** Hardening (#125), the Circle and Siege redesign (#126) and journal editing (#128) are merged to `main`; deploys not verified. The seven last pictures (five room crests, the Council chair, the shopkeeper "ready" face) are wired on `feature/design-last7-crests`, PR to review. Next: Sprint 7 (default art decision), then C1 Siege back-test. Decided 2026-10-13: no more feature contest until the design plan and C1 are done; a knife-edge tower stays off the Council agenda. Plans: [design-remaining-objects-2026-10-13.md](game/design-remaining-objects-2026-10-13.md), [design-master-sprint-plan-2026-10-11.md](game/design-master-sprint-plan-2026-10-11.md).
+**Close the design plan, then the trust slice.** Hardening (#125), the Circle and Siege redesign (#126) and journal editing (#128) are merged to `main`; deploys not verified. The seven last pictures (room crests, Council chair, shopkeeper "ready" face) are merged (#129). Next: Sprint 7 (default art decision), then C1 Siege back-test. Decided 2026-10-13: no more feature contest until the design plan and C1 are done; a knife-edge tower stays off the Council agenda. Plans: [design-remaining-objects-2026-10-13.md](game/design-remaining-objects-2026-10-13.md), [design-master-sprint-plan-2026-10-11.md](game/design-master-sprint-plan-2026-10-11.md).
 
-State: local checkout `E:\Aladdin` is on `feature/design-last7-crests` (cut from `main` at `9678178`); masters live in git-ignored `art-masters/`. Repo migration head `t1f2a3b4c5d6`. Live URLs: frontend `https://exciting-gratitude-production-71b5.up.railway.app`, backend `https://aladdin-production-bd25.up.railway.app`.
+State: `main` is at `c3e28f8` (#129 merged); the stones removal is PR #130 on `fix/circle-remove-stones`; masters live in git-ignored `art-masters/`. Repo migration head `t1f2a3b4c5d6`. Live URLs: frontend `https://exciting-gratitude-production-71b5.up.railway.app`, backend `https://aladdin-production-bd25.up.railway.app`.
 
 ## Active Tasks
 
-- [ ] **Review the last-seven pictures PR (Faiz):** five room crests in the room banners and as small medallions in the tab strip, the new high-backed Council chair, and a smiling shopkeeper for the "ready" verdict. Art switch on only; checked with tests, tsc and lint, not seen in a browser. Branch `feature/design-last7-crests`, not merged, not deployed
 - [ ] **Optional backdrops (Faiz):** Council, Circle and Map wide scenes; descriptions in [the design doc](game/design-remaining-objects-2026-10-13.md). Skip if you'd rather not
 - [ ] **Confirm the hardening deploy, then run the live browser specs (Faiz or Claude):** `SMOKE_FRONTEND_URL`, `SMOKE_API_URL`, then `npm run smoke` and `npx playwright test e2e/game-pages.spec.ts` (both passed only against a local demo stack)
+- [ ] **Review the Circle stones removal (Faiz):** the standing stones around the ring are gone (they distracted from the markers); brazier and fog stake stay. Art switch on only; checked with tests, lint and tsc, not seen in a browser. Branch `fix/circle-remove-stones`, not merged, not deployed
 - [ ] **Sprint 7 close-out (Claude, next):** fix Fortress phone performance (73-82 today), re-score identity with screenshots, colour-blind pass, decide the default art, update the visual-identity standard
 - [ ] **C1 Siege back-test (Claude):** with the `siege_scenarios_v3` fix so the unmodelled share shows in the headline (finding 3 of [the team review](game/game-mode-team-review-2026-10-09.md)); new versioned file, no migration
 - [ ] **D1 Plain lens, then D2 Camera (Claude):** trust and first-glance legibility, after C1

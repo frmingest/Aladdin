@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { circleBrazier, circleStones, fogStakeId, type RingPiece } from "../../../lib/roomArt";
+import { circleBrazier, fogStakeId, type RingPiece } from "../../../lib/roomArt";
 import { getObjectArt, useArtMode } from "../../../lib/stitchArt";
 
 function pieceStyle(p: RingPiece, anchor: "base" | "centre") {
@@ -32,8 +32,8 @@ function Piece({ piece, anchor }: { piece: RingPiece; anchor: "base" | "centre" 
 }
 
 /**
- * The standing stones and the brazier on the Circle map (Design Master Sprint 11), under the markers and
- * the zone names. Constant decoration: the same stones and the same brazier whatever the data says, so the
+ * The brazier on the Circle map (Design Master Sprint 11; the standing stones were removed 2026-10-13, they distracted from the markers), under the markers and
+ * the zone names. Constant decoration: the same brazier whatever the data says, so the
  * ring never changes with a mark and the circle line stays an outline. Only with the Settings "Object art"
  * switch on; empty alt text; the markers, the list and the Plain view are untouched.
  */
@@ -43,9 +43,6 @@ export default function CircleRingArt() {
   const brazier = circleBrazier();
   return (
     <div className="circle-ring-art" aria-hidden="true">
-      {circleStones().map((s, i) => (
-        <Piece key={i} piece={s} anchor="base" />
-      ))}
       {brazier && <Piece piece={brazier} anchor="centre" />}
     </div>
   );

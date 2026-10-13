@@ -210,7 +210,7 @@
   .circle-name { display: none; }
 }
 
-/* Object art (Sprint 11): standing stones on the circle line, the brazier at the centre, a stake in the fog.
+/* Object art (Sprint 11): the brazier at the centre, a stake in the fog.
    Decoration only, under the markers and the zone names; no pointer events, no motion. */
 .circle-ring-art { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
 .circle-piece { position: absolute; height: auto; pointer-events: none; }
