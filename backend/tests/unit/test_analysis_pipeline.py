@@ -263,6 +263,33 @@ def test_blind_pass_failure_with_no_fallback_persists_failed_run():
     assert run.blind_pass_json is None
 
 
+class _QuotaLLM:
+    """Every call fails the way Gemini reports a spent quota."""
+
+    name = "quota_llm"
+
+    def generate_structured(self, *, system_prompt, user_prompt, response_schema, max_output_tokens=None):
+        raise LLMUnavailableError(
+            "Gemini API call failed (model=gemini-3.6-flash): 429 RESOURCE_EXHAUSTED. " + "{'error': " + "x" * 3000 + "}"
+        )
+
+
+def test_failed_run_stores_a_plain_reason_not_the_vendor_dump():
+    db = _session()
+    holding = _stock_holding()
+    db.add(holding)
+    db.commit()
+    _with_two_periods(db, holding)
+
+    run = run_full_analysis(
+        db, holding, llm_provider=_QuotaLLM(), llm_fallback_provider=None,
+        market_data_provider=_FakeMarket(), risk_free_rate_provider=_FakeRate(), research_provider=_FakeResearch(),
+    )
+    assert run.status == EquityAnalysisRunStatus.FAILED.value
+    assert run.error_message.startswith("blind pass failed: The AI provider's quota or rate limit was hit.")
+    assert len(run.error_message) < 400
+
+
 class _BlindOnlyThenFailLLM:
     """Succeeds the blind pass, fails the reconciliation pass — used to
     prove the blind pass's own output survives a reconciliation failure."""
