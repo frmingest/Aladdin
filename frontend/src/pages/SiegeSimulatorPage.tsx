@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../lib/api";
 import { formatNok } from "../lib/format";
@@ -14,8 +14,11 @@ import {
   formatDrop,
   headline,
   holdingLine,
-  betaSourceLine,
+  isRoughGuide,
   presetDrop,
+  rowFacts,
+  rowStatus,
+  stressGapNote,
 } from "../lib/siege";
 import type { SiegeSim, SiegeSimExposure, SiegeSimHolding } from "../lib/types";
 import { Card, EmptyState, LoadError, PageHeader } from "../components/ui";
@@ -79,32 +82,69 @@ function SiegeStrip({ rows }: { rows: SiegeSimHolding[] }) {
   );
 }
 
+/** One tower: its name, how much of its wall is lost, and the result. The how-it-was-measured detail
+ * (beta, fit, days, the Fortress's own stress case) sits behind "Details" so a list of seven is a glance. */
 function Row({ h, benchmark }: { h: SiegeSimHolding; benchmark: string }) {
+  const [open, setOpen] = useState(false);
+  const detailId = useId();
+  const rough = isRoughGuide(h);
+  const gap = stressGapNote(h);
+  const facts = rowFacts(h, benchmark, formatShock);
   return (
-    <li className="grid gap-x-4 gap-y-1 border-b border-border-subtle py-3 sm:grid-cols-[minmax(0,14rem)_1fr_auto] sm:items-center">
-      <div className="min-w-0">
-        <Link to={`/holdings/${h.holding_id}`} className="font-medium text-ink hover:underline">
-          {h.name}
-        </Link>
-        <p className="truncate text-xs text-ink-faint">
-          {isFundCode(h.ticker) ? "Fund" : h.ticker} · {WALL_LABEL[h.wall]}
-          {h.weight_pct ? ` · ${Number(h.weight_pct).toFixed(1)}% of the book` : ""}
-        </p>
-      </div>
-      <div className="min-w-0">
-        <div className="h-2.5 w-full overflow-hidden rounded-full bg-border-subtle" aria-hidden>
-          <div className={`h-full rounded-full transition-[width] duration-300 ${BAR_CLASS[h.exposure]}`} style={{ width: `${damageWidth(h.shock_pct)}%` }} />
+    <li className="border-b border-border-subtle py-3">
+      <div className="grid gap-x-4 gap-y-1 sm:grid-cols-[minmax(0,14rem)_1fr_auto] sm:items-center">
+        <div className="min-w-0">
+          <Link to={`/holdings/${h.holding_id}`} className="font-medium text-ink hover:underline">
+            {h.name}
+          </Link>
+          <p className="truncate text-xs text-ink-faint">
+            {isFundCode(h.ticker) ? "Fund" : h.ticker} · {WALL_LABEL[h.wall]}
+            {h.weight_pct ? ` · ${Number(h.weight_pct).toFixed(1)}% of the book` : ""}
+          </p>
         </div>
-        <p className="mt-1 text-xs text-ink-muted">
-          {holdingLine(h)}
-          {h.modelled && h.beta !== null && ` ${betaSourceLine(h, benchmark)}`}
-          {h.modelled && h.stored_shock_pct !== null && ` The Fortress's own stress case for it: ${formatShock(h.stored_shock_pct)}.`}
-        </p>
+        <div className="min-w-0">
+          <div className="h-2.5 w-full overflow-hidden rounded-full bg-border-subtle" aria-hidden>
+            <div className={`h-full rounded-full transition-[width] duration-300 ${BAR_CLASS[h.exposure]}`} style={{ width: `${damageWidth(h.shock_pct)}%` }} />
+          </div>
+          <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-muted">
+            <span>{rowStatus(h)}</span>
+            {rough && <span className="rounded-full border border-border px-2 py-0.5 text-ink-faint">Rough guide</span>}
+            {gap && <span className="rounded-full border border-border px-2 py-0.5 text-ink-faint">Differs from stress case</span>}
+            {h.modelled && (
+              <button
+                type="button"
+                className="inline-flex min-h-[44px] items-center text-accent hover:underline sm:min-h-0"
+                aria-expanded={open}
+                aria-controls={detailId}
+                onClick={() => setOpen((o) => !o)}
+              >
+                {open ? "Hide details" : "Details"}
+              </button>
+            )}
+          </p>
+        </div>
+        <div className="tabular text-right text-sm">
+          <p className={h.modelled ? "font-semibold text-ink" : "text-ink-faint"}>{h.modelled ? formatShock(h.shock_pct) : "?"}</p>
+          <p className="text-xs text-ink-faint">{h.modelled ? formatNok(h.loss_nok) : SIM_EXPOSURE_LABEL.unmodelled}</p>
+        </div>
       </div>
-      <div className="tabular text-right text-sm">
-        <p className={h.modelled ? "font-semibold text-ink" : "text-ink-faint"}>{h.modelled ? formatShock(h.shock_pct) : "?"}</p>
-        <p className="text-xs text-ink-faint">{h.modelled ? formatNok(h.loss_nok) : SIM_EXPOSURE_LABEL.unmodelled}</p>
-      </div>
+      {open && h.modelled && (
+        <div id={detailId} className="mt-2 rounded-md bg-raised p-3">
+          <dl className="tabular grid grid-cols-2 gap-x-6 gap-y-2 text-xs sm:grid-cols-3 lg:grid-cols-6">
+            {facts.map((f) => (
+              <div key={f.label}>
+                <dt className="text-ink-faint">{f.label}</dt>
+                <dd className="text-ink">{f.value}</dd>
+              </div>
+            ))}
+          </dl>
+          {h.method === "price_history" && h.r_squared !== null && (
+            <p className="mt-2 text-xs text-ink-faint">Fit is the share of its moves on market-down days that the benchmark explains. A low fit means treat the number as a rough guide.</p>
+          )}
+          {h.caution && <p className="mt-1 text-xs text-ink-muted">{h.caution}</p>}
+          {gap && <p className="mt-1 text-xs text-ink-muted">{gap}</p>}
+        </div>
+      )}
     </li>
   );
 }
@@ -240,7 +280,7 @@ export default function SiegeSimulatorPage() {
                 {artMode === "stitch" ? <SiegeArtStrip rows={sim.holdings} level={sim.level} /> : <SiegeStrip rows={sim.holdings} />}
               </div>
               <p className="mb-1 text-xs text-ink-faint">
-                {artMode === "stitch" ? "The sooty, burning part of each wall is the share lost in this what-if: the higher the fire climbs, the more is lost. Faded with a question mark: not modelled." : "The filled part of each wall is the share lost in this what-if. Grey with a question mark: not modelled."}
+                {artMode === "stitch" ? "The burning part of each wall is the share lost in this what-if. Faded with a ?: not modelled." : "The filled part of each wall is the share lost. Grey with a ?: not modelled."}
                 {sim.holdings.length > 18 ? ` Showing the 18 worst-hit of ${sim.holdings.length}.` : ""}
               </p>
               <ul>{sim.holdings.filter((h) => h.modelled).map((h) => <Row key={h.holding_id} h={h} benchmark={sim.benchmark_ticker} />)}</ul>

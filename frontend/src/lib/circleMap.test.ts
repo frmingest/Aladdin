@@ -28,6 +28,16 @@ import {
   SEGMENT_WORD,
   slotAngle,
   circleView,
+  DRAG_HINT,
+  DROP_LIMIT,
+  isMove,
+  levelForBand,
+  pickNames,
+  placedText,
+  pointerToPct,
+  TRAY_TITLE,
+  zoneAt,
+  ZONE_EDGES,
   type CircleMapModel,
 } from "./circleMap";
 import { countWords } from "./wordBudget";
@@ -232,9 +242,33 @@ describe("marker size comes from weight only", () => {
 });
 
 describe("what is on the ring and what is not", () => {
-  it("names only the heaviest markers", () => {
+  it("names only the heaviest markers, never more than NAMED_MAX, and never two names on top of each other", () => {
     const m = buildCircleMap(comp(many(8, "know", (i) => String(i + 1))));
-    expect(m.markers.filter((x) => x.showName)).toHaveLength(NAMED_MAX);
+    const named = m.markers.filter((x) => x.showName);
+    expect(named.length).toBeGreaterThan(0);
+    expect(named.length).toBeLessThanOrEqual(NAMED_MAX);
+    // ranked heaviest first among the names that fit
+    const ranks = named.map((x) => x.nameRank);
+    expect([...ranks].sort()).toEqual(ranks.map((_, i) => i));
+    const byRank = [...named].sort((a, b) => (a.nameRank ?? 0) - (b.nameRank ?? 0));
+    for (let i = 1; i < byRank.length; i++) expect(byRank[i - 1].weightPct).toBeGreaterThanOrEqual(byRank[i].weightPct);
+    // the rule itself: no two printed names share space
+    const boxes = named.map((x) => ({ x: (x.dx / 100) * LAYOUT_PX, y: (x.dy / 100) * LAYOUT_PX + x.sizePx / 2 }));
+    for (let i = 0; i < boxes.length; i++)
+      for (let j = i + 1; j < boxes.length; j++)
+        expect(Math.abs(boxes[i].x - boxes[j].x) >= 40 || Math.abs(boxes[i].y - boxes[j].y) >= 15).toBe(true);
+  });
+
+  it("drops a name that would cover the zone labels on the bottom spoke", () => {
+    const sectors = [sec("Aaa Aaa Aaa Aaa Aaa", "know", "30"), sec("Bbb", "partly", "20"), sec("Ccc", "outside", "10"), sec("Ddd", null, "5")];
+    const m = buildCircleMap(comp(sectors));
+    for (const x of m.markers.filter((k) => k.showName)) {
+      const left = (x.dx / 100) * LAYOUT_PX - 52;
+      const right = left + 104;
+      const top = (x.dy / 100) * LAYOUT_PX + x.sizePx / 2;
+      const onSpoke = left < 40 && right > -40 && top > 0.1 * LAYOUT_PX && top < 0.3 * LAYOUT_PX;
+      expect(onSpoke && top < 0.27 * LAYOUT_PX && top > 0.12 * LAYOUT_PX && Math.abs(x.dx) < 8).toBe(false);
+    }
   });
 
   it("sectors with nothing held and no mark are only rows behind a disclosure; a mark keeps a sector on the ring", () => {
@@ -332,5 +366,77 @@ describe("labels and wording", () => {
 
   it("keeps the fixed chrome inside its own word budget", () => {
     expect(CIRCLE_MAP_CHROME.reduce((n, s) => n + countWords(s), 0)).toBeLessThanOrEqual(CIRCLE_MAP_CHROME_BUDGET);
+  });
+});
+
+describe("placing a mark by dragging it onto a zone", () => {
+  it("reads the zone from the distance to the centre, in the same percent-of-width unit as a marker", () => {
+    expect(zoneAt(0, 0)).toBe("inside");
+    expect(zoneAt(ZONE_EDGES.inside * 50 - 1, 0)).toBe("inside");
+    expect(zoneAt(ZONE_EDGES.inside * 50 + 1, 0)).toBe("edge");
+    expect(zoneAt(0, -(ZONE_EDGES.edge * 50 + 1))).toBe("outside");
+    expect(zoneAt(0, ZONE_EDGES.outside * 50 + 1)).toBe("fog");
+    expect(zoneAt(49, 0)).toBe("fog");
+  });
+
+  it("is the same in every direction", () => {
+    for (const a of [0, 45, 90, 135, 180, 225, 270, 315]) {
+      const rad = (a * Math.PI) / 180;
+      const at = (frac: number) => zoneAt(Math.sin(rad) * 50 * frac, -Math.cos(rad) * 50 * frac);
+      expect([at(0.2), at(0.38), at(0.55), at(0.85)]).toEqual(["inside", "edge", "outside", "fog"]);
+    }
+  });
+
+  it("cancels a drop that ends clear of the map, and ignores a point it cannot read", () => {
+    expect(zoneAt(50 * DROP_LIMIT + 1, 0)).toBeNull();
+    expect(zoneAt(Number.NaN, 0)).toBeNull();
+  });
+
+  it("every zone the markers are drawn in is the zone a drop there would give", () => {
+    // markers sit strictly inside their band (see bandRadii), so dragging one a little still reads as its band
+    const m = buildCircleMap(comp([sec("A", "know", "10"), sec("B", "partly", "10"), sec("C", "outside", "10"), sec("D", null, "10")]));
+    for (const x of m.markers) {
+      const got = zoneAt(x.dx, x.dy);
+      expect(got).toBe(x.band);
+    }
+  });
+
+  it("turns a pointer position into percent of the map width from its centre", () => {
+    const rect = { left: 100, top: 200, width: 400, height: 400 };
+    expect(pointerToPct(300, 400, rect)).toEqual({ dx: 0, dy: 0 });
+    expect(pointerToPct(500, 200, rect)).toEqual({ dx: 50, dy: -50 });
+    expect(Number.isNaN(pointerToPct(1, 1, { left: 0, top: 0, width: 0, height: 0 }).dx)).toBe(true);
+  });
+
+  it("maps a zone to the level the page writes, and the fog to clearing the mark", () => {
+    expect(levelForBand("inside")).toBe("know");
+    expect(levelForBand("edge")).toBe("partly");
+    expect(levelForBand("outside")).toBe("outside");
+    expect(levelForBand("fog")).toBe("");
+  });
+
+  it("writes nothing when a marker is dropped where it already is", () => {
+    expect(isMove("know", "inside")).toBe(false);
+    expect(isMove(null, "fog")).toBe(false);
+    expect(isMove("know", "edge")).toBe(true);
+    expect(isMove("partly", "fog")).toBe(true);
+    expect(isMove(null, "outside")).toBe(true);
+  });
+
+  it("says what the drop did in the map's own words", () => {
+    expect(placedText("Energy", "inside")).toBe("Energy: Inside.");
+    expect(placedText("Energy", "edge")).toBe("Energy: On the edge.");
+    expect(placedText("Energy", "fog")).toBe("Energy: mark cleared, now unmarked.");
+  });
+
+  it("keeps the drag wording short and free of trading words", () => {
+    expect(countWords(`${DRAG_HINT} ${TRAY_TITLE}`)).toBeLessThanOrEqual(22);
+    expect(`${DRAG_HINT} ${TRAY_TITLE}`).not.toMatch(/\b(buy|sell|score|reward|points)\b/i);
+  });
+
+  it("pickNames never returns more than NAMED_MAX and is empty for no markers", () => {
+    expect(pickNames([])).toEqual([]);
+    const m = buildCircleMap(comp(many(10, "know", (i) => String(i + 1))));
+    expect(pickNames(m.markers.filter((x) => x.kind === "sector")).length).toBeLessThanOrEqual(NAMED_MAX);
   });
 });

@@ -39,11 +39,15 @@ const render = (game: boolean, demo = false) => {
 };
 
 describe("Circle page views", () => {
-  it("game mode shows the ring map with the three-state control and no select", () => {
+  it("game mode shows the ring map with drag-to-place and no per-row buttons or select", () => {
     const html = render(true);
     expect(html).toContain("circle-marker");
-    expect(html).toContain('type="radio"');
+    expect(html).toContain('data-draggable="true"');
+    expect(html).toContain("Drag a sector to where you know it");
     expect(html).not.toContain("<select");
+    expect(html).not.toContain('type="radio"');
+    expect(html).not.toContain("mark-save");
+    expect(html).not.toContain("Optional note");
   });
 
   it("Normal mode shows the old content: bar legend, selects, holdings list, no map", () => {
@@ -56,12 +60,13 @@ describe("Circle page views", () => {
     }
   });
 
-  it("demo data is read-only in the ring view: radios and Save disabled, no Clear", () => {
+  it("demo data is read-only in the ring view: nothing can be dragged and no hint is printed", () => {
     const html = render(true, true);
     expect(html).toContain("Demo data");
-    expect(html).not.toMatch(/<input type="radio"(?![^>]*disabled)/);
+    expect(html).not.toContain('data-draggable="true"');
+    expect(html).not.toContain("Drag a sector to where you know it");
     expect(html).not.toContain("Clear mark");
-    expect(html).toMatch(/class="mark-save" disabled/);
+    expect(html).not.toContain("mark-save");
   });
 });
 

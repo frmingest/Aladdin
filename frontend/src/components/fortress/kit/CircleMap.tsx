@@ -1,4 +1,5 @@
-import { useId, useMemo, type CSSProperties } from "react";
+import { useId, useMemo, useRef, type CSSProperties } from "react";
+import { createPortal } from "react-dom";
 import {
   buildCircleMap,
   CIRCLE_R,
@@ -6,7 +7,11 @@ import {
   hudFacts,
   INSIDE_CAPTION,
   collapsedText,
+  DRAG_HINT,
   HIT_PX,
+  levelForBand,
+  TRAY_TITLE,
+  ZONE_EDGES,
   NO_SECTOR_TITLE,
   NOT_JUDGED_TITLE,
   RING_LABEL,
@@ -20,6 +25,7 @@ import CircleGlyph from "./CircleGlyph";
 import CircleRingArt, { FogStake } from "./CircleRingArt";
 import FogPanel from "./FogPanel";
 import NightPanel from "./NightPanel";
+import { useZoneDrag, type DragState } from "./useZoneDrag";
 import "./circleMap.css";
 
 /** The Circle of Competence drawn as a ring map (game mode, Circle page hero). The layout is the pure
@@ -27,7 +33,9 @@ import "./circleMap.css";
  * aria-hidden; every marker is a real button (>= 44 px) with its sector, level and share in its
  * name, and every label is HTML, not SVG text. Neutral parchment and ink: nothing is green, and the
  * inside of the circle is an outline, never a glow. Pressing a marker hands the sector to the page,
- * which focuses its mark control; the only write stays that control's own Save. */
+ * which opens its panel. Placement is direct: drag a marker onto a zone and the page saves it (the one
+ * write, unchanged: a PUT, or a DELETE when it is dropped in the fog). The panel's radios and the tap
+ * are the keyboard way to do the same thing. */
 
 function Ground() {
   const id = useId().replace(/:/g, "");
@@ -54,18 +62,64 @@ function Ground() {
   );
 }
 
-function Marker({ m, onPress }: { m: CircleMarker; onPress: (sector: string | null) => void }) {
+const ZONE_WORD: Record<CircleBand, string> = RING_LABEL;
+
+/** The drop zones, drawn only while a marker is being dragged. The zone under the pointer is outlined
+ * and lightly filled; the shape of the zones is the same circle the page already draws. */
+function ZoneOverlay({ hot }: { hot: CircleBand | null }) {
+  const ring = (r: number) => `M${50 - r} 50 a${r} ${r} 0 1 0 ${2 * r} 0 a${r} ${r} 0 1 0 ${-2 * r} 0 Z`;
+  const a = ZONE_EDGES.inside * 50;
+  const b = ZONE_EDGES.edge * 50;
+  const c = ZONE_EDGES.outside * 50;
+  const zones: { band: CircleBand; d: string; rule?: "evenodd" }[] = [
+    { band: "inside", d: ring(a) },
+    { band: "edge", d: `${ring(b)} ${ring(a)}`, rule: "evenodd" },
+    { band: "outside", d: `${ring(c)} ${ring(b)}`, rule: "evenodd" },
+    { band: "fog", d: `${ring(50)} ${ring(c)}`, rule: "evenodd" },
+  ];
+  return (
+    <svg viewBox="0 0 100 100" className="circle-zones" aria-hidden>
+      {zones.map((z) => (
+        <path key={z.band} d={z.d} fillRule={z.rule} className="circle-zone" data-zone={z.band} data-hot={hot === z.band ? "true" : undefined} />
+      ))}
+    </svg>
+  );
+}
+
+type Bind = ReturnType<typeof useZoneDrag>["bind"];
+
+function Marker({
+  m,
+  selected,
+  dragging,
+  draggable,
+  bind,
+  onPress,
+}: {
+  m: CircleMarker;
+  selected: boolean;
+  dragging: boolean;
+  draggable: boolean;
+  bind: Bind;
+  onPress: (sector: string | null) => void;
+}) {
   const style = { "--dx": m.dx, "--dy": m.dy, "--hit": `${Math.max(HIT_PX, m.sizePx)}px`, opacity: m.opacity } as CSSProperties;
+  const isSector = m.kind === "sector";
+  const events = isSector ? bind(m.sector, m.level, m.sizePx) : { onClick: () => onPress(null) };
   return (
     <button
       type="button"
       className="circle-marker"
       data-band={m.band}
       data-kind={m.kind}
+      data-selected={selected ? "true" : undefined}
+      data-dragging={dragging ? "true" : undefined}
+      data-draggable={isSector && draggable ? "true" : undefined}
       style={style}
-      aria-label={m.kind === "sector" ? `${m.label}. Go to its mark control` : `${m.label}. Go to the list`}
+      aria-pressed={isSector ? selected : undefined}
+      aria-label={isSector ? `${m.label}. Press to choose its mark, or drag it onto a zone` : `${m.label}. Go to the list`}
       title={m.label}
-      onClick={() => onPress(m.kind === "sector" ? m.sector : null)}
+      {...events}
     >
       <span className="circle-marker-disc" style={{ width: m.sizePx, height: m.sizePx }}>
         <CircleGlyph level={m.level} size={m.sizePx} rotate={m.angleDeg} />
@@ -82,6 +136,24 @@ function Marker({ m, onPress }: { m: CircleMarker; onPress: (sector: string | nu
         )}
       </span>
     </button>
+  );
+}
+
+/** The copy of the marker that follows the pointer. It takes the shape of the zone it is over, so the
+ * result of letting go is visible before it happens: a dashed "?" over the fog means "clear". */
+function Ghost({ drag }: { drag: DragState }) {
+  const level = drag.zone ? levelForBand(drag.zone) || null : null;
+  return createPortal(
+    <span
+      className="circle-ghost"
+      data-zone={drag.zone ?? "none"}
+      style={{ left: drag.x, top: drag.y, width: drag.size + 6, height: drag.size + 6 }}
+      aria-hidden
+    >
+      <CircleGlyph level={level} size={drag.size} />
+      <span className="circle-ghost-word">{drag.zone ? ZONE_WORD[drag.zone] : "Let go to cancel"}</span>
+    </span>,
+    document.body,
   );
 }
 
@@ -109,29 +181,96 @@ function Tent() {
   );
 }
 
-export default function CircleMap({ data, onPress }: { data: Competence; onPress: (sector: string | null) => void }) {
+export default function CircleMap({
+  data,
+  onPress,
+  onSelect,
+  onPlace,
+  selected = null,
+  readOnly = false,
+  status = "",
+  onUndo,
+}: {
+  data: Competence;
+  /** Tags and the "smaller sectors" button: go to the list (null). */
+  onPress: (sector: string | null) => void;
+  /** A marker or chip was pressed: choose it (falls back to onPress when the page gives no panel). */
+  onSelect?: (sector: string) => void;
+  /** A marker was dropped on a zone that changes its level; "" clears the mark. */
+  onPlace?: (sector: string, level: CompetenceLevel | "") => void;
+  selected?: string | null;
+  /** Demo data, or a save in flight: markers can be pressed but not dragged. */
+  readOnly?: boolean;
+  /** What the last drop did, read aloud and shown under the map. */
+  status?: string;
+  onUndo?: () => void;
+}) {
   const model = useMemo(() => buildCircleMap(data), [data]);
   const { noSector, notJudged, collapsed } = model;
   const bands = (Object.keys(RING_LABEL) as CircleBand[]).map((b) => ({ b, pos: ringLabelPos(b) }));
   const fogLines = noSector.names.length > 0 ? noSector.names : [];
+  const mapRef = useRef<HTMLDivElement>(null);
+  const canDrag = !readOnly && !!onPlace;
+  const { drag, bind } = useZoneDrag({
+    mapRef,
+    disabled: !canDrag,
+    onPlace: (sector, level) => onPlace?.(sector, level),
+    onTap: (sector) => (onSelect ?? onPress)(sector),
+  });
   return (
     <div>
       <Hud data={data} />
       <GameFrame>
         <NightPanel className="circle-stage">
-          <div className="circle-map" role="group" aria-label="Circle of competence: one marker per sector">
+          {!!onPlace && !data.demo && <p className="circle-hint">{DRAG_HINT}</p>}
+          <div className="circle-map" ref={mapRef} role="group" aria-label="Circle of competence: one marker per sector" data-dragging={drag ? "true" : undefined}>
             <Ground />
+            <ZoneOverlay hot={drag?.zone ?? null} />
             <CircleRingArt />
             {bands.map(({ b, pos }) => (
-              <span key={b} className="circle-ring-label" style={{ left: `${pos.left}%`, top: `${pos.top}%` }} data-band={b}>
+              <span key={b} className="circle-ring-label" style={{ left: `${pos.left}%`, top: `${pos.top}%` }} data-band={b} data-hot={drag?.zone === b ? "true" : undefined}>
                 {RING_LABEL[b]}
               </span>
             ))}
             {model.markers.map((m) => (
-              <Marker key={m.key} m={m} onPress={onPress} />
+              <Marker key={m.key} m={m} selected={selected === m.sector && m.kind === "sector"} dragging={drag?.sector === m.sector} draggable={canDrag} bind={bind} onPress={onPress} />
             ))}
           </div>
           <p className="circle-caption">{INSIDE_CAPTION}</p>
+          <p className="circle-status" role="status" aria-live="polite">
+            {status}
+            {status && onUndo && (
+              <>
+                {" "}
+                <button type="button" className="mark-clear" onClick={onUndo}>
+                  Undo
+                </button>
+              </>
+            )}
+          </p>
+          {model.quiet.length > 0 && (
+            <div className="circle-tray">
+              <p className="circle-tray-title">{TRAY_TITLE}</p>
+              <ul className="circle-tray-list">
+                {model.quiet.map((q) => (
+                  <li key={q.sector}>
+                    <button
+                      type="button"
+                      className="circle-chip"
+                      data-draggable={canDrag ? "true" : undefined}
+                      data-dragging={drag?.sector === q.sector ? "true" : undefined}
+                      data-selected={selected === q.sector ? "true" : undefined}
+                      aria-pressed={selected === q.sector}
+                      aria-label={`${q.sector}: not marked, nothing held. Press to choose its mark, or drag it onto a zone`}
+                      {...bind(q.sector, q.level, 28)}
+                    >
+                      {q.sector}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           {(noSector.count > 0 || notJudged.count > 0 || collapsed) && (
             <div className="circle-tags">
               {noSector.count > 0 && (
@@ -164,6 +303,7 @@ export default function CircleMap({ data, onPress }: { data: Competence; onPress
           )}
         </NightPanel>
       </GameFrame>
+      {drag && <Ghost drag={drag} />}
     </div>
   );
 }
