@@ -280,6 +280,8 @@ Same rules as Sprints 1 to 6: one branch and one PR per sprint off fresh `main`,
 - Not done, by design: pin and wave tile (cut line).
 - Checks: tsc (only the known `artAssets.test.ts` gap), eslint (0 errors), the kit and map tests pass (art off draws no frame, tools or image). Not rendered in a browser: corner size over settlements near the edge, and the zoom button position, need Faiz's eye.
 
+**Update 2026-10-13:** the five crests, the high-backed Council chair and the shopkeeper "ready" face have arrived and are wired (see [design-remaining-objects-2026-10-13.md](design-remaining-objects-2026-10-13.md)); only the three optional backdrops remain. The list below is the 2026-10-12 state.
+
 **Still missing for the rooms (updated 2026-10-12; prompts are in the master doc, Part 6b).**
 - **Crests (Sprint 8, batch 3):** the five room crests (council, records, circle, chronicle, map). One medallion arrived on 2026-10-12, a tower on a teal disc: it fits the Fortress, not a room, and is kept in the masters.
 - **Council:** a second, differently shaped advisor chair (the high-backed one arrived as a lectern). Optional council backdrop.

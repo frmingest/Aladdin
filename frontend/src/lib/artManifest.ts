@@ -95,6 +95,12 @@ import marketBooth2 from "../assets/art/market-booth-2.webp";
 import marketBoothProduce from "../assets/art/market-booth-produce.webp";
 import councilSitPartner from "../assets/art/council-sit-partner.webp";
 import councilSitOracle from "../assets/art/council-sit-oracle.webp";
+import crestCouncil from "../assets/art/crest-council.webp";
+import crestRecords from "../assets/art/crest-records.webp";
+import crestCircle from "../assets/art/crest-circle.webp";
+import crestChronicle from "../assets/art/crest-chronicle.webp";
+import crestMap from "../assets/art/crest-map.webp";
+import shopkeeperReady from "../assets/art/shopkeeper-ready.webp";
 
 export interface PackedArt {
   src: string;
@@ -184,7 +190,7 @@ export const ART_MANIFEST = {
   "map-dividers": { src: mapDividers, width: 94, height: 160, alt: "" },
   "map-rolled": { src: mapRolled, width: 192, height: 130, alt: "" },
   "council-table": { src: councilTable, width: 320, height: 310, alt: "" },
-  "council-chair": { src: councilChair, width: 164, height: 256, alt: "" },
+  "council-chair": { src: councilChair, width: 163, height: 256, alt: "" },
   "council-candles": { src: councilCandles, width: 87, height: 256, alt: "", anchors: { "f1": [0.505, 0.012] as const, "f2": [0.18, 0.145] as const, "f3": [0.815, 0.205] as const } },
   "room-scroll": { src: roomScroll, width: 192, height: 130, alt: "" },
   "room-inkwell": { src: roomInkwell, width: 99, height: 160, alt: "" },
@@ -201,4 +207,10 @@ export const ART_MANIFEST = {
   "market-booth-produce": { src: marketBoothProduce, width: 132, height: 160, alt: "" },
   "council-sit-partner": { src: councilSitPartner, width: 192, height: 256, alt: "" },
   "council-sit-oracle": { src: councilSitOracle, width: 160, height: 256, alt: "" },
+  "crest-council": { src: crestCouncil, width: 192, height: 192, alt: "" },
+  "crest-records": { src: crestRecords, width: 192, height: 192, alt: "" },
+  "crest-circle": { src: crestCircle, width: 192, height: 192, alt: "" },
+  "crest-chronicle": { src: crestChronicle, width: 192, height: 192, alt: "" },
+  "crest-map": { src: crestMap, width: 192, height: 192, alt: "" },
+  "shopkeeper-ready": { src: shopkeeperReady, width: 365, height: 384, alt: "" },
 } as const satisfies Record<string, PackedArt>;

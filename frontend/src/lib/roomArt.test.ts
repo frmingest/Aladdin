@@ -42,6 +42,13 @@ describe("room art ids", () => {
     }
   });
 
+  it("gives each of the five rooms its own crest picture, and no other room one", () => {
+    const rooms = ["council", "records", "circle", "chronicle", "map"] as const;
+    const ids = rooms.map((r) => roomCrestId(r));
+    expect(ids).toEqual(rooms.map((r) => `crest-${r}`));
+    for (const room of ["siege", "market", "fortress"] as const) expect(roomCrestId(room)).toBeNull();
+  });
+
   it("returns null for a crest or seal whose picture is not packed (never a broken id)", () => {
     const packed = Object.keys(ART_MANIFEST);
     for (const room of ["council", "records", "circle", "chronicle", "map"] as const) {

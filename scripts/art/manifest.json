@@ -833,7 +833,7 @@
   },
   {
    "id": "council-chair",
-   "source": "a_single_standalone_fantasy_game_furniture_prop_asset_a_plain_iron_framed_chair",
+   "source": "a_single_standalone_fantasy_game_furniture_prop_asset_council_advisor_chair",
    "max_side": 256
   },
   {
@@ -941,6 +941,42 @@
    "id": "council-sit-oracle",
    "source": "standalone_2d_fantasy_game_character_asset_the_wise_scholar_oracle_from_data",
    "max_side": 256
+  },
+  {
+   "id": "crest-council",
+   "source": "a_single_standalone_fantasy_game_crest_prop_asset_council_crest_badge_seen",
+   "key": "white",
+   "max_side": 192
+  },
+  {
+   "id": "crest-records",
+   "source": "a_single_standalone_fantasy_game_crest_prop_asset_records_crest_badge_seen",
+   "key": "white",
+   "max_side": 192
+  },
+  {
+   "id": "crest-circle",
+   "source": "a_single_standalone_fantasy_game_crest_prop_asset_circle_crest_badge_seen",
+   "key": "white",
+   "max_side": 192
+  },
+  {
+   "id": "crest-chronicle",
+   "source": "a_single_standalone_fantasy_game_crest_prop_asset_chronicle_crest_badge_seen",
+   "key": "white",
+   "max_side": 192
+  },
+  {
+   "id": "crest-map",
+   "source": "a_single_standalone_fantasy_game_crest_prop_asset_map_crest_badge_seen_straight",
+   "key": "white",
+   "max_side": 192
+  },
+  {
+   "id": "shopkeeper-ready",
+   "source": "cartoon_fantasy_medieval_character_bust_portrait_of_the_exact_same_store",
+   "key": "sampled",
+   "tol": 9
   }
  ]
 }

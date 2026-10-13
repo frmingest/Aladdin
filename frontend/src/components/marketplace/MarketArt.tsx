@@ -47,7 +47,7 @@ export function Awning({ a, b, stripes = 10, className = "" }: { a: string; b: s
   );
 }
 
-/** The merchant: the Stitch face for the verdict when art is on (four of the five), else a generic drawn shopkeeper, not anyone's likeness. */
+/** The merchant: the Stitch face for the verdict when art is on (all five verdicts have one), else a generic drawn shopkeeper, not anyone's likeness. */
 export function Merchant({ level, size = 84 }: { level: StoreLevel; size?: number }) {
   const face = shopkeeperFaceId(level);
   const svg = <MerchantSvg level={level} size={size} />;

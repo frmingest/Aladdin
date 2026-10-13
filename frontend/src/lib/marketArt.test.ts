@@ -44,11 +44,11 @@ describe("salBustId", () => {
 });
 
 describe("shopkeeperFaceId", () => {
-  it("gives four verdicts a face that exists, and leaves 'ready' to the SVG merchant until it has a smiling one", () => {
-    const faces: StoreLevel[] = ["promising", "wait", "pass", "unknown"];
+  it("gives every verdict its own face, and each face exists", () => {
+    const faces: StoreLevel[] = ["ready", "promising", "wait", "pass", "unknown"];
     const ids = faces.map((l) => shopkeeperFaceId(l));
     for (const id of ids) expect(OBJECT_ART[id!]).toBeDefined();
-    expect(new Set(ids).size).toBe(4);
-    expect(shopkeeperFaceId("ready")).toBeNull();
+    expect(new Set(ids).size).toBe(5);
+    expect(shopkeeperFaceId("ready")).toBe("shopkeeper-ready");
   });
 });
