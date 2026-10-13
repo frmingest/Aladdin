@@ -1,19 +1,17 @@
 # Aladdin — Progress
 
-**Last updated:** 2026-10-13 (C1 Siege back-test written on `feature/c1-siege-backtest`, PR to review). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
+**Last updated:** 2026-10-13 (D1 Plain lens written on `feature/d1-plain-lens`, PR to review). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
 
 ## Current Objective
 
-**Trust slice: C1 Siege back-test is written and waits for review.** Branch `feature/c1-siege-backtest` (PR to review, not merged, not deployed): the Siege page now names the unmodelled share in its headline (`siege_scenarios_v3`) and has a "Looking back" card that checks the page's method against the benchmark's worst stored fall ([doc](game/siege-backtest-c1-2026-10-13.md)). Decided by Faiz 2026-10-13: the art default stays opt-in, the phone Fortress keeps its sideways scroll, no more feature contest until C1 is done, and a knife-edge tower stays off the Council agenda.
+**Trust slice: D1 Plain lens is written and waits for review.** Branch `feature/d1-plain-lens` (PR to review, not merged, not deployed): the Fortress gets a third view, **Plain**, that keeps the Scene's arrangement but draws every holding as a labelled block with its numbers, plus a print form and a remembered view (a data-saving browser starts on Plain) ([doc](game/plain-lens-d1-2026-10-13.md)). C1 and its wording fix are merged (#134, #135). Decided by Faiz 2026-10-13: the art default stays opt-in, the phone Fortress keeps its sideways scroll, and a knife-edge tower stays off the Council agenda.
 
-State: `main` is at `bdc512f` (#132 backdrops and #133 docs merged; the live site answers but Claude could not confirm which build it serves). Repo migration head `t1f2a3b4c5d6` (C1 adds none). Live URLs: frontend `https://exciting-gratitude-production-71b5.up.railway.app`, backend `https://aladdin-production-bd25.up.railway.app`.
+State: `main` is at `3ab3b1b` (#135 merged; the live site answers but Claude could not confirm which build it serves). Repo migration head `t1f2a3b4c5d6` (D1 adds none). Live URLs: frontend `https://exciting-gratitude-production-71b5.up.railway.app`, backend `https://aladdin-production-bd25.up.railway.app`.
 
 ## Active Tasks
 
-- [ ] **Review and merge the C1 PR (Faiz):** review and merge the C1 PR; then open Siege Simulator and the "Looking back" card (steps in the [doc](game/siege-backtest-c1-2026-10-13.md)); merging is a production deploy
-- [ ] **Look at the Council banner on the live site (Faiz):** the darkest of the five backdrops under the wash; Game mode on, open Council
-- [ ] **Run the live browser specs (Claude):** `SMOKE_FRONTEND_URL`, `SMOKE_API_URL`, then `npm run smoke` and `npx playwright test e2e/game-pages.spec.ts` (both passed only against a local demo stack)
-- [ ] **D1 Plain lens, then D2 Camera (Claude):** trust and first-glance legibility, after C1 is merged
+- [ ] **Review and merge the D1 PR (Faiz):** then press Plain on the Fortress, compare a few holdings with the Ledger, open a survey from a block, try Print this view (steps in the [doc](game/plain-lens-d1-2026-10-13.md)); merging is a production deploy. No browser or print check was done by Claude
+- [ ] **D2 Camera (Claude):** zoom, pan and fit for the painted scene, labels floor at 11 px, survey docked beside the scene on wide screens; after D1 is merged
 
 ## Recent Blockers / Open Questions
 
@@ -31,4 +29,4 @@ State: `main` is at `bdc512f` (#132 backdrops and #133 docs merged; the live sit
 
 ## Archive Pointer
 
-Completed milestones moved to [`/docs/archive/progress-archive.md`](archive/progress-archive.md) (newest first: 2026-10-13 review tasks closed by Faiz, 2026-10-12 Design Master Sprints 8, 10, 12, 13, 2026-10-11 Design Master Sprints 0 to 5, 2026-10-11 design passes and Phase A, 2026-10-09 review tasks, then the full 2026-10-07 snapshot). Older: [`archive/PROGRESS-full-2026-09-30.md`](archive/PROGRESS-full-2026-09-30.md). Per-topic write-ups live in `docs/<topic>/`; index at [`docs/README.md`](README.md).
+Completed milestones moved to [`/docs/archive/progress-archive.md`](archive/progress-archive.md) (newest first: 2026-10-13 C1 Siege back-test and review tasks, 2026-10-13 design plan, 2026-10-13 review tasks closed by Faiz, 2026-10-12 Design Master Sprints 8, 10, 12, 13, 2026-10-11 Design Master Sprints 0 to 5, 2026-10-11 design passes and Phase A, 2026-10-09 review tasks, then the full 2026-10-07 snapshot). Older: [`archive/PROGRESS-full-2026-09-30.md`](archive/PROGRESS-full-2026-09-30.md). Per-topic write-ups live in `docs/<topic>/`; index at [`docs/README.md`](README.md).
