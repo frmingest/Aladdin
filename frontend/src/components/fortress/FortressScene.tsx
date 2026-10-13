@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { isNavKey, nextTower } from "../../lib/sceneNav";
 import { useSceneRunning } from "./useScenePause";
+import { useAfterFirstPaint } from "../../lib/useAfterFirstPaint";
 import {
   CURTAIN_HEIGHT,
   FRESHNESS_LABEL,
@@ -1644,6 +1645,7 @@ export default function FortressScene({
   const handlers: RealmHandlers = { realm, onRealmSelect, onRealmHover };
   const rootRef = useRef<HTMLDivElement>(null);
   const running = useSceneRunning(rootRef);
+  const detailReady = useAfterFirstPaint();
   const onNavigate = (fromId: string, key: string) => {
     if (!isNavKey(key)) return;
     const target = nextTower(layout.items, fromId, key);
@@ -1659,6 +1661,8 @@ export default function FortressScene({
       <svg viewBox={`0 0 ${SCENE_WIDTH} ${height}`} className="block h-auto w-full" role="group" aria-label={summary}>
         <SceneDefs palette={palette} />
         <SceneBackdrop layout={layout} sky={sky} palette={palette} height={height} level={level} />
+        {detailReady && (
+        <>
         {Array.from({ length: rowCount }, (_, r) => {
           const rowItems = layout.items.filter((i) => i.row === r);
           const y = groundY(r);
@@ -1695,6 +1699,8 @@ export default function FortressScene({
         {market && <MarketSquare y={marketTop} {...market} />}
         <SceneAmbience palette={palette} height={height} />
         <SceneVignette height={height} />
+        </>
+        )}
       </svg>
     </div>
   );
