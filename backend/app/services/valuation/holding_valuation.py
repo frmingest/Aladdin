@@ -109,6 +109,8 @@ class HoldingValuationResult:
     regime_adjustments_version: str | None = None
     risk_free_rate_pct: Decimal | None = None
     beta: Decimal | None = None
+    # The vendor beta that was thrown out as implausible (assumptions v5), if any.
+    rejected_beta: Decimal | None = None
     equity_risk_premium: Decimal | None = None
     current_price_per_share: Decimal | None = None
     dcf: DCFScenarioResult | None = None
@@ -271,7 +273,21 @@ def _resolve_cost_of_equity(
     beta = get_or_refresh_beta(
         db, market_data_provider, holding.ticker, force=force_refresh, refresh_live=force_refresh
     ).value
-    if beta is None:
+    lowest, highest = assumptions.beta_plausible_min, assumptions.beta_plausible_max
+    if beta is not None and (
+        (lowest is not None and beta < lowest) or (highest is not None and beta > highest)
+    ):
+        # v5 (2026-10-14): a vendor beta that cannot be right (Yahoo: Equinor -0.66)
+        # is not used, and the reason is shown next to the valuation.
+        result.rejected_beta = beta
+        result.unavailable_reasons.append(
+            f"{market_data_provider.name}'s beta for {holding.ticker} ({beta}) is outside the "
+            f"believable range {lowest} to {highest} for a company's shares, so the default beta "
+            f"{assumptions.default_beta} was used instead (assumptions {assumptions.version}); "
+            "check the beta source before relying on this discount rate."
+        )
+        beta = assumptions.default_beta
+    elif beta is None:
         beta = assumptions.default_beta
         result.unavailable_reasons.append(
             f"beta unavailable from {market_data_provider.name}, used default beta "

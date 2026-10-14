@@ -241,7 +241,8 @@ class Settings(BaseSettings):
     # v2 (2026-09-29) adds the plausibility guardrails and the financials method;
     # v3 (2026-10-03) measures growth over the latest profitable run of years;
     # v4 (2026-10-07) starts from the median of volatile owner earnings.
-    active_valuation_assumptions_version: str = "v4"
+    # v5 (2026-10-14) rejects vendor betas below 0 or above 3 (default beta used, said so).
+    active_valuation_assumptions_version: str = "v5"
 
     # --- Game mode (2026-10-01, app/domain/game_mapping/) ---
     # Thresholds that turn stored analysis values into fortress properties.

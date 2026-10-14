@@ -96,3 +96,12 @@ class ValuationAssumptions:
     normalisation_window_years: int = 5
     normalisation_min_years: int = 3
     normalisation_dispersion: Decimal = Decimal(2)
+
+
+    # --- v5 (2026-10-14): which vendor betas are believable --------------------
+    # A vendor beta outside [min, max] is not used: the default beta is used
+    # instead and the page says so. None (v1-v4) leaves every beta as fetched.
+    # Yahoo gave Equinor a beta of -0.66; CAPM then said the cost of equity was
+    # below the risk-free rate and only the cost-of-equity floor hid it.
+    beta_plausible_min: Decimal | None = None
+    beta_plausible_max: Decimal | None = None

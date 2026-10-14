@@ -151,7 +151,7 @@ def test_valuation_reports_the_growth_cap_and_status(client):
     body = client.get(f"/valuation/holdings/{holding_id}").json()
     _clear_overrides()
 
-    assert body["assumptions_version"] == "v4"
+    assert body["assumptions_version"] == "v5"
     assert body["valuation_method"] == "owner_earnings_dcf"
     assert body["valuation_status"] == "ok"
     assert body["growth_capped"] is True

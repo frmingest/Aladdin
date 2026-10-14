@@ -169,8 +169,18 @@ def test_v2_turns_the_guardrails_on_and_keeps_v1_market_inputs():
     assert v2.min_cost_of_equity > v2.terminal_growth_rate
 
 
-def test_default_settings_use_v4():
-    assert Settings(_env_file=None).active_valuation_assumptions_version == "v4"
+def test_default_settings_use_v5():
+    assert Settings(_env_file=None).active_valuation_assumptions_version == "v5"
+
+
+def test_v5_changes_only_the_believable_beta_range():
+    import dataclasses
+
+    v4, v5 = get_valuation_assumptions("v4"), get_valuation_assumptions("v5")
+    assert (v4.beta_plausible_min, v4.beta_plausible_max) == (None, None)
+    assert (v5.beta_plausible_min, v5.beta_plausible_max) == (D(0), D(3))
+    differing = {f.name for f in dataclasses.fields(v4) if getattr(v4, f.name) != getattr(v5, f.name)}
+    assert differing == {"version", "beta_plausible_min", "beta_plausible_max"}
 
 
 def test_v3_changes_only_the_growth_base_method():

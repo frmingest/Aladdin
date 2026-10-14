@@ -4,13 +4,13 @@
 
 ## Current Objective
 
-**Price and split data fixes are written (2026-10-14, `feature/price-split-data-fixes`, not merged or deployed).** Kongsberg's pre-split years are restated to today's price basis, a sudden price jump now gets a warning next to the valuation, and a read-only holding-currency check exists at `/system/holding-currency-check`. The Equinor 41.95 USD turned out to be 402.80 NOK converted, not a bug ([doc](valuation/price-split-data-fixes-2026-10-14.md)).
+**Equinor beta fix is written (2026-10-14, `fix/equinor-beta`, not merged or deployed).** Yahoo's beta for Equinor was -0.66; the valuation used it and only the 8% cost-of-equity floor hid it. New assumptions v5 rejects betas outside 0 to 3, uses the default 1.0 and says so on the page ([doc](valuation/equinor-beta-fix-2026-10-14.md)). The price/split fixes (#143) are merged and Faiz's screenshot shows them live (Kongsberg restated x5).
 
-State: `main` is at `28db340` (#140 and #142 merged; Claude has not checked which build the live site serves). Repo migration head after this branch: `v1d2e3f4a5b6` (new `stock_splits` table); `u1a2b3c4d5e6` is the current head on `main`. Live URLs: frontend `https://exciting-gratitude-production-71b5.up.railway.app`, backend `https://aladdin-production-bd25.up.railway.app`.
+State: `main` is at `8dc8646` (#143 merged). Repo migration head `v1d2e3f4a5b6` (stock_splits); the beta fix adds none. Live URLs: frontend `https://exciting-gratitude-production-71b5.up.railway.app`, backend `https://aladdin-production-bd25.up.railway.app`.
 
 ## Active Tasks
 
-- [ ] **Review and merge the price/split PR (Faiz):** merging deploys and the new migration `v1d2e3f4a5b6` must run; then press Refresh on Kongsberg and check FY2023 shows the "restated x5" note
+- [ ] **Review and merge the Equinor beta PR (Faiz):** merging deploys; then press Refresh on Equinor: the amber note names the rejected beta and the discount rate becomes about 9.7%
 - [ ] **Compare the Equinor price (Faiz):** stored 402.80 NOK; check it against the live Oslo quote
 - [ ] **Run the currency check (Faiz) after deploy:** open `/system/holding-currency-check` on the backend; an empty list means all holdings match
 - [ ] **Confirm the prompt-log migration ran (Faiz):** #137 added `u1a2b3c4d5e6`; merging deploys, so check System status loads the Prompt log card
@@ -23,7 +23,8 @@ State: `main` is at `28db340` (#140 and #142 merged; Claude has not checked whic
 - **Hit rate (C2), decided 2026-10-14 (Faiz left it to Claude): yes, with limits.** Shown only once there are enough decisions (opens at 8 with a 6- or 12-month outcome), always with the count beside it and a "too few so far" state before that; the Oracle's range versus later price counts the same way; no score, streak or reward, and it never changes a verdict or a tower. This amends the Sprint 25 "no hit rate" rule. Needs the small `forecasts` table so the clock starts now, which is a database change to approve when the slice starts
 - **Siege benchmark:** decided to add a global option (stand-in index fund, labelled as such on screen); OSEBX stays for Norwegian stocks ([doc](game/siege-instrument-sensitivity-2026-10-07.md))
 - **Loss-making valuation** (Vend Marketplaces, Salmon Evolution, Vår Energi): decided not to force a score; show "can't be ranked yet" with the reason, plus what the price assumes, as information only
-- **Price/split data, written not deployed:** Equinor 41.95 USD is the NOK price converted (not a bug); Kongsberg 5:1 split is now restated in the multiples history once splits are stored; jump flag added ([doc](valuation/price-split-data-fixes-2026-10-14.md)). Other splits only appear after a price refresh
+- **Price/split data (live per screenshot, #143):** Equinor 41.95 USD is the NOK price converted (not a bug); Kongsberg 5:1 split is now restated in the multiples history once splits are stored; jump flag added ([doc](valuation/price-split-data-fixes-2026-10-14.md)). Other splits only appear after a price refresh
+- **Seen in Faiz's screenshots, not fixed:** Kongsberg EV/EBITDA shows a "missing shares" reason though shares exist (likely the known missing D&A, wrong reason shown); Kongsberg P/S jumps at FY2024 (cause unknown, possible demerger/restated revenue); "Multiples over time" likely pairs one recent stored price with every year (from the code, not checked live)
 - **Holding currency:** the check exists but has not been run on real data; if a NOK holding shows USD/EUR, the CSV "Valuta" import is the cause
 - **Housekeeping:** decided to remove the 4 unused manual snapshot/position endpoints; the legacy analysis tables stay until Faiz asks (CLAUDE.md)
 - **Known data gaps** (Kongsberg/Bouvet D&A, Salmon FY2020–21 scale, duplicate market observations, stale EUR rate, Risk and Performance cover 5 of 8 holdings): see [overview](valuation/data-gaps-overview-2026-10-03.md); fund yearly returns still to be typed in

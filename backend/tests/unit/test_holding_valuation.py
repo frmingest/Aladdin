@@ -4,6 +4,7 @@ the deterministic DCF/multiples modules together for one holding, against
 an in-memory SQLite DB and fake providers (no real network calls)."""
 from datetime import datetime, timezone
 from decimal import Decimal
+from unittest.mock import patch
 
 import pytest
 from sqlalchemy import create_engine
@@ -333,3 +334,48 @@ def test_multiples_are_still_computed_even_when_dcf_is_unavailable():
 
     # multiples_over_time doesn't depend on the DCF succeeding.
     assert len(result.multiples) == 1
+
+
+# --- implausible vendor beta (assumptions v5, 2026-10-14: Yahoo gave Equinor -0.66) ---
+
+
+def _value_with_beta(beta, *, version="v5"):
+    from app.config.settings import Settings
+
+    settings = Settings(_env_file=None, active_valuation_assumptions_version=version)
+    with _session() as db, patch("app.services.valuation.holding_valuation.get_settings", return_value=settings):
+        holding = _setup_holding_with_two_periods(db, fy2025_net_income="85")
+        market_provider = _FakeMarketDataProvider(price=_price_point(), beta=beta)
+        rate_provider = _FakeRiskFreeRateProvider(rate=_risk_free_rate())
+        return compute_holding_valuation(db, holding, market_provider, rate_provider)
+
+
+def test_negative_beta_is_rejected_and_the_default_is_used_with_the_reason_shown():
+    result = _value_with_beta(D("-0.661"))
+    assert result.beta == D("1.0")
+    assert result.rejected_beta == D("-0.661")
+    assert any("-0.661" in r and "believable range" in r and "default beta 1.0" in r for r in result.unavailable_reasons)
+    # the discount rate is CAPM on the default beta, not on the rejected one
+    assert result.capm_cost_of_equity == D("0.04") + D("1.0") * D("0.045")
+    assert result.dcf is not None
+
+
+def test_absurdly_high_beta_is_rejected_too():
+    result = _value_with_beta(D("4.2"))
+    assert result.beta == D("1.0") and result.rejected_beta == D("4.2")
+
+
+def test_a_believable_beta_is_used_untouched():
+    result = _value_with_beta(D("0.55"))
+    assert result.beta == D("0.55") and result.rejected_beta is None
+    assert not any("believable range" in r for r in result.unavailable_reasons)
+
+
+def test_edges_of_the_range_are_accepted():
+    assert _value_with_beta(D("0")).rejected_beta is None
+    assert _value_with_beta(D("3")).rejected_beta is None
+
+
+def test_v4_still_uses_a_negative_beta_as_fetched():
+    result = _value_with_beta(D("-0.661"), version="v4")
+    assert result.beta == D("-0.661") and result.rejected_beta is None

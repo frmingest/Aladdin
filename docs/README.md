@@ -112,6 +112,7 @@ Valuation and analysis numbers: DCF, ROIC/ROE, margin of safety, data gaps, fund
 - [sb1no-implausible-dcf-investigation-2026-09-29.md](valuation/sb1no-implausible-dcf-investigation-2026-09-29.md) — SB1NO.OL "incorrect data" investigation — 2026-09-29
 - [valuation-data-diagnosis-2026-10-06.md](valuation/valuation-data-diagnosis-2026-10-06.md) — Why 15 holdings and watchlist names cannot be valued: diagnosis from Faiz's SQL results (2026-10-06)
 - [price-split-data-fixes-2026-10-14.md](valuation/price-split-data-fixes-2026-10-14.md) — Equinor price checked (not a bug), Kongsberg 5-for-1 split restated, price-jump flag, holding-currency check (2026-10-14)
+- [equinor-beta-fix-2026-10-14.md](valuation/equinor-beta-fix-2026-10-14.md) — Yahoo gave Equinor a beta of -0.66; assumptions v5 rejects betas outside 0 to 3 and says so (2026-10-14)
 - [valuation-guardrails-build-2026-09-29.md](valuation/valuation-guardrails-build-2026-09-29.md) — Valuation guardrails — build (2026-09-29)
 - [valuation-v4-normalised-base-certificates-2026-10-07.md](valuation/valuation-v4-normalised-base-certificates-2026-10-07.md) — Valuation v4: normalised DCF base, equity-certificate banks, insurer ROE (2026-10-07)
 
