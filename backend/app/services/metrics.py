@@ -469,7 +469,9 @@ def compute_holding_metrics(
                 calculations.net_debt_to_ebitda,
             )
         else:
-            result.skipped["net_debt_to_ebitda"] = "missing: ebitda"
+            result.skipped["net_debt_to_ebitda"] = (
+                "missing: ebitda (and no EBIT + depreciation_and_amortization to derive it)"
+            )
         if "free_cash_flow" in result.computed:
             ratio(
                 "net_debt_to_fcf", net_debt_value, result.computed["free_cash_flow"],
@@ -769,7 +771,9 @@ def _market_multiples(
         else:
             result.skipped["ev_to_ebitda"] = "missing: enterprise_value (itself unavailable)"
     else:
-        result.skipped["ev_to_ebitda"] = "missing: ebitda"
+        result.skipped["ev_to_ebitda"] = (
+            "missing: ebitda (and no EBIT + depreciation_and_amortization to derive it)"
+        )
 
     equity = ordinary_equity(facts)
     if equity is None:
