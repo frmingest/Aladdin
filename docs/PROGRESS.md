@@ -1,20 +1,21 @@
 # Aladdin — Progress
 
-**Last updated:** 2026-10-14 (Game mode on by default, PR open; D2 Camera merged as #138 and checked OK by Faiz; hit-rate view approved with limits). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
+**Last updated:** 2026-10-14 (B2 Then and Now written, PR open and stacked on #140; Game mode on by default, PR #140; hit-rate view approved with limits). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
 
 ## Current Objective
 
-**Game mode now starts ON for a browser that never chose (decided 2026-10-14; written on `feature/game-mode-default-on`, not yet merged or deployed). D2 Camera is merged (#138) and Faiz checked it: OK.** The painted Fortress has zoom, fit and a **Read labels** step (smallest label 11 px), mouse-drag pan, Ctrl + wheel zoom, scroll-to-selected, and on screens of 1280 px and up the survey docks beside the scene ([doc](game/camera-d2-2026-10-14.md)). The phone Fortress keeps its sideways scroll. D1 Plain lens (#136) and the Prompt log (#137) are merged.
+**B2 Then and Now is written (2026-10-14, `feature/b2-then-and-now`, stacked on #140, not merged or deployed).** Press **Then and now** on a record in the Hall of Records (painted or Plain) and it shows what the analyst's blind view said on the decision day next to today's, changed lines only, no judgement words ([doc](game/then-and-now-b2-2026-10-14.md)). Game mode now starts ON for a fresh browser (#140). D2 Camera is merged and checked OK by Faiz.
 
-State: `main` is at `37c85f9` (#138 merged; Claude has not checked which build the live site serves). Repo migration head `u1a2b3c4d5e6` (D2 adds none; if #137's migration was not run on deploy, run it). Live URLs: frontend `https://exciting-gratitude-production-71b5.up.railway.app`, backend `https://aladdin-production-bd25.up.railway.app`.
+State: `main` is at `72637c7` (#139 merged; Claude has not checked which build the live site serves). Repo migration head `u1a2b3c4d5e6` (B2 adds none; if #137's migration was not run on deploy, run it). Live URLs: frontend `https://exciting-gratitude-production-71b5.up.railway.app`, backend `https://aladdin-production-bd25.up.railway.app`.
 
 ## Active Tasks
 
-- [ ] **Review and merge the Game-mode-default PR (Faiz):** a fresh browser (or private window) opens in Game mode; anyone who chose "off" before stays off; the Settings toggle is unchanged
+- [ ] **Review and merge #140 first, then the B2 PR (Faiz):** #140: a fresh browser (or private window) opens in Game mode; anyone who chose "off" before stays off; the Settings toggle is unchanged
 - [ ] **Confirm the prompt-log migration ran (Faiz):** #137 added `u1a2b3c4d5e6`; merging deploys, so check System status loads the Prompt log card
 - [ ] **Next build (Claude, decided 2026-10-14, waits for a go):** fix the Equinor price (41.95 USD) and the Kongsberg 5:1 split, add a flag for sudden price jumps, and run a one-time holding-currency check; one feature branch, one PR
 - [ ] **Then, in order (Claude, decided 2026-10-14):** global benchmark option in the Siege Simulator; "can't be ranked yet" plus a no-score "what the price assumes" view for loss-making companies; remove the 4 unused endpoints; report-only mypy job
-- [ ] **Next design slice (Claude, waits for a go):** B2 Then and Now, the last item of the original order ([team review](game/game-mode-team-review-2026-10-09.md)); then C2 hit rate once there is enough data (see Blockers)
+- [ ] **Check B2 on the live site (Faiz) after deploy:** open a record, press Then and now (steps in the [doc](game/then-and-now-b2-2026-10-14.md)); no browser check was done by Claude
+- [ ] **Next design slice (Faiz to pick):** B2 was the last item of the original order ([team review](game/game-mode-team-review-2026-10-09.md)); C2 hit rate waits for enough data (see Blockers)
 
 ## Recent Blockers / Open Questions
 

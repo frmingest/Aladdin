@@ -58,6 +58,7 @@ Game mode (Fortress): concept, sprint plans and reviews, visual identity, art pa
 - [siege-backtest-c1-2026-10-13.md](game/siege-backtest-c1-2026-10-13.md) — C1 Siege back-test and the unmodelled share in the headline — 2026-10-13
 - [plain-lens-d1-2026-10-13.md](game/plain-lens-d1-2026-10-13.md) — D1 Plain lens: the Fortress as labelled blocks, print form, light fallback — 2026-10-13
 - [camera-d2-2026-10-14.md](game/camera-d2-2026-10-14.md) — D2 Camera: zoom, pan, fit and an 11 px label floor for the Fortress scene; survey docked beside it on wide screens — 2026-10-14
+- [then-and-now-b2-2026-10-14.md](game/then-and-now-b2-2026-10-14.md) — B2 Then and Now: the analyst's blind view on the decision date beside today's, changed lines only, in the Hall of Records — 2026-10-14
 - [long-memory-b1-2026-10-09.md](game/long-memory-b1-2026-10-09.md) — B1 Long Memory — 2026-10-09
 - [map-design-2026-10-09.md](game/map-design-2026-10-09.md) — Map (Cartographer's table): making fog look like fog
 - [siege-instrument-sensitivity-2026-10-07.md](game/siege-instrument-sensitivity-2026-10-07.md) — Siege Simulator: a beta for every instrument (2026-10-07)

@@ -16,6 +16,7 @@ import { describeError } from "../lib/errors";
 import { useGameMode } from "../lib/gameMode";
 import GameFooter from "../components/fortress/GameFooter";
 import HallOfRecords from "../components/fortress/kit/HallOfRecords";
+import ThenAndNow from "../components/ThenAndNow";
 import { HALL_COPY } from "../lib/hall";
 
 /** The Hall of Records (game mode G18): the decision journal as a library. Hindsight, not a score:
@@ -38,7 +39,7 @@ function Review({ months, state, text }: { months: 6 | 12; state: DecisionRecord
   );
 }
 
-function RecordCard({ r }: { r: DecisionRecord }) {
+function RecordCard({ r, demo }: { r: DecisionRecord; demo: boolean }) {
   return (
     <Card>
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
@@ -75,6 +76,7 @@ function RecordCard({ r }: { r: DecisionRecord }) {
         <Review months={6} state={r.review_6m} text={r.review_6m_text} />
         <Review months={12} state={r.review_12m} text={r.review_12m_text} />
       </div>
+      {!demo && r.holding_id && <ThenAndNow entryId={r.id} />}
     </Card>
   );
 }
@@ -151,7 +153,7 @@ export default function RecordsPage() {
           ) : shown.length === 0 ? (
             <EmptyState>No record has a review owed.</EmptyState>
           ) : (
-            shown.map((r) => <RecordCard key={r.id} r={r} />)
+            shown.map((r) => <RecordCard key={r.id} r={r} demo={records.demo} />)
           )}
         </div>
       )}

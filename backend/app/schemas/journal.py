@@ -75,3 +75,33 @@ class JournalEntryOut(BaseModel):
 class JournalOut(BaseModel):
     entries: list[JournalEntryOut]
     reviews_due: int
+
+
+class ThenNowStampOut(BaseModel):
+    model_config = {"protected_namespaces": ()}
+
+    run_id: UUID
+    analyzed_at: datetime | None
+    model_name: str | None
+
+
+class ThenNowChangeOut(BaseModel):
+    key: str
+    label: str
+    kind: Literal["value", "list"]
+    then_value: str | None = None
+    now_value: str | None = None
+    then_items: list[str] = Field(default_factory=list)
+    now_items: list[str] = Field(default_factory=list)
+
+
+class ThenAndNowOut(BaseModel):
+    """B2 Then and Now: blind-pass analysis at the decision date versus the latest."""
+
+    version: str
+    status: Literal["compared", "same_run", "no_analysis_then", "no_analysis_now", "no_holding", "demo"]
+    then: ThenNowStampOut | None = None
+    now: ThenNowStampOut | None = None
+    changes: list[ThenNowChangeOut] = Field(default_factory=list)
+    unchanged_count: int = 0
+    note: str | None = None
