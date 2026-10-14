@@ -3,6 +3,10 @@
 Completed milestones and retired status, moved out of `docs/PROGRESS.md` under the rolling-log rules
 in `CLAUDE.md` ("Progress file rules"). Newest snapshot first. Older: [PROGRESS-full-2026-09-30.md](PROGRESS-full-2026-09-30.md).
 
+## Closed 2026-10-14 — Pareto Bank
+
+- **Closed by Faiz 2026-10-14:** Pareto Bank FY2025 (`PARB.OL`). The `.xhtml` is untagged (a PDF converted to HTML), so no CSV will be prepared and the holding stays unvalued. Doc: [pareto-gigante-and-fund-constituents-2026-10-04.md](../ingestion/pareto-gigante-and-fund-constituents-2026-10-04.md).
+
 ## Closed 2026-10-14 — D1 Plain lens and Prompt log
 
 - **Merged:** D1 Plain lens, the Fortress as labelled blocks with print form and light fallback (PR #136, [doc](../game/plain-lens-d1-2026-10-13.md)); the Prompt log card on System status, migration `u1a2b3c4d5e6` (PR #137, [doc](../features/llm-prompt-log-2026-10-13.md)). Deploys and the migration run not verified by Claude.
