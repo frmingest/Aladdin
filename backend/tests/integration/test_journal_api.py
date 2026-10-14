@@ -109,3 +109,35 @@ def test_changing_decided_on_recomputes_the_verdict_at_decision(client, db_sessi
     assert entry["verdict_at_decision"] == "Avoid"
     moved = client.patch(f"/journal/{entry['id']}", json={"decided_on": "2026-02-01"}).json()
     assert moved["verdict_at_decision"] == "Buy"
+
+
+def _analysis(db_session, hid, *, at, rating):
+    db_session.add(EquityAnalysisRun(
+        holding_id=uuid.UUID(hid), status="COMPLETED",
+        schema_version="v1", blind_prompt_version="v1", evidence_packet_version="v3", evidence_packet_json=[],
+        evidence_unavailable_reasons=[],
+        blind_pass_json={"verdict": {"rating": rating, "top_risks": [], "thesis_bullets": [], "invalidation_triggers": []},
+                         "moat": {"overall_rating": "Wide"}},
+        started_at=at, completed_at=at,
+    ))
+
+
+def test_then_and_now_endpoint(client, db_session):
+    hid = _holding(client)
+    _analysis(db_session, hid, at=datetime(2026, 1, 10, tzinfo=timezone.utc), rating="Buy")
+    db_session.commit()
+    entry = client.post("/journal", json={
+        "holding_id": hid, "action": "buy", "decided_on": "2026-01-15", "thesis": "Low-cost producer",
+    }).json()
+
+    same = client.get(f"/journal/{entry['id']}/then-and-now")
+    assert same.status_code == 200, same.text
+    assert same.json()["status"] == "same_run"
+
+    _analysis(db_session, hid, at=datetime(2026, 3, 1, tzinfo=timezone.utc), rating="Hold")
+    db_session.commit()
+    body = client.get(f"/journal/{entry['id']}/then-and-now").json()
+    assert body["status"] == "compared"
+    assert [(c["key"], c["then_value"], c["now_value"]) for c in body["changes"]] == [("verdict", "Buy", "Hold")]
+
+    assert client.get(f"/journal/{uuid.uuid4()}/then-and-now").status_code == 404

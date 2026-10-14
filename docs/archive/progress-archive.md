@@ -3,6 +3,10 @@
 Completed milestones and retired status, moved out of `docs/PROGRESS.md` under the rolling-log rules
 in `CLAUDE.md` ("Progress file rules"). Newest snapshot first. Older: [PROGRESS-full-2026-09-30.md](PROGRESS-full-2026-09-30.md).
 
+## Closed 2026-10-14 — D2 Camera checked
+
+- **Checked by Faiz 2026-10-14: D2 Camera is OK** (merged as #138). Doc: [camera-d2-2026-10-14.md](../game/camera-d2-2026-10-14.md).
+
 ## Closed 2026-10-14 — Pareto Bank and D2 Camera merge
 
 - **Closed by Faiz 2026-10-14:** Pareto Bank FY2025 (`PARB.OL`). The `.xhtml` is untagged (a PDF converted to HTML), so no CSV will be prepared and the holding stays unvalued. Doc: [pareto-gigante-and-fund-constituents-2026-10-04.md](../ingestion/pareto-gigante-and-fund-constituents-2026-10-04.md).

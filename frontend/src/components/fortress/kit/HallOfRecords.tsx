@@ -9,6 +9,7 @@ import type { DecisionRecord, Records } from "../../../lib/types";
 import { capsuleArt } from "../../../lib/roomArt";
 import { getObjectArt, useArtMode } from "../../../lib/stitchArt";
 import { EmptyState } from "../../ui";
+import ThenAndNow from "../../ThenAndNow";
 import TorchPair from "./TorchPair";
 import "./hall.css";
 
@@ -112,7 +113,7 @@ function Review({ months, state, text }: { months: 6 | 12; state: DecisionRecord
   );
 }
 
-function Desk({ r }: { r: DecisionRecord }) {
+function Desk({ r, demo }: { r: DecisionRecord; demo: boolean }) {
   return (
     <div className="hall-desk" id="hall-desk" aria-live="polite">
       <div className="hall-book">
@@ -150,6 +151,7 @@ function Desk({ r }: { r: DecisionRecord }) {
             <Review months={6} state={r.review_6m} text={r.review_6m_text} />
             <Review months={12} state={r.review_12m} text={r.review_12m_text} />
           </div>
+          {!demo && r.holding_id && <ThenAndNow key={r.id} entryId={r.id} />}
         </div>
       </div>
     </div>
@@ -230,7 +232,7 @@ export default function HallOfRecords({ records }: { records: Records }) {
             })}
           </ul>
           <p className="hall-hint">{HALL_COPY.press}</p>
-          <div ref={deskRef}>{open && <Desk r={open} />}</div>
+          <div ref={deskRef}>{open && <Desk r={open} demo={records.demo} />}</div>
         </>
       )}
     </div>
