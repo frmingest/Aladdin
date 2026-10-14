@@ -4,7 +4,7 @@
 
 ## Current Objective
 
-**Siege Simulator World yardstick (PR `feature/siege-global-benchmark`): written and tested, not merged, not deployed.** A toggle "Measured against: Oslo | World" on the Siege page; World is ACWI (a fund standing in for a world index) converted to NOK; Oslo stays the default. Scenarios `v4`, `GET /game/siege?benchmark=`, the worker also stores ACWI and USD/NOK. No migration ([doc](game/siege-global-benchmark-2026-10-14.md)).
+**Siege Simulator World yardstick (PR `feature/siege-global-benchmark`): written and tested, not merged, not deployed.** A toggle "Measured against: Oslo | World" on the Siege page; World is ACWI (a fund standing in for a world index) converted to NOK; Oslo stays the default. Scenarios `v4`, `GET /game/siege?benchmark=`, the worker also stores ACWI and USD/NOK. No migration. Faiz's "Siege global" picture is the World banner (Game mode only) ([doc](game/siege-global-benchmark-2026-10-14.md)).
 
 State: `main` is at `fc4e2a1` (#148). Repo migration head `w1e2f3a4b5c6` (forecasts, C2); this PR adds none. Live URLs: frontend `https://exciting-gratitude-production-71b5.up.railway.app`, backend `https://aladdin-production-bd25.up.railway.app`.
 

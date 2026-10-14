@@ -29,6 +29,7 @@ import { describeError } from "../lib/errors";
 import GameFooter from "../components/fortress/GameFooter";
 import SiegeBacktestCard from "../components/fortress/SiegeBacktestCard";
 import SiegeArtStrip from "../components/fortress/kit/SiegeArtStrip";
+import SiegeWorldBanner from "../components/fortress/kit/SiegeWorldBanner";
 import { useArtMode } from "../lib/stitchArt";
 
 const BENCHMARK_STORAGE_KEY = "aladdin.siege.benchmark";
@@ -239,6 +240,7 @@ export default function SiegeSimulatorPage() {
           <Card>
             {(sim.benchmark_options?.length ?? 0) > 1 && (
               <div className="mb-4 border-b border-border-subtle pb-3">
+                <SiegeWorldBanner active={sim.benchmark_key === "global"} />
                 <p className="text-xs uppercase tracking-wide text-ink-faint" id="siege-yardstick-label">Measured against</p>
                 <div role="group" aria-labelledby="siege-yardstick-label" className="mt-1 inline-flex flex-wrap rounded-md border border-border p-0.5">
                   {sim.benchmark_options?.map((o) => (

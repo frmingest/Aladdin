@@ -16,6 +16,10 @@ The Siege page asks "if the market falls X%, what happens to each tower?". Until
 - **API:** `GET /game/siege?benchmark=local|global` (default `local`; anything else is a 422). The response gains `benchmark_key`, `benchmark_label` and `benchmark_options`. Still database only: no provider call, no write.
 - **Worker:** the existing price-history job now also stores ACWI and USD/NOK, so the World view works without a live call. Until the worker has run once after deploy, World shows each tower as "not modelled" with the reason ("no price history stored for the benchmark ACWI" or "no USD/NOK history stored ...").
 
+## Art (added the same day)
+
+Faiz's Stitch picture "Siege global" (a stone lookout tower on a rocky coast, a faint globe on the horizon) is the World banner. Packed as `backdrop-siege-world` (960x536 WebP, 22 KB, pack mode `none`); the master now lives in the git-ignored `art-masters/Design_master/siege_global_world/` (it was in `frontend/public/art/Siege global/`, which must stay empty of images). It shows in a short strip above the Oslo | World toggle, **only while World is selected and Game mode (Object art) is on**; it carries no fact, has empty alt text, is lazy-loaded and disappears if it fails to load. New component `SiegeWorldBanner`. Art budget: set now about 2,400 KB of 2,800; backdrop cap raised from 5 to 6 in `artAssets.test.ts` with the reason in the comment. Tests: 2 new (draws nothing with art off; the picture is packed and decorative); `vitest` 786 passed, build green. Not looked at in a browser: judge the crop (the tower sits left, the globe right) on the live page.
+
 ## Limits (also on the page)
 
 - Norwegian stocks usually read *lower* against the world than against Oslo, and a world fund *higher*. Both views are right for their own question.
