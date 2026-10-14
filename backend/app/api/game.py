@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from decimal import Decimal
+from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -87,6 +88,10 @@ def get_siege(
     market_drop: Decimal | None = Query(
         default=None, description="Market fall as a fraction (0.30 = 30%). Default and range come from the versioned scenarios file."
     ),
+    benchmark: Literal["local", "global"] = Query(
+        default="local",
+        description="Yardstick for 'the market' (scenarios v4+): 'local' is Oslo (OSEBX), 'global' is the World stand-in fund.",
+    ),
     db: Session = Depends(get_db),
 ) -> SiegeSimOut:
     """Siege Simulator (G13): a chosen market fall pushed through each
@@ -97,6 +102,10 @@ def get_siege(
     settings = get_settings()
     mapping = get_game_mapping(settings.active_game_mapping_version)
     scenarios = get_siege_scenarios(settings.active_siege_scenarios_version)
+    try:
+        scenarios = scenarios.with_benchmark(benchmark)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     drop = scenarios.drop_default if market_drop is None else market_drop
     if not (scenarios.drop_min <= drop <= scenarios.drop_max):
         raise HTTPException(

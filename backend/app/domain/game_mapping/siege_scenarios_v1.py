@@ -21,7 +21,7 @@ Why these values:
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from decimal import Decimal
 
 
@@ -47,6 +47,40 @@ class SiegeScenarios:
     # --- added with v3 (2026-10-13); v1 and v2 keep the default and so behave exactly as before ---
     # v3: the share of the book that could not be modelled is stated in the result itself.
     name_unmodelled_in_headline: bool = False
+    # --- added with v4 (2026-10-14); earlier versions keep these defaults and so behave exactly as before ---
+    # v4: the reader may choose the yardstick. "local" is `local_benchmark_ticker` (OSEBX); "global" is
+    # `global_benchmark_ticker` (a stand-in fund for a world index, listed in `global_benchmark_currency`
+    # and converted to NOK like every holding). `benchmark_key` says which one is active in this copy.
+    benchmark_label: str = ""
+    benchmark_key: str = "local"
+    local_benchmark_ticker: str = ""
+    local_benchmark_label: str = ""
+    global_benchmark_ticker: str = ""
+    global_benchmark_label: str = ""
+    global_benchmark_currency: str = ""
+
+    def with_benchmark(self, key: str) -> SiegeScenarios:
+        """This scenarios file with the chosen yardstick active. Raises ValueError for an
+        unknown key, or for "global" when this version has no global yardstick."""
+        if key == "local":
+            if not self.local_benchmark_ticker:
+                return self  # v2 and v3: OSEBX is the only yardstick and is already active
+            return replace(
+                self,
+                benchmark_key="local",
+                benchmark_ticker=self.local_benchmark_ticker,
+                benchmark_label=self.local_benchmark_label,
+            )
+        if key == "global":
+            if not self.global_benchmark_ticker:
+                raise ValueError("this siege scenarios version has no global benchmark")
+            return replace(
+                self,
+                benchmark_key="global",
+                benchmark_ticker=self.global_benchmark_ticker,
+                benchmark_label=self.global_benchmark_label,
+            )
+        raise ValueError(f"unknown benchmark {key!r}; expected 'local' or 'global'")
 
 
 SIEGE_SCENARIOS_V1 = SiegeScenarios(
@@ -60,14 +94,16 @@ SIEGE_SCENARIOS_V1 = SiegeScenarios(
 )
 
 def get_siege_scenarios(version: str) -> SiegeScenarios:
-    # Imported here: v2 and v3 build on the SiegeScenarios class above.
+    # Imported here: v2, v3 and v4 build on the SiegeScenarios class above.
     from app.domain.game_mapping.siege_scenarios_v2 import SIEGE_SCENARIOS_V2
     from app.domain.game_mapping.siege_scenarios_v3 import SIEGE_SCENARIOS_V3
+    from app.domain.game_mapping.siege_scenarios_v4 import SIEGE_SCENARIOS_V4
 
     versions: dict[str, SiegeScenarios] = {
         "v1": SIEGE_SCENARIOS_V1,
         "v2": SIEGE_SCENARIOS_V2,
         "v3": SIEGE_SCENARIOS_V3,
+        "v4": SIEGE_SCENARIOS_V4,
     }
     try:
         return versions[version]

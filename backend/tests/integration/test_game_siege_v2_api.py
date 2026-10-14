@@ -68,7 +68,7 @@ def test_a_fund_with_no_vendor_beta_is_modelled_from_its_own_prices(client, db_s
     assert D(fund["beta"]) == D("0.5") and D(fund["shock_pct"]) == D("-0.1")
     assert fund["observations"] >= 40 and D(fund["r_squared"]) == D("1")
     assert fund["caution"] is None
-    assert body["benchmark_ticker"] == "OSEBX.OL" and body["scenarios_version"] == "v3"
+    assert body["benchmark_ticker"] == "OSEBX.OL" and body["scenarios_version"] == "v4"
     assert any("OSEBX.OL" in n and "days the benchmark fell" in n for n in body["notes"])
 
 

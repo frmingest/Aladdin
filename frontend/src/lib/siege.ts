@@ -1,4 +1,4 @@
-import type { FortressSiegeLevel, SiegeSim, SiegeSimExposure, SiegeSimHolding } from "./types";
+import type { FortressSiegeLevel, SiegeBenchmarkKey, SiegeSim, SiegeSimExposure, SiegeSimHolding } from "./types";
 
 /**
  * Siege Simulator wording and helpers (game mode, G13). Pure. Every number is
@@ -32,6 +32,21 @@ export const SIM_EXPOSURE_LABEL: Record<SiegeSimExposure, string> = {
 
 export const SIM_LIMITS =
   "This is a what-if, not a forecast. It scales each holding by its stored beta, a historical, linear, single-factor estimate. A real fall hits holdings unevenly, and betas move.";
+
+/** Siege v4: the two yardsticks in the words the page uses. The long names come from the backend. */
+export const BENCHMARK_SHORT: Record<SiegeBenchmarkKey, string> = { local: "Oslo", global: "World" };
+
+/** What the slider's fall is a fall *of*: the Oslo market (the long-standing wording) or world stocks. */
+export function fallSubject(sim: Pick<SiegeSim, "benchmark_key"> | null): { label: string; sentence: string } {
+  return sim?.benchmark_key === "global"
+    ? { label: "World stocks fall by", sentence: "fall in world stocks" }
+    : { label: "Market falls by", sentence: "market fall" };
+}
+
+/** Remembered choice, per browser. Unknown or missing values fall back to Oslo, the default. */
+export function parseBenchmarkChoice(value: string | null | undefined): SiegeBenchmarkKey {
+  return value === "global" ? "global" : "local";
+}
 
 /** Slider position as a whole percent (0.3 -> 30). */
 export const dropToPercent = (drop: number): number => Math.round(drop * 100);
@@ -149,14 +164,15 @@ export function rowFacts(h: SiegeSimHolding, benchmark: string, formatShock: (s:
 /** One plain sentence about the whole book at the chosen fall. */
 export function headline(sim: SiegeSim): string {
   const fall = formatDrop(sim.market_drop);
+  const subject = fallSubject(sim).sentence;
   if (sim.level === "unsurveyed" || sim.portfolio_shock_pct === null) {
     const gap = sim.unmodelled_note ? ` ${sim.unmodelled_note}` : "";
-    return `A ${fall} market fall: ${SIM_LEVEL_TEXT.unsurveyed.toLowerCase()}${gap}`;
+    return `A ${fall} ${subject}: ${SIM_LEVEL_TEXT.unsurveyed.toLowerCase()}${gap}`;
   }
   const book = (Math.abs(Number(sim.portfolio_shock_pct)) * 100).toFixed(1);
   const dir = Number(sim.portfolio_shock_pct) < 0 ? "costs" : "adds to";
   const gap = sim.unmodelled_note ? ` ${sim.unmodelled_note}` : "";
-  return `A ${fall} market fall ${dir} the modelled book ${book}%. ${SIM_LEVEL_TEXT[sim.level]}${gap}`;
+  return `A ${fall} ${subject} ${dir} the modelled book ${book}%. ${SIM_LEVEL_TEXT[sim.level]}${gap}`;
 }
 
 export function coverageLine(sim: SiegeSim): string {

@@ -1,15 +1,18 @@
 import { describe, expect, it } from "vitest";
 import {
+  BENCHMARK_SHORT,
   allSiegeLines,
   betaSourceLine,
   clampDrop,
   coverageLine,
   damageWidth,
   dropToPercent,
+  fallSubject,
   formatDrop,
   headline,
   holdingLine,
   isRoughGuide,
+  parseBenchmarkChoice,
   presetDrop,
   rowFacts,
   rowStatus,
@@ -190,5 +193,32 @@ describe("scenarios v3 headline", () => {
   it("keeps the gap in the headline when no portfolio result can be given", () => {
     const text = headline(sim({ level: "unsurveyed", portfolio_shock_pct: null, unmodelled_note: "90.0% of the book's value (3 holdings) is not modelled." }));
     expect(text).toContain("90.0%");
+  });
+});
+
+describe("scenarios v4: the choice of yardstick", () => {
+  it("names the two yardsticks in short words", () => {
+    expect(BENCHMARK_SHORT.local).toBe("Oslo");
+    expect(BENCHMARK_SHORT.global).toBe("World");
+  });
+
+  it("keeps the long-standing wording for Oslo and for versions with no choice", () => {
+    expect(fallSubject(sim()).label).toBe("Market falls by");
+    expect(fallSubject(sim({ benchmark_key: "local" })).sentence).toBe("market fall");
+    expect(fallSubject(null).sentence).toBe("market fall");
+    expect(headline(sim({ benchmark_key: "local" }))).toContain("A 30% market fall costs the modelled book");
+  });
+
+  it("says the fall is of world stocks when the World yardstick is active", () => {
+    expect(fallSubject(sim({ benchmark_key: "global" })).label).toBe("World stocks fall by");
+    expect(headline(sim({ benchmark_key: "global" }))).toContain("A 30% fall in world stocks costs the modelled book");
+    expect(headline(sim({ benchmark_key: "global", level: "unsurveyed", portfolio_shock_pct: null }))).toContain("fall in world stocks");
+  });
+
+  it("falls back to Oslo for a missing or unknown remembered choice", () => {
+    expect(parseBenchmarkChoice(null)).toBe("local");
+    expect(parseBenchmarkChoice(undefined)).toBe("local");
+    expect(parseBenchmarkChoice("moon")).toBe("local");
+    expect(parseBenchmarkChoice("global")).toBe("global");
   });
 });

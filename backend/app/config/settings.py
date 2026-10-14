@@ -249,7 +249,8 @@ class Settings(BaseSettings):
     # Versioned like the valuation assumptions: a change is a new vN.py.
     active_game_mapping_version: str = "v2"
     # v3 (2026-10-13) names the unmodelled share of the book in the Siege headline.
-    active_siege_scenarios_version: str = "v3"
+    # v4 (2026-10-14) adds a World yardstick (ACWI) next to OSEBX; OSEBX stays the default.
+    active_siege_scenarios_version: str = "v4"
     # The Siege back-test (C1): how the Siege Simulator's method would have done in the worst
     # stored fall of the benchmark. Thresholds live in app/domain/game_mapping/backtest_v1.py.
     active_siege_backtest_version: str = "v1"
