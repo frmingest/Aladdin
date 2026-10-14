@@ -3,6 +3,11 @@
 Completed milestones and retired status, moved out of `docs/PROGRESS.md` under the rolling-log rules
 in `CLAUDE.md` ("Progress file rules"). Newest snapshot first. Older: [PROGRESS-full-2026-09-30.md](PROGRESS-full-2026-09-30.md).
 
+## Closed 2026-10-14 — loss-making view, unused endpoints and mypy job merged
+
+- **Merged** (merge commits on `main`, seen in `git log` 2026-10-14; deploy not checked): #150 loss-making companies stay "can't be ranked yet" and show what the price assumes ([doc](../valuation/loss-making-price-assumes-2026-10-14.md)); #151 removes four unused manual portfolio endpoints ([doc](../ops/remove-unused-manual-portfolio-endpoints-2026-10-14.md)); #152 report-only mypy job in CI, 166 findings baseline, never blocks ([doc](../ops/mypy-report-only-2026-10-14.md)). #153 closed out progress.
+- Faiz's post-deploy check for #150 still stands: Refresh Margin of safety, open "Can't be ranked yet" then "Why" on Vend Marketplaces, Salmon Evolution and Vår Energi and sanity-check the owner-earnings figure (if wrong, check share count and price currency first).
+
 ## Closed 2026-10-14 — Siege World yardstick merged and checked live
 
 - **Merged as #149** (`5135a8f`): a toggle "Measured against: Oslo | World" on the Siege Simulator; World is ACWI (a fund standing in for a world index) converted to NOK, Oslo stays the default; scenarios `v4`; `GET /game/siege?benchmark=`; the worker also stores ACWI and USD/NOK; the World banner picture in Game mode. No migration. Doc: [siege-global-benchmark-2026-10-14.md](../game/siege-global-benchmark-2026-10-14.md).

@@ -2,10 +2,14 @@ import { describe, expect, it } from "vitest";
 import {
   COMPASS_SIZE,
   MAP_KEEP_H,
+  MAX_LANDMARKS_PER_PROVINCE,
+  SECTOR_THEMES,
   SETTLEMENT_MAX,
   pineRect,
   placeLandmarks,
   placeMapKeep,
+  placeSectorLandmarks,
+  sectorLandmarkIds,
   placeSettlementArt,
   compassRect,
   hillArtId,
@@ -20,7 +24,7 @@ import {
 import { TOWER_BOX } from "./realmMap";
 import { OBJECT_ART } from "./stitchArt";
 import type { FortressSize, FortressStructure } from "./types";
-import { CAPITAL, buildWorld, dist, isLand, placeRealm } from "./worldMap";
+import { CAPITAL, buildWorld, dist, isLand, placeRealm, pointInPolygon } from "./worldMap";
 
 const SIZES: FortressSize[] = ["great", "medium", "small", "tiny", "unknown"];
 const STRUCTURES: FortressStructure[] = ["keep", "outpost", "bullion", "granary"];
@@ -179,5 +183,74 @@ describe("map scenery pictures (Sprint 6)", () => {
     const r = serpentRect({ x: 200, y: 600 });
     expect(r.id).toBe("map-serpent");
     expect(r.x + r.width / 2).toBeCloseTo(200, 5);
+  });
+});
+
+describe("sector landmarks", () => {
+  const SECTORS = ["Energy", "Financials", "Industrials", "Consumer Staples", "Materials", "Diversified Fund"];
+  const world = buildWorld();
+  const items = [
+    ...SECTORS.map((sector, i) => ({ id: `s${i}`, weightPct: 20 - i * 2, sector })),
+    { id: "m2", weightPct: 8, sector: "Materials" },
+    { id: "none", weightPct: 3, sector: null },
+  ];
+  const realm = placeRealm(items);
+  const base = placeLandmarks(world, realm.settlements);
+  const extra = [base.port, base.island, ...base.palms].filter((r): r is NonNullable<typeof r> => r !== null);
+  const marks = placeSectorLandmarks(world, realm, extra);
+  const centre = (r: { x: number; y: number; width: number; height: number }) => ({ x: r.x + r.width / 2, y: r.y + r.height / 2 });
+  const foot = (r: { x: number; y: number; width: number; height: number }) => ({ x: r.x + r.width / 2, y: r.y + r.height });
+
+  it("themes each sector by its name, loosely, and leaves unknown sectors bare", () => {
+    expect(sectorLandmarkIds("Materials")[0]).toBe("map-gold-mine");
+    expect(sectorLandmarkIds("Consumer Staples")[0]).toBe("map-farmhouse");
+    expect(sectorLandmarkIds("financials")[0]).toBe("map-bank-vault");
+    expect(sectorLandmarkIds("Industrials")[0]).toBe("map-factory");
+    expect(sectorLandmarkIds("Energy")[0]).toBe("map-windmill");
+    expect(sectorLandmarkIds("Diversified Fund")[0]).toBe("map-fountain-square");
+    expect(sectorLandmarkIds("Consumer Discretionary")).toEqual(["map-market-stall"]);
+    for (const none of ["No sector set", "Sector unknown", "Other sectors", "Technology", ""]) expect(sectorLandmarkIds(none)).toEqual([]);
+  });
+
+  it("only ever uses packed pictures", () => {
+    for (const t of SECTOR_THEMES) for (const id of t.ids) expect(OBJECT_ART[id], id).toBeTruthy();
+  });
+
+  it("gives every themed province its first landmark, and the unsorted province none", () => {
+    for (const p of realm.provinces) {
+      const ids = marks.filter((r) => pointInPolygon(foot(r), p.cell)).map((r) => r.id);
+      if (p.unsorted) expect(ids, p.name).toEqual([]);
+      else {
+        expect(ids[0], p.name).toBe(sectorLandmarkIds(p.name)[0]);
+        expect(ids.length, p.name).toBeLessThanOrEqual(MAX_LANDMARKS_PER_PROVINCE);
+      }
+    }
+  });
+
+  it("is the same every time: the realm is one place", () => {
+    expect(placeSectorLandmarks(world, realm, extra)).toEqual(marks);
+  });
+
+  it("stands each landmark on the mainland, smaller than a settlement, in proportion", () => {
+    for (const r of marks) {
+      expect(isLand(world, foot(r)), r.id).toBe(true);
+      expect(r.height, r.id).toBeLessThan(SETTLEMENT_MAX.h / 2);
+      expect(r.width / r.height, r.id).toBeCloseTo(OBJECT_ART[r.id].width / OBJECT_ART[r.id].height, 5);
+    }
+  });
+
+  it("never covers the capital, a holding, a province name or another landmark", () => {
+    for (const r of marks) {
+      expect(dist(centre(r), CAPITAL), r.id).toBeGreaterThan(60);
+      for (const s of realm.settlements) expect(dist(centre(r), s), `${r.id} vs ${s.id}`).toBeGreaterThan(30);
+      for (const p of realm.provinces) expect(dist(centre(r), p.label), `${r.id} vs ${p.name}`).toBeGreaterThan(20);
+    }
+    marks.forEach((a, i) => marks.slice(i + 1).forEach((b) => expect(dist(centre(a), centre(b))).toBeGreaterThan(40)));
+    for (const e of extra) for (const r of marks) expect(dist(centre(r), centre(e))).toBeGreaterThan(40);
+  });
+
+  it("copes with no sectors at all", () => {
+    expect(placeSectorLandmarks(world, placeRealm([{ id: "a", weightPct: 5, sector: null }]))).toEqual([]);
+    expect(placeSectorLandmarks(world, placeRealm([]))).toEqual([]);
   });
 });

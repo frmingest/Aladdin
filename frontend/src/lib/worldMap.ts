@@ -428,7 +428,7 @@ export function groupSectors(
 export const PROV_LABEL_FS = 17;
 const PROV_LABEL_SIZES = [PROV_LABEL_FS, 15, 13, 12];
 /** Width of one painted capital incl. its letter spacing, in font sizes (the CSS uses 0.16em spacing). */
-const PROV_CHAR_EM = 0.9;
+export const PROV_CHAR_EM = 0.9;
 
 /** The box a province name covers when painted centred on `at`, padded so it clears the coast. */
 function labelBox(at: Pt, lines: readonly string[], fs: number): { x0: number; x1: number; y0: number; y1: number } {
