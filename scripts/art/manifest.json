@@ -998,6 +998,30 @@
    "source": "cartoon_fantasy_medieval_character_bust_portrait_of_the_exact_same_store",
    "key": "sampled",
    "tol": 9
+  },
+  {
+   "id": "ledger-book",
+   "source": "a_single_standalone_fantasy_game_prop_asset_a_closed_medieval_record_book_with",
+   "key": "white",
+   "max_side": 320
+  },
+  {
+   "id": "ledger-scale",
+   "source": "a_single_standalone_fantasy_game_prop_asset_a_plain_brass_balance_scale_level",
+   "key": "white",
+   "max_side": 320
+  },
+  {
+   "id": "ledger-lantern",
+   "source": "a_single_standalone_fantasy_game_prop_asset_a_small_brass_lantern_unlit._style",
+   "key": "white",
+   "max_side": 256
+  },
+  {
+   "id": "ledger-staff",
+   "source": "a_single_standalone_fantasy_game_surveyor_tool_prop_asset_a_medieval_surveyor_s",
+   "key": "white",
+   "max_side": 320
   }
  ]
 }

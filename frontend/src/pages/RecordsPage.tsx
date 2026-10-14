@@ -10,12 +10,13 @@ import {
   priceLine,
   verdictLine,
 } from "../lib/rituals";
-import type { DecisionRecord, Records } from "../lib/types";
+import type { Calibration, DecisionRecord, Records } from "../lib/types";
 import { Card, EmptyState, LoadError, PageHeader } from "../components/ui";
 import { describeError } from "../lib/errors";
 import { useGameMode } from "../lib/gameMode";
 import GameFooter from "../components/fortress/GameFooter";
 import HallOfRecords from "../components/fortress/kit/HallOfRecords";
+import LedgerPanel from "../components/fortress/kit/LedgerPanel";
 import ThenAndNow from "../components/ThenAndNow";
 import { HALL_COPY } from "../lib/hall";
 
@@ -86,6 +87,19 @@ export default function RecordsPage() {
   const [error, setError] = useState<{ message: string; retryable: boolean } | null>(null);
   const [attempt, setAttempt] = useState(0);
   const [onlyOwed, setOnlyOwed] = useState(false);
+  const [calibration, setCalibration] = useState<Calibration | null>(null);
+
+  // The ledger is extra: if it fails to load the records page still works, so no error is shown for it.
+  useEffect(() => {
+    let live = true;
+    api
+      .getCalibration()
+      .then((c) => live && setCalibration(c))
+      .catch(() => live && setCalibration(null));
+    return () => {
+      live = false;
+    };
+  }, [attempt]);
 
   useEffect(() => {
     let live = true;
@@ -124,6 +138,7 @@ export default function RecordsPage() {
       {records && painted && (
         <div className="space-y-4">
           <HallOfRecords records={records} />
+          {calibration && <LedgerPanel data={calibration} />}
           <GameFooter rules={`Records ${records.rules_version}. Read-only: nothing here grades a decision.`} />
         </div>
       )}
@@ -155,6 +170,7 @@ export default function RecordsPage() {
           ) : (
             shown.map((r) => <RecordCard key={r.id} r={r} demo={records.demo} />)
           )}
+          {calibration && <LedgerPanel data={calibration} />}
         </div>
       )}
     </div>

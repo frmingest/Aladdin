@@ -42,6 +42,7 @@ import type {
   Council,
   HoldingAdvisors,
   Records,
+  Calibration,
   NightWatch,
   Ravens,
   Holding,
@@ -420,6 +421,8 @@ export const api = {
   // Sprint 25 rituals: Council (G17), Hall of Records (G18), Circle of Competence (G19), per-holding advisor lines (G20).
   getCouncil: () => request<Council>("/game/council"),
   getRecords: () => request<Records>("/game/records"),
+  /** C2 hit rate: counts only, gated by the server (opens at min_n outcomes). */
+  getCalibration: () => request<Calibration>("/game/calibration"),
   getCompetence: () => request<Competence>("/game/competence"),
   /** The only write of Sprint 25: your own mark for one sector. */
   putCompetence: (sector: string, level: CompetenceLevel, note: string | null) =>

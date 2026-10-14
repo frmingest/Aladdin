@@ -187,7 +187,7 @@ def get_holding_advisors(holding_id: UUID, db: Session = Depends(get_db)) -> Hol
 @router.get("/records", response_model=RecordsOut)
 def get_records(db: Session = Depends(get_db)) -> RecordsOut:
     """G18 Hall of Records: the decision journal as a library. Hindsight, not
-    a score: no hit rate, no ranking."""
+    a score: no ranking. (The n-gated hit rate lives at /game/calibration.)"""
     rules = get_rituals(get_settings().active_rituals_version)
     state, demo = _state_for(db)
     entries = demo_journal_entries() if demo else journal_entries(db)
