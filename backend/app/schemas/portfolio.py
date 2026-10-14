@@ -7,25 +7,10 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from app.schemas.account import AccountOut
 from app.schemas.document import DocumentOut
-
-
-class PortfolioPositionIn(BaseModel):
-    holding_id: UUID
-    weight_pct: Decimal | None = None
-    quantity: Decimal | None = None
-    cost_basis: Decimal | None = None
-    cost_basis_currency: str | None = Field(default=None, min_length=3, max_length=3)
-    # Both added 2026-09-22 (migration a2b4c6d8e0f1) — see
-    # app/models/portfolio.py's PortfolioPosition docstrings for what
-    # currency each is in.
-    last_price: Decimal | None = None
-    market_value_nok: Decimal | None = None
-    notes: str | None = None
-    account_id: UUID | None = None
 
 
 class PortfolioPositionOut(BaseModel):
@@ -41,13 +26,6 @@ class PortfolioPositionOut(BaseModel):
     market_value_nok: Decimal | None
     notes: str | None
     account_id: UUID | None
-
-
-class PortfolioSnapshotCreate(BaseModel):
-    source_file_id: UUID
-    reporting_currency: str = Field(min_length=3, max_length=3)
-    account_id: UUID | None = None
-    positions: list[PortfolioPositionIn] = Field(default_factory=list)
 
 
 class PortfolioSnapshotOut(BaseModel):
@@ -71,12 +49,6 @@ class PortfolioSnapshotSummary(BaseModel):
     reporting_currency: str
     status: str
     account_id: UUID | None
-    position_count: int
-
-
-class ConcentrationOut(BaseModel):
-    snapshot_id: UUID
-    hhi: Decimal
     position_count: int
 
 

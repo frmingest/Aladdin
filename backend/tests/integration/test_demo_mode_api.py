@@ -301,22 +301,10 @@ def test_every_mutating_endpoint_is_blocked_in_demo_mode(client):
         ),
         ("delete", f"/holdings/{u}/share-count", {"params": {"confirm": True}}),
         # portfolio
-        (
-            "post",
-            "/portfolio/snapshots",
-            {"json": {"source_file_id": u, "reporting_currency": "USD"}},
-        ),
         ("get", "/portfolio/snapshots", {}),
         ("get", f"/portfolio/snapshots/{u}", {}),
         ("delete", f"/portfolio/snapshots/{u}", {"params": {"confirm": True}}),
         ("delete", "/portfolio/all", {"params": {"confirm": True}}),
-        ("post", f"/portfolio/snapshots/{u}/positions", {"json": {"holding_id": u}}),
-        (
-            "delete",
-            f"/portfolio/snapshots/{u}/positions/{u}",
-            {"params": {"confirm": True}},
-        ),
-        ("get", f"/portfolio/snapshots/{u}/concentration", {}),
         # valuation
         ("post", f"/valuation/holdings/{u}/refresh", {}),
         # analysis
