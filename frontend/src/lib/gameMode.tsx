@@ -3,18 +3,19 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 /**
  * Game mode toggle (F33, G2). A pure view preference: it never changes an
  * analysis, a score or a stored row, so it lives in this browser only —
- * not in the backend's app_settings — and defaults to OFF, which leaves the
- * app exactly as it was. Storage can be unavailable (private window), so
- * every access is guarded and the mode simply is not remembered then.
+ * not in the backend's app_settings. It defaults to ON for a browser that has
+ * never chosen (decided by Faiz, 2026-10-14); an explicit "off" is remembered.
+ * Storage can be unavailable (private window), so every access is guarded and
+ * the mode then simply starts on and is not remembered.
  */
 
 const STORAGE_KEY = "aladdin-game-mode";
 
 function readStored(): boolean {
   try {
-    return localStorage.getItem(STORAGE_KEY) === "on";
+    return localStorage.getItem(STORAGE_KEY) !== "off";
   } catch {
-    return false;
+    return true;
   }
 }
 

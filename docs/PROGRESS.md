@@ -1,23 +1,24 @@
 # Aladdin — Progress
 
-**Last updated:** 2026-10-14 (D2 Camera merged as #138, deploy not verified; Pareto Bank closed; blocker decisions recorded). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
+**Last updated:** 2026-10-14 (Game mode on by default, PR open; D2 Camera merged as #138 and checked OK by Faiz; hit-rate view approved with limits). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
 
 ## Current Objective
 
-**Trust slice: D2 Camera is merged (#138, 2026-10-14); waiting for your look on the live site.** The painted Fortress has zoom, fit and a **Read labels** step (smallest label 11 px), mouse-drag pan, Ctrl + wheel zoom, scroll-to-selected, and on screens of 1280 px and up the survey docks beside the scene ([doc](game/camera-d2-2026-10-14.md)). The phone Fortress keeps its sideways scroll. D1 Plain lens (#136) and the Prompt log (#137) are merged.
+**Game mode now starts ON for a browser that never chose (decided 2026-10-14; written on `feature/game-mode-default-on`, not yet merged or deployed). D2 Camera is merged (#138) and Faiz checked it: OK.** The painted Fortress has zoom, fit and a **Read labels** step (smallest label 11 px), mouse-drag pan, Ctrl + wheel zoom, scroll-to-selected, and on screens of 1280 px and up the survey docks beside the scene ([doc](game/camera-d2-2026-10-14.md)). The phone Fortress keeps its sideways scroll. D1 Plain lens (#136) and the Prompt log (#137) are merged.
 
 State: `main` is at `37c85f9` (#138 merged; Claude has not checked which build the live site serves). Repo migration head `u1a2b3c4d5e6` (D2 adds none; if #137's migration was not run on deploy, run it). Live URLs: frontend `https://exciting-gratitude-production-71b5.up.railway.app`, backend `https://aladdin-production-bd25.up.railway.app`.
 
 ## Active Tasks
 
-- [ ] **Check D2 on the live site (Faiz):** open the Fortress Scene, press Read labels, zoom, drag, select a far tower, and on a wide screen check the survey sits beside the scene (steps in the [doc](game/camera-d2-2026-10-14.md)). No browser or phone check was done by Claude
+- [ ] **Review and merge the Game-mode-default PR (Faiz):** a fresh browser (or private window) opens in Game mode; anyone who chose "off" before stays off; the Settings toggle is unchanged
 - [ ] **Confirm the prompt-log migration ran (Faiz):** #137 added `u1a2b3c4d5e6`; merging deploys, so check System status loads the Prompt log card
 - [ ] **Next build (Claude, decided 2026-10-14, waits for a go):** fix the Equinor price (41.95 USD) and the Kongsberg 5:1 split, add a flag for sudden price jumps, and run a one-time holding-currency check; one feature branch, one PR
 - [ ] **Then, in order (Claude, decided 2026-10-14):** global benchmark option in the Siege Simulator; "can't be ranked yet" plus a no-score "what the price assumes" view for loss-making companies; remove the 4 unused endpoints; report-only mypy job
-- [ ] **Next design slice (Faiz to pick):** after D2 nothing is queued; options are in the review's remaining items ([team review](game/game-mode-team-review-2026-10-09.md)); B2 Then and Now is the only item left of the original order
+- [ ] **Next design slice (Claude, waits for a go):** B2 Then and Now, the last item of the original order ([team review](game/game-mode-team-review-2026-10-09.md)); then C2 hit rate once there is enough data (see Blockers)
 
 ## Recent Blockers / Open Questions
 
+- **Hit rate (C2), decided 2026-10-14 (Faiz left it to Claude): yes, with limits.** Shown only once there are enough decisions (opens at 8 with a 6- or 12-month outcome), always with the count beside it and a "too few so far" state before that; the Oracle's range versus later price counts the same way; no score, streak or reward, and it never changes a verdict or a tower. This amends the Sprint 25 "no hit rate" rule. Needs the small `forecasts` table so the clock starts now, which is a database change to approve when the slice starts
 - **Siege benchmark:** decided to add a global option (stand-in index fund, labelled as such on screen); OSEBX stays for Norwegian stocks ([doc](game/siege-instrument-sensitivity-2026-10-07.md))
 - **Loss-making valuation** (Vend Marketplaces, Salmon Evolution, Vår Energi): decided not to force a score; show "can't be ranked yet" with the reason, plus what the price assumes, as information only
 - **Possible price/split data errors:** Equinor stored price 41.95 USD; Kongsberg 5:1 split not restated; decided to fix first ([diagnosis](valuation/valuation-data-diagnosis-2026-10-06.md))
