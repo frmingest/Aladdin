@@ -1,50 +1,48 @@
-# Map: sector landmarks (Stitch pictures for the Map tab)
+# Map: sector pictures as the towers (Stitch pictures for the Map tab)
 
 Status: **written and tested, not merged, not deployed** (2026-10-14). Game mode only; with Game mode off the map is unchanged.
 
+History: #154 first drew the ten Stitch pictures as small scenery beside the towers. Faiz said he meant them to **replace the towers**, so this change makes each holding's own picture its sector's picture and removes the separate scenery (a second set would have doubled every farmhouse and mine).
+
 ## What it is
 
-Each sector's province on the Cartographer's table now carries one to three small scenery pictures that say what the sector is, drawn by Stitch in the Stitch Master look (ink outline, teal and slate, no text):
+A holding in a sector with a theme is drawn as that sector's picture instead of the generic town, citadel, outpost or vault. Sectors are matched loosely by name (`SECTOR_THEMES` in `frontend/src/lib/mapArt.ts`):
 
-| Sector (matched loosely by name) | Pictures, most telling first |
+| Sector | Picture |
 |---|---|
-| Materials (mining, metals, gold, commodities) | `map-gold-mine`, `map-gold-ingots`, `map-quarry` |
-| Consumer Staples (food, agri, beverages) | `map-farmhouse`, `map-market-stall` |
+| Materials (mining, metals, gold) | `map-gold-mine` or `map-quarry`; gold itself (the bullion structure) gets `map-gold-ingots` |
+| Consumer Staples (food, agri) | `map-farmhouse` or `map-market-stall` |
 | Consumer (discretionary, retail) | `map-market-stall` |
 | Financials (bank, insurance) | `map-bank-vault` |
-| Industrials (manufacturing, transport) | `map-factory` |
-| Energy (oil, gas) | `map-windmill`, `map-watermill` |
-| Utilities (power, electric) | `map-watermill`, `map-windmill` |
+| Industrials | `map-factory` |
+| Energy (oil, gas) | `map-windmill` or `map-watermill` |
+| Utilities | `map-watermill` or `map-windmill` |
 | Diversified Fund (fund, ETF) | `map-fountain-square` |
 
-A province with no sector set, an unknown sector, the "Other sectors" fold, or a sector with no theme (Technology, Health care and so on) gets nothing. New themes are one line in `SECTOR_THEMES` (`frontend/src/lib/mapArt.ts`) plus a picture.
+Where a sector has more than one picture, a stable hash of the holding's id picks one, so a holding never changes picture when its weight does. A holding with no sector, an unknown sector, or a sector with no theme (Technology, Health care...) keeps the old picture from its structure and size (town, citadel, outpost, vault, granary), and the drawn SVG tower when nothing is known. New themes are one line in `SECTOR_THEMES` plus a picture.
+
+## Decision and what it costs (Faiz, 2026-10-14)
+
+The old pictures showed what kind of holding it was (a stock as town or citadel by size, a fund as the outpost, gold as the vault, cash as the granary). In a themed sector that is given up on the map: a fund in Industrials is now a factory. The distinction is still in the slate you open by pressing a tower and in the Fortress; gold keeps its own picture (bars) inside Materials. Revisit if the fund/stock split is missed.
 
 ## Rules it follows
 
-- **Scenery, no fact.** Same rule as the port and the island: no name, no button, no fog, no state. A landmark only repeats the sector name already printed on the land. It never reads the survey, the weight or a verdict, and looks identical whatever the survey says. The holdings stay the pressable settlements with their five fog patches drawn by code on top.
-- **Small on purpose.** 18 to 34 world units tall against about 45 for a settlement and 78 for the Keep, with a soft ground shadow, so a landmark does not read as a holding (a bank vault or gold ingots next to a gold holding is the case to watch).
-- **Placement is pure and deterministic** (`placeSectorLandmarks`): a fixed grid inside the province, on the mainland with a margin to the shore, clear of the capital, every settlement and the name under it, every province name, the port and island pictures, and each other. The best spot has the most room, pulled toward the province's heart. A province with no free spot gets fewer landmarks, never a covered holding.
-- **Pictures follow Game mode** (no separate switch); a picture that fails to load drops out like the other map pictures. Decorative, `alt=""`, inside the `aria-hidden` map; the provinces legend and the survey list still say everything in words.
+- **The picture is chosen from the sector alone** (plus bullion for the gold bars): never the survey, the weight or a verdict, so surveying never makes a tower prettier or uglier.
+- **Everything else is still drawn by code.** Drawing size still comes from the weight, and the five survey patches (fog, clear, not judged) are drawn over the picture where they always were, so an unknown fact stays fog. Same tower box, same hit area, same labels and keyboard behaviour.
+- Pictures follow Game mode (no separate switch); a picture that fails to load falls back to the next choice. Decorative, `alt=""`, inside the `aria-hidden` map; the provinces legend, the slate and the survey list say everything in words.
 
 ## What changed
 
-- 10 pictures packed from the Stitch masters (`scripts/art/manifest.json`, `frontend/src/assets/art/map-*.webp`, 13 to 26 KB each, about 200 KB together; the set stays under the 2800 KB cap). Packed at `max_side` 320 since they are drawn tiny. Masters stay in the git-ignored `art-masters/` (the Stitch export folder `frontend/public/art/Map assets` is git-ignored too and was not committed).
-- `lib/mapArt.ts`: `SECTOR_THEMES`, `sectorLandmarkIds`, `placeSectorLandmarks`. `lib/worldMap.ts`: `PROV_CHAR_EM` exported. `WorldMap.tsx`: draws them after the port and before the province names, so names and settlements stay on top.
-- Tests: `mapArt.test.ts` (theming, determinism, on land, never on the capital, a holding, a name or another landmark, no sectors at all) and `mapSectorArt.test.tsx` (drawn with Game mode on, absent with it off, none for an unthemed sector, decorative).
+- 10 pictures packed from the Stitch masters (done in #154: `scripts/art/manifest.json`, `frontend/src/assets/art/map-*.webp`, about 200 KB together).
+- `lib/mapArt.ts`: `sectorArtId`, `holdingArtId` (sector picture, else structure picture, else none), `sectorLandmarkIds`, `SECTOR_THEMES`. The scenery placement from #154 (`placeSectorLandmarks`) is removed. `WorldMap.tsx` draws the holding's picture through `holdingArtId`.
+- Tests: `mapArt.test.ts` (theming, gold bars, stable choice, themed beats structure, unthemed keeps structure, nothing known gives none, every picture fits the slot) and `mapSectorArt.test.tsx` (drawn with Game mode on, absent with it off, unthemed keeps the old picture, decorative, five patches kept).
 
 ## Game identity checklist (docs/game/game-sprint-checklist.md)
 
-- Pages touched: the Map tab only. Identity before and after: the map already scored 2 or more (scene header, kit, fog patches, Plain view); this adds the sector visual verb: **"survey the sectors" in a painted realm where each province has its own landmark**.
-- Visual win: a sector reads at a glance from its picture (mine, farm, vault) instead of only a printed name.
-- Look-and-judge: **not done in a browser.** The placement was checked on a schematic render of your six sectors (grey boxes for the towers), not in the real app. Please look at the live Map after deploy (steps below).
+- Page touched: the Map tab only. Visual verb: **survey the sectors**, in a realm where each tower looks like what the company does.
+- Look-and-judge: **not done in the real app.** The layout was checked on a schematic render of the six real sectors (windmill, vault, factory, gold bars, market stall, gold mine all read at tower size). Please look at the live Map after deploy.
 
 ## After deploy (Faiz)
 
-- Open the Map with Game mode on. Expect: gold mine, ingots and quarry in Materials; farmhouse and stall in Consumer Staples; bank vault in Financials; factory in Industrials; windmill and watermill in Energy; market fountain in Diversified Fund.
-- Check on a phone: no landmark covers a tower or a province name, and nothing looks pressable.
-- If a landmark sits somewhere awkward, `KEEP_OUT` and the heights in `mapArt.ts` are the knobs.
-
-## Not done / decisions for Faiz
-
-- The pressable towers (settlements) are unchanged: a stock is a town or citadel, a fund the outpost, gold the vault, as decided on 2026-10-11. Making the holdings themselves sector-themed (a gold-mine picture for Xetra-Gold instead of the vault) would drop the fund/gold/stock distinction those pictures carry, so it needs your call.
-- Prompts for further pictures (harbour, lighthouse, treasure isle, pine grove) were given in chat and are not generated yet.
+- Open the Map with Game mode on, desktop and phone. Expect: Xetra-Gold as gold bars, L&G Gold Mining as the mine or quarry, Salmon Evolution as the farmhouse or stall, Vår Energi as a windmill or watermill, Alfred Berg as the vault, Xtrackers as the factory, Heimdal as the market fountain.
+- Check the fog patches still sit on each picture and read at phone size, and that wide pictures (fountain, farmhouse) are not too small. If one picture reads badly, the per-picture choice and size are in `mapArt.ts`.

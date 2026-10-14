@@ -1,18 +1,17 @@
 # Aladdin — Progress
 
-**Last updated:** 2026-10-14 (loss-making view, unused-endpoint removal and mypy job merged; Map sector landmarks written, PR open). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
+**Last updated:** 2026-10-14 (loss-making view, unused-endpoint removal, mypy job and sector landmarks merged; Map towers as sector pictures written, PR open). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
 
 ## Current Objective
 
-**Map tab sector landmarks (PR `feature/map-sector-landmarks`): written and tested, not merged, not deployed.** Game mode only: each sector's province gets Stitch pictures that say what the sector is (gold mine, ingots and quarry for Materials; farmhouse and stall for Consumer Staples; bank vault; factory; windmill and watermill; market fountain for the diversified fund). Scenery only, no fact; the holdings' own towers are unchanged ([doc](game/map-sector-landmarks-2026-10-14.md)).
+**Map towers as sector pictures (PR `feature/sector-towers`): written and tested, not merged, not deployed.** Game mode only: a holding in a themed sector is drawn as that sector's Stitch picture (gold bars for gold, mine or quarry for Materials, farmhouse or stall for Consumer Staples, vault, factory, windmill or watermill, market fountain for the fund) instead of town, citadel, outpost or vault. Faiz decided this on 2026-10-14 (the fund/stock split is given up on the map in themed sectors). Replaces the scenery landmarks merged in #154 ([doc](game/map-sector-landmarks-2026-10-14.md)).
 
-State: `main` is at `0cf4770` (#153); #150, #151 and #152 are merged there (seen in `git log`; deploy not checked, say if Railway has redeployed). Repo migration head `w1e2f3a4b5c6` (forecasts, C2); neither the merged PRs nor this one adds one. Live URLs: frontend `https://exciting-gratitude-production-71b5.up.railway.app`, backend `https://aladdin-production-bd25.up.railway.app`.
+State: `main` is at `acc1718` (#154); #150, #151 and #152 are merged there (seen in `git log`; deploy not checked, say if Railway has redeployed). Repo migration head `w1e2f3a4b5c6` (forecasts, C2); neither the merged PRs nor this one adds one. Live URLs: frontend `https://exciting-gratitude-production-71b5.up.railway.app`, backend `https://aladdin-production-bd25.up.railway.app`.
 
 ## Active Tasks
 
-- [ ] **Review and merge the Map sector-landmarks PR (Faiz), then look at the live Map with Game mode on** (desktop and phone): landmarks should not cover a tower, a province name or look pressable. Placement was checked only on a schematic render of the six sectors, not in the real app. Steps in the [doc](game/map-sector-landmarks-2026-10-14.md)
+- [ ] **Review and merge the Map sector-towers PR (Faiz), then look at the live Map with Game mode on** (desktop and phone): fog patches still readable on each picture, wide pictures not too small. Only checked on a schematic render of the real sectors, not in the app. Steps in the [doc](game/map-sector-landmarks-2026-10-14.md)
 - [ ] **After #150 is deployed (Faiz):** Refresh Margin of safety, open "Can't be ranked yet" then "Why" on Vend Marketplaces, Salmon Evolution and Vår Energi and sanity-check the owner-earnings figure (if wrong, check share count and price currency first). [Doc](valuation/loss-making-price-assumes-2026-10-14.md)
-- [ ] **Decision (Faiz):** should the holdings' own towers become sector-themed too (a gold-mine picture for Xetra-Gold)? Today a stock is a town or citadel, a fund the outpost, gold the vault, and that distinction would be lost
 - [ ] **Optional, visual:** with Game mode on, look at the World banner crop on the Siege Simulator (Claude could not judge it)
 
 ## Recent Blockers / Open Questions
