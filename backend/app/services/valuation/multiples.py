@@ -37,6 +37,12 @@ from app.models.market import FxObservation, MarketObservation
 from app.services.bank_detection import holding_is_financial
 from app.services.holding_facts import facts_by_period
 from app.services.market_data.shares import eps_implied_range
+from app.services.market_data.splits import (
+    describe_ratio,
+    restate_shares,
+    split_factor,
+    splits_for,
+)
 from app.services.metrics import MarketInputs, compute_holding_metrics
 
 HISTORY_KEYS = ("price_to_earnings", "price_to_book", "price_to_sales", "ev_to_ebitda", "enterprise_value")
@@ -105,8 +111,14 @@ def multiples_over_time(
     fx_rows = list(db.scalars(select(FxObservation)))
 
     is_financial = holding_is_financial(db, holding)
+    splits = splits_for(db, holding.id)
+    ordered = sorted(facts_by_period(db, holding.id).items())
+    # The newest year's count is already on today's share basis: the
+    # yardstick that stops a split being applied to a year that already
+    # reports post-split figures.
+    reference_shares = _shares(ordered[-1][1].facts)[0] if ordered else None
     results: list[PeriodMultiples] = []
-    for period, entry in sorted(facts_by_period(db, holding.id).items()):
+    for period, entry in ordered:
         result = PeriodMultiples(period=period)
         results.append(result)
         if entry.year is None:
@@ -149,8 +161,25 @@ def multiples_over_time(
         if shares_note:
             result.notes.append(shares_note)
 
+        facts = entry.facts
+        if splits:
+            factor = split_factor(
+                splits, after=target, up_to=observation.observed_at  # type: ignore[attr-defined]
+            )
+            shares, restated = restate_shares(shares, factor, reference=reference_shares)
+            if restated:
+                facts = dict(facts)
+                if "eps_basic" in facts:
+                    facts["eps_basic"] = facts["eps_basic"] / factor
+                if "shares_outstanding" in facts:
+                    facts["shares_outstanding"] = facts["shares_outstanding"] * factor
+                result.notes.append(
+                    f"shares and EPS restated x{factor.normalize():f} for the "
+                    f"{describe_ratio(factor)} split after this year, to match today's price"
+                )
+
         metrics = compute_holding_metrics(
-            entry.facts,
+            facts,
             entry.currencies,
             market=MarketInputs(price=price, shares=shares),
             financial=is_financial,

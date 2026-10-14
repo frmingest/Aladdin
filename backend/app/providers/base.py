@@ -177,6 +177,15 @@ class PricePoint:
 
 
 @dataclass(frozen=True)
+class SplitEvent:
+    """One share split: `ratio` is new shares per old share (5-for-1 = 5,
+    1-for-10 reverse split = 0.1)."""
+
+    ex_date: datetime
+    ratio: Decimal
+
+
+@dataclass(frozen=True)
 class FxRate:
     """One point-in-time FX rate, as app/models/market.py's FxObservation
     persists it."""
@@ -234,6 +243,13 @@ class MarketDataProvider(ABC):
         has no share counts simply raises, and the share-count service falls
         back to the next source."""
         raise MarketDataUnavailableError(f"{self.name} does not provide share counts")
+
+    def get_split_history(self, ticker: str) -> list[SplitEvent]:
+        """Every share split the vendor knows for `ticker`, oldest first
+        (2026-10-14). Not abstract, same discipline as the other later
+        additions: a provider without split data returns no events, which
+        means "none known", not "none happened"."""
+        return []
 
     def get_daily_price_history(
         self, ticker: str, *, days: int = 400, currency_hint: str | None = None

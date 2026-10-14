@@ -22,7 +22,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, Index, Numeric, String
+from sqlalchemy import DateTime, ForeignKey, Index, Numeric, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
@@ -150,3 +150,33 @@ class ShareCountObservation(Base):
 
     def __repr__(self) -> str:  # pragma: no cover
         return f"<ShareCountObservation holding_id={self.holding_id} shares={self.shares} ({self.source})>"
+
+
+class StockSplit(Base):
+    """One share split (or reverse split) of a holding, from a market data
+    provider (2026-10-14, claude/price-split-data-fixes-2026-10-14.md).
+
+    `ratio` is new shares per old share: a 5-for-1 split is 5, a 1-for-10
+    reverse split is 0.1. A filing reports shares and EPS as they stood at
+    its date, so figures from before `ex_date` are on the old basis while
+    today's price is on the new one — app/services/market_data/splits.py
+    restates the old figures when the two are compared. Append-only; a
+    refresh only inserts splits not yet on file."""
+
+    __tablename__ = "stock_splits"
+    __table_args__ = (
+        UniqueConstraint("holding_id", "ex_date", name="uq_stock_splits_holding_ex_date"),
+        Index("ix_stock_splits_holding_ex_date", "holding_id", "ex_date"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(GUID(), primary_key=True, default=uuid.uuid4)
+    holding_id: Mapped[uuid.UUID] = mapped_column(GUID(), ForeignKey("holdings.id"), nullable=False)
+    ex_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    ratio: Mapped[Decimal] = mapped_column(Numeric(16, 8), nullable=False)
+    provider: Mapped[str] = mapped_column(String(32), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc)
+    )
+
+    def __repr__(self) -> str:  # pragma: no cover
+        return f"<StockSplit holding_id={self.holding_id} {self.ex_date.date()} x{self.ratio}>"

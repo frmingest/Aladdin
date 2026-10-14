@@ -40,6 +40,7 @@ from app.models.market import (
     MarketObservation,
     RiskFreeRateObservation,
     ShareCountObservation,
+    StockSplit,
 )
 from app.models.portfolio import PortfolioPosition, PortfolioSnapshot
 from app.models.precious_metal import PreciousMetalHolding
@@ -88,6 +89,7 @@ __all__ = [
     "ResearchRun",
     "RiskFreeRateObservation",
     "ShareCountObservation",
+    "StockSplit",
     "TagMappingRule",
     "ThesisTripwire",
     "WatchlistItem",
