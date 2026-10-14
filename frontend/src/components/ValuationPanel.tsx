@@ -10,7 +10,8 @@ import {
 } from "recharts";
 import { api, ApiError } from "../lib/api";
 import { formatDate, formatDecimal, formatPercent } from "../lib/format";
-import type { DCFScenario, HoldingValuation, PeriodMultiples } from "../lib/types";
+import type { DCFScenario, HoldingValuation, PeriodMultiples, PriceAssumes } from "../lib/types";
+import { describePriceAssumes } from "../lib/priceAssumes";
 import { MULTIPLE_LABELS, MULTIPLE_ORDER } from "../lib/types";
 import { latestSkipReason } from "../lib/multiples";
 import { Button, Card, EmptyState } from "./ui";
@@ -138,6 +139,19 @@ function MultiplesChart({
           </LineChart>
         </ResponsiveContainer>
       </div>
+    </div>
+  );
+}
+
+/** What the price already assumes for a company with no DCF (loss-making). Information only. */
+function PriceAssumesCard({ read, currency }: { read: PriceAssumes; currency: string | null }) {
+  const text = describePriceAssumes(read, currency);
+  return (
+    <div className="mt-3 rounded-md border border-border-subtle px-3 py-3 text-sm text-ink-muted">
+      <p className="font-medium text-ink">What the price assumes</p>
+      <p className="mt-1">{text.headline}</p>
+      {text.comparison && <p className="mt-1">{text.comparison}</p>}
+      <p className="mt-1 text-xs text-ink-faint">{text.caveat}</p>
     </div>
   );
 }
@@ -276,7 +290,12 @@ export function ValuationPanel({ holdingId, ticker }: { holdingId: string; ticke
                 )}
               </div>
             ) : valuation.dcf === null ? (
-              <EmptyState>DCF unavailable for this holding — see the note above.</EmptyState>
+              <>
+                <EmptyState>DCF unavailable for this holding — see the note above.</EmptyState>
+                {valuation.price_assumes && (
+                  <PriceAssumesCard read={valuation.price_assumes} currency={valuation.valuation_currency} />
+                )}
+              </>
             ) : (
               <>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">

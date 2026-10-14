@@ -105,6 +105,7 @@ Valuation and analysis numbers: DCF, ROIC/ROE, margin of safety, data gaps, fund
 - [fund-etf-analysis-sprint8-2026-09-24.md](valuation/fund-etf-analysis-sprint8-2026-09-24.md) — Sprint 8: Buffett/Munger analysis for funds and ETFs (F9)
 - [fund-look-through-valuation-2026-09-29.md](valuation/fund-look-through-valuation-2026-09-29.md) — Fund look-through valuation via the Xtrackers feed (F30) — 2026-09-29
 - [gap-closing-roic-roe-multiples-2026-09-25.md](valuation/gap-closing-roic-roe-multiples-2026-09-25.md) — Closing the "Not available" gaps: ROIC, ROE and market multiples (2026-09-25)
+- [loss-making-price-assumes-2026-10-14.md](valuation/loss-making-price-assumes-2026-10-14.md) — Loss-making companies: "can't be ranked yet" plus what the price assumes (2026-10-14)
 - [margin-board-sprint19-2026-10-03.md](valuation/margin-board-sprint19-2026-10-03.md) — Sprint 19: make the Margin-of-safety board rank more (2026-10-03)
 - [margin-of-safety-data-gaps-2026-09-27.md](valuation/margin-of-safety-data-gaps-2026-09-27.md) — Margin-of-safety board: why all 5 holdings are unrankable (2026-09-27)
 - [own-year-fact-ownership-2026-10-08.md](valuation/own-year-fact-ownership-2026-10-08.md) — Own-year fact ownership (2026-10-08)

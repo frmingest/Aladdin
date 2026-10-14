@@ -194,6 +194,7 @@ def _to_out(result: HoldingValuationResult) -> HoldingValuationOut:
         financials=financials_out,
         fund_look_through=look_out,
         rejected_values=rejected_values,
+        price_assumes=result.price_assumes,
     )
 
 

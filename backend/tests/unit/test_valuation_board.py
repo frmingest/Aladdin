@@ -81,7 +81,7 @@ def _fake_valuation(values: dict[str, tuple]):
                 unavailable_reasons=["DCF unavailable: fewer than two periods"],
                 regime=None, regime_discount_rate_addon=None,
                 valuation_method="owner_earnings_dcf", valuation_status="unavailable",
-                valuation_status_reason=None,
+                valuation_status_reason=None, price_assumes=None,
                 headline_values=lambda: None, headline_margin_of_safety=lambda label: None,
             )
         price, bear, base, bull = (None if v is None else D(v) for v in spec)
@@ -101,7 +101,7 @@ def _fake_valuation(values: dict[str, tuple]):
             unavailable_reasons=[] if price is not None else ["current price unavailable"],
             regime=None, regime_discount_rate_addon=None,
             valuation_method="owner_earnings_dcf", valuation_status="ok",
-            valuation_status_reason=None,
+            valuation_status_reason=None, price_assumes=None,
             headline_values=lambda: dict(by_label), headline_margin_of_safety=mos,
         )
 
@@ -230,3 +230,34 @@ def test_watchlist_rows_are_separate_and_exclude_owned(monkeypatch, setup):
     assert "WATCHED" not in [r.ticker for r in board.rows]
     assert board.total_equity_value_nok == D("9000")
     assert sum(board.zone_counts().values()) == len(board.rows)
+
+
+def test_a_price_reading_rides_on_an_unranked_row_and_changes_nothing_else(monkeypatch, setup):
+    """Loss-making company (2026-10-14): no DCF, so unranked, but the row carries what the price assumes."""
+    from app.services.valuation.price_assumes import price_assumes
+
+    db, _ = setup
+    read = price_assumes(
+        price_per_share=D("10"), shares_outstanding=D("100"), discount_rate=D("0.09"),
+        terminal_growth_rate=D("0.025"), latest_owner_earnings=D("-5"), latest_period="FY2025",
+    )
+    plain = board_module.compute_holding_valuation  # the fake installed by the fixture
+
+    def with_reading(db_, holding, market, rate, force_refresh=False):
+        result = plain(db_, holding, market, rate, force_refresh=force_refresh)
+        if holding.ticker == "NODCF":
+            result.price_assumes = read
+            result.unavailable_reasons.append("Price check unavailable: no risk-free rate")
+        return result
+
+    monkeypatch.setattr(board_module, "compute_holding_valuation", with_reading)
+    board = build_board(db, market_data_provider=None, risk_free_rate_provider=None)
+    nodcf = next(r for r in board.rows if r.ticker == "NODCF")
+    assert nodcf.price_assumes is read
+    assert nodcf.zone == UNAVAILABLE
+    assert nodcf.margin_of_safety_base is None and nodcf.base is None
+    # the reason shown is still the DCF one, not a later price-check note
+    assert "fewer than two periods" in nodcf.unavailable_reason
+    # ranked rows carry no reading, and the ranking is unchanged
+    assert [r.ticker for r in board.rows] == ["CHEAP", "FAIR", "RICH", "NODCF"]
+    assert all(r.price_assumes is None for r in board.rows if r.ticker != "NODCF")

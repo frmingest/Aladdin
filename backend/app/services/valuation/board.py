@@ -34,6 +34,7 @@ from app.models.watchlist import WatchlistItem
 from app.providers.base import MarketDataProvider, RiskFreeRateProvider
 from app.services.analysis.latest import latest_runs_by_holding, run_ratings
 from app.services.valuation.holding_valuation import compute_holding_valuation
+from app.services.valuation.price_assumes import PriceAssumes
 
 # Where the current price sits relative to the bear/base/bull values.
 BELOW_BEAR = "below_bear"
@@ -74,6 +75,8 @@ class BoardRow:
     # 2026-09-30: only set on watchlist rows (your own buy-below target).
     buy_below_price: Decimal | None = None
     buy_below_currency: str | None = None
+    # 2026-10-14: loss-making companies only, information beside "can't be ranked yet".
+    price_assumes: PriceAssumes | None = None
 
 
 @dataclass
@@ -156,6 +159,7 @@ def _value_row(
     row.regime_discount_rate_addon = valuation.regime_discount_rate_addon
     row.valuation_method = valuation.valuation_method
     row.valuation_status = valuation.valuation_status
+    row.price_assumes = valuation.price_assumes
     # headline_values() is None for a withheld (implausible) model, so a
     # value the plausibility guard rejected can never be ranked here.
     values = valuation.headline_values()

@@ -5,6 +5,7 @@ describe("shortReason", () => {
   it("names the common causes in a word or two", () => {
     expect(shortReason("Cannot compute CAGR: latest period (FY2025) is not profitable").label).toBe("Loss-making");
     expect(shortReason("Cannot compute CAGR: only one profitable year on file (FY2025); a growth rate needs at least two").label).toBe("One profitable year");
+    expect(shortReason("DCF unavailable: owner earnings are volatile and their 5-year median is not positive (FY2021-FY2025), so there is no normal level to value").label).toBe("Loss-making");
     expect(shortReason("DCF unavailable: fewer than two periods with complete owner-earnings inputs (net_income)").label).toBe("Data missing");
     expect(shortReason("Price-to-book valuation unavailable: no financial history on file").label).toBe("No financial history");
     expect(shortReason("Cannot value on justified P/B: no ROE for any period").label).toBe("No ROE data");
