@@ -24,12 +24,14 @@ from app.config.settings import get_settings
 from app.models.llm_prompt_log import LlmPromptLog
 from app.providers.factory import get_primary_budget_guard
 from app.schemas.system import (
+    CurrencyCheckOut,
     PromptLogDetailOut,
     PromptLogItemOut,
     PromptLogListOut,
     SystemStatusOut,
 )
 from app.services.llm_prompt_log import get_prompt_log, list_prompt_logs
+from app.services.market_data.currency_check import check_holding_currencies
 from app.services.settings.demo_mode import is_demo_mode
 from app.services.settings.synthetic_data import demo_system_status
 from app.services.system_status import build_system_status
@@ -45,6 +47,13 @@ def get_system_status(db: Session = Depends(get_db)) -> SystemStatusOut:
     out = SystemStatusOut.model_validate(status, from_attributes=True)
     out.demo_mode = False
     return out
+
+
+@router.get("/holding-currency-check", response_model=CurrencyCheckOut)
+def get_holding_currency_check(db: Session = Depends(get_db)) -> CurrencyCheckOut:
+    """One-time, read-only check: holdings whose saved trading currency
+    disagrees with their latest price's currency or their exchange."""
+    return CurrencyCheckOut.model_validate(check_holding_currencies(db), from_attributes=True)
 
 
 def _preview(row: LlmPromptLog) -> str:

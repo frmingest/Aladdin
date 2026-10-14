@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 
 from sqlalchemy import select
@@ -42,13 +42,16 @@ from app.domain.regime_adjustments import get_regime_adjustments
 from app.domain.valuation_assumptions import get_valuation_assumptions
 from app.models.financial_line_item import FinancialLineItem
 from app.models.holding import Holding
+from app.models.market import MarketObservation
 from app.providers.base import MarketDataProvider, RiskFreeRateProvider
 from app.services.holding_facts import facts_by_period, previous_period
 from app.services.market_data.beta import get_or_refresh_beta
 from app.services.market_data.fx import get_or_refresh_fx
-from app.services.market_data.price import get_or_refresh_price
+from app.services.market_data.price import get_or_refresh_price, previous_observation
 from app.services.market_data.risk_free_rate import get_or_refresh_risk_free_rate
+from app.services.market_data.sanity import price_jump_note
 from app.services.market_data.shares import resolve_share_count
+from app.services.market_data.splits import splits_for
 from app.services.metrics import (
     certificate_holder_share,
     compute_holding_metrics,
@@ -754,6 +757,30 @@ def compute_holding_valuation(
     return result
 
 
+def _flag_price_jump(db: Session, price: MarketObservation, result: HoldingValuationResult) -> None:
+    """Say so next to the valuation when the latest stored price is far from
+    the one before it (2026-10-14): a data error, a currency change or an
+    unrecorded split would otherwise pass for a real margin of safety."""
+    previous = previous_observation(db, price)
+    if previous is None:
+        return
+    if previous.currency != price.currency:
+        result.unavailable_reasons.append(
+            f"price currency changed from {previous.currency} to {price.currency} since the previous "
+            "stored price; check the holding's currency"
+        )
+        return
+    prev_at, now_at = _as_utc(previous.observed_at), _as_utc(price.observed_at)
+    explained_by = [s for s in splits_for(db, price.holding_id) if prev_at < _as_utc(s.ex_date) <= now_at]
+    note = price_jump_note(previous.price, price.price, known_splits=explained_by)
+    if note:
+        result.unavailable_reasons.append(note)
+
+
+def _as_utc(value: datetime) -> datetime:
+    return value if value.tzinfo is not None else value.replace(tzinfo=timezone.utc)
+
+
 def _current_price_in_valuation_currency(
     db: Session,
     holding: Holding,
@@ -774,6 +801,7 @@ def _current_price_in_valuation_currency(
 
     result.as_of = price_snapshot.as_of
     price = price_snapshot.value
+    _flag_price_jump(db, price, result)
     if price.currency == valuation_currency:
         return price.price
 

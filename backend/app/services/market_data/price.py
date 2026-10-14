@@ -12,12 +12,28 @@ from app.models.holding import Holding
 from app.models.market import MarketObservation
 from app.providers.base import MarketDataProvider, MarketDataUnavailableError
 from app.services.market_data.common import MarketDataSnapshot, get_or_refresh
+from app.services.market_data.splits import refresh_splits
 
 
 def _latest_price(db: Session, holding_id: uuid.UUID) -> MarketObservation | None:
     stmt = (
         select(MarketObservation)
         .where(MarketObservation.holding_id == holding_id)
+        .order_by(MarketObservation.observed_at.desc())
+        .limit(1)
+    )
+    return db.scalar(stmt)
+
+
+def previous_observation(db: Session, observation: MarketObservation) -> MarketObservation | None:
+    """The stored price just before `observation` for the same holding, or
+    None. Used to flag a sudden jump (app/services/market_data/sanity.py)."""
+    stmt = (
+        select(MarketObservation)
+        .where(
+            MarketObservation.holding_id == observation.holding_id,
+            MarketObservation.observed_at < observation.observed_at,
+        )
         .order_by(MarketObservation.observed_at.desc())
         .limit(1)
     )
@@ -45,6 +61,8 @@ def get_or_refresh_price(
         )
         db.add(observation)
         db.flush()
+        # Splits ride along with the price: best effort, never blocks it.
+        refresh_splits(db, provider, holding)
         return observation
 
     return get_or_refresh(

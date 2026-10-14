@@ -62,3 +62,15 @@ def test_missing_research_key_is_503_with_reason(client, monkeypatch):
         app.dependency_overrides.pop(get_research_provider, None)
     assert r.status_code == 503
     assert "GOOGLE_AI_STUDIO_API_KEY" in r.json()["detail"]
+
+
+def test_holding_currency_check_endpoint(client, db_session):
+    db_session.add_all([
+        Holding(ticker="EQNR.OL", name="Equinor", trading_currency="NOK"),
+        Holding(ticker="NAS.OL", name="Norwegian", trading_currency="EUR"),
+    ])
+    db_session.commit()
+    body = client.get("/system/holding-currency-check").json()
+    assert body["checked"] == 2
+    assert [f["ticker"] for f in body["findings"]] == ["NAS.OL"]
+    assert "NOK" in body["findings"][0]["issues"][0]

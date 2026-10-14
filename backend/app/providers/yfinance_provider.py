@@ -30,6 +30,7 @@ from app.providers.base import (
     MarketDataProvider,
     MarketDataUnavailableError,
     PricePoint,
+    SplitEvent,
 )
 
 _PROVIDER_NAME = "yfinance"
@@ -208,6 +209,30 @@ class YFinanceMarketDataProvider(MarketDataProvider):
             from_currency=from_currency, to_currency=to_currency, rate=rate,
             observed_at=now, provider=self.name,
         )
+
+    def get_split_history(self, ticker: str) -> list[SplitEvent]:
+        """Share splits from yfinance's `.splits` series (ex-date index,
+        value = new shares per old share), oldest first. Empty when Yahoo
+        lists none; a vendor failure raises MarketDataUnavailableError."""
+        yf_ticker = self._ticker(ticker)
+        try:
+            series = yf_ticker.splits
+        except Exception as exc:  # pragma: no cover - vendor failure path
+            raise MarketDataUnavailableError(
+                f"yfinance split history lookup failed for {ticker!r}: {exc}"
+            ) from exc
+        events: list[SplitEvent] = []
+        if series is None:
+            return events
+        for ex_date, value in series.items():
+            ratio = _to_decimal(value)
+            if ratio is None or ratio <= 0 or ratio == 1:
+                continue
+            ts = ex_date.to_pydatetime()
+            if ts.tzinfo is None:
+                ts = ts.replace(tzinfo=timezone.utc)
+            events.append(SplitEvent(ex_date=ts, ratio=ratio))
+        return sorted(events, key=lambda e: e.ex_date)
 
     def get_shares_outstanding(self, ticker: str) -> Decimal:
         """Current shares outstanding. Same fallback discipline as the price:

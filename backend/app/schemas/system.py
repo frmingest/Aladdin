@@ -91,3 +91,19 @@ class PromptLogDetailOut(PromptLogItemOut):
     system_prompt: str | None
     user_prompt: str
     response_text: str | None
+
+
+class CurrencyFindingOut(BaseModel):
+    ticker: str
+    name: str
+    saved_currency: str
+    price_currency: str | None
+    issues: list[str]
+
+
+class CurrencyCheckOut(BaseModel):
+    """GET /system/holding-currency-check: holdings whose saved currency
+    looks wrong. Empty `findings` means every checked holding matches."""
+
+    checked: int
+    findings: list[CurrencyFindingOut]
