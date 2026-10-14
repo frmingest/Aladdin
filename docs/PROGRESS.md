@@ -10,7 +10,7 @@ State: `main` is at `fc4e2a1` (#148). Repo migration head `w1e2f3a4b5c6` (foreca
 
 ## Active Tasks
 
-- [ ] **Review and merge the Siege World-yardstick PR (Faiz), then check it live:** restart the PC worker (or wait a pass) so it stores ACWI and USD/NOK; open the Siege Simulator and press World. Funds should read higher than under Oslo, Norwegian stocks lower. Steps in the [doc](game/siege-global-benchmark-2026-10-14.md)
+- [ ] **Review and merge the Siege World-yardstick PR (Faiz), then check it live:** restart the PC worker (or wait a pass) so it stores ACWI and USD/NOK; open the Siege Simulator and press World. Funds should read higher than under Oslo, Norwegian stocks lower. With Game mode on, check the lookout-tower banner crop. Steps in the [doc](game/siege-global-benchmark-2026-10-14.md)
 - [ ] **Next (Claude, decided 2026-10-14), in order:** "can't be ranked yet" plus a no-score "what the price assumes" view for loss-making companies; remove the 4 unused manual snapshot/position endpoints; report-only mypy job in CI
 
 ## Recent Blockers / Open Questions
