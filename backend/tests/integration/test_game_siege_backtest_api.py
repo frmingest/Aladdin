@@ -22,7 +22,7 @@ def test_backtest_compares_prediction_with_what_the_holding_did(client, db_sessi
     _history(db_session, "CASH.OL", [r * D("1.0") for r in br])
     body = client.get("/game/siege/backtest").json()
     assert body["status"] == "ok" and body["benchmark_ticker"] == "OSEBX.OL"
-    assert body["backtest_version"] == "v1" and body["scenarios_version"] == "v3"
+    assert body["backtest_version"] == "v1" and body["scenarios_version"] == "v4"
     assert D(body["episode"]["fall"]) < D("-0.15") and body["episode"]["significant"] is True
     rows = {h["ticker"]: h for h in body["holdings"]}
     assert rows["FUND"]["tested"] and rows["FUND"]["verdict"] == "close"

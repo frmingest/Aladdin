@@ -3,6 +3,11 @@
 Completed milestones and retired status, moved out of `docs/PROGRESS.md` under the rolling-log rules
 in `CLAUDE.md` ("Progress file rules"). Newest snapshot first. Older: [PROGRESS-full-2026-09-30.md](PROGRESS-full-2026-09-30.md).
 
+## Closed 2026-10-14 — open items closed by Faiz
+
+- **Faiz closed all other open items on 2026-10-14** (his word; Claude did not re-check them): Kongsberg display fix (already in `main` as #146, confirmed from git), Equinor stored-price comparison, the holding-currency check, the prompt-log migration check, the B2 Then and now / default-on Game mode live check, and the "next design slice" pick. Related docs: [kongsberg-multiples-display-2026-10-14.md](../valuation/kongsberg-multiples-display-2026-10-14.md), [equinor-beta-fix-2026-10-14.md](../valuation/equinor-beta-fix-2026-10-14.md), [then-and-now-b2-2026-10-14.md](../game/then-and-now-b2-2026-10-14.md).
+- The Kongsberg P/S jump at FY2024 stays a data question (it needs the stored revenue and net income for FY2023-25), not a task.
+
 ## Closed 2026-10-14 — C2 hit rate merged and checked
 
 - **Merged as #147 and checked OK by Faiz 2026-10-14.** Ledger panel on the Hall of Records (opens at 8 outcomes, count always beside the ratio), `GET /game/calibration`, additive `forecasts` table (migration `w1e2f3a4b5c6`), four ledger pictures packed. Doc: [c2-hit-rate-sprint-2026-10-14.md](../game/c2-hit-rate-sprint-2026-10-14.md).

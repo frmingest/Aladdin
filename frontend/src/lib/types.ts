@@ -2211,6 +2211,15 @@ export interface SiegeSimHolding {
   caution: string | null;
 }
 
+/** Siege v4: what "the market" means on the page. "local" is Oslo (OSEBX); "global" is the World stand-in fund. */
+export type SiegeBenchmarkKey = "local" | "global";
+
+export interface SiegeBenchmarkOption {
+  key: SiegeBenchmarkKey;
+  label: string;
+  ticker: string;
+}
+
 export interface SiegeSim {
   scenarios_version: string;
   mapping_version: string;
@@ -2240,6 +2249,10 @@ export interface SiegeSim {
   notes: string[];
   /** What the betas are measured against; empty for the v1 scenarios. */
   benchmark_ticker: string;
+  /** Scenarios v4: the active yardstick ("" for v1 to v3, which have no choice), its plain name, and the options to offer. */
+  benchmark_key?: SiegeBenchmarkKey | "";
+  benchmark_label?: string;
+  benchmark_options?: SiegeBenchmarkOption[];
   /** Scenarios v3: the part of the book left out of the result, stated beside the headline number. */
   unmodelled_share?: string | null;
   unmodelled_count?: number;

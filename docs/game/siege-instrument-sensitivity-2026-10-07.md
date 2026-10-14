@@ -25,7 +25,7 @@ Root causes, from the code and from `computed_snapshots` on Supabase (22 `beta:*
 ## Limits (stated on the page or here)
 
 - Norwegian funds price once a day at NAV and lag the market, so their measured beta tends to read too low; the row carries a caution when the data shows it.
-- Returns are daily; a fall of "the market" means a fall of OSEBX. A global ETF (XDEF) is understated by an OSEBX benchmark. A global benchmark option is a later decision.
+- Returns are daily; a fall of "the market" means a fall of OSEBX. A global ETF (XDEF) is understated by an OSEBX benchmark. A global benchmark option was decided on 2026-10-14 and built: see [siege-global-benchmark-2026-10-14.md](siege-global-benchmark-2026-10-14.md).
 - It is a what-if from past down days, not a forecast.
 
 ## Verified

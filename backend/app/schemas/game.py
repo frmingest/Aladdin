@@ -252,6 +252,14 @@ class SiegeSimHoldingOut(BaseModel):
     caution: str | None = None
 
 
+class SiegeBenchmarkOptionOut(BaseModel):
+    """One yardstick the Siege Simulator can measure against (v4): "local" (Oslo) or "global" (World)."""
+
+    key: Literal["local", "global"]
+    label: str
+    ticker: str
+
+
 class SiegeSimOut(BaseModel):
     """A what-if: one chosen market fall pushed through each holding's stored
     beta. Never a forecast, never a recommendation."""
@@ -283,6 +291,11 @@ class SiegeSimOut(BaseModel):
     notes: list[str]
     # Siege v2: what the betas are measured against ("" for v1, which used vendor betas only).
     benchmark_ticker: str = ""
+    # Siege v4: which yardstick is active ("local" or "global"; "" when the version has no choice),
+    # its plain-language name, and the options the page may offer.
+    benchmark_key: str = ""
+    benchmark_label: str = ""
+    benchmark_options: list[SiegeBenchmarkOptionOut] = []
     # Siege v3: the part of the book that could not be modelled, stated next to the headline number.
     unmodelled_share: Decimal | None = None
     unmodelled_count: int = 0

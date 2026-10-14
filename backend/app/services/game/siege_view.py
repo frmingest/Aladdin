@@ -11,7 +11,12 @@ from sqlalchemy.orm import Session
 
 from app.domain.game_mapping.siege_scenarios_v1 import SiegeScenarios
 from app.domain.game_mapping.value_types import GameMapping
-from app.schemas.game import GameStateOut, SiegeSimHoldingOut, SiegeSimOut
+from app.schemas.game import (
+    GameStateOut,
+    SiegeBenchmarkOptionOut,
+    SiegeSimHoldingOut,
+    SiegeSimOut,
+)
 from app.services.game.sensitivity import (
     METHOD_NONE,
     METHOD_VENDOR_BETA,
@@ -61,12 +66,30 @@ def stored_sensitivity_lookup(db: Session, scenarios: SiegeScenarios) -> Sensiti
             fx_cache[currency] = read_stored_history(db, f"{currency}NOK=X", since=since)
         return fx_cache[currency]
 
+    # The yardstick is compared with holdings whose closes are in NOK, so a yardstick listed in
+    # another currency (the World option, ACWI in USD) is converted the same way: what a Norwegian
+    # saver experiences, currency moves included.
+    bench_points = bench.points
+    bench_problem: str | None = None
+    if bench.available:
+        bench_currency = (bench.currency or "NOK").upper()
+        if bench_currency != "NOK":
+            bench_fx = fx_for(bench_currency)
+            if not bench_fx.available:
+                bench_problem = (
+                    f"no {bench_currency}/NOK history stored to convert the benchmark {scenarios.benchmark_ticker} to NOK"
+                )
+            else:
+                bench_points = to_nok(bench.points, bench_fx.points)
+
     def lookup(ticker: str) -> Sensitivity:
         why: str | None
         estimate: Sensitivity | None = None
         history = read_stored_history(db, ticker, since=since)
         if not bench.available:
             why = f"no price history stored for the benchmark {scenarios.benchmark_ticker}"
+        elif bench_problem is not None:
+            why = bench_problem
         elif not history.available:
             why = "no price history stored for this holding"
         else:
@@ -82,7 +105,7 @@ def stored_sensitivity_lookup(db: Session, scenarios: SiegeScenarios) -> Sensiti
             if why is None:
                 estimate, why = sensitivity_from_history(
                     to_nok(history.points, fx),
-                    bench.points,
+                    bench_points,
                     min_observations=scenarios.min_observations,
                     min_down_days=scenarios.min_down_days,
                     weak_fit_r_squared=scenarios.weak_fit_r_squared,
@@ -105,6 +128,20 @@ def stored_sensitivity_lookup(db: Session, scenarios: SiegeScenarios) -> Sensiti
         return Sensitivity(None, METHOD_NONE, reason=f"not modelled: {why}, and no vendor beta is stored")
 
     return lookup
+
+
+def benchmark_options(scenarios: SiegeScenarios) -> list[SiegeBenchmarkOptionOut]:
+    """The yardsticks the reader may pick between; empty when the version has no choice (v1 to v3)."""
+    if not scenarios.global_benchmark_ticker:
+        return []
+    return [
+        SiegeBenchmarkOptionOut(
+            key="local", label=scenarios.local_benchmark_label, ticker=scenarios.local_benchmark_ticker
+        ),
+        SiegeBenchmarkOptionOut(
+            key="global", label=scenarios.global_benchmark_label, ticker=scenarios.global_benchmark_ticker
+        ),
+    ]
 
 
 def build_siege_sim(
@@ -135,6 +172,14 @@ def build_siege_sim(
             "using only the days the benchmark fell. Where that history is too short, Yahoo's beta is used and marked. "
             f"A fall of the market here means a fall of {scenarios.benchmark_ticker}."
         )
+        if scenarios.benchmark_key == "global":
+            notes.append(
+                f"The World yardstick is {scenarios.global_benchmark_ticker}, a US-listed fund that stands in for a "
+                "world index; it is not the index itself. Its prices are converted to NOK like every holding's, so "
+                "currency moves are inside the numbers. Norwegian stocks will usually read lower against the world "
+                "than against Oslo, and a world fund higher; switch back to Oslo to see the other view. The back-test "
+                "below always uses Oslo."
+            )
     unmodelled = [r.holding.ticker for r in result.holdings if not r.modelled]
     if unmodelled:
         shown = ", ".join(unmodelled[:6]) + (f" and {len(unmodelled) - 6} more" if len(unmodelled) > 6 else "")
@@ -189,6 +234,9 @@ def build_siege_sim(
         ],
         notes=notes,
         benchmark_ticker=scenarios.benchmark_ticker,
+        benchmark_key=scenarios.benchmark_key if scenarios.global_benchmark_ticker else "",
+        benchmark_label=scenarios.benchmark_label,
+        benchmark_options=benchmark_options(scenarios),
         unmodelled_share=result.unmodelled_share,
         unmodelled_count=result.unmodelled_count,
         unmodelled_note=result.unmodelled_note,

@@ -4,6 +4,7 @@ import { api } from "../lib/api";
 import { formatNok } from "../lib/format";
 import { WALL_LABEL, formatShock, isFundCode, shortLabel } from "../lib/fortress";
 import {
+  BENCHMARK_SHORT,
   SIEGE_SIM_RULES,
   SIM_EXPOSURE_LABEL,
   SIM_LEVEL_LABEL,
@@ -11,22 +12,35 @@ import {
   clampDrop,
   coverageLine,
   damageWidth,
+  fallSubject,
   formatDrop,
   headline,
   holdingLine,
   isRoughGuide,
+  parseBenchmarkChoice,
   presetDrop,
   rowFacts,
   rowStatus,
   stressGapNote,
 } from "../lib/siege";
-import type { SiegeSim, SiegeSimExposure, SiegeSimHolding } from "../lib/types";
+import type { SiegeBenchmarkKey, SiegeSim, SiegeSimExposure, SiegeSimHolding } from "../lib/types";
 import { Card, EmptyState, LoadError, PageHeader } from "../components/ui";
 import { describeError } from "../lib/errors";
 import GameFooter from "../components/fortress/GameFooter";
 import SiegeBacktestCard from "../components/fortress/SiegeBacktestCard";
 import SiegeArtStrip from "../components/fortress/kit/SiegeArtStrip";
 import { useArtMode } from "../lib/stitchArt";
+
+const BENCHMARK_STORAGE_KEY = "aladdin.siege.benchmark";
+
+/** The reader's last choice of yardstick, kept in this browser only. Storage can be missing or blocked. */
+function readBenchmarkChoice(): SiegeBenchmarkKey {
+  try {
+    return parseBenchmarkChoice(window.localStorage.getItem(BENCHMARK_STORAGE_KEY));
+  } catch {
+    return "local";
+  }
+}
 
 /** The Siege Simulator (game mode, G13): pick how far the market falls and watch it reach each
  * tower. A what-if over stored data: each holding's beta scales the fall, and the result is
@@ -157,7 +171,17 @@ export default function SiegeSimulatorPage() {
   const [error, setError] = useState<{ message: string; retryable: boolean } | null>(null);
   const [retry, setRetry] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [benchmark, setBenchmark] = useState<SiegeBenchmarkKey>(readBenchmarkChoice);
   const latest = useRef(0);
+
+  function chooseBenchmark(key: SiegeBenchmarkKey) {
+    setBenchmark(key);
+    try {
+      window.localStorage.setItem(BENCHMARK_STORAGE_KEY, key);
+    } catch {
+      /* the choice still applies for this visit */
+    }
+  }
 
   // First load uses the file's default fall; after that the slider drives it (debounced, newest answer wins).
   useEffect(() => {
@@ -167,7 +191,7 @@ export default function SiegeSimulatorPage() {
     const t = window.setTimeout(() => {
       setLoading(true);
       api
-        .getSiegeSim(drop ?? undefined)
+        .getSiegeSim(drop ?? undefined, benchmark)
         .then((s) => {
           if (id !== latest.current) return;
           setSim(s);
@@ -182,7 +206,7 @@ export default function SiegeSimulatorPage() {
         });
     }, wait);
     return () => window.clearTimeout(t);
-  }, [drop, retry]);
+  }, [drop, retry, benchmark]);
 
   const min = sim ? Number(sim.drop_min) : 0.05;
   const max = sim ? Number(sim.drop_max) : 0.6;
@@ -213,9 +237,32 @@ export default function SiegeSimulatorPage() {
       {sim && (
         <div className="space-y-4">
           <Card>
+            {(sim.benchmark_options?.length ?? 0) > 1 && (
+              <div className="mb-4 border-b border-border-subtle pb-3">
+                <p className="text-xs uppercase tracking-wide text-ink-faint" id="siege-yardstick-label">Measured against</p>
+                <div role="group" aria-labelledby="siege-yardstick-label" className="mt-1 inline-flex flex-wrap rounded-md border border-border p-0.5">
+                  {sim.benchmark_options?.map((o) => (
+                    <button
+                      key={o.key}
+                      type="button"
+                      aria-pressed={sim.benchmark_key === o.key}
+                      className={`min-h-[44px] rounded px-3 py-1 text-sm sm:min-h-0 ${
+                        sim.benchmark_key === o.key ? "bg-accent-subtle font-medium text-ink" : "text-ink-muted hover:text-ink"
+                      }`}
+                      onClick={() => chooseBenchmark(o.key)}
+                    >
+                      {BENCHMARK_SHORT[o.key]}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-1 text-xs text-ink-faint">
+                  {sim.benchmark_label}. {sim.benchmark_key === "global" ? "A fund standing in for a world index, in kroner. Good for global funds; Norwegian stocks usually read lower against it." : "Good for Norwegian stocks; it understates a global fund's fall."}
+                </p>
+              </div>
+            )}
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
-                <p className="text-xs uppercase tracking-wide text-ink-faint">Market falls by</p>
+                <p className="text-xs uppercase tracking-wide text-ink-faint">{fallSubject(sim).label}</p>
                 <p className="tabular font-display text-4xl text-ink" aria-live="polite">{formatDrop(drop ?? sim.market_drop)}</p>
               </div>
               <div className="flex flex-wrap gap-2 text-sm">

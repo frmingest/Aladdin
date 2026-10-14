@@ -45,6 +45,12 @@ def wanted_tickers(db: Session, scenarios: SiegeScenarios) -> dict[str, str | No
     """ticker -> currency hint, for everything the v2 simulator reads."""
     wanted: dict[str, str | None] = {scenarios.benchmark_ticker: BASE_CURRENCY}
     currencies: set[str] = set()
+    if scenarios.global_benchmark_ticker:
+        # v4: the World yardstick is stored too, so the page can switch to it without a vendor call.
+        # It is listed in a foreign currency, so the pair that converts it to NOK is stored with it.
+        wanted.setdefault(scenarios.global_benchmark_ticker, scenarios.global_benchmark_currency or None)
+        if scenarios.global_benchmark_currency and scenarios.global_benchmark_currency.upper() != BASE_CURRENCY:
+            currencies.add(scenarios.global_benchmark_currency.upper())
     for p in build_overview(db).positions:
         if not p.value_nok:
             continue
