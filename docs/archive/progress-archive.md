@@ -3,6 +3,10 @@
 Completed milestones and retired status, moved out of `docs/PROGRESS.md` under the rolling-log rules
 in `CLAUDE.md` ("Progress file rules"). Newest snapshot first. Older: [PROGRESS-full-2026-09-30.md](PROGRESS-full-2026-09-30.md).
 
+## Closed 2026-10-14 — C2 hit rate merged and checked
+
+- **Merged as #147 and checked OK by Faiz 2026-10-14.** Ledger panel on the Hall of Records (opens at 8 outcomes, count always beside the ratio), `GET /game/calibration`, additive `forecasts` table (migration `w1e2f3a4b5c6`), four ledger pictures packed. Doc: [c2-hit-rate-sprint-2026-10-14.md](../game/c2-hit-rate-sprint-2026-10-14.md).
+
 ## Closed 2026-10-14 — D2 Camera checked
 
 - **Checked by Faiz 2026-10-14: D2 Camera is OK** (merged as #138). Doc: [camera-d2-2026-10-14.md](../game/camera-d2-2026-10-14.md).
