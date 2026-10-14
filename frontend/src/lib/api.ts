@@ -59,6 +59,7 @@ import type {
   JournalEntry,
   JournalEntryInput,
   JournalEntryUpdate,
+  ThenAndNow,
   MacroIndicators,
   MacroRefreshResult,
   MacroResearch,
@@ -374,6 +375,7 @@ export const api = {
     request<JournalEntry>("/journal", { method: "POST", body: JSON.stringify(input) }),
   updateJournalEntry: (id: string, input: JournalEntryUpdate) =>
     request<JournalEntry>(`/journal/${id}`, { method: "PATCH", body: JSON.stringify(input) }),
+  getThenAndNow: (entryId: string) => request<ThenAndNow>(`/journal/${entryId}/then-and-now`),
   deleteJournalEntry: (id: string) =>
     request<void>(`/journal/${id}`, { method: "DELETE", query: { confirm: true } }),
 

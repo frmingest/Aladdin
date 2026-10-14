@@ -1280,6 +1280,34 @@ export interface Journal {
   reviews_due: number;
 }
 
+export interface ThenNowStamp {
+  run_id: string;
+  analyzed_at: string | null;
+  model_name: string | null;
+}
+
+export interface ThenNowChange {
+  key: string;
+  label: string;
+  kind: "value" | "list";
+  then_value: string | null;
+  now_value: string | null;
+  then_items: string[];
+  now_items: string[];
+}
+
+/** B2 Then and Now (backend/app/services/then_and_now.py): the analyst's blind-pass view when a
+ * decision was written versus now. Changed lines only; no direction arrows. */
+export interface ThenAndNow {
+  version: string;
+  status: "compared" | "same_run" | "no_analysis_then" | "no_analysis_now" | "no_holding" | "demo";
+  then: ThenNowStamp | null;
+  now: ThenNowStamp | null;
+  changes: ThenNowChange[];
+  unchanged_count: number;
+  note: string | null;
+}
+
 export interface JournalEntryInput {
   holding_id: string;
   action: JournalAction;

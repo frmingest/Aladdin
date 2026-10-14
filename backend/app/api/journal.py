@@ -20,6 +20,7 @@ from app.schemas.journal import (
     JournalEntryUpdate,
     JournalOut,
     JournalOutcomeOut,
+    ThenAndNowOut,
 )
 from app.services.analysis.latest import (
     run_in_force,
@@ -29,6 +30,7 @@ from app.services.journal import outcomes_for
 from app.services.settings.demo_guard import require_not_demo
 from app.services.settings.demo_mode import is_demo_mode
 from app.services.settings.synthetic_data import demo_journal
+from app.services.then_and_now import THEN_AND_NOW_VERSION, build_then_and_now
 
 router = APIRouter(prefix="/journal", tags=["journal"])
 
@@ -74,6 +76,20 @@ def list_entries(holding_id: UUID | None = None, db: Session = Depends(get_db)) 
         entries=entries,
         reviews_due=sum(1 for e in entries if e.outcome.review_6m_due or e.outcome.review_12m_due),
     )
+
+
+@router.get("/{entry_id}/then-and-now", response_model=ThenAndNowOut)
+def then_and_now(entry_id: UUID, db: Session = Depends(get_db)) -> ThenAndNowOut:
+    """B2: the analyst's blind view when this decision was written versus now.
+    Read-only; changed lines only; see app/services/then_and_now.py."""
+    if is_demo_mode(db):
+        return ThenAndNowOut(
+            version=THEN_AND_NOW_VERSION,
+            status="demo",
+            note="Demo data has no stored analysis history to compare.",
+        )
+    result = build_then_and_now(db, _get_or_404(db, entry_id))
+    return ThenAndNowOut.model_validate(result, from_attributes=True)
 
 
 @router.post("", response_model=JournalEntryOut, status_code=201)
