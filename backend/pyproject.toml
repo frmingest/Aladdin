@@ -21,3 +21,19 @@ extend-immutable-calls = [
     "fastapi.Header",
     "fastapi.Cookie",
 ]
+
+# mypy is a report-only CI job for now (about 170 old findings, none gating): it prints the list and a count so
+# the number can only be seen to fall. Make it blocking once it reaches zero (docs/ops/mypy-report-only-2026-10-14.md).
+[tool.mypy]
+python_version = "3.12"
+files = ["app"]
+exclude = ["alembic/"]
+warn_unused_configs = true
+show_error_codes = true
+pretty = false
+
+# yfinance ships no type information and has no stubs package.
+[[tool.mypy.overrides]]
+module = ["yfinance", "yfinance.*"]
+ignore_missing_imports = true
+

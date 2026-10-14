@@ -147,6 +147,7 @@ Running the app: Railway/Supabase runbook, auth gate, page-load, background jobs
 - [claude-setup-assessment-2026-10-09.md](ops/claude-setup-assessment-2026-10-09.md) — Claude setup assessment and proposal — 2026-10-09
 - [live-verification-2026-09-27.md](ops/live-verification-2026-09-27.md) — Live verification — 2026-09-27 (post API-key-gate deploy)
 - [macro-data-and-guardrails-sprint7-2026-09-24.md](ops/macro-data-and-guardrails-sprint7-2026-09-24.md) — Numeric macro data (Fed / Norges Bank) + Sprint 7 guardrail tooling
+- [mypy-report-only-2026-10-14.md](ops/mypy-report-only-2026-10-14.md) — Backend type check in CI: mypy, report only (2026-10-14)
 - [object-storage-free-tier-alternatives-2026-09-27.md](ops/object-storage-free-tier-alternatives-2026-09-27.md) — Object storage: free-tier alternatives to Supabase Storage (2026-09-27)
 - [page-load-root-cause-2026-10-03.md](ops/page-load-root-cause-2026-10-03.md) — Page load: root cause found and options (2026-10-03)
 - [page-load-snapshots-2026-09-30.md](ops/page-load-snapshots-2026-09-30.md) — Page-load fix: timing header, stored snapshots, no live price fetch in GET (2026-09-30)
