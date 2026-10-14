@@ -12,6 +12,7 @@ import { api, ApiError } from "../lib/api";
 import { formatDate, formatDecimal, formatPercent } from "../lib/format";
 import type { DCFScenario, HoldingValuation, PeriodMultiples } from "../lib/types";
 import { MULTIPLE_LABELS, MULTIPLE_ORDER } from "../lib/types";
+import { latestSkipReason } from "../lib/multiples";
 import { Button, Card, EmptyState } from "./ui";
 import { InfoTooltip } from "./InfoTooltip";
 import { GLOSSARY } from "../lib/glossary";
@@ -84,7 +85,7 @@ function MultiplesChart({
     .map((p) => ({ period: p.period, value: Number(p.computed[metricKey]) }));
 
   if (points.length === 0) {
-    const reason = series.find((p) => p.skipped[metricKey])?.skipped[metricKey];
+    const reason = latestSkipReason(series, metricKey);
     return (
       <div className="rounded-lg border border-border-subtle p-3">
         <h5 className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">{label}</h5>

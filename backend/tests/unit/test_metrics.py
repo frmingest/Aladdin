@@ -172,3 +172,20 @@ def test_net_cash_over_positive_ebitda_is_still_a_real_ratio():
 def test_zero_revenue_margins_are_not_meaningful():
     result = compute_holding_metrics({**FULL_FACTS, "revenue": Decimal(0)})
     assert result.skipped["gross_margin"].startswith("not meaningful: revenue is zero")
+
+
+def test_missing_ebitda_says_what_it_would_take_to_derive_it():
+    # Kongsberg: revenue, profit and EBIT are filed but no D&A, so no EBITDA.
+    from app.services.metrics import MarketInputs
+
+    facts = {k: v for k, v in FULL_FACTS.items() if k not in ("ebitda", "depreciation_and_amortization")}
+    result = compute_holding_metrics(facts, market=MarketInputs(price=Decimal(10), shares=Decimal(100)))
+    assert "ev_to_ebitda" not in result.computed
+    reason = result.skipped["ev_to_ebitda"]
+    assert reason.startswith("missing: ebitda") and "depreciation_and_amortization" in reason
+
+    # With EBIT and D&A the EBITDA is derived and the multiple computes.
+    derivable = {k: v for k, v in FULL_FACTS.items() if k != "ebitda"}
+    assert "ev_to_ebitda" in compute_holding_metrics(
+        derivable, market=MarketInputs(price=Decimal(10), shares=Decimal(100))
+    ).computed

@@ -4,13 +4,13 @@
 
 ## Current Objective
 
-**Equinor beta fix is written (2026-10-14, `fix/equinor-beta`, not merged or deployed).** Yahoo's beta for Equinor was -0.66; the valuation used it and only the 8% cost-of-equity floor hid it. New assumptions v5 rejects betas outside 0 to 3, uses the default 1.0 and says so on the page ([doc](valuation/equinor-beta-fix-2026-10-14.md)). The price/split fixes (#143) are merged and Faiz's screenshot shows them live (Kongsberg restated x5).
+**Equinor beta fix (#144) is merged, so deployed once Railway finished (Faiz to confirm on the live page).** Yahoo's beta for Equinor was -0.66; assumptions v5 rejects betas outside 0 to 3, uses the default 1.0 and says so on the page ([doc](valuation/equinor-beta-fix-2026-10-14.md)). The Kongsberg display fix (#145) was merged into the Equinor branch after #144 had already merged, so it never reached `main`; it is re-opened as a new PR against `main` (written, not merged, not deployed). The price/split fixes (#143) are live (Kongsberg restated x5).
 
-State: `main` is at `8dc8646` (#143 merged). Repo migration head `v1d2e3f4a5b6` (stock_splits); the beta fix adds none. Live URLs: frontend `https://exciting-gratitude-production-71b5.up.railway.app`, backend `https://aladdin-production-bd25.up.railway.app`.
+State: `main` is at `3f54fa5` (#144 merged). Repo migration head `v1d2e3f4a5b6` (stock_splits); the beta fix adds none. Live URLs: frontend `https://exciting-gratitude-production-71b5.up.railway.app`, backend `https://aladdin-production-bd25.up.railway.app`.
 
 ## Active Tasks
 
-- [ ] **Review and merge the Equinor beta PR (Faiz):** merging deploys; then press Refresh on Equinor: the amber note names the rejected beta and the discount rate becomes about 9.7%
+- [ ] **Merge the new Kongsberg display PR into `main` (Faiz):** #145 landed on the Equinor branch, not `main`. Then press Refresh on Equinor: the amber note names the rejected beta and the discount rate becomes about 9.7%
 - [ ] **Compare the Equinor price (Faiz):** stored 402.80 NOK; check it against the live Oslo quote
 - [ ] **Run the currency check (Faiz) after deploy:** open `/system/holding-currency-check` on the backend; an empty list means all holdings match
 - [ ] **Confirm the prompt-log migration ran (Faiz):** #137 added `u1a2b3c4d5e6`; merging deploys, so check System status loads the Prompt log card
@@ -24,7 +24,7 @@ State: `main` is at `8dc8646` (#143 merged). Repo migration head `v1d2e3f4a5b6` 
 - **Siege benchmark:** decided to add a global option (stand-in index fund, labelled as such on screen); OSEBX stays for Norwegian stocks ([doc](game/siege-instrument-sensitivity-2026-10-07.md))
 - **Loss-making valuation** (Vend Marketplaces, Salmon Evolution, Vår Energi): decided not to force a score; show "can't be ranked yet" with the reason, plus what the price assumes, as information only
 - **Price/split data (live per screenshot, #143):** Equinor 41.95 USD is the NOK price converted (not a bug); Kongsberg 5:1 split is now restated in the multiples history once splits are stored; jump flag added ([doc](valuation/price-split-data-fixes-2026-10-14.md)). Other splits only appear after a price refresh
-- **Seen in Faiz's screenshots, not fixed:** Kongsberg EV/EBITDA shows a "missing shares" reason though shares exist (likely the known missing D&A, wrong reason shown); Kongsberg P/S jumps at FY2024 (cause unknown, possible demerger/restated revenue); "Multiples over time" likely pairs one recent stored price with every year (from the code, not checked live)
+- **Kongsberg multiples (screenshots 2026-10-14):** EV/EBITDA reason fixed in `fix/kongsberg-multiples` (written, not deployed; the card now names the newest period and the real cause, no EBITDA). Still open: the P/S jump at FY2024 needs Faiz's stored revenue and net income for FY2023-25 ([doc](valuation/kongsberg-multiples-display-2026-10-14.md)); "Multiples over time" likely pairs one recent price with every year (from the code, not checked live)
 - **Holding currency:** the check exists but has not been run on real data; if a NOK holding shows USD/EUR, the CSV "Valuta" import is the cause
 - **Housekeeping:** decided to remove the 4 unused manual snapshot/position endpoints; the legacy analysis tables stay until Faiz asks (CLAUDE.md)
 - **Known data gaps** (Kongsberg/Bouvet D&A, Salmon FY2020–21 scale, duplicate market observations, stale EUR rate, Risk and Performance cover 5 of 8 holdings): see [overview](valuation/data-gaps-overview-2026-10-03.md); fund yearly returns still to be typed in
