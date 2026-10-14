@@ -18,10 +18,15 @@ from app.config.database import get_db
 from app.config.settings import get_settings
 from app.domain.game_mapping import get_game_mapping
 from app.domain.game_mapping.backtest_v1 import get_backtest_rules
+from app.domain.game_mapping.calibration_v1 import get_calibration_rules
 from app.domain.game_mapping.rituals_v1 import get_rituals
 from app.domain.game_mapping.siege_scenarios_v1 import get_siege_scenarios
 from app.domain.game_mapping.time_and_filings_v1 import get_time_and_filings
 from app.schemas.game import (
+    CalibrationBandOut,
+    CalibrationCallsOut,
+    CalibrationOracleOut,
+    CalibrationOut,
     ChronicleOut,
     CompetenceMarkIn,
     CompetenceOut,
@@ -34,6 +39,7 @@ from app.schemas.game import (
     SiegeBacktestOut,
     SiegeSimOut,
 )
+from app.services.game import calibration as calibration_svc
 from app.services.game import competence as competence_svc
 from app.services.game import rituals as rituals_svc
 from app.services.game.backtest_view import (
@@ -186,6 +192,44 @@ def get_records(db: Session = Depends(get_db)) -> RecordsOut:
     state, demo = _state_for(db)
     entries = demo_journal_entries() if demo else journal_entries(db)
     return rituals_svc.build_records(entries, state, rules, demo=demo)
+
+
+CALIBRATION_CAPTION = (
+    "A count of how past calls and analyst ranges turned out, not a grade. "
+    "It changes no verdict and no tower."
+)
+
+
+@router.get("/calibration", response_model=CalibrationOut)
+def get_calibration(db: Session = Depends(get_db)) -> CalibrationOut:
+    """C2 calibration ledger (hit rate, n-gated). Counts only; ratios appear
+    once there are enough outcomes; read-only; demo mode shows none of the
+    real rows."""
+    rules = get_calibration_rules(get_settings().active_calibration_version)
+    demo = is_demo_mode(db)
+    if demo:
+        calls = calibration_svc.build_calls([], rules)
+        oracle = calibration_svc.build_oracle([], rules)
+    else:
+        calls, oracle = calibration_svc.get_calibration(db, rules)
+    return CalibrationOut(
+        version=rules.version,
+        demo=demo,
+        min_n=rules.min_n,
+        min_band_n=rules.min_band_n,
+        calls=CalibrationCallsOut(
+            n=calls.n,
+            is_open=calls.is_open,
+            as_expected=calls.as_expected,
+            against=calls.against,
+            flat=calls.flat,
+            bands=[CalibrationBandOut(**vars(b)) for b in calls.bands],
+            waiting=calls.waiting,
+            left_out=calls.left_out,
+        ),
+        oracle=CalibrationOracleOut(**vars(oracle)),
+        caption=CALIBRATION_CAPTION,
+    )
 
 
 @router.get("/competence", response_model=CompetenceOut)

@@ -645,3 +645,45 @@ class CompetenceOut(BaseModel):
 class CompetenceMarkIn(BaseModel):
     level: CompetenceLevelOut
     note: str | None = None
+
+
+# --- C2 calibration ledger (hit rate, 2026-10-14) ---------------------------------------
+
+
+class CalibrationBandOut(BaseModel):
+    confidence: int
+    n: int
+    shown: bool
+    as_expected: int | None = None
+    against: int | None = None
+    flat: int | None = None
+
+
+class CalibrationCallsOut(BaseModel):
+    n: int
+    is_open: bool
+    as_expected: int | None = None
+    against: int | None = None
+    flat: int | None = None
+    bands: list[CalibrationBandOut]
+    waiting: int
+    left_out: int
+
+
+class CalibrationOracleOut(BaseModel):
+    n: int
+    is_open: bool
+    inside: int | None = None
+    below: int | None = None
+    above: int | None = None
+    waiting: int
+
+
+class CalibrationOut(BaseModel):
+    version: str
+    demo: bool
+    min_n: int
+    min_band_n: int
+    calls: CalibrationCallsOut
+    oracle: CalibrationOracleOut
+    caption: str

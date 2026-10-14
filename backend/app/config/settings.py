@@ -259,6 +259,7 @@ class Settings(BaseSettings):
     siege_history_refresh_interval_seconds: int = 6 * 3600
     active_time_and_filings_version: str = "v1"
     active_rituals_version: str = "v1"
+    active_calibration_version: str = "v1"
 
     # --- Regime-adjusted DCF (Sprint 14, 2026-09-26, app/domain/regime_adjustments/) ---
     # Off by default: wiring Sprint 12's macro regime (app/services/risk/regime.py)

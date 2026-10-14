@@ -141,3 +141,24 @@ def test_then_and_now_endpoint(client, db_session):
     assert [(c["key"], c["then_value"], c["now_value"]) for c in body["changes"]] == [("verdict", "Buy", "Hold")]
 
     assert client.get(f"/journal/{uuid.uuid4()}/then-and-now").status_code == 404
+
+
+def test_confidence_is_frozen_in_forecasts_and_calibration_stays_closed_when_few(client, db_session):
+    from sqlalchemy import select
+
+    from app.models.forecast import Forecast
+
+    hid = _holding(client)
+    r = client.post("/journal", json={
+        "holding_id": hid, "action": "buy", "decided_on": "2026-01-15", "price": "300", "thesis": "x", "confidence": 4,
+    })
+    eid = r.json()["id"]
+    assert client.patch(f"/journal/{eid}", json={"confidence": 2}).status_code == 200
+    assert client.patch(f"/journal/{eid}", json={"thesis": "y"}).status_code == 200  # no new row
+    rows = db_session.scalars(select(Forecast).order_by(Forecast.made_at)).all()
+    assert [f.confidence for f in rows] == [4, 2]
+
+    body = client.get("/game/calibration").json()
+    assert body["calls"]["is_open"] is False and body["calls"]["as_expected"] is None
+    assert body["oracle"]["is_open"] is False
+    assert body["min_n"] == 8

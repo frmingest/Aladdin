@@ -17,6 +17,7 @@ from app.models.base import Base
 from app.models.competence import CompetenceMark
 from app.models.document import Document, DocumentChunk, DocumentPage
 from app.models.financial_line_item import FinancialLineItem
+from app.models.forecast import Forecast
 from app.models.fund import (
     FundConstituentMultiple,
     FundExposure,
@@ -68,6 +69,7 @@ __all__ = [
     "EvidenceReference",
     "FactorAssessment",
     "FinancialLineItem",
+    "Forecast",
     "FundConstituentMultiple",
     "FundExposure",
     "FundProfile",
