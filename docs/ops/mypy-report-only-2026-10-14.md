@@ -6,7 +6,7 @@ Decision (Faiz, 2026-10-14): add a report-only mypy job, with stubs for the unty
 ## What it does
 
 A new CI job, **Type check (mypy, report only)**, runs `mypy` over `backend/app` and writes the last line (the count) into the run
-summary. It has `continue-on-error: true`, so it can never block a change and never turns the PR red. The existing jobs
+summary. It has `continue-on-error: true`, so it can never block a change and never turns the PR red. Findings (mypy exit 1) are reported as a warning and the check stays green; only a crash (exit 2 or more) shows red. The existing jobs
 (ruff + pytest, migrations, frontend, gitleaks, dependency audit) are untouched.
 
 - `backend/pyproject.toml` has the `[tool.mypy]` config (`python_version = "3.12"`, `files = ["app"]`).

@@ -137,6 +137,11 @@ jobs:
             echo
             tail -n 1 /tmp/mypy.txt
           } >> "$GITHUB_STEP_SUMMARY"
+          # Report-only: findings show as a warning, the check stays green. Only a crash (exit 2+) fails.
+          if [ "$status" -eq 1 ]; then
+            echo "::warning title=mypy::$(tail -n 1 /tmp/mypy.txt)"
+            exit 0
+          fi
           exit "$status"
 
   dependency-audit:
