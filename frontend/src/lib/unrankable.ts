@@ -12,7 +12,7 @@ export function shortReason(reason: string | null | undefined): ShortReason {
   if (r.includes("far outside what a sound model gives") || r.includes("withheld")) {
     return { label: "Check inputs", kind: "model" };
   }
-  if (r.includes("not profitable")) return { label: "Loss-making", kind: "model" };
+  if (r.includes("not profitable") || r.includes("median is not positive")) return { label: "Loss-making", kind: "model" };
   if (r.includes("only one profitable year")) return { label: "One profitable year", kind: "model" };
   if (r.includes("fewer than two periods") || r.includes("complete owner-earnings inputs")) {
     return { label: "Data missing", kind: "data" };

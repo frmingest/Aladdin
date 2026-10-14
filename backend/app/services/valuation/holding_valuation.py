@@ -79,6 +79,7 @@ from app.services.valuation.growth import (
     profitable_run_cagr,
 )
 from app.services.valuation.multiples import PeriodMultiples, multiples_over_time
+from app.services.valuation.price_assumes import PriceAssumes, price_assumes
 
 OWNER_EARNINGS_DCF = "owner_earnings_dcf"
 FINANCIALS_PRICE_TO_BOOK = "financials_price_to_book"
@@ -143,6 +144,9 @@ class HoldingValuationResult:
     # Funds/ETFs (2026-09-29): the look-through earnings-yield screen.
     fund_look_through: FundLookThroughValuation | None = None
     rejected_fund_look_through: FundLookThroughValuation | None = None
+    # 2026-10-14: for a loss-making company with no DCF, what today's price
+    # already assumes (yearly owner earnings). Information only, never ranked.
+    price_assumes: PriceAssumes | None = None
 
     def headline_values(self) -> dict[str, Decimal] | None:
         """bear/base/bull value per share from whichever method applies, or
@@ -334,6 +338,58 @@ def _resolve_cost_of_equity(
                 f"{result.base_discount_rate * 100:.2f}%)."
             )
     return result.discount_rate
+
+
+def _attach_price_assumes(
+    db: Session,
+    holding: Holding,
+    market_data_provider: MarketDataProvider,
+    risk_free_rate_provider: RiskFreeRateProvider,
+    result: HoldingValuationResult,
+    assumptions,
+    *,
+    latest_period: str,
+    latest_owner_earnings: Decimal,
+    force_refresh: bool,
+) -> None:
+    """For a company the DCF cannot value because its earnings are not positive:
+    record what the price assumes (price_assumes.py). Never raises and never
+    changes the valuation status: the company stays "unavailable" and unranked."""
+    price = result.current_price_per_share
+    valuation_currency = result.valuation_currency
+    if price is None or price <= 0 or not valuation_currency:
+        return
+    share_count = resolve_share_count(
+        db,
+        holding,
+        market_data_provider,
+        latest_facts=_period_facts(db, holding, latest_period),
+        latest_period=latest_period,
+        force=force_refresh,
+        refresh_live=force_refresh,
+    )
+    shares = share_count.shares
+    if shares is None or shares <= 0:
+        return
+    discount_rate = _resolve_cost_of_equity(
+        db, holding, market_data_provider, risk_free_rate_provider, result, assumptions,
+        valuation_currency, what="Price check", force_refresh=force_refresh,
+    )
+    if discount_rate is None:
+        return
+    try:
+        result.price_assumes = price_assumes(
+            price_per_share=price,
+            shares_outstanding=shares,
+            discount_rate=discount_rate,
+            terminal_growth_rate=assumptions.terminal_growth_rate,
+            latest_owner_earnings=latest_owner_earnings,
+            latest_period=latest_period,
+        )
+    except ValueError:
+        return
+    result.shares_outstanding = shares
+    result.shares_source = share_count.describe()
 
 
 def _implausible_reason(value: Decimal, price: Decimal, max_ratio: Decimal, what: str) -> str | None:
@@ -635,6 +691,10 @@ def compute_holding_valuation(
                 f"median is not positive (FY{normalised.years[0]}-FY{normalised.years[-1]}), so there is "
                 "no normal level to value"
             )
+            _attach_price_assumes(
+                db, holding, market_data_provider, risk_free_rate_provider, result, assumptions,
+                latest_period=latest_period, latest_owner_earnings=history[-1][2], force_refresh=force_refresh,
+            )
             return result
         base_owner_earnings = normalised.base
         raw_growth_rate = assumptions.terminal_growth_rate
@@ -659,6 +719,10 @@ def compute_holding_valuation(
                 raw_growth_rate = historical_cagr([row[2] for row in history])
         except ValueError as exc:
             result.unavailable_reasons.append(f"DCF unavailable: {exc}")
+            _attach_price_assumes(
+                db, holding, market_data_provider, risk_free_rate_provider, result, assumptions,
+                latest_period=latest_period, latest_owner_earnings=history[-1][2], force_refresh=force_refresh,
+            )
             return result
     base_growth_rate = raw_growth_rate
     cap = assumptions.max_base_growth

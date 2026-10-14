@@ -1,11 +1,36 @@
 """Pydantic schemas for the valuation API (app/api/valuation.py, Sprint 3)."""
 from __future__ import annotations
 
+import dataclasses
 from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
+
+
+class PriceAssumesOut(BaseModel):
+    """What today's price assumes for a company with no DCF (2026-10-14).
+    Information only: never a score, a zone or a margin of safety."""
+
+    price_per_share: Decimal
+    shares_outstanding: Decimal
+    market_cap: Decimal
+    discount_rate: Decimal
+    terminal_growth_rate: Decimal
+    # Yearly owner earnings (valuation currency) the price needs, in total and per share.
+    required_owner_earnings: Decimal
+    required_per_share: Decimal
+    # The company's own latest owner earnings (negative when loss-making).
+    latest_owner_earnings: Decimal | None = None
+    latest_period: str | None = None
+
+
+def _price_assumes_from_domain(value):
+    """Accept the service's dataclass as well as a dict or the model itself."""
+    if dataclasses.is_dataclass(value) and not isinstance(value, type):
+        return dataclasses.asdict(value)
+    return value
 
 
 class DCFScenarioOut(BaseModel):
@@ -121,6 +146,13 @@ class HoldingValuationOut(BaseModel):
     # the rate alone is None when none is stored yet.
     trading_currency: str | None = None
     trading_currency_fx_rate: Decimal | None = None
+    # 2026-10-14: loss-making companies only (no DCF). Information, never a value.
+    price_assumes: PriceAssumesOut | None = None
+
+    @field_validator("price_assumes", mode="before")
+    @classmethod
+    def _accept_dataclass(cls, value):
+        return _price_assumes_from_domain(value)
 
 
 class BoardRowOut(BaseModel):
@@ -153,6 +185,13 @@ class BoardRowOut(BaseModel):
     # 2026-09-30: watchlist rows only.
     buy_below_price: Decimal | None = None
     buy_below_currency: str | None = None
+    # 2026-10-14: loss-making companies only (no DCF, not ranked).
+    price_assumes: PriceAssumesOut | None = None
+
+    @field_validator("price_assumes", mode="before")
+    @classmethod
+    def _accept_dataclass(cls, value):
+        return _price_assumes_from_domain(value)
 
 
 class MarginOfSafetyBoardOut(BaseModel):

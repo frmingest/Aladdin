@@ -3,11 +3,12 @@ import { Link } from "react-router-dom";
 import { api, ApiError } from "../lib/api";
 import { useCachedQuery } from "../lib/queryCache";
 import { formatDate, formatDecimal, formatNok, formatPercent } from "../lib/format";
-import type { BoardRow, BoardZone, MarginOfSafetyBoard } from "../lib/types";
+import type { BoardRow, BoardZone, MarginOfSafetyBoard, PriceAssumes } from "../lib/types";
 import { Button, Card, EmptyState, PageHeader, SnapshotStamp, VerdictBadge } from "../components/ui";
 import { InfoTooltip } from "../components/InfoTooltip";
 import { GLOSSARY } from "../lib/glossary";
 import { shortReason } from "../lib/unrankable";
+import { describePriceAssumes } from "../lib/priceAssumes";
 
 /** Feature F3 — every stock you own, ranked by how far its price sits below
  * the DCF value (backend/app/services/valuation/board.py). All numbers are
@@ -155,6 +156,20 @@ function RankedTable({ rows, variant = "portfolio" }: { rows: BoardRow[]; varian
   );
 }
 
+/** What the price already assumes, for a company with no DCF. Information only: quiet text, never a
+ * score, a zone, a badge or a rank. */
+function PriceAssumesNote({ read, currency }: { read: PriceAssumes; currency: string | null }) {
+  const text = describePriceAssumes(read, currency);
+  return (
+    <div className="mt-2 border-l-2 border-border-subtle pl-3">
+      <p className="font-medium text-ink-muted">What the price assumes</p>
+      <p className="mt-0.5">{text.headline}</p>
+      {text.comparison && <p className="mt-0.5">{text.comparison}</p>}
+      <p className="mt-0.5 text-ink-faint">{text.caveat}</p>
+    </div>
+  );
+}
+
 /** One line per holding that has no valuation: its name and a one-word cause. The full sentence from
  * the backend is one click away, so nothing is hidden, only moved out of the first read. */
 function UnrankableRow({ row, withValue = false }: { row: BoardRow; withValue?: boolean }) {
@@ -185,6 +200,9 @@ function UnrankableRow({ row, withValue = false }: { row: BoardRow; withValue?: 
           {row.price ? `Price ${formatDecimal(row.price)} ${row.valuation_currency}. ` : ""}
           {row.unavailable_reason ?? "No DCF yet"}
         </p>
+        {row.price_assumes && (
+          <PriceAssumesNote read={row.price_assumes} currency={row.valuation_currency} />
+        )}
       </details>
     </li>
   );

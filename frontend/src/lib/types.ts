@@ -638,6 +638,23 @@ export interface LookThroughRefresh {
   refreshed_at: string;
 }
 
+/** What today's price assumes for a company with no DCF (loss-making). Information only:
+ * never a value, a score or a margin of safety. Mirrors PriceAssumesOut in
+ * backend/app/schemas/valuation.py. Money amounts are in the filing's currency. */
+export interface PriceAssumes {
+  price_per_share: string;
+  shares_outstanding: string;
+  market_cap: string;
+  discount_rate: string;
+  terminal_growth_rate: string;
+  /** Yearly owner earnings the price needs, in total and per share. */
+  required_owner_earnings: string;
+  required_per_share: string;
+  /** The company's own latest owner earnings (negative when loss-making). */
+  latest_owner_earnings?: string | null;
+  latest_period?: string | null;
+}
+
 export interface HoldingValuation {
   holding_id: string;
   ticker: string;
@@ -681,6 +698,8 @@ export interface HoldingValuation {
   fund_look_through?: FundLookThrough | null;
   /** Withheld values, for display as "rejected" only. */
   rejected_values?: Record<string, string> | null;
+  /** Loss-making companies only: what the price already assumes. Not a valuation. */
+  price_assumes?: PriceAssumes | null;
 }
 
 /** Order + display label for every multiple
@@ -1009,6 +1028,8 @@ export interface BoardRow {
   /** 2026-09-30 — watchlist rows only: your own buy-below target. */
   buy_below_price?: string | null;
   buy_below_currency?: string | null;
+  /** Loss-making companies only (unranked): what the price already assumes. Not a valuation. */
+  price_assumes?: PriceAssumes | null;
 }
 
 export interface MarginOfSafetyBoard {
