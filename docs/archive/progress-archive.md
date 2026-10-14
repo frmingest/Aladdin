@@ -3,6 +3,11 @@
 Completed milestones and retired status, moved out of `docs/PROGRESS.md` under the rolling-log rules
 in `CLAUDE.md` ("Progress file rules"). Newest snapshot first. Older: [PROGRESS-full-2026-09-30.md](PROGRESS-full-2026-09-30.md).
 
+## Closed 2026-10-14 — Siege World yardstick merged and checked live
+
+- **Merged as #149** (`5135a8f`): a toggle "Measured against: Oslo | World" on the Siege Simulator; World is ACWI (a fund standing in for a world index) converted to NOK, Oslo stays the default; scenarios `v4`; `GET /game/siege?benchmark=`; the worker also stores ACWI and USD/NOK; the World banner picture in Game mode. No migration. Doc: [siege-global-benchmark-2026-10-14.md](../game/siege-global-benchmark-2026-10-14.md).
+- **Checked live by Claude 2026-10-14** (built-in browser, read-only): frontend and backend up, toggle present, World shows 7 of 7 holdings modelled and a 20% world fall costing the book 6.3% (Oslo 9.4%). The banner crop was not checked.
+
 ## Closed 2026-10-14 — open items closed by Faiz
 
 - **Faiz closed all other open items on 2026-10-14** (his word; Claude did not re-check them): Kongsberg display fix (already in `main` as #146, confirmed from git), Equinor stored-price comparison, the holding-currency check, the prompt-log migration check, the B2 Then and now / default-on Game mode live check, and the "next design slice" pick. Related docs: [kongsberg-multiples-display-2026-10-14.md](../valuation/kongsberg-multiples-display-2026-10-14.md), [equinor-beta-fix-2026-10-14.md](../valuation/equinor-beta-fix-2026-10-14.md), [then-and-now-b2-2026-10-14.md](../game/then-and-now-b2-2026-10-14.md).
