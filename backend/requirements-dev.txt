@@ -7,3 +7,13 @@ ruff==0.16.8
 pre-commit==4.6.2
 # Reports known-vulnerable dependencies (CI job "dependency audit", report-only).
 pip-audit==2.9.0
+
+# Type check (CI job "Type check", report-only: see docs/ops/mypy-report-only-2026-10-14.md).
+# The stubs give mypy the types of pandas, openpyxl, lxml, boto3/botocore. yfinance has none (ignored in pyproject.toml);
+# PyMuPDF and the scheduler ship their own types.
+mypy==2.4.0
+pandas-stubs==3.0.5.260914
+types-openpyxl==3.1.5.20260827
+lxml-stubs==0.5.1
+boto3-stubs==1.43.113
+botocore-stubs==1.43.113
