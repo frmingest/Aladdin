@@ -1,8 +1,10 @@
 # Aladdin — Progress
 
-**Last updated:** 2026-10-14 (price and split data fixes written, PR open; B2 Then and Now and Game-mode-on-by-default merged as #142 and #140; hit-rate view approved with limits). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
+**Last updated:** 2026-10-14 (price and split data fixes written, PR open; B2 Then and Now and Game-mode-on-by-default merged as #142 and #140; C2 hit-rate view written on `feature/c2-hit-rate`, PR open). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
 
 ## Current Objective
+
+**C2 hit rate (PR `feature/c2-hit-rate`): written, not merged, not deployed.** Ledger panel on the Hall of Records, `GET /game/calibration`, new `forecasts` table (migration `w1e2f3a4b5c6`, additive); the four Stitch pictures are packed ([doc](game/c2-hit-rate-sprint-2026-10-14.md)). Merging deploys and runs the migration.
 
 **Equinor beta fix (#144) is merged, so deployed once Railway finished (Faiz to confirm on the live page).** Yahoo's beta for Equinor was -0.66; assumptions v5 rejects betas outside 0 to 3, uses the default 1.0 and says so on the page ([doc](valuation/equinor-beta-fix-2026-10-14.md)). The Kongsberg display fix (#145) was merged into the Equinor branch after #144 had already merged, so it never reached `main`; it is re-opened as a new PR against `main` (written, not merged, not deployed). The price/split fixes (#143) are live (Kongsberg restated x5).
 
@@ -16,11 +18,11 @@ State: `main` is at `3f54fa5` (#144 merged). Repo migration head `v1d2e3f4a5b6` 
 - [ ] **Confirm the prompt-log migration ran (Faiz):** #137 added `u1a2b3c4d5e6`; merging deploys, so check System status loads the Prompt log card
 - [ ] **Then, in order (Claude, decided 2026-10-14):** global benchmark option in the Siege Simulator; "can't be ranked yet" plus a no-score "what the price assumes" view for loss-making companies; remove the 4 unused endpoints; report-only mypy job
 - [ ] **Check B2 and the default-on Game mode on the live site (Faiz) after deploy:** open a record, press Then and now (steps in the [doc](game/then-and-now-b2-2026-10-14.md)); no browser check was done by Claude
-- [ ] **Next design slice (Faiz to pick):** B2 was the last item of the original order ([team review](game/game-mode-team-review-2026-10-09.md)); C2 hit rate waits for enough data (see Blockers)
+- [ ] **Review and merge the C2 PR (Faiz), then check it live:** the Records page shows the ledger with "Too few so far" until 8 outcomes exist; turn Object art on to see the book, scale, lantern and staff. Next design slice is yours to pick
 
 ## Recent Blockers / Open Questions
 
-- **Hit rate (C2), decided 2026-10-14 (Faiz left it to Claude): yes, with limits.** Shown only once there are enough decisions (opens at 8 with a 6- or 12-month outcome), always with the count beside it and a "too few so far" state before that; the Oracle's range versus later price counts the same way; no score, streak or reward, and it never changes a verdict or a tower. This amends the Sprint 25 "no hit rate" rule. Needs the small `forecasts` table so the clock starts now, which is a database change to approve when the slice starts
+- **Hit rate (C2), decided 2026-10-14: yes, with limits; now written (PR open).** Opens at 8 outcomes, count always beside the ratio, bands need 3, no score or streak, never changes a verdict or tower. The `forecasts` table freezes your confidence as first written; analyst runs already store their ranges. The analyst half stays "too few so far" for months (most runs are under 3 weeks old); it counts each run, so repeated runs on one holding weigh more
 - **Siege benchmark:** decided to add a global option (stand-in index fund, labelled as such on screen); OSEBX stays for Norwegian stocks ([doc](game/siege-instrument-sensitivity-2026-10-07.md))
 - **Loss-making valuation** (Vend Marketplaces, Salmon Evolution, Vår Energi): decided not to force a score; show "can't be ranked yet" with the reason, plus what the price assumes, as information only
 - **Price/split data (live per screenshot, #143):** Equinor 41.95 USD is the NOK price converted (not a bug); Kongsberg 5:1 split is now restated in the multiples history once splits are stored; jump flag added ([doc](valuation/price-split-data-fixes-2026-10-14.md)). Other splits only appear after a price refresh

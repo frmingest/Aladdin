@@ -2724,3 +2724,39 @@ export interface PromptLogDetail extends PromptLogItem {
   user_prompt: string;
   response_text: string | null;
 }
+
+// C2 calibration ledger (hit rate, n-gated; 2026-10-14)
+export interface CalibrationBand {
+  confidence: number;
+  n: number;
+  shown: boolean;
+  as_expected: number | null;
+  against: number | null;
+  flat: number | null;
+}
+
+export interface Calibration {
+  version: string;
+  demo: boolean;
+  min_n: number;
+  min_band_n: number;
+  calls: {
+    n: number;
+    is_open: boolean;
+    as_expected: number | null;
+    against: number | null;
+    flat: number | null;
+    bands: CalibrationBand[];
+    waiting: number;
+    left_out: number;
+  };
+  oracle: {
+    n: number;
+    is_open: boolean;
+    inside: number | null;
+    below: number | null;
+    above: number | null;
+    waiting: number;
+  };
+  caption: string;
+}

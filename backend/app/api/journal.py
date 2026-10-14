@@ -12,6 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config.database import get_db
+from app.models.forecast import Forecast
 from app.models.holding import Holding
 from app.models.journal import DecisionJournalEntry
 from app.schemas.journal import (
@@ -114,6 +115,9 @@ def create_entry(payload: JournalEntryCreate, db: Session = Depends(get_db)) -> 
         verdict_at_decision=run_ratings(run)[0] if run else None,
     )
     db.add(entry)
+    db.flush()
+    if entry.confidence is not None:
+        db.add(Forecast(entry_id=entry.id, holding_id=holding.id, source="user", confidence=entry.confidence))
     db.commit()
     db.refresh(entry)
     return _out(db, [entry])[0]
@@ -123,6 +127,7 @@ def create_entry(payload: JournalEntryCreate, db: Session = Depends(get_db)) -> 
 def update_entry(entry_id: UUID, payload: JournalEntryUpdate, db: Session = Depends(get_db)) -> JournalEntryOut:
     require_not_demo(db)
     entry = _get_or_404(db, entry_id)
+    before_confidence = entry.confidence
     for name in payload.model_fields_set:
         value = getattr(payload, name)
         if isinstance(value, str):
@@ -132,6 +137,8 @@ def update_entry(entry_id: UUID, payload: JournalEntryUpdate, db: Session = Depe
         if value is None and name in ("thesis", "action", "decided_on"):
             raise HTTPException(status_code=422, detail=f"{name} can't be empty")
         setattr(entry, name, value)
+    if "confidence" in payload.model_fields_set and entry.confidence != before_confidence:
+        db.add(Forecast(entry_id=entry.id, holding_id=entry.holding_id, source="user", confidence=entry.confidence))
     if "decided_on" in payload.model_fields_set:
         run = run_in_force(db, entry.holding_id, entry.decided_on)
         entry.verdict_at_decision = run_ratings(run)[0] if run else None

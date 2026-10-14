@@ -104,6 +104,10 @@ import crestCircle from "../assets/art/crest-circle.webp";
 import crestChronicle from "../assets/art/crest-chronicle.webp";
 import crestMap from "../assets/art/crest-map.webp";
 import shopkeeperReady from "../assets/art/shopkeeper-ready.webp";
+import ledgerBook from "../assets/art/ledger-book.webp";
+import ledgerScale from "../assets/art/ledger-scale.webp";
+import ledgerLantern from "../assets/art/ledger-lantern.webp";
+import ledgerStaff from "../assets/art/ledger-staff.webp";
 
 export interface PackedArt {
   src: string;
@@ -219,4 +223,8 @@ export const ART_MANIFEST = {
   "crest-chronicle": { src: crestChronicle, width: 192, height: 192, alt: "" },
   "crest-map": { src: crestMap, width: 192, height: 192, alt: "" },
   "shopkeeper-ready": { src: shopkeeperReady, width: 365, height: 384, alt: "" },
+  "ledger-book": { src: ledgerBook, width: 319, height: 320, alt: "" },
+  "ledger-scale": { src: ledgerScale, width: 320, height: 295, alt: "" },
+  "ledger-lantern": { src: ledgerLantern, width: 144, height: 256, alt: "" },
+  "ledger-staff": { src: ledgerStaff, width: 146, height: 320, alt: "" },
 } as const satisfies Record<string, PackedArt>;
