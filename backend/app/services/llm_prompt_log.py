@@ -26,7 +26,9 @@ from app.services.llm_ledger import SessionFactory
 log = logging.getLogger(__name__)
 
 _PURGE_EVERY_SECONDS = 3600.0
-_last_purge_at = 0.0
+# -inf, not 0.0: time.monotonic() counts from boot, so on a host up for under an hour 0.0 would
+# read as "purged moments ago" and skip the first purge.
+_last_purge_at = float("-inf")
 
 
 def record_prompt(
