@@ -14,7 +14,6 @@ Deletion (a whole snapshot, or one position) is destructive (CLAUDE.md
 """
 from __future__ import annotations
 
-from decimal import Decimal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
@@ -26,7 +25,6 @@ from app.domain.errors import FileTooLargeError, UnsupportedFileTypeError
 from app.models.account import Account
 from app.models.document import Document, DocumentPage
 from app.models.financial_line_item import FinancialLineItem
-from app.models.holding import Holding
 from app.models.legacy_analysis import (
     AnalysisRun,
     EvidenceReference,
@@ -40,19 +38,15 @@ from app.providers.factory import get_object_storage
 from app.schemas.account import AccountOut
 from app.schemas.document import DocumentOut
 from app.schemas.portfolio import (
-    ConcentrationOut,
     LegacyAnalysisPurgeCounts,
     PortfolioImportResponse,
     PortfolioOverviewOut,
-    PortfolioPositionIn,
     PortfolioPositionOut,
-    PortfolioSnapshotCreate,
     PortfolioSnapshotOut,
     PortfolioSnapshotSummary,
     PortfolioWipeResult,
     SnapshotDeleteResult,
 )
-from app.services.calculations import herfindahl_hirschman_index
 from app.services.portfolio_import.csv_parser import CsvParseError
 from app.services.portfolio_import.ingestion import import_portfolio_csv
 from app.services.portfolio_overview import build_overview
@@ -61,8 +55,6 @@ from app.services.settings.demo_mode import is_demo_mode
 from app.services.settings.synthetic_data import demo_portfolio_overview
 
 router = APIRouter(prefix="/portfolio", tags=["portfolio"])
-
-SNAPSHOT_STATUS_PROCESSED = "processed"
 
 
 def _purge_legacy_analysis(db: Session, snapshot_ids: list[UUID]) -> LegacyAnalysisPurgeCounts:
@@ -282,62 +274,6 @@ async def import_csv(
     )
 
 
-def _validate_position_refs(db: Session, position: PortfolioPositionIn) -> None:
-    if db.get(Holding, position.holding_id) is None:
-        raise HTTPException(
-            status_code=404, detail=f"holding '{position.holding_id}' not found"
-        )
-    if position.account_id is not None and db.get(Account, position.account_id) is None:
-        raise HTTPException(
-            status_code=404, detail=f"account '{position.account_id}' not found"
-        )
-
-
-@router.post("/snapshots", response_model=PortfolioSnapshotOut, status_code=201)
-def create_snapshot(
-    payload: PortfolioSnapshotCreate, db: Session = Depends(get_db)
-) -> PortfolioSnapshotOut:
-    require_not_demo(db)
-    document = db.get(Document, payload.source_file_id)
-    if document is None:
-        raise HTTPException(
-            status_code=404, detail=f"document '{payload.source_file_id}' not found"
-        )
-    if payload.account_id is not None and db.get(Account, payload.account_id) is None:
-        raise HTTPException(status_code=404, detail=f"account '{payload.account_id}' not found")
-    for position in payload.positions:
-        _validate_position_refs(db, position)
-
-    snapshot = PortfolioSnapshot(
-        source_file_id=payload.source_file_id,
-        reporting_currency=payload.reporting_currency.upper(),
-        status=SNAPSHOT_STATUS_PROCESSED,
-        account_id=payload.account_id,
-    )
-    db.add(snapshot)
-    db.flush()  # assigns snapshot.id for the positions below
-
-    for position in payload.positions:
-        db.add(
-            PortfolioPosition(
-                snapshot_id=snapshot.id,
-                holding_id=position.holding_id,
-                weight_pct=position.weight_pct,
-                quantity=position.quantity,
-                cost_basis=position.cost_basis,
-                cost_basis_currency=position.cost_basis_currency,
-                last_price=position.last_price,
-                market_value_nok=position.market_value_nok,
-                notes=position.notes,
-                account_id=position.account_id,
-            )
-        )
-
-    db.commit()
-    db.refresh(snapshot)
-    return _snapshot_to_out(snapshot)
-
-
 @router.get("/snapshots", response_model=list[PortfolioSnapshotSummary])
 def list_snapshots(
     account_id: UUID | None = None, db: Session = Depends(get_db)
@@ -457,77 +393,6 @@ def delete_all_portfolio_data(
         positions_deleted=positions_deleted,
         legacy_analysis_purged=purge_counts,
     )
-
-
-@router.post(
-    "/snapshots/{snapshot_id}/positions", response_model=PortfolioPositionOut, status_code=201
-)
-def add_position(
-    snapshot_id: UUID, payload: PortfolioPositionIn, db: Session = Depends(get_db)
-) -> PortfolioPositionOut:
-    require_not_demo(db)
-    snapshot = db.get(PortfolioSnapshot, snapshot_id)
-    if snapshot is None:
-        raise HTTPException(status_code=404, detail="portfolio snapshot not found")
-    _validate_position_refs(db, payload)
-
-    position = PortfolioPosition(
-        snapshot_id=snapshot_id,
-        holding_id=payload.holding_id,
-        weight_pct=payload.weight_pct,
-        quantity=payload.quantity,
-        cost_basis=payload.cost_basis,
-        cost_basis_currency=payload.cost_basis_currency,
-        last_price=payload.last_price,
-        market_value_nok=payload.market_value_nok,
-        notes=payload.notes,
-        account_id=payload.account_id,
-    )
-    db.add(position)
-    db.commit()
-    db.refresh(position)
-    return _position_to_out(position)
-
-
-@router.delete(
-    "/snapshots/{snapshot_id}/positions/{position_id}", status_code=204, response_model=None
-)
-def delete_position(
-    snapshot_id: UUID, position_id: UUID, confirm: bool = False, db: Session = Depends(get_db)
-) -> None:
-    require_not_demo(db)
-    if not confirm:
-        raise HTTPException(
-            status_code=400,
-            detail="deleting a portfolio position is destructive — pass confirm=true to proceed",
-        )
-    position = db.get(PortfolioPosition, position_id)
-    if position is None or position.snapshot_id != snapshot_id:
-        raise HTTPException(status_code=404, detail="portfolio position not found")
-    db.delete(position)
-    db.commit()
-
-
-@router.get("/snapshots/{snapshot_id}/concentration", response_model=ConcentrationOut)
-def get_concentration(snapshot_id: UUID, db: Session = Depends(get_db)) -> ConcentrationOut:
-    require_not_demo(db)
-    """Herfindahl-Hirschman concentration index over this snapshot's
-    positions' weight_pct — CLAUDE.md Rule 1, deterministic application
-    code (app/services/calculations.py), never the LLM.
-    """
-    snapshot = db.get(PortfolioSnapshot, snapshot_id)
-    if snapshot is None:
-        raise HTTPException(status_code=404, detail="portfolio snapshot not found")
-
-    weights: list[Decimal] = [p.weight_pct for p in snapshot.positions if p.weight_pct is not None]
-    if not weights:
-        raise HTTPException(
-            status_code=422,
-            detail="cannot compute concentration: no position in this snapshot has a weight_pct",
-        )
-
-    hhi = herfindahl_hirschman_index(weights)
-    return ConcentrationOut(snapshot_id=snapshot_id, hhi=hhi, position_count=len(weights))
 
 
 @router.get("/overview", response_model=PortfolioOverviewOut)

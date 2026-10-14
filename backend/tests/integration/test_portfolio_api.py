@@ -1,5 +1,9 @@
-"""End-to-end tests for the portfolio snapshot/position API
-(app/api/portfolio.py)."""
+"""End-to-end tests for the portfolio snapshot API (app/api/portfolio.py).
+
+Snapshots come from the CSV import (tests/integration/test_portfolio_import_api.py).
+The manual create/add/delete-position and concentration endpoints were removed on
+2026-10-14 (no screen called them), so these tests build a snapshot straight in the
+database and exercise the endpoints that remain: list, get, delete, bulk wipe."""
 from __future__ import annotations
 
 import io
@@ -9,6 +13,7 @@ from datetime import datetime, timezone
 import openpyxl
 
 from app.models.legacy_analysis import AnalysisRun, PortfolioRiskSnapshot
+from app.models.portfolio import PortfolioPosition, PortfolioSnapshot
 
 
 def _create_holding(client, ticker="EQNR.OL", name="Equinor ASA"):
@@ -54,79 +59,43 @@ def _upload_portfolio_export(client):
     return response.json()["document"]["id"]
 
 
-def test_create_snapshot_with_positions(client):
-    holding_id = _create_holding(client)
-    account_id = _create_account(client)
-    document_id = _upload_portfolio_export(client)
-
-    response = client.post(
-        "/portfolio/snapshots",
-        json={
-            "source_file_id": document_id,
-            "reporting_currency": "nok",
-            "account_id": account_id,
-            "positions": [
-                {
-                    "holding_id": holding_id,
-                    "weight_pct": "45.5",
-                    "quantity": "100",
-                    "account_id": account_id,
-                }
-            ],
-        },
+def _make_snapshot(db_session, document_id, holding_ids=(), account_id=None):
+    """A processed snapshot with one position per holding id, built in the database."""
+    snapshot = PortfolioSnapshot(
+        source_file_id=uuid.UUID(document_id),
+        reporting_currency="NOK",
+        status="processed",
+        account_id=uuid.UUID(account_id) if account_id else None,
     )
-    assert response.status_code == 201, response.text
-    body = response.json()
-    assert body["reporting_currency"] == "NOK"
-    assert body["status"] == "processed"
-    assert len(body["positions"]) == 1
-    assert body["positions"][0]["ticker"] == "EQNR.OL"
-    assert body["positions"][0]["weight_pct"] == "45.5000"
+    db_session.add(snapshot)
+    db_session.flush()
+    for holding_id in holding_ids:
+        db_session.add(
+            PortfolioPosition(
+                snapshot_id=snapshot.id,
+                holding_id=uuid.UUID(holding_id),
+                account_id=uuid.UUID(account_id) if account_id else None,
+            )
+        )
+    db_session.commit()
+    return str(snapshot.id)
 
 
-def test_create_snapshot_requires_real_document(client):
-    response = client.post(
-        "/portfolio/snapshots",
-        json={
-            "source_file_id": "00000000-0000-0000-0000-000000000000",
-            "reporting_currency": "NOK",
-        },
-    )
-    assert response.status_code == 404
-
-
-def test_create_snapshot_rejects_unknown_holding_in_positions(client):
-    document_id = _upload_portfolio_export(client)
-    response = client.post(
-        "/portfolio/snapshots",
-        json={
-            "source_file_id": document_id,
-            "reporting_currency": "NOK",
-            "positions": [{"holding_id": "00000000-0000-0000-0000-000000000000"}],
-        },
-    )
-    assert response.status_code == 404
-
-
-def test_list_and_get_snapshots(client):
+def test_list_and_get_snapshots(client, db_session):
     holding_id = _create_holding(client)
     document_id = _upload_portfolio_export(client)
-    created = client.post(
-        "/portfolio/snapshots",
-        json={
-            "source_file_id": document_id,
-            "reporting_currency": "NOK",
-            "positions": [{"holding_id": holding_id, "weight_pct": "100"}],
-        },
-    ).json()
+    snapshot_id = _make_snapshot(db_session, document_id, [holding_id])
 
     list_response = client.get("/portfolio/snapshots")
     assert list_response.status_code == 200
     assert list_response.json()[0]["position_count"] == 1
 
-    get_response = client.get(f"/portfolio/snapshots/{created['id']}")
+    get_response = client.get(f"/portfolio/snapshots/{snapshot_id}")
     assert get_response.status_code == 200
+    assert get_response.json()["reporting_currency"] == "NOK"
+    assert get_response.json()["status"] == "processed"
     assert len(get_response.json()["positions"]) == 1
+    assert get_response.json()["positions"][0]["ticker"] == "EQNR.OL"
 
 
 def test_get_missing_snapshot_returns_404(client):
@@ -134,50 +103,19 @@ def test_get_missing_snapshot_returns_404(client):
     assert response.status_code == 404
 
 
-def test_add_and_delete_position(client):
+def test_the_removed_manual_endpoints_are_gone(client):
+    """2026-10-14: no screen called them; CSV import is the only way to add a snapshot."""
+    u = "00000000-0000-0000-0000-000000000000"
+    assert client.post("/portfolio/snapshots", json={}).status_code == 405
+    assert client.post(f"/portfolio/snapshots/{u}/positions", json={}).status_code == 404
+    assert client.delete(f"/portfolio/snapshots/{u}/positions/{u}").status_code == 404
+    assert client.get(f"/portfolio/snapshots/{u}/concentration").status_code == 404
+
+
+def test_delete_snapshot_requires_confirm_and_cascades_positions(client, db_session):
     holding_id = _create_holding(client)
     document_id = _upload_portfolio_export(client)
-    snapshot_id = client.post(
-        "/portfolio/snapshots",
-        json={"source_file_id": document_id, "reporting_currency": "NOK", "positions": []},
-    ).json()["id"]
-
-    add_response = client.post(
-        f"/portfolio/snapshots/{snapshot_id}/positions",
-        json={"holding_id": holding_id, "quantity": "10"},
-    )
-    assert add_response.status_code == 201, add_response.text
-    position_id = add_response.json()["id"]
-
-    assert (
-        client.get(f"/portfolio/snapshots/{snapshot_id}").json()["positions"][0]["id"]
-        == position_id
-    )
-
-    delete_without_confirm = client.delete(
-        f"/portfolio/snapshots/{snapshot_id}/positions/{position_id}"
-    )
-    assert delete_without_confirm.status_code == 400
-
-    delete_response = client.delete(
-        f"/portfolio/snapshots/{snapshot_id}/positions/{position_id}",
-        params={"confirm": "true"},
-    )
-    assert delete_response.status_code == 204
-    assert client.get(f"/portfolio/snapshots/{snapshot_id}").json()["positions"] == []
-
-
-def test_delete_snapshot_requires_confirm_and_cascades_positions(client):
-    holding_id = _create_holding(client)
-    document_id = _upload_portfolio_export(client)
-    snapshot_id = client.post(
-        "/portfolio/snapshots",
-        json={
-            "source_file_id": document_id,
-            "reporting_currency": "NOK",
-            "positions": [{"holding_id": holding_id}],
-        },
-    ).json()["id"]
+    snapshot_id = _make_snapshot(db_session, document_id, [holding_id])
 
     assert client.delete(f"/portfolio/snapshots/{snapshot_id}").status_code == 400
 
@@ -207,14 +145,7 @@ def test_delete_snapshot_cascades_legacy_analysis_runs(client, db_session):
     """
     holding_id = _create_holding(client)
     document_id = _upload_portfolio_export(client)
-    snapshot_id = client.post(
-        "/portfolio/snapshots",
-        json={
-            "source_file_id": document_id,
-            "reporting_currency": "NOK",
-            "positions": [{"holding_id": holding_id}],
-        },
-    ).json()["id"]
+    snapshot_id = _make_snapshot(db_session, document_id, [holding_id])
 
     legacy_run = AnalysisRun(
         id=uuid.uuid4(),
@@ -253,14 +184,7 @@ def test_delete_snapshot_cascades_legacy_risk_snapshots(client, db_session):
     """
     holding_id = _create_holding(client)
     document_id = _upload_portfolio_export(client)
-    snapshot_id = client.post(
-        "/portfolio/snapshots",
-        json={
-            "source_file_id": document_id,
-            "reporting_currency": "NOK",
-            "positions": [{"holding_id": holding_id}],
-        },
-    ).json()["id"]
+    snapshot_id = _make_snapshot(db_session, document_id, [holding_id])
 
     legacy_risk_snapshot = PortfolioRiskSnapshot(
         id=uuid.uuid4(),
@@ -293,14 +217,7 @@ def test_delete_all_portfolio_data_cascades_legacy_risk_snapshots(client, db_ses
     — the actual endpoint Faiz hit the 500 on, 2026-09-21."""
     holding_id = _create_holding(client)
     document_id = _upload_portfolio_export(client)
-    snapshot_id = client.post(
-        "/portfolio/snapshots",
-        json={
-            "source_file_id": document_id,
-            "reporting_currency": "NOK",
-            "positions": [{"holding_id": holding_id}],
-        },
-    ).json()["id"]
+    snapshot_id = _make_snapshot(db_session, document_id, [holding_id])
 
     db_session.add(
         PortfolioRiskSnapshot(
@@ -326,19 +243,11 @@ def test_delete_all_portfolio_data_cascades_legacy_risk_snapshots(client, db_ses
     assert db_session.query(PortfolioRiskSnapshot).count() == 0
 
 
-def test_delete_all_portfolio_data_requires_confirm_and_wipes_scope(client):
+def test_delete_all_portfolio_data_requires_confirm_and_wipes_scope(client, db_session):
     holding_id = _create_holding(client)
     account_id = _create_account(client)
     document_id = _upload_portfolio_export(client)
-    client.post(
-        "/portfolio/snapshots",
-        json={
-            "source_file_id": document_id,
-            "reporting_currency": "NOK",
-            "account_id": account_id,
-            "positions": [{"holding_id": holding_id, "account_id": account_id}],
-        },
-    )
+    _make_snapshot(db_session, document_id, [holding_id], account_id=account_id)
 
     assert client.delete("/portfolio/all").status_code == 400
 
@@ -355,43 +264,3 @@ def test_delete_all_portfolio_data_requires_confirm_and_wipes_scope(client):
     # Faiz's explicit choice, 2026-09-21.
     holdings = client.get("/holdings").json()
     assert any(h["id"] == holding_id for h in holdings)
-
-
-def test_concentration(client):
-    holding_a = _create_holding(client, ticker="EQNR.OL", name="Equinor ASA")
-    holding_b = _create_holding(client, ticker="AAPL", name="Apple Inc")
-    document_id = _upload_portfolio_export(client)
-    snapshot_id = client.post(
-        "/portfolio/snapshots",
-        json={
-            "source_file_id": document_id,
-            "reporting_currency": "NOK",
-            "positions": [
-                {"holding_id": holding_a, "weight_pct": "60"},
-                {"holding_id": holding_b, "weight_pct": "40"},
-            ],
-        },
-    ).json()["id"]
-
-    response = client.get(f"/portfolio/snapshots/{snapshot_id}/concentration")
-    assert response.status_code == 200
-    body = response.json()
-    # HHI = 60^2 + 40^2 = 5200
-    assert body["hhi"] == "5200.00000000"
-    assert body["position_count"] == 2
-
-
-def test_concentration_without_weights_returns_422(client):
-    holding_id = _create_holding(client)
-    document_id = _upload_portfolio_export(client)
-    snapshot_id = client.post(
-        "/portfolio/snapshots",
-        json={
-            "source_file_id": document_id,
-            "reporting_currency": "NOK",
-            "positions": [{"holding_id": holding_id}],
-        },
-    ).json()["id"]
-
-    response = client.get(f"/portfolio/snapshots/{snapshot_id}/concentration")
-    assert response.status_code == 422
