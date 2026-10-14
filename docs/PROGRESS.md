@@ -1,18 +1,18 @@
 # Aladdin — Progress
 
-**Last updated:** 2026-10-13 (D1 Plain lens written on `feature/d1-plain-lens`, PR to review). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
+**Last updated:** 2026-10-14 (D2 Camera written on `feature/d2-camera`, PR to review; D1 and the prompt log merged). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
 
 ## Current Objective
 
-**Trust slice: D1 Plain lens is written and waits for review.** Branch `feature/d1-plain-lens` (PR to review, not merged, not deployed): the Fortress gets a third view, **Plain**, that keeps the Scene's arrangement but draws every holding as a labelled block with its numbers, plus a print form and a remembered view (a data-saving browser starts on Plain) ([doc](game/plain-lens-d1-2026-10-13.md)). C1 and its wording fix are merged (#134, #135). Decided by Faiz 2026-10-13: the art default stays opt-in, the phone Fortress keeps its sideways scroll, and a knife-edge tower stays off the Council agenda.
+**Trust slice: D2 Camera is written and waits for review.** Branch `feature/d2-camera` (PR to review, not merged, not deployed): the painted Fortress gets zoom, fit and a **Read labels** step that makes the smallest label 11 px, mouse-drag pan and Ctrl + wheel zoom, scroll-to-selected, and on screens of 1280 px and up the survey docks beside the scene ([doc](game/camera-d2-2026-10-14.md)). The phone Fortress keeps its sideways scroll. D1 Plain lens (#136) and the Prompt log (#137) are merged.
 
-State: `main` is at `3ab3b1b` (#135 merged; the live site answers but Claude could not confirm which build it serves). Repo migration head `t1f2a3b4c5d6` (D1 adds none; the prompt-log branch adds `u1a2b3c4d5e6`). Live URLs: frontend `https://exciting-gratitude-production-71b5.up.railway.app`, backend `https://aladdin-production-bd25.up.railway.app`.
+State: `main` is at `3f34597` (#137 merged; Claude has not checked which build the live site serves). Repo migration head `u1a2b3c4d5e6` (D2 adds none; if #137's migration was not run on deploy, run it). Live URLs: frontend `https://exciting-gratitude-production-71b5.up.railway.app`, backend `https://aladdin-production-bd25.up.railway.app`.
 
 ## Active Tasks
 
-- [ ] **Review and merge the D1 PR (Faiz):** then press Plain on the Fortress, compare a few holdings with the Ledger, open a survey from a block, try Print this view (steps in the [doc](game/plain-lens-d1-2026-10-13.md)); merging is a production deploy. No browser or print check was done by Claude
-- [ ] **Review and merge the prompt-log PR (Faiz):** `feature/llm-prompt-log` (written, not deployed): System status gets a Prompt log card showing the exact prompts sent to Gemini and the local model. Adds migration `u1a2b3c4d5e6`, so run the migration on deploy; merging is a production deploy ([doc](features/llm-prompt-log-2026-10-13.md))
-- [ ] **D2 Camera (Claude):** zoom, pan and fit for the painted scene, labels floor at 11 px, survey docked beside the scene on wide screens; after D1 is merged
+- [ ] **Review and merge the D2 PR (Faiz):** then open the Fortress Scene, press Read labels, zoom, drag, select a far tower, and on a wide screen check the survey sits beside the scene (steps in the [doc](game/camera-d2-2026-10-14.md)); merging is a production deploy. No browser or phone check was done by Claude
+- [ ] **Confirm the prompt-log migration ran (Faiz):** #137 added `u1a2b3c4d5e6`; merging deploys, so check System status loads the Prompt log card
+- [ ] **Next design slice (Faiz to pick):** after D2 nothing is queued; options are in the review's remaining items ([team review](game/game-mode-team-review-2026-10-09.md))
 
 ## Recent Blockers / Open Questions
 
@@ -30,4 +30,4 @@ State: `main` is at `3ab3b1b` (#135 merged; the live site answers but Claude cou
 
 ## Archive Pointer
 
-Completed milestones moved to [`/docs/archive/progress-archive.md`](archive/progress-archive.md) (newest first: 2026-10-13 C1 Siege back-test and review tasks, 2026-10-13 design plan, 2026-10-13 review tasks closed by Faiz, 2026-10-12 Design Master Sprints 8, 10, 12, 13, 2026-10-11 Design Master Sprints 0 to 5, 2026-10-11 design passes and Phase A, 2026-10-09 review tasks, then the full 2026-10-07 snapshot). Older: [`archive/PROGRESS-full-2026-09-30.md`](archive/PROGRESS-full-2026-09-30.md). Per-topic write-ups live in `docs/<topic>/`; index at [`docs/README.md`](README.md).
+Completed milestones moved to [`/docs/archive/progress-archive.md`](archive/progress-archive.md) (newest first: 2026-10-14 D1 Plain lens and Prompt log, 2026-10-13 C1 Siege back-test and review tasks, 2026-10-13 design plan, 2026-10-13 review tasks closed by Faiz, 2026-10-12 Design Master Sprints 8, 10, 12, 13, 2026-10-11 Design Master Sprints 0 to 5, 2026-10-11 design passes and Phase A, 2026-10-09 review tasks, then the full 2026-10-07 snapshot). Older: [`archive/PROGRESS-full-2026-09-30.md`](archive/PROGRESS-full-2026-09-30.md). Per-topic write-ups live in `docs/<topic>/`; index at [`docs/README.md`](README.md).

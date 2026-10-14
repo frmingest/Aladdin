@@ -1,6 +1,7 @@
 """LLM prompt log: recording from every provider path, retention, and the API."""
 from __future__ import annotations
 
+import importlib
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -48,7 +49,7 @@ def client(factory):
 
 @pytest.fixture(autouse=True)
 def _reset_purge_clock(monkeypatch):
-    monkeypatch.setattr(module, "_last_purge_at", 0.0)
+    monkeypatch.setattr(module, "_last_purge_at", float("-inf"))
     monkeypatch.setenv("LLM_PROMPT_LOG_ENABLED", "true")
     get_settings.cache_clear()
     yield
@@ -108,6 +109,18 @@ def test_purge_removes_only_rows_past_retention(factory, monkeypatch):
 def test_writing_triggers_the_hourly_purge(factory, monkeypatch):
     monkeypatch.setenv("LLM_PROMPT_LOG_RETENTION_DAYS", "7")
     get_settings.cache_clear()
+    record_prompt(factory, provider="p", model_name="m", call_type="c", user_prompt="ancient",
+                  now=datetime.now(timezone.utc) - timedelta(days=30))
+    record_prompt(factory, provider="p", model_name="m", call_type="c", user_prompt="fresh")
+    assert [r.user_prompt for r in _rows(factory)] == ["fresh"]
+
+
+def test_first_purge_runs_even_on_a_freshly_booted_host(factory, monkeypatch):
+    # time.monotonic() counts from boot; a host up for under an hour must still purge on first write.
+    monkeypatch.setenv("LLM_PROMPT_LOG_RETENTION_DAYS", "7")
+    get_settings.cache_clear()
+    importlib.reload(module)  # the module's own start value, not the fixture's reset
+    monkeypatch.setattr(module.time, "monotonic", lambda: 120.0)
     record_prompt(factory, provider="p", model_name="m", call_type="c", user_prompt="ancient",
                   now=datetime.now(timezone.utc) - timedelta(days=30))
     record_prompt(factory, provider="p", model_name="m", call_type="c", user_prompt="fresh")

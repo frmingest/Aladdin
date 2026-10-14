@@ -14,6 +14,7 @@ import { FORTRESS_VIEWS, FORTRESS_VIEW_LABEL, initialFortressView, saveFortressV
 import type { FortressView } from "../lib/fortressView";
 import MagicLamp from "../components/fortress/MagicLamp";
 import NightWatchCard from "../components/fortress/NightWatchCard";
+import SceneCamera from "../components/fortress/SceneCamera";
 import FortressScene, { MarketPeek, RealmPeek, TowerPeek } from "../components/fortress/FortressScene";
 import RealmVerdict from "../components/fortress/RealmVerdict";
 import { REALM_LEVEL_LABEL, summarizeRealm } from "../lib/realmVerdict";
@@ -133,6 +134,18 @@ export default function FortressPage() {
     setRealmSelected((cur) => !cur);
   };
 
+  // The survey (or the verdict on the whole fortress) for the current selection.
+  const detail =
+    state && view !== "ledger" && state.towers.length > 0
+      ? realmSelected && realm
+        ? <RealmVerdict verdict={realm} count={state.towers.length} onOpenHolding={selectHolding} />
+        : selected
+          ? <TowerSurvey tower={selected} />
+          : null
+      : null;
+  // D2: beside the Scene on wide screens (the picture stays in view while you read); below it elsewhere.
+  const docked = view === "scene" && detail !== null;
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
       <PageHeader
@@ -167,6 +180,8 @@ export default function FortressPage() {
           <div className="print:hidden">
             <NightWatchCard />
           </div>
+          <div className={docked ? "space-y-4 xl:grid xl:grid-cols-[minmax(0,1fr)_23rem] xl:items-start xl:gap-4 xl:space-y-0" : "space-y-4"}>
+          <div className="min-w-0 space-y-4">
           <Card className="p-3 sm:p-4">
             <div className="mb-3 flex items-center justify-between gap-3">
               <div
@@ -225,7 +240,7 @@ export default function FortressPage() {
               <>
                 <GameFrame>
                   <GameHud state={state} />
-                  <div className="game-frame-inner">
+                  <SceneCamera selectedId={selectedId}>
                     <FortressScene
                       layout={layout}
                       shantytown={state.diworsification.shantytown}
@@ -241,7 +256,7 @@ export default function FortressPage() {
                       market={market}
                       ravenIds={ravenIds}
                     />
-                  </div>
+                  </SceneCamera>
                 </GameFrame>
                 {/* Quick look sits beneath the frame so it never covers the other towers. */}
                 <div className="fortress-peek-slot" aria-live="polite">
@@ -323,18 +338,16 @@ export default function FortressPage() {
             </ul>
             </Disclosure>
           )}
-
-          {view !== "ledger" &&
-            state.towers.length > 0 &&
-            (realmSelected && realm ? (
-              <RealmVerdict
-                verdict={realm}
-                count={state.towers.length}
-                onOpenHolding={selectHolding}
-              />
-            ) : selected ? (
-              <TowerSurvey tower={selected} />
-            ) : null)}
+          </div>
+          {detail !== null &&
+            (docked ? (
+              <aside aria-label="Selected survey" className="min-w-0 xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto">
+                {detail}
+              </aside>
+            ) : (
+              <div className="min-w-0">{detail}</div>
+            ))}
+          </div>
 
           <div className="print:hidden">
             <FortressReports state={state} ravens={ravens} seen={seenRavens} onSeen={onRavensSeen} />
