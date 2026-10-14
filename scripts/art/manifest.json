@@ -1029,6 +1029,66 @@
    "source": "a_single_standalone_fantasy_game_surveyor_tool_prop_asset_a_medieval_surveyor_s",
    "key": "white",
    "max_side": 320
+  },
+  {
+   "id": "map-bank-vault",
+   "source": "a_single_standalone_fantasy_game_building_prop_asset_a_chunky_stone_bank_vault",
+   "max_side": 320,
+   "quality": 78
+  },
+  {
+   "id": "map-farmhouse",
+   "source": "a_single_standalone_fantasy_game_building_prop_asset_a_cosy_timber_farmhouse",
+   "max_side": 320,
+   "quality": 78
+  },
+  {
+   "id": "map-watermill",
+   "source": "a_single_standalone_fantasy_game_building_prop_asset_a_mill_wheel_generating",
+   "max_side": 320,
+   "quality": 78
+  },
+  {
+   "id": "map-factory",
+   "source": "a_single_standalone_fantasy_game_building_prop_asset_a_stone_and_timber_factory",
+   "max_side": 320,
+   "quality": 78
+  },
+  {
+   "id": "map-windmill",
+   "source": "a_single_standalone_fantasy_game_building_prop_asset_a_stout_wind_turbine_with",
+   "max_side": 320,
+   "quality": 78
+  },
+  {
+   "id": "map-market-stall",
+   "source": "a_single_standalone_fantasy_game_market_stall_asset_a_timber_market_stall_piled",
+   "max_side": 320,
+   "quality": 78
+  },
+  {
+   "id": "map-gold-ingots",
+   "source": "a_single_standalone_fantasy_game_prop_asset_a_neat_stack_of_five_gold_ingots_on",
+   "max_side": 320,
+   "quality": 78
+  },
+  {
+   "id": "map-gold-mine",
+   "source": "a_single_standalone_fantasy_game_structure_asset_a_hillside_gold_mine_entrance",
+   "max_side": 320,
+   "quality": 78
+  },
+  {
+   "id": "map-fountain-square",
+   "source": "a_single_standalone_fantasy_game_structure_asset_a_round_market_square_fountain",
+   "max_side": 320,
+   "quality": 78
+  },
+  {
+   "id": "map-quarry",
+   "source": "a_single_standalone_fantasy_game_structure_asset_a_stepped_stone_quarry_with_a",
+   "max_side": 320,
+   "quality": 78
   }
  ]
 }

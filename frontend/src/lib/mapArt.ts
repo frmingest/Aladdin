@@ -1,7 +1,7 @@
 import { TOWER_BOX } from "./realmMap";
 import { OBJECT_ART, type ObjectArt, type ObjectArtId } from "./stitchArt";
 import type { FortressSize, FortressStructure } from "./types";
-import { CAPITAL, dist, type Glyph, type Pt, type World } from "./worldMap";
+import { CAPITAL, PROV_CHAR_EM, WORLD, dist, isLand, pointInPolygon, provinceLines, type Glyph, type Pt, type Realm, type World } from "./worldMap";
 
 /**
  * The Cartographer's map as pictures (Design Master Sprint 4). Pure placement
@@ -188,4 +188,111 @@ export function placeLandmarks(world: Pick<World, "coast" | "islands">, settleme
     return propOnGround("prop-palms", c.x, c.y + 8, PALM_H);
   });
   return { port, island, palms };
+}
+
+// --- Sector landmarks (2026-10-14) ----------------------------------------------------------------------
+//
+// One or more scenery pictures in each sector's province that say what the sector is: a gold mine for
+// Materials, a farmhouse for Consumer Staples, a bank vault for Financials and so on. Like the port and
+// the island they are scenery: no name, no button, no fog and no state. They repeat the province's own
+// label (the sector name already printed on the land) and nothing else, so they never carry a fact that
+// the holding's survey, weight or verdict decides. A province with no sector set, an unknown sector, the
+// "Other sectors" fold, or a sector with no theme here gets no landmark.
+
+export interface SectorTheme {
+  match: RegExp;
+  /** Pictures for the sector, most telling first. */
+  ids: readonly ObjectArtId[];
+}
+
+/** First match wins. Names are matched loosely (case-insensitive), since the sector comes from the user's own data. */
+export const SECTOR_THEMES: readonly SectorTheme[] = [
+  { match: /diversif|fund|etf/i, ids: ["map-fountain-square"] },
+  { match: /energy|oil|petrol|gas\b/i, ids: ["map-windmill", "map-watermill"] },
+  { match: /utilit|power|electric/i, ids: ["map-watermill", "map-windmill"] },
+  { match: /financ|bank|insur/i, ids: ["map-bank-vault"] },
+  { match: /industr|manufactur|transport/i, ids: ["map-factory"] },
+  { match: /staple|food|agri|beverage/i, ids: ["map-farmhouse", "map-market-stall"] },
+  { match: /discretionary|retail|consumer/i, ids: ["map-market-stall"] },
+  { match: /material|mining|metal|gold|commodit/i, ids: ["map-gold-mine", "map-gold-ingots", "map-quarry"] },
+];
+
+/** The landmark pictures for a sector name, or none when the sector has no theme. */
+export function sectorLandmarkIds(sector: string): readonly ObjectArtId[] {
+  return SECTOR_THEMES.find((t) => t.match.test(sector))?.ids ?? [];
+}
+
+/** Heights in world units (a settlement is about 45 tall, the keep 78): small enough that a landmark never
+ * reads as a holding. Wide, low pictures are drawn shorter so their width stays in proportion. */
+const LANDMARK_H: Partial<Record<ObjectArtId, number>> = {
+  "map-gold-ingots": 18,
+  "map-farmhouse": 27,
+  "map-fountain-square": 27,
+  "map-quarry": 27,
+  "map-market-stall": 29,
+};
+const LANDMARK_DEFAULT_H = 34;
+/** At most this many landmarks in one province. */
+export const MAX_LANDMARKS_PER_PROVINCE = 3;
+
+/** Keep-out radii (world units) round things already on the land, measured from a landmark's centre. */
+const KEEP_OUT = { capital: 80, settlement: 52, label: 30, landmark: 54 } as const;
+const GRID = 12;
+
+export function landmarkRect(id: ObjectArtId, foot: Pt): ArtRect {
+  return propOnGround(id, foot.x, foot.y, LANDMARK_H[id] ?? LANDMARK_DEFAULT_H);
+}
+
+/**
+ * Where each province's landmarks stand. Deterministic: candidates come from a fixed grid over the
+ * province, a spot must be on the mainland with a margin to the shore, inside its own province, and clear
+ * of the capital, every settlement (and the name under it), every province name and every landmark already
+ * placed (`extra`: the port and island pictures). The best spot is the one with the most room, pulled
+ * toward the province's heart. A province that has no free spot simply gets fewer landmarks (or none): a
+ * holding is never covered.
+ */
+export function placeSectorLandmarks(world: Pick<World, "coast" | "islands">, realm: Pick<Realm, "provinces" | "settlements">, extra: readonly ArtRect[] = []): ArtRect[] {
+  const avoid: { at: Pt; r: number }[] = [{ at: CAPITAL, r: KEEP_OUT.capital }];
+  for (const s of realm.settlements) {
+    for (const dy of [-22, 0, 16]) avoid.push({ at: { x: s.x, y: s.y + dy }, r: KEEP_OUT.settlement });
+  }
+  for (const p of realm.provinces) {
+    const half = (Math.max(...provinceLines(p.name).map((l) => l.length)) * p.labelFs * PROV_CHAR_EM) / 2;
+    for (const dx of [-half, 0, half]) avoid.push({ at: { x: p.label.x + dx, y: p.label.y }, r: KEEP_OUT.label });
+  }
+  for (const e of extra) avoid.push({ at: { x: e.x + e.width / 2, y: e.y + e.height / 2 }, r: KEEP_OUT.landmark });
+
+  const out: ArtRect[] = [];
+  for (const prov of realm.provinces) {
+    if (prov.unsorted) continue;
+    const ids = sectorLandmarkIds(prov.name).slice(0, MAX_LANDMARKS_PER_PROVINCE);
+    const xs = prov.cell.map((p) => p.x);
+    const ys = prov.cell.map((p) => p.y);
+    const x0 = Math.max(12, Math.min(...xs));
+    const x1 = Math.min(WORLD.w - 12, Math.max(...xs));
+    const y0 = Math.max(12, Math.min(...ys));
+    const y1 = Math.min(WORLD.h - 12, Math.max(...ys));
+    for (const id of ids) {
+      const h = LANDMARK_H[id] ?? LANDMARK_DEFAULT_H;
+      let best: { foot: Pt; score: number } | null = null;
+      for (let y = y0; y <= y1; y += GRID) {
+        for (let x = x0; x <= x1; x += GRID) {
+          const foot = { x, y };
+          // Inside this province, on the mainland, with a margin to the shore on every side.
+          if (!pointInPolygon(foot, prov.cell)) continue;
+          if (![foot, { x: x - 14, y }, { x: x + 14, y }, { x, y: y - 10 }, { x, y: y + 8 }].every((q) => isLand(world, q))) continue;
+          const centre = { x, y: y - h / 2 };
+          const room = avoid.reduce((m, a) => Math.min(m, dist(centre, a.at) - a.r), Infinity);
+          if (room < 0) continue;
+          const score = Math.min(room, 30) - 0.12 * dist(foot, prov.anchor);
+          if (!best || score > best.score) best = { foot, score };
+        }
+      }
+      if (!best) continue;
+      const r = landmarkRect(id, best.foot);
+      out.push(r);
+      avoid.push({ at: { x: best.foot.x, y: best.foot.y - h / 2 }, r: KEEP_OUT.landmark });
+    }
+  }
+  return out;
 }

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { TOWER_BOX, fogSlots, towerAriaLabel } from "../../../lib/realmMap";
 import type { MapFlag } from "../../../lib/realmMap";
-import { compassRect, hillArtId, hillRect, mountainArtId, mountainRect, placeLandmarks, placeMapKeep, placeSettlementArt, pineRect, serpentRect, settlementArtId, shipRect, type ArtRect, type SettlementKind } from "../../../lib/mapArt";
+import { compassRect, hillArtId, hillRect, mountainArtId, mountainRect, placeLandmarks, placeMapKeep, placeSectorLandmarks, placeSettlementArt, pineRect, serpentRect, settlementArtId, shipRect, type ArtRect, type SettlementKind } from "../../../lib/mapArt";
 import { weightText } from "../../../lib/rituals";
 import { getObjectArt, useArtMode } from "../../../lib/stitchArt";
 import type { TowerFog } from "../../../lib/survey";
@@ -291,6 +291,11 @@ export default function WorldMap({ towers, sectors, sectorsKnown, hatchId, selec
   const placed = useMemo(() => realm.settlements.map((s) => ({ s, t: towerById.get(s.id) as TowerFog })).filter((x) => x.t), [realm, towerById]);
   // Port, island sanctuary and island palms: scenery only (no name, no button, no fog), drawn in art mode.
   const landmarks = useMemo(() => placeLandmarks(world, realm.settlements), [world, realm]);
+  // One picture per sector that says what the sector is (gold mine, farmhouse, bank vault...). Scenery as well.
+  const sectorMarks = useMemo(() => {
+    const others = [landmarks.port, landmarks.island, ...landmarks.palms].filter((r): r is ArtRect => r !== null);
+    return placeSectorLandmarks(world, realm, others);
+  }, [world, realm, landmarks]);
 
   // Measure the box; the first measure picks the starting view (phones start zoomed on the capital).
   useEffect(() => {
@@ -497,6 +502,14 @@ export default function WorldMap({ towers, sectors, sectorsKnown, hatchId, selec
           {landmarks.palms.map((r, k) => art.ok(r.id) && <ArtImage key={k} r={r} onFail={art.fail} />)}
           {landmarks.island && art.ok(landmarks.island.id) && <ArtImage r={landmarks.island} onFail={art.fail} />}
           {landmarks.port && art.ok(landmarks.port.id) && <ArtImage r={landmarks.port} onFail={art.fail} />}
+          {sectorMarks.map((r) =>
+            art.ok(r.id) ? (
+              <g key={`${r.id}-${r.x}-${r.y}`}>
+                <ellipse cx={r.x + r.width / 2} cy={r.y + r.height - 1} rx={r.width * 0.42} ry={r.width * 0.08} fill="#2b2118" fillOpacity="0.32" />
+                <ArtImage r={r} onFail={art.fail} />
+              </g>
+            ) : null,
+          )}
           {realm.provinces.map((p) => {
             const lines = provinceLines(p.name);
             const fs = p.labelFs;

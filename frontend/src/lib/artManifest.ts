@@ -109,6 +109,16 @@ import ledgerBook from "../assets/art/ledger-book.webp";
 import ledgerScale from "../assets/art/ledger-scale.webp";
 import ledgerLantern from "../assets/art/ledger-lantern.webp";
 import ledgerStaff from "../assets/art/ledger-staff.webp";
+import mapBankVault from "../assets/art/map-bank-vault.webp";
+import mapFarmhouse from "../assets/art/map-farmhouse.webp";
+import mapWatermill from "../assets/art/map-watermill.webp";
+import mapFactory from "../assets/art/map-factory.webp";
+import mapWindmill from "../assets/art/map-windmill.webp";
+import mapMarketStall from "../assets/art/map-market-stall.webp";
+import mapGoldIngots from "../assets/art/map-gold-ingots.webp";
+import mapGoldMine from "../assets/art/map-gold-mine.webp";
+import mapFountainSquare from "../assets/art/map-fountain-square.webp";
+import mapQuarry from "../assets/art/map-quarry.webp";
 
 export interface PackedArt {
   src: string;
@@ -229,4 +239,14 @@ export const ART_MANIFEST = {
   "ledger-scale": { src: ledgerScale, width: 320, height: 295, alt: "" },
   "ledger-lantern": { src: ledgerLantern, width: 144, height: 256, alt: "" },
   "ledger-staff": { src: ledgerStaff, width: 146, height: 320, alt: "" },
+  "map-bank-vault": { src: mapBankVault, width: 292, height: 320, alt: "" },
+  "map-farmhouse": { src: mapFarmhouse, width: 320, height: 251, alt: "" },
+  "map-watermill": { src: mapWatermill, width: 228, height: 320, alt: "" },
+  "map-factory": { src: mapFactory, width: 255, height: 320, alt: "" },
+  "map-windmill": { src: mapWindmill, width: 175, height: 320, alt: "" },
+  "map-market-stall": { src: mapMarketStall, width: 273, height: 320, alt: "" },
+  "map-gold-ingots": { src: mapGoldIngots, width: 320, height: 238, alt: "" },
+  "map-gold-mine": { src: mapGoldMine, width: 320, height: 309, alt: "" },
+  "map-fountain-square": { src: mapFountainSquare, width: 320, height: 249, alt: "" },
+  "map-quarry": { src: mapQuarry, width: 320, height: 319, alt: "" },
 } as const satisfies Record<string, PackedArt>;
