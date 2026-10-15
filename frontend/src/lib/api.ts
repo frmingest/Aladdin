@@ -43,6 +43,9 @@ import type {
   Council,
   HoldingAdvisors,
   Records,
+  Blindfold,
+  BlindfoldName,
+  BlindfoldReveal,
   Calibration,
   NightWatch,
   Ravens,
@@ -424,6 +427,21 @@ export const api = {
   getRecords: () => request<Records>("/game/records"),
   /** C2 hit rate: counts only, gated by the server (opens at min_n outcomes). */
   getCalibration: () => request<Calibration>("/game/calibration"),
+  /** E1 Blindfold Years: the next puzzle not in `seen` (ids answered in this browser). Read-only. */
+  getBlindfold: (seen: string[]) => {
+    const query = new URLSearchParams();
+    seen.forEach((id) => query.append("seen", id));
+    const qs = query.toString();
+    return request<Blindfold>(`/game/blindfold${qs ? `?${qs}` : ""}`);
+  },
+  /** The stored figure beside your staked range (nothing is saved server-side). */
+  getBlindfoldReveal: (puzzleId: string, low: string, high: string) =>
+    request<BlindfoldReveal>(
+      `/game/blindfold/reveal?${new URLSearchParams({ puzzle_id: puzzleId, low, high }).toString()}`,
+    ),
+  /** Lifts the mask; the page labels this as weakening the exercise. */
+  getBlindfoldName: (puzzleId: string) =>
+    request<BlindfoldName>(`/game/blindfold/name?${new URLSearchParams({ puzzle_id: puzzleId }).toString()}`),
   getCompetence: () => request<Competence>("/game/competence"),
   /** The only write of Sprint 25: your own mark for one sector. */
   putCompetence: (sector: string, level: CompetenceLevel, note: string | null) =>

@@ -20,7 +20,8 @@ const MAX_PUBLIC_IMAGE_KB = 150;
 // Room backdrops (Design Master Sprint 8): wide opaque scenes, one per room at most, shown behind a banner.
 const MAX_BACKDROP_KB = 120;
 // Six since 2026-10-14: the Siege page's World banner (about 22 KB), shown only while the World yardstick is selected.
-const MAX_BACKDROPS = 6;
+// Seven since 2026-10-15: the Blindfold Years river-bank banner (about 18 KB), shown only in that room.
+const MAX_BACKDROPS = 7;
 const isBackdrop = (file: string) => file.startsWith("backdrop-");
 
 const sourceIds = SOURCE.objects.map((o) => o.id);
