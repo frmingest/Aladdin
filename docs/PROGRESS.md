@@ -4,7 +4,7 @@
 
 ## Current Objective
 
-**Blindfold Years, sprint E1 of the Contest 3 plan (PR `feature/blindfold-years`): written and tested, not merged, not deployed.** A new Fortress room: a holding rolled back to a past year with its name masked, you stake a low and a high figure for the next year's owner earnings, then the stored figure is shown. Read-only, no migration, answers kept in the browser ([write-up](game/blindfold-years-2026-10-15.md)). Seen only on mock data in a built copy of the page.
+**Blindfold Years (E1) is merged (#157) and live; a wording pass (PR `feature/blindfold-copy`) is written and tested, not merged, not deployed.** Faiz found the copy too wordy; same numbers, shorter game-style words. A new Fortress room: a holding rolled back to a past year with its name masked, you stake a low and a high figure for the next year's owner earnings, then the stored figure is shown. Read-only, no migration, answers kept in the browser ([write-up](game/blindfold-years-2026-10-15.md)). Seen only on mock data in a built copy of the page.
 
 State: `main` is at `30f0cb9` (#156), which includes #155 (Map towers as sector pictures); deploy not checked, say if Railway has redeployed. Repo migration head `w1e2f3a4b5c6` (forecasts, C2); E1 adds none. Live URLs: frontend `https://exciting-gratitude-production-71b5.up.railway.app`, backend `https://aladdin-production-bd25.up.railway.app`.
 

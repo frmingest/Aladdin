@@ -41,3 +41,7 @@ A new Fortress room, `/fortress/blindfold` (tab "Blindfold"). The app picks a ho
 - Against the real database: how many puzzles there actually are. The plan guessed 20 to 30; the strict rule (five complete, unflagged years in one currency) may give fewer. The page says plainly when the pool is empty or used up.
 - The live site, and a real phone.
 - The two unused pictures (`blindfold-veiled-tower`, `blindfold-scroll`) are packed so the art set is complete for E1; they add about 20 KB and can be dropped from `scripts/art/manifest.json` if you would rather not ship them before they are used.
+
+## Wording pass (2026-10-15)
+
+Faiz found the first copy too wordy for a game. Rewritten shorter and plainer ("Plant your stakes", "Caught it", "Peek at the name", "Reveal the answer"); no figure, rule or layout changed. Copy lives in `BlindfoldPage.tsx`, `lib/blindfold.ts` and the captions in `backend/app/api/game.py`.

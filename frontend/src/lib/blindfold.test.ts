@@ -58,22 +58,22 @@ describe("the tally is a count that opens at n of 8", () => {
   it("shows no ratio below the gate, only the count", () => {
     const t = tally(results(5, 7), 8);
     expect(t).toEqual({ n: 7, open: false, inside: null });
-    expect(tallyLine(t, 8, 80)).toBe("Too few so far: 7 puzzles answered. A count opens at 8.");
-    expect(tallyLine(tally(results(0, 1), 8), 8, 80)).toContain("1 puzzle answered");
+    expect(tallyLine(t, 8)).toBe("Keep going: 7 answered. Your tally opens at 8.");
+    expect(tallyLine(tally(results(0, 1), 8), 8)).toContain("1 answered");
   });
 
   it("opens at the gate and always prints the count beside the ratio", () => {
     const t = tally(results(5, 8), 8);
     expect(t).toEqual({ n: 8, open: true, inside: 5 });
-    expect(tallyLine(t, 8, 80)).toBe("Your 80% ranges held 5 of 8.");
+    expect(tallyLine(t, 8)).toBe("Your stakes caught it 5 of 8 times.");
   });
 
   it("gates each width group on its own count", () => {
     const by = tallyByWidth(results(8, 16), 8); // 8 narrow, 8 wide, 0 medium
     expect(by.narrow.open && by.wide.open).toBe(true);
     expect(by.medium).toEqual({ n: 0, open: false, inside: null });
-    expect(widthLine("medium", by.medium, 8)).toBe("Medium ranges: too few so far (0, opens at 8)");
-    expect(widthLine("narrow", by.narrow, 8)).toMatch(/^Narrow ranges: held \d of 8$/);
+    expect(widthLine("medium", by.medium, 8)).toBe("Medium stakes: not enough yet (0 of 8)");
+    expect(widthLine("narrow", by.narrow, 8)).toMatch(/^Narrow stakes: caught \d of 8$/);
   });
 });
 
