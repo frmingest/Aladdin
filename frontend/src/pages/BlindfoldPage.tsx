@@ -228,6 +228,10 @@ export default function BlindfoldPage() {
     (which === "low" ? setLowText : setHighText)(text);
     setTouched(true);
   };
+  const dragStake = (which: "low" | "high", value: number) => {
+    (which === "low" ? setLowText : setHighText)(stakeText(Number(value.toPrecision(4))));
+    setTouched(true);
+  };
   const sliderValue = (n: number | null, fallback: number) =>
     domain && n !== null ? Math.round(valueToFraction(n, domain.min, domain.max) * SLIDER_STEPS) : fallback;
 
@@ -268,17 +272,6 @@ export default function BlindfoldPage() {
 
           {puzzle && domain && (
             <>
-              {gameMode && (
-                <BlindfoldScene
-                  points={points}
-                  min={domain.min}
-                  max={domain.max}
-                  low={lo}
-                  high={hi}
-                  actual={reveal ? Number(reveal.actual) : null}
-                />
-              )}
-
               <Panel>
                 <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
                   <h2 className="section-title !mb-0">Mystery company</h2>
@@ -302,7 +295,31 @@ export default function BlindfoldPage() {
                 )}
               </Panel>
 
-              {!reveal && (
+              {gameMode && (
+                <div className="space-y-3">
+                  <BlindfoldScene
+                    points={points}
+                    min={domain.min}
+                    max={domain.max}
+                    low={lo}
+                    high={hi}
+                    actual={reveal ? Number(reveal.actual) : null}
+                    position={reveal ? reveal.position : null}
+                    onChange={reveal ? undefined : dragStake}
+                  />
+                  {!reveal && (
+                    <div className="flex flex-wrap items-center justify-center gap-3">
+                      <p className="text-sm text-ink-muted">Drag the two stakes to catch next year&apos;s owner earnings.</p>
+                      <Button disabled={!stakesReady || busy} onClick={doReveal}>
+                        {busy ? "Checking…" : "Reveal the answer"}
+                      </Button>
+                    </div>
+                  )}
+                  {actionError && <p className="text-center text-xs text-negative">{actionError}</p>}
+                </div>
+              )}
+
+              {!reveal && !gameMode && (
                 <Panel>
                   <h2 className="section-title">Plant your stakes</h2>
                   <p className="mb-3 text-xs text-ink-muted">

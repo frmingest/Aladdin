@@ -31,14 +31,34 @@ describe("BlindfoldScene", () => {
 
   it("names the answer on the water once it is known", () => {
     const before = renderToStaticMarkup(<BlindfoldScene {...base} low={80} high={140} actual={null} />);
-    expect(before).not.toContain("Answer ");
+    expect(before).not.toContain(">Answer<");
     const after = renderToStaticMarkup(<BlindfoldScene {...base} low={80} high={140} actual={150} />);
-    expect(after).toContain("Answer 150");
+    expect(after).toContain(">Answer<");
+    expect(after).toContain(">150<");
   });
 
   it("keeps a stored figure far outside the gauge on the gauge", () => {
     const html = renderToStaticMarkup(<BlindfoldScene {...base} low={80} high={140} actual={99999} />);
-    expect(html).toContain("Answer 99,999");
+    expect(html).toContain(">99,999<");
     expect(html).not.toContain("NaN");
+  });
+
+  it("offers draggable, keyboard-reachable stakes only while a move handler is given and the answer is hidden", () => {
+    const playing = renderToStaticMarkup(<BlindfoldScene {...base} low={80} high={140} actual={null} onChange={() => {}} />);
+    expect(playing.match(/role="slider"/g)?.length).toBe(2);
+    expect(playing).toContain('aria-label="Low stake"');
+    expect(playing).toContain('aria-label="High stake"');
+    const watching = renderToStaticMarkup(<BlindfoldScene {...base} low={80} high={140} actual={null} />);
+    expect(watching).not.toContain('role="slider"');
+    const done = renderToStaticMarkup(<BlindfoldScene {...base} low={80} high={140} actual={150} onChange={() => {}} />);
+    expect(done).not.toContain('role="slider"');
+  });
+
+  it("stamps the result with a shape and a word, not colour alone", () => {
+    const hit = renderToStaticMarkup(<BlindfoldScene {...base} low={80} high={140} actual={110} position="inside" />);
+    expect(hit).toContain("Caught it!");
+    expect(hit).toContain("\u25CF");
+    expect(renderToStaticMarkup(<BlindfoldScene {...base} low={80} high={140} actual={190} position="above" />)).toContain("Missed: above");
+    expect(renderToStaticMarkup(<BlindfoldScene {...base} low={80} high={140} actual={10} position="below" />)).toContain("Missed: below");
   });
 });

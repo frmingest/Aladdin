@@ -148,6 +148,21 @@ export function sceneY(v: number, min: number, max: number, top: number, bottom:
   return bottom - clamp01(valueToFraction(v, min, max)) * (bottom - top);
 }
 
+/** The smallest gap kept between the two stakes (a share of the gauge), so their pills never overlap. */
+export const MIN_STAKE_GAP = 0.11;
+
+/** The value at a scene y: the inverse of sceneY, kept on the gauge. */
+export function valueFromSceneY(sy: number, min: number, max: number, top: number, bottom: number): number {
+  return fractionToValue((bottom - sy) / (bottom - top), min, max);
+}
+
+/** Where a dragged stake ends up: on the gauge, and never closer than MIN_STAKE_GAP to the other stake. */
+export function moveStake(which: "low" | "high", value: number, low: number, high: number, min: number, max: number): number {
+  const gap = (max - min) * MIN_STAKE_GAP;
+  const v = Math.min(max, Math.max(min, value));
+  return which === "low" ? Math.min(v, high - gap) : Math.max(v, low + gap);
+}
+
 /** Round, even tick values between min and max for the gauge (about `count` of them). */
 export function gaugeTicks(min: number, max: number, count = 4): number[] {
   const span = max - min;

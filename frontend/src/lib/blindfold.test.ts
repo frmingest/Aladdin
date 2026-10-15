@@ -6,6 +6,8 @@ import {
   formatFigure,
   fractionToValue,
   gaugeTicks,
+  moveStake,
+  valueFromSceneY,
   loadResults,
   parseStake,
   sceneY,
@@ -147,5 +149,20 @@ describe("stake geometry", () => {
     expect(ticks.every((t) => t >= -30 && t <= 230)).toBe(true);
     expect(ticks.length).toBeGreaterThanOrEqual(3);
     expect(gaugeTicks(5, 5)).toEqual([5]);
+  });
+});
+
+describe("dragging a stake", () => {
+  it("reads a value back from a scene position", () => {
+    expect(valueFromSceneY(266, 100, 200, 46, 266)).toBe(100);
+    expect(valueFromSceneY(46, 100, 200, 46, 266)).toBe(200);
+    expect(valueFromSceneY(0, 100, 200, 46, 266)).toBe(200); // past the top stays on the gauge
+  });
+
+  it("keeps stakes on the gauge and apart", () => {
+    expect(moveStake("low", -50, 120, 160, 100, 200)).toBe(100);
+    expect(moveStake("high", 999, 120, 160, 100, 200)).toBe(200);
+    expect(moveStake("low", 159, 120, 160, 100, 200)).toBe(149); // 11% of the gauge below the high stake
+    expect(moveStake("high", 121, 120, 160, 100, 200)).toBe(131);
   });
 });
