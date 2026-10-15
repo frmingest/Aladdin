@@ -7,6 +7,7 @@ import type { Commission, SurveyState, TowerFog } from "../../../lib/survey";
 import { Card, Disclosure, EmptyState } from "../../ui";
 import CommissionSeal from "./CommissionSeal";
 import { FogDefs, PatchMark } from "./FogPatch";
+import { imageMapEnabled } from "../../../lib/imageMap";
 import WorldMap from "./WorldMap";
 import NightPanel from "./NightPanel";
 import TowerSlate from "./TowerSlate";
@@ -163,6 +164,7 @@ function PaintedBody({
                 sectors={sectors}
                 sectorsKnown={sectorsKnown}
                 kinds={kinds}
+                imageMap={typeof window !== "undefined" && imageMapEnabled(window.location.search)}
                 hatchId={hatchId}
                 selectedId={selectedId}
                 flags={flagByTower}
