@@ -2794,3 +2794,67 @@ export interface Calibration {
   };
   caption: string;
 }
+
+// E1 Blindfold Years (2026-10-15). Decimals arrive as strings. The puzzle never carries the answer,
+// the name, the real years, the currency or the source files.
+export interface BlindfoldCell {
+  value: string | null;
+  fog: string | null;
+}
+
+export interface BlindfoldRow {
+  key: string;
+  label: string;
+  kind: "money" | "ratio";
+}
+
+export interface BlindfoldYear {
+  label: string;
+  cells: Record<string, BlindfoldCell>;
+}
+
+export interface BlindfoldPuzzle {
+  puzzle_id: string;
+  sector: string | null;
+  rows: BlindfoldRow[];
+  years: BlindfoldYear[];
+  stake_min: string;
+  stake_max: string;
+}
+
+export interface Blindfold {
+  version: string;
+  demo: boolean;
+  min_n: number;
+  confidence_pct: number;
+  pool_size: number;
+  remaining: number;
+  puzzle: BlindfoldPuzzle | null;
+  empty_reason: string | null;
+  caption: string;
+}
+
+export type BlindfoldPosition = "below" | "inside" | "above";
+export type BlindfoldWidthClass = "narrow" | "medium" | "wide";
+
+export interface BlindfoldReveal {
+  puzzle_id: string;
+  actual: string;
+  low: string;
+  high: string;
+  inside: boolean;
+  position: BlindfoldPosition;
+  width_class: BlindfoldWidthClass | null;
+  last_owner_earnings: string;
+  name: string;
+  ticker: string;
+  shown_period: string;
+  answer_period: string;
+  source_file: string | null;
+  note: string;
+}
+
+export interface BlindfoldName {
+  name: string;
+  ticker: string;
+}

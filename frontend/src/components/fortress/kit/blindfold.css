@@ -1,0 +1,6 @@
+/* Blindfold Years scene (E1). One-shot rise of the water on reveal; no looping animation. */
+.bf-scene { position: relative; width: 100%; max-width: 34rem; aspect-ratio: 360 / 300; margin-inline: auto; border-radius: 0.75rem; overflow: hidden; border: 1px solid #26253b; }
+.bf-scene > svg { pointer-events: none; position: absolute; inset: 0; width: 100%; height: 100%; }
+.bf-art { position: absolute; pointer-events: none; height: auto; }
+.bf-water { transition: y 0.9s ease-out, height 0.9s ease-out; }
+@media (prefers-reduced-motion: reduce) { .bf-water { transition: none; } }

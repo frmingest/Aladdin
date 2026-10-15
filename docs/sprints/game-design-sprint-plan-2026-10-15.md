@@ -1,6 +1,6 @@
 # Game design sprint plan: Contest 3 (2026-10-15)
 
-Status: **proposed, not started. Nothing in this plan is built, committed or deployed.** It comes from a four-expert design contest run on 2026-10-15 (progression, narrative, core mechanics, UX and game feel), judged by Claude. The experts worked from the Claude project docs only; none of them verified the repo. Every "already shipped" and "not shipped" claim below comes from those docs. **First step of every sprint: `git status`, `git log --oneline -15`, and `grep`/`find` for the files a sprint claims to build on** (this plan was written against `main` at `872029b`, #155, on 2026-10-15; `E:\Aladdin` can be stale, so `git pull` first).
+Status: **E1 (Blindfold Years) is written and tested on branch `feature/blindfold-years`, PR open, not merged, not deployed ([write-up](../game/blindfold-years-2026-10-15.md)). E2 to E5 and the bucket are proposed, not started: nothing in them is built, committed or deployed.** It comes from a four-expert design contest run on 2026-10-15 (progression, narrative, core mechanics, UX and game feel), judged by Claude. The experts worked from the Claude project docs only; none of them verified the repo. Every "already shipped" and "not shipped" claim below comes from those docs. **First step of every sprint: `git status`, `git log --oneline -15`, and `grep`/`find` for the files a sprint claims to build on** (this plan was written against `main` at `872029b`, #155, on 2026-10-15; `E:\Aladdin` can be stale, so `git pull` first).
 
 Related: [design-master-sprint-plan-2026-10-11.md](../game/design-master-sprint-plan-2026-10-11.md) (art pipeline, closed), [stitch-master-object-art-2026-10-11.md](../game/stitch-master-object-art-2026-10-11.md) (style, rules, shared prompt block), `game-design-contest-2026-10-09.md` (contest 1 and 2 pitches; Claude project doc only, not in `docs/`), game-visual-identity standard.
 
@@ -300,7 +300,7 @@ If D1 = no, replace E5-1 to E5-6 with six **lanterns of six different shapes** (
 
 Suggested Stitch order: E1-1 to E1-3 (needed first), then E2 ★, then E3 ★, then E4 ★, then E5 (after you rule on D1). Backdrops last, and only if the first ones look good in place.
 
-## Decisions I need from you
+## Decisions (ruled 2026-10-15: Faiz said "for all decisions, go as you recommend"; D1 to D8 all take the Recommended column)
 
 | # | Decision | Recommended |
 |---|---|---|

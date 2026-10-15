@@ -1,18 +1,19 @@
 # Aladdin — Progress
 
-**Last updated:** 2026-10-15 (Contest 3 game design sprint plan added, proposed; loss-making view, unused-endpoint removal, mypy job and sector landmarks merged; Map towers as sector pictures written, PR open). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
+**Last updated:** 2026-10-15 (E1 Blindfold Years written, PR open; Map sector towers #155 and the Contest 3 plan #156 are merged). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
 
 ## Current Objective
 
-**Map towers as sector pictures (PR `feature/sector-towers`): written and tested, not merged, not deployed.** Game mode only: a holding in a themed sector is drawn as that sector's Stitch picture (gold bars for gold, mine or quarry for Materials, farmhouse or stall for Consumer Staples, vault, factory, windmill or watermill, market fountain for the fund) instead of town, citadel, outpost or vault. Faiz decided this on 2026-10-14 (the fund/stock split is given up on the map in themed sectors). Replaces the scenery landmarks merged in #154 ([doc](game/map-sector-landmarks-2026-10-14.md)).
+**Blindfold Years, sprint E1 of the Contest 3 plan (PR `feature/blindfold-years`): written and tested, not merged, not deployed.** A new Fortress room: a holding rolled back to a past year with its name masked, you stake a low and a high figure for the next year's owner earnings, then the stored figure is shown. Read-only, no migration, answers kept in the browser ([write-up](game/blindfold-years-2026-10-15.md)). Seen only on mock data in a built copy of the page.
 
-State: `main` is at `acc1718` (#154); #150, #151 and #152 are merged there (seen in `git log`; deploy not checked, say if Railway has redeployed). Repo migration head `w1e2f3a4b5c6` (forecasts, C2); neither the merged PRs nor this one adds one. Live URLs: frontend `https://exciting-gratitude-production-71b5.up.railway.app`, backend `https://aladdin-production-bd25.up.railway.app`.
+State: `main` is at `30f0cb9` (#156), which includes #155 (Map towers as sector pictures); deploy not checked, say if Railway has redeployed. Repo migration head `w1e2f3a4b5c6` (forecasts, C2); E1 adds none. Live URLs: frontend `https://exciting-gratitude-production-71b5.up.railway.app`, backend `https://aladdin-production-bd25.up.railway.app`.
 
 ## Active Tasks
 
-- [ ] **Review and merge the Map sector-towers PR (Faiz), then look at the live Map with Game mode on** (desktop and phone): fog patches still readable on each picture, wide pictures not too small. Only checked on a schematic render of the real sectors, not in the app. Steps in the [doc](game/map-sector-landmarks-2026-10-14.md)
+- [ ] **Review and merge the Blindfold Years PR (Faiz), then open Blindfold with Game mode on** (desktop and phone) and check how many puzzles the real data gives (the plan guessed 20 to 30; the strict rule may give fewer) and that the scene reads
+- [ ] **Once the Map towers (#155) are deployed, look at the live Map with Game mode on:** fog patches readable on each sector picture, wide pictures not too small ([doc](game/map-sector-landmarks-2026-10-14.md))
 - [ ] **After #150 is deployed (Faiz):** Refresh Margin of safety, open "Can't be ranked yet" then "Why" on Vend Marketplaces, Salmon Evolution and Vår Energi and sanity-check the owner-earnings figure (if wrong, check share count and price currency first). [Doc](valuation/loss-making-price-assumes-2026-10-14.md)
-- [ ] **Game design Contest 3 plan (Faiz):** rule on decisions D1 to D8 and start the Stitch pictures for E1 (gauge post, flood stake, veiled tower); nothing is built yet ([plan](sprints/game-design-sprint-plan-2026-10-15.md))
+- [ ] **Contest 3 plan: D1 to D8 ruled 2026-10-15 (all as recommended: lanterns and ravens, no figures; teal ribbon; browser-first state; journal note for E2; Norwegian copy by Claude, reviewed by Faiz; one backdrop per sprint; order E1 to E5).** E2 Winter Rehearsal is next but needs the E2 Stitch pictures first (icicles, winter-order tablet, war-table; none in `art/` yet) ([plan](sprints/game-design-sprint-plan-2026-10-15.md))
 - [ ] **Optional, visual:** with Game mode on, look at the World banner crop on the Siege Simulator (Claude could not judge it)
 
 ## Recent Blockers / Open Questions

@@ -51,6 +51,11 @@ def _pick(candidates: list[PeriodFacts]) -> PeriodFacts | None:
     return annual[0] if len(annual) == 1 else None
 
 
+def period_for_year(periods: dict[str, PeriodFacts], year: int) -> PeriodFacts | None:
+    """The one period for a fiscal year (same rule as `previous_period`), if on file."""
+    return _pick([p for p in periods.values() if p.year == year])
+
+
 def latest_period(periods: dict[str, PeriodFacts]) -> PeriodFacts | None:
     years = [p.year for p in periods.values() if p.year is not None]
     if not years:
