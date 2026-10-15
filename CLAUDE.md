@@ -163,4 +163,5 @@ Game mode must look like a game on every tab (painted fortress, scrolls, ravens,
 - Every game page has an identity score 0-3. A new or changed page below 2 (scene header or bespoke illustration, shared kit, one real fact encoded visually, Plain view) is a review blocker. "A Card with a list" is not done.
 - Every game spec and idea carries a "visual verb + scene" line; every game sprint plan and review answers the checklist (pages touched, identity before/after, visual wins, look-and-judge screenshots).
 - Visuals replace words (noise-audit word budgets still apply) and never cost truth (unknown stays fog), colour-blind safety, reduced motion or phone performance.
+- Game voice (standard section 6): every game-mode string is short, plain and playful, written for the player's act ("Plant your stakes", "Caught it"), with caveats moved to a tooltip or rules foldout. Heavy, methods-style copy is a review finding, and the page cannot score 3.
 - The shared page-scene kit is owned by `game-feel-engineer`; add missing pieces there, do not inline one-off art or hex.

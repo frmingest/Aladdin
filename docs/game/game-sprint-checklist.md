@@ -8,6 +8,7 @@ Status: standing gate, proposed 2026-10-09. Standard: [.claude/standards/game-vi
 3. **Visual wins included.** At least one item per sprint whose point is the look (scene header, bespoke illustration, kit piece, signature object) and that deletes words. Name it, its visual verb + scene, and the real fact it encodes. If none, say why and what slips.
 4. **Every item has a visual verb + scene line** (motif, page, mapping, unknown look, words deleted).
 5. **Words.** Word budget per touched page (before, target). Visuals replace words.
+   - **Voice.** Name the page's player verbs and the key labels in game voice (standard section 6), not the app's methods language.
 6. **Kit.** Which kit pieces are reused, which are added (owner: game-feel-engineer).
 7. **Cut line.** One thing to cut if the sprint runs long; it is never the Plain view, the unknown state or the screenshots.
 8. **Rules.** Which Fortress rules each item touches and how truth / colour-blind / reduced-motion / performance are kept.
@@ -15,7 +16,7 @@ Status: standing gate, proposed 2026-10-09. Standard: [.claude/standards/game-vi
 ## B. Sprint review must answer
 1. **Pages touched** (as built, from the diff, not from the plan).
 2. **Identity table** scored by `game-ux-designer`: `page | before | after | kit pieces used | fact encoded visually | Plain view | words before/after`.
-3. **Visual wins delivered** vs planned, one line each.
+3. **Visual wins delivered** vs planned, one line each. Add the **voice check**: list the page's buttons, headings and captions as shipped; each reads aloud in one breath and passes standard section 6, or is listed as copy debt.
 4. **Look-and-judge list for Faiz.** For each touched page: desktop and phone screenshots in game mode, Plain view, and normal mode side by side (from `playtest-qa`), plus one question ("Does this read as the game, and is the weak tower still weak?"). Paths listed; pages that could not be rendered are named.
 5. **Checks.** tsc, lint, test, build; word budgets; colour-blind pass; reduced-motion pass; phone frame-rate / long-task note; what was NOT seen.
 6. **Status.** Merged / deployed / seen on real data, each stated separately.
