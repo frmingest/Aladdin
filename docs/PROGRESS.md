@@ -6,7 +6,7 @@
 
 **Blindfold Years (E1) is merged (#157, wording #158). A rebuild of the play area (PR `feature/blindfold-drag`: drag the stakes in the picture, no number boxes) is written and tested, not merged, not deployed.** Faiz found the first version not engaging and messy. A new Fortress room: a holding rolled back to a past year with its name masked, you stake a low and a high figure for the next year's owner earnings, then the stored figure is shown. Read-only, no migration, answers kept in the browser ([write-up](game/blindfold-years-2026-10-15.md)). Seen only on mock data in a built copy of the page.
 
-**Map on the painted Stitch picture (prototype) is written and tested, not merged, not deployed:** behind `?map=image` on the Map tab; 13 fixed regions, dashed islet for "No sector set", Keep on the strait island. Seen only on test data ([write-up](game/map-image-prototype-2026-10-15.md)).
+**The painted Stitch map is now the default Game-mode Map (PR `feature/map-image-default`, written and tested, not merged, not deployed).** Faiz saw the prototype live (#161) and approved it; `?map=classic` brings the old drawn map back ([write-up](game/map-image-prototype-2026-10-15.md)).
 
 State: `main` is at `30f0cb9` (#156), which includes #155 (Map towers as sector pictures); deploy not checked, say if Railway has redeployed. Repo migration head `w1e2f3a4b5c6` (forecasts, C2); E1 adds none. Live URLs: frontend `https://exciting-gratitude-production-71b5.up.railway.app`, backend `https://aladdin-production-bd25.up.railway.app`.
 
@@ -16,7 +16,7 @@ State: `main` is at `30f0cb9` (#156), which includes #155 (Map towers as sector 
 - [ ] **Once the Map towers (#155) are deployed, look at the live Map with Game mode on:** fog patches readable on each sector picture, wide pictures not too small ([doc](game/map-sector-landmarks-2026-10-14.md))
 - [ ] **After #150 is deployed (Faiz):** Refresh Margin of safety, open "Can't be ranked yet" then "Why" on Vend Marketplaces, Salmon Evolution and Vår Energi and sanity-check the owner-earnings figure (if wrong, check share count and price currency first). [Doc](valuation/loss-making-price-assumes-2026-10-14.md)
 - [ ] **Contest 3 plan: D1 to D8 ruled 2026-10-15 (all as recommended: lanterns and ravens, no figures; teal ribbon; browser-first state; journal note for E2; Norwegian copy by Claude, reviewed by Faiz; one backdrop per sprint; order E1 to E5).** E2 Winter Rehearsal is next but needs the E2 Stitch pictures first (icicles, winter-order tablet, war-table; none in `art/` yet) ([plan](sprints/game-design-sprint-plan-2026-10-15.md))
-- [ ] **Map prototype (PR `feature/map-image-prototype`): review and merge (Faiz), then open the Map with Game mode on and `?map=image`** (desktop and phone): crowded sectors, fog patches on each picture; decide on a larger Stitch copy of the map picture ([doc](game/map-image-prototype-2026-10-15.md))
+- [ ] **Map default (PR `feature/map-image-default`): review and merge (Faiz), then check the Map on desktop and phone:** crowded sectors, fog patches on each picture; decide on a larger Stitch copy of the map picture ([doc](game/map-image-prototype-2026-10-15.md))
 - [ ] **Optional, visual:** with Game mode on, look at the World banner crop on the Siege Simulator (Claude could not judge it)
 
 ## Recent Blockers / Open Questions

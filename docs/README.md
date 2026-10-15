@@ -63,7 +63,7 @@ Game mode (Fortress): concept, sprint plans and reviews, visual identity, art pa
 - [c2-hit-rate-sprint-2026-10-14.md](game/c2-hit-rate-sprint-2026-10-14.md) — C2 hit rate: n-gated calibration ledger on the Hall of Records (your calls and the analyst's range), `forecasts` table, art slots for the four ledger pictures — 2026-10-14
 - [long-memory-b1-2026-10-09.md](game/long-memory-b1-2026-10-09.md) — B1 Long Memory — 2026-10-09
 - [map-design-2026-10-09.md](game/map-design-2026-10-09.md) — Map (Cartographer's table): making fog look like fog
-- [map-image-prototype-2026-10-15.md](game/map-image-prototype-2026-10-15.md) — Map tab prototype on the painted Stitch picture, behind `?map=image`: fixed sector regions, limits — 2026-10-15
+- [map-image-prototype-2026-10-15.md](game/map-image-prototype-2026-10-15.md) — Map tab on the painted Stitch picture (default in Game mode, `?map=classic` for the old one): fixed sector regions, limits — 2026-10-15
 - [map-sector-landmarks-2026-10-14.md](game/map-sector-landmarks-2026-10-14.md) — Map tab: the towers are Stitch pictures by sector (gold mine, farmhouse, vault...) — 2026-10-14
 - [siege-global-benchmark-2026-10-14.md](game/siege-global-benchmark-2026-10-14.md) — Siege Simulator: a World yardstick (ACWI) next to Oslo — 2026-10-14
 - [siege-instrument-sensitivity-2026-10-07.md](game/siege-instrument-sensitivity-2026-10-07.md) — Siege Simulator: a beta for every instrument (2026-10-07)

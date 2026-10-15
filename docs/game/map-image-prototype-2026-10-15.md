@@ -1,6 +1,6 @@
 # Map on the painted Stitch picture (prototype)
 
-Status: **written and tested, not merged, not deployed** (2026-10-15). Off by default: it only shows when the Map tab's address ends in `?map=image`. Branch `feature/map-image-prototype`.
+Status: prototype merged (#161) behind `?map=image`; Faiz saw it live and approved (2026-10-15), so it is now the default in Game mode (branch `feature/map-image-default`, written, not yet deployed). The old drawn map comes back with `?map=classic` on the Map tab's address.
 
 ## What it is, in plain words
 
