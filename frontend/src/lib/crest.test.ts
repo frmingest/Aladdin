@@ -11,6 +11,7 @@ describe("crestForPath", () => {
     expect(crestForPath("/fortress/siege")).toBe("siege");
     expect(crestForPath("/fortress/marketplace/abc")).toBe("market");
     expect(crestForPath("/fortress/blindfold")).toBe("blindfold");
+    expect(crestForPath("/fortress/winter")).toBe("winter");
     expect(crestForPath("/fortress")).toBe("fortress");
   });
 });

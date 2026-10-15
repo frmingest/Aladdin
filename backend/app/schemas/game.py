@@ -765,3 +765,54 @@ class BlindfoldRevealOut(BaseModel):
 class BlindfoldNameOut(BaseModel):
     name: str
     ticker: str
+
+
+# --- E2 Winter Rehearsal (2026-10-15) ---
+
+
+class WinterHoldingCoverageOut(BaseModel):
+    holding_id: UUID
+    name: str
+    covered: bool
+    reason: str | None = None
+
+
+class WinterCoverageOut(BaseModel):
+    covered_count: int = 0
+    total_count: int = 0
+    covered_value_nok: Decimal = Decimal(0)
+    covered_value_share: Decimal | None = None
+    holdings: list[WinterHoldingCoverageOut] = []
+
+
+class WinterPointOut(BaseModel):
+    day: date
+    value_nok: Decimal  # what today's covered book would be worth that day
+    change_nok: Decimal  # against the peak, negative when lower
+    change: Decimal  # fraction against the peak, negative when lower
+    days_under_water: int  # stored trading days since the peak
+
+
+class WinterWindowOut(BaseModel):
+    peak_date: date
+    trough_date: date
+    fall: Decimal  # negative fraction
+    trading_days: int  # points in the window, peak and trough included
+    points: list[WinterPointOut]
+
+
+class WinterRehearsalOut(BaseModel):
+    """The worst stored fall of the book, replayed at today's weights. A mirror
+    of the record, never a forecast and never advice."""
+
+    version: str
+    demo: bool = False
+    status: Literal["ok", "no_winter", "no_history", "demo"]
+    status_reason: str = ""
+    real_winter_fall: Decimal
+    coverage: WinterCoverageOut = WinterCoverageOut()
+    days_on_file: int = 0
+    worst_fall: Decimal | None = None
+    window: WinterWindowOut | None = None
+    notes: list[str] = []
+    caption: str

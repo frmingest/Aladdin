@@ -2858,3 +2858,50 @@ export interface BlindfoldName {
   name: string;
   ticker: string;
 }
+
+// E2 Winter Rehearsal (2026-10-15). Decimals arrive as strings. Kroner are what today's covered holdings
+// would have lost, replayed at today's weights through the stored prices.
+export interface WinterHoldingCoverage {
+  holding_id: string;
+  name: string;
+  covered: boolean;
+  reason: string | null;
+}
+
+export interface WinterCoverage {
+  covered_count: number;
+  total_count: number;
+  covered_value_nok: string;
+  covered_value_share: string | null;
+  holdings: WinterHoldingCoverage[];
+}
+
+export interface WinterPoint {
+  day: string;
+  value_nok: string;
+  change_nok: string;
+  change: string;
+  days_under_water: number;
+}
+
+export interface WinterWindow {
+  peak_date: string;
+  trough_date: string;
+  fall: string;
+  trading_days: number;
+  points: WinterPoint[];
+}
+
+export interface WinterRehearsal {
+  version: string;
+  demo: boolean;
+  status: "ok" | "no_winter" | "no_history" | "demo";
+  status_reason: string;
+  real_winter_fall: string;
+  coverage: WinterCoverage;
+  days_on_file: number;
+  worst_fall: string | null;
+  window: WinterWindow | null;
+  notes: string[];
+  caption: string;
+}

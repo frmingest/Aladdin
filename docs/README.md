@@ -37,6 +37,7 @@ Stable background: what is AI vs deterministic, tech overview, graphics rules, O
 Game mode (Fortress): concept, sprint plans and reviews, visual identity, art passes, checklist.
 
 - [blindfold-years-2026-10-15.md](game/blindfold-years-2026-10-15.md) — Blindfold Years (E1): masked past-year puzzles, stake a range for next year's owner earnings (2026-10-15, written, not deployed)
+- [winter-rehearsal-2026-10-15.md](game/winter-rehearsal-2026-10-15.md) — Winter Rehearsal (E2): write your winter order, walk down the worst stored fall of today's book (2026-10-15, written, not deployed)
 - [circle-council-design-2026-10-09.md](game/circle-council-design-2026-10-09.md) — Circle of Competence and Council Chamber: making them feel like game screens
 - [design-master-sprint-plan-2026-10-11.md](game/design-master-sprint-plan-2026-10-11.md) — Design Master: review and sprint plan (2026-10-11)
 - [fog-of-war-sprint28-2026-10-08.md](game/fog-of-war-sprint28-2026-10-08.md) — Game mode Sprint 28: fog of war (G34–G37) — 2026-10-08

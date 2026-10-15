@@ -124,6 +124,11 @@ import blindfoldStake from "../assets/art/blindfold-stake.webp";
 import blindfoldVeiledTower from "../assets/art/blindfold-veiled-tower.webp";
 import blindfoldScroll from "../assets/art/blindfold-scroll.webp";
 import backdropBlindfold from "../assets/art/backdrop-blindfold.webp";
+import winterIcicles from "../assets/art/winter-icicles.webp";
+import winterTablet from "../assets/art/winter-tablet.webp";
+import winterWarTable from "../assets/art/winter-war-table.webp";
+import backdropWinter from "../assets/art/backdrop-winter.webp";
+import backdropWinterSnow from "../assets/art/backdrop-winter-snow.webp";
 
 export interface PackedArt {
   src: string;
@@ -259,4 +264,9 @@ export const ART_MANIFEST = {
   "blindfold-veiled-tower": { src: blindfoldVeiledTower, width: 202, height: 320, alt: "" },
   "blindfold-scroll": { src: blindfoldScroll, width: 256, height: 203, alt: "" },
   "backdrop-blindfold": { src: backdropBlindfold, width: 960, height: 536, alt: "" },
+  "winter-icicles": { src: winterIcicles, width: 290, height: 320, alt: "" },
+  "winter-tablet": { src: winterTablet, width: 256, height: 182, alt: "" },
+  "winter-war-table": { src: winterWarTable, width: 384, height: 282, alt: "" },
+  "backdrop-winter": { src: backdropWinter, width: 960, height: 536, alt: "" },
+  "backdrop-winter-snow": { src: backdropWinterSnow, width: 960, height: 536, alt: "" },
 } as const satisfies Record<string, PackedArt>;

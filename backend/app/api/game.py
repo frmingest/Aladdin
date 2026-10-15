@@ -24,6 +24,7 @@ from app.domain.game_mapping.calibration_v1 import get_calibration_rules
 from app.domain.game_mapping.rituals_v1 import get_rituals
 from app.domain.game_mapping.siege_scenarios_v1 import get_siege_scenarios
 from app.domain.game_mapping.time_and_filings_v1 import get_time_and_filings
+from app.domain.game_mapping.winter_v1 import get_winter_rules
 from app.schemas.game import (
     BlindfoldCellOut,
     BlindfoldNameOut,
@@ -47,6 +48,7 @@ from app.schemas.game import (
     RecordsOut,
     SiegeBacktestOut,
     SiegeSimOut,
+    WinterRehearsalOut,
 )
 from app.services.game import blindfold as blindfold_svc
 from app.services.game import calibration as calibration_svc
@@ -75,6 +77,7 @@ from app.services.game.ritual_inputs import (
 from app.services.game.sensitivity import METHOD_DEMO, Sensitivity
 from app.services.game.siege_view import build_siege_sim, stored_sensitivity_lookup
 from app.services.game.state import get_game_state
+from app.services.game.winter_view import build_winter, demo_winter
 from app.services.settings.demo_guard import require_not_demo
 from app.services.settings.demo_mode import is_demo_mode
 
@@ -145,6 +148,23 @@ def get_siege_backtest(db: Session = Depends(get_db)) -> SiegeBacktestOut:
     state = get_game_state(db, mapping.version)
     bench, holdings = stored_backtest_inputs(db, state, scenarios)
     return build_backtest(state, bench, holdings, scenarios, rules)
+
+
+@router.get("/winter-rehearsal", response_model=WinterRehearsalOut)
+def get_winter_rehearsal(db: Session = Depends(get_db)) -> WinterRehearsalOut:
+    """E2 Winter Rehearsal: the worst fall of the book inside the stored price
+    history, replayed at today's weights (kroner and days under water). Over
+    stored data only: no provider call, no LLM, no write. Your written winter
+    order is kept in the browser and never reaches the server."""
+    settings = get_settings()
+    mapping = get_game_mapping(settings.active_game_mapping_version)
+    scenarios = get_siege_scenarios(settings.active_siege_scenarios_version)
+    rules = get_winter_rules(settings.active_winter_version)
+    if is_demo_mode(db):
+        return demo_winter(rules)
+    state = get_game_state(db, mapping.version)
+    _bench, holdings = stored_backtest_inputs(db, state, scenarios)
+    return build_winter(holdings, rules, scenarios.min_observations)
 
 
 @router.get("/chronicle", response_model=ChronicleOut)
