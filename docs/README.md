@@ -180,6 +180,7 @@ Feature and UI notes: dashboard, watchlist, thesis tracking, performance, reader
 
 Cross-cutting sprint plans and the hardening sprint.
 
+- [game-design-sprint-plan-2026-10-15.md](sprints/game-design-sprint-plan-2026-10-15.md) — Contest 3 game design sprint plan: 5 main sprints (E1-E5), 13-item bucket, Stitch asks for each (2026-10-15, proposed, not started)
 - [hardening-sprint-2026-10-12.md](sprints/hardening-sprint-2026-10-12.md) — Hardening sprint (2026-10-12)
 - [sprint15-plan-and-quarterly-review-2026-09-26.md](sprints/sprint15-plan-and-quarterly-review-2026-09-26.md) — Sprint 15 plan + economic/mathematical review + doc cleanup (2026-09-26)
 
