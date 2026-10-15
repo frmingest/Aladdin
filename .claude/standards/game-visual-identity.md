@@ -37,3 +37,15 @@ Today's look, as built on `main`:
 
 ## 5. Shared kit contract
 Owned by `game-feel-engineer`. Location: `frontend/src/components/fortress/kit/` (page scene header, parchment panel, seal badge, crest, banner, fog patch, plain-view toggle) with tokens in one file (`lib/gameTokens.ts` plus CSS variables), pure mapping in `lib/pageScene.ts` with tests. New pages compose from the kit; a missing piece is added to the kit first, not inlined.
+
+## 6. Game voice (Faiz, 2026-10-15; applies to every game page, dialog, caption, button, empty state and error)
+Game mode talks like a game, not like a methods section. Faiz on Blindfold Years: the first copy "doesn't engage me like a game should but rather a lot of text opting me to try to understand." The numbers stay exact; only the words change.
+- **Say it in one breath.** A caption is one short sentence a first-time reader gets without re-reading. Under about 12 words per sentence, everyday words, no hedges stacked in a row. If it needs a second clause to be safe, move that clause to the tooltip or "Show the rules".
+- **Verbs for the player's act, nouns from the world.** Plant your stakes, Reveal the answer, Peek at the name, Caught it, Missed. Not "Stake Year +1 owner earnings", "Show the stored figure", "Lift the mask (this weakens the exercise)". Use the existing motifs (tower, moat, raven, scroll, seal, lamp, fog) when a word is needed.
+- **Win and miss feel different, and neither scolds.** A result line names what happened in plain words ("Caught it: inside your stakes", "Missed: it landed above"). No grades, streaks or praise that the plan forbids; no lecture either.
+- **Say it with a picture first.** If the scene or a kit piece already shows it, delete the sentence (this stands with the word budgets in section 3).
+- **Short beats complete.** Put the long caveat (method, restatements, data gaps) in the rules foldout or a tooltip, never as a paragraph above the play. The truth rules still hold: unknown stays "unknown" or fog, no number is softened, "practice" pages still say so in one line.
+- **Numbers as people say them.** "3.39 bn", "caught 4 of 8", "80% sure"; not "80 times in 100", not raw digit strings, not statistical jargon (confidence interval, n of 8) on the page face.
+- **Same voice everywhere.** Reuse the same word for the same thing across pages (stakes, answer, mystery company, tally). Check the glossary before inventing a term.
+- **Plain view and normal mode** keep exact, neutral wording; the playful voice is for game mode only. Norwegian copy follows the same rules and is reviewed by Faiz (plan decision D6).
+- **Test it:** read every new string aloud. If you stumble, or a friend would ask "what does that mean?", rewrite it. Reviewers (`game-ux-designer`) score copy as part of the identity score; a page with heavy copy cannot score 3.

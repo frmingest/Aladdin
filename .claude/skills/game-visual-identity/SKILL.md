@@ -11,6 +11,7 @@ Standard: `.claude/standards/game-visual-identity.md` (ladder 0-3, anti-patterns
 3. **Write the mapping as a pure function** `fact -> {shape, size, fill, crack, fog, label}`; unknown -> fog or "?" glyph, never a default-good draw. Name the file in `lib/`.
 4. **Compose from the kit** (parchment panel, seal badge, crest, banner, frame corners). Add to the kit before inlining.
 5. **Cut words**: remove the sentence the picture now says; keep one caption line; number and source in the tooltip/detail.
+   - **Game voice** (standard section 6): write every string as a player would say it: short, plain, verbs for the player's act (Plant your stakes, Reveal the answer, Caught it). Move caveats to the rules foldout. Read each aloud before shipping.
 6. **Plain view**: same facts as labelled blocks with numbers. Colour never alone.
 7. **Budget**: static composition first; at most one looping animation on the page, none under reduced motion; no animated SVG filters.
 8. **Look-and-judge**: list the screenshots Faiz should look at (desktop, phone, plain, game vs normal) and one question each.
