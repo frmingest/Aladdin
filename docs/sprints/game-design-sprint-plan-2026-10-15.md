@@ -300,7 +300,7 @@ If D1 = no, replace E5-1 to E5-6 with six **lanterns of six different shapes** (
 
 Suggested Stitch order: E1-1 to E1-3 (needed first), then E2 ★, then E3 ★, then E4 ★, then E5 (after you rule on D1). Backdrops last, and only if the first ones look good in place.
 
-## Decisions I need from you
+## Decisions (ruled 2026-10-15: Faiz said "for all decisions, go as you recommend"; D1 to D8 all take the Recommended column)
 
 | # | Decision | Recommended |
 |---|---|---|

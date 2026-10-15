@@ -13,7 +13,7 @@ State: `main` is at `30f0cb9` (#156), which includes #155 (Map towers as sector 
 - [ ] **Review and merge the Blindfold Years PR (Faiz), then open Blindfold with Game mode on** (desktop and phone) and check how many puzzles the real data gives (the plan guessed 20 to 30; the strict rule may give fewer) and that the scene reads
 - [ ] **Once the Map towers (#155) are deployed, look at the live Map with Game mode on:** fog patches readable on each sector picture, wide pictures not too small ([doc](game/map-sector-landmarks-2026-10-14.md))
 - [ ] **After #150 is deployed (Faiz):** Refresh Margin of safety, open "Can't be ranked yet" then "Why" on Vend Marketplaces, Salmon Evolution and Vår Energi and sanity-check the owner-earnings figure (if wrong, check share count and price currency first). [Doc](valuation/loss-making-price-assumes-2026-10-14.md)
-- [ ] **Contest 3 plan (Faiz):** rule on D1 to D8 before E2 to E5 (E1 took the recommended D4 and D8); next Stitch batch is E2 (icicles, winter-order tablet, war-table) ([plan](sprints/game-design-sprint-plan-2026-10-15.md))
+- [ ] **Contest 3 plan: D1 to D8 ruled 2026-10-15 (all as recommended: lanterns and ravens, no figures; teal ribbon; browser-first state; journal note for E2; Norwegian copy by Claude, reviewed by Faiz; one backdrop per sprint; order E1 to E5).** E2 Winter Rehearsal is next but needs the E2 Stitch pictures first (icicles, winter-order tablet, war-table; none in `art/` yet) ([plan](sprints/game-design-sprint-plan-2026-10-15.md))
 - [ ] **Optional, visual:** with Game mode on, look at the World banner crop on the Siege Simulator (Claude could not judge it)
 
 ## Recent Blockers / Open Questions
