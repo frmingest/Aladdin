@@ -119,6 +119,11 @@ import mapGoldIngots from "../assets/art/map-gold-ingots.webp";
 import mapGoldMine from "../assets/art/map-gold-mine.webp";
 import mapFountainSquare from "../assets/art/map-fountain-square.webp";
 import mapQuarry from "../assets/art/map-quarry.webp";
+import blindfoldGaugePost from "../assets/art/blindfold-gauge-post.webp";
+import blindfoldStake from "../assets/art/blindfold-stake.webp";
+import blindfoldVeiledTower from "../assets/art/blindfold-veiled-tower.webp";
+import blindfoldScroll from "../assets/art/blindfold-scroll.webp";
+import backdropBlindfold from "../assets/art/backdrop-blindfold.webp";
 
 export interface PackedArt {
   src: string;
@@ -249,4 +254,9 @@ export const ART_MANIFEST = {
   "map-gold-mine": { src: mapGoldMine, width: 320, height: 309, alt: "" },
   "map-fountain-square": { src: mapFountainSquare, width: 320, height: 249, alt: "" },
   "map-quarry": { src: mapQuarry, width: 320, height: 319, alt: "" },
+  "blindfold-gauge-post": { src: blindfoldGaugePost, width: 66, height: 420, alt: "" },
+  "blindfold-stake": { src: blindfoldStake, width: 148, height: 320, alt: "" },
+  "blindfold-veiled-tower": { src: blindfoldVeiledTower, width: 202, height: 320, alt: "" },
+  "blindfold-scroll": { src: blindfoldScroll, width: 256, height: 203, alt: "" },
+  "backdrop-blindfold": { src: backdropBlindfold, width: 960, height: 536, alt: "" },
 } as const satisfies Record<string, PackedArt>;
