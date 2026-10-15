@@ -29,16 +29,16 @@ describe("BlindfoldScene", () => {
     expect(html).not.toContain(">Low<");
   });
 
-  it("names the stored figure on the water once it is known", () => {
+  it("names the answer on the water once it is known", () => {
     const before = renderToStaticMarkup(<BlindfoldScene {...base} low={80} high={140} actual={null} />);
-    expect(before).not.toContain("Stored figure");
+    expect(before).not.toContain("Answer ");
     const after = renderToStaticMarkup(<BlindfoldScene {...base} low={80} high={140} actual={150} />);
-    expect(after).toContain("Stored figure 150");
+    expect(after).toContain("Answer 150");
   });
 
   it("keeps a stored figure far outside the gauge on the gauge", () => {
     const html = renderToStaticMarkup(<BlindfoldScene {...base} low={80} high={140} actual={99999} />);
-    expect(html).toContain("Stored figure 99,999");
+    expect(html).toContain("Answer 99,999");
     expect(html).not.toContain("NaN");
   });
 });

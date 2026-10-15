@@ -79,27 +79,27 @@ export function tallyByWidth(results: BlindfoldResult[], minN: number): Record<B
   return out;
 }
 
-export function tallyLine(t: Tally, minN: number, confidencePct: number): string {
+export function tallyLine(t: Tally, minN: number): string {
   if (!t.open) {
-    return `Too few so far: ${t.n} ${t.n === 1 ? "puzzle" : "puzzles"} answered. A count opens at ${minN}.`;
+    return `Keep going: ${t.n} answered. Your tally opens at ${minN}.`;
   }
-  return `Your ${confidencePct}% ranges held ${t.inside} of ${t.n}.`;
+  return `Your stakes caught it ${t.inside} of ${t.n} times.`;
 }
 
 export const WIDTH_LABEL: Record<BlindfoldWidthClass, string> = {
-  narrow: "Narrow ranges",
-  medium: "Medium ranges",
-  wide: "Wide ranges",
+  narrow: "Narrow stakes",
+  medium: "Medium stakes",
+  wide: "Wide stakes",
 };
 
 export function widthLine(w: BlindfoldWidthClass, t: Tally, minN: number): string {
-  return t.open ? `${WIDTH_LABEL[w]}: held ${t.inside} of ${t.n}` : `${WIDTH_LABEL[w]}: too few so far (${t.n}, opens at ${minN})`;
+  return t.open ? `${WIDTH_LABEL[w]}: caught ${t.inside} of ${t.n}` : `${WIDTH_LABEL[w]}: not enough yet (${t.n} of ${minN})`;
 }
 
 export const POSITION_WORD: Record<BlindfoldPosition, string> = {
-  below: "Below your range",
-  inside: "Inside your range",
-  above: "Above your range",
+  below: "Missed: it landed below your stakes",
+  inside: "Caught it: inside your stakes",
+  above: "Missed: it landed above your stakes",
 };
 
 // --- numbers --------------------------------------------------------------------

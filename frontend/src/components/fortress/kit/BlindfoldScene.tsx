@@ -126,7 +126,7 @@ export default function BlindfoldScene({
           <g>
             <line x1="0" x2={SCENE_W} y1={waterY} y2={waterY} stroke="#26253b" strokeWidth="1.5" strokeDasharray="2 3" />
             <text x="8" y={waterY - 6} fontSize="12" fontWeight="600" fill="#26253b" {...HALO}>
-              Stored figure {formatFigure(String(actual), "money")}
+              Answer {formatFigure(String(actual), "money")}
             </text>
           </g>
         )}

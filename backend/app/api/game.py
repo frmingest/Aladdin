@@ -251,12 +251,10 @@ def get_calibration(db: Session = Depends(get_db)) -> CalibrationOut:
 
 
 BLINDFOLD_CAPTION = (
-    "Practice, not measurement: a number can still give a company away. "
-    "It changes no verdict and no tower, and nothing you stake reaches the analysis."
+    "Just for practice. Nothing you guess changes any verdict or tower."
 )
 BLINDFOLD_NOTE = (
-    "The stored figure is the one on file today, from the latest filing for that year, "
-    "so it may include later restatements."
+    "Taken from the newest filing on file, so numbers may be restated."
 )
 
 
@@ -270,7 +268,7 @@ def get_blindfold(seen: list[str] = Query(default=[]), db: Session = Depends(get
             "caption": BLINDFOLD_CAPTION}
     if is_demo_mode(db):
         return BlindfoldOut(demo=True, pool_size=0, remaining=0,
-                            empty_reason="Demo mode shows no real filings, so there is nothing to roll back.", **base)
+                            empty_reason="Demo mode has no real filings, so there is nothing to guess.", **base)
     holdings = blindfold_svc.load_holdings(db)
     by_id = {h.id: h for h in holdings}
     pool = blindfold_svc.build_pool(holdings, rules)
@@ -278,8 +276,8 @@ def get_blindfold(seen: list[str] = Query(default=[]), db: Session = Depends(get
     unseen = [pid for pid in pool if pid not in answered]
     if not unseen:
         reason = (
-            "No puzzles yet: a holding needs four complete years of filings plus the year after."
-            if not pool else "You have been through every puzzle on file. New ones appear when more years are filed."
+            "No puzzles yet. A company needs four full years on file, plus the year after."
+            if not pool else "You have cleared every puzzle on file. New ones appear as more years are filed."
         )
         return BlindfoldOut(demo=False, pool_size=len(pool), remaining=0, empty_reason=reason, **base)
     holding_id, year = blindfold_svc.parse_puzzle_id(unseen[0])

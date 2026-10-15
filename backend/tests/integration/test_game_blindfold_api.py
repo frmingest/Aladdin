@@ -70,7 +70,7 @@ def test_reveal_returns_the_stored_figure_and_lifts_the_mask(client, db_session)
     inside = client.get("/game/blindfold/reveal", params={"puzzle_id": pid, "low": str(expected - 1), "high": str(expected + 1)}).json()
     assert D(inside["actual"]) == expected and inside["inside"] is True and inside["position"] == "inside"
     assert inside["name"] == "Secret Co" and inside["ticker"] == "SECR.OL"
-    assert inside["source_file"] == "SECR.OL-annual.pdf" and "restatement" in inside["note"]
+    assert inside["source_file"] == "SECR.OL-annual.pdf" and "restated" in inside["note"]
     above = client.get("/game/blindfold/reveal", params={"puzzle_id": pid, "low": str(expected - 20), "high": str(expected - 10)}).json()
     assert above["inside"] is False and above["position"] == "above"
 
