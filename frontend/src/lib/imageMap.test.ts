@@ -190,10 +190,11 @@ describe("the names and pictures fit their regions", () => {
 });
 
 describe("imageMapEnabled", () => {
-  it("is only on for ?map=image", () => {
+  it("is on by default and off only for ?map=classic", () => {
+    expect(imageMapEnabled("")).toBe(true);
     expect(imageMapEnabled("?map=image")).toBe(true);
-    expect(imageMapEnabled("?tab=map&map=image")).toBe(true);
-    expect(imageMapEnabled("")).toBe(false);
-    expect(imageMapEnabled("?map=old")).toBe(false);
+    expect(imageMapEnabled("?tab=map")).toBe(true);
+    expect(imageMapEnabled("?map=classic")).toBe(false);
+    expect(imageMapEnabled("?tab=map&map=classic")).toBe(false);
   });
 });

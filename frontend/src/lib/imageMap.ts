@@ -246,7 +246,7 @@ export function placeImageRealm(items: readonly PlaceInput[], nullName: string =
   return { settlements: items.map((i) => byInput.get(i.id)).filter((s): s is Settlement => !!s), provinces, keep: KEEP_AT, roads: [], mountains: [], forests: [], hills: [], rivers: [] };
 }
 
-/** The prototype switch: `?map=image` on the Map tab's address. */
+/** The painted map is the default; `?map=classic` on the Map tab's address brings the old drawn one back. */
 export function imageMapEnabled(search: string): boolean {
-  return new URLSearchParams(search).get("map") === "image";
+  return new URLSearchParams(search).get("map") !== "classic";
 }
