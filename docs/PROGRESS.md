@@ -1,6 +1,6 @@
 # Aladdin — Progress
 
-**Last updated:** 2026-10-14 (loss-making view, unused-endpoint removal, mypy job and sector landmarks merged; Map towers as sector pictures written, PR open). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
+**Last updated:** 2026-10-15 (Contest 3 game design sprint plan added, proposed; loss-making view, unused-endpoint removal, mypy job and sector landmarks merged; Map towers as sector pictures written, PR open). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
 
 ## Current Objective
 
@@ -12,6 +12,7 @@ State: `main` is at `acc1718` (#154); #150, #151 and #152 are merged there (seen
 
 - [ ] **Review and merge the Map sector-towers PR (Faiz), then look at the live Map with Game mode on** (desktop and phone): fog patches still readable on each picture, wide pictures not too small. Only checked on a schematic render of the real sectors, not in the app. Steps in the [doc](game/map-sector-landmarks-2026-10-14.md)
 - [ ] **After #150 is deployed (Faiz):** Refresh Margin of safety, open "Can't be ranked yet" then "Why" on Vend Marketplaces, Salmon Evolution and Vår Energi and sanity-check the owner-earnings figure (if wrong, check share count and price currency first). [Doc](valuation/loss-making-price-assumes-2026-10-14.md)
+- [ ] **Game design Contest 3 plan (Faiz):** rule on decisions D1 to D8 and start the Stitch pictures for E1 (gauge post, flood stake, veiled tower); nothing is built yet ([plan](sprints/game-design-sprint-plan-2026-10-15.md))
 - [ ] **Optional, visual:** with Game mode on, look at the World banner crop on the Siege Simulator (Claude could not judge it)
 
 ## Recent Blockers / Open Questions
