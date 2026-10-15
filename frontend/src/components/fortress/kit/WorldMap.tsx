@@ -2,6 +2,8 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import { TOWER_BOX, fogSlots, towerAriaLabel } from "../../../lib/realmMap";
 import type { MapFlag } from "../../../lib/realmMap";
 import { compassRect, hillArtId, hillRect, mountainArtId, mountainRect, holdingArtId, placeLandmarks, placeMapKeep, placeSettlementArt, pineRect, serpentRect, shipRect, type ArtRect, type SettlementKind } from "../../../lib/mapArt";
+import baseUrl from "../../../assets/map/map-base.webp";
+import { IMAGE_RECT, placeImageRealm } from "../../../lib/imageMap";
 import { weightText } from "../../../lib/rituals";
 import { getObjectArt, useArtMode } from "../../../lib/stitchArt";
 import type { TowerFog } from "../../../lib/survey";
@@ -246,6 +248,8 @@ export interface WorldMapProps {
   flags: Map<string, MapFlag>;
   /** holding id -> what it is (structure, size class), to choose its picture when art is on. */
   kinds?: Record<string, SettlementKind>;
+  /** Prototype: draw on the painted picture (assets/map/map-base.webp) instead of the generated land. Off by default. */
+  imageMap?: boolean;
   onSelect: (id: string) => void;
   onEscape: () => void;
 }
@@ -253,7 +257,7 @@ export interface WorldMapProps {
 const weightOf = (t: TowerFog) => weightText(t.weightPct === null ? null : String(t.weightPct));
 const SPRITE_BASE_Y = TOWER_BOX.y + TOWER_BOX.h;
 
-export default function WorldMap({ towers, sectors, sectorsKnown, hatchId, selectedId, flags, kinds = {}, onSelect, onEscape }: WorldMapProps) {
+export default function WorldMap({ towers, sectors, sectorsKnown, hatchId, selectedId, flags, kinds = {}, imageMap = false, onSelect, onEscape }: WorldMapProps) {
   const uid = useId().replace(/:/g, "");
   const hatchProv = `wm-hatch-${uid}`;
   const boxRef = useRef<HTMLDivElement | null>(null);
@@ -286,7 +290,7 @@ export default function WorldMap({ towers, sectors, sectorsKnown, hatchId, selec
 
   const world = useMemo(() => buildWorld(), []);
   const items = useMemo<PlaceInput[]>(() => towers.map((t) => ({ id: t.holdingId, weightPct: t.weightPct, sector: sectors[t.holdingId] ?? null })), [towers, sectors]);
-  const realm = useMemo(() => placeRealm(items, sectorsKnown ? undefined : "Sector unknown"), [items, sectorsKnown]);
+  const realm = useMemo(() => (imageMap ? placeImageRealm(items, sectorsKnown ? undefined : "Sector unknown") : placeRealm(items, sectorsKnown ? undefined : "Sector unknown")), [items, sectorsKnown, imageMap]);
   const towerById = useMemo(() => new Map(towers.map((t) => [t.holdingId, t])), [towers]);
   const placed = useMemo(() => realm.settlements.map((s) => ({ s, t: towerById.get(s.id) as TowerFog })).filter((x) => x.t), [realm, towerById]);
   // Port, island sanctuary and island palms: scenery only (no name, no button, no fog), drawn in art mode.
@@ -427,7 +431,7 @@ export default function WorldMap({ towers, sectors, sectorsKnown, hatchId, selec
   });
   const labels = chooseLabels(labelItems, pinned, cw, ch, 4);
 
-  const keepSp = toScreen(CAPITAL, view, cw, ch);
+  const keepSp = toScreen(realm.keep, view, cw, ch);
   const keepFlag = flags.get("keep");
   const motion = !reduce && running;
   /** The settlement's picture, or undefined for the SVG tower: art off, nothing known to pick one from, or a failed load. */
@@ -437,7 +441,10 @@ export default function WorldMap({ towers, sectors, sectorsKnown, hatchId, selec
     const artId = holdingArtId(sectors[id], id, kinds[id]);
     return artId && art.ok(artId) ? <ArtImage r={placeSettlementArt(artId)} onFail={art.fail} /> : undefined;
   };
-  const keepArt = art.ok("keep-granite") ? placeMapKeep(CAPITAL) : null;
+  // On the picture the Keep stands on a small island, so it is drawn smaller.
+  const keepK = imageMap ? 0.62 : 1;
+  const keepFull = art.ok("keep-granite") ? placeMapKeep(realm.keep) : null;
+  const keepArt = keepFull ? { ...keepFull, x: realm.keep.x - (keepFull.width * keepK) / 2, y: realm.keep.y + 6 - keepFull.height * keepK, width: keepFull.width * keepK, height: keepFull.height * keepK } : null;
 
   useEffect(() => {
     const svg = svgRef.current as (SVGSVGElement & { pauseAnimations?: () => void; unpauseAnimations?: () => void }) | null;
@@ -480,23 +487,33 @@ export default function WorldMap({ towers, sectors, sectorsKnown, hatchId, selec
               <stop offset="1" stopColor="#000" stopOpacity="0" />
             </radialGradient>
           </defs>
-          <rect x="-1500" y="-1500" width="4000" height="3720" fill={`url(#wm-sea-${uid})`} />
-          <g className="wm-drift wm-drift-a"><rect x="-1500" y="-1500" width="4046" height="3744" fill={`url(#wm-wave-${uid})`} /></g>
-          {[11, 20, 29].map((k) => (
-            <path key={k} d={world.landPath} fill="none" stroke="#9fd6f0" strokeOpacity={0.34 - k * 0.008} strokeWidth={k * 2} strokeLinejoin="round" />
-          ))}
-          {world.islands.flatMap((i, n) => [9, 17].map((k) => <path key={`${n}-${k}`} d={i.path} fill="none" stroke="#9fd6f0" strokeOpacity={0.3 - k * 0.008} strokeWidth={k * 2} strokeLinejoin="round" />))}
-          <g className="wm-drift wm-drift-b">
-            {world.waves.map((p, k) => (
-              <path key={k} d={`M${p.x} ${p.y} q4 -4 8 0 t8 0 t8 0`} fill="none" stroke="#d6eefb" strokeOpacity="0.5" strokeWidth="1.2" strokeLinecap="round" />
+          {imageMap ? (
+            <>
+              <rect x="-1500" y="-1500" width="4000" height="3720" fill="#d6bf9b" />
+              <image href={baseUrl} x={IMAGE_RECT.x} y={IMAGE_RECT.y} width={IMAGE_RECT.width} height={IMAGE_RECT.height} preserveAspectRatio="none" aria-hidden />
+              {realm.provinces.map((p) => !p.unsorted && <path key={p.index} d={p.path} fill={PROVINCE_TINT[p.index % PROVINCE_TINT.length]} fillOpacity="0.16" />)}
+            </>
+          ) : (
+            <>
+            <rect x="-1500" y="-1500" width="4000" height="3720" fill={`url(#wm-sea-${uid})`} />
+            <g className="wm-drift wm-drift-a"><rect x="-1500" y="-1500" width="4046" height="3744" fill={`url(#wm-wave-${uid})`} /></g>
+            {[11, 20, 29].map((k) => (
+              <path key={k} d={world.landPath} fill="none" stroke="#9fd6f0" strokeOpacity={0.34 - k * 0.008} strokeWidth={k * 2} strokeLinejoin="round" />
             ))}
-          </g>
-          <Compass at={world.compass} art={art} />
-          <Serpent at={world.serpent} art={art} />
-          <Scenery world={world} realm={realm} hatchProv={hatchProv} art={art} />
-          {landmarks.palms.map((r, k) => art.ok(r.id) && <ArtImage key={k} r={r} onFail={art.fail} />)}
-          {landmarks.island && art.ok(landmarks.island.id) && <ArtImage r={landmarks.island} onFail={art.fail} />}
-          {landmarks.port && art.ok(landmarks.port.id) && <ArtImage r={landmarks.port} onFail={art.fail} />}
+            {world.islands.flatMap((i, n) => [9, 17].map((k) => <path key={`${n}-${k}`} d={i.path} fill="none" stroke="#9fd6f0" strokeOpacity={0.3 - k * 0.008} strokeWidth={k * 2} strokeLinejoin="round" />))}
+            <g className="wm-drift wm-drift-b">
+              {world.waves.map((p, k) => (
+                <path key={k} d={`M${p.x} ${p.y} q4 -4 8 0 t8 0 t8 0`} fill="none" stroke="#d6eefb" strokeOpacity="0.5" strokeWidth="1.2" strokeLinecap="round" />
+              ))}
+            </g>
+            <Compass at={world.compass} art={art} />
+            <Serpent at={world.serpent} art={art} />
+            <Scenery world={world} realm={realm} hatchProv={hatchProv} art={art} />
+            {landmarks.palms.map((r, k) => art.ok(r.id) && <ArtImage key={k} r={r} onFail={art.fail} />)}
+            {landmarks.island && art.ok(landmarks.island.id) && <ArtImage r={landmarks.island} onFail={art.fail} />}
+            {landmarks.port && art.ok(landmarks.port.id) && <ArtImage r={landmarks.port} onFail={art.fail} />}
+            </>
+          )}
           {realm.provinces.map((p) => {
             const lines = provinceLines(p.name);
             const fs = p.labelFs;
@@ -508,7 +525,7 @@ export default function WorldMap({ towers, sectors, sectorsKnown, hatchId, selec
               </text>
             );
           })}
-          <rect x="-1500" y="-1500" width="4000" height="3720" fill={`url(#wm-glow-${uid})`} pointerEvents="none" />
+          {!imageMap && <rect x="-1500" y="-1500" width="4000" height="3720" fill={`url(#wm-glow-${uid})`} pointerEvents="none" />}
           {placed.map(({ s: st, t }) => (
             <g key={st.id} transform={`translate(${st.x} ${st.y})`}>
               <ellipse cx="0" cy="2" rx={44 * st.scale * 1.5} ry={9 * st.scale * 1.5} fill="#2b2118" fillOpacity="0.4" />
@@ -519,20 +536,20 @@ export default function WorldMap({ towers, sectors, sectorsKnown, hatchId, selec
           ))}
           {keepArt ? (
             <g>
-              <ellipse cx={CAPITAL.x} cy={CAPITAL.y + 5} rx={38} ry={9} fill="#2b2118" fillOpacity="0.35" />
+              <ellipse cx={realm.keep.x} cy={realm.keep.y + 5} rx={38 * keepK} ry={9 * keepK} fill="#2b2118" fillOpacity="0.35" />
               <ArtImage r={keepArt} onFail={art.fail} />
             </g>
           ) : (
-            <Keep at={CAPITAL} />
+            <Keep at={realm.keep} />
           )}
-          {motion &&
+          {!imageMap && motion &&
             world.shipLoops.map((d, k) => (
               <g key={k}>
                 <Ship art={art} />
                 <animateMotion dur={`${90 + k * 40}s`} repeatCount="indefinite" path={d} begin={`-${k * 31}s`} />
               </g>
             ))}
-          {!motion &&
+          {!imageMap && !motion &&
             world.shipLoops.map((_, k) => {
               const p = world.coast[(k * 41 + 9) % world.coast.length];
               const x = Math.min(985, Math.max(15, CAPITAL.x + (p.x - CAPITAL.x) * (1.12 + k * 0.08)));
@@ -592,7 +609,7 @@ export default function WorldMap({ towers, sectors, sectorsKnown, hatchId, selec
             <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden focusable="false"><path d="M3 9 L10 3 L17 9 V17 H12 V12 H8 V17 H3 Z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" /></svg>
           </button>
         </div>
-        <MapFrame art={art} />
+        {!imageMap && <MapFrame art={art} />}
       </div>
       <div className="wm-foot">
       <ul className="wm-legend" aria-label="Provinces">
