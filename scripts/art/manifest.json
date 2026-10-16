@@ -1089,41 +1089,6 @@
    "source": "a_single_standalone_fantasy_game_structure_asset_a_stepped_stone_quarry_with_a",
    "max_side": 320,
    "quality": 78
-  },
-  {
-   "id": "blindfold-gauge-post",
-   "source": "a_single_standalone_fantasy_game_surveyor_prop_asset_a_tall_upright_wooden",
-   "key": "white",
-   "max_side": 420,
-   "quality": 80
-  },
-  {
-   "id": "blindfold-stake",
-   "source": "a_single_standalone_fantasy_game_environmental_waymarker_prop_asset_one_short",
-   "key": "white",
-   "max_side": 320,
-   "quality": 80
-  },
-  {
-   "id": "blindfold-veiled-tower",
-   "source": "a_single_standalone_fantasy_game_structure_prop_asset_a_small_round_stone_tower",
-   "key": "white",
-   "max_side": 320,
-   "quality": 80
-  },
-  {
-   "id": "blindfold-scroll",
-   "source": "a_single_standalone_fantasy_game_prop_asset_a_closed_parchment_scroll_tied_with",
-   "key": "white",
-   "max_side": 256,
-   "quality": 80
-  },
-  {
-   "id": "backdrop-blindfold",
-   "source": "a_wide_quiet_river_bank_panoramic_landscape_backdrop_at_dawn_for_a_fantasy_game",
-   "key": "none",
-   "max_side": 960,
-   "quality": 74
   }
  ]
 }

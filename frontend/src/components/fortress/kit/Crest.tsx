@@ -57,14 +57,6 @@ function Glyph({ kind }: { kind: CrestKind }) {
           <path d="M22 13 h9 v18 h-9 Z M22 17 h3 M28 17 h3" fill="#f2d27a" fillOpacity="0.2" />
         </g>
       );
-    case "blindfold":
-      return (
-        <g {...ink}>
-          <path d="M20 9 v24" />
-          <path d="M14 14 h12 M14 21 h12 M14 28 h12" />
-          <path d="M8 33 q4 -3 8 0 t8 0 t8 0" />
-        </g>
-      );
     case "market":
       return (
         <g {...ink}>

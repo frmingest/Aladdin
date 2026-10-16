@@ -55,7 +55,6 @@ export const FORTRESS_NAV: NavItem[] = [
   { label: "Records", to: "/fortress/records" },
   { label: "Circle", to: "/fortress/circle" },
   { label: "Map", to: "/fortress/map" },
-  { label: "Blindfold", to: "/fortress/blindfold" },
 ];
 
 /** What the sidebar lists without opening "More". */
