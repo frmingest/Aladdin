@@ -1,5 +1,7 @@
 # Game design sprint plan: Contest 3 (2026-10-15)
 
+> **2026-10-16:** E1 Blindfold Years, E2 Winter Rehearsal and E3 The Hearth were built, then removed at Faiz's request. Their sections below are kept as a record only; do not build from them without a new ruling.
+
 Status: **proposed, not started. Nothing in this plan is built, committed or deployed.** It comes from a four-expert design contest run on 2026-10-15 (progression, narrative, core mechanics, UX and game feel), judged by Claude. The experts worked from the Claude project docs only; none of them verified the repo. Every "already shipped" and "not shipped" claim below comes from those docs. **First step of every sprint: `git status`, `git log --oneline -15`, and `grep`/`find` for the files a sprint claims to build on** (this plan was written against `main` at `872029b`, #155, on 2026-10-15; `E:\Aladdin` can be stale, so `git pull` first).
 
 Related: [design-master-sprint-plan-2026-10-11.md](../game/design-master-sprint-plan-2026-10-11.md) (art pipeline, closed), [stitch-master-object-art-2026-10-11.md](../game/stitch-master-object-art-2026-10-11.md) (style, rules, shared prompt block), `game-design-contest-2026-10-09.md` (contest 1 and 2 pitches; Claude project doc only, not in `docs/`), game-visual-identity standard.
