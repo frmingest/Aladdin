@@ -129,6 +129,10 @@ import winterTablet from "../assets/art/winter-tablet.webp";
 import winterWarTable from "../assets/art/winter-war-table.webp";
 import backdropWinter from "../assets/art/backdrop-winter.webp";
 import backdropWinterSnow from "../assets/art/backdrop-winter-snow.webp";
+import hearthDoor from "../assets/art/hearth-door.webp";
+import hearthFireplace from "../assets/art/hearth-fireplace.webp";
+import hearthLog from "../assets/art/hearth-log.webp";
+import hearthShutters from "../assets/art/hearth-shutters.webp";
 
 export interface PackedArt {
   src: string;
@@ -269,4 +273,8 @@ export const ART_MANIFEST = {
   "winter-war-table": { src: winterWarTable, width: 384, height: 282, alt: "" },
   "backdrop-winter": { src: backdropWinter, width: 960, height: 536, alt: "" },
   "backdrop-winter-snow": { src: backdropWinterSnow, width: 960, height: 536, alt: "" },
+  "hearth-door": { src: hearthDoor, width: 222, height: 256, alt: "" },
+  "hearth-fireplace": { src: hearthFireplace, width: 384, height: 291, alt: "" },
+  "hearth-log": { src: hearthLog, width: 160, height: 117, alt: "" },
+  "hearth-shutters": { src: hearthShutters, width: 225, height: 256, alt: "" },
 } as const satisfies Record<string, PackedArt>;

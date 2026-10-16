@@ -24,8 +24,8 @@ import WinterScene from "../components/fortress/kit/WinterScene";
 
 /** Winter Rehearsal (game mode E2): in calm weather, write your own winter order, then walk down the worst
  * real fall on file, replayed at today's holdings. At the bottom the page shows only your own words and the
- * numbers. No score, no outcome, no advice. The server computes every figure; your order stays in this
- * browser and reaches no analysis. */
+ * numbers. No score, no outcome, no advice. The server computes every figure; your order is kept on the server
+ * (with a copy in this browser) and reaches no analysis. */
 
 function storage(): Storage | null {
   try {
@@ -60,7 +60,7 @@ export function OrderEditor({ saved, onSave }: { saved: string; onSave: (text: s
         aria-describedby="winter-order-hint"
       />
       <p id="winter-order-hint" className="text-xs text-ink-faint">
-        One line. Kept only in this browser.
+        One line. Kept here, and shown again in the Hearth.
       </p>
       <div className="flex flex-wrap items-center gap-3">
         <Button type="submit" disabled={!dirty}>
@@ -195,6 +195,31 @@ export default function WinterRehearsalPage() {
     };
   }, [attempt]);
 
+  // The server copy is the one the Hearth shows. If it has none yet but this browser does (an order written
+  // before E3), it is sent up once. If the server cannot be reached the browser copy simply stays.
+  useEffect(() => {
+    let live = true;
+    api
+      .getWinterOrder()
+      .then((o) => {
+        if (!live) return;
+        if (o.text) setOrder(saveOrder(storage(), o.text));
+        else {
+          const local = loadOrder(storage());
+          if (local) api.saveWinterOrder(local).catch(() => undefined);
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  const keepOrder = (text: string) => {
+    setOrder(saveOrder(storage(), text));
+    api.saveWinterOrder(cleanOrder(text)).catch(() => undefined);
+  };
+
   const points = useMemo(() => data?.window?.points ?? [], [data]);
   const scene = useMemo(() => sceneState(points, index), [points, index]);
   const point = points.length ? points[Math.min(Math.max(index, 0), points.length - 1)] : null;
@@ -220,7 +245,7 @@ export default function WinterRehearsalPage() {
 
           <Panel>
             <h2 className="section-title">Your winter order</h2>
-            <OrderEditor saved={order} onSave={(text) => setOrder(saveOrder(storage(), text))} />
+            <OrderEditor saved={order} onSave={keepOrder} />
           </Panel>
 
           {data.status !== "ok" && (

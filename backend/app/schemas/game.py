@@ -816,3 +816,74 @@ class WinterRehearsalOut(BaseModel):
     window: WinterWindowOut | None = None
     notes: list[str] = []
     caption: str
+
+
+# --- E3 The Hearth (2026-10-16) ---
+
+
+class WinterOrderIn(BaseModel):
+    text: str = Field(max_length=200)
+
+
+class WinterOrderOut(BaseModel):
+    text: str | None = None
+    made_at: datetime | None = None
+
+
+class HearthLineOut(BaseModel):
+    """One line on a shelf. `holding_id` is None for book-wide lines (weather)."""
+
+    holding_id: UUID | None = None
+    name: str | None = None
+    text: str
+    day: date | None = None
+
+
+class HearthTripwireOut(BaseModel):
+    metric: str
+    label: str | None = None
+    operator: str
+    threshold: Decimal
+    current_value: Decimal | None = None
+    unavailable_reason: str | None = None
+    firing: bool = False
+
+
+class HearthInvalidationOut(BaseModel):
+    """Your own invalidation line, verbatim, beside the live numbers of the
+    tripwires set on that holding. The line is free text, so it is never
+    parsed into a metric: only tripwires you set are read."""
+
+    holding_id: UUID
+    name: str
+    entry_id: UUID
+    decided_on: date
+    line: str
+    tripwires: list[HearthTripwireOut] = []
+
+
+class HearthRecordOut(BaseModel):
+    status: Literal["ok", "no_winter", "no_history", "demo"]
+    text: str
+    worst_fall: Decimal | None = None
+    fall_nok: Decimal | None = None
+    days_under_water: int | None = None
+
+
+class HearthOut(BaseModel):
+    version: str
+    demo: bool = False
+    # open: bad weather on the newest stored frame. shut: calm, or nothing stored.
+    state: Literal["open", "shut"]
+    state_reason: str
+    weather: SiegeLevel | None = None
+    as_of: date | None = None
+    look_back_from: date | None = None
+    moved: list[HearthLineOut] = []
+    held: list[HearthLineOut] = []
+    changed: list[HearthLineOut] = []
+    invalidations: list[HearthInvalidationOut] = []
+    order: WinterOrderOut = WinterOrderOut()
+    record: HearthRecordOut | None = None
+    gaps: list[str] = []
+    notes: list[str] = []

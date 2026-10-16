@@ -2905,3 +2905,62 @@ export interface WinterRehearsal {
   notes: string[];
   caption: string;
 }
+
+// E3 The Hearth (2026-10-16). Decimals arrive as strings. Lines are plain sentences written by the server
+// from the Chronicle's own diffs; your invalidation lines are your own words, verbatim.
+export interface HearthLine {
+  holding_id: string | null;
+  name: string | null;
+  text: string;
+  day: string | null;
+}
+
+export interface HearthTripwire {
+  metric: string;
+  label: string | null;
+  operator: string;
+  threshold: string;
+  current_value: string | null;
+  unavailable_reason: string | null;
+  firing: boolean;
+}
+
+export interface HearthInvalidation {
+  holding_id: string;
+  name: string;
+  entry_id: string;
+  decided_on: string;
+  line: string;
+  tripwires: HearthTripwire[];
+}
+
+export interface HearthRecord {
+  status: "ok" | "no_winter" | "no_history" | "demo";
+  text: string;
+  worst_fall: string | null;
+  fall_nok: string | null;
+  days_under_water: number | null;
+}
+
+export interface WinterOrder {
+  text: string | null;
+  made_at: string | null;
+}
+
+export interface Hearth {
+  version: string;
+  demo: boolean;
+  state: "open" | "shut";
+  state_reason: string;
+  weather: "calm" | "gathering" | "besieged" | "unsurveyed" | null;
+  as_of: string | null;
+  look_back_from: string | null;
+  moved: HearthLine[];
+  held: HearthLine[];
+  changed: HearthLine[];
+  invalidations: HearthInvalidation[];
+  order: WinterOrder;
+  record: HearthRecord | null;
+  gaps: string[];
+  notes: string[];
+}

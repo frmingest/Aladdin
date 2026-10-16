@@ -21,6 +21,7 @@ from app.domain.game_mapping import get_game_mapping
 from app.domain.game_mapping.backtest_v1 import get_backtest_rules
 from app.domain.game_mapping.blindfold_v1 import get_blindfold_rules
 from app.domain.game_mapping.calibration_v1 import get_calibration_rules
+from app.domain.game_mapping.hearth_v1 import get_hearth_rules
 from app.domain.game_mapping.rituals_v1 import get_rituals
 from app.domain.game_mapping.siege_scenarios_v1 import get_siege_scenarios
 from app.domain.game_mapping.time_and_filings_v1 import get_time_and_filings
@@ -42,12 +43,15 @@ from app.schemas.game import (
     CompetenceOut,
     CouncilOut,
     GameStateOut,
+    HearthOut,
     HoldingAdvisorsOut,
     NightWatchOut,
     RavensOut,
     RecordsOut,
     SiegeBacktestOut,
     SiegeSimOut,
+    WinterOrderIn,
+    WinterOrderOut,
     WinterRehearsalOut,
 )
 from app.services.game import blindfold as blindfold_svc
@@ -66,6 +70,12 @@ from app.services.game.demo import (
     demo_game_state,
     demo_night_watch,
     demo_ravens,
+)
+from app.services.game.hearth import compose_hearth
+from app.services.game.hearth_view import (
+    current_order,
+    invalidation_lines,
+    save_winter_order,
 )
 from app.services.game.night_watch import get_night_watch
 from app.services.game.ravens import build_ravens
@@ -165,6 +175,40 @@ def get_winter_rehearsal(db: Session = Depends(get_db)) -> WinterRehearsalOut:
     state = get_game_state(db, mapping.version)
     _bench, holdings = stored_backtest_inputs(db, state, scenarios)
     return build_winter(holdings, rules, scenarios.min_observations)
+
+
+@router.get("/hearth", response_model=HearthOut)
+def get_hearth(db: Session = Depends(get_db)) -> HearthOut:
+    """E3 The Hearth: when the stored weather is bad, what moved, held and
+    changed, beside your own invalidation lines and winter order. Stored data
+    only: no provider call, no LLM, no write."""
+    settings = get_settings()
+    rules = get_hearth_rules(settings.active_hearth_version)
+    winter_rules = get_winter_rules(settings.active_winter_version)
+    rules_v = get_time_and_filings(settings.active_time_and_filings_version)
+    if is_demo_mode(db):
+        chron = demo_chronicle(settings.active_game_mapping_version, rules_v)
+        return compose_hearth(chron, [], WinterOrderOut(), demo_winter(winter_rules), rules, demo=True)
+    mapping = get_game_mapping(settings.active_game_mapping_version)
+    scenarios = get_siege_scenarios(settings.active_siege_scenarios_version)
+    chron = get_chronicle(db, mapping, rules_v)
+    state = get_game_state(db, mapping.version)
+    _bench, holdings = stored_backtest_inputs(db, state, scenarios)
+    winter = build_winter(holdings, winter_rules, scenarios.min_observations)
+    return compose_hearth(chron, invalidation_lines(db, chron), current_order(db), winter, rules)
+
+
+@router.get("/winter-order", response_model=WinterOrderOut)
+def get_winter_order(db: Session = Depends(get_db)) -> WinterOrderOut:
+    """E3: your written winter order (newest saved), or empty."""
+    return WinterOrderOut() if is_demo_mode(db) else current_order(db)
+
+
+@router.put("/winter-order", response_model=WinterOrderOut)
+def put_winter_order(body: WinterOrderIn, db: Session = Depends(get_db)) -> WinterOrderOut:
+    """E3: save your winter order. Appends one row; an empty text clears it."""
+    require_not_demo(db)
+    return save_winter_order(db, body.text)
 
 
 @router.get("/chronicle", response_model=ChronicleOut)
