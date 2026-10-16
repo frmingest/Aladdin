@@ -47,7 +47,7 @@ describe("OrderEditor", () => {
     const html = renderToStaticMarkup(<OrderEditor saved="" onSave={() => {}} />);
     expect(html).toContain("If the market falls hard, I will first check");
     expect(html).toContain('maxLength="200"');
-    expect(html).toContain("Kept only in this browser");
+    expect(html).toContain("Kept here, and shown again in the Hearth");
     expect(html).toContain("Save my order");
     expect(html).not.toContain("Clear my order");
   });

@@ -257,6 +257,8 @@ class Settings(BaseSettings):
     # Winter Rehearsal (E2): the worst stored fall of the book at today's weights. The "no real
     # winter" line lives in app/domain/game_mapping/winter_v1.py.
     active_winter_version: str = "v1"
+    # E3 Hearth: when the room opens and how far back it looks.
+    active_hearth_version: str = "v1"
     # The worker stores daily price history for every holding, the benchmark and the FX pairs
     # the Siege Simulator (v2) measures betas from. Cheap when the stored history is fresh.
     siege_history_refresh_enabled: bool = True

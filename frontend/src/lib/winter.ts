@@ -3,7 +3,7 @@ import type { WinterPoint, WinterRehearsal } from "./types";
 /** Pure helpers for Winter Rehearsal (E2): the winter order kept in this browser, and the mapping from a
  * point in the replay to what the war-table scene draws. The server computes every figure (kroner, fall,
  * days under water); nothing here does financial arithmetic beyond picking a point and a share of the
- * way down. Your order is never sent anywhere: it lives in this browser and reaches no analysis. */
+ * way down. Your order is kept on the server (E3) with a copy in this browser, and reaches no analysis. */
 
 export const WINTER_STORAGE_KEY = "aladdin.winter.order.v1";
 export const ORDER_MAX_LENGTH = 200;

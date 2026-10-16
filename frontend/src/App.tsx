@@ -25,6 +25,7 @@ const CompetencePage = lazy(() => import("./pages/CompetencePage"));
 const CartographerPage = lazy(() => import("./pages/CartographerPage"));
 const BlindfoldPage = lazy(() => import("./pages/BlindfoldPage"));
 const WinterRehearsalPage = lazy(() => import("./pages/WinterRehearsalPage"));
+const HearthPage = lazy(() => import("./pages/HearthPage"));
 // Marketplace (G9): the street of watchlist stores and the deep-dive inside each.
 const MarketplacePage = lazy(() => import("./pages/MarketplacePage"));
 const MarketStorePage = lazy(() => import("./pages/MarketStorePage"));
@@ -81,6 +82,7 @@ export default function App() {
           <Route path="/fortress/map" element={<CartographerPage />} />
           <Route path="/fortress/blindfold" element={<BlindfoldPage />} />
           <Route path="/fortress/winter" element={<WinterRehearsalPage />} />
+          <Route path="/fortress/hearth" element={<HearthPage />} />
           <Route path="/fortress/marketplace" element={<MarketplacePage />} />
           <Route path="/fortress/marketplace/:holdingId" element={<MarketStorePage />} />
           <Route path="/holdings" element={<HoldingsListPage />} />

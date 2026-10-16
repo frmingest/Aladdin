@@ -1159,6 +1159,34 @@
    "key": "none",
    "max_side": 960,
    "quality": 70
+  },
+  {
+   "id": "hearth-fireplace",
+   "source": "a_single_standalone_fantasy_game_architectural_prop_asset_a_stone_fireplace",
+   "key": "white",
+   "max_side": 384,
+   "quality": 80
+  },
+  {
+   "id": "hearth-log",
+   "source": "a_single_standalone_fantasy_game_prop_asset_one_split_log_showing_bark_and_pale",
+   "key": "white",
+   "max_side": 160,
+   "quality": 80
+  },
+  {
+   "id": "hearth-shutters",
+   "source": "a_single_standalone_fantasy_game_architectural_prop_asset_a_stone_window_with",
+   "key": "white",
+   "max_side": 256,
+   "quality": 80
+  },
+  {
+   "id": "hearth-door",
+   "source": "a_single_standalone_fantasy_game_architectural_prop_asset_a_shut_oak_door_in_a",
+   "key": "white",
+   "max_side": 256,
+   "quality": 80
   }
  ]
 }

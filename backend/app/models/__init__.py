@@ -51,6 +51,7 @@ from app.models.snapshot import ComputedSnapshot
 from app.models.tag_mapping_rule import TagMappingRule
 from app.models.thesis import ThesisTripwire
 from app.models.watchlist import WatchlistItem
+from app.models.winter_order import WinterOrder
 
 __all__ = [
     "Account",
@@ -95,4 +96,5 @@ __all__ = [
     "TagMappingRule",
     "ThesisTripwire",
     "WatchlistItem",
+    "WinterOrder",
 ]

@@ -73,6 +73,13 @@ function Glyph({ kind }: { kind: CrestKind }) {
           <path d="M16 8 l4 4 l4 -4" />
         </g>
       );
+    case "hearth":
+      return (
+        <g {...ink}>
+          <path d="M10 32 h20 M12 32 v-14 h16 v14" />
+          <path d="M20 29 c-4 -3 -3 -7 0 -10 c1 3 4 4 3 7 c-1 2 -2 3 -3 3 z" fill="#f2a24a" fillOpacity="0.45" />
+        </g>
+      );
     case "market":
       return (
         <g {...ink}>
