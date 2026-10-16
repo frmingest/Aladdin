@@ -15,6 +15,7 @@ State: `main` is at `30f0cb9` (#156), which includes #155 (Map towers as sector 
 - [ ] **Once the Map towers (#155) are deployed, look at the live Map with Game mode on:** fog patches readable on each sector picture, wide pictures not too small ([doc](game/map-sector-landmarks-2026-10-14.md))
 - [ ] **After #150 is deployed (Faiz):** Refresh Margin of safety, open "Can't be ranked yet" then "Why" on Vend Marketplaces, Salmon Evolution and Vår Energi and sanity-check the owner-earnings figure (if wrong, check share count and price currency first). [Doc](valuation/loss-making-price-assumes-2026-10-14.md)
 - [ ] **Map default (PR `feature/map-image-default`): review and merge (Faiz), then check the Map on desktop and phone:** crowded sectors, fog patches on each picture; decide on a larger Stitch copy of the map picture ([doc](game/map-image-prototype-2026-10-15.md))
+- [ ] **Map fills the canvas (PR `feature/map-fill-canvas`, written and tested, not merged, not deployed):** the painted map now covers the whole box instead of sitting in flat tan bands; on desktop the box takes the picture's 16:9 shape, on a phone it is tall and you pan. Check the live Map on desktop and phone after deploy
 - [ ] **Optional, visual:** with Game mode on, look at the World banner crop on the Siege Simulator (Claude could not judge it)
 
 ## Recent Blockers / Open Questions
