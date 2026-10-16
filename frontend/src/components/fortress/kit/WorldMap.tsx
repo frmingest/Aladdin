@@ -26,6 +26,7 @@ import {
   zoomAt,
   type Glyph,
   type PlaceInput,
+  type Rect,
   type Pt,
   type View,
 } from "../../../lib/worldMap";
@@ -281,7 +282,11 @@ export default function WorldMap({ towers, sectors, sectorsKnown, hatchId, selec
   viewRef.current = view;
   const sizeRef = useRef(size);
   sizeRef.current = size;
-  const setView = useCallback((v: View) => setViewRaw(clampView(v)), []);
+  // On the painted picture the camera is bounded by the picture, so it always fills the canvas.
+  const bounds = useMemo<Rect | undefined>(() => (imageMap ? { x: IMAGE_RECT.x, y: IMAGE_RECT.y, w: IMAGE_RECT.width, h: IMAGE_RECT.height } : undefined), [imageMap]);
+  const boundsRef = useRef(bounds);
+  boundsRef.current = bounds;
+  const setView = useCallback((v: View) => setViewRaw(clampView(v, sizeRef.current.cw, sizeRef.current.ch, boundsRef.current)), []);
   const measured = useRef(false);
   const anim = useRef<number | null>(null);
   const [hot, setHot] = useState<string | null>(null);
@@ -306,7 +311,7 @@ export default function WorldMap({ towers, sectors, sectorsKnown, hatchId, selec
       setSize({ cw, ch });
       if (!measured.current && el.clientWidth > 0) {
         measured.current = true;
-        setViewRaw(initialView(cw));
+        setViewRaw(clampView(initialView(cw, boundsRef.current), cw, ch, boundsRef.current));
       }
     };
     apply();
@@ -319,7 +324,7 @@ export default function WorldMap({ towers, sectors, sectorsKnown, hatchId, selec
   const flyTo = useCallback(
     (target: View) => {
       if (anim.current !== null) cancelAnimationFrame(anim.current);
-      const to = clampView(target);
+      const to = clampView(target, sizeRef.current.cw, sizeRef.current.ch, boundsRef.current);
       if (reduce || typeof requestAnimationFrame === "undefined") {
         setViewRaw(to);
         return;
@@ -367,12 +372,12 @@ export default function WorldMap({ towers, sectors, sectorsKnown, hatchId, selec
       const [a, b] = [...pointers.current.values()];
       const d = Math.hypot(a.x - b.x, a.y - b.y);
       const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
-      setView(zoomAt(viewRef.current, d / pinch.current, mid, cw, ch));
+      setView(zoomAt(viewRef.current, d / pinch.current, mid, cw, ch, boundsRef.current));
       pinch.current = d;
       return;
     }
     if (drag.current) drag.current.moved = true;
-    setView(panBy(viewRef.current, now.x - prev.x, now.y - prev.y, cw, ch));
+    setView(panBy(viewRef.current, now.x - prev.x, now.y - prev.y, cw, ch, boundsRef.current));
   };
   const onPointerUp = (e: React.PointerEvent) => {
     pointers.current.delete(e.pointerId);
@@ -389,16 +394,16 @@ export default function WorldMap({ towers, sectors, sectorsKnown, hatchId, selec
       e.preventDefault();
       const r = el.getBoundingClientRect();
       const { cw, ch } = sizeRef.current;
-      setViewRaw((v) => zoomAt(v, Math.exp(-e.deltaY * 0.0022), { x: e.clientX - r.left, y: e.clientY - r.top }, cw, ch));
+      setViewRaw((v) => zoomAt(v, Math.exp(-e.deltaY * 0.0022), { x: e.clientX - r.left, y: e.clientY - r.top }, cw, ch, boundsRef.current));
     };
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
   }, []);
 
   const { cw, ch } = size;
-  const vb = viewBox(view, cw, ch);
+  const vb = viewBox(view, cw, ch, bounds);
   const s = vb.s;
-  const zoomBy = (f: number) => flyTo(zoomAt(viewRef.current, f, { x: cw / 2, y: ch / 2 }, cw, ch));
+  const zoomBy = (f: number) => flyTo(zoomAt(viewRef.current, f, { x: cw / 2, y: ch / 2 }, cw, ch, bounds));
 
   // Keyboard: one tab stop; arrows hop to the nearest tower that way; + - 0 zoom.
   const ids = placed.map((p) => p.s.id);
@@ -408,14 +413,14 @@ export default function WorldMap({ towers, sectors, sectorsKnown, hatchId, selec
     if (!id) return;
     setStop(i);
     const p = placed[i].s;
-    flyTo(ensureVisible(viewRef.current, p, cw, ch));
+    flyTo(ensureVisible(viewRef.current, p, cw, ch, 0.14, bounds));
     btnRefs.current.get(id)?.focus();
   };
   const onKey = (e: React.KeyboardEvent, i: number) => {
     if (e.key === "Escape") { e.preventDefault(); onEscape(); return; }
     if (e.key === "+" || e.key === "=") { e.preventDefault(); zoomBy(1.4); return; }
     if (e.key === "-" || e.key === "_") { e.preventDefault(); zoomBy(1 / 1.4); return; }
-    if (e.key === "0") { e.preventDefault(); flyTo(initialView(cw)); return; }
+    if (e.key === "0") { e.preventDefault(); flyTo(initialView(cw, bounds)); return; }
     if (e.key === "Home") { e.preventDefault(); focusAt(0); return; }
     if (e.key === "End") { e.preventDefault(); focusAt(ids.length - 1); return; }
     if (!isDirKey(e.key)) return;
@@ -426,12 +431,12 @@ export default function WorldMap({ towers, sectors, sectorsKnown, hatchId, selec
   // Names: as many as fit, heaviest first; the pressed, hovered or focused one always.
   const pinned = useMemo(() => new Set([selectedId, hot].filter((x): x is string => !!x)), [selectedId, hot]);
   const labelItems = placed.map(({ s: st, t }) => {
-    const sp = toScreen({ x: st.x, y: st.y }, view, cw, ch);
+    const sp = toScreen({ x: st.x, y: st.y }, view, cw, ch, bounds);
     return { id: st.id, text: mapName(t.name), sx: sp.x, sy: sp.y, weight: t.weightPct ?? 0 };
   });
   const labels = chooseLabels(labelItems, pinned, cw, ch, 4);
 
-  const keepSp = toScreen(realm.keep, view, cw, ch);
+  const keepSp = toScreen(realm.keep, view, cw, ch, bounds);
   const keepFlag = flags.get("keep");
   const motion = !reduce && running;
   /** The settlement's picture, or undefined for the SVG tower: art off, nothing known to pick one from, or a failed load. */
@@ -459,6 +464,7 @@ export default function WorldMap({ towers, sectors, sectorsKnown, hatchId, selec
         ref={boxRef}
         className="wm-box"
         data-zoomed={view.z > 1.05 ? "true" : "false"}
+        data-image={imageMap ? "true" : "false"}
         data-motion={motion ? "on" : "off"}
         data-frame={art.ok("map-frame-corner") ? "on" : undefined}
         onPointerDown={onPointerDown}
@@ -570,7 +576,7 @@ export default function WorldMap({ towers, sectors, sectorsKnown, hatchId, selec
           </span>
         )}
         {placed.map(({ s: st, t }, i) => {
-          const sp = toScreen({ x: st.x, y: st.y }, view, cw, ch);
+          const sp = toScreen({ x: st.x, y: st.y }, view, cw, ch, bounds);
           const spriteH = (TOWER_BOX.h + 14) * st.scale * s;
           const hit = Math.max(44, 70 * st.scale * s);
           const flag = flags.get(st.id);
@@ -594,7 +600,7 @@ export default function WorldMap({ towers, sectors, sectorsKnown, hatchId, selec
               onBlur={() => setHot((h) => (h === st.id ? null : h))}
               onMouseEnter={() => setHot(st.id)}
               onMouseLeave={() => setHot((h) => (h === st.id ? null : h))}
-              onClick={() => { setStop(i); onSelect(st.id); flyTo(ensureVisible(viewRef.current, st, cw, ch)); }}
+              onClick={() => { setStop(i); onSelect(st.id); flyTo(ensureVisible(viewRef.current, st, cw, ch, 0.14, bounds)); }}
               onKeyDown={(e) => onKey(e, i)}
             >
               {flag && <FlagMark shape={flag.shape} n={flag.number} />}
@@ -605,7 +611,7 @@ export default function WorldMap({ towers, sectors, sectorsKnown, hatchId, selec
         <div className="wm-controls">
           <button type="button" aria-label="Zoom in" onClick={() => zoomBy(1.45)} disabled={view.z >= 4.4}>+</button>
           <button type="button" aria-label="Zoom out" onClick={() => zoomBy(1 / 1.45)} disabled={view.z <= 1.02}>−</button>
-          <button type="button" aria-label="Show the whole realm" onClick={() => flyTo(initialView(cw))}>
+          <button type="button" aria-label="Show the whole realm" onClick={() => flyTo(initialView(cw, bounds))}>
             <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden focusable="false"><path d="M3 9 L10 3 L17 9 V17 H12 V12 H8 V17 H3 Z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" /></svg>
           </button>
         </div>

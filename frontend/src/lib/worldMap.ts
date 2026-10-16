@@ -628,55 +628,77 @@ export function clamp(n: number, lo: number, hi: number): number {
   return Math.min(hi, Math.max(lo, n));
 }
 
-/** Pixels per world unit when the whole world just fits the box. */
-export function fitScale(cw: number, ch: number): number {
+/** A rectangle in world units. */
+export interface Rect { x: number; y: number; w: number; h: number }
+
+/**
+ * Pixels per world unit at zoom 1. Without `bounds` the whole world just fits the box (some empty
+ * margin on one axis). With `bounds` (the painted map picture) the rectangle COVERS the box instead:
+ * the picture fills the canvas on both axes, so no flat colour shows around it. Either way zoom 1 is
+ * the farthest out the camera goes.
+ */
+export function fitScale(cw: number, ch: number, bounds?: Rect): number {
+  if (bounds) return Math.max(cw / bounds.w, ch / bounds.h);
   return Math.min(cw / WORLD.w, ch / WORLD.h);
 }
 
-export function clampView(v: View): View {
-  return { cx: clamp(v.cx, 0, WORLD.w), cy: clamp(v.cy, 0, WORLD.h), z: clamp(v.z, MIN_ZOOM, MAX_ZOOM) };
+/**
+ * Keep the zoom in range and the centre inside the world. With `bounds` and the box size, the centre is
+ * also held so the visible window never leaves the rectangle (the picture's edge never shows).
+ */
+export function clampView(v: View, cw?: number, ch?: number, bounds?: Rect): View {
+  const z = clamp(v.z, MIN_ZOOM, MAX_ZOOM);
+  if (!bounds || cw === undefined || ch === undefined) return { cx: clamp(v.cx, 0, WORLD.w), cy: clamp(v.cy, 0, WORLD.h), z };
+  const s = fitScale(cw, ch, bounds) * z;
+  const halfW = cw / s / 2;
+  const halfH = ch / s / 2;
+  const cx = halfW * 2 >= bounds.w ? bounds.x + bounds.w / 2 : clamp(v.cx, bounds.x + halfW, bounds.x + bounds.w - halfW);
+  const cy = halfH * 2 >= bounds.h ? bounds.y + bounds.h / 2 : clamp(v.cy, bounds.y + halfH, bounds.y + bounds.h - halfH);
+  return { cx, cy, z };
 }
 
 /** The world rectangle on screen for a view in a box. */
-export function viewBox(v: View, cw: number, ch: number): { x: number; y: number; w: number; h: number; s: number } {
-  const s = fitScale(cw, ch) * v.z;
+export function viewBox(v: View, cw: number, ch: number, bounds?: Rect): { x: number; y: number; w: number; h: number; s: number } {
+  const s = fitScale(cw, ch, bounds) * v.z;
   const w = cw / s;
   const h = ch / s;
   return { x: v.cx - w / 2, y: v.cy - h / 2, w, h, s };
 }
 
-export function toScreen(p: Pt, v: View, cw: number, ch: number): Pt {
-  const b = viewBox(v, cw, ch);
+export function toScreen(p: Pt, v: View, cw: number, ch: number, bounds?: Rect): Pt {
+  const b = viewBox(v, cw, ch, bounds);
   return { x: (p.x - b.x) * b.s, y: (p.y - b.y) * b.s };
 }
 
-export function toWorld(sp: Pt, v: View, cw: number, ch: number): Pt {
-  const b = viewBox(v, cw, ch);
+export function toWorld(sp: Pt, v: View, cw: number, ch: number, bounds?: Rect): Pt {
+  const b = viewBox(v, cw, ch, bounds);
   return { x: sp.x / b.s + b.x, y: sp.y / b.s + b.y };
 }
 
 /** Zoom by `factor`, keeping the world point under the screen point `at` where it is. */
-export function zoomAt(v: View, factor: number, at: Pt, cw: number, ch: number): View {
-  const before = toWorld(at, v, cw, ch);
+export function zoomAt(v: View, factor: number, at: Pt, cw: number, ch: number, bounds?: Rect): View {
+  const before = toWorld(at, v, cw, ch, bounds);
   const z = clamp(v.z * factor, MIN_ZOOM, MAX_ZOOM);
-  const s = fitScale(cw, ch) * z;
-  return clampView({ z, cx: before.x - (at.x - cw / 2) / s, cy: before.y - (at.y - ch / 2) / s });
+  const s = fitScale(cw, ch, bounds) * z;
+  return clampView({ z, cx: before.x - (at.x - cw / 2) / s, cy: before.y - (at.y - ch / 2) / s }, cw, ch, bounds);
 }
 
 /** Move the camera by a screen-space drag. */
-export function panBy(v: View, dxPx: number, dyPx: number, cw: number, ch: number): View {
-  const s = fitScale(cw, ch) * v.z;
-  return clampView({ ...v, cx: v.cx - dxPx / s, cy: v.cy - dyPx / s });
+export function panBy(v: View, dxPx: number, dyPx: number, cw: number, ch: number, bounds?: Rect): View {
+  const s = fitScale(cw, ch, bounds) * v.z;
+  return clampView({ ...v, cx: v.cx - dxPx / s, cy: v.cy - dyPx / s }, cw, ch, bounds);
 }
 
 /** The view that shows a point, if it is not already comfortably on screen. */
-export function ensureVisible(v: View, p: Pt, cw: number, ch: number, margin = 0.14): View {
-  const sp = toScreen(p, v, cw, ch);
+export function ensureVisible(v: View, p: Pt, cw: number, ch: number, margin = 0.14, bounds?: Rect): View {
+  const sp = toScreen(p, v, cw, ch, bounds);
   const inside = sp.x > cw * margin && sp.x < cw * (1 - margin) && sp.y > ch * margin && sp.y < ch * (1 - margin);
-  return inside ? v : clampView({ ...v, cx: p.x, cy: p.y });
+  return inside ? v : clampView({ ...v, cx: p.x, cy: p.y }, cw, ch, bounds);
 }
 
-export function initialView(cw: number): View {
+export function initialView(cw: number, bounds?: Rect): View {
+  // On the picture the zoom floor already fills the box, so every width starts at 1, centred on it.
+  if (bounds) return { cx: bounds.x + bounds.w / 2, cy: bounds.y + bounds.h / 2, z: 1 };
   return cw < 640 ? { cx: CAPITAL.x, cy: CAPITAL.y, z: 2 } : { cx: WORLD.w / 2, cy: WORLD.h / 2, z: 1 };
 }
 
