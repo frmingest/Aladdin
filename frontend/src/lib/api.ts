@@ -43,12 +43,6 @@ import type {
   Council,
   HoldingAdvisors,
   Records,
-  Blindfold,
-  BlindfoldName,
-  BlindfoldReveal,
-  WinterRehearsal,
-  Hearth,
-  WinterOrder,
   Calibration,
   NightWatch,
   Ravens,
@@ -430,33 +424,6 @@ export const api = {
   getRecords: () => request<Records>("/game/records"),
   /** C2 hit rate: counts only, gated by the server (opens at min_n outcomes). */
   getCalibration: () => request<Calibration>("/game/calibration"),
-  /** E1 Blindfold Years: the next puzzle not in `seen` (ids answered in this browser). Read-only. */
-  getBlindfold: (seen: string[]) => {
-    const query = new URLSearchParams();
-    seen.forEach((id) => query.append("seen", id));
-    const qs = query.toString();
-    return request<Blindfold>(`/game/blindfold${qs ? `?${qs}` : ""}`);
-  },
-  /** The stored figure beside your staked range (nothing is saved server-side). */
-  getBlindfoldReveal: (puzzleId: string, low: string, high: string) =>
-    request<BlindfoldReveal>(
-      `/game/blindfold/reveal?${new URLSearchParams({ puzzle_id: puzzleId, low, high }).toString()}`,
-    ),
-  /** Lifts the mask; the page labels this as weakening the exercise. */
-  getBlindfoldName: (puzzleId: string) =>
-    request<BlindfoldName>(`/game/blindfold/name?${new URLSearchParams({ puzzle_id: puzzleId }).toString()}`),
-  /** E2 Winter Rehearsal: the worst stored fall of the book at today's weights. Read-only; your order stays in the browser. */
-  getWinterRehearsal: () => request<WinterRehearsal>("/game/winter-rehearsal"),
-  /** E3 The Hearth: what moved, held and changed in bad weather, beside your lines and winter order. Read-only. */
-  getHearth: () => request<Hearth>("/game/hearth"),
-  /** E3: your written winter order as saved on the server (newest row). */
-  getWinterOrder: () => request<WinterOrder>("/game/winter-order"),
-  /** E3: save your winter order (an empty text clears it). */
-  saveWinterOrder: (text: string) =>
-    request<WinterOrder>("/game/winter-order", {
-      method: "PUT",
-      body: JSON.stringify({ text }),
-    }),
   getCompetence: () => request<Competence>("/game/competence"),
   /** The only write of Sprint 25: your own mark for one sector. */
   putCompetence: (sector: string, level: CompetenceLevel, note: string | null) =>

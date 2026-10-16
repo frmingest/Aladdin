@@ -57,29 +57,6 @@ function Glyph({ kind }: { kind: CrestKind }) {
           <path d="M22 13 h9 v18 h-9 Z M22 17 h3 M28 17 h3" fill="#f2d27a" fillOpacity="0.2" />
         </g>
       );
-    case "blindfold":
-      return (
-        <g {...ink}>
-          <path d="M20 9 v24" />
-          <path d="M14 14 h12 M14 21 h12 M14 28 h12" />
-          <path d="M8 33 q4 -3 8 0 t8 0 t8 0" />
-        </g>
-      );
-    case "winter":
-      return (
-        <g {...ink}>
-          <path d="M20 8 v24" />
-          <path d="M9 14 l22 12 M9 26 l22 -12" />
-          <path d="M16 8 l4 4 l4 -4" />
-        </g>
-      );
-    case "hearth":
-      return (
-        <g {...ink}>
-          <path d="M10 32 h20 M12 32 v-14 h16 v14" />
-          <path d="M20 29 c-4 -3 -3 -7 0 -10 c1 3 4 4 3 7 c-1 2 -2 3 -3 3 z" fill="#f2a24a" fillOpacity="0.45" />
-        </g>
-      );
     case "market":
       return (
         <g {...ink}>

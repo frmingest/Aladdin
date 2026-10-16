@@ -1,26 +1,19 @@
 # Aladdin — Progress
 
-**Last updated:** 2026-10-16 (E3 Hearth written, PR open; E2 Winter Rehearsal and E1 Blindfold Years merged; Map sector towers #155 and the Contest 3 plan #156 are merged). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
+**Last updated:** 2026-10-16 (Blindfold Years, Winter Rehearsal and The Hearth removed at Faiz's request). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
 
 ## Current Objective
 
-**The Hearth (E3) is written and tested, PR `feature/hearth`, not merged, not deployed.** A new Fortress room `/fortress/hearth`: when the newest stored weather is gathering or besieged it shows what moved, what held and what changed over the last 30 stored days, your own journal invalidation lines verbatim beside the live numbers of the tripwires you set, your winter order and the record of the worst fall. In calm weather the door is shut. One new small table `winter_orders` (migration `x1f2a3b4c5d6`, append-only, newest row wins) now keeps the winter order on the server, so the Hearth can show it; Winter Rehearsal saves there and keeps a browser copy as fallback ([write-up](game/hearth-2026-10-16.md)). Seen only in tests, not live.
-
-**Winter Rehearsal (E2) is merged (#163).** Room `/fortress/winter`; read-only replay of the worst stored fall ([write-up](game/winter-rehearsal-2026-10-15.md)).
-
-**Blindfold Years (E1) is merged (#157, wording #158). A rebuild of the play area (PR `feature/blindfold-drag`: drag the stakes in the picture, no number boxes) is written and tested, not merged, not deployed.** Faiz found the first version not engaging and messy. A new Fortress room: a holding rolled back to a past year with its name masked, you stake a low and a high figure for the next year's owner earnings, then the stored figure is shown. Read-only, no migration, answers kept in the browser ([write-up](game/blindfold-years-2026-10-15.md)). Seen only on mock data in a built copy of the page.
+**Blindfold Years (E1), Winter Rehearsal (E2) and The Hearth (E3) are removed from the app (PR `feature/remove-blindfold-winter-hearth`, written and tested locally, not merged, not deployed).** Faiz was not happy with them. Code, tests, art and write-ups are reverted; the unused `winter_orders` migration `x1f2a3b4c5d6` is deliberately kept so a database that already ran it still resolves its revision (the table stays, unused). E4/E5 and the bucket in the Contest 3 plan are untouched.
 
 **The painted Stitch map is now the default Game-mode Map (PR `feature/map-image-default`, written and tested, not merged, not deployed).** Faiz saw the prototype live (#161) and approved it; `?map=classic` brings the old drawn map back ([write-up](game/map-image-prototype-2026-10-15.md)).
 
-State: `main` is at `30f0cb9` (#156), which includes #155 (Map towers as sector pictures); deploy not checked, say if Railway has redeployed. Repo migration head `w1e2f3a4b5c6` (forecasts, C2); E3 adds `x1f2a3b4c5d6` (winter_orders) once merged. Live URLs: frontend `https://exciting-gratitude-production-71b5.up.railway.app`, backend `https://aladdin-production-bd25.up.railway.app`.
+State: `main` is at `30f0cb9` (#156), which includes #155 (Map towers as sector pictures); deploy not checked, say if Railway has redeployed. Repo migration head `w1e2f3a4b5c6` (forecasts, C2); E1 adds none. Live URLs: frontend `https://exciting-gratitude-production-71b5.up.railway.app`, backend `https://aladdin-production-bd25.up.railway.app`.
 
 ## Active Tasks
 
-- [ ] **Review and merge the Blindfold Years PR (Faiz), then open Blindfold with Game mode on** (desktop and phone) and check how many puzzles the real data gives (the plan guessed 20 to 30; the strict rule may give fewer) and that the scene reads
-- [ ] **Review and merge the Hearth PR (Faiz); it carries a migration, so check the deploy runs it.** Then open the Hearth with Game mode on, in a storm and in calm weather: the three shelves read right, your invalidation lines sit beside the right tripwires, the shut door shows when calm. Also open Winter and check your order still shows (it is sent to the server once)
 - [ ] **Once the Map towers (#155) are deployed, look at the live Map with Game mode on:** fog patches readable on each sector picture, wide pictures not too small ([doc](game/map-sector-landmarks-2026-10-14.md))
 - [ ] **After #150 is deployed (Faiz):** Refresh Margin of safety, open "Can't be ranked yet" then "Why" on Vend Marketplaces, Salmon Evolution and Vår Energi and sanity-check the owner-earnings figure (if wrong, check share count and price currency first). [Doc](valuation/loss-making-price-assumes-2026-10-14.md)
-- [ ] **Contest 3 plan: D1 to D8 ruled 2026-10-15 (all as recommended: lanterns and ravens, no figures; teal ribbon; browser-first state; journal note for E2; Norwegian copy by Claude, reviewed by Faiz; one backdrop per sprint; order E1 to E5).** E1, E2 merged; E3 The Hearth built (pictures used: fireplace, log, shuttered window, door); E4 and E5 next ([plan](sprints/game-design-sprint-plan-2026-10-15.md))
 - [ ] **Map default (PR `feature/map-image-default`): review and merge (Faiz), then check the Map on desktop and phone:** crowded sectors, fog patches on each picture; decide on a larger Stitch copy of the map picture ([doc](game/map-image-prototype-2026-10-15.md))
 - [ ] **Optional, visual:** with Game mode on, look at the World banner crop on the Siege Simulator (Claude could not judge it)
 
