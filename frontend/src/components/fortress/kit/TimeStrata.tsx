@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { dayLabel, strata, timeStrip } from "../../../lib/chronicle";
 import type { Chronicle } from "../../../lib/types";
 import ObjectArtImage from "../../ObjectArtImage";
+import { gapPlotId } from "../../../lib/roomArt";
 import "./strata.css";
 
 /** A change on the spine: a lozenge, or (Object art on) a block of strata, one layer per day on record. */
@@ -12,7 +13,11 @@ function ChangeMark() {
 /** Beside a gap (Object art on): a wall sconce whose torch is out. The ring with a slash and the hatched
  * block stay, so a gap is told by shape and by its words; the sconce only says "no light was kept". */
 function GapSconce() {
-  return <ObjectArtImage id="room-sconce" width={36} className="strata-sconce" fallback={null} />;
+  // The covered plot says "nothing was kept here" more plainly than the dark sconce; the sconce is the fallback.
+  const plot = gapPlotId();
+  const sconce = <ObjectArtImage id="room-sconce" width={36} className="strata-sconce" fallback={null} />;
+  if (!plot) return sconce;
+  return <ObjectArtImage id={plot} width={44} className="strata-sconce" fallback={sconce} />;
 }
 
 /** The Chronicle as time strata (game mode, Stitch room look): a strip that shows where the stored frames

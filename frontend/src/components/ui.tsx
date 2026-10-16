@@ -4,6 +4,8 @@ import { formatRelative } from "../lib/format";
 import { useGameMode } from "../lib/gameMode";
 import { isFortressPath } from "../lib/nav";
 import { crestForPath } from "../lib/crest";
+import ObjectArtImage from "./ObjectArtImage";
+import { emptyChestId } from "../lib/roomArt";
 import GamePageHeader from "./fortress/kit/GamePageHeader";
 import { InfoTooltip } from "./InfoTooltip";
 
@@ -50,7 +52,8 @@ function PlainPageHeader({ title, subtitle, actions }: PageHeaderProps) {
 function RoutedPageHeader(props: PageHeaderProps) {
   const { pathname } = useLocation();
   // The Fortress home and the Marketplace already carry their own painted identity (scene, awnings).
-  const banner = isFortressPath(pathname) && pathname !== "/fortress" && !pathname.startsWith("/fortress/marketplace");
+  // The Journal is not a fortress route but is one of the game rooms: it wears the banner too.
+  const banner = (isFortressPath(pathname) && pathname !== "/fortress" && !pathname.startsWith("/fortress/marketplace")) || pathname === "/journal";
   if (!banner) return <PlainPageHeader {...props} />;
   return (
     <GamePageHeader {...props} crest={crestForPath(pathname)} />
@@ -116,9 +119,18 @@ export function CollapsibleSection({
   );
 }
 
-export function EmptyState({ children }: { children: React.ReactNode }) {
+function EmptyChestArt() {
+  const id = emptyChestId();
+  if (!id) return null;
+  return <ObjectArtImage id={id} width={72} className="mx-auto mb-3" fallback={null} />;
+}
+
+export function EmptyState({ children, chest = false }: { children: React.ReactNode; chest?: boolean }) {
+  // `chest` adds the open empty chest in Game mode (art on). It is decoration only: the words say what is empty.
+  const game = useGameMode();
   return (
     <div className="rounded-lg border border-dashed border-border px-6 py-10 text-center text-sm text-ink-muted">
+      {chest && game && <EmptyChestArt />}
       {children}
     </div>
   );

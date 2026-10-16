@@ -36,7 +36,7 @@ export default function JournalPanel({ holding }: { holding: Holding }) {
         </Button>
       )}
       {entries && entries.length === 0 && !adding && (
-        <EmptyState>No decisions recorded for {holding.name} yet.</EmptyState>
+        <EmptyState chest>No decisions recorded for {holding.name} yet.</EmptyState>
       )}
       {entries?.map((e) => <JournalEntryCard key={e.id} entry={e} onChanged={load} showCompany={false} />)}
     </div>

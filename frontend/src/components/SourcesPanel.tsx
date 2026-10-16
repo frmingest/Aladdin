@@ -369,7 +369,7 @@ export function NewswebAllReportsCard({ holdingId, onImported }: { holdingId: st
 
       {loadError && <p className="mb-3 text-sm text-negative">{loadError}</p>}
       {!loaded && !loadError && <p className="text-sm text-ink-muted">Loading…</p>}
-      {loaded && reports.length === 0 && !loadError && <EmptyState>Nothing fetched yet.</EmptyState>}
+      {loaded && reports.length === 0 && !loadError && <EmptyState chest>Nothing fetched yet.</EmptyState>}
 
       <TagReviewBanner holdingId={holdingId} refreshKey={lastRun} />
 
