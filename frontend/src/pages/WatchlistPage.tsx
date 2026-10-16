@@ -279,7 +279,7 @@ export default function WatchlistPage() {
         {!rows && !error && <p className="text-sm text-ink-muted">Loading prices…</p>}
 
         {rows && rows.length === 0 && (
-          <EmptyState>Nothing on the watchlist yet. Add a company above, or use Watch on any holding page.</EmptyState>
+          <EmptyState chest>Nothing on the watchlist yet. Add a company above, or use Watch on any holding page.</EmptyState>
         )}
 
         {rows && rows.length > 0 && <StatusTiles rows={rows} />}

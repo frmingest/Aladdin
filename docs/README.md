@@ -37,6 +37,7 @@ Stable background: what is AI vs deterministic, tech overview, graphics rules, O
 Game mode (Fortress): concept, sprint plans and reviews, visual identity, art passes, checklist.
 
 - [circle-council-design-2026-10-09.md](game/circle-council-design-2026-10-09.md) — Circle of Competence and Council Chamber: making them feel like game screens
+- [game-art-dde-2026-10-16.md](game/game-art-dde-2026-10-16.md) — the 17 Stitch pictures from the design review: crests, Council badges, sky badges, covered plot, empty chest
 - [design-master-sprint-plan-2026-10-11.md](game/design-master-sprint-plan-2026-10-11.md) — Design Master: review and sprint plan (2026-10-11)
 - [fog-of-war-sprint28-2026-10-08.md](game/fog-of-war-sprint28-2026-10-08.md) — Game mode Sprint 28: fog of war (G34–G37) — 2026-10-08
 - [fortress-art-pass-2026-10-09.md](game/fortress-art-pass-2026-10-09.md) — Fortress art pass — 2026-10-09

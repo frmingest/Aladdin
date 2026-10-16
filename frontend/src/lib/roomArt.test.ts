@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ART_MANIFEST } from "./artManifest";
-import { capsuleArt, roomBackdropId, roomCrestId, roomPropIds, sealId } from "./roomArt";
+import { capsuleArt, councilBadgeId, emptyChestId, gapPlotId, roomBackdropId, roomCrestId, roomPropIds, sealId, skyBadgeId } from "./roomArt";
 
 describe("Records art (Sprint 10)", () => {
   it("tells the three review states apart by picture and seal, and they are all packed", () => {
@@ -42,16 +42,15 @@ describe("room art ids", () => {
     }
   });
 
-  it("gives each of the five rooms its own crest picture, and no other room one", () => {
-    const rooms = ["council", "records", "circle", "chronicle", "map"] as const;
+  it("gives each room its own crest picture", () => {
+    const rooms = ["council", "records", "circle", "chronicle", "map", "siege", "market", "fortress", "journal"] as const;
     const ids = rooms.map((r) => roomCrestId(r));
     expect(ids).toEqual(rooms.map((r) => `crest-${r}`));
-    for (const room of ["siege", "market", "fortress"] as const) expect(roomCrestId(room)).toBeNull();
   });
 
   it("returns null for a crest or seal whose picture is not packed (never a broken id)", () => {
     const packed = Object.keys(ART_MANIFEST);
-    for (const room of ["council", "records", "circle", "chronicle", "map"] as const) {
+    for (const room of ["council", "records", "circle", "chronicle", "map", "siege", "market", "fortress", "journal"] as const) {
       const id = roomCrestId(room);
       if (id !== null) expect(packed).toContain(id);
     }
@@ -59,5 +58,27 @@ describe("room art ids", () => {
       const id = sealId(state);
       if (id !== null) expect(packed).toContain(id);
     }
+  });
+
+  it("gives each Council agenda kind a packed badge, except 'no moat found' (not delivered yet)", () => {
+    const packed = Object.keys(ART_MANIFEST);
+    for (const kind of ["tripwire", "thesis_review", "review_due", "weak_walls", "stale_analysis", "outside_circle", "cash"] as const) {
+      const id = councilBadgeId(kind);
+      expect(id).not.toBeNull();
+      expect(packed).toContain(id);
+    }
+    expect(councilBadgeId("no_moat")).toBeNull();
+  });
+
+  it("gives calm, gathering and besieged a sky badge and 'not surveyed' none (unknown never looks known)", () => {
+    expect(skyBadgeId("calm")).toBe("sky-calm");
+    expect(skyBadgeId("gathering")).toBe("sky-clouds");
+    expect(skyBadgeId("besieged")).toBe("sky-smoke");
+    expect(skyBadgeId("unsurveyed")).toBeNull();
+  });
+
+  it("packs the covered plot and the empty chest", () => {
+    expect(gapPlotId()).toBe("plot-covered");
+    expect(emptyChestId()).toBe("empty-chest");
   });
 });

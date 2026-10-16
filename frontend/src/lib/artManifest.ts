@@ -119,6 +119,23 @@ import mapGoldIngots from "../assets/art/map-gold-ingots.webp";
 import mapGoldMine from "../assets/art/map-gold-mine.webp";
 import mapFountainSquare from "../assets/art/map-fountain-square.webp";
 import mapQuarry from "../assets/art/map-quarry.webp";
+import badgeTripwire from "../assets/art/badge-tripwire.webp";
+import badgeThesis from "../assets/art/badge-thesis.webp";
+import badgeVault from "../assets/art/badge-vault.webp";
+import badgeCircle from "../assets/art/badge-circle.webp";
+import badgeCasket from "../assets/art/badge-casket.webp";
+import badgeWall from "../assets/art/badge-wall.webp";
+import badgeScroll from "../assets/art/badge-scroll.webp";
+import crestFortress from "../assets/art/crest-fortress.webp";
+import crestJournal from "../assets/art/crest-journal.webp";
+import crestMarket from "../assets/art/crest-market.webp";
+import crestSiege from "../assets/art/crest-siege.webp";
+import skyCalm from "../assets/art/sky-calm.webp";
+import skyClouds from "../assets/art/sky-clouds.webp";
+import skyStorm from "../assets/art/sky-storm.webp";
+import skySmoke from "../assets/art/sky-smoke.webp";
+import plotCovered from "../assets/art/plot-covered.webp";
+import emptyChest from "../assets/art/empty-chest.webp";
 
 export interface PackedArt {
   src: string;
@@ -249,4 +266,21 @@ export const ART_MANIFEST = {
   "map-gold-mine": { src: mapGoldMine, width: 320, height: 309, alt: "" },
   "map-fountain-square": { src: mapFountainSquare, width: 320, height: 249, alt: "" },
   "map-quarry": { src: mapQuarry, width: 320, height: 319, alt: "" },
+  "badge-tripwire": { src: badgeTripwire, width: 96, height: 96, alt: "" },
+  "badge-thesis": { src: badgeThesis, width: 96, height: 96, alt: "" },
+  "badge-vault": { src: badgeVault, width: 96, height: 96, alt: "" },
+  "badge-circle": { src: badgeCircle, width: 96, height: 96, alt: "" },
+  "badge-casket": { src: badgeCasket, width: 96, height: 96, alt: "" },
+  "badge-wall": { src: badgeWall, width: 96, height: 96, alt: "" },
+  "badge-scroll": { src: badgeScroll, width: 96, height: 96, alt: "" },
+  "crest-fortress": { src: crestFortress, width: 192, height: 192, alt: "" },
+  "crest-journal": { src: crestJournal, width: 192, height: 192, alt: "" },
+  "crest-market": { src: crestMarket, width: 192, height: 192, alt: "" },
+  "crest-siege": { src: crestSiege, width: 192, height: 192, alt: "" },
+  "sky-calm": { src: skyCalm, width: 64, height: 64, alt: "" },
+  "sky-clouds": { src: skyClouds, width: 64, height: 64, alt: "" },
+  "sky-storm": { src: skyStorm, width: 64, height: 64, alt: "" },
+  "sky-smoke": { src: skySmoke, width: 64, height: 64, alt: "" },
+  "plot-covered": { src: plotCovered, width: 256, height: 177, alt: "" },
+  "empty-chest": { src: emptyChest, width: 243, height: 256, alt: "" },
 } as const satisfies Record<string, PackedArt>;

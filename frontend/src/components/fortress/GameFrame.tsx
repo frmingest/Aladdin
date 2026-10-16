@@ -1,6 +1,8 @@
 import { SIEGE_LABEL, TEMPERAMENT_LABEL, VAULT_LABEL } from "../../lib/fortress";
 import { formatNok } from "../../lib/format";
-import type { GameState } from "../../lib/types";
+import type { FortressSiegeLevel, GameState } from "../../lib/types";
+import ObjectArtImage from "../ObjectArtImage";
+import { skyBadgeId } from "../../lib/roomArt";
 
 /**
  * The frame around the Fortress painting and the resource bar above it
@@ -43,7 +45,14 @@ export function GameFrame({ children }: { children: React.ReactNode }) {
 
 type IconKind = "coin" | "chest" | "tower" | "sky" | "scales";
 
-function HudIcon({ kind }: { kind: IconKind }) {
+/** The weather icon: a sky badge for a known level, the drawn icon for "not surveyed" (unknown never gets a picture). */
+function SkyIcon({ level, svg }: { level: FortressSiegeLevel; svg: React.ReactNode }) {
+  const id = skyBadgeId(level);
+  if (!id) return <>{svg}</>;
+  return <ObjectArtImage id={id} width={22} fallback={svg} />;
+}
+
+function HudIcon({ kind, level = "unsurveyed" }: { kind: IconKind; level?: FortressSiegeLevel }) {
   const common = { width: 22, height: 22, viewBox: "0 0 22 22", "aria-hidden": true } as const;
   switch (kind) {
     case "coin":
@@ -73,13 +82,13 @@ function HudIcon({ kind }: { kind: IconKind }) {
         </svg>
       );
     case "sky":
-      return (
+      return <SkyIcon level={level} svg={
         <svg {...common}>
           <circle cx="8" cy="8" r="4" fill="#f6c25a" />
           <ellipse cx="13" cy="13" rx="7" ry="4" fill="#9aa4b8" />
           <ellipse cx="10" cy="12" rx="4" ry="3.2" fill="#c3cad8" />
         </svg>
-      );
+      } />;
     case "scales":
       return (
         <svg {...common}>
@@ -116,7 +125,7 @@ export function GameHud({ state }: { state: GameState }) {
     <dl className="game-hud" aria-label="Realm at a glance">
       {items.map((i) => (
         <div key={i.label} className="game-hud-item has-icon">
-          <HudIcon kind={i.kind} />
+          <HudIcon kind={i.kind} level={level} />
           <dt className="game-hud-label">{i.label}</dt>
           <dd className="game-hud-value tabular" style={i.color ? { color: i.color } : undefined}>
             {i.value}

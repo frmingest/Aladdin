@@ -1089,6 +1089,108 @@
    "source": "a_single_standalone_fantasy_game_structure_asset_a_stepped_stone_quarry_with_a",
    "max_side": 320,
    "quality": 78
+  },
+  {
+   "id": "badge-tripwire",
+   "source": "a_single_standalone_fantasy_game_crest_prop_asset_council_agenda_badge_1_of_8",
+   "key": "white",
+   "max_side": 96
+  },
+  {
+   "id": "badge-thesis",
+   "source": "a_single_standalone_fantasy_game_crest_prop_asset_council_agenda_badge_2_of_8",
+   "key": "white",
+   "max_side": 96
+  },
+  {
+   "id": "badge-vault",
+   "source": "a_single_standalone_fantasy_game_crest_prop_asset_council_agenda_badge_3_of_8",
+   "key": "white",
+   "max_side": 96
+  },
+  {
+   "id": "badge-circle",
+   "source": "a_single_standalone_fantasy_game_crest_prop_asset_council_agenda_badge_4_of_8",
+   "key": "white",
+   "max_side": 96
+  },
+  {
+   "id": "badge-casket",
+   "source": "a_single_standalone_fantasy_game_crest_prop_asset_council_agenda_badge_5_of_8",
+   "key": "white",
+   "max_side": 96
+  },
+  {
+   "id": "badge-wall",
+   "source": "a_single_standalone_fantasy_game_crest_prop_asset_council_agenda_badge_6_of_8",
+   "key": "white",
+   "max_side": 96
+  },
+  {
+   "id": "badge-scroll",
+   "source": "a_single_standalone_fantasy_game_crest_prop_asset_council_agenda_badge_7_of_8",
+   "key": "white",
+   "max_side": 96
+  },
+  {
+   "id": "crest-fortress",
+   "source": "a_single_standalone_fantasy_game_crest_prop_asset_fortress_crest_badge_seen",
+   "key": "white",
+   "max_side": 192
+  },
+  {
+   "id": "crest-journal",
+   "source": "a_single_standalone_fantasy_game_crest_prop_asset_journal_crest_badge_seen",
+   "key": "white",
+   "max_side": 192
+  },
+  {
+   "id": "crest-market",
+   "source": "a_single_standalone_fantasy_game_crest_prop_asset_marketplace_crest_badge_seen",
+   "key": "white",
+   "max_side": 192
+  },
+  {
+   "id": "crest-siege",
+   "source": "a_single_standalone_fantasy_game_crest_prop_asset_siege_crest_badge_seen",
+   "key": "white",
+   "max_side": 192
+  },
+  {
+   "id": "sky-calm",
+   "source": "a_single_standalone_fantasy_game_crest_prop_asset_sky_badge_1_of_4_calm_sun",
+   "key": "white",
+   "max_side": 64
+  },
+  {
+   "id": "sky-clouds",
+   "source": "a_single_standalone_fantasy_game_crest_prop_asset_sky_badge_2_of_4_clouds",
+   "key": "white",
+   "max_side": 64
+  },
+  {
+   "id": "sky-storm",
+   "source": "a_single_standalone_fantasy_game_crest_prop_asset_sky_badge_3_of_4_storm_cloud",
+   "key": "white",
+   "max_side": 64
+  },
+  {
+   "id": "sky-smoke",
+   "source": "a_single_standalone_fantasy_game_crest_prop_asset_sky_badge_4_of_4_dark_smoke",
+   "key": "white",
+   "max_side": 64
+  },
+  {
+   "id": "plot-covered",
+   "source": "a_single_standalone_fantasy_game_environmental_prop_asset_a_construction_plot",
+   "key": "white",
+   "max_side": 256
+  },
+  {
+   "id": "empty-chest",
+   "source": "a_single_standalone_fantasy_game_ui_empty_state_prop_asset_an_empty_open_wooden",
+   "key": "white",
+   "max_side": 256
   }
  ]
 }

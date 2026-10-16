@@ -5,7 +5,8 @@ import ChamberFurniture from "./ChamberFurniture";
 import SealArt from "./SealArt";
 import TorchPair from "./TorchPair";
 import { sealForTone } from "../../../lib/seals";
-import { councilFurniture } from "../../../lib/roomArt";
+import ObjectArtImage from "../../ObjectArtImage";
+import { councilBadgeId, councilFurniture } from "../../../lib/roomArt";
 import { useArtMode } from "../../../lib/stitchArt";
 
 /** The Council chamber (game mode, Council page hero): a round table with eight chairs, one per agenda
@@ -26,9 +27,12 @@ function Papers({ n }: { n: number }) {
 }
 
 function SeatBody({ s }: { s: Seat }) {
+  // The agenda badge names the rule only (alt ""): the seal, papers, count and words still tell whether it is occupied.
+  const badge = councilBadgeId(s.kind);
   return (
     <>
       <span className="flex items-center justify-center gap-1.5">
+        {badge && <ObjectArtImage id={badge} width={26} className="shrink-0" fallback={null} />}
         <SealArt kind={s.occupied && s.tone ? sealForTone(s.tone) : "none"} size={22} />
         {s.occupied && <Papers n={s.papers} />}
         {s.count !== null && <span className="text-xs font-bold text-[#f6e6bd]">{s.count}</span>}
