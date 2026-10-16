@@ -12,6 +12,7 @@ import {
   provinceLines,
   clampView,
   coastDistance,
+  fitScale,
   dist,
   ensureVisible,
   groupSectors,
@@ -26,6 +27,7 @@ import {
   viewBox,
   zoomAt,
   type PlaceInput,
+  type Rect,
 } from "./worldMap";
 
 const sectors = ["Energy", "Financials", "Technology", "Industrials", "Materials", "Health care", "Consumer staples"];
@@ -263,5 +265,49 @@ describe("province names stay on land", () => {
         }
       }
     }
+  });
+});
+
+describe("camera bounded by the painted picture (cover)", () => {
+  // The picture is 16:9, so it is 1000 x 558 world units.
+  const pic: Rect = { x: 0, y: 81, w: 1000, h: 558 };
+  const inside = (b: { x: number; y: number; w: number; h: number }) =>
+    b.x >= pic.x - 1e-6 && b.y >= pic.y - 1e-6 && b.x + b.w <= pic.x + pic.w + 1e-6 && b.y + b.h <= pic.y + pic.h + 1e-6;
+
+  it("covers the box instead of fitting inside it", () => {
+    expect(fitScale(1000, 558, pic)).toBeCloseTo(1, 6); // same shape: exact fit
+    expect(fitScale(1000, 800, pic)).toBeCloseTo(800 / 558, 6); // taller box: fill the height, crop the sides
+    expect(fitScale(2000, 558, pic)).toBeCloseTo(2, 6); // wider box: fill the width, crop top and bottom
+    expect(fitScale(1000, 800)).toBeCloseTo(1000 / 1000, 6); // without bounds: still the old fit
+  });
+
+  it("never shows anything outside the picture at any zoom, in any box", () => {
+    for (const [cw, ch] of [[1000, 558], [390, 540], [1400, 600], [600, 900]] as const) {
+      for (const z of [1, 1.7, 4.5]) {
+        for (const c of [{ cx: -500, cy: -500 }, { cx: 500, cy: 360 }, { cx: 5000, cy: 5000 }]) {
+          const v = clampView({ ...c, z }, cw, ch, pic);
+          expect(inside(viewBox(v, cw, ch, pic))).toBe(true);
+        }
+      }
+    }
+  });
+
+  it("starts whole and centred on the picture, also on a phone", () => {
+    expect(initialView(390, pic)).toEqual({ cx: 500, cy: 360, z: 1 });
+    expect(initialView(1200, pic)).toEqual({ cx: 500, cy: 360, z: 1 });
+  });
+
+  it("keeps zooming and panning inside the picture", () => {
+    const cw = 800, ch = 446;
+    const zoomed = zoomAt({ cx: 500, cy: 360, z: 1 }, 3, { x: 780, y: 20 }, cw, ch, pic);
+    expect(inside(viewBox(zoomed, cw, ch, pic))).toBe(true);
+    const panned = panBy(zoomed, -5000, 5000, cw, ch, pic);
+    expect(inside(viewBox(panned, cw, ch, pic))).toBe(true);
+    const shown = ensureVisible({ cx: 500, cy: 360, z: 3 }, { x: 990, y: 630 }, cw, ch, 0.14, pic);
+    expect(inside(viewBox(shown, cw, ch, pic))).toBe(true);
+  });
+
+  it("leaves the old camera exactly as it was without bounds", () => {
+    expect(clampView({ cx: -50, cy: 9999, z: 99 })).toEqual({ cx: 0, cy: WORLD.h, z: MAX_ZOOM });
   });
 });
