@@ -18,6 +18,7 @@ const BACKDROP_OF: Partial<Record<CrestKind, string>> = {
   circle: "backdrop-circle",
   map: "backdrop-map",
   blindfold: "backdrop-blindfold",
+  winter: "backdrop-winter",
 };
 
 /**
@@ -30,6 +31,7 @@ const BACKDROP_POSITION: Partial<Record<CrestKind, string>> = {
   circle: "50% 45%",
   map: "50% 22%",
   blindfold: "50% 70%",
+  winter: "50% 55%",
 };
 
 /** The CSS object-position for a room's backdrop (centred when the room has no override). */

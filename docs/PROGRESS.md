@@ -1,8 +1,10 @@
 # Aladdin — Progress
 
-**Last updated:** 2026-10-15 (E1 Blindfold Years written, PR open; Map sector towers #155 and the Contest 3 plan #156 are merged). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
+**Last updated:** 2026-10-15 (E2 Winter Rehearsal written, PR open; E1 Blindfold Years merged; Map sector towers #155 and the Contest 3 plan #156 are merged). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
 
 ## Current Objective
+
+**Winter Rehearsal (E2) is written and tested, PR `feature/winter-rehearsal`, not merged, not deployed.** A new Fortress room `/fortress/winter`: write your own winter order in calm weather, then walk a slider down the worst real fall of today's book in the stored prices (kroner, fall, days under water, candles snuffed and frost climbing). At the bottom it shows only your words and the numbers. If the worst fall is under 10% it says "no real winter on file". Read-only, no migration; your order stays in this browser ([write-up](game/winter-rehearsal-2026-10-15.md)). Seen only on mock data in a built copy of the page.
 
 **Blindfold Years (E1) is merged (#157, wording #158). A rebuild of the play area (PR `feature/blindfold-drag`: drag the stakes in the picture, no number boxes) is written and tested, not merged, not deployed.** Faiz found the first version not engaging and messy. A new Fortress room: a holding rolled back to a past year with its name masked, you stake a low and a high figure for the next year's owner earnings, then the stored figure is shown. Read-only, no migration, answers kept in the browser ([write-up](game/blindfold-years-2026-10-15.md)). Seen only on mock data in a built copy of the page.
 
@@ -13,9 +15,10 @@ State: `main` is at `30f0cb9` (#156), which includes #155 (Map towers as sector 
 ## Active Tasks
 
 - [ ] **Review and merge the Blindfold Years PR (Faiz), then open Blindfold with Game mode on** (desktop and phone) and check how many puzzles the real data gives (the plan guessed 20 to 30; the strict rule may give fewer) and that the scene reads
+- [ ] **Review and merge the Winter Rehearsal PR (Faiz), then open Winter with Game mode on** (desktop and phone): check how big the real worst fall is, that the coverage line (how many holdings had stored prices) reads right, and that the order box and the bottom card feel right. Decide whether the order should also be kept on the server (needed for E3 The Hearth; see the write-up)
 - [ ] **Once the Map towers (#155) are deployed, look at the live Map with Game mode on:** fog patches readable on each sector picture, wide pictures not too small ([doc](game/map-sector-landmarks-2026-10-14.md))
 - [ ] **After #150 is deployed (Faiz):** Refresh Margin of safety, open "Can't be ranked yet" then "Why" on Vend Marketplaces, Salmon Evolution and Vår Energi and sanity-check the owner-earnings figure (if wrong, check share count and price currency first). [Doc](valuation/loss-making-price-assumes-2026-10-14.md)
-- [ ] **Contest 3 plan: D1 to D8 ruled 2026-10-15 (all as recommended: lanterns and ravens, no figures; teal ribbon; browser-first state; journal note for E2; Norwegian copy by Claude, reviewed by Faiz; one backdrop per sprint; order E1 to E5).** E2 Winter Rehearsal is next but needs the E2 Stitch pictures first (icicles, winter-order tablet, war-table; none in `art/` yet) ([plan](sprints/game-design-sprint-plan-2026-10-15.md))
+- [ ] **Contest 3 plan: D1 to D8 ruled 2026-10-15 (all as recommended: lanterns and ravens, no figures; teal ribbon; browser-first state; journal note for E2; Norwegian copy by Claude, reviewed by Faiz; one backdrop per sprint; order E1 to E5).** E2 is built (Stitch pictures arrived, see above); E3 The Hearth is next and will need its own pictures (hearth, log, shuttered window, shut door) ([plan](sprints/game-design-sprint-plan-2026-10-15.md))
 - [ ] **Map default (PR `feature/map-image-default`): review and merge (Faiz), then check the Map on desktop and phone:** crowded sectors, fog patches on each picture; decide on a larger Stitch copy of the map picture ([doc](game/map-image-prototype-2026-10-15.md))
 - [ ] **Optional, visual:** with Game mode on, look at the World banner crop on the Siege Simulator (Claude could not judge it)
 

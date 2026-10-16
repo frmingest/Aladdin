@@ -46,6 +46,7 @@ import type {
   Blindfold,
   BlindfoldName,
   BlindfoldReveal,
+  WinterRehearsal,
   Calibration,
   NightWatch,
   Ravens,
@@ -442,6 +443,8 @@ export const api = {
   /** Lifts the mask; the page labels this as weakening the exercise. */
   getBlindfoldName: (puzzleId: string) =>
     request<BlindfoldName>(`/game/blindfold/name?${new URLSearchParams({ puzzle_id: puzzleId }).toString()}`),
+  /** E2 Winter Rehearsal: the worst stored fall of the book at today's weights. Read-only; your order stays in the browser. */
+  getWinterRehearsal: () => request<WinterRehearsal>("/game/winter-rehearsal"),
   getCompetence: () => request<Competence>("/game/competence"),
   /** The only write of Sprint 25: your own mark for one sector. */
   putCompetence: (sector: string, level: CompetenceLevel, note: string | null) =>
