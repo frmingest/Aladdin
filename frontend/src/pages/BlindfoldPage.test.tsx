@@ -52,7 +52,7 @@ const reveal = (position: BlindfoldReveal["position"]): BlindfoldReveal => ({
   shown_period: "FY2021",
   answer_period: "FY2022",
   source_file: "secr-2022.pdf",
-  note: "Taken from the newest filing on file, so numbers may be restated.",
+  note: "The stored figure may include later restatements.",
 });
 
 const results = (n: number): BlindfoldResult[] =>
@@ -72,7 +72,7 @@ describe("FiguresTable", () => {
     expect(html).toContain("Year -3");
     expect(html).toContain("1.0 m");
     expect(html).toContain("12.3%");
-    expect(html).toContain("hidden");
+    expect(html).toContain("not named");
   });
 
   it("shows a missing figure as unknown with its reason, never a number", () => {
@@ -84,14 +84,14 @@ describe("FiguresTable", () => {
 describe("Tallies", () => {
   it("shows only a count below the gate", () => {
     const html = renderToStaticMarkup(<Tallies results={results(5)} data={data()} onForget={() => {}} />);
-    expect(html).toContain("Keep going: 5 answered. Your tally opens at 8.");
-    expect(html).not.toContain("caught");
-    expect(html).toContain("Clear my answers");
+    expect(html).toContain("Too few so far: 5 puzzles answered. A count opens at 8.");
+    expect(html).not.toContain("held");
+    expect(html).toContain("Forget my answers in this browser");
   });
 
   it("prints the ratio with its count once the gate opens, with no grade or trend wording", () => {
     const html = renderToStaticMarkup(<Tallies results={results(8)} data={data()} onForget={() => {}} />);
-    expect(html).toContain("Your stakes caught it 4 of 8 times.");
+    expect(html).toContain("Your 80% ranges held 4 of 8.");
     expect(html.toLowerCase()).not.toMatch(/improv|streak|score|grade|well done|great/);
   });
 });
@@ -99,15 +99,15 @@ describe("Tallies", () => {
 describe("RevealPanel", () => {
   it("words the position as shape and words, and lifts the mask only now", () => {
     for (const [position, mark, word] of [
-      ["below", "▼", "Missed: it landed below your stakes"],
-      ["inside", "●", "Caught it: inside your stakes"],
-      ["above", "▲", "Missed: it landed above your stakes"],
+      ["below", "▼", "Below your range"],
+      ["inside", "●", "Inside your range"],
+      ["above", "▲", "Above your range"],
     ] as const) {
       const html = renderToStaticMarkup(<RevealPanel reveal={reveal(position)} hasNext onNext={() => {}} />);
       expect(html).toContain(mark);
       expect(html).toContain(word);
       expect(html).toContain("Secret Co (SECR.OL)");
-      expect(html).toContain("restated");
+      expect(html).toContain("restatements");
     }
   });
 

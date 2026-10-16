@@ -79,27 +79,27 @@ export function tallyByWidth(results: BlindfoldResult[], minN: number): Record<B
   return out;
 }
 
-export function tallyLine(t: Tally, minN: number): string {
+export function tallyLine(t: Tally, minN: number, confidencePct: number): string {
   if (!t.open) {
-    return `Keep going: ${t.n} answered. Your tally opens at ${minN}.`;
+    return `Too few so far: ${t.n} ${t.n === 1 ? "puzzle" : "puzzles"} answered. A count opens at ${minN}.`;
   }
-  return `Your stakes caught it ${t.inside} of ${t.n} times.`;
+  return `Your ${confidencePct}% ranges held ${t.inside} of ${t.n}.`;
 }
 
 export const WIDTH_LABEL: Record<BlindfoldWidthClass, string> = {
-  narrow: "Narrow stakes",
-  medium: "Medium stakes",
-  wide: "Wide stakes",
+  narrow: "Narrow ranges",
+  medium: "Medium ranges",
+  wide: "Wide ranges",
 };
 
 export function widthLine(w: BlindfoldWidthClass, t: Tally, minN: number): string {
-  return t.open ? `${WIDTH_LABEL[w]}: caught ${t.inside} of ${t.n}` : `${WIDTH_LABEL[w]}: not enough yet (${t.n} of ${minN})`;
+  return t.open ? `${WIDTH_LABEL[w]}: held ${t.inside} of ${t.n}` : `${WIDTH_LABEL[w]}: too few so far (${t.n}, opens at ${minN})`;
 }
 
 export const POSITION_WORD: Record<BlindfoldPosition, string> = {
-  below: "Missed: it landed below your stakes",
-  inside: "Caught it: inside your stakes",
-  above: "Missed: it landed above your stakes",
+  below: "Below your range",
+  inside: "Inside your range",
+  above: "Above your range",
 };
 
 // --- numbers --------------------------------------------------------------------
@@ -146,21 +146,6 @@ export function valueToFraction(v: number, min: number, max: number): number {
  * kept at the edge so a stored figure far outside the shown years still sits on the gauge. */
 export function sceneY(v: number, min: number, max: number, top: number, bottom: number): number {
   return bottom - clamp01(valueToFraction(v, min, max)) * (bottom - top);
-}
-
-/** The smallest gap kept between the two stakes (a share of the gauge), so their pills never overlap. */
-export const MIN_STAKE_GAP = 0.11;
-
-/** The value at a scene y: the inverse of sceneY, kept on the gauge. */
-export function valueFromSceneY(sy: number, min: number, max: number, top: number, bottom: number): number {
-  return fractionToValue((bottom - sy) / (bottom - top), min, max);
-}
-
-/** Where a dragged stake ends up: on the gauge, and never closer than MIN_STAKE_GAP to the other stake. */
-export function moveStake(which: "low" | "high", value: number, low: number, high: number, min: number, max: number): number {
-  const gap = (max - min) * MIN_STAKE_GAP;
-  const v = Math.min(max, Math.max(min, value));
-  return which === "low" ? Math.min(v, high - gap) : Math.max(v, low + gap);
 }
 
 /** Round, even tick values between min and max for the gauge (about `count` of them). */

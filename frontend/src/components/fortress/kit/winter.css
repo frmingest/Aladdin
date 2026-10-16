@@ -1,6 +1,0 @@
-/* Winter Rehearsal scene (E2). Nothing animates: the scene changes only when the slider moves. */
-.ws-scene { position: relative; width: 100%; max-width: 34rem; aspect-ratio: 420 / 260; margin-inline: auto; border-radius: 0.75rem; overflow: hidden; border: 1px solid #26253b; background: #1c1b2e; }
-.ws-layer { position: absolute; inset: 0; }
-.ws-backdrop { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 55%; }
-.ws-art { position: absolute; pointer-events: none; height: auto; }
-.ws-svg { pointer-events: none; position: absolute; inset: 0; width: 100%; height: 100%; }

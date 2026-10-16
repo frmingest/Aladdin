@@ -50,7 +50,7 @@ export function FiguresTable({ puzzle }: { puzzle: BlindfoldPuzzle }) {
     <div className="overflow-x-auto">
       <table className="w-full text-xs sm:text-sm">
         <caption className="mb-2 text-left text-xs text-ink-faint">
-          Four years on record. The currency is hidden too.
+          What had been filed by Year 0. Figures are in the filing's own currency, which is not named.
         </caption>
         <thead>
           <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-ink-faint">
@@ -95,9 +95,9 @@ export function FiguresTable({ puzzle }: { puzzle: BlindfoldPuzzle }) {
 export function RevealPanel({ reveal, onNext, hasNext }: { reveal: BlindfoldReveal; onNext: () => void; hasNext: boolean }) {
   return (
     <div className="space-y-2" aria-live="polite">
-      <h2 className="section-title">The answer</h2>
+      <h2 className="section-title">The stored figure</h2>
       <p className="text-sm text-ink">
-        Owner earnings landed at <strong>{formatFigure(reveal.actual, "money")}</strong>. Your stakes: {formatFigure(reveal.low, "money")} to{" "}
+        Year +1 owner earnings were <strong>{formatFigure(reveal.actual, "money")}</strong>. You staked {formatFigure(reveal.low, "money")} to{" "}
         {formatFigure(reveal.high, "money")}.
       </p>
       <p className="text-sm font-semibold text-ink">
@@ -105,12 +105,12 @@ export function RevealPanel({ reveal, onNext, hasNext }: { reveal: BlindfoldReve
         {POSITION_WORD[reveal.position]}.
       </p>
       <p className="text-sm text-ink-muted">
-        The company: {reveal.name} ({reveal.ticker}). Year 0 was {reveal.shown_period}, the answer is {reveal.answer_period}
-        {reveal.source_file ? ` (from ${reveal.source_file})` : ""}.
+        It was {reveal.name} ({reveal.ticker}). Year 0 was {reveal.shown_period}; the answer is {reveal.answer_period}
+        {reveal.source_file ? `, read from ${reveal.source_file}` : ""}.
       </p>
       <p className="text-xs text-ink-faint">{reveal.note}</p>
       <div className="pt-1">
-        <Button onClick={onNext}>{hasNext ? "Next company" : "That is all for now"}</Button>
+        <Button onClick={onNext}>{hasNext ? "Next puzzle" : "See what is left"}</Button>
       </div>
     </div>
   );
@@ -121,8 +121,8 @@ export function Tallies({ results, data, onForget }: { results: BlindfoldResult[
   const byWidth = useMemo(() => tallyByWidth(results, data.min_n), [results, data.min_n]);
   return (
     <div className="space-y-1">
-      <h2 className="section-title">Your stakes so far</h2>
-      <p className="text-sm text-ink">{tallyLine(overall, data.min_n)}</p>
+      <h2 className="section-title">Your answers so far</h2>
+      <p className="text-sm text-ink">{tallyLine(overall, data.min_n, data.confidence_pct)}</p>
       {overall.open && (
         <ul className="text-sm text-ink-muted">
           {WIDTH_ORDER.map((w) => (
@@ -130,9 +130,9 @@ export function Tallies({ results, data, onForget }: { results: BlindfoldResult[
           ))}
         </ul>
       )}
-      <p className="text-xs text-ink-faint">Just counts, kept in this browser.</p>
+      <p className="text-xs text-ink-faint">Counts only. They change no verdict and no tower, and they stay in this browser.</p>
       <button type="button" className="inline-flex min-h-[44px] items-center text-xs text-accent hover:underline" onClick={onForget}>
-        Clear my answers
+        Forget my answers in this browser
       </button>
     </div>
   );
@@ -228,10 +228,6 @@ export default function BlindfoldPage() {
     (which === "low" ? setLowText : setHighText)(text);
     setTouched(true);
   };
-  const dragStake = (which: "low" | "high", value: number) => {
-    (which === "low" ? setLowText : setHighText)(stakeText(Number(value.toPrecision(4))));
-    setTouched(true);
-  };
   const sliderValue = (n: number | null, fallback: number) =>
     domain && n !== null ? Math.round(valueToFraction(n, domain.min, domain.max) * SLIDER_STEPS) : fallback;
 
@@ -246,7 +242,7 @@ export default function BlindfoldPage() {
     <div>
       <PageHeader
         title="Blindfold Years"
-        subtitle="A hidden company, four years of numbers. Where will its owner earnings land next?"
+        subtitle="Roll one holding back to a past year with its name masked. Stake where next year's owner earnings will land."
         actions={
           <Link to="/fortress" className="inline-flex min-h-[44px] items-center text-sm text-accent hover:underline">
             Back to the Fortress
@@ -272,11 +268,23 @@ export default function BlindfoldPage() {
 
           {puzzle && domain && (
             <>
+              {gameMode && (
+                <BlindfoldScene
+                  points={points}
+                  min={domain.min}
+                  max={domain.max}
+                  low={lo}
+                  high={hi}
+                  actual={reveal ? Number(reveal.actual) : null}
+                />
+              )}
+
               <Panel>
                 <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                  <h2 className="section-title !mb-0">Mystery company</h2>
+                  <h2 className="section-title !mb-0">A masked company</h2>
                   <span className="text-xs text-ink-faint">
-                    {puzzle.sector ?? "Sector not set"} · {data.remaining} of {data.pool_size} left
+                    {puzzle.sector ? `Sector: ${puzzle.sector}` : "Sector not set"} · {data.remaining} {data.remaining === 1 ? "puzzle" : "puzzles"} left of{" "}
+                    {data.pool_size}
                   </span>
                 </div>
                 <FiguresTable puzzle={puzzle} />
@@ -284,52 +292,29 @@ export default function BlindfoldPage() {
                   <div className="mt-3 text-xs text-ink-muted">
                     {lifted ? (
                       <p>
-                        It is {lifted.name} ({lifted.ticker}). Peeking makes it easier.
+                        The mask is off: {lifted.name} ({lifted.ticker}). That weakens the exercise.
                       </p>
                     ) : (
                       <button type="button" className="inline-flex min-h-[44px] items-center text-accent hover:underline" disabled={busy} onClick={liftMask}>
-                        Peek at the name (makes it easier)
+                        Lift the mask (this weakens the exercise)
                       </button>
                     )}
                   </div>
                 )}
               </Panel>
 
-              {gameMode && (
-                <div className="space-y-3">
-                  <BlindfoldScene
-                    points={points}
-                    min={domain.min}
-                    max={domain.max}
-                    low={lo}
-                    high={hi}
-                    actual={reveal ? Number(reveal.actual) : null}
-                    position={reveal ? reveal.position : null}
-                    onChange={reveal ? undefined : dragStake}
-                  />
-                  {!reveal && (
-                    <div className="flex flex-wrap items-center justify-center gap-3">
-                      <p className="text-sm text-ink-muted">Drag the two stakes to catch next year&apos;s owner earnings.</p>
-                      <Button disabled={!stakesReady || busy} onClick={doReveal}>
-                        {busy ? "Checking…" : "Reveal the answer"}
-                      </Button>
-                    </div>
-                  )}
-                  {actionError && <p className="text-center text-xs text-negative">{actionError}</p>}
-                </div>
-              )}
-
-              {!reveal && !gameMode && (
+              {!reveal && (
                 <Panel>
-                  <h2 className="section-title">Plant your stakes</h2>
+                  <h2 className="section-title">Stake Year +1 owner earnings</h2>
                   <p className="mb-3 text-xs text-ink-muted">
-                    Owner earnings next year: plant a low and a high stake you are {data.confidence_pct}% sure it lands between. Same units as the table.
+                    Set a low and a high figure you would expect the real number to fall between {data.confidence_pct} times in 100. The figures use the same
+                    unit as the table.
                   </p>
                   <div className="grid gap-4 sm:grid-cols-2">
                     {(
                       [
-                        ["low", "Low", lowText, setLowText, lowN],
-                        ["high", "High", highText, setHighText, highN],
+                        ["low", "Low stake", lowText, setLowText, lowN],
+                        ["high", "High stake", highText, setHighText, highN],
                       ] as const
                     ).map(([which, label, text, setText, n]) => (
                       <div key={which} className="space-y-1">
@@ -366,7 +351,7 @@ export default function BlindfoldPage() {
                   {actionError && <p className="mt-2 text-xs text-negative">{actionError}</p>}
                   <div className="mt-3">
                     <Button disabled={!stakesReady || !touched || busy} onClick={doReveal}>
-                      {busy ? "Checking…" : "Reveal the answer"}
+                      {busy ? "Looking it up…" : "Show the stored figure"}
                     </Button>
                   </div>
                 </Panel>
@@ -386,7 +371,7 @@ export default function BlindfoldPage() {
             </>
           )}
 
-          <GameFooter rules={`Blindfold ${data.version}. A company needs four full years on file plus the next one. Years with gaps or data warnings are never offered.`} />
+          <GameFooter rules={`Blindfold ${data.version}. A puzzle needs four complete filed years and the next one; a missing or flagged year means it is never offered.`} />
         </div>
       )}
     </div>

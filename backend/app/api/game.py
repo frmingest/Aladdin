@@ -21,11 +21,9 @@ from app.domain.game_mapping import get_game_mapping
 from app.domain.game_mapping.backtest_v1 import get_backtest_rules
 from app.domain.game_mapping.blindfold_v1 import get_blindfold_rules
 from app.domain.game_mapping.calibration_v1 import get_calibration_rules
-from app.domain.game_mapping.hearth_v1 import get_hearth_rules
 from app.domain.game_mapping.rituals_v1 import get_rituals
 from app.domain.game_mapping.siege_scenarios_v1 import get_siege_scenarios
 from app.domain.game_mapping.time_and_filings_v1 import get_time_and_filings
-from app.domain.game_mapping.winter_v1 import get_winter_rules
 from app.schemas.game import (
     BlindfoldCellOut,
     BlindfoldNameOut,
@@ -43,16 +41,12 @@ from app.schemas.game import (
     CompetenceOut,
     CouncilOut,
     GameStateOut,
-    HearthOut,
     HoldingAdvisorsOut,
     NightWatchOut,
     RavensOut,
     RecordsOut,
     SiegeBacktestOut,
     SiegeSimOut,
-    WinterOrderIn,
-    WinterOrderOut,
-    WinterRehearsalOut,
 )
 from app.services.game import blindfold as blindfold_svc
 from app.services.game import calibration as calibration_svc
@@ -71,12 +65,6 @@ from app.services.game.demo import (
     demo_night_watch,
     demo_ravens,
 )
-from app.services.game.hearth import compose_hearth
-from app.services.game.hearth_view import (
-    current_order,
-    invalidation_lines,
-    save_winter_order,
-)
 from app.services.game.night_watch import get_night_watch
 from app.services.game.ravens import build_ravens
 from app.services.game.ritual_inputs import (
@@ -87,7 +75,6 @@ from app.services.game.ritual_inputs import (
 from app.services.game.sensitivity import METHOD_DEMO, Sensitivity
 from app.services.game.siege_view import build_siege_sim, stored_sensitivity_lookup
 from app.services.game.state import get_game_state
-from app.services.game.winter_view import build_winter, demo_winter
 from app.services.settings.demo_guard import require_not_demo
 from app.services.settings.demo_mode import is_demo_mode
 
@@ -158,57 +145,6 @@ def get_siege_backtest(db: Session = Depends(get_db)) -> SiegeBacktestOut:
     state = get_game_state(db, mapping.version)
     bench, holdings = stored_backtest_inputs(db, state, scenarios)
     return build_backtest(state, bench, holdings, scenarios, rules)
-
-
-@router.get("/winter-rehearsal", response_model=WinterRehearsalOut)
-def get_winter_rehearsal(db: Session = Depends(get_db)) -> WinterRehearsalOut:
-    """E2 Winter Rehearsal: the worst fall of the book inside the stored price
-    history, replayed at today's weights (kroner and days under water). Over
-    stored data only: no provider call, no LLM, no write. Your written winter
-    order is kept in the browser and never reaches the server."""
-    settings = get_settings()
-    mapping = get_game_mapping(settings.active_game_mapping_version)
-    scenarios = get_siege_scenarios(settings.active_siege_scenarios_version)
-    rules = get_winter_rules(settings.active_winter_version)
-    if is_demo_mode(db):
-        return demo_winter(rules)
-    state = get_game_state(db, mapping.version)
-    _bench, holdings = stored_backtest_inputs(db, state, scenarios)
-    return build_winter(holdings, rules, scenarios.min_observations)
-
-
-@router.get("/hearth", response_model=HearthOut)
-def get_hearth(db: Session = Depends(get_db)) -> HearthOut:
-    """E3 The Hearth: when the stored weather is bad, what moved, held and
-    changed, beside your own invalidation lines and winter order. Stored data
-    only: no provider call, no LLM, no write."""
-    settings = get_settings()
-    rules = get_hearth_rules(settings.active_hearth_version)
-    winter_rules = get_winter_rules(settings.active_winter_version)
-    rules_v = get_time_and_filings(settings.active_time_and_filings_version)
-    if is_demo_mode(db):
-        chron = demo_chronicle(settings.active_game_mapping_version, rules_v)
-        return compose_hearth(chron, [], WinterOrderOut(), demo_winter(winter_rules), rules, demo=True)
-    mapping = get_game_mapping(settings.active_game_mapping_version)
-    scenarios = get_siege_scenarios(settings.active_siege_scenarios_version)
-    chron = get_chronicle(db, mapping, rules_v)
-    state = get_game_state(db, mapping.version)
-    _bench, holdings = stored_backtest_inputs(db, state, scenarios)
-    winter = build_winter(holdings, winter_rules, scenarios.min_observations)
-    return compose_hearth(chron, invalidation_lines(db, chron), current_order(db), winter, rules)
-
-
-@router.get("/winter-order", response_model=WinterOrderOut)
-def get_winter_order(db: Session = Depends(get_db)) -> WinterOrderOut:
-    """E3: your written winter order (newest saved), or empty."""
-    return WinterOrderOut() if is_demo_mode(db) else current_order(db)
-
-
-@router.put("/winter-order", response_model=WinterOrderOut)
-def put_winter_order(body: WinterOrderIn, db: Session = Depends(get_db)) -> WinterOrderOut:
-    """E3: save your winter order. Appends one row; an empty text clears it."""
-    require_not_demo(db)
-    return save_winter_order(db, body.text)
 
 
 @router.get("/chronicle", response_model=ChronicleOut)
@@ -315,10 +251,12 @@ def get_calibration(db: Session = Depends(get_db)) -> CalibrationOut:
 
 
 BLINDFOLD_CAPTION = (
-    "Just for practice. Nothing you guess changes any verdict or tower."
+    "Practice, not measurement: a number can still give a company away. "
+    "It changes no verdict and no tower, and nothing you stake reaches the analysis."
 )
 BLINDFOLD_NOTE = (
-    "Taken from the newest filing on file, so numbers may be restated."
+    "The stored figure is the one on file today, from the latest filing for that year, "
+    "so it may include later restatements."
 )
 
 
@@ -332,7 +270,7 @@ def get_blindfold(seen: list[str] = Query(default=[]), db: Session = Depends(get
             "caption": BLINDFOLD_CAPTION}
     if is_demo_mode(db):
         return BlindfoldOut(demo=True, pool_size=0, remaining=0,
-                            empty_reason="Demo mode has no real filings, so there is nothing to guess.", **base)
+                            empty_reason="Demo mode shows no real filings, so there is nothing to roll back.", **base)
     holdings = blindfold_svc.load_holdings(db)
     by_id = {h.id: h for h in holdings}
     pool = blindfold_svc.build_pool(holdings, rules)
@@ -340,8 +278,8 @@ def get_blindfold(seen: list[str] = Query(default=[]), db: Session = Depends(get
     unseen = [pid for pid in pool if pid not in answered]
     if not unseen:
         reason = (
-            "No puzzles yet. A company needs four full years on file, plus the year after."
-            if not pool else "You have cleared every puzzle on file. New ones appear as more years are filed."
+            "No puzzles yet: a holding needs four complete years of filings plus the year after."
+            if not pool else "You have been through every puzzle on file. New ones appear when more years are filed."
         )
         return BlindfoldOut(demo=False, pool_size=len(pool), remaining=0, empty_reason=reason, **base)
     holding_id, year = blindfold_svc.parse_puzzle_id(unseen[0])

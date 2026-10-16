@@ -21,8 +21,7 @@ const MAX_PUBLIC_IMAGE_KB = 150;
 const MAX_BACKDROP_KB = 120;
 // Six since 2026-10-14: the Siege page's World banner (about 22 KB), shown only while the World yardstick is selected.
 // Seven since 2026-10-15: the Blindfold Years river-bank banner (about 18 KB), shown only in that room.
-// Nine since 2026-10-15: the Winter Rehearsal war-room banner (about 29 KB) and its snow-field picture (about 16 KB), shown only in that room.
-const MAX_BACKDROPS = 9;
+const MAX_BACKDROPS = 7;
 const isBackdrop = (file: string) => file.startsWith("backdrop-");
 
 const sourceIds = SOURCE.objects.map((o) => o.id);
