@@ -126,23 +126,70 @@
 }
 .hall-hint { margin: 0 1rem; font-size: 0.75rem; color: rgb(var(--c-ink-muted)); }
 .hall-desk { margin: 1rem 1rem 0; scroll-margin-top: 1rem; }
-/* The open book. The board takes the tome's own leather, so the book on the desk is the book you pressed. */
-.hall-book { position: relative; max-width: 1100px; margin: 0 auto; perspective: 2200px; }
+/* The open book. One fixed size for every record: the text is paged (CSS columns, one per page), never stretched.
+   The board takes the tome's own leather, so the book on the desk is the book you pressed. --lt/--lr/--lb/--ll are the
+   frame widths around the text of a leaf; --pad is the breathing room inside them. */
+.hall-book {
+  --lt: 30px; --lr: 29px; --lb: 34px; --ll: 33px; --pad: 0px;
+  position: relative;
+  width: min(100%, 1000px);
+  aspect-ratio: 1.55;
+  margin: 0 auto;
+  perspective: 2200px;
+  container-type: inline-size;
+}
 .hall-board {
   position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 18px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  height: 100%;
   padding: 9px 9px 13px;
   border-radius: 8px 8px 12px 12px;
   background: linear-gradient(180deg, var(--cover, #3a2615), #1c1109);
   box-shadow: 0 16px 26px -16px #000, inset 0 0 0 1px var(--cover-edge, #8a6a32), inset 0 0 0 3px rgba(0, 0, 0, 0.35);
 }
-.hall-page { position: relative; min-width: 0; padding: 1.25rem 1.5rem 1.5rem; background: linear-gradient(180deg, #2c2218, #231a11); }
+.hall-page { position: relative; min-width: 0; background: linear-gradient(180deg, #2c2218, #231a11); }
 .hall-page-left { border-radius: 6px 0 0 6px; background-image: linear-gradient(270deg, rgba(0, 0, 0, 0.34), transparent 13%), linear-gradient(180deg, #2c2218, #231a11); }
 .hall-page-right { border-radius: 0 6px 6px 0; background-image: linear-gradient(90deg, rgba(0, 0, 0, 0.34), transparent 13%), linear-gradient(180deg, #2c2218, #231a11); }
 /* Stacked page edges under each leaf. */
 .hall-page::after { content: ""; position: absolute; left: 0; right: 0; bottom: -6px; height: 5px; background: repeating-linear-gradient(180deg, #4a3b27 0 1px, #1a120a 1px 2px); border-radius: 0 0 4px 4px; }
 .hall-spine { background: linear-gradient(90deg, #0f0905, #3a2a18 50%, #0f0905); }
+/* The text: two columns (left page, right page), as tall as the leaf. Pages beyond the first spread sit to the right,
+   out of sight, and the pager slides them in. */
+.hall-flow {
+  position: absolute;
+  z-index: 1;
+  top: calc(var(--lt) + var(--pad));
+  bottom: calc(var(--lb) + var(--pad));
+  left: calc(var(--ll) + var(--pad));
+  right: calc(var(--ll) + var(--pad));
+  column-count: 2;
+  column-gap: calc(2 * (var(--lr) + var(--pad)));
+  column-fill: auto;
+  overflow: hidden;
+}
+.hall-flow .hall-title { break-after: avoid; }
+.hall-flow dt { break-after: avoid; }
+.hall-facts .space-y-3 > * { break-inside: avoid; }
+/* The facts start on the right-hand page. */
+.hall-facts { break-before: column; }
+.hall-pager { display: flex; align-items: center; justify-content: center; gap: 1rem; margin: 0.75rem auto 0; }
+.hall-pager-count { min-width: 6rem; text-align: center; font-size: 0.75rem; color: rgb(var(--c-ink-muted)); }
+.hall-pager-btn {
+  padding: 0.35rem 0.95rem;
+  border: 1px solid #8a6a32;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #5a4020, #3a2813);
+  color: #f6dfa6;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  box-shadow: inset 0 1px 0 rgba(255, 220, 160, 0.25), 0 3px 6px -3px #000;
+}
+.hall-pager-btn:hover:not(:disabled) { background: linear-gradient(180deg, #6c4d27, #46301a); }
+.hall-pager-btn:disabled { opacity: 0.4; cursor: default; }
+.hall-pager-btn:focus-visible { outline: 2px solid #f6dfa6; outline-offset: 2px; }
 .hall-ribbon {
   position: absolute;
   left: 50%;
@@ -157,7 +204,7 @@
 .hall-title { margin-bottom: 0.4rem; padding-bottom: 0.45rem; border-bottom: 1px solid rgba(217, 169, 62, 0.32); }
 .hall-leaf-label { display: flex; align-items: center; gap: 8px; font-size: 0.6875rem; letter-spacing: 0.14em; text-transform: uppercase; color: #cfae66; }
 .hall-leaf-label::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, rgba(217, 169, 62, 0.45), transparent); }
-.hall-page .hall-price { font-size: 1rem; font-weight: 600; }
+.hall-flow .hall-price { font-size: 1rem; font-weight: 600; }
 
 /* The cover is a picture of the tome, only used for the opening swing: hidden unless the reader allows motion. */
 .hall-cover { position: absolute; top: 0; bottom: 0; left: 50%; right: 0; z-index: 3; display: none; transform-origin: left center; transform-style: preserve-3d; pointer-events: none; }
@@ -181,10 +228,15 @@
    middle (border-image), so the book grows with its text without stretching any artwork. The slice numbers are
    packed-picture pixels (leaf 452x778, cover 349x400); --k and --kc scale them to screen. The drawn book above is the
    fallback until every picture has loaded. */
-.hall-book--art { --k: 0.55; --kc: 0.8; --lt: calc(150px * var(--k)); --lr: calc(20px * var(--k)); --lb: calc(193px * var(--k)); --ll: calc(215px * var(--k)); }
+.hall-book--art {
+  --ku: calc(100cqw / 1000 * 0.55);
+  --kc: calc(100cqw / 1000 * 0.8);
+  --lt: calc(150 * var(--ku)); --lr: calc(20 * var(--ku)); --lb: calc(193 * var(--ku)); --ll: calc(215 * var(--ku));
+  --pad: calc(26 * var(--ku));
+}
 .hall-book--art .hall-board { padding: 0; background: none; box-shadow: none; border-radius: 0; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 .hall-book--art .hall-spine { display: none; }
-.hall-book--art .hall-page { padding: 0.5rem 0.9rem; border-style: solid; border-color: transparent; border-radius: 0; background: none; }
+.hall-book--art .hall-page { border-style: solid; border-color: transparent; border-radius: 0; background: none; }
 .hall-book--art .hall-page::after { display: none; }
 .hall-book--art .hall-page-left {
   margin-right: -2px;
@@ -202,8 +254,8 @@
   box-shadow: none;
   border-style: solid;
   border-color: transparent;
-  border-width: calc(105px * var(--kc)) calc(100px * var(--kc)) calc(105px * var(--kc)) calc(150px * var(--kc));
-  border-image: var(--cover-img) 105 100 105 150 fill / calc(105px * var(--kc)) calc(100px * var(--kc)) calc(105px * var(--kc)) calc(150px * var(--kc)) stretch;
+  border-width: calc(105 * var(--kc)) calc(100 * var(--kc)) calc(105 * var(--kc)) calc(150 * var(--kc));
+  border-image: var(--cover-img) 105 100 105 150 fill / calc(105 * var(--kc)) calc(100 * var(--kc)) calc(105 * var(--kc)) calc(150 * var(--kc)) stretch;
 }
 /* The inside of the cover is the left leaf again, so it lands on the left page without a seam. */
 .hall-book--art .hall-cover-back {
@@ -215,7 +267,7 @@
   border-width: var(--lt) var(--lr) var(--lb) var(--ll);
   border-image: var(--page-left) 150 20 193 215 fill / var(--lt) var(--lr) var(--lb) var(--ll) stretch;
 }
-.hall-ribbon-art { position: absolute; left: 50%; top: calc(8px * var(--k, 0.55)); z-index: 2; width: 30px; height: auto; transform: translateX(-50%); pointer-events: none; }
+.hall-ribbon-art { position: absolute; left: 50%; top: calc(8 * var(--ku, 0.55px)); z-index: 2; width: calc(55 * var(--ku, 0.55px)); height: auto; transform: translateX(-50%); pointer-events: none; }
 
 @keyframes hall-book-open {
   from { transform: translateX(-25%); clip-path: inset(-60px -60px -60px 50%); }
@@ -230,36 +282,41 @@
 @keyframes hall-ink { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
 @keyframes hall-book-lift { from { opacity: 0; transform: perspective(900px) rotateX(-24deg) translateY(10px); transform-origin: top center; } to { opacity: 1; transform: none; } }
 
+/* Turning a page: a leaf painted like the page swings over the spine. Hidden unless the reader allows motion. */
+.hall-turner { position: absolute; top: 0; bottom: 0; z-index: 4; display: none; transform-style: preserve-3d; pointer-events: none; }
+.hall-turner .hall-page { position: absolute; inset: 0; margin: 0 !important; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.hall-turner .hall-page::after { display: none; }
+.hall-turner-back { transform: rotateY(180deg); }
+.hall-turner--next { left: 50%; right: 0; transform-origin: left center; }
+.hall-turner--prev { left: 0; right: 50%; transform-origin: right center; }
+.hall-turner--prev .hall-page-right { transform: rotateY(180deg); }
+.hall-turner--prev .hall-page-left { transform: none; }
+@keyframes hall-turn-next { from { transform: rotateY(0deg); } to { transform: rotateY(-180deg); } }
+@keyframes hall-turn-prev { from { transform: rotateY(0deg); } to { transform: rotateY(180deg); } }
+
 @media (prefers-reduced-motion: no-preference) {
   .hall-book--opening { animation: hall-book-open 1050ms cubic-bezier(0.55, 0.05, 0.25, 1) backwards; }
   .hall-book--opening .hall-cover { display: block; animation: hall-cover-swing 1050ms cubic-bezier(0.55, 0.05, 0.25, 1) both; }
   .hall-book--opening .hall-cover-back { animation: hall-cover-settle 1050ms linear both; }
-  .hall-book--opening .hall-page > * { animation: hall-ink 360ms ease-out both; }
-  .hall-book--opening .hall-page-right > :nth-child(1) { animation-delay: 480ms; }
-  .hall-book--opening .hall-page-right > :nth-child(2) { animation-delay: 560ms; }
-  .hall-book--opening .hall-page-right > :nth-child(3) { animation-delay: 640ms; }
-  .hall-book--opening .hall-page-right > :nth-child(n + 4) { animation-delay: 720ms; }
-  .hall-book--opening .hall-page-left > :nth-child(1) { animation-delay: 820ms; }
-  .hall-book--opening .hall-page-left > :nth-child(2) { animation-delay: 880ms; }
-  .hall-book--opening .hall-page-left > :nth-child(n + 3) { animation-delay: 940ms; }
+  .hall-book--opening .hall-flow { animation: hall-ink 520ms ease-out 700ms both; }
+  .hall-book--turn-next .hall-turner--next { display: block; animation: hall-turn-next 620ms cubic-bezier(0.45, 0.05, 0.3, 1) both; }
+  .hall-book--turn-prev .hall-turner--prev { display: block; animation: hall-turn-prev 620ms cubic-bezier(0.45, 0.05, 0.3, 1) both; }
 }
 
+/* Phone: one page at a time. The book is a single leaf; the pager turns the pages. */
 @media (max-width: 640px) {
-  .hall-book--art { --k: 0.34; }
-  .hall-book--art .hall-board { grid-template-columns: minmax(0, 1fr); }
-  .hall-book--art .hall-page { padding: 0.4rem 0.6rem; }
-  .hall-book--art .hall-page-left, .hall-book--art .hall-page-right { margin-left: 0; margin-right: 0; }
-  .hall-book--art .hall-page-right { margin-top: -6px; }
-  .hall-ribbon-art { display: none; }
-  .hall-board { grid-template-columns: minmax(0, 1fr); }
-  .hall-spine, .hall-ribbon, .hall-cover { display: none; }
-  .hall-page-left, .hall-page-right { border-radius: 4px; }
-  .hall-page-right { margin-top: 12px; }
+  .hall-book { aspect-ratio: 3 / 4; }
+  .hall-book--art { --ku: 0.34px; --kc: 0.34px; --pad: 8px; }
+  .hall-board, .hall-book--art .hall-board { grid-template-columns: minmax(0, 1fr); }
+  .hall-page-right, .hall-spine, .hall-ribbon, .hall-ribbon-art, .hall-cover, .hall-turner { display: none !important; }
+  .hall-book--art .hall-page-left { margin-right: 0; }
+  .hall-flow { column-count: 1; column-gap: 2rem; right: calc(var(--lr) + var(--pad)); }
+  .hall-facts { break-before: auto; }
   .hall-niche { width: 50%; }
 }
 /* Phone: no 3D cover, the book simply tips up onto the desk. */
 @media (max-width: 640px) and (prefers-reduced-motion: no-preference) {
   .hall-book--opening { animation: hall-book-lift 480ms ease-out backwards; }
   .hall-book--opening .hall-cover { display: none; }
-  .hall-book--opening .hall-page-right > *, .hall-book--opening .hall-page-left > * { animation: none; }
+  .hall-book--opening .hall-flow { animation: none; }
 }
