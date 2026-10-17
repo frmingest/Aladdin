@@ -17,7 +17,11 @@ paths = [
 # series *identifier* named `..._3m` and a fake thesis note used by a test to
 # prove blind-pass isolation. Neither is a credential. Match on the exact
 # values, not on paths, so a real secret in those files is still caught.
+# 2026-10-17: the same rule matched `WINTER_STORAGE_KEY = "aladdin.winter.order.v1"`, the name of a
+# browser localStorage slot in frontend/src/lib/winter.ts (Winter Rehearsal, since removed but still in
+# history). It is a key name, not a credential. Exact value again.
 regexes = [
   '''no_curve_10y_3m''',
   '''MY-PRIVATE-THESIS-7731''',
+  '''aladdin\.winter\.order\.v1''',
 ]

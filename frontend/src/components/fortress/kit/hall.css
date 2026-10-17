@@ -1,5 +1,6 @@
 /* The Hall of Records (game mode, identity pass). Dark stone and leather to sit with the study skin.
-   Static: the only motion in the hall is the torch flame (reduced-motion aware), nothing is filtered.
+   Motion: the torch flame and, after a press, the tome's cover swinging open (both off for reduced motion,
+   which gets the open book at once). Only transform, opacity and one short clip-path reveal move; nothing is filtered.
    Colour is ornament; every state is also a shape and a printed word. */
 .hall {
   --c-surface: 27 20 14;
@@ -25,9 +26,10 @@
 .hall-casket { position: relative; display: inline-block; flex: 0 0 auto; width: 40px; line-height: 0; }
 .hall-casket img { display: block; width: 40px; height: auto; max-height: 40px; object-fit: contain; }
 .hall-casket-seal { position: absolute; right: -8px; bottom: -4px; }
-.hall-cornice { position: relative; height: 44px; border-bottom: 2px solid #8a6a32; background: #120c07; overflow: hidden; }
+.hall-cornice { position: relative; height: 52px; border-bottom: 2px solid #8a6a32; background: #120c07; overflow: hidden; }
 .hall-cornice > svg:last-child { position: absolute; left: 0; right: 0; bottom: 0; }
-.hall-torches { position: absolute; inset: 0 0 auto 0; height: 28px; width: 100%; opacity: 0.9; z-index: 1; }
+.hall-torches { position: absolute; inset: 0 0 auto 0; height: 40px; width: 100%; opacity: 0.95; z-index: 1; }
+.hall-arcade { display: block; }
 .hall-plaque { margin: 1rem 1rem 0.5rem; padding: 0.75rem 1rem; border: 1px solid rgba(217, 169, 62, 0.45); border-radius: 8px; background: rgba(15, 10, 6, 0.55); }
 .hall-toggle {
   min-height: 44px;
@@ -73,9 +75,45 @@
 .hall-tome[aria-pressed="true"] .hall-tome-art { filter: none; outline: 2px solid #f2d27a; outline-offset: 3px; border-radius: 6px; }
 .hall-tome:focus-visible { outline: 3px solid #f2d27a; outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { .hall-tome { transition: none; } .hall-tome:hover, .hall-tome[aria-pressed="true"] { transform: none; } }
-.hall-label { display: block; max-width: 132px; text-align: center; }
-.hall-label-name { display: block; font-size: 0.8125rem; font-weight: 600; line-height: 1.15; color: #f6e6bd; overflow-wrap: anywhere; }
-.hall-label-meta { display: block; margin-top: 1px; font-size: 0.6875rem; color: #cdb98c; }
+/* Brass nameplate under each tome: engraved name, a small ornament, then the act and the date. */
+.hall-label {
+  position: relative;
+  display: block;
+  width: 128px;
+  max-width: 100%;
+  margin: 2px auto 6px;
+  padding: 7px 9px 8px;
+  text-align: center;
+  color: #2a1a06;
+  border: 1px solid #6b4a14;
+  border-radius: 4px;
+  background: linear-gradient(180deg, #e2c477 0%, #cfa94f 50%, #bb9340 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 244, 200, 0.65), inset 0 -1px 0 rgba(70, 45, 8, 0.45), 0 3px 5px -2px rgba(0, 0, 0, 0.7);
+}
+.hall-label::before, .hall-label::after { content: ""; position: absolute; top: 50%; width: 3px; height: 3px; border-radius: 50%; background: #6b4a14; transform: translateY(-50%); }
+.hall-label::before { left: 3px; }
+.hall-label::after { right: 3px; }
+.hall-label-name {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  overflow: hidden;
+  font-size: 0.8125rem;
+  line-height: 1.18;
+  letter-spacing: 0.01em;
+  overflow-wrap: anywhere;
+  text-shadow: 0 1px 0 rgba(255, 238, 185, 0.55);
+}
+.hall-label-rule { position: relative; display: block; height: 7px; margin: 5px 6px 3px; }
+.hall-label-rule::before { content: ""; position: absolute; left: 0; right: 0; top: 3px; height: 1px; background: linear-gradient(90deg, transparent, #5b3f15 25%, #5b3f15 75%, transparent); }
+.hall-label-rule::after { content: ""; position: absolute; left: 50%; top: 1px; width: 5px; height: 5px; background: #5b3f15; transform: translateX(-50%) rotate(45deg); box-shadow: 0 0 0 2px #c9a24d; }
+.hall-label-meta { display: block; font-size: 0.6875rem; line-height: 1.35; }
+.hall-label-action { display: block; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; }
+.hall-label-date { display: block; letter-spacing: 0.02em; }
+.hall-tome[aria-pressed="true"] .hall-label {
+  background: linear-gradient(180deg, #f6dd96 0%, #e2c477 50%, #cfa94f 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 250, 220, 0.8), inset 0 -1px 0 rgba(70, 45, 8, 0.45), 0 0 0 2px rgba(242, 210, 122, 0.55), 0 0 14px rgba(242, 210, 122, 0.35);
+}
 .hall-plank {
   position: relative;
   z-index: 1;
@@ -87,23 +125,95 @@
   box-shadow: 0 6px 8px -4px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 220, 160, 0.3);
 }
 .hall-hint { margin: 0 1rem; font-size: 0.75rem; color: rgb(var(--c-ink-muted)); }
-.hall-desk { margin: 0.75rem 1rem 0; scroll-margin-top: 1rem; }
-.hall-book {
+.hall-desk { margin: 1rem 1rem 0; scroll-margin-top: 1rem; }
+/* The open book. The board takes the tome's own leather, so the book on the desk is the book you pressed. */
+.hall-book { position: relative; max-width: 1100px; margin: 0 auto; perspective: 2200px; }
+.hall-board {
+  position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 14px minmax(0, 1fr);
-  border-radius: 6px 6px 10px 10px;
-  background: #3a2615;
-  padding: 8px;
-  box-shadow: 0 12px 22px -14px #000, inset 0 0 0 1px #8a6a32;
+  grid-template-columns: minmax(0, 1fr) 18px minmax(0, 1fr);
+  padding: 9px 9px 13px;
+  border-radius: 8px 8px 12px 12px;
+  background: linear-gradient(180deg, var(--cover, #3a2615), #1c1109);
+  box-shadow: 0 16px 26px -16px #000, inset 0 0 0 1px var(--cover-edge, #8a6a32), inset 0 0 0 3px rgba(0, 0, 0, 0.35);
 }
-.hall-page { padding: 1rem 1.1rem; background: linear-gradient(180deg, #2a2016, #211810); min-width: 0; }
-.hall-page:first-child { border-radius: 4px 0 0 4px; }
-.hall-page:last-child { border-radius: 0 4px 4px 0; }
-.hall-spine { background: linear-gradient(90deg, #120c07, #3a2615 50%, #120c07); }
+.hall-page { position: relative; min-width: 0; padding: 1.25rem 1.5rem 1.5rem; background: linear-gradient(180deg, #2c2218, #231a11); }
+.hall-page-left { border-radius: 6px 0 0 6px; background-image: linear-gradient(270deg, rgba(0, 0, 0, 0.34), transparent 13%), linear-gradient(180deg, #2c2218, #231a11); }
+.hall-page-right { border-radius: 0 6px 6px 0; background-image: linear-gradient(90deg, rgba(0, 0, 0, 0.34), transparent 13%), linear-gradient(180deg, #2c2218, #231a11); }
+/* Stacked page edges under each leaf. */
+.hall-page::after { content: ""; position: absolute; left: 0; right: 0; bottom: -6px; height: 5px; background: repeating-linear-gradient(180deg, #4a3b27 0 1px, #1a120a 1px 2px); border-radius: 0 0 4px 4px; }
+.hall-spine { background: linear-gradient(90deg, #0f0905, #3a2a18 50%, #0f0905); }
+.hall-ribbon {
+  position: absolute;
+  left: 50%;
+  top: 4px;
+  z-index: 2;
+  width: 10px;
+  height: 74px;
+  transform: translateX(-50%);
+  background: linear-gradient(90deg, #7a1f18, #a8342a 50%, #7a1f18);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 86%, 0 100%);
+}
+.hall-title { margin-bottom: 0.4rem; padding-bottom: 0.45rem; border-bottom: 1px solid rgba(217, 169, 62, 0.32); }
+.hall-leaf-label { display: flex; align-items: center; gap: 8px; font-size: 0.6875rem; letter-spacing: 0.14em; text-transform: uppercase; color: #cfae66; }
+.hall-leaf-label::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, rgba(217, 169, 62, 0.45), transparent); }
+.hall-page .hall-price { font-size: 1rem; font-weight: 600; }
+
+/* The cover is a picture of the tome, only used for the opening swing: hidden unless the reader allows motion. */
+.hall-cover { position: absolute; top: 0; bottom: 0; left: 50%; right: 0; z-index: 3; display: none; transform-origin: left center; transform-style: preserve-3d; pointer-events: none; }
+.hall-cover-front, .hall-cover-back { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.hall-cover-front {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px 12px 12px 4px;
+  background: radial-gradient(ellipse at 50% 42%, rgba(255, 255, 255, 0.09), transparent 62%), linear-gradient(90deg, rgba(0, 0, 0, 0.4), transparent 9%), var(--cover, #4a3320);
+  box-shadow: inset 0 0 0 2px var(--cover-edge, #8a6a32), inset 0 0 0 7px rgba(0, 0, 0, 0.25), inset 0 0 0 8px rgba(217, 169, 62, 0.55);
+}
+.hall-cover-back {
+  transform: rotateY(180deg);
+  border-radius: 12px 4px 4px 12px;
+  background: linear-gradient(270deg, rgba(0, 0, 0, 0.34), transparent 13%), linear-gradient(180deg, #2c2218, #231a11);
+  box-shadow: inset 0 0 0 9px var(--cover, #3a2615);
+}
+
+@keyframes hall-book-open {
+  from { transform: translateX(-25%); clip-path: inset(-60px -60px -60px 50%); }
+  80%, to { transform: none; clip-path: inset(-60px); }
+}
+@keyframes hall-cover-swing {
+  from { transform: rotateY(0deg); }
+  80%, to { transform: rotateY(-180deg); }
+}
+/* Fade only the inside face: fading the whole cover would flatten the 3D and show the front through it. */
+@keyframes hall-cover-settle { 0%, 80% { opacity: 1; } to { opacity: 0; } }
+@keyframes hall-ink { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+@keyframes hall-book-lift { from { opacity: 0; transform: perspective(900px) rotateX(-24deg) translateY(10px); transform-origin: top center; } to { opacity: 1; transform: none; } }
+
+@media (prefers-reduced-motion: no-preference) {
+  .hall-book--opening { animation: hall-book-open 1050ms cubic-bezier(0.55, 0.05, 0.25, 1) backwards; }
+  .hall-book--opening .hall-cover { display: block; animation: hall-cover-swing 1050ms cubic-bezier(0.55, 0.05, 0.25, 1) both; }
+  .hall-book--opening .hall-cover-back { animation: hall-cover-settle 1050ms linear both; }
+  .hall-book--opening .hall-page > * { animation: hall-ink 360ms ease-out both; }
+  .hall-book--opening .hall-page-right > :nth-child(1) { animation-delay: 480ms; }
+  .hall-book--opening .hall-page-right > :nth-child(2) { animation-delay: 560ms; }
+  .hall-book--opening .hall-page-right > :nth-child(3) { animation-delay: 640ms; }
+  .hall-book--opening .hall-page-right > :nth-child(n + 4) { animation-delay: 720ms; }
+  .hall-book--opening .hall-page-left > :nth-child(1) { animation-delay: 820ms; }
+  .hall-book--opening .hall-page-left > :nth-child(2) { animation-delay: 880ms; }
+  .hall-book--opening .hall-page-left > :nth-child(n + 3) { animation-delay: 940ms; }
+}
+
 @media (max-width: 640px) {
-  .hall-book { grid-template-columns: minmax(0, 1fr); }
-  .hall-spine { display: none; }
-  .hall-page:first-child, .hall-page:last-child { border-radius: 4px; }
-  .hall-page + .hall-spine + .hall-page { margin-top: 6px; }
+  .hall-board { grid-template-columns: minmax(0, 1fr); }
+  .hall-spine, .hall-ribbon, .hall-cover { display: none; }
+  .hall-page-left, .hall-page-right { border-radius: 4px; }
+  .hall-page-right { margin-top: 12px; }
   .hall-niche { width: 50%; }
+}
+/* Phone: no 3D cover, the book simply tips up onto the desk. */
+@media (max-width: 640px) and (prefers-reduced-motion: no-preference) {
+  .hall-book--opening { animation: hall-book-lift 480ms ease-out backwards; }
+  .hall-book--opening .hall-cover { display: none; }
+  .hall-book--opening .hall-page-right > *, .hall-book--opening .hall-page-left > * { animation: none; }
 }

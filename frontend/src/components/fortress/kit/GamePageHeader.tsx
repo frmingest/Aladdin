@@ -21,7 +21,7 @@ export default function GamePageHeader({
   return (
     <header className="game-banner relative mb-6 overflow-hidden rounded-xl">
       <RoomBackdrop room={crest} />
-      <TorchPair className="pointer-events-none absolute inset-x-0 top-0 h-7 w-full opacity-90" />
+      <TorchPair className="pointer-events-none absolute inset-x-0 top-0 h-9 w-full opacity-90" />
       <div className="relative flex flex-col gap-3 px-4 pb-3 pt-6 sm:flex-row sm:items-center sm:justify-between sm:px-6">
         <div className="flex min-w-0 items-center gap-3">
           <Crest kind={crest} />
