@@ -30,6 +30,8 @@ import GameFooter from "../components/fortress/GameFooter";
 import SiegeBacktestCard from "../components/fortress/SiegeBacktestCard";
 import SiegeArtStrip from "../components/fortress/kit/SiegeArtStrip";
 import SiegeWorldBanner from "../components/fortress/kit/SiegeWorldBanner";
+import SiegeTowersBackdrop from "../components/fortress/kit/SiegeTowersBackdrop";
+import { hasTowersBackdrop } from "../lib/siegeBackdrop";
 import { useArtMode } from "../lib/stitchArt";
 
 const BENCHMARK_STORAGE_KEY = "aladdin.siege.benchmark";
@@ -237,6 +239,43 @@ export default function SiegeSimulatorPage() {
 
       {sim && (
         <div className="space-y-4">
+          {sim.holdings.length > 0 && (
+            <Card>
+              <h2 className="section-title">The towers under attack</h2>
+              <div className="relative mb-2 overflow-hidden rounded-md bg-[#1c1812]">
+                {artMode === "stitch" && <SiegeTowersBackdrop drop={drop ?? sim.market_drop} />}
+                <div className="relative overflow-x-auto p-3">
+                  {artMode === "stitch" ? <SiegeArtStrip rows={sim.holdings} level={sim.level} scenery={hasTowersBackdrop()} /> : <SiegeStrip rows={sim.holdings} />}
+                </div>
+              </div>
+              <p className="mb-1 text-xs text-ink-faint">
+                {artMode === "stitch" ? "The burning part of each wall is the share lost in this what-if. Faded with a ?: not modelled." : "The filled part of each wall is the share lost. Grey with a ?: not modelled."}
+                {sim.holdings.length > 18 ? ` Showing the 18 worst-hit of ${sim.holdings.length}.` : ""}
+              </p>
+              <ul>{sim.holdings.filter((h) => h.modelled).map((h) => <Row key={h.holding_id} h={h} benchmark={sim.benchmark_ticker} />)}</ul>
+              {sim.holdings.some((h) => !h.modelled) && (
+                <div className="mt-3 text-sm text-ink-muted">
+                  <p className="font-medium text-ink">
+                    Not modelled ({sim.holdings.filter((h) => !h.modelled).length}): no usable beta, so they are left out of
+                    the total, not given a default.
+                  </p>
+                  <ul className="mt-1 space-y-1 text-xs">
+                    {sim.holdings
+                      .filter((h) => !h.modelled)
+                      .map((h) => (
+                        <li key={h.holding_id}>
+                          <Link to={`/holdings/${h.holding_id}`} className="text-accent hover:underline">
+                            {h.name}
+                          </Link>
+                          {h.reason ? `: ${h.reason}` : ""}
+                        </li>
+                      ))}
+                  </ul>
+                </div>
+              )}
+            </Card>
+          )}
+
           <Card>
             {(sim.benchmark_options?.length ?? 0) > 1 && (
               <div className="mb-4 border-b border-border-subtle pb-3">
@@ -322,40 +361,6 @@ export default function SiegeSimulatorPage() {
               </ul>
             )}
           </Card>
-
-          {sim.holdings.length > 0 && (
-            <Card>
-              <h2 className="section-title">The towers under attack</h2>
-              <div className="mb-2 overflow-x-auto rounded-md bg-[#1c1812] p-3">
-                {artMode === "stitch" ? <SiegeArtStrip rows={sim.holdings} level={sim.level} /> : <SiegeStrip rows={sim.holdings} />}
-              </div>
-              <p className="mb-1 text-xs text-ink-faint">
-                {artMode === "stitch" ? "The burning part of each wall is the share lost in this what-if. Faded with a ?: not modelled." : "The filled part of each wall is the share lost. Grey with a ?: not modelled."}
-                {sim.holdings.length > 18 ? ` Showing the 18 worst-hit of ${sim.holdings.length}.` : ""}
-              </p>
-              <ul>{sim.holdings.filter((h) => h.modelled).map((h) => <Row key={h.holding_id} h={h} benchmark={sim.benchmark_ticker} />)}</ul>
-              {sim.holdings.some((h) => !h.modelled) && (
-                <div className="mt-3 text-sm text-ink-muted">
-                  <p className="font-medium text-ink">
-                    Not modelled ({sim.holdings.filter((h) => !h.modelled).length}): no usable beta, so they are left out of
-                    the total, not given a default.
-                  </p>
-                  <ul className="mt-1 space-y-1 text-xs">
-                    {sim.holdings
-                      .filter((h) => !h.modelled)
-                      .map((h) => (
-                        <li key={h.holding_id}>
-                          <Link to={`/holdings/${h.holding_id}`} className="text-accent hover:underline">
-                            {h.name}
-                          </Link>
-                          {h.reason ? `: ${h.reason}` : ""}
-                        </li>
-                      ))}
-                  </ul>
-                </div>
-              )}
-            </Card>
-          )}
 
           {sim.holdings.length === 0 && <EmptyState>No holdings to put under siege yet.</EmptyState>}
 

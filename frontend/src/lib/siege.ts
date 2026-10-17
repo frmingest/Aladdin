@@ -57,6 +57,21 @@ export function formatDrop(drop: number | string | null): string {
   return Number.isFinite(n) ? `${(n * 100).toFixed(n * 100 % 1 === 0 ? 0 : 1)}%` : "—";
 }
 
+/** The four moods of the towers' backdrop, picked by the size of the fall on the slider (not by the book's own storm and siege lines). */
+export type FallStage = "calm" | "storm" | "siege" | "ruin";
+export const FALL_STAGES: readonly FallStage[] = ["calm", "storm", "siege", "ruin"];
+/** Where each stage starts, as a fall (0.15 = 15%): calm below 15%, storm to 30%, siege to 45%, ruin from 45%. */
+export const FALL_STAGE_STARTS: Record<FallStage, number> = { calm: 0, storm: 0.15, siege: 0.3, ruin: 0.45 };
+
+export function fallStage(drop: number | string | null | undefined): FallStage {
+  const n = Number(drop);
+  const d = Number.isFinite(n) ? n : 0;
+  if (d >= FALL_STAGE_STARTS.ruin) return "ruin";
+  if (d >= FALL_STAGE_STARTS.siege) return "siege";
+  if (d >= FALL_STAGE_STARTS.storm) return "storm";
+  return "calm";
+}
+
 /** Keep a requested fall inside the slider's range. */
 export function clampDrop(drop: number, min: number, max: number): number {
   if (!Number.isFinite(drop)) return min;

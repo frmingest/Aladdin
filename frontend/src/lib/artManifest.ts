@@ -71,6 +71,10 @@ import backdropCouncil from "../assets/art/backdrop-council.webp";
 import backdropCircle from "../assets/art/backdrop-circle.webp";
 import backdropMap from "../assets/art/backdrop-map.webp";
 import backdropSiegeWorld from "../assets/art/backdrop-siege-world.webp";
+import backdropSiegeTowersCalm from "../assets/art/backdrop-siege-towers-calm.webp";
+import backdropSiegeTowersStorm from "../assets/art/backdrop-siege-towers-storm.webp";
+import backdropSiegeTowersSiege from "../assets/art/backdrop-siege-towers-siege.webp";
+import backdropSiegeTowersRuin from "../assets/art/backdrop-siege-towers-ruin.webp";
 import casketClosed from "../assets/art/casket-closed.webp";
 import casketOpen from "../assets/art/casket-open.webp";
 import roomBookshelf from "../assets/art/room-bookshelf.webp";
@@ -227,6 +231,10 @@ export const ART_MANIFEST = {
   "backdrop-circle": { src: backdropCircle, width: 960, height: 536, alt: "" },
   "backdrop-map": { src: backdropMap, width: 960, height: 536, alt: "" },
   "backdrop-siege-world": { src: backdropSiegeWorld, width: 960, height: 536, alt: "" },
+  "backdrop-siege-towers-calm": { src: backdropSiegeTowersCalm, width: 960, height: 536, alt: "" },
+  "backdrop-siege-towers-storm": { src: backdropSiegeTowersStorm, width: 960, height: 536, alt: "" },
+  "backdrop-siege-towers-siege": { src: backdropSiegeTowersSiege, width: 960, height: 536, alt: "" },
+  "backdrop-siege-towers-ruin": { src: backdropSiegeTowersRuin, width: 960, height: 536, alt: "" },
   "casket-closed": { src: casketClosed, width: 256, height: 256, alt: "" },
   "casket-open": { src: casketOpen, width: 222, height: 256, alt: "" },
   "room-bookshelf": { src: roomBookshelf, width: 218, height: 384, alt: "" },
