@@ -73,11 +73,11 @@ The first stall row's top edge must be at or above 30 rem from the page top on d
 A three-column grid: `[left side] [lane] [right side]`.
 
 - **Lane:** code-drawn cobbles (section 6), width `clamp(2.75rem, 9vw, 7rem)`. It runs from under the square to the gate without a break. Districts are marked *in* the lane, not by section headings.
-- **Sides:** each side holds `perSide` plot columns. A plot is `12.5rem` wide at stall scale 1.0. Plots face the lane, so the inner column (next to the lane) fills first.
+- **Sides:** each side holds `perSide` plot columns. A plot is `9.4rem` wide and the stall picture `8.4rem` tall (2026-10-17 follow-up: about a third smaller than the first build's 12.5rem). Plots face the lane, so the inner column (next to the lane) fills first.
 - **perSide (pure function, `lanePlots`):**
   - total stalls <= 6: `perSide = 1` on every width (a small street stays narrow and close);
-  - total stalls > 6: `perSide = 2` at >= 1024 px, else 1.
-- **Scene width = what the plots need**, centred in the page: `2 x perSide x 12.5rem + lane + 2 x 3rem edge`, capped at the content width. The skyline band, square and gate span the same width. For 2 stalls that is about 38 rem: a compact painted panel, not 70 rem of tan. (With `perSide = 2` it is about 62 rem.)
+  - total stalls > 6: `perSide = 3` at >= 1024 px, 2 at >= 760 px, else 1.
+- **Scene width = what the plots need**, centred in the page: `2 x perSide x 9.4rem + lane + 2 x 2rem edge`, capped at 64rem, capped at the content width. The skyline band, square and gate span the same width. For 2 stalls that is about 38 rem: a compact painted panel, not 70 rem of tan. (With `perSide = 2` it is about 62 rem.)
 - **Fill order inside a district:** left-inner, right-inner, left-outer, right-outer, then the next row. **A district's first stall goes on the side opposite the previous district's last stall,** so a run of 1-stall districts zigzags down the lane instead of stacking on one side.
 - **Each district starts a new row.** Between districts runs a **cross-street**: a 1 rem strip of the same cobbles across the full width, with a kerb line. That is the district boundary; no heading card.
 - **District sign:** the `market-signpost` picture stands **in the lane** at the start of the district's first row (lane-centred, 0.6x stall height). Its board is code-printed: district word plus count, e.g. "In range · 1". On phones (lane under 4 rem), the board text moves onto the cross-street as a small code-drawn plank across the lane, and the signpost picture is dropped.
@@ -203,7 +203,7 @@ No new pictures are needed for this redesign. Optional later: a straight paving 
 
 ```
 lanePlots(districts: District[], width: "wide" | "narrow") -> {
-  perSide: 1 | 2,
+  perSide: 1 | 2 | 3,
   rows: Array<{
     districtId: DistrictId,
     first: boolean,               // first row of its district: signpost + lamps at the cross-street above
