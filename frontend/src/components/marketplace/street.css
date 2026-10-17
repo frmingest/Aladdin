@@ -25,6 +25,7 @@
   --ms-per-side: 1;
   position: relative;
   overflow: hidden;
+  container-type: inline-size; /* the square spreads Sal and the Hype tent by the scene's own width (cqw) */
   width: min(100%, calc(var(--ms-per-side) * 2 * var(--ms-plot) + var(--ms-lane) + 2 * var(--ms-edge)));
   max-width: 64rem;
   margin-inline: auto;
@@ -70,8 +71,8 @@
 .ms-fountain .ms-fountain-pic { width: 100%; height: auto; }
 .ms-fig { position: absolute; bottom: 25%; z-index: 2; }
 .ms-fig img { width: 100%; height: auto; }
-.ms-fig-sal { left: calc(var(--sq) * -0.62); width: calc(var(--sq) * 0.92); }
-.ms-fig-hype { right: calc(var(--sq) * -0.56); width: calc(var(--sq) * 0.84); }
+.ms-fig-sal { left: min(calc(var(--sq) * -0.62), calc(var(--sq) * 0.95 - 38cqw)); width: calc(var(--sq) * 0.92); }
+.ms-fig-hype { right: min(calc(var(--sq) * -0.56), calc(var(--sq) * 0.95 - 38cqw)); width: calc(var(--sq) * 0.84); }
 .ms-fig::before { /* contact shadow */
   content: "";
   position: absolute;
