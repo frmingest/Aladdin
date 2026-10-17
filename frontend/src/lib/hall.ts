@@ -84,6 +84,25 @@ export function defaultOpenId(records: ReadonlyArray<Pick<DecisionRecord, "id" |
   return (owed ?? records[0]).id;
 }
 
+/** Packed picture ids for the book on the reading desk (Stitch art, Game mode). One cover per action, matched to
+ * the tome leathers above (red buy, tan add, blue trim, purple sell, green hold, charcoal pass); the book's two
+ * leaves are cut from one open-book picture; a ribbon hangs in the spine when a review is owed. None of them
+ * carries a fact: the action, the dates and the reviews are printed and drawn by the code. */
+export const COVER_ART: Record<string, string> = {
+  buy: "book-cover-buy",
+  add: "book-cover-add",
+  trim: "book-cover-trim",
+  sell: "book-cover-sell",
+  hold: "book-cover-hold",
+  pass: "book-cover-pass",
+};
+export const BOOK_ART = { left: "book-page-left", right: "book-page-right", ribbon: "book-ribbon" } as const;
+
+/** The cover picture id for an action, or null for one the hall has no cover for (the drawn cover is used). */
+export function coverArtId(action: string): string | null {
+  return Object.prototype.hasOwnProperty.call(COVER_ART, action) ? COVER_ART[action] : null;
+}
+
 /** Strings the hall prints; budget-checked. */
 export const HALL_COPY = {
   subtitle: "Your decision journal, shelved: what you wrote, what the price did, which reviews are owed.",

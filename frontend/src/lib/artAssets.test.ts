@@ -15,7 +15,8 @@ const SOURCE = JSON.parse(readFileSync(resolve(FRONTEND, "../scripts/art/manifes
 const MAX_FILE_KB = 60;
 // Raised from 1200 in Sprint 6 (23 more pictures) and to 2000 in Sprint 8 (room backdrops). Pictures load only when a view uses them.
 // Raised to 2800 in the hardening sprint (2026-10-12): the set stood at 1996 of 2000 KB, so no new picture fit. Each later raise needs its reason here and a check that the heaviest page still loads well on a phone.
-const MAX_TOTAL_KB = 2800;
+const MAX_TOTAL_KB = 3000;
+// Raised to 3000 on 2026-10-17: nine pictures for the Hall of Records book (six covers, two leaves, a ribbon; about 175 KB together, the set stood at 2723 of 2800). They load only on the Records page, in Game mode, and only the covers of actions that page shows.
 const MAX_PUBLIC_IMAGE_KB = 150;
 // Room backdrops (Design Master Sprint 8): wide opaque scenes, one per room at most, shown behind a banner.
 const MAX_BACKDROP_KB = 120;

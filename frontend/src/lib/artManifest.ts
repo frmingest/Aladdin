@@ -136,6 +136,15 @@ import skyStorm from "../assets/art/sky-storm.webp";
 import skySmoke from "../assets/art/sky-smoke.webp";
 import plotCovered from "../assets/art/plot-covered.webp";
 import emptyChest from "../assets/art/empty-chest.webp";
+import bookCoverBuy from "../assets/art/book-cover-buy.webp";
+import bookCoverAdd from "../assets/art/book-cover-add.webp";
+import bookCoverTrim from "../assets/art/book-cover-trim.webp";
+import bookCoverSell from "../assets/art/book-cover-sell.webp";
+import bookCoverHold from "../assets/art/book-cover-hold.webp";
+import bookCoverPass from "../assets/art/book-cover-pass.webp";
+import bookPageLeft from "../assets/art/book-page-left.webp";
+import bookPageRight from "../assets/art/book-page-right.webp";
+import bookRibbon from "../assets/art/book-ribbon.webp";
 
 export interface PackedArt {
   src: string;
@@ -283,4 +292,13 @@ export const ART_MANIFEST = {
   "sky-smoke": { src: skySmoke, width: 64, height: 64, alt: "" },
   "plot-covered": { src: plotCovered, width: 256, height: 177, alt: "" },
   "empty-chest": { src: emptyChest, width: 243, height: 256, alt: "" },
+  "book-cover-buy": { src: bookCoverBuy, width: 349, height: 400, alt: "" },
+  "book-cover-add": { src: bookCoverAdd, width: 346, height: 400, alt: "" },
+  "book-cover-trim": { src: bookCoverTrim, width: 347, height: 400, alt: "" },
+  "book-cover-sell": { src: bookCoverSell, width: 327, height: 400, alt: "" },
+  "book-cover-hold": { src: bookCoverHold, width: 331, height: 400, alt: "" },
+  "book-cover-pass": { src: bookCoverPass, width: 356, height: 400, alt: "" },
+  "book-page-left": { src: bookPageLeft, width: 452, height: 778, alt: "" },
+  "book-page-right": { src: bookPageRight, width: 456, height: 778, alt: "" },
+  "book-ribbon": { src: bookRibbon, width: 89, height: 200, alt: "" },
 } as const satisfies Record<string, PackedArt>;

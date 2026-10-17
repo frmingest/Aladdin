@@ -1191,6 +1191,62 @@
    "source": "a_single_standalone_fantasy_game_ui_empty_state_prop_asset_an_empty_open_wooden",
    "key": "white",
    "max_side": 256
+  },
+  {
+   "id": "book-cover-buy",
+   "source": "modify_data_image_image_3_keep_everything_exactly_identical_the_crimson_red",
+   "key": "white",
+   "max_side": 400
+  },
+  {
+   "id": "book-cover-add",
+   "source": "modify_data_image_image_7_keep_everything_exactly_identical_the_warm_faded",
+   "key": "white",
+   "max_side": 400
+  },
+  {
+   "id": "book-cover-trim",
+   "source": "modify_data_image_image_5_keep_everything_exactly_identical_the_faded_navy_blue",
+   "key": "white",
+   "max_side": 400
+  },
+  {
+   "id": "book-cover-sell",
+   "source": "modify_data_image_image_8_keep_everything_exactly_identical_the_faded_dark",
+   "key": "white",
+   "max_side": 400
+  },
+  {
+   "id": "book-cover-hold",
+   "source": "modify_data_image_image_4_keep_everything_exactly_identical_the_sage_moss_green",
+   "key": "white",
+   "max_side": 400
+  },
+  {
+   "id": "book-cover-pass",
+   "source": "modify_data_image_image_6_keep_everything_exactly_identical_the_dark_charcoal",
+   "key": "white",
+   "max_side": 400
+  },
+  {
+   "id": "book-page-left",
+   "source": "book-open-left",
+   "key": "white",
+   "max_side": 800,
+   "quality": 82
+  },
+  {
+   "id": "book-page-right",
+   "source": "book-open-right",
+   "key": "white",
+   "max_side": 800,
+   "quality": 82
+  },
+  {
+   "id": "book-ribbon",
+   "source": "a_single_standalone_fantasy_game_inventory_prop_asset_a_red_ribbon_bookmark",
+   "key": "white",
+   "max_side": 200
   }
  ]
 }

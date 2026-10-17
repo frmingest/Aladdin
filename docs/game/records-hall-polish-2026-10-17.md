@@ -15,5 +15,5 @@ No fact moved or added; words unchanged. Only transform, opacity and one short c
 ## Identity checklist
 Pages touched: Records (and the shared torch kit). Identity before/after: 3 / 3 (signature object is now the book itself). Look-and-judge screenshots: taken from a standalone preview of the hall at 1700 px (header, shelf, four frames of the opening); not yet seen on real data or on the live deploy.
 
-## Faiz can still do
-Draw a dedicated cover picture per action (buy, sell, trim, add, hold, pass). The cover face is a leather panel with the shelf tome picture; a painted image would slot into `.hall-cover-front`.
+## Painted book (Stitch pictures, same day)
+Faiz's pictures replaced the CSS-drawn book: six painted covers (one per action; buy, add, trim, sell, hold, pass), a painted open book (split into left and right leaf, drawn with `border-image` so the ornament corners never stretch and the leaf grows with its text) and a painted ribbon. Packed through `scripts/art/pack.py` into `frontend/src/assets/art/book-*.webp` (about 175 KB; art budget raised to 3000 KB). Only the covers of actions on the page load. The cover's back face is the left leaf, so the swing lands seamlessly. Phone: leaves stack, no ribbon, no 3D swing. Masters live in gitignored `art-masters/Design_master/`. Checked in a standalone preview at 1700 px and 390 px; not seen on real data or live.
