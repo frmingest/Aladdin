@@ -13,7 +13,7 @@ import "./street.css";
 
 /**
  * Market Street (game mode): the watchlist as one cobbled lane with stalls on both sides. Sal's counter and the
- * Hype tent stand on the rim of the fountain square, each district starts at a cross-street with a plank sign, the
+ * Hype tent stand on the rim of the Market Hall plaza, each district starts at a cross-street with a plank sign, the
  * gate closes the lane. Every stall is a button that opens its card (the way into the store is a real link inside it), with a slim signboard; the pictures are decoration (empty
  * alt) and carry no fact. The flag on each stall is drawn here: a shape and a word per tone, never colour alone.
  * Where each stall stands is the pure `lanePlots`. Read-only: nothing here buys or sells.
@@ -344,11 +344,12 @@ export default function MarketStreet({
       <div className="ms-ground">
         <div className="ms-square">
           <div className="ms-patch">
-            <span className="ms-floor" aria-hidden>
-              <ObjectArtImage id="market-cobble" width={288} className="ms-cobble" fallback={null} />
+            <span className="ms-floor" aria-hidden />
+            <span className="ms-hall" aria-hidden>
+              <ObjectArtImage id="market-hall" width={384} className="ms-hall-pic" fallback={null} />
             </span>
-            <span className="ms-fountain" aria-hidden>
-              <ObjectArtImage id="market-fountain" width={208} className="ms-fountain-pic" fallback={null} />
+            <span className="ms-hall-plate" aria-hidden>
+              {`Marketplace · ${rows.length} ${rows.length === 1 ? "store" : "stores"}`}
             </span>
             <div className="ms-fig ms-fig-sal">
               <ObjectArtImage id="sal-counter" width={140} fallback={<SalesRep mood="pitch" size={64} className="sal-figure" />} />
