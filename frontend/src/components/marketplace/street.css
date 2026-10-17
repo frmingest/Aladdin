@@ -1,211 +1,331 @@
-/* Market Street (game mode, 2026-10-17): the watchlist as stalls on a painted street.
-   The ground is drawn here (gradient plus a tiny cobble pattern, no picture); the pictures are the skyline, the
-   fountain square, the props and the stalls. Static: no animation. A picture carries no fact: the tone is the flag
-   shape, the printed word and the plate edge. Scene colours are fixed paint on purpose, like the Fortress painting;
-   the plates use the theme tokens so their text always has contrast. */
+/* Market Street (game mode, 2026-10-17 redesign): one cobbled lane, stalls on both sides, the fountain square at the top.
+   Everything on the ground is drawn here (0 KB): packed earth, the lane cobbles, kerbs, a vignette. The pictures are the
+   skyline, the square, the props and the stalls. Static. A picture carries no fact: the tone is the flag shape, the
+   printed word and the plate. Scene colours are fixed paint on purpose, like the Fortress painting, so the street looks
+   the same in the dark and light theme. Spec: docs/game/market-street-redesign-2026-10-17.md. */
 .market-street {
   --ms-ink: #26253b;
   --ms-sky-top: #3b3a63;
   --ms-sky-low: #e9c98f;
   --ms-ground-a: #d7c59c;
-  --ms-ground-b: #b9a273;
+  --ms-mortar: #9c8d68;
+  --ms-wood: #6a431c;
+  --ms-wood-hi: #8c5d2c;
+  --ms-wood-dark: #2a1f12;
+  --ms-parch-a: #f1e3bd;
+  --ms-parch-b: #e4cf9d;
+  --ms-parch-ink: #2a1f12;
+  --ms-parch-faint: #5b4a30;
+  --ms-parch-accent: #7a4a0c;
+  --ms-art-h: 12.5rem; /* stall picture height: the scale everything on the street is measured against */
+  --ms-lane: clamp(2.75rem, 9vw, 7rem);
+  --ms-edge: 3rem;
+  --sq: 9.5rem; /* the fountain's width; the square scales from it */
+  --ms-per-side: 1;
   position: relative;
   overflow: hidden;
-  border: 1px solid rgb(var(--c-border));
+  width: min(100%, calc(var(--ms-per-side) * 27rem + var(--ms-lane) + 2 * var(--ms-edge)));
+  max-width: 62rem;
+  margin-inline: auto;
+  border: 2px solid var(--ms-wood-dark);
   border-radius: 0.5rem;
   background: var(--ms-ground-a);
 }
+
+/* Rooftops cropped to a short band that fades into the ground. */
 .ms-sky {
-  padding-top: 2rem;
+  position: relative;
+  height: clamp(5rem, 11vw, 8rem);
+  overflow: hidden;
   background: linear-gradient(180deg, var(--ms-sky-top), #8a7aa0 55%, var(--ms-sky-low));
 }
-.ms-skyline {
-  display: block;
-  width: 100%;
-  height: auto;
-  min-height: 3rem;
-}
+.ms-sky .ms-skyline { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; object-fit: cover; object-position: 50% 78%; }
+.ms-sky::after { content: ""; position: absolute; inset: 55% 0 0; background: linear-gradient(180deg, transparent, var(--ms-ground-a)); }
+
+/* Packed earth with a faint pebble grain; an edge vignette sits over everything. */
 .ms-ground {
   position: relative;
-  margin-top: -0.25rem;
-  padding: 0.75rem 1rem 0;
+  padding: 0 var(--ms-edge) 0.25rem;
   background-color: var(--ms-ground-a);
-  background-image:
-    linear-gradient(180deg, transparent, rgb(38 37 59 / 0.12)),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'%3E%3Cg fill='none' stroke='%2326253b' stroke-opacity='.11' stroke-width='1.6'%3E%3Cpath d='M0 16q16-8 32 0t32 0M0 48q16-8 32 0t32 0M16 0q8 16 0 32t0 32M48 0q8 16 0 32t0 32'/%3E%3C/g%3E%3C/svg%3E");
-  background-size: 64px 64px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'%3E%3Cg fill='%2326253b' fill-opacity='.07'%3E%3Ccircle cx='14' cy='22' r='2'/%3E%3Ccircle cx='52' cy='9' r='1.4'/%3E%3Ccircle cx='97' cy='31' r='2.2'/%3E%3Ccircle cx='141' cy='14' r='1.6'/%3E%3Ccircle cx='33' cy='72' r='1.7'/%3E%3Ccircle cx='78' cy='84' r='2.4'/%3E%3Ccircle cx='122' cy='66' r='1.5'/%3E%3Ccircle cx='150' cy='108' r='2'/%3E%3Ccircle cx='20' cy='128' r='2.1'/%3E%3Ccircle cx='64' cy='140' r='1.5'/%3E%3Ccircle cx='108' cy='127' r='1.8'/%3E%3Ccircle cx='88' cy='54' r='1.2'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 160px 160px;
 }
-
-/* The square: Sal's counter, the fountain on its paving, the Hype tent. */
-.ms-square {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-around;
-  gap: 1rem 1.5rem;
-  padding: 0.5rem 0 1rem;
-}
-.ms-booth {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-  max-width: 11rem;
-  text-align: center;
-}
-.ms-booth .sal-btn-ghost { color: #f3e4bf; background: #2a1f12; box-shadow: inset 0 0 0 1px #8a6a32, 0 2px 0 var(--ms-ink); }
-.ms-booth .sal-btn-ghost:hover { background: #3a2b18; }
-.ms-booth img { filter: drop-shadow(0 6px 5px rgb(38 37 59 / 0.35)); }
-.ms-fountain {
-  position: relative;
-  width: min(18rem, 78vw);
-  aspect-ratio: 384 / 320;
-}
-.ms-fountain .ms-cobble { position: absolute; inset: 0; width: 100%; height: 100%; }
-.ms-fountain .ms-fountain-pic {
+.ms-ground::after {
+  content: "";
   position: absolute;
-  left: 14%;
-  top: 4%;
-  width: 72%;
-  height: auto;
-  filter: drop-shadow(0 6px 5px rgb(38 37 59 / 0.35));
-}
-.ms-hint {
-  flex: 1 0 100%;
-  margin: 0;
-  padding: 0.35rem 0.75rem;
-  border-radius: 2px;
-  background: rgb(var(--c-surface) / 0.88);
-  color: rgb(var(--c-ink-muted));
-  font-size: 0.75rem;
-  text-align: center;
+  inset: 0;
+  box-shadow: inset 0 0 2.4rem rgb(38 37 59 / 0.3);
+  pointer-events: none;
+  z-index: 6;
 }
 
-/* Districts: a signpost and a brass-edged heading plate, then the stalls on their plots. */
-.ms-district { margin-top: 0.5rem; }
-.ms-district-head {
-  display: flex;
-  align-items: flex-end;
-  gap: 0.5rem;
-  margin-bottom: 0.25rem;
+/* The square: the paving is the floor, the fountain stands in its middle, Sal and the Hype tent on its rim. */
+.ms-square { display: flex; justify-content: center; padding: calc(var(--sq) * 0.42) 0 0.9rem; }
+.ms-patch { position: relative; width: calc(var(--sq) * 1.9); aspect-ratio: 2.3 / 1; }
+.ms-floor, .ms-fountain { position: absolute; display: block; }
+.ms-floor { inset: 0; }
+.ms-floor .ms-cobble { width: 100%; height: 100%; max-width: none; object-fit: fill; }
+.ms-fountain { left: 50%; bottom: 38%; width: var(--sq); transform: translateX(-50%); }
+.ms-fountain .ms-fountain-pic { width: 100%; height: auto; }
+.ms-fig { position: absolute; bottom: 25%; z-index: 2; }
+.ms-fig img { width: 100%; height: auto; }
+.ms-fig-sal { left: calc(var(--sq) * -0.62); width: calc(var(--sq) * 0.92); }
+.ms-fig-hype { right: calc(var(--sq) * -0.56); width: calc(var(--sq) * 0.84); }
+.ms-fig::before { /* contact shadow */
+  content: "";
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: -0.2rem;
+  height: 0.9rem;
+  background: radial-gradient(ellipse at 50% 50%, rgb(38 37 59 / 0.4), transparent 70%);
+  z-index: -1;
 }
-.ms-district-head img { filter: drop-shadow(0 4px 3px rgb(38 37 59 / 0.35)); }
-.ms-district-title {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0.5rem;
-  padding: 0.3rem 0.8rem;
-  border: 1px solid rgb(var(--c-accent) / 0.6);
-  border-radius: 2px;
-  background: rgb(var(--c-surface));
-  color: rgb(var(--c-ink));
+.ms-fig .ms-board { position: absolute; left: 50%; top: calc(100% - 0.7rem); transform: translateX(-50%); }
+
+/* Both buttons are hanging boards: timber, ink outline, two rope lines. Sal's has the gold rim. */
+.ms-board {
+  position: relative;
+  display: inline-block;
+  padding: 0.4rem 0.85rem;
+  border: 2px solid var(--ms-wood-dark);
+  border-radius: 4px;
+  background: linear-gradient(180deg, var(--ms-wood-hi), var(--ms-wood));
+  box-shadow: inset 0 0 0 1px rgb(255 224 160 / 0.28), 0 3px 0 var(--ms-wood-dark);
+  color: #f8ecd0;
   font-family: "Marcellus", "Palatino Linotype", Palatino, Georgia, serif;
-  font-size: 1.05rem;
-  letter-spacing: 0.04em;
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
 }
-.ms-district-title span { font-family: inherit; font-size: 0.8125rem; color: rgb(var(--c-ink-muted)); }
-.ms-plots {
+.ms-board::before, .ms-board::after { content: ""; position: absolute; top: -0.6rem; width: 2px; height: 0.65rem; background: var(--ms-wood-dark); }
+.ms-board::before { left: 22%; }
+.ms-board::after { right: 22%; }
+.ms-board-gold { box-shadow: inset 0 0 0 2px #d9a93e, 0 3px 0 var(--ms-wood-dark); }
+.ms-board:hover { filter: brightness(1.1); }
+.ms-board:focus-visible { outline: 3px solid #f2c94c; outline-offset: 3px; }
+
+/* The lane: cobbles down the middle from the square to the gate; cross-streets open each district. */
+.ms-lane-area { position: relative; }
+.ms-lane-area::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: var(--ms-lane);
+  transform: translateX(-50%);
+  background-color: var(--ms-mortar);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='32' viewBox='0 0 48 32'%3E%3Cg stroke='%2326253b' stroke-opacity='.3' stroke-width='1'%3E%3Crect x='1' y='1' width='21' height='14' rx='5' fill='%23a29eae'/%3E%3Crect x='25' y='1' width='21' height='14' rx='5' fill='%23918da0'/%3E%3Crect x='13' y='17' width='21' height='14' rx='5' fill='%23aca8b6'/%3E%3Crect x='37' y='17' width='21' height='14' rx='5' fill='%239893a6'/%3E%3Crect x='-11' y='17' width='21' height='14' rx='5' fill='%239893a6'/%3E%3C/g%3E%3Cg fill='%23fff' fill-opacity='.12'%3E%3Crect x='4' y='3' width='9' height='2' rx='1'/%3E%3Crect x='28' y='3' width='9' height='2' rx='1'/%3E%3Crect x='16' y='19' width='9' height='2' rx='1'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 48px 32px;
+  box-shadow: inset 0.3rem 0 0 rgb(38 37 59 / 0.35), inset -0.3rem 0 0 rgb(38 37 59 / 0.35);
+}
+.ms-cross {
+  position: relative;
+  height: 1.25rem;
+  margin: 0.9rem calc(var(--ms-edge) * -1);
+  background-color: var(--ms-mortar);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='32' viewBox='0 0 48 32'%3E%3Cg stroke='%2326253b' stroke-opacity='.3' stroke-width='1'%3E%3Crect x='1' y='1' width='21' height='14' rx='5' fill='%23a29eae'/%3E%3Crect x='25' y='1' width='21' height='14' rx='5' fill='%23918da0'/%3E%3Crect x='13' y='17' width='21' height='14' rx='5' fill='%23aca8b6'/%3E%3Crect x='37' y='17' width='21' height='14' rx='5' fill='%239893a6'/%3E%3Crect x='-11' y='17' width='21' height='14' rx='5' fill='%239893a6'/%3E%3C/g%3E%3Cg fill='%23fff' fill-opacity='.12'%3E%3Crect x='4' y='3' width='9' height='2' rx='1'/%3E%3Crect x='28' y='3' width='9' height='2' rx='1'/%3E%3Crect x='16' y='19' width='9' height='2' rx='1'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 48px 32px;
+  box-shadow: inset 0 0.25rem 0 rgb(38 37 59 / 0.35), inset 0 -0.25rem 0 rgb(38 37 59 / 0.35);
+}
+.ms-plank {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 4;
+  transform: translate(-50%, -50%);
+  padding: 0.2rem 0.9rem;
+  border: 2px solid var(--ms-wood-dark);
+  border-radius: 3px;
+  background: linear-gradient(180deg, var(--ms-wood-hi), var(--ms-wood));
+  box-shadow: 0 2px 0 var(--ms-wood-dark);
+  color: #f8ecd0;
+  font-family: "Marcellus", "Palatino Linotype", Palatino, Georgia, serif;
+  font-size: 0.875rem;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.ms-plank b { margin-left: 0.3rem; font-weight: 600; color: #f2d16b; }
+.ms-lamp { position: absolute; bottom: -0.25rem; z-index: 3; width: calc(var(--ms-art-h) * 0.18); }
+.ms-lamp img { width: 100%; height: auto; }
+.ms-lamp-l { left: calc(50% - var(--ms-lane) / 2 + 0.1rem); }
+.ms-lamp-r { right: calc(50% - var(--ms-lane) / 2 + 0.1rem); }
+
+/* A row of plots: [outer inner] lane [inner outer]. Each item names its own column. */
+.ms-row {
+  position: relative;
   display: grid;
-  grid-template-columns: repeat(auto-fit, 12rem);
-  justify-content: center;
-  gap: 0.5rem 1.25rem;
+  grid-template-columns: repeat(var(--ms-per-side), minmax(0, 1fr)) var(--ms-lane) repeat(var(--ms-per-side), minmax(0, 1fr));
+  align-items: start;
   margin: 0;
   padding: 0;
   list-style: none;
 }
-.ms-decor {
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  padding-bottom: 3.5rem;
-  pointer-events: none;
+.ms-row.is-fog .ms-art { opacity: 0.88; }
+.ms-cell { position: relative; z-index: 1; grid-row: 1; min-width: 0; display: flex; justify-content: center; }
+.ms-cell-prop { height: var(--ms-art-h); align-items: flex-end; pointer-events: none; }
+.ms-cell-sign { align-items: flex-start; padding-top: 0.5rem; height: calc(var(--ms-art-h) * 0.62); pointer-events: none; }
+.ms-cell-sign img { width: auto; height: calc(var(--ms-art-h) * 0.55); max-width: 100%; }
+.ms-prop { position: relative; display: flex; align-items: flex-end; justify-content: center; max-width: 100%; }
+.ms-prop::after { /* one contact shadow instead of drop-shadow filters (cheaper on phones) */
+  content: "";
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: -0.2rem;
+  height: 0.8rem;
+  background: radial-gradient(ellipse at 50% 50%, rgb(38 37 59 / 0.35), transparent 70%);
+  z-index: -1;
 }
-.ms-decor img { max-width: 100%; height: auto; filter: drop-shadow(0 5px 4px rgb(38 37 59 / 0.3)); }
+.ms-prop img { width: auto; max-width: 100%; object-fit: contain; object-position: 50% 100%; }
+.ms-prop-crates img { height: calc(var(--ms-art-h) * 0.5); }
+.ms-prop-bench img { height: calc(var(--ms-art-h) * 0.45); }
+.ms-prop-handcart img { height: calc(var(--ms-art-h) * 0.5); }
+.ms-prop-tree img { height: calc(var(--ms-art-h) * 1); }
 
-/* One stall: a real link. Picture on top, flag drawn by code, plate printed under it. */
+/* One stall: a real link. Picture on top, flag drawn by code, a parchment signboard hung under it. */
+.ms-stall-wrap { position: relative; width: 100%; }
+.ms-cell.is-open { z-index: 5; }
 .ms-stall {
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  height: 100%;
-  transform: translateY(var(--ms-jitter, 0));
-  color: inherit;
-  text-decoration: none;
-  outline-offset: 3px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  text-align: inherit;
+  cursor: pointer;
+  color: var(--ms-parch-ink);
+  outline-offset: 4px;
 }
-.ms-stall:hover, .ms-stall:focus-visible { transform: translateY(calc(var(--ms-jitter, 0px) - 3px)); z-index: 2; }
-.ms-stall:focus-visible { outline: 3px solid rgb(var(--c-ink)); box-shadow: 0 0 0 6px var(--ms-ink); border-radius: 4px; }
-.ms-art {
-  position: relative;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  height: 10rem;
-}
-.ms-art::before {
+.ms-stall:hover, .ms-stall:focus-visible, .ms-stall[aria-expanded="true"] { transform: translateY(-3px); z-index: 2; }
+.ms-stall:hover .ms-name, .ms-stall:focus-visible .ms-name { text-decoration: underline; text-underline-offset: 2px; }
+.ms-stall:focus-visible { outline: 3px solid #f2c94c; border-radius: 4px; box-shadow: 0 0 0 6px var(--ms-ink); }
+.ms-art { position: relative; display: flex; align-items: flex-end; justify-content: center; height: var(--ms-art-h); }
+.ms-art::before { /* contact shadow */
   content: "";
   position: absolute;
-  left: 8%;
-  right: 8%;
-  bottom: -2px;
-  height: 0.9rem;
-  background: radial-gradient(ellipse at 50% 50%, rgb(38 37 59 / 0.4), transparent 70%);
+  left: 10%;
+  right: 10%;
+  bottom: -0.1rem;
+  height: 1.1rem;
+  background: radial-gradient(ellipse at 50% 50%, rgb(38 37 59 / 0.42), transparent 70%);
 }
-.ms-stall-img { position: relative; height: 9.5rem; width: auto; max-width: 100%; }
-.ms-flag { position: absolute; top: 0; right: 14%; width: 1.6rem; height: 2.5rem; overflow: visible; }
+.ms-stall-img { position: relative; width: min(88%, calc(var(--ms-art-h) * 0.98)); height: auto; max-height: 100%; object-fit: contain; object-position: 50% 100%; }
+.ms-flag { position: absolute; top: 4%; right: 14%; width: 1.9rem; height: 3rem; overflow: visible; }
 
-/* The fog lane: the same stalls, paler, under a code-drawn mist. Still links. */
-.ms-stall.is-fog .ms-stall-img { filter: saturate(0.5) brightness(0.95); }
-.ms-stall.is-fog .ms-art::after {
+/* The fog stretch: the same stalls, paler, under a code-drawn mist. Still links. */
+.ms-row.is-fog::before {
   content: "";
   position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, rgb(235 232 224 / 0.55), rgb(235 232 224 / 0.1) 70%);
+  inset: -0.6rem calc(var(--ms-edge) * -1);
+  background: linear-gradient(180deg, transparent, rgb(235 232 224 / 0.62) 20%, rgb(235 232 224 / 0.5) 80%, transparent);
   pointer-events: none;
 }
+.ms-stall.is-fog .ms-stall-img { filter: saturate(0.5) brightness(0.96); }
 
+/* The signboard: wood frame, two short posts, parchment. Fixed colours (checked: every line 4.5:1 or better). */
 .ms-plate {
   position: relative;
   z-index: 1;
   display: flex;
-  flex: 1;
-  gap: 0.5rem;
-  align-items: flex-start;
-  padding: 0.5rem 0.6rem;
-  border: 1px solid rgb(var(--c-border));
-  border-left: 4px solid var(--stall-tone, rgb(var(--c-border)));
-  border-radius: 2px;
-  background: linear-gradient(180deg, rgb(var(--c-raised)), rgb(var(--c-surface)));
-  box-shadow: 0 3px 0 var(--ms-ink);
+  flex-direction: column;
+  gap: 0.15rem;
+  width: 94%;
+  margin: -0.9rem auto 0;
+  padding: 0.5rem 0.6rem 0.45rem;
+  border: 3px solid #5a3a18;
+  border-radius: 3px;
+  background: linear-gradient(180deg, var(--ms-parch-a), var(--ms-parch-b));
+  box-shadow: inset 0 3px 0 var(--stall-tone, transparent), 0 3px 0 rgb(38 37 59 / 0.35);
+  min-width: 0;
 }
-.ms-plate-body { display: flex; min-width: 0; overflow-wrap: anywhere; flex: 1; flex-direction: column; gap: 0.15rem; }
-.ms-name { font-family: "Marcellus", "Palatino Linotype", Palatino, Georgia, serif; font-size: 1rem; line-height: 1.15; color: rgb(var(--c-ink)); }
-.ms-meta, .ms-ledger { font-size: 0.75rem; line-height: 1.25; color: rgb(var(--c-ink-faint)); }
-.ms-tone { display: flex; align-items: center; gap: 0.35rem; font-size: 0.8125rem; font-weight: 600; color: rgb(var(--c-ink)); }
-.ms-tone svg { flex: 0 0 auto; }
-.ms-pips { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.25rem 0.35rem; margin-top: 0.15rem; }
-.ms-enter { margin-top: 0.2rem; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.03em; color: rgb(var(--c-accent)); }
-
-/* The gate closes the street; fences run out from it. */
-.ms-gate {
+.ms-plate::before, .ms-plate::after { content: ""; position: absolute; top: -0.85rem; width: 0.3rem; height: 0.9rem; border-radius: 1px; background: #5a3a18; }
+.ms-plate::before { left: 16%; }
+.ms-plate::after { right: 16%; }
+.ms-plate { padding-block: 0.35rem 0.3rem; align-items: center; text-align: center; }
+.ms-stall[aria-expanded="true"] .ms-plate { box-shadow: inset 0 3px 0 var(--stall-tone, transparent), 0 0 0 2px #f2c94c, 0 3px 0 rgb(38 37 59 / 0.35); }
+/* The card: an overlay under the signboard, so opening it never moves a neighbour. */
+.ms-card {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  left: 3%;
+  z-index: 3;
   display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  gap: 0.5rem;
-  margin: 1.25rem -1rem 0;
-  padding: 0 1rem;
+  flex-direction: column;
+  gap: 0.2rem;
+  width: 94%;
+  min-width: 8.5rem;
+  padding: 0.5rem 0.6rem 0.5rem;
+  border: 3px solid #5a3a18;
+  border-radius: 3px;
+  background: linear-gradient(180deg, var(--ms-parch-a), var(--ms-parch-b));
+  box-shadow: inset 0 3px 0 var(--stall-tone, transparent), 0 6px 10px rgb(38 37 59 / 0.4);
+  color: var(--ms-parch-ink);
 }
-.ms-gate .ms-fence { width: min(24%, 9rem); height: auto; margin-bottom: 0.5rem; }
+.ms-card[hidden] { display: none; }
+.ms-card-head { display: flex; align-items: center; gap: 0.4rem; }
+.ms-enter { margin-top: 0.15rem; font-size: 0.8125rem; font-weight: 700; color: var(--ms-parch-accent); text-decoration: underline; text-underline-offset: 2px; }
+.ms-enter:focus-visible { outline: 3px solid var(--ms-parch-ink); outline-offset: 2px; }
+@media (prefers-reduced-motion: no-preference) {
+  .ms-card:not([hidden]) { animation: ms-card-in 0.14s ease-out; }
+}
+@keyframes ms-card-in { from { opacity: 0; transform: translateY(-3px); } }
+.ms-name-row { display: flex; align-items: flex-start; gap: 0.4rem; min-width: 0; }
+.ms-numeral {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  padding: 0 0.25rem;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #fff0b8, #d9a93e 55%, #8a5e14);
+  box-shadow: 0 0 0 1px #2a1a06;
+  color: #2a1a06;
+  font-family: "Marcellus", "Palatino Linotype", Palatino, Georgia, serif;
+  font-size: 0.75rem;
+}
+.ms-name {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  min-width: 0;
+  font-family: "Marcellus", "Palatino Linotype", Palatino, Georgia, serif;
+  font-size: 0.9375rem;
+  line-height: 1.15;
+  color: var(--ms-parch-ink);
+}
+.ms-meta { font-size: 0.75rem; line-height: 1.25; color: var(--ms-parch-faint); overflow-wrap: anywhere; }
+.ms-tone { display: flex; align-items: center; gap: 0.35rem; font-size: 0.8125rem; font-weight: 700; color: var(--ms-parch-ink); }
+.ms-tone svg { flex: 0 0 auto; }
+.ms-pips { display: flex; align-items: center; gap: 0.25rem; margin-top: 0.1rem; color: var(--ms-parch-faint); }
+
+/* The gate closes the lane; fences run out from the posts to the scene edges. */
+.ms-gate { display: flex; align-items: flex-end; min-height: 8rem; margin: 0.6rem calc(var(--ms-edge) * -1) 0; position: relative; z-index: 2; }
+.ms-gate .ms-fence { flex: 1 1 0; min-width: 0; width: 0; height: calc(var(--ms-art-h) * 0.4); max-width: none; object-fit: cover; object-position: 100% 100%; margin-bottom: 0.4rem; }
 .ms-gate .ms-fence-right { transform: scaleX(-1); }
-.ms-gate .ms-gate-pic { width: min(52%, 17rem); height: auto; filter: drop-shadow(0 6px 5px rgb(38 37 59 / 0.35)); }
+.ms-gate .ms-gate-pic { flex: 0 0 auto; width: min(calc(var(--ms-lane) * 2.4), 17rem); height: auto; max-width: none; }
 .ms-empty {
-  margin: 0.5rem auto 0;
-  max-width: 28rem;
-  padding: 0.6rem 0.9rem;
-  border-radius: 2px;
-  background: rgb(var(--c-surface) / 0.92);
-  color: rgb(var(--c-ink));
+  position: relative;
+  z-index: 3;
+  margin: 0.9rem auto 0;
+  max-width: 20rem;
+  padding: 0.5rem 0.9rem;
+  border: 3px solid #5a3a18;
+  border-radius: 3px;
+  background: linear-gradient(180deg, var(--ms-parch-a), var(--ms-parch-b));
+  color: var(--ms-parch-ink);
   text-align: center;
 }
 
@@ -214,28 +334,27 @@
 .ms-switch button { border-radius: 0.25rem; padding: 0.2rem 0.7rem; font-size: 0.875rem; font-weight: 500; color: rgb(var(--c-ink-muted)); }
 .ms-switch button[aria-pressed="true"] { background: rgb(var(--c-accent-subtle)); color: rgb(var(--c-ink)); }
 
-/* Street furniture between districts: a lamp, a tree, a bench. Decoration only. */
-.ms-furniture {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 1rem;
-  margin: 0 0.5rem;
-  min-height: 3.5rem;
-  pointer-events: none;
-}
-.ms-furniture img { height: auto; filter: drop-shadow(0 5px 4px rgb(38 37 59 / 0.3)); }
+/* The flag key in the foldout. */
+.ms-key { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 1rem; margin: 0; padding: 0; list-style: none; font-size: 0.75rem; color: rgb(var(--c-ink-faint)); }
+.ms-key li { display: inline-flex; align-items: center; gap: 0.35rem; }
+.ms-key-pips { flex-basis: 100%; }
 
+/* Phones: one plot a side, a narrow lane, everything smaller by the same factor. */
+@media (max-width: 899px) {
+  .ms-cell-sign, .ms-lamp { display: none; }
+}
 @media (max-width: 640px) {
-  .ms-fountain { order: -1; flex: 0 0 100%; margin-inline: auto; width: min(15rem, 70vw); }
-  .ms-booth { flex: 1 1 8rem; max-width: 10rem; }
-  .ms-plate { padding: 0.4rem 0.45rem; gap: 0.35rem; }
-  .ms-plate .stall-numeral { min-width: 1.6rem; height: 1.6rem; font-size: 0.7rem; }
-  .ms-ground { padding: 0.5rem 0.6rem 0; }
-  .ms-gate { margin: 1rem -0.6rem 0; padding: 0 0.6rem; }
-  .ms-plots { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem 0.5rem; }
-  .ms-art { height: 8.5rem; }
-  .ms-stall-img { height: 8rem; }
+  .market-street { --ms-art-h: 9.4rem; --ms-edge: 0.6rem; --sq: 5.9rem; }
+  .ms-sky { height: 4rem; }
+  .ms-cross { margin-block: 0.6rem; }
+  .ms-prop-tree img { height: calc(var(--ms-art-h) * 0.8); }
+  .ms-plate { width: 98%; padding: 0.4rem 0.4rem 0.4rem; }
+  .ms-numeral { display: none; }
+  .ms-name { font-size: 0.875rem; }
+  .ms-board { padding: 0.3rem 0.55rem; font-size: 0.75rem; }
+  .ms-plank { font-size: 0.8125rem; padding: 0.15rem 0.6rem; }
+  .ms-flag { width: 1.4rem; height: 2.2rem; }
+  .ms-square { padding-bottom: 0.7rem; }
 }
 @media (prefers-reduced-motion: reduce) {
   .ms-stall, .ms-stall:hover, .ms-stall:focus-visible { transition: none; }
