@@ -228,7 +228,7 @@ function useMarkReveal(root: RefObject<HTMLElement>, animKey: string) {
   }, [root, animKey]);
 }
 
-/** Screen class for the lane: 3 plots a side from 1024 px, 2 from 760 px, else 1. Matches the media queries the CSS uses. */
+/** Screen class for the lane: 5 plots a side from 1024 px, 3 from 760 px, else 1. Matches the media queries the CSS uses. */
 function useLaneWidth(): LaneWidth {
   const qWide = "(min-width: 1024px)";
   const qMedium = "(min-width: 760px)";
@@ -340,6 +340,7 @@ export default function MarketStreet({
     <section ref={street} className="market-street" aria-label="Market Street" style={{ "--ms-per-side": plan.perSide } as CSSProperties}>
       <div className="ms-sky" aria-hidden>
         <ObjectArtImage id="market-skyline" width={900} className="ms-skyline" fallback={null} />
+        <ObjectArtImage id="market-skyline" width={900} className="ms-skyline ms-skyline-r" fallback={null} />
       </div>
       <div className="ms-ground">
         <div className="ms-square">

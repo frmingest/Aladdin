@@ -36,16 +36,16 @@
   background: var(--ms-ground-a);
 }
 
-/* Rooftops cropped to a short band that fades into the ground. */
+/* The town row (2026-10-17 picture, cut out of white): two copies side by side, the second mirrored so the join is seamless, each half the scene wide (so the band stays short); sky gradient behind. */
 .ms-sky {
   position: relative;
-  height: clamp(5rem, 11vw, 8rem);
+  display: flex;
+  padding-top: clamp(0.5rem, 2.5cqw, 1.5rem);
   overflow: hidden;
-  background: linear-gradient(180deg, var(--ms-sky-top), #8a7aa0 55%, var(--ms-sky-low));
+  background: linear-gradient(180deg, var(--ms-sky-top), #8a7aa0 70%, var(--ms-sky-low));
 }
-.ms-sky .ms-skyline { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; object-fit: cover; object-position: 50% 78%; }
-.ms-sky::after { content: ""; position: absolute; inset: 55% 0 0; background: linear-gradient(180deg, transparent, var(--ms-ground-a)); }
-
+.ms-sky .ms-skyline { display: block; flex: 0 0 50%; width: 50%; height: auto; max-width: none; align-self: flex-end; }
+.ms-sky .ms-skyline-r { transform: scaleX(-1); }
 /* Packed earth with a faint pebble grain; an edge vignette sits over everything. */
 .ms-ground {
   position: relative;
@@ -441,7 +441,6 @@
 }
 @media (max-width: 640px) {
   .market-street { --ms-art-h: 6.6rem; --ms-plot: 8rem; --ms-edge: 0.6rem; --sq: 4.8rem; }
-  .ms-sky { height: 4rem; }
   .ms-cross { margin-block: 0.45rem; }
   .ms-prop-tree img { height: calc(var(--ms-art-h) * 0.55); }
   .ms-prop-crates img, .ms-prop-handcart img { height: calc(var(--ms-art-h) * 0.4); }
@@ -464,3 +463,22 @@
   .ms-stall { transition: transform 0.15s ease-out; }
 }
 @media print { .market-street { display: none; } }
+
+/* Half-size stalls (2026-10-17 trial): above phone width everything on the plots is half what it was, so a row holds up to five a side. */
+@media (min-width: 641px) {
+  .market-street { --ms-art-h: 4.2rem; --ms-plot: 5.8rem; }
+  .ms-art::before { bottom: -0.25rem; height: 0.7rem; border-width: 1px; }
+  .ms-plate { width: 100%; margin-top: 0.2rem; padding: 0.15rem 0.2rem 0.25rem; border-width: 1.5px; box-shadow: inset 0 -3px 0 var(--stall-tone, transparent), 0 1px 0 rgb(0 0 0 / 0.5); }
+  .ms-stall[aria-expanded="true"] .ms-plate { box-shadow: inset 0 -3px 0 var(--stall-tone, transparent), 0 0 0 2px #f2c94c, 0 1px 0 rgb(0 0 0 / 0.5); }
+  .ms-name { font-size: 0.6875rem; line-height: 1.1; }
+  .ms-flag { width: 0.85rem; height: 1.35rem; }
+  .ms-lamp { width: calc(var(--ms-art-h) * 0.3); }
+  .ms-seal-wrap { top: -0.7rem; right: -0.3rem; }
+  .ms-seal { width: 1.1rem; height: 1.1rem; }
+  .ms-ribbon { font-size: 0.5625rem; padding: 0.05rem 0.55rem 0.05rem 0.3rem; margin-right: -0.45rem; }
+  .ms-card { left: 50%; width: 8.75rem; transform: translateX(-50%); }
+}
+@media (min-width: 641px) and (prefers-reduced-motion: no-preference) {
+  .ms-card:not([hidden]) { animation-name: ms-card-in-centered; }
+}
+@keyframes ms-card-in-centered { from { opacity: 0; transform: translate(-50%, -3px); } }

@@ -325,7 +325,7 @@ export const ART_MANIFEST = {
   "book-ribbon": { src: bookRibbon, width: 89, height: 200, alt: "" },
   "market-fence": { src: marketFence, width: 400, height: 126, alt: "" },
   "market-gate": { src: marketGate, width: 480, height: 353, alt: "" },
-  "market-skyline": { src: marketSkyline, width: 900, height: 286, alt: "" },
+  "market-skyline": { src: marketSkyline, width: 900, height: 369, alt: "" },
   "market-fountain": { src: marketFountain, width: 336, height: 292, alt: "" },
   "market-lamp": { src: marketLamp, width: 77, height: 272, alt: "" },
   "market-cobble": { src: marketCobble, width: 384, height: 320, alt: "" },

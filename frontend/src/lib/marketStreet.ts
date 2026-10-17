@@ -113,7 +113,7 @@ export function fillerFor(districtIndex: number): PropId {
   return FILLER_PROPS[((districtIndex % FILLER_PROPS.length) + FILLER_PROPS.length) % FILLER_PROPS.length]!;
 }
 
-/** Plots per side of the lane (1 to 3). A small street stays narrow; a long one widens on wider screens: 2 on tablets, 3 on desktops. */
+/** Plots per side of the lane (1 to 5). A small street stays narrow; a long one widens on wider screens: 3 on tablets, 5 on desktops (stalls are half size above phone width). */
 export const SMALL_STREET = 6;
 
 export type Slot = { kind: "stall"; row: WatchlistRow; place: number } | { kind: "prop"; id: PropId } | { kind: "ground" };
@@ -133,7 +133,7 @@ export interface LaneRow {
 }
 
 export interface LanePlan {
-  perSide: 1 | 2 | 3;
+  perSide: 1 | 2 | 3 | 4 | 5;
   rows: LaneRow[];
 }
 
@@ -149,7 +149,7 @@ export type LaneWidth = "wide" | "medium" | "narrow";
 
 export function lanePlots(districts: District[], width: LaneWidth): LanePlan {
   const total = districts.reduce((n, d) => n + d.rows.length, 0);
-  const perSide: 1 | 2 | 3 = total <= SMALL_STREET ? 1 : width === "wide" ? 3 : width === "medium" ? 2 : 1;
+  const perSide: 1 | 2 | 3 | 4 | 5 = total <= SMALL_STREET ? 1 : width === "wide" ? 5 : width === "medium" ? 3 : 1;
   const cap = perSide * 2;
   const rows: LaneRow[] = [];
   let nextFirst: "left" | "right" = "left";
