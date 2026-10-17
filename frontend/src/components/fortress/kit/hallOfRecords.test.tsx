@@ -49,4 +49,14 @@ describe("hall of records art", () => {
     expect(html([rec()])).not.toContain("hall-ribbon");
     expect(html([rec({ review_6m: "due" })])).toContain("hall-ribbon");
   });
+
+  it("sets the text in one paged flow inside a fixed-size book, so long notes never stretch it", () => {
+    const out = html([rec({ thesis: "word ".repeat(400) })]);
+    expect(out.match(/class="hall-flow"/g)).toHaveLength(1);
+    expect(out).toContain("hall-facts");
+    expect(out).toContain("hall-turner--next");
+    expect(out).toContain("hall-turner--prev");
+    // No pager until the text overflows the first two pages (measured in the browser).
+    expect(out).not.toContain("hall-pager");
+  });
 });

@@ -17,7 +17,7 @@ State: `main` is at `30f0cb9` (#156), which includes #155 (Map towers as sector 
 - [ ] **Map default (PR `feature/map-image-default`): review and merge (Faiz), then check the Map on desktop and phone:** crowded sectors, fog patches on each picture; decide on a larger Stitch copy of the map picture ([doc](game/map-image-prototype-2026-10-15.md))
 - [ ] **Game art (PR `feature/game-art-dde`): review and merge (Faiz), then look at Council, top bar, Chronicle gaps and Journal with Game mode on;** still to generate: barometer without text, 8th Council badge, quiet council room, larger map ([doc](game/game-art-dde-2026-10-16.md))
 - [ ] **Map fills the canvas (PR `feature/map-fill-canvas`, written and tested, not merged, not deployed):** the painted map now covers the whole box instead of sitting in flat tan bands; on desktop the box takes the picture's 16:9 shape, on a phone it is tall and you pan. Check the live Map on desktop and phone after deploy
-- [ ] **Hall of Records polish (PR `feature/records-hall-polish`, written and tested locally, not merged, not deployed):** after merge and deploy, look at Records with Game mode on, desktop and phone: torches and arches, brass nameplates, press a tome and watch the painted book open ([doc](game/records-hall-polish-2026-10-17.md))
+- [ ] **Hall of Records book pages (PR `feature/records-book-pages`, written, not merged, not deployed):** fixed-size book with a Next page pager for long notes; after deploy check a record with long notes and a phone ([doc](game/records-hall-polish-2026-10-17.md))
 - [ ] **Optional, visual:** with Game mode on, look at the World banner crop on the Siege Simulator (Claude could not judge it)
 
 ## Recent Blockers / Open Questions

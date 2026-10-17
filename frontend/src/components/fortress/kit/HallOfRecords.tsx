@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import { formatDate } from "../../../lib/format";
 import { capsuleLabel, capsuleState } from "../../../lib/capsules";
@@ -176,11 +176,89 @@ function Desk({ r, t, deskId, demo, opening, art }: { r: DecisionRecord; t: Tome
   if (painted && art && cover) {
     Object.assign(look, { "--page-left": `url(${art.left})`, "--page-right": `url(${art.right})`, "--cover-img": `url(${cover})` });
   }
+
+  // The book is one fixed size. Its text flows through CSS columns (one per page) and is paged, never stretched.
+  const flowRef = useRef<HTMLDivElement>(null);
+  const stepRef = useRef(1);
+  const pageRef = useRef(0);
+  const timers = useRef<number[]>([]);
+  const [spreads, setSpreads] = useState(1);
+  const [page, setPage] = useState(0);
+  const [turning, setTurning] = useState<"next" | "prev" | null>(null);
+  pageRef.current = page;
+
+  const measure = useCallback(() => {
+    const el = flowRef.current;
+    if (!el) return;
+    const gap = parseFloat(getComputedStyle(el).columnGap) || 0;
+    const step = el.clientWidth + gap;
+    if (step <= 0) return;
+    stepRef.current = step;
+    const n = Math.max(1, Math.ceil((el.scrollWidth + gap) / step - 0.02));
+    setSpreads(n);
+    const at = Math.min(pageRef.current, n - 1);
+    setPage(at);
+    el.scrollLeft = at * step;
+  }, []);
+
+  useLayoutEffect(() => {
+    measure();
+    const el = flowRef.current;
+    if (!el) return;
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(measure) : null;
+    ro?.observe(el);
+    const mo = typeof MutationObserver !== "undefined" ? new MutationObserver(measure) : null;
+    mo?.observe(el, { childList: true, subtree: true, characterData: true });
+    void document.fonts?.ready.then(measure);
+    const pending = timers.current;
+    return () => {
+      ro?.disconnect();
+      mo?.disconnect();
+      pending.forEach((id) => window.clearTimeout(id));
+    };
+  }, [measure]);
+
+  const shownOnce = useRef(false);
+  useLayoutEffect(() => {
+    const el = flowRef.current;
+    if (!el) return;
+    el.scrollLeft = page * stepRef.current;
+    if (shownOnce.current && typeof el.animate === "function" && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 260, easing: "ease-out" });
+    }
+    shownOnce.current = true;
+  }, [page]);
+
+  const go = (dir: 1 | -1) => {
+    const next = page + dir;
+    if (next < 0 || next >= spreads || turning) return;
+    const calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches || window.matchMedia("(max-width: 640px)").matches;
+    if (calm) {
+      setPage(next);
+      return;
+    }
+    setTurning(dir === 1 ? "next" : "prev");
+    timers.current.push(window.setTimeout(() => setPage(next), 280), window.setTimeout(() => setTurning(null), 620));
+  };
+
+  // Tabbing to a link on another page turns to that page instead of leaving the book half scrolled.
+  const onFlowFocus = (e: React.FocusEvent<HTMLDivElement>) => {
+    const el = flowRef.current;
+    const target = e.target as HTMLElement;
+    if (!el || target === el) return;
+    const at = Math.max(0, Math.floor((target.offsetLeft + 1) / stepRef.current));
+    el.scrollLeft = at * stepRef.current;
+    setPage(at);
+  };
+
   return (
     <div className="hall-desk" id="hall-desk" aria-live="polite">
-      <div className={`hall-book${painted ? " hall-book--art" : ""}${opening ? " hall-book--opening" : ""}`} style={look}>
+      <div className={`hall-book${painted ? " hall-book--art" : ""}${opening ? " hall-book--opening" : ""}${turning ? ` hall-book--turn-${turning}` : ""}`} style={look}>
         <div className="hall-board">
-          <div className="hall-page hall-page-left">
+          <div className="hall-page hall-page-left" aria-hidden />
+          <div className="hall-spine" aria-hidden />
+          <div className="hall-page hall-page-right" aria-hidden />
+          <div className="hall-flow" ref={flowRef} onFocus={onFlowFocus}>
             <h3 className="hall-title font-display text-lg text-ink">
               {actionLabel(r.action)}{" "}
               {r.holding_id ? (
@@ -205,18 +283,25 @@ function Desk({ r, t, deskId, demo, opening, art }: { r: DecisionRecord; t: Tome
                 <dd className="mt-1 whitespace-pre-wrap text-ink">{r.invalidation ?? <span className="text-ink-muted">Nothing was written.</span>}</dd>
               </div>
             </dl>
-          </div>
-          <div className="hall-spine" aria-hidden />
-          <div className="hall-page hall-page-right">
-            <p className="hall-price text-sm text-ink">{priceLine(r)}</p>
-            <p className="text-sm text-ink-muted">{verdictLine(r)}</p>
-            <div className="mt-4 space-y-3 border-t border-border-subtle pt-3">
-              <Review months={6} state={r.review_6m} text={r.review_6m_text} />
-              <Review months={12} state={r.review_12m} text={r.review_12m_text} />
+            <div className="hall-facts">
+              <p className="hall-price text-sm text-ink">{priceLine(r)}</p>
+              <p className="text-sm text-ink-muted">{verdictLine(r)}</p>
+              <div className="mt-4 space-y-3 border-t border-border-subtle pt-3">
+                <Review months={6} state={r.review_6m} text={r.review_6m_text} />
+                <Review months={12} state={r.review_12m} text={r.review_12m_text} />
+              </div>
+              {!demo && r.holding_id && <ThenAndNow key={r.id} entryId={r.id} />}
             </div>
-            {!demo && r.holding_id && <ThenAndNow key={r.id} entryId={r.id} />}
           </div>
           {t.owed && (painted && art ? <img className="hall-ribbon-art" src={art.ribbon} alt="" aria-hidden="true" width={89} height={200} /> : <span className="hall-ribbon" aria-hidden />)}
+        </div>
+        <div className="hall-turner hall-turner--next" aria-hidden>
+          <div className="hall-page hall-page-right hall-turner-front" />
+          <div className="hall-page hall-page-left hall-turner-back" />
+        </div>
+        <div className="hall-turner hall-turner--prev" aria-hidden>
+          <div className="hall-page hall-page-left hall-turner-front" />
+          <div className="hall-page hall-page-right hall-turner-back" />
         </div>
         <div className="hall-cover" aria-hidden>
           <div className="hall-cover-front">
@@ -225,6 +310,19 @@ function Desk({ r, t, deskId, demo, opening, art }: { r: DecisionRecord; t: Tome
           <div className="hall-cover-back" />
         </div>
       </div>
+      {spreads > 1 && (
+        <div className="hall-pager">
+          <button type="button" className="hall-pager-btn" onClick={() => go(-1)} disabled={page === 0 || turning !== null}>
+            <span aria-hidden>‹</span> Back
+          </button>
+          <span className="hall-pager-count">
+            Page {page + 1} of {spreads}
+          </span>
+          <button type="button" className="hall-pager-btn" onClick={() => go(1)} disabled={page >= spreads - 1 || turning !== null}>
+            Next page <span aria-hidden>›</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }
