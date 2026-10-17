@@ -28,7 +28,7 @@ const WALL_SEGMENT_SRC = OBJECT_ART["wall-segment"].src;
  * grow with it, a grey "?" over towers that are not modelled, and the besieging camp (the same camp the
  * Fortress draws for the same siege level). The list below the strip says every number in words.
  */
-export default function SiegeArtStrip({ rows, level }: { rows: SiegeSimHolding[]; level: FortressSiegeLevel }) {
+export default function SiegeArtStrip({ rows, level, scenery = false }: { rows: SiegeSimHolding[]; level: FortressSiegeLevel; scenery?: boolean }) {
   const uid = useId().replace(/:/g, "");
   const palette = worldPalette(level);
   const width = sceneWidth(rows.length);
@@ -82,10 +82,14 @@ export default function SiegeArtStrip({ rows, level }: { rows: SiegeSimHolding[]
         )}
       </defs>
 
-      <rect width={width} height={SCENE_H} fill={`url(#${uid}-sky)`} />
-      <ellipse cx={210} cy={GROUND_Y - 40} rx={palette.sun.r} ry={palette.sun.r * 0.45} fill={palette.sun.color} opacity={palette.sun.opacity * 0.5} />
-      <path d={`M0 ${GROUND_Y - 34} Q ${width * 0.2} ${GROUND_Y - 62} ${width * 0.4} ${GROUND_Y - 36} T ${width * 0.8} ${GROUND_Y - 40} T ${width} ${GROUND_Y - 30} V ${GROUND_Y} H0 Z`} fill={palette.farHills} />
-      <rect y={GROUND_Y - 6} width={width} height={SCENE_H - GROUND_Y + 6} fill={`url(#${uid}-grass)`} />
+      {!scenery && (
+        <>
+          <rect width={width} height={SCENE_H} fill={`url(#${uid}-sky)`} />
+          <ellipse cx={210} cy={GROUND_Y - 40} rx={palette.sun.r} ry={palette.sun.r * 0.45} fill={palette.sun.color} opacity={palette.sun.opacity * 0.5} />
+          <path d={`M0 ${GROUND_Y - 34} Q ${width * 0.2} ${GROUND_Y - 62} ${width * 0.4} ${GROUND_Y - 36} T ${width * 0.8} ${GROUND_Y - 40} T ${width} ${GROUND_Y - 30} V ${GROUND_Y} H0 Z`} fill={palette.farHills} />
+        </>
+      )}
+      <rect y={GROUND_Y - 6} width={width} height={SCENE_H - GROUND_Y + 6} fill={`url(#${uid}-grass)`} opacity={scenery ? 0.85 : 1} />
 
       <g aria-hidden="true" style={{ filter: palette.grade }}>
         {camp.map((s, i) => (

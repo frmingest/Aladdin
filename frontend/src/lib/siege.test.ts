@@ -7,6 +7,7 @@ import {
   coverageLine,
   damageWidth,
   dropToPercent,
+  fallStage,
   fallSubject,
   formatDrop,
   headline,
@@ -220,5 +221,19 @@ describe("scenarios v4: the choice of yardstick", () => {
     expect(parseBenchmarkChoice(undefined)).toBe("local");
     expect(parseBenchmarkChoice("moon")).toBe("local");
     expect(parseBenchmarkChoice("global")).toBe("global");
+  });
+});
+
+describe("fallStage (the towers' backdrop follows the slider)", () => {
+  it("is calm under 15%, storm from 15%, siege from 30%, ruin from 45%", () => {
+    expect([0.05, 0.1, 0.149].map(fallStage)).toEqual(["calm", "calm", "calm"]);
+    expect([0.15, 0.2, 0.299].map(fallStage)).toEqual(["storm", "storm", "storm"]);
+    expect([0.3, 0.4, 0.449].map(fallStage)).toEqual(["siege", "siege", "siege"]);
+    expect([0.45, 0.6].map(fallStage)).toEqual(["ruin", "ruin"]);
+  });
+  it("reads the backend's decimal strings and falls back to calm on rubbish", () => {
+    expect(fallStage("0.30")).toBe("siege");
+    expect(fallStage(null)).toBe("calm");
+    expect(fallStage("abc")).toBe("calm");
   });
 });
