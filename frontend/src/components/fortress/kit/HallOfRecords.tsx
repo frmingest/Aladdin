@@ -2,7 +2,7 @@ import { useEffect, useId, useMemo, useRef, useState, type CSSProperties } from 
 import { Link } from "react-router-dom";
 import { formatDate } from "../../../lib/format";
 import { capsuleLabel, capsuleState } from "../../../lib/capsules";
-import { HALL_COPY, SEAL_LOOK, defaultOpenId, tomeAria, tomeFor, type Tome } from "../../../lib/hall";
+import { BOOK_ART, HALL_COPY, SEAL_LOOK, coverArtId, defaultOpenId, tomeAria, tomeFor, type Tome } from "../../../lib/hall";
 import type { CapsuleState } from "../../../lib/capsules";
 import { actionLabel, daysText, filterRecords, priceLine, verdictLine } from "../../../lib/rituals";
 import type { DecisionRecord, Records } from "../../../lib/types";
@@ -113,11 +113,72 @@ function Review({ months, state, text }: { months: 6 | 12; state: DecisionRecord
   );
 }
 
-function Desk({ r, t, deskId, demo, opening }: { r: DecisionRecord; t: Tome; deskId: string; demo: boolean; opening: boolean }) {
+/** The painted book (Game mode, "Object art"): the six covers, two leaves and the ribbon. Returns the picture
+ * addresses once every picture the desk needs has loaded, else null and the desk keeps its drawn book. Loading
+ * is checked up front so the book never flips from drawn to painted in front of the reader. */
+type BookArt = { left: string; right: string; ribbon: string; covers: Record<string, string> };
+function useBookArt(actions: string[]): BookArt | null {
+  const mode = useArtMode();
+  const [art, setArt] = useState<BookArt | null>(null);
+  const key = actions.join("|");
+  useEffect(() => {
+    if (mode !== "stitch") {
+      setArt(null);
+      return;
+    }
+    const left = getObjectArt(BOOK_ART.left);
+    const right = getObjectArt(BOOK_ART.right);
+    const ribbon = getObjectArt(BOOK_ART.ribbon);
+    if (!left || !right || !ribbon) return;
+    const covers: Record<string, string> = {};
+    for (const a of key.split("|").filter(Boolean)) {
+      const id = coverArtId(a);
+      const pic = id ? getObjectArt(id) : null;
+      if (pic) covers[a] = pic.src;
+    }
+    const urls = [left.src, right.src, ribbon.src, ...Object.values(covers)];
+    let live = true;
+    let pending = urls.length;
+    for (const src of urls) {
+      const img = new Image();
+      img.onload = () => {
+        pending -= 1;
+        if (live && pending === 0) setArt({ left: left.src, right: right.src, ribbon: ribbon.src, covers });
+      };
+      img.onerror = () => {
+        live = false;
+      };
+      img.src = src;
+    }
+    return () => {
+      live = false;
+    };
+  }, [mode, key]);
+  return art;
+}
+
+/** Round emblem for a painted cover: the action's letter, as on the shelf tome. Decoration. */
+function CoverEmblem({ letter }: { letter: string }) {
+  return (
+    <svg viewBox="0 0 64 64" width="64" height="64" aria-hidden focusable="false" className="hall-cover-emblem">
+      <circle cx="32" cy="32" r="27" fill="#120c07" fillOpacity="0.5" stroke="#d9a93e" strokeWidth="2" />
+      <text x="32" y="42" textAnchor="middle" fontSize="30" fontWeight="700" fontFamily="Georgia, serif" fill="#f6dfa6">
+        {letter}
+      </text>
+    </svg>
+  );
+}
+
+function Desk({ r, t, deskId, demo, opening, art }: { r: DecisionRecord; t: Tome; deskId: string; demo: boolean; opening: boolean; art: BookArt | null }) {
+  const cover = art?.covers[r.action];
+  const painted = Boolean(art && cover);
   const look = { "--cover": t.leather, "--cover-edge": t.edge } as CSSProperties;
+  if (painted && art && cover) {
+    Object.assign(look, { "--page-left": `url(${art.left})`, "--page-right": `url(${art.right})`, "--cover-img": `url(${cover})` });
+  }
   return (
     <div className="hall-desk" id="hall-desk" aria-live="polite">
-      <div className={`hall-book${opening ? " hall-book--opening" : ""}`} style={look}>
+      <div className={`hall-book${painted ? " hall-book--art" : ""}${opening ? " hall-book--opening" : ""}`} style={look}>
         <div className="hall-board">
           <div className="hall-page hall-page-left">
             <h3 className="hall-title font-display text-lg text-ink">
@@ -155,11 +216,11 @@ function Desk({ r, t, deskId, demo, opening }: { r: DecisionRecord; t: Tome; des
             </div>
             {!demo && r.holding_id && <ThenAndNow key={r.id} entryId={r.id} />}
           </div>
-          {t.owed && <span className="hall-ribbon" aria-hidden />}
+          {t.owed && (painted && art ? <img className="hall-ribbon-art" src={art.ribbon} alt="" aria-hidden="true" width={89} height={200} /> : <span className="hall-ribbon" aria-hidden />)}
         </div>
         <div className="hall-cover" aria-hidden>
           <div className="hall-cover-front">
-            <TomePicture t={t} id={`${deskId}${r.id}`} scale={1.7} />
+            {painted ? <CoverEmblem letter={t.letter} /> : <TomePicture t={t} id={`${deskId}${r.id}`} scale={1.7} />}
           </div>
           <div className="hall-cover-back" />
         </div>
@@ -176,6 +237,8 @@ export default function HallOfRecords({ records }: { records: Records }) {
   const deskRef = useRef<HTMLDivElement | null>(null);
   // The cover swings open only after a press, never on page load (the desk starts below the fold).
   const [opening, setOpening] = useState(false);
+  const actions = useMemo(() => Array.from(new Set(records.records.map((x) => x.action))).sort(), [records.records]);
+  const bookArt = useBookArt(actions);
   const open = shown.find((r) => r.id === openId) ?? shown[0] ?? null;
   useEffect(() => {
     if (shown.length > 0 && !shown.some((r) => r.id === openId)) setOpenId(shown[0].id);
@@ -258,7 +321,7 @@ export default function HallOfRecords({ records }: { records: Records }) {
             })}
           </ul>
           <p className="hall-hint">{HALL_COPY.press}</p>
-          <div ref={deskRef}>{open && <Desk key={open.id} r={open} t={tomeFor(open)} deskId={`d${uid}`} demo={records.demo} opening={opening} />}</div>
+          <div ref={deskRef}>{open && <Desk key={open.id} r={open} t={tomeFor(open)} deskId={`d${uid}`} demo={records.demo} opening={opening} art={bookArt} />}</div>
         </>
       )}
     </div>
