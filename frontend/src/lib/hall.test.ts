@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { ACTION_SPINE, HALL_COPY, HALL_CHROME_BUDGET, SEAL_LOOK, defaultOpenId, spineFor, tomeAria, tomeFor } from "./hall";
+import { ART_MANIFEST } from "./artManifest";
+import { ACTION_SPINE, BOOK_ART, COVER_ART, coverArtId, HALL_COPY, HALL_CHROME_BUDGET, SEAL_LOOK, defaultOpenId, spineFor, tomeAria, tomeFor } from "./hall";
 import type { DecisionRecord } from "./types";
 
 const rec = (over: Partial<DecisionRecord> = {}): DecisionRecord => ({
@@ -44,5 +45,16 @@ describe("hall of records mapping", () => {
     const words = Object.values(HALL_COPY).join(" ").split(/\s+/).length;
     expect(words).toBeLessThanOrEqual(HALL_CHROME_BUDGET + 25);
     expect(Object.values(HALL_COPY).join(" ")).not.toMatch(/\b(buy|sell|score|win|streak|reward|points?)\b/i);
+  });
+});
+
+describe("hall book pictures", () => {
+  it("has a packed cover for every action and the leaves and ribbon", () => {
+    for (const action of Object.keys(ACTION_SPINE)) {
+      const id = coverArtId(action);
+      expect(id, action).toBe(COVER_ART[action]);
+      expect((ART_MANIFEST as Record<string, unknown>)[id as string], action).toBeTruthy();
+    }
+    for (const id of Object.values(BOOK_ART)) expect((ART_MANIFEST as Record<string, unknown>)[id], id).toBeTruthy();
   });
 });
