@@ -113,7 +113,7 @@ export function fillerFor(districtIndex: number): PropId {
   return FILLER_PROPS[((districtIndex % FILLER_PROPS.length) + FILLER_PROPS.length) % FILLER_PROPS.length]!;
 }
 
-/** Plots per side of the lane (1 or 2). A small street stays narrow; a long one widens on wide screens only. */
+/** Plots per side of the lane (1 to 3). A small street stays narrow; a long one widens on wider screens: 2 on tablets, 3 on desktops. */
 export const SMALL_STREET = 6;
 
 export type Slot = { kind: "stall"; row: WatchlistRow; place: number } | { kind: "prop"; id: PropId } | { kind: "ground" };
@@ -133,7 +133,7 @@ export interface LaneRow {
 }
 
 export interface LanePlan {
-  perSide: 1 | 2;
+  perSide: 1 | 2 | 3;
   rows: LaneRow[];
 }
 
@@ -145,9 +145,11 @@ export interface LanePlan {
  *  - In the last row of a district an empty inner plot gets the district's filler prop; an empty outer plot stays ground.
  * The stalls keep their `place` from the street order; nothing here reorders them.
  */
-export function lanePlots(districts: District[], width: "wide" | "narrow"): LanePlan {
+export type LaneWidth = "wide" | "medium" | "narrow";
+
+export function lanePlots(districts: District[], width: LaneWidth): LanePlan {
   const total = districts.reduce((n, d) => n + d.rows.length, 0);
-  const perSide: 1 | 2 = total > SMALL_STREET && width === "wide" ? 2 : 1;
+  const perSide: 1 | 2 | 3 = total <= SMALL_STREET ? 1 : width === "wide" ? 3 : width === "medium" ? 2 : 1;
   const cap = perSide * 2;
   const rows: LaneRow[] = [];
   let nextFirst: "left" | "right" = "left";

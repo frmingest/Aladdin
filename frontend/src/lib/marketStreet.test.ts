@@ -120,7 +120,7 @@ describe("lanePlots", () => {
     expect(lanePlots(ds, "wide").perSide).toBe(1);
   });
 
-  it("widens a long street to two plots per side on wide screens only, with every stall once and places unchanged", () => {
+  it("widens a long street to three plots per side on wide screens, two on medium, one on narrow, with every stall once and places unchanged", () => {
     const specs = [
       ...Array.from({ length: 3 }, (_, i) => ({ id: `r${i}`, status: "buy_zone" as const, gap: String(-i - 1) })),
       ...Array.from({ length: 9 }, (_, i) => ({ id: `n${i}`, status: i < 2 ? ("near" as const) : ("above" as const), gap: String(i + 3) })),
@@ -128,10 +128,12 @@ describe("lanePlots", () => {
     ];
     const ds = street(specs);
     const wide = lanePlots(ds, "wide");
+    const medium = lanePlots(ds, "medium");
     const narrow = lanePlots(ds, "narrow");
-    expect(wide.perSide).toBe(2);
+    expect(wide.perSide).toBe(3);
+    expect(medium.perSide).toBe(2);
     expect(narrow.perSide).toBe(1);
-    for (const plan of [wide, narrow]) {
+    for (const plan of [wide, medium, narrow]) {
       const placed = plan.rows.flatMap((r) => [...r.left, ...r.right]).flatMap((s) => (s.kind === "stall" ? [s] : []));
       expect(placed).toHaveLength(30);
       expect(new Set(placed.map((s) => s.row.id)).size).toBe(30);
@@ -142,7 +144,7 @@ describe("lanePlots", () => {
 
   it("fills left-inner, right-inner, left-outer, right-outer so place numbers rise in that order", () => {
     const ds = street(Array.from({ length: 7 }, (_, i) => ({ id: `a${i}`, status: "above" as const, gap: String(i) })));
-    const { rows } = lanePlots(ds, "wide");
+    const { rows } = lanePlots(ds, "medium");
     expect(rows).toHaveLength(2);
     const [r0, r1] = rows;
     expect([r0!.left[0], r0!.right[0], r0!.left[1], r0!.right[1]].map((s) => (s!.kind === "stall" ? s.place : 0))).toEqual([1, 2, 3, 4]);

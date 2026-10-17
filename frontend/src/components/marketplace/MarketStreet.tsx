@@ -7,7 +7,7 @@ import TopMarkSeal from "./TopMarkSeal";
 import { stallArtId } from "../../lib/marketArt";
 import { boothNumeral, shopFront, shopPips, storePath, type ShopTone } from "../../lib/marketplace";
 import { TONE_PAINT } from "../../lib/marketplacePaint";
-import { animatedMarks, gapLabel, lanePlots, openReducer, priceLine, stallLabel, staggerDelays, streetDistricts, TONE_FLAG, TOP_MARK_WORD, topMark, topMarkTitle, type FlagShape, type LaneRow, type Slot } from "../../lib/marketStreet";
+import { animatedMarks, gapLabel, lanePlots, openReducer, priceLine, stallLabel, staggerDelays, streetDistricts, TONE_FLAG, TOP_MARK_WORD, topMark, topMarkTitle, type FlagShape, type LaneRow, type LaneWidth, type Slot } from "../../lib/marketStreet";
 import type { WatchlistRow } from "../../lib/types";
 import "./street.css";
 
@@ -228,20 +228,23 @@ function useMarkReveal(root: RefObject<HTMLElement>, animKey: string) {
   }, [root, animKey]);
 }
 
-/** Wide screens (the lane may take two plots a side). Matches the media query the CSS uses. */
-function useLaneWidth(): "wide" | "narrow" {
-  const q = "(min-width: 1024px)";
+/** Screen class for the lane: 3 plots a side from 1024 px, 2 from 760 px, else 1. Matches the media queries the CSS uses. */
+function useLaneWidth(): LaneWidth {
+  const qWide = "(min-width: 1024px)";
+  const qMedium = "(min-width: 760px)";
   const has = typeof window !== "undefined" && typeof window.matchMedia === "function";
-  const [wide, setWide] = useState(() => has && window.matchMedia(q).matches);
+  const read = (): LaneWidth => (!has ? "narrow" : window.matchMedia(qWide).matches ? "wide" : window.matchMedia(qMedium).matches ? "medium" : "narrow");
+  const [width, setWidth] = useState<LaneWidth>(read);
   useEffect(() => {
     if (!has) return;
-    const m = window.matchMedia(q);
-    const on = () => setWide(m.matches);
+    const list = [window.matchMedia(qWide), window.matchMedia(qMedium)];
+    const on = () => setWidth(read());
     on();
-    m.addEventListener("change", on);
-    return () => m.removeEventListener("change", on);
+    list.forEach((m) => m.addEventListener("change", on));
+    return () => list.forEach((m) => m.removeEventListener("change", on));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [has]);
-  return wide ? "wide" : "narrow";
+  return width;
 }
 
 /** The cross-street that opens a district: a strip of cobbles across the scene, a plank sign, lamps at the lane edges. */
