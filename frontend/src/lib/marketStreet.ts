@@ -1,5 +1,5 @@
 import { hash32 } from "./marketArt";
-import { shopFront, type ShopTone } from "./marketplace";
+import { analysisAgeDays, MARKET_RULES, shopFront, type ShopTone } from "./marketplace";
 import { formatPct100, formatPrice } from "./format";
 import type { WatchlistRow } from "./types";
 import type { ObjectArtId } from "./stitchArt";
@@ -87,7 +87,7 @@ export function priceLine(row: WatchlistRow): string {
 }
 
 /** What a screen reader hears for a stall: the whole fact in one sentence. The picture is silent. */
-export function stallLabel(row: WatchlistRow): string {
+export function stallLabel(row: WatchlistRow, now: number = Date.now()): string {
   const front = shopFront(row);
   const gap = gapLabel(row);
   const price = row.price ? `Price ${formatPrice(row.price, row.price_currency)}.` : "No price on file.";
@@ -97,6 +97,7 @@ export function stallLabel(row: WatchlistRow): string {
     `${front.tag}${gap ? `, ${gap} versus yours` : ""}.`,
     `${price}${yours}`,
     row.owned ? " In your fortress." : "",
+    topMarkText(row, now),
   ]
     .join(" ")
     .replace(/\s+/g, " ")
@@ -195,4 +196,64 @@ export type OpenAction = { type: "toggle"; id: string } | { type: "close" };
 export function openReducer(open: string | null, action: OpenAction): string | null {
   if (action.type === "close") return null;
   return open === action.id ? null : action.id;
+}
+
+/**
+ * The analyst's top mark on a stall: the stored rating "Strong Buy" (and only that), shown as a seal with the printed
+ * words "Top mark" / "Old mark". The street never prints the verdict word itself. Pure; no money maths.
+ *  - null: not a Strong Buy (nothing is drawn, nothing is faked).
+ *  - "old": no date, or older than the stale cut-off: dashed seal, "Old mark", no frame, no motion. Beats the fog (truth over flattery).
+ *  - "fogged": unpriced stall: static seal under the mist, no frame, no motion.
+ *  - "ageing": 91-180 days: seal and frame, still.
+ *  - "fresh": up to 90 days: seal and frame; may animate (see animatedMarks).
+ */
+export type TopMark = "fresh" | "ageing" | "old" | "fogged";
+
+export function topMark(row: WatchlistRow, now: number = Date.now()): TopMark | null {
+  if (row.verdict_rating !== "Strong Buy") return null;
+  const age = analysisAgeDays(null, row.analyzed_at, now);
+  if (age === null || age > MARKET_RULES.analysisStaleDays) return "old";
+  if (districtOf(row) === "fog") return "fogged";
+  return age > MARKET_RULES.analysisFreshDays ? "ageing" : "fresh";
+}
+
+/** The printed word on the seal's ribbon. */
+export const TOP_MARK_WORD: Record<TopMark, string> = { fresh: "Top mark", ageing: "Top mark", fogged: "Top mark", old: "Old mark" };
+
+/** At most this many stalls animate on a visit: the first fresh marks in street order. */
+export const MARK_ANIMATION_CAP = 3;
+/** Gap between entrances when several enter view together. */
+export const MARK_STAGGER_MS = 400;
+
+/** Row ids of the stalls that may play the entrance: the first MARK_ANIMATION_CAP fresh marks, in street order. */
+export function animatedMarks(ordered: WatchlistRow[], now: number = Date.now()): Set<string> {
+  const out = new Set<string>();
+  for (const row of ordered) {
+    if (out.size >= MARK_ANIMATION_CAP) break;
+    if (topMark(row, now) === "fresh") out.add(row.id);
+  }
+  return out;
+}
+
+/** Entrance delays for stalls that enter view in the same moment: by place, MARK_STAGGER_MS apart. */
+export function staggerDelays(places: number[]): Map<number, number> {
+  return new Map([...places].sort((a, b) => a - b).map((p, i) => [p, i * MARK_STAGGER_MS]));
+}
+
+/** The seal's tooltip: the analyst's word and its age, or a plain admission that the date is unknown. */
+export function topMarkTitle(row: WatchlistRow, now: number = Date.now()): string | null {
+  if (topMark(row, now) === null) return null;
+  const age = analysisAgeDays(null, row.analyzed_at, now);
+  if (age === null) return "The analyst's top word. Date unknown.";
+  const ago = age === 1 ? "1 day ago" : `${age} days ago`;
+  return age > MARKET_RULES.analysisStaleDays ? `The analyst's top word, ${ago}. Old: re-read first.` : `The analyst's top word, ${ago}.`;
+}
+
+/** What a screen reader hears for the mark (appended to the stall's sentence); empty when there is none. */
+export function topMarkText(row: WatchlistRow, now: number = Date.now()): string {
+  if (topMark(row, now) === null) return "";
+  const age = analysisAgeDays(null, row.analyzed_at, now);
+  if (age === null) return "Analyst's top mark, date unknown.";
+  const old = age > MARKET_RULES.analysisStaleDays ? ": old" : "";
+  return `Analyst's top mark, ${age === 1 ? "1 day" : `${age} days`} old${old}.`;
 }
