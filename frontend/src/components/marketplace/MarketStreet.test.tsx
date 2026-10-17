@@ -25,11 +25,11 @@ function row(id: string, over: Partial<WatchlistRow> = {}): WatchlistRow {
   } as unknown as WatchlistRow;
 }
 
-function render(open: string | null) {
+function render(open: string | null, rows: WatchlistRow[] = [row("a"), row("b", { status: "above", distance_to_buy_pct: "9", owned: false })]) {
   return renderToStaticMarkup(
     <MemoryRouter>
       <MarketStreet
-        rows={[row("a"), row("b", { status: "above", distance_to_buy_pct: "9", owned: false })]}
+        rows={rows}
         loaded
         onTalk={() => {}}
         onHype={() => {}}
@@ -69,5 +69,24 @@ describe("MarketStreet stalls are buttons that open a card", () => {
     expect(html).toContain("ms-flag");
     expect(html).toContain("In range · -4%");
     expect(html).toContain("In your fortress");
+  });
+});
+
+describe("the analyst's top mark on a stall", () => {
+  const recent = new Date(Date.now() - 20 * 86_400_000).toISOString();
+  const old = new Date(Date.now() - 400 * 86_400_000).toISOString();
+  it("prints Top mark with a seal, never the verdict word, and tells the screen reader the age", () => {
+    const html = render(null, [row("a", { verdict_rating: "Strong Buy", analyzed_at: recent })]);
+    expect(html).toContain("Top mark");
+    expect(html).toContain("ms-seal");
+    expect(html).toContain('data-mark-kind="fresh"');
+    expect(html).toContain("Analyst&#x27;s top mark, 20 days old.");
+    expect(html).not.toMatch(/Strong Buy|>Buy</);
+  });
+  it("shows an old read as a dashed Old mark and a plain Buy as nothing", () => {
+    const html = render(null, [row("a", { verdict_rating: "Strong Buy", analyzed_at: old }), row("b", { verdict_rating: "Buy", analyzed_at: recent })]);
+    expect(html).toContain("Old mark");
+    expect(html).toContain("is-old");
+    expect(html.match(/class="ms-ribbon"/g)).toHaveLength(1);
   });
 });

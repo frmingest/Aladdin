@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { districtOf, FILLER_PROPS, fillerFor, gapLabel, jitterPx, lanePlots, openReducer, priceLine, streetDistricts, stallLabel, TONE_FLAG, type Slot } from "./marketStreet";
+import { districtOf, FILLER_PROPS, fillerFor, gapLabel, jitterPx, lanePlots, openReducer, priceLine, animatedMarks, staggerDelays, topMark, topMarkText, topMarkTitle, MARK_ANIMATION_CAP, TOP_MARK_WORD, streetDistricts, stallLabel, TONE_FLAG, type Slot } from "./marketStreet";
 import { orderStreet, shopFront } from "./marketplace";
 import { OBJECT_ART } from "./stitchArt";
 import type { WatchlistRow } from "./types";
@@ -192,5 +192,56 @@ describe("openReducer", () => {
   it("closes on Escape (close), and closing nothing stays closed", () => {
     expect(openReducer("a", { type: "close" })).toBeNull();
     expect(openReducer(null, { type: "close" })).toBeNull();
+  });
+});
+
+describe("topMark", () => {
+  const NOW = Date.parse("2026-10-17T12:00:00Z");
+  const daysAgo = (d: number) => new Date(NOW - d * 86_400_000).toISOString();
+  const strong = (over: Partial<WatchlistRow> = {}) => row({ verdict_rating: "Strong Buy", analyzed_at: daysAgo(10), status: "above", ...over });
+
+  it("only the stored Strong Buy gets a mark", () => {
+    for (const r of ["Buy", "Hold", "Sell", "Avoid", null] as const) expect(topMark(row({ verdict_rating: r, analyzed_at: daysAgo(1) }), NOW)).toBeNull();
+    expect(topMark(strong(), NOW)).toBe("fresh");
+  });
+  it("cuts at 90 and 180 days, and an unknown date is old", () => {
+    expect(topMark(strong({ analyzed_at: daysAgo(90) }), NOW)).toBe("fresh");
+    expect(topMark(strong({ analyzed_at: daysAgo(91) }), NOW)).toBe("ageing");
+    expect(topMark(strong({ analyzed_at: daysAgo(180) }), NOW)).toBe("ageing");
+    expect(topMark(strong({ analyzed_at: daysAgo(181) }), NOW)).toBe("old");
+    expect(topMark(strong({ analyzed_at: null }), NOW)).toBe("old");
+  });
+  it("puts an unpriced fresh Strong Buy under the fog, but an old one stays old (truth over flattery)", () => {
+    expect(topMark(strong({ status: "no_price" }), NOW)).toBe("fogged");
+    expect(topMark(strong({ status: "no_target", analyzed_at: daysAgo(30) }), NOW)).toBe("fogged");
+    expect(topMark(strong({ status: "no_price", analyzed_at: daysAgo(300) }), NOW)).toBe("old");
+  });
+  it("prints Top mark or Old mark, never the verdict word", () => {
+    expect(TOP_MARK_WORD.fresh).toBe("Top mark");
+    expect(TOP_MARK_WORD.old).toBe("Old mark");
+    for (const w of Object.values(TOP_MARK_WORD)) expect(w).not.toMatch(/buy|sell/i);
+  });
+  it("is deterministic for the same row and time", () => {
+    expect(topMark(strong(), NOW)).toBe(topMark(strong(), NOW));
+  });
+  it("animates only the first fresh marks in street order, up to the cap", () => {
+    const rows = Array.from({ length: 6 }, (_, i) => strong({ id: `s${i}`, status: "above", distance_to_buy_pct: String(i) }));
+    rows.splice(1, 0, strong({ id: "old1", analyzed_at: daysAgo(400) }), row({ id: "plain", verdict_rating: "Buy" }));
+    const ids = [...animatedMarks(rows, NOW)];
+    expect(ids).toEqual(["s0", "s1", "s2"]);
+    expect(ids).toHaveLength(MARK_ANIMATION_CAP);
+  });
+  it("staggers entrances 400 ms apart by place", () => {
+    const m = staggerDelays([7, 2, 5]);
+    expect([...m.entries()]).toEqual([[2, 0], [5, 400], [7, 800]]);
+  });
+  it("gives the screen reader and the tooltip the age, with no buy word", () => {
+    expect(topMarkText(strong({ analyzed_at: daysAgo(34) }), NOW)).toBe("Analyst's top mark, 34 days old.");
+    expect(topMarkText(strong({ analyzed_at: daysAgo(212) }), NOW)).toBe("Analyst's top mark, 212 days old: old.");
+    expect(topMarkText(strong({ analyzed_at: null }), NOW)).toBe("Analyst's top mark, date unknown.");
+    expect(topMarkText(row({ verdict_rating: "Hold" }), NOW)).toBe("");
+    expect(topMarkTitle(strong({ analyzed_at: daysAgo(34) }), NOW)).toBe("The analyst's top word, 34 days ago.");
+    expect(stallLabel(strong({ analyzed_at: daysAgo(34) }), NOW)).toContain("Analyst's top mark, 34 days old.");
+    expect(stallLabel(strong({ analyzed_at: daysAgo(34) }), NOW)).not.toMatch(/strong buy/i);
   });
 });
