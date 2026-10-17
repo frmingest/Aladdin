@@ -7,7 +7,7 @@
   --ms-ink: #26253b;
   --ms-sky-top: #3b3a63;
   --ms-sky-low: #e9c98f;
-  --ms-ground-a: #d7c59c;
+  --ms-ground-a: #2b4420;
   --ms-mortar: #9c8d68;
   --ms-wood: #6a431c;
   --ms-wood-hi: #8c5d2c;
@@ -21,7 +21,7 @@
   --ms-plot: 9.4rem; /* one plot's width: small stalls, so a side holds up to three */
   --ms-lane: clamp(2.5rem, 6vw, 4.5rem);
   --ms-edge: 2rem;
-  --sq: 7rem; /* the fountain's width; the square scales from it */
+  --sq: 7rem; /* the plaza scale: the Market Hall is 1.9 of it wide; the square scales from it */
   --ms-per-side: 1;
   position: relative;
   overflow: hidden;
@@ -49,8 +49,8 @@
   position: relative;
   padding: 0 var(--ms-edge) 0.25rem;
   background-color: var(--ms-ground-a);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'%3E%3Cg fill='%2326253b' fill-opacity='.07'%3E%3Ccircle cx='14' cy='22' r='2'/%3E%3Ccircle cx='52' cy='9' r='1.4'/%3E%3Ccircle cx='97' cy='31' r='2.2'/%3E%3Ccircle cx='141' cy='14' r='1.6'/%3E%3Ccircle cx='33' cy='72' r='1.7'/%3E%3Ccircle cx='78' cy='84' r='2.4'/%3E%3Ccircle cx='122' cy='66' r='1.5'/%3E%3Ccircle cx='150' cy='108' r='2'/%3E%3Ccircle cx='20' cy='128' r='2.1'/%3E%3Ccircle cx='64' cy='140' r='1.5'/%3E%3Ccircle cx='108' cy='127' r='1.8'/%3E%3Ccircle cx='88' cy='54' r='1.2'/%3E%3C/g%3E%3C/svg%3E");
-  background-size: 160px 160px;
+  background-image: linear-gradient(180deg, #355629, #29421f 60%, #223a1a), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'%3E%3Cg fill='%23d6efb0' fill-opacity='.07'%3E%3Ccircle cx='14' cy='22' r='2'/%3E%3Ccircle cx='52' cy='9' r='1.4'/%3E%3Ccircle cx='97' cy='31' r='2.2'/%3E%3Ccircle cx='141' cy='14' r='1.6'/%3E%3Ccircle cx='33' cy='72' r='1.7'/%3E%3Ccircle cx='78' cy='84' r='2.4'/%3E%3Ccircle cx='122' cy='66' r='1.5'/%3E%3Ccircle cx='150' cy='108' r='2'/%3E%3Ccircle cx='20' cy='128' r='2.1'/%3E%3Ccircle cx='64' cy='140' r='1.5'/%3E%3Ccircle cx='108' cy='127' r='1.8'/%3E%3Ccircle cx='88' cy='54' r='1.2'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: auto, 160px 160px;
 }
 .ms-ground::after {
   content: "";
@@ -62,13 +62,47 @@
 }
 
 /* The square: the paving is the floor, the fountain stands in its middle, Sal and the Hype tent on its rim. */
-.ms-square { display: flex; justify-content: center; padding: calc(var(--sq) * 0.42) 0 0.9rem; }
+.ms-square { display: flex; justify-content: center; padding: calc(var(--sq) * 0.95) 0 1.6rem; }
 .ms-patch { position: relative; width: calc(var(--sq) * 1.9); aspect-ratio: 2.3 / 1; }
-.ms-floor, .ms-fountain { position: absolute; display: block; }
-.ms-floor { inset: 0; }
-.ms-floor .ms-cobble { width: 100%; height: 100%; max-width: none; object-fit: fill; }
-.ms-fountain { left: 50%; bottom: 38%; width: var(--sq); transform: translateX(-50%); }
-.ms-fountain .ms-fountain-pic { width: 100%; height: auto; }
+/* The plaza: one wide stone oval under the Hall, Sal and the Hype tent (code-drawn, like the Fortress's market square). */
+.ms-floor, .ms-hall, .ms-hall-plate { position: absolute; display: block; }
+.ms-floor {
+  left: calc(50% - 44cqw);
+  right: calc(50% - 44cqw);
+  top: 12%;
+  bottom: -14%;
+  border-radius: 50%;
+  border: 2px solid #2a2218;
+  background:
+    radial-gradient(ellipse at 50% 45%, rgb(255 255 255 / 0.1), transparent 60%),
+    radial-gradient(ellipse at 50% 50%, #85795f 0 62%, #6c604b 75%, #5d5242 100%);
+  box-shadow: 0 0.3rem 0 #2a2218, inset 0 0 1.2rem rgb(0 0 0 / 0.3);
+}
+.ms-hall { left: 50%; bottom: 22%; width: calc(var(--sq) * 1.9); transform: translateX(-50%); }
+.ms-hall .ms-hall-pic { width: 100%; height: auto; }
+.ms-hall::before { /* contact shadow */
+  content: "";
+  position: absolute;
+  left: -4%;
+  right: -4%;
+  bottom: -0.3rem;
+  height: 1rem;
+  background: radial-gradient(ellipse at 50% 50%, rgb(0 0 0 / 0.5), transparent 70%);
+  z-index: -1;
+}
+.ms-hall-plate {
+  left: 50%;
+  bottom: calc(22% - 2rem);
+  transform: translateX(-50%);
+  padding: 0.15rem 0.7rem;
+  border: 1px solid #8a6a32;
+  border-radius: 2px;
+  background: rgb(26 18 10 / 0.9);
+  color: #e8d6ae;
+  font-family: "Marcellus", "Palatino Linotype", Palatino, Georgia, serif;
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
 .ms-fig { position: absolute; bottom: 25%; z-index: 2; }
 .ms-fig img { width: 100%; height: auto; }
 .ms-fig-sal { left: min(calc(var(--sq) * -0.62), calc(var(--sq) * 0.95 - 38cqw)); width: calc(var(--sq) * 0.92); }
@@ -211,14 +245,17 @@
 .ms-stall:hover .ms-name, .ms-stall:focus-visible .ms-name { text-decoration: underline; text-underline-offset: 2px; }
 .ms-stall:focus-visible { outline: 3px solid #f2c94c; border-radius: 4px; box-shadow: 0 0 0 6px var(--ms-ink); }
 .ms-art { position: relative; display: flex; align-items: flex-end; justify-content: center; height: var(--ms-art-h); }
-.ms-art::before { /* contact shadow */
+.ms-art::before { /* a small stone pad under the stall, with its shadow */
   content: "";
   position: absolute;
-  left: 10%;
-  right: 10%;
-  bottom: -0.1rem;
-  height: 1.1rem;
-  background: radial-gradient(ellipse at 50% 50%, rgb(38 37 59 / 0.42), transparent 70%);
+  left: 2%;
+  right: 2%;
+  bottom: -0.45rem;
+  height: 1.3rem;
+  border-radius: 50%;
+  border: 1.5px solid #2a2218;
+  background: radial-gradient(ellipse at 50% 45%, #85795f 0 60%, #6c604b 100%);
+  box-shadow: 0 0.18rem 0 rgb(0 0 0 / 0.45);
 }
 .ms-stall-img { position: relative; width: min(88%, calc(var(--ms-art-h) * 0.98)); height: auto; max-height: 100%; object-fit: contain; object-position: 50% 100%; }
 .ms-flag { position: absolute; top: 4%; right: 12%; width: 1.35rem; height: 2.15rem; overflow: visible; }
@@ -228,32 +265,30 @@
   content: "";
   position: absolute;
   inset: -0.6rem calc(var(--ms-edge) * -1);
-  background: linear-gradient(180deg, transparent, rgb(235 232 224 / 0.62) 20%, rgb(235 232 224 / 0.5) 80%, transparent);
+  background: linear-gradient(180deg, transparent, rgb(205 220 195 / 0.3) 20%, rgb(205 220 195 / 0.24) 80%, transparent);
   pointer-events: none;
 }
 .ms-stall.is-fog .ms-stall-img { filter: saturate(0.5) brightness(0.96); }
 
-/* The signboard: wood frame, two short posts, parchment. Fixed colours (checked: every line 4.5:1 or better). */
+/* The nameplate: dark timber, brass rim, the tone as a coloured bar along its foot. Fixed colours (cream on near-black). */
 .ms-plate {
   position: relative;
   z-index: 1;
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 0.15rem;
   width: 94%;
-  margin: -0.7rem auto 0;
-  padding: 0.4rem 0.4rem 0.35rem;
-  border: 3px solid #5a3a18;
+  margin: 0.35rem auto 0;
+  padding: 0.25rem 0.4rem 0.35rem;
+  border: 2px solid #8a6a32;
   border-radius: 3px;
-  background: linear-gradient(180deg, var(--ms-parch-a), var(--ms-parch-b));
-  box-shadow: inset 0 3px 0 var(--stall-tone, transparent), 0 3px 0 rgb(38 37 59 / 0.35);
+  background: linear-gradient(180deg, #2c2012, #1a120a);
+  box-shadow: inset 0 -4px 0 var(--stall-tone, transparent), 0 2px 0 rgb(0 0 0 / 0.5);
+  text-align: center;
   min-width: 0;
 }
-.ms-plate::before, .ms-plate::after { content: ""; position: absolute; top: -0.85rem; width: 0.3rem; height: 0.9rem; border-radius: 1px; background: #5a3a18; }
-.ms-plate::before { left: 16%; }
-.ms-plate::after { right: 16%; }
-.ms-plate { padding-block: 0.25rem 0.2rem; align-items: center; text-align: center; }
-.ms-stall[aria-expanded="true"] .ms-plate { box-shadow: inset 0 3px 0 var(--stall-tone, transparent), 0 0 0 2px #f2c94c, 0 3px 0 rgb(38 37 59 / 0.35); }
+.ms-stall[aria-expanded="true"] .ms-plate { box-shadow: inset 0 -4px 0 var(--stall-tone, transparent), 0 0 0 2px #f2c94c, 0 2px 0 rgb(0 0 0 / 0.5); }
 /* The card: an overlay under the signboard, so opening it never moves a neighbour. */
 .ms-card {
   position: absolute;
@@ -307,7 +342,7 @@
   font-family: "Marcellus", "Palatino Linotype", Palatino, Georgia, serif;
   font-size: 0.8125rem;
   line-height: 1.15;
-  color: var(--ms-parch-ink);
+  color: #f3e4bf;
 }
 .ms-meta { font-size: 0.75rem; line-height: 1.25; color: var(--ms-parch-faint); overflow-wrap: anywhere; }
 .ms-tone { display: flex; align-items: center; gap: 0.35rem; font-size: 0.8125rem; font-weight: 700; color: var(--ms-parch-ink); }
@@ -416,7 +451,9 @@
   .ms-board { padding: 0.3rem 0.55rem; font-size: 0.75rem; }
   .ms-plank { font-size: 0.8125rem; padding: 0.15rem 0.6rem; }
   .ms-flag { width: 1.4rem; height: 2.2rem; }
-  .ms-square { padding-bottom: 0.7rem; }
+  .ms-square { padding-bottom: 1rem; }
+  .ms-hall { width: calc(var(--sq) * 1.35); }
+  .ms-hall-plate { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .ms-stall, .ms-stall:hover, .ms-stall:focus-visible { transition: none; }
