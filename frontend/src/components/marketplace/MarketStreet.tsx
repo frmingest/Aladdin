@@ -3,10 +3,11 @@ import { Link } from "react-router-dom";
 import ObjectArtImage from "../ObjectArtImage";
 import { Awning, Pip } from "./MarketArt";
 import { SalesRep } from "./SalesRepArt";
+import TopMarkSeal from "./TopMarkSeal";
 import { stallArtId } from "../../lib/marketArt";
 import { boothNumeral, shopFront, shopPips, storePath, type ShopTone } from "../../lib/marketplace";
 import { TONE_PAINT } from "../../lib/marketplacePaint";
-import { gapLabel, lanePlots, openReducer, priceLine, stallLabel, streetDistricts, TONE_FLAG, type FlagShape, type LaneRow, type Slot } from "../../lib/marketStreet";
+import { animatedMarks, gapLabel, lanePlots, openReducer, priceLine, stallLabel, staggerDelays, streetDistricts, TONE_FLAG, TOP_MARK_WORD, topMark, topMarkTitle, type FlagShape, type LaneRow, type Slot } from "../../lib/marketStreet";
 import type { WatchlistRow } from "../../lib/types";
 import "./street.css";
 
@@ -72,6 +73,10 @@ export function FlagKey() {
           {TONE_FLAG[t].word}
         </li>
       ))}
+      <li>
+        <TopMarkSeal kind="fresh" />
+        Top mark
+      </li>
       <li className="ms-key-pips">Pips: moat, fair price, your price, analyst word, freshness. Dashed = unknown.</li>
     </ul>
   );
@@ -82,7 +87,7 @@ export function FlagKey() {
  * Pressing it opens its card (an overlay under the signboard, so nothing around it moves) with the tone, ticker, pips
  * and the real link into the store. The card is a sibling of the button, never inside it.
  */
-function StreetStall({ row, place, fog, open, onToggle }: { row: WatchlistRow; place: number; fog: boolean; open: boolean; onToggle: () => void }) {
+function StreetStall({ row, place, fog, open, onToggle, animate, now }: { row: WatchlistRow; place: number; fog: boolean; open: boolean; onToggle: () => void; animate: boolean; now: number }) {
   const front = shopFront(row);
   const paint = TONE_PAINT[front.tone];
   const flag = TONE_FLAG[front.tone];
@@ -90,6 +95,8 @@ function StreetStall({ row, place, fog, open, onToggle }: { row: WatchlistRow; p
   const pips = shopPips(row);
   const analysed = row.verdict_rating !== null || row.moat_rating !== null;
   const cardId = `ms-card-${row.id}`;
+  const mark = topMark(row, now);
+  const markTitle = topMarkTitle(row, now);
   const card = useRef<HTMLSpanElement>(null);
   useEffect(() => {
     // Keep an opened card on screen (phones): scroll just enough, instantly under reduced motion.
@@ -98,15 +105,21 @@ function StreetStall({ row, place, fog, open, onToggle }: { row: WatchlistRow; p
     card.current.scrollIntoView({ block: "nearest", inline: "nearest", behavior: calm ? "auto" : "smooth" });
   }, [open]);
   return (
-    <div className={`ms-stall-wrap${open ? " is-open" : ""}`} style={{ "--stall-tone": paint.a } as CSSProperties}>
+    <div
+      className={`ms-stall-wrap${open ? " is-open" : ""}`}
+      style={{ "--stall-tone": paint.a } as CSSProperties}
+      data-mark-kind={mark ?? undefined}
+      data-mark-anim={animate ? "" : undefined}
+      data-place={place}
+    >
       <button
         type="button"
         id={`ms-stall-${row.id}`}
         className={`ms-stall${fog ? " is-fog" : ""}`}
         aria-expanded={open}
         aria-controls={cardId}
-        aria-label={stallLabel(row)}
-        title={`${front.tag} · ${priceLine(row)}`}
+        aria-label={stallLabel(row, now)}
+        title={`${front.tag} · ${priceLine(row)}${markTitle ? ` · ${markTitle}` : ""}`}
         data-tone={front.tone}
         onClick={onToggle}
       >
@@ -121,6 +134,15 @@ function StreetStall({ row, place, fog, open, onToggle }: { row: WatchlistRow; p
         </span>
         <span className="ms-plate" aria-hidden>
           <span className="ms-name">{row.name}</span>
+          {mark && (
+            <>
+              <span className="ms-sweep" />
+              <span className="ms-seal-wrap">
+                <TopMarkSeal kind={mark} />
+                <span className="ms-ribbon">{TOP_MARK_WORD[mark]}</span>
+              </span>
+            </>
+          )}
         </span>
       </button>
       <span id={cardId} ref={card} className="ms-card" hidden={!open}>
@@ -138,6 +160,7 @@ function StreetStall({ row, place, fog, open, onToggle }: { row: WatchlistRow; p
           {row.ticker}
           {row.owned ? " · In your fortress" : ""}
         </span>
+        {mark && <span className="ms-meta ms-mark-line">{`${TOP_MARK_WORD[mark]} · ${markTitle ?? ""}`}</span>}
         <span className="ms-pips" title={analysed ? undefined : "Not analysed yet"}>
           {analysed
             ? pips.map((p) => <Pip key={p.id} gate={p} size={16} />)
@@ -162,6 +185,47 @@ function Prop({ id }: { id: Extract<Slot, { kind: "prop" }>["id"] }) {
       <ObjectArtImage id={id} width={140} fallback={null} />
     </span>
   );
+}
+
+/**
+ * The entrance of the top mark, once per stall per visit. ONE shared IntersectionObserver for the street: a capped stall
+ * is "armed" (seal hidden) until 60% of it is in view, then "run" (CSS press and sweep, transform and opacity only), its
+ * delay staggered 400 ms by place when several enter together. Any key or pointer press settles everything at once.
+ * Reduced motion, or no IntersectionObserver: nothing is armed, so the finished seal and word show at once.
+ */
+function useMarkReveal(root: RefObject<HTMLElement>, animKey: string) {
+  useEffect(() => {
+    const el = root.current;
+    const calm = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!el || animKey === "" || calm || typeof IntersectionObserver === "undefined") return;
+    const targets = Array.from(el.querySelectorAll<HTMLElement>("[data-mark-anim]"));
+    targets.forEach((t) => (t.dataset.mark = "armed"));
+    const io = new IntersectionObserver(
+      (entries) => {
+        const hits = entries.filter((e) => e.isIntersecting).map((e) => e.target as HTMLElement);
+        const delays = staggerDelays(hits.map((h) => Number(h.dataset.place)));
+        for (const h of hits) {
+          h.style.setProperty("--ms-mark-delay", `${delays.get(Number(h.dataset.place)) ?? 0}ms`);
+          h.dataset.mark = "run";
+          io.unobserve(h);
+        }
+      },
+      { threshold: 0.6 },
+    );
+    targets.forEach((t) => io.observe(t));
+    const settle = () => {
+      io.disconnect();
+      targets.forEach((t) => (t.dataset.mark = "done"));
+    };
+    document.addEventListener("keydown", settle, true);
+    el.addEventListener("pointerdown", settle, true);
+    return () => {
+      io.disconnect();
+      document.removeEventListener("keydown", settle, true);
+      el.removeEventListener("pointerdown", settle, true);
+      targets.forEach((t) => delete t.dataset.mark);
+    };
+  }, [root, animKey]);
 }
 
 /** Wide screens (the lane may take two plots a side). Matches the media query the CSS uses. */
@@ -201,7 +265,7 @@ function CrossStreet({ row }: { row: LaneRow }) {
   );
 }
 
-function LaneRowView({ row, perSide, openId, onToggle }: { row: LaneRow; perSide: number; openId: string | null; onToggle: (id: string) => void }) {
+function LaneRowView({ row, perSide, openId, onToggle, animated, now }: { row: LaneRow; perSide: number; openId: string | null; onToggle: (id: string) => void; animated: Set<string>; now: number }) {
   const fog = row.districtId === "fog";
   const cells: { slot: Slot; col: number }[] = [
     ...row.left.map((slot, i) => ({ slot, col: perSide - i })),
@@ -215,7 +279,7 @@ function LaneRowView({ row, perSide, openId, onToggle }: { row: LaneRow; perSide
     <ul className={`ms-row${fog ? " is-fog" : ""}`} aria-label={`${row.label}, ${stallCount} ${stallCount === 1 ? "stall" : "stalls"}`}>
       {stalls.map(({ slot, col }) => (
         <li key={slot.row.id} className={`ms-cell${openId === slot.row.id ? " is-open" : ""}`} style={{ gridColumn: col }}>
-          <StreetStall row={slot.row} place={slot.place} fog={fog} open={openId === slot.row.id} onToggle={() => onToggle(slot.row.id)} />
+          <StreetStall row={slot.row} place={slot.place} fog={fog} open={openId === slot.row.id} onToggle={() => onToggle(slot.row.id)} animate={animated.has(slot.row.id)} now={now} />
         </li>
       ))}
       {props.map(({ slot, col }) => (
@@ -264,8 +328,13 @@ export default function MarketStreet({
     return () => document.removeEventListener("keydown", onKey);
   }, [openId]);
   const plan = lanePlots(streetDistricts(rows), width);
+  const [now] = useState(() => Date.now());
+  const animated = animatedMarks(rows, now);
+  const animKey = [...animated].join("|");
+  const street = useRef<HTMLElement>(null);
+  useMarkReveal(street, animKey);
   return (
-    <section className="market-street" aria-label="Market Street" style={{ "--ms-per-side": plan.perSide } as CSSProperties}>
+    <section ref={street} className="market-street" aria-label="Market Street" style={{ "--ms-per-side": plan.perSide } as CSSProperties}>
       <div className="ms-sky" aria-hidden>
         <ObjectArtImage id="market-skyline" width={900} className="ms-skyline" fallback={null} />
       </div>
@@ -304,7 +373,7 @@ export default function MarketStreet({
           {plan.rows.map((r, i) => (
             <div key={`${r.districtId}-${i}`} className="ms-district-row">
               {r.first && <CrossStreet row={r} />}
-              <LaneRowView row={r} perSide={plan.perSide} openId={openId} onToggle={(id) => dispatch({ type: "toggle", id })} />
+              <LaneRowView row={r} perSide={plan.perSide} openId={openId} onToggle={(id) => dispatch({ type: "toggle", id })} animated={animated} now={now} />
             </div>
           ))}
           <div className="ms-gate" aria-hidden>

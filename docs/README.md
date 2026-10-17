@@ -78,6 +78,8 @@ Game mode (Fortress): concept, sprint plans and reviews, visual identity, art pa
 - [stitch-master-object-art-2026-10-11.md](game/stitch-master-object-art-2026-10-11.md) — Stitch Master object art: style, rules and prompts for what is missing
 - [marketplace-landscape-2026-10-17.md](game/marketplace-landscape-2026-10-17.md) — Marketplace landscape: concept and Stitch object list (stalls placed on a street scene)
 - [market-street-redesign-2026-10-17.md](game/market-street-redesign-2026-10-17.md) — Market Street redesign: critique, lane layout spec, scale table, decisions (built on `feature/market-street`)
+- [market-street-strong-pick-2026-10-17.md](game/market-street-strong-pick-2026-10-17.md) — Market Street: the analyst's top mark (wax seal on the signboard), concepts and rules (built on `feature/market-street`)
+- [market-street-strong-pick-motion-2026-10-17.md](game/market-street-strong-pick-motion-2026-10-17.md) — Market Street top mark: motion and performance spec from game-feel-engineer (the seal design won; its glow and loop were not used)
 
 ### ingestion/
 
