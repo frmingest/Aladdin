@@ -4,7 +4,7 @@ Status: **written, type-checked and tested; the four Stitch pictures are packed 
 
 ## What changed
 
-- **Order on the Siege page:** title, then "The towers under attack", then the Oslo | World banner, toggle and "falls by" slider, then "What it does to the realm". The whole section moved, list included.
+- **Order on the Siege page:** title, then one card with the Oslo | World toggle and the "falls by" slider on top and "The towers under attack" (picture and list) below it, then "What it does to the realm". The lookout-tower World banner was taken off the page (its component and picture stay in the code, unused).
 - **A picture behind the tower row that follows the "falls by" slider** (Game mode on only). Four moods, picked by the size of the fall (not by the book's own storm and siege lines): **calm** under 15%, **storm** 15 to 29%, **siege** 30 to 44%, **ruin** 45% and up. Pictures cross-fade; with reduced motion they swap.
 - **Safe without pictures:** a missing or broken picture leaves the plain dark panel; if only some stages exist, the nearest one is used. With a picture present, the old drawn sky and hills step aside (the grass strip stays so towers always stand on something).
 - Code: `fallStage` in `lib/siege.ts`, `lib/siegeBackdrop.ts`, `SiegeTowersBackdrop.tsx`, a `scenery` flag on `SiegeArtStrip`. Art ids to pack: `backdrop-siege-towers-calm`, `-storm`, `-siege`, `-ruin`. Backdrop cap in `artAssets.test.ts` raised 6 to 10 (reason in the comment).
