@@ -8,7 +8,7 @@ import type { Watchlist, WatchlistRow } from "../lib/types";
 import { Awning, Pip } from "../components/marketplace/MarketArt";
 import HypeBoothDialog from "../components/marketplace/HypeBoothDialog";
 import SalesRepDialog from "../components/marketplace/SalesRepDialog";
-import MarketStreet from "../components/marketplace/MarketStreet";
+import MarketStreet, { FlagKey } from "../components/marketplace/MarketStreet";
 import { useArtMode } from "../lib/stitchArt";
 import { SalesRep } from "../components/marketplace/SalesRepArt";
 import ObjectArtImage from "../components/ObjectArtImage";
@@ -233,7 +233,7 @@ export default function MarketplacePage() {
             <button ref={boothButton} type="button" className="sal-btn" onClick={() => setTalking(true)}>
               Talk to Sal: open a new stall
             </button>
-            <button ref={hypeButton} type="button" className="sal-btn-ghost" onClick={() => setHyping(true)} title="Bring a tip from a friend, Reddit or a newsletter and see whether it survives the eight gates">
+            <button ref={hypeButton} type="button" className="sal-btn-ghost" onClick={() => setHyping(true)} title="Test a tip against the eight gates">
               The Hype Booth: test a tip
             </button>
           </div>
@@ -255,7 +255,6 @@ export default function MarketplacePage() {
         <MarketStreet
           rows={rows}
           loaded
-          demoMode={demoMode === true}
           onTalk={() => setTalking(true)}
           onHype={() => setHyping(true)}
           salRef={boothButton}
@@ -273,12 +272,12 @@ export default function MarketplacePage() {
         <div className="space-y-4">
           <dl className="game-hud" aria-label="The street at a glance">
             {[
-              { label: "Stores open", value: String(rows.length) },
-              { label: "In your price range", value: String(inRange), color: inRange > 0 ? "#f2d16b" : undefined },
-              { label: "Within 10% of it", value: String(near) },
-              { label: "No price to compare", value: String(unpriced) },
+              { label: "Stalls", value: String(rows.length), tip: "One stall for every company on your watchlist" },
+              { label: "In range", value: String(inRange), color: inRange > 0 ? "#f2d16b" : undefined, tip: "At or below the price you named" },
+              { label: "Near", value: String(near), tip: "Within 10% of the price you named" },
+              { label: "No price", value: String(unpriced), tip: "No price of yours to compare, or no price on file" },
             ].map((i) => (
-              <div key={i.label} className="game-hud-item">
+              <div key={i.label} className="game-hud-item" title={i.tip}>
                 <dt className="game-hud-label">{i.label}</dt>
                 <dd className="game-hud-value tabular" style={i.color ? { color: i.color } : undefined}>
                   {i.value}
@@ -291,7 +290,6 @@ export default function MarketplacePage() {
             <MarketStreet
               rows={rows}
               loaded
-              demoMode={demoMode === true}
               onTalk={() => setTalking(true)}
               onHype={() => setHyping(true)}
               salRef={boothButton}
@@ -322,21 +320,17 @@ export default function MarketplacePage() {
             </Disclosure>
           )}
 
-          <Disclosure label="how to read the street" level="evidence" className="px-1">
-          {streetOn ? (
-            <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-faint" aria-label="How to read the street">
-              <li>Flag with a tick: in range · Pointed flag: near · Blunt flag: above · Dashed ring: no price</li>
-              <li>Round marks: moat, fair price, your price, analyst word, freshness · tick open, half ajar, cross closed, dashed unknown</li>
-              <li>Stalls in the fog lane have no price of yours to compare</li>
-            </ul>
-          ) : (
-          <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-faint" aria-label="How to read the street">
-            <li>Gold awning: priced at or below the price you named</li>
-            <li>Amber: within 10% of it · Blue: above it · Grey: no price to compare</li>
-            <li>Round marks, left to right: moat, fair price, your price, analyst word, freshness</li>
-            <li>A tick is open, a half is ajar, a cross is closed, a dashed ring is unknown</li>
-          </ul>
-          )}
+          <Disclosure label={streetOn ? "how to read the flags" : "how to read the street"} level="evidence" className="px-1">
+            {streetOn ? (
+              <FlagKey />
+            ) : (
+              <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-faint" aria-label="How to read the street">
+                <li>Gold awning: priced at or below the price you named</li>
+                <li>Amber: within 10% of it · Blue: above it · Grey: no price to compare</li>
+                <li>Round marks, left to right: moat, fair price, your price, analyst word, freshness</li>
+                <li>A tick is open, a half is ajar, a cross is closed, a dashed ring is unknown</li>
+              </ul>
+            )}
           </Disclosure>
         </div>
       )}
