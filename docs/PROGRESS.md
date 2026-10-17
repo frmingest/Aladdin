@@ -1,6 +1,6 @@
 # Aladdin — Progress
 
-**Last updated:** 2026-10-17 (Siege towers backdrops written, PR open). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
+**Last updated:** 2026-10-17 (Market Street page and Night Watch card order written; Siege towers backdrops written, PR open). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
 
 ## Current Objective
 
@@ -19,6 +19,7 @@ State: `main` is at `30f0cb9` (#156), which includes #155 (Map towers as sector 
 - [ ] **Map fills the canvas (PR `feature/map-fill-canvas`, written and tested, not merged, not deployed):** the painted map now covers the whole box instead of sitting in flat tan bands; on desktop the box takes the picture's 16:9 shape, on a phone it is tall and you pan. Check the live Map on desktop and phone after deploy
 - [ ] **Hall of Records book pages (PR `feature/records-book-pages`, written, not merged, not deployed):** fixed-size book with a Next page pager for long notes; after deploy check a record with long notes and a phone ([doc](game/records-hall-polish-2026-10-17.md))
 - [ ] **Siege towers backdrops (PR `feature/siege-towers-backdrops`, written and tested, not merged, not deployed, not seen in a browser):** The Siege page now opens with one card: the Oslo | World toggle and "falls by" slider on top, "The towers under attack" below, with Faiz's four Stitch pictures (calm / storm / siege / ruin) behind the tower row, following the "falls by" slider. After merge and deploy: Game mode on, slider 5% to 60%, desktop and phone; check the crop and that labels stay readable over the bright calm picture ([doc](game/siege-towers-backdrops-2026-10-17.md))
+- [ ] **Market Street (PR `feature/market-street`, written and tested, not merged, not deployed):** the Marketplace is now a painted street in Game mode (skyline, fountain square with Sal and the Hype tent, stalls in districts, fog lane for unpriced stores, gate), with a Street | Plain switch; the Fortress page now shows the fortress first and the Night Watch card after it. After deploy check both on desktop and phone with real watchlist data ([doc](game/marketplace-landscape-2026-10-17.md))
 - [ ] **Optional, visual:** with Game mode on, look at the World banner crop on the Siege Simulator (Claude could not judge it)
 
 ## Recent Blockers / Open Questions

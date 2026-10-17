@@ -177,9 +177,6 @@ export default function FortressPage() {
 
       {state && (
         <div className="space-y-4">
-          <div className="print:hidden">
-            <NightWatchCard />
-          </div>
           <div className={docked ? "space-y-4 xl:grid xl:grid-cols-[minmax(0,1fr)_23rem] xl:items-start xl:gap-4 xl:space-y-0" : "space-y-4"}>
           <div className="min-w-0 space-y-4">
           <Card className="p-3 sm:p-4">
@@ -347,6 +344,11 @@ export default function FortressPage() {
             ) : (
               <div className="min-w-0">{detail}</div>
             ))}
+          </div>
+
+          {/* The fortress is the first thing you see; the night watch comes after it. */}
+          <div className="print:hidden">
+            <NightWatchCard />
           </div>
 
           <div className="print:hidden">

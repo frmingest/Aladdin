@@ -149,6 +149,20 @@ import bookCoverPass from "../assets/art/book-cover-pass.webp";
 import bookPageLeft from "../assets/art/book-page-left.webp";
 import bookPageRight from "../assets/art/book-page-right.webp";
 import bookRibbon from "../assets/art/book-ribbon.webp";
+import marketFence from "../assets/art/market-fence.webp";
+import marketGate from "../assets/art/market-gate.webp";
+import marketSkyline from "../assets/art/market-skyline.webp";
+import marketFountain from "../assets/art/market-fountain.webp";
+import marketLamp from "../assets/art/market-lamp.webp";
+import marketCobble from "../assets/art/market-cobble.webp";
+import marketTree from "../assets/art/market-tree.webp";
+import marketSignpost from "../assets/art/market-signpost.webp";
+import marketHypeTent from "../assets/art/market-hype-tent.webp";
+import marketStallCart from "../assets/art/market-stall-cart.webp";
+import marketStallShop from "../assets/art/market-stall-shop.webp";
+import marketCrates from "../assets/art/market-crates.webp";
+import marketBench from "../assets/art/market-bench.webp";
+import marketHandcart from "../assets/art/market-handcart.webp";
 
 export interface PackedArt {
   src: string;
@@ -309,4 +323,18 @@ export const ART_MANIFEST = {
   "book-page-left": { src: bookPageLeft, width: 452, height: 778, alt: "" },
   "book-page-right": { src: bookPageRight, width: 456, height: 778, alt: "" },
   "book-ribbon": { src: bookRibbon, width: 89, height: 200, alt: "" },
+  "market-fence": { src: marketFence, width: 400, height: 126, alt: "" },
+  "market-gate": { src: marketGate, width: 480, height: 353, alt: "" },
+  "market-skyline": { src: marketSkyline, width: 900, height: 286, alt: "" },
+  "market-fountain": { src: marketFountain, width: 336, height: 292, alt: "" },
+  "market-lamp": { src: marketLamp, width: 77, height: 272, alt: "" },
+  "market-cobble": { src: marketCobble, width: 384, height: 320, alt: "" },
+  "market-tree": { src: marketTree, width: 260, height: 288, alt: "" },
+  "market-signpost": { src: marketSignpost, width: 219, height: 272, alt: "" },
+  "market-hype-tent": { src: marketHypeTent, width: 243, height: 320, alt: "" },
+  "market-stall-cart": { src: marketStallCart, width: 333, height: 384, alt: "" },
+  "market-stall-shop": { src: marketStallShop, width: 288, height: 384, alt: "" },
+  "market-crates": { src: marketCrates, width: 224, height: 196, alt: "" },
+  "market-bench": { src: marketBench, width: 249, height: 256, alt: "" },
+  "market-handcart": { src: marketHandcart, width: 256, height: 200, alt: "" },
 } as const satisfies Record<string, PackedArt>;
