@@ -8,6 +8,8 @@ import type { Watchlist, WatchlistRow } from "../lib/types";
 import { Awning, Pip } from "../components/marketplace/MarketArt";
 import HypeBoothDialog from "../components/marketplace/HypeBoothDialog";
 import SalesRepDialog from "../components/marketplace/SalesRepDialog";
+import MarketStreet from "../components/marketplace/MarketStreet";
+import { useArtMode } from "../lib/stitchArt";
 import { SalesRep } from "../components/marketplace/SalesRepArt";
 import ObjectArtImage from "../components/ObjectArtImage";
 import { TONE_PAINT } from "../lib/marketplacePaint";
@@ -112,6 +114,16 @@ function CompactStall({ row }: { row: WatchlistRow }) {
   );
 }
 
+type StreetView = "street" | "plain";
+const VIEW_KEY = "aladdin.marketView";
+function readView(): StreetView {
+  try {
+    return window.localStorage.getItem(VIEW_KEY) === "plain" ? "plain" : "street";
+  } catch {
+    return "street";
+  }
+}
+
 export default function MarketplacePage() {
   const [list, setList] = useState<Watchlist | null>(null);
   const [error, setError] = useState<{ message: string; retryable: boolean } | null>(null);
@@ -122,6 +134,17 @@ export default function MarketplacePage() {
   const hypeButton = useRef<HTMLButtonElement>(null);
   const boothButton = useRef<HTMLButtonElement>(null);
   const { demoMode } = useDemoMode();
+  const artOn = useArtMode() === "stitch";
+  const [view, setViewState] = useState<StreetView>(readView);
+  const streetOn = artOn && view === "street";
+  const setView = (v: StreetView) => {
+    setViewState(v);
+    try {
+      window.localStorage.setItem(VIEW_KEY, v);
+    } catch {
+      /* a private window or blocked storage: the choice just is not remembered */
+    }
+  };
 
   const load = useCallback(() => {
     setLoading(true);
@@ -177,9 +200,23 @@ export default function MarketplacePage() {
       </nav>
       <PageHeader
         title="The Marketplace"
-        subtitle="One store for every company on your watchlist. Walk the street, then step inside a store for the full appraisal: eight gates, a price board, the moat, the numbers and the case for and against. Nothing here buys or sells anything."
+        subtitle={
+          streetOn
+            ? "Who's near your price?"
+            : "One store for every company on your watchlist. Walk the street, then step inside a store for the full appraisal: eight gates, a price board, the moat, the numbers and the case for and against. Nothing here buys or sells anything."
+        }
         actions={
           <>
+            {artOn && (
+              <div className="ms-switch" role="group" aria-label="Market view">
+                <button type="button" aria-pressed={view === "street"} onClick={() => setView("street")}>
+                  Street
+                </button>
+                <button type="button" aria-pressed={view === "plain"} onClick={() => setView("plain")}>
+                  Plain
+                </button>
+              </div>
+            )}
             <SnapshotStamp at={list?.snapshot_at} />
             <Button variant="secondary" onClick={restock} disabled={restocking || loading} title="Refresh the watchlist prices and valuations (same as Refresh on the Watchlist page)">
               {restocking ? "Restocking…" : "Restock prices"}
@@ -188,6 +225,7 @@ export default function MarketplacePage() {
         }
       />
 
+      {!streetOn && (
       <section className="sal-booth mb-4" aria-label="Sal, the sales rep">
         <ObjectArtImage id="sal-counter" width={96} className="sal-counter-art" fallback={<SalesRep mood="pitch" size={64} className="sal-figure" />} />
         <div className="min-w-0">
@@ -204,6 +242,7 @@ export default function MarketplacePage() {
           </p>
         </div>
       </section>
+      )}
 
       {error && (
         <div className="mb-4">
@@ -212,7 +251,18 @@ export default function MarketplacePage() {
       )}
       {!list && loading && <EmptyState>Setting up the stalls…</EmptyState>}
 
-      {list && rows.length === 0 && (
+      {list && rows.length === 0 && streetOn && (
+        <MarketStreet
+          rows={rows}
+          loaded
+          demoMode={demoMode === true}
+          onTalk={() => setTalking(true)}
+          onHype={() => setHyping(true)}
+          salRef={boothButton}
+          hypeRef={hypeButton}
+        />
+      )}
+      {list && rows.length === 0 && !streetOn && (
         <EmptyState>
           <ObjectArtImage id="booth-goods" width={120} className="mx-auto mb-3" fallback={null} />
           The street is empty. Talk to Sal above to open the first stall, or add companies on the <Link className="text-accent underline underline-offset-2" to="/watchlist">Watchlist</Link> page, and a store will open for each.
@@ -237,7 +287,19 @@ export default function MarketplacePage() {
             ))}
           </dl>
 
-          {priced.length > 0 && (
+          {streetOn && (
+            <MarketStreet
+              rows={rows}
+              loaded
+              demoMode={demoMode === true}
+              onTalk={() => setTalking(true)}
+              onHype={() => setHyping(true)}
+              salRef={boothButton}
+              hypeRef={hypeButton}
+            />
+          )}
+
+          {!streetOn && priced.length > 0 && (
             <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {priced.map((r) => (
                 <li key={r.id}>
@@ -247,7 +309,7 @@ export default function MarketplacePage() {
             </ul>
           )}
 
-          {unpricedRows.length > 0 && (
+          {!streetOn && unpricedRows.length > 0 && (
             <Disclosure
               label={`the ${unpricedRows.length} ${unpricedRows.length === 1 ? "store" : "stores"} with no price of yours to compare`}
               defaultOpen={priced.length === 0}
@@ -261,12 +323,20 @@ export default function MarketplacePage() {
           )}
 
           <Disclosure label="how to read the street" level="evidence" className="px-1">
+          {streetOn ? (
+            <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-faint" aria-label="How to read the street">
+              <li>Flag with a tick: in range · Pointed flag: near · Blunt flag: above · Dashed ring: no price</li>
+              <li>Round marks: moat, fair price, your price, analyst word, freshness · tick open, half ajar, cross closed, dashed unknown</li>
+              <li>Stalls in the fog lane have no price of yours to compare</li>
+            </ul>
+          ) : (
           <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-faint" aria-label="How to read the street">
             <li>Gold awning: priced at or below the price you named</li>
             <li>Amber: within 10% of it · Blue: above it · Grey: no price to compare</li>
             <li>Round marks, left to right: moat, fair price, your price, analyst word, freshness</li>
             <li>A tick is open, a half is ajar, a cross is closed, a dashed ring is unknown</li>
           </ul>
+          )}
           </Disclosure>
         </div>
       )}

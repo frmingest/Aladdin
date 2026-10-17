@@ -1275,6 +1275,91 @@
    "source": "a_single_standalone_fantasy_game_inventory_prop_asset_a_red_ribbon_bookmark",
    "key": "white",
    "max_side": 200
+  },
+  {
+   "id": "market-fence",
+   "source": "a_single_standalone_fantasy_game_architectural_lane_boundary_prop_asset_a_low",
+   "key": "white",
+   "max_side": 400
+  },
+  {
+   "id": "market-gate",
+   "source": "a_single_standalone_fantasy_game_architectural_structure_prop_asset_a_wide",
+   "key": "white",
+   "max_side": 480
+  },
+  {
+   "id": "market-skyline",
+   "source": "a_single_standalone_fantasy_game_architectural_town_silhouette_prop_asset_a",
+   "key": "white",
+   "max_side": 900,
+   "quality": 74
+  },
+  {
+   "id": "market-fountain",
+   "source": "a_single_standalone_fantasy_game_architectural_town_square_prop_asset_a_round",
+   "key": "white",
+   "max_side": 336
+  },
+  {
+   "id": "market-lamp",
+   "source": "a_single_standalone_fantasy_game_architectural_town_street_prop_asset_a_tall",
+   "key": "white",
+   "max_side": 272
+  },
+  {
+   "id": "market-cobble",
+   "source": "a_single_standalone_fantasy_game_environmental_ground_paving_prop_asset_a_round",
+   "key": "white",
+   "max_side": 384
+  },
+  {
+   "id": "market-tree",
+   "source": "a_single_standalone_fantasy_game_environmental_vegetation_prop_asset_a_round",
+   "key": "white",
+   "max_side": 288
+  },
+  {
+   "id": "market-signpost",
+   "source": "a_single_standalone_fantasy_game_environmental_wayfinding_prop_asset_a_wooden",
+   "key": "white",
+   "max_side": 272
+  },
+  {
+   "id": "market-hype-tent",
+   "source": "a_single_standalone_fantasy_game_fairground_marketplace_tent_prop_asset_a_small",
+   "key": "white",
+   "max_side": 320
+  },
+  {
+   "id": "market-stall-cart",
+   "source": "a_single_standalone_fantasy_game_marketplace_prop_asset_an_open_cart_style",
+   "key": "white",
+   "max_side": 384
+  },
+  {
+   "id": "market-stall-shop",
+   "source": "a_single_standalone_fantasy_game_marketplace_shop_prop_asset_a_tall_two_storey",
+   "key": "white",
+   "max_side": 384
+  },
+  {
+   "id": "market-crates",
+   "source": "a_single_standalone_fantasy_game_storage_marketplace_prop_cluster_asset_a_small",
+   "key": "white",
+   "max_side": 224
+  },
+  {
+   "id": "market-bench",
+   "source": "a_single_standalone_fantasy_game_street_town_furniture_prop_asset_a_rustic",
+   "key": "white",
+   "max_side": 256
+  },
+  {
+   "id": "market-handcart",
+   "source": "a_single_standalone_fantasy_game_street_transport_prop_asset_a_two_wheeled",
+   "key": "white",
+   "max_side": 256
   }
  ]
 }

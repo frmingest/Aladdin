@@ -19,7 +19,7 @@ describe("stallArtId", () => {
     }
   });
 
-  it("spreads companies over all four stalls", () => {
+  it("spreads companies over every stall", () => {
     const seen = new Set(Array.from({ length: 200 }, (_, i) => stallArtId(`holding-${i}`)));
     expect(seen.size).toBe(STALL_ART_IDS.length);
   });

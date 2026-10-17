@@ -4,16 +4,16 @@ import type { ObjectArtId } from "./stitchArt";
 
 /**
  * Marketplace pictures (Design Master Sprint 5, art mode only). Pure choices, no drawing:
- *  - which of the four stalls a company gets (a stable hash of its id: decoration, never data);
+ *  - which of the six stalls a company gets (a stable hash of its id: decoration, never data);
  *  - which Sal bust goes with a mood.
  * The stall picture carries no fact. The tone of a store stays in the plate edge and the printed
  * tag (decision 6a, 2026-10-11); the SVG awning is the fallback.
  */
 
-export const STALL_ART_IDS = ["stall-smithy", "stall-armoury", "stall-provisions", "booth-goods"] as const satisfies readonly ObjectArtId[];
+export const STALL_ART_IDS = ["stall-smithy", "stall-armoury", "stall-provisions", "booth-goods", "market-stall-cart", "market-stall-shop"] as const satisfies readonly ObjectArtId[];
 
 /** FNV-1a: small, stable across loads and browsers, no dependency. */
-function hash32(text: string): number {
+export function hash32(text: string): number {
   let h = 0x811c9dc5;
   for (let i = 0; i < text.length; i++) {
     h ^= text.charCodeAt(i);

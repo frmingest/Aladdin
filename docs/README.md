@@ -76,6 +76,7 @@ Game mode (Fortress): concept, sprint plans and reviews, visual identity, art pa
 - [sprint29-ravens-recent-and-feel-2026-10-08.md](game/sprint29-ravens-recent-and-feel-2026-10-08.md) — Ravens: newest first, and Sprint 29 first slice (feel) — 2026-10-08
 - [stitch-design-pass-2026-10-10.md](game/stitch-design-pass-2026-10-10.md) — Stitch design pass (2026-10-10)
 - [stitch-master-object-art-2026-10-11.md](game/stitch-master-object-art-2026-10-11.md) — Stitch Master object art: style, rules and prompts for what is missing
+- [marketplace-landscape-2026-10-17.md](game/marketplace-landscape-2026-10-17.md) — Marketplace landscape: concept and Stitch object list (stalls placed on a street scene)
 
 ### ingestion/
 
