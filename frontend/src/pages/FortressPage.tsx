@@ -58,8 +58,8 @@ export default function FortressPage() {
   };
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [hoverId, setHoverId] = useState<string | null>(null);
-  // The Great Keep and the walls stand for the whole fortress.
-  const [realmSelected, setRealmSelected] = useState(false);
+  // The Great Keep and the walls stand for the whole fortress. It starts selected: the page opens on the Scene with the verdict on the whole fortress beside it.
+  const [realmSelected, setRealmSelected] = useState(true);
   const [realmHot, setRealmHot] = useState(false);
   // The Marketplace (G9) reads the watchlist; the fortress still draws if it cannot load.
   const [watch, setWatch] = useState<Watchlist | null>(null);

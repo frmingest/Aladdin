@@ -17,15 +17,16 @@
   --ms-parch-ink: #2a1f12;
   --ms-parch-faint: #5b4a30;
   --ms-parch-accent: #7a4a0c;
-  --ms-art-h: 12.5rem; /* stall picture height: the scale everything on the street is measured against */
-  --ms-lane: clamp(2.75rem, 9vw, 7rem);
-  --ms-edge: 3rem;
-  --sq: 9.5rem; /* the fountain's width; the square scales from it */
+  --ms-art-h: 8.4rem; /* stall picture height: the scale everything on the street is measured against */
+  --ms-plot: 9.4rem; /* one plot's width: small stalls, so a side holds up to three */
+  --ms-lane: clamp(2.5rem, 6vw, 4.5rem);
+  --ms-edge: 2rem;
+  --sq: 7rem; /* the fountain's width; the square scales from it */
   --ms-per-side: 1;
   position: relative;
   overflow: hidden;
-  width: min(100%, calc(var(--ms-per-side) * 27rem + var(--ms-lane) + 2 * var(--ms-edge)));
-  max-width: 62rem;
+  width: min(100%, calc(var(--ms-per-side) * 2 * var(--ms-plot) + var(--ms-lane) + 2 * var(--ms-edge)));
+  max-width: 64rem;
   margin-inline: auto;
   border: 2px solid var(--ms-wood-dark);
   border-radius: 0.5rem;
@@ -125,8 +126,8 @@
 }
 .ms-cross {
   position: relative;
-  height: 1.25rem;
-  margin: 0.9rem calc(var(--ms-edge) * -1);
+  height: 1.1rem;
+  margin: 0.6rem calc(var(--ms-edge) * -1);
   background-color: var(--ms-mortar);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='32' viewBox='0 0 48 32'%3E%3Cg stroke='%2326253b' stroke-opacity='.3' stroke-width='1'%3E%3Crect x='1' y='1' width='21' height='14' rx='5' fill='%23a29eae'/%3E%3Crect x='25' y='1' width='21' height='14' rx='5' fill='%23918da0'/%3E%3Crect x='13' y='17' width='21' height='14' rx='5' fill='%23aca8b6'/%3E%3Crect x='37' y='17' width='21' height='14' rx='5' fill='%239893a6'/%3E%3Crect x='-11' y='17' width='21' height='14' rx='5' fill='%239893a6'/%3E%3C/g%3E%3Cg fill='%23fff' fill-opacity='.12'%3E%3Crect x='4' y='3' width='9' height='2' rx='1'/%3E%3Crect x='28' y='3' width='9' height='2' rx='1'/%3E%3Crect x='16' y='19' width='9' height='2' rx='1'/%3E%3C/g%3E%3C/svg%3E");
   background-size: 48px 32px;
@@ -219,7 +220,7 @@
   background: radial-gradient(ellipse at 50% 50%, rgb(38 37 59 / 0.42), transparent 70%);
 }
 .ms-stall-img { position: relative; width: min(88%, calc(var(--ms-art-h) * 0.98)); height: auto; max-height: 100%; object-fit: contain; object-position: 50% 100%; }
-.ms-flag { position: absolute; top: 4%; right: 14%; width: 1.9rem; height: 3rem; overflow: visible; }
+.ms-flag { position: absolute; top: 4%; right: 12%; width: 1.35rem; height: 2.15rem; overflow: visible; }
 
 /* The fog stretch: the same stalls, paler, under a code-drawn mist. Still links. */
 .ms-row.is-fog::before {
@@ -239,8 +240,8 @@
   flex-direction: column;
   gap: 0.15rem;
   width: 94%;
-  margin: -0.9rem auto 0;
-  padding: 0.5rem 0.6rem 0.45rem;
+  margin: -0.7rem auto 0;
+  padding: 0.4rem 0.4rem 0.35rem;
   border: 3px solid #5a3a18;
   border-radius: 3px;
   background: linear-gradient(180deg, var(--ms-parch-a), var(--ms-parch-b));
@@ -250,7 +251,7 @@
 .ms-plate::before, .ms-plate::after { content: ""; position: absolute; top: -0.85rem; width: 0.3rem; height: 0.9rem; border-radius: 1px; background: #5a3a18; }
 .ms-plate::before { left: 16%; }
 .ms-plate::after { right: 16%; }
-.ms-plate { padding-block: 0.35rem 0.3rem; align-items: center; text-align: center; }
+.ms-plate { padding-block: 0.25rem 0.2rem; align-items: center; text-align: center; }
 .ms-stall[aria-expanded="true"] .ms-plate { box-shadow: inset 0 3px 0 var(--stall-tone, transparent), 0 0 0 2px #f2c94c, 0 3px 0 rgb(38 37 59 / 0.35); }
 /* The card: an overlay under the signboard, so opening it never moves a neighbour. */
 .ms-card {
@@ -302,7 +303,7 @@
   overflow: hidden;
   min-width: 0;
   font-family: "Marcellus", "Palatino Linotype", Palatino, Georgia, serif;
-  font-size: 0.9375rem;
+  font-size: 0.8125rem;
   line-height: 1.15;
   color: var(--ms-parch-ink);
 }
@@ -312,10 +313,10 @@
 .ms-pips { display: flex; align-items: center; gap: 0.25rem; margin-top: 0.1rem; color: var(--ms-parch-faint); }
 
 /* The gate closes the lane; fences run out from the posts to the scene edges. */
-.ms-gate { display: flex; align-items: flex-end; min-height: 8rem; margin: 0.6rem calc(var(--ms-edge) * -1) 0; position: relative; z-index: 2; }
+.ms-gate { display: flex; align-items: flex-end; min-height: 5.5rem; margin: 0.6rem calc(var(--ms-edge) * -1) 0; position: relative; z-index: 2; }
 .ms-gate .ms-fence { flex: 1 1 0; min-width: 0; width: 0; height: calc(var(--ms-art-h) * 0.4); max-width: none; object-fit: cover; object-position: 100% 100%; margin-bottom: 0.4rem; }
 .ms-gate .ms-fence-right { transform: scaleX(-1); }
-.ms-gate .ms-gate-pic { flex: 0 0 auto; width: min(calc(var(--ms-lane) * 2.4), 17rem); height: auto; max-width: none; }
+.ms-gate .ms-gate-pic { flex: 0 0 auto; width: min(calc(var(--ms-lane) * 2.6), 11rem); height: auto; max-width: none; }
 .ms-empty {
   position: relative;
   z-index: 3;
@@ -344,13 +345,13 @@
   .ms-cell-sign, .ms-lamp { display: none; }
 }
 @media (max-width: 640px) {
-  .market-street { --ms-art-h: 9.4rem; --ms-edge: 0.6rem; --sq: 5.9rem; }
+  .market-street { --ms-art-h: 6.6rem; --ms-plot: 8rem; --ms-edge: 0.6rem; --sq: 4.8rem; }
   .ms-sky { height: 4rem; }
-  .ms-cross { margin-block: 0.6rem; }
+  .ms-cross { margin-block: 0.45rem; }
   .ms-prop-tree img { height: calc(var(--ms-art-h) * 0.8); }
   .ms-plate { width: 98%; padding: 0.4rem 0.4rem 0.4rem; }
   .ms-numeral { display: none; }
-  .ms-name { font-size: 0.875rem; }
+  .ms-name { font-size: 0.8125rem; }
   .ms-board { padding: 0.3rem 0.55rem; font-size: 0.75rem; }
   .ms-plank { font-size: 0.8125rem; padding: 0.15rem 0.6rem; }
   .ms-flag { width: 1.4rem; height: 2.2rem; }
