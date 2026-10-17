@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import { formatDate } from "../../../lib/format";
 import { capsuleLabel, capsuleState } from "../../../lib/capsules";
@@ -42,9 +42,9 @@ export function SealGlyph({ state, months, cx, cy, r }: { state: CapsuleState; m
   );
 }
 
-function TomePicture({ t, id }: { t: Tome; id: string }) {
+function TomePicture({ t, id, scale = 1 }: { t: Tome; id: string; scale?: number }) {
   return (
-    <svg viewBox="0 0 96 124" width="96" height="124" aria-hidden focusable="false" className="hall-tome-art">
+    <svg viewBox="0 0 96 124" width={96 * scale} height={124 * scale} aria-hidden focusable="false" className="hall-tome-art">
       <defs>
         <linearGradient id={`hl-${id}`} x1="0" y1="0" x2="1" y2="0">
           <stop offset="0" stopColor="#000" stopOpacity="0.45" />
@@ -113,45 +113,55 @@ function Review({ months, state, text }: { months: 6 | 12; state: DecisionRecord
   );
 }
 
-function Desk({ r, demo }: { r: DecisionRecord; demo: boolean }) {
+function Desk({ r, t, deskId, demo, opening }: { r: DecisionRecord; t: Tome; deskId: string; demo: boolean; opening: boolean }) {
+  const look = { "--cover": t.leather, "--cover-edge": t.edge } as CSSProperties;
   return (
     <div className="hall-desk" id="hall-desk" aria-live="polite">
-      <div className="hall-book">
-        <div className="hall-page">
-          <h3 className="font-display text-lg text-ink">
-            {actionLabel(r.action)}{" "}
-            {r.holding_id ? (
-              <Link to={`/holdings/${r.holding_id}`} className="text-accent hover:underline">
-                {r.company_name}
-              </Link>
-            ) : (
-              r.company_name
-            )}
-          </h3>
-          <p className="text-xs text-ink-muted">
-            {formatDate(r.decided_on)} · {daysText(r.days_since)}
-            {r.confidence !== null && ` · confidence ${r.confidence} of 5`}
-          </p>
-          <dl className="mt-3 space-y-3 text-sm">
-            <div>
-              <dt className="text-xs uppercase tracking-wide text-ink-faint">What you wrote then</dt>
-              <dd className="mt-1 whitespace-pre-wrap text-ink">{r.thesis}</dd>
-            </div>
-            <div>
-              <dt className="text-xs uppercase tracking-wide text-ink-faint">What would prove it wrong</dt>
-              <dd className="mt-1 whitespace-pre-wrap text-ink">{r.invalidation ?? <span className="text-ink-muted">Nothing was written.</span>}</dd>
-            </div>
-          </dl>
-        </div>
-        <div className="hall-spine" aria-hidden />
-        <div className="hall-page">
-          <p className="text-sm text-ink-muted">{priceLine(r)}</p>
-          <p className="text-sm text-ink-muted">{verdictLine(r)}</p>
-          <div className="mt-4 space-y-3 border-t border-border-subtle pt-3">
-            <Review months={6} state={r.review_6m} text={r.review_6m_text} />
-            <Review months={12} state={r.review_12m} text={r.review_12m_text} />
+      <div className={`hall-book${opening ? " hall-book--opening" : ""}`} style={look}>
+        <div className="hall-board">
+          <div className="hall-page hall-page-left">
+            <h3 className="hall-title font-display text-lg text-ink">
+              {actionLabel(r.action)}{" "}
+              {r.holding_id ? (
+                <Link to={`/holdings/${r.holding_id}`} className="text-accent hover:underline">
+                  {r.company_name}
+                </Link>
+              ) : (
+                r.company_name
+              )}
+            </h3>
+            <p className="text-xs text-ink-muted">
+              {formatDate(r.decided_on)} · {daysText(r.days_since)}
+              {r.confidence !== null && ` · confidence ${r.confidence} of 5`}
+            </p>
+            <dl className="mt-4 space-y-4 text-sm">
+              <div>
+                <dt className="hall-leaf-label">What you wrote then</dt>
+                <dd className="mt-1 whitespace-pre-wrap text-ink">{r.thesis}</dd>
+              </div>
+              <div>
+                <dt className="hall-leaf-label">What would prove it wrong</dt>
+                <dd className="mt-1 whitespace-pre-wrap text-ink">{r.invalidation ?? <span className="text-ink-muted">Nothing was written.</span>}</dd>
+              </div>
+            </dl>
           </div>
-          {!demo && r.holding_id && <ThenAndNow key={r.id} entryId={r.id} />}
+          <div className="hall-spine" aria-hidden />
+          <div className="hall-page hall-page-right">
+            <p className="hall-price text-sm text-ink">{priceLine(r)}</p>
+            <p className="text-sm text-ink-muted">{verdictLine(r)}</p>
+            <div className="mt-4 space-y-3 border-t border-border-subtle pt-3">
+              <Review months={6} state={r.review_6m} text={r.review_6m_text} />
+              <Review months={12} state={r.review_12m} text={r.review_12m_text} />
+            </div>
+            {!demo && r.holding_id && <ThenAndNow key={r.id} entryId={r.id} />}
+          </div>
+          {t.owed && <span className="hall-ribbon" aria-hidden />}
+        </div>
+        <div className="hall-cover" aria-hidden>
+          <div className="hall-cover-front">
+            <TomePicture t={t} id={`${deskId}${r.id}`} scale={1.7} />
+          </div>
+          <div className="hall-cover-back" />
         </div>
       </div>
     </div>
@@ -164,6 +174,8 @@ export default function HallOfRecords({ records }: { records: Records }) {
   const shown = useMemo(() => filterRecords(records.records, onlyOwed), [records.records, onlyOwed]);
   const [openId, setOpenId] = useState<string | null>(() => defaultOpenId(records.records));
   const deskRef = useRef<HTMLDivElement | null>(null);
+  // The cover swings open only after a press, never on page load (the desk starts below the fold).
+  const [opening, setOpening] = useState(false);
   const open = shown.find((r) => r.id === openId) ?? shown[0] ?? null;
   useEffect(() => {
     if (shown.length > 0 && !shown.some((r) => r.id === openId)) setOpenId(shown[0].id);
@@ -174,10 +186,19 @@ export default function HallOfRecords({ records }: { records: Records }) {
     <div className="hall">
       <div className="hall-cornice" aria-hidden>
         <TorchPair className="hall-torches" />
-        <svg viewBox="0 0 400 34" preserveAspectRatio="none" width="100%" height="34" focusable="false">
-          {Array.from({ length: 10 }, (_, k) => (
-            <path key={k} d={`M${k * 40 + 4} 34 V16 a16 16 0 0 1 32 0 V34`} fill="#0e0905" stroke="#8a6a32" strokeWidth="1.4" />
-          ))}
+        <svg className="hall-arcade" width="100%" height="36" focusable="false">
+          <defs>
+            {/* Tile origin is the page centre and arches sit on the tile edges, so the row is symmetric. */}
+            <pattern id={`arcade-${uid}`} x="50%" width="44" height="36" patternUnits="userSpaceOnUse">
+              {[0, 44].map((cx) => (
+                <g key={cx}>
+                  <path d={`M${cx - 17} 36 V19 a17 17 0 0 1 34 0 V36`} fill="#0e0905" stroke="#8a6a32" strokeWidth="1.4" />
+                  <path d={`M${cx - 12} 36 V20 a12 12 0 0 1 24 0 V36`} fill="#1b120a" stroke="#3a2a18" strokeWidth="1" />
+                </g>
+              ))}
+            </pattern>
+          </defs>
+          <rect width="100%" height="36" fill={`url(#arcade-${uid})`} />
         </svg>
       </div>
       <div className="hall-plaque">
@@ -215,14 +236,19 @@ export default function HallOfRecords({ records }: { records: Records }) {
                     aria-label={tomeAria(r)}
                     onClick={() => {
                       setOpenId(r.id);
+                      setOpening(true);
                       deskRef.current?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
                     }}
                   >
                     <TomePicture t={t} id={`${uid}${r.id}`} />
                     <span className="hall-label">
-                      <span className="hall-label-name">{r.company_name}</span>
+                      <span className="hall-label-name font-display" title={r.company_name}>
+                        {r.company_name}
+                      </span>
+                      <span className="hall-label-rule" aria-hidden />
                       <span className="hall-label-meta">
-                        {t.actionWord} · {formatDate(r.decided_on)}
+                        <span className="hall-label-action">{t.actionWord}</span>
+                        <span className="hall-label-date">{formatDate(r.decided_on)}</span>
                       </span>
                     </span>
                   </button>
@@ -232,7 +258,7 @@ export default function HallOfRecords({ records }: { records: Records }) {
             })}
           </ul>
           <p className="hall-hint">{HALL_COPY.press}</p>
-          <div ref={deskRef}>{open && <Desk r={open} demo={records.demo} />}</div>
+          <div ref={deskRef}>{open && <Desk key={open.id} r={open} t={tomeFor(open)} deskId={`d${uid}`} demo={records.demo} opening={opening} />}</div>
         </>
       )}
     </div>

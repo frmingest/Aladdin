@@ -225,6 +225,8 @@
   50% { stroke-opacity: 0.55; }
 }
 
+.torch-pair { display: flex; justify-content: space-between; padding-inline: clamp(10px, 2vw, 32px); }
+.torch-pair > svg { display: block; height: 100%; width: auto; aspect-ratio: 1 / 1; overflow: visible; }
 .siege-flame { transform-box: fill-box; transform-origin: 50% 100%; }
 .fortress-raven { transform-box: fill-box; }
 .fortress-rise { transform-box: fill-box; transform-origin: bottom center; }
