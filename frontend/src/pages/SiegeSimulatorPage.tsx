@@ -9,6 +9,7 @@ import {
   SIM_EXPOSURE_LABEL,
   SIM_LEVEL_LABEL,
   SIM_LIMITS,
+  SIEGE_START_DROP,
   clampDrop,
   coverageLine,
   damageWidth,
@@ -169,10 +170,11 @@ function Row({ h, benchmark }: { h: SiegeSimHolding; benchmark: string }) {
 export default function SiegeSimulatorPage() {
   const artMode = useArtMode();
   const [sim, setSim] = useState<SiegeSim | null>(null);
-  const [drop, setDrop] = useState<number | null>(null);
+  const [drop, setDrop] = useState<number | null>(SIEGE_START_DROP);
   const [error, setError] = useState<{ message: string; retryable: boolean } | null>(null);
   const [retry, setRetry] = useState(0);
   const [loading, setLoading] = useState(true);
+  const firstLoad = useRef(true);
   const [benchmark, setBenchmark] = useState<SiegeBenchmarkKey>(readBenchmarkChoice);
   const latest = useRef(0);
 
@@ -185,11 +187,12 @@ export default function SiegeSimulatorPage() {
     }
   }
 
-  // First load uses the file's default fall; after that the slider drives it (debounced, newest answer wins).
+  // First load starts at a 5% fall (SIEGE_START_DROP); after that the slider drives it (debounced, newest answer wins).
   useEffect(() => {
     document.title = "Siege Simulator · Aladdin";
     const id = ++latest.current;
-    const wait = drop === null ? 0 : 250;
+    const wait = firstLoad.current ? 0 : 250;
+    firstLoad.current = false;
     const t = window.setTimeout(() => {
       setLoading(true);
       api

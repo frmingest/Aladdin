@@ -72,6 +72,9 @@ export function fallStage(drop: number | string | null | undefined): FallStage {
   return "calm";
 }
 
+/** Where the slider starts when the page opens: a gentle 5% fall (the slider's lowest stop). */
+export const SIEGE_START_DROP = 0.05;
+
 /** Keep a requested fall inside the slider's range. */
 export function clampDrop(drop: number, min: number, max: number): number {
   if (!Number.isFinite(drop)) return min;

@@ -12,13 +12,16 @@ import {
 } from "../../lib/fortress";
 import { formatNok, formatPct100 } from "../../lib/format";
 import type { GameTower } from "../../lib/types";
+import { wallRise } from "../../lib/wallRise";
 import { Card, VerdictBadge } from "../ui";
+import WallRiseGauge from "./kit/WallRiseGauge";
 
 /** The survey of one tower: the numbers behind its wall, moat, size and
  * analysis age. Shared by the Fortress page and, in game mode, the holding
  * page. Read-only: it shows what GET /game/state already decided. */
 export default function TowerSurvey({ tower, compact = false }: { tower: GameTower; compact?: boolean }) {
   const inputs = Object.entries(tower.wall_inputs);
+  const rise = wallRise(tower);
   return (
     <Card>
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -57,6 +60,11 @@ export default function TowerSurvey({ tower, compact = false }: { tower: GameTow
           {(tower.wall_margins ?? []).length > 0 && (
             <dd className="mt-2">
               <p className="text-xs uppercase tracking-wide text-ink-faint">Distance to the next tier</p>
+              {rise && (
+                <div className="mt-1 max-w-xs">
+                  <WallRiseGauge rise={rise} />
+                </div>
+              )}
               <ul className="mt-1 space-y-0.5 text-xs text-ink-muted">
                 {(tower.wall_margins ?? []).map((m) => (
                   <li key={`${m.metric}-${m.direction}`}>
