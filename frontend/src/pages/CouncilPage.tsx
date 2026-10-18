@@ -6,8 +6,7 @@ import { lecternTokens } from "../lib/councilAsk";
 import { ADVISOR_TONE_LABEL, advisorRuleLabel } from "../lib/fortress";
 import { COUNCIL_LABEL, weightText } from "../lib/rituals";
 import { sealForTone } from "../lib/seals";
-import type { Council, CouncilItem, CouncilKind, GameTower } from "../lib/types";
-import CouncilChamber from "../components/fortress/kit/CouncilChamber";
+import type { Council, CouncilItem, CouncilKind, GameAdvisorName, GameTower } from "../lib/types";
 import CouncilLectern from "../components/fortress/kit/CouncilLectern";
 import CouncilQuiet from "../components/fortress/kit/CouncilQuiet";
 import FogPanel from "../components/fortress/kit/FogPanel";
@@ -99,6 +98,8 @@ export default function CouncilPage() {
   const [attempt, setAttempt] = useState(0);
   // The towers on the table for "call someone to the floor". The page works without them (no lectern).
   const [towers, setTowers] = useState<GameTower[]>([]);
+  // A counselor pressed in the room picture; the counter makes a second press on the same one count again.
+  const [call, setCall] = useState<{ who: GameAdvisorName; n: number } | null>(null);
 
   useEffect(() => {
     let live = true;
@@ -149,12 +150,14 @@ export default function CouncilPage() {
       {!error && !council && <p className="text-sm text-ink-muted">The council is gathering…</p>}
       {council && (
         <div className="space-y-4">
-          {council.items.length === 0 ? (
-            <CouncilQuiet seats={seats} onJump={jump} unresolved={council.unknowns.length > 0} />
-          ) : (
-            <CouncilChamber seats={seats} onJump={jump} unresolved={council.unknowns.length > 0} />
-          )}
-          <CouncilLectern tokens={tokens} />
+          <CouncilQuiet
+            seats={seats}
+            onJump={jump}
+            unresolved={council.unknowns.length > 0}
+            busy={council.items.length > 0}
+            onCall={tokens.length > 0 ? (who) => setCall((c) => ({ who, n: (c?.n ?? 0) + 1 })) : undefined}
+          />
+          <CouncilLectern tokens={tokens} call={call} />
           <Card>
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="section-title mb-0">The agenda</h2>

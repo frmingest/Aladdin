@@ -42,9 +42,18 @@ export function SealGlyph({ state, months, cx, cy, r }: { state: CapsuleState; m
   );
 }
 
-function TomePicture({ t, id, scale = 1 }: { t: Tome; id: string; scale?: number }) {
+function TomePicture({ t, id, scale = 1, shelf = false }: { t: Tome; id: string; scale?: number; shelf?: boolean }) {
+  // On the shelf the picture is cropped to the cover (6 units of margin each side) and sized by CSS, so the book
+  // is exactly as wide as the nameplate under it. The desk's cover keeps the full frame and its own scale.
   return (
-    <svg viewBox="0 0 96 124" width={96 * scale} height={124 * scale} aria-hidden focusable="false" className="hall-tome-art">
+    <svg
+      viewBox={shelf ? "6 0 84 124" : "0 0 96 124"}
+      width={shelf ? undefined : 96 * scale}
+      height={shelf ? undefined : 124 * scale}
+      aria-hidden
+      focusable="false"
+      className={shelf ? "hall-tome-art hall-tome-art--shelf" : "hall-tome-art"}
+    >
       <defs>
         <linearGradient id={`hl-${id}`} x1="0" y1="0" x2="1" y2="0">
           <stop offset="0" stopColor="#000" stopOpacity="0.45" />
@@ -401,7 +410,7 @@ export default function HallOfRecords({ records }: { records: Records }) {
                       deskRef.current?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
                     }}
                   >
-                    <TomePicture t={t} id={`${uid}${r.id}`} />
+                    <TomePicture t={t} id={`${uid}${r.id}`} shelf />
                     <span className="hall-label">
                       <span className="hall-label-name font-display" title={r.company_name}>
                         {r.company_name}
