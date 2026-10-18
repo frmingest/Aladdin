@@ -42,18 +42,10 @@ export function SealGlyph({ state, months, cx, cy, r }: { state: CapsuleState; m
   );
 }
 
-function TomePicture({ t, id, scale = 1, shelf = false }: { t: Tome; id: string; scale?: number; shelf?: boolean }) {
-  // On the shelf the picture is cropped to the cover (6 units of margin each side) and sized by CSS, so the book
-  // is exactly as wide as the nameplate under it. The desk's cover keeps the full frame and its own scale.
+/** The drawn cover on the desk's swinging cover (fallback when the painted pictures are not loaded). */
+function TomePicture({ t, id, scale = 1 }: { t: Tome; id: string; scale?: number }) {
   return (
-    <svg
-      viewBox={shelf ? "6 0 84 124" : "0 0 96 124"}
-      width={shelf ? undefined : 96 * scale}
-      height={shelf ? undefined : 124 * scale}
-      aria-hidden
-      focusable="false"
-      className={shelf ? "hall-tome-art hall-tome-art--shelf" : "hall-tome-art"}
-    >
+    <svg viewBox="0 0 96 124" width={96 * scale} height={124 * scale} aria-hidden focusable="false" className="hall-tome-art">
       <defs>
         <linearGradient id={`hl-${id}`} x1="0" y1="0" x2="1" y2="0">
           <stop offset="0" stopColor="#000" stopOpacity="0.45" />
@@ -175,6 +167,22 @@ function CoverEmblem({ letter }: { letter: string }) {
         {letter}
       </text>
     </svg>
+  );
+}
+
+/** A book on the shelf: every book the same size, the company name the only thing written on it. The action shows as
+ * the leather (and the owed bookmark as a ribbon shape); the act, date and seals are read on the open book. */
+function BookCover({ r, t, art }: { r: DecisionRecord; t: Tome; art: BookArt | null }) {
+  const cover = art?.covers[r.action];
+  const style = { "--cover": t.leather, "--cover-edge": t.edge } as CSSProperties;
+  if (cover) Object.assign(style, { "--cover-img": `url(${cover})` });
+  return (
+    <span className={`hall-bookcover${cover ? " hall-bookcover--art" : ""}`} style={style}>
+      {t.owed && <span className="hall-bookcover-ribbon" aria-hidden />}
+      <span className="hall-bookcover-name font-display" title={r.company_name}>
+        {r.company_name}
+      </span>
+    </span>
   );
 }
 
@@ -400,7 +408,7 @@ export default function HallOfRecords({ records }: { records: Records }) {
                 <li key={r.id} className="hall-niche">
                   <button
                     type="button"
-                    className="hall-tome"
+                    className={`hall-tome${active ? " hall-tome--open" : ""}`}
                     aria-pressed={active}
                     aria-controls="hall-desk"
                     aria-label={tomeAria(r)}
@@ -410,17 +418,7 @@ export default function HallOfRecords({ records }: { records: Records }) {
                       deskRef.current?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
                     }}
                   >
-                    <TomePicture t={t} id={`${uid}${r.id}`} shelf />
-                    <span className="hall-label">
-                      <span className="hall-label-name font-display" title={r.company_name}>
-                        {r.company_name}
-                      </span>
-                      <span className="hall-label-rule" aria-hidden />
-                      <span className="hall-label-meta">
-                        <span className="hall-label-action">{t.actionWord}</span>
-                        <span className="hall-label-date">{formatDate(r.decided_on)}</span>
-                      </span>
-                    </span>
+                    <BookCover r={r} t={t} art={bookArt} />
                   </button>
                   <span className="hall-plank" aria-hidden />
                 </li>
