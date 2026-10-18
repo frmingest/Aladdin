@@ -948,6 +948,13 @@
 .chamber-art-sit { position: absolute; top: 52%; transform: translate(-50%, -50%); pointer-events: none; height: 170px; width: auto; }
 .chamber-art-sit-left { left: calc(50% - 150px); }
 .chamber-art-sit-right { left: calc(50% + 150px); }
+/* The counselors in the council room pictures: transparent hotspots over the painted figures. */
+.council-room { position: relative; }
+.council-sitter { position: absolute; padding: 0; border: 0; border-radius: 14px; background: transparent; cursor: pointer; transition: box-shadow 160ms ease, background-color 160ms ease; }
+.council-sitter:hover, .council-sitter:focus-visible { background: rgba(242, 210, 122, 0.08); box-shadow: 0 0 0 2px rgba(242, 210, 122, 0.55), 0 0 26px rgba(242, 210, 122, 0.4); }
+.council-sitter:focus-visible { outline: 3px solid #f2d27a; outline-offset: 3px; }
+.council-sitter-tag { position: absolute; left: 50%; bottom: 4px; transform: translateX(-50%); white-space: nowrap; padding: 2px 9px; border: 1px solid #6b4a14; border-radius: 4px; background: linear-gradient(180deg, #e2c477, #bb9340); color: #2a1a06; font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.04em; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.6); }
+@media (prefers-reduced-motion: reduce) { .council-sitter { transition: none; } }
 .chamber-art-sitter { position: absolute; left: 50%; top: 4%; transform: translateX(-50%); }
 
 /* Night panel (game mode): the dark counterpart of .parchment for the Circle page. Re-points the same

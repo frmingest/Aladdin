@@ -167,6 +167,8 @@ import councilLectern from "../assets/art/council-lectern.webp";
 import councilSpeakOracle from "../assets/art/council-speak-oracle.webp";
 import councilSpeakPartner from "../assets/art/council-speak-partner.webp";
 import councilQuiet from "../assets/art/council-quiet.webp";
+import councilRoomQuiet from "../assets/art/council-room-quiet.webp";
+import councilRoomBusy from "../assets/art/council-room-busy.webp";
 
 export interface PackedArt {
   src: string;
@@ -345,4 +347,6 @@ export const ART_MANIFEST = {
   "council-speak-oracle": { src: councilSpeakOracle, width: 160, height: 256, alt: "" },
   "council-speak-partner": { src: councilSpeakPartner, width: 192, height: 256, alt: "" },
   "council-quiet": { src: councilQuiet, width: 640, height: 455, alt: "" },
+  "council-room-quiet": { src: councilRoomQuiet, width: 1200, height: 670, alt: "" },
+  "council-room-busy": { src: councilRoomBusy, width: 1200, height: 670, alt: "" },
 } as const satisfies Record<string, PackedArt>;

@@ -1385,6 +1385,20 @@
    "key": "vignette",
    "max_side": 640,
    "quality": 72
+  },
+  {
+   "id": "council-room-quiet",
+   "source": "council-room-2026-10-18/a_wide_panoramic_2d_fantasy_game_council_chamber_room_scene_aspect_ratio_16_9",
+   "key": "none",
+   "max_side": 1200,
+   "quality": 72
+  },
+  {
+   "id": "council-room-busy",
+   "source": "council-room-2026-10-18/modify_data_image_image_2_create_a_second_version_of_this_exact_wide_council",
+   "key": "none",
+   "max_side": 1200,
+   "quality": 68
   }
  ]
 }

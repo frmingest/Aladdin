@@ -41,12 +41,13 @@ function Speaker({ who, width }: { who: GameAdvisorName; width: number }) {
   );
 }
 
-export default function CouncilLectern({ tokens }: { tokens: Token[] }) {
+export default function CouncilLectern({ tokens, call = null }: { tokens: Token[]; call?: { who: GameAdvisorName; n: number } | null }) {
   const [holdingId, setHoldingId] = useState<string | null>(null);
   const [question, setQuestion] = useState<CouncilQuestion>("why_here");
   const [answer, setAnswer] = useState<CouncilAnswer | null>(null);
   const [busy, setBusy] = useState<GameAdvisorName | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [nudge, setNudge] = useState<GameAdvisorName | null>(null);
   const latest = useRef(0);
 
   // A different tower or question is a different conversation: drop the old answer.
@@ -55,6 +56,7 @@ export default function CouncilLectern({ tokens }: { tokens: Token[] }) {
     setAnswer(null);
     setError(null);
     setBusy(null);
+    setNudge(null);
   }, [holdingId, question]);
 
   function ask(who: GameAdvisorName) {
@@ -68,6 +70,17 @@ export default function CouncilLectern({ tokens }: { tokens: Token[] }) {
       .catch((e: unknown) => id === latest.current && setError(describeError(e, "the councillor").message))
       .finally(() => id === latest.current && setBusy(null));
   }
+
+  // A counselor pressed in the room: ask them now if a tower is picked, else say what is missing.
+  const lastCall = useRef(0);
+  useEffect(() => {
+    if (!call || call.n === lastCall.current) return;
+    lastCall.current = call.n;
+    document.getElementById("ask-title")?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+    if (holdingId) ask(call.who);
+    else setNudge(call.who);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [call]);
 
   function onQuestionKey(e: React.KeyboardEvent, i: number) {
     const step = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 0;
@@ -161,7 +174,11 @@ export default function CouncilLectern({ tokens }: { tokens: Token[] }) {
             </button>
           ))}
         </div>
-        {!holdingId && <p className="mt-1 text-xs text-[#a8977a]">Pick a tower first.</p>}
+        {!holdingId && (
+          <p className="mt-1 text-xs text-[#a8977a]" role={nudge ? "status" : undefined}>
+            {nudge ? `${ADVISOR_NAME[nudge]} is ready. Pick a tower first.` : "Pick a tower first."}
+          </p>
+        )}
       </div>
 
       <div aria-live="polite" className="mt-4">
