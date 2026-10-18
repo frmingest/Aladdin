@@ -34,7 +34,7 @@ function render(path: string, game: boolean) {
 
 describe("PageHeader", () => {
   it("is the painted banner in game mode on a fortress room", () => {
-    const html = render("/fortress/council", true);
+    const html = render("/fortress/records", true);
     expect(html).toContain("game-banner");
     expect(html).not.toContain("Plain view");
     expect(html).toContain("Act");
@@ -48,7 +48,7 @@ describe("PageHeader", () => {
 
   it("stays plain outside the fortress and with game mode off", () => {
     expect(render("/holdings", true)).not.toContain("game-banner");
-    expect(render("/fortress/council", false)).not.toContain("game-banner");
+    expect(render("/fortress/records", false)).not.toContain("game-banner");
   });
 
   it("renders without a Router (as other tests and pages do)", () => {

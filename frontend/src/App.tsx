@@ -18,8 +18,6 @@ const DashboardPage = lazy(() => import("./pages/DashboardPage"));
 const FortressPage = lazy(() => import("./pages/FortressPage"));
 const SiegeSimulatorPage = lazy(() => import("./pages/SiegeSimulatorPage"));
 // Sprint 24 (G14): the fortress replayed through time.
-const ChroniclePage = lazy(() => import("./pages/ChroniclePage"));
-const CouncilPage = lazy(() => import("./pages/CouncilPage"));
 const RecordsPage = lazy(() => import("./pages/RecordsPage"));
 const CompetencePage = lazy(() => import("./pages/CompetencePage"));
 const CartographerPage = lazy(() => import("./pages/CartographerPage"));
@@ -72,8 +70,6 @@ export default function App() {
           <Route path="/" element={<DashboardPage />} />
           <Route path="/fortress" element={<FortressPage />} />
           <Route path="/fortress/siege" element={<SiegeSimulatorPage />} />
-          <Route path="/fortress/chronicle" element={<ChroniclePage />} />
-          <Route path="/fortress/council" element={<CouncilPage />} />
           <Route path="/fortress/records" element={<RecordsPage />} />
           <Route path="/fortress/circle" element={<CompetencePage />} />
           <Route path="/fortress/map" element={<CartographerPage />} />

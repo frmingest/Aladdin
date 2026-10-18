@@ -20,13 +20,13 @@ describe("readableDetail", () => {
 
 describe("describeError", () => {
   it("never prints a proxy error page", () => {
-    const d = describeError(new ApiError(502, "<html><body>Bad Gateway</body></html>"), "the Chronicle");
-    expect(d.message).toContain("the Chronicle");
+    const d = describeError(new ApiError(502, "<html><body>Bad Gateway</body></html>"), "the Siege Simulator");
+    expect(d.message).toContain("the Siege Simulator");
     expect(d.message).not.toContain("<");
     expect(d.retryable).toBe(true);
   });
   it("treats a network failure as retryable and says the server cannot be reached", () => {
-    const d = describeError(new TypeError("Failed to fetch"), "the Council");
+    const d = describeError(new TypeError("Failed to fetch"), "the Circle");
     expect(d.message).toMatch(/could not reach the server/i);
     expect(d.retryable).toBe(true);
   });

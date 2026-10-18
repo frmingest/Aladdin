@@ -1,5 +1,5 @@
 import { useId } from "react";
-import { WALL_FILL } from "../../../lib/chronicle";
+import { WALL_FILL } from "../../../lib/wallRise";
 import { WALL_RUNGS, describeRise, rungWord, type WallRise } from "../../../lib/wallRise";
 
 /** Masons' courses rising to the next rung (Fortress, "Walls on the rise").

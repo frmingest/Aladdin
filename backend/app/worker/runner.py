@@ -322,7 +322,7 @@ class AnalysisWorker:
 
     def maybe_store_game_state(self) -> None:
         """Sprint 24 (G14a): store today's Fortress frame once per UTC day
-        (after `game_state_history_hour_utc`), so the Chronicle has history.
+        (after `game_state_history_hour_utc`), so the Night Watch has history.
         Database only; never raises."""
         if not self.settings.game_state_history_enabled:
             return

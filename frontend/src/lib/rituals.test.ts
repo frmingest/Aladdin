@@ -3,7 +3,6 @@ import {
   actionLabel,
   changeText,
   circleSegments,
-  COUNCIL_LABEL,
   daysText,
   filterRecords,
   priceLine,
@@ -41,7 +40,7 @@ describe("price and verdict wording", () => {
     expect(verdictLine(rec({ verdict_then: null, verdict_now: null }))).toContain("none recorded");
   });
   it("uses no verdict words about the decision itself", () => {
-    const text = [priceLine(rec()), verdictLine(rec()), ...Object.values(REVIEW_LABEL), ...Object.values(COUNCIL_LABEL)].join(" ");
+    const text = [priceLine(rec()), verdictLine(rec()), ...Object.values(REVIEW_LABEL)].join(" ");
     expect(text).not.toMatch(/\b(good|bad|right|wrong|win|loss|score|hit)\b/i);
   });
 });

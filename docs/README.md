@@ -38,14 +38,14 @@ Game mode (Fortress): concept, sprint plans and reviews, visual identity, art pa
 
 - [records-hall-polish-2026-10-17.md](game/records-hall-polish-2026-10-17.md) — Hall of Records: undistorted torches and arches, brass nameplates, tome cover that swings open into a book
 - [siege-towers-backdrops-2026-10-17.md](game/siege-towers-backdrops-2026-10-17.md) — Siege Simulator: towers section moved to the top, backdrop that follows the "falls by" slider, four Stitch pictures
-- [circle-council-design-2026-10-09.md](game/circle-council-design-2026-10-09.md) — Circle of Competence and Council Chamber: making them feel like game screens
-- [game-art-dde-2026-10-16.md](game/game-art-dde-2026-10-16.md) — the 17 Stitch pictures from the design review: crests, Council badges, sky badges, covered plot, empty chest
+- [circle-design-2026-10-09.md](game/circle-design-2026-10-09.md) — Circle of Competence: making it feel like a game screen
+- [game-art-dde-2026-10-16.md](game/game-art-dde-2026-10-16.md) — the 17 Stitch pictures from the design review: crests, sky badges, empty chest
 - [design-master-sprint-plan-2026-10-11.md](game/design-master-sprint-plan-2026-10-11.md) — Design Master: review and sprint plan (2026-10-11)
 - [fog-of-war-sprint28-2026-10-08.md](game/fog-of-war-sprint28-2026-10-08.md) — Game mode Sprint 28: fog of war (G34–G37) — 2026-10-08
 - [fortress-art-pass-2026-10-09.md](game/fortress-art-pass-2026-10-09.md) — Fortress art pass — 2026-10-09
 - [game-design-challenge-2026-10-09.md](game/game-design-challenge-2026-10-09.md) — Game design challenge: Records, Circle, Map, dispatch details (2026-10-09)
 - [game-identity-circle-2026-10-09.md](game/game-identity-circle-2026-10-09.md) — Game identity: Circle of Competence ring map — 2026-10-09
-- [game-identity-kit-council-2026-10-09.md](game/game-identity-kit-council-2026-10-09.md) — Game identity: page-scene kit and Council Chamber — 2026-10-09
+- [game-identity-kit-2026-10-09.md](game/game-identity-kit-2026-10-09.md) — Game identity: page-scene kit — 2026-10-09
 - [game-identity-map-2026-10-09.md](game/game-identity-map-2026-10-09.md) — Game identity: Map fog patches, slate and commission seals — 2026-10-09
 - [game-identity-process-changes-2026-10-09.md](game/game-identity-process-changes-2026-10-09.md) — Changes proposed (copy into the repo at these paths)
 - [game-integrity-fixes-2026-10-09.md](game/game-integrity-fixes-2026-10-09.md) — Game mode integrity fixes (PR 1 of the team-review follow-ups) — 2026-10-09
@@ -81,9 +81,8 @@ Game mode (Fortress): concept, sprint plans and reviews, visual identity, art pa
 - [market-street-strong-pick-2026-10-17.md](game/market-street-strong-pick-2026-10-17.md) — Market Street: the analyst's top mark (wax seal on the signboard), concepts and rules (built on `feature/market-street`)
 - [market-street-strong-pick-motion-2026-10-17.md](game/market-street-strong-pick-motion-2026-10-17.md) — Market Street top mark: motion and performance spec from game-feel-engineer (the seal design won; its glow and loop were not used)
 - [walls-on-the-rise-2026-10-18.md](game/walls-on-the-rise-2026-10-18.md) — Walls on the rise: how far each wall stands from the next rung, on the Fortress page; the Siege slider now starts at 5%
-- [council-engagement-ideas-2026-10-18.md](game/council-engagement-ideas-2026-10-18.md) — Council Chamber: four ideas to make it interactive, the recommendation, and what was built (concept B, "Call someone to the floor")
-- [council-fewer-clicks-2026-10-18.md](game/council-fewer-clicks-2026-10-18.md) — Council lectern: defaults and tap-to-ask cut four taps to one; interaction-cost gate added to the game checklist
-- [council-room-and-records-shelf-2026-10-18.md](game/council-room-and-records-shelf-2026-10-18.md) — Council: two wide Stitch room pictures with clickable Oracle and Partner; Records: shelf books as wide as their nameplates
+- [remove-council-chronicle-2026-10-18.md](game/remove-council-chronicle-2026-10-18.md) — Council and Chronicle removed from Game mode: what went, what was kept (Stitch pictures, Night Watch, stored frames), how to restore
+- [records-shelf-books-2026-10-18.md](game/records-shelf-books-2026-10-18.md) — Records: shelf books as wide as their nameplates
 
 ### ingestion/
 

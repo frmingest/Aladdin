@@ -19,13 +19,13 @@ from app.domain.game_mapping.time_and_filings_v1 import TimeAndFilingsRules
 from app.models.holding import Holding
 from app.models.thesis import ThesisTripwire
 from app.schemas.game import (
-    ChronicleChangeOut,
+    FrameChangeOut,
     NightWatchFiredOut,
     NightWatchLineOut,
     NightWatchOut,
 )
 from app.services import snapshot_refresh
-from app.services.game import chronicle, history
+from app.services.game import frame_diff, history
 from app.services.thesis import nightly
 
 MAX_FIRED_LINES = 5
@@ -61,7 +61,7 @@ def build_night_watch(
     snapshots_summary: str | None,
     firing: list[NightWatchFiredOut],
     frame_days: list,
-    changes: list[ChronicleChangeOut],
+    changes: list[FrameChangeOut],
     ravens_landed: list[str],
     demo: bool = False,
 ) -> NightWatchOut:
@@ -144,7 +144,7 @@ def build_night_watch(
     if len(changes) > MAX_CHANGE_LINES:
         lines.append(
             NightWatchLineOut(
-                tone="note", text=f"{len(changes) - MAX_CHANGE_LINES} more change(s) are in the Chronicle."
+                tone="note", text=f"{len(changes) - MAX_CHANGE_LINES} more change(s) between the last two stored frames."
             )
         )
 
@@ -223,14 +223,14 @@ def get_night_watch(db: Session, rules_v: TimeAndFilingsRules, *, now: datetime 
     ]
 
     days = history.stored_days(db)
-    changes: list[ChronicleChangeOut] = []
+    changes: list[FrameChangeOut] = []
     if len(days) >= 2:
         before = history.load_frame(db, days[-2])
         after = history.load_frame(db, days[-1])
         if before is not None and after is not None:
-            changes = chronicle.diff_frames(
-                chronicle.frame_from_state(days[-2], before[0], before[1]),
-                chronicle.frame_from_state(days[-1], after[0], after[1]),
+            changes = frame_diff.diff_frames(
+                frame_diff.frame_from_state(days[-2], before[0], before[1]),
+                frame_diff.frame_from_state(days[-1], after[0], after[1]),
                 rules_v,
             )
 

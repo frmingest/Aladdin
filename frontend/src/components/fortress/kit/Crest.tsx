@@ -11,16 +11,6 @@ import ObjectArtImage from "../../ObjectArtImage";
 function Glyph({ kind }: { kind: CrestKind }) {
   const ink = { stroke: "#f2d27a", strokeWidth: 1.6, fill: "none", strokeLinecap: "round", strokeLinejoin: "round" } as const;
   switch (kind) {
-    case "council":
-      return (
-        <g {...ink}>
-          <ellipse cx="20" cy="21" rx="9" ry="5" fill="#f2d27a" fillOpacity="0.25" />
-          <circle cx="9" cy="21" r="1.6" />
-          <circle cx="31" cy="21" r="1.6" />
-          <circle cx="20" cy="12.5" r="1.6" />
-          <circle cx="20" cy="29.5" r="1.6" />
-        </g>
-      );
     case "circle":
       return (
         <g {...ink}>
@@ -41,13 +31,6 @@ function Glyph({ kind }: { kind: CrestKind }) {
         <g {...ink}>
           <path d="M20 14 q-6 -3 -11 -1 v16 q5 -2 11 1 q6 -3 11 -1 v-16 q-5 -2 -11 1 Z" fill="#f2d27a" fillOpacity="0.2" />
           <path d="M20 14 v16" />
-        </g>
-      );
-    case "chronicle":
-      return (
-        <g {...ink}>
-          <path d="M11 12 h18 v17 h-18 Z" fill="#f2d27a" fillOpacity="0.2" />
-          <path d="M15 17 h10 M15 21 h10 M15 25 h6" />
         </g>
       );
     case "siege":

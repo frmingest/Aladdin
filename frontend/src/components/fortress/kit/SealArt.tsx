@@ -47,7 +47,7 @@ export function SealPicture({
   );
 }
 
-/** A Council seal: the wax picture with Object art on (notes and warnings only), otherwise the SVG seal.
+/** A seal: the wax picture with Object art on (notes and warnings only), otherwise the SVG seal.
  * A picture that fails to load turns back into the SVG. */
 export default function SealArt({ kind, size = 22, decorative = false }: { kind: SealKind; size?: number; decorative?: boolean }) {
   const mode = useArtMode();

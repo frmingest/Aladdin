@@ -1,19 +1,14 @@
-"""B1 Long Memory: retention_v1 thins stored game-state frames by age tier and
-names the days the worker stored nothing (2026-10-09). Pure, no database."""
+"""B1 Long Memory: retention_v1 thins stored game-state frames by age tier (2026-10-09).
+Pure, no database."""
 from __future__ import annotations
 
 from datetime import date, timedelta
 
 from app.domain.game_mapping.retention_v1 import (
     RETENTION_V1,
-    Gap,
     frames_to_keep,
     get_retention,
-    missing_ranges,
 )
-from app.domain.game_mapping.time_and_filings_v1 import TIME_AND_FILINGS_V1
-from app.services.game.chronicle import build_chronicle_from
-from tests.unit.test_game_time_and_filings import _state, tower
 
 TODAY = date(2026, 10, 9)  # a Friday
 
@@ -52,26 +47,8 @@ def test_a_frame_dated_in_the_future_is_never_dropped():
     assert future in frames_to_keep([future], today=TODAY)
 
 
-def test_no_frames_means_nothing_to_keep_and_no_gaps():
+def test_no_frames_means_nothing_to_keep():
     assert frames_to_keep([], today=TODAY) == set()
-    assert missing_ranges([], today=TODAY) == []
-
-
-def test_missing_days_are_reported_only_after_the_record_started_and_never_today():
-    stored = [TODAY - timedelta(days=9), TODAY - timedelta(days=8), TODAY - timedelta(days=4), TODAY - timedelta(days=3)]
-    gaps = missing_ranges(stored, today=TODAY)
-    # days -7..-5 are missing, and -2..-1 (yesterday); today is not a gap, and nothing before -9 is
-    assert gaps == [
-        Gap(TODAY - timedelta(days=7), TODAY - timedelta(days=5)),
-        Gap(TODAY - timedelta(days=2), TODAY - timedelta(days=1)),
-    ]
-    assert gaps[0].days == 3
-
-
-def test_thinned_old_days_are_not_reported_as_missing():
-    old = date(2026, 2, 1)
-    gaps = missing_ranges([old, TODAY], today=TODAY)
-    assert gaps and gaps[0].first_day == TODAY - timedelta(days=RETENTION_V1.daily_days)
 
 
 def test_unknown_version_is_refused():
@@ -81,26 +58,3 @@ def test_unknown_version_is_refused():
     except ValueError:
         return
     raise AssertionError("expected ValueError")
-
-
-def test_chronicle_names_unrecorded_days_and_explains_thinning():
-    state = _state([tower("Alpha", 100)])
-    from datetime import datetime, timezone
-
-    at = datetime(2026, 10, 9, 5, tzinfo=timezone.utc)
-    stored = [
-        (TODAY - timedelta(days=200), at, state),
-        (TODAY - timedelta(days=3), at, state),
-        (TODAY - timedelta(days=1), at, state),
-    ]
-    out = build_chronicle_from(stored, [], TIME_AND_FILINGS_V1, today=TODAY)
-    texts = [g.text for g in out.gaps]
-    assert out.gaps and out.gaps[0].first_day == TODAY - timedelta(days=90)
-    assert all("not even that they were calm" in t for t in texts)
-    assert any(g.first_day == g.last_day == TODAY - timedelta(days=2) for g in out.gaps)
-    assert any("one per week" in n for n in out.notes)
-
-
-def test_chronicle_without_today_reports_no_gaps():
-    out = build_chronicle_from([], [], TIME_AND_FILINGS_V1)
-    assert out.gaps == []

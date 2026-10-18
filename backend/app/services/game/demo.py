@@ -10,7 +10,7 @@ from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 from app.domain.game_mapping import get_game_mapping
-from app.schemas.game import ChronicleOut, GameStateOut, NightWatchOut, RavensOut
+from app.schemas.game import GameStateOut, NightWatchOut, RavensOut
 from app.services.game.rules import (
     ClusterFact,
     LandFacts,
@@ -215,14 +215,13 @@ def demo_game_state(version: str) -> GameStateOut:
     return build_game_state(inputs, get_game_mapping(version))
 
 
-# --- Sprint 24 (2026-10-04): invented Chronicle, Ravens and Night Watch ---------
+# --- Sprint 24 (2026-10-04): invented Ravens and Night Watch ---------
 
 
-def demo_chronicle(version: str, rules_v) -> ChronicleOut:
-    """Three invented stored frames built from the demo state, so the replay
-    shows towers joining, a wall weakening and the weather turning. Never
-    touches the database."""
-    from app.services.game.chronicle import build_chronicle_from
+def _demo_frames(version: str):
+    """Three invented stored frames built from the demo state (towers joining, a wall weakening, the
+    weather turning), so the Night Watch has something to compare. Never touches the database."""
+    from app.services.game.frame_diff import frame_from_state
 
     now = datetime.now(timezone.utc)
     today = demo_game_state(version)
@@ -235,12 +234,11 @@ def demo_chronicle(version: str, rules_v) -> ChronicleOut:
         middle_towers[0] = middle_towers[0].model_copy(update={"wall": "granite", "weight_pct": (middle_towers[0].weight_pct or D(0)) + D(3)})
     siege_mid = today.siege.model_copy(update={"level": "gathering"}) if today.siege is not None else None
     middle = today.model_copy(update={"towers": middle_towers, "siege": siege_mid})
-    stored = [
-        ((now - timedelta(days=60)).date(), now - timedelta(days=60), early),
-        ((now - timedelta(days=30)).date(), now - timedelta(days=30), middle),
-        (now.date(), now, today),
+    return [
+        frame_from_state((now - timedelta(days=60)).date(), now - timedelta(days=60), early),
+        frame_from_state((now - timedelta(days=30)).date(), now - timedelta(days=30), middle),
+        frame_from_state(now.date(), now, today),
     ]
-    return build_chronicle_from(stored, [], rules_v, demo=True)
 
 
 def demo_ravens(version: str, rules_v) -> RavensOut:
@@ -292,12 +290,15 @@ def demo_night_watch(version: str, rules_v) -> NightWatchOut:
         firing.append(NightWatchFiredOut(holding_id=t.holding_id, ticker=t.ticker, name=t.name,
                                          label="Net debt / EBITDA above 2.5x", metric="net_debt_to_ebitda",
                                          fired_at=now - timedelta(hours=5)))
-    chronicle = demo_chronicle(version, rules_v)
+    frames = _demo_frames(version)
+    from app.services.game.frame_diff import diff_frames
+
+    changes = diff_frames(frames[-2], frames[-1], rules_v)
     return build_night_watch(
         rules_v=rules_v, now=now, watch_last_at=now - timedelta(hours=6),
         watch_summary="Demo: 6 tripwire(s) on 4 holding(s), 1 newly fired, 0 cleared",
         snapshots_last_at=now - timedelta(hours=5), snapshots_summary="Demo: rebuilt risk, performance, board, watchlist",
-        firing=firing, frame_days=[f.day for f in chronicle.frames],
-        changes=[c for c in chronicle.changes if c.day == chronicle.frames[-1].day],
+        firing=firing, frame_days=[f.day for f in frames],
+        changes=changes,
         ravens_landed=[r.name for r in demo_ravens(version, rules_v).ravens[:1]], demo=True,
     )

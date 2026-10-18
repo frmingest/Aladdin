@@ -18,8 +18,6 @@ const API = (process.env.SMOKE_API_URL ?? "").replace(/\/$/, "");
 const GAME_PAGES: { path: string; heading: string }[] = [
   { path: "/fortress", heading: "The Fortress" },
   { path: "/fortress/siege", heading: "The Siege Simulator" },
-  { path: "/fortress/chronicle", heading: "The Chronicle" },
-  { path: "/fortress/council", heading: "Council Chamber" },
   { path: "/fortress/records", heading: "Hall of Records" },
   { path: "/fortress/circle", heading: "Circle of Competence" },
   { path: "/fortress/map", heading: "Cartographer's table" },

@@ -1,4 +1,4 @@
-"""Sprint 25 over the real routes and a database: G17 Council, G18 Records,
+"""Sprint 25 over the real routes and a database: G18 Records,
 G19 Circle, G20 holding lines (2026-10-04). Read-only except the user's own
 competence marks; demo mode wins; unknown stays unknown."""
 from __future__ import annotations
@@ -44,22 +44,6 @@ def test_holding_advisors_unknown_holding_is_an_empty_list(client, db_session):
     _seed(db_session)
     body = client.get("/game/holdings/00000000-0000-0000-0000-000000000001/advisors")
     assert body.status_code == 200 and body.json()["lines"] == []
-
-
-# --- Council questions (2026-10-18) ---------------------------------------------
-
-
-def test_council_ask_answers_from_stored_facts_and_validates_input(client, db_session):
-    _seed(db_session)
-    geared = _holding(db_session, "GEAR.OL")
-    ok = client.get("/game/council/ask", params={"holding_id": str(geared.id), "question": "why_here", "advisor": "partner"})
-    body = ok.json()
-    assert ok.status_code == 200 and body["read"] == "read" and body["holding_name"] and body["facts"]
-    assert body["questions_version"] == "v1" and body["disclaimer"]
-    bad = client.get("/game/council/ask", params={"holding_id": str(geared.id), "question": "should_i_buy", "advisor": "partner"})
-    assert bad.status_code == 422
-    gone = client.get("/game/council/ask", params={"holding_id": "00000000-0000-0000-0000-000000000001", "question": "edge", "advisor": "oracle"})
-    assert gone.status_code == 404
 
 
 # --- G18 ----------------------------------------------------------------------
@@ -119,38 +103,13 @@ def test_competence_refuses_unknown_sector_level_and_long_note(client, db_sessio
     assert db_session.query(CompetenceMark).count() == 0
 
 
-# --- G17 ----------------------------------------------------------------------
-
-
-def test_council_builds_its_agenda_from_stored_facts(client, db_session):
-    _seed(db_session)
-    geared = _holding(db_session, "GEAR.OL")
-    _journal(db_session, geared, days_ago=200)
-    client.put("/game/competence/Energy", json={"level": "outside"})
-    body = client.get("/game/council").json()
-    kinds = [i["kind"] for i in body["items"]]
-    assert kinds == sorted(
-        kinds, key=["tripwire", "thesis_review", "review_due", "weak_walls", "no_moat", "stale_analysis",
-                    "outside_circle", "cash"].index)
-    assert {"review_due", "weak_walls", "no_moat", "outside_circle", "cash"} <= set(kinds)
-    weak = next(i for i in body["items"] if i["kind"] == "weak_walls")
-    assert [h["name"] for h in weak["holdings"]] == ["Geared"]
-    assert body["advisors"]  # the advisors open the session
-    assert "not advice to trade" in body["disclaimer"]
-
-
-def test_council_on_an_empty_database_says_so(client):
-    body = client.get("/game/council").json()
-    assert body["items"] == [] and "empty" in body["summary"]
-
-
 # --- read-only and demo --------------------------------------------------------
 
 
 def test_reads_write_nothing(client, db_session):
     _seed(db_session)
     before = db_session.query(CompetenceMark).count(), db_session.query(DecisionJournalEntry).count()
-    for path in ("/game/council", "/game/records", "/game/competence"):
+    for path in ("/game/records", "/game/competence"):
         assert client.get(path).status_code == 200
     assert (db_session.query(CompetenceMark).count(), db_session.query(DecisionJournalEntry).count()) == before
 
@@ -158,10 +117,9 @@ def test_reads_write_nothing(client, db_session):
 def test_demo_mode_shows_invented_data_and_blocks_marks(client, db_session):
     _seed(db_session)
     assert client.put("/settings/demo-mode", json={"enabled": True}).status_code == 200
-    council = client.get("/game/council").json()
     records = client.get("/game/records").json()
     circle = client.get("/game/competence").json()
-    assert council["demo"] and records["demo"] and circle["demo"]
+    assert records["demo"] and circle["demo"]
     real = {"CASH.OL", "GEAR.OL", "BANK.OL"}
     assert not real & {t["name"] for t in circle["towers"]} and not real & {r["ticker"] for r in records["records"]}
     assert {s["level"] for s in circle["sectors"]} >= {"know", "partly", "outside"}

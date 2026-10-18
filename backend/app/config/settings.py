@@ -163,7 +163,7 @@ class Settings(BaseSettings):
     # Sprint 24 (G14a): the worker also stores one game-state frame per UTC
     # day (app/services/game/history.py), one hour after the page snapshots so
     # it reads their fresh risk / margin-of-safety rows. Thinned by
-    # retention_v1 (daily 90 days, weekly 2 years, monthly for ever). The Chronicle (G14) replays these.
+    # retention_v1 (daily 90 days, weekly 2 years, monthly for ever). The Night Watch compares the newest two.
     game_state_history_enabled: bool = True
     game_state_history_hour_utc: int = 5
     # Unused since B1 (retention_v1 thins by age tier instead); kept so an old

@@ -1,5 +1,5 @@
-"""Sprint 24 pure logic: Chronicle diff, Raven measures, Night Watch dispatch
-(game mode G14 / G15 / G16, 2026-10-04)."""
+"""Sprint 24 pure logic: Frame diff, Raven measures, Night Watch dispatch
+(game mode G15 / G16, 2026-10-04)."""
 from __future__ import annotations
 
 import re
@@ -17,12 +17,12 @@ from app.domain.game_mapping.time_and_filings_v1 import (
     get_time_and_filings,
 )
 from app.schemas.game import (
-    ChronicleChangeOut,
-    ChronicleFrameOut,
-    ChronicleTowerOut,
+    FrameChangeOut,
+    FrameOut,
+    FrameTowerOut,
     NightWatchFiredOut,
 )
-from app.services.game.chronicle import build_chronicle_from, diff_frames
+from app.services.game.frame_diff import diff_frames
 from app.services.game.night_watch import build_night_watch
 from app.services.game.ravens import measure_line, summarise
 
@@ -32,16 +32,16 @@ BANNED = re.compile(r"\b(buy|sell|add|trim|invest|purchase|congratulations|great
 
 
 def tower(name, weight, *, wall="granite", moat="wide", land="fog", thesis="intact", hid=None):
-    return ChronicleTowerOut(
+    return FrameTowerOut(
         holding_id=hid or uuid.uuid5(uuid.NAMESPACE_DNS, name), ticker=name[:4].upper(), name=name,
         structure="keep", size_class="medium", weight_pct=None if weight is None else D(weight),
         wall=wall, moat=moat, land=land, thesis=thesis,
     )
 
 
-def frame(day, towers, *, source="stored", weather="calm"):
-    return ChronicleFrameOut(
-        day=day, at=datetime.combine(day, datetime.min.time(), tzinfo=timezone.utc), source=source,
+def frame(day, towers, *, weather="calm"):
+    return FrameOut(
+        day=day, at=datetime.combine(day, datetime.min.time(), tzinfo=timezone.utc),
         total_value_nok=D(1000), weather=weather, towers=towers,
     )
 
@@ -54,7 +54,7 @@ def test_rules_version_lookup():
         get_time_and_filings("v9")
 
 
-# --- Chronicle ----------------------------------------------------------------
+# --- Frame diff ----------------------------------------------------------------
 
 def test_towers_joining_leaving_and_resizing():
     a, b = tower("Alpha", 30), tower("Beta", 20)
@@ -90,73 +90,6 @@ def test_surveyed_and_no_longer_surveyed_are_said_plainly():
     texts = [c.text for c in diff_frames(before, after, R)]
     assert "The walls of Alpha were surveyed: brick." in texts
     assert "The moat of Alpha is no longer surveyed." in texts
-
-
-def test_no_wall_or_weather_change_is_reported_across_a_positions_only_frame():
-    # A positions-only frame carries "unsurveyed" because nothing was stored,
-    # not because the walls were unknown: comparing it would invent history.
-    old = frame(date(2026, 9, 1), [tower("Alpha", 30, wall="unsurveyed", moat="unsurveyed", thesis="not_analyzed")],
-                source="positions_only", weather="unsurveyed")
-    new = frame(date(2026, 9, 2), [tower("Alpha", 30, wall="basalt", moat="wide", thesis="intact")], weather="calm")
-    assert diff_frames(old, new, R) == []
-
-
-def test_chronicle_assembly_prefers_stored_frames_and_labels_the_rest():
-    pos = [frame(date(2026, 8, 1), [tower("Alpha", 100, wall="unsurveyed")], source="positions_only"),
-           frame(date(2026, 9, 2), [tower("Alpha", 100, wall="unsurveyed")], source="positions_only")]
-    state = _state([tower("Alpha", 60), tower("Beta", 40)])
-    stored = [(date(2026, 9, 2), NOW, state)]
-    out = build_chronicle_from(stored, pos, R)
-    # the positions-only frame on the stored day is dropped; the stored one wins
-    assert [f.source for f in out.frames] == ["positions_only", "stored"]
-    assert out.stored_frames == 1 and out.positions_only_frames == 1
-    assert out.first_stored_day == date(2026, 9, 2)
-    joined = " ".join(out.notes)
-    assert "cannot be rebuilt" in joined and "One nightly frame" in joined
-    assert any(c.kind == "tower_added" and "Beta" in c.text for c in out.changes)
-
-
-def test_empty_chronicle_says_why():
-    out = build_chronicle_from([], [], R)
-    assert out.frames == [] and "no portfolio snapshot" in " ".join(out.notes)
-
-
-def test_frames_beyond_the_cap_are_counted_not_silently_dropped():
-    pos = [frame(date(2026, 1, 1) + timedelta(days=i), [tower("Alpha", 100)], source="positions_only") for i in range(130)]
-    out = build_chronicle_from([], pos, R)
-    assert len(out.frames) == R.chronicle_max_frames and out.hidden_frames == 10
-    assert out.frames[-1].day == date(2026, 1, 1) + timedelta(days=129)  # the newest are kept
-    assert "10 older frame(s)" in " ".join(out.notes)
-
-
-def _state(towers):
-    from app.schemas.game import (
-        DiworsificationOut,
-        GameStateOut,
-        SiegeOut,
-        TowerOut,
-        VaultOut,
-    )
-
-    return GameStateOut(
-        mapping_version="v1", as_of=NOW, total_value_nok=D(1000),
-        towers=[
-            TowerOut(holding_id=t.holding_id, ticker=t.ticker, name=t.name, instrument_type="stock", sector=None,
-                     structure=t.structure, value_nok=None, weight_pct=t.weight_pct, size_class=t.size_class,
-                     moat=t.moat, wall=t.wall, wall_reason="", freshness="fresh", analysis_age_days=1,
-                     verdict_rating=None)
-            for t in towers
-        ],
-        diworsification=DiworsificationOut(position_count=len(towers), shack_count=0, shantytown="none", hhi=None,
-                                           effective_holdings=None, top1_pct=None, top5_pct=None),
-        vault=VaultOut(level="unsurveyed", cash_nok=None, cash_share_pct=None, accounts_total=0, accounts_with_cash=0,
-                       cash_oldest_as_of=None, gold_oz=D(0), silver_oz=D(0)),
-        siege=SiegeOut(level="calm", reasons=[], regime=None, regime_explanation=None, portfolio_shock_pct=None,
-                       portfolio_drawdown_nok=None, risk_snapshot_at=None, risk_snapshot_age_days=None,
-                       risk_snapshot_stale=False, land_snapshot_at=None, land_snapshot_age_days=None,
-                       land_snapshot_stale=False, shared_walls=[], breached_count=0),
-        notes=[],
-    )
 
 
 # --- Ravens --------------------------------------------------------------------
@@ -284,7 +217,7 @@ def test_many_fired_lines_are_capped_and_counted():
 
 
 def test_changes_ravens_and_missing_frames_are_said():
-    change = ChronicleChangeOut(day=date(2026, 10, 4), kind="weather_changed", text="The weather turned from calm to gathering.")
+    change = FrameChangeOut(day=date(2026, 10, 4), kind="weather_changed", text="The weather turned from calm to gathering.")
     out = watch(changes=[change], ravens_landed=["Alpha", "Beta"])
     texts = [line.text for line in out.lines]
     assert "The weather turned from calm to gathering." in texts
@@ -299,7 +232,7 @@ def test_changes_ravens_and_missing_frames_are_said():
 
 def test_lines_are_sorted_warnings_first_and_never_advise():
     out = watch(firing=[fired("Alpha", 2)], ravens_landed=["Beta"],
-                changes=[ChronicleChangeOut(day=date(2026, 10, 4), kind="tower_added", text="Gamma joined the fortress (5.0% of the realm).")])
+                changes=[FrameChangeOut(day=date(2026, 10, 4), kind="tower_added", text="Gamma joined the fortress (5.0% of the realm).")])
     tones = [line.tone for line in out.lines]
     assert tones == sorted(tones, key={"warning": 0, "note": 1, "calm": 2}.get)
     for line in out.lines:

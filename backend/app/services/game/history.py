@@ -3,7 +3,7 @@
 History cannot be backfilled: `computed_snapshots` rows are keyed and
 overwritten, so yesterday's walls, moats and weather are gone the moment
 today's are stored. Saving the Fortress state once a night starts the record
-the Chronicle (G14) replays.
+the Night Watch (G16) compares.
 
 * Stored in the existing `computed_snapshots` table under
   `game_state:YYYY-MM-DD` (UTC day). **No migration.** A stored frame is a
