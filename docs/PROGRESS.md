@@ -1,6 +1,6 @@
 # Aladdin — Progress
 
-**Last updated:** 2026-10-18 (Council lectern, PR open; Walls on the rise and Siege slider at 5%, PR open; smaller Market Street stalls and Fortress default view written; Market Street page and Night Watch card order written; Siege towers backdrops written, PR open). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
+**Last updated:** 2026-10-18 (Council fewer clicks, PR open; Council lectern, PR open; Walls on the rise and Siege slider at 5%, PR open; smaller Market Street stalls and Fortress default view written; Market Street page and Night Watch card order written; Siege towers backdrops written, PR open). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
 
 ## Current Objective
 
@@ -24,6 +24,8 @@ State: `main` is at `30f0cb9` (#156), which includes #155 (Map towers as sector 
 - [ ] **Council lectern (PR `feature/council-lectern`, written and tested, not merged, not deployed, not seen in a browser):** "Call someone to the floor": pick a tower, one of four fixed questions, then the Oracle or the Partner answers from stored facts (new read-only `GET /game/council/ask`, hand-written versioned answers, no LLM); a quiet night now shows one picture of the empty hall instead of eight hollow seats. After deploy look at the Council with Game mode on, phone and desktop, and try a quiet night ([doc](game/council-engagement-ideas-2026-10-18.md))
 - [ ] **Council room + Records shelf (PR `feature/records-shelf-council-room`, written and tested, not merged, not deployed, not seen in a browser):** the Council shows Faiz's two wide room pictures (quiet / busy) with the Oracle and Partner as clickable hotspots that call them to the lectern; Records shelf books are as wide as their nameplates. After deploy look at both pages with Game mode on, phone and desktop ([doc](game/council-room-and-records-shelf-2026-10-18.md))
 - [ ] **Optional, visual:** with Game mode on, look at the World banner crop on the Siege Simulator (Claude could not judge it)
+
+- [ ] **Council fewer clicks (PR `fix/council-fewer-clicks`, written and tested, not merged, not deployed, not seen in a browser):** the lectern opens with a tower, question and councillor already picked and answers on any tap (no Ask step); new "Taps" gate in the game checklist and CLAUDE.md. After deploy: Council with Game mode on, count the taps, phone and desktop ([doc](game/council-fewer-clicks-2026-10-18.md))
 
 ## Recent Blockers / Open Questions
 
