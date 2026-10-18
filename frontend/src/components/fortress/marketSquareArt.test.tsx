@@ -4,7 +4,6 @@ import { afterEach, describe, expect, it } from "vitest";
 import { GameModeProvider } from "../../lib/gameMode";
 import MarketSquare from "./MarketSquare";
 import VaultCard from "./VaultCard";
-import ChamberFurniture from "./kit/ChamberFurniture";
 import type { GameVault } from "../../lib/types";
 
 /** Pictures follow Game mode (no separate switch), so the stub turns game mode on or off. */
@@ -67,19 +66,5 @@ describe("Vault picture", () => {
   it("never shows it for a thin, empty or unentered vault", () => {
     stub(true);
     for (const level of ["thin", "empty", "unsurveyed"] as const) expect(render(level)).not.toContain("vault-stocked");
-  });
-});
-
-describe("Council advisers", () => {
-  it("seat each adviser on a chair in one picture", () => {
-    stub(true);
-    const html = renderToStaticMarkup(
-      <GameModeProvider>
-        <ChamberFurniture oracle={<i />} partner={<i />} />
-      </GameModeProvider>,
-    );
-    expect(html).toContain("council-sit-partner");
-    expect(html).toContain("council-sit-oracle");
-    expect(html).not.toContain("council-chair");
   });
 });

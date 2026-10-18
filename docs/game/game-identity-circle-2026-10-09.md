@@ -1,6 +1,6 @@
 # Game identity: Circle of Competence ring map — 2026-10-09
 
-Status: **written and tested, not merged, not deployed. Seen only in headless Chromium with a synthetic fixture (1280 px and 390 px), never with real data and never in Faiz's browser.** Frontend only: no backend, API, migration or dependency change. The only write is still the existing competence PUT/DELETE behind each row's Save. Stacked on #89 (page-scene kit): retarget to `main` after #89 merges. Design: `docs/game/circle-council-design-2026-10-09.md` section 2.B (C1-C5; C6 skipped on purpose).
+Status: **written and tested, not merged, not deployed. Seen only in headless Chromium with a synthetic fixture (1280 px and 390 px), never with real data and never in Faiz's browser.** Frontend only: no backend, API, migration or dependency change. The only write is still the existing competence PUT/DELETE behind each row's Save. Stacked on #89 (page-scene kit): retarget to `main` after #89 merges. Design: `docs/game/circle-design-2026-10-09.md` section 2.B (C1-C5; C6 skipped on purpose).
 
 ## What changed
 

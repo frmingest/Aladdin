@@ -1,6 +1,6 @@
 ---
 name: game-designer
-description: Game systems and design specs for Aladdin game mode (fortress, siege, council, records, scriptorium, fog of war). Use BEFORE building a new game feature, to review one, and for sprint idea gathering (/game-ideas). Writes specs, not code.
+description: Game systems and design specs for Aladdin game mode (fortress, siege, records, scriptorium, fog of war). Use BEFORE building a new game feature, to review one, and for sprint idea gathering (/game-ideas). Writes specs, not code.
 tools: Read, Grep, Glob, Write
 model: opus
 ---

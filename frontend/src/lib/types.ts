@@ -2349,11 +2349,10 @@ export interface SiegeBacktest {
   notes: string[];
 }
 
-// --- Sprint 24: Chronicle (G14), Ravens (G15), Night Watch (G16) -------------
-// backend/app/api/game.py GET /game/chronicle, /game/ravens, /game/night-watch
+// --- Sprint 24: stored-frame changes, Ravens (G15), Night Watch (G16) -------------
+// backend/app/api/game.py GET /game/ravens, /game/night-watch
 
-export type ChronicleSource = "stored" | "positions_only";
-export type ChronicleChangeKind =
+export type FrameChangeKind =
   | "tower_added"
   | "tower_removed"
   | "tower_resized"
@@ -2362,55 +2361,12 @@ export type ChronicleChangeKind =
   | "thesis_changed"
   | "weather_changed";
 
-export interface ChronicleTower {
-  holding_id: string;
-  ticker: string;
-  name: string;
-  structure: FortressStructure;
-  size_class: FortressSize;
-  weight_pct: string | null;
-  wall: FortressWall;
-  moat: FortressMoat;
-  land: FortressLand;
-  thesis: FortressThesis;
-}
-
-export interface ChronicleFrame {
+export interface FrameChange {
   day: string;
-  at: string;
-  source: ChronicleSource;
-  total_value_nok: string | null;
-  weather: FortressSiegeLevel;
-  towers: ChronicleTower[];
-}
-
-export interface ChronicleChange {
-  day: string;
-  kind: ChronicleChangeKind;
+  kind: FrameChangeKind;
   holding_id: string | null;
   holding_name: string | null;
   text: string;
-}
-
-export interface ChronicleGap {
-  first_day: string;
-  last_day: string;
-  days: number;
-  text: string;
-}
-
-export interface Chronicle {
-  rules_version: string;
-  demo: boolean;
-  frames: ChronicleFrame[];
-  changes: ChronicleChange[];
-  stored_frames: number;
-  positions_only_frames: number;
-  first_stored_day: string | null;
-  hidden_frames: number;
-  /** Recent days with no stored frame (the worker was off). Absent on older payloads. */
-  gaps?: ChronicleGap[];
-  notes: string[];
 }
 
 export type RavenDirection = "better" | "worse" | "steady" | "unknown";
@@ -2491,7 +2447,7 @@ export interface NightWatch {
   frames_stored: number;
   last_frame_day: string | null;
   ravens_landed: number;
-  changes_since_last_frame: ChronicleChange[];
+  changes_since_last_frame: FrameChange[];
   lines: NightWatchLine[];
 }
 
@@ -2501,63 +2457,6 @@ export interface HoldingAdvisors {
   holding_id: string;
   lines_version: string;
   lines: GameAdvisorLine[];
-  disclaimer: string;
-}
-
-export type CouncilKind =
-  | "tripwire"
-  | "thesis_review"
-  | "review_due"
-  | "weak_walls"
-  | "no_moat"
-  | "stale_analysis"
-  | "outside_circle"
-  | "cash";
-
-export interface CouncilHolding {
-  holding_id: string | null;
-  name: string;
-  weight_pct: string | null;
-}
-
-export interface CouncilItem {
-  kind: CouncilKind;
-  tone: "warning" | "note";
-  title: string;
-  text: string;
-  holdings: CouncilHolding[];
-  /** Holdings that matched but were not named. */
-  more: number;
-  facts: string[];
-}
-
-export interface Council {
-  rules_version: string;
-  demo: boolean;
-  as_of: string;
-  items: CouncilItem[];
-  advisors: GameAdvisorLine[];
-  unknowns: string[];
-  summary: string;
-  disclaimer: string;
-}
-
-/** Council questions: four fixed questions, no free text. */
-export type CouncilQuestion = "why_here" | "edge" | "storm" | "beside";
-
-/** One advisor's answer about one holding, built from stored fields by fixed rules and worded by hand.
- * read: a reading; silent: this advisor has no rule for the holding; none: nothing stored to answer from. */
-export interface CouncilAnswer {
-  holding_id: string;
-  holding_name: string;
-  question: CouncilQuestion;
-  advisor: GameAdvisorName;
-  read: "read" | "silent" | "none";
-  tone: "warning" | "note" | "calm";
-  text: string;
-  facts: string[];
-  rules: string[];
-  questions_version: string;
   disclaimer: string;
 }
 

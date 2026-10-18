@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from dataclasses import dataclass
-from datetime import date, timedelta
+from datetime import date
 
 
 @dataclass(frozen=True)
@@ -57,38 +57,3 @@ def frames_to_keep(days: Iterable[date], *, today: date, rules: RetentionRules =
     keep.update(weekly.values())
     keep.update(monthly.values())
     return keep
-
-
-@dataclass(frozen=True)
-class Gap:
-    first_day: date
-    last_day: date
-
-    @property
-    def days(self) -> int:
-        return (self.last_day - self.first_day).days + 1
-
-
-def missing_ranges(stored: Iterable[date], *, today: date, rules: RetentionRules = RETENTION_V1) -> list[Gap]:
-    """Runs of days inside the daily window, after the first stored frame and
-    before today, that have no stored frame. Today is never a gap (the worker
-    may not have run yet), and nothing before the first stored frame is: the
-    record had not started. Older days are thinned by design, not missing."""
-    have = set(stored)
-    if not have:
-        return []
-    start = max(min(have), today - timedelta(days=rules.daily_days))
-    gaps: list[Gap] = []
-    run_start: date | None = None
-    day = start
-    while day < today:
-        if day in have:
-            if run_start is not None:
-                gaps.append(Gap(run_start, day - timedelta(days=1)))
-                run_start = None
-        elif run_start is None:
-            run_start = day
-        day += timedelta(days=1)
-    if run_start is not None:
-        gaps.append(Gap(run_start, today - timedelta(days=1)))
-    return gaps

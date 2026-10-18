@@ -28,11 +28,8 @@ from app.schemas.game import (
     CalibrationCallsOut,
     CalibrationOracleOut,
     CalibrationOut,
-    ChronicleOut,
     CompetenceMarkIn,
     CompetenceOut,
-    CouncilAnswerOut,
-    CouncilOut,
     GameStateOut,
     HoldingAdvisorsOut,
     NightWatchOut,
@@ -43,17 +40,14 @@ from app.schemas.game import (
 )
 from app.services.game import calibration as calibration_svc
 from app.services.game import competence as competence_svc
-from app.services.game import council_ask as council_ask_svc
 from app.services.game import rituals as rituals_svc
 from app.services.game.backtest_view import (
     build_backtest,
     demo_backtest,
     stored_backtest_inputs,
 )
-from app.services.game.chronicle import get_chronicle
 from app.services.game.demo import (
     DEMO_BETAS,
-    demo_chronicle,
     demo_game_state,
     demo_night_watch,
     demo_ravens,
@@ -140,20 +134,6 @@ def get_siege_backtest(db: Session = Depends(get_db)) -> SiegeBacktestOut:
     return build_backtest(state, bench, holdings, scenarios, rules)
 
 
-@router.get("/chronicle", response_model=ChronicleOut)
-def get_chronicle_route(db: Session = Depends(get_db)) -> ChronicleOut:
-    """G14 The Chronicle: the fortress replayed through time. Frames stored by
-    the worker each night (G14a) carry the real walls, moats and weather of
-    their day; older days are rebuilt from portfolio imports with unsurveyed
-    walls. A replay of stored data: no provider call, no LLM, no write."""
-    settings = get_settings()
-    rules_v = get_time_and_filings(settings.active_time_and_filings_version)
-    if is_demo_mode(db):
-        return demo_chronicle(settings.active_game_mapping_version, rules_v)
-    mapping = get_game_mapping(settings.active_game_mapping_version)
-    return get_chronicle(db, mapping, rules_v)
-
-
 @router.get("/ravens", response_model=RavensOut)
 def get_ravens(db: Session = Depends(get_db)) -> RavensOut:
     """G15 The Ravens: reports captured recently, each with what changed
@@ -193,23 +173,6 @@ def get_holding_advisors(holding_id: UUID, db: Session = Depends(get_db)) -> Hol
     only the first few). Stored data only; never advice to trade."""
     state, _ = _state_for(db)
     return rituals_svc.holding_advisor_lines(state, holding_id)
-
-
-@router.get("/council/ask", response_model=CouncilAnswerOut)
-def get_council_answer(
-    holding_id: UUID,
-    question: Literal["why_here", "edge", "storm", "beside"] = Query(description="One of four fixed questions; there is no free text."),
-    advisor: Literal["oracle", "partner"] = Query(description="Which councillor answers."),
-    db: Session = Depends(get_db),
-) -> CouncilAnswerOut:
-    """Council question: one advisor's answer about one holding, picked by fixed rules from the stored
-    fortress and worded by hand (council_questions_v1). Stored data only: no provider call, no LLM, no
-    write, and nothing the player wrote is read."""
-    state, _ = _state_for(db)
-    found = council_ask_svc.answer(state, holding_id, question, advisor)
-    if found is None:
-        raise HTTPException(status_code=404, detail="That holding is not in the fortress.")
-    return found
 
 
 @router.get("/records", response_model=RecordsOut)
@@ -293,19 +256,3 @@ def delete_competence(sector: str, db: Session = Depends(get_db)) -> CompetenceO
     competence_svc.clear_mark(db, sector)
     state, _ = _state_for(db)
     return competence_svc.get_competence(db, state.towers, rules)
-
-
-@router.get("/council", response_model=CouncilOut)
-def get_council(db: Session = Depends(get_db)) -> CouncilOut:
-    """G17 Council Chamber: a quarterly review agenda built from the rules the
-    Fortress already uses. Read-only; attending earns nothing."""
-    rules = get_rituals(get_settings().active_rituals_version)
-    state, demo = _state_for(db)
-    entries = demo_journal_entries() if demo else journal_entries(db)
-    records = rituals_svc.build_records(entries, state, rules, demo=demo)
-    now = datetime.now(timezone.utc)
-    if demo:
-        circle = competence_svc.build_competence(state.towers, demo_competence_marks(now), rules, demo=True)
-    else:
-        circle = competence_svc.get_competence(db, state.towers, rules)
-    return rituals_svc.build_council(state, records, circle, rules, now=now, demo=demo)

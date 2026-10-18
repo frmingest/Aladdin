@@ -368,40 +368,36 @@ class SiegeBacktestOut(BaseModel):
     notes: list[str] = []
 
 
-# --- Sprint 24 (2026-10-04): Chronicle (G14), Ravens (G15), Night Watch (G16) ---
+# --- Sprint 24 (2026-10-04): stored-frame changes, Ravens (G15), Night Watch (G16) ---
 
-ChronicleSource = Literal["stored", "positions_only"]
 ChangeKind = Literal[
     "tower_added", "tower_removed", "tower_resized", "wall_changed", "moat_changed",
     "thesis_changed", "weather_changed",
 ]
 
 
-class ChronicleTowerOut(BaseModel):
+class FrameTowerOut(BaseModel):
     holding_id: UUID
     ticker: str
     name: str
     structure: Structure
     size_class: SizeClass
     weight_pct: Decimal | None
-    # In a positions-only frame these are "unsurveyed" / "fog" / "not_analyzed":
-    # the walls of a day nobody stored cannot be rebuilt from old positions.
     wall: WallMaterial
     moat: MoatTier
     land: LandState
     thesis: ThesisState
 
 
-class ChronicleFrameOut(BaseModel):
+class FrameOut(BaseModel):
     day: date
     at: datetime
-    source: ChronicleSource
     total_value_nok: Decimal | None
     weather: SiegeLevel
-    towers: list[ChronicleTowerOut]
+    towers: list[FrameTowerOut]
 
 
-class ChronicleChangeOut(BaseModel):
+class FrameChangeOut(BaseModel):
     """One thing that differs between a frame and the one before it."""
 
     day: date
@@ -409,31 +405,6 @@ class ChronicleChangeOut(BaseModel):
     holding_id: UUID | None = None
     holding_name: str | None = None
     text: str
-
-
-class ChronicleGapOut(BaseModel):
-    """A run of recent days with no stored frame (the worker was off). Nothing
-    is known about those days, not even that they were calm."""
-
-    first_day: date
-    last_day: date
-    days: int
-    text: str
-
-
-class ChronicleOut(BaseModel):
-    rules_version: str
-    demo: bool = False
-    frames: list[ChronicleFrameOut]
-    changes: list[ChronicleChangeOut]
-    stored_frames: int
-    positions_only_frames: int
-    first_stored_day: date | None
-    # Frames older than the newest `chronicle_max_frames` that were left out.
-    hidden_frames: int = 0
-    # Recent days with no stored frame; older days are thinned by retention_v1.
-    gaps: list[ChronicleGapOut] = []
-    notes: list[str]
 
 
 RavenDirectionOut = Literal["better", "worse", "steady", "unknown"]
@@ -521,17 +492,14 @@ class NightWatchOut(BaseModel):
     frames_stored: int
     last_frame_day: date | None
     ravens_landed: int
-    changes_since_last_frame: list[ChronicleChangeOut]
+    changes_since_last_frame: list[FrameChangeOut]
     lines: list[NightWatchLineOut]
 
 
-# --- Sprint 25: rituals (G17 Council, G18 Records, G19 Circle, G20 holding lines) ---
+# --- Sprint 25: rituals (G18 Records, G19 Circle, G20 holding lines) ---
 
 CompetenceLevelOut = Literal["know", "partly", "outside"]
 CompetenceStatus = Literal["inside", "edge", "outside", "unmarked", "unclassified", "not_applicable"]
-AgendaKind = Literal[
-    "tripwire", "thesis_review", "review_due", "weak_walls", "no_moat", "stale_analysis", "outside_circle", "cash"
-]
 RecordReviewState = Literal["written", "due", "not_due"]
 
 
@@ -542,37 +510,6 @@ class HoldingAdvisorsOut(BaseModel):
     holding_id: UUID
     lines_version: str
     lines: list[AdvisorLineOut]
-    disclaimer: str
-
-
-class CouncilHoldingOut(BaseModel):
-    holding_id: UUID | None
-    name: str
-    weight_pct: Decimal | None = None
-
-
-class CouncilItemOut(BaseModel):
-    kind: AgendaKind
-    tone: Literal["warning", "note"]
-    title: str
-    text: str
-    holdings: list[CouncilHoldingOut]
-    more: int = 0  # holdings that matched but were not named
-    facts: list[str] = Field(default_factory=list)
-
-
-class CouncilOut(BaseModel):
-    """G17: the quarterly review room. An agenda built from rules the Fortress
-    already uses, plus what the advisors say. Read-only; attending earns
-    nothing and an empty agenda is said plainly, never padded."""
-
-    rules_version: str
-    demo: bool = False
-    as_of: datetime
-    items: list[CouncilItemOut]
-    advisors: list[AdvisorLineOut]
-    unknowns: list[str]
-    summary: str
     disclaimer: str
 
 
@@ -700,21 +637,3 @@ class CalibrationOut(BaseModel):
     calls: CalibrationCallsOut
     oracle: CalibrationOracleOut
     caption: str
-
-
-class CouncilAnswerOut(BaseModel):
-    """Council question: one advisor's answer about one holding, built from stored fields by fixed
-    rules and worded by hand (council_questions_v1). `read` says whether it is a reading, silence (this
-    advisor has no rule for the holding) or no reading (nothing stored to answer from)."""
-
-    holding_id: UUID
-    holding_name: str
-    question: Literal["why_here", "edge", "storm", "beside"]
-    advisor: Literal["oracle", "partner"]
-    read: Literal["read", "silent", "none"]
-    tone: Literal["warning", "note", "calm"]
-    text: str
-    facts: list[str] = Field(default_factory=list)
-    rules: list[str] = Field(default_factory=list)
-    questions_version: str
-    disclaimer: str

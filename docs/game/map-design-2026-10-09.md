@@ -1,7 +1,7 @@
 # Map (Cartographer's table): making fog look like fog
 
 Role: game-designer + art director. Date: 2026-10-09. Proposal only; nothing built, nothing under `$HOME/mnt` touched.
-Paths relative to `frontend/src/`. Read: circle-council-design.md, game-pages-identity-audit.md, `pages/CartographerPage.tsx`, `lib/survey.ts` + test, sprint-28 doc, sprint-plan v2 (G34/G35), `lib/fortress.ts` (layout), `lib/fortressArt.ts`, `GameFrame.tsx`, `TowerSurvey.tsx`, `wordBudget.ts`, parts of `FortressScene.tsx` (`GhostKeep`) and `sceneWorld.tsx`.
+Paths relative to `frontend/src/`. Read: circle-design.md, game-pages-identity-audit.md, `pages/CartographerPage.tsx`, `lib/survey.ts` + test, sprint-28 doc, sprint-plan v2 (G34/G35), `lib/fortress.ts` (layout), `lib/fortressArt.ts`, `GameFrame.tsx`, `TowerSurvey.tsx`, `wordBudget.ts`, parts of `FortressScene.tsx` (`GhostKeep`) and `sceneWorld.tsx`.
 NOT verified: nothing seen in a browser; `lib/sceneNav.ts` (named in the Circle doc) not opened; `Disclosure` in `ui.tsx` (whether closed children are in the DOM, which matters for word-count tests) not opened; word counts below are estimates from code; backend untouched/unread.
 
 ## 1. Diagnosis (why it is normal mode, and what is wrong with the fog)

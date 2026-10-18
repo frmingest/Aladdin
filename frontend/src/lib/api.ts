@@ -37,13 +37,8 @@ import type {
   SiegeBacktest,
   SiegeBenchmarkKey,
   SiegeSim,
-  Chronicle,
   Competence,
   CompetenceLevel,
-  Council,
-  CouncilAnswer,
-  CouncilQuestion,
-  GameAdvisorName,
   HoldingAdvisors,
   Records,
   Calibration,
@@ -418,15 +413,10 @@ export const api = {
 
   /** Game mode (F33, G1) — the fortress state: a read-only view over stored data, no provider call. */
   getGameState: () => request<GameState>("/game/state"),
-  // Sprint 24: replay of stored fortress frames (G14), recently captured reports (G15), the nightly check as a dispatch (G16). All read-only.
-  getChronicle: () => request<Chronicle>("/game/chronicle"),
+  // Sprint 24: recently captured reports (G15), the nightly check as a dispatch (G16). All read-only.
   getRavens: () => request<Ravens>("/game/ravens"),
   getNightWatch: () => request<NightWatch>("/game/night-watch"),
-  // Sprint 25 rituals: Council (G17), Hall of Records (G18), Circle of Competence (G19), per-holding advisor lines (G20).
-  getCouncil: () => request<Council>("/game/council"),
-  /** Council question: one advisor, one holding, one of four fixed questions. Stored data only. */
-  askCouncil: (holdingId: string, question: CouncilQuestion, advisor: GameAdvisorName) =>
-    request<CouncilAnswer>("/game/council/ask", { query: { holding_id: holdingId, question, advisor } }),
+  // Sprint 25 rituals: Hall of Records (G18), Circle of Competence (G19), per-holding advisor lines (G20).
   getRecords: () => request<Records>("/game/records"),
   /** C2 hit rate: counts only, gated by the server (opens at min_n outcomes). */
   getCalibration: () => request<Calibration>("/game/calibration"),

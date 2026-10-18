@@ -1,5 +1,5 @@
-"""Sprint 24 over the real routes and a database: G14a nightly frame, G14
-Chronicle, G15 Ravens, G16 Night Watch (2026-10-04). Read-only, demo mode
+"""Sprint 24 over the real routes and a database: G14a nightly frame,
+G15 Ravens, G16 Night Watch (2026-10-04). Read-only, demo mode
 wins, unknown stays unknown."""
 from __future__ import annotations
 
@@ -84,60 +84,9 @@ def test_demo_mode_is_never_stored(client, db_session):
     assert history.stored_days(db_session) == []
 
 
-# --- G14 ---------------------------------------------------------------------
-
-
-def test_empty_chronicle(client):
-    body = client.get("/game/chronicle").json()
-    assert body["frames"] == [] and "no portfolio snapshot" in " ".join(body["notes"])
-
-
-def test_chronicle_replays_imports_then_stored_frames(client, db_session):
-    account = _seed(db_session)
-    # An older import (30 days ago) with only two of today's holdings.
-    old_doc = Document(type="portfolio_export", original_filename="b.csv", mime_type="text/csv", size_bytes=1,
-                       storage_path="b.csv", sha256="b" * 64, status="processed", quality_flags={})
-    old = PortfolioSnapshot(source_file=old_doc, reporting_currency="NOK", status="processed", account=account,
-                            uploaded_at=NOW - timedelta(days=30))
-    db_session.add_all([old_doc, old])
-    db_session.add_all([
-        PortfolioPosition(snapshot=old, holding=_holding(db_session, "CASH.OL"), market_value_nok=D(600)),
-        PortfolioPosition(snapshot=old, holding=_holding(db_session, "GEAR.OL"), market_value_nok=D(400)),
-    ])
-    db_session.commit()
-
-    body = client.get("/game/chronicle").json()
-    assert [f["source"] for f in body["frames"]] == ["positions_only", "positions_only"]
-    first = body["frames"][0]
-    assert {t["ticker"] for t in first["towers"]} == {"CASH.OL", "GEAR.OL"}
-    weights = {t["ticker"]: D(t["weight_pct"]) for t in first["towers"]}
-    assert weights == {"CASH.OL": D(60), "GEAR.OL": D(40)}
-    assert all(t["wall"] == "unsurveyed" and t["land"] == "fog" for t in first["towers"])
-    assert first["weather"] == "unsurveyed"
-    kinds = {c["kind"] for c in body["changes"]}
-    assert kinds == {"tower_added", "tower_resized"}                       # no wall / weather claims
-    assert body["stored_frames"] == 0 and "No nightly frame" in " ".join(body["notes"])
-
-    # Two stored frames: the second has a fired tripwire, so the breach shows.
-    holding = _holding(db_session, "CASH.OL")
-    state = get_game_state(db_session, "v1", now=NOW)
-    history.store_frame(db_session, state, day=NOW.date() - timedelta(days=1), now=NOW)
-    db_session.add(ThesisTripwire(holding_id=holding.id, metric="roic", operator="below", threshold=D("0.5"),
-                                  label="ROIC below 50%", active=True, fired_at=NOW))
-    db_session.commit()
-    history.store_frame(db_session, get_game_state(db_session, "v1", now=NOW), day=NOW.date(), now=NOW)
-
-    body = client.get("/game/chronicle").json()
-    assert body["stored_frames"] == 2
-    assert [f["source"] for f in body["frames"]] == ["positions_only", "stored", "stored"]
-    assert body["first_stored_day"] == (NOW.date() - timedelta(days=1)).isoformat()
-    assert any(c["kind"] == "thesis_changed" and c["text"] == "A tripwire fired on Cash Rich." for c in body["changes"])
-
-
-def test_chronicle_is_read_only(client, db_session):
+def test_night_watch_and_ravens_are_read_only(client, db_session):
     _seed(db_session)
     before = (db_session.query(ComputedSnapshot).count(), db_session.query(AppSetting).count())
-    client.get("/game/chronicle")
     client.get("/game/ravens")
     client.get("/game/night-watch")
     db_session.expire_all()
@@ -292,13 +241,10 @@ def test_night_watch_reports_overnight_fires_and_changes(client, db_session):
     assert body["lines"][0]["tone"] == "warning"
 
 
-def test_demo_mode_shows_invented_data_on_all_three_routes(client, db_session):
+def test_demo_mode_shows_invented_data_on_both_routes(client, db_session):
     _seed(db_session)
     assert client.put("/settings/demo-mode", json={"enabled": True}).status_code == 200
     real = {"CASH.OL", "GEAR.OL", "BANK.OL", "FUND", "BARE.OL"}
-    chronicle = client.get("/game/chronicle").json()
-    assert chronicle["demo"] is True and len(chronicle["frames"]) == 3 and chronicle["changes"]
-    assert not {t["ticker"] for f in chronicle["frames"] for t in f["towers"]} & real
     ravens = client.get("/game/ravens").json()
     assert ravens["demo"] is True and {r["kind"] for r in ravens["ravens"]} == {"figures", "text_only"}
     assert not {r["ticker"] for r in ravens["ravens"]} & real
@@ -306,10 +252,10 @@ def test_demo_mode_shows_invented_data_on_all_three_routes(client, db_session):
     assert watch["demo"] is True and watch["fired_overnight"] and watch["status"] == "attention"
 
 
-def test_account_is_untouched_by_the_three_reads(client, db_session):
+def test_account_is_untouched_by_the_reads(client, db_session):
     _seed(db_session)
     before = db_session.query(Account).one().cash_as_of
-    for route in ("chronicle", "ravens", "night-watch"):
+    for route in ("ravens", "night-watch"):
         assert client.get(f"/game/{route}").status_code == 200
     db_session.expire_all()
     assert db_session.query(Account).one().cash_as_of == before

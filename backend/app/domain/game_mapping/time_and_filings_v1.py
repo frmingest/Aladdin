@@ -1,4 +1,4 @@
-"""v1 settings for game mode Sprint 24: Chronicle (G14), Ravens (G15) and
+"""v1 settings for game mode Sprint 24: Ravens (G15) and
 Night Watch (G16), 2026-10-04.
 
 None of these numbers is a prediction or a recommendation. They decide only
@@ -7,10 +7,8 @@ how long a thing stays "new". CLAUDE.md Rule 3: once shown for real, a change
 is a new `time_and_filings_v2.py`, not an edit of this file.
 
 Why these values:
-- Chronicle: a position that moved by at least 2 percentage points of the
-  portfolio is "resized" (smaller moves are price drift, not news); at most
-  120 frames are returned, newest kept, so the payload stays small however
-  long the history grows.
+- Stored-frame changes: a position that moved by at least 2 percentage points
+  of the portfolio is "resized" (smaller moves are price drift, not news).
 - Ravens: a captured report stays "new" for 45 days (about one reporting
   cycle's worth of attention). A measure is only called better or worse when
   it moved by at least the step below; anything smaller is "steady". The
@@ -41,8 +39,7 @@ class RavenMeasure:
 @dataclass(frozen=True)
 class TimeAndFilingsRules:
     version: str
-    # Chronicle
-    chronicle_max_frames: int
+    # Stored-frame changes
     resize_min_points: Decimal  # percentage points of the portfolio
     # Ravens
     raven_window_days: int
@@ -54,7 +51,6 @@ class TimeAndFilingsRules:
 
 TIME_AND_FILINGS_V1 = TimeAndFilingsRules(
     version="v1",
-    chronicle_max_frames=120,
     resize_min_points=Decimal(2),
     raven_window_days=45,
     raven_measures=(

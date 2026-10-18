@@ -1,5 +1,5 @@
 import type { CapsuleState } from "./capsules";
-import type { CouncilKind, FortressSiegeLevel } from "./types";
+import type { FortressSiegeLevel } from "./types";
 import type { CrestKind } from "./crest";
 import { SEAL_LOOK, type SealKind } from "./seals";
 import { getObjectArt, type ObjectArtId } from "./stitchArt";
@@ -14,19 +14,15 @@ import { getObjectArt, type ObjectArtId } from "./stitchArt";
 /** Wide opaque scene behind a room's banner, one per room at most (pack mode `none`). */
 const BACKDROP_OF: Partial<Record<CrestKind, string>> = {
   records: "backdrop-records",
-  chronicle: "backdrop-chronicle",
-  council: "backdrop-council",
   circle: "backdrop-circle",
   map: "backdrop-map",
 };
 
 /**
- * Which band of a wide backdrop the banner strip shows (CSS object-position). Council sits on the
- * table row, above the faint empty panels baked into the bottom of that picture; Circle shows the
+ * Which band of a wide backdrop the banner strip shows (CSS object-position). Circle shows the
  * standing stones on the horizon; Map shows the instruments on the desk.
  */
 const BACKDROP_POSITION: Partial<Record<CrestKind, string>> = {
-  council: "50% 62%",
   circle: "50% 45%",
   map: "50% 22%",
 };
@@ -51,8 +47,6 @@ export function roomCrestId(room: CrestKind): string | null {
 /** Furniture and tools that stand in a room's banner (Sprints 10 to 13), in the order they are drawn. */
 const PROPS_OF: Partial<Record<CrestKind, readonly string[]>> = {
   records: ["room-bookshelf", "room-lectern"],
-  chronicle: ["room-hourglass"],
-  council: ["room-inkwell", "room-scroll"],
   journal: ["room-inkwell", "room-scroll"],
 };
 
@@ -79,7 +73,7 @@ export function sealId(state: SealState): string | null {
 }
 
 /**
- * The picture and printed mark for a Council seal kind (Sprint 9). A note is a whole seal, a warning is a
+ * The picture and printed mark for a seal kind (Sprint 9). A note is a whole seal, a warning is a
  * broken one: the shape carries the tone, and the glyph and word of the page's own seal (lib/seals.ts) are
  * drawn over it by code, so colour is never the only signal. Unknown and none have no picture: their
  * dashed ring and "?" stay SVG so unknown never looks like a smaller known state.
@@ -88,24 +82,6 @@ export function sealArtFor(kind: SealKind): { id: string; glyph: string; label: 
   if (kind !== "alert" && kind !== "notice") return null;
   const id = sealId(kind === "alert" ? "broken" : "whole");
   return id ? { id, glyph: SEAL_LOOK[kind].glyph, label: SEAL_LOOK[kind].label } : null;
-}
-
-export interface CouncilFurniture {
-  table: string;
-  chair: string;
-  candles: string;
-}
-
-/** The Council chamber's furniture, or null unless all three pictures are packed (then the SVG table stays). */
-export function councilFurniture(): CouncilFurniture | null {
-  const f = { table: "council-table", chair: "council-chair", candles: "council-candles" };
-  return Object.values(f).every((id) => getObjectArt(id) !== null) ? f : null;
-}
-
-/** Where the three unlit candles stand on the candle-stand picture, as fractions [x, y] (flames are drawn by code). */
-export function candleTops(): (readonly [number, number])[] {
-  const a = getObjectArt("council-candles")?.anchors;
-  return a ? (["f1", "f2", "f3"] as const).flatMap((k) => (a[k] ? [a[k]] : [])) : [];
 }
 
 /** A picture standing on the Circle map: its base point and width, in percent of the map's width. */
@@ -127,27 +103,6 @@ export function fogStakeId(): string | null {
 }
 
 /**
- * The small round badge for a Council agenda kind (the Council room's seats). It names the rule and nothing
- * else: whether the seat has something on it is told by the seal, the papers and the words, never by the
- * badge. "No moat found" has no badge yet (the picture was not delivered), so that seat keeps its plain look.
- */
-const COUNCIL_BADGE: Partial<Record<CouncilKind, ObjectArtId>> = {
-  tripwire: "badge-tripwire",
-  thesis_review: "badge-thesis",
-  review_due: "badge-casket",
-  weak_walls: "badge-wall",
-  stale_analysis: "badge-scroll",
-  outside_circle: "badge-circle",
-  cash: "badge-vault",
-};
-
-/** The agenda badge for a Council seat kind, or null (no picture for that kind, or not packed). */
-export function councilBadgeId(kind: CouncilKind): ObjectArtId | null {
-  const id = COUNCIL_BADGE[kind];
-  return id && getObjectArt(id) ? id : null;
-}
-
-/**
  * The sky badge beside the weather word in the top bar. Calm is the sun, gathering is clouds, besieged is
  * smoke over a wall. "Not surveyed" has NO picture: an unknown sky must never look like a known one, so it
  * keeps the plain drawn icon. The word beside the badge always says the level.
@@ -161,11 +116,6 @@ const SKY_BADGE: Partial<Record<FortressSiegeLevel, ObjectArtId>> = {
 export function skyBadgeId(level: FortressSiegeLevel): ObjectArtId | null {
   const id = SKY_BADGE[level];
   return id && getObjectArt(id) ? id : null;
-}
-
-/** A plot of ground under a canvas sheet: the Chronicle's unrecorded days ("nothing was kept here"). */
-export function gapPlotId(): ObjectArtId | null {
-  return getObjectArt("plot-covered") ? "plot-covered" : null;
 }
 
 /** The open empty chest for "nothing yet" messages. It carries no amount: it is not the Vault. */

@@ -1,4 +1,4 @@
-import type { GameMargin, GameTower } from "./types";
+import type { FortressWall, GameMargin, GameTower } from "./types";
 
 /**
  * Walls on the rise: how far each keep's wall stands from the next rung up.
@@ -8,6 +8,17 @@ import type { GameMargin, GameTower } from "./types";
  * distance on the last stored statements, and it can move either way with the
  * next report, so the weaker line is kept on the gauge too.
  */
+
+/** Fill colours for a wall material (same palette family as the Fortress scene). */
+export const WALL_FILL: Record<FortressWall, string> = {
+  basalt: "#4b4f57",
+  granite: "#9097a1",
+  brick: "#a9553a",
+  timber: "#8d6436",
+  rotted: "#4f3e29",
+  unsurveyed: "#3a4352",
+  not_applicable: "#7b828d",
+};
 
 export const WALL_RUNGS = ["rotted", "timber", "brick", "granite", "basalt"] as const;
 export type WallRung = (typeof WALL_RUNGS)[number];

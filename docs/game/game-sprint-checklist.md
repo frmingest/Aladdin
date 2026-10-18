@@ -12,7 +12,7 @@ Status: standing gate, proposed 2026-10-09. Standard: [.claude/standards/game-vi
 6. **Kit.** Which kit pieces are reused, which are added (owner: game-feel-engineer).
 7. **Cut line.** One thing to cut if the sprint runs long; it is never the Plain view, the unknown state or the screenshots.
 8. **Rules.** Which Fortress rules each item touches and how truth / colour-blind / reduced-motion / performance are kept.
-9. **Taps.** For each touched page, its main task and the planned tap count from a cold load (target 2 or fewer for the common case). The default state already shows something useful; no control appears twice; selecting acts without a separate confirm step. Added 2026-10-18 after the Council lectern needed four taps to get one answer.
+9. **Taps.** For each touched page, its main task and the planned tap count from a cold load (target 2 or fewer for the common case). The default state already shows something useful; no control appears twice; selecting acts without a separate confirm step. Added 2026-10-18 after a game page needed four taps to get one answer.
 
 ## B. Sprint review must answer
 1. **Pages touched** (as built, from the diff, not from the plan).

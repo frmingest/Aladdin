@@ -21,7 +21,7 @@ export interface DescribedError {
 }
 
 /**
- * @param what  The thing that failed to load, e.g. "the Chronicle" (no capital, no full stop).
+ * @param what  The thing that failed to load, e.g. "the Siege Simulator" (no capital, no full stop).
  */
 export function describeError(e: unknown, what: string): DescribedError {
   if (e instanceof ApiError) {

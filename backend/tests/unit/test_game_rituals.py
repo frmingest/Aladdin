@@ -1,4 +1,4 @@
-"""Sprint 25 rules (G17 Council, G18 Records, G19 Circle, G20 holding lines),
+"""Sprint 25 rules (G18 Records, G19 Circle, G20 holding lines),
 tested without a database. The rituals read the user's real money records, so
 the voice rules are tested too: no trade instruction, no score, no padding."""
 from __future__ import annotations
@@ -52,9 +52,6 @@ def entry(i=1, **kw) -> JournalEntryOut:
 
 def test_rules_file_is_versioned_and_complete():
     assert get_rituals("v1") is RITUALS_V1
-    assert set(RITUALS_V1.agenda_order) == {
-        "tripwire", "thesis_review", "review_due", "weak_walls", "no_moat", "stale_analysis", "outside_circle", "cash"
-    }
     assert RITUALS_V1.competence_levels == ("know", "partly", "outside")
     with pytest.raises(ValueError):
         get_rituals("v9")
@@ -157,74 +154,12 @@ def test_competence_with_no_stocks_says_so():
     assert "no stock holdings" in out.summary
 
 
-# --- G17 ----------------------------------------------------------------------
-
-
-def _council(towers, entries=(), marks=None, **state_kw):
-    state = make_state(towers, **state_kw)
-    records = rit.build_records(list(entries), state, RITUALS_V1)
-    circle = comp.build_competence(towers, marks or {}, RITUALS_V1)
-    return rit.build_council(state, records, circle, RITUALS_V1, now=NOW)
-
-
-def test_agenda_order_is_fixed_and_warnings_come_from_the_named_rules():
-    bad = tower("Bad", wall="rotted", moat="none", thesis="breached", tripwires_fired=1, freshness="overgrown",
-                analysis_age_days=300, sector="Energy")
-    out = _council([bad], marks=MARKS, vault_level="unsurveyed")
-    kinds = [i.kind for i in out.items]
-    assert kinds == ["tripwire", "weak_walls", "no_moat", "stale_analysis", "outside_circle", "cash"]
-    assert [i.tone for i in out.items][:3] == ["warning"] * 3
-    assert out.items[0].holdings[0].name == "Bad"
-
-
-def test_empty_agenda_is_said_plainly_and_not_called_all_well():
-    out = _council([tower("Fine")])
-    assert out.items == []
-    assert "not that all is well" in out.summary
-    assert "not that all is well" in out.disclaimer
-
-
-def test_names_are_capped_and_the_rest_counted():
-    towers = [tower(f"T{i}", moat="none", weight_pct=D(20 - i)) for i in range(7)]
-    out = _council(towers)
-    item = next(i for i in out.items if i.kind == "no_moat")
-    assert len(item.holdings) == RITUALS_V1.council_max_names_per_item
-    assert item.more == 3
-    assert [h.name for h in item.holdings] == ["T0", "T1", "T2", "T3"]  # largest first
-
-
-def test_reviews_due_come_from_the_journal_once_per_holding():
-    t = tower("Alpha")
-    es = [
-        entry(1, holding_id=t.holding_id, company_name="Alpha", outcome={"review_6m_due": True}),
-        entry(2, holding_id=t.holding_id, company_name="Alpha", outcome={"review_12m_due": True}),
-    ]
-    out = _council([t], es)
-    item = next(i for i in out.items if i.kind == "review_due")
-    assert [h.name for h in item.holdings] == ["Alpha"]
-    assert "2 written review(s)" in item.text
-
-
-def test_stale_cash_and_unknowns_are_listed_not_hidden():
-    out = _council([tower("A")], vault_level="stocked", stale=True, level="unsurveyed")
-    assert any(i.kind == "cash" for i in out.items)
-    assert any("weather is unknown" in u for u in out.unknowns)
-    assert any("No sector is marked" in u for u in out.unknowns)
-
-
-def test_funds_never_raise_the_stale_analysis_item():
-    fund = tower("Fund", instrument_type="equity_fund", structure="outpost", freshness="unsurveyed")
-    assert not any(i.kind == "stale_analysis" for i in _council([fund]).items)
+# --- wording ------------------------------------------------------------------
 
 
 def test_no_text_says_buy_sell_add_trim_or_invest():
     bad = tower("Bad", wall="rotted", moat="none", thesis="breached", tripwires_fired=1, sector="Energy",
                 freshness="overgrown", analysis_age_days=300)
-    out = _council([bad], marks=MARKS, vault_level="unsurveyed")
-    texts = [out.summary, out.disclaimer, rit.HINDSIGHT_CAPTION, comp.build_competence([bad], MARKS, RITUALS_V1).summary]
-    for item in out.items:
-        texts += [item.title, item.text]
-    texts += out.unknowns
+    texts = [rit.HINDSIGHT_CAPTION, comp.build_competence([bad], MARKS, RITUALS_V1).summary]
     for text in texts:
-        # the disclaimer says "not advice to trade": 'trade' is allowed, the verbs are not
         assert not FORBIDDEN.search(text), text

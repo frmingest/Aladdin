@@ -1,26 +1,14 @@
 import type {
   CompetenceLevel,
   CompetenceStatus,
-  CouncilKind,
   DecisionRecord,
   RecordReviewState,
 } from "./types";
 
-/** Wording and classes for the Sprint 25 rituals (game mode G17 Council, G18 Hall of Records, G19
- * Circle of Competence). Pure, so it is unit-tested. The backend decides every agenda item, review
+/** Wording and classes for the Sprint 25 rituals (game mode G18 Hall of Records, G19
+ * Circle of Competence). Pure, so it is unit-tested. The backend decides every review
  * state and status from stored facts; this file only chooses labels and colours and never scores
  * anything. A decision is not its outcome: nothing here counts wins or ranks a decision. */
-
-export const COUNCIL_LABEL: Record<CouncilKind, string> = {
-  tripwire: "Tripwire fired",
-  thesis_review: "Thesis to revisit",
-  review_due: "Reviews owed",
-  weak_walls: "Weak walls",
-  no_moat: "No moat found",
-  stale_analysis: "Analysis old or missing",
-  outside_circle: "Outside your circle",
-  cash: "Vault figure",
-};
 
 export const REVIEW_LABEL: Record<RecordReviewState, string> = {
   written: "Written",

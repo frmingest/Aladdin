@@ -19,11 +19,6 @@ export const SEAL_LOOK: Record<SealKind, SealLook> = {
   none: { kind: "none", shape: "ring", glyph: "", label: "None found" },
 };
 
-/** Council tone ("warning" | "note") to a seal. Anything else is a plain note, never a calm look. */
-export function sealForTone(tone: string): SealKind {
-  return tone === "warning" ? "alert" : "notice";
-}
-
 /** The five distinguishing features must differ pairwise, so no two states can be mistaken for each other. */
 export function sealSignature(kind: SealKind): string {
   const l = SEAL_LOOK[kind];

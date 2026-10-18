@@ -1,4 +1,6 @@
-# Circle of Competence and Council Chamber: making them feel like game screens
+# Circle of Competence: making it feel like a game screen
+
+> *2026-10-18: the Council Chamber was removed from the app, so its proposal (section 2.A) is cut from this document. Remaining mentions of the Council below are history.*
 
 Author role: game-designer + art director. Date: 2026-10-09. Status: proposal only, nothing built, nothing under `$HOME/mnt` touched.
 Read: CLAUDE.md, the 2026-10-01 fortress doc, art pass, noise audit, team review, sprint plan v2, `.claude/standards/game-ui-standards.md`, the three skills, `CompetencePage.tsx`, `CouncilPage.tsx`, `components/fortress/*`, `lib/fortressArt.ts`, `lib/rituals.ts`, `index.css`, `lib/types.ts` (Council, Competence).
@@ -65,62 +67,6 @@ No new dependency is needed for anything below. No animated SVG filter is needed
 ## 2. Page proposals
 
 Scoring: impact 1-5 ("feels like a game screen"), effort in hours. Ranked by impact / effort; the build order in section 5 differs where one piece enables another. Size S = under about half a day, M = about one day.
-
-### 2.A Council Chamber
-
-Real fields available (`lib/types.ts:2372-2413`): `items[]` with `kind` (8 fixed kinds in a fixed order: tripwire, thesis_review, review_due, weak_walls, no_moat, stale_analysis, outside_circle, cash), `tone` (warning or note), `title`, `text`, `holdings[]` (holding_id, name, weight_pct), `more` (count not named), `facts[]` (unused on the page today); `advisors[]` (advisor, tone, rule, text, holding, facts); `unknowns[]` (free text); `summary`; `disclaimer`; `as_of`; `demo`; `rules_version`.
-
-**N1. Dossier cards with wax seals (impact 3, S about 3 h; ratio 1.0).**
-- User sees: each agenda item is a parchment folio with a seal at its corner instead of "1." and a pill. A warning item carries a red wax seal with a triangle and "!"; a note item carries a seal with a circle and "i". The kind label sits on the folio as a gilded plaque. Holdings named in the item are pennants with their weight. Links sit at the foot, unchanged.
-- Fact encoded: `item.tone`, `item.kind` (label via `COUNCIL_LABEL`), `item.holdings` and `item.more` (pennants plus "and N more"), the holding weight.
-- Reuses: `.scroll-paper` token re-point (extract as `.parchment`), `.library-plaque`, the `ThesisMarks` medallion extracted as `SealMark`, `Banner` as a pennant.
-- Files: `index.css` (new `.parchment`; `.scroll-paper` composes it), new `components/fortress/kit/{ParchmentPanel,SealMark}.tsx`, new `lib/seals.ts` (pure mapping tone to shape/label, tested), edit `CouncilPage.tsx` (the `Item` component only).
-- Colour-blind: the seal differs by shape (triangle versus circle), glyph ("!" versus "i") and a visible text label ("Warning" / "Note"), never by red versus amber alone. Keep the text label that is there today in the kind plaque.
-- Phone: folios stack full width; the seal is 28 px at the top-right, the pennants wrap. Targets stay at least 44 px for links (add padding).
-- Reduced motion: nothing animates.
-- Caution: inside `.parchment` the state colours (`bg-caution-subtle`) are not re-pointed and would look like dark chips on paper. Use `SealMark`, not the existing pills, inside parchment.
-
-**N2. Advisors seated with speech banners (impact 3, S about 2 h; ratio 1.5).**
-- User sees: the Oracle bust on the left and the Partner on the right of one "speaker row"; each line is a speech bubble attached to its speaker, with a tone glyph on the bubble corner ("!" for warning, "i" for note, a small moon for calm). "Why this line" stays a disclosure.
-- Fact encoded: `line.advisor`, `line.tone`, `line.text`, `line.holding_*`, `line.facts` (in the disclosure). Nothing is added.
-- Reuses: `Portrait` (render at 56-64 px via `className`), `.market-bubble` (alias as `.speech-bubble`; the tail flips for right-hand speakers), `Line`'s logic.
-- Files: new `kit/Speaker.tsx`; `AdvisorsCard.tsx` exports `Line` (keep it for the Fortress card; add a `bubble` variant) or `CouncilPage.tsx` renders the new `Speaker` directly.
-- Colour-blind: tone has glyph plus the existing text chip ("Warning" / "Note" / "Calm" from `ADVISOR_TONE_LABEL`).
-- Phone: portrait above the bubble, one column. Reduced motion: none needed (static).
-- Honesty: lines are hand-written and rule-triggered and are not quotations from Buffett or Munger. Keep the disclaimer (`council.disclaimer`) inside `GameFooter`.
-
-**N3. Fog alcove for "What the council cannot see" (impact 2, S about 1.5 h; ratio 1.3).**
-- User sees: a misty dashed-outline panel (not a bullet list), one line per unknown with a "?" lantern glyph. It is never collapsed, because it is honesty-critical.
-- Fact encoded: one tile per `council.unknowns[]` entry, nothing more.
-- Reuses: the fog gradient (page-local copy with a `useId` suffix), the ghost-plan dashed stroke and "?" from `GhostKeep`.
-- Files: new `kit/FogPanel.tsx`; edit `CouncilPage.tsx:119-128`. Reusable in Circle (unmarked), Siege ("Not modelled"), Chronicle (gap days).
-- Colour-blind: dashed border plus "?" plus text. Reduced motion: static. Phone: full width.
-
-**N4. The chamber: a round table with the eight seats (impact 5, M about 5-6 h; ratio 0.9, but it is the hero).**
-- User sees: at the top of the page, inside a `GameFrame`, a painted stone chamber (arches, two torches, banner) with a round table and eight chairs in the fixed agenda order. A chair with an item has a lit candle, a dossier stack and a seal; a chair with no item is plain with an outline. Pressing an occupied chair scrolls to its folio below and highlights it. At the head of the table the Oracle and the Partner portraits sit.
-- Facts encoded, one for one:
-  - 8 chairs = the 8 fixed `CouncilKind`s (`types.ts:2372`), in `rituals.py` order.
-  - Occupied = an `items[]` entry with that `kind`. Seal shape = `item.tone`.
-  - Dossier stack height = `item.holdings.length + item.more`, capped at 5 papers, with the true number printed ("7"). The number is the real count, not a score.
-  - A plaque on the table: "Stored state of <date>" from `as_of`.
-  - Two portraits = the two advisors that exist.
-- What it must NOT imply:
-  - An empty chair is not "all well". It is drawn as a neutral outline chair, not green, with no candle and no checkmark, and its label reads "<kind>: nothing found". The page already says that an empty agenda is not proof (sprint 25 doc, "Council" row); the scene must not contradict it.
-  - If the agenda is completely empty, show eight neutral chairs and the existing plain sentence. No "all clear" banner, no fanfare, no animation. Clearing the agenda must not feel like a reward (standards rule 7, "no rewards"). Never print "3 of 8".
-  - No gavel and no hourglass. A gavel implies a decision was made (nothing is decided here), and an hourglass is a timer (banned by rule 7). The skill rule is that decoration must map to a fact or imply none.
-  - VERIFY, and a possible additive field: a seat for a kind whose input is unknown (for example `outside_circle` when no sectors are marked, or `stale_analysis` with no analyses) should be a fogged chair, not a neutral one. Today `unknowns[]` is free text, so the front end cannot map it. Proposal: an additive `kinds_unevaluated: CouncilKind[]` on `Council` (backend, not versioned text). Until then, all non-occupied seats are neutral and labelled "nothing found", and the fog alcove (N3) carries the unknowns. Decision D3 below.
-- Reuses: `GameFrame`, `Portrait`, `Torch` (extracted, own gradient id), `SealMark`, `Banner`, pure `seatPositions(8)` (angle table), `COUNCIL_LABEL`.
-- Implementation shape (solves text size on phones, the problem the team review flagged for the Fortress scene at `min-w-[720px]`): decorative SVG backdrop at `viewBox 0 0 720 260` (floor, arches, table ellipse), with the chairs as real HTML `<button>`/`<div>` elements positioned by percentage from `seatPositions`. Labels are therefore HTML at least 11 px, targets at least 44 px. Below 640 px the table ellipse is dropped and the seats form a 2 x 4 grid under a short banner.
-- Files: new `components/fortress/kit/{CouncilChamber,Torch,SealMark}.tsx`, new `lib/councilSeats.ts` (+ test: order, occupancy, count cap, empty agenda), edit `CouncilPage.tsx` (render above the Card; keep `<ol aria-label="Council agenda">` as the accessible source of truth and mark the SVG `aria-hidden`).
-- Accessibility: seat buttons have `aria-label="Reviews owed: 2 holdings. Press to jump to the item"`; empty seats are not buttons. Focus ring reuses the gold ring style (`index.css:253-261` colours; not green: the team review item D3 flags the green selection ring as reading "good").
-- Reduced motion: torches static (`fortress-flicker` is already inside `prefers-reduced-motion: no-preference`, `index.css:223-226`). The only loop on the page is two torch flames, paused by `useSceneRunning` when off-screen.
-- Word budget: the scene adds the 8 kind labels (about 20 words, already existing strings) and one plaque. Remove the duplicate kind pill from the folios to stay level (N1 does that).
-
-**N5. Candle at the table centre = data age (impact 1-2, S about 1 h; VERIFY).**
-- A candle at the centre of the table that is lit, dim or out using the existing `lampReading(as_of, now)` (`lib/fortress.ts:802`). Same rule and wording as `StudyDesk`'s lamp (lit within 7 days of the stored state).
-- VERIFY first that `Council.as_of` has the same meaning as `GameState.as_of` (the snapshot date). If it is the compute time of the response it is always "today" and the candle would lie. Skip this win if unverified.
-
-Not recommended for the Council: a gavel, an hourglass, a seat count, a "quorum" bar, applause or fanfare when the agenda is empty.
 
 ### 2.B Circle of Competence
 

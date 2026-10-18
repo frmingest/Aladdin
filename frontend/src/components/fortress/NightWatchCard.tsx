@@ -100,10 +100,7 @@ export default function NightWatchCard() {
 function DispatchNote() {
   return (
     <p className="mt-2 text-xs text-ink-faint">
-      A reading of what the worker stored. It never runs the check itself and never says what to do.{" "}
-      <Link to="/fortress/chronicle" className="text-accent underline underline-offset-2">
-        Open the Chronicle
-      </Link>
+      A reading of what the worker stored. It never runs the check itself and never says what to do.
     </p>
   );
 }

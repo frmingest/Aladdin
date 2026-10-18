@@ -1,13 +1,14 @@
-# Game identity: page-scene kit and Council Chamber — 2026-10-09
+# Game identity: page-scene kit — 2026-10-09
 
-Status: **written and tested, not merged, not deployed. Seen only in headless Chromium with a synthetic fixture (desktop 1280 px and phone 390 px), never with real data.** Frontend only, no backend change, no migration, no new dependency. Design: [docs/game/circle-council-design-2026-10-09.md](circle-council-design-2026-10-09.md); standard: `.claude/standards/game-visual-identity.md` (added by PR #88).
+> *2026-10-18: the Council Chamber was removed from the app; its bullets are cut below.*
+
+Status: **written and tested, not merged, not deployed. Seen only in headless Chromium with a synthetic fixture (desktop 1280 px and phone 390 px), never with real data.** Frontend only, no backend change, no migration, no new dependency. Design: [docs/game/circle-design-2026-10-09.md](circle-design-2026-10-09.md); standard: `.claude/standards/game-visual-identity.md` (added by PR #88).
 
 ## What changed
 
-- **Page-scene kit** (`components/fortress/kit/`): `Crest` (one shield per room), `TorchPair`, `GamePageHeader`, `ParchmentPanel`, `SealMark`, `FogPanel`, `Speaker`, `CouncilChamber`. Pure mappings in `lib/seals.ts`, `lib/councilSeats.ts`, `lib/crest.ts`, `lib/plainView.ts`. CSS in `index.css` (`.parchment`, `.game-banner`, `.fog-panel`, `.chamber`, `.market-bubble-right`).
+- **Page-scene kit** (`components/fortress/kit/`): `Crest` (one shield per room), `TorchPair`, `GamePageHeader`, `ParchmentPanel`, `SealMark`, `FogPanel`, `Speaker`. Pure mappings in `lib/seals.ts`, `lib/councilSeats.ts`, `lib/crest.ts`, `lib/plainView.ts`. CSS in `index.css` (`.parchment`, `.game-banner`, `.fog-panel`, `.chamber`, `.market-bubble-right`).
 - **Banner on every fortress room except the Fortress home and the Marketplace** (they already have their own scene): `PageHeader` renders the painted banner in game mode on `/fortress/*` rooms; otherwise it is unchanged. Records, Chronicle, Siege, Circle and Map get the banner with this PR; their bodies are unchanged.
 - **Plain view** (button in the banner, kept in this browser): drops the painted scene and shows the same facts as ordinary cards. A way back is always shown.
-- **Council Chamber:** a round table with one chair per agenda rule (eight, fixed order). A lit chair has a wax seal, a stack of papers and the real count; an empty chair is plain and says "nothing found". Agenda items are parchment folios with a seal (triangle "!" = Warning, circle "i" = Note: shape, glyph and printed word). The unknowns are a fog panel. Advisors are portraits with speech bubbles. One footer (`GameFooter`).
 - **Fix found on the way:** the Fortress tab strip was 695 px wide on a 390 px phone (the page scrolled sideways) because of `mx-auto` without `w-full`. One class.
 
 ## What it deliberately does not do

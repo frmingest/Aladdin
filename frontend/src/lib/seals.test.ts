@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { SEAL_LOOK, sealForTone, sealSignature, type SealKind } from "./seals";
+import { SEAL_LOOK, sealSignature, type SealKind } from "./seals";
 
 describe("seals", () => {
   const kinds = Object.keys(SEAL_LOOK) as SealKind[];
@@ -13,12 +13,6 @@ describe("seals", () => {
         expect(sealSignature(a)).not.toBe(sealSignature(b));
       }
     }
-  });
-
-  it("maps council tones: warning is an alert, everything else a plain note", () => {
-    expect(sealForTone("warning")).toBe("alert");
-    expect(sealForTone("note")).toBe("notice");
-    expect(sealForTone("calm")).toBe("notice");
   });
 
   it("uses no wording that promises or praises", () => {

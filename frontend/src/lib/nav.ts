@@ -50,8 +50,6 @@ export const FORTRESS_NAV: NavItem[] = [
   { label: "Fortress", to: "/fortress" },
   { label: "Marketplace", to: "/fortress/marketplace" },
   { label: "Siege Simulator", to: "/fortress/siege" },
-  { label: "Chronicle", to: "/fortress/chronicle" },
-  { label: "Council", to: "/fortress/council" },
   { label: "Records", to: "/fortress/records" },
   { label: "Circle", to: "/fortress/circle" },
   { label: "Map", to: "/fortress/map" },
