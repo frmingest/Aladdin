@@ -21,7 +21,22 @@ describe("CouncilLectern", () => {
     expect(out).toContain("Ask the Partner");
     expect(out).not.toContain("<input");
     expect(out).not.toContain("<textarea");
-    expect(out).toContain("Pick a tower first.");
+  });
+
+  it("has a tower, a question and a councillor picked from the start, so no tap is wasted on an empty form", () => {
+    const out = renderToStaticMarkup(<MemoryRouter><CouncilLectern tokens={tokens} /></MemoryRouter>);
+    // The first token (agenda-named) is pressed, the first question and the Oracle are checked.
+    expect(out).toMatch(/aria-pressed="true"[^>]*>(?:(?!<\/button>).)*Alpha/s);
+    expect(out).toMatch(/aria-checked="true"[^>]*id="ask-q-why_here"|id="ask-q-why_here"[^>]*aria-checked="true"/);
+    expect(out).toMatch(/role="radio" aria-checked="true" aria-label="Ask the Oracle about Alpha/);
+    // No gate to unlock and no separate "ask" press: nothing is disabled, no "pick first" nag.
+    expect(out).not.toContain("disabled");
+    expect(out).not.toContain("Pick a tower first");
+  });
+
+  it("falls back to the first token when the picked one is gone", () => {
+    const out = renderToStaticMarkup(<MemoryRouter><CouncilLectern tokens={[tokens[1]]} /></MemoryRouter>);
+    expect(out).toContain("Ask the Oracle about Beta");
   });
 
   it("draws nothing when there are no towers", () => {

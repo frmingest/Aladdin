@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../../lib/api";
 import {
@@ -17,8 +17,10 @@ import ObjectArtImage from "../../ObjectArtImage";
 import { Portrait } from "../AdvisorsCard";
 import SealArt from "./SealArt";
 
-/** "Call someone to the floor" (Council page). Pick a tower, pick one of four fixed questions, then pick
- * who answers. The answer comes from the server, chosen by fixed rules from stored fields and worded by
+/** "Call someone to the floor" (Council page). A tower, one of four fixed questions and a councillor are
+ * always picked (defaults: the first tower on the table, "Why is this here?", the Oracle), so an answer is
+ * on the table at once and any single tap on a tower, a question or a councillor re-asks. No Ask button.
+ * The answer comes from the server, chosen by fixed rules from stored fields and worded by
  * hand: no model, no free text, nothing you wrote is read. Silence and "no reading" are said plainly and
  * never look like an all clear. Read-only: nothing is saved and nothing is scored. */
 
@@ -42,44 +44,35 @@ function Speaker({ who, width }: { who: GameAdvisorName; width: number }) {
 }
 
 export default function CouncilLectern({ tokens, call = null }: { tokens: Token[]; call?: { who: GameAdvisorName; n: number } | null }) {
-  const [holdingId, setHoldingId] = useState<string | null>(null);
+  const [pickedId, setPickedId] = useState<string | null>(null);
   const [question, setQuestion] = useState<CouncilQuestion>("why_here");
+  const [advisor, setAdvisor] = useState<GameAdvisorName>("oracle");
   const [answer, setAnswer] = useState<CouncilAnswer | null>(null);
-  const [busy, setBusy] = useState<GameAdvisorName | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [nudge, setNudge] = useState<GameAdvisorName | null>(null);
-  const latest = useRef(0);
 
-  // A different tower or question is a different conversation: drop the old answer.
+  // Never an empty choice: until you tap a tower, the first one on the table (agenda-named, then biggest).
+  const holdingId = tokens.some((t) => t.id === pickedId) ? pickedId : (tokens[0]?.id ?? null);
+
+  // Any change of tower, question or councillor asks again. A stale reply is dropped, not shown.
   useEffect(() => {
-    latest.current += 1;
+    if (!holdingId) return;
+    let live = true;
     setAnswer(null);
     setError(null);
-    setBusy(null);
-    setNudge(null);
-  }, [holdingId, question]);
-
-  function ask(who: GameAdvisorName) {
-    if (!holdingId) return;
-    const id = ++latest.current;
-    setBusy(who);
-    setError(null);
     api
-      .askCouncil(holdingId, question, who)
-      .then((a) => id === latest.current && setAnswer(a))
-      .catch((e: unknown) => id === latest.current && setError(describeError(e, "the councillor").message))
-      .finally(() => id === latest.current && setBusy(null));
-  }
+      .askCouncil(holdingId, question, advisor)
+      .then((a) => live && setAnswer(a))
+      .catch((e: unknown) => live && setError(describeError(e, "the councillor").message));
+    return () => {
+      live = false;
+    };
+  }, [holdingId, question, advisor]);
 
-  // A counselor pressed in the room: ask them now if a tower is picked, else say what is missing.
-  const lastCall = useRef(0);
+  // A counselor pressed in the room picture: they take the floor now and the answer is brought into view.
   useEffect(() => {
-    if (!call || call.n === lastCall.current) return;
-    lastCall.current = call.n;
+    if (!call) return;
+    setAdvisor(call.who);
     document.getElementById("ask-title")?.scrollIntoView?.({ behavior: "smooth", block: "start" });
-    if (holdingId) ask(call.who);
-    else setNudge(call.who);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [call]);
 
   function onQuestionKey(e: React.KeyboardEvent, i: number) {
@@ -93,6 +86,7 @@ export default function CouncilLectern({ tokens, call = null }: { tokens: Token[
 
   if (tokens.length === 0) return null;
   const chosen = tokens.find((t) => t.id === holdingId) ?? null;
+  const waiting = !answer && !error;
   const note = answer ? answerNote(answer) : null;
   const seal = answer ? (answer.read !== "read" ? "unknown" : answer.tone === "warning" ? "alert" : "notice") : "none";
 
@@ -104,7 +98,7 @@ export default function CouncilLectern({ tokens, call = null }: { tokens: Token[
           <h2 id="ask-title" className="font-display text-lg font-semibold text-[#f6e6bd]">
             Call someone to the floor
           </h2>
-          <p className="text-sm text-[#cdb98c]">Pick a tower, then a question, then who answers.</p>
+          <p className="text-sm text-[#cdb98c]">Tap a tower, a question or a councillor. The answer follows.</p>
         </div>
       </div>
 
@@ -116,7 +110,7 @@ export default function CouncilLectern({ tokens, call = null }: { tokens: Token[
               <button
                 type="button"
                 aria-pressed={t.id === holdingId}
-                onClick={() => setHoldingId(t.id === holdingId ? null : t.id)}
+                onClick={() => setPickedId(t.id)}
                 className={`inline-flex min-h-[44px] items-center gap-1.5 rounded-md border px-2.5 py-1 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#f2d27a] ${
                   t.id === holdingId ? "border-[#f2d27a] bg-[#4a3220] text-[#fff1cc]" : "border-[#8a6a32] bg-[#2b2014] text-[#f3e4bf] hover:bg-[#3a2a1a]"
                 }`}
@@ -155,33 +149,30 @@ export default function CouncilLectern({ tokens, call = null }: { tokens: Token[
         </div>
       </div>
 
-      <div className="mt-3">
+      <div className="mt-3" role="radiogroup" aria-label="Who answers">
         <p className="text-xs font-semibold uppercase tracking-wide text-[#cdb98c]">3. Who answers</p>
         <div className="mt-1 grid grid-cols-2 gap-3">
           {(["oracle", "partner"] as const).map((who) => (
             <button
               key={who}
               type="button"
-              disabled={!holdingId || busy !== null}
-              aria-label={chosen ? `${ASK_LABEL[who]} about ${chosen.name}: ${QUESTION_LABEL[question]}` : `${ASK_LABEL[who]} (pick a tower first)`}
-              onClick={() => ask(who)}
-              className={`flex min-h-[44px] flex-col items-center gap-1 rounded-md border px-2 py-2 text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#f2d27a] disabled:cursor-not-allowed disabled:opacity-55 ${
-                answer?.advisor === who ? "border-[#f2d27a] bg-[#4a3220]" : "border-[#8a6a32] bg-[#2b2014] enabled:hover:bg-[#3a2a1a]"
+              role="radio"
+              aria-checked={who === advisor}
+              aria-label={chosen ? `${ASK_LABEL[who]} about ${chosen.name}: ${QUESTION_LABEL[question]}` : ASK_LABEL[who]}
+              onClick={() => setAdvisor(who)}
+              className={`flex min-h-[44px] flex-col items-center gap-1 rounded-md border px-2 py-2 text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#f2d27a] ${
+                who === advisor ? "border-[#f2d27a] bg-[#4a3220]" : "border-[#8a6a32] bg-[#2b2014] hover:bg-[#3a2a1a]"
               }`}
             >
               <Speaker who={who} width={72} />
-              <span>{busy === who ? "Thinking…" : ASK_LABEL[who]}</span>
+              <span>{ASK_LABEL[who]}</span>
             </button>
           ))}
         </div>
-        {!holdingId && (
-          <p className="mt-1 text-xs text-[#a8977a]" role={nudge ? "status" : undefined}>
-            {nudge ? `${ADVISOR_NAME[nudge]} is ready. Pick a tower first.` : "Pick a tower first."}
-          </p>
-        )}
       </div>
 
       <div aria-live="polite" className="mt-4">
+        {waiting && <p className="text-sm italic text-[#cdb98c]">{ADVISOR_NAME[advisor]} is thinking…</p>}
         {error && <p className="rounded-md border border-dashed border-[#6b5a3c] p-2 text-sm text-[#f2b8a8]">{error}</p>}
         {answer && (
           <div className="flex items-start gap-3">
@@ -209,7 +200,7 @@ export default function CouncilLectern({ tokens, call = null }: { tokens: Token[
                 <p className="mt-1 text-xs text-[#a8977a]">Rule: {answer.rules.map((r) => advisorRuleLabel(r)).join("; ")}</p>
               )}
               <p className="mt-2 flex flex-wrap gap-x-4 text-xs">
-                <button type="button" disabled={busy !== null} onClick={() => ask(OTHER_ADVISOR[answer.advisor])} className="inline-block min-h-[44px] py-2 text-[#f2d27a] hover:underline disabled:opacity-55">
+                <button type="button" onClick={() => setAdvisor(OTHER_ADVISOR[answer.advisor])} className="inline-block min-h-[44px] py-2 text-[#f2d27a] hover:underline">
                   Ask {ADVISOR_NAME[OTHER_ADVISOR[answer.advisor]].replace("The ", "the ")} the same
                 </button>
                 <Link to={`/holdings/${answer.holding_id}`} className="inline-block min-h-[44px] py-2 text-[#f2d27a] hover:underline">
