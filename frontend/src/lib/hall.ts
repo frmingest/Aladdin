@@ -106,7 +106,7 @@ export function coverArtId(action: string): string | null {
 /** Strings the hall prints; budget-checked. */
 export const HALL_COPY = {
   subtitle: "Your decision journal, shelved: what you wrote, what the price did, which reviews are owed.",
-  press: "Press a tome to open it at the desk.",
+  press: "Press a book to open it.",
   empty: "The shelves are bare. Decisions you log in the Journal are shelved here.",
   noneOwed: "No record has a review owed.",
   onlyOwed: "Only reviews owed",

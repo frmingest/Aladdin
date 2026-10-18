@@ -31,11 +31,12 @@ describe("hall of records art", () => {
     expect(out).not.toContain('preserveAspectRatio="none"');
   });
 
-  it("puts the name, the act and the date on the nameplate, with the full name as a tooltip", () => {
-    const out = html([rec({ company_name: "Xtrackers Europe Defence Technologies UCITS ETF 1C" })]);
+  it("shelves every record as one same-size book with only the company name on it, and no nameplate", () => {
+    const out = html([rec({ company_name: "Xtrackers Europe Defence Technologies UCITS ETF 1C" }), rec({ id: "r2", company_name: "Vår Energi", action: "sell" })]);
     expect(out).toContain('title="Xtrackers Europe Defence Technologies UCITS ETF 1C"');
-    expect(out).toContain("hall-label-action");
-    expect(out).toContain("hall-label-date");
+    expect(out.match(/class="hall-bookcover"/g)).toHaveLength(2);
+    expect(out).not.toContain("hall-label");
+    expect(out).not.toContain("hall-tome-art--shelf");
   });
 
   it("shows the opened book at once on load: the swinging cover is decoration and the swing is off until a press", () => {
