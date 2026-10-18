@@ -1,6 +1,6 @@
 # Aladdin — Progress
 
-**Last updated:** 2026-10-17 (smaller Market Street stalls and Fortress default view written; Market Street page and Night Watch card order written; Siege towers backdrops written, PR open). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
+**Last updated:** 2026-10-18 (Walls on the rise and Siege slider at 5%, PR open; smaller Market Street stalls and Fortress default view written; Market Street page and Night Watch card order written; Siege towers backdrops written, PR open). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
 
 ## Current Objective
 
@@ -20,6 +20,7 @@ State: `main` is at `30f0cb9` (#156), which includes #155 (Map towers as sector 
 - [ ] **Hall of Records book pages (PR `feature/records-book-pages`, written, not merged, not deployed):** fixed-size book with a Next page pager for long notes; after deploy check a record with long notes and a phone ([doc](game/records-hall-polish-2026-10-17.md))
 - [ ] **Siege towers backdrops (PR `feature/siege-towers-backdrops`, written and tested, not merged, not deployed, not seen in a browser):** The Siege page now opens with one card: the Oslo | World toggle and "falls by" slider on top, "The towers under attack" below, with Faiz's four Stitch pictures (calm / storm / siege / ruin) behind the tower row, following the "falls by" slider. After merge and deploy: Game mode on, slider 5% to 60%, desktop and phone; check the crop and that labels stay readable over the bright calm picture ([doc](game/siege-towers-backdrops-2026-10-17.md))
 - [ ] **Market Street: new town-row backdrop and half-size stalls (PR `feature/market-new-skyline-tiny-stalls`, written and tested, not merged, not deployed):** the skyline is Faiz's new building-row picture (cut out of white, shown twice side by side with the second mirrored, so the band stays short); above phone width the stalls are half their size and a row holds 5 a side on desktop, 3 on tablets (phones unchanged). This is a trial: after deploy, say if the names are still readable or the stalls are too small ([spec](game/market-street-redesign-2026-10-17.md))
+- [ ] **Walls on the rise + Siege slider at 5% (PR `feature/walls-on-the-rise`, written and tested, not merged, not deployed, not seen in a browser):** the Fortress page gets a panel showing each wall's distance to the next rung (nearest first; also in the tower survey), and the Siege "falls by" slider opens at 5%. After deploy look at the Fortress with Game mode on, phone and desktop. Note: this relaxes the A1 rule that the distance to a stronger tier is never shown as progress; Faiz asked for it ([doc](game/walls-on-the-rise-2026-10-18.md))
 - [ ] **Optional, visual:** with Game mode on, look at the World banner crop on the Siege Simulator (Claude could not judge it)
 
 ## Recent Blockers / Open Questions

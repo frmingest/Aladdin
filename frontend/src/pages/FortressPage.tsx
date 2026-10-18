@@ -23,6 +23,7 @@ import SoundToggle from "../components/fortress/SoundToggle";
 import StudyDesk from "../components/fortress/StudyDesk";
 import TowerSurvey from "../components/fortress/TowerSurvey";
 import VaultCard from "../components/fortress/VaultCard";
+import WallsOnTheRise from "../components/fortress/WallsOnTheRise";
 import {
   Button,
   Card,
@@ -303,6 +304,10 @@ export default function FortressPage() {
               <FortressLedger towers={state.towers} />
             )}
           </Card>
+
+          {view !== "ledger" && state.towers.length > 0 && (
+            <WallsOnTheRise towers={state.towers} selectedId={selectedId} onSelect={selectHolding} />
+          )}
 
           {view === "scene" && state.towers.length > 0 && (
             <Disclosure label="how to read the picture" level="evidence" className="px-1">
