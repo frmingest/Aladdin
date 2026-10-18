@@ -46,6 +46,22 @@ def test_holding_advisors_unknown_holding_is_an_empty_list(client, db_session):
     assert body.status_code == 200 and body.json()["lines"] == []
 
 
+# --- Council questions (2026-10-18) ---------------------------------------------
+
+
+def test_council_ask_answers_from_stored_facts_and_validates_input(client, db_session):
+    _seed(db_session)
+    geared = _holding(db_session, "GEAR.OL")
+    ok = client.get("/game/council/ask", params={"holding_id": str(geared.id), "question": "why_here", "advisor": "partner"})
+    body = ok.json()
+    assert ok.status_code == 200 and body["read"] == "read" and body["holding_name"] and body["facts"]
+    assert body["questions_version"] == "v1" and body["disclaimer"]
+    bad = client.get("/game/council/ask", params={"holding_id": str(geared.id), "question": "should_i_buy", "advisor": "partner"})
+    assert bad.status_code == 422
+    gone = client.get("/game/council/ask", params={"holding_id": "00000000-0000-0000-0000-000000000001", "question": "edge", "advisor": "oracle"})
+    assert gone.status_code == 404
+
+
 # --- G18 ----------------------------------------------------------------------
 
 

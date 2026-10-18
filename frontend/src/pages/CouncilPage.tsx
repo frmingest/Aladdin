@@ -2,17 +2,20 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../lib/api";
 import { councilSeats } from "../lib/councilSeats";
+import { lecternTokens } from "../lib/councilAsk";
 import { ADVISOR_TONE_LABEL, advisorRuleLabel } from "../lib/fortress";
 import { COUNCIL_LABEL, weightText } from "../lib/rituals";
 import { sealForTone } from "../lib/seals";
-import type { Council, CouncilItem, CouncilKind } from "../lib/types";
+import type { Council, CouncilItem, CouncilKind, GameTower } from "../lib/types";
 import CouncilChamber from "../components/fortress/kit/CouncilChamber";
+import CouncilLectern from "../components/fortress/kit/CouncilLectern";
+import CouncilQuiet from "../components/fortress/kit/CouncilQuiet";
 import FogPanel from "../components/fortress/kit/FogPanel";
 import ParchmentPanel from "../components/fortress/kit/ParchmentPanel";
 import SealMark from "../components/fortress/kit/SealMark";
 import Speaker from "../components/fortress/kit/Speaker";
 import GameFooter from "../components/fortress/GameFooter";
-import { Card, LoadError, PageHeader } from "../components/ui";
+import { Card, Disclosure, LoadError, PageHeader } from "../components/ui";
 import { describeError } from "../lib/errors";
 
 /** The Council Chamber (game mode G17): a quarterly review room. The agenda is built by fixed rules
@@ -94,6 +97,8 @@ export default function CouncilPage() {
   const [council, setCouncil] = useState<Council | null>(null);
   const [error, setError] = useState<{ message: string; retryable: boolean } | null>(null);
   const [attempt, setAttempt] = useState(0);
+  // The towers on the table for "call someone to the floor". The page works without them (no lectern).
+  const [towers, setTowers] = useState<GameTower[]>([]);
 
   useEffect(() => {
     let live = true;
@@ -107,6 +112,18 @@ export default function CouncilPage() {
     };
   }, [attempt]);
 
+  useEffect(() => {
+    let live = true;
+    api
+      .getGameState()
+      .then((st) => live && setTowers(st.towers))
+      .catch(() => live && setTowers([]));
+    return () => {
+      live = false;
+    };
+  }, [attempt]);
+
+  const tokens = useMemo(() => (council ? lecternTokens(towers, council) : []), [towers, council]);
   const seats = useMemo(() => (council ? councilSeats(council) : []), [council]);
 
   function jump(kind: CouncilKind) {
@@ -132,7 +149,12 @@ export default function CouncilPage() {
       {!error && !council && <p className="text-sm text-ink-muted">The council is gathering…</p>}
       {council && (
         <div className="space-y-4">
-          {<CouncilChamber seats={seats} onJump={jump} unresolved={council.unknowns.length > 0} />}
+          {council.items.length === 0 ? (
+            <CouncilQuiet seats={seats} onJump={jump} unresolved={council.unknowns.length > 0} />
+          ) : (
+            <CouncilChamber seats={seats} onJump={jump} unresolved={council.unknowns.length > 0} />
+          )}
+          <CouncilLectern tokens={tokens} />
           <Card>
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="section-title mb-0">The agenda</h2>
@@ -154,7 +176,8 @@ export default function CouncilPage() {
 
           {council.advisors.length > 0 && (
             <Card>
-              <h2 className="section-title">The advisors speak</h2>
+              <h2 className="section-title">What they said on the Fortress</h2>
+              <Disclosure label="the lines the advisors already gave" level="evidence">
               <ul>
                 {council.advisors.map((line, i) => (
                   <Speaker
@@ -184,6 +207,7 @@ export default function CouncilPage() {
                   </Speaker>
                 ))}
               </ul>
+              </Disclosure>
             </Card>
           )}
           <GameFooter rules={`Council rules ${council.rules_version}.`}>

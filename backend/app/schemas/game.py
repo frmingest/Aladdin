@@ -700,3 +700,21 @@ class CalibrationOut(BaseModel):
     calls: CalibrationCallsOut
     oracle: CalibrationOracleOut
     caption: str
+
+
+class CouncilAnswerOut(BaseModel):
+    """Council question: one advisor's answer about one holding, built from stored fields by fixed
+    rules and worded by hand (council_questions_v1). `read` says whether it is a reading, silence (this
+    advisor has no rule for the holding) or no reading (nothing stored to answer from)."""
+
+    holding_id: UUID
+    holding_name: str
+    question: Literal["why_here", "edge", "storm", "beside"]
+    advisor: Literal["oracle", "partner"]
+    read: Literal["read", "silent", "none"]
+    tone: Literal["warning", "note", "calm"]
+    text: str
+    facts: list[str] = Field(default_factory=list)
+    rules: list[str] = Field(default_factory=list)
+    questions_version: str
+    disclaimer: str

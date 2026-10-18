@@ -41,6 +41,9 @@ import type {
   Competence,
   CompetenceLevel,
   Council,
+  CouncilAnswer,
+  CouncilQuestion,
+  GameAdvisorName,
   HoldingAdvisors,
   Records,
   Calibration,
@@ -421,6 +424,9 @@ export const api = {
   getNightWatch: () => request<NightWatch>("/game/night-watch"),
   // Sprint 25 rituals: Council (G17), Hall of Records (G18), Circle of Competence (G19), per-holding advisor lines (G20).
   getCouncil: () => request<Council>("/game/council"),
+  /** Council question: one advisor, one holding, one of four fixed questions. Stored data only. */
+  askCouncil: (holdingId: string, question: CouncilQuestion, advisor: GameAdvisorName) =>
+    request<CouncilAnswer>("/game/council/ask", { query: { holding_id: holdingId, question, advisor } }),
   getRecords: () => request<Records>("/game/records"),
   /** C2 hit rate: counts only, gated by the server (opens at min_n outcomes). */
   getCalibration: () => request<Calibration>("/game/calibration"),

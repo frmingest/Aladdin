@@ -23,6 +23,9 @@ Key modes (manifest "key"):
                 a flood fill would leave a halo around (the fire arrow).
   erase-shadow  white key plus removal of a pale neutral cast shadow that
                 touches the background (the trading port).
+  vignette      a dark scene that fades to white at its edge (the quiet council room): alpha rises from white
+                to the dark body and the faded colour is pulled dark, so the rim blends into any dark page
+                without a pale halo.
   none          no keying and no crop: the picture stays an opaque rectangle
                 (room backdrops, Sprint 8). Budget: each at most 120 KB.
 
@@ -58,7 +61,7 @@ ENCLOSED_MIN_AREA = 700  # px at 1024; ignores glints and small highlights
 SAMPLED_TOL = 22  # max channel distance from the sampled border colour
 SHADOW_MIN = 170  # erase-shadow: lightest-channel floor for a "pale" pixel
 SHADOW_SAT_MAX = 0.14  # erase-shadow: max saturation for a neutral grey
-KEY_MODES = ("white", "sampled", "glow", "erase-shadow", "none")
+KEY_MODES = ("white", "sampled", "glow", "erase-shadow", "vignette", "none")
 
 
 def _soft_alpha(opaque: np.ndarray) -> Image.Image:
@@ -110,6 +113,17 @@ def key_glow(img: Image.Image) -> Image.Image:
     return Image.fromarray((out * 255).astype(np.uint8), "RGBA")
 
 
+def key_vignette(img: Image.Image) -> Image.Image:
+    """Dark scene on white with a soft rim: alpha from the lightest channel (opaque at 0.46, clear at 0.70),
+    rim colour un-blended from white and darkened in proportion to how transparent it is."""
+    a = np.asarray(img.convert("RGB")).astype(float) / 255.0
+    alpha = np.clip((0.70 - a.min(axis=2)) / 0.24, 0.0, 1.0)
+    safe = np.maximum(alpha, 1e-3)[..., None]
+    rgb = np.clip((a - (1.0 - safe)) / safe, 0.0, 1.0)
+    rgb = rgb * (alpha[..., None] ** 1.5)
+    return Image.fromarray((np.dstack([rgb, alpha]) * 255).astype(np.uint8), "RGBA")
+
+
 def key_erase_shadow(img: Image.Image) -> Image.Image:
     a = np.asarray(img.convert("RGB")).astype(int)
     mx, mn = a.max(axis=2), a.min(axis=2)
@@ -131,6 +145,8 @@ def key_image(img: Image.Image, spec: dict) -> Image.Image:
         return key_glow(img)
     if mode == "erase-shadow":
         return key_erase_shadow(img)
+    if mode == "vignette":
+        return key_vignette(img)
     raise ValueError(f"unknown key mode {mode!r} for {spec['id']}")
 
 
