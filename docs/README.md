@@ -80,6 +80,7 @@ Game mode (Fortress): concept, sprint plans and reviews, visual identity, art pa
 - [market-street-redesign-2026-10-17.md](game/market-street-redesign-2026-10-17.md) — Market Street redesign: critique, lane layout spec, scale table, decisions (built on `feature/market-street`)
 - [market-street-strong-pick-2026-10-17.md](game/market-street-strong-pick-2026-10-17.md) — Market Street: the analyst's top mark (wax seal on the signboard), concepts and rules (built on `feature/market-street`)
 - [market-street-strong-pick-motion-2026-10-17.md](game/market-street-strong-pick-motion-2026-10-17.md) — Market Street top mark: motion and performance spec from game-feel-engineer (the seal design won; its glow and loop were not used)
+- [council-engagement-ideas-2026-10-18.md](game/council-engagement-ideas-2026-10-18.md) — Council Chamber: four ideas to make it interactive, the recommendation, and what was built (concept B, "Call someone to the floor")
 
 ### ingestion/
 

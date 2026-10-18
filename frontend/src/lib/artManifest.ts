@@ -163,6 +163,10 @@ import marketStallShop from "../assets/art/market-stall-shop.webp";
 import marketCrates from "../assets/art/market-crates.webp";
 import marketBench from "../assets/art/market-bench.webp";
 import marketHandcart from "../assets/art/market-handcart.webp";
+import councilLectern from "../assets/art/council-lectern.webp";
+import councilSpeakOracle from "../assets/art/council-speak-oracle.webp";
+import councilSpeakPartner from "../assets/art/council-speak-partner.webp";
+import councilQuiet from "../assets/art/council-quiet.webp";
 
 export interface PackedArt {
   src: string;
@@ -337,4 +341,8 @@ export const ART_MANIFEST = {
   "market-crates": { src: marketCrates, width: 224, height: 196, alt: "" },
   "market-bench": { src: marketBench, width: 249, height: 256, alt: "" },
   "market-handcart": { src: marketHandcart, width: 256, height: 200, alt: "" },
+  "council-lectern": { src: councilLectern, width: 146, height: 220, alt: "" },
+  "council-speak-oracle": { src: councilSpeakOracle, width: 160, height: 256, alt: "" },
+  "council-speak-partner": { src: councilSpeakPartner, width: 192, height: 256, alt: "" },
+  "council-quiet": { src: councilQuiet, width: 640, height: 455, alt: "" },
 } as const satisfies Record<string, PackedArt>;

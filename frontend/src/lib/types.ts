@@ -2542,6 +2542,25 @@ export interface Council {
   disclaimer: string;
 }
 
+/** Council questions: four fixed questions, no free text. */
+export type CouncilQuestion = "why_here" | "edge" | "storm" | "beside";
+
+/** One advisor's answer about one holding, built from stored fields by fixed rules and worded by hand.
+ * read: a reading; silent: this advisor has no rule for the holding; none: nothing stored to answer from. */
+export interface CouncilAnswer {
+  holding_id: string;
+  holding_name: string;
+  question: CouncilQuestion;
+  advisor: GameAdvisorName;
+  read: "read" | "silent" | "none";
+  tone: "warning" | "note" | "calm";
+  text: string;
+  facts: string[];
+  rules: string[];
+  questions_version: string;
+  disclaimer: string;
+}
+
 export type RecordReviewState = "written" | "due" | "not_due";
 
 export interface DecisionRecord {

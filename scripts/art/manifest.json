@@ -1360,6 +1360,31 @@
    "source": "a_single_standalone_fantasy_game_street_transport_prop_asset_a_two_wheeled",
    "key": "white",
    "max_side": 256
+  },
+  {
+   "id": "council-lectern",
+   "source": "a_single_standalone_fantasy_game_furniture_ui_prop_asset_a_small_wooden_reading",
+   "key": "white",
+   "max_side": 220
+  },
+  {
+   "id": "council-speak-oracle",
+   "source": "modify_and_pose_the_character_from_data_image_image_168_and_data_image_image",
+   "key": "white",
+   "max_side": 256
+  },
+  {
+   "id": "council-speak-partner",
+   "source": "modify_and_pose_the_character_from_data_image_image_169_and_data_image_image",
+   "key": "white",
+   "max_side": 256
+  },
+  {
+   "id": "council-quiet",
+   "source": "a_wide_atmospheric_medieval_council_room_scene_furniture_cluster_asset_for_a_2d",
+   "key": "vignette",
+   "max_side": 640,
+   "quality": 72
   }
  ]
 }

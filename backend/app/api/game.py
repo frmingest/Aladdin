@@ -31,6 +31,7 @@ from app.schemas.game import (
     ChronicleOut,
     CompetenceMarkIn,
     CompetenceOut,
+    CouncilAnswerOut,
     CouncilOut,
     GameStateOut,
     HoldingAdvisorsOut,
@@ -42,6 +43,7 @@ from app.schemas.game import (
 )
 from app.services.game import calibration as calibration_svc
 from app.services.game import competence as competence_svc
+from app.services.game import council_ask as council_ask_svc
 from app.services.game import rituals as rituals_svc
 from app.services.game.backtest_view import (
     build_backtest,
@@ -191,6 +193,23 @@ def get_holding_advisors(holding_id: UUID, db: Session = Depends(get_db)) -> Hol
     only the first few). Stored data only; never advice to trade."""
     state, _ = _state_for(db)
     return rituals_svc.holding_advisor_lines(state, holding_id)
+
+
+@router.get("/council/ask", response_model=CouncilAnswerOut)
+def get_council_answer(
+    holding_id: UUID,
+    question: Literal["why_here", "edge", "storm", "beside"] = Query(description="One of four fixed questions; there is no free text."),
+    advisor: Literal["oracle", "partner"] = Query(description="Which councillor answers."),
+    db: Session = Depends(get_db),
+) -> CouncilAnswerOut:
+    """Council question: one advisor's answer about one holding, picked by fixed rules from the stored
+    fortress and worded by hand (council_questions_v1). Stored data only: no provider call, no LLM, no
+    write, and nothing the player wrote is read."""
+    state, _ = _state_for(db)
+    found = council_ask_svc.answer(state, holding_id, question, advisor)
+    if found is None:
+        raise HTTPException(status_code=404, detail="That holding is not in the fortress.")
+    return found
 
 
 @router.get("/records", response_model=RecordsOut)
