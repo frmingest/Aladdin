@@ -18,7 +18,6 @@ Standard: `.claude/standards/game-visual-identity.md` (ladder 0-3, anti-patterns
 
 ## Recipes (page type: scene header / hero object, fact encoded, unknown state)
 - **Records (journal and reviews).** Shelf of sealed scrolls: wax seal intact = review not yet due, cracked = 6/12-month review open, ribbon = written. Scroll length = days held. Unknown outcome: sealed, never a verdict colour.
-- **Circle of Competence.** A map ring: sectors as wedges of a drawn circle, inside = marked within circle, outside = beyond, hatched = unmarked (fog). Wedge arc = portfolio weight. Replaces the marking table as the first view.
 - **Siege Simulator.** A cross-section of the walls: each tower drawn at its modelled loss as a breach height on the wall; unmodelled towers stay fogged (no beta) with a small "not modelled" banner; headline coverage as a fog band across the horizon, not four empty tiles.
 - **Marketplace street and Store.** A street of shopfronts: awning colour never status; sign shape = verdict word + glyph; price band as a plank gauge; stores with no price grouped as one shuttered row. Store header = merchant stall with the single decision on the sign.
 - **Scriptorium/Scrolls library.** Shelves per tower: scroll size by report type, seal broken when opened (labelled opened, not understood).

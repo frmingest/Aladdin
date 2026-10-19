@@ -1,6 +1,6 @@
 # Sprint 25: game mode rituals (G18–G20) — 2026-10-04
 
-Status: **written and tested, PR open, not merged, not deployed.** *Update 2026-10-18: the Council Chamber (G17) was removed; the rows below that are about it are struck from this doc.* Branch `feature/game-mode-sprint-25-rituals`, built on `main` `25d51ec` (Sprint 24 merged as #48). F33 in `PROGRESS.md`.
+Status: **written and tested, PR open, not merged, not deployed.** *Update 2026-10-18: the Council Chamber (G17) was removed; the rows below that are about it are struck from this doc. Update 2026-10-19: the Circle of Competence (G19) was removed too, see [remove-circle-page-2026-10-19.md](remove-circle-page-2026-10-19.md); its row below is history.* Branch `feature/game-mode-sprint-25-rituals`, built on `main` `25d51ec` (Sprint 24 merged as #48). F33 in `PROGRESS.md`.
 
 ## Rules kept
 Read-only except the user's own competence marks. Deterministic, versioned (`app/domain/game_mapping/rituals_v1.py`). No points, streaks or reward for writing a review. Unknown stays unknown. No text says buy, sell, add, trim or invest (tests enforce it). Demo mode shows invented data and blocks marks.

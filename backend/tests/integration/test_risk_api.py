@@ -74,7 +74,6 @@ def _create_holding(client, ticker, name="Test Co"):
     return response.json()["id"]
 
 
-_SNAPSHOT_CACHE: dict[int, object] = {}
 
 
 def _shared_snapshot(db_session):
@@ -82,9 +81,10 @@ def _shared_snapshot(db_session):
     LATEST snapshot per account, and snapshots with no account all share
     one group — so every position in a test portfolio with no accounts
     must live in the SAME snapshot, not one each."""
-    key = id(db_session)
-    if key in _SNAPSHOT_CACHE:
-        return _SNAPSHOT_CACHE[key]
+    # Cached on the session itself: a dict keyed by id(db_session) could hit a recycled id and return
+    # a snapshot row from an earlier test that was already deleted.
+    if "shared_snapshot" in db_session.info:
+        return db_session.info["shared_snapshot"]
     from app.models.document import Document
     from app.models.portfolio import PortfolioSnapshot
 
@@ -97,7 +97,7 @@ def _shared_snapshot(db_session):
     snapshot = PortfolioSnapshot(source_file=document, reporting_currency="NOK", status="processed")
     db_session.add(snapshot)
     db_session.flush()
-    _SNAPSHOT_CACHE[key] = snapshot
+    db_session.info["shared_snapshot"] = snapshot
     return snapshot
 
 

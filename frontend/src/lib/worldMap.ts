@@ -6,7 +6,7 @@
  *  - one settlement per holding; its size follows the holding's weight (bounded, like the home scene);
  *  - one province per sector, so holdings of one sector are neighbours; holdings with no sector set sit
  *    in their own province, named as such, and are never folded into a real sector;
- *  - the five fog patches on each settlement are the survey, drawn by the same code as before;
+ *  - the four fog patches on each settlement are the survey, drawn by the same code as before;
  *  - the Great Keep stands at the capital. It is not a holding; the cash commission plants its flag there.
  *
  * Truth rules kept here, each under test: terrain never encodes a state (no good or bad land, nothing

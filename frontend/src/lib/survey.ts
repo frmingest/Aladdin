@@ -1,30 +1,30 @@
 import { scrollDate } from "./scrolls";
-import type { Competence, DecisionRecord, DocumentSummary, GameState, GameTower } from "./types";
+import type { DecisionRecord, DocumentSummary, GameState, GameTower } from "./types";
 
 /**
- * Fog of war (game mode G34 / G35, Sprint 28). Progress is a map, not a score: for each tower five
+ * Fog of war (game mode G34 / G35, Sprint 28). Progress is a map, not a score: for each tower four
  * plain facts are either clear or still in fog. Nothing is granted for buying, selling, opening the
  * app, speed or consecutive days, and fog can come BACK when an analysis goes stale. A fully clear
  * tower is only a well-understood tower, never a good one: this file never reads a verdict.
  *
  * Pure and view-only: it reads values the app already stored (the game state, the decision journal,
- * the competence marks, the document list) plus the per-browser "opened" flags of the Scrolls
+ * the document list) plus the per-browser "opened" flags of the Scrolls
  * library (decision D4). It writes nothing, calls no provider or model, and never says to buy, sell,
  * add or trim. Unknown stays unknown: a missing list is fog with a reason, never clear.
  *
- * The five checks are version 1. A change to them is a new version, not an in-place edit.
+ * The checks are versioned: survey-v1 had five (one was "Circle marked"); survey-v2 (2026-10-19) has four,
+ * because the Circle page that set that mark was removed. A change to them is a new version, not an in-place edit.
  */
 
-export const SURVEY_VERSION = "survey-v1";
+export const SURVEY_VERSION = "survey-v2";
 
-export type SurveyCheckId = "report" | "analysis" | "thesis" | "circle" | "valuation";
+export type SurveyCheckId = "report" | "analysis" | "thesis" | "valuation";
 export type SurveyState = "clear" | "fog" | "not_judged";
 
 export const SURVEY_CHECKS: ReadonlyArray<{ id: SurveyCheckId; label: string }> = [
   { id: "report", label: "Latest report opened" },
   { id: "analysis", label: "Analysis fresh" },
   { id: "thesis", label: "Invalidation written" },
-  { id: "circle", label: "Circle marked" },
   { id: "valuation", label: "Valuation available" },
 ];
 
@@ -50,7 +50,6 @@ export interface TowerFog {
 
 export interface SurveyInputs {
   state: GameState;
-  competence: Competence | null;
   records: DecisionRecord[] | null;
   /** Documents per holding id; a missing key (or null) means the list could not be read. */
   documents: Record<string, DocumentSummary[] | null>;
@@ -112,24 +111,6 @@ function thesisCheck(tower: GameTower, inputs: SurveyInputs): SurveyCheck {
     : { ...base, state: "fog", reason: "No decision here says what would prove it wrong." };
 }
 
-function circleCheck(tower: GameTower, inputs: SurveyInputs): SurveyCheck {
-  const base = { id: "circle" as const, label: "Circle marked" };
-  const row = inputs.competence?.towers.find((c) => c.holding_id === tower.holding_id);
-  if (!row) return { ...base, state: "fog", reason: "The circle could not be read, so this stays unknown." };
-  switch (row.status) {
-    case "inside":
-    case "edge":
-    case "outside":
-      return { ...base, state: "clear", reason: "You have marked this sector." };
-    case "not_applicable":
-      return { ...base, state: "not_judged", reason: "Funds and gold are not placed in the circle." };
-    case "unclassified":
-      return { ...base, state: "fog", reason: "No sector is set for this holding." };
-    default:
-      return { ...base, state: "fog", reason: "You have not marked this sector." };
-  }
-}
-
 function valuationCheck(tower: GameTower): SurveyCheck {
   const base = { id: "valuation" as const, label: "Valuation available" };
   if (tower.freshness === "not_applicable") {
@@ -146,7 +127,6 @@ export function surveyTower(tower: GameTower, inputs: SurveyInputs): TowerFog {
     reportCheck(tower, inputs),
     analysisCheck(tower),
     thesisCheck(tower, inputs),
-    circleCheck(tower, inputs),
     valuationCheck(tower),
   ];
   const judged = checks.filter((c) => c.state !== "not_judged").length;
@@ -171,7 +151,7 @@ export function fogLevel(t: Pick<TowerFog, "clear" | "judged">): number {
   return t.judged === 0 ? 0 : 1 - t.clear / t.judged;
 }
 
-/** "3 of 5 surveyed" */
+/** "3 of 4 surveyed" */
 export function surveyText(t: Pick<TowerFog, "clear" | "judged">): string {
   return `${t.clear} of ${t.judged} surveyed`;
 }
@@ -206,12 +186,6 @@ const COMMISSION_TEXT: Record<SurveyCheckId, { title: string; text: string; to: 
     text: "No decision for these holdings says what would prove it wrong.",
     to: "/journal",
     linkLabel: "Open the Journal",
-  },
-  circle: {
-    title: "Mark the sector",
-    text: "You have not marked how well you know these sectors, or no sector is set.",
-    to: "/fortress/circle",
-    linkLabel: "Open the Circle of Competence",
   },
   valuation: {
     title: "Find the missing valuation",

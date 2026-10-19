@@ -38,13 +38,12 @@ Game mode (Fortress): concept, sprint plans and reviews, visual identity, art pa
 
 - [records-hall-polish-2026-10-17.md](game/records-hall-polish-2026-10-17.md) — Hall of Records: undistorted torches and arches, brass nameplates, tome cover that swings open into a book
 - [siege-towers-backdrops-2026-10-17.md](game/siege-towers-backdrops-2026-10-17.md) — Siege Simulator: towers section moved to the top, backdrop that follows the "falls by" slider, four Stitch pictures
-- [circle-design-2026-10-09.md](game/circle-design-2026-10-09.md) — Circle of Competence: making it feel like a game screen
+- [remove-circle-page-2026-10-19.md](game/remove-circle-page-2026-10-19.md) — Circle of Competence page removed from Game mode; survey drops to four facts (survey-v2)
 - [game-art-dde-2026-10-16.md](game/game-art-dde-2026-10-16.md) — the 17 Stitch pictures from the design review: crests, sky badges, empty chest
 - [design-master-sprint-plan-2026-10-11.md](game/design-master-sprint-plan-2026-10-11.md) — Design Master: review and sprint plan (2026-10-11)
 - [fog-of-war-sprint28-2026-10-08.md](game/fog-of-war-sprint28-2026-10-08.md) — Game mode Sprint 28: fog of war (G34–G37) — 2026-10-08
 - [fortress-art-pass-2026-10-09.md](game/fortress-art-pass-2026-10-09.md) — Fortress art pass — 2026-10-09
 - [game-design-challenge-2026-10-09.md](game/game-design-challenge-2026-10-09.md) — Game design challenge: Records, Circle, Map, dispatch details (2026-10-09)
-- [game-identity-circle-2026-10-09.md](game/game-identity-circle-2026-10-09.md) — Game identity: Circle of Competence ring map — 2026-10-09
 - [game-identity-kit-2026-10-09.md](game/game-identity-kit-2026-10-09.md) — Game identity: page-scene kit — 2026-10-09
 - [game-identity-map-2026-10-09.md](game/game-identity-map-2026-10-09.md) — Game identity: Map fog patches, slate and commission seals — 2026-10-09
 - [game-identity-process-changes-2026-10-09.md](game/game-identity-process-changes-2026-10-09.md) — Changes proposed (copy into the repo at these paths)

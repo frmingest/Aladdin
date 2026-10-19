@@ -86,7 +86,7 @@ function Silhouette() {
   );
 }
 
-/** The tower and its five patch slots as plain SVG content (no wrapping <svg>), so the world map can
+/** The tower and its four patch slots as plain SVG content (no wrapping <svg>), so the world map can
  * place many of them. Sockets are drawn first so a cloud lies over a neighbour. `body` swaps the fixed
  * silhouette for a picture (map art); the patches are always code, drawn over it. */
 export function TowerFigure({ slots, hatchId, body }: { slots: FogSlot[]; hatchId: string; body?: ReactNode }) {
@@ -101,7 +101,7 @@ export function TowerFigure({ slots, hatchId, body }: { slots: FogSlot[]; hatchI
   );
 }
 
-/** A tower with its five patch slots. */
+/** A tower with its four patch slots. */
 export function TowerPicture({ slots, hatchId, className = "" }: { slots: FogSlot[]; hatchId: string; className?: string }) {
   return (
     <svg viewBox={`0 0 ${VIEW.w} ${VIEW.h}`} width={VIEW.w} height={VIEW.h} aria-hidden focusable="false" className={className}>

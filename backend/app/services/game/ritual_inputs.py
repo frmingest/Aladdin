@@ -1,8 +1,5 @@
-"""Database and demo inputs for the Sprint 25 rituals. Read-only; the only
-writes in the sprint are the user's own competence marks (competence.py)."""
+"""Database and demo inputs for the Sprint 25 rituals (Hall of Records). Read-only."""
 from __future__ import annotations
-
-from datetime import datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -33,16 +30,4 @@ def journal_entries(db: Session) -> list[JournalEntryOut]:
 
 def demo_journal_entries() -> list[JournalEntryOut]:
     return list(demo_journal().entries)
-
-
-def demo_competence_marks(now: datetime) -> dict[str, tuple[str, str | None, datetime | None]]:
-    """Invented marks so the demo Circle shows every level."""
-    return {
-        "Information Technology": ("know", "Demo data: an invented mark.", now - timedelta(days=30)),
-        "Consumer Staples": ("know", "Demo data: an invented mark.", now - timedelta(days=30)),
-        "Health Care": ("partly", "Demo data: an invented mark.", now - timedelta(days=30)),
-        "Energy": ("outside", "Demo data: an invented mark.", now - timedelta(days=30)),
-    }
-
-
 

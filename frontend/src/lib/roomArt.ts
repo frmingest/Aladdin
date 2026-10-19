@@ -14,16 +14,13 @@ import { getObjectArt, type ObjectArtId } from "./stitchArt";
 /** Wide opaque scene behind a room's banner, one per room at most (pack mode `none`). */
 const BACKDROP_OF: Partial<Record<CrestKind, string>> = {
   records: "backdrop-records",
-  circle: "backdrop-circle",
   map: "backdrop-map",
 };
 
 /**
- * Which band of a wide backdrop the banner strip shows (CSS object-position). Circle shows the
- * standing stones on the horizon; Map shows the instruments on the desk.
+ * Which band of a wide backdrop the banner strip shows (CSS object-position). Map shows the instruments on the desk.
  */
 const BACKDROP_POSITION: Partial<Record<CrestKind, string>> = {
-  circle: "50% 45%",
   map: "50% 22%",
 };
 
@@ -82,24 +79,6 @@ export function sealArtFor(kind: SealKind): { id: string; glyph: string; label: 
   if (kind !== "alert" && kind !== "notice") return null;
   const id = sealId(kind === "alert" ? "broken" : "whole");
   return id ? { id, glyph: SEAL_LOOK[kind].glyph, label: SEAL_LOOK[kind].label } : null;
-}
-
-/** A picture standing on the Circle map: its base point and width, in percent of the map's width. */
-export interface RingPiece {
-  id: string;
-  left: number;
-  top: number;
-  width: number;
-}
-
-/** The brazier at the centre of the circle: always there, never lit by data. Null unless packed. */
-export function circleBrazier(): RingPiece | null {
-  return getObjectArt("circle-brazier") ? { id: "circle-brazier", left: 50, top: 50, width: 9 } : null;
-}
-
-/** The fog stake that stands beside the "No sector set" marker (only drawn when holdings have no sector). */
-export function fogStakeId(): string | null {
-  return getObjectArt("circle-stake") ? "circle-stake" : null;
 }
 
 /**

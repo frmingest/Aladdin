@@ -1,13 +1,12 @@
 """Sprint 25 over the real routes and a database: G18 Records,
-G19 Circle, G20 holding lines (2026-10-04). Read-only except the user's own
-competence marks; demo mode wins; unknown stays unknown."""
+G20 holding lines (2026-10-04). Read-only; demo mode wins; unknown stays
+unknown. (Circle of Competence, G19, was removed 2026-10-19.)"""
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 from app.models import Holding
-from app.models.competence import CompetenceMark
 from app.models.journal import DecisionJournalEntry
 from tests.integration.test_game_api import _seed
 
@@ -69,59 +68,22 @@ def test_records_empty_journal_is_an_empty_library(client, db_session):
     assert body["records"] == [] and body["reviews_due"] == 0
 
 
-# --- G19 ----------------------------------------------------------------------
-
-
-def test_competence_starts_unmarked_and_marks_round_trip(client, db_session):
-    _seed(db_session)
-    body = client.get("/game/competence").json()
-    assert all(s["level"] is None for s in body["sectors"])
-    status = {t["name"]: t["status"] for t in body["towers"]}
-    assert status["Geared"] == "unmarked" and status["World ETF"] == "not_applicable"
-    assert status["No Filings"] == "unclassified"
-
-    put = client.put("/game/competence/Energy", json={"level": "outside", "note": " not my field "})
-    assert put.status_code == 200
-    out = put.json()
-    assert {t["name"]: t["status"] for t in out["towers"]}["Geared"] == "outside"
-    assert D(out["outside_weight_pct"]) == D(30)  # 300 of 1000
-    energy = next(s for s in out["sectors"] if s["sector"] == "Energy")
-    assert energy["level"] == "outside" and energy["note"] == "not my field"
-
-    client.put("/game/competence/Energy", json={"level": "know"})  # change it, still one row
-    assert db_session.query(CompetenceMark).count() == 1
-    cleared = client.delete("/game/competence/Energy").json()
-    assert next(s for s in cleared["sectors"] if s["sector"] == "Energy")["level"] is None
-    assert db_session.query(CompetenceMark).count() == 0
-
-
-def test_competence_refuses_unknown_sector_level_and_long_note(client, db_session):
-    _seed(db_session)
-    assert client.put("/game/competence/Widgets", json={"level": "know"}).status_code == 422
-    assert client.put("/game/competence/Energy", json={"level": "guru"}).status_code == 422
-    assert client.put("/game/competence/Energy", json={"level": "know", "note": "x" * 501}).status_code == 422
-    assert db_session.query(CompetenceMark).count() == 0
-
-
 # --- read-only and demo --------------------------------------------------------
 
 
 def test_reads_write_nothing(client, db_session):
     _seed(db_session)
-    before = db_session.query(CompetenceMark).count(), db_session.query(DecisionJournalEntry).count()
-    for path in ("/game/records", "/game/competence"):
-        assert client.get(path).status_code == 200
-    assert (db_session.query(CompetenceMark).count(), db_session.query(DecisionJournalEntry).count()) == before
+    before = db_session.query(DecisionJournalEntry).count()
+    assert client.get("/game/records").status_code == 200
+    assert db_session.query(DecisionJournalEntry).count() == before
 
 
-def test_demo_mode_shows_invented_data_and_blocks_marks(client, db_session):
+def test_demo_mode_shows_invented_data(client, db_session):
     _seed(db_session)
     assert client.put("/settings/demo-mode", json={"enabled": True}).status_code == 200
     records = client.get("/game/records").json()
-    circle = client.get("/game/competence").json()
-    assert records["demo"] and circle["demo"]
+    assert records["demo"]
     real = {"CASH.OL", "GEAR.OL", "BANK.OL"}
-    assert not real & {t["name"] for t in circle["towers"]} and not real & {r["ticker"] for r in records["records"]}
-    assert {s["level"] for s in circle["sectors"]} >= {"know", "partly", "outside"}
-    assert client.put("/game/competence/Energy", json={"level": "know"}).status_code in (403, 409, 423)
-    assert db_session.query(CompetenceMark).count() == 0
+    assert not real & {r["ticker"] for r in records["records"]}
+    # the removed Circle routes are gone, not just empty
+    assert client.get("/game/competence").status_code == 404

@@ -1,7 +1,7 @@
 """Sprint 25 rituals (2026-10-04): G18 Hall of Records, G20 per-holding advisor lines.
 
 Pure and deterministic over values the Fortress already derived (the game
-state, the decision journal with its outcomes, the competence marks). No
+state, the decision journal with its outcomes). No
 provider, no model, no clock of its own, no write. Rules kept:
 
 * No points, streaks or reward for writing a review.

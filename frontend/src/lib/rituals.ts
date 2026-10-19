@@ -1,12 +1,6 @@
-import type {
-  CompetenceLevel,
-  CompetenceStatus,
-  DecisionRecord,
-  RecordReviewState,
-} from "./types";
+import type { DecisionRecord, RecordReviewState } from "./types";
 
-/** Wording and classes for the Sprint 25 rituals (game mode G18 Hall of Records, G19
- * Circle of Competence). Pure, so it is unit-tested. The backend decides every review
+/** Wording and classes for the Sprint 25 rituals (game mode G18 Hall of Records). Pure, so it is unit-tested. The backend decides every review
  * state and status from stored facts; this file only chooses labels and colours and never scores
  * anything. A decision is not its outcome: nothing here counts wins or ranks a decision. */
 
@@ -20,30 +14,6 @@ export const REVIEW_CLASS: Record<RecordReviewState, string> = {
   written: "bg-positive-subtle text-positive",
   due: "bg-caution-subtle text-caution",
   not_due: "bg-raised text-ink-muted",
-};
-
-export const LEVEL_LABEL: Record<CompetenceLevel, string> = {
-  know: "I know this",
-  partly: "On the edge",
-  outside: "Outside my circle",
-};
-
-export const STATUS_LABEL: Record<CompetenceStatus, string> = {
-  inside: "Inside",
-  edge: "On the edge",
-  outside: "Outside",
-  unmarked: "Unmarked",
-  unclassified: "No sector set",
-  not_applicable: "Not judged",
-};
-
-export const STATUS_CLASS: Record<CompetenceStatus, string> = {
-  inside: "bg-positive-subtle text-positive",
-  edge: "bg-caution-subtle text-caution",
-  outside: "bg-negative-subtle text-negative",
-  unmarked: "bg-raised text-ink-muted",
-  unclassified: "bg-raised text-ink-muted",
-  not_applicable: "bg-raised text-ink-muted",
 };
 
 export const ACTION_LABEL: Record<string, string> = {
@@ -101,22 +71,4 @@ export function weightText(weight: string | null): string {
   if (weight === null) return "unknown";
   const n = Number(weight);
   return Number.isFinite(n) ? `${n.toFixed(1)}%` : "unknown";
-}
-
-/** Width in percent for the circle bar segments (sums to 100 or less; the rest is not judged). */
-export function circleSegments(c: {
-  inside_weight_pct: string;
-  edge_weight_pct: string;
-  outside_weight_pct: string;
-  unmarked_weight_pct: string;
-  unclassified_weight_pct: string;
-}): { key: CompetenceStatus; pct: number }[] {
-  const raw: { key: CompetenceStatus; pct: number }[] = [
-    { key: "inside", pct: Number(c.inside_weight_pct) },
-    { key: "edge", pct: Number(c.edge_weight_pct) },
-    { key: "outside", pct: Number(c.outside_weight_pct) },
-    { key: "unmarked", pct: Number(c.unmarked_weight_pct) },
-    { key: "unclassified", pct: Number(c.unclassified_weight_pct) },
-  ];
-  return raw.filter((s) => Number.isFinite(s.pct) && s.pct > 0);
 }

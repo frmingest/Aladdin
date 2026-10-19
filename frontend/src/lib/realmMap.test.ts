@@ -26,7 +26,7 @@ import {
 } from "./realmMap";
 import { SURVEY_CHECKS, commissionsFor, surveyTower } from "./survey";
 import type { SurveyInputs, SurveyState } from "./survey";
-import type { Competence, DecisionRecord, DocumentSummary, GameState, GameTower } from "./types";
+import type { DecisionRecord, DocumentSummary, GameState, GameTower } from "./types";
 
 function tower(over: Partial<GameTower> = {}): GameTower {
   return {
@@ -52,13 +52,10 @@ function state(towers: GameTower[], over: Partial<GameState> = {}): GameState {
     siege: null, notes: [], ...over,
   };
 }
-function comp(status: Competence["towers"][number]["status"]): Competence {
-  return { towers: [{ holding_id: "h1", name: "Alpha", sector: "Energy", weight_pct: "40", status }] } as Competence;
-}
 const rec = (inv: string | null): DecisionRecord => ({ holding_id: "h1", invalidation: inv }) as DecisionRecord;
 function inputs(t: GameTower, over: Partial<SurveyInputs> = {}): SurveyInputs {
   return {
-    state: state([t]), competence: comp("inside"), records: [rec("Margins fall below 10%")],
+    state: state([t]), records: [rec("Margins fall below 10%")],
     documents: { h1: [doc("d1", "annual_report", "2026-03-01")] }, opened: new Set(["d1"]), ...over,
   };
 }
@@ -66,14 +63,14 @@ function inputs(t: GameTower, over: Partial<SurveyInputs> = {}): SurveyInputs {
 const STATES: SurveyState[] = ["clear", "fog", "not_judged"];
 
 describe("fogSlots", () => {
-  it("is always five slots in SURVEY_CHECKS order, each with a fixed place", () => {
+  it("is always four slots in SURVEY_CHECKS order, each with a fixed place", () => {
     const s = surveyTower(tower(), inputs(tower()));
     const slots = fogSlots(s);
-    expect(slots).toHaveLength(5);
+    expect(slots).toHaveLength(4);
     expect(slots.map((x) => x.id)).toEqual(SURVEY_CHECKS.map((c) => c.id));
     expect(SLOT_AT.map((x) => x.id)).toEqual(SURVEY_CHECKS.map((c) => c.id));
     const places = slots.map((x) => `${x.cx},${x.cy}`);
-    expect(new Set(places).size).toBe(5);
+    expect(new Set(places).size).toBe(4);
   });
 
   it("a slot never moves when its state changes", () => {
@@ -117,18 +114,17 @@ describe("fogSlots", () => {
     }
   });
 
-  it("unknown stays fog: unreadable documents, journal and circle are cloud, never a ring", () => {
+  it("unknown stays fog: unreadable documents and journal are cloud, never a ring", () => {
     const t = tower();
-    const slots = fogSlots(surveyTower(t, inputs(t, { documents: {}, records: null, competence: null })));
+    const slots = fogSlots(surveyTower(t, inputs(t, { documents: {}, records: null })));
     const by = (id: string) => slots.find((s) => s.id === id)!;
     expect(by("report").look.shape).toBe("cloud");
     expect(by("thesis").look.shape).toBe("cloud");
-    expect(by("circle").look.shape).toBe("cloud");
   });
 
   it("a check missing from the input is fog, not clear", () => {
     const slots = fogSlots([{ id: "report", state: "clear", reason: "r" }]);
-    expect(slots).toHaveLength(5);
+    expect(slots).toHaveLength(4);
     expect(slots[0].state).toBe("clear");
     expect(slots.slice(1).every((s) => s.state === "fog")).toBe(true);
     expect(slots[1].reason).toMatch(/stays unknown/);
@@ -139,16 +135,15 @@ describe("fogSlots", () => {
     const aged = fogSlots(surveyTower(tower({ freshness: "weathered" }), inputs(tower({ freshness: "weathered" }))));
     expect(fresh[1].look.shape).toBe("ring");
     expect(aged[1].look.shape).toBe("cloud");
-    for (const i of [0, 2, 3, 4]) expect(aged[i].state).toBe(fresh[i].state);
+    for (const i of [0, 2, 3]) expect(aged[i].state).toBe(fresh[i].state);
     expect(aged[1].reason).toMatch(/weathered/);
   });
 
   it("funds and gold: checks that are not judged are dashed sockets, not rings", () => {
     const t = tower({ freshness: "not_applicable" });
-    const slots = fogSlots(surveyTower(t, inputs(t, { competence: { towers: [{ holding_id: "h1", name: "A", sector: null, weight_pct: null, status: "not_applicable" }] } as Competence })));
+    const slots = fogSlots(surveyTower(t, inputs(t)));
     expect(slots[1].look.shape).toBe("dashed-ring");
     expect(slots[3].look.shape).toBe("dashed-ring");
-    expect(slots[4].look.shape).toBe("dashed-ring");
   });
 });
 
@@ -244,7 +239,7 @@ describe("commission flags", () => {
   ];
   const st = state(towers, { vault: { accounts_total: 2, accounts_with_cash: 1, cash_stale: false } as GameState["vault"] });
   const surveyed = towers.map((t) =>
-    surveyTower(t, { state: st, competence: { towers: towers.map((x) => ({ holding_id: x.holding_id, name: x.name, sector: "S", weight_pct: null, status: "inside" })) } as Competence, records: towers.map((x) => ({ holding_id: x.holding_id, invalidation: "x" }) as DecisionRecord), documents: {}, opened: new Set() }),
+    surveyTower(t, { state: st, records: towers.map((x) => ({ holding_id: x.holding_id, invalidation: "x" }) as DecisionRecord), documents: {}, opened: new Set() }),
   );
   const commissions = commissionsFor(surveyed, st);
   const ids = towers.map((t) => t.holding_id);

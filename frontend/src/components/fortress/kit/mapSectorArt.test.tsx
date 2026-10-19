@@ -71,7 +71,7 @@ describe("sector pictures are the map's towers", () => {
     expect(html).toContain("outpost");
   });
 
-  it("keeps the five survey patches drawn by code over the picture, and the picture decorative", () => {
+  it("keeps the four survey patches drawn by code over the picture, and the picture decorative", () => {
     const html = render({ a: "Materials", b: "Energy" }, true);
     expect(html).toContain(sectorArtId("Materials", "a")!);
     expect(html).toContain("<image");

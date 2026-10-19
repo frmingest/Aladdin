@@ -37,8 +37,6 @@ import type {
   SiegeBacktest,
   SiegeBenchmarkKey,
   SiegeSim,
-  Competence,
-  CompetenceLevel,
   HoldingAdvisors,
   Records,
   Calibration,
@@ -416,19 +414,10 @@ export const api = {
   // Sprint 24: recently captured reports (G15), the nightly check as a dispatch (G16). All read-only.
   getRavens: () => request<Ravens>("/game/ravens"),
   getNightWatch: () => request<NightWatch>("/game/night-watch"),
-  // Sprint 25 rituals: Hall of Records (G18), Circle of Competence (G19), per-holding advisor lines (G20).
+  // Sprint 25 rituals: Hall of Records (G18), per-holding advisor lines (G20).
   getRecords: () => request<Records>("/game/records"),
   /** C2 hit rate: counts only, gated by the server (opens at min_n outcomes). */
   getCalibration: () => request<Calibration>("/game/calibration"),
-  getCompetence: () => request<Competence>("/game/competence"),
-  /** The only write of Sprint 25: your own mark for one sector. */
-  putCompetence: (sector: string, level: CompetenceLevel, note: string | null) =>
-    request<Competence>(`/game/competence/${encodeURIComponent(sector)}`, {
-      method: "PUT",
-      body: JSON.stringify({ level, note }),
-    }),
-  deleteCompetence: (sector: string) =>
-    request<Competence>(`/game/competence/${encodeURIComponent(sector)}`, { method: "DELETE" }),
   getHoldingAdvisors: (holdingId: string) => request<HoldingAdvisors>(`/game/holdings/${holdingId}/advisors`),
   // G13 Siege Simulator: a what-if over stored betas, read-only. marketDrop is a fraction (0.3 = 30%).
   getSiegeSim: (marketDrop?: number, benchmark?: SiegeBenchmarkKey) =>

@@ -41,12 +41,12 @@ describe("the map on the painted picture (prototype)", () => {
     expect(html).not.toContain("wm-frame");
   });
 
-  it("keeps everything that carries data: every settlement button, all fifteen survey patches, province names and the legend", () => {
+  it("keeps everything that carries data: every settlement button, all twelve survey patches, province names and the legend", () => {
     const html = render(true);
     expect(html.match(/class="wm-tower"/g)?.length ?? 0).toBe(towers.length);
-    expect(html.match(/data-patch="fog"/g)?.length ?? 0).toBe(5);
-    expect(html.match(/data-patch="clear"/g)?.length ?? 0).toBe(5);
-    expect(html.match(/data-patch="not-judged"/g)?.length ?? 0).toBe(5);
+    expect(html.match(/data-patch="fog"/g)?.length ?? 0).toBe(4);
+    expect(html.match(/data-patch="clear"/g)?.length ?? 0).toBe(4);
+    expect(html.match(/data-patch="not-judged"/g)?.length ?? 0).toBe(4);
     expect(html).toContain("Energy");
     expect(html).toContain("Materials");
     expect(html).toContain("No sector set");

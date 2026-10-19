@@ -2451,7 +2451,7 @@ export interface NightWatch {
   lines: NightWatchLine[];
 }
 
-// --- Game mode Sprint 25: rituals — backend/app/services/game/rituals.py, competence.py
+// --- Game mode Sprint 25: rituals — backend/app/services/game/rituals.py
 
 export interface HoldingAdvisors {
   holding_id: string;
@@ -2493,47 +2493,6 @@ export interface Records {
   records: DecisionRecord[];
   reviews_due: number;
   caption: string;
-}
-
-export type CompetenceLevel = "know" | "partly" | "outside";
-export type CompetenceStatus = "inside" | "edge" | "outside" | "unmarked" | "unclassified" | "not_applicable";
-
-export interface CompetenceHeld {
-  holding_id: string;
-  name: string;
-  weight_pct: string | null;
-}
-
-export interface CompetenceSector {
-  sector: string;
-  level: CompetenceLevel | null;
-  note: string | null;
-  marked_at: string | null;
-  weight_pct: string;
-  holdings: CompetenceHeld[];
-}
-
-export interface CompetenceTower {
-  holding_id: string;
-  name: string;
-  sector: string | null;
-  weight_pct: string | null;
-  status: CompetenceStatus;
-}
-
-export interface Competence {
-  rules_version: string;
-  demo: boolean;
-  levels: string[];
-  sectors: CompetenceSector[];
-  towers: CompetenceTower[];
-  inside_weight_pct: string;
-  edge_weight_pct: string;
-  outside_weight_pct: string;
-  unmarked_weight_pct: string;
-  unclassified_weight_pct: string;
-  summary: string;
-  note_max_chars: number;
 }
 
 

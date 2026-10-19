@@ -3,7 +3,7 @@ import type { Commission, SurveyCheck, SurveyCheckId, SurveyState, TowerFog } fr
 
 /**
  * The Cartographer's table, wins 1 to 4 (game mode G34 / G35, identity pass). Pure mapping from the
- * stored survey (`lib/survey.ts`, survey-v1, untouched) to what the page draws: five fixed fog patches
+ * stored survey (`lib/survey.ts`, survey-v2) to what the page draws: four fixed fog patches
  * per tower, the keyboard step between towers, and the flags a pressed commission plants. Nothing here
  * reads a verdict, a wall or a weight to decide a look: a patch depends only on the state of its check.
  *
@@ -43,7 +43,7 @@ export function contrastRatio(a: string, b: string): number {
   return (hi + 0.05) / (lo + 0.05);
 }
 
-// --- The tower picture and its five slots --------------------------------------------------------------
+// --- The tower picture and its four slots --------------------------------------------------------------
 
 /** Drawing space of one tower card (1 unit = 1 CSS px at the card's natural size). */
 export const VIEW = { w: 120, h: 112 } as const;
@@ -64,8 +64,7 @@ export const SLOT_AT: ReadonlyArray<{ id: SurveyCheckId; fx: number; fy: number;
   { id: "report", fx: 0.5, fy: 0.0, name: "roof" },
   { id: "analysis", fx: 0.12, fy: 0.3, name: "left shoulder" },
   { id: "thesis", fx: 0.88, fy: 0.3, name: "right shoulder" },
-  { id: "circle", fx: 0.12, fy: 0.78, name: "left base" },
-  { id: "valuation", fx: 0.88, fy: 0.78, name: "right base" },
+  { id: "valuation", fx: 0.5, fy: 0.78, name: "base" },
 ];
 
 export type PatchShape = "cloud" | "ring" | "dashed-ring";
@@ -114,7 +113,7 @@ export function patchRadius(state: SurveyState, towerW: number = TOWER_BOX.w): n
 
 const UNREAD = "This fact could not be read, so it stays unknown.";
 
-/** The five patch slots of a tower, always five and always in SURVEY_CHECKS order. A check that is
+/** The four patch slots of a tower, always four and always in SURVEY_CHECKS order. A check that is
  * missing from the input is unknown, and unknown is fog. */
 export function fogSlots(checks: ReadonlyArray<Pick<SurveyCheck, "id" | "state" | "reason">> | Pick<TowerFog, "checks">): FogSlot[] {
   const list = Array.isArray(checks) ? checks : (checks as Pick<TowerFog, "checks">).checks;
@@ -164,7 +163,6 @@ export const MISSING_PHRASE: Record<SurveyCheckId, string> = {
   report: "latest report not opened",
   analysis: "analysis not fresh",
   thesis: "invalidation not written",
-  circle: "circle not marked",
   valuation: "valuation not available",
 };
 
@@ -210,14 +208,13 @@ export function gridMove(index: number, key: GridKey, count: number, cols: numbe
 
 // --- Win 4: commission seals and flags --------------------------------------------------------------
 
-export type CommissionShape = "square" | "hexagon" | "diamond" | "ring" | "triangle-down" | "coin";
+export type CommissionShape = "square" | "hexagon" | "diamond" | "triangle-down" | "coin";
 
 /** One shape per kind of commission. Shape + number + the title beside it; colour is ornament. */
 export const COMMISSION_SHAPE: Record<string, CommissionShape> = {
   report: "square",
   analysis: "hexagon",
   thesis: "diamond",
-  circle: "ring",
   valuation: "triangle-down",
   vault: "coin",
 };
@@ -265,7 +262,7 @@ export function flagsFor(commissions: ReadonlyArray<Pick<Commission, "id" | "hol
 
 export const MAP_COPY = {
   subtitle: "Which parts of the realm are surveyed, and which are still in fog.",
-  intro: "Five facts per tower. Clear means looked at, not sound; fog comes back when an analysis ages.",
+  intro: "Four facts per tower. Clear means looked at, not sound; fog comes back when an analysis ages.",
   hint: "Drag to explore. Press a tower.",
   hintSeal: "Press a numbered seal to flag its towers.",
   /** Wide screens only: the empty dock beside the map. */
@@ -275,11 +272,11 @@ export const MAP_COPY = {
   /** Plain view and normal mode only: the browser-only note the short intro leaves out. */
   browserNote: "Opened reports are remembered on this browser only.",
   empty: "No towers yet.",
-  commissionsEmpty: "Nothing is in fog by these five facts. That says what you have looked at, not that all is well.",
+  commissionsEmpty: "Nothing is in fog by these four facts. That says what you have looked at, not that all is well.",
 } as const;
 
 /** Words of the default view's chrome: subtitle, intro, key, hint and the demo pill. Budget 45. */
 export const CARTOGRAPHER_CHROME_BUDGET = 45;
-/** Words of the whole default body (measured 161 with three towers and five commissions, tower names printed once excluded; the chips repeat names, so it grows with the realm): the chrome,
+/** Words of the whole default body (measured 161 with three towers and four commissions, tower names printed once excluded; the chips repeat names, so it grows with the realm): the chrome,
  * the commission titles, their one-line reasons and their links (the per-tower text list is closed). */
 export const CARTOGRAPHER_BODY_BUDGET = 180;

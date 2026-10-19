@@ -195,7 +195,7 @@ About 47,000 lines of Python in `app/`; 160 test files holding about 1,670 test 
 | `llm_ledger`, `llm_prompt_log`, `llm_errors` | Usage ledger and daily budget; exact prompts sent, kept 30 days; readable failure messages |
 | `system_status`, `job_status`, `settings/` | Status page, background-job last-run record, demo-mode guard |
 | `then_and_now`, `journal`, `watchlist` | Blind-pass-only comparison across a decision; decision journal; buy-below list |
-| `game/` | Fortress state, temperament, hand-written advisor lines, Siege Simulator and back-test, Night Watch, Ravens, Records, calibration, competence. Code only, no LLM or market call |
+| `game/` | Fortress state, temperament, hand-written advisor lines, Siege Simulator and back-test, Night Watch, Ravens, Records, calibration. Code only, no LLM or market call |
 
 ### Providers
 
@@ -297,7 +297,7 @@ create 3 more that no model maps. Tables by group:
 | Analysis | `equity_analysis_runs`, `equity_holding_notes`, `analysis_worker_heartbeats`, `llm_usage_events`, `llm_prompt_logs` |
 | Research and market data | `research_runs`, `research_items`, `market_observations`, `fx_observations`, `share_count_observations`, `stock_splits`, `risk_free_rate_observations`, `price_history_observations`, `macro_observations`, `macro_series_status` |
 | Thesis, risk, watchlist, journal | `thesis_tripwires`, `portfolio_risk_snapshots`, `watchlist_items`, `decision_journal_entries`, `forecasts` |
-| Game | `competence_marks` (Circle); the frozen `forecasts` above feed the hit rate; stored Fortress frames live in `computed_snapshots`, not their own table |
+| Game | none of its own: the frozen `forecasts` above feed the hit rate; stored Fortress frames live in `computed_snapshots`. (`competence_marks`, the Circle page's table, is no longer read or written by any code; the table and its migration stay) |
 | Speed and settings | `computed_snapshots`, `app_settings` |
 | Legacy (pre-rebuild; all rows removed by the 2026-09-21 wipe migration `e5f6a7b8c9d0`, tables kept) | `analysis_runs`, `holding_analyses`, `factor_assessments`, `evidence_references`; migration-only (no model): `investment_theses`, `valuation_cases` |
 | Unused but kept | `winter_orders` (migration `x1f2a3b4c5d6`; the Winter Rehearsal feature was removed in PR #165, the migration stays so a database that ran it still resolves its revision) |
@@ -336,8 +336,8 @@ erDiagram
 Two things to know when reading the schema. First, `portfolio_risk_snapshots` and `llm_usage_events` still
 carry foreign keys to the legacy `analysis_runs` / `holding_analyses` tables, so those legacy tables cannot
 simply be dropped. Second, the game mode keeps almost nothing of its own: frames go into
-`computed_snapshots`, and the only dedicated game tables are `competence_marks` and the append-only
-`forecasts`.
+`computed_snapshots`, and the only dedicated game table is the append-only `forecasts`. The old `competence_marks` table
+(Circle page, removed 2026-10-19) is left in the database, unused.
 
 ---
 
@@ -365,7 +365,6 @@ flowchart LR
     SG["siege + back-test<br/>stress scenarios v4"]
     NW["Night Watch<br/>reads stored frames"]
     RC["Records + calibration (hit rate)"]
-    CP["competence marks (Circle)"]
   end
 
   subgraph FRONT["Frontend: /fortress/*"]
@@ -373,7 +372,6 @@ flowchart LR
     F2["Marketplace + Market store"]
     F3["Siege Simulator"]
     F4["Records (Hall of Records)"]
-    F5["Circle"]
     F6["Map"]
   end
 
@@ -382,7 +380,6 @@ flowchart LR
   D & E --> SG --> F3
   C --> RC --> F4
   NW --> F1
-  CP --> F5
   S --> F6
   S --> F2
   WORKER["PC worker: one frame a day"] -. "computed_snapshots" .-> NW
@@ -395,10 +392,10 @@ flowchart LR
 | `GET /game/ravens`, `GET /game/night-watch` | Newest-first events (Ravens); the morning dispatch from stored frames and tripwires |
 | `GET /game/holdings/{id}/advisors` | Hand-written advisor lines for one holding |
 | `GET /game/records`, `GET /game/calibration` | Hall of Records (the decision journal as a library, no ranking); n-gated hit-rate ledger |
-| `GET/PUT/DELETE /game/competence…` | Circle of Competence marks, the only write endpoints in `game` |
 
 Pages in the Fortress write only through existing endpoints on your action: edit account cash (the Vault),
-set a watchlist buy-below price, refresh the watchlist, queue analyses. **Removed from game mode:** Council
+set a watchlist buy-below price, refresh the watchlist, queue analyses. **Removed from game mode:** Circle of Competence
+(2026-10-19, [write-up](game/remove-circle-page-2026-10-19.md)), Council
 and Chronicle (PR #184), Blindfold Years, Winter Rehearsal and The Hearth (PR #165).
 
 ---
@@ -429,7 +426,7 @@ flowchart TB
   APP --> MAIN["Primary nav<br/>/ Dashboard · /holdings · /margin-of-safety · /thesis"]
   APP --> MORE["More<br/>/portfolio · /performance · /risk · /precious-metals<br/>/watchlist · /analysis-queue · /macro · /journal<br/>/settings · /tag-review · /glossary"]
   APP --> DEEP["Detail routes<br/>/holdings/:id · /sectors/:sector · /status"]
-  APP --> FORT["Fortress (game mode)<br/>/fortress · /fortress/marketplace(/:holdingId)<br/>/fortress/siege · /fortress/records<br/>/fortress/circle · /fortress/map"]
+  APP --> FORT["Fortress (game mode)<br/>/fortress · /fortress/marketplace(/:holdingId)<br/>/fortress/siege · /fortress/records<br/>/fortress/map"]
   APP --> LIB["lib/api.ts<br/>typed client, sends X-API-Key"]
 ```
 
@@ -440,7 +437,7 @@ flowchart TB
 | Risk and returns | Portfolio risk, Performance, Precious metals |
 | Context | Macro, Sector, Glossary |
 | Operations | System status (incl. prompt log), Settings |
-| Game mode | Fortress, Marketplace and per-holding Market store, Siege Simulator, Records, Circle, Map |
+| Game mode | Fortress, Marketplace and per-holding Market store, Siege Simulator, Records, Map |
 
 The sidebar shows four primary pages and groups the rest under "More" (`lib/nav.ts`, held by a test).
 Shared pieces: `lib/api.ts` (typed client), `components/DocumentReader.tsx` and `StatementsPane.tsx`

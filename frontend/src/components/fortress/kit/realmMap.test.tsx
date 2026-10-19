@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { CARTOGRAPHER_BODY_BUDGET, CARTOGRAPHER_CHROME_BUDGET, MAP_COPY, PATCH_LOOK, fogSlots } from "../../../lib/realmMap";
 import { commissionsFor, surveyTower } from "../../../lib/survey";
 import type { SurveyInputs, TowerFog } from "../../../lib/survey";
-import type { Competence, DecisionRecord, GameState, GameTower } from "../../../lib/types";
+import type { DecisionRecord, GameState, GameTower } from "../../../lib/types";
 import { countWords } from "../../../lib/wordBudget";
 import page from "../../../pages/CartographerPage.tsx?raw";
 import bodySource from "./RealmMapBody.tsx?raw";
@@ -40,7 +40,6 @@ const state: GameState = {
 };
 const inputs: SurveyInputs = {
   state,
-  competence: { towers: towers.map((t) => ({ holding_id: t.holding_id, name: t.name, sector: "S", weight_pct: null, status: "inside" })) } as Competence,
   records: [{ holding_id: "c", invalidation: "x" } as DecisionRecord],
   documents: {},
   opened: new Set(),
@@ -59,7 +58,7 @@ describe("Cartographer's table pieces", () => {
   it("a tower picture draws one patch per slot: cloud for fog, ring for clear, dashed ring for not judged", () => {
     const slots = fogSlots(surveyed[2]);
     const html = renderToStaticMarkup(<TowerPicture slots={slots} hatchId="h" />);
-    expect((html.match(/data-patch=/g) ?? []).length).toBe(5);
+    expect((html.match(/data-patch=/g) ?? []).length).toBe(4);
     const fogCount = slots.filter((s) => s.state === "fog").length;
     expect((html.match(/data-patch="fog"/g) ?? []).length).toBe(fogCount);
     expect(html).toContain("url(#h)");
@@ -73,7 +72,7 @@ describe("Cartographer's table pieces", () => {
     expect(renderToStaticMarkup(<FogDefs id="h" />)).toContain("<pattern");
   });
 
-  it("the slate prints a word, the label and the reason for each of the five checks", () => {
+  it("the slate prints a word, the label and the reason for each of the four checks", () => {
     const html = renderToStaticMarkup(
       <MemoryRouter>
         <TowerSlate tower={surveyed[0]} hatchId="h" onClose={() => {}} />

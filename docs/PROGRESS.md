@@ -1,10 +1,10 @@
 # Aladdin — Progress
 
-**Last updated:** 2026-10-19 (Map scene dive PR opened; housekeeping docs merged). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
+**Last updated:** 2026-10-19 (Circle page removal PR opened). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
 
 ## Current Objective
 
-**Housekeeping pass (PR `docs/housekeeping-2026-10-19`, docs only, not merged).** Every doc that describes how the app is built was checked against the code on `main`: [architecture.md](architecture.md) is rewritten (7 diagrams, all rendered and checked), the two reference docs, CLAUDE.md, the docs index and four broken links are fixed. Findings and loose ends: [housekeeping-2026-10-19.md](ops/housekeeping-2026-10-19.md). No code was changed.
+**Circle page removed from Game mode (PR `feature/remove-circle-page`, not merged, not deployed, not seen in a browser).** Faiz said it did not fit the design. The page, its tab, its three `/game/competence` endpoints, the competence service and model, and the ring-map components are gone, with their tests and the two Circle-only docs. The Map's "Circle marked" check went with it, so the survey is now four facts (`survey-v2`). Stitch pictures and the `competence_marks` table stay. Write-up: [remove-circle-page-2026-10-19.md](game/remove-circle-page-2026-10-19.md).
 
 State: `main` is at `4d0ce8b` (#185). **No PR was open on 2026-10-19** (GitHub API); everything listed in earlier versions of this file as "not merged" has merged ([archive](archive/progress-archive.md)). Repo migration head `x1f2a3b4c5d6` (the unused `winter_orders`). Deploy not checked; say if Railway has redeployed. Supabase is retired (decision 2026-10-14): database is Railway Postgres, files are on Cloudflare R2. Live URLs: frontend `https://exciting-gratitude-production-71b5.up.railway.app`, backend `https://aladdin-production-bd25.up.railway.app`.
 
@@ -12,7 +12,7 @@ State: `main` is at `4d0ce8b` (#185). **No PR was open on 2026-10-19** (GitHub A
 
 - [ ] **Records shelf, after the next deploy (PR `fix/records-uniform-books`):** on a wide screen all books must be exactly the same height (long names used to stretch their book)
 - [ ] **Review and merge the Map scene-dive PR (`feature/map-zoom-into-scene`, Faiz).** Written and tested in a clean clone, not yet deployed; after deploy press a gold, defence, energy, food and bank holding on the Map and check the dive on desktop and phone. [Doc](game/map-scene-dive-2026-10-19.md)
-- [ ] **Review and merge the housekeeping docs PR (Faiz).** Docs only, so merging it deploys nothing new
+- [ ] **Review and merge the Circle removal PR (Faiz).** After deploy, open the Map: each tower should show four fog patches, and `/fortress/circle` is gone (an old bookmark shows an empty page). [Doc](game/remove-circle-page-2026-10-19.md)
 - [ ] **After the latest deploy, look at Game mode on desktop and phone:** Records (one large book per record, long names fit the cover), Map (picture fills the box, fog patches readable on each sector picture), Siege Simulator (towers backdrops follow the slider, opens at 5%), Fortress "Walls on the rise", Market Street (half-size stalls: are the names still readable?). Docs: [records](game/records-hall-polish-2026-10-17.md), [map](game/map-image-prototype-2026-10-15.md), [siege](game/siege-towers-backdrops-2026-10-17.md), [walls](game/walls-on-the-rise-2026-10-18.md), [market](game/market-street-redesign-2026-10-17.md)
 - [ ] **After #150 is deployed:** Refresh Margin of safety, open "Can't be ranked yet" then "Why" on Vend Marketplaces, Salmon Evolution and Vår Energi and sanity-check the owner-earnings figure (if wrong, check share count and price currency first). [Doc](valuation/loss-making-price-assumes-2026-10-14.md)
 - [ ] **Still to generate in Stitch:** a barometer picture without text and a larger copy of the map picture ([doc](game/game-art-dde-2026-10-16.md))
