@@ -31,16 +31,24 @@ describe("sceneFor", () => {
     expect(sceneFor({ sector: "Consumer Staples" })).toBe("farm");
   });
 
+  it("sends financials to the counting house and information technology to the guild hall", () => {
+    expect(sceneFor({ sector: "Financials" })).toBe("bank");
+    expect(sceneFor({ sector: "Banks" })).toBe("bank");
+    expect(sceneFor({ sector: "Insurance" })).toBe("bank");
+    expect(sceneFor({ sector: "Information Technology" })).toBe("tech");
+    expect(sceneFor({ sector: "Software & Services" })).toBe("tech");
+    expect(sceneFor({ sector: "Communication Services" })).toBe("tech");
+  });
+
   it("sends money to the exchange, and so does anything with no scene of its own", () => {
-    expect(sceneFor({ sector: "Financials" })).toBe("exchange");
     expect(sceneFor({ sector: "Diversified / Fund" })).toBe("exchange");
-    expect(sceneFor({ sector: "Information Technology" })).toBe("exchange");
+    expect(sceneFor({ sector: "Real Estate" })).toBe("exchange");
     expect(sceneFor({ sector: null })).toBe("exchange");
     expect(sceneFor({})).toBe("exchange");
   });
 
   it("does not take a metal word buried in a company name for the trade", () => {
-    expect(sceneFor({ sector: "Information Technology", name: "Materialise NV" })).toBe("exchange");
+    expect(sceneFor({ sector: "Information Technology", name: "Materialise NV" })).toBe("tech");
   });
 
   it("is decided by the holding's own facts only: the same input always gives the same scene", () => {
@@ -57,7 +65,7 @@ describe("scene pictures", () => {
       expect(s.kicker.split(/\s+/).length, id).toBeLessThanOrEqual(5);
       expect(s.width / s.height).toBeCloseTo(16 / 9, 1);
     }
-    expect([...SCENE_IDS].sort()).toEqual(["clinic", "exchange", "farm", "forge", "mill", "mines", "workshop"]);
+    expect([...SCENE_IDS].sort()).toEqual(["bank", "clinic", "exchange", "farm", "forge", "mill", "mines", "tech", "workshop"]);
   });
 
   it("keeps each shipped picture under the 150 KB image guard", () => {
