@@ -46,3 +46,9 @@ describe("sidebar navigation", () => {
     expect(primaryNavFor(false).map((i) => i.to)).not.toContain("/tag-review");
   });
 });
+
+describe("Fortress tab strip order", () => {
+  it("puts Map right after Fortress", () => {
+    expect(FORTRESS_NAV.slice(0, 2).map((i) => i.label)).toEqual(["Fortress", "Map"]);
+  });
+});

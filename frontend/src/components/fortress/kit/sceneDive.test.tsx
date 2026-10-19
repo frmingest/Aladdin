@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { SCENES } from "../../../lib/mapScenes";
@@ -29,5 +31,16 @@ describe("SceneDive", () => {
     const html = renderToStaticMarkup(<SceneDive {...base} scene="farm" phase="open" />);
     expect(html).toContain('alt=""');
     expect(html).not.toMatch(/%|fog|clear|weight/i);
+  });
+
+  it("keeps Back in the top right corner, outside the caption plate", () => {
+    const css = readFileSync(resolve(__dirname, "sceneDive.css"), "utf-8");
+    const back = css.match(/\.wm-dive-back \{([^}]*)\}/)![1];
+    expect(back).toMatch(/position:\s*absolute/);
+    expect(back).toMatch(/top:\s*12px/);
+    expect(back).toMatch(/right:\s*12px/);
+    const html = renderToStaticMarkup(<SceneDive {...base} scene="mines" phase="open" />);
+    const plate = html.slice(html.indexOf("wm-dive-plate"), html.indexOf("</div>", html.indexOf("wm-dive-plate")));
+    expect(plate).not.toContain("<button");
   });
 });

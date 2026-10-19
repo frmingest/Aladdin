@@ -268,6 +268,8 @@ export const MAP_COPY = {
   intro: "Five facts per tower. Clear means looked at, not sound; fog comes back when an analysis ages.",
   hint: "Drag to explore. Press a tower.",
   hintSeal: "Press a numbered seal to flag its towers.",
+  /** Wide screens only: the empty dock beside the map. */
+  slateEmpty: "Press a tower to read its survey here.",
   noFlag: "No tower to flag.",
   demo: "Demo data",
   /** Plain view and normal mode only: the browser-only note the short intro leaves out. */

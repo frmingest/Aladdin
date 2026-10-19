@@ -24,4 +24,9 @@ Pictures: `frontend/src/assets/map/scenes/*.webp` (1280 x 714, each under 150 KB
 
 ## Open
 - Scenes for sectors that fall back to the Exchange (technology, health care, real estate, consumer discretionary) would need more Stitch pictures.
-- The survey slate is still below the map, not inside the scene.
+
+
+## Layout follow-up (same day)
+- "Back to the map" sits top right of the scene.
+- On wide screens (xl) the survey slate is docked beside the map in a 23rem column, like the Fortress dock; the column is always there (a quiet "Press a tower" note when empty) so the map never jumps. Narrower screens keep it under the map.
+- "Map" is the second tab, right after Fortress.
