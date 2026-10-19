@@ -11,7 +11,7 @@
 | All numbers (ROE, DCF, FX, …) | Python code | Unchanged — the LLM never calculates (CLAUDE.md Rule 1). |
 
 **Topology:** you run the backend + frontend **on your PC** when you want to run analyses. They talk
-to the same Supabase database as Railway, so results show up in the deployed app too. Railway can't
+to the same database as Railway (Railway Postgres since 2026-10-14), so results show up in the deployed app too. Railway can't
 reach `localhost` on your PC, so an analysis started from the Railway site still uses Gemini.
 (Same decision as 2026-09-17: no tunnel, no port exposed to the internet.)
 
@@ -110,7 +110,7 @@ MARKET_DATA_PROVIDER=yfinance
 > `anthropic` is **not** a value the code accepts (only `google_ai_studio`, `mistral`, `ollama`),
 > so replace both lines as above.
 
-Keep `DATABASE_URL` (Supabase session pooler) and the `OBJECT_STORAGE_*` values the same as on
+Keep `DATABASE_URL` (Railway Postgres, the public URL since the PC is outside Railway) and the `OBJECT_STORAGE_*` values the same as on
 Railway, so local runs read/write the same data and documents.
 
 ## Step 6 — Start the backend locally

@@ -3,9 +3,9 @@
 A simple overview of what information the app handles, **where an LLM is involved (API or local)**,
 what everything else runs on, and why each technology was chosen.
 
-*Written 2026-09-23; refreshed 2026-10-09 against `main` (`53bf98a`; adds the bond/money-market/commodity prompts, the packet token budget and the link to [docs/llm-local/ollama-what-it-reads-2026-10-09.md](../llm-local/ollama-what-it-reads-2026-10-09.md)). Update this doc whenever a provider,
+*Written 2026-09-23; refreshed 2026-10-19 against `main` (`4d0ce8b`; hosting is now Railway Postgres + Cloudflare R2, test count updated). Earlier refresh 2026-10-09 (`53bf98a`; adds the bond/money-market/commodity prompts, the packet token budget and the link to [docs/llm-local/ollama-what-it-reads-2026-10-09.md](../llm-local/ollama-what-it-reads-2026-10-09.md)). Update this doc whenever a provider,
 prompt or data source changes. The structure of the app (services, deployment, jobs, diagrams) is in
-[architecture.md](architecture.md). For a per-output view (which thing on screen is code, LLM or your input) see
+[architecture.md](../architecture.md). For a per-output view (which thing on screen is code, LLM or your input) see
 [docs/reference/AI-VS-DETERMINISTIC.md](AI-VS-DETERMINISTIC.md).*
 
 ---
@@ -95,8 +95,8 @@ Cited evidence IDs are checked against the packet. An unknown ID is flagged as a
 | Area | Technology | What it does in Aladdin |
 |---|---|---|
 | Backend API | **Python, FastAPI, Pydantic** | REST API; validates every request and every LLM JSON reply against a schema |
-| Database | **PostgreSQL on Supabase**, SQLAlchemy, Alembic | Holdings, positions, facts, research cache, analysis runs; versioned migrations |
-| File storage | **Supabase Storage** (S3 API via boto3); local disk in dev | Stores the uploaded original files |
+| Database | **PostgreSQL on Railway** (Supabase retired 2026-10-14), SQLAlchemy, Alembic | Holdings, positions, facts, research cache, analysis runs; versioned migrations |
+| File storage | **Cloudflare R2** (S3 API via boto3); local disk in dev | Stores the uploaded original files |
 | Document parsing | **lxml** (ESEF inline XBRL), **PyMuPDF** (PDF text), openpyxl (Excel), python-pptx, own CSV parser | Turns uploads into tagged figures and page text, deterministically |
 | LLM usage ledger | **`llm_usage_events` table** | Every LLM request is recorded; the Gemini daily budget is counted from it, so it survives restarts and is shared with the PC worker |
 | Financial maths | **Own Python code** (`calculations.py`, `metrics.py`, `valuation/`), `Decimal` arithmetic | Ratios, owner earnings, DCF / reverse DCF, multiples, margin of safety, integrity checks |
@@ -116,7 +116,7 @@ Cited evidence IDs are checked against the packet. An unknown ID is flagged as a
 
 | Choice | Why we chose it | Trade-off we accepted |
 |---|---|---|
-| **Code for all numbers, LLM only for judgement** | Numbers must be exact, repeatable and traceable when real money is involved | More code to write and test (about 1,450 backend tests) |
+| **Code for all numbers, LLM only for judgement** | Numbers must be exact, repeatable and traceable when real money is involved | More code to write and test (about 1,670 backend tests) |
 | **Gemini (Google AI Studio)** | Free tier; **Google Search grounding** gives real source URLs for every research claim; supports structured JSON output | Small daily quota (~20 calls/day), hence the budget guard and fallbacks |
 | **Ollama + qwen3:14b (local)** | No quota, no cost per run, and analysis data stays on your PC. Fits a 12GB GPU. | Slower. Only works when the app runs on your PC. Research still needs Gemini. |
 | **Mistral** | A second, independent vendor when Gemini's quota runs out | Another key and quota to manage |
@@ -124,7 +124,7 @@ Cited evidence IDs are checked against the packet. An unknown ID is flagged as a
 | **SEC EDGAR + Newsweb** | Official primary sources, free, no key | Newsweb is an undocumented endpoint and could change |
 | **yfinance + FRED** | Free and good enough for prices, FX and rates | yfinance is unofficial and can break without notice |
 | **FastAPI + Pydantic** | Python has the best finance and data libraries; Pydantic enforces the LLM output schema | — |
-| **Postgres on Supabase** | Managed, free tier, includes file storage | Legacy pre-rebuild tables kept (emptied by the 2026-09-21 wipe, never queried) |
+| **Postgres on Railway** | Same platform and private network as the backend; moved off Supabase when its free-plan egress ran out | Legacy pre-rebuild tables kept (emptied by the 2026-09-21 wipe, never queried) |
 | **React + TypeScript + Vite** | Fast to build, type-safe, large ecosystem | — |
 | **Railway** | Deploys straight from GitHub with little setup | Can't reach your local Ollama |
 | **Versioned prompts and schemas** | Any past analysis can be traced to the exact prompt/schema that produced it | A change means a new version file, not an edit |

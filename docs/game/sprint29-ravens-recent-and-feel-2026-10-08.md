@@ -4,7 +4,7 @@ Branch `feature/ravens-recent-and-game-feel`, off `main` `7c27bfa`. **Written an
 
 ## Why
 
-The walkthrough found 177–183 unseen ravens: every Newsweb report captured in the last 45 days with no figures raises a text-only raven, so the overnight bulk fetch (302 reports) flooded the tab ([walkthrough, polish item 1](game-mode-walkthrough-g1-g20-2026-10-08.md)). Faiz asked for the newest items only, past 48 hours or so.
+The walkthrough found 177–183 unseen ravens: every Newsweb report captured in the last 45 days with no figures raises a text-only raven, so the overnight bulk fetch (302 reports) flooded the tab (walkthrough, polish item 1; the write-up was never added to the repo). Faiz asked for the newest items only, past 48 hours or so.
 
 ## Ravens (what changed)
 
