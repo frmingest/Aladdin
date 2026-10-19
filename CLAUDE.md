@@ -2,7 +2,7 @@
 
 Aladdin is Faiz's personal, investment-grade portfolio analysis webapp, being rebuilt from a clean
 slate (2026-09-21) as a single-focus Warren Buffett / Charlie Munger equity advisor: FastAPI +
-Postgres (Supabase) backend, React/Vite frontend, an evidence-first LLM analysis pipeline (Google AI
+Postgres (Railway; Supabase retired 2026-10-14) backend, React/Vite frontend, an evidence-first LLM analysis pipeline (Google AI
 Studio/Gemini + Mistral), deployed to Railway. It handles Faiz's real brokerage holdings and real
 financial documents. See the rebuild sprint plan (repo `docs/buffett-munger-rebuild-sprint-plan-2026-09-21.md`; Claude project copy
 `claude/buffett-munger-rebuild-sprint-plan-2026-09-21.md`) for the phased build order and the
@@ -37,7 +37,7 @@ Faiz can actually trust with real money):
 
 ## Database
 
-The Supabase database was **wiped once, at Faiz's explicit request** (migration `e5f6a7b8c9d0`,
+The database (Supabase until Faiz retired it on 2026-10-14, now Railway Postgres) was **wiped once, at Faiz's explicit request** (migration `e5f6a7b8c9d0`,
 2026-09-21), which superseded the earlier "not being reset" decision. The wipe emptied every table but
 kept the schema, so it still holds the pre-rebuild legacy tables and columns, including legacy non-equity
 (collectibles) columns (e.g. `holdings.asset_class`,

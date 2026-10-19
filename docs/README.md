@@ -6,7 +6,7 @@ Find a doc by topic folder below, or `grep -ril <term> docs/`. Folder = topic, n
 ## Always-current (docs root)
 
 - [PROGRESS.md](PROGRESS.md) — Current status, active tasks, blockers. Rolling log, under 100 lines.
-- [architecture.md](architecture.md) — System diagram, analysis flow, deployment, jobs, data model.
+- [architecture.md](architecture.md) — System diagram, analysis paths, deployment, background jobs, data model (ER diagram), game mode, frontend map, known gaps. Rewritten 2026-10-19.
 - [buffett-munger-rebuild-sprint-plan-2026-09-21.md](buffett-munger-rebuild-sprint-plan-2026-09-21.md) — The active rebuild sprint plan and the analyst prompt ("the Brain").
 
 ## Topic folders
@@ -16,7 +16,7 @@ Find a doc by topic folder below, or `grep -ril <term> docs/`. Folder = topic, n
 - **[ingestion/](ingestion/)** — Getting data in: Newsweb/ESEF/XHTML filings, uploads, tag gaps, ETF holdings capture.
 - **[valuation/](valuation/)** — Valuation and analysis numbers: DCF, ROIC/ROE, margin of safety, data gaps, fund look-through.
 - **[llm-local/](llm-local/)** — Local LLM (Ollama), the worker and queue, evidence packets, LLM usage ledger.
-- **[ops/](ops/)** — Running the app: Railway/Supabase runbook, auth gate, page-load, background jobs, audits, live checks.
+- **[ops/](ops/)** — Running the app: hosting, auth gate, page-load, background jobs, audits, live checks.
 - **[features/](features/)** — Feature and UI notes: dashboard, watchlist, thesis tracking, performance, reader, polish and noise audits.
 - **[sprints/](sprints/)** — Cross-cutting sprint plans and the hardening sprint.
 - **[archive/](archive/)** — Finished progress history. Move completed milestones here from PROGRESS.md.
@@ -78,6 +78,8 @@ Game mode (Fortress): concept, sprint plans and reviews, visual identity, art pa
 - [stitch-master-object-art-2026-10-11.md](game/stitch-master-object-art-2026-10-11.md) — Stitch Master object art: style, rules and prompts for what is missing
 - [marketplace-landscape-2026-10-17.md](game/marketplace-landscape-2026-10-17.md) — Marketplace landscape: concept and Stitch object list (stalls placed on a street scene)
 - [market-street-redesign-2026-10-17.md](game/market-street-redesign-2026-10-17.md) — Market Street redesign: critique, lane layout spec, scale table, decisions (built on `feature/market-street`)
+- [design-remaining-objects-2026-10-13.md](game/design-remaining-objects-2026-10-13.md) — Design: closing plan and last Stitch objects (closed 2026-10-13)
+- [game-mode-design-review-2026-10-16.md](game/game-mode-design-review-2026-10-16.md) — Game mode: full design review and Stitch picture plan (review only, 2026-10-16)
 - [market-street-strong-pick-2026-10-17.md](game/market-street-strong-pick-2026-10-17.md) — Market Street: the analyst's top mark (wax seal on the signboard), concepts and rules (built on `feature/market-street`)
 - [market-street-strong-pick-motion-2026-10-17.md](game/market-street-strong-pick-motion-2026-10-17.md) — Market Street top mark: motion and performance spec from game-feel-engineer (the seal design won; its glow and loop were not used)
 - [walls-on-the-rise-2026-10-18.md](game/walls-on-the-rise-2026-10-18.md) — Walls on the rise: how far each wall stands from the next rung, on the Fortress page; the Siege slider now starts at 5%
@@ -152,12 +154,13 @@ Local LLM (Ollama), the worker and queue, evidence packets, LLM usage ledger.
 
 ### ops/
 
-Running the app: Railway/Supabase runbook, auth gate, page-load, background jobs, audits, live checks.
+Running the app: hosting, auth gate, page-load, background jobs, audits, live checks.
 
 - [agentic-coding-audit-2026-09-27.md](ops/agentic-coding-audit-2026-09-27.md) — Agentic-coding audit — 2026-09-27
 - [backend-auth-cors-gate-2026-09-27.md](ops/backend-auth-cors-gate-2026-09-27.md) — Backend auth gate + CORS lockdown — 2026-09-27
 - [background-jobs-status-2026-10-07.md](ops/background-jobs-status-2026-10-07.md) — Background jobs on System status (2026-10-07)
 - [claude-setup-assessment-2026-10-09.md](ops/claude-setup-assessment-2026-10-09.md) — Claude setup assessment and proposal — 2026-10-09
+- [housekeeping-2026-10-19.md](ops/housekeeping-2026-10-19.md) — Housekeeping: code and feature audit, docs and diagrams refreshed, loose ends (2026-10-19)
 - [live-verification-2026-09-27.md](ops/live-verification-2026-09-27.md) — Live verification — 2026-09-27 (post API-key-gate deploy)
 - [macro-data-and-guardrails-sprint7-2026-09-24.md](ops/macro-data-and-guardrails-sprint7-2026-09-24.md) — Numeric macro data (Fed / Norges Bank) + Sprint 7 guardrail tooling
 - [mypy-report-only-2026-10-14.md](ops/mypy-report-only-2026-10-14.md) — Backend type check in CI: mypy, report only (2026-10-14)

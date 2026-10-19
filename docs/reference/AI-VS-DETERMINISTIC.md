@@ -2,7 +2,7 @@
 
 One place to answer: **"Is this thing on screen from an LLM, from plain code, or from me?"**
 
-*Written 2026-10-01; refreshed 2026-10-04 against `main` (`07cf9fb`). It complements
+*Written 2026-10-01; refreshed 2026-10-19 against `main` (`4d0ce8b`; adds the income and commodity paths, game endpoints, tag review, prompt log). Earlier refresh 2026-10-04 (`07cf9fb`). It complements
 [docs/reference/llm-and-technology-overview.md](llm-and-technology-overview.md), which is organised by LLM call
 (provider, local vs API, prompts, quotas). This doc is organised by **output**: each thing you see,
 and where it comes from. Update it when an output starts or stops using an LLM.*
@@ -36,9 +36,13 @@ code and runs wherever the app runs.
 | **"Changed from blind?" and the reconciliation narrative** | Reconciliation pass, the only step that sees your notes | same | Yes | `reconciliation_pass.py` |
 | **Fund / ETF analysis text** | Same two passes with the `fund_v1` schema | same | Yes | `services/funds/evidence.py`, `analysis_schema/fund_v1.py` |
 
+| **Bond / money-market fund analysis text** | Same two passes with the `income_v1` schema | same | Yes | `analysis_schema/income_v1.py` |
+| **Physical commodity ETC analysis text** | Same two passes with the `commodity_v1` schema | same | Yes | `analysis_schema/commodity_v1.py` |
+
 Prompts: `backend/prompts/research/*_v1.md`, `backend/prompts/analysis/blind_v2.md`,
-`reconciliation_v2.md`, `blind_fund_v1.md`, `reconciliation_fund_v1.md` (older versions kept so
-old runs stay traceable).
+`reconciliation_v2.md`, and the `_fund_v1`, `_income_v1` and `_commodity_v1` pairs (older versions kept
+so old runs stay traceable). Every prompt actually sent is stored and readable under System status >
+Prompt log (kept 30 days).
 
 ### 2b. Code only (no LLM anywhere in the path)
 
@@ -53,7 +57,9 @@ old runs stay traceable).
 | Prices, FX, beta, risk-free rate, macro series | yfinance, FRED, Norges Bank, SSB | `services/market_data/`, `services/macro/` |
 | Macro **regime** (baseline / stagflation / crisis) | Rules over 3-month averages of stored macro series | `services/risk/regime.py` |
 | Portfolio risk, correlation clusters, stress scenarios | Price history, DCF bear case or volatility shock | `services/risk/` |
+| ESEF tag-gap suggestions (Tag review) | Rule matching over tagged filings; you accept or reject, nothing is auto-applied | `services/tag_review.py`, `services/tag_rules.py` |
 | Thesis tripwires and the nightly check | Strict threshold crossing on computed metrics. The "make a tripwire" pre-fill is regex, not an LLM | `services/thesis/` |
+| "Then and now" on a journal entry, hit-rate ledger | Compares stored blind-pass runs and prices; counts, never scores | `services/then_and_now.py`, `services/game/calibration.py` |
 | Decision journal outcomes, 6- and 12-month review due dates | Plain arithmetic on stored prices | `services/journal.py` |
 | Portfolio performance, real return | Snapshots + prices | `services/performance/` |
 | Gold and silver coin values | gold-api.com spot | `services/precious_metals/` |
@@ -73,8 +79,9 @@ old runs stay traceable).
 | **Hype Booth, Sal the sales rep, Genie** | Front-end rules over stored numbers (`lib/hype.ts`, `lib/salesRep.ts`, `lib/genie.ts`). Hand-written lines, no model |
 | Ambience (rain, clock, sound) | Front-end only |
 
-The game backend (`GET /game/state`, `GET /game/siege`) is read-only: it never changes an analysis, score or stored row, and never calls an
-LLM or a market provider (`services/game/`). The Fortress pages themselves can write, but only by calling existing endpoints on your action: edit account cash (vault), set a watchlist buy-below price or refresh the watchlist (Marketplace), and queue analyses (Magic Lamp).
+The game backend (`/game/state`, `/siege`, `/siege/backtest`, `/ravens`, `/night-watch`, `/records`, `/calibration`, advisors) is read-only:
+it never changes an analysis, score or stored row, and never calls an LLM or a market provider (`services/game/`). The one exception is the
+Circle of Competence, where `PUT`/`DELETE /game/competence/{sector}` store your own marks. Council and Chronicle were removed in PR #184. The Fortress pages themselves can write, but only by calling existing endpoints on your action: edit account cash (vault), set a watchlist buy-below price or refresh the watchlist (Marketplace), and queue analyses (Magic Lamp).
 
 ---
 

@@ -1,6 +1,6 @@
 # Game sprint checklist
 
-Status: standing gate, proposed 2026-10-09. Standard: [.claude/standards/game-visual-identity.md](../.claude/standards/game-visual-identity.md). Every game sprint plan answers section A before work starts; every sprint review (and `/game-review`) answers section B before the sprint is called done. A plan or review that skips a line is incomplete. Status claims follow CLAUDE.md "Status honesty" (written, not yet deployed, unless checked).
+Status: standing gate, proposed 2026-10-09. Standard: [.claude/standards/game-visual-identity.md](../../.claude/standards/game-visual-identity.md). Every game sprint plan answers section A before work starts; every sprint review (and `/game-review`) answers section B before the sprint is called done. A plan or review that skips a line is incomplete. Status claims follow CLAUDE.md "Status honesty" (written, not yet deployed, unless checked).
 
 ## A. Sprint plan must answer
 1. **Pages touched.** List every game page, tab or dialog the sprint changes or adds. Mechanics-only items still name the page they land on.

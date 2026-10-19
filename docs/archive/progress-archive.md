@@ -3,6 +3,16 @@
 Completed milestones and retired status, moved out of `docs/PROGRESS.md` under the rolling-log rules
 in `CLAUDE.md` ("Progress file rules"). Newest snapshot first. Older: [PROGRESS-full-2026-09-30.md](PROGRESS-full-2026-09-30.md).
 
+## Closed 2026-10-19 — everything merged since the last archive (#155 to #185)
+
+- **All merged; no PR was open on 2026-10-19** (GitHub API, `main` at `4d0ce8b`). Deploy of these was not checked; Faiz's look-and-judge items stay in `PROGRESS.md`.
+- **Map:** #155 towers as sector pictures; #161 painted-map prototype; #162 painted map is the default (`?map=classic` brings the drawn one back); #166 the picture fills the whole canvas ([doc](../game/map-image-prototype-2026-10-15.md)).
+- **Removed after Faiz was unhappy:** Blindfold Years, Winter Rehearsal and The Hearth (built in #157 to #160, #163, #164, removed in #165; the unused `winter_orders` migration stays); Council and Chronicle (Council built in #181 to #183, both removed in #184). Every Stitch picture was kept ([doc](../game/remove-council-chronicle-2026-10-18.md)).
+- **Records:** #168 polish, #169 painted book, #170 page turning, #182 bigger shelf books, #185 one same-size large book per record with only the company name on the cover ([doc](../game/records-hall-polish-2026-10-17.md)).
+- **Siege Simulator:** #171 towers section first with backdrops that follow the "falls by" slider; #172 controls on top, World banner dropped; #180 slider opens at 5% and the Fortress shows "Walls on the rise" ([doc](../game/walls-on-the-rise-2026-10-18.md)). This relaxes the A1 rule that distance to a stronger tier is never shown as progress; Faiz asked for it.
+- **Market Street:** #173 to #179 the cobbled-lane rebuild, wax-seal top mark, Fortress look, smaller and then half-size stalls, new town-row backdrop ([spec](../game/market-street-redesign-2026-10-17.md)).
+- **Game art:** #167 the 17 Stitch pictures from the design review wired in ([doc](../game/game-art-dde-2026-10-16.md)). **Docs:** #156 Contest 3 sprint plan; #159 game voice as a standing rule.
+
 ## Closed 2026-10-14 — loss-making view, unused endpoints and mypy job merged
 
 - **Merged** (merge commits on `main`, seen in `git log` 2026-10-14; deploy not checked): #150 loss-making companies stay "can't be ranked yet" and show what the price assumes ([doc](../valuation/loss-making-price-assumes-2026-10-14.md)); #151 removes four unused manual portfolio endpoints ([doc](../ops/remove-unused-manual-portfolio-endpoints-2026-10-14.md)); #152 report-only mypy job in CI, 166 findings baseline, never blocks ([doc](../ops/mypy-report-only-2026-10-14.md)). #153 closed out progress.
@@ -133,7 +143,7 @@ Architecture and diagram: [architecture.md](../architecture.md).
 | **Migration head** | `r1d9e0f1a2b3` (Sprint 25) on `main`, **confirmed on Supabase by Faiz 2026-10-05**. The all-instrument PR adds `t1f2a3b4c5d6` (`instrument_facts`; up/down/up checked on Postgres 16, one head; not on Supabase until merged and deployed). PR #61 adds `s1e0f1a2b3c4` (`tag_mapping_rules`); up/down/up checked on Postgres 16, one head; **not on Supabase until #61 is merged and deployed** |
 | **Live URLs** | Frontend `https://exciting-gratitude-production-71b5.up.railway.app` · Backend `https://aladdin-production-bd25.up.railway.app` |
 | **Deploy** | Railway auto-deploys every push to `main`. Live state not re-verified since 2026-09-27; Sprint 18 does that. **Backend region moved next to Supabase 2026-10-03 (setting, no code)** |
-| **How Claude ships work** | Branch → commit → push → **Claude opens the PR from chat** → Faiz reviews and merges ([CLAUDE.md](../CLAUDE.md), "Pull requests") |
+| **How Claude ships work** | Branch → commit → push → **Claude opens the PR from chat** → Faiz reviews and merges ([CLAUDE.md](../../CLAUDE.md), "Pull requests") |
 
 ---
 
