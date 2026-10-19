@@ -66,6 +66,7 @@ Game mode (Fortress): concept, sprint plans and reviews, visual identity, art pa
 - [long-memory-b1-2026-10-09.md](game/long-memory-b1-2026-10-09.md) — B1 Long Memory — 2026-10-09
 - [map-design-2026-10-09.md](game/map-design-2026-10-09.md) — Map (Cartographer's table): making fog look like fog
 - [map-image-prototype-2026-10-15.md](game/map-image-prototype-2026-10-15.md) — Map tab on the painted Stitch picture (default in Game mode, `?map=classic` for the old one): fixed sector regions, limits — 2026-10-15
+- [map-scene-dive-2026-10-19.md](game/map-scene-dive-2026-10-19.md) — Map: press a settlement, fall into it, a round window opens on its scene (mines, forge, mill, farm, exchange) — 2026-10-19
 - [map-sector-landmarks-2026-10-14.md](game/map-sector-landmarks-2026-10-14.md) — Map tab: the towers are Stitch pictures by sector (gold mine, farmhouse, vault...) — 2026-10-14
 - [siege-global-benchmark-2026-10-14.md](game/siege-global-benchmark-2026-10-14.md) — Siege Simulator: a World yardstick (ACWI) next to Oslo — 2026-10-14
 - [siege-instrument-sensitivity-2026-10-07.md](game/siege-instrument-sensitivity-2026-10-07.md) — Siege Simulator: a beta for every instrument (2026-10-07)

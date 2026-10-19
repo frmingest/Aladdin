@@ -1,0 +1,60 @@
+/* The scene dive (Cartographer's map). A round window opens from the pressed settlement and the picture
+   settles in from a closer crop, as if the camera kept falling. Only clip-path, transform and opacity move;
+   nothing is filtered. Reduced motion: no iris, no ring, no drift; the scene is just shown. */
+.wm-dive { position: absolute; inset: 0; z-index: 8; overflow: hidden; border-radius: 10px; cursor: default; touch-action: none; }
+.wm-dive[data-phase="in"] { pointer-events: none; }
+.wm-dive-pane { position: absolute; inset: 0; background: #120c07; clip-path: circle(var(--r) at var(--ox) var(--oy)); }
+.wm-dive-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; transform-origin: var(--ox) var(--oy); user-select: none; -webkit-user-select: none; }
+/* A dark floor under the plate so the type reads on any picture; the picture itself stays unfiltered. */
+.wm-dive-shade { position: absolute; left: 0; right: 0; bottom: 0; height: 34%; background: linear-gradient(to top, rgba(14, 9, 5, 0.86), rgba(14, 9, 5, 0)); pointer-events: none; }
+.wm-dive-plate { position: absolute; left: 14px; right: 14px; bottom: 12px; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.wm-dive-kicker { margin: 0; font-size: 0.75rem; letter-spacing: 0.14em; text-transform: uppercase; color: #f2d27a; }
+.wm-dive-name { margin: 2px 0 0; font-family: "IM Fell English SC", "Marcellus", "Palatino Linotype", Georgia, serif; font-size: clamp(1.25rem, 3.2cqw, 2rem); line-height: 1.1; color: #fbe9c2; text-shadow: 0 1px 0 #120c07, 0 0 10px rgba(0, 0, 0, 0.7); overflow-wrap: anywhere; }
+.wm-dive-back {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1.5px solid #8a6a32;
+  border-radius: 8px;
+  background: rgba(20, 14, 9, 0.92);
+  color: #f2d27a;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.wm-dive-back:hover { background: #3a2a18; }
+.wm-dive-back:focus-visible { outline: 3px solid #f2d27a; outline-offset: 2px; }
+/* The brass edge of the iris: a ring the size of the box's reach, scaled from nothing in step with the window. */
+.wm-dive-ring {
+  position: absolute;
+  left: calc(var(--ox) - var(--r));
+  top: calc(var(--oy) - var(--r));
+  width: calc(var(--r) * 2);
+  height: calc(var(--r) * 2);
+  border-radius: 50%;
+  border: 5px solid #f2d27a;
+  box-shadow: 0 0 0 2px #2b2118, inset 0 0 0 2px #2b2118;
+  opacity: 0;
+  transform: scale(0);
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .wm-dive[data-phase="in"] .wm-dive-pane { animation: wm-iris-in 760ms cubic-bezier(0.5, 0, 0.2, 1) both; }
+  .wm-dive[data-phase="in"] .wm-dive-img { animation: wm-settle 1500ms cubic-bezier(0.16, 0.7, 0.2, 1) both; }
+  .wm-dive[data-phase="in"] .wm-dive-ring { animation: wm-ring-in 760ms cubic-bezier(0.5, 0, 0.2, 1) both; }
+  .wm-dive[data-phase="open"] .wm-dive-img { animation: wm-drift-scene 26s ease-in-out infinite alternate; transform: scale(1); }
+  .wm-dive[data-phase="out"] .wm-dive-pane { animation: wm-iris-out 520ms cubic-bezier(0.55, 0, 0.45, 1) both; }
+  .wm-dive[data-phase="out"] .wm-dive-img { animation: wm-pull 520ms cubic-bezier(0.55, 0, 0.45, 1) both; }
+  .wm-dive[data-phase="out"] .wm-dive-ring { animation: wm-ring-out 520ms cubic-bezier(0.55, 0, 0.45, 1) both; }
+  .wm-dive[data-phase="in"] .wm-dive-plate, .wm-dive[data-phase="out"] .wm-dive-plate { opacity: 0; }
+  .wm-dive[data-phase="open"] .wm-dive-plate { animation: wm-plate-in 420ms ease-out both; }
+}
+@keyframes wm-iris-in { from { clip-path: circle(0 at var(--ox) var(--oy)); } to { clip-path: circle(var(--r) at var(--ox) var(--oy)); } }
+@keyframes wm-iris-out { from { clip-path: circle(var(--r) at var(--ox) var(--oy)); } to { clip-path: circle(0 at var(--ox) var(--oy)); } }
+@keyframes wm-settle { from { transform: scale(1.7); } to { transform: scale(1); } }
+@keyframes wm-pull { from { transform: scale(1); } to { transform: scale(1.4); } }
+@keyframes wm-drift-scene { from { transform: scale(1); } to { transform: scale(1.06); } }
+@keyframes wm-ring-in { from { transform: scale(0); opacity: 1; } to { transform: scale(1); opacity: 0; } }
+@keyframes wm-ring-out { from { transform: scale(1); opacity: 0; } to { transform: scale(0); opacity: 1; } }
+@keyframes wm-plate-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }

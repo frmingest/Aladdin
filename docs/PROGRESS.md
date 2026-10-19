@@ -1,6 +1,6 @@
 # Aladdin — Progress
 
-**Last updated:** 2026-10-19 (housekeeping: architecture and reference docs rewritten, diagrams added, doc index and links fixed). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
+**Last updated:** 2026-10-19 (Map scene dive PR opened; housekeeping docs merged). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
 
 ## Current Objective
 
@@ -10,6 +10,7 @@ State: `main` is at `4d0ce8b` (#185). **No PR was open on 2026-10-19** (GitHub A
 
 ## Active Tasks
 
+- [ ] **Review and merge the Map scene-dive PR (`feature/map-zoom-into-scene`, Faiz).** Written and tested in a clean clone, not yet deployed; after deploy press a gold, defence, energy, food and bank holding on the Map and check the dive on desktop and phone. [Doc](game/map-scene-dive-2026-10-19.md)
 - [ ] **Review and merge the housekeeping docs PR (Faiz).** Docs only, so merging it deploys nothing new
 - [ ] **After the latest deploy, look at Game mode on desktop and phone:** Records (one large book per record, long names fit the cover), Map (picture fills the box, fog patches readable on each sector picture), Siege Simulator (towers backdrops follow the slider, opens at 5%), Fortress "Walls on the rise", Market Street (half-size stalls: are the names still readable?). Docs: [records](game/records-hall-polish-2026-10-17.md), [map](game/map-image-prototype-2026-10-15.md), [siege](game/siege-towers-backdrops-2026-10-17.md), [walls](game/walls-on-the-rise-2026-10-18.md), [market](game/market-street-redesign-2026-10-17.md)
 - [ ] **After #150 is deployed:** Refresh Margin of safety, open "Can't be ranked yet" then "Why" on Vend Marketplaces, Salmon Evolution and Vår Energi and sanity-check the owner-earnings figure (if wrong, check share count and price currency first). [Doc](valuation/loss-making-price-assumes-2026-10-14.md)

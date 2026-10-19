@@ -5,6 +5,7 @@ import { compassRect, hillArtId, hillRect, mountainArtId, mountainRect, holdingA
 import baseUrl from "../../../assets/map/map-base.webp";
 import { IMAGE_RECT, placeImageRealm } from "../../../lib/imageMap";
 import { weightText } from "../../../lib/rituals";
+import { DIVE_MS, SCENES, diveView, irisOrigin, irisRadius, sceneFor, type SceneId } from "../../../lib/mapScenes";
 import { getObjectArt, useArtMode } from "../../../lib/stitchArt";
 import type { TowerFog } from "../../../lib/survey";
 import {
@@ -32,6 +33,7 @@ import {
 } from "../../../lib/worldMap";
 import { useSceneRunning } from "../useScenePause";
 import { FlagMark } from "./CommissionSeal";
+import SceneDive, { type DivePhase } from "./SceneDive";
 import { TowerFigure } from "./FogPatch";
 import "./worldMap.css";
 
@@ -253,12 +255,24 @@ export interface WorldMapProps {
   imageMap?: boolean;
   onSelect: (id: string) => void;
   onEscape: () => void;
+  /** Called with true when a scene dive starts and false when it has fully closed (the page holds its own scrolling while true). */
+  onSceneChange?: (open: boolean) => void;
+}
+
+/** A scene dive in progress: "fly" is the camera falling in (no window yet), then the iris opens, stays, and closes. */
+interface Dive {
+  id: string;
+  scene: SceneId;
+  /** The spot on the settlement the camera and the iris aim at, in world units, and the view the camera lands on. */
+  point: Pt;
+  to: View;
+  phase: "fly" | DivePhase;
 }
 
 const weightOf = (t: TowerFog) => weightText(t.weightPct === null ? null : String(t.weightPct));
 const SPRITE_BASE_Y = TOWER_BOX.y + TOWER_BOX.h;
 
-export default function WorldMap({ towers, sectors, sectorsKnown, hatchId, selectedId, flags, kinds = {}, imageMap = false, onSelect, onEscape }: WorldMapProps) {
+export default function WorldMap({ towers, sectors, sectorsKnown, hatchId, selectedId, flags, kinds = {}, imageMap = false, onSelect, onEscape, onSceneChange }: WorldMapProps) {
   const uid = useId().replace(/:/g, "");
   const hatchProv = `wm-hatch-${uid}`;
   const boxRef = useRef<HTMLDivElement | null>(null);
@@ -322,26 +336,41 @@ export default function WorldMap({ towers, sectors, sectorsKnown, hatchId, selec
   }, []);
 
   const flyTo = useCallback(
-    (target: View) => {
+    (target: View, ms = 380): View => {
       if (anim.current !== null) cancelAnimationFrame(anim.current);
       const to = clampView(target, sizeRef.current.cw, sizeRef.current.ch, boundsRef.current);
-      if (reduce || typeof requestAnimationFrame === "undefined") {
+      if (reduce || ms <= 0 || typeof requestAnimationFrame === "undefined") {
         setViewRaw(to);
-        return;
+        return to;
       }
       const from = viewRef.current;
       const t0 = performance.now();
       const step = (now: number) => {
-        const p = Math.min(1, (now - t0) / 380);
+        const p = Math.min(1, (now - t0) / ms);
         const e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
-        setViewRaw({ cx: from.cx + (to.cx - from.cx) * e, cy: from.cy + (to.cy - from.cy) * e, z: from.z + (to.z - from.z) * e });
+        // Zoom is blended in log space so a deep dive feels even instead of rushing at the end.
+        const z = from.z * Math.pow(to.z / from.z, e);
+        setViewRaw({ cx: from.cx + (to.cx - from.cx) * e, cy: from.cy + (to.cy - from.cy) * e, z });
         anim.current = p < 1 ? requestAnimationFrame(step) : null;
       };
       anim.current = requestAnimationFrame(step);
+      return to;
     },
     [reduce],
   );
   useEffect(() => () => { if (anim.current !== null) cancelAnimationFrame(anim.current); }, []);
+
+  // --- Scene dive: press a settlement, fall into it, open a window onto its scene ---------------------------
+  const [dive, setDive] = useState<Dive | null>(null);
+  const diveRef = useRef<Dive | null>(null);
+  diveRef.current = dive;
+  const diveFrom = useRef<View | null>(null);
+  const diveTimers = useRef<number[]>([]);
+  const [failedScenes, setFailedScenes] = useState<ReadonlySet<SceneId>>(() => new Set());
+  const preloaded = useRef(new Set<SceneId>());
+  const clearDiveTimers = () => { diveTimers.current.forEach((t) => window.clearTimeout(t)); diveTimers.current = []; };
+  useEffect(() => clearDiveTimers, []);
+  const later = (fn: () => void, ms: number) => { diveTimers.current.push(window.setTimeout(fn, ms)); };
 
   // Pointer: drag to pan, two fingers to pinch.
   const pointers = useRef(new Map<number, Pt>());
@@ -352,7 +381,7 @@ export default function WorldMap({ towers, sectors, sectorsKnown, hatchId, selec
     return { x: e.clientX - (r?.left ?? 0), y: e.clientY - (r?.top ?? 0) };
   };
   const onPointerDown = (e: React.PointerEvent) => {
-    if ((e.target as HTMLElement).closest("button")) return;
+    if ((e.target as HTMLElement).closest("button") || diveRef.current) return;
     if (anim.current !== null) { cancelAnimationFrame(anim.current); anim.current = null; }
     pointers.current.set(e.pointerId, local(e));
     (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
@@ -392,6 +421,7 @@ export default function WorldMap({ towers, sectors, sectorsKnown, hatchId, selec
     const onWheel = (e: WheelEvent) => {
       if (!e.ctrlKey && !e.metaKey) return;
       e.preventDefault();
+      if (diveRef.current) return;
       const r = el.getBoundingClientRect();
       const { cw, ch } = sizeRef.current;
       setViewRaw((v) => zoomAt(v, Math.exp(-e.deltaY * 0.0022), { x: e.clientX - r.left, y: e.clientY - r.top }, cw, ch, boundsRef.current));
@@ -403,6 +433,68 @@ export default function WorldMap({ towers, sectors, sectorsKnown, hatchId, selec
   const { cw, ch } = size;
   const vb = viewBox(view, cw, ch, bounds);
   const s = vb.s;
+  const sceneOf = (id: string): SceneId => sceneFor({ sector: sectors[id], name: towerById.get(id)?.name, structure: kinds[id]?.structure });
+  /** Scenes are Game-mode pictures like the rest of the map art; a picture that fails to load is skipped and the old behaviour (fly to it) stays. */
+  const sceneOk = (sc: SceneId) => artMode === "stitch" && !failedScenes.has(sc);
+
+  const startDive = (st: { id: string; x: number; y: number; scale: number }) => {
+    if (diveRef.current) return;
+    const scene = sceneOf(st.id);
+    if (!sceneOk(scene)) {
+      flyTo(ensureVisible(viewRef.current, st, cw, ch, 0.14, bounds));
+      return;
+    }
+    // Aim at the middle of the settlement's picture, not the ground under it.
+    const point = { x: st.x, y: st.y - 40 * st.scale };
+    diveFrom.current = viewRef.current;
+    clearDiveTimers();
+    const to = flyTo(diveView(viewRef.current, point, cw, ch, bounds), DIVE_MS.fly);
+    onSceneChange?.(true);
+    if (reduce) {
+      setDive({ id: st.id, scene, point, to, phase: "open" });
+      return;
+    }
+    setDive({ id: st.id, scene, point, to, phase: "fly" });
+    later(() => setDive((d) => (d && d.phase === "fly" ? { ...d, phase: "in" } : d)), DIVE_MS.irisAt);
+    later(() => setDive((d) => (d && d.phase === "in" ? { ...d, phase: "open" } : d)), DIVE_MS.irisAt + DIVE_MS.iris);
+  };
+  const endDive = () => {
+    const d = diveRef.current;
+    if (!d || d.phase === "out") return;
+    clearDiveTimers();
+    const home = diveFrom.current ?? initialView(cw, bounds);
+    const finish = () => {
+      setDive(null);
+      onSceneChange?.(false);
+      btnRefs.current.get(d.id)?.focus({ preventScroll: true });
+    };
+    if (reduce || d.phase === "fly") {
+      flyTo(home, reduce ? 0 : DIVE_MS.out);
+      finish();
+      return;
+    }
+    setDive({ ...d, phase: "out" });
+    flyTo(home, DIVE_MS.out + 140);
+    later(finish, DIVE_MS.out);
+  };
+  const failScene = (sc: SceneId) => {
+    setFailedScenes((cur) => (cur.has(sc) ? cur : new Set(cur).add(sc)));
+    if (diveRef.current?.scene === sc) endDive();
+  };
+  // The scene for the settlement you are about to press is fetched while you hover or focus it, so the window never opens onto blank.
+  useEffect(() => {
+    if (!hot || artMode !== "stitch" || typeof Image === "undefined") return;
+    const sc = sceneOf(hot);
+    if (preloaded.current.has(sc)) return;
+    preloaded.current.add(sc);
+    const img = new Image();
+    img.onerror = () => failScene(sc);
+    img.src = SCENES[sc].src;
+    // Decoded now, so the first frame of the iris is the picture and not an empty window.
+    void img.decode?.().catch(() => undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hot, artMode]);
+
   const zoomBy = (f: number) => flyTo(zoomAt(viewRef.current, f, { x: cw / 2, y: ch / 2 }, cw, ch, bounds));
 
   // Keyboard: one tab stop; arrows hop to the nearest tower that way; + - 0 zoom.
@@ -600,7 +692,7 @@ export default function WorldMap({ towers, sectors, sectorsKnown, hatchId, selec
               onBlur={() => setHot((h) => (h === st.id ? null : h))}
               onMouseEnter={() => setHot(st.id)}
               onMouseLeave={() => setHot((h) => (h === st.id ? null : h))}
-              onClick={() => { setStop(i); onSelect(st.id); flyTo(ensureVisible(viewRef.current, st, cw, ch, 0.14, bounds)); }}
+              onClick={() => { setStop(i); if (selectedId !== st.id) onSelect(st.id); startDive(st); }}
               onKeyDown={(e) => onKey(e, i)}
             >
               {flag && <FlagMark shape={flag.shape} n={flag.number} />}
@@ -608,6 +700,20 @@ export default function WorldMap({ towers, sectors, sectorsKnown, hatchId, selec
           );
         })}
 
+        {dive && dive.phase !== "fly" && (() => {
+          const origin = irisOrigin(toScreen(dive.point, dive.to, cw, ch, bounds), cw, ch);
+          return (
+            <SceneDive
+              scene={dive.scene}
+              name={mapName(towerById.get(dive.id)?.name ?? "")}
+              phase={dive.phase}
+              origin={origin}
+              radius={irisRadius(origin, cw, ch)}
+              onBack={endDive}
+              onImageError={() => failScene(dive.scene)}
+            />
+          );
+        })()}
         <div className="wm-controls">
           <button type="button" aria-label="Zoom in" onClick={() => zoomBy(1.45)} disabled={view.z >= 4.4}>+</button>
           <button type="button" aria-label="Zoom out" onClick={() => zoomBy(1 / 1.45)} disabled={view.z <= 1.02}>−</button>
