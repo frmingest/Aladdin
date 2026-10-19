@@ -124,16 +124,18 @@ function PaintedBody({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [commissionId, setCommissionId] = useState<string | null>(null);
   const slateRef = useRef<HTMLDivElement | null>(null);
+  // While a scene is open the page stays put; the survey slate scrolls into view when you come back out.
+  const [sceneOpen, setSceneOpen] = useState(false);
 
   const selected = towers.find((t) => t.holdingId === selectedId) ?? null;
   const flags = useMemo(() => flagsFor(commissions, commissionId, towers.map((t) => t.holdingId)), [commissions, commissionId, towers]);
   const flagByTower = useMemo(() => new Map(flags.map((f) => [f.target, f])), [flags]);
 
   useEffect(() => {
-    if (!selected || !slateRef.current || typeof slateRef.current.scrollIntoView !== "function") return;
+    if (!selected || sceneOpen || !slateRef.current || typeof slateRef.current.scrollIntoView !== "function") return;
     const reduce = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     slateRef.current.scrollIntoView({ block: "nearest", behavior: reduce ? "auto" : "smooth" });
-  }, [selected]);
+  }, [selected, sceneOpen]);
 
   function closeSlate() {
     const id = selectedId;
@@ -170,6 +172,7 @@ function PaintedBody({
                 flags={flagByTower}
                 onSelect={(id) => setSelectedId((cur) => (cur === id ? null : id))}
                 onEscape={() => selectedId !== null && closeSlate()}
+                onSceneChange={setSceneOpen}
               />
             </div>
             <div id="map-slate" ref={slateRef} className="mt-3 scroll-mt-4" aria-live="polite">
