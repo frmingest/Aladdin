@@ -18,7 +18,7 @@ Status: **proposed, nothing built, nothing changed in tracked files.** Source: t
 
 **One edit lifts ~15 pages:** a game-mode banner inside `PageHeader` (`ui.tsx`): crest, title plate, torches.
 
-**Council** (details in [docs/game/circle-design-2026-10-09.md](circle-design-2026-10-09.md)):
+**Council** (details in `docs/game/circle-design-2026-10-09.md` (deleted 2026-10-19 with the Circle page)):
 - Agenda items become parchment folios with a wax seal (shape and glyph, not colour alone): ~3 h.
 - Advisors seated with speech bubbles, reusing `Portrait` and the Marketplace bubble: ~2 h.
 - "What the council cannot see" as a fog alcove: ~1.5 h.

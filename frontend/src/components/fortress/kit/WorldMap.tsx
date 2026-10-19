@@ -38,7 +38,7 @@ import { TowerFigure } from "./FogPatch";
 import "./worldMap.css";
 
 /** The Cartographer's world map (game mode). A generated fantasy continent: provinces are sectors,
- * settlements are holdings, the five fog patches on each settlement are the survey. The land is scenery;
+ * settlements are holdings, the four fog patches on each settlement are the survey. The land is scenery;
  * it never encodes a state. The map pans (drag, touch), zooms (buttons, ctrl + wheel, pinch) and keeps
  * one tab stop: arrow keys step to the nearest tower. Seas drift and ships sail only when motion is
  * allowed and the map is on screen. Every tower is a real button with its fog said as what is missing;

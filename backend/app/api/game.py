@@ -7,7 +7,6 @@ read).
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Literal
 from uuid import UUID
@@ -28,8 +27,6 @@ from app.schemas.game import (
     CalibrationCallsOut,
     CalibrationOracleOut,
     CalibrationOut,
-    CompetenceMarkIn,
-    CompetenceOut,
     GameStateOut,
     HoldingAdvisorsOut,
     NightWatchOut,
@@ -39,7 +36,6 @@ from app.schemas.game import (
     SiegeSimOut,
 )
 from app.services.game import calibration as calibration_svc
-from app.services.game import competence as competence_svc
 from app.services.game import rituals as rituals_svc
 from app.services.game.backtest_view import (
     build_backtest,
@@ -55,14 +51,12 @@ from app.services.game.demo import (
 from app.services.game.night_watch import get_night_watch
 from app.services.game.ravens import build_ravens
 from app.services.game.ritual_inputs import (
-    demo_competence_marks,
     demo_journal_entries,
     journal_entries,
 )
 from app.services.game.sensitivity import METHOD_DEMO, Sensitivity
 from app.services.game.siege_view import build_siege_sim, stored_sensitivity_lookup
 from app.services.game.state import get_game_state
-from app.services.settings.demo_guard import require_not_demo
 from app.services.settings.demo_mode import is_demo_mode
 
 router = APIRouter(prefix="/game", tags=["game"])
@@ -223,36 +217,3 @@ def get_calibration(db: Session = Depends(get_db)) -> CalibrationOut:
     )
 
 
-@router.get("/competence", response_model=CompetenceOut)
-def get_competence(db: Session = Depends(get_db)) -> CompetenceOut:
-    """G19 Circle of Competence: your own sector marks laid over the holdings.
-    Marks are never inferred; unmarked is not inside."""
-    rules = get_rituals(get_settings().active_rituals_version)
-    state, demo = _state_for(db)
-    if demo:
-        marks = demo_competence_marks(datetime.now(timezone.utc))
-        return competence_svc.build_competence(state.towers, marks, rules, demo=True)
-    return competence_svc.get_competence(db, state.towers, rules)
-
-
-@router.put("/competence/{sector}", response_model=CompetenceOut)
-def put_competence(sector: str, payload: CompetenceMarkIn, db: Session = Depends(get_db)) -> CompetenceOut:
-    """Set or change your mark for one sector (the only write of Sprint 25)."""
-    require_not_demo(db)
-    rules = get_rituals(get_settings().active_rituals_version)
-    try:
-        competence_svc.set_mark(db, sector, payload.level, payload.note, rules)
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-    state, _ = _state_for(db)
-    return competence_svc.get_competence(db, state.towers, rules)
-
-
-@router.delete("/competence/{sector}", response_model=CompetenceOut)
-def delete_competence(sector: str, db: Session = Depends(get_db)) -> CompetenceOut:
-    """Clear your mark for one sector (it becomes unmarked again)."""
-    require_not_demo(db)
-    rules = get_rituals(get_settings().active_rituals_version)
-    competence_svc.clear_mark(db, sector)
-    state, _ = _state_for(db)
-    return competence_svc.get_competence(db, state.towers, rules)

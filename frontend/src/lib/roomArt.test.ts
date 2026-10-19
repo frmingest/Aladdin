@@ -15,14 +15,13 @@ describe("Records art (Sprint 10)", () => {
 
   it("stands the bookshelf and lectern in the Records banner only", () => {
     expect(roomPropIds("records")).toEqual(["room-bookshelf", "room-lectern"]);
-    expect(roomPropIds("circle")).toEqual([]);
     expect(roomPropIds("fortress")).toEqual([]);
   });
 });
 
 describe("room art ids", () => {
-  it("gives Records, Circle and Map a banner backdrop that is really packed", () => {
-    for (const room of ["records", "circle", "map"] as const) {
+  it("gives Records and Map a banner backdrop that is really packed", () => {
+    for (const room of ["records", "map"] as const) {
       const id = roomBackdropId(room);
       expect(id).not.toBeNull();
       expect(Object.keys(ART_MANIFEST)).toContain(id);
@@ -36,14 +35,14 @@ describe("room art ids", () => {
   });
 
   it("gives each room its own crest picture", () => {
-    const rooms = ["records", "circle", "map", "siege", "market", "fortress", "journal"] as const;
+    const rooms = ["records", "map", "siege", "market", "fortress", "journal"] as const;
     const ids = rooms.map((r) => roomCrestId(r));
     expect(ids).toEqual(rooms.map((r) => `crest-${r}`));
   });
 
   it("returns null for a crest or seal whose picture is not packed (never a broken id)", () => {
     const packed = Object.keys(ART_MANIFEST);
-    for (const room of ["records", "circle", "map", "siege", "market", "fortress", "journal"] as const) {
+    for (const room of ["records", "map", "siege", "market", "fortress", "journal"] as const) {
       const id = roomCrestId(room);
       if (id !== null) expect(packed).toContain(id);
     }

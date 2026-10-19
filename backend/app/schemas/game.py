@@ -496,10 +496,8 @@ class NightWatchOut(BaseModel):
     lines: list[NightWatchLineOut]
 
 
-# --- Sprint 25: rituals (G18 Records, G19 Circle, G20 holding lines) ---
+# --- Sprint 25: rituals (G18 Records, G20 holding lines) ---
 
-CompetenceLevelOut = Literal["know", "partly", "outside"]
-CompetenceStatus = Literal["inside", "edge", "outside", "unmarked", "unclassified", "not_applicable"]
 RecordReviewState = Literal["written", "due", "not_due"]
 
 
@@ -548,53 +546,6 @@ class RecordsOut(BaseModel):
     records: list[RecordOut]
     reviews_due: int
     caption: str
-
-
-class CompetenceHeldOut(BaseModel):
-    holding_id: UUID
-    name: str
-    weight_pct: Decimal | None
-
-
-class CompetenceSectorOut(BaseModel):
-    sector: str
-    level: CompetenceLevelOut | None
-    note: str | None
-    marked_at: datetime | None
-    weight_pct: Decimal
-    holdings: list[CompetenceHeldOut]
-
-
-class CompetenceTowerOut(BaseModel):
-    holding_id: UUID
-    name: str
-    sector: str | None
-    weight_pct: Decimal | None
-    status: CompetenceStatus
-
-
-class CompetenceOut(BaseModel):
-    """G19: the user's own marks of how well each sector is known, laid over
-    the holdings. A mark is never inferred; no mark is *unmarked*, which is not
-    the same as inside the circle."""
-
-    rules_version: str
-    demo: bool = False
-    levels: list[str]
-    sectors: list[CompetenceSectorOut]
-    towers: list[CompetenceTowerOut]
-    inside_weight_pct: Decimal
-    edge_weight_pct: Decimal
-    outside_weight_pct: Decimal
-    unmarked_weight_pct: Decimal
-    unclassified_weight_pct: Decimal
-    summary: str
-    note_max_chars: int
-
-
-class CompetenceMarkIn(BaseModel):
-    level: CompetenceLevelOut
-    note: str | None = None
 
 
 # --- C2 calibration ledger (hit rate, 2026-10-14) ---------------------------------------

@@ -5,7 +5,7 @@ backend, schema, migration or prompt change. Decision D1 (reward knowing, never 
 
 ## What was built
 
-- **G34 Survey level (`lib/survey.ts`, rules `survey-v1`).** Five plain facts per tower, each clear, in fog, or not judged:
+- **G34 Survey level (`lib/survey.ts`, rules `survey-v1`).** Five plain facts per tower (*update 2026-10-19: survey-v2 has four; check 4 below, "Circle marked", was removed with the Circle page*), each clear, in fog, or not judged:
   1. *Latest report opened* — the newest annual, quarterly or half-year report on file has been opened on this browser
      ("opened, not understood", the Scrolls library's per-browser flag, D4). Demo data: not judged. A document list that could not be read is fog, never clear.
   2. *Analysis fresh* — freshness is `fresh`. Weathered, old or missing is fog, so **fog comes back when an analysis ages**. Funds/gold: not judged.

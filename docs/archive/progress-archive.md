@@ -3,6 +3,10 @@
 Completed milestones and retired status, moved out of `docs/PROGRESS.md` under the rolling-log rules
 in `CLAUDE.md` ("Progress file rules"). Newest snapshot first. Older: [PROGRESS-full-2026-09-30.md](PROGRESS-full-2026-09-30.md).
 
+## Closed 2026-10-19 — housekeeping docs pass
+
+- **Housekeeping pass (#186, merged):** every doc that describes how the app is built was checked against the code on `main`; [architecture.md](../architecture.md) rewritten (7 diagrams), reference docs, CLAUDE.md, the docs index and four broken links fixed. Findings and loose ends: [housekeeping-2026-10-19.md](../ops/housekeeping-2026-10-19.md). No code changed.
+
 ## Closed 2026-10-19 — everything merged since the last archive (#155 to #185)
 
 - **All merged; no PR was open on 2026-10-19** (GitHub API, `main` at `4d0ce8b`). Deploy of these was not checked; Faiz's look-and-judge items stay in `PROGRESS.md`.

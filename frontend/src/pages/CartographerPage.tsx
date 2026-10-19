@@ -6,14 +6,14 @@ import { useCachedQuery } from "../lib/queryCache";
 import { MAP_COPY } from "../lib/realmMap";
 import { loadOpened } from "../lib/scrolls";
 import { SURVEY_VERSION, commissionsFor, surveyRealm } from "../lib/survey";
-import type { Competence, DocumentSummary, GameState, Records } from "../lib/types";
+import type { DocumentSummary, GameState, Records } from "../lib/types";
 import GameFooter from "../components/fortress/GameFooter";
 import RealmMapBody from "../components/fortress/kit/RealmMapBody";
 import { LoadError, PageHeader } from "../components/ui";
 import { describeError } from "../lib/errors";
 
 /** The Cartographer's table (game mode G34 and G35): the realm as a map of fog. Each tower shows
- * five plain facts as fog patches, clear or still in fog; the commissions are the same fog grouped by
+ * four plain facts as fog patches, clear or still in fog; the commissions are the same fog grouped by
  * what would clear it, each ending at an existing page. Progress here is a map, not a score: nothing
  * is granted for buying, selling, visiting or speed, there is no streak, and fog comes back when an
  * analysis ages. A fully clear tower is only a well-understood one, never a good one. Read-only.
@@ -51,7 +51,6 @@ export default function CartographerPage() {
   const stateQ = useCachedQuery<GameState>("game-state", () => api.getGameState(), {
     describeError: (e) => describeError(e, "the map").message,
   });
-  const compQ = useCachedQuery<Competence>("game-competence", () => api.getCompetence());
   const recQ = useCachedQuery<Records>("game-records", () => api.getRecords());
   const docs = useRealmDocuments(stateQ.data);
   const opened = useMemo(() => loadOpened(), []);
@@ -67,16 +66,16 @@ export default function CartographerPage() {
       state && docs
         ? surveyRealm({
             state,
-            competence: compQ.data,
             records: recQ.data ? recQ.data.records : null,
             documents: docs,
             opened,
           })
         : null,
-    [state, docs, compQ.data, recQ.data, opened],
+    [state, docs, recQ.data, opened],
   );
   const commissions = useMemo(() => (state && towers ? commissionsFor(towers, state) : []), [state, towers]);
-  const sectors = useMemo(() => Object.fromEntries((compQ.data?.towers ?? []).map((t) => [t.holding_id, t.sector])), [compQ.data]);
+  // Each holding's sector comes straight from the game state (the stored classification).
+  const sectors = useMemo(() => Object.fromEntries((state?.towers ?? []).map((t) => [t.holding_id, t.sector])), [state]);
   // What each holding is, so the map can pick its picture (art mode only; the facts do not change).
   const kinds = useMemo(
     () => Object.fromEntries((state?.towers ?? []).map((t) => [t.holding_id, { structure: t.structure, size_class: t.size_class }])),
@@ -99,7 +98,7 @@ export default function CartographerPage() {
       {!error && !towers && <p className="text-sm text-ink-muted">Unrolling the map…</p>}
       {state && towers && (
         <div className="space-y-4">
-          <RealmMapBody towers={towers} commissions={commissions} demo={state.demo} painted={gameMode} sectors={sectors} sectorsKnown={!!compQ.data} kinds={kinds} />
+          <RealmMapBody towers={towers} commissions={commissions} demo={state.demo} painted={gameMode} sectors={sectors} sectorsKnown kinds={kinds} />
           <div className="map-foot">
             <GameFooter rules={`Rules ${SURVEY_VERSION}. Finishing a commission earns nothing.`} />
           </div>

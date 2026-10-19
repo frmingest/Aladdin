@@ -19,7 +19,6 @@ const FortressPage = lazy(() => import("./pages/FortressPage"));
 const SiegeSimulatorPage = lazy(() => import("./pages/SiegeSimulatorPage"));
 // Sprint 24 (G14): the fortress replayed through time.
 const RecordsPage = lazy(() => import("./pages/RecordsPage"));
-const CompetencePage = lazy(() => import("./pages/CompetencePage"));
 const CartographerPage = lazy(() => import("./pages/CartographerPage"));
 // Marketplace (G9): the street of watchlist stores and the deep-dive inside each.
 const MarketplacePage = lazy(() => import("./pages/MarketplacePage"));
@@ -71,7 +70,6 @@ export default function App() {
           <Route path="/fortress" element={<FortressPage />} />
           <Route path="/fortress/siege" element={<SiegeSimulatorPage />} />
           <Route path="/fortress/records" element={<RecordsPage />} />
-          <Route path="/fortress/circle" element={<CompetencePage />} />
           <Route path="/fortress/map" element={<CartographerPage />} />
           <Route path="/fortress/marketplace" element={<MarketplacePage />} />
           <Route path="/fortress/marketplace/:holdingId" element={<MarketStorePage />} />

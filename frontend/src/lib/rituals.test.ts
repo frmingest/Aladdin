@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   actionLabel,
   changeText,
-  circleSegments,
   daysText,
   filterRecords,
   priceLine,
@@ -64,14 +63,5 @@ describe("labels and filters", () => {
   it("shows a missing weight as unknown", () => {
     expect(weightText(null)).toBe("unknown");
     expect(weightText("12.345")).toBe("12.3%");
-  });
-});
-
-describe("circle bar", () => {
-  it("drops empty segments and keeps unmarked separate from inside", () => {
-    const s = circleSegments({
-      inside_weight_pct: "30", edge_weight_pct: "0", outside_weight_pct: "20", unmarked_weight_pct: "15", unclassified_weight_pct: "0",
-    });
-    expect(s.map((x) => x.key)).toEqual(["inside", "outside", "unmarked"]);
   });
 });

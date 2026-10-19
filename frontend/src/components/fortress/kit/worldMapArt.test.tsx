@@ -33,9 +33,9 @@ describe("map art stays behind the Settings switch", () => {
   it("draws no picture by default (art off), with or without kinds, and keeps every survey patch", () => {
     for (const html of [render(), render({ a: { structure: "keep", size_class: "great" }, b: { structure: "outpost", size_class: "small" }, c: { structure: "granary", size_class: "small" } })]) {
       expect(html).not.toContain("<image");
-      expect(html.match(/data-patch="fog"/g)?.length ?? 0).toBe(5);
-      expect(html.match(/data-patch="clear"/g)?.length ?? 0).toBe(5);
-      expect(html.match(/data-patch="not-judged"/g)?.length ?? 0).toBe(5);
+      expect(html.match(/data-patch="fog"/g)?.length ?? 0).toBe(4);
+      expect(html.match(/data-patch="clear"/g)?.length ?? 0).toBe(4);
+      expect(html.match(/data-patch="not-judged"/g)?.length ?? 0).toBe(4);
       expect(html.match(/class="wm-tower"/g)?.length ?? 0).toBe(towers.length);
     }
   });
@@ -44,7 +44,7 @@ describe("map art stays behind the Settings switch", () => {
 describe("TowerFigure body", () => {
   const slots = towers[0].checks.map((c, i) => ({ index: i, id: c.id, label: c.label, state: c.state, look: {} as never, reason: "", cx: 10 + i * 10, cy: 40, r: 16 }));
 
-  it("shows the silhouette unless a picture body is given, and always the five patches over it", () => {
+  it("shows the silhouette unless a picture body is given, and always the four patches over it", () => {
     const plain = renderToStaticMarkup(<svg><FogDefs id="h" /><TowerFigure slots={slots} hatchId="h" /></svg>);
     const withBody = renderToStaticMarkup(
       <svg>
@@ -53,7 +53,7 @@ describe("TowerFigure body", () => {
     );
     expect(plain).toContain("<path");
     expect(withBody).toContain('data-test="body"');
-    expect(withBody.match(/data-patch="fog"/g)?.length).toBe(5);
+    expect(withBody.match(/data-patch="fog"/g)?.length).toBe(4);
     // the survey patch comes after the picture, so fog lies over it
     expect(withBody.indexOf('data-test="body"')).toBeLessThan(withBody.indexOf('data-patch="fog"'));
   });

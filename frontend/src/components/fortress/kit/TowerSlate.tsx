@@ -5,7 +5,7 @@ import type { TowerFog } from "../../../lib/survey";
 import { PatchMark } from "./FogPatch";
 import "./realmMap.css";
 
-/** The survey slate (Cartographer's table, win 3): the five checks of the tower you pressed, each with
+/** The survey slate (Cartographer's table, win 3): the four checks of the tower you pressed, each with
  * its patch, the printed word and the reason. It replaces the hover-only tooltips, so touch devices get
  * the reasons too. Facts only: no count of how many are clear, no percentage. */
 export default function TowerSlate({ tower, hatchId, onClose }: { tower: TowerFog; hatchId: string; onClose: () => void }) {

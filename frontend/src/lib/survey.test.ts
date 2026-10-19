@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { commissionsFor, fogLevel, latestReport, surveyText, surveyTower } from "./survey";
 import type { SurveyInputs } from "./survey";
-import type { Competence, DecisionRecord, DocumentSummary, GameState, GameTower } from "./types";
+import type { DecisionRecord, DocumentSummary, GameState, GameTower } from "./types";
 
 function tower(over: Partial<GameTower> = {}): GameTower {
   return {
@@ -27,31 +27,27 @@ function state(towers: GameTower[], over: Partial<GameState> = {}): GameState {
     siege: null, notes: [], ...over,
   };
 }
-function comp(status: Competence["towers"][number]["status"]): Competence {
-  return { towers: [{ holding_id: "h1", name: "Alpha", sector: "Energy", weight_pct: "40", status }] } as Competence;
-}
 const rec = (inv: string | null): DecisionRecord => ({ holding_id: "h1", invalidation: inv }) as DecisionRecord;
 function inputs(t: GameTower, over: Partial<SurveyInputs> = {}): SurveyInputs {
   return {
-    state: state([t]), competence: comp("inside"), records: [rec("Margins fall below 10%")],
+    state: state([t]), records: [rec("Margins fall below 10%")],
     documents: { h1: [doc("d1", "annual_report", "2026-03-01")] }, opened: new Set(["d1"]), ...over,
   };
 }
 const byId = (t: ReturnType<typeof surveyTower>, id: string) => t.checks.find((c) => c.id === id)!;
 
-describe("survey-v1", () => {
-  it("clears all five checks when every fact is present", () => {
+describe("survey-v2", () => {
+  it("clears all four checks when every fact is present", () => {
     const s = surveyTower(tower(), inputs(tower()));
-    expect(s.checks.map((c) => c.state)).toEqual(["clear", "clear", "clear", "clear", "clear"]);
-    expect(surveyText(s)).toBe("5 of 5 surveyed");
+    expect(s.checks.map((c) => c.state)).toEqual(["clear", "clear", "clear", "clear"]);
+    expect(surveyText(s)).toBe("4 of 4 surveyed");
     expect(fogLevel(s)).toBe(0);
   });
 
-  it("keeps unknown as fog: unreadable documents, journal and circle are never clear", () => {
-    const s = surveyTower(tower(), inputs(tower(), { documents: {}, records: null, competence: null }));
+  it("keeps unknown as fog: unreadable documents and journal are never clear", () => {
+    const s = surveyTower(tower(), inputs(tower(), { documents: {}, records: null }));
     expect(byId(s, "report").state).toBe("fog");
     expect(byId(s, "thesis").state).toBe("fog");
-    expect(byId(s, "circle").state).toBe("fog");
   });
 
   it("report: needs the NEWEST report opened; an older opened one does not count", () => {
@@ -82,18 +78,12 @@ describe("survey-v1", () => {
     expect(byId(surveyTower(tower(), inputs(tower(), { records: [{ holding_id: "x", invalidation: "y" } as DecisionRecord] })), "thesis").state).toBe("fog");
   });
 
-  it("circle: marked counts, unmarked and unclassified are fog, funds are not judged", () => {
-    const check = (s: Competence["towers"][number]["status"]) => byId(surveyTower(tower(), inputs(tower(), { competence: comp(s) })), "circle").state;
-    expect([check("inside"), check("edge"), check("outside")]).toEqual(["clear", "clear", "clear"]);
-    expect([check("unmarked"), check("unclassified"), check("not_applicable")]).toEqual(["fog", "fog", "not_judged"]);
-  });
-
   it("valuation: fog land is fog; funds are not judged and drop out of the count", () => {
     const foggy = tower({ land: "fog", land_reason: "No price." });
     expect(byId(surveyTower(foggy, inputs(foggy)), "valuation").reason).toBe("No price.");
     const fund = tower({ freshness: "not_applicable", land: "fog" });
     const s = surveyTower(fund, inputs(fund));
-    expect(s.judged).toBe(3);
+    expect(s.judged).toBe(2);
     expect(byId(s, "analysis").state).toBe("not_judged");
     expect(byId(s, "valuation").state).toBe("not_judged");
   });
@@ -103,7 +93,7 @@ describe("survey-v1", () => {
     const b = tower({ holding_id: "h2", name: "Beta", weight_pct: "50", freshness: "overgrown", land: "fog" });
     const st = state([a, b], { vault: { accounts_total: 2, accounts_with_cash: 1, cash_stale: false } as GameState["vault"] });
     const i: SurveyInputs = {
-      state: st, competence: { towers: [] } as unknown as Competence, records: [], documents: { h1: [], h2: [] }, opened: new Set(),
+      state: st, records: [], documents: { h1: [], h2: [] }, opened: new Set(),
     };
     const towers = st.towers.map((t) => surveyTower(t, i));
     const c = commissionsFor(towers, st);
@@ -123,7 +113,7 @@ describe("survey-v1", () => {
 
   it("never uses trading or reward wording", () => {
     const t = tower({ freshness: "unsurveyed", land: "fog" });
-    const i = inputs(t, { documents: {}, records: [], competence: comp("unmarked") });
+    const i = inputs(t, { documents: {}, records: [] });
     const tf = surveyTower(t, i);
     const all = [...tf.checks.map((c) => c.reason), ...commissionsFor([tf], i.state).flatMap((c) => [c.title, c.text])].join(" ");
     expect(all).not.toMatch(/\b(buy|sell|trim|add to|invest|purchase|points?|streak|reward|level up|unlock)\b/i);

@@ -52,7 +52,6 @@ export const FORTRESS_NAV: NavItem[] = [
   { label: "Marketplace", to: "/fortress/marketplace" },
   { label: "Siege Simulator", to: "/fortress/siege" },
   { label: "Records", to: "/fortress/records" },
-  { label: "Circle", to: "/fortress/circle" },
 ];
 
 /** What the sidebar lists without opening "More". */

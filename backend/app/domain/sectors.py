@@ -35,8 +35,7 @@ SECTORS: tuple[str, ...] = (
 )
 
 FUND_SECTOR = "Diversified Fund"
-"""Funds only: not a company sector, so it is never a Circle of Competence row
-and has no sector research page."""
+"""Funds only: not a company sector, so it has no sector research page."""
 
 STOCK_SECTORS: tuple[str, ...] = tuple(s for s in SECTORS if s != FUND_SECTOR)
 """The GICS-11 company sectors (everything in SECTORS except FUND_SECTOR)."""

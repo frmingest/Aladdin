@@ -11,14 +11,6 @@ import ObjectArtImage from "../../ObjectArtImage";
 function Glyph({ kind }: { kind: CrestKind }) {
   const ink = { stroke: "#f2d27a", strokeWidth: 1.6, fill: "none", strokeLinecap: "round", strokeLinejoin: "round" } as const;
   switch (kind) {
-    case "circle":
-      return (
-        <g {...ink}>
-          <circle cx="20" cy="21" r="10" />
-          <path d="M20 8.5 v4 M20 29.5 v4 M7.5 21 h4 M28.5 21 h4" />
-          <circle cx="20" cy="21" r="1.8" fill="#f2d27a" />
-        </g>
-      );
     case "map":
       return (
         <g {...ink}>

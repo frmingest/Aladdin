@@ -937,7 +937,7 @@
   background-color: rgb(var(--c-surface));
 }
 
-/* Night panel (game mode): the dark counterpart of .parchment for the Circle page. Re-points the same
+/* Night panel (game mode): the dark counterpart of .parchment for the former Circle page. Re-points the same
    tokens to light ink on deep umber, so it sits with the candlelit study instead of glaring against it.
    Static: a few painted star dots and a warm vignette, no filter, no animation. */
 .nightpanel {

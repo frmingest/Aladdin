@@ -1,4 +1,4 @@
-"""Sprint 25 rules (G18 Records, G19 Circle, G20 holding lines),
+"""Sprint 25 rules (G18 Records, G20 holding lines),
 tested without a database. The rituals read the user's real money records, so
 the voice rules are tested too: no trade instruction, no score, no padding."""
 from __future__ import annotations
@@ -13,7 +13,6 @@ import pytest
 from app.domain.game_mapping.rituals_v1 import RITUALS_V1, get_rituals
 from app.schemas.game import GameStateOut, RecordOut
 from app.schemas.journal import JournalEntryOut, JournalOutcomeOut
-from app.services.game import competence as comp
 from app.services.game import rituals as rit
 from tests.unit.test_game_advisors import diw, siege, tower, vault
 
@@ -52,7 +51,7 @@ def entry(i=1, **kw) -> JournalEntryOut:
 
 def test_rules_file_is_versioned_and_complete():
     assert get_rituals("v1") is RITUALS_V1
-    assert RITUALS_V1.competence_levels == ("know", "partly", "outside")
+    assert RITUALS_V1.version == "v1"
     with pytest.raises(ValueError):
         get_rituals("v9")
 
@@ -103,63 +102,10 @@ def test_records_unlinked_entry_has_no_verdict_now():
     assert r.verdict_now is None
 
 
-# --- G19 ----------------------------------------------------------------------
-
-
-MARKS = {"Energy": ("outside", None, NOW), "Industrials": ("know", "my trade", NOW), "Materials": ("partly", None, NOW)}
-
-
-def test_competence_statuses_and_weights():
-    t_in = tower("In", sector="Industrials", weight_pct=D(30))
-    t_edge = tower("Edge", sector="Materials", weight_pct=D(10))
-    t_out = tower("Out", sector="Energy", weight_pct=D(20))
-    t_un = tower("Un", sector="Utilities", weight_pct=D(15))
-    t_none = tower("None", sector=None, weight_pct=D(5))
-    t_fund = tower("Fund", instrument_type="equity_fund", sector="Energy", weight_pct=D(20), structure="outpost")
-    out = comp.build_competence([t_in, t_edge, t_out, t_un, t_none, t_fund], MARKS, RITUALS_V1)
-    status = {r.name: r.status for r in out.towers}
-    assert status == {
-        "In": "inside", "Edge": "edge", "Out": "outside", "Un": "unmarked", "None": "unclassified",
-        "Fund": "not_applicable",
-    }
-    assert (out.inside_weight_pct, out.edge_weight_pct, out.outside_weight_pct) == (D(30), D(10), D(20))
-    assert (out.unmarked_weight_pct, out.unclassified_weight_pct) == (D(15), D(5))
-    energy = next(s for s in out.sectors if s.sector == "Energy")
-    assert energy.level == "outside" and [h.name for h in energy.holdings] == ["Out"]  # the fund is not counted
-    assert len(out.sectors) == 11
-
-
-def test_fund_sector_is_never_a_circle_row_or_markable():
-    from app.domain.sectors import FUND_SECTOR, SECTORS, is_valid_sector
-
-    assert is_valid_sector(FUND_SECTOR) and FUND_SECTOR in SECTORS
-    out = comp.build_competence([tower("Heimdal", instrument_type="equity_fund", sector=FUND_SECTOR, weight_pct=D(40), structure="outpost")], {}, RITUALS_V1)
-    assert FUND_SECTOR not in [s.sector for s in out.sectors]
-    assert out.towers[0].status == "not_applicable"
-    with pytest.raises(ValueError):
-        comp.set_mark(None, FUND_SECTOR, "know", None, RITUALS_V1)  # refused before the database is touched
-
-
-def test_competence_never_infers_a_mark():
-    t = tower("Alpha", sector="Industrials", weight_pct=D(50))
-    out = comp.build_competence([t], {}, RITUALS_V1)
-    assert out.towers[0].status == "unmarked"
-    assert out.inside_weight_pct == 0
-    assert "unmarked is not the same as inside" in out.summary
-    assert all(s.level is None for s in out.sectors)
-
-
-def test_competence_with_no_stocks_says_so():
-    out = comp.build_competence([], MARKS, RITUALS_V1)
-    assert "no stock holdings" in out.summary
-
-
 # --- wording ------------------------------------------------------------------
 
 
 def test_no_text_says_buy_sell_add_trim_or_invest():
-    bad = tower("Bad", wall="rotted", moat="none", thesis="breached", tripwires_fired=1, sector="Energy",
-                freshness="overgrown", analysis_age_days=300)
-    texts = [rit.HINDSIGHT_CAPTION, comp.build_competence([bad], MARKS, RITUALS_V1).summary]
+    texts = [rit.HINDSIGHT_CAPTION]
     for text in texts:
         assert not FORBIDDEN.search(text), text

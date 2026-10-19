@@ -2,7 +2,7 @@
 
 > *2026-10-18: the Council Chamber was removed from the app; its bullets are cut below.*
 
-Status: **written and tested, not merged, not deployed. Seen only in headless Chromium with a synthetic fixture (desktop 1280 px and phone 390 px), never with real data.** Frontend only, no backend change, no migration, no new dependency. Design: [docs/game/circle-design-2026-10-09.md](circle-design-2026-10-09.md); standard: `.claude/standards/game-visual-identity.md` (added by PR #88).
+Status: **written and tested, not merged, not deployed. Seen only in headless Chromium with a synthetic fixture (desktop 1280 px and phone 390 px), never with real data.** Frontend only, no backend change, no migration, no new dependency. Design: `docs/game/circle-design-2026-10-09.md` (deleted 2026-10-19 with the Circle page); standard: `.claude/standards/game-visual-identity.md` (added by PR #88).
 
 ## What changed
 

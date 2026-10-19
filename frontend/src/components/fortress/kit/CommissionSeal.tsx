@@ -18,13 +18,6 @@ function Body({ shape }: { shape: CommissionShape }) {
       return <path d="M14 2 L26 14 L14 26 L2 14 Z" fill={fill} stroke={stroke} strokeWidth={sw} strokeLinejoin="round" />;
     case "triangle-down":
       return <path d="M2.5 4.5 H25.5 L14 25 Z" fill={fill} stroke={stroke} strokeWidth={sw} strokeLinejoin="round" />;
-    case "ring":
-      return (
-        <g>
-          <circle cx="14" cy="14" r="11.5" fill={fill} stroke={stroke} strokeWidth={sw} />
-          <circle cx="14" cy="14" r="8" fill="none" stroke={C.cream} strokeWidth="1" />
-        </g>
-      );
     case "coin":
       return <circle cx="14" cy="14" r="10.5" fill={fill} stroke={stroke} strokeWidth="3.4" />;
   }

@@ -13,7 +13,7 @@ import NightPanel from "./NightPanel";
 import TowerSlate from "./TowerSlate";
 import "./realmMap.css";
 
-/** The body of the Cartographer's table (game mode G34 / G35, wins 1 to 4): every tower with its five
+/** The body of the Cartographer's table (game mode G34 / G35, wins 1 to 4): every tower with its four
  * fog patches, a slate for the tower you press, and the commissions as numbered seals that plant flags
  * on the towers they cover. Read-only: nothing here trades, scores or rewards anything. The numbered
  * list of commissions and the closed text list of towers are the accessible source of truth; the
@@ -302,7 +302,7 @@ export default function RealmMapBody({
   commissions: Commission[];
   demo: boolean;
   painted: boolean;
-  /** holding id -> sector, from the Circle of Competence; empty when it could not be read. */
+  /** holding id -> sector, from the game state; empty when unknown. */
   sectors?: Record<string, string | null>;
   sectorsKnown?: boolean;
   /** holding id -> structure and size class, to pick each settlement's picture when art is on. */

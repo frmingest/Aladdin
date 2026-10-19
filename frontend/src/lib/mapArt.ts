@@ -7,7 +7,7 @@ import { CAPITAL, dist, hashString, type Glyph, type Pt, type World } from "./wo
  * The Cartographer's map as pictures (Design Master Sprint 4). Pure placement
  * and choice, no React. The land stays scenery and the picture carries NO fact:
  * what a settlement stands for is already decided by the holding (structure and
- * size class, as on the Fortress), and the five survey patches are still drawn
+ * size class, as on the Fortress), and the four survey patches are still drawn
  * by code over the picture, so an unknown fact stays fog.
  *
  * Decision 5 (2026-10-11): a stock is a town, or a citadel when it is a great
@@ -197,7 +197,7 @@ export function placeLandmarks(world: Pick<World, "coast" | "islands">, settleme
 // Financials, and so on. Decided by Faiz on 2026-10-14: the picture says what the holding does for a
 // living, and the fund / gold / stock split that the old pictures carried is given up where a sector has a
 // theme. A holding with no sector, an unknown sector or a sector with no theme keeps the picture from
-// `settlementArtId`. The picture is still decoration: the weight (drawing size), the five survey patches and
+// `settlementArtId`. The picture is still decoration: the weight (drawing size), the four survey patches and
 // every other fact stay drawn by code, so nothing here can make an unknown fact look known. A sector picture
 // is chosen from the sector alone (never the survey, the weight or a verdict).
 
