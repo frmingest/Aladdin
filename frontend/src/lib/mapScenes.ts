@@ -3,6 +3,8 @@ import forgeUrl from "../assets/map/scenes/forge.webp";
 import millUrl from "../assets/map/scenes/mill.webp";
 import farmUrl from "../assets/map/scenes/farm.webp";
 import exchangeUrl from "../assets/map/scenes/exchange.webp";
+import clinicUrl from "../assets/map/scenes/clinic.webp";
+import workshopUrl from "../assets/map/scenes/workshop.webp";
 import { clampView, MAX_ZOOM, type Pt, type View } from "./worldMap";
 
 /**
@@ -12,11 +14,11 @@ import { clampView, MAX_ZOOM, type Pt, type View } from "./worldMap";
  *
  * Truth rules: a scene is chosen from the holding's sector, name and structure alone, never from the
  * survey, the weight or a verdict, and it carries no fact (no figure, no status colour). A holding whose
- * sector has no scene of its own gets the Exchange, the general market picture, so nothing is left blank.
+ * sector has no scene of its own (technology, real estate, communications...) gets the Exchange, the general market picture, so nothing is left blank.
  * Names come from the user's own data, so matching is loose and case-insensitive.
  */
 
-export type SceneId = "mines" | "forge" | "mill" | "farm" | "exchange";
+export type SceneId = "mines" | "forge" | "mill" | "farm" | "exchange" | "clinic" | "workshop";
 
 export interface SceneArt {
   id: SceneId;
@@ -34,6 +36,8 @@ export const SCENES: Record<SceneId, SceneArt> = {
   mill: { id: "mill", src: millUrl, kicker: "By the mill", width: 1280, height: 714 },
   farm: { id: "farm", src: farmUrl, kicker: "Out on the farm", width: 1280, height: 714 },
   exchange: { id: "exchange", src: exchangeUrl, kicker: "On the exchange floor", width: 1280, height: 714 },
+  clinic: { id: "clinic", src: clinicUrl, kicker: "In the apothecary", width: 1280, height: 714 },
+  workshop: { id: "workshop", src: workshopUrl, kicker: "In the workshop", width: 1280, height: 714 },
 };
 
 export const SCENE_IDS = Object.keys(SCENES) as SceneId[];
@@ -43,6 +47,8 @@ const MINES_SECTOR = /gold|silver|copper|platinum|palladium|bullion|mining|miner
 /** A holding's own name only counts when it says the metal or the trade outright ("Gold ETC", "Gold Miners ETF"). */
 const MINES_NAME = /\b(gold|silver|copper|platinum|palladium|bullion|mining|miners?|metals)\b/i;
 const SECTOR_SCENES: readonly { match: RegExp; id: SceneId }[] = [
+  { match: /health|pharma|medic|biotech|hospital|drug|life science/i, id: "clinic" },
+  { match: /discretionary|cyclical|retail|leisure|apparel|luxury|automobile|\bautos?\b|homebuild|furnitur|hotel|restaurant/i, id: "workshop" },
   { match: /defen[cs]e|aerospace|weapon|arms\b|military|industr|manufactur|machin|transport/i, id: "forge" },
   { match: /energy|oil|petrol|gas\b|utilit|power|electric|renewable|solar|wind|hydro|water/i, id: "mill" },
   { match: /staple|food|agri|beverage|farm|grain/i, id: "farm" },

@@ -23,6 +23,14 @@ describe("sceneFor", () => {
     expect(sceneFor({ sector: "Agriculture" })).toBe("farm");
   });
 
+  it("sends health care to the apothecary and consumer discretionary to the workshop", () => {
+    expect(sceneFor({ sector: "Health Care" })).toBe("clinic");
+    expect(sceneFor({ sector: "Pharmaceuticals & Biotech" })).toBe("clinic");
+    expect(sceneFor({ sector: "Consumer Discretionary" })).toBe("workshop");
+    expect(sceneFor({ sector: "Retail" })).toBe("workshop");
+    expect(sceneFor({ sector: "Consumer Staples" })).toBe("farm");
+  });
+
   it("sends money to the exchange, and so does anything with no scene of its own", () => {
     expect(sceneFor({ sector: "Financials" })).toBe("exchange");
     expect(sceneFor({ sector: "Diversified / Fund" })).toBe("exchange");
@@ -49,7 +57,7 @@ describe("scene pictures", () => {
       expect(s.kicker.split(/\s+/).length, id).toBeLessThanOrEqual(5);
       expect(s.width / s.height).toBeCloseTo(16 / 9, 1);
     }
-    expect(SCENE_IDS.sort()).toEqual(["exchange", "farm", "forge", "mill", "mines"]);
+    expect([...SCENE_IDS].sort()).toEqual(["clinic", "exchange", "farm", "forge", "mill", "mines", "workshop"]);
   });
 
   it("keeps each shipped picture under the 150 KB image guard", () => {

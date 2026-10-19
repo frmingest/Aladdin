@@ -23,7 +23,7 @@ Camera flies in 900 ms (zoom blended in log space); the iris starts at 480 ms an
 Pictures: `frontend/src/assets/map/scenes/*.webp` (1280 x 714, each under 150 KB), fetched and decoded while you hover or focus a settlement. A picture that fails to load is skipped and the old behaviour (fly to the settlement) stays. Game mode only.
 
 ## Open
-- Scenes for sectors that fall back to the Exchange (technology, health care, real estate, consumer discretionary) would need more Stitch pictures.
+- Information Technology still shows the Exchange: no picture for it yet. Real estate and communications too.
 
 
 ## Layout follow-up (same day)
