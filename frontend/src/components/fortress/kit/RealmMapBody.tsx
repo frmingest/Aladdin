@@ -160,7 +160,8 @@ function PaintedBody({
               <Key hatchId={hatchId} />
               <p className="mt-1 text-xs text-ink-muted">{MAP_COPY.hint} {MAP_COPY.hintSeal}</p>
             </div>
-            <div className="mt-3">
+            <div className="mt-3 xl:grid xl:grid-cols-[minmax(0,1fr)_23rem] xl:items-start xl:gap-4">
+            <div className="min-w-0">
               <WorldMap
                 towers={towers}
                 sectors={sectors}
@@ -175,8 +176,14 @@ function PaintedBody({
                 onSceneChange={setSceneOpen}
               />
             </div>
-            <div id="map-slate" ref={slateRef} className="mt-3 scroll-mt-4" aria-live="polite">
-              {selected && <TowerSlate tower={selected} hatchId={hatchId} onClose={closeSlate} />}
+            {/* Like the Fortress dock: beside the map on wide screens (the column is always there, so the map never jumps when you press a tower), under it on narrow ones. */}
+            <div id="map-slate" ref={slateRef} className="mt-3 scroll-mt-4 xl:sticky xl:top-4 xl:mt-0" aria-live="polite">
+              {selected ? (
+                <TowerSlate tower={selected} hatchId={hatchId} onClose={closeSlate} />
+              ) : (
+                <p className="map-slate-empty hidden rounded-md border border-dashed border-border p-3 text-sm text-ink-muted xl:block">{MAP_COPY.slateEmpty}</p>
+              )}
+            </div>
             </div>
             <Disclosure label="the survey as a list" className="map-disc mt-2">
               <SurveyList towers={towers} />

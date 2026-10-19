@@ -61,14 +61,12 @@ export default function SceneDive({ scene, name, phase, origin, radius, onBack, 
         <img className="wm-dive-img" src={art.src} width={art.width} height={art.height} alt="" decoding="async" draggable={false} onError={onImageError} />
         <div className="wm-dive-shade" aria-hidden="true" />
         <div className="wm-dive-plate">
-          <div className="min-w-0">
-            <p className="wm-dive-kicker">{art.kicker}</p>
-            <p className="wm-dive-name">{name}</p>
-          </div>
-          <button ref={backRef} type="button" className="wm-dive-back" onClick={onBack}>
-            Back to the map
-          </button>
+          <p className="wm-dive-kicker">{art.kicker}</p>
+          <p className="wm-dive-name">{name}</p>
         </div>
+        <button ref={backRef} type="button" className="wm-dive-back" onClick={onBack}>
+          Back to the map
+        </button>
       </div>
     </div>
   );

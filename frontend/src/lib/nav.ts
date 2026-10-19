@@ -48,11 +48,11 @@ export const MORE_NAV: NavSection[] = [
 /** The Fortress rooms, shown as a tab strip on every /fortress page. */
 export const FORTRESS_NAV: NavItem[] = [
   { label: "Fortress", to: "/fortress" },
+  { label: "Map", to: "/fortress/map" },
   { label: "Marketplace", to: "/fortress/marketplace" },
   { label: "Siege Simulator", to: "/fortress/siege" },
   { label: "Records", to: "/fortress/records" },
   { label: "Circle", to: "/fortress/circle" },
-  { label: "Map", to: "/fortress/map" },
 ];
 
 /** What the sidebar lists without opening "More". */
