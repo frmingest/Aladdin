@@ -81,6 +81,10 @@
   width: 150px;
   max-width: 100%;
   aspect-ratio: 349 / 400;
+  /* Fixed shape: a long name must never stretch its book (aspect-ratio alone lets content grow the box). */
+  min-height: 0;
+  overflow: hidden;
+  container-type: inline-size;
   margin: 0 auto;
   padding: 22% 14% 22% 22%;
   text-align: center;
@@ -97,7 +101,7 @@
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 4;
   overflow: hidden;
-  font-size: 0.95rem;
+  font-size: 17cqw; /* scales with the book, not the root font size, so four lines always fit */
   font-weight: 600;
   line-height: 1.18;
   letter-spacing: 0.01em;
