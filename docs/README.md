@@ -78,6 +78,7 @@ Game mode (Fortress): concept, sprint plans and reviews, visual identity, art pa
 - [stitch-master-object-art-2026-10-11.md](game/stitch-master-object-art-2026-10-11.md) — Stitch Master object art: style, rules and prompts for what is missing
 - [marketplace-landscape-2026-10-17.md](game/marketplace-landscape-2026-10-17.md) — Marketplace landscape: concept and Stitch object list (stalls placed on a street scene)
 - [the-printer-sprint-plan-2026-10-20.md](game/the-printer-sprint-plan-2026-10-20.md) — The Printer (Royal Mint room, 13 central-bank levers): contest result, sprints P0 to P5, Stitch picture list, open questions
+- [printer-p1-ledger-engine-2026-10-20.md](game/printer-p1-ledger-engine-2026-10-20.md) — The Printer Sprint P1: lever table with sources, deterministic engine, `/game/printer` endpoints, finding that amounts are direction-only until holding profiles are measured
 - [market-street-redesign-2026-10-17.md](game/market-street-redesign-2026-10-17.md) — Market Street redesign: critique, lane layout spec, scale table, decisions (built on `feature/market-street`)
 - [design-remaining-objects-2026-10-13.md](game/design-remaining-objects-2026-10-13.md) — Design: closing plan and last Stitch objects (closed 2026-10-13)
 - [game-mode-design-review-2026-10-16.md](game/game-mode-design-review-2026-10-16.md) — Game mode: full design review and Stitch picture plan (review only, 2026-10-16)
