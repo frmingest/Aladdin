@@ -1,8 +1,10 @@
 # Aladdin — Progress
 
-**Last updated:** 2026-10-19 (Circle page removal PR opened). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
+**Last updated:** 2026-10-20 (The Printer planned; plan only). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
 
 ## Current Objective
+
+**The Printer (new Game-mode room, plan only, nothing built):** a Royal Mint with 13 central-bank levers and a STAMP button; the effect on your holdings shows as ranges with confidence tags. Kingdom Mint won a three-team design contest; sprints P1 to P5 and the Stitch picture list are in the [plan](game/the-printer-sprint-plan-2026-10-20.md).
 
 **Circle page removed from Game mode (PR `feature/remove-circle-page`, not merged, not deployed, not seen in a browser).** Faiz said it did not fit the design. The page, its tab, its three `/game/competence` endpoints, the competence service and model, and the ring-map components are gone, with their tests and the two Circle-only docs. The Map's "Circle marked" check went with it, so the survey is now four facts (`survey-v2`). Stitch pictures and the `competence_marks` table stay. Write-up: [remove-circle-page-2026-10-19.md](game/remove-circle-page-2026-10-19.md).
 
@@ -15,7 +17,7 @@ State: `main` is at `4d0ce8b` (#185). **No PR was open on 2026-10-19** (GitHub A
 - [ ] **Review and merge the Circle removal PR (Faiz).** After deploy, open the Map: each tower should show four fog patches, and `/fortress/circle` is gone (an old bookmark shows an empty page). [Doc](game/remove-circle-page-2026-10-19.md)
 - [ ] **After the latest deploy, look at Game mode on desktop and phone:** Records (one large book per record, long names fit the cover), Map (picture fills the box, fog patches readable on each sector picture), Siege Simulator (towers backdrops follow the slider, opens at 5%), Fortress "Walls on the rise", Market Street (half-size stalls: are the names still readable?). Docs: [records](game/records-hall-polish-2026-10-17.md), [map](game/map-image-prototype-2026-10-15.md), [siege](game/siege-towers-backdrops-2026-10-17.md), [walls](game/walls-on-the-rise-2026-10-18.md), [market](game/market-street-redesign-2026-10-17.md)
 - [ ] **After #150 is deployed:** Refresh Margin of safety, open "Can't be ranked yet" then "Why" on Vend Marketplaces, Salmon Evolution and Vår Energi and sanity-check the owner-earnings figure (if wrong, check share count and price currency first). [Doc](valuation/loss-making-price-assumes-2026-10-14.md)
-- [ ] **Still to generate in Stitch:** a barometer picture without text and a larger copy of the map picture ([doc](game/game-art-dde-2026-10-16.md))
+- [ ] **The Printer (Faiz):** answer the 5 questions in section 6 of the [plan](game/the-printer-sprint-plan-2026-10-20.md); **still to generate in Stitch:** the 7 Printer MUST pictures (press, brass lever, STAMP button, coin pile, single coin, Mint Master bust, Mint crest), a barometer picture without text and a larger copy of the map picture ([doc](game/game-art-dde-2026-10-16.md)). Then Claude starts Sprint P1 (numbers first, no art)
 - [ ] **Next backend change:** clear the Supabase leftovers (`backend/.env.example`, the `config/database.py` docstring) and commit the Supabase-to-Railway runbook that only exists in the local checkout ([list](architecture.md#11-known-gaps-and-loose-ends))
 
 ## Recent Blockers / Open Questions
