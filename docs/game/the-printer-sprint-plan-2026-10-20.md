@@ -1,6 +1,6 @@
 # The Printer: sprint plan and Stitch picture list (2026-10-20)
 
-Status: **plan only, nothing built, nothing deployed.** Decisions are in section 6; Faiz still generates the pictures in section 5. The style rules, truth rules and review checklist in [stitch-master-object-art-2026-10-11.md](stitch-master-object-art-2026-10-11.md) stay in force.
+Status: **Sprint P1 written, not merged, not deployed** ([P1 doc](printer-p1-ledger-engine-2026-10-20.md)); P2 to P5 not started. Decisions are in section 6. The 12 pictures in section 5 arrived 2026-10-20 and are not yet packed or wired. The style rules, truth rules and review checklist in [stitch-master-object-art-2026-10-11.md](stitch-master-object-art-2026-10-11.md) stay in force.
 
 ## 1. What The Printer is, in plain words
 

@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from app.config.database import get_db
 from app.config.settings import get_settings
 from app.domain.game_mapping import get_game_mapping
+from app.domain.game_mapping import printer_v1 as printer_table
 from app.domain.game_mapping.backtest_v1 import get_backtest_rules
 from app.domain.game_mapping.calibration_v1 import get_calibration_rules
 from app.domain.game_mapping.rituals_v1 import get_rituals
@@ -35,7 +36,10 @@ from app.schemas.game import (
     SiegeBacktestOut,
     SiegeSimOut,
 )
+from app.schemas.printer import PrinterLedgerOut, PrinterOut
 from app.services.game import calibration as calibration_svc
+from app.services.game import printer as printer_engine
+from app.services.game import printer_view
 from app.services.game import rituals as rituals_svc
 from app.services.game.backtest_view import (
     build_backtest,
@@ -108,6 +112,54 @@ def get_siege(
         return build_siege_sim(state, demo_lookup, drop, mapping, scenarios)
     state = get_game_state(db, mapping.version)
     return build_siege_sim(state, stored_sensitivity_lookup(db, scenarios), drop, mapping, scenarios)
+
+
+@router.get("/printer/ledger", response_model=PrinterLedgerOut)
+def get_printer_ledger() -> PrinterLedgerOut:
+    """The Printer's Ledger of Truth: every lever, every assumption with its source, date and confidence.
+    A fixed table; no database, no provider, no LLM."""
+    return printer_view.ledger()
+
+
+@router.get("/printer", response_model=PrinterOut)
+def get_printer(
+    pull: list[str] = Query(
+        default=[],
+        description="A lever pull as 'lever:size' or 'lever:size:variant', repeatable, e.g. pull=toll_gate:1&pull=great_press:2.",
+    ),
+    horizon: int = Query(default=1, description="Years: 1 or 3."),
+    db: Session = Depends(get_db),
+) -> PrinterOut:
+    """The Printer (Royal Mint): what the pulled central-bank levers would do to each holding, as ranges with a
+    confidence tag (Low = direction only). A scenario over stored data: no provider call, no LLM, no write."""
+    pulls: list[printer_engine.Pull] = []
+    for raw in pull:
+        parts = raw.split(":")
+        if len(parts) not in (2, 3):
+            raise HTTPException(status_code=422, detail=f"pull '{raw}' must look like lever:size or lever:size:variant")
+        try:
+            size = Decimal(parts[1])
+        except Exception as exc:
+            raise HTTPException(status_code=422, detail=f"pull '{raw}' has a size that is not a number") from exc
+        variant = parts[2] if len(parts) == 3 else ""
+        if not variant:
+            lever = printer_table.LEVERS.get(parts[0])
+            variant = printer_table.DEFAULT_VARIANT if lever is None or printer_table.DEFAULT_VARIANT in lever.variants else next(iter(lever.variants))
+        pulls.append(printer_engine.Pull(parts[0], size, variant))
+    try:
+        printer_engine.validate_pulls(pulls)
+        if horizon not in printer_table.HORIZONS:
+            raise ValueError("horizon must be 1 or 3 (years)")
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    mapping = get_game_mapping(get_settings().active_game_mapping_version)
+    scenarios = get_siege_scenarios(get_settings().active_siege_scenarios_version)
+    if is_demo_mode(db):
+        state = demo_game_state(mapping.version)
+        demo_lookup = lambda ticker: Sensitivity(DEMO_BETAS.get(ticker), METHOD_DEMO)
+        return printer_view.build_printer(state, demo_lookup, pulls, horizon)
+    state = get_game_state(db, mapping.version)
+    return printer_view.build_printer(state, stored_sensitivity_lookup(db, scenarios), pulls, horizon)
 
 
 @router.get("/siege/backtest", response_model=SiegeBacktestOut)
