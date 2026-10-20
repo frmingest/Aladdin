@@ -1,6 +1,6 @@
 # The Printer: sprint plan and Stitch picture list (2026-10-20)
 
-Status: **plan only, nothing built, nothing deployed.** Written for Faiz to read, decide the open questions in section 6, and generate the pictures in section 5. The style rules, truth rules and review checklist in [stitch-master-object-art-2026-10-11.md](stitch-master-object-art-2026-10-11.md) stay in force.
+Status: **plan only, nothing built, nothing deployed.** Decisions are in section 6; Faiz still generates the pictures in section 5. The style rules, truth rules and review checklist in [stitch-master-object-art-2026-10-11.md](stitch-master-object-art-2026-10-11.md) stay in force.
 
 ## 1. What The Printer is, in plain words
 
@@ -46,7 +46,7 @@ Data already in the app that the Printer can start from: Norges Bank policy rate
 
 A sprint here is one small, finished step you can look at, so we never build a big thing you have not seen. Each ends with a short summary and a git description, and goes through a feature branch and a PR for you to merge.
 
-**Sprint P0, Decisions (you, 10 minutes).** Answer the questions in section 6. Nothing to build.
+**Sprint P0, Decisions (you).** Done 2026-10-20, see section 6.
 
 **Sprint P1, The Ledger and the engine (no pictures).**
 *For:* getting the numbers honest before anything looks pretty.
@@ -55,7 +55,7 @@ A sprint here is one small, finished step you can look at, so we never build a b
 
 **Sprint P2, The Mint Floor.**
 *For:* making it playable.
-*Build:* a new Game-mode page (proposed `/fortress/printer`, name to confirm) with all 13 levers, the money gauge, the Realm Report (ranked holding cards with ranges, real-terms switch), and the Ledger of Truth (every assumption, source, date, confidence in one tap). A plain view stays behind a toggle as the fallback. Drawn with code art first; Stitch pictures slot in through the existing `?art=stitch|svg` switch.
+*Build:* a new Game-mode page (`/fortress/printer`) with all 13 levers, the money gauge, the Realm Report (ranked holding cards with ranges, real-terms switch), and the Ledger of Truth (every assumption, source, date, confidence in one tap). A plain view stays behind a toggle as the fallback. Drawn with code art first; Stitch pictures slot in through the existing `?art=stitch|svg` switch.
 The Realm Report updates the moment a lever moves (live preview), so the common task costs one tap and STAMP is the show, never a step you must take to see a number.
 *You see:* pull levers, read the result. No animation yet.
 
@@ -104,13 +104,13 @@ Paste the shared block from `stitch-master-object-art-2026-10-11.md` section 5 a
 
 Alt text empty, as with the other pictures; the page states each fact in words.
 
-## 6. Questions for you (Faiz)
+## 6. Decisions (Faiz, 2026-10-20)
 
-1. **Where does it live?** A new room next to Siege (`/fortress/printer`), or a button on the Fortress home? Recommendation: its own room, entered from the Fortress like the others.
-2. **Time span of the result:** 12 months only (recommendation), or let you pick 1 or 3 years?
-3. **Real terms by default?** The result shows "after inflation" next to the plain figure. Recommendation: show both side by side, real terms highlighted, because that is the Buffett point.
-4. **Temperament meter:** should wild multi-lever pulls raise your "panic or greed" meter? Recommendation: yes, a small nudge and a warning line, since it teaches "do not trade on scenarios".
-5. **Sprint P5 (history missions):** keep it on the list as "later", or drop it for now? Recommendation: keep as later.
+1. **Where it lives:** its own room, entered from the Fortress like the others.
+2. **Time span:** 1 year or 3 years, your choice on the page, "if feasible". It is: the coefficient table carries a value per horizon. The 3-year numbers rest on thinner evidence, so they are shown wider and more often tagged Low (direction only). Default: 1 year.
+3. **Real terms:** plain and after-inflation figures side by side.
+4. **Temperament meter:** yes, wild multi-lever pulls give a small nudge and a warning line.
+5. **History missions (P5):** kept as later.
 
 ## 7. Risks and guardrails (summary)
 
@@ -123,7 +123,7 @@ Alt text empty, as with the other pictures; the page states each fact in words.
 
 ## 8. Game sprint checklist, section A (CLAUDE.md gate)
 
-1. **Pages touched.** New: the Mint Floor (`/fortress/printer`, name to confirm). Touched lightly: Fortress home (entry), Records Hall (P4, saved reigns), temperament meter (only if question 4 is yes).
+1. **Pages touched.** New: the Mint Floor (`/fortress/printer`). Touched lightly: Fortress home (entry), Records Hall (P4, saved reigns), temperament meter (decision 4, yes).
 2. **Identity score before to after.** `Mint Floor | none (new) | 3 | scene header = the lever wall, signature object = the press, fact = per-holding range and confidence`; `Records Hall | existing | unchanged ≥2 | reign books reuse the book picture`. Identity debt is unchanged by this work.
 3. **Visual win.** The press and lever wall with the STAMP moment: replaces a table of assumptions with pictures; encodes the per-holding range. The Ledger of Truth holds the detail behind one tap.
 4. **Visual verb + scene:** *Stamp*, see section 1. Unknown look: a Low-confidence holding shows a fogged building with a direction arrow only.
