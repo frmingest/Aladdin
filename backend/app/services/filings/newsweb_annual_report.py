@@ -250,6 +250,12 @@ def _import_one(
     except Exception as exc:
         raise NewswebImportError(f"could not process '{filename}': {exc}") from exc
 
+    if intake.was_duplicate and intake.document.type != document_type:
+        # Same file already stored under another kind (a 2024/2025 annual
+        # report that an earlier fetch filed as a quarterly report because the
+        # issuer posted it under the half-year category): the title decides.
+        intake.document.type = document_type
+
     if is_esef and (intake.document.quality_flags or {}).get("no_ixbrl_tags") is True:
         # An .xhtml is picked by file extension, so an untagged one still
         # counts as "ESEF". Say plainly that nothing was captured from it.

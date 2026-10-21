@@ -253,8 +253,10 @@ def test_provider_list_annual_reports_fetches_attachments():
     def handler(request: httpx.Request) -> httpx.Response:
         calls.append(request)
         if "list" in str(request.url):
-            assert dict(request.url.params)["category"] == "1001"
             assert dict(request.url.params)["issuer"] == "NYKD"
+            if dict(request.url.params)["category"] == "1002":  # also searched, for annual-titled filings
+                return httpx.Response(200, json=_list_payload())
+            assert dict(request.url.params)["category"] == "1001"
             return httpx.Response(200, json=_list_payload(_msg(670839, "Nykode Therapeutics - Annual Report 2025")))
         assert dict(request.url.params)["messageId"] == "670839"
         return httpx.Response(
@@ -275,7 +277,7 @@ def test_provider_list_annual_reports_fetches_attachments():
     assert ref.message_id == "670839"
     assert ref.message_url == "https://newsweb.oslobors.no/message/670839"
     assert [a.name for a in ref.attachments] == ["Report.pdf", "nykode-2025-12-31-0-en.zip"]
-    assert len(calls) == 2
+    assert len(calls) == 3  # both report categories, then the message
 
 
 def test_provider_list_annual_reports_empty_when_no_rows():
@@ -310,3 +312,62 @@ def test_provider_http_error_is_unavailable():
     )
     with pytest.raises(NewswebFilingUnavailableError, match="500"):
         provider.list_annual_reports("NYKD", since=date(2022, 1, 1))
+
+
+def test_looks_like_annual_report_title():
+    from app.providers.newsweb_filing_provider import looks_like_annual_report_title
+
+    assert looks_like_annual_report_title("Jæren Sparebank - årsrapport 2025")
+    assert looks_like_annual_report_title("Jæren Sparebank - Årsrapport 2023")
+    assert looks_like_annual_report_title("Acme ASA - Annual Report 2025")
+    assert looks_like_annual_report_title("Acme - Annual financial report 2025")
+    assert not looks_like_annual_report_title("Jæren Sparebank - resultat 2. kvartal 2026")
+    assert not looks_like_annual_report_title("Nykode - Half Year Report H1 2026")
+    assert not looks_like_annual_report_title("")
+
+
+def _two_category_provider(annual_rows, interim_rows):
+    """Provider whose /list answers per category, /message gives one PDF each."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        params = dict(request.url.params)
+        if "list" in str(request.url):
+            rows = annual_rows if params["category"] == "1001" else interim_rows
+            return httpx.Response(200, json=_list_payload(*rows))
+        return httpx.Response(200, json=_message_payload(params["messageId"], [{"id": 1, "name": "x.xhtml"}]))
+
+    return NewswebFilingProvider(client=httpx.Client(transport=httpx.MockTransport(handler)))
+
+
+def test_list_annual_reports_includes_annual_titled_half_year_category_messages():
+    """Jæren Sparebank filed its 2024 and 2025 annual reports under HALF YEAR
+    (1002), and its real half-year/quarterly reports under the same category."""
+    provider = _two_category_provider(
+        annual_rows=[_msg(586801, "Jæren Sparebank - Årsrapport 2022", sign="JAREN", published="2023-03-31T05:40:00Z")],
+        interim_rows=[
+            _msg(667551, "Jæren Sparebank - årsrapport 2025", sign="JAREN", category_id=1002, published="2026-03-05T08:00:00Z"),
+            _msg(700001, "Jæren Sparebank - resultat 2. kvartal 2026", sign="JAREN", category_id=1002, published="2026-08-13T05:00:00Z"),
+        ],
+    )
+    refs = provider.list_annual_reports("JAREN", since=date(2022, 1, 1), today=date(2026, 10, 21))
+    assert [r.message_id for r in refs] == ["667551", "586801"]  # newest first, the quarterly one left out
+
+
+def test_list_annual_reports_does_not_duplicate_a_message_in_both_categories():
+    row_a = _msg(5, "Acme - Annual Report 2025", sign="ACME")
+    row_b = _msg(5, "Acme - Annual Report 2025", sign="ACME", category_id=1002)
+    provider = _two_category_provider(annual_rows=[row_a], interim_rows=[row_b])
+    refs = provider.list_annual_reports("ACME", since=date(2022, 1, 1), today=date(2026, 10, 21))
+    assert [r.message_id for r in refs] == ["5"]
+
+
+def test_list_interim_reports_leaves_annual_titled_messages_to_the_annual_fetch():
+    provider = _two_category_provider(
+        annual_rows=[],
+        interim_rows=[
+            _msg(667551, "Jæren Sparebank - årsrapport 2025", sign="JAREN", category_id=1002),
+            _msg(700001, "Jæren Sparebank - resultat 2. kvartal 2026", sign="JAREN", category_id=1002),
+        ],
+    )
+    refs = provider.list_interim_reports("JAREN", since=date(2022, 1, 1), today=date(2026, 10, 21))
+    assert [r.message_id for r in refs] == ["700001"]

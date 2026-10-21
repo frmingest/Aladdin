@@ -1,8 +1,10 @@
 # Aladdin — Progress
 
-**Last updated:** 2026-10-20 (The Printer Sprint P1 written; PR #193 open, not merged). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
+**Last updated:** 2026-10-21 (Newsweb annual-report category fix written; PR `fix/newsweb-annual-category`, not merged). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
 
 ## Current Objective
+
+**Jæren Sparebank reports (JAREN.OL), fix written, not merged, not deployed:** the annual fetch also finds annual reports an issuer filed under the half-year category (Jæren's 2024 and 2025), the quarterly fetch skips them, and a stored annual report filed as quarterly is retyped on the next *Fetch all reports*. **Still no figures for Jæren:** all five Newsweb `.xhtml` files carry no XBRL tags; the tagged ESEF package is not on Newsweb. Write-up: [jaeren-newsweb-annual-category-2026-10-21.md](ingestion/jaeren-newsweb-annual-category-2026-10-21.md).
 
 **The Printer (new Game-mode room), Sprint P1 written, not merged, not deployed, no page yet:** the lever table with sources, the deterministic engine and `GET /game/printer` (+ `/ledger`) for 5 levers, 1- and 3-year horizons, plain and after-inflation. Finding: with today's evidence almost every holding reads "direction only" (sector-guess profiles are Low); see the decision in the [P1 doc](game/printer-p1-ledger-engine-2026-10-20.md). Plan: [sprints P1 to P5](game/the-printer-sprint-plan-2026-10-20.md).
 
@@ -12,6 +14,7 @@ State: `main` is at `4d0ce8b` (#185). **No PR was open on 2026-10-19** (GitHub A
 
 ## Active Tasks
 
+- [ ] **Jæren Sparebank (Faiz): after the PR is merged and deployed,** press *Fetch all reports* on JAREN.OL and check that the 2024 and 2025 annual reports move to Annual reports. For figures: get the tagged ESEF `.xhtml` (Jæren's own announcement or filings.xbrl.org; needs the LEI) and upload it, or upload a statement CSV. Also set the holding name and sector (Financials)
 - [ ] **Records shelf, after the next deploy (PR `fix/records-uniform-books`):** on a wide screen all books must be exactly the same height (long names used to stretch their book)
 - [ ] **Review and merge the Map scene-dive PR (`feature/map-zoom-into-scene`, Faiz).** Written and tested in a clean clone, not yet deployed; after deploy press a gold, defence, energy, food and bank holding on the Map and check the dive on desktop and phone. [Doc](game/map-scene-dive-2026-10-19.md)
 - [ ] **Review and merge the Circle removal PR (Faiz).** After deploy, open the Map: each tower should show four fog patches, and `/fortress/circle` is gone (an old bookmark shows an empty page). [Doc](game/remove-circle-page-2026-10-19.md)

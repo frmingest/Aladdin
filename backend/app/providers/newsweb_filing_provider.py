@@ -48,6 +48,7 @@ guessing.
 from __future__ import annotations
 
 import io
+import re
 import zipfile
 from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
@@ -86,6 +87,20 @@ _REPORT_EXTENSIONS = (".xhtml", ".htm", ".html")
 # in the list" when a differently-named one is clearly the presentation,
 # not the report.
 _PRESENTATION_PDF_KEYWORDS = ("presentation", "presentasjon", "webcast", "invitation", "invitasjon")
+
+
+# Some issuers file their annual report under the HALF YEAR category (Jæren
+# Sparebank's 2024 and 2025 annual reports are 1002, not 1001). The category
+# is the issuer's choice, so the title decides what a report is.
+_ANNUAL_TITLE = re.compile(
+    r"\b(?:årsrapport|arsrapport|årsberetning|annual\s+(?:financial\s+)?report|annual\s+and\s+sustainability\s+report)\b",
+    re.IGNORECASE,
+)
+
+
+def looks_like_annual_report_title(title: str) -> bool:
+    """True for 'Jæren Sparebank - årsrapport 2025' / 'Annual Report 2025'."""
+    return bool(_ANNUAL_TITLE.search(title or ""))
 
 
 class NewswebFilingUnavailableError(ResearchUnavailableError):
@@ -315,12 +330,7 @@ class NewswebFilingProvider:
         )
         return parse_report_list(payload, issuer_sign=issuer_sign, category_id=category_id)
 
-    def _list_reports(
-        self, issuer_sign: str, *, since: date, today: date | None, category_id: int
-    ) -> list[NewswebAnnualReportRef]:
-        issuer_sign = issuer_sign.strip().upper()
-        end = today or datetime.now(timezone.utc).date()
-        rows = self._list_rows(issuer_sign, start=since, end=end, category_id=category_id)
+    def _refs_for_rows(self, rows: list[tuple[str, str, datetime | None]]) -> list[NewswebAnnualReportRef]:
         return [
             NewswebAnnualReportRef(
                 message_id=message_id,
@@ -332,25 +342,54 @@ class NewswebFilingProvider:
             for message_id, title, published_at in rows
         ]
 
+    def _list_reports(
+        self, issuer_sign: str, *, since: date, today: date | None, category_id: int
+    ) -> list[NewswebAnnualReportRef]:
+        issuer_sign = issuer_sign.strip().upper()
+        end = today or datetime.now(timezone.utc).date()
+        rows = self._list_rows(issuer_sign, start=since, end=end, category_id=category_id)
+        return self._refs_for_rows(rows)
+
     def list_annual_reports(
         self, issuer_sign: str, *, since: date, today: date | None = None
     ) -> list[NewswebAnnualReportRef]:
-        """Every ANNUAL FINANCIAL REPORT announcement for this issuer from
-        ``since`` through today (inclusive), newest first, each with its
-        attachments already fetched. Used by the "fetch every available
-        year" flow (Faiz's ask, 2026-09-26) — an explicit calendar start
-        date (not a rolling window), so a company that's been reporting since
-        2022 keeps showing all of it no matter how far "today" has moved on."""
-        return self._list_reports(issuer_sign, since=since, today=today, category_id=ANNUAL_REPORT_CATEGORY_ID)
+        """Every annual report announcement for this issuer from ``since``
+        through today (inclusive), newest first, each with its attachments
+        already fetched. Used by the "fetch every available year" flow (Faiz's
+        ask, 2026-09-26) — an explicit calendar start date (not a rolling
+        window), so a company that's been reporting since 2022 keeps showing
+        all of it no matter how far "today" has moved on.
+
+        Category 1001 (ANNUAL FINANCIAL REPORT) plus any HALF YEAR (1002)
+        announcement whose title says it is an annual report: Jæren Sparebank
+        filed its 2024 and 2025 annual reports under 1002, so a 1001-only
+        search missed them and they were stored as quarterly reports."""
+        issuer_sign = issuer_sign.strip().upper()
+        end = today or datetime.now(timezone.utc).date()
+        rows = self._list_rows(issuer_sign, start=since, end=end, category_id=ANNUAL_REPORT_CATEGORY_ID)
+        seen = {message_id for message_id, _, _ in rows}
+        for row in self._list_rows(issuer_sign, start=since, end=end, category_id=INTERIM_REPORT_CATEGORY_ID):
+            if row[0] not in seen and looks_like_annual_report_title(row[1]):
+                rows.append(row)
+        rows.sort(key=lambda r: r[2] or datetime.min.replace(tzinfo=timezone.utc), reverse=True)
+        return self._refs_for_rows(rows)
 
     def list_interim_reports(
         self, issuer_sign: str, *, since: date, today: date | None = None
     ) -> list[NewswebAnnualReportRef]:
         """Every HALF YEAR FINANCIAL REPORT announcement for this issuer
-        from ``since`` through today, newest first — same shape as
-        list_annual_reports, category 1002 instead of 1001 (Faiz's ask,
-        2026-09-26, following the document-sources investigation)."""
-        return self._list_reports(issuer_sign, since=since, today=today, category_id=INTERIM_REPORT_CATEGORY_ID)
+        from ``since`` through today, newest first — category 1002 (Faiz's
+        ask, 2026-09-26). An announcement whose title says it is an annual
+        report is left to list_annual_reports, so it is not stored twice as a
+        quarterly report."""
+        issuer_sign = issuer_sign.strip().upper()
+        end = today or datetime.now(timezone.utc).date()
+        rows = [
+            row
+            for row in self._list_rows(issuer_sign, start=since, end=end, category_id=INTERIM_REPORT_CATEGORY_ID)
+            if not looks_like_annual_report_title(row[1])
+        ]
+        return self._refs_for_rows(rows)
 
     def get_message_attachments(self, message_id: str) -> list[NewswebAttachmentRef]:
         payload = self._get_json(MESSAGE_URL, {"messageId": str(message_id)})

@@ -723,3 +723,32 @@ def test_untagged_xhtml_from_newsweb_is_imported_with_a_no_xbrl_tags_warning(cli
     assert any("no XBRL tags" in w for w in report["warnings"])
     doc = client.get(f"/documents/{report['document_id']}").json()
     assert doc["quality_flags"]["no_ixbrl_tags"] is True
+
+
+def test_annual_report_stored_as_quarterly_is_retyped_by_the_annual_fetch(client, db_session, newsweb_filing):
+    """Jæren Sparebank case: an annual report an earlier fetch filed as a
+    quarterly report (it sat under the half-year category) becomes an annual
+    report when the annual fetch finds the same file, with no second copy."""
+    from app.providers.newsweb_filing_provider import (
+        NewswebAnnualReportRef,
+        NewswebAttachmentRef,
+    )
+
+    xhtml = _annual_xhtml("2025-12-31")
+    ref = NewswebAnnualReportRef(
+        message_id="667551", message_url="https://newsweb.oslobors.no/message/667551",
+        title="Jæren Sparebank - årsrapport 2025", published_at=None,
+        attachments=[NewswebAttachmentRef("1", "Årsrapport 2025.xhtml")],
+    )
+    newsweb_filing.interim_refs = [ref]  # how the old interim-only search found it
+    newsweb_filing.attachment_bytes = {"667551": xhtml}
+    hid = _holding(client, ticker="JAREN.OL", name="Jæren Sparebank", currency="NOK")
+    assert client.post(f"/sources/holdings/{hid}/newsweb-interim-report/import").status_code == 200
+    before = client.get("/documents", params={"holding_id": hid}).json()
+    assert [d["type"] for d in before] == ["quarterly_report"]
+
+    newsweb_filing.refs = [ref]  # the annual search now finds it too
+    assert client.post(f"/sources/holdings/{hid}/newsweb-annual-report/import").status_code == 200
+    after = client.get("/documents", params={"holding_id": hid}).json()
+    assert [d["type"] for d in after] == ["annual_report"]
+    assert after[0]["id"] == before[0]["id"]
