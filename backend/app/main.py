@@ -24,6 +24,7 @@ from app.api.game import router as game_router
 from app.api.holdings import router as holdings_router
 from app.api.journal import router as journal_router
 from app.api.macro import router as macro_router
+from app.api.newsweb_watch import router as newsweb_watch_router
 from app.api.performance import router as performance_router
 from app.api.portfolio import router as portfolio_router
 from app.api.precious_metals import router as precious_metals_router
@@ -46,6 +47,7 @@ from app.providers.base import (
     RiskFreeRateUnavailableError,
 )
 from app.security import ApiKeyMiddleware
+from app.services.filings.newsweb_watch_scheduler import NewswebWatchScheduler
 from app.services.llm_errors import explain_llm_failure
 from app.services.macro.scheduler import MacroRefreshScheduler
 from app.services.settings.demo_guard import DemoModeWriteBlockedError
@@ -62,10 +64,15 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     # MACRO_DATA_PROVIDER=none or no DATABASE_URL.
     scheduler = MacroRefreshScheduler(settings)
     scheduler.start()
+    # Newsweb watch (2026-10-28): hourly check of owned + watchlist Oslo
+    # holdings for new announcements. Off when NEWSWEB_WATCH_INTERVAL_MINUTES=0.
+    newsweb_watch = NewswebWatchScheduler(settings)
+    newsweb_watch.start()
     try:
         yield
     finally:
         scheduler.stop()
+        newsweb_watch.stop()
 
 
 app = FastAPI(title=settings.app_name, version=settings.app_version, lifespan=lifespan)
@@ -126,6 +133,7 @@ app.include_router(research_router)
 app.include_router(valuation_router)
 app.include_router(analysis_router)
 app.include_router(sources_router)
+app.include_router(newsweb_watch_router)
 app.include_router(system_router)
 app.include_router(watchlist_router)
 app.include_router(journal_router)
