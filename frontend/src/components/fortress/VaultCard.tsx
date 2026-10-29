@@ -3,8 +3,9 @@ import { VAULT_LABEL } from "../../lib/fortress";
 import { formatDate, formatNok, formatPct100 } from "../../lib/format";
 import type { FortressVaultLevel, GameVault } from "../../lib/types";
 import { Button, Card } from "../ui";
-import ObjectArtImage from "../ObjectArtImage";
 import VaultEditor from "./VaultEditor";
+import VaultCutaway from "./kit/VaultCutaway";
+import { accountPips } from "../../lib/sectionScene";
 
 /** How full the vault picture is drawn. Chosen by the backend's level, never
  * by this file. */
@@ -44,13 +45,25 @@ function VaultPicture({ level }: { level: FortressVaultLevel }) {
   );
 }
 
-/** The stocked-vault picture (game mode). It shows a full vault, so it is only used for the two levels that
- * are stocked; thin, empty and "cash not entered" keep the drawn vault so a picture never claims money. */
+/** Game mode: the empty cutaway with the gold drawn by code from the backend's level (so a picture never claims money);
+ * with pictures off the drawn vault stays. */
 function VaultView({ level }: { level: FortressVaultLevel }) {
-  const drawn = <VaultPicture level={level} />;
-  if (level !== "stocked" && level !== "deep") return drawn;
+  return <VaultCutaway level={level} label={VAULT_LABEL[level]} fallback={<VaultPicture level={level} />} />;
+}
+
+function AccountPips({ withCash, total }: { withCash: number; total: number }) {
+  const { filled, hollow, more } = accountPips(withCash, total);
+  if (filled + hollow === 0) return null;
   return (
-    <ObjectArtImage id="vault-stocked" width={128} className="shrink-0" fallback={drawn} />
+    <span className="inline-flex items-center gap-1 align-middle" role="img" aria-label={`${withCash} of ${total} accounts have a cash figure`}>
+      {Array.from({ length: filled }, (_, i) => (
+        <span key={`f${i}`} className="vault-gold inline-block h-2.5 w-2.5 rounded-full border border-border" />
+      ))}
+      {Array.from({ length: hollow }, (_, i) => (
+        <span key={`h${i}`} className="inline-block h-2.5 w-2.5 rounded-full border border-dashed border-ink-faint" />
+      ))}
+      {more > 0 && <span className="text-xs text-ink-faint">+{more}</span>}
+    </span>
   );
 }
 
@@ -90,6 +103,7 @@ export default function VaultCard({
           )}
           {vault.accounts_with_cash > 0 && (
             <p className="mt-1 text-xs text-ink-faint">
+              <AccountPips withCash={vault.accounts_with_cash} total={vault.accounts_total} />{" "}
               {vault.accounts_with_cash} of {vault.accounts_total} accounts have a cash figure
               {vault.cash_oldest_as_of ? `; oldest entered ${formatDate(vault.cash_oldest_as_of)}` : ""}.
             </p>

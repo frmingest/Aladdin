@@ -1,8 +1,10 @@
 # Aladdin — Progress
 
-**Last updated:** 2026-10-28 (Newsweb watch written; PR `feature/newsweb-watch`, not merged). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
+**Last updated:** 2026-10-29 (Fortress section art PR 1 written; PR `feature/fortress-section-art`, not merged). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
 
 ## Current Objective
+
+**Fortress section art, PR 1 written and tested, not merged, not deployed, not seen on real data:** nine new Stitch pictures packed; the whole-fortress verdict flag, Walls on the rise, Night Watch turret and the Vault cutaway are wired (Game mode only). PR 2 still to do: Spread of the realm, Reports tabs (calm/panic pair), legend, survey gaps, footer, Study desk. Write-up: [fortress-section-art-2026-10-29.md](game/fortress-section-art-2026-10-29.md).
 
 **Newsweb watch (background check for new announcements), written and tested locally, not merged, not deployed:** the Railway backend checks Oslo holdings you own plus your watchlist every 60 minutes, stores each Newsweb message the first time it sees it (a holding's first look is a silent baseline) and exposes the unread ones at `GET /sources/newsweb/new` (+ `POST .../acknowledge`). It never queues an analysis or spends LLM quota. No frontend yet. Write-up: [newsweb-watch-2026-10-28.md](ingestion/newsweb-watch-2026-10-28.md).
 
@@ -16,6 +18,7 @@ State: `main` is at `4d0ce8b` (#185). **No PR was open on 2026-10-19** (GitHub A
 
 ## Active Tasks
 
+- [ ] **Fortress section art (Faiz): review and merge PR 1; after deploy** look at the Fortress page in Game mode on desktop and phone: the verdict flag (try an unknown level), Walls rows, Night Watch beacon (is a silent watch a cold bowl?), Vault levels (does the gold level match what you hold, and does "cash not entered" read as unknown?). Then PR 2
 - [ ] **Newsweb watch (Faiz): review and merge the PR; after deploy** open System status and check the "Newsweb announcements watch" job turns green (a failed ticker is named in its summary), then open `/sources/newsweb/new`. Next: a small frontend (unread badge on Watchlist and holdings, acknowledge button)
 - [ ] **Jæren Sparebank (Faiz): after the PR is merged and deployed,** press *Fetch all reports* on JAREN.OL and check that the 2024 and 2025 annual reports move to Annual reports. For figures: get the tagged ESEF `.xhtml` (Jæren's own announcement or filings.xbrl.org; needs the LEI) and upload it, or upload a statement CSV. Also set the holding name and sector (Financials)
 - [ ] **Records shelf, after the next deploy (PR `fix/records-uniform-books`):** on a wide screen all books must be exactly the same height (long names used to stretch their book)

@@ -15,7 +15,8 @@ const SOURCE = JSON.parse(readFileSync(resolve(FRONTEND, "../scripts/art/manifes
 const MAX_FILE_KB = 60;
 // Raised from 1200 in Sprint 6 (23 more pictures) and to 2000 in Sprint 8 (room backdrops). Pictures load only when a view uses them.
 // Raised to 2800 in the hardening sprint (2026-10-12): the set stood at 1996 of 2000 KB, so no new picture fit. Each later raise needs its reason here and a check that the heaviest page still loads well on a phone.
-const MAX_TOTAL_KB = 3600;
+const MAX_TOTAL_KB = 3800;
+// Raised to 3800 on 2026-10-29: nine Fortress-page pictures (vault cutaway, scaffold, watch turret, desk lamp, study shelf, spyglass, calm and panic steward, night parapet; about 110 KB together, the set stood at about 3590 of 3600). They load lazily, below the scene, in Game mode only.
 // Raised to 3600 on 2026-10-17: fourteen Market Street pictures (gate, skyline, fountain, lamp, signpost, cobble patch, tree, fence, bench, crates, handcart, Hype tent, two more stalls; about 300 KB together). They load only on the Marketplace page, in Game mode, lazily.
 // Raised to 3000 on 2026-10-17: nine pictures for the Hall of Records book (six covers, two leaves, a ribbon; about 175 KB together, the set stood at 2723 of 2800). They load only on the Records page, in Game mode, and only the covers of actions that page shows.
 // Raised to 3200 on 2026-10-17: four Siege towers backdrops (calm, storm, siege, ruin; about 140 KB together, the set stood at about 2900 of 3000). Only one of them is on screen at a time, only on the Siege page, in Game mode.
@@ -24,7 +25,8 @@ const MAX_PUBLIC_IMAGE_KB = 150;
 const MAX_BACKDROP_KB = 120;
 // Six since 2026-10-14: the Siege page's World banner (about 22 KB), shown only while the World yardstick is selected.
 // Ten once the four Siege towers backdrops (calm, storm, siege, ruin; about 25 KB each) are packed: one is shown at a time behind "The towers under attack", in Game mode only.
-const MAX_BACKDROPS = 10;
+const MAX_BACKDROPS = 11;
+// Eleven with the Night Watch parapet (about 14 KB), shown only on the Fortress page's Night Watch card in Game mode.
 const isBackdrop = (file: string) => file.startsWith("backdrop-");
 
 const sourceIds = SOURCE.objects.map((o) => o.id);

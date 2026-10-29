@@ -7,6 +7,7 @@ import { useGameMode } from "../../lib/gameMode";
 import type { NightWatch } from "../../lib/types";
 import { Card, Disclosure } from "../ui";
 import DispatchDisclosure from "./DispatchDisclosure";
+import WatchBeacon from "./kit/WatchBeacon";
 
 /** Game mode G16, Night Watch: the nightly tripwire check as a morning dispatch. It reads what the
  * worker stored overnight (GET /game/night-watch) and never runs a check, calls a provider or tells
@@ -63,6 +64,9 @@ export default function NightWatchCard() {
 
   return (
     <Card aria-label="Night Watch dispatch">
+      <div className="flex items-start gap-3">
+      <WatchBeacon status={watch.status} watchState={watch.watch_state} />
+      <div className="min-w-0 flex-1">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <h2 className="section-title mb-0">Night Watch</h2>
         <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${STATUS_CLASS[watch.status]}`}>
@@ -93,6 +97,8 @@ export default function NightWatchCard() {
           <DispatchNote />
         </>
       )}
+      </div>
+      </div>
     </Card>
   );
 }

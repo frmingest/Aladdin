@@ -169,6 +169,15 @@ import councilSpeakPartner from "../assets/art/council-speak-partner.webp";
 import councilQuiet from "../assets/art/council-quiet.webp";
 import councilRoomQuiet from "../assets/art/council-room-quiet.webp";
 import councilRoomBusy from "../assets/art/council-room-busy.webp";
+import vaultCutaway from "../assets/art/vault-cutaway.webp";
+import scaffoldWindlass from "../assets/art/scaffold-windlass.webp";
+import watchTurret from "../assets/art/watch-turret.webp";
+import deskLamp from "../assets/art/desk-lamp.webp";
+import backdropNightParapet from "../assets/art/backdrop-night-parapet.webp";
+import studyShelf from "../assets/art/study-shelf.webp";
+import spyglass from "../assets/art/spyglass.webp";
+import temperamentCalm from "../assets/art/temperament-calm.webp";
+import temperamentPanic from "../assets/art/temperament-panic.webp";
 
 export interface PackedArt {
   src: string;
@@ -349,4 +358,13 @@ export const ART_MANIFEST = {
   "council-quiet": { src: councilQuiet, width: 640, height: 455, alt: "" },
   "council-room-quiet": { src: councilRoomQuiet, width: 1200, height: 670, alt: "" },
   "council-room-busy": { src: councilRoomBusy, width: 1200, height: 670, alt: "" },
+  "vault-cutaway": { src: vaultCutaway, width: 221, height: 256, alt: "", anchors: { "opening-tl": [0.25, 0.4] as const, "opening-br": [0.54, 0.957] as const } },
+  "scaffold-windlass": { src: scaffoldWindlass, width: 148, height: 256, alt: "" },
+  "watch-turret": { src: watchTurret, width: 209, height: 256, alt: "", anchors: { "bowl": [0.5, 0.1] as const } },
+  "desk-lamp": { src: deskLamp, width: 78, height: 256, alt: "" },
+  "backdrop-night-parapet": { src: backdropNightParapet, width: 960, height: 536, alt: "" },
+  "study-shelf": { src: studyShelf, width: 512, height: 247, alt: "" },
+  "spyglass": { src: spyglass, width: 256, height: 221, alt: "" },
+  "temperament-calm": { src: temperamentCalm, width: 218, height: 256, alt: "" },
+  "temperament-panic": { src: temperamentPanic, width: 207, height: 256, alt: "" },
 } as const satisfies Record<string, PackedArt>;

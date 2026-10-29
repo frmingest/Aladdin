@@ -57,14 +57,19 @@ describe("Vault picture", () => {
       </GameModeProvider>,
     );
 
-  it("shows the stocked vault only for a stocked or deep vault", () => {
+  it("draws the empty cutaway for every level, so no picture can claim money", () => {
     stub(true);
-    expect(render("stocked")).toContain("vault-stocked");
-    expect(render("deep")).toContain("vault-stocked");
+    for (const level of ["deep", "stocked", "thin", "empty", "unsurveyed"] as const) {
+      const html = render(level);
+      expect(html).toContain("vault-cutaway");
+      expect(html).not.toContain("vault-stocked");
+    }
   });
 
-  it("never shows it for a thin, empty or unentered vault", () => {
-    stub(true);
-    for (const level of ["thin", "empty", "unsurveyed"] as const) expect(render(level)).not.toContain("vault-stocked");
+  it("keeps the drawn vault with game mode off", () => {
+    stub(false);
+    const html = render("stocked");
+    expect(html).not.toContain("vault-cutaway");
+    expect(html).toContain("<svg");
   });
 });

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { REALM_LEVEL_LABEL, REALM_RULES, type RealmLevel, type RealmTone, type RealmVerdict as Verdict } from "../../lib/realmVerdict";
 import { formatPct100 } from "../../lib/format";
 import { Card, VerdictBadge } from "../ui";
-import LampLogo from "../LampLogo";
+import VerdictKeep from "./kit/VerdictKeep";
 
 /**
  * The summary verdict on the whole fortress: what you read after pressing the
@@ -40,7 +40,7 @@ export default function RealmVerdict({
     <Card>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-start gap-3">
-          <LampLogo className="h-11 w-11 shrink-0" />
+          <VerdictKeep level={verdict.level} />
           <div>
             <h2 className="font-display text-lg font-semibold text-ink">The whole fortress</h2>
             <p className="text-xs text-ink-faint">
@@ -107,9 +107,8 @@ export default function RealmVerdict({
             </span>
           ))}
         </div>
-        <p className="mt-1 text-xs text-ink-faint">
-          These ratings come from your saved analyses (partly written by a model from the evidence). They are shown as
-          they were stored; this card does not change or re-rate them.
+        <p className="mt-1 text-xs text-ink-faint" title="These ratings come from your saved analyses (partly written by a model from the evidence). They are shown as they were stored; this card does not change or re-rate them.">
+          Ratings as stored; nothing is re-rated here.
         </p>
       </div>
 
