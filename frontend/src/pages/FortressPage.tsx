@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
+import { useGameMode } from "../lib/gameMode";
 import { layoutTowers, notesWithoutRepeats } from "../lib/fortress";
 import { formatDecimal, formatNok, formatPct100 } from "../lib/format";
 import type { GameState, Ravens, Watchlist } from "../lib/types";
@@ -24,6 +25,8 @@ import StudyDesk from "../components/fortress/StudyDesk";
 import TowerSurvey from "../components/fortress/TowerSurvey";
 import VaultCard from "../components/fortress/VaultCard";
 import WallsOnTheRise from "../components/fortress/WallsOnTheRise";
+import SpreadSkyline from "../components/fortress/kit/SpreadSkyline";
+import ObjectArtImage from "../components/ObjectArtImage";
 import {
   Button,
   Card,
@@ -49,6 +52,7 @@ const SHANTY_TEXT = {
 } as const;
 
 export default function FortressPage() {
+  const { gameMode } = useGameMode();
   const [state, setState] = useState<GameState | null>(null);
   const [error, setError] = useState<{ message: string; retryable: boolean } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -310,7 +314,9 @@ export default function FortressPage() {
           )}
 
           {view === "scene" && state.towers.length > 0 && (
-            <Disclosure label="how to read the picture" level="evidence" className="px-1">
+            <div className="flex items-start gap-2 px-1">
+            <ObjectArtImage id="spyglass" width={26} className="mt-0.5 shrink-0" fallback={null} />
+            <Disclosure label="how to read the picture" level="evidence" className="min-w-0 flex-1">
             <ul
               className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-faint"
               aria-label="How to read the picture"
@@ -339,6 +345,7 @@ export default function FortressPage() {
               </li>
             </ul>
             </Disclosure>
+            </div>
           )}
           </div>
           {detail !== null &&
@@ -371,6 +378,13 @@ export default function FortressPage() {
               <p className="text-sm text-ink-muted">
                 {SHANTY_TEXT[state.diworsification.shantytown]}
               </p>
+              {gameMode && (
+                <SpreadSkyline
+                  weights={state.towers.map((t) => (t.weight_pct === null ? null : Number(t.weight_pct)))}
+                  effective={state.diworsification.effective_holdings === null ? null : Number(state.diworsification.effective_holdings)}
+                  shacks={state.diworsification.shack_count}
+                />
+              )}
               <dl className="tabular mt-3 grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
                 <dt className="text-ink-faint">Positions</dt>
                 <dd className="text-right text-ink">
@@ -394,7 +408,10 @@ export default function FortressPage() {
 
           {notesWithoutRepeats(state.notes, state.vault).length > 0 && (
             <Card className="bg-raised">
-              <h2 className="section-title">What the survey could not see</h2>
+              <h2 className="section-title flex items-center gap-2">
+                <ObjectArtImage id="spyglass" width={28} fallback={null} />
+                What the survey could not see
+              </h2>
               <ul className="list-disc space-y-1 pl-5 text-sm text-ink-muted">
                 {notesWithoutRepeats(state.notes, state.vault).map((n) => (
                   <li key={n}>{n}</li>

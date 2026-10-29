@@ -1,12 +1,13 @@
 # Fortress sections: more graphics (2026-10-29)
 
-Status: **PR 1 written and tested, not merged, not deployed, not yet seen in a real browser on real data.** Pictures render in a static harness only (desktop, dark skin).
+Status: **PR 1 merged on 2026-10-29 (#196; deploy not checked). PR 2 written and tested, not merged. Not yet seen in a real browser on real data.** Pictures render in a static harness only (desktop, dark skin).
 
 ## What shipped in PR 1 (`feature/fortress-section-art`)
 - **Art packed (nine pictures, about 110 KB):** `vault-cutaway`, `scaffold-windlass`, `watch-turret`, `desk-lamp`, `study-shelf`, `spyglass`, `temperament-calm`, `temperament-panic`, `backdrop-night-parapet`. Art cap raised 3600 to 3800 KB and backdrops 10 to 11 (reasons in `artAssets.test.ts`).
 - **Wired:** The whole fortress (keep + verdict flag: straight = no rule flags, swallowtail = mixed, torn = needs a look, blank "?" = cannot judge; unknown fogs the keep), Walls on the rise (scaffold header, the tower's own bastion per row, dimmed when unmeasured), Night Watch (turret + code flame: lit only for a watch that reported on time; a silent watch is a cold bowl), Vault (empty cutaway, gold drawn by code from the backend level, a pip per account; "cash not entered" is a "?" not an empty vault). The old `vault-stocked` picture is no longer used by the Vault card (the scene still uses it).
 - **Pure mappings:** `lib/sectionScene.ts` (tests in `sectionScene.test.ts`, `fortressSectionArt.test.tsx`).
-- **Packed, not wired yet (PR 2):** spyglass (legend, "What the survey could not see"), calm/panic steward pair (Reports tab "Temperament", always shown as a fixed pair, never chosen by data), desk lamp (Study desk), study shelf, night parapet. Also still to do: Spread of the realm skyline, Reports tabs, legend, survey-gaps, footer.
+- **PR 2 (`feature/fortress-section-art-2`, written and tested, not merged, not deployed):** Spread of the realm (skyline of towers by weight, bracket on the top five, dashed equal-split row for the effective holdings, a hut per tiny position, a fogged "?" tower for a holding with no stored weight), Reports tabs (small pictures; Temperament shows the fixed calm and panic pair, never chosen from data), spyglass on the legend and "What the survey could not see", Study desk (desk lamp with a code-drawn flame; the clock is dropped in Game mode). Pure mapping `spreadScene` in `lib/sectionScene.ts`.
+- **Not done:** footer (shared by every game page, little gain, left alone), the packed `study-shelf` and `backdrop-night-parapet` (no slot wired; both are packed and unused).
 - Pictures show in Game mode only; with it off every card keeps its previous look.
 
 ## Decisions (Faiz, 2026-10-28)
