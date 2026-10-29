@@ -85,6 +85,7 @@ Game mode (Fortress): concept, sprint plans and reviews, visual identity, art pa
 - [market-street-strong-pick-2026-10-17.md](game/market-street-strong-pick-2026-10-17.md) — Market Street: the analyst's top mark (wax seal on the signboard), concepts and rules (built on `feature/market-street`)
 - [market-street-strong-pick-motion-2026-10-17.md](game/market-street-strong-pick-motion-2026-10-17.md) — Market Street top mark: motion and performance spec from game-feel-engineer (the seal design won; its glow and loop were not used)
 - [walls-on-the-rise-2026-10-18.md](game/walls-on-the-rise-2026-10-18.md) — Walls on the rise: how far each wall stands from the next rung, on the Fortress page; the Siege slider now starts at 5%
+- [fortress-section-art-2026-10-29.md](game/fortress-section-art-2026-10-29.md) — More graphics for the Fortress sections (whole-fortress verdict, Walls on the rise, Night Watch, Vault, then Spread, Reports, legend): design-team brief, Stitch prompts, what shipped
 - [remove-council-chronicle-2026-10-18.md](game/remove-council-chronicle-2026-10-18.md) — Council and Chronicle removed from Game mode: what went, what was kept (Stitch pictures, Night Watch, stored frames), how to restore
 - [records-shelf-books-2026-10-18.md](game/records-shelf-books-2026-10-18.md) — Records: shelf books as wide as their nameplates
 

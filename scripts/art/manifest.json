@@ -1399,6 +1399,80 @@
    "key": "none",
    "max_side": 1200,
    "quality": 68
+  },
+  {
+   "id": "vault-cutaway",
+   "source": "a_single_standalone_fantasy_game_building_facade_prop_asset_a_stone_strongroom",
+   "key": "white",
+   "max_side": 256,
+   "anchors_frac": {
+    "opening-tl": [
+     0.25,
+     0.4
+    ],
+    "opening-br": [
+     0.54,
+     0.957
+    ]
+   }
+  },
+  {
+   "id": "scaffold-windlass",
+   "source": "a_single_standalone_fantasy_game_construction_masonry_prop_asset_a_small_mason",
+   "key": "white",
+   "max_side": 256
+  },
+  {
+   "id": "watch-turret",
+   "source": "a_single_standalone_fantasy_game_defensive_architectural_structure_asset_a",
+   "key": "white",
+   "max_side": 256,
+   "anchors_frac": {
+    "bowl": [
+     0.5,
+     0.1
+    ]
+   }
+  },
+  {
+   "id": "desk-lamp",
+   "source": "a_single_standalone_fantasy_game_lighting_prop_asset_a_brass_oil_lamp_on_a",
+   "key": "white",
+   "max_side": 256
+  },
+  {
+   "id": "backdrop-night-parapet",
+   "source": "a_wide_panoramic_fantasy_game_environmental_backdrop_architectural_prop_asset",
+   "key": "none",
+   "max_side": 960,
+   "quality": 72
+  },
+  {
+   "id": "study-shelf",
+   "source": "a_wide_panoramic_fantasy_game_furniture_ui_shelf_prop_asset_study_shelf_study",
+   "key": "sampled",
+   "max_side": 512,
+   "tol": 9
+  },
+  {
+   "id": "spyglass",
+   "source": "fortressview-new/a_single_standalone_fantasy_game_inventory_nautical_prop_asset_a_closed_brass",
+   "key": "white",
+   "max_side": 256
+  },
+  {
+   "id": "temperament-calm",
+   "source": "fortressview-new/modify_data_image_image_4_create_a_calm_serene_and_collected_version_of_this",
+   "key": "sampled",
+   "max_side": 256,
+   "tol": 9
+  },
+  {
+   "id": "temperament-panic",
+   "source": "fortressview-new/cartoon_fantasy_medieval_character_bust_portrait_of_the_exact_same_steward_from",
+   "key": "sampled",
+   "max_side": 256,
+   "tol": 9
   }
  ]
 }

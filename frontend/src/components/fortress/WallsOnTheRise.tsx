@@ -2,6 +2,8 @@ import { useMemo } from "react";
 import type { GameTower } from "../../lib/types";
 import { riseRows, rungWord } from "../../lib/wallRise";
 import { Card } from "../ui";
+import ObjectArtImage from "../ObjectArtImage";
+import { bastionId } from "../../lib/sectionScene";
 import WallRiseGauge from "./kit/WallRiseGauge";
 
 /** Fortress home: every keep's wall and how far it stands from the next rung up, closest first.
@@ -22,14 +24,21 @@ export default function WallsOnTheRise({
   return (
     <Card className="print:hidden">
       <div className="flex items-start gap-3">
+        <ObjectArtImage
+          id="scaffold-windlass"
+          width={44}
+          className="mt-0.5 shrink-0"
+          fallback={
         <svg viewBox="0 0 40 32" width="40" height="32" aria-hidden="true" focusable="false" className="mt-0.5 shrink-0 text-ink-muted">
           <path d="M2 30h36M4 30V22h8v8M12 30V14h8v16M20 30V6h8v24M28 30V16h8v14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
           <path d="M24 6V1l6 2-6 2" fill="currentColor" opacity="0.7" />
         </svg>
+          }
+        />
         <div className="min-w-0">
           <h2 className="section-title">Walls on the rise</h2>
-          <p className="text-sm text-ink-muted">
-            How far each wall stands from the next rung. {climbing > 0 ? "Nearest rung first." : "Nothing to climb right now."}
+          <p className="text-sm text-ink-muted" title="From the last stored statements; a new report can move a wall either way. Press a row for the numbers.">
+            {climbing > 0 ? "Nearest rung first." : "Nothing to climb right now."}
           </p>
         </div>
       </div>
@@ -44,9 +53,14 @@ export default function WallsOnTheRise({
                 aria-pressed={on}
                 className={`grid w-full min-h-[44px] grid-cols-[minmax(0,9rem)_minmax(0,1fr)] items-center gap-x-4 gap-y-1 rounded-md px-2 py-2 text-left transition-colors hover:bg-raised sm:grid-cols-[minmax(0,11rem)_minmax(0,1fr)_minmax(0,9rem)] ${on ? "bg-accent-subtle" : ""}`}
               >
-                <span className="min-w-0">
-                  <span className="block truncate text-sm font-semibold text-ink">{tower.name}</span>
-                  <span className="block text-xs text-ink-faint">{rungWord(rise.rung)} walls</span>
+                <span className="flex min-w-0 items-center gap-2">
+                  <span className={`flex w-8 shrink-0 justify-center ${rise.kind === "unmeasured" ? "opacity-40" : ""}`}>
+                    <ObjectArtImage id={bastionId(rise.rung)} width={28} fallback={null} />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-semibold text-ink">{tower.name}</span>
+                    <span className="block text-xs text-ink-faint">{rungWord(rise.rung)} walls</span>
+                  </span>
                 </span>
                 <WallRiseGauge rise={rise} compact />
                 <span className="col-span-2 text-xs text-ink-muted sm:col-span-1">
@@ -63,9 +77,7 @@ export default function WallsOnTheRise({
           );
         })}
       </ul>
-      <p className="mt-2 text-xs text-ink-faint">
-        From the last stored statements; a new report can move a wall either way. Press a row for the numbers.
-      </p>
+      <p className="mt-2 text-xs text-ink-faint">Last stored statements; a new report can move a wall either way.</p>
     </Card>
   );
 }

@@ -551,6 +551,8 @@
 }
 /* Stitch Master object pictures (static, decorative). */
 .object-art { display: block; height: auto; max-width: 100%; }
+/* Gold standing in the vault opening (VaultCutaway): drawn by code from the vault level, same two golds as the drawn vault. */
+.vault-gold { background: linear-gradient(#f6d365, #c99a2e); border-radius: 40% 40% 0 0 / 14% 14% 0 0; }
 /* Advisor busts as round avatars (Sprint 6): the head and shoulders of the picture in a ringed circle. */
 .object-art.portrait-art { width: 2.75rem; height: 2.75rem; flex-shrink: 0; border-radius: 9999px; object-fit: cover; object-position: 50% 4%; background: #20170e; border: 2px solid #9aa4b8; }
 .object-art.portrait-art-oracle { border-color: #d9a93e; }
