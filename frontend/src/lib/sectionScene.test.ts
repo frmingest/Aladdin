@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { accountPips, beaconFor, bastionId, pennantFor, vaultScene } from "./sectionScene";
+import { accountPips, beaconFor, bastionId, pennantFor, spreadScene, vaultScene } from "./sectionScene";
 
 describe("pennantFor", () => {
   it("gives each level its own shape, so colour is never alone", () => {
@@ -43,5 +43,37 @@ describe("accountPips and bastionId", () => {
   });
   it("names the scene's own bastion for a rung", () => {
     expect(bastionId("brick")).toBe("bastion-brick");
+  });
+});
+
+describe("spreadScene", () => {
+  it("draws the largest first and as wide as its share", () => {
+    const s = spreadScene([10, 50, 40], 2.8);
+    expect(s.towers).toHaveLength(3);
+    expect(s.towers[0].w).toBeGreaterThan(s.towers[1].w);
+    expect(s.towers[1].w).toBeGreaterThan(s.towers[2].w);
+    expect(s.towers[0].h).toBeGreaterThan(s.towers[2].h);
+  });
+  it("gives a holding with no weight a fogged tower, never zero and never counted in the top five", () => {
+    const s = spreadScene([30, null, 70], 1.7);
+    expect(s.unweighted).toBe(1);
+    expect(s.towers.filter((t) => t.fog)).toHaveLength(1);
+    expect(s.towers.at(-1)?.fog).toBe(true);
+    expect(s.topFive?.x).toBe(s.towers[0].x);
+  });
+  it("shows no equal-weight row when the effective count is unknown, and no towers without weights", () => {
+    expect(spreadScene([40, 60], null).ghosts).toBeNull();
+    expect(spreadScene([null, null], 2).towers).toEqual([]);
+  });
+  it("rounds the effective holdings into equal ghost towers across the same width", () => {
+    const g = spreadScene([20, 20, 20, 20, 20], 4.6).ghosts!;
+    expect(g).toHaveLength(5);
+    expect(new Set(g.map((x) => x.w.toFixed(3))).size).toBe(1);
+  });
+  it("turns a long tail into a count, not slivers", () => {
+    const s = spreadScene(Array.from({ length: 30 }, () => 3), 30);
+    expect(s.towers).toHaveLength(12);
+    expect(s.tail).toBe(18);
+    expect(s.ghosts).toHaveLength(12);
   });
 });

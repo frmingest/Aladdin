@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { clockHands, clockPoint, lampReading } from "../../lib/fortress";
+import { useArtMode } from "../../lib/stitchArt";
+import DeskLamp from "./kit/DeskLamp";
 
 /** Game mode G7b: the study lamp and clock. The clock is the real local time.
  * The lamp is lit while the portfolio snapshot is recent, dim when it is
@@ -24,10 +26,12 @@ export default function StudyDesk({ asOf }: { asOf: string | null }) {
   const hourTip = clockPoint(hands.hour, cx, cy, 9);
   const minuteTip = clockPoint(hands.minute, cx, cy, 14);
   const time = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const art = useArtMode() === "stitch";
   const glow = lamp.state === "lit" ? 0.9 : lamp.state === "dim" ? 0.35 : 0;
 
   return (
     <div className="flex items-center gap-3" aria-label="Study desk">
+      {!art && (
       <svg viewBox="0 0 44 44" className="h-11 w-11 shrink-0" role="img" aria-label={`Clock: ${time}`}>
         <circle cx={cx} cy={cy} r="20" fill="#f3e4bf" stroke="#6e4a12" strokeWidth="2.4" />
         <circle cx={cx} cy={cy} r="17" fill="none" stroke="#6e4a12" strokeOpacity="0.4" />
@@ -40,7 +44,11 @@ export default function StudyDesk({ asOf }: { asOf: string | null }) {
         <line x1={cx} y1={cy} x2={minuteTip.x} y2={minuteTip.y} stroke="#20170e" strokeWidth="1.6" strokeLinecap="round" />
         <circle cx={cx} cy={cy} r="1.8" fill="#7a1d18" />
       </svg>
+      )}
 
+      {art ? (
+        <DeskLamp state={lamp.state} label={lamp.text} fallback={null} />
+      ) : (
       <svg viewBox="0 0 44 44" className="h-11 w-11 shrink-0" role="img" aria-label={lamp.text}>
         {glow > 0 && (
           <g opacity={glow}>
@@ -52,10 +60,15 @@ export default function StudyDesk({ asOf }: { asOf: string | null }) {
         <path d="M10 24 L15 10 H29 L34 24 Z" fill={lamp.state === "out" ? "#4a4036" : "#c98f2e"} stroke="#2a1a06" />
         <ellipse cx="22" cy="24" rx="12" ry="2.6" fill={lamp.state === "out" ? "#2f2820" : "#ffe6a3"} opacity={lamp.state === "dim" ? 0.55 : 1} />
       </svg>
+      )}
 
       <p className="min-w-0 text-xs leading-snug text-ink-muted">
-        <span className="tabular font-semibold text-ink">{time}</span> local time.
-        <br />
+        {!art && (
+          <>
+            <span className="tabular font-semibold text-ink">{time}</span> local time.
+            <br />
+          </>
+        )}
         {lamp.text}
       </p>
     </div>

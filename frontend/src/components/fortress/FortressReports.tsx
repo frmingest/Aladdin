@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ravensTabLabel, splitRavens } from "../../lib/ravens";
 import type { GameState, Ravens } from "../../lib/types";
+import ObjectArtImage from "../ObjectArtImage";
 import AdvisorsCard from "./AdvisorsCard";
 import RavensCard from "./RavensCard";
 import SiegeCard from "./SiegeCard";
@@ -46,7 +47,10 @@ export default function FortressReports({
               active === t.id ? "bg-accent-subtle text-ink" : "text-ink-muted hover:text-ink"
             }`}
           >
-            {t.label}
+            <span className="inline-flex items-center gap-1.5">
+              <TabArt id={t.id} />
+              {t.label}
+            </span>
           </button>
         ))}
       </div>
@@ -55,5 +59,19 @@ export default function FortressReports({
       {active === "temperament" && <TemperamentCard temperament={state.temperament} />}
       {active === "ravens" && <RavensCard ravens={ravens} seen={seen} onSeen={onSeen} />}
     </section>
+  );
+}
+
+/** A small picture in front of each tab label (Game mode only; nothing without it). Temperament shows the fixed calm and panic pair:
+ * it says "how steady is your hand" and is never chosen from the data, so neither face reads as a verdict. */
+function TabArt({ id }: { id: ReportId }) {
+  if (id === "advisors") return <ObjectArtImage id="bust-oracle" width={22} fallback={null} />;
+  if (id === "weather") return <ObjectArtImage id="siege-tent" width={26} fallback={null} />;
+  if (id === "ravens") return <ObjectArtImage id="raven" width={26} fallback={null} />;
+  return (
+    <span className="inline-flex items-end">
+      <ObjectArtImage id="temperament-calm" width={20} fallback={null} />
+      <ObjectArtImage id="temperament-panic" width={20} className="-ml-1" fallback={null} />
+    </span>
   );
 }
