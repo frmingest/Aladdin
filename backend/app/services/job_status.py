@@ -188,6 +188,7 @@ def build_background_jobs(
                enabled=settings.siege_history_refresh_enabled, last_at=siege_at, summary=siege_summary),
     ]
     jobs.append(_macro(db, settings, now))
+    jobs.append(_newsweb_watch(db, settings, now))
     return jobs
 
 
@@ -206,3 +207,19 @@ def _macro(db: Session, settings: Settings, now: datetime) -> JobItem:
         return JobItem("macro_refresh", "Macro data refresh", BACKEND, schedule, last, WARN,
                        "Overdue. The backend has not fetched successfully for a long time.")
     return JobItem("macro_refresh", "Macro data refresh", BACKEND, schedule, last, OK, "")
+
+
+def _newsweb_watch(db: Session, settings: Settings, now: datetime) -> JobItem:
+    key, label = "newsweb_watch", "Newsweb announcements watch (owned + watchlist)"
+    minutes = settings.newsweb_watch_interval_minutes
+    schedule = f"every {minutes} min" if minutes > 0 else "off"
+    last, summary = read_job_run(db, key)
+    if minutes <= 0 or settings.announcements_provider != "newsweb":
+        return JobItem(key, label, BACKEND, schedule, last, OFF,
+                       "Switched off (interval 0 or announcements provider is not newsweb).")
+    if last is None:
+        return JobItem(key, label, BACKEND, schedule, None, WARN, "Has not run yet.")
+    if now - last > timedelta(minutes=minutes * 3):
+        return JobItem(key, label, BACKEND, schedule, last, WARN,
+                       "Overdue. The backend has not completed a pass for a long time.")
+    return JobItem(key, label, BACKEND, schedule, last, OK, summary or "")

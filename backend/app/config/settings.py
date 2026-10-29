@@ -336,6 +336,14 @@ class Settings(BaseSettings):
     esef_index_timeout_seconds: float = 60.0
     announcements_provider: str = "newsweb"  # "newsweb" | "none"
     announcements_lookback_days: int = 365
+    # Background Newsweb watch (2026-10-28, services/filings/newsweb_watch.py):
+    # the Railway backend checks the Oslo-listed holdings you own plus your
+    # watchlist for new announcements every N minutes (0 = off) and stores what
+    # is new. A short lookback is enough once a holding has its baseline.
+    newsweb_watch_interval_minutes: int = 60
+    newsweb_watch_lookback_days: int = 30
+    newsweb_watch_timeout_seconds: float = 20.0
+    newsweb_watch_pause_seconds: float = 1.0
     # How many of the most recent announcements go into the analysis
     # evidence packet (all are still stored and shown in the UI).
     announcements_in_evidence_packet: int = 15

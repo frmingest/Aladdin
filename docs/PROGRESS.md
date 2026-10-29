@@ -1,8 +1,10 @@
 # Aladdin — Progress
 
-**Last updated:** 2026-10-21 (Newsweb annual-report category fix written; PR `fix/newsweb-annual-category`, not merged). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
+**Last updated:** 2026-10-28 (Newsweb watch written; PR `feature/newsweb-watch`, not merged). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
 
 ## Current Objective
+
+**Newsweb watch (background check for new announcements), written and tested locally, not merged, not deployed:** the Railway backend checks Oslo holdings you own plus your watchlist every 60 minutes, stores each Newsweb message the first time it sees it (a holding's first look is a silent baseline) and exposes the unread ones at `GET /sources/newsweb/new` (+ `POST .../acknowledge`). It never queues an analysis or spends LLM quota. No frontend yet. Write-up: [newsweb-watch-2026-10-28.md](ingestion/newsweb-watch-2026-10-28.md).
 
 **Jæren Sparebank reports (JAREN.OL), fix written, not merged, not deployed:** the annual fetch also finds annual reports an issuer filed under the half-year category (Jæren's 2024 and 2025), the quarterly fetch skips them, and a stored annual report filed as quarterly is retyped on the next *Fetch all reports*. **Still no figures for Jæren:** all five Newsweb `.xhtml` files carry no XBRL tags; the tagged ESEF package is not on Newsweb. Write-up: [jaeren-newsweb-annual-category-2026-10-21.md](ingestion/jaeren-newsweb-annual-category-2026-10-21.md).
 
@@ -10,10 +12,11 @@
 
 **Circle page removed from Game mode (PR `feature/remove-circle-page`, not merged, not deployed, not seen in a browser).** Faiz said it did not fit the design. The page, its tab, its three `/game/competence` endpoints, the competence service and model, and the ring-map components are gone, with their tests and the two Circle-only docs. The Map's "Circle marked" check went with it, so the survey is now four facts (`survey-v2`). Stitch pictures and the `competence_marks` table stay. Write-up: [remove-circle-page-2026-10-19.md](game/remove-circle-page-2026-10-19.md).
 
-State: `main` is at `4d0ce8b` (#185). **No PR was open on 2026-10-19** (GitHub API); everything listed in earlier versions of this file as "not merged" has merged ([archive](archive/progress-archive.md)). Repo migration head `x1f2a3b4c5d6` (the unused `winter_orders`). Deploy not checked; say if Railway has redeployed. Supabase is retired (decision 2026-10-14): database is Railway Postgres, files are on Cloudflare R2. Live URLs: frontend `https://exciting-gratitude-production-71b5.up.railway.app`, backend `https://aladdin-production-bd25.up.railway.app`.
+State: `main` is at `4d0ce8b` (#185). **No PR was open on 2026-10-19** (GitHub API); everything listed in earlier versions of this file as "not merged" has merged ([archive](archive/progress-archive.md)). Repo migration head `y1a2b3c4d5e6` once the Newsweb watch PR merges (before that `x1f2a3b4c5d6`). Deploy not checked; say if Railway has redeployed. Supabase is retired (decision 2026-10-14): database is Railway Postgres, files are on Cloudflare R2. Live URLs: frontend `https://exciting-gratitude-production-71b5.up.railway.app`, backend `https://aladdin-production-bd25.up.railway.app`.
 
 ## Active Tasks
 
+- [ ] **Newsweb watch (Faiz): review and merge the PR; after deploy** open System status and check the "Newsweb announcements watch" job turns green (a failed ticker is named in its summary), then open `/sources/newsweb/new`. Next: a small frontend (unread badge on Watchlist and holdings, acknowledge button)
 - [ ] **Jæren Sparebank (Faiz): after the PR is merged and deployed,** press *Fetch all reports* on JAREN.OL and check that the 2024 and 2025 annual reports move to Annual reports. For figures: get the tagged ESEF `.xhtml` (Jæren's own announcement or filings.xbrl.org; needs the LEI) and upload it, or upload a statement CSV. Also set the holding name and sector (Financials)
 - [ ] **Records shelf, after the next deploy (PR `fix/records-uniform-books`):** on a wide screen all books must be exactly the same height (long names used to stretch their book)
 - [ ] **Review and merge the Map scene-dive PR (`feature/map-zoom-into-scene`, Faiz).** Written and tested in a clean clone, not yet deployed; after deploy press a gold, defence, energy, food and bank holding on the Map and check the dive on desktop and phone. [Doc](game/map-scene-dive-2026-10-19.md)

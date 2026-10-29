@@ -42,6 +42,7 @@ from app.models.market import (
     ShareCountObservation,
     StockSplit,
 )
+from app.models.newsweb_announcement import NewswebAnnouncement
 from app.models.portfolio import PortfolioPosition, PortfolioSnapshot
 from app.models.precious_metal import PreciousMetalHolding
 from app.models.research import ResearchItem, ResearchRun
@@ -81,6 +82,7 @@ __all__ = [
     "MacroObservation",
     "MacroSeriesStatus",
     "MarketObservation",
+    "NewswebAnnouncement",
     "PortfolioPosition",
     "PortfolioSnapshot",
     "PreciousMetalHolding",

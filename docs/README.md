@@ -109,6 +109,7 @@ Getting data in: Newsweb/ESEF/XHTML filings, uploads, tag gaps, ETF holdings cap
 - [tag-review-inbox-2026-10-07.md](ingestion/tag-review-inbox-2026-10-07.md) — Tag review inbox: see missing ESEF inputs and the closest tags after a Newsweb fetch (2026-10-07)
 - [upload-validation-var-energi-and-deletes-2026-09-23.md](ingestion/upload-validation-var-energi-and-deletes-2026-09-23.md) — Upload validation (Vår Energi FY2025) + document/holding deletes (2026-09-23)
 - [xhtml-ingestion-validation-2026-10-05.md](ingestion/xhtml-ingestion-validation-2026-10-05.md) — ESEF ingestion validated against the printed annual reports: Aker BP, Orkla, Salmon Evolution, Subsea 7 (2026-10-05)
+- [newsweb-watch-2026-10-28.md](ingestion/newsweb-watch-2026-10-28.md) — Background hourly check of Newsweb for new announcements on owned + watchlist holdings (2026-10-28)
 
 ### valuation/
 
