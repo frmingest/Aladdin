@@ -16,7 +16,7 @@ hub is feasible; an MMO is not. Multiplayer is out (real holdings must stay priv
 - A stand-in hero (capsule body) you walk with W A S D or the arrows, Shift to run, Space to jump.
   Click the scene to capture the mouse and look round (Esc frees it; dragging works if the browser
   refuses capture). Wheel zooms. Camera follows behind and above.
-- F3 shows frames per second, draw calls and triangles (for the week 4 go/no-go measure).
+- F3, P or the Stats button shows frames per second, draw calls and triangles (for the week 4 go/no-go measure).
 - No WebGL, or a crash in the scene: a plain card with a link to the flat Fortress.
 - Lighting is flat and the same everywhere on purpose: nothing may flatter a weak holding (week 2 rule).
 
@@ -30,7 +30,7 @@ tower spots), `Game3DPage.test.tsx` (no-WebGL fallback). Typecheck and ESLint cl
 
 ## To look at (Faiz)
 Run the frontend, open `/game3d`: can you walk through the gate, round the keep and between the pads;
-do the walls stop you; does the camera feel right; press F3 and note the frame rate.
+do the walls stop you; does the camera feel right; press P (or the Stats button) and note the frame rate.
 
 ## Next (week 2)
 `stateToWorld()`: one pure function that turns `/game/state` into tower, wall, moat and fog values for

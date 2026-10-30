@@ -37,7 +37,8 @@ export default function Game3DPage() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.code === "F3") {
+      // F3 is often grabbed by the browser or editor ("find"), so P works too.
+      if (e.code === "F3" || e.code === "KeyP") {
         e.preventDefault();
         setShowPerf((v) => !v);
       }
@@ -69,11 +70,14 @@ export default function Game3DPage() {
         </p>
       )}
 
-      {showPerf && stats && (
-        <p className="pointer-events-none absolute right-3 top-3 rounded bg-black/60 px-3 py-1.5 font-mono text-xs text-white">
-          {stats.fps} fps · {stats.calls} draws · {Math.round(stats.triangles / 1000)}k tris
-        </p>
-      )}
+      <button
+        type="button"
+        onClick={() => setShowPerf((v) => !v)}
+        aria-pressed={showPerf}
+        className="absolute right-3 top-3 rounded border border-border bg-surface/90 px-3 py-1.5 text-xs text-ink hover:opacity-80"
+      >
+        {showPerf ? (stats ? `${stats.fps} fps · ${stats.calls} draws · ${Math.round(stats.triangles / 1000)}k tris` : "Measuring...") : "Stats (P)"}
+      </button>
     </div>
   );
 }
