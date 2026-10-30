@@ -1,5 +1,7 @@
 import { useMemo } from "react";
 import { CuboidCollider, CylinderCollider, RigidBody } from "@react-three/rapier";
+import TowerMesh from "./TowerMesh";
+import type { WorldModel } from "./stateToWorld";
 import {
   COBBLE_RADIUS,
   KEEP,
@@ -29,9 +31,9 @@ const SPOT_SIZE = 3.4;
 /**
  * The walled courtyard. Everything is built from plain shapes that double as
  * colliders: the same shapes are what you see and what stops you.
- * Week 2 replaces the eight pads with towers driven by the real portfolio.
+ * Each holding in `world` stands on one of the eight pads as a tower.
  */
-export default function Courtyard() {
+export default function Courtyard({ world }: { world: WorldModel }) {
   const walls = useMemo(() => wallSegments(), []);
   const corners = useMemo(() => cornerTowers(), []);
   const spots = useMemo(() => towerSpots(), []);
@@ -100,7 +102,7 @@ export default function Courtyard() {
         </mesh>
       </RigidBody>
 
-      {/* Eight pads, one per holding (week 2 raises real towers here). */}
+      {/* Eight pads. A holding raises a tower on its pad; empty pads stay bare. */}
       {spots.map((s, i) => (
         <RigidBody key={i} type="fixed" colliders={false} position={[s.x, 0.25, s.z]}>
           <CuboidCollider args={[SPOT_SIZE / 2, 0.25, SPOT_SIZE / 2]} />
@@ -109,6 +111,10 @@ export default function Courtyard() {
             <meshStandardMaterial color={COLORS.spot} flatShading />
           </mesh>
         </RigidBody>
+      ))}
+
+      {world.towers.map((t) => (
+        <TowerMesh key={t.holdingId} t={t} />
       ))}
     </group>
   );

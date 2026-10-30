@@ -37,6 +37,7 @@ Stable background: what is AI vs deterministic, tech overview, graphics rules, O
 Game mode (Fortress): concept, sprint plans and reviews, visual identity, art passes, checklist.
 
 - [game3d-prototype-2026-10-30.md](game/game3d-prototype-2026-10-30.md) — 3D courtyard prototype (week 1): walkable walled courtyard at /game3d, WoW-style third-person controls, desktop only
+- [game3d-towers-2026-10-30.md](game/game3d-towers-2026-10-30.md) — 3D courtyard (week 2): holdings stand as towers via stateToWorld(); weak looks weak, unknown stays fog; facts in a side panel
 - [records-hall-polish-2026-10-17.md](game/records-hall-polish-2026-10-17.md) — Hall of Records: undistorted torches and arches, brass nameplates, tome cover that swings open into a book
 - [siege-towers-backdrops-2026-10-17.md](game/siege-towers-backdrops-2026-10-17.md) — Siege Simulator: towers section moved to the top, backdrop that follows the "falls by" slider, four Stitch pictures
 - [remove-circle-page-2026-10-19.md](game/remove-circle-page-2026-10-19.md) — Circle of Competence page removed from Game mode; survey drops to four facts (survey-v2)

@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { Canvas } from "@react-three/fiber";
 import { Physics } from "@react-three/rapier";
 import Courtyard from "./Courtyard";
+import type { WorldModel } from "./stateToWorld";
 import PerfProbe from "./PerfProbe";
 import type { PerfStats } from "./PerfProbe";
 import Player from "./Player";
@@ -11,16 +12,17 @@ import { useOrbit } from "./useOrbit";
 const SKY = "#cfe3f1";
 
 interface Props {
+  world: WorldModel;
   onLockChange: (locked: boolean) => void;
   onStats: (s: PerfStats) => void;
 }
 
-function World({ onLockChange }: { onLockChange: (locked: boolean) => void }) {
+function World({ onLockChange, world }: { onLockChange: (locked: boolean) => void; world: WorldModel }) {
   const keys = useKeys();
   const orbit = useOrbit(onLockChange);
   return (
     <Physics gravity={[0, -25, 0]} timeStep="vary">
-      <Courtyard />
+      <Courtyard world={world} />
       <Player keys={keys} orbit={orbit} />
     </Physics>
   );
@@ -30,7 +32,7 @@ function World({ onLockChange }: { onLockChange: (locked: boolean) => void }) {
  * The 3D courtyard canvas. Lighting is deliberately flat and the same
  * everywhere: no spotlight on a "good" tower, nothing that flatters a weak one.
  */
-export default function Scene({ onLockChange, onStats }: Props) {
+export default function Scene({ world, onLockChange, onStats }: Props) {
   return (
     <Canvas
       shadows
@@ -57,7 +59,7 @@ export default function Scene({ onLockChange, onStats }: Props) {
         shadow-bias={-0.0005}
       />
       <Suspense fallback={null}>
-        <World onLockChange={onLockChange} />
+        <World onLockChange={onLockChange} world={world} />
       </Suspense>
       <PerfProbe onStats={onStats} />
     </Canvas>

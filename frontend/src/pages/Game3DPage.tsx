@@ -1,6 +1,11 @@
-import { Suspense, lazy, useEffect, useMemo, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { api } from "../lib/api";
+import { describeError } from "../lib/errors";
+import type { GameState } from "../lib/types";
 import SceneBoundary from "../game3d/SceneBoundary";
+import TowerPanel from "../game3d/TowerPanel";
+import { stateToWorld } from "../game3d/stateToWorld";
 import { webglSupported } from "../game3d/webgl";
 import type { PerfStats } from "../game3d/PerfProbe";
 
@@ -25,8 +30,9 @@ function Unavailable() {
 }
 
 /**
- * 3D courtyard (prototype, week 1): a walled courtyard you can walk round with
- * W A S D and the mouse. No portfolio data yet; the flat Fortress stays the
+ * 3D courtyard (prototype, week 2): a walled courtyard you can walk round with
+ * W A S D and the mouse. Each holding from /game/state stands on a pad as a
+ * tower; the facts are in the side panel. The flat Fortress stays the
  * full-fidelity view and the fallback.
  */
 export default function Game3DPage() {
@@ -34,6 +40,27 @@ export default function Game3DPage() {
   const [locked, setLocked] = useState(false);
   const [stats, setStats] = useState<PerfStats | null>(null);
   const [showPerf, setShowPerf] = useState(false);
+  const [state, setState] = useState<GameState | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(() => {
+    setLoading(true);
+    setError(null);
+    api
+      .getGameState()
+      .then(setState)
+      .catch((e: unknown) => setError(describeError(e, "the fortress").message))
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    document.title = "3D courtyard · Aladdin";
+    if (supported) load();
+  }, [supported, load]);
+
+  // Never invent towers: no state means bare pads.
+  const world = useMemo(() => stateToWorld(state), [state]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -53,9 +80,11 @@ export default function Game3DPage() {
     <div className="relative h-[calc(100dvh-5rem)] min-h-[480px] w-full overflow-hidden bg-surface">
       <SceneBoundary fallback={<Unavailable />}>
         <Suspense fallback={<p className="p-6 text-sm text-ink-muted">Raising the walls...</p>}>
-          <Scene onLockChange={setLocked} onStats={setStats} />
+          <Scene world={world} onLockChange={setLocked} onStats={setStats} />
         </Suspense>
       </SceneBoundary>
+
+      <TowerPanel world={world} loading={loading} error={error} onRetry={load} />
 
       <Link
         to="/fortress"
