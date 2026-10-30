@@ -1,10 +1,10 @@
 # Aladdin — Progress
 
-**Last updated:** 2026-10-29 (Fortress section art PR 1 merged #196; PR 2 `feature/fortress-section-art-2` written, not merged). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
+**Last updated:** 2026-10-30 (3D week 1 merged #198, week 2 written; Fortress section art PR 1 merged #196; PR 2 `feature/fortress-section-art-2` written, not merged). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
 
 ## Current Objective
 
-**3D courtyard prototype (week 1 of the 3D Fortress), written and tested, not merged, not deployed, not seen in a browser** (branch `feature/game3d-prototype`): a walkable walled courtyard at `/game3d` (W A S D, mouse look, P or Stats-button frame-rate readout), no portfolio data yet; Faiz chose a WoW-feel 3D game, desktop only, free walking ([write-up](game/game3d-prototype-2026-10-30.md)).
+**3D courtyard, week 2 (holdings as towers), written and tested, not merged, not deployed, not seen in a browser** (branch `feature/game3d-towers`; week 1 merged as #198): `stateToWorld()` turns `/game/state` into one tower per pad (size, wall, moat, ivy, thesis flag; unknown = fog), with the facts in a side panel ([write-up](game/game3d-towers-2026-10-30.md)). Faiz chose a WoW-feel 3D game, desktop only, free walking.
 
 **Fortress section art, PR 2 written and tested, not merged, not deployed, not seen on real data** (PR 1 merged as #196; deploy not checked): Spread of the realm skyline, Reports tab pictures with the calm/panic pair, spyglass on legend and gaps, Study desk lamp. Left alone: footer, study shelf and night parapet (packed, unused). Write-up: [fortress-section-art-2026-10-29.md](game/fortress-section-art-2026-10-29.md).
 
@@ -20,7 +20,7 @@ State: `main` is at `4d0ce8b` (#185). **No PR was open on 2026-10-19** (GitHub A
 
 ## Active Tasks
 
-- [ ] **3D courtyard (Faiz): review the PR, run the frontend and open `/game3d`:** walk through the gate and round the keep, check the walls stop you, press P for the frame rate; then Claude starts week 2 (towers driven by real data) ([doc](game/game3d-prototype-2026-10-30.md))
+- [ ] **3D courtyard (Faiz): review the week 2 PR, run the frontend and open `/game3d`:** do your towers stand on the pads, is the weakest holding clearly the weakest without reading, do the side-panel words match, press P for the frame rate (week 1 look-over is still open too: walls stop you, camera feel); then Claude starts week 3 (Oracle and Partner to talk to, first quest) ([doc](game/game3d-towers-2026-10-30.md))
 - [ ] **Fortress section art (Faiz): review and merge PR 2; after deploy** look at the Fortress in Game mode on desktop and phone: Spread skyline (is concentration visible without reading a number? try a holding with no weight), Reports tabs (the Temperament pair), Study desk lamp, and the PR 1 sections (verdict flag, Night Watch beacon, Vault levels)
 - [ ] **Newsweb watch (Faiz): review and merge the PR; after deploy** open System status and check the "Newsweb announcements watch" job turns green (a failed ticker is named in its summary), then open `/sources/newsweb/new`. Next: a small frontend (unread badge on Watchlist and holdings, acknowledge button)
 - [ ] **Jæren Sparebank (Faiz): after the PR is merged and deployed,** press *Fetch all reports* on JAREN.OL and check that the 2024 and 2025 annual reports move to Annual reports. For figures: get the tagged ESEF `.xhtml` (Jæren's own announcement or filings.xbrl.org; needs the LEI) and upload it, or upload a statement CSV. Also set the holding name and sector (Financials)
