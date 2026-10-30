@@ -29,8 +29,11 @@ export const WALK_SPEED = 4.5;
 export const RUN_SPEED = 8;
 export const JUMP_SPEED = 8.5;
 
-export const MIN_PITCH = 0.08;
+/** Negative pitch tilts the view up (the camera stays above ground; only its aim lifts). */
+export const MIN_PITCH = -1.4;
 export const MAX_PITCH = 1.25;
+/** Lowest the camera body itself goes, as an orbit angle above the player's focus. */
+export const MIN_CAMERA_PITCH = 0.05;
 export const MIN_DISTANCE = 3;
 export const MAX_DISTANCE = 11;
 
@@ -73,8 +76,20 @@ export function clampDistance(distance: number): number {
 
 /** Camera offset from the player's focus point for the given orbit angles. */
 export function cameraOffset(yaw: number, pitch: number, distance: number): [number, number, number] {
-  const horizontal = Math.cos(pitch) * distance;
-  return [Math.sin(yaw) * horizontal, Math.sin(pitch) * distance, Math.cos(yaw) * horizontal];
+  const p = Math.max(pitch, MIN_CAMERA_PITCH);
+  const horizontal = Math.cos(p) * distance;
+  return [Math.sin(yaw) * horizontal, Math.sin(p) * distance, Math.cos(yaw) * horizontal];
+}
+
+/**
+ * How far above the player's focus point the camera aims. Zero while the
+ * camera looks down at the player; once the mouse pulls past level it rises,
+ * so you can look straight up a tower from its foot.
+ */
+export function lookUpHeight(pitch: number, distance: number): number {
+  if (pitch >= MIN_CAMERA_PITCH) return 0;
+  const up = MIN_CAMERA_PITCH - pitch; // radians above the camera's own level view
+  return Math.tan(up) * Math.cos(MIN_CAMERA_PITCH) * distance + Math.sin(MIN_CAMERA_PITCH) * distance;
 }
 
 /** Angle (about y) that turns a model facing +z towards the given direction. */

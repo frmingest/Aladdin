@@ -38,6 +38,12 @@ Full `vitest run` has one failure that is not from this change: "packed object a
 unpacked Printer pictures in the gitignored `frontend/public/art/printer` on this disk (known:
 not packed yet, see PROGRESS).
 
+## Fix after first look on Railway (2026-10-30)
+Faiz walked it on Railway (165 fps, 71 draws, 3k tris) and could not look straight up when standing
+close to a tower. The camera could only look down at the hero. Now pulling the mouse past level tilts
+the view up (down to about 80 degrees up), while the camera itself stays above the ground
+(`movement.ts`: `MIN_PITCH` -1.4, `lookUpHeight`). Branch `fix/game3d-look-up`; not yet seen in a browser.
+
 ## Known gaps
 - Not seen in a browser, so frame rate, readable labels and the look of the towers are unjudged.
 - Towers share one cylinder look per structure type; no real art yet. Moat is not walkable-blocking.

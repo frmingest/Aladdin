@@ -8,6 +8,8 @@ import {
   cameraOffset,
   clampDistance,
   clampPitch,
+  lookUpHeight,
+  MIN_CAMERA_PITCH,
   facingYaw,
   moveVector,
   shortestAngle,
@@ -52,6 +54,16 @@ describe("moveVector", () => {
 });
 
 describe("camera limits", () => {
+  it("lets the view tilt up without putting the camera under the ground", () => {
+    expect(MIN_PITCH).toBeLessThan(0);
+    // The camera body never drops below its floor angle, however far you look up.
+    expect(cameraOffset(0, MIN_PITCH, 7)[1]).toBeCloseTo(Math.sin(MIN_CAMERA_PITCH) * 7, 6);
+    // Aim stays on the player while looking down, rises as you look up, and is far above at the limit.
+    expect(lookUpHeight(0.45, 7)).toBe(0);
+    expect(lookUpHeight(-0.5, 7)).toBeGreaterThan(lookUpHeight(-0.1, 7));
+    expect(lookUpHeight(MIN_PITCH, 7)).toBeGreaterThan(30);
+  });
+
   it("keeps pitch and distance in range", () => {
     expect(clampPitch(-3)).toBe(MIN_PITCH);
     expect(clampPitch(3)).toBe(MAX_PITCH);
