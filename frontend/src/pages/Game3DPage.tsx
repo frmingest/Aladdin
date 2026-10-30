@@ -7,7 +7,7 @@ import SceneBoundary from "../game3d/SceneBoundary";
 import TowerPanel from "../game3d/TowerPanel";
 import QuestLog from "../game3d/QuestLog";
 import DialoguePanel from "../game3d/DialoguePanel";
-import { unwrittenThesis } from "../game3d/quest";
+import { sixMonthReckoning, unwrittenThesis } from "../game3d/quest";
 import type { NpcId } from "../game3d/npcs";
 import { stateToWorld } from "../game3d/stateToWorld";
 import { webglSupported } from "../game3d/webgl";
@@ -34,10 +34,10 @@ function Unavailable() {
 }
 
 /**
- * 3D courtyard (prototype, week 3): a walled courtyard you can walk round with
+ * 3D courtyard (prototype, week 4): a walled courtyard you can walk round with
  * W A S D and the mouse. Each holding from /game/state stands on a pad as a
  * tower; the facts are in the side panel. The Oracle and the Partner stand in the
- * courtyard (press E near them); the one quest is read from the decision journal. The flat Fortress stays the
+ * courtyard (press E near them); the two quests are read from the decision journal. The flat Fortress stays the
  * full-fidelity view and the fallback.
  */
 export default function Game3DPage() {
@@ -86,6 +86,8 @@ export default function Game3DPage() {
       ),
     [world, state, error, journal, journalFailed],
   );
+  // Quest 2 reads the same journal; it needs no holdings, so it does not wait for the towers.
+  const reviews = useMemo(() => sixMonthReckoning(journal?.entries ?? null, journalFailed), [journal, journalFailed]);
 
 
   // Walking away ends the talk.
@@ -134,8 +136,8 @@ export default function Game3DPage() {
       </SceneBoundary>
 
       <TowerPanel world={world} loading={loading} error={error} onRetry={load} />
-      <QuestLog quest={quest} demo={world.demo} />
-      {talking && <DialoguePanel npc={talking} quest={quest} onClose={() => setTalking(null)} onRetry={load} />}
+      <QuestLog quest={quest} reviews={reviews} demo={world.demo} />
+      {talking && <DialoguePanel npc={talking} quest={quest} reviews={reviews} onClose={() => setTalking(null)} onRetry={load} />}
 
       <Link
         to="/fortress"

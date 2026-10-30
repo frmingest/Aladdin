@@ -2,9 +2,9 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { GameState, GameTower, JournalEntry } from "../lib/types";
 import DialoguePanel from "./DialoguePanel";
-import { lines } from "./dialogueV1";
+import { lines, talk } from "./dialogueV1";
 import type { NpcId } from "./npcs";
-import { unwrittenThesis } from "./quest";
+import { sixMonthReckoning, unwrittenThesis } from "./quest";
 import { stateToWorld } from "./stateToWorld";
 
 const t = (holding_id: string, name: string, weight_pct: string | null) =>
@@ -65,12 +65,60 @@ describe("courtyard dialogue v1", () => {
   });
 
   it("renders as a labelled dialog with a Close button and a retry only when unreadable", () => {
-    const html = renderToStaticMarkup(<DialoguePanel npc="oracle" quest={quests[1]} onClose={() => {}} onRetry={() => {}} />);
+    const html = renderToStaticMarkup(<DialoguePanel npc="oracle" quest={quests[1]} reviews={sixMonthReckoning(null, true)} onClose={() => {}} onRetry={() => {}} />);
     expect(html).toContain('role="dialog"');
     expect(html).toContain("The Oracle");
     expect(html).toContain("Try again");
-    const ok = renderToStaticMarkup(<DialoguePanel npc="partner" quest={quests[4]} onClose={() => {}} onRetry={() => {}} />);
+    const ok = renderToStaticMarkup(<DialoguePanel npc="partner" quest={quests[4]} reviews={sixMonthReckoning([], false)} onClose={() => {}} onRetry={() => {}} />);
     expect(ok).not.toContain("Try again");
     expect(ok).toContain("Close (E)");
+  });
+});
+
+
+const dueEntry = (id: string, name: string, conf: number | null, days: number) =>
+  ({ id, holding_id: id, ticker: name, company_name: name, thesis: "x", confidence: conf, outcome: { days_since: days, review_6m_due: true, review_12m_due: false } }) as unknown as JournalEntry;
+
+describe("courtyard dialogue v1, Six-Month Reckoning", () => {
+  const allWritten = unwrittenThesis(holdings, [e("a"), e("b")], false);
+  const open = sixMonthReckoning([dueEntry("a", "Alpha", 5, 300), dueEntry("b", "Beta", 2, 200)], false);
+  const clear = sixMonthReckoning([{ ...dueEntry("a", "Alpha", 5, 10), outcome: { days_since: 10, review_6m_due: false, review_12m_due: false } } as unknown as JournalEntry], false);
+
+  it("speaks of reviews only once every reason is written, and names the due entries from the data", () => {
+    const oracle = talk("oracle", allWritten, open).join(" ");
+    expect(oracle).toContain("Alpha (6 months)");
+    expect(oracle).toContain("Beta (6 months)");
+    expect(oracle).toContain("2 written reasons are");
+    // while a reason is still missing, the Unwritten Thesis words win
+    const missing = unwrittenThesis(holdings, [e("a")], false);
+    expect(talk("oracle", missing, open)).toEqual(lines("oracle", missing));
+  });
+
+  it("the Partner starts with the most confident entry and quotes the confidence only when written", () => {
+    expect(talk("partner", allWritten, open).join(" ")).toContain("Start with Alpha, where you wrote 5 out of 5");
+    const unrated = sixMonthReckoning([dueEntry("a", "Alpha", null, 300)], false);
+    const text = talk("partner", allWritten, unrated).join(" ");
+    expect(text).toContain("Start with Alpha.");
+    expect(text).not.toContain("out of 5");
+  });
+
+  it("falls back to the Unwritten Thesis words when nothing is due, and when the journal is unreadable", () => {
+    for (const p of people) {
+      expect(talk(p, allWritten, clear)).toEqual(lines(p, allWritten));
+      const bad = sixMonthReckoning(null, true);
+      expect(talk(p, unwrittenThesis(holdings, null, true), bad)).toEqual(lines(p, unwrittenThesis(holdings, null, true)));
+    }
+  });
+
+  it("uses no buy/sell wording, no cheering, and no price or return talk", () => {
+    for (const p of people) {
+      const text = talk(p, allWritten, open).join(" ");
+      expect(text).not.toMatch(/\b(buy|sell|trim|add more|great job|well done|congrat|return|profit|gain|loss)/i);
+    }
+  });
+
+  it("renders the dialog markup with the review words", () => {
+    const html = renderToStaticMarkup(<DialoguePanel npc="oracle" quest={allWritten} reviews={open} onClose={() => {}} onRetry={() => {}} />);
+    expect(html).toContain("Alpha (6 months)");
   });
 });
