@@ -11,6 +11,7 @@ import {
   WALK_SPEED,
   cameraOffset,
   facingYaw,
+  lookUpHeight,
   moveVector,
   shortestAngle,
 } from "./movement";
@@ -71,7 +72,7 @@ export default function Player({ keys, orbit }: Props) {
     const fz = pos.z;
     const cam = state.camera;
     cam.position.lerp(new THREE.Vector3(fx + ox, fy + oy, fz + oz), 1 - Math.exp(-CAMERA_FOLLOW * dt));
-    cam.lookAt(fx, fy, fz);
+    cam.lookAt(fx, fy + lookUpHeight(o.pitch, o.distance), fz);
   });
 
   return (

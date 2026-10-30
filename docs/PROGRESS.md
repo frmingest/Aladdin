@@ -4,7 +4,7 @@
 
 ## Current Objective
 
-**3D courtyard, week 2 (holdings as towers), written and tested, not merged, not deployed, not seen in a browser** (branch `feature/game3d-towers`; week 1 merged as #198): `stateToWorld()` turns `/game/state` into one tower per pad (size, wall, moat, ivy, thesis flag; unknown = fog), with the facts in a side panel ([write-up](game/game3d-towers-2026-10-30.md)). Faiz chose a WoW-feel 3D game, desktop only, free walking.
+**3D courtyard: weeks 1 and 2 merged (#198, #199) and seen on Railway by Faiz (165 fps); fix `fix/game3d-look-up` written, not merged, not deployed:** you can now look straight up a tower. Walkable courtyard at `/game3d` with one tower per holding (size, wall, moat, ivy, thesis flag; unknown = fog) and the facts in a side panel ([write-up](game/game3d-towers-2026-10-30.md)). Faiz chose a WoW-feel 3D game, desktop only.
 
 **Fortress section art, PR 2 written and tested, not merged, not deployed, not seen on real data** (PR 1 merged as #196; deploy not checked): Spread of the realm skyline, Reports tab pictures with the calm/panic pair, spyglass on legend and gaps, Study desk lamp. Left alone: footer, study shelf and night parapet (packed, unused). Write-up: [fortress-section-art-2026-10-29.md](game/fortress-section-art-2026-10-29.md).
 
