@@ -7,8 +7,8 @@
  * then what to look at. No buy/sell wording, no cheering, no reward for acting, and
  * unknown stays unknown. Once shown for real, add dialogueV2.ts instead of editing this.
  */
-import { nameList } from "./quest";
-import type { QuestState } from "./quest";
+import { mostSure, nameList, whichWords } from "./quest";
+import type { QuestState, ReviewQuestState } from "./quest";
 import type { NpcId } from "./npcs";
 
 export const DIALOGUE_VERSION = "v1";
@@ -62,4 +62,37 @@ function partner(q: QuestState): string[] {
 /** Paragraphs the NPC says right now. Pure: the same quest state gives the same words. */
 export function lines(npc: NpcId, q: QuestState): string[] {
   return npc === "oracle" ? oracle(q) : partner(q);
+}
+
+/* ---- Quest 2, "Six-Month Reckoning" (week 4) -------------------------------- */
+
+function reviewOracle(r: ReviewQuestState): string[] {
+  const n = r.due.length;
+  const list = nameList(r.due.map((d) => `${d.name} (${whichWords(d.which)})`));
+  return [
+    `${n} written ${n === 1 ? "reason is" : "reasons are"} old enough to be checked: ${list}.`,
+    "Read what you wrote then, in your own words. Next to it, write what actually happened. A review is not a verdict on you; it is how the record stays honest.",
+  ];
+}
+
+function reviewPartner(r: ReviewQuestState): string[] {
+  const pick = mostSure(r.due);
+  if (!pick) return [];
+  const sure = pick.confidence !== null ? `, where you wrote ${pick.confidence} out of 5 for confidence` : "";
+  return [
+    "Reviews are cheap when you were unsure and expensive when you were certain. That is why the certain ones teach most.",
+    `Start with ${pick.name}${sure}.`,
+  ];
+}
+
+/**
+ * What the person says right now, across both quests. The first quest still open
+ * speaks: the unwritten reasons first, then the reviews that have come due.
+ * When the journal cannot be read, or nothing is open, the Unwritten Thesis words stand.
+ */
+export function talk(npc: NpcId, q: QuestState, r: ReviewQuestState): string[] {
+  if (q.status === "done" && r.status === "open") {
+    return npc === "oracle" ? reviewOracle(r) : reviewPartner(r);
+  }
+  return lines(npc, q);
 }

@@ -17,7 +17,7 @@ export default function TowerPanel({ world, loading, error, onRetry }: Props) {
   return (
     <aside
       aria-label="Your towers in words"
-      className="absolute bottom-3 right-3 top-12 w-72 max-w-[40%] overflow-y-auto rounded border border-border bg-surface/95 p-3 text-sm text-ink"
+      className="absolute z-20 bottom-3 right-3 top-12 w-72 max-w-[40%] overflow-y-auto rounded border border-border bg-surface/95 p-3 text-sm text-ink"
     >
       <h2 className="text-sm font-semibold">Your towers</h2>
       {world.demo && <p className="mt-1 rounded bg-amber-100 px-2 py-1 text-xs text-amber-900">Sample fortress, not your holdings.</p>}

@@ -1,26 +1,27 @@
 import { NPCS } from "./npcs";
 import type { NpcId } from "./npcs";
-import { lines } from "./dialogueV1";
-import type { QuestState } from "./quest";
+import { talk } from "./dialogueV1";
+import type { QuestState, ReviewQuestState } from "./quest";
 
 interface Props {
   npc: NpcId;
   quest: QuestState;
+  reviews: ReviewQuestState;
   onClose: () => void;
   onRetry: () => void;
 }
 
 /** What the person you are talking to says. Plain text over the scene, not in it. */
-export default function DialoguePanel({ npc, quest, onClose, onRetry }: Props) {
+export default function DialoguePanel({ npc, quest, reviews, onClose, onRetry }: Props) {
   const who = NPCS.find((n) => n.id === npc);
   return (
     <section
       role="dialog"
       aria-label={`Talking to ${who?.name ?? "someone"}`}
-      className="absolute bottom-16 left-1/2 w-[34rem] max-w-[60%] -translate-x-1/2 rounded border border-border bg-surface/95 p-4 text-sm text-ink"
+      className="absolute z-20 bottom-16 left-1/2 w-[34rem] max-w-[60%] -translate-x-1/2 rounded border border-border bg-surface/95 p-4 text-sm text-ink"
     >
       <h2 className="text-sm font-semibold">{who?.name}</h2>
-      {lines(npc, quest).map((p, i) => (
+      {talk(npc, quest, reviews).map((p, i) => (
         <p key={i} className="mt-2">
           {p}
         </p>

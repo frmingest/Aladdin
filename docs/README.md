@@ -39,6 +39,8 @@ Game mode (Fortress): concept, sprint plans and reviews, visual identity, art pa
 - [game3d-prototype-2026-10-30.md](game/game3d-prototype-2026-10-30.md) — 3D courtyard prototype (week 1): walkable walled courtyard at /game3d, WoW-style third-person controls, desktop only
 - [game3d-towers-2026-10-30.md](game/game3d-towers-2026-10-30.md) — 3D courtyard (week 2): holdings stand as towers via stateToWorld(); weak looks weak, unknown stays fog; facts in a side panel
 - [game3d-npcs-2026-10-30.md](game/game3d-npcs-2026-10-30.md) — 3D courtyard (week 3): the Oracle and the Partner to talk to (press E) and quest 1 "Unwritten Thesis", worked out from the journal
+- [game3d-reckoning-2026-10-30.md](game/game3d-reckoning-2026-10-30.md) — 3D courtyard (week 4): quest 2 "Six-Month Reckoning", worked out from the journal's review-due flags; Oracle and Partner speak of it once every reason is written
+- [game3d-billboards-2026-10-30.md](game/game3d-billboards-2026-10-30.md) — 3D courtyard (week 5 start): Oracle, Partner, fountain, lamps, quest board, raven perch and a mountain backdrop as Stitch billboards; pack_game3d.py
 - [records-hall-polish-2026-10-17.md](game/records-hall-polish-2026-10-17.md) — Hall of Records: undistorted torches and arches, brass nameplates, tome cover that swings open into a book
 - [siege-towers-backdrops-2026-10-17.md](game/siege-towers-backdrops-2026-10-17.md) — Siege Simulator: towers section moved to the top, backdrop that follows the "falls by" slider, four Stitch pictures
 - [remove-circle-page-2026-10-19.md](game/remove-circle-page-2026-10-19.md) — Circle of Competence page removed from Game mode; survey drops to four facts (survey-v2)
