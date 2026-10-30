@@ -1,5 +1,5 @@
-import { Suspense } from "react";
-import { Canvas } from "@react-three/fiber";
+import { Suspense, useRef } from "react";
+import { Canvas, useFrame } from "@react-three/fiber";
 import { Physics } from "@react-three/rapier";
 import Courtyard from "./Courtyard";
 import type { WorldModel } from "./stateToWorld";
@@ -8,6 +8,9 @@ import type { PerfStats } from "./PerfProbe";
 import Player from "./Player";
 import { useKeys } from "./useKeys";
 import { useOrbit } from "./useOrbit";
+import { LEAVE_RANGE, NPCS, TALK_RANGE, nearestNpc } from "./npcs";
+import type { NpcId } from "./npcs";
+import NpcMesh from "./NpcMesh";
 
 const SKY = "#cfe3f1";
 
@@ -15,15 +18,48 @@ interface Props {
   world: WorldModel;
   onLockChange: (locked: boolean) => void;
   onStats: (s: PerfStats) => void;
+  /** Who is close enough to talk to (null: nobody). Called only when it changes. */
+  onNear: (id: NpcId | null) => void;
+  near: NpcId | null;
 }
 
-function World({ onLockChange, world }: { onLockChange: (locked: boolean) => void; world: WorldModel }) {
+/** Tells the page when the hero walks up to, or away from, someone. */
+function NearNpc({ pos, onNear }: { pos: { current: { x: number; z: number } }; onNear: (id: NpcId | null) => void }) {
+  const last = useRef<NpcId | null>(null);
+  useFrame(() => {
+    // Wider range to leave than to arrive, so standing on the edge doesn't flicker.
+    const n = nearestNpc(pos.current, NPCS, last.current ? LEAVE_RANGE : TALK_RANGE);
+    const id = n ? n.id : null;
+    if (id !== last.current) {
+      last.current = id;
+      onNear(id);
+    }
+  });
+  return null;
+}
+
+function World({
+  onLockChange,
+  world,
+  onNear,
+  near,
+}: {
+  onLockChange: (locked: boolean) => void;
+  world: WorldModel;
+  onNear: (id: NpcId | null) => void;
+  near: NpcId | null;
+}) {
   const keys = useKeys();
+  const pos = useRef({ x: 0, z: 0 });
   const orbit = useOrbit(onLockChange);
   return (
     <Physics gravity={[0, -25, 0]} timeStep="vary">
       <Courtyard world={world} />
-      <Player keys={keys} orbit={orbit} />
+      {NPCS.map((n) => (
+        <NpcMesh key={n.id} npc={n} active={near === n.id} />
+      ))}
+      <Player keys={keys} orbit={orbit} pos={pos} />
+      <NearNpc pos={pos} onNear={onNear} />
     </Physics>
   );
 }
@@ -32,7 +68,7 @@ function World({ onLockChange, world }: { onLockChange: (locked: boolean) => voi
  * The 3D courtyard canvas. Lighting is deliberately flat and the same
  * everywhere: no spotlight on a "good" tower, nothing that flatters a weak one.
  */
-export default function Scene({ world, onLockChange, onStats }: Props) {
+export default function Scene({ world, onLockChange, onStats, onNear, near }: Props) {
   return (
     <Canvas
       shadows
@@ -59,7 +95,7 @@ export default function Scene({ world, onLockChange, onStats }: Props) {
         shadow-bias={-0.0005}
       />
       <Suspense fallback={null}>
-        <World onLockChange={onLockChange} world={world} />
+        <World onLockChange={onLockChange} world={world} onNear={onNear} near={near} />
       </Suspense>
       <PerfProbe onStats={onStats} />
     </Canvas>

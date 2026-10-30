@@ -29,13 +29,15 @@ const CAMERA_FOLLOW = 14;
 interface Props {
   keys: MutableRefObject<Keys>;
   orbit: MutableRefObject<OrbitState>;
+  /** Written every frame with where the hero stands, so others can ask who is near. */
+  pos: MutableRefObject<{ x: number; z: number }>;
 }
 
 /**
  * The hero: a Rapier capsule driven by WASD, with a stand-in body (week 3
  * swaps it for a rigged character). Camera follows behind and above.
  */
-export default function Player({ keys, orbit }: Props) {
+export default function Player({ keys, orbit, pos: posOut }: Props) {
   const body = useRef<RapierRigidBody>(null);
   const model = useRef<THREE.Group>(null);
   const facing = useRef(0);
@@ -47,6 +49,8 @@ export default function Player({ keys, orbit }: Props) {
     const dt = Math.min(delta, 0.05);
     const pos = rb.translation();
     const vel = rb.linvel();
+    posOut.current.x = pos.x;
+    posOut.current.z = pos.z;
     const k = keys.current;
 
     const dir = moveVector(k, orbit.current.yaw);
