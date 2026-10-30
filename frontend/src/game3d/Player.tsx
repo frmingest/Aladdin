@@ -4,6 +4,7 @@ import { useFrame } from "@react-three/fiber";
 import { CapsuleCollider, RigidBody, useRapier } from "@react-three/rapier";
 import type { RapierRigidBody } from "@react-three/rapier";
 import * as THREE from "three";
+import { HeroFigure } from "./Figures";
 import { SPAWN } from "./layout";
 import {
   JUMP_SPEED,
@@ -34,8 +35,8 @@ interface Props {
 }
 
 /**
- * The hero: a Rapier capsule driven by WASD, with a stand-in body (week 3
- * swaps it for a rigged character). Camera follows behind and above.
+ * The hero: a Rapier capsule driven by WASD, with a solid figure from simple shapes (a
+ * rigged model can replace it later). Camera follows behind and above.
  */
 export default function Player({ keys, orbit, pos: posOut }: Props) {
   const body = useRef<RapierRigidBody>(null);
@@ -90,32 +91,8 @@ export default function Player({ keys, orbit, pos: posOut }: Props) {
     >
       <CapsuleCollider args={[HALF_HEIGHT, RADIUS]} friction={0} />
       <group ref={model} position={[0, -CENTRE_HEIGHT, 0]}>
-        <Hero />
+        <HeroFigure />
       </group>
     </RigidBody>
-  );
-}
-
-/** Stand-in hero from simple shapes: robe, head, hat, a lantern to show which way is forward. */
-function Hero() {
-  return (
-    <group>
-      <mesh position={[0, 0.55, 0]} castShadow>
-        <cylinderGeometry args={[0.28, 0.4, 1.1, 8]} />
-        <meshStandardMaterial color="#3d5a80" flatShading />
-      </mesh>
-      <mesh position={[0, 1.3, 0]} castShadow>
-        <sphereGeometry args={[0.24, 10, 8]} />
-        <meshStandardMaterial color="#e0b88f" flatShading />
-      </mesh>
-      <mesh position={[0, 1.62, 0]} castShadow>
-        <coneGeometry args={[0.3, 0.45, 8]} />
-        <meshStandardMaterial color="#293241" flatShading />
-      </mesh>
-      <mesh position={[0.28, 0.8, 0.3]} castShadow>
-        <boxGeometry args={[0.12, 0.16, 0.12]} />
-        <meshStandardMaterial color="#ffd166" emissive="#ffb703" emissiveIntensity={0.6} flatShading />
-      </mesh>
-    </group>
   );
 }

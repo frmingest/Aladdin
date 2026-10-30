@@ -1,13 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { ART3D } from "./artManifest3d";
 import { COBBLE_RADIUS, KEEP, SPAWN, towerSpots } from "./layout";
 import { NPCS } from "./npcs";
 import { PROPS, PROP_CLEARANCE } from "./props";
 
 describe("courtyard props", () => {
-  it("every prop uses a packed picture and has a sensible size", () => {
+  it("every prop has a known model and a sensible size", () => {
     for (const p of PROPS) {
-      expect(ART3D[p.art], p.id).toBeDefined();
+      expect(["fountain", "lamp", "board", "perch"], p.id).toContain(p.kind);
       expect(p.height).toBeGreaterThan(1);
       expect(p.solid).toBeGreaterThanOrEqual(0);
     }

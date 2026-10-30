@@ -1,4 +1,4 @@
-"""Pack the 3D courtyard billboard pictures (offline dev tool, not run in CI).
+"""Pack the 3D courtyard backdrop picture (offline dev tool, not run in CI).
 
 Masters live OUTSIDE the shipped tree in art-masters/game3d/<id>.png (gitignored).
 For each id below: key the white background out (same key as scripts/art/pack.py),
@@ -6,14 +6,10 @@ crop to the object, shrink to max_side, write frontend/src/assets/game3d/<id>.we
 and write frontend/src/game3d/artManifest3d.ts (id -> file and picture size, so the
 scene can keep the true aspect ratio). The backdrop is an opaque panorama, not keyed.
 
-Stitch folders the masters came from (2026-10-30, Faiz's "New folder" and "das"):
-  oracle    a_standalone_full_body_fantasy_game_character_sprite_the_oracle_full_body
-  partner   a_standalone_full_body_fantasy_game_character_sprite_the_partner_full_body
-  fountain  a_single_standalone_fantasy_game_town_courtyard_prop_asset_stone_fountain
-  lamp      a_single_standalone_fantasy_game_street_town_prop_asset_short_iron_lamp_post
-  board     a_single_standalone_fantasy_game_town_quest_prop_asset_wooden_notice_quest
-  perch     redesign_and_modify_this_wooden_perch_asset_... (das)
-  backdrop  modify_and_re_render_the_scenic_mountain_and_lake_backdrop_... (das)
+The people and props are solid models built from shapes in code (Figures.tsx, PropModels.tsx),
+coloured after the Stitch pictures; only the backdrop is a picture. Stitch folder it came from
+(2026-10-30, Faiz's "das" folder):
+  backdrop  modify_and_re_render_the_scenic_mountain_and_lake_backdrop_...
 
 Needs: pip install pillow numpy scipy
 Usage: python scripts/art/pack_game3d.py [--masters art-masters/game3d]
@@ -35,12 +31,6 @@ TS_OUT = ROOT / "frontend" / "src" / "game3d" / "artManifest3d.ts"
 
 # id -> (key, max_side, quality)
 OBJECTS: dict[str, tuple[str, int, int]] = {
-    "oracle": ("white", 512, 80),
-    "partner": ("white", 512, 80),
-    "fountain": ("white", 384, 80),
-    "lamp": ("white", 384, 80),
-    "board": ("white", 384, 80),
-    "perch": ("white", 384, 80),
     "backdrop": ("none", 1024, 76),
 }
 
