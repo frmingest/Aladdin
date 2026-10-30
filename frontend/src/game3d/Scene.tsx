@@ -11,6 +11,9 @@ import { useOrbit } from "./useOrbit";
 import { LEAVE_RANGE, NPCS, TALK_RANGE, nearestNpc } from "./npcs";
 import type { NpcId } from "./npcs";
 import NpcMesh from "./NpcMesh";
+import PropMesh from "./PropMesh";
+import Backdrop from "./Backdrop";
+import { PROPS } from "./props";
 
 const SKY = "#cfe3f1";
 
@@ -54,7 +57,11 @@ function World({
   const orbit = useOrbit(onLockChange);
   return (
     <Physics gravity={[0, -25, 0]} timeStep="vary">
+      <Backdrop />
       <Courtyard world={world} />
+      {PROPS.map((p) => (
+        <PropMesh key={p.id} prop={p} />
+      ))}
       {NPCS.map((n) => (
         <NpcMesh key={n.id} npc={n} active={near === n.id} />
       ))}

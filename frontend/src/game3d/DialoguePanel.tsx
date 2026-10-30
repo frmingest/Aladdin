@@ -18,7 +18,7 @@ export default function DialoguePanel({ npc, quest, reviews, onClose, onRetry }:
     <section
       role="dialog"
       aria-label={`Talking to ${who?.name ?? "someone"}`}
-      className="absolute bottom-16 left-1/2 w-[34rem] max-w-[60%] -translate-x-1/2 rounded border border-border bg-surface/95 p-4 text-sm text-ink"
+      className="absolute z-20 bottom-16 left-1/2 w-[34rem] max-w-[60%] -translate-x-1/2 rounded border border-border bg-surface/95 p-4 text-sm text-ink"
     >
       <h2 className="text-sm font-semibold">{who?.name}</h2>
       {talk(npc, quest, reviews).map((p, i) => (

@@ -23,7 +23,7 @@ export default function QuestLog({ quest, reviews, demo }: { quest: QuestState; 
   return (
     <aside
       aria-label="Quest log"
-      className="absolute left-3 top-14 w-64 max-w-[30%] rounded border border-border bg-surface/95 p-3 text-sm text-ink"
+      className="absolute z-20 left-3 top-14 w-64 max-w-[30%] rounded border border-border bg-surface/95 p-3 text-sm text-ink"
     >
       <h2 className="text-sm font-semibold">Quest: {QUEST_TITLE}</h2>
       {demo && <p className="mt-1 rounded bg-amber-100 px-2 py-1 text-xs text-amber-900">Sample journal, not yours.</p>}
