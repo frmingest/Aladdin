@@ -16,6 +16,7 @@ import Layout from "./components/Layout";
 const DashboardPage = lazy(() => import("./pages/DashboardPage"));
 // Game mode (F33, G2): its own chunk, so default mode downloads nothing for it.
 const FortressPage = lazy(() => import("./pages/FortressPage"));
+const Game3DPage = lazy(() => import("./pages/Game3DPage"));
 const SiegeSimulatorPage = lazy(() => import("./pages/SiegeSimulatorPage"));
 // Sprint 24 (G14): the fortress replayed through time.
 const RecordsPage = lazy(() => import("./pages/RecordsPage"));
@@ -68,6 +69,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<DashboardPage />} />
           <Route path="/fortress" element={<FortressPage />} />
+          <Route path="/game3d" element={<Game3DPage />} />
           <Route path="/fortress/siege" element={<SiegeSimulatorPage />} />
           <Route path="/fortress/records" element={<RecordsPage />} />
           <Route path="/fortress/map" element={<CartographerPage />} />
