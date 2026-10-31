@@ -4,6 +4,8 @@ import { useFrame } from "@react-three/fiber";
 import { CapsuleCollider, RigidBody, useRapier } from "@react-three/rapier";
 import type { RapierRigidBody } from "@react-three/rapier";
 import * as THREE from "three";
+import Avatar from "./Avatar";
+import type { Motion } from "./animClips";
 import { HeroFigure } from "./Figures";
 import { SPAWN } from "./layout";
 import {
@@ -42,6 +44,7 @@ export default function Player({ keys, orbit, pos: posOut }: Props) {
   const body = useRef<RapierRigidBody>(null);
   const model = useRef<THREE.Group>(null);
   const facing = useRef(0);
+  const motion = useRef<Motion>({ moving: false, running: false });
   const { world, rapier } = useRapier();
 
   useFrame((state, delta) => {
@@ -62,6 +65,9 @@ export default function Player({ keys, orbit, pos: posOut }: Props) {
     const grounded = world.castRay(ray, CENTRE_HEIGHT + 0.15, true, undefined, undefined, undefined, rb) !== null;
     const vy = grounded && k.jump && vel.y <= 0.1 ? JUMP_SPEED : vel.y;
     rb.setLinvel({ x: dir.x * speed, y: vy, z: dir.z * speed }, true);
+
+    motion.current.moving = dir.x !== 0 || dir.z !== 0;
+    motion.current.running = k.run;
 
     // Turn the body towards where it is walking.
     if (dir.x !== 0 || dir.z !== 0) {
@@ -91,7 +97,7 @@ export default function Player({ keys, orbit, pos: posOut }: Props) {
     >
       <CapsuleCollider args={[HALF_HEIGHT, RADIUS]} friction={0} />
       <group ref={model} position={[0, -CENTRE_HEIGHT, 0]}>
-        <HeroFigure />
+        <Avatar id="hero" height={HALF_HEIGHT * 2 + RADIUS * 2} fallback={<HeroFigure />} motion={motion} />
       </group>
     </RigidBody>
   );
