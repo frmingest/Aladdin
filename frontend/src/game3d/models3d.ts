@@ -33,4 +33,13 @@ export const MODELS3D: Partial<Record<ModelId, ModelSpec>> = {
       "2H_Sword",
     ],
   },
+  // Townsfolk (S8): standing life, no dialogue. Axes, shield and mug hidden so the fitted height is the person.
+  guard: {
+    url: "/models/Barbarian.glb",
+    hide: ["1H_Axe_Offhand", "Barbarian_Round_Shield", "1H_Axe", "2H_Axe", "Mug"],
+  },
+  scout: {
+    url: "/models/Rogue.glb",
+    hide: ["Knife_Offhand", "1H_Crossbow", "2H_Crossbow", "Knife", "Throwable"],
+  },
 };

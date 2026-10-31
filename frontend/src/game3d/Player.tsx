@@ -34,13 +34,15 @@ interface Props {
   orbit: MutableRefObject<OrbitState>;
   /** Written every frame with where the hero stands, so others can ask who is near. */
   pos: MutableRefObject<{ x: number; z: number }>;
+  /** A new number starts one short cheer. */
+  cheerKey?: number | null;
 }
 
 /**
  * The hero: a Rapier capsule driven by WASD, with a solid figure from simple shapes (a
  * rigged model can replace it later). Camera follows behind and above.
  */
-export default function Player({ keys, orbit, pos: posOut }: Props) {
+export default function Player({ keys, orbit, pos: posOut, cheerKey = null }: Props) {
   const body = useRef<RapierRigidBody>(null);
   const model = useRef<THREE.Group>(null);
   const facing = useRef(0);
@@ -97,7 +99,7 @@ export default function Player({ keys, orbit, pos: posOut }: Props) {
     >
       <CapsuleCollider args={[HALF_HEIGHT, RADIUS]} friction={0} />
       <group ref={model} position={[0, -CENTRE_HEIGHT, 0]}>
-        <Avatar id="hero" height={HALF_HEIGHT * 2 + RADIUS * 2} fallback={<HeroFigure />} motion={motion} />
+        <Avatar id="hero" height={HALF_HEIGHT * 2 + RADIUS * 2} fallback={<HeroFigure />} motion={motion} cheerKey={cheerKey} />
       </group>
     </RigidBody>
   );

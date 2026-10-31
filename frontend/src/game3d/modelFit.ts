@@ -5,7 +5,7 @@
  */
 
 /** The places a real model can replace a shape figure. */
-export type ModelId = "hero" | "oracle" | "partner";
+export type ModelId = "hero" | "oracle" | "partner" | "guard" | "scout";
 
 export interface Vec3 {
   x: number;

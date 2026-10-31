@@ -9,7 +9,7 @@ export interface Motion {
   running: boolean;
 }
 
-export const CLIP = { idle: "Idle", walk: "Walking_A", run: "Running_A" } as const;
+export const CLIP = { idle: "Idle", walk: "Walking_A", run: "Running_A", cheer: "Cheer", cast: "Spellcasting" } as const;
 
 /** The clip we want for this motion. With reduced motion the character holds Idle. */
 export function wantedClip(motion: Motion, reducedMotion: boolean): string {
@@ -26,3 +26,17 @@ export function resolveClip(wanted: string, available: readonly string[]): strin
 
 /** Seconds to cross-fade between two clips. */
 export const FADE_SECONDS = 0.2;
+
+/** Seconds the quest-done cheer lasts. */
+export const CHEER_SECONDS = 3;
+
+/**
+ * The clip for this moment. Reduced motion always holds Idle (no cheer, no casting).
+ * Otherwise a cheer wins, then a held pose (the Oracle casting while he talks), then walk/run/idle.
+ */
+export function chooseClip(motion: Motion, reducedMotion: boolean, pose: string | null, cheering: boolean): string {
+  if (reducedMotion) return CLIP.idle;
+  if (cheering) return CLIP.cheer;
+  if (pose) return pose;
+  return wantedClip(motion, false);
+}
