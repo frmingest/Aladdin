@@ -13,7 +13,7 @@ The rule for a fourth level, **The Watch**, now exists in the backend. It says: 
 - Words (game voice, in `build_standing`): "The watch has not reported. Nothing is known." / "The watch is not walking the walls" / "1 wire fired, not yet looked at" / "The watch reports in. Every wire looked at" / "Nothing to watch yet". Goal for level 4: "Keep the watch walking, and look at every wire that fires."
 
 ## Checks run
-`ruff check .` clean; `pytest -q` 2006 passed, 2 skipped (21 new: 10 unit, 7 over the route and a database, plus the v1 checks that still pass). Covered: level 4 held, never-ran watch is unknown, old watch drops to 3, an unseen fired wire drops to 3 and acknowledging it restores 4, an inactive fired wire does not block, level 4 needs levels 1 to 3, sample stays 0, v1 stays the default and tops out at 3.
+`ruff check .` clean; `pytest -q` 2006 passed, 2 skipped (18 new: 11 unit, 7 over the route and a database; the v1 tests still pass). Covered: level 4 held, never-ran watch is unknown, old watch drops to 3, an unseen fired wire drops to 3 and acknowledging it restores 4, an inactive fired wire does not block, level 4 needs levels 1 to 3, sample stays 0, v1 stays the default and tops out at 3.
 
 ## Not done / not seen
 T2 (look at a wire in the Quest log), T3 (fourth torch, words v2, flip the setting to `v2`), T4 (browser check). Not run against a real database with a real worker; not deployed. Copy debt: the words live in `build_standing` for gate 4 facts, as for levels 1 to 3.
