@@ -1,6 +1,6 @@
 # 3D courtyard: Standing 1, levels 1 to 3 (2026-10-31)
 
-Status: **written and tested (backend 1988 passed, frontend 993 passed, ruff, tsc, lint, build green), rendered in a headless software browser, not merged, not deployed, not seen on a real GPU or on Railway.** Branch `feature/game3d-standing`. Plan: [game3d-standing-sprint-plan-2026-10-31.md](game3d-standing-sprint-plan-2026-10-31.md). Decisions: [brainstorm](game3d-progression-brainstorm-2026-10-31.md) section 9, and Faiz's "you decide" on Jæren (yes).
+Status: **written and tested (backend 1988 passed, frontend 993 passed, ruff, tsc, lint, build green), rendered in a headless software browser, merged as #217 (merge checked on `main`), deploy not checked, not seen on a real GPU or on Railway.** Branch `feature/game3d-standing`. Plan: [game3d-standing-sprint-plan-2026-10-31.md](game3d-standing-sprint-plan-2026-10-31.md). Decisions: [brainstorm](game3d-progression-brainstorm-2026-10-31.md) section 9, and Faiz's "you decide" on Jæren (yes).
 
 ## What this sprint is for (plain words)
 The courtyard now has a **Standing**: a level from 1 to 3 that says how far you have really got with your own fortress. It shows as **torches by the road ahead of where you spawn** (one burns per level) and one card at the top of the Quest log. It is not XP: nothing is saved, nothing is earned by clicking, and the level goes **down** again if the facts go stale.
