@@ -67,7 +67,7 @@ describe("courtyard dialogue v1", () => {
   it("renders as a labelled dialog with a Close button and a retry only when unreadable", () => {
     const html = renderToStaticMarkup(<DialoguePanel npc="oracle" quest={quests[1]} reviews={sixMonthReckoning(null, true)} onClose={() => {}} onRetry={() => {}} />);
     expect(html).toContain('role="dialog"');
-    expect(html).toContain("The Oracle");
+    expect(html).toContain("Barren Wuffet");
     expect(html).toContain("Try again");
     const ok = renderToStaticMarkup(<DialoguePanel npc="partner" quest={quests[4]} reviews={sixMonthReckoning([], false)} onClose={() => {}} onRetry={() => {}} />);
     expect(ok).not.toContain("Try again");
