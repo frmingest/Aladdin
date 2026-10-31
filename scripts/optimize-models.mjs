@@ -1,32 +1,31 @@
-// Shrinks the KayKit character GLBs (S4 of the 3D courtyard): keeps only the clips the game can play,
-// then meshopt-compresses. Original files are the untouched CC0 downloads (see frontend/public/models/CREDITS.md).
+// Shrinks the KayKit character GLBs for the 3D courtyard (S4). Run from a folder that holds the
+// ORIGINAL Rogue_Hooded.glb, Mage.glb and Knight.glb (KayKit-Character-Pack-Adventures-1.0, CC0),
+// with `npm i @gltf-transform/core @gltf-transform/extensions @gltf-transform/functions` installed:
+//   node optimize-models.mjs        -> writes out/*.glb
 //
-// Usage (deps are NOT in the repo; install them in a scratch folder):
-//   npm i @gltf-transform/core @gltf-transform/extensions @gltf-transform/functions meshoptimizer
-//   node optimize-models.mjs <dir with the original .glb files> <output dir>
-// The app decodes meshopt through drei's useGLTF (meshopt decoder is on by default).
+// What it does: drops every animation clip the game cannot play, resamples what is left and prunes
+// the unused data. The size was the 76 clips per file (about 3.5 MB), not the picture.
+//
+// What it must NOT do: quantize or meshopt-compress the skinned meshes. gltf-transform's quantize
+// moves the vertex scale into the skin, but the courtyard's fit and outline code reads the raw
+// geometry bounds, so the hero fitted wrongly and the scene broke (found in S5, rendered, 2026-10-31).
 import { NodeIO } from "@gltf-transform/core";
 import { ALL_EXTENSIONS } from "@gltf-transform/extensions";
-import { prune, dedup, meshopt, resample } from "@gltf-transform/functions";
-import { MeshoptEncoder, MeshoptDecoder } from "meshoptimizer";
-
-const [inDir = ".", outDir = "out"] = process.argv.slice(2);
+import { prune, dedup, resample } from "@gltf-transform/functions";
 const KEEP = ["Idle", "Walking_A", "Running_A", "Cheer", "Interact", "Spellcasting"];
-await MeshoptEncoder.ready;
-await MeshoptDecoder.ready;
-const io = new NodeIO()
-  .registerExtensions(ALL_EXTENSIONS)
-  .registerDependencies({ "meshopt.encoder": MeshoptEncoder, "meshopt.decoder": MeshoptDecoder });
-
-for (const name of ["Rogue_Hooded", "Mage", "Knight"]) {
-  const doc = await io.read(`${inDir}/${name}.glb`);
-  for (const anim of doc.getRoot().listAnimations()) {
-    if (KEEP.includes(anim.getName())) continue;
-    // Dispose channels and samplers too, or their accessors stay in the file (JSON bloat).
-    anim.listChannels().forEach((c) => c.dispose());
-    anim.listSamplers().forEach((s) => s.dispose());
-    anim.dispose();
+const io = new NodeIO().registerExtensions(ALL_EXTENSIONS);
+for (const f of ["Rogue_Hooded", "Mage", "Knight"]) {
+  const doc = await io.read(`${f}.glb`);
+  const root = doc.getRoot();
+  for (const a of root.listAnimations()) {
+    if (!KEEP.includes(a.getName())) {
+      a.listChannels().forEach((c) => c.dispose());
+      a.listSamplers().forEach((x) => x.dispose());
+      a.dispose();
+    }
   }
-  await doc.transform(resample(), prune(), dedup(), meshopt({ encoder: MeshoptEncoder, level: "medium" }));
-  await io.write(`${outDir}/${name}.glb`, doc);
+  const left = root.listAnimations().map((a) => a.getName());
+  await doc.transform(resample(), prune(), dedup());
+  await io.write(`out/${f}.glb`, doc);
+  console.log(f, left.join(","));
 }
