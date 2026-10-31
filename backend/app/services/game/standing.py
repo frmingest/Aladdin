@@ -35,6 +35,9 @@ class StandingInputs:
     towers: Sequence[TowerFact]
     journal: Sequence[JournalFact]
     active_tripwires: int  # active tripwires on holdings that stand as towers
+    # Level 4 (standing_v2). Defaults keep v1 callers unchanged. An unknown watch is "never", never "ok".
+    watch_state: str = "never"  # "ok" | "old" | "never", from the night watch
+    unseen_wires: int = 0  # active wires on towers that fired and have not been marked seen
 
 
 def tower_fact(t: TowerOut) -> TowerFact:
@@ -69,7 +72,10 @@ def build_standing(inputs: StandingInputs, rules: StandingRules) -> StandingOut:
     written = sum(1 for t in towers if t.holding_id in written_ids)
     g3 = g2 and written == total and inputs.active_tripwires >= rules.min_active_tripwires
 
-    met_by_level = {1: g1, 2: g2, 3: g3}
+    # Gate 4 (v2): the watch reported in, and every fired wire has been looked at. Unknown is not met.
+    g4 = g3 and inputs.watch_state == "ok" and inputs.unseen_wires == 0
+
+    met_by_level = {1: g1, 2: g2, 3: g3, 4: g4}
     level = 0
     for rule in rules.levels:
         if rule.level > rules.max_level or not met_by_level.get(rule.level, False):
@@ -85,10 +91,24 @@ def build_standing(inputs: StandingInputs, rules: StandingRules) -> StandingOut:
             if total else "Nothing to write up yet"
         ),
     }
+    if inputs.demo:
+        fact4 = sample
+    elif not total:
+        fact4 = "Nothing to watch yet"
+    elif inputs.watch_state == "never":
+        fact4 = "The watch has not reported. Nothing is known."
+    elif inputs.watch_state == "old":
+        fact4 = "The watch is not walking the walls"
+    elif inputs.unseen_wires:
+        fact4 = f"{inputs.unseen_wires} wire{'s' if inputs.unseen_wires != 1 else ''} fired, not yet looked at"
+    else:
+        fact4 = "The watch reports in. Every wire looked at"
+    facts[4] = fact4
     counts: dict[int, tuple[int | None, int | None]] = {
         1: (None, None) if inputs.demo else (min(total, 1), 1),
         2: (None, None) if inputs.demo else (covered, total),
         3: (None, None) if inputs.demo else (written, total),
+        4: (None, None),
     }
     gates = [
         StandingGateOut(

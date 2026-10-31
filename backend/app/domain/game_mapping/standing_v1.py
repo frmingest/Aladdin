@@ -58,11 +58,12 @@ STANDING_V1 = StandingRules(
     named_gaps=(NamedGap("JAREN.OL", "no tagged filing"),),
 )
 
-_VERSIONS: dict[str, StandingRules] = {"v1": STANDING_V1}
-
-
 def get_standing_rules(version: str) -> StandingRules:
+    # Later versions import this module for the dataclasses, so they are loaded lazily here.
+    from app.domain.game_mapping.standing_v2 import STANDING_V2
+
+    versions: dict[str, StandingRules] = {"v1": STANDING_V1, "v2": STANDING_V2}
     try:
-        return _VERSIONS[version]
+        return versions[version]
     except KeyError as exc:
         raise ValueError(f"Unknown standing version: {version!r}") from exc
