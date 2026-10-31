@@ -59,9 +59,21 @@ Rules that stay: **no model carries a fact** (towers are driven only by `stateTo
 | Replace the four corner towers and the keep with `building_tower_*` and `building_castle_*` | Hexagon | **Maybe, S7, behind a look-and-judge.** Corner towers and keep carry no facts, so allowed. They need colliders that match the model, which is real work. |
 | Replace the **holding towers** (the eight pads) | Hexagon towers | **No.** They show crenels, cracks, ivy, water and flags from real data; a fixed model cannot show those. Hexagon could still supply the *base* or flag shapes later, but that is a design question for Faiz, not a swap. |
 | Two more people standing about (Barbarian, Rogue) as townsfolk | Adventurers (already in repo's source pack) | **Yes, S8, small.** Decoration only; they say nothing and carry no data. |
-| Keep interior (Oracle's study) | Furniture Bits, Dungeon | Not now: there is no interior. |
+| Writing desk (Oracle's study) | Furniture Bits, Dungeon | **Yes, S11, as an open-air nook.** A real interior is a separate, bigger sprint. |
 | Skeleton enemies, animals | itch.io packs | Not now: no game use. |
 
 ## Budget with the extras
 
 First load of `/game3d` must stay at 15 MB or less and draw calls at 300 or less. The three characters are 1.57 MB now. KayKit props are small (a handful of KB each plus one shared palette texture), so S6 should add well under 1 MB if props are packed into one GLB per group and instanced. S6 measures it; S7 (nature, buildings) is the one that can break the budget.
+
+## Update 2026-10-31, evening: second search, and what changed
+
+Question from Faiz: use more free kits (Kenney and others) for the siege simulator, the map and the library. What was checked: pack pages read through search today, and the three KayKit GitHub repos listed file by file (piece names below are confirmed to exist). Plan: sprints S9 to S12 in the [KayKit plan](game3d-kaykit-sprint-plan-2026-10-31.md).
+
+- **Kenney Castle Kit and Retro Medieval Kit: the pages say CC0** (Castle Kit: 70+ models with siege weapons, OBJ, FBX and glTF, 2.1 MB). This replaces "Kenney: unverified" above for these two packs. The licence file inside the zip still has to be opened before anything is committed (S9). Castle Kit is the best match for KayKit's flat look; Retro Medieval has a PS1 look and is not planned.
+- **Older Quaternius packs (Medieval Weapons, Low Poly RPG Pack, Furniture Low Poly): CC0 on their pages.** The newer MegaKits and the animation and character packs are **still unresolved** (not read, or the licence conflict above): blocked until the zip's own licence text is opened.
+- **Siege engines outside KayKit:** LowPolyAssets Medieval Weapons says CC0 (60+ meshes including siege engines). The De Alpe Siege Engine Pack (catapult, siege tower, two rams, two ladders) showed **no licence line**, so it is blocked.
+- **Library furniture:** the Imzaiko Basic Library showed no licence line, so it is blocked. **KayKit Furniture Bits is CC0 (licence file in the repo) and already has `book_set`, `book_single`, `shelf_*`, `table_*`, `chair_*`, `lamp_*`, `rug_*`, picture frames.** That makes the writing desk (S11) a no-download job.
+- **Siege pieces already in the Hexagon repo (no download):** `building_tower_catapult_*`, `projectile_catapult`, `ladder`, `target`, `tent`, `weaponrack`, `flag_*`. Missing from KayKit: a siege tower and a battering ram. The red and green variants exist and stay unused, so no piece can read as a status colour.
+- **Vault pieces in Dungeon Remastered:** `chest`, `chest_gold`, `coin_stack_small|medium|large`, `key`, `keyring_hanging`, `column`, `pillar`. Parked (S12).
+- **Correction to an earlier chat answer the same day:** a first shortlist suggested the Quaternius MegaKits, Universal Animation Library 2 and the Imzaiko library as free picks. Under this project's hard rule (CC0 or equivalent, licence file in hand) they are blocked or unnecessary, as above.
