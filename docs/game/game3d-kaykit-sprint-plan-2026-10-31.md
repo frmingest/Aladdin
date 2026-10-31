@@ -1,6 +1,8 @@
 # 3D courtyard: free CC0 character models (KayKit) — sprint plan, 2026-10-31
 
-**Status: plan only. Nothing below is written, committed or deployed.** Written so a new chat can start from this file alone.
+**Status (updated 2026-10-31, evening): S0 to S3 merged (#207 to #209). S4 and S5 written on `feature/game3d-kaykit-s5-and-packs` (PR open, not merged, not deployed): the character files are 0.5 MB each and were seen rendered in a headless browser (the first S4 build broke the scene and was fixed, see [the models doc](game3d-kaykit-models-2026-10-31.md)). S6 to S9 (more free packs) are plan only: nothing of them is written.** Written so a new chat can start from this file alone. Other packs: [assessment](game3d-free-3d-packs-assessment-2026-10-31.md).
+
+**Corrections to the plan below (found 2026-10-31):** GitHub repo names need the `KayKit-` prefix (`KayKit-Medieval-Hexagon-Pack`, `KayKit-Dungeon-Remastered`, `KayKit-Furniture-Bits` all clone; the unprefixed names in the table fail). Forest, Skeletons, Animations and the other "failed" names are itch.io-only, not missing. The Quaternius licence claim is unresolved (see the assessment). **Never quantize or meshopt a skinned character GLB** (S4 trap).
 
 ## Why
 
@@ -35,7 +37,7 @@ Hideable child nodes (all are separate mesh nodes, so hide by `visible = false`)
 - Weapons hidden by default; Oracle keeps `Spellbook` and `2H_Staff` only if they read well at game distance (look at it, decide).
 - Fountain, lamps, quest board and raven perch **stay code-built** (no fountain/lamp/board found in the CC0 packs). Hexagon well and Dungeon torch/banners are optional dressing in S4.
 - Code-built `HeroFigure`/`OracleFigure`/`PartnerFigure` stay as the **fallback** if a GLB fails to load.
-- No model carries a fact (unchanged rule); towers are still driven only by `stateToWorld()`.
+- No model carries a fact (unchanged rule, **one exception added 2026-10-31: the quest-1 celebration in S8**); towers are still driven only by `stateToWorld()`.
 
 ## Budget
 
@@ -77,6 +79,39 @@ Hideable child nodes (all are separate mesh nodes, so hide by `visible = false`)
 - CI-equivalent locally: `tsc --noEmit`, `npm run lint`, `npm test`, `npm run build` in `frontend/`.
 - Docs: write-up `docs/game/game3d-kaykit-models-<date>.md` (identity before/after, tap count, screenshots), README line, PROGRESS, and the mirrored `claude/` copies. Update the game-identity checklist answers.
 - Open the PR from the branch; do not merge. Status wording: "written, not yet deployed".
+
+## Sprints S6 to S9 (added 2026-10-31 after the pack assessment)
+
+Source: [game3d-free-3d-packs-assessment-2026-10-31.md](game3d-free-3d-packs-assessment-2026-10-31.md). Nothing here is built. Each sprint: own branch off `main`, one PR, `tsc`, `lint`, `test`, `build` green, a headless screenshot looked at, doc and PROGRESS in the same PR. Every model here is decoration: **no fact, no data, nothing replaces the fountain, lamps, board, perch or the eight holding towers.** If a file fails to load, the courtyard looks like it does today.
+
+**S6: dress the courtyard (KayKit Dungeon Remastered and Hexagon props, both CC0, both clone from GitHub)**
+- Re-clone `KayKit-Dungeon-Remastered` and `KayKit-Medieval-Hexagon-Pack` into a scratch folder; copy their `LICENSE.txt` next to `CREDITS.md` and add one credits row per pack.
+- Pick about 12 to 20 pieces: `torch_mounted` either side of the keep door and by the gate, 3 to 5 banners (neutral and teal sets only, so no red or green that could read as a status colour), `barrel`, `crate_*`, `sack`, `tent` and `weaponrack` near the Partner, a `wheelbarrow` by the gate road, `flag_*` neutral on a wall or two.
+- Hexagon pieces are `.gltf` + `.bin` + one 16 KB palette PNG; pack each group into one plain `.glb` with a script (`scripts/pack-props.mjs`, same rules as `optimize-models.mjs`: float vertices, no quantize, no meshopt). Individual pieces are 3 to 55 KB, so the whole group should stay under 1 MB.
+- New pure data file `scenery.ts` (id, model, x, z, yaw, scale, `solid` radius or 0) plus `scenery.test.ts` copying the `props.test.ts` rules (on the cobbles, clear of pads, keep, people, spawn and the gate road; no two pieces on each other). New `Scenery.tsx` loads with `useGLTF`, clones each piece, flat-lit like the rest, ink outline only if it looks right in a screenshot (static meshes use the plain inverted hull, not the skinned one). A load failure renders nothing.
+- Done when: the above tests pass, a headless screenshot from spawn, the keep door and the Partner shows the pieces, `P` stats show 300 or fewer draw calls (software rendering is not a frame-rate measure; Faiz checks 60 fps), first load of `/game3d` is still 15 MB or less (record the number), and the game checklist answers are in the doc: identity score before and after, visual verb and scene line ("light the torches, hang the banners: a gate with a keep, not a plain yard"), tap count unchanged.
+
+**S7: the shell and the horizon (decision gate: Faiz looks at S6 first)**
+- Outer ring: Hexagon `tree_*`, `rock_*`, `hills_*`, `mountain_*` (and, if Faiz downloads it, the KayKit Forest Nature free tier) beyond the walls, instanced, replacing or sitting in front of the painted backdrop (`Backdrop.tsx`, a Stitch picture today). Keep the painted backdrop as the fallback and decide with a screenshot whether the models replace it or add depth in front of it.
+- Corner towers and the keep (`Courtyard.tsx`, `CORNER_TOWER_*`, `KEEP`) may become `building_tower_*` / `building_castle_*` **only if** the collider still matches the visible shape and Faiz agrees after seeing one test shot. These hold no data. The eight **holding towers stay code-built** (they show crenels, cracks, ivy, water and flags from real data).
+- Risk: this is the sprint that can break the budget (trees and hills add triangles and draw calls). Instance every repeated piece, measure after each addition, drop pieces before raising the budget.
+- Done when: budget numbers recorded, screenshots from spawn and from the far wall, the gate road and every pad still reachable (existing `layout`/`movement` tests green).
+
+**S8: townsfolk and small life (small)**
+- Two more people from the Adventurers pack already in the source repo (`Barbarian`, `Rogue`): idle loops at fixed spots (a guard at the gate, one by the board), no dialogue, no name tag that suggests a role in the data. Needs two entries in `models3d.ts` (ids beyond `hero | oracle | partner`, so `ModelId` and the registry test change), the same compression step, and a 0.5 MB budget each.
+- The Oracle plays `Spellcasting` (or `Interact`) while his dialogue is open; the clips are already in the file. Reduced motion holds `Idle`.
+- Teal retint of the hero's hood if the palette texture allows it cleanly (open since S1); otherwise say so in the doc and stop.
+- **Quest-done celebration (Faiz said yes on 2026-10-31: a cheer, and maybe confetti).** This is the one place a model shows a fact, so the rule "no model carries a fact" gets this single exception, with these guards:
+  - Trigger: quest 1 (Unwritten Thesis) status is exactly `done`, worked out from the journal as today (nothing stored). Never on `loading`, `unreadable`, `empty`, and **not on the sample/demo journal** ("Sample journal, not yours"), so it cannot cheer for data that is not Faiz's.
+  - What happens: the hero and both people play `Cheer` for about 3 seconds, and a short confetti burst goes up over the fountain, then everything returns to `Idle`. Once per page load, not looping, not on every re-render.
+  - Confetti: one instanced particle burst (about 150 small flat quads, a few colours, gravity, gone after 3 s), no textures, no per-frame allocation. Reduced motion: no confetti and no cheer, just the quest log line "Done!" as today.
+  - Test: the trigger is a pure function of the quest state and the demo flag (unit-tested for every status), so a wrong state cannot celebrate.
+  - Not decided (default: no): a smaller cheer when quest 2 (Six-Month Reckoning) reads "clear". Nothing waiting is not an achievement, so it stays quiet unless Faiz asks.
+
+**S9: bring-your-own packs (only if S6 to S8 leave a gap; needs Faiz to download)**
+- For anything hosted only on kenney.nl, quaternius.com or itch.io (Quaternius Medieval Village MegaKit, KayKit Forest free tier, Skeletons): Faiz downloads the zip and puts it in a folder; a script `scripts/import-pack.mjs` reads it, **stops if there is no licence file or it is not CC0**, converts to plain GLB (same rules), writes a `CREDITS.md` row and copies the licence text. Nothing is committed without that file.
+- Quaternius licence check is mandatory first (the assessment records the conflict). Kenney is unverified.
+- Done when: one pack imported end to end and used for one visible change, or a written decision that none is needed.
 
 ## Risks and open questions
 

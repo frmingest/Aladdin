@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { MODELS3D } from "./models3d";
 
 /** Reads the JSON header of a .glb (node names and clip names) without loading any 3D code. */
-function glbHeader(url: string): { nodes: string[]; clips: string[] } {
+function glbHeader(url: string): { nodes: string[]; clips: string[]; extensions: string[] } {
   const buf = readFileSync(join(__dirname, "../../public", url));
   expect(buf.toString("ascii", 0, 4)).toBe("glTF");
   const jsonLength = buf.readUInt32LE(12);
@@ -12,6 +12,7 @@ function glbHeader(url: string): { nodes: string[]; clips: string[] } {
   return {
     nodes: (json.nodes ?? []).map((n: { name?: string }) => n.name ?? ""),
     clips: (json.animations ?? []).map((a: { name?: string }) => a.name ?? ""),
+    extensions: json.extensionsUsed ?? [],
   };
 }
 
@@ -32,6 +33,16 @@ describe("the model files the registry points at", () => {
       for (const clip of ["Idle", "Walking_A", "Running_A", "Cheer", "Interact", "Spellcasting"]) {
         expect(clips).toContain(clip);
       }
+    });
+  }
+
+  // S5 (2026-10-31): the first S4 build quantized the skinned meshes. Their raw bounds then no longer
+  // matched the figure (Avatar fits and outlines from them), and the hero dropped out of the scene.
+  for (const [slot, spec] of Object.entries(MODELS3D)) {
+    it(`${slot}: no quantized or meshopt geometry (Avatar reads the raw vertex bounds)`, () => {
+      const { extensions } = glbHeader(spec!.url);
+      expect(extensions).not.toContain("KHR_mesh_quantization");
+      expect(extensions).not.toContain("EXT_meshopt_compression");
     });
   }
 });
