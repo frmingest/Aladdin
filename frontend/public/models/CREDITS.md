@@ -20,3 +20,13 @@ The pack's own licence text is in `LICENSE-KayKit-Adventurers.txt`. **Modified (
 | `barrel`, `crate_A_big`, `crate_B_small`, `sack`, `tent`, `weaponrack`, `wheelbarrow`, `bucket_water`, `flag_blue`, `flag_yellow` | KayKit Medieval Hexagon Pack | Kay Lousberg (KayKit) | https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack | CC0 1.0 | 2026-10-31 |
 
 Licence texts: `LICENSE-KayKit-Dungeon-Remastered.txt`, `LICENSE-KayKit-Medieval-Hexagon.txt`. **Modified:** the pieces were merged into one file with `scripts/pack-props.mjs` (plain float vertices, no compression, no animation); geometry and texture are unchanged. Banners and flags use blue, white or yellow only, never red or green, so no flag can read as a status colour.
+
+## Horizon (S7, 2026-10-31)
+
+`horizon.glb` is one file holding 17 nature pieces (trees, tree clumps, boulders, hills, mountains), each a top-level node named after the piece. All CC0 1.0.
+
+| Pieces | Asset | Author | Source | Licence | Fetched |
+|---|---|---|---|---|---|
+| `tree_single_A`, `tree_single_B`, `trees_A_small`, `trees_A_medium`, `trees_B_large`, `rock_single_C`, `rock_single_E`, `hills_A`, `hills_B`, `hills_C`, `hills_A_trees`, `hills_C_trees`, `mountain_A`, `mountain_B`, `mountain_C`, `mountain_A_grass_trees`, `mountain_B_grass` | KayKit Medieval Hexagon Pack | Kay Lousberg (KayKit) | https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack | CC0 1.0 | 2026-10-31 |
+
+Licence text: `LICENSE-KayKit-Medieval-Hexagon.txt`. **Modified:** merged into one file with `scripts/pack-horizon.mjs` (plain float vertices, no compression, no animation); geometry and texture unchanged.
