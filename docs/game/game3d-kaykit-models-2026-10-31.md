@@ -1,6 +1,6 @@
 # 3D courtyard: free CC0 character models (KayKit), 2026-10-31
 
-**Status: S0 (assets and licence) and S1 (loader and hero) merged (#207); S2 (ink outline on the model) written on `feature/game3d-kaykit-outline`, PR open, not merged, not deployed. S3 to S5 not started.** The full plan (why, decisions, budget, S0 to S5, risks) is the Claude project doc `claude/game3d-kaykit-sprint-plan-2026-10-31.md`.
+**Status: S0 (assets and licence), S1 (loader and hero) and S2 (ink outline) merged (#207, #208); S3 (Oracle and Partner) written on `feature/game3d-kaykit-npcs`, PR open, not merged, not deployed. S4 (compression) and S5 (verify) not started.** The full plan (why, decisions, budget, S0 to S5, risks) is the Claude project doc `claude/game3d-kaykit-sprint-plan-2026-10-31.md`.
 
 ## S0 result
 
@@ -28,3 +28,15 @@
 - **Visual check, with a caveat:** the app itself was not rendered in a browser. The same `outline.ts` was rendered in a small standalone page with the real `Rogue_Hooded.glb` (weapons hidden, `Walking_A` frozen mid-stride, headless swiftshader). The outline is a clean dark line all round the hood, face, arms, belt and boots, follows the swung arms and split legs, and has no gaps at the hard edges. 6 skinned meshes became 12 with shells. Screenshots were not added to the repo. Not seen inside the courtyard, on a real GPU or on Railway.
 - Cost to watch in S4: the shells double the draw calls and vertex work for each character (6 meshes to 12 for the hero). Fine for one hero; check again when the Oracle and Partner are added.
 - Still open from S1: teal retint of the hood.
+
+## S3 result (Oracle and Partner)
+
+- **The Oracle is the Mage and the Partner is the Knight**, both through the same `Avatar` as the hero. `models3d.ts` now has three entries. Hidden for the Oracle: `Spellbook`, `Spellbook_open`, `1H_Wand`, `2H_Staff` (hat and cape stay). Hidden for the Partner: both swords and all four shields (helmet and cape stay). The height is measured on what stays visible, so the Mage's staff does not shrink the figure; both are fitted to the NPC's `height: 2.0`.
+- **Decision on the plan's open point (book and staff):** hidden, not kept. The staff and the open book would change the fitted height, and neither was looked at in the courtyard. Easy to switch back by removing the name from the `hide` list.
+- `NpcMesh.tsx` draws `Avatar` with the old code-built Oracle/Partner as the fallback (shown while the file loads and if it fails). Collider, name tag, "press E" and position are unchanged, and so are `npcs.ts` data, `dialogueV1` and the quests.
+- **Facing the player:** when you are in talking range (the same `near` that shows "press E"), the person turns smoothly toward you and turns back to the middle when you leave. New pure helper `yawToward` in `npcs.ts`; `Scene.tsx` passes the hero position to `NpcMesh`. It turns on "near", slightly before the dialogue panel opens with E.
+- Both loop `Idle`. The Oracle does not yet play `Spellcasting`/`Interact` during a dialogue; small to add later.
+- New `modelFiles.test.ts` reads the header of each real `.glb` and checks that every name in a `hide` list exists as a node and that `Idle`, `Walking_A` and `Running_A` exist, so a wrong node name fails a test instead of showing a sword in the courtyard.
+- Checks run locally in `frontend/`: `tsc --noEmit` clean, `eslint src/game3d` clean, `vitest run src/game3d` 76 passed, full `vitest run` all green except one test that failed only because of an untracked, gitignored `public/art/New folder` on Faiz's machine, `vite build` ok (Scene chunk 3.0 MB, unchanged).
+- **Not seen rendered.** No browser was available, so the Mage and the Knight were not looked at in the courtyard or in a standalone page; fitted height, the facing turn and the outline on these two are checked by code and tests only. S5's headless run should look at both.
+- Still open: teal retint of the hero's hood; cost of three outlined characters (draw calls) to be measured in S4/S5; the three GLBs are still 3.6 MB each until S4.

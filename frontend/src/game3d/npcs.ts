@@ -45,3 +45,8 @@ export function nearestNpc(
   }
   return best;
 }
+
+/** Yaw that turns a front facing +z toward a point (the same convention as `facing` above). */
+export function yawToward(from: { x: number; z: number }, to: { x: number; z: number }): number {
+  return Math.atan2(to.x - from.x, to.z - from.z);
+}
