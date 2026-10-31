@@ -966,3 +966,55 @@
     linear-gradient(180deg, #1e150d, #0f0a06);
   box-shadow: 0 10px 24px -14px rgba(0, 0, 0, 0.8), inset 0 0 0 1px rgba(214, 168, 90, 0.4), inset 0 0 44px rgba(0, 0, 0, 0.55);
 }
+
+/* ---------------------------------------------------------------------------
+   3D courtyard HUD: the toolbar and the panels (quests, towers, talk).
+   Fixed gilded-parchment colours, like the Fortress painting, so they read
+   over any part of the scene. Colour never carries a verdict alone: chips
+   also have a mark (check, !, x, ?) in front of the words. */
+.g3d-panel {
+  color: #f3e4bf;
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgb(38 27 16 / 0.95), rgb(18 13 8 / 0.95));
+  box-shadow:
+    inset 0 0 0 1px #000,
+    inset 0 0 0 2px #a07b3a,
+    inset 0 0 0 3px #3b2a16,
+    0 14px 30px -12px rgb(0 0 0 / 0.9);
+}
+.g3d-head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.g3d-head h2 { font-family: "Space Grotesk", Inter, system-ui, sans-serif; font-size: 0.95rem; font-weight: 700; color: #f2d27a; letter-spacing: 0.02em; }
+.g3d-x { width: 1.6rem; height: 1.6rem; line-height: 1; border-radius: 4px; font-size: 1.2rem; color: #f3e4bf; box-shadow: inset 0 0 0 1px #8a6a32; }
+.g3d-x:hover { background: rgb(255 255 255 / 0.1); }
+.g3d-card { margin-top: 0.6rem; padding: 0.6rem 0.7rem; border-radius: 6px; background: rgb(255 255 255 / 0.045); box-shadow: inset 0 0 0 1px rgb(255 220 150 / 0.14); }
+.g3d-card h3 { font-weight: 600; font-size: 0.9rem; color: #fff1cf; }
+.g3d-tag { font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase; color: #c9a653; }
+.g3d-muted { font-size: 0.75rem; line-height: 1.35; color: #cdb98c; }
+.g3d-demo { margin-top: 0.5rem; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; color: #3a2a06; background: #f2d27a; }
+.g3d-pill { display: inline-block; padding: 0.1rem 0.55rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; color: #f3e4bf; box-shadow: inset 0 0 0 1px #8a6a32; }
+.g3d-pill.good { color: #0e2a14; background: #7fd48f; box-shadow: none; }
+.g3d-bar { margin-top: 0.5rem; height: 0.55rem; overflow: hidden; border-radius: 999px; background: #120d08; box-shadow: inset 0 0 0 1px #5a4220; }
+.g3d-bar > i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #a07b3a, #f2d27a); }
+.g3d-chip { padding: 0.12rem 0.5rem; border-radius: 999px; font-size: 0.7rem; line-height: 1.3; color: #f3e4bf; background: rgb(255 255 255 / 0.06); box-shadow: inset 0 0 0 1px rgb(255 220 150 / 0.22); }
+.g3d-chip.good { box-shadow: inset 0 0 0 1px #5fae6f; }
+.g3d-chip.warn { box-shadow: inset 0 0 0 1px #d6a43a; }
+.g3d-chip.bad { box-shadow: inset 0 0 0 1px #d9695c; background: rgb(217 105 92 / 0.12); }
+.g3d-chip.fog { color: #b7a98a; box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.2); border-style: dashed; }
+.g3d-weight { flex: none; font-size: 0.75rem; font-weight: 700; color: #f2d27a; }
+.g3d-btn { display: inline-block; padding: 0.3rem 0.7rem; border-radius: 5px; font-size: 0.75rem; font-weight: 600; color: #f3e4bf; background: rgb(255 255 255 / 0.05); box-shadow: inset 0 0 0 1px #8a6a32; }
+.g3d-btn:hover { background: rgb(255 255 255 / 0.12); }
+.g3d-name { font-family: "Space Grotesk", Inter, system-ui, sans-serif; font-size: 1.05rem; font-weight: 700; color: #f2d27a; }
+.g3d-portrait { display: grid; place-items: center; flex: none; width: 2.6rem; height: 2.6rem; border-radius: 50%; font-family: "Space Grotesk", Inter, system-ui, sans-serif; font-size: 1.3rem; font-weight: 700; color: #2a1d0c; background: radial-gradient(circle at 35% 30%, #ffe9a8, #c9a653); box-shadow: 0 0 0 2px #3b2a16, 0 0 0 3px #a07b3a; }
+
+.g3d-toolbar { display: flex; gap: 0.25rem; padding: 0.25rem; border-radius: 10px; background: linear-gradient(180deg, #20170e, #120d08); box-shadow: inset 0 0 0 1px #000, inset 0 0 0 2px #a07b3a, 0 8px 20px -8px rgb(0 0 0 / 0.9); }
+.g3d-tool { display: flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.7rem; border-radius: 7px; font-size: 0.8rem; font-weight: 600; color: #f3e4bf; white-space: nowrap; }
+.g3d-tool:hover { background: rgb(255 255 255 / 0.1); }
+.g3d-tool[aria-pressed="true"] { color: #2a1d0c; background: linear-gradient(180deg, #f2d27a, #c9a653); }
+.g3d-badge { min-width: 1.2rem; padding: 0 0.3rem; border-radius: 999px; font-size: 0.68rem; line-height: 1.2rem; text-align: center; color: #fff; background: #b4432f; }
+.g3d-tool[aria-pressed="true"] .g3d-badge { background: #6b2a1d; }
+.g3d-kbd { padding: 0 0.3rem; border-radius: 3px; font-family: inherit; font-size: 0.62rem; opacity: 0.7; box-shadow: inset 0 0 0 1px currentColor; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .g3d-slide { animation: g3d-in 0.18s ease-out; }
+  @keyframes g3d-in { from { opacity: 0; } to { opacity: 1; } }
+}
