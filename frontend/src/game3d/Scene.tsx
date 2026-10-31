@@ -12,6 +12,7 @@ import { LEAVE_RANGE, NPCS, TALK_RANGE, nearestNpc } from "./npcs";
 import type { NpcId } from "./npcs";
 import NpcMesh from "./NpcMesh";
 import PropMesh from "./PropMesh";
+import Scenery from "./Scenery";
 import Backdrop from "./Backdrop";
 import { PROPS } from "./props";
 
@@ -62,6 +63,7 @@ function World({
       {PROPS.map((p) => (
         <PropMesh key={p.id} prop={p} />
       ))}
+      <Scenery />
       {NPCS.map((n) => (
         <NpcMesh key={n.id} npc={n} active={near === n.id} playerPos={pos} />
       ))}
