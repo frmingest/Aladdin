@@ -40,7 +40,7 @@ interface Props {
   talking?: NpcId | null;
   /** A new number starts the quest-done cheer and confetti, once. */
   cheerKey?: number | null;
-  /** The Standing level (0 to 3); null when it could not be read. One Standing torch burns per level. */
+  /** The Standing level (0 to 4); null when it could not be read. One Standing torch burns per level. */
   standingLevel?: number | null;
 }
 

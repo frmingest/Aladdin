@@ -18,7 +18,7 @@ import { unwrittenThesisV2 } from "../game3d/questV2";
 import type { NpcId } from "../game3d/npcs";
 import { stateToWorld } from "../game3d/stateToWorld";
 import { withGaps } from "../game3d/standingGaps";
-import { standingWords } from "../game3d/standingWordsV1";
+import { wordsFor } from "../game3d/standingWordsV2";
 import { webglSupported } from "../game3d/webgl";
 import type { PerfStats } from "../game3d/PerfProbe";
 
@@ -128,7 +128,7 @@ export default function Game3DPage() {
   const world = useMemo(() => stateToWorld(state), [state]);
   // What is drawn and listed: the same world, with the Standing's named gaps labelled on their towers.
   const shownWorld = useMemo(() => withGaps(world, standing?.gaps ?? []), [world, standing]);
-  const standingText = useMemo(() => standingWords(standing, standingFailed), [standing, standingFailed]);
+  const standingText = useMemo(() => wordsFor(standing, standingFailed), [standing, standingFailed]);
   // The quest is worked out from the journal every render; nothing about it is stored.
   const quest = useMemo(
     () =>

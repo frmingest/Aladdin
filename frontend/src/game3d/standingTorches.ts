@@ -1,5 +1,5 @@
 /**
- * The three Standing torches (Standing 1): one stands lit per level you hold, on the road ahead.
+ * The four Standing torches (Standing 1, fourth added in Standing 3): one stands lit per level you hold, on the road ahead.
  * Pure data, no three.js. Decoration that shows one real fact (your level), so it is narrow:
  * the same warm flame for every level (never red or green), and only the count differs.
  * Level 0, or a Standing that could not be read, burns none: unknown never lights a torch.
@@ -15,6 +15,7 @@ export const STANDING_TORCHES: readonly StandingTorch[] = [
   { id: "standing-torch-1", x: -2.8, z: 20.4 },
   { id: "standing-torch-2", x: -2.8, z: 18.4 },
   { id: "standing-torch-3", x: -2.8, z: 16.4 },
+  { id: "standing-torch-4", x: -2.8, z: 14.4 },
 ];
 
 /** Radius of the post you walk round. */

@@ -29,7 +29,7 @@ def _gates(body):
 
 def test_empty_database_is_level_zero_with_a_first_step(client):
     body = client.get("/game/standing").json()
-    assert body["level"] == 0 and body["demo"] is False and body["max_level"] == 3
+    assert body["level"] == 0 and body["demo"] is False and body["max_level"] == 4
     assert body["next_step"] == "Bring in your holdings."
 
 
@@ -51,7 +51,7 @@ def test_a_named_gap_lets_level_two_stand_and_is_listed(client, db_session):
     assert _gates(body)[2]["fact"] == "5 of 5 surveyed"
 
 
-def test_level_three_needs_every_reason_a_wrong_if_and_an_active_wire(client, db_session):
+def test_level_three_needs_every_reason_a_wrong_if_and_an_active_wire(client, db_session, standing_v1):
     _seed(db_session)
     db_session.query(Holding).filter_by(ticker="BARE.OL").one().ticker = "JAREN.OL"
     db_session.commit()
@@ -140,7 +140,28 @@ def standing_v2(monkeypatch):
     settings_module.get_settings.cache_clear()
 
 
-def test_v1_stays_the_default_and_tops_out_at_three(client, db_session):
+@pytest.fixture
+def standing_v1(monkeypatch):
+    from app.config import settings as settings_module
+
+    monkeypatch.setenv("ACTIVE_STANDING_VERSION", "v1")
+    settings_module.get_settings.cache_clear()
+    yield
+    monkeypatch.undo()
+    settings_module.get_settings.cache_clear()
+
+
+def test_v2_is_the_live_default(client, db_session):
+    from app.config.settings import Settings
+
+    assert Settings.model_fields["active_standing_version"].default == "v2"
+    _level_three_fortress(db_session)
+    _watch_reported(db_session, 2)
+    body = client.get("/game/standing").json()
+    assert body["version"] == "v2" and body["max_level"] == 4 and body["level"] == 4
+
+
+def test_v1_can_still_be_chosen_and_tops_out_at_three(client, db_session, standing_v1):
     _level_three_fortress(db_session)
     _watch_reported(db_session, 2)
     body = client.get("/game/standing").json()
