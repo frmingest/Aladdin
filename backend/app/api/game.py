@@ -22,7 +22,9 @@ from app.domain.game_mapping.backtest_v1 import get_backtest_rules
 from app.domain.game_mapping.calibration_v1 import get_calibration_rules
 from app.domain.game_mapping.rituals_v1 import get_rituals
 from app.domain.game_mapping.siege_scenarios_v1 import get_siege_scenarios
+from app.domain.game_mapping.standing_v1 import get_standing_rules
 from app.domain.game_mapping.time_and_filings_v1 import get_time_and_filings
+from app.models.thesis import ThesisTripwire
 from app.schemas.game import (
     CalibrationBandOut,
     CalibrationCallsOut,
@@ -35,6 +37,7 @@ from app.schemas.game import (
     RecordsOut,
     SiegeBacktestOut,
     SiegeSimOut,
+    StandingOut,
 )
 from app.schemas.printer import PrinterLedgerOut, PrinterOut
 from app.services.game import calibration as calibration_svc
@@ -60,6 +63,12 @@ from app.services.game.ritual_inputs import (
 )
 from app.services.game.sensitivity import METHOD_DEMO, Sensitivity
 from app.services.game.siege_view import build_siege_sim, stored_sensitivity_lookup
+from app.services.game.standing import (
+    JournalFact,
+    StandingInputs,
+    build_standing,
+    tower_fact,
+)
 from app.services.game.state import get_game_state
 from app.services.settings.demo_mode import is_demo_mode
 
@@ -201,6 +210,31 @@ def get_night_watch_route(db: Session = Depends(get_db)) -> NightWatchOut:
     if is_demo_mode(db):
         return demo_night_watch(settings.active_game_mapping_version, rules_v)
     return get_night_watch(db, rules_v)
+
+
+@router.get("/standing", response_model=StandingOut)
+def get_standing(db: Session = Depends(get_db)) -> StandingOut:
+    """Standing 1: the courtyard level (1 to 3), worked out fresh from stored facts. Read-only,
+    nothing saved, the level can go down. The sample fortress never counts (level 0, labelled)."""
+    rules = get_standing_rules(get_settings().active_standing_version)
+    if is_demo_mode(db):
+        state, entries, wires = demo_game_state(get_settings().active_game_mapping_version), demo_journal_entries(), 0
+    else:
+        state, entries = get_game_state(db, get_settings().active_game_mapping_version), journal_entries(db)
+        ids = [t.holding_id for t in state.towers]
+        wires = (
+            db.query(ThesisTripwire).filter(ThesisTripwire.holding_id.in_(ids), ThesisTripwire.active.is_(True)).count()
+            if ids else 0
+        )
+    return build_standing(
+        StandingInputs(
+            demo=state.demo,
+            towers=[tower_fact(t) for t in state.towers],
+            journal=[JournalFact(e.holding_id, e.thesis, e.invalidation) for e in entries],
+            active_tripwires=wires,
+        ),
+        rules,
+    )
 
 
 # --- Sprint 25: rituals ---------------------------------------------------------
