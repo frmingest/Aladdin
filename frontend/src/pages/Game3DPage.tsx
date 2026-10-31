@@ -2,16 +2,19 @@ import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } fro
 import { Link } from "react-router-dom";
 import { api } from "../lib/api";
 import { describeError } from "../lib/errors";
-import type { GameState, Journal, Standing } from "../lib/types";
+import type { GameState, Journal, JournalEntryInput, Standing } from "../lib/types";
 import SceneBoundary from "../game3d/SceneBoundary";
 import TowerPanel from "../game3d/TowerPanel";
 import QuestLog from "../game3d/QuestLog";
 import DialoguePanel from "../game3d/DialoguePanel";
+import DeskPanel from "../game3d/DeskPanel";
+import { deskBlock } from "../game3d/deskForm";
 import Toolbar from "../game3d/Toolbar";
 import { PANEL_KEYS, loadPanels, savePanels, togglePanel } from "../game3d/hudPanels";
 import type { PanelId } from "../game3d/hudPanels";
 import { celebrationDue } from "../game3d/celebrate";
-import { sixMonthReckoning, unwrittenThesis } from "../game3d/quest";
+import { sixMonthReckoning } from "../game3d/quest";
+import { unwrittenThesisV2 } from "../game3d/questV2";
 import type { NpcId } from "../game3d/npcs";
 import { stateToWorld } from "../game3d/stateToWorld";
 import { withGaps } from "../game3d/standingGaps";
@@ -61,6 +64,9 @@ export default function Game3DPage() {
   const [journalFailed, setJournalFailed] = useState(false);
   const [near, setNear] = useState<NpcId | null>(null);
   const [talking, setTalking] = useState<NpcId | null>(null);
+  // The writing desk: whether you stand at it, and whether its panel is open.
+  const [atDesk, setAtDesk] = useState(false);
+  const [deskOpen, setDeskOpen] = useState(false);
   // The quest-done cheer: a new number starts it, once per page load, never on the sample journal.
   const [cheerKey, setCheerKey] = useState<number | null>(null);
   const cheered = useRef(false);
@@ -90,6 +96,21 @@ export default function Game3DPage() {
       .catch(() => setStandingFailed(true));
   }, []);
 
+  // After a desk entry is saved, read the journal and the Standing again: the shelf and the level are
+  // worked out from the facts, never from "I just saved".
+  const saveAtDesk = useCallback(async (input: JournalEntryInput) => {
+    await api.createJournalEntry(input);
+    const [j, st] = await Promise.allSettled([api.getJournal(), api.getStanding()]);
+    if (j.status === "fulfilled") {
+      setJournal(j.value);
+      setJournalFailed(false);
+    } else setJournalFailed(true);
+    if (st.status === "fulfilled") {
+      setStanding(st.value);
+      setStandingFailed(false);
+    }
+  }, []);
+
   useEffect(() => {
     document.title = "3D courtyard · Aladdin";
     if (supported) load();
@@ -103,7 +124,7 @@ export default function Game3DPage() {
   // The quest is worked out from the journal every render; nothing about it is stored.
   const quest = useMemo(
     () =>
-      unwrittenThesis(
+      unwrittenThesisV2(
         world.plain,
         state === null ? null : (journal?.entries ?? null),
         journalFailed || (state === null && error !== null),
@@ -120,6 +141,11 @@ export default function Game3DPage() {
   const reviews = useMemo(() => sixMonthReckoning(journal?.entries ?? null, journalFailed), [journal, journalFailed]);
 
 
+  // Walking away from the desk closes it; so does starting a talk.
+  useEffect(() => {
+    if (deskOpen && (!atDesk || talking)) setDeskOpen(false);
+  }, [atDesk, deskOpen, talking]);
+
   // Walking away ends the talk.
   useEffect(() => {
     if (talking && near !== talking) setTalking(null);
@@ -127,10 +153,16 @@ export default function Game3DPage() {
 
   useEffect(() => {
     const onTalk = (e: KeyboardEvent) => {
-      if (e.code !== "KeyE" || !near) return;
+      if (e.code !== "KeyE" || (!near && !atDesk)) return;
       const el = e.target as HTMLElement | null;
-      if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable)) return;
+      if (el && (el.tagName === "INPUT" || el.tagName === "SELECT" || el.tagName === "TEXTAREA" || el.isContentEditable)) return;
       e.preventDefault();
+      if (!near) {
+        // Only the desk is in reach: E opens or closes it.
+        if (!deskOpen && document.pointerLockElement) document.exitPointerLock();
+        setDeskOpen((v) => !v);
+        return;
+      }
       if (talking) {
         setTalking(null);
       } else {
@@ -141,7 +173,7 @@ export default function Game3DPage() {
     };
     window.addEventListener("keydown", onTalk);
     return () => window.removeEventListener("keydown", onTalk);
-  }, [near, talking]);
+  }, [near, talking, atDesk, deskOpen]);
 
   useEffect(() => {
     const onPanelKey = (e: KeyboardEvent) => {
@@ -181,6 +213,8 @@ export default function Game3DPage() {
             onStats={setStats}
             onNear={setNear}
             near={near}
+            books={quest.written}
+            onNearDesk={setAtDesk}
             talking={talking}
             cheerKey={cheerKey}
           />
@@ -198,6 +232,16 @@ export default function Game3DPage() {
       />
       {panels.towers && <TowerPanel world={shownWorld} loading={loading} error={error} onRetry={load} onClose={() => flip("towers")} />}
       {panels.quests && <QuestLog quest={quest} reviews={reviews} demo={world.demo} standing={standingText} onClose={() => flip("quests")} />}
+      {deskOpen && (
+        <DeskPanel
+          holdings={world.plain}
+          missing={quest.missing}
+          written={quest.written}
+          block={deskBlock(world.demo, quest.status)}
+          onSave={saveAtDesk}
+          onClose={() => setDeskOpen(false)}
+        />
+      )}
       {talking && <DialoguePanel npc={talking} quest={quest} reviews={reviews} onClose={() => setTalking(null)} onRetry={load} />}
 
       <Link
@@ -206,6 +250,12 @@ export default function Game3DPage() {
       >
         ← Flat fortress
       </Link>
+
+      {atDesk && !deskOpen && !talking && (
+        <p className="pointer-events-none absolute bottom-16 left-1/2 w-max -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-sm text-white">
+          Press E to write at the desk
+        </p>
+      )}
 
       {!locked && !talking && (
         <p className="pointer-events-none absolute bottom-4 left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-center text-sm text-white">

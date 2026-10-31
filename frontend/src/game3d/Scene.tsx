@@ -18,9 +18,12 @@ import Horizon from "./Horizon";
 import Backdrop from "./Backdrop";
 import Townsfolk from "./Townsfolk";
 import Confetti from "./Confetti";
+import Desk from "./Desk";
+import { DESK_LEAVE_RANGE, DESK_RANGE, nearDesk } from "./desk";
 import { PROPS } from "./props";
 
 const SKY = "#cfe3f1";
+const noop = () => {};
 
 interface Props {
   world: WorldModel;
@@ -29,6 +32,10 @@ interface Props {
   /** Who is close enough to talk to (null: nobody). Called only when it changes. */
   onNear: (id: NpcId | null) => void;
   near: NpcId | null;
+  /** Books on the writing desk's shelf: holdings with a reason and a wrong-if line. */
+  books?: number;
+  /** Tells the page when the hero is at the writing desk. Called only when it changes. */
+  onNearDesk?: (near: boolean) => void;
   /** Whose dialogue is open (the Oracle casts while he talks). */
   talking?: NpcId | null;
   /** A new number starts the quest-done cheer and confetti, once. */
@@ -52,6 +59,19 @@ function NearNpc({ pos, onNear }: { pos: { current: { x: number; z: number } }; 
   return null;
 }
 
+/** Tells the page when the hero walks up to, or away from, the writing desk. */
+function NearDeskWatch({ pos, onNearDesk }: { pos: { current: { x: number; z: number } }; onNearDesk: (near: boolean) => void }) {
+  const last = useRef(false);
+  useFrame(() => {
+    const now = nearDesk(pos.current, last.current ? DESK_LEAVE_RANGE : DESK_RANGE);
+    if (now !== last.current) {
+      last.current = now;
+      onNearDesk(now);
+    }
+  });
+  return null;
+}
+
 function World({
   onLockChange,
   world,
@@ -60,11 +80,15 @@ function World({
   talking,
   cheerKey,
   standingLevel,
+  books,
+  onNearDesk,
 }: {
   onLockChange: (locked: boolean) => void;
   world: WorldModel;
   onNear: (id: NpcId | null) => void;
   near: NpcId | null;
+  books: number;
+  onNearDesk: (near: boolean) => void;
   talking: NpcId | null;
   cheerKey: number | null;
   standingLevel: number | null;
@@ -82,6 +106,7 @@ function World({
       ))}
       <Scenery />
       <StandingTorches level={standingLevel} />
+      <Desk books={books} />
       {NPCS.map((n) => (
         <NpcMesh key={n.id} npc={n} active={near === n.id} playerPos={pos} talking={talking === n.id} cheerKey={cheerKey} />
       ))}
@@ -89,6 +114,7 @@ function World({
       <Player keys={keys} orbit={orbit} pos={pos} cheerKey={cheerKey} />
       <Confetti burstKey={cheerKey} />
       <NearNpc pos={pos} onNear={onNear} />
+      <NearDeskWatch pos={pos} onNearDesk={onNearDesk} />
     </Physics>
   );
 }
@@ -97,7 +123,7 @@ function World({
  * The 3D courtyard canvas. Lighting is deliberately flat and the same
  * everywhere: no spotlight on a "good" tower, nothing that flatters a weak one.
  */
-export default function Scene({ world, onLockChange, onStats, onNear, near, talking = null, cheerKey = null, standingLevel = null }: Props) {
+export default function Scene({ world, onLockChange, onStats, onNear, near, books = 0, onNearDesk = noop, talking = null, cheerKey = null, standingLevel = null }: Props) {
   return (
     <Canvas
       shadows
@@ -124,7 +150,7 @@ export default function Scene({ world, onLockChange, onStats, onNear, near, talk
         shadow-bias={-0.0005}
       />
       <Suspense fallback={null}>
-        <World onLockChange={onLockChange} world={world} onNear={onNear} near={near} talking={talking} cheerKey={cheerKey} standingLevel={standingLevel} />
+        <World onLockChange={onLockChange} world={world} onNear={onNear} near={near} books={books} onNearDesk={onNearDesk} talking={talking} cheerKey={cheerKey} standingLevel={standingLevel} />
       </Suspense>
       <PerfProbe onStats={onStats} />
     </Canvas>
