@@ -44,4 +44,4 @@ Not in this sprint: writing desk (it comes with the Level 3 work after this), Ni
 Never say merged or deployed unless checked. Journal `invalidation` exists on entries (`lib/types.ts`); the tripwire and Night Watch services exist in the backend (`services/thesis/tripwires.py`, `services/game/night_watch.py`). The exact "active tripwire" query is checked in step 1 before the rule is written.
 
 ## After this sprint (from the brainstorm, one PR each)
-Quests as data and quest 1 v2 · Level 4 (tripwire and Night Watch quests) · writing desk from Level 3 · Storm Drill · Level 5 (the Ledger) · world growth.
+Quests as data and quest 1 v2 · Level 4 (tripwire and Night Watch quests) · writing desk from Level 3 (furniture and decision: KayKit plan S11) · Storm Drill (camp pieces: KayKit plan S10) · Level 5 (the Ledger) · world growth. Free-pack plan: [KayKit plan, S9 to S12](game3d-kaykit-sprint-plan-2026-10-31.md).

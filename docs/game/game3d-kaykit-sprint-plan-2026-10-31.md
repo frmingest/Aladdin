@@ -1,6 +1,6 @@
 # 3D courtyard: free CC0 character models (KayKit) — sprint plan, 2026-10-31
 
-**Status (updated 2026-10-31, night): S0 to S6 merged (#207 to #213). S7 (horizon) written on `feature/game3d-horizon` (PR open, not merged, not deployed; [write-up](game3d-horizon-2026-10-31.md)); corner towers and keep as models deliberately left for Faiz's call. S8, S9 plan only. Older status line, kept for the record: S0 to S3 merged (#207 to #209). S4 and S5 written on `feature/game3d-kaykit-s5-and-packs` (PR open, not merged, not deployed): the character files are 0.5 MB each and were seen rendered in a headless browser (the first S4 build broke the scene and was fixed, see [the models doc](game3d-kaykit-models-2026-10-31.md)). S6 to S9 (more free packs) are plan only: nothing of them is written.** Written so a new chat can start from this file alone. Other packs: [assessment](game3d-free-3d-packs-assessment-2026-10-31.md).
+**Status (updated 2026-10-31, evening): S0 to S8 merged (#207 to #215): characters, scenery, horizon, townsfolk, casting and the quest-1 cheer; merge checked on `main`, deploy not checked, seen only in a headless browser. Plan only, nothing written: S9 (bring-your-own packs, rewritten with a licence table), and three new sprints from the 2026-10-31 free-pack research: S10 drill camp, S11 writing nook, S12 vault props (parked).** Written so a new chat can start from this file alone. Other packs: [assessment](game3d-free-3d-packs-assessment-2026-10-31.md).
 
 **Corrections to the plan below (found 2026-10-31):** GitHub repo names need the `KayKit-` prefix (`KayKit-Medieval-Hexagon-Pack`, `KayKit-Dungeon-Remastered`, `KayKit-Furniture-Bits` all clone; the unprefixed names in the table fail). Forest, Skeletons, Animations and the other "failed" names are itch.io-only, not missing. The Quaternius licence claim is unresolved (see the assessment). **Never quantize or meshopt a skinned character GLB** (S4 trap).
 
@@ -80,9 +80,9 @@ Hideable child nodes (all are separate mesh nodes, so hide by `visible = false`)
 - Docs: write-up `docs/game/game3d-kaykit-models-<date>.md` (identity before/after, tap count, screenshots), README line, PROGRESS, and the mirrored `claude/` copies. Update the game-identity checklist answers.
 - Open the PR from the branch; do not merge. Status wording: "written, not yet deployed".
 
-## Sprints S6 to S9 (added 2026-10-31 after the pack assessment)
+## Sprints S6 to S8 (added 2026-10-31 after the pack assessment; merged)
 
-Source: [game3d-free-3d-packs-assessment-2026-10-31.md](game3d-free-3d-packs-assessment-2026-10-31.md). Nothing here is built. Each sprint: own branch off `main`, one PR, `tsc`, `lint`, `test`, `build` green, a headless screenshot looked at, doc and PROGRESS in the same PR. Every model here is decoration: **no fact, no data, nothing replaces the fountain, lamps, board, perch or the eight holding towers.** If a file fails to load, the courtyard looks like it does today.
+Source: [game3d-free-3d-packs-assessment-2026-10-31.md](game3d-free-3d-packs-assessment-2026-10-31.md). All three are built and merged (write-ups: [scenery](game3d-scenery-2026-10-31.md), [horizon](game3d-horizon-2026-10-31.md), [townsfolk](game3d-townsfolk-2026-10-31.md)). Each sprint: own branch off `main`, one PR, `tsc`, `lint`, `test`, `build` green, a headless screenshot looked at, doc and PROGRESS in the same PR. Every model here is decoration: **no fact, no data, nothing replaces the fountain, lamps, board, perch or the eight holding towers.** If a file fails to load, the courtyard looks like it does today.
 
 **S6: dress the courtyard (KayKit Dungeon Remastered and Hexagon props, both CC0, both clone from GitHub)**
 - Re-clone `KayKit-Dungeon-Remastered` and `KayKit-Medieval-Hexagon-Pack` into a scratch folder; copy their `LICENSE.txt` next to `CREDITS.md` and add one credits row per pack.
@@ -108,10 +108,60 @@ Source: [game3d-free-3d-packs-assessment-2026-10-31.md](game3d-free-3d-packs-ass
   - Test: the trigger is a pure function of the quest state and the demo flag (unit-tested for every status), so a wrong state cannot celebrate.
   - Not decided (default: no): a smaller cheer when quest 2 (Six-Month Reckoning) reads "clear". Nothing waiting is not an achievement, so it stays quiet unless Faiz asks.
 
-**S9: bring-your-own packs (only if S6 to S8 leave a gap; needs Faiz to download)**
-- For anything hosted only on kenney.nl, quaternius.com or itch.io (Quaternius Medieval Village MegaKit, KayKit Forest free tier, Skeletons): Faiz downloads the zip and puts it in a folder; a script `scripts/import-pack.mjs` reads it, **stops if there is no licence file or it is not CC0**, converts to plain GLB (same rules), writes a `CREDITS.md` row and copies the licence text. Nothing is committed without that file.
-- Quaternius licence check is mandatory first (the assessment records the conflict). Kenney is unverified.
+## Sprints S9 to S12 (rewritten and extended 2026-10-31, evening)
+
+Source: a second free-pack search on 2026-10-31 (pack pages read, plus the three KayKit repos listed file by file; the piece names below exist). Same rules as S6 to S8: own branch off `main`, one PR, `tsc`, `lint`, `test`, `build` green, a headless screenshot looked at, doc and PROGRESS in the same PR, status written as three facts (merged, deployed, seen on real data). **Hard rule unchanged: CC0 or equivalent, no AI generation, no per-model licence hunting. Models are decoration: anything that shows a fact stays code-built, like the eight holding towers.** If a file fails to load, the courtyard looks like it does today. No red or green pieces (the red and green banner, flag and castle variants exist in the packs and are not used).
+
+**S9: bring-your-own packs (only if S10 to S12 leave a gap; needs Faiz to download)**
+- For anything hosted only on kenney.nl, quaternius.com or itch.io: Faiz downloads the zip and puts it in a folder; a script `scripts/import-pack.mjs` reads it, **stops if there is no licence file or it is not CC0**, converts to plain GLB (same rules: float vertices, no quantize, no meshopt on skinned files), writes a `CREDITS.md` row and copies the licence text. Nothing is committed without that file. The sandbox cannot reach those hosts, so this step is always done on Faiz's machine.
+- Vetted on 2026-10-31 from each pack's own page (the licence file inside the zip must still be opened before anything is committed):
+
+| Pack | Page says | Use | Verdict |
+|---|---|---|---|
+| Kenney Castle Kit (70+ models, walls, gates, siege weapons, OBJ/FBX/glTF, 2.1 MB) | CC0 | siege pieces and castle extras for S10 | **Candidate.** Flat colours match KayKit best. |
+| Quaternius Medieval Weapons (22) and the 2017 Low Poly RPG Pack (100+ items) | CC0 | weapons, items for S12 | Candidate. |
+| LowPolyAssets Medieval Weapons (60+ meshes, includes siege engines, FBX) | CC0 | siege engines | Candidate; check the style against KayKit first. |
+| De Alpe Low Poly Siege Engine Pack (catapult, siege tower, two rams, two ladders; FBX and GLB) | no licence line seen | the siege tower and rams KayKit lacks | **Blocked** until a licence file is found. |
+| Imzaiko Basic Library (books, table, library furniture) | no licence line seen | library | **Blocked.** Use KayKit Furniture Bits instead (S11). |
+| Quaternius MegaKits (Medieval Village, Fantasy Props), Universal Base Characters, Universal Animation Library 2 | Village page says CC0; the others not read; the licence conflict in the assessment is unresolved | town pieces, props, animation | **Blocked** until the zip's own licence text is opened. Not needed for animation: the Adventurers carry 76 clips. |
+| Kenney Retro Medieval Kit | CC0 | none | **No:** PS1 look clashes with KayKit. |
+
 - Done when: one pack imported end to end and used for one visible change, or a written decision that none is needed.
+
+**S10: the drill camp (built together with the Storm Drill quest, P5 in the Standing plan)**
+- What it is, in plain words: when you start a Storm Drill, a small enemy camp appears outside the wall: ladders against the stone, a catapult, targets, tents. It is only there during a drill the player starts, and the drill is labelled "Drill", so a calm fortress never looks besieged and a drill never looks like a real attack.
+- Pieces, all KayKit Medieval Hexagon (CC0, the repo is already in use, **no download**): `building_tower_catapult_blue` and `_yellow`, `projectile_catapult`, `ladder`, `target`, `tent`, `weaponrack`, `flag_blue`, `flag_yellow`. Not in KayKit: a siege tower or a battering ram. Options: a simple code-built ram (default), or Kenney Castle Kit through S9.
+- Packed into one GLB with the same packer as S6 and S7, loaded only when a drill starts (zero cost the rest of the time), instanced where repeated. Budget: 0.4 MB or less, 30 draw calls or fewer.
+- **Version 1 carries no fact:** the camp is the same size whatever the slider says. Decision for Faiz (default: no): let the number of ladders and catapults follow the stored siege level. That is a model showing a fact, so it would need its own exception, written like the cheer's (pure function of stored state, never on sample data, tested for every state).
+- Done when: the camp appears and disappears with the drill, a headless screenshot from the gate and from the wall, budget numbers recorded, reduced motion shows the camp without movement.
+
+**S11: the writing nook (P4 in the Standing plan: write in the world instead of leaving for the Journal page)**
+- What it is: a desk by the keep door where you write a reason or an invalidation line, using the journal write that already exists (`POST /journal`). Today every quest ends with "go to the Journal page", which leaves the world.
+- Furniture, decoration only, from KayKit Furniture Bits (CC0 licence file checked in the repo): `table_medium`, `chair_A_wood`, `shelf_B_large_decorated`, `lamp_table`, `book_set`, `rug_rectangle_A`; plus from Dungeon Remastered `candle_lit` and `shelf_small_candles`. About 12 KB to 55 KB per piece, one shared palette texture.
+- **The books that show your written reasons are code-built boxes driven by the journal** (the rule the towers follow). The furniture is a model, the fact is code.
+- Decision for Faiz (default: nook): an open-air nook under the keep wall (cheap, one afternoon) or a real interior room (needs walls, a door, a camera rule; a separate sprint).
+- Done when: walk up, press E, write, and the shelf shows one more book without leaving `/game3d`; tap count measured in a real browser; budget 0.3 MB or less.
+
+**S12: vault props (parked until The Printer or the Vault has a 3D place; not scheduled)**
+- Verified pieces in KayKit Dungeon Remastered: `chest`, `chest_gold`, `coin_stack_small`, `coin_stack_medium`, `coin_stack_large`, `key`, `keyring_hanging`, `column`, `pillar`. Anything that shows an amount (a coin stack for your cash) stays code-built; the chest, keys and columns are decoration.
+
+## Game sprint checklist, section A, for S10 and S11
+
+1. **Pages touched.** Only `/game3d` (the drill camp outside the wall, the writing nook by the keep door, the Oracle and Partner lines that currently send you to the Journal page). No flat Game mode page changes.
+2. **Identity score.** `/game3d`: target 2 or higher after each sprint; it must not drop. Not re-scored here.
+3. **Visual wins.** S10: *besiege*, at the wall: you see what a drill means. S11: *write*, at the desk: the shelf of books is your written reasons. S11 deletes the "go to the Journal page" lines.
+4. **Verb and scene.** As above. S10 encodes no fact in v1; S11 encodes the number of written reasons through code-built books.
+5. **Words.** No new paragraphs. Oracle first-step lines stay at 15 words or fewer; wording is a new version file, never an edit of the old one.
+6. **Kit.** Reused: `Scenery.tsx` loader pattern, `Horizon.tsx` instancing, the packers `scripts/pack-props.mjs` and `scripts/pack-horizon.mjs`, `CREDITS.md`. Added: one packer job per sprint and a drill-only mount (owner: game-feel-engineer).
+7. **Cut line.** S10: cut the siege tower and ram first. S11: cut the picture frames and the rug first. Never the unknown state, the plain words or the screenshots.
+8. **Rules.** Truth: decoration carries no fact, fact pieces are code-built. Colour-blind: no red or green pieces, shape and number carry the meaning. Reduced motion: no drill animation. Performance: lazy GLBs, instanced repeats, 300 draw calls or fewer and 15 MB first load or less, measured and recorded.
+9. **Taps.** S11: writing a reason from the courtyard is walk up and press E, then write (2 taps from standing near the desk; measured in a real browser). Today it leaves the world.
+
+## Decisions for Faiz (defaults apply if you say nothing)
+
+1. **Drill camp size:** fixed in version 1 (default), or following the stored siege level (a fact on a model; needs its own guarded exception).
+2. **Writing place:** open-air nook (default) or a real interior room.
+3. **Download Kenney Castle Kit for S9:** only if the KayKit pieces look too thin for the drill camp after S10's first screenshot.
 
 ## Risks and open questions
 
@@ -123,7 +173,7 @@ Source: [game3d-free-3d-packs-assessment-2026-10-31.md](game3d-free-3d-packs-ass
 
 ## Starting a new chat
 
-1. `git status`, `git log --oneline -15`; fetch `origin/main` (week 1-4 and the solid models are merged as #198-#203; PR #205 is a docs-only correction that may still be open).
+1. `git status`, `git log --oneline -15`; fetch `origin/main` (S0 to S8 are merged as #207 to #215, Standing 1 as #217).
 2. Read this file, `docs/game/game3d-billboards-2026-10-30.md`, and `frontend/src/game3d/{Figures,Inked,NpcMesh,Player,PropMesh}.tsx`.
 3. Re-clone the KayKit repos (sandbox paths from the last session under `/tmp/claude-0/assets/` may be gone).
-4. Run S0 to S5 in order, one commit per sprint, tests before each commit.
+4. S0 to S8 are done. Next are S10 and S11 (S10 together with the Storm Drill quest), one commit per sprint, tests before each commit.
