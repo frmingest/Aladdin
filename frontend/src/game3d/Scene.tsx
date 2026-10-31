@@ -63,7 +63,7 @@ function World({
         <PropMesh key={p.id} prop={p} />
       ))}
       {NPCS.map((n) => (
-        <NpcMesh key={n.id} npc={n} active={near === n.id} />
+        <NpcMesh key={n.id} npc={n} active={near === n.id} playerPos={pos} />
       ))}
       <Player keys={keys} orbit={orbit} pos={pos} />
       <NearNpc pos={pos} onNear={onNear} />
