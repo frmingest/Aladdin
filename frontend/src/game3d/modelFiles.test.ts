@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { MODELS3D } from "./models3d";
@@ -21,6 +21,17 @@ describe("the model files the registry points at", () => {
       const { nodes, clips } = glbHeader(spec!.url);
       for (const name of spec!.hide) expect(nodes).toContain(name);
       for (const clip of ["Idle", "Walking_A", "Running_A"]) expect(clips).toContain(clip);
+    });
+  }
+
+  for (const [slot, spec] of Object.entries(MODELS3D)) {
+    it(`${slot}: stays inside the 1.5 MB budget and keeps the clips we may play`, () => {
+      const bytes = statSync(join(__dirname, "../../public", spec!.url)).size;
+      expect(bytes).toBeLessThanOrEqual(1.5 * 1024 * 1024);
+      const { clips } = glbHeader(spec!.url);
+      for (const clip of ["Idle", "Walking_A", "Running_A", "Cheer", "Interact", "Spellcasting"]) {
+        expect(clips).toContain(clip);
+      }
     });
   }
 });

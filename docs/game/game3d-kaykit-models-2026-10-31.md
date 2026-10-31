@@ -1,6 +1,6 @@
 # 3D courtyard: free CC0 character models (KayKit), 2026-10-31
 
-**Status: S0 (assets and licence), S1 (loader and hero) and S2 (ink outline) merged (#207, #208); S3 (Oracle and Partner) written on `feature/game3d-kaykit-npcs`, PR open, not merged, not deployed. S4 (compression) and S5 (verify) not started.** The full plan (why, decisions, budget, S0 to S5, risks) is the Claude project doc `claude/game3d-kaykit-sprint-plan-2026-10-31.md`.
+**Status: S0 to S3 merged (#207, #208, #209). S4 (compression) written on `feature/game3d-kaykit-compress`, PR open, not merged, not deployed. S5 (verify) not started.** The full plan (why, decisions, budget, S0 to S5, risks) is the Claude project doc `claude/game3d-kaykit-sprint-plan-2026-10-31.md`.
 
 ## S0 result
 
@@ -40,3 +40,17 @@
 - Checks run locally in `frontend/`: `tsc --noEmit` clean, `eslint src/game3d` clean, `vitest run src/game3d` 76 passed, full `vitest run` all green except one test that failed only because of an untracked, gitignored `public/art/New folder` on Faiz's machine, `vite build` ok (Scene chunk 3.0 MB, unchanged).
 - **Not seen rendered.** No browser was available, so the Mage and the Knight were not looked at in the courtyard or in a standalone page; fitted height, the facing turn and the outline on these two are checked by code and tests only. S5's headless run should look at both.
 - Still open: teal retint of the hero's hood; cost of three outlined characters (draw calls) to be measured in S4/S5; the three GLBs are still 3.6 MB each until S4.
+
+## S4 result (compression)
+
+- **The size was the animations, not the picture.** Each file held 76 clips (about 3.5 MB); the texture is 16 KB and the whole mesh about 150 KB. So the fix is to drop clips the game cannot play and compress the rest. No texture change was needed (the plan's WebP step was left out: nothing to gain on a 16 KB PNG).
+- Kept clips in every file: `Idle`, `Walking_A`, `Running_A` (played today) plus `Cheer`, `Interact`, `Spellcasting` (for later). Everything else (melee, ranged, sit, death, jump and so on) is gone. Meshopt compression and quantised vertices on top.
+- **Sizes (bytes), before to after:** `Rogue_Hooded.glb` 3,597,652 to 337,824; `Mage.glb` 3,589,240 to 330,136; `Knight.glb` 3,659,532 to 365,816. Total 10.8 MB to 1.03 MB, about a tenth, far under the 1.5 MB per character budget and the 15 MB first-load budget.
+- Done with the new `scripts/optimize-models.mjs` (needs `@gltf-transform/*` and `meshoptimizer` in a scratch folder; the repo does not depend on them). One trap found and written in the script: deleting an animation in glTF-Transform leaves its channels and samplers (and thousands of accessors) in the file unless they are deleted too; the first try was still 2 MB because of that.
+- The app decodes meshopt through drei `useGLTF`, whose meshopt decoder is on by default. No loader change.
+- `CREDITS.md` now says the files are modified (clips removed, compressed) and by what. Licence is unchanged (CC0).
+- `modelFiles.test.ts` has 3 new checks: each file is at most 1.5 MB and still has all six kept clips.
+- Checks run in a clean clone, `frontend/`: `tsc --noEmit` clean, `eslint src/game3d` clean, `vitest run src/game3d` 79 passed, `vite build` ok.
+- **Seen rendered:** original and compressed files rendered side by side in a standalone page (`Walking_A` frozen mid-stride, weapons hidden): the three pairs are visually identical, so quantising did not distort the skinned meshes. In the built app (headless swiftshader, API mocked to 500) all three files load with status 200 at 0.33 to 0.37 MB and the hero is the model, not the shape fallback; no model warnings in the console. The Oracle and the Partner stand outside the first camera view with the API down, so they were not looked at inside the courtyard; S5 still has to do that.
+- **Optional props (Hexagon well, Dungeon torch and banners): not done.** They are marked optional in the plan, the repo names are unchecked, and the budget is no longer a reason to add them. Left for Faiz to ask for.
+- Still open: teal retint of the hero's hood; draw-call count with three outlined characters (S5); the Oracle playing `Spellcasting`/`Interact` during a dialogue (the clips are now in the file).

@@ -8,4 +8,4 @@ All models here are **CC0 1.0 Universal** (public domain). Attribution is not re
 | `Mage.glb` | KayKit Character Pack: Adventurers 1.0, Mage | Kay Lousberg (KayKit) | same | CC0 1.0 | 2026-10-31 |
 | `Knight.glb` | KayKit Character Pack: Adventurers 1.0, Knight | Kay Lousberg (KayKit) | same | CC0 1.0 | 2026-10-31 |
 
-The pack's own licence text is in `LICENSE-KayKit-Adventurers.txt`. Files are unmodified originals until the compression step (S4) is done; this file will then say so.
+The pack's own licence text is in `LICENSE-KayKit-Adventurers.txt`. **Modified (2026-10-31, S4):** the three `.glb` files are the original models with the unused animation clips removed (kept: `Idle`, `Walking_A`, `Running_A`, `Cheer`, `Interact`, `Spellcasting`) and meshopt-compressed, to cut each file from about 3.6 MB to about 0.35 MB. Geometry, texture and look are unchanged. Done with `scripts/optimize-models.mjs`; the original downloads are in the source repo above.
