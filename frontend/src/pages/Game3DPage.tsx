@@ -19,6 +19,9 @@ import type { NpcId } from "../game3d/npcs";
 import { stateToWorld } from "../game3d/stateToWorld";
 import { withGaps } from "../game3d/standingGaps";
 import { standingWords } from "../game3d/standingWordsV1";
+import { lookAtWire, wiresToShow } from "../game3d/wireWords";
+import type { LookResult } from "../game3d/wireWords";
+import type { StandingWire } from "../lib/types";
 import { webglSupported } from "../game3d/webgl";
 import type { PerfStats } from "../game3d/PerfProbe";
 
@@ -110,6 +113,21 @@ export default function Game3DPage() {
       setStandingFailed(false);
     }
   }, []);
+
+  // "I have looked": mark one fired wire seen with the call the app already has, then read the Standing
+  // again. The level comes from the facts, never from "I just clicked". The sample cannot mark anything.
+  const lookAtOne = useCallback(
+    (wire: StandingWire): Promise<LookResult> =>
+      lookAtWire(wire, {
+        demo: standing?.demo ?? true,
+        acknowledge: (id) => api.acknowledgeTripwire(id),
+        reread: async () => {
+          setStanding(await api.getStanding());
+          setStandingFailed(false);
+        },
+      }),
+    [standing?.demo],
+  );
 
   useEffect(() => {
     document.title = "3D courtyard · Aladdin";
@@ -231,7 +249,7 @@ export default function Game3DPage() {
         onToggleStats={() => setShowPerf((v) => !v)}
       />
       {panels.towers && <TowerPanel world={shownWorld} loading={loading} error={error} onRetry={load} onClose={() => flip("towers")} />}
-      {panels.quests && <QuestLog quest={quest} reviews={reviews} demo={world.demo} standing={standingText} onClose={() => flip("quests")} />}
+      {panels.quests && <QuestLog quest={quest} reviews={reviews} demo={world.demo} standing={standingText} wires={wiresToShow(standing, standingFailed)} onLook={lookAtOne} onClose={() => flip("quests")} />}
       {deskOpen && (
         <DeskPanel
           holdings={world.plain}
