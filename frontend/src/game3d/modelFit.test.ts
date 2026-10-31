@@ -21,10 +21,16 @@ describe("fitting a model", () => {
     expect(fitToHeight({ x: 0, y: 0, z: 0 }, { x: 1, y: NaN, z: 1 }, 2).scale).toBe(1);
   });
 
-  it("registers only the hero in S1, with weapons hidden", () => {
-    expect(Object.keys(MODELS3D)).toEqual(["hero"]);
+  it("registers the hero, the Oracle and the Partner, weapons hidden", () => {
+    expect(Object.keys(MODELS3D)).toEqual(["hero", "oracle", "partner"]);
     expect(MODELS3D.hero?.url).toBe("/models/Rogue_Hooded.glb");
     expect(MODELS3D.hero?.hide).toContain("1H_Crossbow");
+    expect(MODELS3D.oracle?.url).toBe("/models/Mage.glb");
+    expect(MODELS3D.oracle?.hide).toEqual(expect.arrayContaining(["2H_Staff", "1H_Wand", "Spellbook"]));
+    expect(MODELS3D.oracle?.hide).not.toContain("Mage_Hat");
+    expect(MODELS3D.partner?.url).toBe("/models/Knight.glb");
+    expect(MODELS3D.partner?.hide).toEqual(expect.arrayContaining(["1H_Sword", "2H_Sword", "Round_Shield"]));
+    expect(MODELS3D.partner?.hide).not.toContain("Knight_Helmet");
     expect(Object.keys(MODEL_YAW).length).toBe(0);
   });
 });
