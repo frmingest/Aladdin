@@ -37,7 +37,7 @@ Hideable child nodes (all are separate mesh nodes, so hide by `visible = false`)
 - Weapons hidden by default; Oracle keeps `Spellbook` and `2H_Staff` only if they read well at game distance (look at it, decide).
 - Fountain, lamps, quest board and raven perch **stay code-built** (no fountain/lamp/board found in the CC0 packs). Hexagon well and Dungeon torch/banners are optional dressing in S4.
 - Code-built `HeroFigure`/`OracleFigure`/`PartnerFigure` stay as the **fallback** if a GLB fails to load.
-- No model carries a fact (unchanged rule); towers are still driven only by `stateToWorld()`.
+- No model carries a fact (unchanged rule, **one exception added 2026-10-31: the quest-1 celebration in S8**); towers are still driven only by `stateToWorld()`.
 
 ## Budget
 
@@ -101,7 +101,12 @@ Source: [game3d-free-3d-packs-assessment-2026-10-31.md](game3d-free-3d-packs-ass
 - Two more people from the Adventurers pack already in the source repo (`Barbarian`, `Rogue`): idle loops at fixed spots (a guard at the gate, one by the board), no dialogue, no name tag that suggests a role in the data. Needs two entries in `models3d.ts` (ids beyond `hero | oracle | partner`, so `ModelId` and the registry test change), the same compression step, and a 0.5 MB budget each.
 - The Oracle plays `Spellcasting` (or `Interact`) while his dialogue is open; the clips are already in the file. Reduced motion holds `Idle`.
 - Teal retint of the hero's hood if the palette texture allows it cleanly (open since S1); otherwise say so in the doc and stop.
-- Open question for Faiz: should anyone cheer (`Cheer`) when quest 1 is done? That would make a model carry a fact (the quest state), which the plan rules out so far. Default: no.
+- **Quest-done celebration (Faiz said yes on 2026-10-31: a cheer, and maybe confetti).** This is the one place a model shows a fact, so the rule "no model carries a fact" gets this single exception, with these guards:
+  - Trigger: quest 1 (Unwritten Thesis) status is exactly `done`, worked out from the journal as today (nothing stored). Never on `loading`, `unreadable`, `empty`, and **not on the sample/demo journal** ("Sample journal, not yours"), so it cannot cheer for data that is not Faiz's.
+  - What happens: the hero and both people play `Cheer` for about 3 seconds, and a short confetti burst goes up over the fountain, then everything returns to `Idle`. Once per page load, not looping, not on every re-render.
+  - Confetti: one instanced particle burst (about 150 small flat quads, a few colours, gravity, gone after 3 s), no textures, no per-frame allocation. Reduced motion: no confetti and no cheer, just the quest log line "Done!" as today.
+  - Test: the trigger is a pure function of the quest state and the demo flag (unit-tested for every status), so a wrong state cannot celebrate.
+  - Not decided (default: no): a smaller cheer when quest 2 (Six-Month Reckoning) reads "clear". Nothing waiting is not an achievement, so it stays quiet unless Faiz asks.
 
 **S9: bring-your-own packs (only if S6 to S8 leave a gap; needs Faiz to download)**
 - For anything hosted only on kenney.nl, quaternius.com or itch.io (Quaternius Medieval Village MegaKit, KayKit Forest free tier, Skeletons): Faiz downloads the zip and puts it in a folder; a script `scripts/import-pack.mjs` reads it, **stops if there is no licence file or it is not CC0**, converts to plain GLB (same rules), writes a `CREDITS.md` row and copies the licence text. Nothing is committed without that file.
