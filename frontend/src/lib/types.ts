@@ -2687,6 +2687,14 @@ export interface StandingGap {
   label: string;
 }
 
+/** A wire that fired on a standing tower and has not been marked seen. */
+export interface StandingWire {
+  tripwire_id: string;
+  ticker: string;
+  name: string;
+  label: string | null;
+}
+
 export interface Standing {
   version: string;
   /** True: the sample fortress, so nothing counts and the level is 0. */
@@ -2697,4 +2705,6 @@ export interface Standing {
   next_step: string | null;
   gates: StandingGate[];
   gaps: StandingGap[];
+  /** Fired, unseen wires on towers that stand; empty for the sample fortress. */
+  wires?: StandingWire[];
 }

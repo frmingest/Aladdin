@@ -12,7 +12,13 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 from app.domain.game_mapping.standing_v1 import StandingRules
-from app.schemas.game import StandingGapOut, StandingGateOut, StandingOut, TowerOut
+from app.schemas.game import (
+    StandingGapOut,
+    StandingGateOut,
+    StandingOut,
+    StandingWireOut,
+    TowerOut,
+)
 
 
 @dataclass(frozen=True)
@@ -38,6 +44,7 @@ class StandingInputs:
     # Level 4 (standing_v2). Defaults keep v1 callers unchanged. An unknown watch is "never", never "ok".
     watch_state: str = "never"  # "ok" | "old" | "never", from the night watch
     unseen_wires: int = 0  # active wires on towers that fired and have not been marked seen
+    wire_list: Sequence[StandingWireOut] = ()  # the same wires by name, for the Quest log (T2)
 
 
 def tower_fact(t: TowerOut) -> TowerFact:
@@ -130,4 +137,5 @@ def build_standing(inputs: StandingInputs, rules: StandingRules) -> StandingOut:
         next_step=nxt.goal if nxt else None,
         gates=gates,
         gaps=[StandingGapOut(ticker=g.ticker, label=g.label) for g in gaps_in_force],
+        wires=[] if inputs.demo else list(inputs.wire_list),
     )
