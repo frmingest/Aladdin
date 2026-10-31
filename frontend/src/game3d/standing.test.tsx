@@ -64,7 +64,7 @@ describe("standing torches", () => {
     expect(litTorches(2.9)).toBe(2);
   });
 
-  it("stand on the cobbles, clear of the pads, the keep, the people, the spawn and the gate road", () => {
+  it("stand on the cobbles, clear of the pads, the keep, the people, the spawn and the gate road, and are in view ahead of the spawn", () => {
     const spots = towerSpots();
     expect(STANDING_TORCHES).toHaveLength(3);
     for (const p of STANDING_TORCHES) {
@@ -74,6 +74,7 @@ describe("standing torches", () => {
       for (const s of spots) expect(Math.hypot(p.x - s.x, p.z - s.z), p.id).toBeGreaterThan(1.7 + SCENERY_CLEARANCE);
       for (const n of [...NPCS, ...TOWNSFOLK]) expect(Math.hypot(p.x - n.x, p.z - n.z), p.id).toBeGreaterThan(SCENERY_CLEARANCE);
       expect(Math.hypot(p.x - SPAWN.x, p.z - SPAWN.z), p.id).toBeGreaterThan(SCENERY_CLEARANCE + 1);
+      expect(p.z, p.id).toBeLessThan(SPAWN.z); // the hero spawns facing north: ahead, not behind the camera
     }
   });
 
