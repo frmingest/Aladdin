@@ -607,6 +607,16 @@ class StandingGapOut(BaseModel):
     label: str
 
 
+class StandingWireOut(BaseModel):
+    """A wire that fired on a standing tower and has not been marked seen. Marking it seen is
+    the existing POST /thesis/tripwires/{id}/acknowledge; "seen" means "I looked", nothing more."""
+
+    tripwire_id: UUID
+    ticker: str
+    name: str
+    label: str | None
+
+
 class StandingOut(BaseModel):
     """The courtyard Standing: derived fresh from stored facts, never saved, can go down."""
 
@@ -618,3 +628,4 @@ class StandingOut(BaseModel):
     next_step: str | None  # None once every built level is held
     gates: list[StandingGateOut]
     gaps: list[StandingGapOut]  # named gaps in force for towers that stand today
+    wires: list[StandingWireOut] = []  # fired, unseen wires on towers that stand (empty for the sample)

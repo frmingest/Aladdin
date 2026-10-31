@@ -111,6 +111,14 @@ export default function Game3DPage() {
     }
   }, []);
 
+  // Face the wire (Standing 3): mark one fired wire seen, then read the Standing again. The level is
+  // worked out from the facts, never from "I just clicked".
+  const lookAtWire = useCallback((id: string) => api.acknowledgeTripwire(id), []);
+  const refreshStanding = useCallback(
+    () => api.getStanding().then((st) => { setStanding(st); setStandingFailed(false); }),
+    [],
+  );
+
   useEffect(() => {
     document.title = "3D courtyard · Aladdin";
     if (supported) load();
@@ -231,7 +239,7 @@ export default function Game3DPage() {
         onToggleStats={() => setShowPerf((v) => !v)}
       />
       {panels.towers && <TowerPanel world={shownWorld} loading={loading} error={error} onRetry={load} onClose={() => flip("towers")} />}
-      {panels.quests && <QuestLog quest={quest} reviews={reviews} demo={world.demo} standing={standingText} onClose={() => flip("quests")} />}
+      {panels.quests && <QuestLog quest={quest} reviews={reviews} demo={world.demo} standing={standingText} wires={standing && !standingFailed ? (standing.wires ?? []) : undefined} onLookAtWire={lookAtWire} onRefreshStanding={refreshStanding} onClose={() => flip("quests")} />}
       {deskOpen && (
         <DeskPanel
           holdings={world.plain}

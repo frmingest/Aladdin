@@ -201,3 +201,40 @@ def test_the_sample_fortress_stays_level_zero_under_v2(client, db_session, stand
     body = client.get("/game/standing").json()
     assert body["demo"] is True and body["level"] == 0 and body["max_level"] == 4
     assert _gates(body)[4]["fact"] == "Sample fortress, not yours"
+
+
+# --- Standing 3 T2: name the wires nobody has looked at ----------------------------
+
+
+def test_fired_unseen_wires_are_listed_by_name_and_clear_once_acknowledged(client, db_session):
+    from datetime import datetime, timezone
+
+    wire = _level_three_fortress(db_session)
+    assert client.get("/game/standing").json()["wires"] == []  # armed, never fired: nothing to look at
+    wire.fired_at, wire.label = datetime.now(timezone.utc), "ROIC under 10%"
+    db_session.commit()
+    body = client.get("/game/standing").json()
+    assert body["wires"] == [{"tripwire_id": str(wire.id), "ticker": "CASH.OL", "name": body["wires"][0]["name"], "label": "ROIC under 10%"}]
+    assert body["wires"][0]["name"]
+    assert client.post(f"/thesis/tripwires/{wire.id}/acknowledge").status_code == 200
+    assert client.get("/game/standing").json()["wires"] == []
+
+
+def test_seen_and_inactive_wires_are_not_listed(client, db_session):
+    from datetime import datetime, timezone
+
+    wire = _level_three_fortress(db_session)
+    now = datetime.now(timezone.utc)
+    wire.fired_at, wire.seen_at = now, now
+    other = ThesisTripwire(
+        holding_id=wire.holding_id, metric="pe", operator=">", threshold=D("30"), active=False, fired_at=now,
+    )
+    db_session.add(other)
+    db_session.commit()
+    assert client.get("/game/standing").json()["wires"] == []
+
+
+def test_the_sample_fortress_lists_no_wires(client, db_session):
+    _level_three_fortress(db_session)
+    assert client.put("/settings/demo-mode", json={"enabled": True}).status_code == 200
+    assert client.get("/game/standing").json()["wires"] == []
