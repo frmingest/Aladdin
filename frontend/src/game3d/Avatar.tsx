@@ -10,6 +10,7 @@ import type { Motion } from "./animClips";
 import { MODELS3D } from "./models3d";
 import type { ModelSpec } from "./models3d";
 import { MODEL_YAW, fitToHeight } from "./modelFit";
+import { OUTLINE_WORLD, addOutlines } from "./outline";
 import type { ModelId } from "./modelFit";
 
 /** If a model file fails to load or draw, the shape figure stays; the courtyard never loses a person. */
@@ -98,6 +99,9 @@ function RealModel({
       mixer.current = null;
     };
   }, [fitted.object]);
+
+  // Ink outline: a shell per visible mesh that shares the skeleton, so it follows the animation.
+  useEffect(() => addOutlines(fitted.object, OUTLINE_WORLD / fitted.scale), [fitted]);
 
   useFrame((_, delta) => {
     const m = mixer.current;
