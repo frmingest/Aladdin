@@ -56,6 +56,7 @@ Game mode (Fortress): concept, sprint plans and reviews, visual identity, art pa
 - [game3d-standing-3-2026-10-31.md](game/game3d-standing-3-2026-10-31.md) — 3D courtyard Standing 3, T1: the Level 4 rule (standing_v2) in the backend; nothing visible yet
 - [game3d-standing-3-wires-2026-10-31.md](game/game3d-standing-3-wires-2026-10-31.md) — 3D courtyard Standing 3, T2: fired, unseen wires in the Quest log with "I have looked"
 - [game3d-standing-3-torch-2026-10-31.md](game/game3d-standing-3-torch-2026-10-31.md) — 3D courtyard Standing 3, T3: the fourth torch, v2 words, live Standing flipped to standing_v2
+- [game3d-standing-3-look-2026-10-31.md](game/game3d-standing-3-look-2026-10-31.md) — 3D courtyard Standing 3, T4: look and judge in a real browser (empty, sample, fired wire acknowledged, quiet watch), tap counts, checklist section B
 - [records-hall-polish-2026-10-17.md](game/records-hall-polish-2026-10-17.md) — Hall of Records: undistorted torches and arches, brass nameplates, tome cover that swings open into a book
 - [siege-towers-backdrops-2026-10-17.md](game/siege-towers-backdrops-2026-10-17.md) — Siege Simulator: towers section moved to the top, backdrop that follows the "falls by" slider, four Stitch pictures
 - [remove-circle-page-2026-10-19.md](game/remove-circle-page-2026-10-19.md) — Circle of Competence page removed from Game mode; survey drops to four facts (survey-v2)
