@@ -68,6 +68,7 @@ export default function TowerPanel({ world, loading, error, onRetry, onClose }: 
                 <Chip tone={MOAT_TONE[f.moat] ?? "fog"}>{MOAT_LABEL[f.moat]}</Chip>
                 <Chip tone="">{SIZE_LABEL[f.size]}</Chip>
                 <Chip tone={THESIS_TONE[f.thesis] ?? "fog"}>{THESIS_LABEL[f.thesis]}</Chip>
+                {t.gap && <Chip tone="fog">{`Gap: ${t.gap}`}</Chip>}
               </ul>
             </li>
           );

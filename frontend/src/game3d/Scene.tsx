@@ -13,6 +13,7 @@ import type { NpcId } from "./npcs";
 import NpcMesh from "./NpcMesh";
 import PropMesh from "./PropMesh";
 import Scenery from "./Scenery";
+import StandingTorches from "./StandingTorches";
 import Horizon from "./Horizon";
 import Backdrop from "./Backdrop";
 import Townsfolk from "./Townsfolk";
@@ -32,6 +33,8 @@ interface Props {
   talking?: NpcId | null;
   /** A new number starts the quest-done cheer and confetti, once. */
   cheerKey?: number | null;
+  /** The Standing level (0 to 3); null when it could not be read. One Standing torch burns per level. */
+  standingLevel?: number | null;
 }
 
 /** Tells the page when the hero walks up to, or away from, someone. */
@@ -56,6 +59,7 @@ function World({
   near,
   talking,
   cheerKey,
+  standingLevel,
 }: {
   onLockChange: (locked: boolean) => void;
   world: WorldModel;
@@ -63,6 +67,7 @@ function World({
   near: NpcId | null;
   talking: NpcId | null;
   cheerKey: number | null;
+  standingLevel: number | null;
 }) {
   const keys = useKeys();
   const pos = useRef({ x: 0, z: 0 });
@@ -76,6 +81,7 @@ function World({
         <PropMesh key={p.id} prop={p} />
       ))}
       <Scenery />
+      <StandingTorches level={standingLevel} />
       {NPCS.map((n) => (
         <NpcMesh key={n.id} npc={n} active={near === n.id} playerPos={pos} talking={talking === n.id} cheerKey={cheerKey} />
       ))}
@@ -91,7 +97,7 @@ function World({
  * The 3D courtyard canvas. Lighting is deliberately flat and the same
  * everywhere: no spotlight on a "good" tower, nothing that flatters a weak one.
  */
-export default function Scene({ world, onLockChange, onStats, onNear, near, talking = null, cheerKey = null }: Props) {
+export default function Scene({ world, onLockChange, onStats, onNear, near, talking = null, cheerKey = null, standingLevel = null }: Props) {
   return (
     <Canvas
       shadows
@@ -118,7 +124,7 @@ export default function Scene({ world, onLockChange, onStats, onNear, near, talk
         shadow-bias={-0.0005}
       />
       <Suspense fallback={null}>
-        <World onLockChange={onLockChange} world={world} onNear={onNear} near={near} talking={talking} cheerKey={cheerKey} />
+        <World onLockChange={onLockChange} world={world} onNear={onNear} near={near} talking={talking} cheerKey={cheerKey} standingLevel={standingLevel} />
       </Suspense>
       <PerfProbe onStats={onStats} />
     </Canvas>
