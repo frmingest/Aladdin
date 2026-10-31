@@ -53,6 +53,7 @@ Game mode (Fortress): concept, sprint plans and reviews, visual identity, art pa
 - [game3d-standing-2-sprint-plan-2026-10-31.md](game/game3d-standing-2-sprint-plan-2026-10-31.md) — 3D courtyard next sprint "Standing 2": a writing desk by the keep door (write reason and wrong-if in the world), a shelf of books for written holdings, quest 1 v2; plan only
 - [game3d-standing-2-2026-10-31.md](game/game3d-standing-2-2026-10-31.md) — 3D courtyard Standing 2 write-up: the writing desk and shelf, quest 1 v2, dialogue v3; written and tested, not merged
 - [game3d-standing-3-sprint-plan-2026-10-31.md](game/game3d-standing-3-sprint-plan-2026-10-31.md) — 3D courtyard next sprint plan, Standing 3: Level 4 The Watch (watch reported in, no fired wire unseen; a fourth torch); plan only
+- [game3d-standing-3-2026-10-31.md](game/game3d-standing-3-2026-10-31.md) — 3D courtyard Standing 3, T1: the Level 4 rule (standing_v2) in the backend; nothing visible yet
 - [records-hall-polish-2026-10-17.md](game/records-hall-polish-2026-10-17.md) — Hall of Records: undistorted torches and arches, brass nameplates, tome cover that swings open into a book
 - [siege-towers-backdrops-2026-10-17.md](game/siege-towers-backdrops-2026-10-17.md) — Siege Simulator: towers section moved to the top, backdrop that follows the "falls by" slider, four Stitch pictures
 - [remove-circle-page-2026-10-19.md](game/remove-circle-page-2026-10-19.md) — Circle of Competence page removed from Game mode; survey drops to four facts (survey-v2)

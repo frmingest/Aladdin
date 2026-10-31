@@ -7,6 +7,7 @@ read).
 """
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Literal
 from uuid import UUID
@@ -55,7 +56,7 @@ from app.services.game.demo import (
     demo_night_watch,
     demo_ravens,
 )
-from app.services.game.night_watch import get_night_watch
+from app.services.game.night_watch import get_night_watch, watch_state
 from app.services.game.ravens import build_ravens
 from app.services.game.ritual_inputs import (
     demo_journal_entries,
@@ -71,6 +72,7 @@ from app.services.game.standing import (
 )
 from app.services.game.state import get_game_state
 from app.services.settings.demo_mode import is_demo_mode
+from app.services.thesis import nightly
 
 router = APIRouter(prefix="/game", tags=["game"])
 
@@ -219,11 +221,26 @@ def get_standing(db: Session = Depends(get_db)) -> StandingOut:
     rules = get_standing_rules(get_settings().active_standing_version)
     if is_demo_mode(db):
         state, entries, wires = demo_game_state(get_settings().active_game_mapping_version), demo_journal_entries(), 0
+        watch, unseen = "never", 0
     else:
         state, entries = get_game_state(db, get_settings().active_game_mapping_version), journal_entries(db)
         ids = [t.holding_id for t in state.towers]
         wires = (
             db.query(ThesisTripwire).filter(ThesisTripwire.holding_id.in_(ids), ThesisTripwire.active.is_(True)).count()
+            if ids else 0
+        )
+        # Level 4 (standing_v2) reads the watch the way the Night Watch does, and the wires nobody looked at.
+        watch_at, _summary = nightly.last_check(db)
+        watch = watch_state(get_time_and_filings(get_settings().active_time_and_filings_version), datetime.now(timezone.utc), watch_at)
+        unseen = (
+            db.query(ThesisTripwire)
+            .filter(
+                ThesisTripwire.holding_id.in_(ids),
+                ThesisTripwire.active.is_(True),
+                ThesisTripwire.fired_at.is_not(None),
+                ThesisTripwire.seen_at.is_(None),
+            )
+            .count()
             if ids else 0
         )
     return build_standing(
@@ -232,6 +249,8 @@ def get_standing(db: Session = Depends(get_db)) -> StandingOut:
             towers=[tower_fact(t) for t in state.towers],
             journal=[JournalFact(e.holding_id, e.thesis, e.invalidation) for e in entries],
             active_tripwires=wires,
+            watch_state=watch,
+            unseen_wires=unseen,
         ),
         rules,
     )

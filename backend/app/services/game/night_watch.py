@@ -51,6 +51,15 @@ def _hours(now: datetime, then: datetime | None) -> int | None:
     return None if then is None else max(int((now - then).total_seconds() // 3600), 0)
 
 
+def watch_state(rules_v: TimeAndFilingsRules, now: datetime, watch_last_at: datetime | None) -> str:
+    """"never" (no check ever stored), "old" (longer ago than a night) or "ok". Shared with the
+    Standing so both read the watch the same way."""
+    if watch_last_at is None:
+        return "never"
+    age = _hours(_aware(now), _aware(watch_last_at))
+    return "old" if age is not None and age > rules_v.watch_old_hours else "ok"
+
+
 def build_night_watch(
     *,
     rules_v: TimeAndFilingsRules,
@@ -68,12 +77,7 @@ def build_night_watch(
     """Pure assembly from stored facts (tested without a database)."""
     now = _aware(now)
     age = _hours(now, watch_last_at)
-    if watch_last_at is None:
-        state = "never"
-    elif age is not None and age > rules_v.watch_old_hours:
-        state = "old"
-    else:
-        state = "ok"
+    state = watch_state(rules_v, now, watch_last_at)
 
     cutoff = now - timedelta(hours=rules_v.overnight_hours)
     overnight = sorted((f for f in firing if _aware(f.fired_at) >= cutoff), key=lambda f: (f.name, f.fired_at))
