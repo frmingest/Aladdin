@@ -5,13 +5,14 @@ import { useGLTF } from "@react-three/drei";
 import { AnimationMixer, Box3, LoopRepeat } from "three";
 import type { AnimationAction, Group, Mesh, Object3D } from "three";
 import { clone } from "three/examples/jsm/utils/SkeletonUtils.js";
-import { FADE_SECONDS, resolveClip, wantedClip } from "./animClips";
+import { CHEER_SECONDS, FADE_SECONDS, chooseClip, resolveClip } from "./animClips";
 import type { Motion } from "./animClips";
 import { MODELS3D } from "./models3d";
 import type { ModelSpec } from "./models3d";
 import { MODEL_YAW, fitToHeight } from "./modelFit";
 import { OUTLINE_WORLD, addOutlines } from "./outline";
 import type { ModelId } from "./modelFit";
+import { prefersReducedMotion } from "./motionPref";
 
 /** If a model file fails to load or draw, the shape figure stays; the courtyard never loses a person. */
 class ModelBoundary extends Component<{ fallback: ReactNode; children: ReactNode }, { failed: boolean }> {
@@ -45,24 +46,20 @@ function visibleBox(root: Object3D): Box3 {
 
 const NO_MOTION: Motion = { moving: false, running: false };
 
-function prefersReducedMotion(): boolean {
-  try {
-    return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  } catch {
-    return false;
-  }
-}
-
 function RealModel({
   spec,
   id,
   height,
   motion,
+  pose,
+  cheerKey,
 }: {
   spec: ModelSpec;
   id: ModelId;
   height: number;
   motion?: MutableRefObject<Motion>;
+  pose?: string | null;
+  cheerKey?: number | null;
 }) {
   const { scene, animations } = useGLTF(spec.url);
   const mixer = useRef<AnimationMixer | null>(null);
@@ -71,6 +68,8 @@ function RealModel({
   const reduced = useRef(prefersReducedMotion());
   const warned = useRef(false);
   const group = useRef<Group>(null);
+  const cheerUntil = useRef(0);
+  const lastCheer = useRef<number | null>(null);
 
   const fitted = useMemo(() => {
     const object = clone(scene);
@@ -103,11 +102,17 @@ function RealModel({
   // Ink outline: a shell per visible mesh that shares the skeleton, so it follows the animation.
   useEffect(() => addOutlines(fitted.object, OUTLINE_WORLD / fitted.scale), [fitted]);
 
-  useFrame((_, delta) => {
+  useFrame((state, delta) => {
     const m = mixer.current;
     if (!m) return;
     const names = animations.map((a) => a.name);
-    const wanted = wantedClip(motion?.current ?? NO_MOTION, reduced.current);
+    // A new cheer key starts a short cheer, once; nothing here loops it.
+    if (cheerKey != null && cheerKey !== lastCheer.current) {
+      lastCheer.current = cheerKey;
+      cheerUntil.current = state.clock.elapsedTime + CHEER_SECONDS;
+    }
+    const cheering = state.clock.elapsedTime < cheerUntil.current;
+    const wanted = chooseClip(motion?.current ?? NO_MOTION, reduced.current, pose ?? null, cheering);
     const name = resolveClip(wanted, names);
     if (name && name !== wanted && !warned.current) {
       warned.current = true;
@@ -145,18 +150,24 @@ export default function Avatar({
   height,
   fallback,
   motion,
+  pose,
+  cheerKey,
 }: {
   id: ModelId;
   height: number;
   fallback: ReactNode;
   motion?: MutableRefObject<Motion>;
+  /** A clip to hold while it is set (the Oracle casting while he talks). */
+  pose?: string | null;
+  /** A new number starts one short cheer. */
+  cheerKey?: number | null;
 }) {
   const spec = MODELS3D[id];
   if (!spec) return <>{fallback}</>;
   return (
     <ModelBoundary fallback={fallback}>
       <Suspense fallback={fallback}>
-        <RealModel spec={spec} id={id} height={height} motion={motion} />
+        <RealModel spec={spec} id={id} height={height} motion={motion} pose={pose} cheerKey={cheerKey} />
       </Suspense>
     </ModelBoundary>
   );

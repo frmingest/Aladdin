@@ -5,6 +5,7 @@ import { CylinderCollider, RigidBody } from "@react-three/rapier";
 import { Html } from "@react-three/drei";
 import type { Group } from "three";
 import Avatar from "./Avatar";
+import { CLIP } from "./animClips";
 import { OracleFigure, PartnerFigure } from "./Figures";
 import { shortestAngle } from "./movement";
 import { yawToward } from "./npcs";
@@ -21,9 +22,14 @@ export default function NpcMesh({
   npc,
   active,
   playerPos,
+  talking = false,
+  cheerKey = null,
 }: {
   npc: Npc;
   active: boolean;
+  /** Their dialogue is open: the Oracle casts. */
+  talking?: boolean;
+  cheerKey?: number | null;
   playerPos?: MutableRefObject<{ x: number; z: number }>;
 }) {
   const turn = useRef<Group>(null);
@@ -44,7 +50,13 @@ export default function NpcMesh({
     <RigidBody type="fixed" colliders={false} position={[npc.x, 0, npc.z]} rotation={[0, npc.facing, 0]}>
       <CylinderCollider args={[0.9, 0.5]} position={[0, 0.9, 0]} />
       <group ref={turn}>
-        <Avatar id={npc.art} height={npc.height} fallback={shape} />
+        <Avatar
+          id={npc.art}
+          height={npc.height}
+          fallback={shape}
+          pose={talking && npc.id === "oracle" ? CLIP.cast : null}
+          cheerKey={cheerKey}
+        />
       </group>
       <Html position={[0, npc.height + 0.5, 0]} center distanceFactor={14} zIndexRange={[10, 0]}>
         <div className="pointer-events-none whitespace-nowrap rounded bg-black/55 px-2 py-0.5 text-xs text-white">

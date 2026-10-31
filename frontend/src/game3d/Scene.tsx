@@ -15,6 +15,8 @@ import PropMesh from "./PropMesh";
 import Scenery from "./Scenery";
 import Horizon from "./Horizon";
 import Backdrop from "./Backdrop";
+import Townsfolk from "./Townsfolk";
+import Confetti from "./Confetti";
 import { PROPS } from "./props";
 
 const SKY = "#cfe3f1";
@@ -26,6 +28,10 @@ interface Props {
   /** Who is close enough to talk to (null: nobody). Called only when it changes. */
   onNear: (id: NpcId | null) => void;
   near: NpcId | null;
+  /** Whose dialogue is open (the Oracle casts while he talks). */
+  talking?: NpcId | null;
+  /** A new number starts the quest-done cheer and confetti, once. */
+  cheerKey?: number | null;
 }
 
 /** Tells the page when the hero walks up to, or away from, someone. */
@@ -48,11 +54,15 @@ function World({
   world,
   onNear,
   near,
+  talking,
+  cheerKey,
 }: {
   onLockChange: (locked: boolean) => void;
   world: WorldModel;
   onNear: (id: NpcId | null) => void;
   near: NpcId | null;
+  talking: NpcId | null;
+  cheerKey: number | null;
 }) {
   const keys = useKeys();
   const pos = useRef({ x: 0, z: 0 });
@@ -67,9 +77,11 @@ function World({
       ))}
       <Scenery />
       {NPCS.map((n) => (
-        <NpcMesh key={n.id} npc={n} active={near === n.id} playerPos={pos} />
+        <NpcMesh key={n.id} npc={n} active={near === n.id} playerPos={pos} talking={talking === n.id} cheerKey={cheerKey} />
       ))}
-      <Player keys={keys} orbit={orbit} pos={pos} />
+      <Townsfolk cheerKey={cheerKey} />
+      <Player keys={keys} orbit={orbit} pos={pos} cheerKey={cheerKey} />
+      <Confetti burstKey={cheerKey} />
       <NearNpc pos={pos} onNear={onNear} />
     </Physics>
   );
@@ -79,7 +91,7 @@ function World({
  * The 3D courtyard canvas. Lighting is deliberately flat and the same
  * everywhere: no spotlight on a "good" tower, nothing that flatters a weak one.
  */
-export default function Scene({ world, onLockChange, onStats, onNear, near }: Props) {
+export default function Scene({ world, onLockChange, onStats, onNear, near, talking = null, cheerKey = null }: Props) {
   return (
     <Canvas
       shadows
@@ -106,7 +118,7 @@ export default function Scene({ world, onLockChange, onStats, onNear, near }: Pr
         shadow-bias={-0.0005}
       />
       <Suspense fallback={null}>
-        <World onLockChange={onLockChange} world={world} onNear={onNear} near={near} />
+        <World onLockChange={onLockChange} world={world} onNear={onNear} near={near} talking={talking} cheerKey={cheerKey} />
       </Suspense>
       <PerfProbe onStats={onStats} />
     </Canvas>

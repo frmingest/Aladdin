@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../lib/api";
 import { describeError } from "../lib/errors";
@@ -10,6 +10,7 @@ import DialoguePanel from "../game3d/DialoguePanel";
 import Toolbar from "../game3d/Toolbar";
 import { PANEL_KEYS, loadPanels, savePanels, togglePanel } from "../game3d/hudPanels";
 import type { PanelId } from "../game3d/hudPanels";
+import { celebrationDue } from "../game3d/celebrate";
 import { sixMonthReckoning, unwrittenThesis } from "../game3d/quest";
 import type { NpcId } from "../game3d/npcs";
 import { stateToWorld } from "../game3d/stateToWorld";
@@ -55,6 +56,9 @@ export default function Game3DPage() {
   const [journalFailed, setJournalFailed] = useState(false);
   const [near, setNear] = useState<NpcId | null>(null);
   const [talking, setTalking] = useState<NpcId | null>(null);
+  // The quest-done cheer: a new number starts it, once per page load, never on the sample journal.
+  const [cheerKey, setCheerKey] = useState<number | null>(null);
+  const cheered = useRef(false);
   // Panels start shut (or as you left them) so the scene is not covered.
   const [panels, setPanels] = useState(loadPanels);
   const flip = useCallback((id: PanelId) => setPanels((p) => togglePanel(p, id)), []);
@@ -93,6 +97,12 @@ export default function Game3DPage() {
       ),
     [world, state, error, journal, journalFailed],
   );
+  useEffect(() => {
+    if (celebrationDue(quest.status, world.demo, cheered.current)) {
+      cheered.current = true;
+      setCheerKey(Date.now());
+    }
+  }, [quest.status, world.demo]);
   // Quest 2 reads the same journal; it needs no holdings, so it does not wait for the towers.
   const reviews = useMemo(() => sixMonthReckoning(journal?.entries ?? null, journalFailed), [journal, journalFailed]);
 
@@ -151,7 +161,15 @@ export default function Game3DPage() {
     <div className="relative h-[calc(100dvh-5rem)] min-h-[480px] w-full overflow-hidden bg-surface">
       <SceneBoundary fallback={<Unavailable />}>
         <Suspense fallback={<p className="p-6 text-sm text-ink-muted">Raising the walls...</p>}>
-          <Scene world={world} onLockChange={setLocked} onStats={setStats} onNear={setNear} near={near} />
+          <Scene
+            world={world}
+            onLockChange={setLocked}
+            onStats={setStats}
+            onNear={setNear}
+            near={near}
+            talking={talking}
+            cheerKey={cheerKey}
+          />
         </Suspense>
       </SceneBoundary>
 
