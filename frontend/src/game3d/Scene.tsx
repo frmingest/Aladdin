@@ -13,6 +13,7 @@ import type { NpcId } from "./npcs";
 import NpcMesh from "./NpcMesh";
 import PropMesh from "./PropMesh";
 import Backdrop from "./Backdrop";
+import GateTorches from "./GateTorches";
 import { PROPS } from "./props";
 
 const SKY = "#cfe3f1";
@@ -24,6 +25,8 @@ interface Props {
   /** Who is close enough to talk to (null: nobody). Called only when it changes. */
   onNear: (id: NpcId | null) => void;
   near: NpcId | null;
+  /** Standing level 0 to 3: how many gate torches are lit. */
+  level: number;
 }
 
 /** Tells the page when the hero walks up to, or away from, someone. */
@@ -46,11 +49,13 @@ function World({
   world,
   onNear,
   near,
+  level,
 }: {
   onLockChange: (locked: boolean) => void;
   world: WorldModel;
   onNear: (id: NpcId | null) => void;
   near: NpcId | null;
+  level: number;
 }) {
   const keys = useKeys();
   const pos = useRef({ x: 0, z: 0 });
@@ -59,6 +64,7 @@ function World({
     <Physics gravity={[0, -25, 0]} timeStep="vary">
       <Backdrop />
       <Courtyard world={world} />
+      <GateTorches level={level} />
       {PROPS.map((p) => (
         <PropMesh key={p.id} prop={p} />
       ))}
@@ -75,7 +81,7 @@ function World({
  * The 3D courtyard canvas. Lighting is deliberately flat and the same
  * everywhere: no spotlight on a "good" tower, nothing that flatters a weak one.
  */
-export default function Scene({ world, onLockChange, onStats, onNear, near }: Props) {
+export default function Scene({ world, onLockChange, onStats, onNear, near, level }: Props) {
   return (
     <Canvas
       shadows
@@ -102,7 +108,7 @@ export default function Scene({ world, onLockChange, onStats, onNear, near }: Pr
         shadow-bias={-0.0005}
       />
       <Suspense fallback={null}>
-        <World onLockChange={onLockChange} world={world} onNear={onNear} near={near} />
+        <World onLockChange={onLockChange} world={world} onNear={onNear} near={near} level={level} />
       </Suspense>
       <PerfProbe onStats={onStats} />
     </Canvas>

@@ -8,6 +8,8 @@ import TowerPanel from "../game3d/TowerPanel";
 import QuestLog from "../game3d/QuestLog";
 import DialoguePanel from "../game3d/DialoguePanel";
 import Toolbar from "../game3d/Toolbar";
+import LevelChip from "../game3d/LevelChip";
+import { standing as standingOf } from "../game3d/standing";
 import { PANEL_KEYS, loadPanels, savePanels, togglePanel } from "../game3d/hudPanels";
 import type { PanelId } from "../game3d/hudPanels";
 import { sixMonthReckoning, unwrittenThesis } from "../game3d/quest";
@@ -93,6 +95,11 @@ export default function Game3DPage() {
       ),
     [world, state, error, journal, journalFailed],
   );
+  // Standing is worked out fresh from the same facts; nothing is stored. No state yet (or a failed load) is unknown, never level 0 by guess.
+  const standing = useMemo(
+    () => standingOf(state === null ? null : world, journal?.entries ?? null, journalFailed),
+    [state, world, journal, journalFailed],
+  );
   // Quest 2 reads the same journal; it needs no holdings, so it does not wait for the towers.
   const reviews = useMemo(() => sixMonthReckoning(journal?.entries ?? null, journalFailed), [journal, journalFailed]);
 
@@ -151,10 +158,11 @@ export default function Game3DPage() {
     <div className="relative h-[calc(100dvh-5rem)] min-h-[480px] w-full overflow-hidden bg-surface">
       <SceneBoundary fallback={<Unavailable />}>
         <Suspense fallback={<p className="p-6 text-sm text-ink-muted">Raising the walls...</p>}>
-          <Scene world={world} onLockChange={setLocked} onStats={setStats} onNear={setNear} near={near} />
+          <Scene world={world} onLockChange={setLocked} onStats={setStats} onNear={setNear} near={near} level={standing.level} />
         </Suspense>
       </SceneBoundary>
 
+      <LevelChip standing={standing} />
       <Toolbar
         open={panels}
         onToggle={flip}
