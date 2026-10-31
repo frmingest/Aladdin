@@ -1,6 +1,6 @@
 # Aladdin — Progress
 
-**Last updated:** 2026-10-31 (3D courtyard: KayKit S0 to S8 merged #207 to #215, free-pack sprints S9 to S12 planned only; Standing 1 (levels 1 to 3) merged #217; Fortress section art PR 1 merged #196, PR 2 `feature/fortress-section-art-2` written, not merged). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
+**Last updated:** 2026-10-31 (3D courtyard: KayKit S0 to S8 merged #207 to #215, free-pack sprints S9 to S12 planned only; Standing 1 (levels 1 to 3) merged #217; **next sprint "Standing 2: the writing desk" planned only (docs PR `docs/game3d-standing-2-plan`)**; Fortress section art PR 1 merged #196, PR 2 `feature/fortress-section-art-2` written, not merged). Rolling log: active status only, under 100 lines (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
 
 ## Current Objective
 
@@ -20,6 +20,7 @@ State: `main` is at `4d0ce8b` (#185). **No PR was open on 2026-10-19** (GitHub A
 
 ## Active Tasks
 
+- [ ] **3D Standing 2, the writing desk (Faiz): review the plan, then say go.** Write reason and wrong-if at a desk in the courtyard instead of leaving for the Journal page; a shelf grows one book per written holding; quest 1 v2 (reason plus wrong-if). Three small decisions in the plan, default is the recommendation. **Planned only, nothing built** ([plan](game/game3d-standing-2-sprint-plan-2026-10-31.md))
 - [ ] **3D courtyard "Standing 1" (Faiz): merged as #217 (with plan PR #216); after deploy** open `/game3d`: torches ahead of the spawn (one per level), press Q for the Standing card, the Jæren tower reads "not surveyed: no tagged filing", and with an empty fortress the Oracle says where to start ([write-up](game/game3d-standing-2026-10-31.md)). Jæren as first named gap: yes (you said "you decide")
 - [ ] **3D courtyard (Faiz): look it over on Railway after the deploy:** toolbar and panels (Q, T, P), the Mage and Knight faces, scenery, horizon, guard and scout, Barren Wuffet casting, and the quest-1 cheer with confetti (needs every holding written up); check 60 fps with P. Do the holdings named "no written reason" really have no journal entry? Not done: hood retint to teal, corner towers and keep as models (your call after a test shot). **Planned, nothing built (free-pack research 2026-10-31):** S10 drill camp (with the Storm Drill), S11 writing nook, S12 vault props (parked), S9 bring-your-own packs (dormant: no download for now). Decided by Claude on your instruction: drill camp fixed in v1, open-air writing nook, no Kenney download ([KayKit plan](game/game3d-kaykit-sprint-plan-2026-10-31.md))
 - [ ] **Fortress section art (Faiz): review and merge PR 2; after deploy** look at the Fortress in Game mode on desktop and phone: Spread skyline (is concentration visible without reading a number? try a holding with no weight), Reports tabs (the Temperament pair), Study desk lamp, and the PR 1 sections (verdict flag, Night Watch beacon, Vault levels)
