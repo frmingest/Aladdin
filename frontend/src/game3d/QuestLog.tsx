@@ -4,6 +4,8 @@ import { QUEST_V2_BAR_LABEL, QUEST_V2_DONE, QUEST_V2_GOAL } from "./questV2";
 import type { QuestState, ReviewQuestState } from "./quest";
 import { NPCS } from "./npcs";
 import type { StandingWords } from "./standingWordsV1";
+
+type ShownStanding = StandingWords & { watch?: string | null };
 import type { StandingWire } from "../lib/types";
 import WireList from "./WireList";
 
@@ -56,7 +58,7 @@ export default function QuestLog({
   reviews: ReviewQuestState;
   demo: boolean;
   /** The courtyard Standing in words; left out, the panel looks as it did before. */
-  standing?: StandingWords;
+  standing?: ShownStanding;
   /** Fired wires nobody has looked at (Standing 3). Left out, no wire list is shown. */
   wires?: readonly StandingWire[];
   onLookAtWire?: (id: string) => Promise<unknown>;
@@ -85,6 +87,7 @@ export default function QuestLog({
             {standing.headline}
           </h3>
           {standing.next && <p className="g3d-muted">{standing.next}</p>}
+          {standing.watch && <p className="g3d-muted">{standing.watch}.</p>}
         </section>
       )}
 

@@ -14,6 +14,7 @@ import { SCENERY, SCENERY_CLEARANCE } from "./sceneryPieces";
 import { withGaps } from "./standingGaps";
 import { STANDING_TORCHES, STANDING_TORCH_SOLID, litTorches } from "./standingTorches";
 import { standingWords } from "./standingWordsV1";
+import { standingWordsV2, wordsFor } from "./standingWordsV2";
 import { stateToWorld } from "./stateToWorld";
 import { TOWNSFOLK } from "./townsfolk";
 
@@ -55,8 +56,8 @@ describe("standing words v1", () => {
 
 describe("standing torches", () => {
   it("one burns per level, never more than there are, and unknown burns none", () => {
-    expect([0, 1, 2, 3].map(litTorches)).toEqual([0, 1, 2, 3]);
-    expect(litTorches(7)).toBe(3);
+    expect([0, 1, 2, 3, 4].map(litTorches)).toEqual([0, 1, 2, 3, 4]);
+    expect(litTorches(7)).toBe(4);
     expect(litTorches(-1)).toBe(0);
     expect(litTorches(null)).toBe(0);
     expect(litTorches(undefined)).toBe(0);
@@ -66,7 +67,7 @@ describe("standing torches", () => {
 
   it("stand on the cobbles, clear of the pads, the keep, the people, the spawn and the gate road, and are in view ahead of the spawn", () => {
     const spots = towerSpots();
-    expect(STANDING_TORCHES).toHaveLength(3);
+    expect(STANDING_TORCHES).toHaveLength(4);
     for (const p of STANDING_TORCHES) {
       expect(Math.hypot(p.x, p.z), p.id).toBeLessThan(COBBLE_RADIUS - 0.2);
       expect(Math.abs(p.x) < 3 + STANDING_TORCH_SOLID && p.z > 26, p.id).toBe(false);
@@ -184,5 +185,56 @@ describe("Quest log Standing card", () => {
     const html = render(standingWords(null, true));
     expect(html).toContain("Can&#x27;t read your Standing right now.");
     expect(html).not.toContain("Level ");
+  });
+});
+
+describe("standing words v2 (The Watch)", () => {
+  const gate4 = (fact: string) => [{ level: 4, title: "The Watch", met: false, done: null, total: null, fact }];
+  const v2 = (over: Partial<Standing> = {}): Standing =>
+    standing({ version: "v2", max_level: 4, level: 3, title: "Reasons", next_step: "Keep the watch walking, and look at every wire that fires.", gates: gate4("The watch has not reported. Nothing is known."), ...over });
+
+  it("names the level out of four and says what the watch reports once levels 1 to 3 hold", () => {
+    const w = standingWordsV2(v2(), false);
+    expect(w.headline).toBe("Level 3 of 4: Reasons");
+    expect(w.lit).toBe(3);
+    expect(w.watch).toBe("The watch has not reported. Nothing is known.");
+  });
+
+  it("lights the fourth torch only at level 4", () => {
+    const w = standingWordsV2(v2({ level: 4, title: "The Watch", next_step: null, gates: gate4("The watch reports in. Every wire looked at") }), false);
+    expect(w.lit).toBe(4);
+    expect(w.watch).toBe("The watch reports in. Every wire looked at");
+    expect(w.next).toMatch(/wire/);
+    expect(litTorches(w.lit)).toBe(4);
+  });
+
+  it("says nothing about the watch below level 3, for the sample and when unreadable", () => {
+    expect(standingWordsV2(v2({ level: 2, title: "The Survey" }), false).watch).toBeNull();
+    expect(standingWordsV2(v2({ demo: true, level: 0, title: null }), false)).toMatchObject({ lit: 0, watch: null, headline: "Sample fortress: no Standing yet." });
+    expect(standingWordsV2(null, true)).toMatchObject({ lit: 0, watch: null });
+    expect(standingWordsV2(null, false)).toMatchObject({ lit: 0, watch: null });
+  });
+
+  it("stays short and never uses buy/sell wording, a score or a streak", () => {
+    for (const s of [v2(), v2({ level: 4, next_step: null, gates: gate4("1 wire fired, not yet looked at") })]) {
+      const w = standingWordsV2(s, false);
+      for (const t of [w.headline, w.next ?? "", w.watch ?? ""]) {
+        expect(t.split(/\s+/).length).toBeLessThanOrEqual(12);
+        expect(t).not.toMatch(/\b(buy|sell|trim|great job|well done|congrat|xp|points|streak)/i);
+      }
+    }
+  });
+
+  it("wordsFor follows the version the backend served, so v1 keeps its own words", () => {
+    expect(wordsFor(standing(), false)).toMatchObject({ headline: "Level 2 of 3: The Survey", watch: null });
+    expect(wordsFor(v2(), false).headline).toBe("Level 3 of 4: Reasons");
+    expect(wordsFor(null, true).lit).toBe(0);
+  });
+
+  it("the Quest log shows the watch line, and no line when there is none", () => {
+    const render = (s: ReturnType<typeof wordsFor>) =>
+      renderToStaticMarkup(<MemoryRouter><QuestLog quest={noQuest} reviews={reviews} demo={false} standing={s} /></MemoryRouter>);
+    expect(render(wordsFor(v2(), false))).toContain("The watch has not reported. Nothing is known.");
+    expect(render(wordsFor(standing(), false))).not.toContain("The watch");
   });
 });
