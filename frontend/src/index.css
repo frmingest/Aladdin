@@ -1018,3 +1018,7 @@
   .g3d-slide { animation: g3d-in 0.18s ease-out; }
   @keyframes g3d-in { from { opacity: 0; } to { opacity: 1; } }
 }
+.g3d-level { display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.75rem; border-radius: 10px; font-size: 0.8rem; font-weight: 600; color: #f3e4bf; white-space: nowrap; background: linear-gradient(180deg, #20170e, #120d08); box-shadow: inset 0 0 0 1px #000, inset 0 0 0 2px #a07b3a, 0 8px 20px -8px rgb(0 0 0 / 0.9); }
+.g3d-level-pips { display: flex; gap: 0.15rem; letter-spacing: 0.05em; color: #8a7a58; }
+.g3d-level-pips i { font-style: normal; }
+.g3d-level-pips i.on { color: #f2d27a; }

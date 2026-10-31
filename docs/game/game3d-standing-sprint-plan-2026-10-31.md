@@ -1,6 +1,6 @@
 # 3D courtyard: next sprint, "Standing" (levels 1 to 3), plan, 2026-10-31
 
-**Status: plan only. Nothing built, nothing committed, nothing seen in a browser.** Built from the [level brainstorm](game3d-progression-brainstorm-2026-10-31.md), the [KayKit doc](game3d-kaykit-models-2026-10-31.md), the 3D code on `feature/game3d-kaykit-models` and the [game sprint checklist](game-sprint-checklist.md) (section A answered below). Deploy not checked.
+**Status: S1 written and tested on `feature/game3d-standing-s1` (2026-10-31); S2 to S4 not started; nothing seen in a browser.** Files: `standing.ts`, `standingGapsV1.ts`, `LevelChip.tsx`, `GateTorches.tsx`, `gateTorchData.ts`. Built here: unknown fortress state shows "Standing unknown", never level 0 by guess; the gate frame (two posts, beam, hanging lantern) is new, no new lights. Built from the [level brainstorm](game3d-progression-brainstorm-2026-10-31.md), the [KayKit doc](game3d-kaykit-models-2026-10-31.md), the 3D code on `feature/game3d-kaykit-models` and the [game sprint checklist](game-sprint-checklist.md) (section A answered below). Deploy not checked.
 
 ## 1. What this sprint is for (plain words)
 
