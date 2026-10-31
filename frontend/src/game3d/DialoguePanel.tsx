@@ -1,6 +1,6 @@
 import { NPCS } from "./npcs";
 import type { NpcId } from "./npcs";
-import { talk } from "./dialogueV1";
+import { IMPORT_PATH, pointsToImport, talk } from "./dialogueV2";
 import type { QuestState, ReviewQuestState } from "./quest";
 
 interface Props {
@@ -33,6 +33,9 @@ export default function DialoguePanel({ npc, quest, reviews, onClose, onRetry }:
         ))}
       </div>
       <div className="mt-3 flex gap-2">
+        {pointsToImport(npc, quest) && (
+          <a href={IMPORT_PATH} className="g3d-btn">Bring in my holdings</a>
+        )}
         {quest.status === "unreadable" && (
           <button type="button" onClick={onRetry} className="g3d-btn">Try again</button>
         )}

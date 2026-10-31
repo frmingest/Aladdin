@@ -588,3 +588,33 @@ class CalibrationOut(BaseModel):
     calls: CalibrationCallsOut
     oracle: CalibrationOracleOut
     caption: str
+
+
+# --- Standing 1 (3D courtyard levels, 2026-10-31) ----------------------------
+
+
+class StandingGateOut(BaseModel):
+    level: int
+    title: str
+    met: bool
+    done: int | None = None
+    total: int | None = None
+    fact: str
+
+
+class StandingGapOut(BaseModel):
+    ticker: str
+    label: str
+
+
+class StandingOut(BaseModel):
+    """The courtyard Standing: derived fresh from stored facts, never saved, can go down."""
+
+    version: str
+    demo: bool  # True: this is the sample fortress, so nothing counts and the level is 0
+    level: int
+    max_level: int
+    title: str | None
+    next_step: str | None  # None once every built level is held
+    gates: list[StandingGateOut]
+    gaps: list[StandingGapOut]  # named gaps in force for towers that stand today

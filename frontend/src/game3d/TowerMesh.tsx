@@ -126,7 +126,7 @@ export default function TowerMesh({ t }: { t: TowerView }) {
       {/* Name only. The facts are in the panel (3D carries mood and navigation). */}
       <Html position={[0, PAD_TOP + t.height + 4.2, 0]} center distanceFactor={14} zIndexRange={[10, 0]}>
         <div className="pointer-events-none whitespace-nowrap rounded bg-black/55 px-2 py-0.5 text-xs text-white">
-          {t.fog ? `${t.name} (not surveyed)` : t.name}
+          {t.fog ? `${t.name} (not surveyed${t.gap ? `: ${t.gap}` : ""})` : t.name}
         </div>
       </Html>
     </group>

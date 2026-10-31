@@ -87,6 +87,8 @@ export interface TowerView {
   moatFog: boolean;
   /** Whole tower unknown (wall or size not surveyed): draw it as a pale ghost. */
   fog: boolean;
+  /** A named gap from the Standing rules ("no tagged filing"): an honest label, the tower stays fog. */
+  gap?: string | null;
   /** Analysis age on the wall: ivy when ageing, overgrown when stale. */
   freshness: FortressFreshness;
   flag: Flag;

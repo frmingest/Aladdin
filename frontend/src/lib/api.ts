@@ -34,6 +34,7 @@ import type {
   FundProfileInput,
   FundReturn,
   GameState,
+  Standing,
   SiegeBacktest,
   SiegeBenchmarkKey,
   SiegeSim,
@@ -411,6 +412,8 @@ export const api = {
 
   /** Game mode (F33, G1) — the fortress state: a read-only view over stored data, no provider call. */
   getGameState: () => request<GameState>("/game/state"),
+  /** 3D courtyard Standing (levels 1 to 3), worked out fresh from stored facts. Read-only. */
+  getStanding: () => request<Standing>("/game/standing"),
   // Sprint 24: recently captured reports (G15), the nightly check as a dispatch (G16). All read-only.
   getRavens: () => request<Ravens>("/game/ravens"),
   getNightWatch: () => request<NightWatch>("/game/night-watch"),

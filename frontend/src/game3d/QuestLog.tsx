@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { QUEST_GOAL, QUEST_TITLE, REVIEW_QUEST_GOAL, REVIEW_QUEST_TITLE, whichWords } from "./quest";
 import type { QuestState, ReviewQuestState } from "./quest";
 import { NPCS } from "./npcs";
+import type { StandingWords } from "./standingWordsV1";
 
 const STATUS_WORDS: Record<QuestState["status"], string> = {
   loading: "Reading your journal...",
@@ -42,11 +43,14 @@ export default function QuestLog({
   quest,
   reviews,
   demo,
+  standing,
   onClose,
 }: {
   quest: QuestState;
   reviews: ReviewQuestState;
   demo: boolean;
+  /** The courtyard Standing in words; left out, the panel looks as it did before. */
+  standing?: StandingWords;
   onClose?: () => void;
 }) {
   const questDone = quest.status === "done";
@@ -62,6 +66,17 @@ export default function QuestLog({
         )}
       </header>
       {demo && <p className="g3d-demo">Sample journal, not yours.</p>}
+
+      {standing && (
+        <section className="g3d-card" aria-label="Standing">
+          <p className="g3d-tag">Standing</p>
+          <h3>
+            <span aria-hidden>{"🔥".repeat(standing.lit) || "·"} </span>
+            {standing.headline}
+          </h3>
+          {standing.next && <p className="g3d-muted">{standing.next}</p>}
+        </section>
+      )}
 
       <section className="g3d-card">
         <p className="g3d-tag">Quest</p>

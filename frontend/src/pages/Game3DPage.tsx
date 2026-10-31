@@ -2,7 +2,7 @@ import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } fro
 import { Link } from "react-router-dom";
 import { api } from "../lib/api";
 import { describeError } from "../lib/errors";
-import type { GameState, Journal } from "../lib/types";
+import type { GameState, Journal, Standing } from "../lib/types";
 import SceneBoundary from "../game3d/SceneBoundary";
 import TowerPanel from "../game3d/TowerPanel";
 import QuestLog from "../game3d/QuestLog";
@@ -14,6 +14,8 @@ import { celebrationDue } from "../game3d/celebrate";
 import { sixMonthReckoning, unwrittenThesis } from "../game3d/quest";
 import type { NpcId } from "../game3d/npcs";
 import { stateToWorld } from "../game3d/stateToWorld";
+import { withGaps } from "../game3d/standingGaps";
+import { standingWords } from "../game3d/standingWordsV1";
 import { webglSupported } from "../game3d/webgl";
 import type { PerfStats } from "../game3d/PerfProbe";
 
@@ -53,6 +55,9 @@ export default function Game3DPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [journal, setJournal] = useState<Journal | null>(null);
+  // The Standing is separate too: if it cannot be read, the torches stay unlit and the log says so.
+  const [standing, setStanding] = useState<Standing | null>(null);
+  const [standingFailed, setStandingFailed] = useState(false);
   const [journalFailed, setJournalFailed] = useState(false);
   const [near, setNear] = useState<NpcId | null>(null);
   const [talking, setTalking] = useState<NpcId | null>(null);
@@ -78,6 +83,11 @@ export default function Game3DPage() {
       .getJournal()
       .then(setJournal)
       .catch(() => setJournalFailed(true));
+    setStandingFailed(false);
+    api
+      .getStanding()
+      .then(setStanding)
+      .catch(() => setStandingFailed(true));
   }, []);
 
   useEffect(() => {
@@ -87,6 +97,9 @@ export default function Game3DPage() {
 
   // Never invent towers: no state means bare pads.
   const world = useMemo(() => stateToWorld(state), [state]);
+  // What is drawn and listed: the same world, with the Standing's named gaps labelled on their towers.
+  const shownWorld = useMemo(() => withGaps(world, standing?.gaps ?? []), [world, standing]);
+  const standingText = useMemo(() => standingWords(standing, standingFailed), [standing, standingFailed]);
   // The quest is worked out from the journal every render; nothing about it is stored.
   const quest = useMemo(
     () =>
@@ -162,7 +175,8 @@ export default function Game3DPage() {
       <SceneBoundary fallback={<Unavailable />}>
         <Suspense fallback={<p className="p-6 text-sm text-ink-muted">Raising the walls...</p>}>
           <Scene
-            world={world}
+            world={shownWorld}
+            standingLevel={standingText.lit}
             onLockChange={setLocked}
             onStats={setStats}
             onNear={setNear}
@@ -182,8 +196,8 @@ export default function Game3DPage() {
         statsLabel={stats ? `${stats.fps} fps · ${stats.calls} draws · ${Math.round(stats.triangles / 1000)}k tris` : "Measuring..."}
         onToggleStats={() => setShowPerf((v) => !v)}
       />
-      {panels.towers && <TowerPanel world={world} loading={loading} error={error} onRetry={load} onClose={() => flip("towers")} />}
-      {panels.quests && <QuestLog quest={quest} reviews={reviews} demo={world.demo} onClose={() => flip("quests")} />}
+      {panels.towers && <TowerPanel world={shownWorld} loading={loading} error={error} onRetry={load} onClose={() => flip("towers")} />}
+      {panels.quests && <QuestLog quest={quest} reviews={reviews} demo={world.demo} standing={standingText} onClose={() => flip("quests")} />}
       {talking && <DialoguePanel npc={talking} quest={quest} reviews={reviews} onClose={() => setTalking(null)} onRetry={load} />}
 
       <Link

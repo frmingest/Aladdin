@@ -2671,3 +2671,30 @@ export interface Calibration {
   };
   caption: string;
 }
+
+/** GET /game/standing (Standing 1, 2026-10-31): the courtyard level, derived fresh, never saved. */
+export interface StandingGate {
+  level: number;
+  title: string;
+  met: boolean;
+  done: number | null;
+  total: number | null;
+  fact: string;
+}
+
+export interface StandingGap {
+  ticker: string;
+  label: string;
+}
+
+export interface Standing {
+  version: string;
+  /** True: the sample fortress, so nothing counts and the level is 0. */
+  demo: boolean;
+  level: number;
+  max_level: number;
+  title: string | null;
+  next_step: string | null;
+  gates: StandingGate[];
+  gaps: StandingGap[];
+}

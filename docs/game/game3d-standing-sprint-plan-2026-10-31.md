@@ -1,6 +1,6 @@
 # 3D courtyard, next sprint: "Standing 1" (levels 1 to 3), plan 2026-10-31
 
-Status: **plan only. Nothing built.** Decisions it rests on are Faiz's, 2026-10-31, in [the progression brainstorm](game3d-progression-brainstorm-2026-10-31.md) section 9. Models and scenery (KayKit S0 to S8) are done and merged, so this sprint is about *what there is to do* in the courtyard, not how it looks. Not seen in a browser by me; deploy not checked.
+Status: **built as planned in PR `feature/game3d-standing`; see [the write-up](game3d-standing-2026-10-31.md) (not merged, not deployed). Jæren decision: yes (Faiz, "you decide", 2026-10-31). The torches ended up on the road ahead of the spawn, not at the gate, so they are in view.** Decisions it rests on are Faiz's, 2026-10-31, in [the progression brainstorm](game3d-progression-brainstorm-2026-10-31.md) section 9. Models and scenery (KayKit S0 to S8) are done and merged, so this sprint is about *what there is to do* in the courtyard, not how it looks. Not seen in a browser by me; deploy not checked.
 
 ## What this sprint is for (plain words)
 Today the courtyard is pretty but has no sense of progress. A new person walks in, the Oracle says the pads are bare, and that is it. This sprint gives the courtyard a **Standing**: a level from 1 to 3 that says how far you have really got with your own fortress, shown as **torches at the gate** (one lit per level) and one line in the Quest log.
@@ -37,7 +37,7 @@ Not in this sprint: writing desk (it comes with the Level 3 work after this), Ni
 9. **Taps from a cold load:** Standing line: 1 (press Q). Torches: 0 (visible at the gate). Empty fortress: walk to the Oracle, E, one link out = 2. No control appears twice; no confirm step.
 
 ## Questions for Faiz
-- Is Jæren Sparebank allowed as the first named gap at Level 2? (Default: yes.)
+- Is Jæren Sparebank allowed as the first named gap at Level 2? **Answered: yes.**
 - Playtest (after deploy), Level 1: with an empty or sample fortress, can someone tell in two minutes what to do first?
 
 ## Checks before the PR is called done
