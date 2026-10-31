@@ -4,6 +4,7 @@ import { useFrame } from "@react-three/fiber";
 import { CapsuleCollider, RigidBody, useRapier } from "@react-three/rapier";
 import type { RapierRigidBody } from "@react-three/rapier";
 import * as THREE from "three";
+import Avatar from "./Avatar";
 import { HeroFigure } from "./Figures";
 import { SPAWN } from "./layout";
 import {
@@ -91,7 +92,7 @@ export default function Player({ keys, orbit, pos: posOut }: Props) {
     >
       <CapsuleCollider args={[HALF_HEIGHT, RADIUS]} friction={0} />
       <group ref={model} position={[0, -CENTRE_HEIGHT, 0]}>
-        <HeroFigure />
+        <Avatar id="hero" height={HALF_HEIGHT * 2 + RADIUS * 2} fallback={<HeroFigure />} />
       </group>
     </RigidBody>
   );
