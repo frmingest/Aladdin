@@ -41,6 +41,7 @@ Game mode (Fortress): concept, sprint plans and reviews, visual identity, art pa
 - [game3d-npcs-2026-10-30.md](game/game3d-npcs-2026-10-30.md) — 3D courtyard (week 3): the Oracle and the Partner to talk to (press E) and quest 1 "Unwritten Thesis", worked out from the journal
 - [game3d-reckoning-2026-10-30.md](game/game3d-reckoning-2026-10-30.md) — 3D courtyard (week 4): quest 2 "Six-Month Reckoning", worked out from the journal's review-due flags; Oracle and Partner speak of it once every reason is written
 - [game3d-billboards-2026-10-30.md](game/game3d-billboards-2026-10-30.md) — 3D courtyard (week 5 start): solid code-built models for hero, Oracle, Partner, fountain, lamps, board and perch (ink outline, Stitch palette) and a mountain backdrop
+- [game3d-kaykit-models-2026-10-31.md](game/game3d-kaykit-models-2026-10-31.md) — 3D courtyard: free CC0 KayKit character models to replace the code-built figures; S0 (assets and credits) done, S1 to S5 pending
 - [records-hall-polish-2026-10-17.md](game/records-hall-polish-2026-10-17.md) — Hall of Records: undistorted torches and arches, brass nameplates, tome cover that swings open into a book
 - [siege-towers-backdrops-2026-10-17.md](game/siege-towers-backdrops-2026-10-17.md) — Siege Simulator: towers section moved to the top, backdrop that follows the "falls by" slider, four Stitch pictures
 - [remove-circle-page-2026-10-19.md](game/remove-circle-page-2026-10-19.md) — Circle of Competence page removed from Game mode; survey drops to four facts (survey-v2)
