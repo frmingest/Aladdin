@@ -13,6 +13,7 @@ import type { NpcId } from "./npcs";
 import NpcMesh from "./NpcMesh";
 import PropMesh from "./PropMesh";
 import Scenery from "./Scenery";
+import Horizon from "./Horizon";
 import Backdrop from "./Backdrop";
 import { PROPS } from "./props";
 
@@ -59,6 +60,7 @@ function World({
   return (
     <Physics gravity={[0, -25, 0]} timeStep="vary">
       <Backdrop />
+      <Horizon />
       <Courtyard world={world} />
       {PROPS.map((p) => (
         <PropMesh key={p.id} prop={p} />

@@ -42,7 +42,8 @@ export default function Courtyard({ world }: { world: WorldModel }) {
     <group>
       {/* Ground: a wide meadow and a cobbled courtyard on top. */}
       <RigidBody type="fixed" colliders={false}>
-        <CuboidCollider args={[120, 0.5, 120]} position={[0, -0.5, 0]} />
+        {/* Deep on purpose: one long frame (a model loading) must not let the hero fall through a thin slab. */}
+        <CuboidCollider args={[120, 10, 120]} position={[0, -10, 0]} />
       </RigidBody>
       <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
         <circleGeometry args={[110, 48]} />
