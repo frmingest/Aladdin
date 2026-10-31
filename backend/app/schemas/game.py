@@ -607,6 +607,15 @@ class StandingGapOut(BaseModel):
     label: str
 
 
+class StandingWireOut(BaseModel):
+    """One wire that fired and has not been marked seen (Standing 3, T2). `id` is the tripwire id
+    the existing acknowledge route takes; `label` is the wire's own words, or its metric if it has none."""
+
+    id: UUID
+    ticker: str
+    label: str
+
+
 class StandingOut(BaseModel):
     """The courtyard Standing: derived fresh from stored facts, never saved, can go down."""
 
@@ -618,3 +627,5 @@ class StandingOut(BaseModel):
     next_step: str | None  # None once every built level is held
     gates: list[StandingGateOut]
     gaps: list[StandingGapOut]  # named gaps in force for towers that stand today
+    # Wires on standing towers that fired and nobody has looked at yet. Empty on the sample fortress.
+    wires: list[StandingWireOut] = []

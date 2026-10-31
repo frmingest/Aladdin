@@ -39,6 +39,7 @@ from app.schemas.game import (
     SiegeBacktestOut,
     SiegeSimOut,
     StandingOut,
+    StandingWireOut,
 )
 from app.schemas.printer import PrinterLedgerOut, PrinterOut
 from app.services.game import calibration as calibration_svc
@@ -221,7 +222,7 @@ def get_standing(db: Session = Depends(get_db)) -> StandingOut:
     rules = get_standing_rules(get_settings().active_standing_version)
     if is_demo_mode(db):
         state, entries, wires = demo_game_state(get_settings().active_game_mapping_version), demo_journal_entries(), 0
-        watch, unseen = "never", 0
+        watch, unseen, wire_list = "never", 0, []
     else:
         state, entries = get_game_state(db, get_settings().active_game_mapping_version), journal_entries(db)
         ids = [t.holding_id for t in state.towers]
@@ -232,7 +233,7 @@ def get_standing(db: Session = Depends(get_db)) -> StandingOut:
         # Level 4 (standing_v2) reads the watch the way the Night Watch does, and the wires nobody looked at.
         watch_at, _summary = nightly.last_check(db)
         watch = watch_state(get_time_and_filings(get_settings().active_time_and_filings_version), datetime.now(timezone.utc), watch_at)
-        unseen = (
+        unseen_rows = (
             db.query(ThesisTripwire)
             .filter(
                 ThesisTripwire.holding_id.in_(ids),
@@ -240,10 +241,17 @@ def get_standing(db: Session = Depends(get_db)) -> StandingOut:
                 ThesisTripwire.fired_at.is_not(None),
                 ThesisTripwire.seen_at.is_(None),
             )
-            .count()
-            if ids else 0
+            .order_by(ThesisTripwire.fired_at)
+            .all()
+            if ids else []
         )
-    return build_standing(
+        unseen = len(unseen_rows)
+        ticker_of = {t.holding_id: t.ticker for t in state.towers}
+        wire_list = [
+            StandingWireOut(id=w.id, ticker=ticker_of.get(w.holding_id, ""), label=(w.label or "").strip() or w.metric)
+            for w in unseen_rows
+        ]
+    out = build_standing(
         StandingInputs(
             demo=state.demo,
             towers=[tower_fact(t) for t in state.towers],
@@ -254,6 +262,9 @@ def get_standing(db: Session = Depends(get_db)) -> StandingOut:
         ),
         rules,
     )
+    # The named wires are a fact on their own (the Quest log lists them), whichever version is active.
+    out.wires = wire_list
+    return out
 
 
 # --- Sprint 25: rituals ---------------------------------------------------------

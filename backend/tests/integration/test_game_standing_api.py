@@ -201,3 +201,47 @@ def test_the_sample_fortress_stays_level_zero_under_v2(client, db_session, stand
     body = client.get("/game/standing").json()
     assert body["demo"] is True and body["level"] == 0 and body["max_level"] == 4
     assert _gates(body)[4]["fact"] == "Sample fortress, not yours"
+
+
+def test_a_fired_unseen_wire_is_named_for_the_quest_log_under_either_version(client, db_session):
+    from datetime import datetime, timezone
+
+    wire = _level_three_fortress(db_session)
+    wire.label = "Margin below 10%"
+    wire.fired_at = datetime.now(timezone.utc)
+    db_session.commit()
+    body = client.get("/game/standing").json()  # v1 is the default: the list does not depend on the version
+    assert body["version"] == "v1"
+    assert body["wires"] == [{"id": str(wire.id), "ticker": body["wires"][0]["ticker"], "label": "Margin below 10%"}]
+    assert body["wires"][0]["ticker"] != ""
+
+    assert client.post(f"/thesis/tripwires/{wire.id}/acknowledge").status_code == 200
+    assert client.get("/game/standing").json()["wires"] == []
+
+
+def test_a_wire_with_no_words_is_named_by_its_metric(client, db_session):
+    from datetime import datetime, timezone
+
+    wire = _level_three_fortress(db_session)
+    wire.label = None
+    wire.fired_at = datetime.now(timezone.utc)
+    db_session.commit()
+    assert client.get("/game/standing").json()["wires"][0]["label"] == wire.metric
+
+
+def test_inactive_seen_and_unfired_wires_are_not_listed_and_the_sample_lists_none(client, db_session):
+    from datetime import datetime, timezone
+
+    wire = _level_three_fortress(db_session)  # active, never fired
+    db_session.add(ThesisTripwire(
+        holding_id=wire.holding_id, metric="pe", operator=">", threshold=D("30"), active=False,
+        fired_at=datetime.now(timezone.utc),
+    ))
+    db_session.add(ThesisTripwire(
+        holding_id=wire.holding_id, metric="pb", operator=">", threshold=D("4"), active=True,
+        fired_at=datetime.now(timezone.utc), seen_at=datetime.now(timezone.utc),
+    ))
+    db_session.commit()
+    assert client.get("/game/standing").json()["wires"] == []
+    assert client.put("/settings/demo-mode", json={"enabled": True}).status_code == 200
+    assert client.get("/game/standing").json()["wires"] == []

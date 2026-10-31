@@ -1,9 +1,13 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { QUEST_TITLE, REVIEW_QUEST_GOAL, REVIEW_QUEST_TITLE, whichWords } from "./quest";
 import { QUEST_V2_BAR_LABEL, QUEST_V2_DONE, QUEST_V2_GOAL } from "./questV2";
 import type { QuestState, ReviewQuestState } from "./quest";
 import { NPCS } from "./npcs";
 import type { StandingWords } from "./standingWordsV1";
+import type { StandingWire } from "../lib/types";
+import { WIRE_BUTTON, WIRE_TITLE, wireLine } from "./wireWords";
+import type { LookResult } from "./wireWords";
 
 const STATUS_WORDS: Record<QuestState["status"], string> = {
   loading: "Reading your journal...",
@@ -45,6 +49,8 @@ export default function QuestLog({
   reviews,
   demo,
   standing,
+  wires,
+  onLook,
   onClose,
 }: {
   quest: QuestState;
@@ -52,8 +58,23 @@ export default function QuestLog({
   demo: boolean;
   /** The courtyard Standing in words; left out, the panel looks as it did before. */
   standing?: StandingWords;
+  /** Fired wires nobody has looked at yet (Standing 3). Left out or empty, no wires card is drawn. */
+  wires?: readonly StandingWire[];
+  /** Marks one wire seen. Left out, the wires are listed without a button. */
+  onLook?: (wire: StandingWire) => Promise<LookResult>;
   onClose?: () => void;
 }) {
+  // Which wire is being marked right now, and the words if one could not be marked. Nothing is stored.
+  const [busy, setBusy] = useState<string | null>(null);
+  const [problem, setProblem] = useState<{ id: string; message: string } | null>(null);
+  const look = async (w: StandingWire) => {
+    if (!onLook || busy !== null) return;
+    setBusy(w.id);
+    setProblem(null);
+    const out = await onLook(w);
+    if (!out.ok) setProblem({ id: w.id, message: out.message });
+    setBusy(null);
+  };
   const questDone = quest.status === "done";
   const reviewsClear = reviews.status === "clear";
   const counted = quest.status === "open" || quest.status === "done";
@@ -76,6 +97,26 @@ export default function QuestLog({
             {standing.headline}
           </h3>
           {standing.next && <p className="g3d-muted">{standing.next}</p>}
+        </section>
+      )}
+
+      {wires && wires.length > 0 && (
+        <section className="g3d-card" aria-label={WIRE_TITLE}>
+          <p className="g3d-tag">{WIRE_TITLE}</p>
+          <ul className="mt-1 space-y-2">
+            {wires.map((w) => (
+              <li key={w.id}>
+                <p>{wireLine(w)}</p>
+                <p className="g3d-muted">{w.label}</p>
+                {onLook && (
+                  <button type="button" className="g3d-btn mt-1" disabled={busy !== null} onClick={() => void look(w)}>
+                    {WIRE_BUTTON}
+                  </button>
+                )}
+                {problem?.id === w.id && <p role="alert" className="g3d-muted mt-1">{problem.message}</p>}
+              </li>
+            ))}
+          </ul>
         </section>
       )}
 
