@@ -157,11 +157,11 @@ Source: a second free-pack search on 2026-10-31 (pack pages read, plus the three
 8. **Rules.** Truth: decoration carries no fact, fact pieces are code-built. Colour-blind: no red or green pieces, shape and number carry the meaning. Reduced motion: no drill animation. Performance: lazy GLBs, instanced repeats, 300 draw calls or fewer and 15 MB first load or less, measured and recorded.
 9. **Taps.** S11: writing a reason from the courtyard is walk up and press E, then write (2 taps from standing near the desk; measured in a real browser). Today it leaves the world.
 
-## Decisions for Faiz (defaults apply if you say nothing)
+## Decisions (settled 2026-10-31: Faiz said "you decide for all decisions"; Claude chose)
 
-1. **Drill camp size:** fixed in version 1 (default), or following the stored siege level (a fact on a model; needs its own guarded exception).
-2. **Writing place:** open-air nook (default) or a real interior room.
-3. **Download Kenney Castle Kit for S9:** only if the KayKit pieces look too thin for the drill camp after S10's first screenshot.
+1. **Drill camp: fixed size in version 1.** Reason: it keeps the rule "no model carries a fact" (the only exception stays the quest-1 cheer). The siege level is already shown where it is worked out (Siege Simulator, Standing), and a camp that grows or shrinks could make a weak holding look calm. Revisit only if Faiz asks, with the guarded exception described in S10.
+2. **Writing place: open-air nook, not an interior room.** Reason: one afternoon of work, no new walls, door or camera rule. A real room stays a separate, later sprint.
+3. **No Kenney download for now; S9 stays dormant.** The siege tower and ram are missing from KayKit, so S10 uses a simple code-built ram and skips the tower. If S10's screenshot looks too thin, S9 is reopened with Kenney Castle Kit (licence file opened first).
 
 ## Risks and open questions
 
