@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
-import { QUEST_GOAL, QUEST_TITLE, REVIEW_QUEST_GOAL, REVIEW_QUEST_TITLE, whichWords } from "./quest";
+import { QUEST_TITLE, REVIEW_QUEST_GOAL, REVIEW_QUEST_TITLE, whichWords } from "./quest";
+import { QUEST_V2_BAR_LABEL, QUEST_V2_DONE, QUEST_V2_GOAL } from "./questV2";
 import type { QuestState, ReviewQuestState } from "./quest";
 import { NPCS } from "./npcs";
 import type { StandingWords } from "./standingWordsV1";
@@ -9,7 +10,7 @@ const STATUS_WORDS: Record<QuestState["status"], string> = {
   unreadable: "Can't read your journal right now.",
   empty: "No holdings yet, so nothing to write.",
   open: "Open",
-  done: "Done! Every holding has a written reason.",
+  done: QUEST_V2_DONE,
 };
 
 const REVIEW_STATUS_WORDS: Record<ReviewQuestState["status"], string> = {
@@ -81,11 +82,11 @@ export default function QuestLog({
       <section className="g3d-card">
         <p className="g3d-tag">Quest</p>
         <h3>{QUEST_TITLE}</h3>
-        <p className="g3d-muted">{QUEST_GOAL}</p>
+        <p className="g3d-muted">{QUEST_V2_GOAL}</p>
         <p className="mt-2"><Pill done={questDone}>{STATUS_WORDS[quest.status]}</Pill></p>
         {counted && (
           <>
-            <div className="g3d-bar" role="progressbar" aria-label="Holdings with a written reason" aria-valuemin={0} aria-valuemax={quest.total} aria-valuenow={quest.written}>
+            <div className="g3d-bar" role="progressbar" aria-label={QUEST_V2_BAR_LABEL} aria-valuemin={0} aria-valuemax={quest.total} aria-valuenow={quest.written}>
               <i style={{ width: `${pct}%` }} />
             </div>
             <p className="g3d-muted mt-1">{quest.written} of {quest.total} written</p>
@@ -95,6 +96,7 @@ export default function QuestLog({
           <>
             <p className="g3d-muted mt-2">Still missing:</p>
             <Chips items={quest.missing.map((m) => m.name)} max={6} />
+            <p className="g3d-muted mt-2">Write them at the desk by the keep door.</p>
           </>
         )}
       </section>
@@ -110,7 +112,7 @@ export default function QuestLog({
             <Chips items={reviews.due.map((d) => `${d.name} (${whichWords(d.which)})`)} max={4} />
           </>
         )}
-        <Link to="/journal" className="g3d-btn mt-3 inline-block">Open the journal</Link>
+        <Link to="/journal" className="g3d-btn mt-3 inline-block">Old entries: the journal</Link>
       </section>
 
       <p className="g3d-muted mt-3">

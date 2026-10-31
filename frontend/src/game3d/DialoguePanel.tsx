@@ -1,6 +1,7 @@
 import { NPCS } from "./npcs";
 import type { NpcId } from "./npcs";
-import { IMPORT_PATH, pointsToImport, talk } from "./dialogueV2";
+import { IMPORT_PATH, pointsToImport } from "./dialogueV2";
+import { talk } from "./dialogueV3";
 import type { QuestState, ReviewQuestState } from "./quest";
 
 interface Props {
