@@ -25,8 +25,8 @@ export const NO_KEYS: Keys = {
   jump: false,
 };
 
-export const WALK_SPEED = 4.5;
-export const RUN_SPEED = 8;
+export const WALK_SPEED = 6;
+export const RUN_SPEED = 11;
 export const JUMP_SPEED = 8.5;
 
 /** Negative pitch tilts the view up (the camera stays above ground; only its aim lifts). */

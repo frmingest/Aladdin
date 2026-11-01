@@ -10,6 +10,7 @@ import DialoguePanel from "../game3d/DialoguePanel";
 import DeskPanel from "../game3d/DeskPanel";
 import { deskBlock } from "../game3d/deskForm";
 import Toolbar from "../game3d/Toolbar";
+import { typingInField } from "../game3d/useKeys";
 import { PANEL_KEYS, loadPanels, savePanels, togglePanel } from "../game3d/hudPanels";
 import type { PanelId } from "../game3d/hudPanels";
 import { celebrationDue } from "../game3d/celebrate";
@@ -163,7 +164,7 @@ export default function Game3DPage() {
     const onTalk = (e: KeyboardEvent) => {
       if (e.code !== "KeyE" || (!near && !atDesk)) return;
       const el = e.target as HTMLElement | null;
-      if (el && (el.tagName === "INPUT" || el.tagName === "SELECT" || el.tagName === "TEXTAREA" || el.isContentEditable)) return;
+      if (typingInField(el)) return;
       e.preventDefault();
       if (!near) {
         // Only the desk is in reach: E opens or closes it.
@@ -187,8 +188,7 @@ export default function Game3DPage() {
     const onPanelKey = (e: KeyboardEvent) => {
       const id = PANEL_KEYS[e.code];
       if (!id || e.ctrlKey || e.metaKey || e.altKey) return;
-      const el = e.target as HTMLElement | null;
-      if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable)) return;
+      if (typingInField(e.target)) return;
       e.preventDefault();
       flip(id);
     };
@@ -199,7 +199,7 @@ export default function Game3DPage() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       // F3 is often grabbed by the browser or editor ("find"), so P works too.
-      if (e.code === "F3" || e.code === "KeyP") {
+      if ((e.code === "F3" || e.code === "KeyP") && !e.ctrlKey && !e.metaKey && !e.altKey && !typingInField(e.target)) {
         e.preventDefault();
         setShowPerf((v) => !v);
       }

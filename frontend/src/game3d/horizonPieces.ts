@@ -46,13 +46,13 @@ export interface HorizonPiece {
 }
 
 /** The meadow you can walk on ends here (an invisible wall), so hills and mountains stay out of reach. */
-export const HORIZON_LIMIT = 74;
-/** Grove and boulders stand between these two radii: past the curtain wall (36), short of the limit. */
-export const GROVE_INNER = 46;
-export const GROVE_OUTER = 68;
+export const HORIZON_LIMIT = 104;
+/** Grove and boulders stand between these two radii: past the curtain wall (54), short of the limit. */
+export const GROVE_INNER = 66;
+export const GROVE_OUTER = 96;
 /** Half-width kept free either side of the gate road, and how far the road runs (see Courtyard.tsx). */
 export const ROAD_HALF_WIDTH = 8;
-export const ROAD_END_Z = 66;
+export const ROAD_END_Z = 94;
 
 /** Hard ceilings the tests hold: instances in total and the number of separate models (= draw calls). */
 export const HORIZON_MAX_PIECES = 120;
@@ -90,7 +90,7 @@ export function seeded(seed: number): () => number {
 
 /** True where a grove piece may not stand: on or beside the road out of the gate. */
 export function onGateRoad(x: number, z: number, margin = ROAD_HALF_WIDTH): boolean {
-  return z > 20 && z < ROAD_END_Z + margin && Math.abs(x) < margin;
+  return z > 30 && z < ROAD_END_Z + margin && Math.abs(x) < margin;
 }
 
 export function buildHorizon(seed = 7): HorizonPiece[] {
@@ -136,8 +136,8 @@ export function buildHorizon(seed = 7): HorizonPiece[] {
       });
     }
   };
-  band("hill", 16, [90, 98], [11, 15], HILLS, 0.1);
-  band("mountain", 14, [101, 108], [21, 27], MOUNTAINS, 0.3);
+  band("hill", 16, [125, 135], [11, 15], HILLS, 0.1);
+  band("mountain", 14, [140, 150], [21, 27], MOUNTAINS, 0.3);
   return pieces;
 }
 
