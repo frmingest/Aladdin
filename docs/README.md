@@ -60,6 +60,7 @@ Game mode (Fortress): concept, sprint plans and reviews, visual identity, art pa
 - [game/game3d-keep-and-towers-2026-11-01.md](game/game3d-keep-and-towers-2026-11-01.md): 3D courtyard keep and corner towers as KayKit models, with plain-shape fallback (not merged, not deployed)
 - [game/game3d-marketplace-corner-2026-11-01.md](game/game3d-marketplace-corner-2026-11-01.md): 3D courtyard marketplace corner (KayKit stall, well, tables, crates, flags), decoration only, plain fallback (not merged, not deployed)
 - [game/game3d-spread-layout-2026-11-01.md](game/game3d-spread-layout-2026-11-01.md): 3D courtyard tower pads spread out, ground reserved for marketplace and siege simulator (not merged, not deployed)
+- [game/game3d-bigger-map-2026-11-01.md](game/game3d-bigger-map-2026-11-01.md): 3D courtyard spread 1.5x (walls, towers, market, horizon) and hotkeys no longer fire while typing (not merged, not deployed)
 - [records-hall-polish-2026-10-17.md](game/records-hall-polish-2026-10-17.md) — Hall of Records: undistorted torches and arches, brass nameplates, tome cover that swings open into a book
 - [siege-towers-backdrops-2026-10-17.md](game/siege-towers-backdrops-2026-10-17.md) — Siege Simulator: towers section moved to the top, backdrop that follows the "falls by" slider, four Stitch pictures
 - [remove-circle-page-2026-10-19.md](game/remove-circle-page-2026-10-19.md) — Circle of Competence page removed from Game mode; survey drops to four facts (survey-v2)

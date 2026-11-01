@@ -18,17 +18,17 @@ export interface Prop {
 
 export const PROPS: readonly Prop[] = [
   // Middle of the courtyard, on the way from the gate to the keep.
-  { id: "fountain", kind: "fountain", x: 0, z: 2, height: 2.4, solid: 2.1 },
+  { id: "fountain", kind: "fountain", x: 0, z: 3, height: 2.4, solid: 2.1 },
   // Beside the gate road, so the first thing you see is light.
-  { id: "lamp-gate-w", kind: "lamp", x: -4.5, z: 29, height: 4, solid: 0.35 },
-  { id: "lamp-gate-e", kind: "lamp", x: 4.5, z: 29, height: 4, solid: 0.35 },
+  { id: "lamp-gate-w", kind: "lamp", x: -6.75, z: 43.5, height: 4, solid: 0.35 },
+  { id: "lamp-gate-e", kind: "lamp", x: 6.75, z: 43.5, height: 4, solid: 0.35 },
   // Either side of the fountain.
-  { id: "lamp-mid-w", kind: "lamp", x: -7, z: -1, height: 4, solid: 0.35 },
-  { id: "lamp-mid-e", kind: "lamp", x: 7, z: -1, height: 4, solid: 0.35 },
+  { id: "lamp-mid-w", kind: "lamp", x: -10.5, z: -1.5, height: 4, solid: 0.35 },
+  { id: "lamp-mid-e", kind: "lamp", x: 10.5, z: -1.5, height: 4, solid: 0.35 },
   // Just in front of where you arrive. The quest log panel says what it is for; the board is blank.
-  { id: "board", kind: "board", x: 5.5, z: 19, height: 3.4, solid: 1.5 },
+  { id: "board", kind: "board", x: 8.25, z: 28.5, height: 3.4, solid: 1.5 },
   // Where the ravens would land, east of the fountain.
-  { id: "perch", kind: "perch", x: 13, z: 12, height: 3.3, solid: 0.5 },
+  { id: "perch", kind: "perch", x: 19.5, z: 18, height: 3.3, solid: 0.5 },
 ];
 
 /** Smallest gap, in world units, a prop keeps from a pad, the keep, a person or the spawn point. */

@@ -62,7 +62,7 @@ describe("courtyard scenery", () => {
 
   it("hanging pieces are on the keep's south face or on the inner face of the wall", () => {
     for (const p of hanging) {
-      const onKeep = Math.abs(p.z - -19) < 0.6 && Math.abs(p.x) < KEEP.width / 2;
+      const onKeep = Math.abs(p.z - (KEEP.z + KEEP.depth / 2)) < 0.6 && Math.abs(p.x) < KEEP.width / 2;
       const onWall = Math.abs(Math.hypot(p.x, p.z) - (WALL_RADIUS - 0.8)) < 0.3;
       expect(onKeep || onWall, p.id).toBe(true);
       expect(p.solid, p.id).toBe(0);

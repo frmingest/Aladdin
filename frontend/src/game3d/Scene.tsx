@@ -130,25 +130,25 @@ export default function Scene({ world, onLockChange, onStats, onNear, near, book
     <Canvas
       shadows
       dpr={[1, 2]}
-      camera={{ fov: 60, near: 0.1, far: 400, position: [0, 6, 32] }}
+      camera={{ fov: 60, near: 0.1, far: 500, position: [0, 6, 44] }}
       gl={{ antialias: true, powerPreference: "high-performance" }}
       tabIndex={0}
       aria-label="3D courtyard. Walk with W A S D, look with the mouse."
     >
       <color attach="background" args={[SKY]} />
-      <fog attach="fog" args={[SKY, 70, 160]} />
+      <fog attach="fog" args={[SKY, 100, 230]} />
       <hemisphereLight args={["#ffffff", "#9aa88a", 0.9]} />
       <directionalLight
-        position={[40, 70, 30]}
+        position={[60, 100, 45]}
         intensity={1.3}
         castShadow
         shadow-mapSize={[2048, 2048]}
-        shadow-camera-left={-55}
-        shadow-camera-right={55}
-        shadow-camera-top={55}
-        shadow-camera-bottom={-55}
+        shadow-camera-left={-80}
+        shadow-camera-right={80}
+        shadow-camera-top={80}
+        shadow-camera-bottom={-80}
         shadow-camera-near={1}
-        shadow-camera-far={200}
+        shadow-camera-far={300}
         shadow-bias={-0.0005}
       />
       <Suspense fallback={null}>

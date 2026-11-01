@@ -4,15 +4,17 @@
  * position = (radius * sin(angle), radius * cos(angle)) in (x, z), so PI is north.
  */
 
-export const WALL_RADIUS = 36;
+/** How far the courtyard is spread: every position (not model size) is the first-draft value times this. */
+export const WORLD_SCALE = 1.5;
+export const WALL_RADIUS = 36 * WORLD_SCALE;
 export const WALL_HEIGHT = 6;
 export const WALL_THICKNESS = 1.6;
-export const COBBLE_RADIUS = 31;
+export const COBBLE_RADIUS = 31 * WORLD_SCALE;
 export const WALL_SEGMENTS = 32;
 /** Half the gate opening as an angle either side of due south. */
 export const GATE_HALF_ANGLE = 0.2;
-export const KEEP = { x: 0, z: -25, width: 16, depth: 12, height: 13 } as const;
-export const SPAWN = { x: 0, y: 2, z: 24 } as const;
+export const KEEP = { x: 0, z: -25 * WORLD_SCALE, width: 16, depth: 12, height: 13 } as const;
+export const SPAWN = { x: 0, y: 2, z: 24 * WORLD_SCALE } as const;
 /** Eight places for the eight holdings. */
 export const TOWER_SPOT_COUNT = 8;
 
@@ -67,6 +69,7 @@ export function cornerTowers(radius = WALL_RADIUS): Spot[] {
  * apart, and the south-east holds the marketplace corner (marketPieces.ts) while the south-west is left free (see RESERVED_ZONES).
  * Mirrored on purpose: a fortress reads as even, and the layout stays easy to reason about.
  */
+/** First-draft positions; towerSpots() spreads them by WORLD_SCALE. */
 const TOWER_SPOTS: readonly Spot[] = [
   { x: -10, z: -9 },
   { x: 10, z: -9 },
@@ -79,7 +82,7 @@ const TOWER_SPOTS: readonly Spot[] = [
 ];
 
 export function towerSpots(): Spot[] {
-  return TOWER_SPOTS.map((s) => ({ ...s }));
+  return TOWER_SPOTS.map((s) => ({ x: s.x * WORLD_SCALE, z: s.z * WORLD_SCALE }));
 }
 
 export interface ReservedZone {
@@ -98,5 +101,5 @@ export interface ReservedZone {
  * takes the zone's place and the entry is deleted in the same change.
  */
 export const RESERVED_ZONES: readonly ReservedZone[] = [
-  { id: "siege-simulator", x: -21, z: 9, radius: 7, for: "the siege simulator (south-west, beside the camp)" },
+  { id: "siege-simulator", x: -21 * WORLD_SCALE, z: 9 * WORLD_SCALE, radius: 7, for: "the siege simulator (south-west, beside the camp)" },
 ];

@@ -47,10 +47,10 @@ export default function Courtyard({ world }: { world: WorldModel }) {
       {/* Ground: a wide meadow and a cobbled courtyard on top. */}
       <RigidBody type="fixed" colliders={false}>
         {/* Deep on purpose: one long frame (a model loading) must not let the hero fall through a thin slab. */}
-        <CuboidCollider args={[120, 10, 120]} position={[0, -10, 0]} />
+        <CuboidCollider args={[170, 10, 170]} position={[0, -10, 0]} />
       </RigidBody>
       <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-        <circleGeometry args={[110, 48]} />
+        <circleGeometry args={[160, 48]} />
         <meshStandardMaterial color={COLORS.grass} flatShading />
       </mesh>
       <mesh position={[0, 0.03, 0]} receiveShadow>
