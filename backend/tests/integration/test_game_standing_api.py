@@ -29,7 +29,7 @@ def _gates(body):
 
 def test_empty_database_is_level_zero_with_a_first_step(client):
     body = client.get("/game/standing").json()
-    assert body["level"] == 0 and body["demo"] is False and body["max_level"] == 4
+    assert body["level"] == 0 and body["demo"] is False and body["max_level"] == 5
     assert body["next_step"] == "Bring in your holdings."
 
 
@@ -151,10 +151,7 @@ def standing_v1(monkeypatch):
     settings_module.get_settings.cache_clear()
 
 
-def test_v2_is_the_live_default(client, db_session):
-    from app.config.settings import Settings
-
-    assert Settings.model_fields["active_standing_version"].default == "v2"
+def test_v2_can_still_be_chosen_and_tops_out_at_four(client, db_session, standing_v2):
     _level_three_fortress(db_session)
     _watch_reported(db_session, 2)
     body = client.get("/game/standing").json()
@@ -259,3 +256,58 @@ def test_the_sample_fortress_lists_no_wires(client, db_session):
     _level_three_fortress(db_session)
     assert client.put("/settings/demo-mode", json={"enabled": True}).status_code == 200
     assert client.get("/game/standing").json()["wires"] == []
+
+
+# --- Standing 4: Level 5, The Ledger (standing_v3) --------------------------------
+
+
+def _level_four_fortress(db_session, *, days_ago=200, looked_back=True):
+    """Level 4 (watch reporting, nothing unseen) with every entry `days_ago` old, looked back on or not."""
+    from datetime import datetime, timedelta, timezone
+
+    _level_three_fortress(db_session)
+    _watch_reported(db_session, 2)
+    for e in db_session.query(DecisionJournalEntry).all():
+        e.decided_on = datetime.now(timezone.utc).date() - timedelta(days=days_ago)
+        e.review_6m = "Margins held; the price did nothing. Still cheap for the same reason." if looked_back else None
+    db_session.commit()
+
+
+def test_v3_is_the_live_default(client, db_session):
+    from app.config.settings import Settings
+
+    assert Settings.model_fields["active_standing_version"].default == "v3"
+    _level_four_fortress(db_session)
+    body = client.get("/game/standing").json()
+    assert body["version"] == "v3" and body["max_level"] == 5 and body["level"] == 5
+    assert body["title"] == "The Ledger" and body["next_step"] is None
+    assert _gates(body)[5]["fact"] == "5 look-backs written, none due"
+
+
+def test_one_look_back_left_unwritten_drops_the_level_to_four(client, db_session):
+    _level_four_fortress(db_session)
+    e = db_session.query(DecisionJournalEntry).filter_by(ticker="FUND").one()
+    e.review_6m = "   "  # blank text is not a look-back
+    db_session.commit()
+    body = client.get("/game/standing").json()
+    assert body["level"] == 4 and _gates(body)[5]["fact"] == "1 look-back due"
+    assert (_gates(body)[5]["done"], _gates(body)[5]["total"]) == (4, 5)
+
+
+def test_a_young_journal_waits_and_says_how_long(client, db_session):
+    _level_four_fortress(db_session, days_ago=100, looked_back=False)
+    body = client.get("/game/standing").json()
+    assert body["level"] == 4 and _gates(body)[5]["fact"] == "Too soon to look back: the first opens in 82 days"
+
+
+def test_a_twelve_month_look_back_falls_due_on_its_own(client, db_session):
+    _level_four_fortress(db_session, days_ago=400)
+    body = client.get("/game/standing").json()
+    assert body["level"] == 4 and _gates(body)[5]["fact"] == "5 look-backs due"
+
+
+def test_the_sample_fortress_stays_level_zero_under_v3(client, db_session):
+    assert client.put("/settings/demo-mode", json={"enabled": True}).status_code == 200
+    body = client.get("/game/standing").json()
+    assert body["demo"] is True and body["level"] == 0 and body["max_level"] == 5
+    assert _gates(body)[5]["fact"] == "Sample fortress, not yours"

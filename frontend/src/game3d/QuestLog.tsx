@@ -5,7 +5,7 @@ import type { QuestState, ReviewQuestState } from "./quest";
 import { NPCS } from "./npcs";
 import type { StandingWords } from "./standingWordsV1";
 
-type ShownStanding = StandingWords & { watch?: string | null };
+type ShownStanding = StandingWords & { watch?: string | null; ledger?: string | null };
 import type { StandingWire } from "../lib/types";
 import WireList from "./WireList";
 import { fallPercent } from "./stormDrill";
@@ -94,6 +94,7 @@ export default function QuestLog({
           </h3>
           {standing.next && <p className="g3d-muted">{standing.next}</p>}
           {standing.watch && <p className="g3d-muted">{standing.watch}.</p>}
+          {standing.ledger && <p className="g3d-muted">{standing.ledger}.</p>}
         </section>
       )}
 
