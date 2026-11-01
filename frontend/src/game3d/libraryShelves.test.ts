@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { GameTower } from "../lib/types";
-import { MAX_SHELF_BOOKS, SHELF_MARK, SHELF_ORDER, describeShelf, shelfMark, shelvesFor } from "./libraryShelves";
+import type { GameAdvisorLine, GameTower, HoldingAdvisors } from "../lib/types";
+import { MAX_SHELF_BOOKS, SHELF_MARK, SHELF_ORDER, councilShelf, describeShelf, shelfMark, shelvesFor } from "./libraryShelves";
 import type { Shelf, ShelfId } from "./libraryShelves";
 
 function tower(o: Partial<GameTower> = {}): GameTower {
@@ -16,10 +16,10 @@ function tower(o: Partial<GameTower> = {}): GameTower {
 const by = (shelves: Shelf[], id: ShelfId) => shelves.find((s) => s.id === id)!;
 
 describe("tower library shelves", () => {
-  it("gives six shelves in room order, each with words", () => {
+  it("gives seven shelves in room order, each with words", () => {
     const shelves = shelvesFor(tower());
     expect(shelves.map((s) => s.id)).toEqual([...SHELF_ORDER]);
-    expect(shelves).toHaveLength(6);
+    expect(shelves).toHaveLength(7);
     for (const s of shelves) {
       expect(s.lines.length).toBeGreaterThan(0);
       expect(s.books).toBeGreaterThanOrEqual(0);
@@ -105,5 +105,63 @@ describe("tower library shelves", () => {
       .join(" ")
       .toLowerCase();
     expect(all).not.toMatch(/\b(buy|sell|accumulate|trim|recommend)\b/);
+  });
+});
+
+function advisors(lines: Partial<GameAdvisorLine>[]): HoldingAdvisors {
+  return {
+    holding_id: "h1",
+    lines_version: "v1",
+    disclaimer: "Hand-written lines chosen by fixed rules. Not advice.",
+    lines: lines.map((l, i) => ({
+      advisor: "oracle", rule: `rule_${i}`, tone: "note", text: `Line ${i}`, holding_id: "h1", holding_name: "Alpha", facts: [], ...l,
+    })) as GameAdvisorLine[],
+  };
+}
+
+describe("the Council's words shelf (the seventh)", () => {
+  it("stands last, and shelvesFor puts the answer on it", () => {
+    const shelves = shelvesFor(tower(), advisors([{}]));
+    expect(shelves[6].id).toBe("council");
+    expect(shelves[6].state).toBe("known");
+  });
+
+  it("shows each advisor line in the advisor's name and the stored words, then the disclaimer", () => {
+    const s = councilShelf(advisors([{ advisor: "partner", tone: "warning", text: "A tripwire is lit.", facts: ["1 tripwire fired", "Alpha"] }]));
+    expect(s.title).toBe("The Council's words");
+    expect(s.lines[0]).toEqual({ label: "The Partner", text: "A tripwire is lit.", tone: "warn" });
+    expect(s.lines[1]).toEqual({ label: "Why", text: "1 tripwire fired · Alpha" });
+    expect(s.lines[s.lines.length - 1].text).toBe("Hand-written lines chosen by fixed rules. Not advice.");
+  });
+
+  it("counts books by lines written, one each up to the shelf, and keeps the plaque tone plain", () => {
+    expect(councilShelf(advisors([{}])).books).toBe(1);
+    expect(councilShelf(advisors([{}, {}, {}])).books).toBe(3);
+    expect(councilShelf(advisors(Array.from({ length: 20 }, () => ({})))).books).toBe(MAX_SHELF_BOOKS);
+    expect(councilShelf(advisors([{ tone: "warning" }, { tone: "calm" }])).tone).toBe("");
+  });
+
+  it("never reads silence as praise: no rule is a bare shelf that says so, not a full one", () => {
+    const s = councilShelf(advisors([]));
+    expect(s.state).toBe("na");
+    expect(s.books).toBe(0);
+    expect(s.lines[0].text).toContain("Silence is not");
+  });
+
+  it("is fog, not a bare shelf, while asking, when the answer failed, and for the sample fortress", () => {
+    for (const input of [null, undefined, "failed", "sample"] as const) {
+      const s = councilShelf(input);
+      expect(s.state, String(input)).toBe("unknown");
+      expect(s.tone).toBe("fog");
+      expect(s.books).toBe(0);
+    }
+    expect(councilShelf(null).lines[0].text).toContain("not answered yet");
+    expect(councilShelf("failed").lines[0].text).toContain("could not be reached");
+    expect(councilShelf("sample").lines[0].text).toContain("sample fortress");
+  });
+
+  it("uses no buy or sell words in its own sentences", () => {
+    const own = [null, "failed", "sample"].flatMap((i) => councilShelf(i as null).lines.map((l) => l.text)).concat(councilShelf(advisors([])).lines.map((l) => l.text));
+    for (const t of own) expect(t).not.toMatch(/\b(buy|sell|trade)\b/i);
   });
 });
