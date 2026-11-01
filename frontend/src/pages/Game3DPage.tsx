@@ -10,6 +10,8 @@ import TowerPanel from "../game3d/TowerPanel";
 import QuestLog from "../game3d/QuestLog";
 import DialoguePanel from "../game3d/DialoguePanel";
 import DeskPanel from "../game3d/DeskPanel";
+import VaultPanel from "../game3d/VaultPanel";
+import { VAULT_PROMPT } from "../game3d/vaultWordsV1";
 import DrillPanel from "../game3d/DrillPanel";
 import WhereToPanel from "../game3d/WhereToPanel";
 import WorldPanel from "../game3d/WorldPanel";
@@ -91,6 +93,9 @@ export default function Game3DPage() {
   // The writing desk: whether you stand at it, and whether its panel is open.
   const [atDesk, setAtDesk] = useState(false);
   const [deskOpen, setDeskOpen] = useState(false);
+  // The vault chest east of the keep door: whether you stand at it, and whether its panel (Vault and Temperament) is open.
+  const [atVault, setAtVault] = useState(false);
+  const [vaultOpen, setVaultOpen] = useState(false);
   // The signpost by the gate: whether you stand at it, whether the "Where to?" menu is open, and the flat page shown in the world panel.
   const [atSign, setAtSign] = useState(false);
   const [whereOpen, setWhereOpen] = useState(false);
@@ -278,6 +283,7 @@ export default function Game3DPage() {
     setNear(null);
     setTalking(null);
     setAtDesk(false);
+    setAtVault(false);
     setAtDrill(false);
     setAtSign(false);
     setNearStall(null);
@@ -290,6 +296,7 @@ export default function Game3DPage() {
   const enterTown = useCallback(() => {
     clearNears();
     setDeskOpen(false);
+    setVaultOpen(false);
     setDrillOpen(false);
     setInTown(true);
   }, [clearNears]);
@@ -371,6 +378,10 @@ export default function Game3DPage() {
   useEffect(() => {
     if (deskOpen && (!atDesk || talking)) setDeskOpen(false);
   }, [atDesk, deskOpen, talking]);
+  // Walking away from the vault closes it too, and so does starting a talk.
+  useEffect(() => {
+    if (vaultOpen && (!atVault || talking)) setVaultOpen(false);
+  }, [atVault, vaultOpen, talking]);
 
   // Walking away from the drill post ends the drill (the camp goes); so does starting a talk.
   useEffect(() => {
@@ -409,13 +420,19 @@ export default function Game3DPage() {
         } else leaveTower();
         return;
       }
-      if (!near && !nearTower && !atDesk && !atDrill && !atSign && !nearStall && !nearBooth && !atGate) return;
+      if (!near && !nearTower && !atDesk && !atVault && !atDrill && !atSign && !nearStall && !nearBooth && !atGate) return;
       e.preventDefault();
       if (!near && nearTower) {
         enterTower(nearTower);
         return;
       }
       if (!near) {
+        if (atVault && !atDesk && !atDrill && !atSign && !nearStall && !nearBooth && !atGate) {
+          // Only the vault chest is in reach: E opens or closes it.
+          if (!vaultOpen && document.pointerLockElement) document.exitPointerLock();
+          setVaultOpen((v) => !v);
+          return;
+        }
         if (!atDesk && !atDrill && !atSign && !nearStall && !nearBooth && atGate) {
           enterTown();
           return;
@@ -454,7 +471,7 @@ export default function Game3DPage() {
     };
     window.addEventListener("keydown", onTalk);
     return () => window.removeEventListener("keydown", onTalk);
-  }, [inTown, whereOpen, townNear, atTownExit, atGate, openBuilding, leaveTown, enterTown, near, talking, atDesk, atDrill, atSign, nearStall, nearBooth, boothOpen, openBooth, openStore, toggleWhere, drillOpen, deskOpen, room, nearShelf, atDoor, atTable, report, readShelf, nearTower, enterTower, leaveTower, openReport]);
+  }, [inTown, whereOpen, townNear, atTownExit, atGate, openBuilding, leaveTown, enterTown, near, talking, atDesk, atVault, vaultOpen, atDrill, atSign, nearStall, nearBooth, boothOpen, openBooth, openStore, toggleWhere, drillOpen, deskOpen, room, nearShelf, atDoor, atTable, report, readShelf, nearTower, enterTower, leaveTower, openReport]);
 
   useEffect(() => {
     const onPanelKey = (e: KeyboardEvent) => {
@@ -515,6 +532,8 @@ export default function Game3DPage() {
             onNearSign={setAtSign}
             onNearStall={setNearStall}
             onNearBooth={setNearBooth}
+            vaultLevel={state?.vault.level ?? null}
+            onNearVault={setAtVault}
             drillOpen={drillOpen}
             stalls={street.stalls}
             talking={talking}
@@ -548,6 +567,7 @@ export default function Game3DPage() {
       {whereOpen && worldPage && <WorldPanel door={worldPage} onBack={() => setWorldPage(null)} onClose={closeWhere} />}
       {panels.towers && <TowerPanel world={shownWorld} loading={loading} error={error} onRetry={load} onClose={() => flip("towers")} />}
       {panels.quests && <QuestLog quest={quest} reviews={reviews} demo={world.demo} standing={standingText} wires={standing && !standingFailed ? (standing.wires ?? []) : undefined} onLookAtWire={lookAtWire} onRefreshStanding={refreshStanding} drill={drillQuest} onClose={() => flip("quests")} />}
+      {vaultOpen && state && <VaultPanel state={state} onChanged={load} onClose={() => setVaultOpen(false)} />}
       {deskOpen && (
         <DeskPanel
           holdings={world.plain}
@@ -637,6 +657,12 @@ export default function Game3DPage() {
       {room && atDoor && !nearShelf && !atTable && (
         <p className="pointer-events-none absolute bottom-16 left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-sm text-white">
           Press E to go back outside
+        </p>
+      )}
+
+      {atVault && !vaultOpen && !talking && !nearTower && !atDesk && !atDrill && !atSign && !nearStall && !nearBooth && !room && (
+        <p className="pointer-events-none absolute bottom-16 left-1/2 w-max -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-sm text-white">
+          {VAULT_PROMPT}
         </p>
       )}
 

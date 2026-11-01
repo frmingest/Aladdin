@@ -3,6 +3,11 @@
 Completed milestones and retired status, moved out of `docs/PROGRESS.md` under the rolling-log rules
 in `CLAUDE.md` ("Progress file rules"). Newest snapshot first. Older: [PROGRESS-full-2026-09-30.md](PROGRESS-full-2026-09-30.md).
 
+## Closed 2026-11-01 (evening) — 3D town kit, parity layer, Market Street and the Town (#238 to #246)
+
+- **All merged into `main` (`3ab938c`).** #238 Standing 4 The Ledger; #239 S9 town kit (Kenney Fantasy Town Kit and KayKit Builder buildings packed in our colours, 1.4 MB); #241 S13 page-parity register, world panel, signpost menu and Plain view; #243 to #245 S14 Market Street (a stall per watchlist company, E opens the store, Sal's counter and the Hype Booth); #246 S15 first slice, the Town beyond the gate (four buildings, one door each to Records, Map, Glossary and the Workshop menu). Deploy not checked.
+- Write-ups: [town kit](../game/game3d-town-kit-import-2026-11-01.md), [Market Street](../game/game3d-market-street-2026-11-01.md), [Town](../game/game3d-town-2026-11-01.md), [sprint plan](../game/game3d-kaykit-sprint-plan-2026-10-31.md).
+
 ## Closed 2026-11-01 — everything merged since the last archive (#187 to #237)
 
 - **All merged; no PR was open on 2026-11-01** (GitHub API, `main` at `32377f2`). Deploy of these was not checked; Faiz's look-overs are folded into two lines in `PROGRESS.md`.
