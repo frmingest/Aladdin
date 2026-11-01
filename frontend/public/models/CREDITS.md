@@ -42,3 +42,14 @@ Licence text: `LICENSE-KayKit-Medieval-Hexagon.txt`. **Modified:** merged into o
 
 Licence text: `LICENSE-KayKit-Medieval-Hexagon.txt`. **Modified:** the two pieces were merged into one file with `scripts/pack-keep.mjs` (plain float vertices, no compression, no animation); geometry and texture unchanged.
 
+
+## Marketplace corner (2026-11-01)
+
+`market.glb` holds 11 top-level nodes, each named after its piece. Blue and neutral pieces only (the red and green market variants are not used). CC0 1.0.
+
+| Pieces | Asset | Author | Source | Licence | Fetched |
+|---|---|---|---|---|---|
+| `market_stalls` (`building_market_blue`), `well` (`building_well_blue`), `tent_market` (`tent`), `crate_long_A` | KayKit Medieval Hexagon Pack | Kay Lousberg (KayKit) | https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack | CC0 1.0 | 2026-11-01 |
+| `stall_table_long` (`table_long_tablecloth_decorated_A`), `stall_table_medium` (`table_medium_tablecloth_decorated_B`), `stall_table_plain` (`table_long_tablecloth`), `crates_stacked`, `keg_decorated`, `barrel_stack` (`barrel_small_stack`), `stool` | KayKit Dungeon Remastered | Kay Lousberg (KayKit) | https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered | CC0 1.0 | 2026-11-01 |
+
+Licence texts: `LICENSE-KayKit-Medieval-Hexagon.txt`, `LICENSE-KayKit-Dungeon-Remastered.txt`. **Modified:** merged into one file with `scripts/pack-market.mjs` (plain float vertices, no compression, no animation); geometry and textures unchanged. `stall_table_plain` and `crate_long_A` are packed but not placed yet.

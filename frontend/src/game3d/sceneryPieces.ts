@@ -83,6 +83,9 @@ export const SCENERY: readonly SceneryPiece[] = [
   { id: "wheelbarrow", model: "wheelbarrow", x: 7.5, y: 0, z: 27.5, yaw: -0.5, scale: 6, solid: 0.9 },
   { id: "flag-w", model: "flag_blue", x: -7, y: 0, z: 27, yaw: 0, scale: 7, solid: 0.3 },
   { id: "flag-e", model: "flag_yellow", x: 11, y: 0, z: 25, yaw: 0, scale: 7, solid: 0.3 },
+  // The marketplace corner: a flag at each end of the square, blue and yellow only.
+  { id: "market-flag-n", model: "flag_blue", x: 13.6, y: 0, z: 6.6, yaw: 0.2, scale: 7, solid: 0.3 },
+  { id: "market-flag-s", model: "flag_yellow", x: 14.2, y: 0, z: 21.6, yaw: -0.2, scale: 7, solid: 0.3 },
 ];
 
 /** Smallest gap a standing piece keeps from a pad, the keep, a person or the spawn point. */

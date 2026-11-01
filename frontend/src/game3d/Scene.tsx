@@ -13,6 +13,7 @@ import type { NpcId } from "./npcs";
 import NpcMesh from "./NpcMesh";
 import PropMesh from "./PropMesh";
 import Scenery from "./Scenery";
+import Market from "./Market";
 import StandingTorches from "./StandingTorches";
 import Horizon from "./Horizon";
 import Backdrop from "./Backdrop";
@@ -105,6 +106,7 @@ function World({
         <PropMesh key={p.id} prop={p} />
       ))}
       <Scenery />
+      <Market />
       <StandingTorches level={standingLevel} />
       <Desk books={books} />
       {NPCS.map((n) => (
