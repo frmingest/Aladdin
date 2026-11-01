@@ -19,6 +19,10 @@ import type { ShelfId } from "../game3d/libraryShelves";
 import type { RoomView } from "../game3d/Scene";
 import { deskBlock } from "../game3d/deskForm";
 import Toolbar from "../game3d/Toolbar";
+import WorldMenu from "../game3d/WorldMenu";
+import WorldPanel from "../game3d/WorldPanel";
+import { SIGN_PROMPT, WHERE_KEY } from "../game3d/signpostSpot";
+import type { Door } from "../game3d/parity3d";
 import { typingInField } from "../game3d/useKeys";
 import { PANEL_KEYS, loadPanels, savePanels, togglePanel } from "../game3d/hudPanels";
 import type { PanelId } from "../game3d/hudPanels";
@@ -82,6 +86,15 @@ export default function Game3DPage() {
   const [drillOpen, setDrillOpen] = useState(false);
   const [drills, setDrills] = useState<StormDrills | null>(null);
   const [drillsFailed, setDrillsFailed] = useState(false);
+  // "Where to?": whether you stand at the signpost, whether the menu is open, and which page is open in the world panel.
+  const [atSign, setAtSign] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [worldDoor, setWorldDoor] = useState<Door | null>(null);
+  const toggleMenu = useCallback(() => {
+    if (document.pointerLockElement) document.exitPointerLock();
+    setWorldDoor(null);
+    setMenuOpen((v) => !v);
+  }, []);
   // The tower library: which door you stand at, which tower you are inside, and what you stand at in there.
   const [nearTower, setNearTower] = useState<string | null>(null);
   const [room, setRoom] = useState<string | null>(null);
@@ -209,6 +222,9 @@ export default function Game3DPage() {
       // Keep the mouse look going through the door: only free it if something else is open.
     }
     setTalking(null);
+    setAtSign(false);
+    setMenuOpen(false);
+    setWorldDoor(null);
     setDeskOpen(false);
     setDrillOpen(false);
     setAtDrill(false);
@@ -290,8 +306,12 @@ export default function Game3DPage() {
         } else leaveTower();
         return;
       }
-      if (!near && !nearTower && !atDesk && !atDrill) return;
+      if (!near && !nearTower && !atDesk && !atDrill && !atSign) return;
       e.preventDefault();
+      if (!near && !nearTower && !atDesk && !atDrill && atSign) {
+        toggleMenu();
+        return;
+      }
       if (!near && nearTower) {
         enterTower(nearTower);
         return;
@@ -318,7 +338,7 @@ export default function Game3DPage() {
     };
     window.addEventListener("keydown", onTalk);
     return () => window.removeEventListener("keydown", onTalk);
-  }, [near, talking, atDesk, atDrill, drillOpen, deskOpen, room, nearShelf, atDoor, atTable, report, readShelf, nearTower, enterTower, leaveTower, openReport]);
+  }, [near, talking, atDesk, atDrill, drillOpen, deskOpen, room, nearShelf, atDoor, atTable, report, readShelf, nearTower, enterTower, leaveTower, openReport, atSign, toggleMenu]);
 
   useEffect(() => {
     const onPanelKey = (e: KeyboardEvent) => {
@@ -331,6 +351,16 @@ export default function Game3DPage() {
     window.addEventListener("keydown", onPanelKey);
     return () => window.removeEventListener("keydown", onPanelKey);
   }, [flip]);
+
+  useEffect(() => {
+    const onWhereKey = (e: KeyboardEvent) => {
+      if (e.code !== WHERE_KEY || e.ctrlKey || e.metaKey || e.altKey || typingInField(e.target)) return;
+      e.preventDefault();
+      toggleMenu();
+    };
+    window.addEventListener("keydown", onWhereKey);
+    return () => window.removeEventListener("keydown", onWhereKey);
+  }, [toggleMenu]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -360,6 +390,7 @@ export default function Game3DPage() {
             books={quest.written}
             onNearDesk={setAtDesk}
             onNearDrill={setAtDrill}
+            onNearSign={setAtSign}
             drillOpen={drillOpen}
             talking={talking}
             cheerKey={cheerKey}
@@ -377,12 +408,33 @@ export default function Game3DPage() {
         onToggle={flip}
         questsWaiting={(quest.status === "open" ? 1 : 0) + (reviews.status === "open" ? 1 : 0)}
         towerCount={world.plain.length}
+        whereOpen={menuOpen || worldDoor !== null}
+        onWhere={toggleMenu}
         statsOn={showPerf}
         statsLabel={stats ? `${stats.fps} fps · ${stats.calls} draws · ${Math.round(stats.triangles / 1000)}k tris` : "Measuring..."}
         onToggleStats={() => setShowPerf((v) => !v)}
       />
       {panels.towers && <TowerPanel world={shownWorld} loading={loading} error={error} onRetry={load} onClose={() => flip("towers")} />}
       {panels.quests && <QuestLog quest={quest} reviews={reviews} demo={world.demo} standing={standingText} wires={standing && !standingFailed ? (standing.wires ?? []) : undefined} onLookAtWire={lookAtWire} onRefreshStanding={refreshStanding} drill={drillQuest} onClose={() => flip("quests")} />}
+      {menuOpen && !worldDoor && (
+        <WorldMenu
+          onPick={(d) => {
+            setWorldDoor(d);
+            setMenuOpen(false);
+          }}
+          onClose={() => setMenuOpen(false)}
+        />
+      )}
+      {worldDoor && (
+        <WorldPanel
+          door={worldDoor}
+          onBack={() => {
+            setWorldDoor(null);
+            setMenuOpen(true);
+          }}
+          onClose={() => setWorldDoor(null)}
+        />
+      )}
       {deskOpen && (
         <DeskPanel
           holdings={world.plain}
@@ -416,7 +468,7 @@ export default function Game3DPage() {
         to="/fortress"
         className="absolute left-3 top-3 rounded border border-border bg-surface/90 px-3 py-1.5 text-sm text-ink hover:opacity-80"
       >
-        ← Flat fortress
+        ← Plain view
       </Link>
       {roomView && (
         <button
@@ -449,6 +501,12 @@ export default function Game3DPage() {
         </p>
       )}
 
+      {atSign && !menuOpen && !worldDoor && !talking && !nearTower && !atDesk && !atDrill && (
+        <p className="pointer-events-none absolute bottom-16 left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-sm text-white">
+          {SIGN_PROMPT}
+        </p>
+      )}
+
       {atDesk && !deskOpen && !talking && !nearTower && (
         <p className="pointer-events-none absolute bottom-16 left-1/2 w-max -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-sm text-white">
           Press E to write at the desk
@@ -463,7 +521,7 @@ export default function Game3DPage() {
 
       {!locked && !talking && (
         <p className="pointer-events-none absolute bottom-4 left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-center text-sm text-white">
-          Click to look around · W A S D walk · Shift run · Space jump · Wheel zoom · Esc frees the mouse · Q quests · T towers
+          Click to look around · W A S D walk · Shift run · Space jump · Wheel zoom · Esc frees the mouse · Q quests · T towers · G where to
         </p>
       )}
     </div>

@@ -6,6 +6,9 @@ interface Props {
   /** Quests still open (a badge, so a shut panel does not hide that something is waiting). */
   questsWaiting: number;
   towerCount: number;
+  /** "Where to?" menu: open or shut it. Optional so older callers still render. */
+  whereOpen?: boolean;
+  onWhere?: () => void;
   statsOn: boolean;
   statsLabel: string;
   onToggleStats: () => void;
@@ -37,11 +40,12 @@ function Tool({
 }
 
 /** The little menu at the top: open or shut each panel, so the scene stays clear until you want a panel. */
-export default function Toolbar({ open, onToggle, questsWaiting, towerCount, statsOn, statsLabel, onToggleStats }: Props) {
+export default function Toolbar({ open, onToggle, questsWaiting, towerCount, whereOpen = false, onWhere, statsOn, statsLabel, onToggleStats }: Props) {
   return (
     <div role="toolbar" aria-label="Courtyard menu" className="g3d-toolbar absolute left-1/2 top-3 z-30 -translate-x-1/2">
       <Tool label="Quests" hint="Q" icon="📜" pressed={open.quests} badge={questsWaiting} onClick={() => onToggle("quests")} />
       <Tool label="Towers" hint="T" icon="🏰" pressed={open.towers} badge={towerCount} onClick={() => onToggle("towers")} />
+      {onWhere && <Tool label="Where to?" hint="G" icon="🧭" pressed={whereOpen} onClick={onWhere} />}
       <Tool label={statsOn ? statsLabel : "Stats"} hint="P" icon="📊" pressed={statsOn} onClick={onToggleStats} />
     </div>
   );

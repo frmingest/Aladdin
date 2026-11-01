@@ -23,6 +23,8 @@ import Confetti from "./Confetti";
 import Desk from "./Desk";
 import DrillCamp from "./DrillCamp";
 import DrillPost from "./DrillPost";
+import SignPost from "./SignPost";
+import { SIGN_LEAVE_RANGE, SIGN_RANGE, nearSignpost } from "./signpostSpot";
 import { DRILL_LEAVE_RANGE, DRILL_RANGE, nearDrillPost } from "./stormDrill";
 import { DESK_LEAVE_RANGE, DESK_RANGE, nearDesk } from "./desk";
 import { PROPS } from "./props";
@@ -48,6 +50,8 @@ interface Props {
   onNearDesk?: (near: boolean) => void;
   /** Tells the page when the hero is at the drill post. */
   onNearDrill?: (near: boolean) => void;
+  /** Tells the page when the hero is at the signpost. */
+  onNearSign?: (near: boolean) => void;
   /** A Storm Drill is open: the camp stands. */
   drillOpen?: boolean;
   /** Whose dialogue is open (the Oracle casts while he talks). */
@@ -114,6 +118,19 @@ function NearDrillWatch({ pos, onNearDrill }: { pos: { current: { x: number; z: 
   return null;
 }
 
+/** Tells the page when the hero walks up to, or away from, the signpost. */
+function NearSignWatch({ pos, onNearSign }: { pos: { current: { x: number; z: number } }; onNearSign: (near: boolean) => void }) {
+  const last = useRef(false);
+  useFrame(() => {
+    const now = nearSignpost(pos.current, last.current ? SIGN_LEAVE_RANGE : SIGN_RANGE);
+    if (now !== last.current) {
+      last.current = now;
+      onNearSign(now);
+    }
+  });
+  return null;
+}
+
 /** Tells the page when the hero walks up to, or away from, a tower's door. */
 function NearTowerWatch({
   pos,
@@ -147,6 +164,7 @@ function World({
   books,
   onNearDesk,
   onNearDrill,
+  onNearSign,
   drillOpen,
   onNearTower,
   room,
@@ -161,6 +179,7 @@ function World({
   books: number;
   onNearDesk: (near: boolean) => void;
   onNearDrill: (near: boolean) => void;
+  onNearSign: (near: boolean) => void;
   drillOpen: boolean;
   talking: NpcId | null;
   cheerKey: number | null;
@@ -212,6 +231,7 @@ function World({
           <StandingTorches level={standingLevel} />
           <Desk books={books} />
           <DrillPost />
+          <SignPost />
           {drillOpen && <DrillCamp />}
           {NPCS.map((n) => (
             <NpcMesh key={n.id} npc={n} active={near === n.id} playerPos={pos} talking={talking === n.id} cheerKey={cheerKey} />
@@ -221,6 +241,7 @@ function World({
           <NearNpc pos={pos} onNear={onNear} />
           <NearDeskWatch pos={pos} onNearDesk={onNearDesk} />
           <NearDrillWatch pos={pos} onNearDrill={onNearDrill} />
+          <NearSignWatch pos={pos} onNearSign={onNearSign} />
           <NearTowerWatch pos={pos} world={world} onNearTower={onNearTower} />
         </>
       )}
@@ -242,6 +263,7 @@ export default function Scene({
   books = 0,
   onNearDesk = noop,
   onNearDrill = noop,
+  onNearSign = noop,
   drillOpen = false,
   talking = null,
   cheerKey = null,
@@ -311,6 +333,7 @@ export default function Scene({
           books={books}
           onNearDesk={onNearDesk}
           onNearDrill={onNearDrill}
+          onNearSign={onNearSign}
           drillOpen={drillOpen}
           talking={talking}
           cheerKey={cheerKey}
