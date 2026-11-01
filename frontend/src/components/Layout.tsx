@@ -300,7 +300,7 @@ function useRouteTitle() {
   }, [pathname, gameMode]);
 }
 
-export default function Layout({ children }: { children: React.ReactNode }) {
+function FullLayout({ children }: { children: React.ReactNode }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   useRouteTitle();
@@ -428,3 +428,23 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
+
+/**
+ * The 3D courtyard shows flat pages inside a panel by loading them in a frame with `?embed=world`
+ * (game3d/parity3d.ts). A page shown that way has no sidebar or top bar, only the page itself, and the
+ * demo-mode strip so fabricated data is never shown without its warning. Everything else is the same page.
+ */
+function Layout({ children }: { children: React.ReactNode }) {
+  const { search } = useLocation();
+  if (new URLSearchParams(search).get("embed") === "world") {
+    return (
+      <div className="min-h-screen">
+        <DemoModeBanner />
+        <main className="mx-auto max-w-6xl px-4 py-4">{children}</main>
+      </div>
+    );
+  }
+  return <FullLayout>{children}</FullLayout>;
+}
+
+export default Layout;
