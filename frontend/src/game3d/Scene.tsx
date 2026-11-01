@@ -35,6 +35,9 @@ import { DRILL_LEAVE_RANGE, DRILL_RANGE, nearDrillPost } from "./stormDrill";
 import { DESK_LEAVE_RANGE, DESK_RANGE, nearDesk } from "./desk";
 import { PROPS } from "./props";
 import Library from "./Library";
+import Town from "./Town";
+import { GATE_RETURN, GATE_RETURN_YAW, GATE_LEAVE_RANGE, GATE_RANGE, TOWN_SPAWN, TOWN_YAW, nearGate } from "./townPlan";
+import type { BuildingId } from "./townPlan";
 import { ROOM_SPAWN, ROOM_YAW } from "./libraryRoom";
 import type { Shelf, ShelfId } from "./libraryShelves";
 import { ENTER_LEAVE_REACH, ENTER_REACH, exitCameraYaw, exitSpot, nearestTower } from "./towerDoor";
@@ -79,6 +82,14 @@ interface Props {
   onNearShelf?: (id: ShelfId | null) => void;
   onNearDoor?: (near: boolean) => void;
   onNearTable?: (near: boolean) => void;
+  /** The Town beyond the gate is where the hero is (the courtyard is not drawn while there). */
+  inTown?: boolean;
+  /** Courtyard: the hero stands at the gate road. */
+  onNearGate?: (near: boolean) => void;
+  /** Town: which building's door the hero stands at, and whether the road back is in reach. */
+  townNear?: BuildingId | null;
+  onNearBuilding?: (id: BuildingId | null) => void;
+  onNearTownExit?: (near: boolean) => void;
 }
 
 export interface RoomView {
@@ -128,6 +139,19 @@ function NearDrillWatch({ pos, onNearDrill }: { pos: { current: { x: number; z: 
     if (now !== last.current) {
       last.current = now;
       onNearDrill(now);
+    }
+  });
+  return null;
+}
+
+/** Tells the page when the hero stands at the gate road (the way out to the Town). */
+function NearGateWatch({ pos, onNearGate }: { pos: { current: { x: number; z: number } }; onNearGate: (near: boolean) => void }) {
+  const last = useRef(false);
+  useFrame(() => {
+    const now = nearGate(pos.current, last.current ? GATE_LEAVE_RANGE : GATE_RANGE);
+    if (now !== last.current) {
+      last.current = now;
+      onNearGate(now);
     }
   });
   return null;
@@ -216,6 +240,11 @@ function World({
   onNearShelf,
   onNearDoor,
   onNearTable,
+  inTown,
+  onNearGate,
+  townNear,
+  onNearBuilding,
+  onNearTownExit,
 }: {
   onLockChange: (locked: boolean) => void;
   world: WorldModel;
@@ -237,6 +266,11 @@ function World({
   onNearShelf: (id: ShelfId | null) => void;
   onNearDoor: (near: boolean) => void;
   onNearTable: (near: boolean) => void;
+  inTown: boolean;
+  onNearGate: (near: boolean) => void;
+  townNear: BuildingId | null;
+  onNearBuilding: (id: BuildingId | null) => void;
+  onNearTownExit: (near: boolean) => void;
 }) {
   const keys = useKeys();
   const pos = useRef({ x: 0, z: 0 });
@@ -262,9 +296,23 @@ function World({
     }
   }, [room, world.towers]);
 
+  // Through the gate: into the Town at its north end, and back out inside the gate.
+  const prevTown = useRef(false);
+  useEffect(() => {
+    if (inTown === prevTown.current) return;
+    prevTown.current = inTown;
+    if (inTown) setTeleport({ key: ++count.current, x: TOWN_SPAWN.x, z: TOWN_SPAWN.z, yaw: TOWN_YAW });
+    else setTeleport({ key: ++count.current, x: GATE_RETURN.x, z: GATE_RETURN.z, yaw: GATE_RETURN_YAW });
+  }, [inTown]);
+
   return (
     <Physics gravity={[0, -25, 0]} timeStep="vary">
-      {room ? (
+      {inTown && !room ? (
+        <>
+          <Backdrop />
+          <Town pos={pos} near={townNear} onNearBuilding={onNearBuilding} onNearExit={onNearTownExit} />
+        </>
+      ) : room ? (
         <Library name={room.name} ticker={room.ticker} gap={room.gap} shelves={room.shelves} pos={pos} onShelf={onNearShelf} onDoor={onNearDoor} onTable={onNearTable} />
       ) : (
         <>
@@ -292,6 +340,7 @@ function World({
           <NearDeskWatch pos={pos} onNearDesk={onNearDesk} />
           <NearDrillWatch pos={pos} onNearDrill={onNearDrill} />
           <NearSignWatch pos={pos} onNearSign={onNearSign} />
+          <NearGateWatch pos={pos} onNearGate={onNearGate} />
           <NearStallWatch pos={pos} stalls={stalls} onNearStall={onNearStall} />
           <NearBoothWatch pos={pos} onNearBooth={onNearBooth} />
           <NearTowerWatch pos={pos} world={world} onNearTower={onNearTower} />
@@ -328,6 +377,11 @@ export default function Scene({
   onNearShelf = noop,
   onNearDoor = noop,
   onNearTable = noop,
+  inTown = false,
+  onNearGate = noop,
+  townNear = null,
+  onNearBuilding = noop,
+  onNearTownExit = noop,
 }: Props) {
   const inside = room !== null;
   return (
@@ -401,6 +455,11 @@ export default function Scene({
           onNearShelf={onNearShelf}
           onNearDoor={onNearDoor}
           onNearTable={onNearTable}
+          inTown={inTown}
+          onNearGate={onNearGate}
+          townNear={townNear}
+          onNearBuilding={onNearBuilding}
+          onNearTownExit={onNearTownExit}
         />
       </Suspense>
       <PerfProbe onStats={onStats} />

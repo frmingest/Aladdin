@@ -25,6 +25,9 @@ import { deskBlock } from "../game3d/deskForm";
 import Toolbar from "../game3d/Toolbar";
 import { typingInField } from "../game3d/useKeys";
 import { stallPrompt, storeDoor } from "../game3d/stallDoor";
+import { BUILDINGS, buildingPrompt, doorAction, exitPrompt, gatePrompt } from "../game3d/townPlan";
+import type { BuildingId } from "../game3d/townPlan";
+import type { PlaceId } from "../game3d/parity3d";
 import { boothPrompt } from "../game3d/boothPlan";
 import type { BoothId } from "../game3d/boothPlan";
 import SalesRepDialog from "../components/marketplace/SalesRepDialog";
@@ -108,6 +111,12 @@ export default function Game3DPage() {
   // The tower library: which door you stand at, which tower you are inside, and what you stand at in there.
   const [nearTower, setNearTower] = useState<string | null>(null);
   const [room, setRoom] = useState<string | null>(null);
+  // The Town beyond the gate: whether you are in it, and which door or the gate road you stand at.
+  const [inTown, setInTown] = useState(false);
+  const [atGate, setAtGate] = useState(false);
+  const [townNear, setTownNear] = useState<BuildingId | null>(null);
+  const [atTownExit, setAtTownExit] = useState(false);
+  const [onlyPlace, setOnlyPlace] = useState<PlaceId | null>(null);
   const [nearShelf, setNearShelf] = useState<ShelfId | null>(null);
   const [atDoor, setAtDoor] = useState(false);
   const [readShelf, setReadShelf] = useState<ShelfId | null>(null);
@@ -240,10 +249,12 @@ export default function Game3DPage() {
       return !open;
     });
     setWorldPage(null);
+    setOnlyPlace(null);
   }, []);
   const closeWhere = useCallback(() => {
     setWhereOpen(false);
     setWorldPage(null);
+    setOnlyPlace(null);
   }, []);
   const pickDoor = useCallback((door: Door) => setWorldPage(door), []);
   // E at a stall: that company's store, in the world panel (the flat store page itself).
@@ -261,6 +272,46 @@ export default function Game3DPage() {
     setBoothOpen(id);
   }, []);
   const closeBooth = useCallback(() => setBoothOpen(null), []);
+
+  // Through the gate and back. The watchers of the other zone are unmounted, so every "near" is cleared on the way.
+  const clearNears = useCallback(() => {
+    setNear(null);
+    setTalking(null);
+    setAtDesk(false);
+    setAtDrill(false);
+    setAtSign(false);
+    setNearStall(null);
+    setNearBooth(null);
+    setNearTower(null);
+    setAtGate(false);
+    setTownNear(null);
+    setAtTownExit(false);
+  }, []);
+  const enterTown = useCallback(() => {
+    clearNears();
+    setDeskOpen(false);
+    setDrillOpen(false);
+    setInTown(true);
+  }, [clearNears]);
+  const leaveTown = useCallback(() => {
+    clearNears();
+    setInTown(false);
+  }, [clearNears]);
+  // E at a building: its page in the world panel, or (the Workshop) the menu of its place.
+  const openBuilding = useCallback((id: BuildingId) => {
+    const b = BUILDINGS.find((x) => x.id === id);
+    const action = b ? doorAction(b) : null;
+    if (!action) return;
+    if (document.pointerLockElement) document.exitPointerLock();
+    setWhereOpen(true);
+    if (action.kind === "page") {
+      setOnlyPlace(null);
+      setWorldPage(action.door);
+    } else {
+      setWorldPage(null);
+      setOnlyPlace(action.place);
+    }
+  }, []);
 
   const enterTower = useCallback((id: string) => {
     if (document.pointerLockElement) {
@@ -337,6 +388,15 @@ export default function Game3DPage() {
       const el = e.target as HTMLElement | null;
       if (typingInField(el)) return;
       if (boothOpen) return;
+      if (inTown) {
+        // In the Town: E knocks at the door you stand at, or takes the road back.
+        if (whereOpen) return;
+        if (!townNear && !atTownExit) return;
+        e.preventDefault();
+        if (townNear) openBuilding(townNear);
+        else leaveTown();
+        return;
+      }
       if (room) {
         // Inside a tower: E reads the shelf you stand at, opens the latest report at the table, or takes the door back out.
         if (report) return;
@@ -349,13 +409,17 @@ export default function Game3DPage() {
         } else leaveTower();
         return;
       }
-      if (!near && !nearTower && !atDesk && !atDrill && !atSign && !nearStall && !nearBooth) return;
+      if (!near && !nearTower && !atDesk && !atDrill && !atSign && !nearStall && !nearBooth && !atGate) return;
       e.preventDefault();
       if (!near && nearTower) {
         enterTower(nearTower);
         return;
       }
       if (!near) {
+        if (!atDesk && !atDrill && !atSign && !nearStall && !nearBooth && atGate) {
+          enterTown();
+          return;
+        }
         if (!atDesk && !atDrill && !atSign && !nearStall && nearBooth) {
           openBooth(nearBooth);
           return;
@@ -390,7 +454,7 @@ export default function Game3DPage() {
     };
     window.addEventListener("keydown", onTalk);
     return () => window.removeEventListener("keydown", onTalk);
-  }, [near, talking, atDesk, atDrill, atSign, nearStall, nearBooth, boothOpen, openBooth, openStore, toggleWhere, drillOpen, deskOpen, room, nearShelf, atDoor, atTable, report, readShelf, nearTower, enterTower, leaveTower, openReport]);
+  }, [inTown, whereOpen, townNear, atTownExit, atGate, openBuilding, leaveTown, enterTown, near, talking, atDesk, atDrill, atSign, nearStall, nearBooth, boothOpen, openBooth, openStore, toggleWhere, drillOpen, deskOpen, room, nearShelf, atDoor, atTable, report, readShelf, nearTower, enterTower, leaveTower, openReport]);
 
   useEffect(() => {
     const onPanelKey = (e: KeyboardEvent) => {
@@ -460,6 +524,11 @@ export default function Game3DPage() {
             onNearShelf={setNearShelf}
             onNearTable={setAtTable}
             onNearDoor={setAtDoor}
+            inTown={inTown}
+            onNearGate={setAtGate}
+            townNear={townNear}
+            onNearBuilding={setTownNear}
+            onNearTownExit={setAtTownExit}
           />
         </Suspense>
       </SceneBoundary>
@@ -475,7 +544,7 @@ export default function Game3DPage() {
         whereOpen={whereOpen}
         onToggleWhere={toggleWhere}
       />
-      {whereOpen && !worldPage && <WhereToPanel onPick={pickDoor} onClose={closeWhere} />}
+      {whereOpen && !worldPage && <WhereToPanel onPick={pickDoor} onClose={closeWhere} only={onlyPlace} />}
       {whereOpen && worldPage && <WorldPanel door={worldPage} onBack={() => setWorldPage(null)} onClose={closeWhere} />}
       {panels.towers && <TowerPanel world={shownWorld} loading={loading} error={error} onRetry={load} onClose={() => flip("towers")} />}
       {panels.quests && <QuestLog quest={quest} reviews={reviews} demo={world.demo} standing={standingText} wires={standing && !standingFailed ? (standing.wires ?? []) : undefined} onLookAtWire={lookAtWire} onRefreshStanding={refreshStanding} drill={drillQuest} onClose={() => flip("quests")} />}
@@ -523,6 +592,31 @@ export default function Game3DPage() {
         >
           ← Back outside
         </button>
+      )}
+
+      {inTown && (
+        <button
+          type="button"
+          onClick={leaveTown}
+          className="absolute left-3 top-14 rounded border border-border bg-surface/90 px-3 py-1.5 text-sm text-ink hover:opacity-80"
+        >
+          ← Back to the courtyard
+        </button>
+      )}
+      {inTown && !whereOpen && townNear && (
+        <p className="pointer-events-none absolute bottom-16 left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-sm text-white">
+          {buildingPrompt(BUILDINGS.find((b) => b.id === townNear) ?? BUILDINGS[0])}
+        </p>
+      )}
+      {inTown && !whereOpen && !townNear && atTownExit && (
+        <p className="pointer-events-none absolute bottom-16 left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-sm text-white">
+          {exitPrompt}
+        </p>
+      )}
+      {!inTown && atGate && !whereOpen && !talking && !nearTower && !atSign && !atDesk && !atDrill && !nearStall && !nearBooth && !room && (
+        <p className="pointer-events-none absolute bottom-16 left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-sm text-white">
+          {gatePrompt}
+        </p>
       )}
 
       {!room && nearTower && !near && !talking && (
