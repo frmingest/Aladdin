@@ -26,6 +26,9 @@ import Backdrop from "./Backdrop";
 import Townsfolk from "./Townsfolk";
 import Confetti from "./Confetti";
 import Desk from "./Desk";
+import Vault from "./Vault";
+import { VAULT_LEAVE_RANGE, VAULT_RANGE, nearVault } from "./vaultPlan";
+import type { FortressVaultLevel } from "../lib/types";
 import DrillCamp from "./DrillCamp";
 import DrillPost from "./DrillPost";
 import Signpost from "./Signpost";
@@ -65,6 +68,10 @@ interface Props {
   onNearStall?: (holdingId: string | null) => void;
   /** Which stand (Sal or the Hype Booth) is within reach, or null. Called only when it changes. */
   onNearBooth?: (id: BoothId | null) => void;
+  /** The backend's vault level (decides the coin stacks on the chest), or null when it cannot be read. */
+  vaultLevel?: FortressVaultLevel | null;
+  /** Whether the vault chest is within reach. Called only when it changes. */
+  onNearVault?: (near: boolean) => void;
   /** Market Street: one stall per watchlist company, already worked out (marketStreet.ts). */
   stalls?: readonly Stall[];
   /** A Storm Drill is open: the camp stands. */
@@ -197,6 +204,19 @@ function NearBoothWatch({ pos, onNearBooth }: { pos: { current: { x: number; z: 
   return null;
 }
 
+/** Tells the page when the hero walks up to, or away from, the vault chest. */
+function NearVaultWatch({ pos, onNearVault }: { pos: { current: { x: number; z: number } }; onNearVault: (near: boolean) => void }) {
+  const last = useRef(false);
+  useFrame(() => {
+    const now = nearVault(pos.current, last.current ? VAULT_LEAVE_RANGE : VAULT_RANGE);
+    if (now !== last.current) {
+      last.current = now;
+      onNearVault(now);
+    }
+  });
+  return null;
+}
+
 /** Tells the page when the hero walks up to, or away from, a tower's door. */
 function NearTowerWatch({
   pos,
@@ -233,6 +253,8 @@ function World({
   onNearSign,
   onNearStall,
   onNearBooth,
+  vaultLevel,
+  onNearVault,
   drillOpen,
   stalls,
   onNearTower,
@@ -256,6 +278,8 @@ function World({
   onNearSign: (near: boolean) => void;
   onNearStall: (holdingId: string | null) => void;
   onNearBooth: (id: BoothId | null) => void;
+  vaultLevel: FortressVaultLevel | null;
+  onNearVault: (near: boolean) => void;
   drillOpen: boolean;
   stalls: readonly Stall[];
   talking: NpcId | null;
@@ -328,6 +352,7 @@ function World({
           <Booths />
           <StandingTorches level={standingLevel} />
           <Desk books={books} />
+          <Vault level={vaultLevel} />
           <DrillPost />
           <Signpost />
           {drillOpen && <DrillCamp />}
@@ -343,6 +368,7 @@ function World({
           <NearGateWatch pos={pos} onNearGate={onNearGate} />
           <NearStallWatch pos={pos} stalls={stalls} onNearStall={onNearStall} />
           <NearBoothWatch pos={pos} onNearBooth={onNearBooth} />
+          <NearVaultWatch pos={pos} onNearVault={onNearVault} />
           <NearTowerWatch pos={pos} world={world} onNearTower={onNearTower} />
         </>
       )}
@@ -367,6 +393,8 @@ export default function Scene({
   onNearSign = noop,
   onNearStall = noop,
   onNearBooth = noop,
+  vaultLevel = null,
+  onNearVault = noop,
   drillOpen = false,
   stalls = NO_STALLS,
   talking = null,
@@ -445,6 +473,8 @@ export default function Scene({
           onNearSign={onNearSign}
           onNearStall={onNearStall}
           onNearBooth={onNearBooth}
+          vaultLevel={vaultLevel}
+          onNearVault={onNearVault}
           drillOpen={drillOpen}
           stalls={stalls}
           talking={talking}

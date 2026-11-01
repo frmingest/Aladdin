@@ -1,6 +1,6 @@
 # 3D courtyard: free CC0 models and the road to full page parity — sprint plan (updated 2026-11-01)
 
-**Status (2026-11-01): S0 to S8, S10 (drill camp), S11 (writing desk), the keep and corner towers, the marketplace corner, the tower libraries and Standing levels 1 to 5 are merged (#198 to #238, per `docs/PROGRESS.md`). S9 (town kit import) is merged (#239). S13 (page doors, Plain view, register test) is merged (#241). S14 M1 to M3 (stalls, flags, plates, E opens the store) are merged (#243, #244). M4 (Sal's counter and the Hype Booth) is in an open PR on `feature/game3d-market-booths`, tests pass, not seen in a browser: see [the S14 write-up](game3d-market-street-2026-11-01.md). Deploy not checked, seen only in headless browsers.** The 2026-11-01 update added the review of the three downloaded packs ([review](game3d-art-review-2026-11-01.md)), rewrote S9, replaced the parked S12, and added S13 to S20 so that every flat Game mode page gets a place in 3D. Written so a new chat can start from this file alone.
+**Status (2026-11-01): S0 to S8, S10 (drill camp), S11 (writing desk), the keep and corner towers, the marketplace corner, the tower libraries and Standing levels 1 to 5 are merged (#198 to #238, per `docs/PROGRESS.md`). S9 (town kit import, #239), S13 (page doors, Plain view, register test, #241), all of S14 (Market Street, stores, Sal and the Hype Booth, #243 to #245) and the S15 first slice (the Town beyond the gate, four buildings, #246) are merged. S16 is under way: PR 1 (the Vault chest and panel) is written on `feature/game3d-fortress-panels`, seen in a headless browser, not merged: see [the S16 PR 1 write-up](game3d-vault-2026-11-01.md). Deploy not checked, seen only in headless browsers.** The 2026-11-01 update added the review of the three downloaded packs ([review](game3d-art-review-2026-11-01.md)), rewrote S9, replaced the parked S12, and added S13 to S20 so that every flat Game mode page gets a place in 3D. Written so a new chat can start from this file alone.
 
 ## Why this plan exists (plain words)
 
@@ -134,6 +134,8 @@ Order is the recommended order. Sizes are relative (S, M, L), not hours.
 - **Towers:** Kenney has none; towers are KayKit (`watchtower` from the Builder Pack, Hexagon towers).
 
 ### S16: the Fortress panels in the world (M, in two or three PRs; no new art needed)
+
+**Progress: PR 1 (Vault chest, coin stacks by code, Vault card and Temperament meter in a world panel) written, not merged ([write-up](game3d-vault-2026-11-01.md)). The chest is code-built; the KayKit `chest` model is a later swap. Still to do: PR 2 (Ravens and Night Watch, Advisors shelf, Journal books), PR 3 (weather, realm verdict, the lamp).**
 
 *For:* the flat Fortress parts that have no 3D home yet.
 - **Vault:** a KayKit `chest` in the keep; coin stacks **by code** show cash (an amount stays code-built); press E opens the existing Vault panel (update cash, the one write that exists). Temperament joins this panel.
