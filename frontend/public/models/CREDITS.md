@@ -31,3 +31,14 @@ Licence texts: `LICENSE-KayKit-Dungeon-Remastered.txt`, `LICENSE-KayKit-Medieval
 | `tree_single_A`, `tree_single_B`, `trees_A_small`, `trees_A_medium`, `trees_B_large`, `rock_single_C`, `rock_single_E`, `hills_A`, `hills_B`, `hills_C`, `hills_A_trees`, `hills_C_trees`, `mountain_A`, `mountain_B`, `mountain_C`, `mountain_A_grass_trees`, `mountain_B_grass` | KayKit Medieval Hexagon Pack | Kay Lousberg (KayKit) | https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack | CC0 1.0 | 2026-10-31 |
 
 Licence text: `LICENSE-KayKit-Medieval-Hexagon.txt`. **Modified:** merged into one file with `scripts/pack-horizon.mjs` (plain float vertices, no compression, no animation); geometry and texture unchanged.
+
+## Keep and corner towers (2026-11-01)
+
+`keep.glb` holds two top-level nodes: `keep` (the castle) and `corner_tower`. Blue set only, so no piece can read as a status colour. CC0 1.0.
+
+| Pieces | Asset | Author | Source | Licence | Fetched |
+|---|---|---|---|---|---|
+| `keep` (`building_castle_blue`), `corner_tower` (`building_tower_B_blue`) | KayKit Medieval Hexagon Pack | Kay Lousberg (KayKit) | https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack | CC0 1.0 | 2026-11-01 |
+
+Licence text: `LICENSE-KayKit-Medieval-Hexagon.txt`. **Modified:** the two pieces were merged into one file with `scripts/pack-keep.mjs` (plain float vertices, no compression, no animation); geometry and texture unchanged.
+

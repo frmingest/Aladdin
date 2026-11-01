@@ -1,6 +1,8 @@
 import { useMemo } from "react";
 import { CuboidCollider, CylinderCollider, RigidBody } from "@react-three/rapier";
 import TowerMesh from "./TowerMesh";
+import { ModelClone, WithFallback } from "./KeepModels";
+import { CORNER_TOWER_MODEL, CORNER_TOWER_SCALE, KEEP_MODEL, KEEP_MODEL_SCALE, KEEP_URL, cornerTowerFootprint, keepModelFootprint } from "./keepModels";
 import type { WorldModel } from "./stateToWorld";
 import {
   COBBLE_RADIUS,
@@ -37,6 +39,8 @@ export default function Courtyard({ world }: { world: WorldModel }) {
   const walls = useMemo(() => wallSegments(), []);
   const corners = useMemo(() => cornerTowers(), []);
   const spots = useMemo(() => towerSpots(), []);
+  const tower = useMemo(() => cornerTowerFootprint(), []);
+  const keepModel = useMemo(() => keepModelFootprint(), []);
 
   return (
     <group>
@@ -70,38 +74,30 @@ export default function Courtyard({ world }: { world: WorldModel }) {
         </RigidBody>
       ))}
 
-      {/* Corner towers. */}
+      {/* Corner towers: KayKit model, plain shapes if the file does not load. */}
       {corners.map((t, i) => (
-        <RigidBody key={i} type="fixed" colliders={false} position={[t.x, CORNER_TOWER_HEIGHT / 2, t.z]}>
-          <CylinderCollider args={[CORNER_TOWER_HEIGHT / 2, CORNER_TOWER_RADIUS]} />
-          <mesh castShadow receiveShadow>
-            <cylinderGeometry args={[CORNER_TOWER_RADIUS, CORNER_TOWER_RADIUS + 0.3, CORNER_TOWER_HEIGHT, 12]} />
-            <meshStandardMaterial color={COLORS.stoneDark} flatShading />
-          </mesh>
-          <mesh position={[0, CORNER_TOWER_HEIGHT / 2 + 1.6, 0]} castShadow>
-            <coneGeometry args={[CORNER_TOWER_RADIUS + 0.6, 3.2, 12]} />
-            <meshStandardMaterial color={COLORS.roof} flatShading />
-          </mesh>
-        </RigidBody>
+        <WithFallback
+          key={i}
+          fallback={<PlainCornerTower x={t.x} z={t.z} />}
+          model={
+            <RigidBody type="fixed" colliders={false} position={[t.x, 0, t.z]} rotation={[0, Math.atan2(-t.x, -t.z), 0]}>
+              <CylinderCollider args={[tower.height / 2, tower.radius]} position={[0, tower.height / 2, 0]} />
+              <ModelClone url={KEEP_URL} node={CORNER_TOWER_MODEL.node} scale={CORNER_TOWER_SCALE} />
+            </RigidBody>
+          }
+        />
       ))}
 
-      {/* The keep, at the north end. */}
-      <RigidBody type="fixed" colliders={false} position={[KEEP.x, KEEP.height / 2, KEEP.z]}>
-        <CuboidCollider args={[KEEP.width / 2, KEEP.height / 2, KEEP.depth / 2]} />
-        <mesh castShadow receiveShadow>
-          <boxGeometry args={[KEEP.width, KEEP.height, KEEP.depth]} />
-          <meshStandardMaterial color={COLORS.stone} flatShading />
-        </mesh>
-        <mesh position={[0, KEEP.height / 2 + 2, 0]} castShadow>
-          <coneGeometry args={[KEEP.width * 0.62, 4, 4]} />
-          <meshStandardMaterial color={COLORS.roof} flatShading />
-        </mesh>
-        {/* Door on the south face. */}
-        <mesh position={[0, -KEEP.height / 2 + 2, KEEP.depth / 2 + 0.05]}>
-          <boxGeometry args={[3, 4, 0.2]} />
-          <meshStandardMaterial color={COLORS.gate} flatShading />
-        </mesh>
-      </RigidBody>
+      {/* The keep, at the north end: KayKit castle, the plain box if the file does not load. */}
+      <WithFallback
+        fallback={<PlainKeep />}
+        model={
+          <RigidBody type="fixed" colliders={false} position={[0, 0, keepModel.centerZ]}>
+            <CuboidCollider args={[keepModel.width / 2, keepModel.height / 2, keepModel.depth / 2]} position={[0, keepModel.height / 2, 0]} />
+            <ModelClone url={KEEP_URL} node={KEEP_MODEL.node} scale={KEEP_MODEL_SCALE} />
+          </RigidBody>
+        }
+      />
 
       {/* Eight pads. A holding raises a tower on its pad; empty pads stay bare. */}
       {spots.map((s, i) => (
@@ -118,5 +114,44 @@ export default function Courtyard({ world }: { world: WorldModel }) {
         <TowerMesh key={t.holdingId} t={t} />
       ))}
     </group>
+  );
+}
+
+/** The old plain-shape corner tower: the fallback when keep.glb does not load. */
+function PlainCornerTower({ x, z }: { x: number; z: number }) {
+  return (
+    <RigidBody type="fixed" colliders={false} position={[x, CORNER_TOWER_HEIGHT / 2, z]}>
+      <CylinderCollider args={[CORNER_TOWER_HEIGHT / 2, CORNER_TOWER_RADIUS]} />
+      <mesh castShadow receiveShadow>
+        <cylinderGeometry args={[CORNER_TOWER_RADIUS, CORNER_TOWER_RADIUS + 0.3, CORNER_TOWER_HEIGHT, 12]} />
+        <meshStandardMaterial color={COLORS.stoneDark} flatShading />
+      </mesh>
+      <mesh position={[0, CORNER_TOWER_HEIGHT / 2 + 1.6, 0]} castShadow>
+        <coneGeometry args={[CORNER_TOWER_RADIUS + 0.6, 3.2, 12]} />
+        <meshStandardMaterial color={COLORS.roof} flatShading />
+      </mesh>
+    </RigidBody>
+  );
+}
+
+/** The old plain-shape keep: the fallback when keep.glb does not load. */
+function PlainKeep() {
+  return (
+    <RigidBody type="fixed" colliders={false} position={[KEEP.x, KEEP.height / 2, KEEP.z]}>
+      <CuboidCollider args={[KEEP.width / 2, KEEP.height / 2, KEEP.depth / 2]} />
+      <mesh castShadow receiveShadow>
+        <boxGeometry args={[KEEP.width, KEEP.height, KEEP.depth]} />
+        <meshStandardMaterial color={COLORS.stone} flatShading />
+      </mesh>
+      <mesh position={[0, KEEP.height / 2 + 2, 0]} castShadow>
+        <coneGeometry args={[KEEP.width * 0.62, 4, 4]} />
+        <meshStandardMaterial color={COLORS.roof} flatShading />
+      </mesh>
+      {/* Door on the south face. */}
+      <mesh position={[0, -KEEP.height / 2 + 2, KEEP.depth / 2 + 0.05]}>
+        <boxGeometry args={[3, 4, 0.2]} />
+        <meshStandardMaterial color={COLORS.gate} flatShading />
+      </mesh>
+    </RigidBody>
   );
 }
