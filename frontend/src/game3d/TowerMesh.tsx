@@ -3,6 +3,8 @@ import { CylinderCollider, RigidBody } from "@react-three/rapier";
 import { Html } from "@react-three/drei";
 import { Object3D, type InstancedMesh } from "three";
 import type { Flag, TowerView } from "./stateToWorld";
+import { PAL, Part } from "./Inked";
+import { doorYaw } from "./towerDoor";
 
 /** Pad top, so towers stand on it. */
 const PAD_TOP = 0.5;
@@ -69,6 +71,29 @@ function Cracks({ t }: { t: TowerView }) {
   );
 }
 
+/**
+ * The door to the tower's library: a small timber door with a lamp, on the side that faces the middle of the
+ * courtyard. Every tower has one, so it carries no fact (a weak tower is not harder to enter). Press E near it.
+ */
+function LibraryDoor({ t }: { t: TowerView }) {
+  const yaw = doorYaw(t.spot);
+  const out = t.radius + 0.2;
+  return (
+    <group position={[Math.sin(yaw) * out, PAD_TOP, Math.cos(yaw) * out]} rotation={[0, yaw, 0]}>
+      <Part color={PAL.timber} position={[0, 0.85, 0]} grow={1.08}>
+        <boxGeometry args={[1, 1.7, 0.24]} />
+      </Part>
+      <Part color={PAL.timberDark} position={[0, 1.78, 0]} grow={1.1}>
+        <boxGeometry args={[1.3, 0.2, 0.3]} />
+      </Part>
+      <mesh position={[0, 2.2, 0.1]}>
+        <sphereGeometry args={[0.14, 8, 6]} />
+        <meshBasicMaterial color="#f2d27a" />
+      </mesh>
+    </group>
+  );
+}
+
 /** One holding as a tower. Everything here comes from the TowerView, nothing else. */
 export default function TowerMesh({ t }: { t: TowerView }) {
   const bodyColor = t.fog ? FOG_COLOR : t.wallColor;
@@ -97,6 +122,8 @@ export default function TowerMesh({ t }: { t: TowerView }) {
           <meshStandardMaterial color={bodyColor} flatShading transparent={t.fog} opacity={t.fog ? 0.55 : 1} />
         </mesh>
       </RigidBody>
+
+      <LibraryDoor t={t} />
 
       {!t.fog && <Crown t={t} />}
       {!t.fog && <Cracks t={t} />}

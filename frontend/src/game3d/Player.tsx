@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import type { MutableRefObject } from "react";
 import { useFrame } from "@react-three/fiber";
 import { CapsuleCollider, RigidBody, useRapier } from "@react-three/rapier";
@@ -28,26 +28,62 @@ const CENTRE_HEIGHT = HALF_HEIGHT + RADIUS;
 const FOCUS_HEIGHT = 1.5;
 const TURN_RATE = 12;
 const CAMERA_FOLLOW = 14;
+/** Calm frames (under 50 ms each) to hover after a door, and the longest to hover whatever the frame rate. */
+const HOVER_FRAMES = 4;
+const HOVER_MAX_MS = 3000;
+/** Below this the hero has left the world: put it back. */
+const VOID_Y = -25;
 
 interface Props {
   keys: MutableRefObject<Keys>;
   orbit: MutableRefObject<OrbitState>;
   /** Written every frame with where the hero stands, so others can ask who is near. */
   pos: MutableRefObject<{ x: number; z: number }>;
+  /** A new key moves the hero there (into a tower's library, or back out of its door). */
+  teleport?: Teleport | null;
   /** A new number starts one short cheer. */
   cheerKey?: number | null;
+}
+
+export interface Teleport {
+  key: number;
+  x: number;
+  z: number;
+  /** Camera yaw to arrive with (the camera sits behind the hero). */
+  yaw: number;
 }
 
 /**
  * The hero: a Rapier capsule driven by WASD, with a solid figure from simple shapes (a
  * rigged model can replace it later). Camera follows behind and above.
  */
-export default function Player({ keys, orbit, pos: posOut, cheerKey = null }: Props) {
+export default function Player({ keys, orbit, pos: posOut, teleport = null, cheerKey = null }: Props) {
   const body = useRef<RapierRigidBody>(null);
   const model = useRef<THREE.Group>(null);
   const facing = useRef(0);
   const motion = useRef<Motion>({ moving: false, running: false });
   const { world, rapier } = useRapier();
+  // After a door the hero hovers until the scene has settled: the first frames of a new room hitch (shaders,
+  // models), and one long physics step drops a falling hero straight through the floor.
+  const hover = useRef<{ frames: number; until: number } | null>(null);
+  // Where to put the hero back if it ever falls out of the world.
+  const home = useRef<{ x: number; z: number }>({ x: SPAWN.x, z: SPAWN.z });
+
+  // Walking through a door: put the hero at the new spot, stop dead, and turn the camera to face the right way.
+  useEffect(() => {
+    const rb = body.current;
+    if (!teleport || !rb) return;
+    rb.setTranslation({ x: teleport.x, y: 1.5, z: teleport.z }, true);
+    rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
+    rb.setGravityScale(0, true);
+    hover.current = { frames: HOVER_FRAMES, until: performance.now() + HOVER_MAX_MS };
+    home.current = { x: teleport.x, z: teleport.z };
+    posOut.current.x = teleport.x;
+    posOut.current.z = teleport.z;
+    orbit.current.yaw = teleport.yaw;
+    facing.current = teleport.yaw + Math.PI;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [teleport?.key]);
 
   useFrame((state, delta) => {
     const rb = body.current;
@@ -59,6 +95,26 @@ export default function Player({ keys, orbit, pos: posOut, cheerKey = null }: Pr
     posOut.current.z = pos.z;
     const k = keys.current;
 
+    // Hovering after a door: no gravity, no walking, until a few calm frames have passed.
+    const h = hover.current;
+    let frozen = false;
+    if (h) {
+      if (delta < 0.05) h.frames -= 1;
+      if (h.frames <= 0 || performance.now() > h.until) {
+        hover.current = null;
+        rb.setGravityScale(1, true);
+      } else {
+        frozen = true;
+        rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
+      }
+    }
+    // Safety net: out of the world means back where the last door (or the spawn) put you.
+    if (pos.y < VOID_Y) {
+      rb.setTranslation({ x: home.current.x, y: 1.5, z: home.current.z }, true);
+      rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
+      return;
+    }
+
     const dir = moveVector(k, orbit.current.yaw);
     const speed = k.run ? RUN_SPEED : WALK_SPEED;
 
@@ -66,7 +122,7 @@ export default function Player({ keys, orbit, pos: posOut, cheerKey = null }: Pr
     const ray = new rapier.Ray({ x: pos.x, y: pos.y, z: pos.z }, { x: 0, y: -1, z: 0 });
     const grounded = world.castRay(ray, CENTRE_HEIGHT + 0.15, true, undefined, undefined, undefined, rb) !== null;
     const vy = grounded && k.jump && vel.y <= 0.1 ? JUMP_SPEED : vel.y;
-    rb.setLinvel({ x: dir.x * speed, y: vy, z: dir.z * speed }, true);
+    if (!frozen) rb.setLinvel({ x: dir.x * speed, y: vy, z: dir.z * speed }, true);
 
     motion.current.moving = dir.x !== 0 || dir.z !== 0;
     motion.current.running = k.run;

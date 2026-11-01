@@ -8,6 +8,10 @@ import TowerPanel from "../game3d/TowerPanel";
 import QuestLog from "../game3d/QuestLog";
 import DialoguePanel from "../game3d/DialoguePanel";
 import DeskPanel from "../game3d/DeskPanel";
+import ShelfPanel from "../game3d/ShelfPanel";
+import { shelvesFor } from "../game3d/libraryShelves";
+import type { ShelfId } from "../game3d/libraryShelves";
+import type { RoomView } from "../game3d/Scene";
 import { deskBlock } from "../game3d/deskForm";
 import Toolbar from "../game3d/Toolbar";
 import { typingInField } from "../game3d/useKeys";
@@ -68,6 +72,12 @@ export default function Game3DPage() {
   // The writing desk: whether you stand at it, and whether its panel is open.
   const [atDesk, setAtDesk] = useState(false);
   const [deskOpen, setDeskOpen] = useState(false);
+  // The tower library: which door you stand at, which tower you are inside, and what you stand at in there.
+  const [nearTower, setNearTower] = useState<string | null>(null);
+  const [room, setRoom] = useState<string | null>(null);
+  const [nearShelf, setNearShelf] = useState<ShelfId | null>(null);
+  const [atDoor, setAtDoor] = useState(false);
+  const [readShelf, setReadShelf] = useState<ShelfId | null>(null);
   // The quest-done cheer: a new number starts it, once per page load, never on the sample journal.
   const [cheerKey, setCheerKey] = useState<number | null>(null);
   const cheered = useRef(false);
@@ -150,6 +160,45 @@ export default function Game3DPage() {
   const reviews = useMemo(() => sixMonthReckoning(journal?.entries ?? null, journalFailed), [journal, journalFailed]);
 
 
+  // The library you are in: the stored row for that holding, turned into six shelves. Nothing is stored here.
+  const roomView = useMemo<RoomView | null>(() => {
+    if (!room || !state) return null;
+    const tower = state.towers.find((t) => t.holding_id === room);
+    const view = shownWorld.plain.find((t) => t.holdingId === room);
+    if (!tower || !view) return null;
+    return { holdingId: room, name: tower.name, ticker: tower.ticker, gap: view.gap ?? null, shelves: shelvesFor(tower) };
+  }, [room, state, shownWorld]);
+  // A fresh load that drops the tower (or the state) puts you back outside rather than in an empty room.
+  useEffect(() => {
+    if (room && !roomView) setRoom(null);
+  }, [room, roomView]);
+
+  const enterTower = useCallback((id: string) => {
+    if (document.pointerLockElement) {
+      // Keep the mouse look going through the door: only free it if something else is open.
+    }
+    setTalking(null);
+    setDeskOpen(false);
+    setNear(null);
+    setAtDesk(false);
+    setNearTower(null);
+    setNearShelf(null);
+    setAtDoor(false);
+    setReadShelf(null);
+    setRoom(id);
+  }, []);
+  const leaveTower = useCallback(() => {
+    setReadShelf(null);
+    setNearShelf(null);
+    setAtDoor(false);
+    setRoom(null);
+  }, []);
+
+  // Walking away from a shelf closes its page.
+  useEffect(() => {
+    if (readShelf && nearShelf !== readShelf) setReadShelf(null);
+  }, [nearShelf, readShelf]);
+
   // Walking away from the desk closes it; so does starting a talk.
   useEffect(() => {
     if (deskOpen && (!atDesk || talking)) setDeskOpen(false);
@@ -162,10 +211,25 @@ export default function Game3DPage() {
 
   useEffect(() => {
     const onTalk = (e: KeyboardEvent) => {
-      if (e.code !== "KeyE" || (!near && !atDesk)) return;
+      if (e.code !== "KeyE") return;
       const el = e.target as HTMLElement | null;
       if (typingInField(el)) return;
+      if (room) {
+        // Inside a tower: E reads the shelf you stand at, or takes the door back out.
+        if (!nearShelf && !atDoor) return;
+        e.preventDefault();
+        if (nearShelf) {
+          if (readShelf !== nearShelf && document.pointerLockElement) document.exitPointerLock();
+          setReadShelf((v) => (v === nearShelf ? null : nearShelf));
+        } else leaveTower();
+        return;
+      }
+      if (!near && !nearTower && !atDesk) return;
       e.preventDefault();
+      if (!near && nearTower) {
+        enterTower(nearTower);
+        return;
+      }
       if (!near) {
         // Only the desk is in reach: E opens or closes it.
         if (!deskOpen && document.pointerLockElement) document.exitPointerLock();
@@ -182,7 +246,7 @@ export default function Game3DPage() {
     };
     window.addEventListener("keydown", onTalk);
     return () => window.removeEventListener("keydown", onTalk);
-  }, [near, talking, atDesk, deskOpen]);
+  }, [near, talking, atDesk, deskOpen, room, nearShelf, atDoor, readShelf, nearTower, enterTower, leaveTower]);
 
   useEffect(() => {
     const onPanelKey = (e: KeyboardEvent) => {
@@ -225,6 +289,10 @@ export default function Game3DPage() {
             onNearDesk={setAtDesk}
             talking={talking}
             cheerKey={cheerKey}
+            onNearTower={setNearTower}
+            room={roomView}
+            onNearShelf={setNearShelf}
+            onNearDoor={setAtDoor}
           />
         </Suspense>
       </SceneBoundary>
@@ -250,6 +318,9 @@ export default function Game3DPage() {
           onClose={() => setDeskOpen(false)}
         />
       )}
+      {roomView && readShelf && (
+        <ShelfPanel name={roomView.name} open={readShelf} shelves={roomView.shelves} demo={world.demo} onClose={() => setReadShelf(null)} />
+      )}
       {talking && <DialoguePanel npc={talking} quest={quest} reviews={reviews} onClose={() => setTalking(null)} onRetry={load} />}
 
       <Link
@@ -258,8 +329,33 @@ export default function Game3DPage() {
       >
         ← Flat fortress
       </Link>
+      {roomView && (
+        <button
+          type="button"
+          onClick={leaveTower}
+          className="absolute left-3 top-14 rounded border border-border bg-surface/90 px-3 py-1.5 text-sm text-ink hover:opacity-80"
+        >
+          ← Back outside
+        </button>
+      )}
 
-      {atDesk && !deskOpen && !talking && (
+      {!room && nearTower && !near && !talking && (
+        <p className="pointer-events-none absolute bottom-16 left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-sm text-white">
+          Press E to go into {world.plain.find((t) => t.holdingId === nearTower)?.name ?? "the tower"}
+        </p>
+      )}
+      {room && nearShelf && !readShelf && (
+        <p className="pointer-events-none absolute bottom-16 left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-sm text-white">
+          Press E to read {roomView?.shelves.find((s) => s.id === nearShelf)?.title ?? "the shelf"}
+        </p>
+      )}
+      {room && atDoor && !nearShelf && (
+        <p className="pointer-events-none absolute bottom-16 left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-sm text-white">
+          Press E to go back outside
+        </p>
+      )}
+
+      {atDesk && !deskOpen && !talking && !nearTower && (
         <p className="pointer-events-none absolute bottom-16 left-1/2 w-max -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-sm text-white">
           Press E to write at the desk
         </p>
