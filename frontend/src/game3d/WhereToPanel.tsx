@@ -1,10 +1,12 @@
 import { doorsAt, placesWithDoors } from "./parity3d";
-import type { Door } from "./parity3d";
+import type { Door, PlaceId } from "./parity3d";
 import { MENU_HINT, MENU_INTRO, MENU_TITLE } from "./worldWordsV1";
 
 interface Props {
   onPick: (door: Door) => void;
   onClose: () => void;
+  /** Show only this place's pages (a building door in the Town opens its own place). */
+  only?: PlaceId | null;
 }
 
 /**
@@ -12,7 +14,7 @@ interface Props {
  * opens it in the world panel (two taps from anywhere: G or the button, then the page). The list comes
  * from the parity register, so a page added to the app shows up here once it has a row.
  */
-export default function WhereToPanel({ onPick, onClose }: Props) {
+export default function WhereToPanel({ onPick, onClose, only = null }: Props) {
   return (
     <aside
       aria-label={MENU_TITLE}
@@ -23,7 +25,7 @@ export default function WhereToPanel({ onPick, onClose }: Props) {
         <button type="button" className="g3d-x" aria-label="Close the signpost" onClick={onClose}>×</button>
       </header>
       <p className="g3d-muted mt-1">{MENU_INTRO}</p>
-      {placesWithDoors().map((place) => (
+      {placesWithDoors().filter((p) => !only || p.id === only).map((place) => (
         <section key={place.id} className="g3d-card" aria-label={place.title}>
           <h3>{place.title}</h3>
           <p className="g3d-tag">{place.will}</p>
