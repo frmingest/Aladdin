@@ -1,8 +1,9 @@
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { MutableRefObject } from "react";
 import { useFrame } from "@react-three/fiber";
 import { CuboidCollider, RigidBody } from "@react-three/rapier";
 import { Html } from "@react-three/drei";
+import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 import { PAL, Part } from "./Inked";
 import {
   DOOR_LEAVE_RANGE,
@@ -12,7 +13,10 @@ import {
   SHELF_LEAVE_RANGE,
   SHELF_RANGE,
   SHELF_SLOTS,
+  TABLE_LEAVE_RANGE,
+  TABLE_RANGE,
   nearDoor,
+  nearTable,
   nearestShelf,
 } from "./libraryRoom";
 import { describeShelf, shelfMark } from "./libraryShelves";
@@ -22,8 +26,6 @@ const PLASTER = "#d8c6a4";
 const FLOOR = "#7a5638";
 const MIST = "#dfe5ea";
 const LAMP = "#f2d27a";
-/** Books are told apart by their place on the shelf, never by colour: fixed colours by slot. */
-const BOOK_COLORS = [PAL.teal, PAL.cream, PAL.slateDark, PAL.timberLight] as const;
 const BOOK_HEIGHTS = [0.95, 1.05, 0.9, 1.0] as const;
 const BOARD_Y = [0.15, 1.3, 2.45] as const;
 const BAY_W = 3.6;
@@ -33,16 +35,72 @@ const LENGTH_Z = HALL.maxZ - HALL.minZ;
 const MID_Z = (HALL.maxZ + HALL.minZ) / 2;
 const WIDTH_X = HALL.maxX - HALL.minX;
 
+const GOLD = "#d6b35a";
+/** Fixed by slot, never by data. No red or green: a cover colour must not read as a verdict. */
+const COVERS = [PAL.teal, "#34456b", "#7a4a2b", PAL.slateDark, "#6a4a6e", "#b9a98a"] as const;
+const BOOK_WIDTHS = [0.42, 0.5, 0.38, 0.46] as const;
+const SPINE_DEPTH = 0.56;
+
+export interface BookSlot {
+  key: number;
+  /** Centre across the bay, and the board it stands on. */
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  lean: number;
+}
+
+/**
+ * Books packed from the left of each board with a hair of gap, in uneven widths and heights, and the last
+ * book of a half-full board leaning. Fixed by position, so they carry no fact of their own; how many
+ * stand there is the fact.
+ */
+function bookSlots(count: number): BookSlot[] {
+  const slots: BookSlot[] = [];
+  for (let row = 0; row < 2; row++) {
+    const inRow = Math.max(0, Math.min(4, count - row * 4));
+    let cursor = -1.5;
+    for (let col = 0; col < inRow; col++) {
+      const i = row * 4 + col;
+      const w = BOOK_WIDTHS[(col + row) % 4];
+      const h = BOOK_HEIGHTS[(col * 3 + row) % 4];
+      const last = col === inRow - 1 && inRow < 4;
+      slots.push({ key: i, x: cursor + w / 2 + (last ? 0.06 : 0), y: BOARD_Y[row] + 0.05, w, h, lean: last ? -0.16 : 0 });
+      cursor += w + 0.03;
+    }
+  }
+  return slots;
+}
+
+/** One book: a rounded cover, a cream edge of pages along the top, and two gold bands on the spine. */
+function Book({ b }: { b: BookSlot }) {
+  const geo = useMemo(() => new RoundedBoxGeometry(b.w, b.h, SPINE_DEPTH, 2, 0.04), [b.w, b.h]);
+  return (
+    <group position={[b.x, b.y, 0.05]} rotation={[0, 0, b.lean]}>
+      <group position={[0, b.h / 2, 0]}>
+        <Part color={COVERS[b.key % COVERS.length]} grow={1.07}>
+          <primitive object={geo} attach="geometry" />
+        </Part>
+        <Part color={PAL.cream} position={[0, b.h / 2 + 0.005, -0.03]} ink={false}>
+          <boxGeometry args={[b.w - 0.1, 0.03, SPINE_DEPTH - 0.14]} />
+        </Part>
+        {([-1, 1] as const).map((s) => (
+          <Part key={s} color={GOLD} position={[0, s * b.h * 0.3, SPINE_DEPTH / 2 + 0.004]} ink={false}>
+            <boxGeometry args={[b.w + 0.01, 0.05, 0.015]} />
+          </Part>
+        ))}
+      </group>
+    </group>
+  );
+}
+
 /** One shelf bay: carcase, up to eight books, mist over it when not surveyed, a gold frame when you stand at it. */
 function Bay({ shelf, x, z, yaw, active }: { shelf: Shelf; x: number; z: number; yaw: number; active: boolean }) {
-  const books = Array.from({ length: shelf.books }, (_, i) => {
-    const row = Math.floor(i / 4);
-    const col = i % 4;
-    const h = BOOK_HEIGHTS[col];
-    return { key: i, x: -1.22 + col * 0.82, y: BOARD_Y[row] + 0.05 + h / 2, h };
-  });
+  const books = bookSlots(shelf.books);
   return (
-    <group position={[x, 0, z]} rotation={[0, yaw, 0]}>
+    <RigidBody type="fixed" colliders={false} position={[x, 0, z]} rotation={[0, yaw, 0]}>
+      <CuboidCollider args={[BAY_W / 2, BAY_H / 2, 0.4]} position={[0, BAY_H / 2, 0]} />
       <Part color={PAL.timberDark} position={[0, BAY_H / 2, -0.32]} grow={1.02}>
         <boxGeometry args={[BAY_W, BAY_H, 0.1]} />
       </Part>
@@ -57,9 +115,7 @@ function Bay({ shelf, x, z, yaw, active }: { shelf: Shelf; x: number; z: number;
         </Part>
       ))}
       {books.map((b) => (
-        <Part key={b.key} color={BOOK_COLORS[b.key % BOOK_COLORS.length]} position={[b.x, b.y, 0.05]} grow={1.08}>
-          <boxGeometry args={[0.62, b.h, 0.5]} />
-        </Part>
+        <Book key={b.key} b={b} />
       ))}
       {shelf.state === "unknown" && (
         <mesh position={[0, 1.4, 0.45]}>
@@ -91,7 +147,7 @@ function Bay({ shelf, x, z, yaw, active }: { shelf: Shelf; x: number; z: number;
           {shelfMark(shelf)} {shelf.title}
         </div>
       </Html>
-    </group>
+    </RigidBody>
   );
 }
 
@@ -100,15 +156,18 @@ function ReadingWatch({
   pos,
   onShelf,
   onDoor,
+  onTable,
   setActive,
 }: {
   pos: MutableRefObject<{ x: number; z: number }>;
   onShelf: (id: ShelfId | null) => void;
   onDoor: (near: boolean) => void;
+  onTable: (near: boolean) => void;
   setActive: (id: ShelfId | null) => void;
 }) {
   const lastShelf = useRef<ShelfId | null>(null);
   const lastDoor = useRef(false);
+  const lastTable = useRef(false);
   useFrame(() => {
     const s = nearestShelf(pos.current, SHELF_SLOTS, lastShelf.current ? SHELF_LEAVE_RANGE : SHELF_RANGE);
     const id = s ? s.id : null;
@@ -121,6 +180,11 @@ function ReadingWatch({
     if (d !== lastDoor.current) {
       lastDoor.current = d;
       onDoor(d);
+    }
+    const t = nearTable(pos.current, lastTable.current ? TABLE_LEAVE_RANGE : TABLE_RANGE);
+    if (t !== lastTable.current) {
+      lastTable.current = t;
+      onTable(t);
     }
   });
   return null;
@@ -135,6 +199,7 @@ interface Props {
   pos: MutableRefObject<{ x: number; z: number }>;
   onShelf: (id: ShelfId | null) => void;
   onDoor: (near: boolean) => void;
+  onTable: (near: boolean) => void;
 }
 
 /**
@@ -143,7 +208,7 @@ interface Props {
  * shelf's books and words come from `shelvesFor`. Walls are drawn from inside only (single-sided), so the
  * follow camera can sit outside them without a wall in the way. Nothing animates.
  */
-export default function Library({ name, ticker, gap = null, shelves, pos, onShelf, onDoor }: Props) {
+export default function Library({ name, ticker, gap = null, shelves, pos, onShelf, onDoor, onTable }: Props) {
   const [active, setActive] = useState<ShelfId | null>(null);
   const byId = new Map(shelves.map((s) => [s.id, s]));
   const doorGap = HALL_DOOR.width / 2;
@@ -254,7 +319,7 @@ export default function Library({ name, ticker, gap = null, shelves, pos, onShel
         return shelf ? <Bay key={slot.id} shelf={shelf} x={slot.x} z={slot.z} yaw={slot.yaw} active={active === slot.id} /> : null;
       })}
 
-      <ReadingWatch pos={pos} onShelf={onShelf} onDoor={onDoor} setActive={setActive} />
+      <ReadingWatch pos={pos} onShelf={onShelf} onDoor={onDoor} onTable={onTable} setActive={setActive} />
     </group>
   );
 }

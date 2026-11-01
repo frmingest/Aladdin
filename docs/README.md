@@ -57,8 +57,9 @@ Game mode (Fortress): concept, sprint plans and reviews, visual identity, art pa
 - [game3d-standing-3-wires-2026-10-31.md](game/game3d-standing-3-wires-2026-10-31.md) — 3D courtyard Standing 3, T2: fired, unseen wires in the Quest log with "I have looked"
 - [game3d-standing-3-torch-2026-10-31.md](game/game3d-standing-3-torch-2026-10-31.md) — 3D courtyard Standing 3, T3: the fourth torch, v2 words, live Standing flipped to standing_v2
 - [game3d-standing-3-look-2026-10-31.md](game/game3d-standing-3-look-2026-10-31.md) — 3D courtyard Standing 3, T4: look and judge in a real browser (empty, sample, fired wire acknowledged, quiet watch), tap counts, checklist section B
-- [game/game3d-keep-and-towers-2026-11-01.md](game/game3d-keep-and-towers-2026-11-01.md): 3D courtyard keep and corner towers as KayKit models, with plain-shape fallback (not merged, not deployed)
+- [game/game3d-keep-and-towers-2026-11-01.md](game/game3d-keep-and-towers-2026-11-01.md): 3D courtyard keep and corner towers as KayKit models, with plain-shape fallback (merged #234, deploy not checked)
 - [game/game3d-tower-library-2026-11-01.md](game/game3d-tower-library-2026-11-01.md): 3D courtyard: walk into a tower and read its library, six shelves from the stored facts (not merged, not deployed)
+- [game/game3d-library-polish-2026-11-01.md](game/game3d-library-polish-2026-11-01.md): 3D library polish: no stuck sideways walk, real-looking books, one shelf per page, the table opens the latest report (not merged, not deployed)
 - [game/game3d-marketplace-corner-2026-11-01.md](game/game3d-marketplace-corner-2026-11-01.md): 3D courtyard marketplace corner (KayKit stall, well, tables, crates, flags), decoration only, plain fallback (not merged, not deployed)
 - [game/game3d-spread-layout-2026-11-01.md](game/game3d-spread-layout-2026-11-01.md): 3D courtyard tower pads spread out, ground reserved for marketplace and siege simulator (not merged, not deployed)
 - [game/game3d-bigger-map-2026-11-01.md](game/game3d-bigger-map-2026-11-01.md): 3D courtyard spread 1.5x (walls, towers, market, horizon) and hotkeys no longer fire while typing (not merged, not deployed)

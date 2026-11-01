@@ -2,7 +2,9 @@ import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } fro
 import { Link } from "react-router-dom";
 import { api } from "../lib/api";
 import { describeError } from "../lib/errors";
-import type { GameState, Journal, JournalEntryInput, Standing } from "../lib/types";
+import type { DocumentSummary, GameState, Journal, JournalEntryInput, Standing } from "../lib/types";
+import { DocumentReader } from "../components/DocumentReader";
+import { latestReport } from "../game3d/libraryReport";
 import SceneBoundary from "../game3d/SceneBoundary";
 import TowerPanel from "../game3d/TowerPanel";
 import QuestLog from "../game3d/QuestLog";
@@ -78,6 +80,10 @@ export default function Game3DPage() {
   const [nearShelf, setNearShelf] = useState<ShelfId | null>(null);
   const [atDoor, setAtDoor] = useState(false);
   const [readShelf, setReadShelf] = useState<ShelfId | null>(null);
+  // The reading table: whether you stand at it, the report it opened, and a short note when there is none.
+  const [atTable, setAtTable] = useState(false);
+  const [report, setReport] = useState<DocumentSummary | null>(null);
+  const [tableNote, setTableNote] = useState<string | null>(null);
   // The quest-done cheer: a new number starts it, once per page load, never on the sample journal.
   const [cheerKey, setCheerKey] = useState<number | null>(null);
   const cheered = useRef(false);
@@ -184,6 +190,9 @@ export default function Game3DPage() {
     setNearTower(null);
     setNearShelf(null);
     setAtDoor(false);
+    setAtTable(false);
+    setReport(null);
+    setTableNote(null);
     setReadShelf(null);
     setRoom(id);
   }, []);
@@ -191,13 +200,36 @@ export default function Game3DPage() {
     setReadShelf(null);
     setNearShelf(null);
     setAtDoor(false);
+    setAtTable(false);
+    setReport(null);
+    setTableNote(null);
     setRoom(null);
+  }, []);
+  const openReport = useCallback((holdingId: string) => {
+    if (document.pointerLockElement) document.exitPointerLock();
+    setReadShelf(null);
+    setTableNote("Fetching the latest report…");
+    api
+      .listDocuments(holdingId)
+      .then((docs) => {
+        const doc = latestReport(docs);
+        if (doc) {
+          setReport(doc);
+          setTableNote(null);
+        } else setTableNote("No report on the table yet.");
+      })
+      .catch(() => setTableNote("Couldn't fetch the report. Try again."));
   }, []);
 
   // Walking away from a shelf closes its page.
   useEffect(() => {
     if (readShelf && nearShelf !== readShelf) setReadShelf(null);
   }, [nearShelf, readShelf]);
+
+  // Walking away from the table puts its note away.
+  useEffect(() => {
+    if (!atTable) setTableNote(null);
+  }, [atTable]);
 
   // Walking away from the desk closes it; so does starting a talk.
   useEffect(() => {
@@ -215,10 +247,12 @@ export default function Game3DPage() {
       const el = e.target as HTMLElement | null;
       if (typingInField(el)) return;
       if (room) {
-        // Inside a tower: E reads the shelf you stand at, or takes the door back out.
-        if (!nearShelf && !atDoor) return;
+        // Inside a tower: E reads the shelf you stand at, opens the latest report at the table, or takes the door back out.
+        if (report) return;
+        if (!nearShelf && !atDoor && !atTable) return;
         e.preventDefault();
-        if (nearShelf) {
+        if (!nearShelf && atTable) openReport(room);
+        else if (nearShelf) {
           if (readShelf !== nearShelf && document.pointerLockElement) document.exitPointerLock();
           setReadShelf((v) => (v === nearShelf ? null : nearShelf));
         } else leaveTower();
@@ -246,7 +280,7 @@ export default function Game3DPage() {
     };
     window.addEventListener("keydown", onTalk);
     return () => window.removeEventListener("keydown", onTalk);
-  }, [near, talking, atDesk, deskOpen, room, nearShelf, atDoor, readShelf, nearTower, enterTower, leaveTower]);
+  }, [near, talking, atDesk, deskOpen, room, nearShelf, atDoor, atTable, report, readShelf, nearTower, enterTower, leaveTower, openReport]);
 
   useEffect(() => {
     const onPanelKey = (e: KeyboardEvent) => {
@@ -292,6 +326,7 @@ export default function Game3DPage() {
             onNearTower={setNearTower}
             room={roomView}
             onNearShelf={setNearShelf}
+            onNearTable={setAtTable}
             onNearDoor={setAtDoor}
           />
         </Suspense>
@@ -319,8 +354,14 @@ export default function Game3DPage() {
         />
       )}
       {roomView && readShelf && (
-        <ShelfPanel name={roomView.name} open={readShelf} shelves={roomView.shelves} demo={world.demo} onClose={() => setReadShelf(null)} />
+        <ShelfPanel
+          name={roomView.name}
+          shelf={roomView.shelves.find((s) => s.id === readShelf) ?? roomView.shelves[0]}
+          demo={world.demo}
+          onClose={() => setReadShelf(null)}
+        />
       )}
+      {report && <DocumentReader document={report} origin="50% 50%" onClosed={() => setReport(null)} />}
       {talking && <DialoguePanel npc={talking} quest={quest} reviews={reviews} onClose={() => setTalking(null)} onRetry={load} />}
 
       <Link
@@ -349,7 +390,12 @@ export default function Game3DPage() {
           Press E to read {roomView?.shelves.find((s) => s.id === nearShelf)?.title ?? "the shelf"}
         </p>
       )}
-      {room && atDoor && !nearShelf && (
+      {room && atTable && !nearShelf && !report && (
+        <p className="pointer-events-none absolute bottom-16 left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-sm text-white">
+          {tableNote ?? "Press E to open the latest report"}
+        </p>
+      )}
+      {room && atDoor && !nearShelf && !atTable && (
         <p className="pointer-events-none absolute bottom-16 left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-sm text-white">
           Press E to go back outside
         </p>
