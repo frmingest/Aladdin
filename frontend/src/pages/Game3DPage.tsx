@@ -11,6 +11,10 @@ import QuestLog from "../game3d/QuestLog";
 import DialoguePanel from "../game3d/DialoguePanel";
 import DeskPanel from "../game3d/DeskPanel";
 import DrillPanel from "../game3d/DrillPanel";
+import WhereToPanel from "../game3d/WhereToPanel";
+import WorldPanel from "../game3d/WorldPanel";
+import type { Door } from "../game3d/parity3d";
+import { PLAIN_VIEW, PLAIN_VIEW_TITLE, SIGN_PROMPT } from "../game3d/worldWordsV1";
 import { drillBlock, stormDrillQuest } from "../game3d/stormDrill";
 import { DRILL_PROMPT } from "../game3d/stormDrillWordsV1";
 import ShelfPanel from "../game3d/ShelfPanel";
@@ -77,6 +81,10 @@ export default function Game3DPage() {
   // The writing desk: whether you stand at it, and whether its panel is open.
   const [atDesk, setAtDesk] = useState(false);
   const [deskOpen, setDeskOpen] = useState(false);
+  // The signpost by the gate: whether you stand at it, whether the "Where to?" menu is open, and the flat page shown in the world panel.
+  const [atSign, setAtSign] = useState(false);
+  const [whereOpen, setWhereOpen] = useState(false);
+  const [worldPage, setWorldPage] = useState<Door | null>(null);
   // The Storm Drill: whether you stand at the drill post, whether a drill is open (the camp stands while it is), and the stored drills.
   const [atDrill, setAtDrill] = useState(false);
   const [drillOpen, setDrillOpen] = useState(false);
@@ -204,6 +212,20 @@ export default function Game3DPage() {
     if (room && !roomView) setRoom(null);
   }, [room, roomView]);
 
+  // Opening the menu frees the mouse so the buttons can be clicked; shutting it never leaves a page open.
+  const toggleWhere = useCallback(() => {
+    setWhereOpen((open) => {
+      if (!open && document.pointerLockElement) document.exitPointerLock();
+      return !open;
+    });
+    setWorldPage(null);
+  }, []);
+  const closeWhere = useCallback(() => {
+    setWhereOpen(false);
+    setWorldPage(null);
+  }, []);
+  const pickDoor = useCallback((door: Door) => setWorldPage(door), []);
+
   const enterTower = useCallback((id: string) => {
     if (document.pointerLockElement) {
       // Keep the mouse look going through the door: only free it if something else is open.
@@ -290,13 +312,18 @@ export default function Game3DPage() {
         } else leaveTower();
         return;
       }
-      if (!near && !nearTower && !atDesk && !atDrill) return;
+      if (!near && !nearTower && !atDesk && !atDrill && !atSign) return;
       e.preventDefault();
       if (!near && nearTower) {
         enterTower(nearTower);
         return;
       }
       if (!near) {
+        if (!atDesk && !atDrill) {
+          // Only the signpost is in reach: E opens or shuts the "Where to?" menu.
+          toggleWhere();
+          return;
+        }
         if (!atDesk) {
           // Only the drill post is in reach: E starts or ends a drill.
           if (!drillOpen && document.pointerLockElement) document.exitPointerLock();
@@ -318,7 +345,7 @@ export default function Game3DPage() {
     };
     window.addEventListener("keydown", onTalk);
     return () => window.removeEventListener("keydown", onTalk);
-  }, [near, talking, atDesk, atDrill, drillOpen, deskOpen, room, nearShelf, atDoor, atTable, report, readShelf, nearTower, enterTower, leaveTower, openReport]);
+  }, [near, talking, atDesk, atDrill, atSign, toggleWhere, drillOpen, deskOpen, room, nearShelf, atDoor, atTable, report, readShelf, nearTower, enterTower, leaveTower, openReport]);
 
   useEffect(() => {
     const onPanelKey = (e: KeyboardEvent) => {
@@ -344,6 +371,22 @@ export default function Game3DPage() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  // G opens or shuts the "Where to?" menu from anywhere; Esc backs out of a page, then the menu.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey || typingInField(e.target)) return;
+      if (e.code === "KeyG") {
+        e.preventDefault();
+        toggleWhere();
+      } else if (e.code === "Escape" && whereOpen) {
+        if (worldPage) setWorldPage(null);
+        else closeWhere();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [toggleWhere, closeWhere, whereOpen, worldPage]);
+
   if (!supported) return <Unavailable />;
 
   return (
@@ -360,6 +403,7 @@ export default function Game3DPage() {
             books={quest.written}
             onNearDesk={setAtDesk}
             onNearDrill={setAtDrill}
+            onNearSign={setAtSign}
             drillOpen={drillOpen}
             talking={talking}
             cheerKey={cheerKey}
@@ -380,7 +424,11 @@ export default function Game3DPage() {
         statsOn={showPerf}
         statsLabel={stats ? `${stats.fps} fps · ${stats.calls} draws · ${Math.round(stats.triangles / 1000)}k tris` : "Measuring..."}
         onToggleStats={() => setShowPerf((v) => !v)}
+        whereOpen={whereOpen}
+        onToggleWhere={toggleWhere}
       />
+      {whereOpen && !worldPage && <WhereToPanel onPick={pickDoor} onClose={closeWhere} />}
+      {whereOpen && worldPage && <WorldPanel door={worldPage} onBack={() => setWorldPage(null)} onClose={closeWhere} />}
       {panels.towers && <TowerPanel world={shownWorld} loading={loading} error={error} onRetry={load} onClose={() => flip("towers")} />}
       {panels.quests && <QuestLog quest={quest} reviews={reviews} demo={world.demo} standing={standingText} wires={standing && !standingFailed ? (standing.wires ?? []) : undefined} onLookAtWire={lookAtWire} onRefreshStanding={refreshStanding} drill={drillQuest} onClose={() => flip("quests")} />}
       {deskOpen && (
@@ -414,9 +462,10 @@ export default function Game3DPage() {
 
       <Link
         to="/fortress"
+        title={PLAIN_VIEW_TITLE}
         className="absolute left-3 top-3 rounded border border-border bg-surface/90 px-3 py-1.5 text-sm text-ink hover:opacity-80"
       >
-        ← Flat fortress
+        {PLAIN_VIEW}
       </Link>
       {roomView && (
         <button
@@ -461,9 +510,15 @@ export default function Game3DPage() {
         </p>
       )}
 
+      {atSign && !whereOpen && !talking && !nearTower && !atDesk && !atDrill && !room && (
+        <p className="pointer-events-none absolute bottom-16 left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-sm text-white">
+          {SIGN_PROMPT}
+        </p>
+      )}
+
       {!locked && !talking && (
         <p className="pointer-events-none absolute bottom-4 left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-center text-sm text-white">
-          Click to look around · W A S D walk · Shift run · Space jump · Wheel zoom · Esc frees the mouse · Q quests · T towers
+          Click to look around · W A S D walk · Shift run · Space jump · Wheel zoom · Esc frees the mouse · Q quests · T towers · G where to
         </p>
       )}
     </div>
