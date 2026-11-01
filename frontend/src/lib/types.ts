@@ -1296,6 +1296,24 @@ export interface JournalEntry {
   outcome: JournalOutcome;
 }
 
+export interface StormDrill {
+  id: string;
+  market_drop: string;
+  plan: string;
+  scenarios_version: string;
+  created_at: string;
+}
+
+export interface StormDrills {
+  drills: StormDrill[];
+  demo: boolean;
+}
+
+export interface StormDrillInput {
+  market_drop: string;
+  plan: string;
+}
+
 export interface Journal {
   entries: JournalEntry[];
   reviews_due: number;

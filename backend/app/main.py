@@ -32,6 +32,7 @@ from app.api.research import router as research_router
 from app.api.risk import router as risk_router
 from app.api.settings import router as settings_router
 from app.api.sources import router as sources_router
+from app.api.storm_drill import router as storm_drill_router
 from app.api.system import router as system_router
 from app.api.tag_review import router as tag_review_router
 from app.api.thesis import router as thesis_router
@@ -146,6 +147,7 @@ app.include_router(precious_metals_router)
 app.include_router(settings_router)
 app.include_router(usage_router)
 app.include_router(game_router)
+app.include_router(storm_drill_router)
 app.include_router(tag_review_router)
 
 

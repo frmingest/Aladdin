@@ -69,12 +69,8 @@ describe("courtyard layout", () => {
     }
   });
 
-  it("holds open ground for the siege simulator, clear of every pad", () => {
-    expect(RESERVED_ZONES.map((z) => z.id)).toEqual(["siege-simulator"]);
-    for (const z of RESERVED_ZONES) {
-      expect(Math.hypot(z.x, z.z) + z.radius, z.id).toBeLessThan(COBBLE_RADIUS);
-      for (const s of towerSpots()) expect(Math.hypot(s.x - z.x, s.z - z.z), z.id).toBeGreaterThan(z.radius + 2.5);
-    }
+  it("holds no reserved ground now: the siege-simulator ground became the Storm Drill camp", () => {
+    expect(RESERVED_ZONES).toEqual([]);
   });
 
   it("spawns the player inside the walls", () => {

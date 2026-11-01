@@ -2,7 +2,7 @@ import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } fro
 import { Link } from "react-router-dom";
 import { api } from "../lib/api";
 import { describeError } from "../lib/errors";
-import type { DocumentSummary, GameState, Journal, JournalEntryInput, Standing } from "../lib/types";
+import type { DocumentSummary, GameState, Journal, JournalEntryInput, Standing, StormDrillInput, StormDrills } from "../lib/types";
 import { DocumentReader } from "../components/DocumentReader";
 import { latestReport } from "../game3d/libraryReport";
 import SceneBoundary from "../game3d/SceneBoundary";
@@ -10,6 +10,9 @@ import TowerPanel from "../game3d/TowerPanel";
 import QuestLog from "../game3d/QuestLog";
 import DialoguePanel from "../game3d/DialoguePanel";
 import DeskPanel from "../game3d/DeskPanel";
+import DrillPanel from "../game3d/DrillPanel";
+import { drillBlock, stormDrillQuest } from "../game3d/stormDrill";
+import { DRILL_PROMPT } from "../game3d/stormDrillWordsV1";
 import ShelfPanel from "../game3d/ShelfPanel";
 import { shelvesFor } from "../game3d/libraryShelves";
 import type { ShelfId } from "../game3d/libraryShelves";
@@ -74,6 +77,11 @@ export default function Game3DPage() {
   // The writing desk: whether you stand at it, and whether its panel is open.
   const [atDesk, setAtDesk] = useState(false);
   const [deskOpen, setDeskOpen] = useState(false);
+  // The Storm Drill: whether you stand at the drill post, whether a drill is open (the camp stands while it is), and the stored drills.
+  const [atDrill, setAtDrill] = useState(false);
+  const [drillOpen, setDrillOpen] = useState(false);
+  const [drills, setDrills] = useState<StormDrills | null>(null);
+  const [drillsFailed, setDrillsFailed] = useState(false);
   // The tower library: which door you stand at, which tower you are inside, and what you stand at in there.
   const [nearTower, setNearTower] = useState<string | null>(null);
   const [room, setRoom] = useState<string | null>(null);
@@ -106,6 +114,11 @@ export default function Game3DPage() {
       .getJournal()
       .then(setJournal)
       .catch(() => setJournalFailed(true));
+    setDrillsFailed(false);
+    api
+      .getStormDrills()
+      .then(setDrills)
+      .catch(() => setDrillsFailed(true));
     setStandingFailed(false);
     api
       .getStanding()
@@ -125,6 +138,17 @@ export default function Game3DPage() {
     if (st.status === "fulfilled") {
       setStanding(st.value);
       setStandingFailed(false);
+    }
+  }, []);
+
+  // After a drill is written, read the drills again: the quest is worked out from what is stored.
+  const saveDrill = useCallback(async (input: StormDrillInput) => {
+    await api.createStormDrill(input);
+    try {
+      setDrills(await api.getStormDrills());
+      setDrillsFailed(false);
+    } catch {
+      setDrillsFailed(true);
     }
   }, []);
 
@@ -163,6 +187,7 @@ export default function Game3DPage() {
     }
   }, [quest.status, world.demo]);
   // Quest 2 reads the same journal; it needs no holdings, so it does not wait for the towers.
+  const drillQuest = useMemo(() => stormDrillQuest(drills, drillsFailed), [drills, drillsFailed]);
   const reviews = useMemo(() => sixMonthReckoning(journal?.entries ?? null, journalFailed), [journal, journalFailed]);
 
 
@@ -185,6 +210,8 @@ export default function Game3DPage() {
     }
     setTalking(null);
     setDeskOpen(false);
+    setDrillOpen(false);
+    setAtDrill(false);
     setNear(null);
     setAtDesk(false);
     setNearTower(null);
@@ -236,6 +263,11 @@ export default function Game3DPage() {
     if (deskOpen && (!atDesk || talking)) setDeskOpen(false);
   }, [atDesk, deskOpen, talking]);
 
+  // Walking away from the drill post ends the drill (the camp goes); so does starting a talk.
+  useEffect(() => {
+    if (drillOpen && (!atDrill || talking)) setDrillOpen(false);
+  }, [atDrill, drillOpen, talking]);
+
   // Walking away ends the talk.
   useEffect(() => {
     if (talking && near !== talking) setTalking(null);
@@ -258,13 +290,19 @@ export default function Game3DPage() {
         } else leaveTower();
         return;
       }
-      if (!near && !nearTower && !atDesk) return;
+      if (!near && !nearTower && !atDesk && !atDrill) return;
       e.preventDefault();
       if (!near && nearTower) {
         enterTower(nearTower);
         return;
       }
       if (!near) {
+        if (!atDesk) {
+          // Only the drill post is in reach: E starts or ends a drill.
+          if (!drillOpen && document.pointerLockElement) document.exitPointerLock();
+          setDrillOpen((v) => !v);
+          return;
+        }
         // Only the desk is in reach: E opens or closes it.
         if (!deskOpen && document.pointerLockElement) document.exitPointerLock();
         setDeskOpen((v) => !v);
@@ -280,7 +318,7 @@ export default function Game3DPage() {
     };
     window.addEventListener("keydown", onTalk);
     return () => window.removeEventListener("keydown", onTalk);
-  }, [near, talking, atDesk, deskOpen, room, nearShelf, atDoor, atTable, report, readShelf, nearTower, enterTower, leaveTower, openReport]);
+  }, [near, talking, atDesk, atDrill, drillOpen, deskOpen, room, nearShelf, atDoor, atTable, report, readShelf, nearTower, enterTower, leaveTower, openReport]);
 
   useEffect(() => {
     const onPanelKey = (e: KeyboardEvent) => {
@@ -321,6 +359,8 @@ export default function Game3DPage() {
             near={near}
             books={quest.written}
             onNearDesk={setAtDesk}
+            onNearDrill={setAtDrill}
+            drillOpen={drillOpen}
             talking={talking}
             cheerKey={cheerKey}
             onNearTower={setNearTower}
@@ -342,7 +382,7 @@ export default function Game3DPage() {
         onToggleStats={() => setShowPerf((v) => !v)}
       />
       {panels.towers && <TowerPanel world={shownWorld} loading={loading} error={error} onRetry={load} onClose={() => flip("towers")} />}
-      {panels.quests && <QuestLog quest={quest} reviews={reviews} demo={world.demo} standing={standingText} wires={standing && !standingFailed ? (standing.wires ?? []) : undefined} onLookAtWire={lookAtWire} onRefreshStanding={refreshStanding} onClose={() => flip("quests")} />}
+      {panels.quests && <QuestLog quest={quest} reviews={reviews} demo={world.demo} standing={standingText} wires={standing && !standingFailed ? (standing.wires ?? []) : undefined} onLookAtWire={lookAtWire} onRefreshStanding={refreshStanding} drill={drillQuest} onClose={() => flip("quests")} />}
       {deskOpen && (
         <DeskPanel
           holdings={world.plain}
@@ -351,6 +391,14 @@ export default function Game3DPage() {
           block={deskBlock(world.demo, quest.status)}
           onSave={saveAtDesk}
           onClose={() => setDeskOpen(false)}
+        />
+      )}
+      {drillOpen && (
+        <DrillPanel
+          count={drillQuest.count}
+          block={drillBlock(drillQuest)}
+          onSave={saveDrill}
+          onClose={() => setDrillOpen(false)}
         />
       )}
       {roomView && readShelf && (
@@ -404,6 +452,12 @@ export default function Game3DPage() {
       {atDesk && !deskOpen && !talking && !nearTower && (
         <p className="pointer-events-none absolute bottom-16 left-1/2 w-max -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-sm text-white">
           Press E to write at the desk
+        </p>
+      )}
+
+      {atDrill && !drillOpen && !talking && !nearTower && !atDesk && (
+        <p className="pointer-events-none absolute bottom-16 left-1/2 w-max -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-sm text-white">
+          {DRILL_PROMPT}
         </p>
       )}
 

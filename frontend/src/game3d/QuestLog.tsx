@@ -8,6 +8,9 @@ import type { StandingWords } from "./standingWordsV1";
 type ShownStanding = StandingWords & { watch?: string | null };
 import type { StandingWire } from "../lib/types";
 import WireList from "./WireList";
+import { fallPercent } from "./stormDrill";
+import type { DrillQuestState } from "./stormDrill";
+import { DRILL_GOAL, DRILL_STATUS_WORDS, DRILL_TITLE } from "./stormDrillWordsV1";
 
 const STATUS_WORDS: Record<QuestState["status"], string> = {
   loading: "Reading your journal...",
@@ -52,6 +55,7 @@ export default function QuestLog({
   wires,
   onLookAtWire,
   onRefreshStanding,
+  drill,
   onClose,
 }: {
   quest: QuestState;
@@ -63,6 +67,8 @@ export default function QuestLog({
   wires?: readonly StandingWire[];
   onLookAtWire?: (id: string) => Promise<unknown>;
   onRefreshStanding?: () => Promise<unknown>;
+  /** Storm Drill state; left out, the third card is not shown. */
+  drill?: DrillQuestState;
   onClose?: () => void;
 }) {
   const questDone = quest.status === "done";
@@ -130,6 +136,21 @@ export default function QuestLog({
         )}
         <Link to="/journal" className="g3d-btn mt-3 inline-block">Old entries: the journal</Link>
       </section>
+
+      {drill && (
+        <section className="g3d-card">
+          <p className="g3d-tag">Quest</p>
+          <h3>{DRILL_TITLE}</h3>
+          <p className="g3d-muted">{DRILL_GOAL}</p>
+          <p className="mt-2"><Pill done={drill.status === "done"}>{DRILL_STATUS_WORDS[drill.status]}</Pill></p>
+          {drill.status === "done" && (
+            <p className="g3d-muted mt-1">
+              {drill.count} written{drill.latestFall !== null ? `, the last for a ${fallPercent(drill.latestFall)} fall` : ""}.
+            </p>
+          )}
+          {drill.status === "open" && <p className="g3d-muted mt-2">Find the drill post in the south-west.</p>}
+        </section>
+      )}
 
       <p className="g3d-muted mt-3">
         Walk up to {NPCS.map((n) => n.name).join(" or ")} and press E.
