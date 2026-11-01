@@ -657,6 +657,8 @@ export default function Game3DPage() {
       {watchOpen && <WatchPanel onClose={() => setWatchOpen(false)} />}
       {perchOpen && ravens && <RavensPanel ravens={ravens} seen={seenRavens} onSeen={onRavensSeen} onClose={() => setPerchOpen(false)} />}
       {deskOpen && (
+        // Hidden, not unmounted, while the old books are open: what you typed stays where it is.
+        <div style={{ display: booksOpen ? "none" : "contents" }}>
         <DeskPanel
           holdings={world.plain}
           missing={quest.missing}
@@ -668,6 +670,7 @@ export default function Game3DPage() {
           due={journal?.reviews_due ?? 0}
           onReadBooks={journalFailed ? undefined : () => setBooksOpen(true)}
         />
+        </div>
       )}
       {deskOpen && booksOpen && (
         <JournalBooksPanel

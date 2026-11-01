@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { COBBLE_RADIUS, KEEP, SPAWN, towerSpots } from "./layout";
+import { ENTER_REACH, exitSpot } from "./towerDoor";
+import { SIZE_RADIUS } from "./stateToWorld";
 import { NPCS } from "./npcs";
 import { PROPS } from "./props";
 import { SCENERY } from "./sceneryPieces";
@@ -23,6 +25,22 @@ describe("writing desk placement", () => {
 
   it("is not within talking range of either person, so E never means two things", () => {
     for (const n of NPCS) expect(Math.hypot(DESK.x - n.x, DESK.z - n.z)).toBeGreaterThan(DESK_LEAVE_RANGE + 5);
+  });
+
+  it("is out of reach of every tower door, so standing at the desk never offers a library instead (found in a browser)", () => {
+    const widest = Math.max(...Object.values(SIZE_RADIUS));
+    for (const s of towerSpots()) {
+      expect(Math.hypot(DESK.x - s.x, DESK.z - s.z), `pad ${s.x},${s.z}`).toBeGreaterThan(DESK_RANGE + widest + ENTER_REACH);
+    }
+  });
+
+  it("is never where a hero stepping out of a tower is put down", () => {
+    for (const s of towerSpots())
+      for (const r of Object.values(SIZE_RADIUS)) {
+        const out = exitSpot(s, r);
+        expect(Math.hypot(out.x - DESK.x, out.z - DESK.z)).toBeGreaterThanOrEqual(2.4);
+        expect(Math.hypot(out.x - SHELF.x, out.z - SHELF.z)).toBeGreaterThanOrEqual(2.4);
+      }
   });
 
   it("arrives at a shorter range than it leaves, so the edge does not flicker", () => {
