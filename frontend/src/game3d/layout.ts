@@ -13,9 +13,8 @@ export const WALL_SEGMENTS = 32;
 export const GATE_HALF_ANGLE = 0.2;
 export const KEEP = { x: 0, z: -25, width: 16, depth: 12, height: 13 } as const;
 export const SPAWN = { x: 0, y: 2, z: 24 } as const;
-/** Eight places for the eight holdings (week 2 puts real towers here). */
+/** Eight places for the eight holdings. */
 export const TOWER_SPOT_COUNT = 8;
-export const TOWER_SPOT_RADIUS = 15;
 
 export interface WallSegment {
   x: number;
@@ -61,12 +60,44 @@ export function cornerTowers(radius = WALL_RADIUS): Spot[] {
   }));
 }
 
-/** Holding-tower spots in an arc across the north half of the courtyard. */
-export function towerSpots(count = TOWER_SPOT_COUNT, radius = TOWER_SPOT_RADIUS): Spot[] {
-  const span = 2.3; // radians, centred on due north
-  return Array.from({ length: count }, (_, i) => {
-    const t = count === 1 ? 0.5 : i / (count - 1);
-    const angle = Math.PI - span / 2 + span * t;
-    return { x: radius * Math.sin(angle), z: radius * Math.cos(angle) };
-  });
+/**
+ * Holding-tower spots, in the order the biggest holdings take them (best seen first).
+ * The towers stand in a wide horseshoe round the open middle: an inner pair that frames the walk from the
+ * gate to the keep, then pairs on the flanks, and a pair that frames the keep itself. Neighbours are 10 or more
+ * apart, and the whole south-east and south-west of the courtyard is left free (see RESERVED_ZONES).
+ * Mirrored on purpose: a fortress reads as even, and the layout stays easy to reason about.
+ */
+const TOWER_SPOTS: readonly Spot[] = [
+  { x: -10, z: -9 },
+  { x: 10, z: -9 },
+  { x: -23, z: -12 },
+  { x: 23, z: -12 },
+  { x: -16.5, z: -23.5 },
+  { x: 16.5, z: -23.5 },
+  { x: -23, z: -1 },
+  { x: 23, z: -1 },
+];
+
+export function towerSpots(): Spot[] {
+  return TOWER_SPOTS.map((s) => ({ ...s }));
 }
+
+export interface ReservedZone {
+  id: string;
+  x: number;
+  z: number;
+  /** Keep everything that stands on the cobbles outside this radius. */
+  radius: number;
+  /** What it is held for. */
+  for: string;
+}
+
+/**
+ * Open ground kept free for things that are planned but not built. Nothing is drawn here and nothing may
+ * stand in it (a test checks every pad, prop, person, desk and scenery piece). When the feature is built it
+ * takes the zone's place and the entry is deleted in the same change.
+ */
+export const RESERVED_ZONES: readonly ReservedZone[] = [
+  { id: "marketplace", x: 20, z: 14, radius: 6.5, for: "the marketplace (south-east, near the gate road)" },
+  { id: "siege-simulator", x: -21, z: 9, radius: 7, for: "the siege simulator (south-west, beside the camp)" },
+];

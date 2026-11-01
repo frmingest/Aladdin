@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { KEEP, TOWER_SPOT_RADIUS, WALL_RADIUS, towerSpots } from "./layout";
+import { KEEP, WALL_RADIUS, towerSpots } from "./layout";
 import { LEAVE_RANGE, NPCS, TALK_RANGE, nearestNpc, yawToward } from "./npcs";
 
 describe("courtyard people", () => {
@@ -17,7 +17,6 @@ describe("courtyard people", () => {
       const inKeep = Math.abs(n.x - KEEP.x) < KEEP.width / 2 + 1 && Math.abs(n.z - KEEP.z) < KEEP.depth / 2 + 1;
       expect(inKeep).toBe(false);
       for (const s of towerSpots()) expect(Math.hypot(n.x - s.x, n.z - s.z)).toBeGreaterThan(4.5);
-      expect(Math.hypot(n.x, n.z)).toBeLessThan(TOWER_SPOT_RADIUS + 20);
     }
     const [a, b] = NPCS;
     expect(Math.hypot(a.x - b.x, a.z - b.z)).toBeGreaterThan(TALK_RANGE * 2);
