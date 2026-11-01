@@ -62,10 +62,10 @@ export const SCENERY: readonly SceneryPiece[] = [
   // The keep door: a torch each side, banners either side of those.
   { id: "keep-torch-w", model: "torch_mounted", x: -2.7, y: 3.4, z: KEEP_FACE_Z + 0.05, yaw: 0, scale: 1.6, solid: 0 },
   { id: "keep-torch-e", model: "torch_mounted", x: 2.7, y: 3.4, z: KEEP_FACE_Z + 0.05, yaw: 0, scale: 1.6, solid: 0 },
-  { id: "keep-banner-w1", model: "banner_white", x: -4.8, y: 3.4, z: KEEP_FACE_Z - 0.33, yaw: 0, scale: 1, solid: 0 },
-  { id: "keep-banner-e1", model: "banner_white", x: 4.8, y: 3.4, z: KEEP_FACE_Z - 0.33, yaw: 0, scale: 1, solid: 0 },
-  { id: "keep-banner-w2", model: "banner_blue", x: -6.6, y: 3.4, z: KEEP_FACE_Z - 0.33, yaw: 0, scale: 1, solid: 0 },
-  { id: "keep-banner-e2", model: "banner_blue", x: 6.6, y: 3.4, z: KEEP_FACE_Z - 0.33, yaw: 0, scale: 1, solid: 0 },
+  { id: "keep-banner-w1", model: "banner_white", x: -3.9, y: 3.4, z: KEEP_FACE_Z - 0.33, yaw: 0, scale: 1, solid: 0 },
+  { id: "keep-banner-e1", model: "banner_white", x: 3.9, y: 3.4, z: KEEP_FACE_Z - 0.33, yaw: 0, scale: 1, solid: 0 },
+  { id: "keep-banner-w2", model: "banner_blue", x: -5.1, y: 3.4, z: KEEP_FACE_Z - 0.33, yaw: 0, scale: 1, solid: 0 },
+  { id: "keep-banner-e2", model: "banner_blue", x: 5.1, y: 3.4, z: KEEP_FACE_Z - 0.33, yaw: 0, scale: 1, solid: 0 },
   // The gate: light either side of the way in.
   gateTorch("gate-torch-w", -1),
   gateTorch("gate-torch-e", 1),
