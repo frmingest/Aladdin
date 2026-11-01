@@ -13,7 +13,13 @@ export const HALL = { minX: -11, maxX: 11, minZ: -10, maxZ: 9, height: 7 } as co
 /** The door is a closed pair of doors in the south wall; E beside it leads back out. */
 export const HALL_DOOR = { x: 0, z: HALL.maxZ, width: 3.2 } as const;
 /** Far enough into the hall that the follow camera (about 6 behind) is still inside the south wall. */
-export const ROOM_SPAWN = { x: 0, y: 1.5, z: 2 } as const;
+export const ROOM_SPAWN = { x: -3.4, y: 1.5, z: 2.2 } as const;
+
+/** The reading table in the middle: you stand on its south side to open the latest report. */
+export const TABLE = { x: 0, z: -1, hx: 1.15, hz: 0.6 } as const;
+export const TABLE_SPOT = { x: 0, z: 0.9 } as const;
+export const TABLE_RANGE = 2.4;
+export const TABLE_LEAVE_RANGE = 3.4;
 /** Camera yaw that puts the hero looking north (toward the shelves) on arrival. */
 export const ROOM_YAW = 0;
 
@@ -68,6 +74,10 @@ export function nearestShelf(
     }
   }
   return best;
+}
+
+export function nearTable(pos: { x: number; z: number }, range: number = TABLE_RANGE): boolean {
+  return Math.hypot(TABLE_SPOT.x - pos.x, TABLE_SPOT.z - pos.z) <= range;
 }
 
 export function nearDoor(pos: { x: number; z: number }, range: number = DOOR_RANGE): boolean {

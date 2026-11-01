@@ -15,28 +15,29 @@ function tower(o: Partial<GameTower> = {}): GameTower {
 }
 const noop = () => {};
 
-describe("ShelfPanel (plain view of the library)", () => {
-  it("lists every shelf in words and opens the one you are reading", () => {
-    const html = renderToStaticMarkup(<ShelfPanel name="Alpha" open="walls" shelves={shelvesFor(tower())} demo={false} onClose={noop} />);
-    for (const title of ["The Walls", "The Moat", "The Land", "The Oath", "The Treasury", "The Storm Test"]) expect(html).toContain(title);
+const shelf = (id: string, o: Partial<GameTower> = {}) => shelvesFor(tower(o)).find((s) => s.id === id)!;
+
+describe("ShelfPanel (plain view of one shelf)", () => {
+  it("shows only the shelf you stand at", () => {
+    const html = renderToStaticMarkup(<ShelfPanel name="Alpha" shelf={shelf("walls")} demo={false} onClose={noop} />);
+    expect(html).toContain("The Walls");
     expect(html).toContain("Granite walls");
     expect(html).toContain("Low debt.");
-    // Only the shelf being read is open.
-    expect(html.match(/<details[^>]* open/g)).toHaveLength(1);
+    for (const other of ["The Moat", "The Land", "The Oath", "The Treasury", "The Storm Test"]) expect(html).not.toContain(other);
+    expect(html).not.toContain("<details");
   });
 
   it("says unknown is not surveyed, and does not apply is not applicable, with their own marks", () => {
-    const shelves = shelvesFor(tower({ moat: "unsurveyed", thesis: "not_applicable" }));
-    const html = renderToStaticMarkup(<ShelfPanel name="Alpha" open={null} shelves={shelves} demo={false} onClose={noop} />);
-    expect(html).toContain("Not surveyed");
-    expect(html).toContain("Doesn&#x27;t apply");
-    expect(html).toContain("? </span>The Moat");
-    expect(html).toContain("– </span>The Oath");
-    expect(html).not.toContain(" open");
+    const fog = renderToStaticMarkup(<ShelfPanel name="Alpha" shelf={shelf("moat", { moat: "unsurveyed" })} demo={false} onClose={noop} />);
+    expect(fog).toContain("Not surveyed");
+    expect(fog).toContain("? </span>");
+    const na = renderToStaticMarkup(<ShelfPanel name="Alpha" shelf={shelf("oath", { thesis: "not_applicable" })} demo={false} onClose={noop} />);
+    expect(na).toContain("Doesn&#x27;t apply");
+    expect(na).toContain("– </span>");
   });
 
   it("flags the sample fortress", () => {
-    const html = renderToStaticMarkup(<ShelfPanel name="Alpha" open={null} shelves={shelvesFor(tower())} demo onClose={noop} />);
+    const html = renderToStaticMarkup(<ShelfPanel name="Alpha" shelf={shelf("walls")} demo onClose={noop} />);
     expect(html).toContain("Sample fortress, not your holdings.");
   });
 });

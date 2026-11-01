@@ -55,6 +55,7 @@ interface Props {
   room?: RoomView | null;
   onNearShelf?: (id: ShelfId | null) => void;
   onNearDoor?: (near: boolean) => void;
+  onNearTable?: (near: boolean) => void;
 }
 
 export interface RoomView {
@@ -129,6 +130,7 @@ function World({
   room,
   onNearShelf,
   onNearDoor,
+  onNearTable,
 }: {
   onLockChange: (locked: boolean) => void;
   world: WorldModel;
@@ -143,6 +145,7 @@ function World({
   room: RoomView | null;
   onNearShelf: (id: ShelfId | null) => void;
   onNearDoor: (near: boolean) => void;
+  onNearTable: (near: boolean) => void;
 }) {
   const keys = useKeys();
   const pos = useRef({ x: 0, z: 0 });
@@ -171,7 +174,7 @@ function World({
   return (
     <Physics gravity={[0, -25, 0]} timeStep="vary">
       {room ? (
-        <Library name={room.name} ticker={room.ticker} gap={room.gap} shelves={room.shelves} pos={pos} onShelf={onNearShelf} onDoor={onNearDoor} />
+        <Library name={room.name} ticker={room.ticker} gap={room.gap} shelves={room.shelves} pos={pos} onShelf={onNearShelf} onDoor={onNearDoor} onTable={onNearTable} />
       ) : (
         <>
           <Backdrop />
@@ -218,6 +221,7 @@ export default function Scene({
   room = null,
   onNearShelf = noop,
   onNearDoor = noop,
+  onNearTable = noop,
 }: Props) {
   const inside = room !== null;
   return (
@@ -284,6 +288,7 @@ export default function Scene({
           room={room}
           onNearShelf={onNearShelf}
           onNearDoor={onNearDoor}
+          onNearTable={onNearTable}
         />
       </Suspense>
       <PerfProbe onStats={onStats} />
