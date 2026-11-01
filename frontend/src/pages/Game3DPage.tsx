@@ -2,7 +2,7 @@ import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } fro
 import { Link } from "react-router-dom";
 import { api } from "../lib/api";
 import { describeError } from "../lib/errors";
-import type { DocumentSummary, GameState, Journal, JournalEntryInput, Standing, StormDrillInput, StormDrills } from "../lib/types";
+import type { DocumentSummary, GameState, Watchlist, Journal, JournalEntryInput, Standing, StormDrillInput, StormDrills } from "../lib/types";
 import { DocumentReader } from "../components/DocumentReader";
 import { latestReport } from "../game3d/libraryReport";
 import SceneBoundary from "../game3d/SceneBoundary";
@@ -30,6 +30,7 @@ import { celebrationDue } from "../game3d/celebrate";
 import { sixMonthReckoning } from "../game3d/quest";
 import { unwrittenThesisV2 } from "../game3d/questV2";
 import type { NpcId } from "../game3d/npcs";
+import { buildStreet } from "../game3d/streetPlan";
 import { stateToWorld } from "../game3d/stateToWorld";
 import { withGaps } from "../game3d/standingGaps";
 import { wordsFor } from "../game3d/standingWordsV3";
@@ -90,6 +91,8 @@ export default function Game3DPage() {
   const [drillOpen, setDrillOpen] = useState(false);
   const [drills, setDrills] = useState<StormDrills | null>(null);
   const [drillsFailed, setDrillsFailed] = useState(false);
+  // Market Street: the watchlist is separate too; if it cannot be read, the street simply has no stalls.
+  const [watchlist, setWatchlist] = useState<Watchlist | null>(null);
   // The tower library: which door you stand at, which tower you are inside, and what you stand at in there.
   const [nearTower, setNearTower] = useState<string | null>(null);
   const [room, setRoom] = useState<string | null>(null);
@@ -127,6 +130,10 @@ export default function Game3DPage() {
       .getStormDrills()
       .then(setDrills)
       .catch(() => setDrillsFailed(true));
+    api
+      .getWatchlist()
+      .then(setWatchlist)
+      .catch(() => setWatchlist(null));
     setStandingFailed(false);
     api
       .getStanding()
@@ -173,6 +180,8 @@ export default function Game3DPage() {
     if (supported) load();
   }, [supported, load]);
 
+  // One stall per watchlist company, in the flat Marketplace's order; no watchlist means no stalls.
+  const street = useMemo(() => buildStreet(watchlist?.rows), [watchlist]);
   // Never invent towers: no state means bare pads.
   const world = useMemo(() => stateToWorld(state), [state]);
   // What is drawn and listed: the same world, with the Standing's named gaps labelled on their towers.
@@ -405,6 +414,7 @@ export default function Game3DPage() {
             onNearDrill={setAtDrill}
             onNearSign={setAtSign}
             drillOpen={drillOpen}
+            stalls={street.stalls}
             talking={talking}
             cheerKey={cheerKey}
             onNearTower={setNearTower}

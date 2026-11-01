@@ -15,6 +15,8 @@ import NpcMesh from "./NpcMesh";
 import PropMesh from "./PropMesh";
 import Scenery from "./Scenery";
 import Market from "./Market";
+import MarketStreet from "./MarketStreet";
+import type { Stall } from "./streetPlan";
 import StandingTorches from "./StandingTorches";
 import Horizon from "./Horizon";
 import Backdrop from "./Backdrop";
@@ -52,6 +54,8 @@ interface Props {
   onNearDrill?: (near: boolean) => void;
   /** Tells the page when the hero is at the signpost by the gate. */
   onNearSign?: (near: boolean) => void;
+  /** Market Street: one stall per watchlist company, already worked out (marketStreet.ts). */
+  stalls?: readonly Stall[];
   /** A Storm Drill is open: the camp stands. */
   drillOpen?: boolean;
   /** Whose dialogue is open (the Oracle casts while he talks). */
@@ -91,6 +95,9 @@ function NearNpc({ pos, onNear }: { pos: { current: { x: number; z: number } }; 
   });
   return null;
 }
+
+/** A stable empty list, so a missing watchlist never re-renders the street. */
+const NO_STALLS: readonly Stall[] = [];
 
 /** Tells the page when the hero walks up to, or away from, the writing desk. */
 function NearDeskWatch({ pos, onNearDesk }: { pos: { current: { x: number; z: number } }; onNearDesk: (near: boolean) => void }) {
@@ -166,6 +173,7 @@ function World({
   onNearDrill,
   onNearSign,
   drillOpen,
+  stalls,
   onNearTower,
   room,
   onNearShelf,
@@ -181,6 +189,7 @@ function World({
   onNearDrill: (near: boolean) => void;
   onNearSign: (near: boolean) => void;
   drillOpen: boolean;
+  stalls: readonly Stall[];
   talking: NpcId | null;
   cheerKey: number | null;
   standingLevel: number | null;
@@ -228,6 +237,7 @@ function World({
           ))}
           <Scenery />
           <Market />
+          <MarketStreet stalls={stalls} />
           <StandingTorches level={standingLevel} />
           <Desk books={books} />
           <DrillPost />
@@ -265,6 +275,7 @@ export default function Scene({
   onNearDrill = noop,
   onNearSign = noop,
   drillOpen = false,
+  stalls = NO_STALLS,
   talking = null,
   cheerKey = null,
   standingLevel = null,
@@ -335,6 +346,7 @@ export default function Scene({
           onNearDrill={onNearDrill}
           onNearSign={onNearSign}
           drillOpen={drillOpen}
+          stalls={stalls}
           talking={talking}
           cheerKey={cheerKey}
           standingLevel={standingLevel}
