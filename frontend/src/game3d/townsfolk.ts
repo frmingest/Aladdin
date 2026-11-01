@@ -16,7 +16,7 @@ export interface Townsperson {
 
 export const TOWNSFOLK: readonly Townsperson[] = [
   // Beside the gate road, west side, looking up the road toward the fountain.
-  { id: "guard", x: -3.8, z: 26.5, facing: Math.atan2(3.8, -26.5), height: 2.1 },
+  { id: "guard", x: -5.7, z: 39.75, facing: Math.atan2(3.8, -26.5), height: 2.1 },
   // Near the quest board, looking at it.
-  { id: "scout", x: 7.8, z: 16.4, facing: Math.atan2(-2.3, 2.6), height: 1.9 },
+  { id: "scout", x: 11.7, z: 24.6, facing: Math.atan2(-2.3, 2.6), height: 1.9 },
 ];

@@ -2,7 +2,7 @@ import { useTexture } from "@react-three/drei";
 import { MirroredRepeatWrapping } from "three";
 import { ART3D } from "./artManifest3d";
 
-const RADIUS = 105;
+const RADIUS = 155;
 const HEIGHT = 70;
 /** How many times the picture wraps round the horizon (mirrored, so the joins do not show). */
 const TILES = 4;

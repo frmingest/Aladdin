@@ -12,10 +12,10 @@ export interface StandingTorch {
 
 /** West edge of the way from the spawn to the fountain, in view as you set off, clear of the camp and the gate road. */
 export const STANDING_TORCHES: readonly StandingTorch[] = [
-  { id: "standing-torch-1", x: -2.8, z: 20.4 },
-  { id: "standing-torch-2", x: -2.8, z: 18.4 },
-  { id: "standing-torch-3", x: -2.8, z: 16.4 },
-  { id: "standing-torch-4", x: -2.8, z: 14.4 },
+  { id: "standing-torch-1", x: -4.2, z: 30.6 },
+  { id: "standing-torch-2", x: -4.2, z: 27.6 },
+  { id: "standing-torch-3", x: -4.2, z: 24.6 },
+  { id: "standing-torch-4", x: -4.2, z: 21.6 },
 ];
 
 /** Radius of the post you walk round. */

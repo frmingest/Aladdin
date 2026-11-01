@@ -23,9 +23,9 @@ export interface Npc {
 
 export const NPCS: readonly Npc[] = [
   // At the keep door, off to the east side, clear of the pads.
-  { id: "oracle", name: "Barren Wuffet", tagline: "The patient one", x: 9.5, z: -18, facing: Math.atan2(-9.5, 18), art: "oracle", height: 2.0 },
+  { id: "oracle", name: "Barren Wuffet", tagline: "The patient one", x: 14.25, z: -27, facing: Math.atan2(-9.5, 18), art: "oracle", height: 2.0 },
   // Just inside the gate, west of the road in.
-  { id: "partner", name: "Marlie Chunger", tagline: "The blunt one", x: -7, z: 17, facing: Math.atan2(7, -17), art: "partner", height: 2.0 },
+  { id: "partner", name: "Marlie Chunger", tagline: "The blunt one", x: -10.5, z: 25.5, facing: Math.atan2(7, -17), art: "partner", height: 2.0 },
 ];
 
 /** Close enough to start talking, and how far you may drift before the talk ends. */

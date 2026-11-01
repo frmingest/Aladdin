@@ -37,23 +37,23 @@ export interface MarketPiece {
   solid: MarketSolid;
 }
 
-/** The ground the corner may use: round the middle of the old reserved zone (20, 14). */
-export const MARKET_CENTER = { x: 20, z: 14 } as const;
+/** The ground the corner may use: round the middle of the old reserved zone (20, 14), moved out with the rest of the spread courtyard. */
+export const MARKET_CENTER = { x: 30, z: 21 } as const;
 export const MARKET_REACH = 10;
 
 export const MARKET: readonly MarketPiece[] = [
   // The big stall: awnings, crates of produce. Its back is to the wall side, its front to the square.
-  { id: "market-stall", model: "market_stalls", x: 24.8, z: 8.6, yaw: -1.45, scale: 5.4, solid: { kind: "box", hx: 4.6, hz: 3.3 } },
+  { id: "market-stall", model: "market_stalls", x: 34.8, z: 15.6, yaw: -1.45, scale: 5.4, solid: { kind: "box", hx: 4.6, hz: 3.3 } },
   // The well at the north end of the square.
-  { id: "market-well", model: "well", x: 16.4, z: 7.8, yaw: 0.3, scale: 4.5, solid: { kind: "circle", r: 1.45 } },
+  { id: "market-well", model: "well", x: 26.4, z: 14.8, yaw: 0.3, scale: 4.5, solid: { kind: "circle", r: 1.45 } },
   // A canopy at the south end, open to the square.
-  { id: "market-canopy", model: "tent_market", x: 21.0, z: 18.0, yaw: -2.4, scale: 5, solid: { kind: "circle", r: 1.6 } },
+  { id: "market-canopy", model: "tent_market", x: 31, z: 25, yaw: -2.4, scale: 5, solid: { kind: "circle", r: 1.6 } },
   // Two laid tables on the west side of the square.
-  { id: "market-table-a", model: "stall_table_long", x: 16.9, z: 17.6, yaw: 1.5, scale: 1.1, solid: { kind: "box", hx: 1.15, hz: 2.3 } },
-  { id: "market-table-b", model: "stall_table_medium", x: 18.6, z: 22.6, yaw: 0.35, scale: 1.15, solid: { kind: "box", hx: 1.15, hz: 1.15 } },
-  { id: "market-stool", model: "stool", x: 20.4, z: 21.4, yaw: 0.9, scale: 1.2, solid: { kind: "circle", r: 0.45 } },
+  { id: "market-table-a", model: "stall_table_long", x: 26.9, z: 24.6, yaw: 1.5, scale: 1.1, solid: { kind: "box", hx: 1.15, hz: 2.3 } },
+  { id: "market-table-b", model: "stall_table_medium", x: 28.6, z: 29.6, yaw: 0.35, scale: 1.15, solid: { kind: "box", hx: 1.15, hz: 1.15 } },
+  { id: "market-stool", model: "stool", x: 30.4, z: 28.4, yaw: 0.9, scale: 1.2, solid: { kind: "circle", r: 0.45 } },
   // Goods: stacked crates and a keg by the stall, barrels by the canopy.
-  { id: "market-crates", model: "crates_stacked", x: 17.6, z: 11.0, yaw: -0.4, scale: 1.1, solid: { kind: "circle", r: 1.2 } },
-  { id: "market-keg", model: "keg_decorated", x: 26.2, z: 14.9, yaw: -0.2, scale: 0.9, solid: { kind: "box", hx: 1.5, hz: 0.9 } },
-  { id: "market-barrels", model: "barrel_stack", x: 24.6, z: 17.2, yaw: 0.5, scale: 1.1, solid: { kind: "box", hx: 1.0, hz: 0.6 } },
+  { id: "market-crates", model: "crates_stacked", x: 27.6, z: 18, yaw: -0.4, scale: 1.1, solid: { kind: "circle", r: 1.2 } },
+  { id: "market-keg", model: "keg_decorated", x: 36.2, z: 21.9, yaw: -0.2, scale: 0.9, solid: { kind: "box", hx: 1.5, hz: 0.9 } },
+  { id: "market-barrels", model: "barrel_stack", x: 34.6, z: 24.2, yaw: 0.5, scale: 1.1, solid: { kind: "box", hx: 1.0, hz: 0.6 } },
 ];

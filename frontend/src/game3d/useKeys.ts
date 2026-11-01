@@ -3,10 +3,14 @@ import type { MutableRefObject } from "react";
 import { KEY_ACTIONS, NO_KEYS } from "./movement";
 import type { Keys } from "./movement";
 
-function typingInField(target: EventTarget | null): boolean {
+/**
+ * True while the player is typing in a form field (quest answers, the desk, search), so game hotkeys
+ * (Q, T, P, E and the movement keys) must stand down and let the letters through.
+ */
+export function typingInField(target: EventTarget | null): boolean {
   const el = target as HTMLElement | null;
   if (!el || !el.tagName) return false;
-  return el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable;
+  return el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable;
 }
 
 /** Held movement keys as a ref (read it every frame; changing it never re-renders). */
