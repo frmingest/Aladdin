@@ -25,6 +25,11 @@ import { deskBlock } from "../game3d/deskForm";
 import Toolbar from "../game3d/Toolbar";
 import { typingInField } from "../game3d/useKeys";
 import { stallPrompt, storeDoor } from "../game3d/stallDoor";
+import { boothPrompt } from "../game3d/boothPlan";
+import type { BoothId } from "../game3d/boothPlan";
+import SalesRepDialog from "../components/marketplace/SalesRepDialog";
+import HypeBoothDialog from "../components/marketplace/HypeBoothDialog";
+import { useDemoMode } from "../lib/demoMode";
 import { PANEL_KEYS, loadPanels, savePanels, togglePanel } from "../game3d/hudPanels";
 import type { PanelId } from "../game3d/hudPanels";
 import { celebrationDue } from "../game3d/celebrate";
@@ -89,6 +94,10 @@ export default function Game3DPage() {
   const [worldPage, setWorldPage] = useState<Door | null>(null);
   // Market Street: which stall (holding id) you stand at.
   const [nearStall, setNearStall] = useState<string | null>(null);
+  // Market Street stands: which one you stand at, and which flat-page dialog (Sal or the Hype Booth) is open over the world.
+  const [nearBooth, setNearBooth] = useState<BoothId | null>(null);
+  const [boothOpen, setBoothOpen] = useState<BoothId | null>(null);
+  const { demoMode } = useDemoMode();
   // The Storm Drill: whether you stand at the drill post, whether a drill is open (the camp stands while it is), and the stored drills.
   const [atDrill, setAtDrill] = useState(false);
   const [drillOpen, setDrillOpen] = useState(false);
@@ -246,6 +255,13 @@ export default function Game3DPage() {
     setWorldPage(door);
   }, []);
 
+  // E at a stand: the flat page's own Sal dialog or Hype Booth dialog, over the world.
+  const openBooth = useCallback((id: BoothId) => {
+    if (document.pointerLockElement) document.exitPointerLock();
+    setBoothOpen(id);
+  }, []);
+  const closeBooth = useCallback(() => setBoothOpen(null), []);
+
   const enterTower = useCallback((id: string) => {
     if (document.pointerLockElement) {
       // Keep the mouse look going through the door: only free it if something else is open.
@@ -320,6 +336,7 @@ export default function Game3DPage() {
       if (e.code !== "KeyE") return;
       const el = e.target as HTMLElement | null;
       if (typingInField(el)) return;
+      if (boothOpen) return;
       if (room) {
         // Inside a tower: E reads the shelf you stand at, opens the latest report at the table, or takes the door back out.
         if (report) return;
@@ -332,13 +349,17 @@ export default function Game3DPage() {
         } else leaveTower();
         return;
       }
-      if (!near && !nearTower && !atDesk && !atDrill && !atSign && !nearStall) return;
+      if (!near && !nearTower && !atDesk && !atDrill && !atSign && !nearStall && !nearBooth) return;
       e.preventDefault();
       if (!near && nearTower) {
         enterTower(nearTower);
         return;
       }
       if (!near) {
+        if (!atDesk && !atDrill && !atSign && !nearStall && nearBooth) {
+          openBooth(nearBooth);
+          return;
+        }
         if (!atDesk && !atDrill && !atSign && nearStall) {
           openStore(nearStall);
           return;
@@ -369,7 +390,7 @@ export default function Game3DPage() {
     };
     window.addEventListener("keydown", onTalk);
     return () => window.removeEventListener("keydown", onTalk);
-  }, [near, talking, atDesk, atDrill, atSign, nearStall, openStore, toggleWhere, drillOpen, deskOpen, room, nearShelf, atDoor, atTable, report, readShelf, nearTower, enterTower, leaveTower, openReport]);
+  }, [near, talking, atDesk, atDrill, atSign, nearStall, nearBooth, boothOpen, openBooth, openStore, toggleWhere, drillOpen, deskOpen, room, nearShelf, atDoor, atTable, report, readShelf, nearTower, enterTower, leaveTower, openReport]);
 
   useEffect(() => {
     const onPanelKey = (e: KeyboardEvent) => {
@@ -429,6 +450,7 @@ export default function Game3DPage() {
             onNearDrill={setAtDrill}
             onNearSign={setAtSign}
             onNearStall={setNearStall}
+            onNearBooth={setNearBooth}
             drillOpen={drillOpen}
             stalls={street.stalls}
             talking={talking}
@@ -542,6 +564,15 @@ export default function Game3DPage() {
           {street.overflow.length > 0 && <span className="block text-xs opacity-80">{streetOverflowLine(street.overflow.length)}</span>}
         </p>
       )}
+
+      {nearBooth && !boothOpen && !whereOpen && !talking && !nearTower && !nearStall && !atSign && !atDesk && !atDrill && !room && (
+        <p className="pointer-events-none absolute bottom-16 left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-center text-sm text-white">
+          {boothPrompt(nearBooth)}
+        </p>
+      )}
+
+      {boothOpen === "sal" && <SalesRepDialog demoMode={demoMode === true} rows={watchlist?.rows ?? []} onClose={closeBooth} onAdded={setWatchlist} />}
+      {boothOpen === "hype" && <HypeBoothDialog demoMode={demoMode === true} rows={watchlist?.rows ?? []} onClose={closeBooth} onAdded={setWatchlist} />}
 
       {atSign && !whereOpen && !talking && !nearTower && !atDesk && !atDrill && !room && (
         <p className="pointer-events-none absolute bottom-16 left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-sm text-white">

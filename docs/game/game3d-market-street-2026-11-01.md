@@ -33,7 +33,18 @@ Pages touched: `/game3d` only. Identity: stays 3 (visual verb *browse*, scene Ma
 
 ## Not done yet (next steps of S14)
 
-- M4: Sal the Sales Rep and the Hype Booth.
+- M4 people: the two stands have no person behind the counter yet (S20 gives them bodies).
 - The fog lane for unpriced stalls (today they stand in order with a bare pole).
 - A look-and-judge screenshot and measured taps; placement was checked by a test and a script, not by eye.
 - Seven plots only, because the south-east is crowded: more companies would need a second area.
+
+## M4: Sal's counter and the Hype Booth (same branch `feature/game3d-market-store`, tests run, not seen in a browser)
+
+**What a sprint is for here:** the flat Marketplace lets you add a company (talk to Sal) and test a tip (Hype Booth). Now both are two little stands at the near end of the street. Walk up, press E, and the flat page's own dialog opens over the world. Adding a company puts a new stall on the street straight away.
+
+- `game3d/boothPlan.ts` (+ `boothPlan.test.ts`, 8 tests): the two stands, their spots, reach (3.0 to arrive, 4.2 to leave), `nearestBooth`, prompts. Pure.
+- `game3d/Booths.tsx`: counter, posts, teal or gold cloth roof and a cream sign, all code-built (no model, so nothing can fail to load). Solid footprint so you walk round.
+- `Scene.tsx`: `NearBoothWatch`, `onNearBooth`. `Game3DPage.tsx`: `nearBooth`, `boothOpen`, the E key, the prompt, and the flat `SalesRepDialog` and `HypeBoothDialog` (same props as the flat page: demo mode, watchlist rows, `onAdded` refreshes the street).
+- Test keeps the stands clear of towers, props, people, scenery, the corner, the sign, the spawn point and every stall plot, and far enough from the stalls that only one prompt shows.
+- No new words: prompts are "Press E to talk to Sal: open a new stall" and "Press E to test a tip at the Hype Booth"; everything inside is the flat page's text. No buy or sell words (tested).
+- Checks run: `boothPlan`, `streetPlan`, `stallDoor`, `parity3d`, `props`, `layout`, `npcs`, `signpost` tests pass (59), `tsc` shows no new errors (the case-clash errors from Windows are old), eslint clean on the touched files. The full game3d suite stalls in the sandbox, so run `npm test` yourself.
