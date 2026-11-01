@@ -195,6 +195,7 @@ Local LLM (Ollama), the worker and queue, evidence packets, LLM usage ledger.
 Running the app: hosting, auth gate, page-load, background jobs, audits, live checks.
 
 - [agentic-coding-audit-2026-09-27.md](ops/agentic-coding-audit-2026-09-27.md) — Agentic-coding audit — 2026-09-27
+- [agentic-coding-audit-2026-11-01.md](ops/agentic-coding-audit-2026-11-01.md) — Agentic-coding audit of PRs #147 to #246: rule breaks and rule contradictions (2026-11-01)
 - [backend-auth-cors-gate-2026-09-27.md](ops/backend-auth-cors-gate-2026-09-27.md) — Backend auth gate + CORS lockdown — 2026-09-27
 - [background-jobs-status-2026-10-07.md](ops/background-jobs-status-2026-10-07.md) — Background jobs on System status (2026-10-07)
 - [claude-setup-assessment-2026-10-09.md](ops/claude-setup-assessment-2026-10-09.md) — Claude setup assessment and proposal — 2026-10-09
