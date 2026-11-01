@@ -63,3 +63,16 @@ Licence texts: `LICENSE-KayKit-Medieval-Hexagon.txt`, `LICENSE-KayKit-Dungeon-Re
 | `catapult`, `catapult_yellow`, `catapult_ball`, `ladder`, `target`, `tent`, `weaponrack`, `flag_blue`, `flag_yellow` | KayKit Medieval Hexagon Pack | Kay Lousberg (KayKit) | https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack | CC0 1.0 | 2026-11-01 |
 
 Licence text: `LICENSE-KayKit-Medieval-Hexagon.txt`. **Modified:** merged into one file with `scripts/pack-camp.mjs` (plain float vertices, no compression, no animation). Blue, yellow and neutral pieces only, never red or green.
+
+## Town kit (S9, 2026-11-01)
+
+Four files, each with every piece as a top-level node named after the piece. All CC0 1.0. Not placed in the world yet (S14 Market Street and S15 the Town use them); list and sizes in `frontend/src/game3d/townPieces.ts`.
+
+| Files | Asset | Author | Source | Licence | Fetched |
+|---|---|---|---|---|---|
+| `town-market.glb` (13), `town-street.glb` (16), `town-nature.glb` (16) | Fantasy Town Kit 2.0 | Kenney (kenney.nl) | https://kenney.nl/ (Fantasy Town Kit 2.0) | CC0 1.0 | 2026-11-01 (kit dated 2025-08-03) |
+| `town-buildings.glb` (13: `house`, `market`, `barracks`, `mill`, `watermill`, `lumbermill`, `mine`, `watchtower`, `castle`, `well`, `wall_straight`, `wall_corner`, `wall_gate`) | KayKit Medieval Builder Pack 1.0 | Kay Lousberg (KayKit) | https://kaylousberg.com/game-assets (Medieval Builder Pack) | CC0 1.0 | 2026-11-01 (pack dated 2021-07-30) |
+
+Licence texts: `LICENSE-Kenney-Fantasy-Town-Kit.txt`, `LICENSE-KayKit-Medieval-Builder.txt` (copied by `scripts/import-pack.mjs`, which stops if a pack has no licence text or it is not CC0). `town-palette.png` is our retinted copy of Kenney's palette.
+
+**Modified:** merged and renamed with `scripts/pack-town.mjs` (plain float vertices, no compression, no animation). Kenney's one 512 by 512 palette image is **retinted**: the red cells became slate blue and the teal-green cells a clearer teal, so no piece reads as a status colour (leaf greens and timber are unchanged). Kenney's colour-named pieces were renamed (`stall-red` is `stall_awning_blue`, `stall-green` is `stall_awning_teal`, `banner-red` and `banner-green` are `banner_blue` and `banner_teal`). The Builder buildings' orange roof material was recoloured to teal; `archeryrange` (the only piece with a pure red material) and the terrain tiles are not packed. Geometry is unchanged.

@@ -66,6 +66,7 @@ Game mode (Fortress): concept, sprint plans and reviews, visual identity, art pa
 - [game/game3d-standing-4-ledger-2026-11-01.md](game/game3d-standing-4-ledger-2026-11-01.md): 3D courtyard Standing 4, "The Ledger": fifth torch for look-backs written on time (not merged, not deployed)
 - [game/game3d-spread-layout-2026-11-01.md](game/game3d-spread-layout-2026-11-01.md): 3D courtyard tower pads spread out, ground reserved for marketplace and siege simulator (not merged, not deployed)
 - [game/game3d-bigger-map-2026-11-01.md](game/game3d-bigger-map-2026-11-01.md): 3D courtyard spread 1.5x (walls, towers, market, horizon) and hotkeys no longer fire while typing (not merged, not deployed)
+- [game3d-town-kit-import-2026-11-01.md](game/game3d-town-kit-import-2026-11-01.md) — 3D courtyard S9: Kenney town kit and KayKit Builder buildings packed in our colours (four files, 1.4 MB, one retinted palette, licence importer that refuses non-CC0), sizes measured, lineup pictures; nothing placed yet (written, not merged)
 - [records-hall-polish-2026-10-17.md](game/records-hall-polish-2026-10-17.md) — Hall of Records: undistorted torches and arches, brass nameplates, tome cover that swings open into a book
 - [siege-towers-backdrops-2026-10-17.md](game/siege-towers-backdrops-2026-10-17.md) — Siege Simulator: towers section moved to the top, backdrop that follows the "falls by" slider, four Stitch pictures
 - [remove-circle-page-2026-10-19.md](game/remove-circle-page-2026-10-19.md) — Circle of Competence page removed from Game mode; survey drops to four facts (survey-v2)
