@@ -64,7 +64,7 @@ export function cornerTowers(radius = WALL_RADIUS): Spot[] {
  * Holding-tower spots, in the order the biggest holdings take them (best seen first).
  * The towers stand in a wide horseshoe round the open middle: an inner pair that frames the walk from the
  * gate to the keep, then pairs on the flanks, and a pair that frames the keep itself. Neighbours are 10 or more
- * apart, and the whole south-east and south-west of the courtyard is left free (see RESERVED_ZONES).
+ * apart, and the south-east holds the marketplace corner (marketPieces.ts) while the south-west is left free (see RESERVED_ZONES).
  * Mirrored on purpose: a fortress reads as even, and the layout stays easy to reason about.
  */
 const TOWER_SPOTS: readonly Spot[] = [
@@ -98,6 +98,5 @@ export interface ReservedZone {
  * takes the zone's place and the entry is deleted in the same change.
  */
 export const RESERVED_ZONES: readonly ReservedZone[] = [
-  { id: "marketplace", x: 20, z: 14, radius: 6.5, for: "the marketplace (south-east, near the gate road)" },
   { id: "siege-simulator", x: -21, z: 9, radius: 7, for: "the siege simulator (south-west, beside the camp)" },
 ];

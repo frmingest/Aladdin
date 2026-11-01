@@ -58,6 +58,7 @@ Game mode (Fortress): concept, sprint plans and reviews, visual identity, art pa
 - [game3d-standing-3-torch-2026-10-31.md](game/game3d-standing-3-torch-2026-10-31.md) — 3D courtyard Standing 3, T3: the fourth torch, v2 words, live Standing flipped to standing_v2
 - [game3d-standing-3-look-2026-10-31.md](game/game3d-standing-3-look-2026-10-31.md) — 3D courtyard Standing 3, T4: look and judge in a real browser (empty, sample, fired wire acknowledged, quiet watch), tap counts, checklist section B
 - [game/game3d-keep-and-towers-2026-11-01.md](game/game3d-keep-and-towers-2026-11-01.md): 3D courtyard keep and corner towers as KayKit models, with plain-shape fallback (not merged, not deployed)
+- [game/game3d-marketplace-corner-2026-11-01.md](game/game3d-marketplace-corner-2026-11-01.md): 3D courtyard marketplace corner (KayKit stall, well, tables, crates, flags), decoration only, plain fallback (not merged, not deployed)
 - [game/game3d-spread-layout-2026-11-01.md](game/game3d-spread-layout-2026-11-01.md): 3D courtyard tower pads spread out, ground reserved for marketplace and siege simulator (not merged, not deployed)
 - [records-hall-polish-2026-10-17.md](game/records-hall-polish-2026-10-17.md) — Hall of Records: undistorted torches and arches, brass nameplates, tome cover that swings open into a book
 - [siege-towers-backdrops-2026-10-17.md](game/siege-towers-backdrops-2026-10-17.md) — Siege Simulator: towers section moved to the top, backdrop that follows the "falls by" slider, four Stitch pictures

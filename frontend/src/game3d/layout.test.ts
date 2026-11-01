@@ -69,14 +69,12 @@ describe("courtyard layout", () => {
     }
   });
 
-  it("holds open ground for the marketplace and the siege simulator, clear of every pad", () => {
-    expect(RESERVED_ZONES.map((z) => z.id)).toEqual(["marketplace", "siege-simulator"]);
+  it("holds open ground for the siege simulator, clear of every pad", () => {
+    expect(RESERVED_ZONES.map((z) => z.id)).toEqual(["siege-simulator"]);
     for (const z of RESERVED_ZONES) {
       expect(Math.hypot(z.x, z.z) + z.radius, z.id).toBeLessThan(COBBLE_RADIUS);
       for (const s of towerSpots()) expect(Math.hypot(s.x - z.x, s.z - z.z), z.id).toBeGreaterThan(z.radius + 2.5);
     }
-    const [a, b] = RESERVED_ZONES;
-    expect(Math.hypot(a.x - b.x, a.z - b.z)).toBeGreaterThan(a.radius + b.radius);
   });
 
   it("spawns the player inside the walls", () => {
