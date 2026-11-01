@@ -217,7 +217,7 @@ def get_night_watch_route(db: Session = Depends(get_db)) -> NightWatchOut:
 
 @router.get("/standing", response_model=StandingOut)
 def get_standing(db: Session = Depends(get_db)) -> StandingOut:
-    """Standing 1: the courtyard level (1 to 3), worked out fresh from stored facts. Read-only,
+    """The courtyard Standing (level 1 to 5 under v3), worked out fresh from stored facts. Read-only,
     nothing saved, the level can go down. The sample fortress never counts (level 0, labelled)."""
     rules = get_standing_rules(get_settings().active_standing_version)
     if is_demo_mode(db):
@@ -255,7 +255,15 @@ def get_standing(db: Session = Depends(get_db)) -> StandingOut:
         StandingInputs(
             demo=state.demo,
             towers=[tower_fact(t) for t in state.towers],
-            journal=[JournalFact(e.holding_id, e.thesis, e.invalidation) for e in entries],
+            journal=[
+                JournalFact(
+                    e.holding_id, e.thesis, e.invalidation,
+                    days_since=e.outcome.days_since,
+                    looked_back=bool((e.review_6m or "").strip() or (e.review_12m or "").strip()),
+                    look_back_due=e.outcome.review_6m_due or e.outcome.review_12m_due,
+                )
+                for e in entries
+            ],
             active_tripwires=wires,
             watch_state=watch,
             unseen_wires=unseen,

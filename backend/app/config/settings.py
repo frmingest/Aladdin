@@ -261,7 +261,8 @@ class Settings(BaseSettings):
     active_time_and_filings_version: str = "v1"
     active_rituals_version: str = "v1"
     active_calibration_version: str = "v1"
-    active_standing_version: str = "v2"
+    # Courtyard Standing rules (standing_v3: five levels, the fifth The Ledger). Roll back with ACTIVE_STANDING_VERSION=v2.
+    active_standing_version: str = "v3"
 
     # --- Regime-adjusted DCF (Sprint 14, 2026-09-26, app/domain/regime_adjustments/) ---
     # Off by default: wiring Sprint 12's macro regime (app/services/risk/regime.py)

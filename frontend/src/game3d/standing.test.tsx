@@ -56,8 +56,8 @@ describe("standing words v1", () => {
 
 describe("standing torches", () => {
   it("one burns per level, never more than there are, and unknown burns none", () => {
-    expect([0, 1, 2, 3, 4].map(litTorches)).toEqual([0, 1, 2, 3, 4]);
-    expect(litTorches(7)).toBe(4);
+    expect([0, 1, 2, 3, 4, 5].map(litTorches)).toEqual([0, 1, 2, 3, 4, 5]);
+    expect(litTorches(7)).toBe(5);
     expect(litTorches(-1)).toBe(0);
     expect(litTorches(null)).toBe(0);
     expect(litTorches(undefined)).toBe(0);
@@ -67,7 +67,7 @@ describe("standing torches", () => {
 
   it("stand on the cobbles, clear of the pads, the keep, the people, the spawn and the gate road, and are in view ahead of the spawn", () => {
     const spots = towerSpots();
-    expect(STANDING_TORCHES).toHaveLength(4);
+    expect(STANDING_TORCHES).toHaveLength(5);
     for (const p of STANDING_TORCHES) {
       expect(Math.hypot(p.x, p.z), p.id).toBeLessThan(COBBLE_RADIUS - 0.2);
       expect(Math.abs(p.x) < 3 + STANDING_TORCH_SOLID && p.z > 26, p.id).toBe(false);

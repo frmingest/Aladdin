@@ -28,7 +28,7 @@ import { unwrittenThesisV2 } from "../game3d/questV2";
 import type { NpcId } from "../game3d/npcs";
 import { stateToWorld } from "../game3d/stateToWorld";
 import { withGaps } from "../game3d/standingGaps";
-import { wordsFor } from "../game3d/standingWordsV2";
+import { wordsFor } from "../game3d/standingWordsV3";
 import { webglSupported } from "../game3d/webgl";
 import type { PerfStats } from "../game3d/PerfProbe";
 

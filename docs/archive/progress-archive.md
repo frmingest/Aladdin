@@ -3,6 +3,14 @@
 Completed milestones and retired status, moved out of `docs/PROGRESS.md` under the rolling-log rules
 in `CLAUDE.md` ("Progress file rules"). Newest snapshot first. Older: [PROGRESS-full-2026-09-30.md](PROGRESS-full-2026-09-30.md).
 
+## Closed 2026-11-01 — everything merged since the last archive (#187 to #237)
+
+- **All merged; no PR was open on 2026-11-01** (GitHub API, `main` at `32377f2`). Deploy of these was not checked; Faiz's look-overs are folded into two lines in `PROGRESS.md`.
+- **Flat game pages and data:** #187/#188/#191 Map scene dive and layout, #189 Records same-size books, #190 Circle page removed, #192/#193 The Printer plan and P1 engine, #194 Jæren annual reports filed as half-year, #195 Newsweb watch (migration `y1a2b3c4d5e6`), #196/#197 Fortress section art PR 1 and 2.
+- **3D courtyard, weeks 1 to 4 and KayKit:** #198 to #215 (courtyard, towers, NPCs, Reckoning, KayKit people, scenery, horizon, townsfolk, HUD). Seen by Faiz on Railway at 165 fps up to the solid models ([KayKit plan](../game/game3d-kaykit-sprint-plan-2026-10-31.md)).
+- **3D Standing levels 1 to 4:** #216/#217 Standing 1, #220/#221 Standing 2 writing desk, #222 to #229 Standing 3 The Watch (live `standing_v2`, four torches) ([brainstorm](../game/game3d-progression-brainstorm-2026-10-31.md)).
+- **3D world, 2026-11-01:** #230 keep and corner towers as models, #231 spread tower layout, #232 marketplace corner, #233 bigger map and typing keys, #234/#235 tower library and polish, #236 tower nameplates, #237 Storm Drill quest and drill camp (migration `z1b2c3d4e5f6`, table `storm_drills`). All seen only in a headless browser.
+
 ## Closed 2026-10-19 — housekeeping docs pass
 
 - **Housekeeping pass (#186, merged):** every doc that describes how the app is built was checked against the code on `main`; [architecture.md](../architecture.md) rewritten (7 diagrams), reference docs, CLAUDE.md, the docs index and four broken links fixed. Findings and loose ends: [housekeeping-2026-10-19.md](../ops/housekeeping-2026-10-19.md). No code changed.
