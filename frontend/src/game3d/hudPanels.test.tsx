@@ -33,6 +33,11 @@ describe("courtyard panels", () => {
     expect(loadPanels({ getItem: () => "not json", setItem: () => {} })).toEqual(DEFAULT_PANELS);
   });
 
+  it("the signpost key never clashes with walking, talking, stats or the panel keys", () => {
+    expect(KEY_ACTIONS["KeyG"]).toBeUndefined();
+    expect(["KeyE", "KeyP", "F3", ...Object.keys(PANEL_KEYS)]).not.toContain("KeyG");
+  });
+
   it("panel keys never clash with walking, talking or stats", () => {
     for (const code of Object.keys(PANEL_KEYS)) {
       expect(KEY_ACTIONS[code]).toBeUndefined();
@@ -44,7 +49,7 @@ describe("courtyard panels", () => {
 describe("Toolbar", () => {
   const html = (o: Partial<Parameters<typeof Toolbar>[0]> = {}) =>
     renderToStaticMarkup(
-      <Toolbar open={DEFAULT_PANELS} onToggle={() => {}} questsWaiting={2} towerCount={7} statsOn={false} statsLabel="" onToggleStats={() => {}} {...o} />,
+      <Toolbar open={DEFAULT_PANELS} onToggle={() => {}} questsWaiting={2} towerCount={7} statsOn={false} statsLabel="" onToggleStats={() => {}} whereOpen={false} onToggleWhere={() => {}} {...o} />,
     );
 
   it("is a labelled toolbar with a button per panel, and badges that say something is waiting", () => {
@@ -52,6 +57,7 @@ describe("Toolbar", () => {
     expect(h).toContain('role="toolbar"');
     expect(h).toContain("Quests");
     expect(h).toContain("Towers");
+    expect(h).toContain("Where to?");
     expect(h).toContain(">2<");
     expect(h).toContain(">7<");
   });

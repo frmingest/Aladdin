@@ -9,6 +9,9 @@ interface Props {
   statsOn: boolean;
   statsLabel: string;
   onToggleStats: () => void;
+  /** The "Where to?" signpost menu: open or not, and a way to flip it. */
+  whereOpen: boolean;
+  onToggleWhere: () => void;
 }
 
 function Tool({
@@ -37,11 +40,12 @@ function Tool({
 }
 
 /** The little menu at the top: open or shut each panel, so the scene stays clear until you want a panel. */
-export default function Toolbar({ open, onToggle, questsWaiting, towerCount, statsOn, statsLabel, onToggleStats }: Props) {
+export default function Toolbar({ open, onToggle, questsWaiting, towerCount, statsOn, statsLabel, onToggleStats, whereOpen, onToggleWhere }: Props) {
   return (
     <div role="toolbar" aria-label="Courtyard menu" className="g3d-toolbar absolute left-1/2 top-3 z-30 -translate-x-1/2">
       <Tool label="Quests" hint="Q" icon="📜" pressed={open.quests} badge={questsWaiting} onClick={() => onToggle("quests")} />
       <Tool label="Towers" hint="T" icon="🏰" pressed={open.towers} badge={towerCount} onClick={() => onToggle("towers")} />
+      <Tool label="Where to?" hint="G" icon="🪧" pressed={whereOpen} onClick={onToggleWhere} />
       <Tool label={statsOn ? statsLabel : "Stats"} hint="P" icon="📊" pressed={statsOn} onClick={onToggleStats} />
     </div>
   );
