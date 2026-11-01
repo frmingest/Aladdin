@@ -21,6 +21,9 @@ import Backdrop from "./Backdrop";
 import Townsfolk from "./Townsfolk";
 import Confetti from "./Confetti";
 import Desk from "./Desk";
+import DrillCamp from "./DrillCamp";
+import DrillPost from "./DrillPost";
+import { DRILL_LEAVE_RANGE, DRILL_RANGE, nearDrillPost } from "./stormDrill";
 import { DESK_LEAVE_RANGE, DESK_RANGE, nearDesk } from "./desk";
 import { PROPS } from "./props";
 import Library from "./Library";
@@ -43,6 +46,10 @@ interface Props {
   books?: number;
   /** Tells the page when the hero is at the writing desk. Called only when it changes. */
   onNearDesk?: (near: boolean) => void;
+  /** Tells the page when the hero is at the drill post. */
+  onNearDrill?: (near: boolean) => void;
+  /** A Storm Drill is open: the camp stands. */
+  drillOpen?: boolean;
   /** Whose dialogue is open (the Oracle casts while he talks). */
   talking?: NpcId | null;
   /** A new number starts the quest-done cheer and confetti, once. */
@@ -94,6 +101,19 @@ function NearDeskWatch({ pos, onNearDesk }: { pos: { current: { x: number; z: nu
   return null;
 }
 
+/** Tells the page when the hero walks up to, or away from, the drill post. */
+function NearDrillWatch({ pos, onNearDrill }: { pos: { current: { x: number; z: number } }; onNearDrill: (near: boolean) => void }) {
+  const last = useRef(false);
+  useFrame(() => {
+    const now = nearDrillPost(pos.current, last.current ? DRILL_LEAVE_RANGE : DRILL_RANGE);
+    if (now !== last.current) {
+      last.current = now;
+      onNearDrill(now);
+    }
+  });
+  return null;
+}
+
 /** Tells the page when the hero walks up to, or away from, a tower's door. */
 function NearTowerWatch({
   pos,
@@ -126,6 +146,8 @@ function World({
   standingLevel,
   books,
   onNearDesk,
+  onNearDrill,
+  drillOpen,
   onNearTower,
   room,
   onNearShelf,
@@ -138,6 +160,8 @@ function World({
   near: NpcId | null;
   books: number;
   onNearDesk: (near: boolean) => void;
+  onNearDrill: (near: boolean) => void;
+  drillOpen: boolean;
   talking: NpcId | null;
   cheerKey: number | null;
   standingLevel: number | null;
@@ -187,6 +211,8 @@ function World({
           <Market />
           <StandingTorches level={standingLevel} />
           <Desk books={books} />
+          <DrillPost />
+          {drillOpen && <DrillCamp />}
           {NPCS.map((n) => (
             <NpcMesh key={n.id} npc={n} active={near === n.id} playerPos={pos} talking={talking === n.id} cheerKey={cheerKey} />
           ))}
@@ -194,6 +220,7 @@ function World({
           <Confetti burstKey={cheerKey} />
           <NearNpc pos={pos} onNear={onNear} />
           <NearDeskWatch pos={pos} onNearDesk={onNearDesk} />
+          <NearDrillWatch pos={pos} onNearDrill={onNearDrill} />
           <NearTowerWatch pos={pos} world={world} onNearTower={onNearTower} />
         </>
       )}
@@ -214,6 +241,8 @@ export default function Scene({
   near,
   books = 0,
   onNearDesk = noop,
+  onNearDrill = noop,
+  drillOpen = false,
   talking = null,
   cheerKey = null,
   standingLevel = null,
@@ -281,6 +310,8 @@ export default function Scene({
           near={near}
           books={books}
           onNearDesk={onNearDesk}
+          onNearDrill={onNearDrill}
+          drillOpen={drillOpen}
           talking={talking}
           cheerKey={cheerKey}
           standingLevel={standingLevel}

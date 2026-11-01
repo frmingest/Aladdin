@@ -53,3 +53,13 @@ Licence text: `LICENSE-KayKit-Medieval-Hexagon.txt`. **Modified:** the two piece
 | `stall_table_long` (`table_long_tablecloth_decorated_A`), `stall_table_medium` (`table_medium_tablecloth_decorated_B`), `stall_table_plain` (`table_long_tablecloth`), `crates_stacked`, `keg_decorated`, `barrel_stack` (`barrel_small_stack`), `stool` | KayKit Dungeon Remastered | Kay Lousberg (KayKit) | https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered | CC0 1.0 | 2026-11-01 |
 
 Licence texts: `LICENSE-KayKit-Medieval-Hexagon.txt`, `LICENSE-KayKit-Dungeon-Remastered.txt`. **Modified:** merged into one file with `scripts/pack-market.mjs` (plain float vertices, no compression, no animation); geometry and textures unchanged. `stall_table_plain` and `crate_long_A` are packed but not placed yet.
+
+## Drill camp (S10, 2026-11-01)
+
+`camp.glb` is one file holding 9 pieces for the Storm Drill camp, each a top-level node named after the piece. It is only fetched when a drill is opened. All CC0 1.0.
+
+| Pieces | Asset | Author | Source | Licence | Fetched |
+|---|---|---|---|---|---|
+| `catapult`, `catapult_yellow`, `catapult_ball`, `ladder`, `target`, `tent`, `weaponrack`, `flag_blue`, `flag_yellow` | KayKit Medieval Hexagon Pack | Kay Lousberg (KayKit) | https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack | CC0 1.0 | 2026-11-01 |
+
+Licence text: `LICENSE-KayKit-Medieval-Hexagon.txt`. **Modified:** merged into one file with `scripts/pack-camp.mjs` (plain float vertices, no compression, no animation). Blue, yellow and neutral pieces only, never red or green.

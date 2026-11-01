@@ -101,5 +101,4 @@ export interface ReservedZone {
  * takes the zone's place and the entry is deleted in the same change.
  */
 export const RESERVED_ZONES: readonly ReservedZone[] = [
-  { id: "siege-simulator", x: -21 * WORLD_SCALE, z: 9 * WORLD_SCALE, radius: 7, for: "the siege simulator (south-west, beside the camp)" },
 ];
