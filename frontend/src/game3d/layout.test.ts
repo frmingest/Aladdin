@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   COBBLE_RADIUS,
   GATE_HALF_ANGLE,
+  KEEP,
+  RESERVED_ZONES,
   SPAWN,
   TOWER_SPOT_COUNT,
   WALL_RADIUS,
@@ -42,6 +44,39 @@ describe("courtyard layout", () => {
       expect(Math.hypot(s.x, s.z)).toBeLessThan(COBBLE_RADIUS);
       expect(s.z).toBeLessThan(0); // north half
     }
+  });
+
+  it("spreads the towers across the courtyard, not in one clump", () => {
+    const spots = towerSpots();
+    const xs = spots.map((s) => s.x);
+    const zs = spots.map((s) => s.z);
+    expect(Math.max(...xs) - Math.min(...xs)).toBeGreaterThan(40);
+    expect(Math.max(...zs) - Math.min(...zs)).toBeGreaterThan(20);
+    for (let i = 0; i < spots.length; i++)
+      for (let j = i + 1; j < spots.length; j++)
+        expect(Math.hypot(spots[i].x - spots[j].x, spots[i].z - spots[j].z), `${i}/${j}`).toBeGreaterThanOrEqual(10);
+    // Both sides get the same number, and the walk from the gate to the keep stays open.
+    expect(spots.filter((s) => s.x < 0)).toHaveLength(spots.filter((s) => s.x > 0).length);
+    for (const s of spots) expect(Math.abs(s.x)).toBeGreaterThan(8);
+  });
+
+  it("keeps every tower pad off the keep, the corner towers and the wall", () => {
+    for (const s of towerSpots()) {
+      const nearKeep = Math.abs(s.x - KEEP.x) < KEEP.width / 2 + 4 && Math.abs(s.z - KEEP.z) < KEEP.depth / 2 + 4;
+      expect(nearKeep).toBe(false);
+      expect(Math.hypot(s.x, s.z)).toBeLessThan(COBBLE_RADIUS - 1);
+      for (const c of cornerTowers()) expect(Math.hypot(s.x - c.x, s.z - c.z)).toBeGreaterThan(7);
+    }
+  });
+
+  it("holds open ground for the marketplace and the siege simulator, clear of every pad", () => {
+    expect(RESERVED_ZONES.map((z) => z.id)).toEqual(["marketplace", "siege-simulator"]);
+    for (const z of RESERVED_ZONES) {
+      expect(Math.hypot(z.x, z.z) + z.radius, z.id).toBeLessThan(COBBLE_RADIUS);
+      for (const s of towerSpots()) expect(Math.hypot(s.x - z.x, s.z - z.z), z.id).toBeGreaterThan(z.radius + 2.5);
+    }
+    const [a, b] = RESERVED_ZONES;
+    expect(Math.hypot(a.x - b.x, a.z - b.z)).toBeGreaterThan(a.radius + b.radius);
   });
 
   it("spawns the player inside the walls", () => {
