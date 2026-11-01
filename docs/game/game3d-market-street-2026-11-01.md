@@ -20,13 +20,19 @@ The flat Marketplace tells you which companies you are watching sit near the pri
 - `game3d/MarketStreet.tsx`: draws the stalls from `town-market.glb` (S9), the flag and the plate. Lazy, boundary-guarded, no colliders beyond a stall footprint.
 - `Scene.tsx` (a `stalls` prop) and `pages/Game3DPage.tsx` (reads the watchlist; a failed read means no stalls).
 
+## M3: step into a store (branch `feature/game3d-market-store`, not run, not merged)
+
+Walk up to a stall (within 3.4 units; it lets go at 4.6) and a prompt says "Press E to step into <name>'s store". E opens that company's store in the world panel. It is the flat store page itself (`/fortress/marketplace/:holdingId`, framed with `?embed=world`), so the eight gates, the price board and Name your price are the same code as the flat route and nothing is copied. If there are more companies than plots the prompt adds the overflow line. Esc backs out to the Where to? menu, then closes it.
+
+- `game3d/stallDoor.ts` (+ `stallDoor.test.ts`): `nearestStall`, `storeDoor` (built from the parity register's store row), `stallPrompt`. Pure.
+- `Scene.tsx`: `NearStallWatch`, `onNearStall`. `Game3DPage.tsx`: `nearStall`, `openStore`, the E key and the prompt.
+
 ## Game sprint checklist
 
 Pages touched: `/game3d` only. Identity: stays 3 (visual verb *browse*, scene Market Street). Words: reuse the flat page's words, no new strings except the overflow line. Fact pieces are code-built; the stall model carries nothing. Kit reused: `Market.tsx` loader pattern, `Inked` parts, the signboard canvas idea from `TowerMesh`. Cut line: the second row of plots, then the plates' fog lane.
 
 ## Not done yet (next steps of S14)
 
-- M3: walk up to a stall, press E, open the Store (eight gates, price board, Name your price) in the world panel.
 - M4: Sal the Sales Rep and the Hype Booth.
 - The fog lane for unpriced stalls (today they stand in order with a bare pole).
 - A look-and-judge screenshot and measured taps; placement was checked by a test and a script, not by eye.

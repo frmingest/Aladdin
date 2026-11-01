@@ -24,13 +24,14 @@ import type { RoomView } from "../game3d/Scene";
 import { deskBlock } from "../game3d/deskForm";
 import Toolbar from "../game3d/Toolbar";
 import { typingInField } from "../game3d/useKeys";
+import { stallPrompt, storeDoor } from "../game3d/stallDoor";
 import { PANEL_KEYS, loadPanels, savePanels, togglePanel } from "../game3d/hudPanels";
 import type { PanelId } from "../game3d/hudPanels";
 import { celebrationDue } from "../game3d/celebrate";
 import { sixMonthReckoning } from "../game3d/quest";
 import { unwrittenThesisV2 } from "../game3d/questV2";
 import type { NpcId } from "../game3d/npcs";
-import { buildStreet } from "../game3d/streetPlan";
+import { buildStreet, streetOverflowLine } from "../game3d/streetPlan";
 import { stateToWorld } from "../game3d/stateToWorld";
 import { withGaps } from "../game3d/standingGaps";
 import { wordsFor } from "../game3d/standingWordsV3";
@@ -86,6 +87,8 @@ export default function Game3DPage() {
   const [atSign, setAtSign] = useState(false);
   const [whereOpen, setWhereOpen] = useState(false);
   const [worldPage, setWorldPage] = useState<Door | null>(null);
+  // Market Street: which stall (holding id) you stand at.
+  const [nearStall, setNearStall] = useState<string | null>(null);
   // The Storm Drill: whether you stand at the drill post, whether a drill is open (the camp stands while it is), and the stored drills.
   const [atDrill, setAtDrill] = useState(false);
   const [drillOpen, setDrillOpen] = useState(false);
@@ -234,6 +237,14 @@ export default function Game3DPage() {
     setWorldPage(null);
   }, []);
   const pickDoor = useCallback((door: Door) => setWorldPage(door), []);
+  // E at a stall: that company's store, in the world panel (the flat store page itself).
+  const openStore = useCallback((holdingId: string) => {
+    const door = storeDoor(holdingId);
+    if (!door) return;
+    if (document.pointerLockElement) document.exitPointerLock();
+    setWhereOpen(true);
+    setWorldPage(door);
+  }, []);
 
   const enterTower = useCallback((id: string) => {
     if (document.pointerLockElement) {
@@ -321,13 +332,17 @@ export default function Game3DPage() {
         } else leaveTower();
         return;
       }
-      if (!near && !nearTower && !atDesk && !atDrill && !atSign) return;
+      if (!near && !nearTower && !atDesk && !atDrill && !atSign && !nearStall) return;
       e.preventDefault();
       if (!near && nearTower) {
         enterTower(nearTower);
         return;
       }
       if (!near) {
+        if (!atDesk && !atDrill && !atSign && nearStall) {
+          openStore(nearStall);
+          return;
+        }
         if (!atDesk && !atDrill) {
           // Only the signpost is in reach: E opens or shuts the "Where to?" menu.
           toggleWhere();
@@ -354,7 +369,7 @@ export default function Game3DPage() {
     };
     window.addEventListener("keydown", onTalk);
     return () => window.removeEventListener("keydown", onTalk);
-  }, [near, talking, atDesk, atDrill, atSign, toggleWhere, drillOpen, deskOpen, room, nearShelf, atDoor, atTable, report, readShelf, nearTower, enterTower, leaveTower, openReport]);
+  }, [near, talking, atDesk, atDrill, atSign, nearStall, openStore, toggleWhere, drillOpen, deskOpen, room, nearShelf, atDoor, atTable, report, readShelf, nearTower, enterTower, leaveTower, openReport]);
 
   useEffect(() => {
     const onPanelKey = (e: KeyboardEvent) => {
@@ -413,6 +428,7 @@ export default function Game3DPage() {
             onNearDesk={setAtDesk}
             onNearDrill={setAtDrill}
             onNearSign={setAtSign}
+            onNearStall={setNearStall}
             drillOpen={drillOpen}
             stalls={street.stalls}
             talking={talking}
@@ -517,6 +533,13 @@ export default function Game3DPage() {
       {atDrill && !drillOpen && !talking && !nearTower && !atDesk && (
         <p className="pointer-events-none absolute bottom-16 left-1/2 w-max -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-sm text-white">
           {DRILL_PROMPT}
+        </p>
+      )}
+
+      {nearStall && !whereOpen && !talking && !nearTower && !atSign && !atDesk && !atDrill && !room && (
+        <p className="pointer-events-none absolute bottom-16 left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-center text-sm text-white">
+          {stallPrompt(street.stalls.find((s) => s.holdingId === nearStall)?.name ?? "this company")}
+          {street.overflow.length > 0 && <span className="block text-xs opacity-80">{streetOverflowLine(street.overflow.length)}</span>}
         </p>
       )}
 

@@ -27,6 +27,7 @@ import DrillCamp from "./DrillCamp";
 import DrillPost from "./DrillPost";
 import Signpost from "./Signpost";
 import { SIGN_LEAVE_RANGE, SIGN_RANGE, nearSign } from "./signpost";
+import { STALL_LEAVE_RANGE, STALL_RANGE, nearestStall } from "./stallDoor";
 import { DRILL_LEAVE_RANGE, DRILL_RANGE, nearDrillPost } from "./stormDrill";
 import { DESK_LEAVE_RANGE, DESK_RANGE, nearDesk } from "./desk";
 import { PROPS } from "./props";
@@ -54,6 +55,8 @@ interface Props {
   onNearDrill?: (near: boolean) => void;
   /** Tells the page when the hero is at the signpost by the gate. */
   onNearSign?: (near: boolean) => void;
+  /** Which stall is within reach (a holding id), or null. Called only when it changes. */
+  onNearStall?: (holdingId: string | null) => void;
   /** Market Street: one stall per watchlist company, already worked out (marketStreet.ts). */
   stalls?: readonly Stall[];
   /** A Storm Drill is open: the camp stands. */
@@ -138,6 +141,20 @@ function NearSignWatch({ pos, onNearSign }: { pos: { current: { x: number; z: nu
   return null;
 }
 
+/** Tells the page when the hero walks up to, or away from, a stall on Market Street. */
+function NearStallWatch({ pos, stalls, onNearStall }: { pos: { current: { x: number; z: number } }; stalls: readonly Stall[]; onNearStall: (id: string | null) => void }) {
+  const last = useRef<string | null>(null);
+  useFrame(() => {
+    if (stalls.length === 0 && last.current === null) return;
+    const now = nearestStall(pos.current, stalls, last.current ? STALL_LEAVE_RANGE : STALL_RANGE);
+    if (now !== last.current) {
+      last.current = now;
+      onNearStall(now);
+    }
+  });
+  return null;
+}
+
 /** Tells the page when the hero walks up to, or away from, a tower's door. */
 function NearTowerWatch({
   pos,
@@ -172,6 +189,7 @@ function World({
   onNearDesk,
   onNearDrill,
   onNearSign,
+  onNearStall,
   drillOpen,
   stalls,
   onNearTower,
@@ -188,6 +206,7 @@ function World({
   onNearDesk: (near: boolean) => void;
   onNearDrill: (near: boolean) => void;
   onNearSign: (near: boolean) => void;
+  onNearStall: (holdingId: string | null) => void;
   drillOpen: boolean;
   stalls: readonly Stall[];
   talking: NpcId | null;
@@ -252,6 +271,7 @@ function World({
           <NearDeskWatch pos={pos} onNearDesk={onNearDesk} />
           <NearDrillWatch pos={pos} onNearDrill={onNearDrill} />
           <NearSignWatch pos={pos} onNearSign={onNearSign} />
+          <NearStallWatch pos={pos} stalls={stalls} onNearStall={onNearStall} />
           <NearTowerWatch pos={pos} world={world} onNearTower={onNearTower} />
         </>
       )}
@@ -274,6 +294,7 @@ export default function Scene({
   onNearDesk = noop,
   onNearDrill = noop,
   onNearSign = noop,
+  onNearStall = noop,
   drillOpen = false,
   stalls = NO_STALLS,
   talking = null,
@@ -345,6 +366,7 @@ export default function Scene({
           onNearDesk={onNearDesk}
           onNearDrill={onNearDrill}
           onNearSign={onNearSign}
+          onNearStall={onNearStall}
           drillOpen={drillOpen}
           stalls={stalls}
           talking={talking}
