@@ -38,7 +38,7 @@ Pages touched: `/game3d` only. Identity: stays 3 (visual verb *browse*, scene Ma
 - A look-and-judge screenshot and measured taps; placement was checked by a test and a script, not by eye.
 - Seven plots only, because the south-east is crowded: more companies would need a second area.
 
-## M4: Sal's counter and the Hype Booth (same branch `feature/game3d-market-store`, tests run, not seen in a browser)
+## M4: Sal's counter and the Hype Booth (branch `feature/game3d-market-booths`, tests run, not seen in a browser)
 
 **What a sprint is for here:** the flat Marketplace lets you add a company (talk to Sal) and test a tip (Hype Booth). Now both are two little stands at the near end of the street. Walk up, press E, and the flat page's own dialog opens over the world. Adding a company puts a new stall on the street straight away.
 

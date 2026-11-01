@@ -4,9 +4,9 @@
 
 ## Current Objective
 
-**3D courtyard S14, Market Street: M1 and M2 merged (#243). M3 (E at a stall opens the store) and M4 (Sal's counter and the Hype Booth, E opens the flat dialogs) are on branch `feature/game3d-market-store`: tests and tsc pass, not pushed, not merged, never seen in a browser.** ([write-up](game/game3d-market-street-2026-11-01.md)). Next: look at it in a browser, then S15 spike (the Town beyond the gate).
+**3D courtyard S14, Market Street: M1 and M2 merged (#243). M3 (E at a stall opens the store) merged as #244. M4 (Sal's counter and the Hype Booth, E opens the flat dialogs) is on branch `feature/game3d-market-booths` with its PR open: tests and tsc pass, never seen in a browser.** ([write-up](game/game3d-market-street-2026-11-01.md)). Next: look at it in a browser, then S15 spike (the Town beyond the gate).
 
-State: `main` at `14227dc` (#243, Market Street merged); no PR open yet. Everything up to #241 is merged ([archive](archive/progress-archive.md)); deploy not checked, say if Railway has redeployed. Database is Railway Postgres, files on Cloudflare R2 (Supabase retired 2026-10-14). Migration head `z1b2c3d4e5f6`. Live URLs: frontend `https://exciting-gratitude-production-71b5.up.railway.app`, backend `https://aladdin-production-bd25.up.railway.app`.
+State: `main` at `a8242b9` (#244 merged); the M4 PR is open. Everything up to #241 is merged ([archive](archive/progress-archive.md)); deploy not checked, say if Railway has redeployed. Database is Railway Postgres, files on Cloudflare R2 (Supabase retired 2026-10-14). Migration head `z1b2c3d4e5f6`. Live URLs: frontend `https://exciting-gratitude-production-71b5.up.railway.app`, backend `https://aladdin-production-bd25.up.railway.app`.
 
 ## Active Tasks
 
