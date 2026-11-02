@@ -47,6 +47,9 @@ import { DESK_LEAVE_RANGE, DESK_RANGE, nearDesk } from "./desk";
 import { PROPS } from "./props";
 import Library from "./Library";
 import Town from "./Town";
+import TownHallRoom from "./TownHallRoom";
+import { HALL_SPAWN, HALL_YAW, hallExit } from "./townHallRoom";
+import type { BoardId } from "./townHallRoom";
 import { GATE_RETURN, GATE_RETURN_YAW, GATE_LEAVE_RANGE, GATE_RANGE, TOWN_SPAWN, TOWN_YAW, nearGate } from "./townPlan";
 import type { BuildingId } from "./townPlan";
 import { ROOM_SPAWN, ROOM_YAW } from "./libraryRoom";
@@ -118,6 +121,10 @@ interface Props {
   townNear?: BuildingId | null;
   onNearBuilding?: (id: BuildingId | null) => void;
   onNearTownExit?: (near: boolean) => void;
+  /** Inside the Town Hall (the Town is not drawn while there), which board you stand at, and whether the door is in reach. */
+  inHall?: boolean;
+  onNearBoard?: (id: BoardId | null) => void;
+  onNearHallDoor?: (near: boolean) => void;
 }
 
 export interface RoomView {
@@ -334,6 +341,9 @@ function World({
   townNear,
   onNearBuilding,
   onNearTownExit,
+  inHall,
+  onNearBoard,
+  onNearHallDoor,
 }: {
   onLockChange: (locked: boolean) => void;
   world: WorldModel;
@@ -369,6 +379,9 @@ function World({
   townNear: BuildingId | null;
   onNearBuilding: (id: BuildingId | null) => void;
   onNearTownExit: (near: boolean) => void;
+  inHall: boolean;
+  onNearBoard: (id: BoardId | null) => void;
+  onNearHallDoor: (near: boolean) => void;
 }) {
   const keys = useKeys();
   const pos = useRef({ x: 0, z: 0 });
@@ -403,9 +416,23 @@ function World({
     else setTeleport({ key: ++count.current, x: GATE_RETURN.x, z: GATE_RETURN.z, yaw: GATE_RETURN_YAW });
   }, [inTown]);
 
+  // Through the Town Hall door: into the hall, and back out at the door spot in the Town.
+  const prevHall = useRef(false);
+  useEffect(() => {
+    if (inHall === prevHall.current) return;
+    prevHall.current = inHall;
+    if (inHall) setTeleport({ key: ++count.current, x: HALL_SPAWN.x, z: HALL_SPAWN.z, yaw: HALL_YAW });
+    else {
+      const out = hallExit();
+      setTeleport({ key: ++count.current, x: out.x, z: out.z, yaw: out.yaw });
+    }
+  }, [inHall]);
+
   return (
     <Physics gravity={[0, -25, 0]} timeStep="vary">
-      {inTown && !room ? (
+      {inHall && !room ? (
+        <TownHallRoom pos={pos} onBoard={onNearBoard} onDoor={onNearHallDoor} />
+      ) : inTown && !room ? (
         <>
           <Backdrop />
           <Town pos={pos} near={townNear} onNearBuilding={onNearBuilding} onNearExit={onNearTownExit} />
@@ -498,8 +525,11 @@ export default function Scene({
   townNear = null,
   onNearBuilding = noop,
   onNearTownExit = noop,
+  inHall = false,
+  onNearBoard = noop,
+  onNearHallDoor = noop,
 }: Props) {
-  const inside = room !== null;
+  const inside = room !== null || inHall;
   // The weather: only the sky and fog colour change (calm keeps the courtyard's own sky); lights stay as they are.
   const wx = weatherLook(siegeLevel);
   return (
@@ -587,6 +617,9 @@ export default function Scene({
           townNear={townNear}
           onNearBuilding={onNearBuilding}
           onNearTownExit={onNearTownExit}
+          inHall={inHall}
+          onNearBoard={onNearBoard}
+          onNearHallDoor={onNearHallDoor}
         />
       </Suspense>
       <PerfProbe onStats={onStats} />
