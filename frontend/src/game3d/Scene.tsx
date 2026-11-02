@@ -48,6 +48,8 @@ import { PROPS } from "./props";
 import Library from "./Library";
 import Town from "./Town";
 import TownHallRoom from "./TownHallRoom";
+import RecordsHallRoom from "./RecordsHallRoom";
+import { ARCHIVE_SPAWN, ARCHIVE_YAW, archiveExit } from "./recordsHallRoom";
 import { HALL_SPAWN, HALL_YAW, hallExit } from "./townHallRoom";
 import type { BoardId } from "./townHallRoom";
 import { GATE_RETURN, GATE_RETURN_YAW, GATE_LEAVE_RANGE, GATE_RANGE, TOWN_SPAWN, TOWN_YAW, nearGate } from "./townPlan";
@@ -125,6 +127,10 @@ interface Props {
   inHall?: boolean;
   onNearBoard?: (id: BoardId | null) => void;
   onNearHallDoor?: (near: boolean) => void;
+  /** Inside the Hall of Records (the Town is not drawn while there), whether you stand at the shelves, and whether the door is in reach. */
+  inRecords?: boolean;
+  onNearShelves?: (near: boolean) => void;
+  onNearArchiveDoor?: (near: boolean) => void;
 }
 
 export interface RoomView {
@@ -344,6 +350,9 @@ function World({
   inHall,
   onNearBoard,
   onNearHallDoor,
+  inRecords,
+  onNearShelves,
+  onNearArchiveDoor,
 }: {
   onLockChange: (locked: boolean) => void;
   world: WorldModel;
@@ -382,6 +391,9 @@ function World({
   inHall: boolean;
   onNearBoard: (id: BoardId | null) => void;
   onNearHallDoor: (near: boolean) => void;
+  inRecords: boolean;
+  onNearShelves: (near: boolean) => void;
+  onNearArchiveDoor: (near: boolean) => void;
 }) {
   const keys = useKeys();
   const pos = useRef({ x: 0, z: 0 });
@@ -428,9 +440,23 @@ function World({
     }
   }, [inHall]);
 
+  // Through the Hall of Records door: into the archive, and back out at the door spot in the Town.
+  const prevRecords = useRef(false);
+  useEffect(() => {
+    if (inRecords === prevRecords.current) return;
+    prevRecords.current = inRecords;
+    if (inRecords) setTeleport({ key: ++count.current, x: ARCHIVE_SPAWN.x, z: ARCHIVE_SPAWN.z, yaw: ARCHIVE_YAW });
+    else {
+      const out = archiveExit();
+      setTeleport({ key: ++count.current, x: out.x, z: out.z, yaw: out.yaw });
+    }
+  }, [inRecords]);
+
   return (
     <Physics gravity={[0, -25, 0]} timeStep="vary">
-      {inHall && !room ? (
+      {inRecords && !room ? (
+        <RecordsHallRoom pos={pos} onShelves={onNearShelves} onDoor={onNearArchiveDoor} />
+      ) : inHall && !room ? (
         <TownHallRoom pos={pos} onBoard={onNearBoard} onDoor={onNearHallDoor} />
       ) : inTown && !room ? (
         <>
@@ -528,8 +554,11 @@ export default function Scene({
   inHall = false,
   onNearBoard = noop,
   onNearHallDoor = noop,
+  inRecords = false,
+  onNearShelves = noop,
+  onNearArchiveDoor = noop,
 }: Props) {
-  const inside = room !== null || inHall;
+  const inside = room !== null || inHall || inRecords;
   // The weather: only the sky and fog colour change (calm keeps the courtyard's own sky); lights stay as they are.
   const wx = weatherLook(siegeLevel);
   return (
@@ -620,6 +649,9 @@ export default function Scene({
           inHall={inHall}
           onNearBoard={onNearBoard}
           onNearHallDoor={onNearHallDoor}
+          inRecords={inRecords}
+          onNearShelves={onNearShelves}
+          onNearArchiveDoor={onNearArchiveDoor}
         />
       </Suspense>
       <PerfProbe onStats={onStats} />

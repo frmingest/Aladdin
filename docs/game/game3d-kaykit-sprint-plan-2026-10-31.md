@@ -158,7 +158,7 @@ Order is the recommended order. Sizes are relative (S, M, L), not hours.
 
 ### S18: interiors and the Town Hall rooms (M; needs S15)
 
-**Status (2026-11-02): PR 1 (the Town Hall building and its menu door) is merged (#253, [write-up](game3d-town-hall-2026-11-02.md)); PR 2 (the interior hall with six boards) is merged (#255, [write-up](game3d-town-hall-interior-2026-11-02.md)); PR 3 (a headline number on four of the six boards) is merged (#256, [write-up](game3d-town-hall-numbers-2026-11-02.md)); PR 4 (numbers on the last two boards: Macro, Thesis monitor and Precious metals) is written on `feature/game3d-town-hall-last-boards`, tests and build green, not looked at in a browser, not merged ([write-up](game3d-town-hall-last-boards-2026-11-02.md)). The Records Hall interior is not started.**
+**Status (2026-11-02): PRs 1 to 4 are merged (#253 the Town Hall building, #255 the interior hall with six boards, #256 four board numbers, #257 numbers on the last two boards; [write-up](game3d-town-hall-last-boards-2026-11-02.md)). PR 5 (inside the Hall of Records: one same-size book per decision, seals by shape, a ribbon when a review is owed, E at the shelves opens the flat page) is written on `feature/game3d-records-hall-interior`, tests and build green, not looked at in a browser, not merged ([write-up](game3d-records-hall-interior-2026-11-02.md)). Once it merges S18 is done.**
 
 *For:* rooms you can walk into for the pages that are lists, not pictures.
 - Reuse the library's scene-swap pattern (hero moved through a door). Interiors from **KayKit Dungeon Remastered** (flat-style floors, walls, doorways, stairs, shelves, tables) and Furniture Bits (rugs, lamps, shelves, books).

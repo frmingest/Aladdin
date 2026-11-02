@@ -24,7 +24,9 @@ import { PERCH_PROMPT, WATCH_PROMPT } from "../game3d/watchWordsV1";
 import DrillPanel from "../game3d/DrillPanel";
 import WhereToPanel from "../game3d/WhereToPanel";
 import WorldPanel from "../game3d/WorldPanel";
+import { REGISTER } from "../game3d/parity3d";
 import type { Door } from "../game3d/parity3d";
+import { RECORDS_ROUTE, archiveDoorPrompt, shelfPrompt } from "../game3d/recordsHallRoom";
 import { PLAIN_VIEW, PLAIN_VIEW_TITLE, SIGN_PROMPT } from "../game3d/worldWordsV1";
 import { drillBlock, stormDrillQuest } from "../game3d/stormDrill";
 import { DRILL_PROMPT } from "../game3d/stormDrillWordsV1";
@@ -152,6 +154,10 @@ export default function Game3DPage() {
   const [inHall, setInHall] = useState(false);
   const [nearBoard, setNearBoard] = useState<BoardId | null>(null);
   const [atHallDoor, setAtHallDoor] = useState(false);
+  // Inside the Hall of Records: whether you are in it, whether you stand at the shelves, and whether the door is in reach.
+  const [inRecords, setInRecords] = useState(false);
+  const [atShelves, setAtShelves] = useState(false);
+  const [atArchiveDoor, setAtArchiveDoor] = useState(false);
   const [onlyRoutes, setOnlyRoutes] = useState<readonly string[] | null>(null);
   const [atTownExit, setAtTownExit] = useState(false);
   const [onlyPlace, setOnlyPlace] = useState<PlaceId | null>(null);
@@ -370,6 +376,8 @@ export default function Game3DPage() {
     setAtTownExit(false);
     setNearBoard(null);
     setAtHallDoor(false);
+    setAtShelves(false);
+    setAtArchiveDoor(false);
   }, []);
   const enterTown = useCallback(() => {
     clearNears();
@@ -385,6 +393,7 @@ export default function Game3DPage() {
   const leaveTown = useCallback(() => {
     clearNears();
     setInHall(false);
+    setInRecords(false);
     setInTown(false);
   }, [clearNears]);
   // Into the Town Hall and back out to its door. The Town's watchers are unmounted while inside, so the nears are cleared.
@@ -396,6 +405,24 @@ export default function Game3DPage() {
     clearNears();
     setInHall(false);
   }, [clearNears]);
+  // Into the Hall of Records and back out to its door; E at the shelves opens the flat Hall of Records page in the world panel.
+  const enterRecords = useCallback(() => {
+    clearNears();
+    setInRecords(true);
+  }, [clearNears]);
+  const leaveRecords = useCallback(() => {
+    clearNears();
+    setInRecords(false);
+  }, [clearNears]);
+  const openShelves = useCallback(() => {
+    const row = REGISTER.find((d) => d.route === RECORDS_ROUTE);
+    if (!row) return;
+    if (document.pointerLockElement) document.exitPointerLock();
+    setWhereOpen(true);
+    setOnlyPlace(null);
+    setOnlyRoutes(null);
+    setWorldPage(row);
+  }, []);
   // E at a board: one page opens as it is; a pair opens a menu of just those two pages.
   const openBoard = useCallback((id: BoardId) => {
     const board = boardById(id);
@@ -419,6 +446,10 @@ export default function Game3DPage() {
       enterHall();
       return;
     }
+    if (id === "records") {
+      enterRecords();
+      return;
+    }
     const b = BUILDINGS.find((x) => x.id === id);
     const action = b ? doorAction(b) : null;
     if (!action) return;
@@ -431,7 +462,7 @@ export default function Game3DPage() {
       setWorldPage(null);
       setOnlyPlace(action.place);
     }
-  }, [enterHall]);
+  }, [enterHall, enterRecords]);
 
   const enterTower = useCallback((id: string) => {
     if (document.pointerLockElement) {
@@ -527,6 +558,15 @@ export default function Game3DPage() {
       const el = e.target as HTMLElement | null;
       if (typingInField(el)) return;
       if (boothOpen || lampOpen) return;
+      if (inRecords) {
+        // In the Hall of Records: E reads the shelves, or takes the door back out.
+        if (whereOpen) return;
+        if (!atShelves && !atArchiveDoor) return;
+        e.preventDefault();
+        if (atShelves) openShelves();
+        else leaveRecords();
+        return;
+      }
       if (inHall) {
         // In the Town Hall: E opens the board you stand at, or takes the door back out.
         if (whereOpen) return;
@@ -628,7 +668,7 @@ export default function Game3DPage() {
     };
     window.addEventListener("keydown", onTalk);
     return () => window.removeEventListener("keydown", onTalk);
-  }, [inHall, nearBoard, atHallDoor, openBoard, leaveHall, inTown, whereOpen, townNear, atTownExit, atGate, openBuilding, leaveTown, enterTown, near, talking, atDesk, atVault, vaultOpen, atWatch, watchOpen, atPerch, perchOpen, ravens, atRealm, realmOpen, lampOpen, state, atDrill, atSign, nearStall, nearBooth, boothOpen, openBooth, openStore, toggleWhere, drillOpen, deskOpen, room, nearShelf, atDoor, atTable, report, readShelf, nearTower, enterTower, leaveTower, openReport]);
+  }, [inRecords, atShelves, atArchiveDoor, openShelves, leaveRecords, inHall, nearBoard, atHallDoor, openBoard, leaveHall, inTown, whereOpen, townNear, atTownExit, atGate, openBuilding, leaveTown, enterTown, near, talking, atDesk, atVault, vaultOpen, atWatch, watchOpen, atPerch, perchOpen, ravens, atRealm, realmOpen, lampOpen, state, atDrill, atSign, nearStall, nearBooth, boothOpen, openBooth, openStore, toggleWhere, drillOpen, deskOpen, room, nearShelf, atDoor, atTable, report, readShelf, nearTower, enterTower, leaveTower, openReport]);
 
   useEffect(() => {
     const onPanelKey = (e: KeyboardEvent) => {
@@ -715,6 +755,9 @@ export default function Game3DPage() {
             inHall={inHall}
             onNearBoard={setNearBoard}
             onNearHallDoor={setAtHallDoor}
+            inRecords={inRecords}
+            onNearShelves={setAtShelves}
+            onNearArchiveDoor={setAtArchiveDoor}
           />
         </Suspense>
       </SceneBoundary>
@@ -816,7 +859,16 @@ export default function Game3DPage() {
           ← Back to the Town
         </button>
       )}
-      {inTown && !inHall && (
+      {inRecords && (
+        <button
+          type="button"
+          onClick={leaveRecords}
+          className="absolute left-3 top-14 rounded border border-border bg-surface/90 px-3 py-1.5 text-sm text-ink hover:opacity-80"
+        >
+          ← Back to the Town
+        </button>
+      )}
+      {inTown && !inHall && !inRecords && (
         <button
           type="button"
           onClick={leaveTown}
@@ -835,12 +887,22 @@ export default function Game3DPage() {
           {hallDoorPrompt}
         </p>
       )}
-      {inTown && !inHall && !whereOpen && townNear && (
+      {inRecords && !whereOpen && atShelves && (
+        <p className="pointer-events-none absolute bottom-16 left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-sm text-white">
+          {shelfPrompt}
+        </p>
+      )}
+      {inRecords && !whereOpen && !atShelves && atArchiveDoor && (
+        <p className="pointer-events-none absolute bottom-16 left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-sm text-white">
+          {archiveDoorPrompt}
+        </p>
+      )}
+      {inTown && !inHall && !inRecords && !whereOpen && townNear && (
         <p className="pointer-events-none absolute bottom-16 left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-sm text-white">
           {buildingPrompt(BUILDINGS.find((b) => b.id === townNear) ?? BUILDINGS[0])}
         </p>
       )}
-      {inTown && !inHall && !whereOpen && !townNear && atTownExit && (
+      {inTown && !inHall && !inRecords && !whereOpen && !townNear && atTownExit && (
         <p className="pointer-events-none absolute bottom-16 left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-sm text-white">
           {exitPrompt}
         </p>
