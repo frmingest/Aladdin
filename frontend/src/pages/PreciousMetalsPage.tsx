@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { api, ApiError } from "../lib/api";
 import { formatDate, formatDecimal, formatNok } from "../lib/format";
+import { metalsValueText } from "../lib/headlines";
 import type { CoinSeries, MetalHoldingRow, MetalPricePoint, PreciousMetalsOverview } from "../lib/types";
 import { Button, Card, EmptyState, PageHeader, SectionTitle, StatTile } from "../components/ui";
 
@@ -338,7 +339,7 @@ export default function PreciousMetalsPage() {
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
               <StatTile
                 label="Total value"
-                value={formatNok(overview.total_value_nok)}
+                value={metalsValueText(overview)}
                 hint={formatDate(overview.as_of)}
               />
               <StatTile

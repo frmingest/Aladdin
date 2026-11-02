@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, ApiError } from "../lib/api";
 import { formatDate } from "../lib/format";
+import { THESIS_STATUS_ORDER, thesisStatusCounts } from "../lib/headlines";
 import type { MonitorRow, ThesisMonitor, ThesisStatus } from "../lib/types";
 import { Card, EmptyState, PageHeader, SectionTitle } from "../components/ui";
 import { CheckTripwiresButton } from "../components/TripwireBanner";
@@ -11,7 +12,7 @@ import { CheckTripwiresButton } from "../components/TripwireBanner";
  * GET /thesis/monitor (backend/app/services/thesis/monitor.py), which
  * reads stored data only: no LLM call, no live market-data provider. */
 
-const STATUS_ORDER: ThesisStatus[] = ["tripwire_fired", "review", "not_analyzed", "intact"];
+const STATUS_ORDER = THESIS_STATUS_ORDER;
 
 const STATUS_BAR: Record<ThesisStatus, string> = {
   tripwire_fired: "bg-negative",
@@ -38,17 +39,13 @@ function StatusBar({ rows }: { rows: MonitorRow[] }) {
         })}
       </div>
       <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm">
-        {STATUS_ORDER.map((status) => {
-          const match = rows.filter((r) => r.status === status);
-          if (match.length === 0) return null;
-          return (
-            <span key={status} className="inline-flex items-center gap-2 text-ink-muted">
-              <span className={`inline-block h-2.5 w-2.5 rounded-full ${STATUS_BAR[status]}`} />
-              <span className="tabular font-semibold text-ink">{match.length}</span>
-              {match[0].status_label}
-            </span>
-          );
-        })}
+        {thesisStatusCounts(rows).map((part) => (
+          <span key={part.status} className="inline-flex items-center gap-2 text-ink-muted">
+            <span className={`inline-block h-2.5 w-2.5 rounded-full ${STATUS_BAR[part.status]}`} />
+            <span className="tabular font-semibold text-ink">{part.count}</span>
+            {part.label}
+          </span>
+        ))}
       </div>
     </Card>
   );

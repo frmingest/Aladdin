@@ -3,6 +3,10 @@
 Completed milestones and retired status, moved out of `docs/PROGRESS.md` under the rolling-log rules
 in `CLAUDE.md` ("Progress file rules"). Newest snapshot first. Older: [PROGRESS-full-2026-09-30.md](PROGRESS-full-2026-09-30.md).
 
+## Closed 2026-11-02 (afternoon) — S18 PRs 1 to 3, the Town Hall, its hall and the first board numbers (#253, #255, #256)
+
+- **Merged into `main` (`774b579`):** #253 the Town Hall building and its menu door ([write-up](../game/game3d-town-hall-2026-11-02.md)); #255 the interior hall with six notice boards ([write-up](../game/game3d-town-hall-interior-2026-11-02.md)); #256 a headline number on four boards (Big Board, Purse and Scoreboard, Storm and Cushion, Roll Call), printed by `lib/headlines.ts`, which the Dashboard, Performance and Margin of safety pages now call too ([write-up](../game/game3d-town-hall-numbers-2026-11-02.md)). Deploy not checked; not looked at in a browser.
+
 ## Closed 2026-11-02 (midday) — S17, the siege yard (#252)
 
 - **Merged as #252** (`8d6d2a8`): the Storm Drill panel lists the worst-hit towers, the whole-book figures and a "?" fog block for towers with no usable beta, all from the flat Siege Simulator's own helpers ([write-up](../game/game3d-siege-yard-2026-11-02.md)). Not clicked through in a browser when merged; deploy not checked.

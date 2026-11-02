@@ -1,12 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { formatNok } from "../lib/format";
-import { portfolioValueText, rankedCounts, totalReturnText } from "../lib/headlines";
+import { metalsValueText, policyRateText, portfolioValueText, rankedCounts, thesisSummaryText, totalReturnText } from "../lib/headlines";
 import { boardHeadline } from "./boardHeadlines";
 import { BOARDS } from "./townHallRoom";
-import type { MarginOfSafetyBoard, PortfolioOverview, PortfolioPerformance } from "../lib/types";
+import type { MacroIndicators, MarginOfSafetyBoard, PortfolioOverview, PortfolioPerformance, PreciousMetalsOverview, ThesisMonitor } from "../lib/types";
 
 const overview = { total_value_nok: "2500000.00" } as PortfolioOverview;
 const perf = (r: string | null) => ({ total_return_pct: r }) as PortfolioPerformance;
+const macro = (rate: string | null, stale = false) =>
+  ({ indicators: [{ key: "no_policy_rate", value: rate, display_unit: "%", stale }] }) as unknown as MacroIndicators;
+const thesis = (...statuses: [string, string][]) =>
+  ({ rows: statuses.map(([status, status_label]) => ({ status, status_label })) }) as unknown as ThesisMonitor;
+const metals = { total_value_nok: "120000.00" } as PreciousMetalsOverview;
 const board = (zones: string[]) => ({ rows: zones.map((zone) => ({ zone })) }) as unknown as MarginOfSafetyBoard;
 
 describe("boardHeadline", () => {
@@ -33,10 +38,30 @@ describe("boardHeadline", () => {
     expect(boardHeadline("roll", { holdingCount: 0 })).toBe("0 holdings");
   });
 
-  it("says nothing extra while a number is unknown, and for boards without a shared function yet", () => {
+  it("shows Norway's policy rate on the Wide Weather board, stale kept", () => {
+    expect(boardHeadline("weather", { macro: macro("4.25") })).toBe(`Norway policy rate: ${policyRateText(macro("4.25"))}`);
+    expect(boardHeadline("weather", { macro: macro("4.25", true) })).toBe("Norway policy rate: 4.25% (stale)");
+    expect(boardHeadline("weather", { macro: macro(null) })).toBeNull();
+  });
+
+  it("shows the Thesis counts and the metals total on the Reasons board, each only when known", () => {
+    const t = thesis(["tripwire_fired", "\u{1F534} Tripwire fired"], ["intact", "\u{1F7E2} Intact"], ["intact", "\u{1F7E2} Intact"]);
+    const reasons = `Reasons: ${thesisSummaryText(t.rows)}`;
+    const shiny = `Metals: ${metalsValueText(metals)}`;
+    expect(boardHeadline("reasons", { thesis: t, metals })).toBe(`${reasons}\n${shiny}`);
+    expect(boardHeadline("reasons", { thesis: t })).toBe(reasons);
+    expect(boardHeadline("reasons", { metals })).toBe(shiny);
+    expect(shiny).toContain(formatNok("120000.00"));
+    expect(boardHeadline("reasons", { thesis: thesis() })).toBe("Reasons: Nothing watched yet");
+  });
+
+  it("says nothing extra while no number is known yet", () => {
     for (const b of BOARDS) expect(boardHeadline(b.id, {})).toBeNull();
-    expect(boardHeadline("weather", { overview, performance: perf("1"), holdingCount: 3 })).toBeNull();
-    expect(boardHeadline("reasons", { overview, holdingCount: 3 })).toBeNull();
+  });
+
+  it("gives every board a number once its data is in", () => {
+    const data = { overview, performance: perf("1"), board: board(["below_bear"]), holdingCount: 2, macro: macro("4"), thesis: thesis(["intact", "Intact"]), metals };
+    for (const b of BOARDS) expect(boardHeadline(b.id, data), b.id).not.toBeNull();
   });
 
   it("never uses buy, sell, red or green wording", () => {
@@ -45,6 +70,8 @@ describe("boardHeadline", () => {
       boardHeadline("purse", { performance: perf("-3.2") }),
       boardHeadline("storm", { board: board(["above_bull", "unavailable"]) }),
       boardHeadline("roll", { holdingCount: 5 }),
+      boardHeadline("weather", { macro: macro("4.25", true) }),
+      boardHeadline("reasons", { thesis: thesis(["tripwire_fired", "Tripwire fired"], ["review", "Needs review"]), metals }),
     ].join(" ");
     expect(all).not.toMatch(/\b(buy|sell|red|green)\b/i);
   });
