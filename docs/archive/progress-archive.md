@@ -3,6 +3,10 @@
 Completed milestones and retired status, moved out of `docs/PROGRESS.md` under the rolling-log rules
 in `CLAUDE.md` ("Progress file rules"). Newest snapshot first. Older: [PROGRESS-full-2026-09-30.md](PROGRESS-full-2026-09-30.md).
 
+## Closed 2026-11-02 (afternoon, later) — S18 PR 4, numbers on the last two Town Hall boards (#257)
+
+- **Merged as #257** (`e037290`): the Wide Weather shows Norway's policy rate, Reasons and Shiny Metal shows the thesis counts and the metals total, each from the same shared function as its flat page, so all six boards carry a number ([write-up](../game/game3d-town-hall-last-boards-2026-11-02.md)). Not seen in a browser; deploy not checked.
+
 ## Closed 2026-11-02 (afternoon) — S18 PRs 1 to 3, the Town Hall, its hall and the first board numbers (#253, #255, #256)
 
 - **Merged into `main` (`774b579`):** #253 the Town Hall building and its menu door ([write-up](../game/game3d-town-hall-2026-11-02.md)); #255 the interior hall with six notice boards ([write-up](../game/game3d-town-hall-interior-2026-11-02.md)); #256 a headline number on four boards (Big Board, Purse and Scoreboard, Storm and Cushion, Roll Call), printed by `lib/headlines.ts`, which the Dashboard, Performance and Margin of safety pages now call too ([write-up](../game/game3d-town-hall-numbers-2026-11-02.md)). Deploy not checked; not looked at in a browser.
