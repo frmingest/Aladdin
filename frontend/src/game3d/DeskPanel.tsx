@@ -5,6 +5,7 @@ import { describeError } from "../lib/errors";
 import { DESK_BLOCK_WORDS, deskInput, deskReady } from "./deskForm";
 import type { DeskBlock } from "./deskForm";
 import { DESK_READ_BOOKS, deskDueLine } from "./journalWordsV1";
+import { LAMP_BUTTON, LAMP_PROMPT } from "./realmWordsV1";
 import type { TowerView } from "./stateToWorld";
 
 /**
@@ -23,6 +24,7 @@ export default function DeskPanel({
   entries = 0,
   due = 0,
   onReadBooks,
+  onRubLamp,
 }: {
   holdings: readonly TowerView[];
   /** Holdings that still lack a reason or a wrong-if line, biggest first. */
@@ -38,6 +40,8 @@ export default function DeskPanel({
   due?: number;
   /** Opens the old entries to read. Absent: no button (the journal could not be read). */
   onReadBooks?: () => void;
+  /** Opens the Genie of the lamp on the desk (the flat page's own wishes). */
+  onRubLamp?: () => void;
 }) {
   const firstId = (missing[0] ?? holdings[0])?.holdingId ?? "";
   const [holdingId, setHoldingId] = useState(firstId);
@@ -131,6 +135,13 @@ export default function DeskPanel({
             {DESK_READ_BOOKS}{entries > 0 ? ` (${entries})` : ""}
           </button>
           {due > 0 && <p className="g3d-muted mt-1" role="status">{deskDueLine(due)}</p>}
+        </div>
+      )}
+
+      {onRubLamp && (
+        <div className="mt-3">
+          <button type="button" className="g3d-btn" onClick={onRubLamp}>{LAMP_BUTTON}</button>
+          <p className="g3d-muted mt-1">{LAMP_PROMPT}</p>
         </div>
       )}
 

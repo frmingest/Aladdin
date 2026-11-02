@@ -35,6 +35,16 @@ export default function Desk({ books }: { books: number }) {
         <Part color={PAL.iron} position={[0.6, 1.17, -0.2]} grow={1.2}>
           <cylinderGeometry args={[0.1, 0.12, 0.2, 10]} />
         </Part>
+        {/* The magic lamp (S16, PR 3): brass, on the desk. Decoration around the flat page's own Genie; it carries no fact. */}
+        <Part color="#d9a83a" position={[-0.85, 1.1, 0.3]} grow={1.15}>
+          <cylinderGeometry args={[0.12, 0.16, 0.1, 10]} />
+        </Part>
+        <Part color="#d9a83a" position={[-0.85, 1.19, 0.3]} grow={1.15}>
+          <sphereGeometry args={[0.13, 10, 8]} />
+        </Part>
+        <Part color="#d9a83a" position={[-0.65, 1.24, 0.3]} rotation={[0, 0, -0.6]} grow={1.2}>
+          <boxGeometry args={[0.24, 0.05, 0.05]} />
+        </Part>
         {/* Chair, on the courtyard side of the desk. */}
         <Part color={PAL.timber} position={[0, 0.5, 1.15]} grow={1.12}>
           <boxGeometry args={[0.7, 0.08, 0.7]} />

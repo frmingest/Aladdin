@@ -135,7 +135,7 @@ Order is the recommended order. Sizes are relative (S, M, L), not hours.
 
 ### S16: the Fortress panels in the world (M, in two or three PRs; no new art needed)
 
-**Progress: PR 1 (Vault chest, coin stacks by code, Vault card and Temperament meter in a world panel) merged as #248 ([write-up](game3d-vault-2026-11-01.md)); the chest is code-built, the KayKit `chest` model is a later swap. PR 2 (a Night Watch lantern post by the gate guard, birds on the raven perch, the Council's words as a seventh library shelf, the old journal books at the desk, and the writing desk moved clear of a tower door) written, not merged ([write-up](game3d-s16-panels-2-2026-11-01.md)). Still to do: PR 3 (weather, realm verdict, the lamp).**
+**Progress: PR 1 (Vault chest, coin stacks by code, Vault card and Temperament meter in a world panel) merged as #248 ([write-up](game3d-vault-2026-11-01.md)); the chest is code-built, the KayKit `chest` model is a later swap. PR 2 (a Night Watch lantern post by the gate guard, birds on the raven perch, the Council's words as a seventh library shelf, the old journal books at the desk, and the writing desk moved clear of a tower door) written, not merged ([write-up](game3d-s16-panels-2-2026-11-01.md)). PR 3 (weather, the verdict banner, the lamp) written on `feature/game3d-fortress-panels-3`, not merged ([write-up](game3d-s16-weather-lamp-2026-11-02.md)). S16 is then complete; next are S17 and S18.**
 
 *For:* the flat Fortress parts that have no 3D home yet.
 - **Vault:** a KayKit `chest` in the keep; coin stacks **by code** show cash (an amount stays code-built); press E opens the existing Vault panel (update cash, the one write that exists). Temperament joins this panel.

@@ -93,9 +93,9 @@ function Sparkles() {
   );
 }
 
-export default function MagicLamp() {
+export default function MagicLamp({ openOnMount = false, onClosed }: { openOnMount?: boolean; onClosed?: () => void } = {}) {
   const { demoMode } = useDemoMode();
-  const [phase, setPhase] = useState<Phase>("idle");
+  const [phase, setPhase] = useState<Phase>(openOnMount ? "asking" : "idle");
   const [outcome, setOutcome] = useState<WishOutcome | null>(null);
   const [chosen, setChosen] = useState<QueueScope | null>(null);
   const [seed, setSeed] = useState(() => Math.floor(Math.random() * 1000));
@@ -132,9 +132,14 @@ export default function MagicLamp() {
   const close = useCallback(() => {
     if (phase === "conjuring") return;
     setPhase("idle");
+    // Hosted in the 3D world: the host closes it; no lamp button is left behind.
+    if (onClosed) {
+      onClosed();
+      return;
+    }
     // Hand the focus back to the lamp so keyboard users are not lost.
     window.setTimeout(() => lampBtn.current?.focus(), 0);
-  }, [phase]);
+  }, [phase, onClosed]);
 
   useEffect(() => {
     if (phase !== "asking" && phase !== "done") return;
@@ -184,7 +189,7 @@ export default function MagicLamp() {
 
   return (
     <>
-      {!open && (
+      {!open && !onClosed && (
         <div className="lamp-fab-wrap">
           {phase === "idle" && !used && <span className="lamp-hint" aria-hidden>Rub me!</span>}
           <button
