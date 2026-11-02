@@ -1,6 +1,6 @@
 # 3D discovery: holding lands, the Siege Field and the Market Quarter (sprint plan proposal, 2026-11-02)
 
-**Status: proposal only. No app code changed. Waiting for Faiz's answers to the decisions at the bottom.** Repo read at `main` `15b19ed` (#262 merged).
+**Status: approved. Faiz, 2026-11-02 21:17: "go for all recommendations"; D1 to D16 are settled as recommended (bold column below). He downloaded the packs the same evening (all but KayKit Forest Nature); each passed `import-pack.mjs` (CC0). Kenney Castle Kit holds catapult, trebuchet, ballista, ram and siege tower (plus demolished versions); Resource Bits holds gold, silver, iron and copper bars and stacks.** Repo read at `main` `15b19ed` (#262 merged).
 
 ## What a sprint is for (plain words)
 
@@ -226,7 +226,7 @@ The target is 60 fps on your desktop, and the first load of `/game3d` stays unde
 - **Extra taps:** opening a shelf must stay at two presses of E from the tower door, which is why the records house sits inside the land instead of behind another door.
 - **Art fit:** each dressing ships on its own PR with a picture, so a bad fit is caught one at a time.
 
-## Decisions needed from Faiz
+## Decisions (settled 2026-11-02: all as recommended)
 
 The team's recommendation is in **bold**. Say "go with the recommendations" if you agree with all of them.
 
