@@ -7,6 +7,7 @@ import bankUrl from "../assets/map/scenes/bank.webp";
 import techUrl from "../assets/map/scenes/tech.webp";
 import clinicUrl from "../assets/map/scenes/clinic.webp";
 import workshopUrl from "../assets/map/scenes/workshop.webp";
+import { sectorRow, type SceneId } from "./sectors";
 import { clampView, MAX_ZOOM, type Pt, type View } from "./worldMap";
 
 /**
@@ -20,7 +21,7 @@ import { clampView, MAX_ZOOM, type Pt, type View } from "./worldMap";
  * Names come from the user's own data, so matching is loose and case-insensitive.
  */
 
-export type SceneId = "mines" | "forge" | "mill" | "farm" | "exchange" | "clinic" | "workshop" | "bank" | "tech";
+export type { SceneId };
 
 export interface SceneArt {
   id: SceneId;
@@ -46,20 +47,10 @@ export const SCENES: Record<SceneId, SceneArt> = {
 
 export const SCENE_IDS = Object.keys(SCENES) as SceneId[];
 
-// Metals first (a gold fund or miner can sit in any sector), then sectors. First match wins.
-const MINES_SECTOR = /gold|silver|copper|platinum|palladium|bullion|mining|miners?\b|metal|material|commodit|quarr/i;
+// Metals and gold by the holding's own name or structure come first; sectors then read from the one sector
+// table (`sectors.ts`), where the Map pictures win any clash.
 /** A holding's own name only counts when it says the metal or the trade outright ("Gold ETC", "Gold Miners ETF"). */
 const MINES_NAME = /\b(gold|silver|copper|platinum|palladium|bullion|mining|miners?|metals)\b/i;
-const SECTOR_SCENES: readonly { match: RegExp; id: SceneId }[] = [
-  { match: /health|pharma|medic|biotech|hospital|drug|life science/i, id: "clinic" },
-  { match: /discretionary|cyclical|retail|leisure|apparel|luxury|automobile|\bautos?\b|homebuild|furnitur|hotel|restaurant/i, id: "workshop" },
-  { match: /defen[cs]e|aerospace|weapon|arms\b|military|industr|manufactur|machin|transport/i, id: "forge" },
-  { match: /energy|oil|petrol|gas\b|utilit|power|electric|renewable|solar|wind|hydro|water/i, id: "mill" },
-  { match: /staple|food|agri|beverage|farm|grain/i, id: "farm" },
-  { match: /information|technolog|software|semiconduct|hardware|internet|communicat|telecom|\bit\b/i, id: "tech" },
-  { match: /financ|bank|insur/i, id: "bank" },
-  { match: /diversif|fund|etf|exchange|broker/i, id: "exchange" },
-];
 
 export interface SceneInput {
   sector?: string | null;
@@ -70,9 +61,8 @@ export interface SceneInput {
 
 /** The scene for a holding. Always one of the five. */
 export function sceneFor({ sector, name, structure }: SceneInput): SceneId {
-  const sec = sector?.trim() ?? "";
-  if (structure === "bullion" || MINES_SECTOR.test(sec) || MINES_NAME.test(name ?? "")) return "mines";
-  return SECTOR_SCENES.find((s) => s.match.test(sec))?.id ?? "exchange";
+  if (structure === "bullion" || MINES_NAME.test(name ?? "")) return "mines";
+  return sectorRow(sector)?.diveScene ?? "exchange";
 }
 
 // --- The camera dive -------------------------------------------------------------------------------------

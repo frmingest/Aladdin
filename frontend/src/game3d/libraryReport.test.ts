@@ -34,3 +34,22 @@ describe("latestReport", () => {
     expect(latestReport(docs)?.id).toBe("a");
   });
 });
+
+describe("markReportOpened", () => {
+  it("sets the same per-browser flag the Scrolls page reads, so the survey check can clear", async () => {
+    const { markReportOpened } = await import("./libraryReport");
+    const { OPENED_KEY, loadOpened } = await import("../lib/scrolls");
+    const mem = new Map<string, string>();
+    const storage = { getItem: (k: string) => mem.get(k) ?? null, setItem: (k: string, v: string) => void mem.set(k, v) };
+    mem.set(OPENED_KEY, JSON.stringify(["old"]));
+    markReportOpened({ id: "r1" }, storage);
+    markReportOpened({ id: "r1" }, storage);
+    expect([...loadOpened(storage)]).toEqual(["old", "r1"]);
+  });
+
+  it("does not throw when storage is blocked", async () => {
+    const { markReportOpened } = await import("./libraryReport");
+    const bad = { getItem: () => { throw new Error("x"); }, setItem: () => { throw new Error("x"); } };
+    expect(() => markReportOpened({ id: "r" }, bad)).not.toThrow();
+  });
+});

@@ -1,7 +1,8 @@
 import { TOWER_BOX } from "./realmMap";
 import { OBJECT_ART, type ObjectArt, type ObjectArtId } from "./stitchArt";
 import type { FortressSize, FortressStructure } from "./types";
-import { CAPITAL, dist, hashString, type Glyph, type Pt, type World } from "./worldMap";
+import { pickSectorArt, SECTOR_ROWS, sectorRow } from "./sectors";
+import { CAPITAL, dist, type Glyph, type Pt, type World } from "./worldMap";
 
 /**
  * The Cartographer's map as pictures (Design Master Sprint 4). Pure placement
@@ -207,39 +208,21 @@ export interface SectorTheme {
   ids: readonly ObjectArtId[];
 }
 
-/** First match wins. Names are matched loosely (case-insensitive), since the sector comes from the user's own data. */
-export const SECTOR_THEMES: readonly SectorTheme[] = [
-  { match: /diversif|fund|etf/i, ids: ["map-fountain-square"] },
-  { match: /energy|oil|petrol|gas\b/i, ids: ["map-windmill", "map-watermill"] },
-  { match: /utilit|power|electric/i, ids: ["map-watermill", "map-windmill"] },
-  { match: /financ|bank|insur/i, ids: ["map-bank-vault"] },
-  { match: /industr|manufactur|transport/i, ids: ["map-factory"] },
-  { match: /staple|food|agri|beverage/i, ids: ["map-farmhouse", "map-market-stall"] },
-  { match: /discretionary|retail|consumer/i, ids: ["map-market-stall"] },
-  { match: /material|mining|metal|gold|commodit/i, ids: ["map-gold-mine", "map-quarry", "map-gold-ingots"] },
-];
+/** The sectors that have a Map picture, read from the one sector table (`sectors.ts`). */
+export const SECTOR_THEMES: readonly SectorTheme[] = SECTOR_ROWS.filter((r) => r.mapArt.length > 0).map((r) => ({ match: r.match, ids: r.mapArt }));
 
 /** The pictures for a sector name, or none when the sector has no theme. */
 export function sectorLandmarkIds(sector: string | null | undefined): readonly ObjectArtId[] {
-  if (!sector) return [];
-  return SECTOR_THEMES.find((t) => t.match.test(sector))?.ids ?? [];
+  return sectorRow(sector)?.mapArt ?? [];
 }
-
-/** Gold bars are for a holding that is gold itself (the bullion structure); every other holding in a sector takes
- * one of the remaining pictures, by a stable hash of its id so it never changes when the weights do. */
-const BULLION_ART: ObjectArtId = "map-gold-ingots";
 
 /**
  * The picture for a holding in a sector, or null when the sector has no theme (the caller then uses
- * `settlementArtId`). `structure` is only used to give gold its bars.
+ * `settlementArtId`). `structure` is only used to give gold its bars. The choice lives in `sectors.ts`
+ * so the 3D holding area picks the same one.
  */
 export function sectorArtId(sector: string | null | undefined, holdingId: string, structure?: FortressStructure): ObjectArtId | null {
-  const ids = sectorLandmarkIds(sector);
-  if (ids.length === 0) return null;
-  if (structure === "bullion" && ids.includes(BULLION_ART)) return BULLION_ART;
-  const pool = ids.filter((id) => id !== BULLION_ART);
-  const from = pool.length > 0 ? pool : ids;
-  return from[hashString(holdingId) % from.length]!;
+  return pickSectorArt(sector, holdingId, structure);
 }
 
 /** What to draw for a holding: its sector's picture when the sector has a theme, otherwise the picture its

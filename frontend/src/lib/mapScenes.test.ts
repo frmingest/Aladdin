@@ -23,11 +23,12 @@ describe("sceneFor", () => {
     expect(sceneFor({ sector: "Agriculture" })).toBe("farm");
   });
 
-  it("sends health care to the apothecary and consumer discretionary to the workshop", () => {
+  it("sends health care to the apothecary; discretionary and retail follow the Map's market stall to the exchange floor", () => {
     expect(sceneFor({ sector: "Health Care" })).toBe("clinic");
     expect(sceneFor({ sector: "Pharmaceuticals & Biotech" })).toBe("clinic");
-    expect(sceneFor({ sector: "Consumer Discretionary" })).toBe("workshop");
-    expect(sceneFor({ sector: "Retail" })).toBe("workshop");
+    expect(sceneFor({ sector: "Consumer Discretionary" })).toBe("exchange");
+    expect(sceneFor({ sector: "Retail" })).toBe("exchange");
+    expect(sceneFor({ sector: "Automobiles" })).toBe("workshop");
     expect(sceneFor({ sector: "Consumer Staples" })).toBe("farm");
   });
 
