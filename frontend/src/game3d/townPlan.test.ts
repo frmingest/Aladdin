@@ -30,8 +30,8 @@ describe("the Town beyond the gate", () => {
     for (const b of BUILDINGS) expect(TOWN_PIECES.buildings as readonly string[]).toContain(b.model);
   });
 
-  it("has four buildings with distinct ids, all inside the ground", () => {
-    expect(new Set(BUILDINGS.map((b) => b.id)).size).toBe(4);
+  it("has five buildings with distinct ids, all inside the ground", () => {
+    expect(new Set(BUILDINGS.map((b) => b.id)).size).toBe(5);
     for (const b of BUILDINGS) expect(Math.hypot(b.x, b.z) + Math.hypot(b.hx, b.hz)).toBeLessThan(TOWN_RADIUS);
   });
 
@@ -74,14 +74,14 @@ describe("the Town beyond the gate", () => {
     }
   });
 
-  it("covers every register row placed in the Town or the Workshop", () => {
+  it("covers every register row placed in the Town, the Workshop or the Town Hall", () => {
     const routes = new Set<string>();
     for (const b of BUILDINGS) {
       const a = doorAction(b);
       if (a?.kind === "page" && a.door.route) routes.add(a.door.route);
       if (a?.kind === "place") for (const d of doorsAt(a.place)) if (d.route) routes.add(d.route);
     }
-    for (const d of REGISTER.filter((r) => (r.place === "town" || r.place === "workshop") && r.route && !r.via))
+    for (const d of REGISTER.filter((r) => (r.place === "town" || r.place === "workshop" || r.place === "townhall") && r.route && !r.via))
       expect(routes.has(d.route as string), `${d.route} has a building`).toBe(true);
   });
 
