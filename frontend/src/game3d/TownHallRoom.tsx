@@ -68,7 +68,7 @@ function BoardMesh({ board, slot, active, headline }: { board: Board; slot: Boar
         <div className="rounded bg-black/70 px-3 py-1.5 text-center text-white" style={{ maxWidth: 220 }}>
           <div className="text-sm font-semibold">{board.title}</div>
           <div className="text-xs opacity-80">{board.line}</div>
-          {headline && <div className="tabular mt-1 text-sm font-semibold">{headline}</div>}
+          {headline && <div className="tabular mt-1 whitespace-pre-line text-sm font-semibold">{headline}</div>}
         </div>
       </Html>
     </group>

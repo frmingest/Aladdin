@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../lib/api";
 import { formatDate, formatIndicatorChange, formatIndicatorValue } from "../lib/format";
+import { macroHeadlineIndicators } from "../lib/headlines";
 import type { MacroIndicator, MacroIndicators, MacroSeriesRefresh } from "../lib/types";
 import { Button, Card } from "./ui";
 
@@ -232,12 +233,9 @@ export function MacroIndicatorsPanel() {
   );
 }
 
-/** Dashboard strip: the handful of numbers worth a glance every day. */
-const HEADLINE_KEYS = ["no_policy_rate", "no_cpi_yoy", "no_10y", "usd_nok", "us_fed_funds_upper", "us_10y"];
-
+/** Dashboard strip: the handful of numbers worth a glance every day (the list lives in lib/headlines.ts, shared with the 3D Town Hall board). */
 export function MacroHeadlineStrip({ data }: { data: MacroIndicators }) {
-  const byKey = new Map(data.indicators.map((i) => [i.key, i]));
-  const rows = HEADLINE_KEYS.map((k) => byKey.get(k)).filter((i): i is MacroIndicator => Boolean(i?.value));
+  const rows = macroHeadlineIndicators(data);
   if (rows.length === 0) return null;
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
