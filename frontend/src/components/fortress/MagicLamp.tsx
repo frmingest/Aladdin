@@ -93,9 +93,11 @@ function Sparkles() {
   );
 }
 
-export default function MagicLamp() {
+export default function MagicLamp({ embedded = false, onClose }: { embedded?: boolean; onClose?: () => void } = {}) {
   const { demoMode } = useDemoMode();
-  const [phase, setPhase] = useState<Phase>("idle");
+  // Embedded (the lamp on the 3D writing desk): no corner lamp. The Genie's dialog opens at once (the desk's lamp was the
+  // rubbing) and closing it tells the parent, which takes it away. Everything else is this component's own.
+  const [phase, setPhase] = useState<Phase>(embedded ? "asking" : "idle");
   const [outcome, setOutcome] = useState<WishOutcome | null>(null);
   const [chosen, setChosen] = useState<QueueScope | null>(null);
   const [seed, setSeed] = useState(() => Math.floor(Math.random() * 1000));
@@ -132,9 +134,13 @@ export default function MagicLamp() {
   const close = useCallback(() => {
     if (phase === "conjuring") return;
     setPhase("idle");
+    if (embedded) {
+      onClose?.();
+      return;
+    }
     // Hand the focus back to the lamp so keyboard users are not lost.
     window.setTimeout(() => lampBtn.current?.focus(), 0);
-  }, [phase]);
+  }, [phase, embedded, onClose]);
 
   useEffect(() => {
     if (phase !== "asking" && phase !== "done") return;
@@ -184,7 +190,7 @@ export default function MagicLamp() {
 
   return (
     <>
-      {!open && (
+      {!open && !embedded && (
         <div className="lamp-fab-wrap">
           {phase === "idle" && !used && <span className="lamp-hint" aria-hidden>Rub me!</span>}
           <button

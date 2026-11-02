@@ -84,3 +84,22 @@ describe("DeskPanel (writing desk)", () => {
     expect(html(null)).not.toContain("Read the old books");
   });
 });
+
+describe("DeskPanel (the Magic Lamp on the desk)", () => {
+  const render = (onRubLamp?: () => void) =>
+    renderToStaticMarkup(
+      <MemoryRouter>
+        <DeskPanel holdings={world.plain} missing={world.plain} written={0} block={null} onSave={noop} onClose={() => {}} onRubLamp={onRubLamp} />
+      </MemoryRouter>,
+    );
+
+  it("offers the lamp when the page can open the Genie", () => {
+    const h = render(() => {});
+    expect(h).toContain("Rub the lamp");
+    expect(h).toContain("Three wishes for the analysis queue");
+  });
+
+  it("has no lamp button when nothing can open it", () => {
+    expect(render()).not.toContain("Rub the lamp");
+  });
+});

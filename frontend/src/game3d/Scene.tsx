@@ -28,9 +28,14 @@ import Confetti from "./Confetti";
 import Desk from "./Desk";
 import Vault from "./Vault";
 import { VAULT_LEAVE_RANGE, VAULT_RANGE, nearVault } from "./vaultPlan";
-import type { FortressVaultLevel, NightWatchStatus } from "../lib/types";
+import type { FortressSiegeLevel, FortressVaultLevel, NightWatchStatus } from "../lib/types";
 import WatchPost from "./WatchPost";
 import RavenBirds from "./RavenBirds";
+import RealmPost from "./RealmPost";
+import Weather from "./Weather";
+import { REALM_LEAVE_RANGE, REALM_RANGE, nearRealm } from "./realmPlan";
+import { weatherLook } from "./weatherPlan";
+import type { RealmLevel } from "../lib/realmVerdict";
 import { PERCH_LEAVE_RANGE, PERCH_RANGE, WATCH_LEAVE_RANGE, WATCH_RANGE, nearPerch, nearWatch } from "./watchPlan";
 import DrillCamp from "./DrillCamp";
 import DrillPost from "./DrillPost";
@@ -48,7 +53,6 @@ import { ROOM_SPAWN, ROOM_YAW } from "./libraryRoom";
 import type { Shelf, ShelfId } from "./libraryShelves";
 import { ENTER_LEAVE_REACH, ENTER_REACH, exitCameraYaw, exitSpot, nearestTower } from "./towerDoor";
 
-const SKY = "#cfe3f1";
 const HALL_DARK = "#1d1712";
 const noop = () => {};
 
@@ -83,6 +87,12 @@ interface Props {
   unseenRavens?: number;
   /** Whether the raven perch is within reach. Called only when it changes. */
   onNearPerch?: (near: boolean) => void;
+  /** The verdict on the whole fortress (worked out by summarizeRealm), or null when the fortress cannot be read. Decides the pennant. */
+  realmLevel?: RealmLevel | null;
+  /** The backend's siege level: the weather. Decides the sky, the clouds and the weather plate. Null when it cannot be read (mist). */
+  siegeLevel?: FortressSiegeLevel | null;
+  /** Whether the Realm post is within reach. Called only when it changes. */
+  onNearRealm?: (near: boolean) => void;
   /** Market Street: one stall per watchlist company, already worked out (marketStreet.ts). */
   stalls?: readonly Stall[];
   /** A Storm Drill is open: the camp stands. */
@@ -228,6 +238,19 @@ function NearVaultWatch({ pos, onNearVault }: { pos: { current: { x: number; z: 
   return null;
 }
 
+/** Tells the page when the hero walks up to, or away from, the Realm post. */
+function NearRealmWatch({ pos, onNearRealm }: { pos: { current: { x: number; z: number } }; onNearRealm: (near: boolean) => void }) {
+  const last = useRef(false);
+  useFrame(() => {
+    const now = nearRealm(pos.current, last.current ? REALM_LEAVE_RANGE : REALM_RANGE);
+    if (now !== last.current) {
+      last.current = now;
+      onNearRealm(now);
+    }
+  });
+  return null;
+}
+
 /** Tells the page when the hero walks up to, or away from, the Night Watch post. */
 function NearWatchWatch({ pos, onNearWatch }: { pos: { current: { x: number; z: number } }; onNearWatch: (near: boolean) => void }) {
   const last = useRef(false);
@@ -296,6 +319,9 @@ function World({
   onNearWatch,
   unseenRavens,
   onNearPerch,
+  realmLevel,
+  siegeLevel,
+  onNearRealm,
   drillOpen,
   stalls,
   onNearTower,
@@ -325,6 +351,9 @@ function World({
   onNearWatch: (near: boolean) => void;
   unseenRavens: number;
   onNearPerch: (near: boolean) => void;
+  realmLevel: RealmLevel | null;
+  siegeLevel: FortressSiegeLevel | null;
+  onNearRealm: (near: boolean) => void;
   drillOpen: boolean;
   stalls: readonly Stall[];
   talking: NpcId | null;
@@ -400,6 +429,8 @@ function World({
           <Vault level={vaultLevel} />
           <WatchPost status={watchStatus} />
           <RavenBirds count={unseenRavens} />
+          <RealmPost level={realmLevel} siege={siegeLevel} />
+          <Weather level={siegeLevel} />
           <DrillPost />
           <Signpost />
           {drillOpen && <DrillCamp />}
@@ -418,6 +449,7 @@ function World({
           <NearVaultWatch pos={pos} onNearVault={onNearVault} />
           <NearWatchWatch pos={pos} onNearWatch={onNearWatch} />
           <NearPerchWatch pos={pos} onNearPerch={onNearPerch} />
+          <NearRealmWatch pos={pos} onNearRealm={onNearRealm} />
           <NearTowerWatch pos={pos} world={world} onNearTower={onNearTower} />
         </>
       )}
@@ -448,6 +480,9 @@ export default function Scene({
   onNearWatch = noop,
   unseenRavens = 0,
   onNearPerch = noop,
+  realmLevel = null,
+  siegeLevel = null,
+  onNearRealm = noop,
   drillOpen = false,
   stalls = NO_STALLS,
   talking = null,
@@ -465,6 +500,8 @@ export default function Scene({
   onNearTownExit = noop,
 }: Props) {
   const inside = room !== null;
+  // The weather: only the sky and fog colour change (calm keeps the courtyard's own sky); lights stay as they are.
+  const wx = weatherLook(siegeLevel);
   return (
     <Canvas
       shadows
@@ -496,8 +533,8 @@ export default function Scene({
         </Fragment>
       ) : (
         <Fragment key="out">
-          <color attach="background" args={[SKY]} />
-          <fog attach="fog" args={[SKY, 100, 230]} />
+          <color attach="background" args={[wx.sky]} />
+          <fog attach="fog" args={[wx.sky, wx.fogNear, wx.fogFar]} />
           <hemisphereLight args={["#ffffff", "#9aa88a", 0.9]} />
           <directionalLight
             position={[60, 100, 45]}
@@ -532,6 +569,9 @@ export default function Scene({
           onNearWatch={onNearWatch}
           unseenRavens={unseenRavens}
           onNearPerch={onNearPerch}
+          realmLevel={realmLevel}
+          siegeLevel={siegeLevel}
+          onNearRealm={onNearRealm}
           drillOpen={drillOpen}
           stalls={stalls}
           talking={talking}
