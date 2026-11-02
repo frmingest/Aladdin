@@ -1,12 +1,12 @@
 # Aladdin — Progress
 
-**Last updated:** 2026-11-02 (night). Rolling log: active status only, under 100 lines, at most 7 tasks (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
+**Last updated:** 2026-11-02 (late night). Rolling log: active status only, under 100 lines, at most 7 tasks (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
 
 ## Current Objective
 
-**Building the approved 3D discovery plan** (Faiz, 2026-11-02: "go for all recommendations"; [plan](game/game3d-discovery-sprint-plan-2026-11-02.md)). PRs are stacked in merge order: #263 (plan) → S24 (one sector table, 3D reading marks the report opened) → S21, S23, packs, then S22, S25 onwards. Each is written and tested, not looked at in a browser by Claude unless its PR says so, not merged, not deployed.
+**Building the approved 3D discovery plan** (Faiz, 2026-11-02: "go for all recommendations"; [plan](game/game3d-discovery-sprint-plan-2026-11-02.md)). Merged: the plan (#263), S24 one sector table (#264), the art packs (#265). S21 (one map of places) is written on `feature/game3d-s21-areas`, not merged. Next: the [S22 and S23 sprint plan](game/game3d-s22-s23-sprint-plan-2026-11-02.md) (fade and name plate, Esc and B, `?at=` links, then a lighter courtyard); S23 PR 1 (measure) can start now, S22 starts once S21 is merged. Written and tested, not looked at in a browser by Claude unless a PR says so, not deployed.
 
-State: `main` at `15b19ed` (#262, merchants, merged). Everything up to #262 is merged ([archive](archive/progress-archive.md)); deploy not checked, say if Railway has redeployed. Database is Railway Postgres, files on Cloudflare R2 (Supabase retired 2026-10-14). Migration head `z1b2c3d4e5f6` (none added). Live URLs: frontend `https://exciting-gratitude-production-71b5.up.railway.app`, backend `https://aladdin-production-bd25.up.railway.app`.
+State: `main` at `e3521a1` (#265, art packs, merged). Everything up to #265 is merged ([archive](archive/progress-archive.md)); deploy not checked, say if Railway has redeployed. Database is Railway Postgres, files on Cloudflare R2 (Supabase retired 2026-10-14). Migration head `z1b2c3d4e5f6` (none added). Live URLs: frontend `https://exciting-gratitude-production-71b5.up.railway.app`, backend `https://aladdin-production-bd25.up.railway.app`.
 
 ## Active Tasks
 
