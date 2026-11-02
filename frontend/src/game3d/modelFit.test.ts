@@ -22,7 +22,7 @@ describe("fitting a model", () => {
   });
 
   it("registers the hero, the Oracle, the Partner the two townsfolk and the two workers, weapons hidden", () => {
-    expect(Object.keys(MODELS3D)).toEqual(["hero", "oracle", "partner", "guard", "scout", "scribe", "keeper"]);
+    expect(Object.keys(MODELS3D)).toEqual(["hero", "oracle", "partner", "guard", "scout", "scribe", "keeper", "merchantSal", "merchantHype"]);
     expect(MODELS3D.hero?.url).toBe("/models/Rogue_Hooded.glb");
     expect(MODELS3D.hero?.hide).toContain("1H_Crossbow");
     expect(MODELS3D.oracle?.url).toBe("/models/Mage.glb");

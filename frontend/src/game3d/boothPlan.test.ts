@@ -9,7 +9,9 @@ import { SIGN } from "./signpost";
 import { STANDING_TORCHES } from "./standingTorches";
 import { TOWNSFOLK } from "./townsfolk";
 import { STALL_SOLID, STREET_PLOTS } from "./streetPlan";
-import { BOOTHS, BOOTH_LEAVE_RANGE, BOOTH_RANGE, BOOTH_SOLID, boothPrompt, nearestBooth } from "./boothPlan";
+import { CLIP } from "./animClips";
+import { MODELS3D } from "./models3d";
+import { BOOTHS, MERCHANT_AT, BOOTH_LEAVE_RANGE, BOOTH_RANGE, BOOTH_SOLID, boothPrompt, nearestBooth } from "./boothPlan";
 
 describe("Market Street stands", () => {
   it("are Sal and the Hype Booth, once each", () => {
@@ -48,6 +50,22 @@ describe("Market Street stands", () => {
       expect(Number.isFinite(b.yaw)).toBe(true);
       expect(b.cloth).toMatch(/^#[0-9a-f]{6}$/i);
     }
+  });
+});
+
+describe("the merchants behind the counters", () => {
+  it("each stand has one, with a model slot of its own and a held clip", () => {
+    const slots = BOOTHS.map((b) => b.merchant.model);
+    expect(new Set(slots).size).toBe(BOOTHS.length);
+    for (const b of BOOTHS) expect(MODELS3D[b.merchant.model], b.id).toBeDefined();
+    expect(BOOTHS[0].merchant.pose).toBe(CLIP.interact);
+    expect(BOOTHS[1].merchant.pose).toBe(CLIP.cheer);
+  });
+
+  it("stands inside the stand's own solid and under its roof, so the stand's collider already holds him", () => {
+    expect(Math.abs(MERCHANT_AT.lx)).toBeLessThan(BOOTH_SOLID.hx);
+    expect(Math.abs(MERCHANT_AT.lz)).toBeLessThan(BOOTH_SOLID.hz);
+    for (const b of BOOTHS) expect(b.merchant.height).toBeGreaterThan(1.5);
   });
 });
 

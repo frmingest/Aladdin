@@ -1,8 +1,10 @@
 import { useEffect, useMemo } from "react";
 import { CuboidCollider, RigidBody } from "@react-three/rapier";
 import { CanvasTexture, SRGBColorSpace } from "three";
+import Avatar from "./Avatar";
+import { HeroFigure } from "./Figures";
 import { INK, PAL, Part } from "./Inked";
-import { BOOTHS, BOOTH_SOLID } from "./boothPlan";
+import { BOOTHS, BOOTH_SOLID, MERCHANT_AT } from "./boothPlan";
 import type { Booth } from "./boothPlan";
 
 /** Dark ink on cream, like the stall plates: just the stand's name. Words only. */
@@ -51,6 +53,20 @@ function BoothMesh({ booth }: { booth: Booth }) {
       <Part color={PAL.timber} position={[0, 2.5, 0.88]} grow={1.04}>
         <boxGeometry args={[1.9, 0.5, 0.06]} />
       </Part>
+      {/* The merchant stands behind the counter inside the stand's own solid, so no collider of his own. */}
+      <group position={[MERCHANT_AT.lx, 0, MERCHANT_AT.lz]}>
+        <Avatar
+          id={booth.merchant.model}
+          height={booth.merchant.height}
+          pose={booth.merchant.pose}
+          loadingFallback={null}
+          fallback={
+            <group scale={booth.merchant.height / 1.9}>
+              <HeroFigure />
+            </group>
+          }
+        />
+      </group>
       <mesh position={[0, 2.5, 0.92]}>
         <planeGeometry args={[1.8, 0.42]} />
         <meshBasicMaterial map={tex} toneMapped={false} />

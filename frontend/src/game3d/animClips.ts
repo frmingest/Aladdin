@@ -11,7 +11,9 @@ export interface Motion {
 
 export const CLIP = { idle: "Idle", walk: "Walking_A", run: "Running_A", cheer: "Cheer", cast: "Spellcasting",
   // In every character file since S20 (2026-11-02): a seated scribe, a keeper using an item.
+  // Held at the Market Street stands (merchants): Sal works the counter, the Hype barker cheers.
   sit: "Sit_Chair_Idle",
+  interact: "Interact",
   useItem: "Use_Item",
 } as const;
 

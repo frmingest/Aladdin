@@ -78,6 +78,7 @@ Game mode (Fortress): concept, sprint plans and reviews, visual identity, art pa
 - [game3d-town-hall-last-boards-2026-11-02.md](game/game3d-town-hall-last-boards-2026-11-02.md) — 3D courtyard S18 (PR 4): a headline number on the last two Town Hall boards (Macro, Thesis monitor and Precious metals) — 2026-11-02
 - [game3d-people-research-2026-11-02.md](game/game3d-people-research-2026-11-02.md) — 3D courtyard S20: free CC0 character options for more people, and two extra clips in the five character files — 2026-11-02
 - [game3d-workers-2026-11-02.md](game/game3d-workers-2026-11-02.md) — 3D courtyard S20: a seated scribe at the writing desk and a vault keeper at the chest, played from the new clips — 2026-11-02
+- [game3d-merchants-2026-11-02.md](game/game3d-merchants-2026-11-02.md) — 3D courtyard S14 M4 + S20: a merchant behind Sal's counter and the Hype Booth, from the two Rogue files — 2026-11-02
 - [game3d-town-hall-numbers-2026-11-02.md](game/game3d-town-hall-numbers-2026-11-02.md) — 3D courtyard S18 (PR 3): a headline number on four Town Hall boards, from functions the flat pages share — 2026-11-02
 - [game3d-town-hall-interior-2026-11-02.md](game/game3d-town-hall-interior-2026-11-02.md) — 3D courtyard S18 (PR 2): inside the Town Hall, a hall with six notice boards that open the main-app pages — 2026-11-02
 - [game3d-town-hall-2026-11-02.md](game/game3d-town-hall-2026-11-02.md) — 3D courtyard S18 (PR 1): a Town Hall building in the Town whose door opens the ten main-app pages — 2026-11-02

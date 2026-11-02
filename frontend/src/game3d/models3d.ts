@@ -53,4 +53,14 @@ export const MODELS3D: Partial<Record<ModelId, ModelSpec>> = {
     url: "/models/Barbarian.glb",
     hide: ["1H_Axe_Offhand", "Barbarian_Round_Shield", "1H_Axe", "2H_Axe"],
   },
+  // Market Street merchants (S14 M4 + S20): Sal is the Rogue file (the scout's body), the Hype barker the hooded
+  // Rogue file (the hero's). Both files are already downloaded, so no extra download. Knives and crossbows put away.
+  merchantSal: {
+    url: "/models/Rogue.glb",
+    hide: ["Knife_Offhand", "1H_Crossbow", "2H_Crossbow", "Knife", "Throwable"],
+  },
+  merchantHype: {
+    url: "/models/Rogue_Hooded.glb",
+    hide: ["Knife_Offhand", "1H_Crossbow", "2H_Crossbow", "Knife", "Throwable"],
+  },
 };
