@@ -16,12 +16,19 @@ import { prune, dedup, resample } from "@gltf-transform/functions";
 // (a seated scribe) and Use_Item (a vault keeper, a merchant). Measured: each extra clip adds about 28 KB to a file;
 // Sit_Floor_Idle and PickUp were tried and left out. Everything else in the 76 stays out.
 const KEEP = ["Idle", "Walking_A", "Running_A", "Cheer", "Interact", "Spellcasting", "Sit_Chair_Idle", "Use_Item"];
+// S26 (2026-11-02): `--keep=Idle,Walking_A,...` replaces the clip list for this run (the four KayKit Skeletons keep their
+// own set), `--out=dir` changes the output folder (default out). Plain names are file names without .glb.
+const keepArg = process.argv.find((a) => a.startsWith("--keep="));
+const outArg = process.argv.find((a) => a.startsWith("--out="));
+const KEEP_NOW = keepArg ? keepArg.slice(7).split(",") : KEEP;
+const OUT = outArg ? outArg.slice(6) : "out";
+const names = process.argv.slice(2).filter((a) => !a.startsWith("--"));
 const io = new NodeIO().registerExtensions(ALL_EXTENSIONS);
-for (const f of process.argv.slice(2).length ? process.argv.slice(2) : ["Rogue_Hooded", "Mage", "Knight"]) {
+for (const f of names.length ? names : ["Rogue_Hooded", "Mage", "Knight"]) {
   const doc = await io.read(`${f}.glb`);
   const root = doc.getRoot();
   for (const a of root.listAnimations()) {
-    if (!KEEP.includes(a.getName())) {
+    if (!KEEP_NOW.includes(a.getName())) {
       a.listChannels().forEach((c) => c.dispose());
       a.listSamplers().forEach((x) => x.dispose());
       a.dispose();
@@ -29,6 +36,6 @@ for (const f of process.argv.slice(2).length ? process.argv.slice(2) : ["Rogue_H
   }
   const left = root.listAnimations().map((a) => a.getName());
   await doc.transform(resample(), prune(), dedup());
-  await io.write(`out/${f}.glb`, doc);
+  await io.write(`${OUT}/${f}.glb`, doc);
   console.log(f, left.join(","));
 }

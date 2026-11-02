@@ -1,13 +1,14 @@
 // Vets a downloaded asset pack before anything is built from it, and copies its licence text next to our models.
-// Usage: node scripts/import-pack.mjs <pack folder> <licence-name>
+// Usage: node scripts/import-pack.mjs <pack folder> <licence-name> [out folder under frontend/public, default models]
+//   (audio and sprites: ... audio, ... fx)
 //   e.g. node scripts/import-pack.mjs "frontend/3D art review/Kenney Fantasy tower kit" Kenney-Fantasy-Town-Kit
-// Writes frontend/public/models/LICENSE-<licence-name>.txt. Stops (exit 1) if the pack has no licence text, or
+// Writes frontend/public/<folder>/LICENSE-<licence-name>.txt. Stops (exit 1) if the pack has no licence text, or
 // the text is not CC0 / public domain. Converts nothing: packing is scripts/pack-*.mjs.
 import { readdirSync, readFileSync, copyFileSync, existsSync } from "node:fs";
 import { join, resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const [packDir, name] = process.argv.slice(2);
+const [packDir, name, outFolder] = process.argv.slice(2);
 if (!packDir || !name) {
   console.error("usage: node scripts/import-pack.mjs <pack folder> <licence-name>");
   process.exit(1);
@@ -42,7 +43,9 @@ const author = lines.find((l) => /created\/distributed by|created by/i.test(l)) 
 const date = lines.find((l) => /creation date/i.test(l)) ?? "(date line not found)";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const out = join(here, "..", "frontend", "public", "models", `LICENSE-${name}.txt`);
+const folder = outFolder ?? "models";
+if (!/^[a-z0-9_-]+$/.test(folder)) fail(`out folder "${folder}" must be a plain folder name under frontend/public`);
+const out = join(here, "..", "frontend", "public", folder, `LICENSE-${name}.txt`);
 copyFileSync(join(root, file), out);
 console.log(`OK  CC0 confirmed in ${file}`);
 console.log(`    ${title}`);
