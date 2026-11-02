@@ -6,6 +6,7 @@
 import { COBBLE_RADIUS, KEEP, RESERVED_ZONES, towerSpots, type Spot } from "./layout";
 import { DESK, SHELF } from "./desk";
 import { VAULT } from "./vaultPlan";
+import { PERCH, WATCH_POST } from "./watchPlan";
 import { NPCS } from "./npcs";
 
 /** Reach from the tower's wall (its radius), not from its middle: fat towers are not easier to enter. */
@@ -42,6 +43,8 @@ function blockers(pads: readonly Spot[], self: Spot): Blocker[] {
     { x: DESK.x, z: DESK.z, r: 2.4 },
     { x: SHELF.x, z: SHELF.z, r: 2.4 },
     { x: VAULT.x, z: VAULT.z, r: 2.4 },
+    { x: WATCH_POST.x, z: WATCH_POST.z, r: 2.4 },
+    { x: PERCH.x, z: PERCH.z, r: 2.4 },
     ...NPCS.map((n) => ({ x: n.x, z: n.z, r: 1.6 })),
     ...pads.filter((p) => p.x !== self.x || p.z !== self.z).map((p) => ({ x: p.x, z: p.z, r: 2.1 + 1.2 })),
     ...RESERVED_ZONES.map((z) => ({ x: z.x, z: z.z, r: z.radius })),

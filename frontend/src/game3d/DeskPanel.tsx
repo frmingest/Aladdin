@@ -4,6 +4,7 @@ import type { JournalEntryInput } from "../lib/types";
 import { describeError } from "../lib/errors";
 import { DESK_BLOCK_WORDS, deskInput, deskReady } from "./deskForm";
 import type { DeskBlock } from "./deskForm";
+import { DESK_READ_BOOKS, deskDueLine } from "./journalWordsV1";
 import type { TowerView } from "./stateToWorld";
 
 /**
@@ -19,6 +20,9 @@ export default function DeskPanel({
   block,
   onSave,
   onClose,
+  entries = 0,
+  due = 0,
+  onReadBooks,
 }: {
   holdings: readonly TowerView[];
   /** Holdings that still lack a reason or a wrong-if line, biggest first. */
@@ -28,6 +32,12 @@ export default function DeskPanel({
   block: DeskBlock | null;
   onSave: (input: JournalEntryInput) => Promise<void>;
   onClose: () => void;
+  /** How many old entries the journal holds (what the books on the shelf are made of). */
+  entries?: number;
+  /** How many look-backs are due, as the backend counts them. */
+  due?: number;
+  /** Opens the old entries to read. Absent: no button (the journal could not be read). */
+  onReadBooks?: () => void;
 }) {
   const firstId = (missing[0] ?? holdings[0])?.holdingId ?? "";
   const [holdingId, setHoldingId] = useState(firstId);
@@ -114,6 +124,15 @@ export default function DeskPanel({
         {savedName && !error && <p className="g3d-muted mt-2">Written down for {savedName}.</p>}
         {error && <p className="g3d-demo" role="alert">Not saved: {error} Your words are still here.</p>}
       </div>
+
+      {onReadBooks && (
+        <div className="mt-3">
+          <button type="button" className="g3d-btn" onClick={onReadBooks}>
+            {DESK_READ_BOOKS}{entries > 0 ? ` (${entries})` : ""}
+          </button>
+          {due > 0 && <p className="g3d-muted mt-1" role="status">{deskDueLine(due)}</p>}
+        </div>
+      )}
 
       <p className="g3d-muted mt-3">
         Old entries and real buys or sells: <Link to="/journal" className="underline">the journal</Link>.

@@ -1,6 +1,6 @@
 # 3D courtyard: free CC0 models and the road to full page parity — sprint plan (updated 2026-11-01)
 
-**Status (2026-11-01): S0 to S8, S10 (drill camp), S11 (writing desk), the keep and corner towers, the marketplace corner, the tower libraries and Standing levels 1 to 5 are merged (#198 to #238, per `docs/PROGRESS.md`). S9 (town kit import, #239), S13 (page doors, Plain view, register test, #241), all of S14 (Market Street, stores, Sal and the Hype Booth, #243 to #245) and the S15 first slice (the Town beyond the gate, four buildings, #246) are merged. S16 is under way: PR 1 (the Vault chest and panel) is written on `feature/game3d-fortress-panels`, seen in a headless browser, not merged: see [the S16 PR 1 write-up](game3d-vault-2026-11-01.md). Deploy not checked, seen only in headless browsers.** The 2026-11-01 update added the review of the three downloaded packs ([review](game3d-art-review-2026-11-01.md)), rewrote S9, replaced the parked S12, and added S13 to S20 so that every flat Game mode page gets a place in 3D. Written so a new chat can start from this file alone.
+**Status (2026-11-01): S0 to S8, S10 (drill camp), S11 (writing desk), the keep and corner towers, the marketplace corner, the tower libraries and Standing levels 1 to 5 are merged (#198 to #238, per `docs/PROGRESS.md`). S9 (town kit import, #239), S13 (page doors, Plain view, register test, #241), all of S14 (Market Street, stores, Sal and the Hype Booth, #243 to #245) and the S15 first slice (the Town beyond the gate, four buildings, #246) are merged. S16 is under way: PR 1 (the Vault chest and panel) is merged (#248, [write-up](game3d-vault-2026-11-01.md)); PR 2 (the Night Watch post, ravens on the perch, the Council's shelf and the old journal books) is written on `feature/game3d-fortress-panels-2`, clicked through in a headless browser, not merged: see [the S16 PR 2 write-up](game3d-s16-panels-2-2026-11-01.md). Deploy not checked, seen only in headless browsers.** The 2026-11-01 update added the review of the three downloaded packs ([review](game3d-art-review-2026-11-01.md)), rewrote S9, replaced the parked S12, and added S13 to S20 so that every flat Game mode page gets a place in 3D. Written so a new chat can start from this file alone.
 
 ## Why this plan exists (plain words)
 
@@ -53,10 +53,10 @@ Every page gets **A at least**, then B or C as the art arrives. A test (S13) lis
 | Map / Cartographer (`/fortress/map`, fog of war) | none | **Cartographer's Office** with a table map | A, then B | S15 |
 | Glossary and Codex (`/glossary`) | none | **Archive** building | A | S15 |
 | Holding page (`/holdings/:id`: scrolls, tower card, advisors, Ravens card) | six shelves, report table | tower library: add shelves (see S16) | B, C | S16 |
-| Journal (`/journal`, old entries and look-backs) | desk writes new entries only | desk shelf: books open to read, look-back written at the desk | C | S16 |
+| Journal (`/journal`, old entries and look-backs) | desk writes new entries; "Read the old books" reads old ones and takes a due look-back (PR 2, not merged) | desk shelf: books open to read, look-back written at the desk | C | S16 |
 | Vault (cash) and Temperament | none | **Vault** (chest, coin stacks by code) in the keep | B, C | S16 |
-| Ravens and Night Watch | raven perch is decoration | perch shows a bird only when a real unseen raven exists; the gate guard reads the dispatch | B, C | S16 |
-| Advisors and Magic Lamp / Genie | Oracle and Partner only | advisor lines as a shelf in each tower; the lamp as an object | B | S16 |
+| Ravens and Night Watch | birds on the perch for unseen ravens, E opens the Ravens card; a lantern post by the gate guard opens the dispatch (PR 2, not merged) | perch shows a bird only when a real unseen raven exists; the gate guard reads the dispatch | B, C | S16 |
+| Advisors and Magic Lamp / Genie | Oracle and Partner, and "The Council's words" shelf in each tower library (PR 2, not merged) | advisor lines as a shelf in each tower; the lamp as an object | B | S16 |
 | Dashboard, Portfolio, Performance, Risk, Margin of Safety, Macro, Sectors, Thesis monitor, Precious metals, Holdings, Watchlist (the main-app pages) | per-holding shelves only (Walls, Land, Oath, Treasury, Storm Test) | **Town Hall**: one room or board per page | A, then B | S15, S18 |
 | Analysis queue, System status, Settings, Tag review | none | **Workshop** (gatehouse): plumbing pages | A | S15 |
 | The Printer (`/fortress/printer`, **not built yet**) | none | **Royal Mint** with a mill | planned | S19 |
@@ -135,7 +135,7 @@ Order is the recommended order. Sizes are relative (S, M, L), not hours.
 
 ### S16: the Fortress panels in the world (M, in two or three PRs; no new art needed)
 
-**Progress: PR 1 (Vault chest, coin stacks by code, Vault card and Temperament meter in a world panel) written, not merged ([write-up](game3d-vault-2026-11-01.md)). The chest is code-built; the KayKit `chest` model is a later swap. Still to do: PR 2 (Ravens and Night Watch, Advisors shelf, Journal books), PR 3 (weather, realm verdict, the lamp).**
+**Progress: PR 1 (Vault chest, coin stacks by code, Vault card and Temperament meter in a world panel) merged as #248 ([write-up](game3d-vault-2026-11-01.md)); the chest is code-built, the KayKit `chest` model is a later swap. PR 2 (a Night Watch lantern post by the gate guard, birds on the raven perch, the Council's words as a seventh library shelf, the old journal books at the desk, and the writing desk moved clear of a tower door) written, not merged ([write-up](game3d-s16-panels-2-2026-11-01.md)). Still to do: PR 3 (weather, realm verdict, the lamp).**
 
 *For:* the flat Fortress parts that have no 3D home yet.
 - **Vault:** a KayKit `chest` in the keep; coin stacks **by code** show cash (an amount stays code-built); press E opens the existing Vault panel (update cash, the one write that exists). Temperament joins this panel.

@@ -1,7 +1,7 @@
 /**
  * The tower library room (game3d, 2026-11-01). Pure data and maths, no three.js and no React.
  *
- * One hall, the same for every holding: furniture never depends on a fact. Six shelf bays stand against
+ * One hall, the same for every holding: furniture never depends on a fact. Seven shelf bays stand against
  * the walls, a closed door is in the south wall. Local coordinates: x east, z south, y up, the hall
  * centred near the origin. The courtyard is not drawn while you are in here, so the room can sit at the
  * origin without touching anything.
@@ -37,7 +37,7 @@ const NORTH_Z = HALL.minZ + BAY_DEPTH_CENTRE;
 const WEST_X = HALL.minX + BAY_DEPTH_CENTRE;
 const EAST_X = HALL.maxX - BAY_DEPTH_CENTRE;
 
-/** Two bays on the north wall, two on each side wall. Order matches SHELF_ORDER. */
+/** Three bays on the north wall (the Council's words in the middle), two on each side wall. Order matches SHELF_ORDER. */
 export const SHELF_SLOTS: readonly ShelfSlot[] = [
   { id: SHELF_ORDER[0], x: -5.5, z: NORTH_Z, yaw: 0 },
   { id: SHELF_ORDER[1], x: 5.5, z: NORTH_Z, yaw: 0 },
@@ -45,6 +45,7 @@ export const SHELF_SLOTS: readonly ShelfSlot[] = [
   { id: SHELF_ORDER[3], x: EAST_X, z: -4, yaw: -Math.PI / 2 },
   { id: SHELF_ORDER[4], x: WEST_X, z: 3, yaw: Math.PI / 2 },
   { id: SHELF_ORDER[5], x: EAST_X, z: 3, yaw: -Math.PI / 2 },
+  { id: SHELF_ORDER[6], x: 0, z: NORTH_Z, yaw: 0 },
 ];
 
 export const SHELF_RANGE = 3.2;

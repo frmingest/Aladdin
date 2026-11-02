@@ -60,4 +60,27 @@ describe("DeskPanel (writing desk)", () => {
   it("keeps a way to the Journal page for old entries and real buys or sells", () => {
     expect(html(null)).toContain('href="/journal"');
   });
+
+  it("offers the old books when the journal can be read, with the count and the due look-backs", () => {
+    const h = renderToStaticMarkup(
+      <MemoryRouter>
+        <DeskPanel holdings={world.plain} missing={world.plain} written={0} block={null} onSave={noop} onClose={() => {}} entries={3} due={2} onReadBooks={() => {}} />
+      </MemoryRouter>,
+    );
+    expect(h).toContain("Read the old books (3)");
+    expect(h).toContain("2 look-backs are due. Open the old books.");
+  });
+
+  it("says one look-back, not one look-backs", () => {
+    const h = renderToStaticMarkup(
+      <MemoryRouter>
+        <DeskPanel holdings={world.plain} missing={world.plain} written={0} block={null} onSave={noop} onClose={() => {}} entries={1} due={1} onReadBooks={() => {}} />
+      </MemoryRouter>,
+    );
+    expect(h).toContain("1 look-back is due.");
+  });
+
+  it("has no old-books button when the journal could not be read (no way to open nothing)", () => {
+    expect(html(null)).not.toContain("Read the old books");
+  });
 });

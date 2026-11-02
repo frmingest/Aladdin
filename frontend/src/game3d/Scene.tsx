@@ -28,7 +28,10 @@ import Confetti from "./Confetti";
 import Desk from "./Desk";
 import Vault from "./Vault";
 import { VAULT_LEAVE_RANGE, VAULT_RANGE, nearVault } from "./vaultPlan";
-import type { FortressVaultLevel } from "../lib/types";
+import type { FortressVaultLevel, NightWatchStatus } from "../lib/types";
+import WatchPost from "./WatchPost";
+import RavenBirds from "./RavenBirds";
+import { PERCH_LEAVE_RANGE, PERCH_RANGE, WATCH_LEAVE_RANGE, WATCH_RANGE, nearPerch, nearWatch } from "./watchPlan";
 import DrillCamp from "./DrillCamp";
 import DrillPost from "./DrillPost";
 import Signpost from "./Signpost";
@@ -72,6 +75,14 @@ interface Props {
   vaultLevel?: FortressVaultLevel | null;
   /** Whether the vault chest is within reach. Called only when it changes. */
   onNearVault?: (near: boolean) => void;
+  /** The backend's Night Watch status (decides the lantern), or null when the dispatch cannot be read. */
+  watchStatus?: NightWatchStatus | null;
+  /** Whether the Night Watch post is within reach. Called only when it changes. */
+  onNearWatch?: (near: boolean) => void;
+  /** Ravens not yet marked seen: one bird each on the perch, none when there are none. */
+  unseenRavens?: number;
+  /** Whether the raven perch is within reach. Called only when it changes. */
+  onNearPerch?: (near: boolean) => void;
   /** Market Street: one stall per watchlist company, already worked out (marketStreet.ts). */
   stalls?: readonly Stall[];
   /** A Storm Drill is open: the camp stands. */
@@ -217,6 +228,32 @@ function NearVaultWatch({ pos, onNearVault }: { pos: { current: { x: number; z: 
   return null;
 }
 
+/** Tells the page when the hero walks up to, or away from, the Night Watch post. */
+function NearWatchWatch({ pos, onNearWatch }: { pos: { current: { x: number; z: number } }; onNearWatch: (near: boolean) => void }) {
+  const last = useRef(false);
+  useFrame(() => {
+    const now = nearWatch(pos.current, last.current ? WATCH_LEAVE_RANGE : WATCH_RANGE);
+    if (now !== last.current) {
+      last.current = now;
+      onNearWatch(now);
+    }
+  });
+  return null;
+}
+
+/** Tells the page when the hero walks up to, or away from, the raven perch. */
+function NearPerchWatch({ pos, onNearPerch }: { pos: { current: { x: number; z: number } }; onNearPerch: (near: boolean) => void }) {
+  const last = useRef(false);
+  useFrame(() => {
+    const now = nearPerch(pos.current, last.current ? PERCH_LEAVE_RANGE : PERCH_RANGE);
+    if (now !== last.current) {
+      last.current = now;
+      onNearPerch(now);
+    }
+  });
+  return null;
+}
+
 /** Tells the page when the hero walks up to, or away from, a tower's door. */
 function NearTowerWatch({
   pos,
@@ -255,6 +292,10 @@ function World({
   onNearBooth,
   vaultLevel,
   onNearVault,
+  watchStatus,
+  onNearWatch,
+  unseenRavens,
+  onNearPerch,
   drillOpen,
   stalls,
   onNearTower,
@@ -280,6 +321,10 @@ function World({
   onNearBooth: (id: BoothId | null) => void;
   vaultLevel: FortressVaultLevel | null;
   onNearVault: (near: boolean) => void;
+  watchStatus: NightWatchStatus | null;
+  onNearWatch: (near: boolean) => void;
+  unseenRavens: number;
+  onNearPerch: (near: boolean) => void;
   drillOpen: boolean;
   stalls: readonly Stall[];
   talking: NpcId | null;
@@ -353,6 +398,8 @@ function World({
           <StandingTorches level={standingLevel} />
           <Desk books={books} />
           <Vault level={vaultLevel} />
+          <WatchPost status={watchStatus} />
+          <RavenBirds count={unseenRavens} />
           <DrillPost />
           <Signpost />
           {drillOpen && <DrillCamp />}
@@ -369,6 +416,8 @@ function World({
           <NearStallWatch pos={pos} stalls={stalls} onNearStall={onNearStall} />
           <NearBoothWatch pos={pos} onNearBooth={onNearBooth} />
           <NearVaultWatch pos={pos} onNearVault={onNearVault} />
+          <NearWatchWatch pos={pos} onNearWatch={onNearWatch} />
+          <NearPerchWatch pos={pos} onNearPerch={onNearPerch} />
           <NearTowerWatch pos={pos} world={world} onNearTower={onNearTower} />
         </>
       )}
@@ -395,6 +444,10 @@ export default function Scene({
   onNearBooth = noop,
   vaultLevel = null,
   onNearVault = noop,
+  watchStatus = null,
+  onNearWatch = noop,
+  unseenRavens = 0,
+  onNearPerch = noop,
   drillOpen = false,
   stalls = NO_STALLS,
   talking = null,
@@ -475,6 +528,10 @@ export default function Scene({
           onNearBooth={onNearBooth}
           vaultLevel={vaultLevel}
           onNearVault={onNearVault}
+          watchStatus={watchStatus}
+          onNearWatch={onNearWatch}
+          unseenRavens={unseenRavens}
+          onNearPerch={onNearPerch}
           drillOpen={drillOpen}
           stalls={stalls}
           talking={talking}
