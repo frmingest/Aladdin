@@ -1,6 +1,8 @@
 import { readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { glbBytes, glbJson, glbTriangles } from "./glbJson";
+import { HOLDING_THEMES, HOLDING_URL, MARKET_QUARTER_URL, SIEGE_URL, SKELETON_FILES, SKELETON_URL, WORK_CLIPS_URL } from "./holdingPieces";
 import { MODELS3D } from "./models3d";
 
 /** Reads the JSON header of a .glb (node names and clip names) without loading any 3D code. */
@@ -43,6 +45,30 @@ describe("the model files the registry points at", () => {
       const { extensions } = glbHeader(spec!.url);
       expect(extensions).not.toContain("KHR_mesh_quantization");
       expect(extensions).not.toContain("EXT_meshopt_compression");
+    });
+  }
+});
+
+// S26 (2026-11-02): budgets for the new packs, read from the file headers (discovery plan, "Budgets").
+// Triangles are per file; the per-land total (<= 80k) is checked when a land is wired in.
+describe("new pack budgets (bytes, meshes, triangles, images)", () => {
+  const KB = 1024;
+  const budgets: { url: string; bytes: number; meshes: number; tris: number; images: number }[] = [
+    ...HOLDING_THEMES.map((t) => ({ url: HOLDING_URL(t), bytes: 600 * KB, meshes: 150, tris: 25_000, images: 4 })),
+    { url: SIEGE_URL, bytes: 1024 * KB, meshes: 200, tris: 30_000, images: 1 },
+    { url: MARKET_QUARTER_URL, bytes: 800 * KB, meshes: 150, tris: 30_000, images: 3 },
+    ...SKELETON_FILES.map((n) => ({ url: SKELETON_URL(n), bytes: 650 * KB, meshes: 12, tris: 12_000, images: 1 })),
+    { url: WORK_CLIPS_URL, bytes: 300 * KB, meshes: 0, tris: 0, images: 0 },
+  ];
+  for (const b of budgets) {
+    it(`${b.url}: within ${Math.round(b.bytes / KB)} KB, ${b.meshes} meshes, ${b.tris} triangles, ${b.images} images`, () => {
+      const j = glbJson(b.url);
+      expect(glbBytes(b.url)).toBeLessThanOrEqual(b.bytes);
+      expect((j.meshes ?? []).length).toBeLessThanOrEqual(b.meshes);
+      expect(glbTriangles(j)).toBeLessThanOrEqual(b.tris);
+      expect((j.images ?? []).length).toBeLessThanOrEqual(b.images);
+      expect(j.extensionsUsed ?? []).not.toContain("KHR_mesh_quantization");
+      expect(j.extensionsUsed ?? []).not.toContain("EXT_meshopt_compression");
     });
   }
 });
