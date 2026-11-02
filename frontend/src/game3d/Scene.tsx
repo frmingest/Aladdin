@@ -24,6 +24,7 @@ import StandingTorches from "./StandingTorches";
 import Horizon from "./Horizon";
 import Backdrop from "./Backdrop";
 import Townsfolk from "./Townsfolk";
+import Workers from "./Workers";
 import Confetti from "./Confetti";
 import Desk from "./Desk";
 import Vault from "./Vault";
@@ -491,6 +492,7 @@ function World({
             <NpcMesh key={n.id} npc={n} active={near === n.id} playerPos={pos} talking={talking === n.id} cheerKey={cheerKey} />
           ))}
           <Townsfolk cheerKey={cheerKey} />
+          <Workers />
           <Confetti burstKey={cheerKey} />
           <NearNpc pos={pos} onNear={onNear} />
           <NearDeskWatch pos={pos} onNearDesk={onNearDesk} />

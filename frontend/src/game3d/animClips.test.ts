@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CLIP, resolveClip, wantedClip } from "./animClips";
+import { CLIP, chooseClip, resolveClip, wantedClip } from "./animClips";
 
 describe("clip mapping", () => {
   it("stands, walks and runs", () => {
@@ -21,5 +21,14 @@ describe("clip mapping", () => {
     expect(resolveClip("Walking_A", ["Idle", "Cheer"])).toBe("Idle");
     expect(resolveClip("Walking_A", ["Cheer"])).toBe("Cheer");
     expect(resolveClip("Walking_A", [])).toBeNull();
+  });
+
+  it("a seated person stays seated with reduced motion, but other poses and cheers still give way to Idle", () => {
+    const still = { moving: false, running: false };
+    expect(chooseClip(still, true, CLIP.sit, false)).toBe(CLIP.sit);
+    expect(chooseClip(still, true, CLIP.useItem, false)).toBe(CLIP.idle);
+    expect(chooseClip(still, true, CLIP.cast, true)).toBe(CLIP.idle);
+    expect(chooseClip(still, false, CLIP.sit, false)).toBe(CLIP.sit);
+    expect(chooseClip(still, true, null, false)).toBe(CLIP.idle);
   });
 });

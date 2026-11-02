@@ -1,12 +1,12 @@
 # Aladdin — Progress
 
-**Last updated:** 2026-11-02 (evening). Rolling log: active status only, under 100 lines, at most 7 tasks (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
+**Last updated:** 2026-11-02 (night). Rolling log: active status only, under 100 lines, at most 7 tasks (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
 
 ## Current Objective
 
-**3D courtyard fix pass from your first walk-through (this PR): no old hero flash while loading, ravens on the perch now match the Ravens card, the report reader can no longer get stuck open, an eighth Market Street stand so a stock added at Sal's gets a stall, tower name signs hung from a wall arm instead of posts in the air** ([write-up](game/game3d-playtest-fixes-2026-11-02.md)). Written on `fix/game3d-playtest-fixes`, off `main` after #259; not looked at in a browser, not merged, not deployed. Just merged (#259): S20 first slice, the five KayKit character files now hold `Sit_Chair_Idle` and `Use_Item` ([write-up](game/game3d-people-research-2026-11-02.md)). S18 is done (#253 to #258). Next: your look-over, then your call on S20 (Kenney Mini Characters for new bodies, or only the free pose swaps). S19 waits for The Printer.
+**3D courtyard S20 (free path): a scribe now sits in the desk chair (open spellbook on his lap) and a vault keeper stands beside the chest holding his mug, each playing a new clip (`Sit_Chair_Idle`, `Use_Item`) from the existing Mage and Barbarian files, so no new download. The sitting pose is kept with reduced motion. Written on `feature/game3d-people-scribe`, off `main` at `20216a4` (#260 merged); tsc, lint, all 1,303 tests and the build are green. NOT looked at in a browser by Claude (how the seat and the chest pose look is unchecked), not merged, not deployed** ([write-up](game/game3d-workers-2026-11-02.md)). Next: your look-over, then your call on Kenney Mini Characters for truly new faces, and the Market Street stands (Sal, Hype Booth).
 
-State: `main` at `442131b` (#259, the S20 clips, merged); the fix pass is the one in flight. Everything up to #259 is merged ([archive](archive/progress-archive.md)); deploy not checked, say if Railway has redeployed. Database is Railway Postgres, files on Cloudflare R2 (Supabase retired 2026-10-14). Migration head `z1b2c3d4e5f6` (none added). Live URLs: frontend `https://exciting-gratitude-production-71b5.up.railway.app`, backend `https://aladdin-production-bd25.up.railway.app`.
+State: `main` at `20216a4` (#260, the playtest fix pass, merged); this PR is the one in flight. Everything up to #260 is merged ([archive](archive/progress-archive.md)); deploy not checked, say if Railway has redeployed. Database is Railway Postgres, files on Cloudflare R2 (Supabase retired 2026-10-14). Migration head `z1b2c3d4e5f6` (none added). Live URLs: frontend `https://exciting-gratitude-production-71b5.up.railway.app`, backend `https://aladdin-production-bd25.up.railway.app`.
 
 ## Active Tasks
 
