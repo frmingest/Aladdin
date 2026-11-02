@@ -3,6 +3,11 @@
 Completed milestones and retired status, moved out of `docs/PROGRESS.md` under the rolling-log rules
 in `CLAUDE.md` ("Progress file rules"). Newest snapshot first. Older: [PROGRESS-full-2026-09-30.md](PROGRESS-full-2026-09-30.md).
 
+## Closed 2026-11-02 (afternoon, last) — S18 PR 5, the Hall of Records interior (#258), and S20 clips (#259)
+
+- **Merged as #258** (`05b164d`): E at the castle door walks into an archive room with one same-size book per decision (leather and letter from the flat Hall's own mapping, a ribbon when a review is owed, seals told apart by shape); E at the shelves opens the flat Records page ([write-up](../game/game3d-records-hall-interior-2026-11-02.md)). S18 is complete.
+- **Merged as #259** (`442131b`): the five KayKit character files also hold `Sit_Chair_Idle` and `Use_Item`, nothing plays them yet, plus the free-character-pack research ([write-up](../game/game3d-people-research-2026-11-02.md)). Neither seen in a browser; deploy not checked.
+
 ## Closed 2026-11-02 (afternoon, later) — S18 PR 4, numbers on the last two Town Hall boards (#257)
 
 - **Merged as #257** (`e037290`): the Wide Weather shows Norway's policy rate, Reasons and Shiny Metal shows the thesis counts and the metals total, each from the same shared function as its flat page, so all six boards carry a number ([write-up](../game/game3d-town-hall-last-boards-2026-11-02.md)). Not seen in a browser; deploy not checked.

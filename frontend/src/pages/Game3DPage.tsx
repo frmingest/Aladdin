@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { api } from "../lib/api";
 import { describeError } from "../lib/errors";
 import type { DocumentSummary, GameState, HoldingAdvisors, Watchlist, Journal, JournalEntryInput, NightWatch, Ravens, Standing, StormDrillInput, StormDrills } from "../lib/types";
-import { loadSeen, markSeen, saveSeen, unseen } from "../lib/ravens";
+import { loadSeen, markSeen, saveSeen, splitRavens } from "../lib/ravens";
 import { DocumentReader } from "../components/DocumentReader";
 import { latestReport } from "../game3d/libraryReport";
 import SceneBoundary from "../game3d/SceneBoundary";
@@ -220,7 +220,9 @@ export default function Game3DPage() {
       return next;
     });
   }, []);
-  const unseenRavens = useMemo(() => unseen(ravens?.ravens ?? [], seenRavens).length, [ravens, seenRavens]);
+  // One bird per raven the Ravens card calls "new" (landed in the last 48 hours and not marked seen). Older unseen ravens sit under
+  // "Earlier" in the card and never show on the perch, so every bird you see is one you can actually mark seen.
+  const unseenRavens = useMemo(() => splitRavens(ravens?.ravens ?? [], seenRavens, ravens?.as_of, "all").recent.length, [ravens, seenRavens]);
 
   // After a desk entry is saved, read the journal and the Standing again: the shelf and the level are
   // worked out from the facts, never from "I just saved".

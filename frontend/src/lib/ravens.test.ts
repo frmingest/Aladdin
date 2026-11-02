@@ -152,3 +152,14 @@ describe("recent first (48 hours)", () => {
     expect(ravensTabLabel(4)).toBe("Ravens · 4 new");
   });
 });
+
+describe("what counts as a new raven (the birds on the 3D perch use this)", () => {
+  it("counts only ravens of the last 48 hours that are not marked seen; older ones wait under Earlier", () => {
+    const now = "2026-11-02T12:00:00Z";
+    const mk = (id: string, hoursAgo: number) =>
+      ({ id, holding_id: `h-${id}`, name: id, in_portfolio: true, captured_at: new Date(Date.parse(now) - hoursAgo * 3_600_000).toISOString() }) as unknown as Parameters<typeof splitRavens>[0][number];
+    const ravens = [mk("fresh", 5), mk("old", 200), mk("older", 400)];
+    expect(splitRavens(ravens, new Set(), now, "all").recent.map((r) => r.id)).toEqual(["fresh"]);
+    expect(splitRavens(ravens, new Set(["fresh"]), now, "all").recent).toHaveLength(0);
+  });
+});

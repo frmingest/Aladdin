@@ -143,7 +143,8 @@ function RealModel({
 
 /**
  * One person in the courtyard: the real model if that slot has one (models3d.ts), otherwise the
- * shape figure. While the model loads, and if it ever fails, the shape figure shows.
+ * shape figure. While the model loads the shape figure shows (unless `loadingFallback` says otherwise), and if the
+ * model ever fails to load it shows for good.
  */
 export default function Avatar({
   id,
@@ -152,6 +153,7 @@ export default function Avatar({
   motion,
   pose,
   cheerKey,
+  loadingFallback = fallback,
 }: {
   id: ModelId;
   height: number;
@@ -161,12 +163,14 @@ export default function Avatar({
   pose?: string | null;
   /** A new number starts one short cheer. */
   cheerKey?: number | null;
+  /** Shown only while the model loads (default: the fallback). Pass null to show nothing, so the old shape figure never flashes. */
+  loadingFallback?: ReactNode;
 }) {
   const spec = MODELS3D[id];
   if (!spec) return <>{fallback}</>;
   return (
     <ModelBoundary fallback={fallback}>
-      <Suspense fallback={fallback}>
+      <Suspense fallback={loadingFallback}>
         <RealModel spec={spec} id={id} height={height} motion={motion} pose={pose} cheerKey={cheerKey} />
       </Suspense>
     </ModelBoundary>

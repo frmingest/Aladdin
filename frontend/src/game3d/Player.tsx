@@ -155,7 +155,7 @@ export default function Player({ keys, orbit, pos: posOut, teleport = null, chee
     >
       <CapsuleCollider args={[HALF_HEIGHT, RADIUS]} friction={0} />
       <group ref={model} position={[0, -CENTRE_HEIGHT, 0]}>
-        <Avatar id="hero" height={HALF_HEIGHT * 2 + RADIUS * 2} fallback={<HeroFigure />} motion={motion} cheerKey={cheerKey} />
+        <Avatar id="hero" height={HALF_HEIGHT * 2 + RADIUS * 2} fallback={<HeroFigure />} loadingFallback={null} motion={motion} cheerKey={cheerKey} />
       </group>
     </RigidBody>
   );
