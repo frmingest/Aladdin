@@ -7,6 +7,8 @@ interface Props {
   onClose: () => void;
   /** Show only this place's pages (a building door in the Town opens its own place). */
   only?: PlaceId | null;
+  /** Narrow the list further to these routes (one board of the Town Hall opens its own pair of pages). */
+  onlyRoutes?: readonly string[] | null;
 }
 
 /**
@@ -14,7 +16,7 @@ interface Props {
  * opens it in the world panel (two taps from anywhere: G or the button, then the page). The list comes
  * from the parity register, so a page added to the app shows up here once it has a row.
  */
-export default function WhereToPanel({ onPick, onClose, only = null }: Props) {
+export default function WhereToPanel({ onPick, onClose, only = null, onlyRoutes = null }: Props) {
   return (
     <aside
       aria-label={MENU_TITLE}
@@ -30,7 +32,7 @@ export default function WhereToPanel({ onPick, onClose, only = null }: Props) {
           <h3>{place.title}</h3>
           <p className="g3d-tag">{place.will}</p>
           <ul className="mt-1 space-y-1">
-            {doorsAt(place.id).map((d) => (
+            {doorsAt(place.id).filter((d) => !onlyRoutes || (d.route !== null && onlyRoutes.includes(d.route))).map((d) => (
               <li key={d.route}>
                 <button type="button" className="g3d-btn w-full text-left" onClick={() => onPick(d)}>
                   <strong>{d.title}</strong>
