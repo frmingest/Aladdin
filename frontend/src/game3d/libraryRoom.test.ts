@@ -5,7 +5,7 @@ import { SHELF_ORDER } from "./libraryShelves";
 const TABLE = { x: 0, z: -1, hx: 1.15, hz: 0.6 };
 
 describe("tower library room", () => {
-  it("has one bay for each of the six shelves, once each, in order", () => {
+  it("has one bay for each of the seven shelves, once each, in order", () => {
     expect(SHELF_SLOTS.map((s) => s.id)).toEqual([...SHELF_ORDER]);
   });
 

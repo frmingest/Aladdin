@@ -1,7 +1,7 @@
 /**
  * The tower library (game3d, 2026-11-01). Pure data and words, no three.js and no React.
  *
- * Walk into a holding's tower and you stand in a library with six shelves, one per financial aspect.
+ * Walk into a holding's tower and you stand in a library with seven shelves: six financial aspects and the Council's words.
  * Nothing here decides a fact: every line is read from the stored GameTower (the same row the flat
  * Fortress and the side panel use), with the same labels. The shelf only adds two things:
  *  - `books`: how many of the eight slots hold a book, a fixed table per stored tier (below);
@@ -9,8 +9,9 @@
  * Unknown never becomes a nice-looking shelf, and a weak tier never gets more books than a strong one.
  * No buy or sell wording. Colour is never the only signal: the plaque also carries a mark.
  */
-import type { GameTower } from "../lib/types";
+import type { GameAdvisorTone, GameTower, HoldingAdvisors } from "../lib/types";
 import {
+  ADVISOR_NAME,
   EXPOSURE_LABEL,
   FRESHNESS_LABEL,
   LAND_LABEL,
@@ -27,7 +28,7 @@ import { WALL_LOOK } from "./stateToWorld";
 
 export const MAX_SHELF_BOOKS = 8;
 
-export type ShelfId = "walls" | "moat" | "land" | "oath" | "storm" | "treasury";
+export type ShelfId = "walls" | "moat" | "land" | "oath" | "storm" | "treasury" | "council";
 export type ShelfTone = "good" | "warn" | "bad" | "fog" | "";
 export type ShelfState = "known" | "unknown" | "na";
 
@@ -60,7 +61,7 @@ export interface Shelf {
 }
 
 /** Order the shelves stand in the room, and the order of the plain list. */
-export const SHELF_ORDER: readonly ShelfId[] = ["walls", "moat", "land", "oath", "treasury", "storm"];
+export const SHELF_ORDER: readonly ShelfId[] = ["walls", "moat", "land", "oath", "treasury", "storm", "council"];
 
 const WALL_TONE: Record<string, ShelfTone> = { basalt: "good", granite: "good", brick: "warn", timber: "warn", rotted: "bad" };
 const MOAT_TONE: Record<string, ShelfTone> = { wide: "good", narrow: "warn", none: "bad" };
@@ -195,9 +196,50 @@ function treasury(t: GameTower): Shelf {
   return known({ id: "treasury", title: "The Treasury", asks, tone: "", books: SIZE_BOOKS[t.size_class] ?? 0, lines });
 }
 
-/** The six shelves of one tower's library, in room order. */
-export function shelvesFor(t: GameTower): Shelf[] {
+/**
+ * What the Council shelf is given. The advisor lines are read from the backend per holding (the same hand-written,
+ * rule-chosen lines the flat holding page lists), so they arrive after the room opens:
+ *  - `null`: asked, no answer yet; "failed": the answer could not be read; "sample": the sample fortress, which has no
+ *    advisors of its own to ask; otherwise the answer.
+ * None of these four ever looks like "all is well": silence from the council is not praise.
+ */
+export type CouncilInput = HoldingAdvisors | "failed" | "sample" | null | undefined;
+
+const COUNCIL_TITLE = "The Council's words";
+const COUNCIL_ASKS = "What do the advisors say?";
+/** Tone marks only; the shelf's own tone stays empty because the lines can differ. */
+const ADVISOR_SHELF_TONE: Record<GameAdvisorTone, ShelfTone> = { warning: "warn", note: "", calm: "good" };
+
+/** The seventh shelf. Books count the lines the advisors wrote, not how good they are: the plaque tone stays plain. */
+export function councilShelf(input: CouncilInput): Shelf {
+  if (input === "sample") {
+    return unknown("council", COUNCIL_TITLE, COUNCIL_ASKS, [{ label: "", text: "The advisors do not speak for the sample fortress.", tone: "fog" }]);
+  }
+  if (input === "failed") {
+    return unknown("council", COUNCIL_TITLE, COUNCIL_ASKS, [{ label: "", text: "The council could not be reached just now.", tone: "fog" }]);
+  }
+  if (!input) {
+    return unknown("council", COUNCIL_TITLE, COUNCIL_ASKS, [{ label: "", text: "The council has not answered yet.", tone: "fog" }]);
+  }
+  if (input.lines.length === 0) {
+    return notApplicable("council", COUNCIL_TITLE, COUNCIL_ASKS, [
+      { label: "", text: "No advisor rule is about this holding. Silence is not \"all is well\"." },
+      { label: "", text: input.disclaimer },
+    ]);
+  }
+  const lines: ShelfLine[] = [];
+  for (const l of input.lines) {
+    lines.push({ label: ADVISOR_NAME[l.advisor], text: l.text, tone: ADVISOR_SHELF_TONE[l.tone] });
+    if (l.facts.length > 0) lines.push({ label: "Why", text: l.facts.join(" · ") });
+  }
+  lines.push({ label: "", text: input.disclaimer });
+  return known({ id: "council", title: COUNCIL_TITLE, asks: COUNCIL_ASKS, tone: "", books: Math.min(MAX_SHELF_BOOKS, input.lines.length), lines });
+}
+
+/** The seven shelves of one tower's library, in room order. */
+export function shelvesFor(t: GameTower, council?: CouncilInput): Shelf[] {
   const all: Record<ShelfId, Shelf> = {
+    council: councilShelf(council),
     walls: walls(t),
     moat: moat(t),
     land: land(t),

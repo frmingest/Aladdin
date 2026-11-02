@@ -7,11 +7,16 @@
  */
 import { yawToward } from "./npcs";
 
-export const DESK = { x: -11.5, z: -16.5 } as const;
+/**
+ * West of the keep door, a little nearer the door than the Vault chest (x = 6), because its reach is wider. It used to stand at x = -11.5, 4.6 from the tower pad at
+ * (-15, -13.5): standing at its front put you inside that tower's door reach, so E took you into the library instead of
+ * opening the desk (found in a browser, 2026-11-01). `desk.test.ts` now checks every door's reach.
+ */
+export const DESK = { x: -5.5, z: -16.5 } as const;
 /** The desk faces the middle of the courtyard, like the people do. */
 export const DESK_FACING = yawToward(DESK, { x: 0, z: 0 });
 /** The shelf stands a little behind the desk, against the keep side. */
-export const SHELF = { x: -14.2, z: -18.8 } as const;
+export const SHELF = { x: -8.2, z: -18.8 } as const;
 
 export const DESK_RANGE = 4.2;
 /** Wider to leave than to arrive, so standing on the edge does not flicker. */

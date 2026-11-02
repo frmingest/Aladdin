@@ -222,7 +222,8 @@ function ReturnValue({ pct, action }: { pct: string | null; action: JournalActio
   );
 }
 
-function ReviewField({
+/** The look-back box of a journal entry whose 6- or 12-month review is due. Exported so the 3D writing desk can use the same box and the same save. */
+export function ReviewField({
   entry,
   which,
   onSaved,

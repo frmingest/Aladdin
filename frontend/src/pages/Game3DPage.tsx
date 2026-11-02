@@ -2,7 +2,8 @@ import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } fro
 import { Link } from "react-router-dom";
 import { api } from "../lib/api";
 import { describeError } from "../lib/errors";
-import type { DocumentSummary, GameState, Watchlist, Journal, JournalEntryInput, Standing, StormDrillInput, StormDrills } from "../lib/types";
+import type { DocumentSummary, GameState, HoldingAdvisors, Watchlist, Journal, JournalEntryInput, NightWatch, Ravens, Standing, StormDrillInput, StormDrills } from "../lib/types";
+import { loadSeen, markSeen, saveSeen, unseen } from "../lib/ravens";
 import { DocumentReader } from "../components/DocumentReader";
 import { latestReport } from "../game3d/libraryReport";
 import SceneBoundary from "../game3d/SceneBoundary";
@@ -10,8 +11,12 @@ import TowerPanel from "../game3d/TowerPanel";
 import QuestLog from "../game3d/QuestLog";
 import DialoguePanel from "../game3d/DialoguePanel";
 import DeskPanel from "../game3d/DeskPanel";
+import JournalBooksPanel from "../game3d/JournalBooksPanel";
 import VaultPanel from "../game3d/VaultPanel";
 import { VAULT_PROMPT } from "../game3d/vaultWordsV1";
+import WatchPanel from "../game3d/WatchPanel";
+import RavensPanel from "../game3d/RavensPanel";
+import { PERCH_PROMPT, WATCH_PROMPT } from "../game3d/watchWordsV1";
 import DrillPanel from "../game3d/DrillPanel";
 import WhereToPanel from "../game3d/WhereToPanel";
 import WorldPanel from "../game3d/WorldPanel";
@@ -21,7 +26,7 @@ import { drillBlock, stormDrillQuest } from "../game3d/stormDrill";
 import { DRILL_PROMPT } from "../game3d/stormDrillWordsV1";
 import ShelfPanel from "../game3d/ShelfPanel";
 import { shelvesFor } from "../game3d/libraryShelves";
-import type { ShelfId } from "../game3d/libraryShelves";
+import type { CouncilInput, ShelfId } from "../game3d/libraryShelves";
 import type { RoomView } from "../game3d/Scene";
 import { deskBlock } from "../game3d/deskForm";
 import Toolbar from "../game3d/Toolbar";
@@ -93,9 +98,22 @@ export default function Game3DPage() {
   // The writing desk: whether you stand at it, and whether its panel is open.
   const [atDesk, setAtDesk] = useState(false);
   const [deskOpen, setDeskOpen] = useState(false);
+  // The old books (past journal entries), opened from the desk panel.
+  const [booksOpen, setBooksOpen] = useState(false);
   // The vault chest east of the keep door: whether you stand at it, and whether its panel (Vault and Temperament) is open.
   const [atVault, setAtVault] = useState(false);
   const [vaultOpen, setVaultOpen] = useState(false);
+  // The Night Watch post inside the gate and the raven perch east of the fountain: whether you stand at each, and whether its panel is open.
+  const [atWatch, setAtWatch] = useState(false);
+  const [watchOpen, setWatchOpen] = useState(false);
+  const [atPerch, setAtPerch] = useState(false);
+  const [perchOpen, setPerchOpen] = useState(false);
+  // The dispatch (decides the lantern) and the ravens (decide the birds). Each is read on its own: if one cannot be read the
+  // lantern stays dark with a "?" and the perch stays bare, and the panel says so.
+  const [nightWatch, setNightWatch] = useState<NightWatch | null>(null);
+  const [ravens, setRavens] = useState<Ravens | null>(null);
+  // "Seen" is the flat page's own per-browser list, so a raven marked here is marked there too.
+  const [seenRavens, setSeenRavens] = useState<Set<string>>(() => loadSeen());
   // The signpost by the gate: whether you stand at it, whether the "Where to?" menu is open, and the flat page shown in the world panel.
   const [atSign, setAtSign] = useState(false);
   const [whereOpen, setWhereOpen] = useState(false);
@@ -165,12 +183,27 @@ export default function Game3DPage() {
       .getStanding()
       .then(setStanding)
       .catch(() => setStandingFailed(true));
+    api
+      .getNightWatch()
+      .then(setNightWatch)
+      .catch(() => setNightWatch(null));
+    api
+      .getRavens()
+      .then(setRavens)
+      .catch(() => setRavens(null));
   }, []);
+  const onRavensSeen = useCallback((ids: string[]) => {
+    setSeenRavens((cur) => {
+      const next = markSeen(cur, ids);
+      saveSeen(next);
+      return next;
+    });
+  }, []);
+  const unseenRavens = useMemo(() => unseen(ravens?.ravens ?? [], seenRavens).length, [ravens, seenRavens]);
 
   // After a desk entry is saved, read the journal and the Standing again: the shelf and the level are
   // worked out from the facts, never from "I just saved".
-  const saveAtDesk = useCallback(async (input: JournalEntryInput) => {
-    await api.createJournalEntry(input);
+  const refreshJournal = useCallback(async () => {
     const [j, st] = await Promise.allSettled([api.getJournal(), api.getStanding()]);
     if (j.status === "fulfilled") {
       setJournal(j.value);
@@ -181,6 +214,10 @@ export default function Game3DPage() {
       setStandingFailed(false);
     }
   }, []);
+  const saveAtDesk = useCallback(async (input: JournalEntryInput) => {
+    await api.createJournalEntry(input);
+    await refreshJournal();
+  }, [refreshJournal]);
 
   // After a drill is written, read the drills again: the quest is worked out from what is stored.
   const saveDrill = useCallback(async (input: StormDrillInput) => {
@@ -234,14 +271,31 @@ export default function Game3DPage() {
   const reviews = useMemo(() => sixMonthReckoning(journal?.entries ?? null, journalFailed), [journal, journalFailed]);
 
 
-  // The library you are in: the stored row for that holding, turned into six shelves. Nothing is stored here.
+  // The Council's words (the seventh shelf): the advisor lines for the holding whose library you are in. Asked when you
+  // walk in; the sample fortress has no advisors to ask. The shelf says "not answered yet" or "could not be reached" until then.
+  const [council, setCouncil] = useState<{ holdingId: string; data: HoldingAdvisors | "failed" } | null>(null);
+  const isSample = state?.demo === true;
+  useEffect(() => {
+    if (!room || isSample) return;
+    let live = true;
+    api
+      .getHoldingAdvisors(room)
+      .then((d) => live && setCouncil({ holdingId: room, data: d }))
+      .catch(() => live && setCouncil({ holdingId: room, data: "failed" }));
+    return () => {
+      live = false;
+    };
+  }, [room, isSample]);
+  const councilInput: CouncilInput = isSample ? "sample" : council && council.holdingId === room ? council.data : null;
+
+  // The library you are in: the stored row for that holding, turned into seven shelves. Nothing is stored here.
   const roomView = useMemo<RoomView | null>(() => {
     if (!room || !state) return null;
     const tower = state.towers.find((t) => t.holding_id === room);
     const view = shownWorld.plain.find((t) => t.holdingId === room);
     if (!tower || !view) return null;
-    return { holdingId: room, name: tower.name, ticker: tower.ticker, gap: view.gap ?? null, shelves: shelvesFor(tower) };
-  }, [room, state, shownWorld]);
+    return { holdingId: room, name: tower.name, ticker: tower.ticker, gap: view.gap ?? null, shelves: shelvesFor(tower, councilInput) };
+  }, [room, state, shownWorld, councilInput]);
   // A fresh load that drops the tower (or the state) puts you back outside rather than in an empty room.
   useEffect(() => {
     if (room && !roomView) setRoom(null);
@@ -284,6 +338,8 @@ export default function Game3DPage() {
     setTalking(null);
     setAtDesk(false);
     setAtVault(false);
+    setAtWatch(false);
+    setAtPerch(false);
     setAtDrill(false);
     setAtSign(false);
     setNearStall(null);
@@ -297,6 +353,8 @@ export default function Game3DPage() {
     clearNears();
     setDeskOpen(false);
     setVaultOpen(false);
+    setWatchOpen(false);
+    setPerchOpen(false);
     setDrillOpen(false);
     setInTown(true);
   }, [clearNears]);
@@ -378,10 +436,21 @@ export default function Game3DPage() {
   useEffect(() => {
     if (deskOpen && (!atDesk || talking)) setDeskOpen(false);
   }, [atDesk, deskOpen, talking]);
+  // The old books belong to the desk: they close with it.
+  useEffect(() => {
+    if (booksOpen && !deskOpen) setBooksOpen(false);
+  }, [booksOpen, deskOpen]);
   // Walking away from the vault closes it too, and so does starting a talk.
   useEffect(() => {
     if (vaultOpen && (!atVault || talking)) setVaultOpen(false);
   }, [atVault, vaultOpen, talking]);
+  // The same for the watch post and the perch.
+  useEffect(() => {
+    if (watchOpen && (!atWatch || talking)) setWatchOpen(false);
+  }, [atWatch, watchOpen, talking]);
+  useEffect(() => {
+    if (perchOpen && (!atPerch || talking)) setPerchOpen(false);
+  }, [atPerch, perchOpen, talking]);
 
   // Walking away from the drill post ends the drill (the camp goes); so does starting a talk.
   useEffect(() => {
@@ -420,7 +489,7 @@ export default function Game3DPage() {
         } else leaveTower();
         return;
       }
-      if (!near && !nearTower && !atDesk && !atVault && !atDrill && !atSign && !nearStall && !nearBooth && !atGate) return;
+      if (!near && !nearTower && !atDesk && !atVault && !atWatch && !atPerch && !atDrill && !atSign && !nearStall && !nearBooth && !atGate) return;
       e.preventDefault();
       if (!near && nearTower) {
         enterTower(nearTower);
@@ -431,6 +500,19 @@ export default function Game3DPage() {
           // Only the vault chest is in reach: E opens or closes it.
           if (!vaultOpen && document.pointerLockElement) document.exitPointerLock();
           setVaultOpen((v) => !v);
+          return;
+        }
+        if (atWatch && !atDesk && !atVault && !atDrill && !atSign && !nearStall && !nearBooth && !atGate) {
+          // Only the Night Watch post is in reach: E opens or closes the dispatch.
+          if (!watchOpen && document.pointerLockElement) document.exitPointerLock();
+          setWatchOpen((v) => !v);
+          return;
+        }
+        if (atPerch && !atDesk && !atVault && !atDrill && !atSign && !nearStall && !nearBooth && !atGate) {
+          // Only the raven perch is in reach: E opens or closes the ravens. Without data there is nothing to open.
+          if (!ravens) return;
+          if (!perchOpen && document.pointerLockElement) document.exitPointerLock();
+          setPerchOpen((v) => !v);
           return;
         }
         if (!atDesk && !atDrill && !atSign && !nearStall && !nearBooth && atGate) {
@@ -471,7 +553,7 @@ export default function Game3DPage() {
     };
     window.addEventListener("keydown", onTalk);
     return () => window.removeEventListener("keydown", onTalk);
-  }, [inTown, whereOpen, townNear, atTownExit, atGate, openBuilding, leaveTown, enterTown, near, talking, atDesk, atVault, vaultOpen, atDrill, atSign, nearStall, nearBooth, boothOpen, openBooth, openStore, toggleWhere, drillOpen, deskOpen, room, nearShelf, atDoor, atTable, report, readShelf, nearTower, enterTower, leaveTower, openReport]);
+  }, [inTown, whereOpen, townNear, atTownExit, atGate, openBuilding, leaveTown, enterTown, near, talking, atDesk, atVault, vaultOpen, atWatch, watchOpen, atPerch, perchOpen, ravens, atDrill, atSign, nearStall, nearBooth, boothOpen, openBooth, openStore, toggleWhere, drillOpen, deskOpen, room, nearShelf, atDoor, atTable, report, readShelf, nearTower, enterTower, leaveTower, openReport]);
 
   useEffect(() => {
     const onPanelKey = (e: KeyboardEvent) => {
@@ -534,6 +616,10 @@ export default function Game3DPage() {
             onNearBooth={setNearBooth}
             vaultLevel={state?.vault.level ?? null}
             onNearVault={setAtVault}
+            watchStatus={nightWatch?.status ?? null}
+            onNearWatch={setAtWatch}
+            unseenRavens={unseenRavens}
+            onNearPerch={setAtPerch}
             drillOpen={drillOpen}
             stalls={street.stalls}
             talking={talking}
@@ -568,7 +654,11 @@ export default function Game3DPage() {
       {panels.towers && <TowerPanel world={shownWorld} loading={loading} error={error} onRetry={load} onClose={() => flip("towers")} />}
       {panels.quests && <QuestLog quest={quest} reviews={reviews} demo={world.demo} standing={standingText} wires={standing && !standingFailed ? (standing.wires ?? []) : undefined} onLookAtWire={lookAtWire} onRefreshStanding={refreshStanding} drill={drillQuest} onClose={() => flip("quests")} />}
       {vaultOpen && state && <VaultPanel state={state} onChanged={load} onClose={() => setVaultOpen(false)} />}
+      {watchOpen && <WatchPanel onClose={() => setWatchOpen(false)} />}
+      {perchOpen && ravens && <RavensPanel ravens={ravens} seen={seenRavens} onSeen={onRavensSeen} onClose={() => setPerchOpen(false)} />}
       {deskOpen && (
+        // Hidden, not unmounted, while the old books are open: what you typed stays where it is.
+        <div style={{ display: booksOpen ? "none" : "contents" }}>
         <DeskPanel
           holdings={world.plain}
           missing={quest.missing}
@@ -576,6 +666,22 @@ export default function Game3DPage() {
           block={deskBlock(world.demo, quest.status)}
           onSave={saveAtDesk}
           onClose={() => setDeskOpen(false)}
+          entries={journal?.entries.length ?? 0}
+          due={journal?.reviews_due ?? 0}
+          onReadBooks={journalFailed ? undefined : () => setBooksOpen(true)}
+        />
+        </div>
+      )}
+      {deskOpen && booksOpen && (
+        <JournalBooksPanel
+          entries={journal?.entries ?? null}
+          failed={journalFailed}
+          onChanged={refreshJournal}
+          onBack={() => setBooksOpen(false)}
+          onClose={() => {
+            setBooksOpen(false);
+            setDeskOpen(false);
+          }}
         />
       )}
       {drillOpen && (
@@ -663,6 +769,18 @@ export default function Game3DPage() {
       {atVault && !vaultOpen && !talking && !nearTower && !atDesk && !atDrill && !atSign && !nearStall && !nearBooth && !room && (
         <p className="pointer-events-none absolute bottom-16 left-1/2 w-max -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-sm text-white">
           {VAULT_PROMPT}
+        </p>
+      )}
+
+      {atWatch && !watchOpen && !talking && !nearTower && !atDesk && !atVault && !atDrill && !atSign && !nearStall && !nearBooth && !room && (
+        <p className="pointer-events-none absolute bottom-16 left-1/2 w-max -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-sm text-white">
+          {WATCH_PROMPT}
+        </p>
+      )}
+
+      {atPerch && !perchOpen && ravens && !talking && !nearTower && !atDesk && !atVault && !atDrill && !atSign && !nearStall && !nearBooth && !room && (
+        <p className="pointer-events-none absolute bottom-16 left-1/2 w-max -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-sm text-white">
+          {PERCH_PROMPT}
         </p>
       )}
 
