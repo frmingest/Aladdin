@@ -15,6 +15,7 @@ import { Card, Disclosure, EmptyState, PageHeader, SectionTitle, VerdictBadge } 
 import { CheckTripwiresButton } from "../components/TripwireBanner";
 import { WarningStack } from "../components/WarningStack";
 import { buildAttention } from "../lib/attention";
+import { portfolioValueText } from "../lib/headlines";
 
 /** Sprint 5 dashboard, the app's home page. Everything comes from
  * GET /portfolio/overview (backend/app/services/portfolio_overview.py),
@@ -177,7 +178,7 @@ function HeroCard({ overview }: { overview: PortfolioOverview }) {
         <div>
           <p className="text-xs font-medium uppercase tracking-wider text-ink-faint">Portfolio value</p>
           <p className="tabular mt-1.5 font-display text-4xl font-semibold leading-none tracking-tight text-ink">
-            {formatNok(overview.total_value_nok)}
+            {portfolioValueText(overview)}
           </p>
           <p className="mt-2 text-xs text-ink-faint">
             {formatNok(overview.equity_value_nok)} in stocks and equity ETFs
