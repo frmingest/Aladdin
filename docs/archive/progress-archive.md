@@ -3,6 +3,10 @@
 Completed milestones and retired status, moved out of `docs/PROGRESS.md` under the rolling-log rules
 in `CLAUDE.md` ("Progress file rules"). Newest snapshot first. Older: [PROGRESS-full-2026-09-30.md](PROGRESS-full-2026-09-30.md).
 
+## Closed 2026-11-02 (midday) — S17, the siege yard (#252)
+
+- **Merged as #252** (`8d6d2a8`): the Storm Drill panel lists the worst-hit towers, the whole-book figures and a "?" fog block for towers with no usable beta, all from the flat Siege Simulator's own helpers ([write-up](../game/game3d-siege-yard-2026-11-02.md)). Not clicked through in a browser when merged; deploy not checked.
+
 ## Closed 2026-11-02 (morning) — S16 PR 3, weather, the Realm post and the Magic Lamp (#250)
 
 - **Merged as #250** (`cc9890e`), finishing S16: a banner pole (the Realm post) between the fountain and the keep whose pennant is the verdict on the whole fortress (E opens the flat verdict card); sky tint, fog and flat clouds follow the storm level (calm keeps the old sky, not surveyed is a mist; no tower light changes); a brass Magic Lamp on the writing desk opens the flat Genie. Write-up: [S16 PR 3](../game/game3d-s16-weather-lamp-2026-11-02.md). Deploy not checked.

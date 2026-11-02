@@ -2,9 +2,9 @@
  * The Town beyond the gate (3D sprint S15). Pure data and maths, no three.js and no React.
  *
  * A second zone, entered like a tower door: stand at the gate road, press E, and the courtyard gives way to the
- * Town (the courtyard is not drawn while you are there, so its 60 fps and its budget stay as they were). Four
+ * Town (the courtyard is not drawn while you are there, so its 60 fps and its budget stay as they were). Five
  * finished KayKit Builder buildings (CC0, S9) stand round a plaza, each one the door to flat pages that are not
- * stores: Records, Map, Codex, and the plumbing pages. The buildings are decoration; the facts stay in the
+ * stores: Records, Map, Codex, the plumbing pages, and (Town Hall, S18) the big-picture pages of the main app. The buildings are decoration; the facts stay in the
  * panels, which are the flat pages themselves (S13).
  *
  * Local coordinates: x east, z south, y up, the plaza at the origin. A building's yaw 0 faces south (like the
@@ -35,12 +35,12 @@ export const EXIT_LEAVE_RANGE = 6;
 /** The ground the Town may use: nothing stands outside this radius. */
 export const TOWN_RADIUS = 46;
 
-export type BuildingId = "records" | "cartographer" | "archive" | "workshop";
+export type BuildingId = "records" | "cartographer" | "archive" | "workshop" | "townhall";
 
 export interface Building {
   id: BuildingId;
   /** Node name inside town-buildings.glb. */
-  model: "castle" | "watchtower" | "house" | "lumbermill";
+  model: "castle" | "watchtower" | "house" | "lumbermill" | "market";
   /** The word on the sign over the door. */
   label: string;
   x: number;
@@ -61,6 +61,7 @@ const NATIVE = {
   watchtower: { w: 0.97, h: 1.98, d: 1.71 },
   house: { w: 1.69, h: 0.91, d: 1.66 },
   lumbermill: { w: 1.82, h: 1.47, d: 1.66 },
+  market: { w: 1.47, h: 0.86, d: 1.67 },
 } as const;
 
 const K = TOWN_SCALE.builder;
@@ -79,15 +80,17 @@ function building(
 }
 
 /**
- * The first four buildings, round a plaza and all facing it. Proposed models; a look decides (the plan's gate).
+ * The five buildings, round a plaza and all facing it. Proposed models; a look decides (the plan's gate).
  * Records: the castle, the big one at the far end. Cartographer: the watchtower, west. Archive: the house, east.
- * Workshop: the lumber mill, north-east. A well stands in the middle of the plaza.
+ * Workshop: the lumber mill, north-east. Town Hall (S18): the market hall, north-west, across the plaza from the
+ * Workshop. A well stands in the middle of the plaza.
  */
 export const BUILDINGS: readonly Building[] = [
   building("records", "castle", "Hall of Records", 0, 26, Math.PI, { route: "/fortress/records" }),
   building("cartographer", "watchtower", "Cartographer", -26, 4, Math.PI / 2, { route: "/fortress/map" }),
   building("archive", "house", "Archive", 26, 4, -Math.PI / 2, { route: "/glossary" }),
   building("workshop", "lumbermill", "Workshop", 26, -17, -Math.PI / 2, { place: "workshop" }),
+  building("townhall", "market", "Town Hall", -26, -17, Math.PI / 2, { place: "townhall" }),
 ];
 
 /** The well in the middle of the plaza: decoration with a round base. */

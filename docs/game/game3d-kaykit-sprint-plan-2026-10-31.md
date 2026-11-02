@@ -158,6 +158,8 @@ Order is the recommended order. Sizes are relative (S, M, L), not hours.
 
 ### S18: interiors and the Town Hall rooms (M; needs S15)
 
+**Status (2026-11-02): PR 1 (the Town Hall building and its menu door) written on `feature/game3d-town-hall` ([write-up](game3d-town-hall-2026-11-02.md)); the interior hall with boards and the Records Hall interior are not started.**
+
 *For:* rooms you can walk into for the pages that are lists, not pictures.
 - Reuse the library's scene-swap pattern (hero moved through a door). Interiors from **KayKit Dungeon Remastered** (flat-style floors, walls, doorways, stairs, shelves, tables) and Furniture Bits (rugs, lamps, shelves, books).
 - **Town Hall:** one room per page group (Portfolio and Performance, Risk and Margin of Safety, Macro and Sectors, Thesis monitor and Precious metals, Holdings and Watchlist); each room has a **code-built board** showing the page's headline number and a panel with the full page (Level B).
