@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
 import { describeError } from "../lib/errors";
 import type { StormDrillInput } from "../lib/types";
+import { YardResults } from "./SiegeYardResults";
+import { useSiegeYard } from "./useSiegeYard";
 import { FALL_DEFAULT, FALL_MAX, FALL_MIN, FALL_STEP, drillInput, drillReady, fallPercent } from "./stormDrill";
 import type { DrillBlock } from "./stormDrill";
 import {
@@ -37,6 +38,8 @@ export default function DrillPanel({
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
+  // What this fall does to each tower, from the same call as the flat Siege Simulator.
+  const yard = useSiegeYard(fall);
   const draft = { fall, plan };
   const ready = drillReady(draft) && block === null && !saving;
 
@@ -84,6 +87,8 @@ export default function DrillPanel({
         }}
       />
 
+      <YardResults state={yard} />
+
       <label className="g3d-label" htmlFor="drill-plan">{DRILL_PLAN_LABEL}</label>
       <textarea
         id="drill-plan"
@@ -106,9 +111,6 @@ export default function DrillPanel({
         {error && <p className="g3d-demo" role="alert">Not saved: {error} Your words are still here.</p>}
       </div>
 
-      <p className="g3d-muted mt-3">
-        What a fall does to each tower: <Link to="/fortress/siege" className="underline">the Siege Simulator</Link>.
-      </p>
     </aside>
   );
 }

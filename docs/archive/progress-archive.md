@@ -3,6 +3,10 @@
 Completed milestones and retired status, moved out of `docs/PROGRESS.md` under the rolling-log rules
 in `CLAUDE.md` ("Progress file rules"). Newest snapshot first. Older: [PROGRESS-full-2026-09-30.md](PROGRESS-full-2026-09-30.md).
 
+## Closed 2026-11-02 (morning) — S16 PR 3, weather, the Realm post and the Magic Lamp (#250)
+
+- **Merged as #250** (`cc9890e`), finishing S16: a banner pole (the Realm post) between the fountain and the keep whose pennant is the verdict on the whole fortress (E opens the flat verdict card); sky tint, fog and flat clouds follow the storm level (calm keeps the old sky, not surveyed is a mist; no tower light changes); a brass Magic Lamp on the writing desk opens the flat Genie. Write-up: [S16 PR 3](../game/game3d-s16-weather-lamp-2026-11-02.md). Deploy not checked.
+
 ## Closed 2026-11-02 (early) — S16 PR 2, Night Watch, ravens, the Council's shelf and the old books (#249)
 
 - **Merged as #249** (`7da9228`): the Night Watch post inside the gate (lantern lit or dark, "!" or "?" on its plate, E opens the flat card), one raven bird per unseen raven on the perch (E opens the flat Ravens card), a seventh library shelf "The Council's words", and "Read the old books" at the writing desk (read only plus the flat look-back box). The desk moved to x = -5.5 because E at its front offered a tower. Deploy not checked ([write-up](../game/game3d-s16-panels-2-2026-11-01.md)).
