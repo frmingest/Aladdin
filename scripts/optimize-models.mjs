@@ -12,7 +12,10 @@
 import { NodeIO } from "@gltf-transform/core";
 import { ALL_EXTENSIONS } from "@gltf-transform/extensions";
 import { prune, dedup, resample } from "@gltf-transform/functions";
-const KEEP = ["Idle", "Walking_A", "Running_A", "Cheer", "Interact", "Spellcasting"];
+// Played today: Idle, Walking_A, Running_A, Cheer, Spellcasting. Kept for the townsfolk (S20): Interact, Sit_Chair_Idle
+// (a seated scribe) and Use_Item (a vault keeper, a merchant). Measured: each extra clip adds about 28 KB to a file;
+// Sit_Floor_Idle and PickUp were tried and left out. Everything else in the 76 stays out.
+const KEEP = ["Idle", "Walking_A", "Running_A", "Cheer", "Interact", "Spellcasting", "Sit_Chair_Idle", "Use_Item"];
 const io = new NodeIO().registerExtensions(ALL_EXTENSIONS);
 for (const f of process.argv.slice(2).length ? process.argv.slice(2) : ["Rogue_Hooded", "Mage", "Knight"]) {
   const doc = await io.read(`${f}.glb`);

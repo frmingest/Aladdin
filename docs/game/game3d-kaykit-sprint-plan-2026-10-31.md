@@ -1,6 +1,6 @@
 # 3D courtyard: free CC0 models and the road to full page parity — sprint plan (updated 2026-11-01)
 
-**Status (2026-11-02): S0 to S8, S10 (drill camp), S11 (writing desk), the keep and corner towers, the marketplace corner, the tower libraries and Standing levels 1 to 5 are merged (#198 to #238, per `docs/PROGRESS.md`). S9 (town kit import, #239), S13 (page doors, Plain view, register test, #241), all of S14 (Market Street, stores, Sal and the Hype Booth, #243 to #245) and the S15 first slice (the Town beyond the gate, four buildings, #246) are merged. S16 is written in full: PR 1 (the Vault chest and panel) is merged (#248, [write-up](game3d-vault-2026-11-01.md)); PR 2 (the Night Watch post, ravens on the perch, the Council's shelf, the old journal books) is merged (#249, [write-up](game3d-s16-panels-2-2026-11-01.md)); PR 3 (the Realm post and weather, the Magic Lamp on the desk) is written on `feature/game3d-weather-lamp`, clicked through in a headless browser, not merged: see [the S16 PR 3 write-up](game3d-s16-weather-lamp-2026-11-02.md). Deploy not checked, seen only in headless browsers.** The 2026-11-01 update added the review of the three downloaded packs ([review](game3d-art-review-2026-11-01.md)), rewrote S9, replaced the parked S12, and added S13 to S20 so that every flat Game mode page gets a place in 3D. Written so a new chat can start from this file alone.
+**Status (2026-11-02): S0 to S8, S9 (town kit, #239), S10, S11, S13, S14 (Market Street, #243 to #245), S15 first slice (the Town, #246), S16 (Vault #248, panels #249, weather and lamp #250), S17 (siege yard, #252) and S18 (Town Hall #253, #255 to #257; Hall of Records interior #258) are merged. Not merged: the S20 clip re-cut (`feature/game3d-extra-clips`, [research](game3d-people-research-2026-11-02.md)). S19 waits for The Printer. Deploy not checked; S16 to S18 seen only in headless browsers or by tests, and S9's lineup pictures still wait for Faiz's judgment.** The 2026-11-01 update added the review of the three downloaded packs ([review](game3d-art-review-2026-11-01.md)), rewrote S9, replaced the parked S12, and added S13 to S20 so that every flat Game mode page gets a place in 3D. Written so a new chat can start from this file alone.
 
 ## Why this plan exists (plain words)
 
@@ -158,7 +158,7 @@ Order is the recommended order. Sizes are relative (S, M, L), not hours.
 
 ### S18: interiors and the Town Hall rooms (M; needs S15)
 
-**Status (2026-11-02): PRs 1 to 4 are merged (#253 the Town Hall building, #255 the interior hall with six boards, #256 four board numbers, #257 numbers on the last two boards; [write-up](game3d-town-hall-last-boards-2026-11-02.md)). PR 5 (inside the Hall of Records: one same-size book per decision, seals by shape, a ribbon when a review is owed, E at the shelves opens the flat page) is written on `feature/game3d-records-hall-interior`, tests and build green, not looked at in a browser, not merged ([write-up](game3d-records-hall-interior-2026-11-02.md)). Once it merges S18 is done.**
+**Status (2026-11-02): PRs 1 to 4 are merged (#253 the Town Hall building, #255 the interior hall with six boards, #256 four board numbers, #257 numbers on the last two boards; [write-up](game3d-town-hall-last-boards-2026-11-02.md)). PR 5 (inside the Hall of Records: one same-size book per decision, seals by shape, a ribbon when a review is owed, E at the shelves opens the flat page) is merged (#258, [write-up](game3d-records-hall-interior-2026-11-02.md)). S18 is done; seen only by tests and headless browsers.**
 
 *For:* rooms you can walk into for the pages that are lists, not pictures.
 - Reuse the library's scene-swap pattern (hero moved through a door). Interiors from **KayKit Dungeon Remastered** (flat-style floors, walls, doorways, stairs, shelves, tables) and Furniture Bits (rugs, lamps, shelves, books).
@@ -174,7 +174,9 @@ The Printer is planned as a flat room (`/fortress/printer`, P1 engine written, P
 
 ### S20: more people (S, decision first)
 
-All five KayKit Adventurers are in use (hero, Oracle, Partner, two townsfolk). Market stalls, the scribe, the raven keeper and the vault keeper need bodies. Options: reuse the five with hat and prop swaps (free, default); or Faiz downloads another CC0 character pack and S9's importer vets it. No new character pack is in hand. Merchants carry no fact (they speak the flat page's words only).
+**Status (2026-11-02): research done and the free path started in `feature/game3d-extra-clips` ([research](game3d-people-research-2026-11-02.md)), not merged.** The five Adventurer files now also carry `Sit_Chair_Idle` and `Use_Item` (about 0.56 to 0.62 MB each; nothing plays them yet). Best candidate if new bodies are wanted: Kenney Mini Characters (12 characters, CC0 as listed, needs a lineup picture first); Quaternius human packs stay parked; KayKit Skeletons are optional enemies. Faiz decides.
+
+All five KayKit Adventurers are in use (hero, Oracle, Partner, two townsfolk). Market stalls, the scribe, the raven keeper and the vault keeper need bodies. Options: reuse the five with hat and prop swaps (free, default); or Faiz downloads another CC0 character pack and S9's importer vets it. Merchants carry no fact (they speak the flat page's words only).
 
 ### S12 (folded into S16): vault props
 
