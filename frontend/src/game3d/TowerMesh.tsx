@@ -4,7 +4,7 @@ import { CanvasTexture, Object3D, SRGBColorSpace, type InstancedMesh } from "thr
 import type { Flag, TowerView } from "./stateToWorld";
 import { INK, PAL, Part } from "./Inked";
 import { doorYaw } from "./towerDoor";
-import { signWords } from "./signText";
+import { SIGN_ARM_FRONT, SIGN_ARM_LENGTH, SIGN_HANG_X as HANG_X, signWords } from "./signText";
 
 /** Pad top, so towers stand on it. */
 const PAD_TOP = 0.5;
@@ -141,9 +141,15 @@ function paintSign(name: string, fog: boolean, gap: string | undefined): HTMLCan
   return c;
 }
 
+const PLANK_TOP = (SIGN_H + 0.3) / 2;
+const HANGER_LEN = 0.43;
+const BEAM_Y = PLANK_TOP + HANGER_LEN + 0.07;
+
 /**
- * The tower's name on a timber signboard hung above its door, facing the middle of the courtyard.
- * Name only: the facts stay in the panel. Fog towers say "not surveyed" in small type, as before.
+ * The tower's name on a timber signboard above its door, facing the middle of the courtyard. It hangs like an
+ * inn sign: one iron arm sticks out of the wall, a beam crosses it, and the plank hangs from the beam on two
+ * short hangers, so every part is held by something and nothing dangles. Name only: the facts stay in the panel.
+ * Fog towers say "not surveyed" in small type, as before.
  */
 function NameSign({ t }: { t: TowerView }) {
   const tex = useMemo(() => {
@@ -155,10 +161,18 @@ function NameSign({ t }: { t: TowerView }) {
   useEffect(() => () => tex.dispose(), [tex]);
   return (
     <group position={[0, 4.3, 0.35]}>
-      {/* Two short posts to the wall, then the plank and the painted face. */}
-      {[-2.1, 2.1].map((x) => (
-        <Part key={x} color={PAL.iron} position={[x, -1.5, -0.15]} grow={1.2}>
-          <boxGeometry args={[0.14, 1.3, 0.14]} />
+      {/* One iron arm from the wall to the middle of the beam (the plank is wider than the tower). */}
+      <Part color={PAL.iron} position={[0, BEAM_Y, SIGN_ARM_FRONT - SIGN_ARM_LENGTH / 2]} grow={1.2}>
+        <boxGeometry args={[0.2, 0.2, SIGN_ARM_LENGTH]} />
+      </Part>
+      {/* The beam the plank hangs from. */}
+      <Part color={PAL.iron} position={[0, BEAM_Y, 0]} grow={1.15}>
+        <boxGeometry args={[SIGN_W + 0.3, 0.14, 0.14]} />
+      </Part>
+      {/* Two hangers from the beam down to the plank. */}
+      {[-HANG_X, HANG_X].map((x) => (
+        <Part key={`hanger${x}`} color={PAL.iron} position={[x, PLANK_TOP + HANGER_LEN / 2, 0]} grow={1.3}>
+          <boxGeometry args={[0.07, HANGER_LEN, 0.07]} />
         </Part>
       ))}
       <Part color={PAL.timber} grow={1.03}>

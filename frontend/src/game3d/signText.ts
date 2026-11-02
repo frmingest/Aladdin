@@ -47,3 +47,19 @@ export function signWords(name: string, fog: boolean, gap?: string | null): Sign
     note: fog ? (gap ? `not surveyed: ${gap}` : "not surveyed") : "",
   };
 }
+
+/**
+ * The sign hangs like an inn sign: ONE iron arm sticks out of the wall above the door, a beam crosses it, and the
+ * plank hangs from the beam on two short hangers. (The plank is wider than the tower, so only the middle can touch the
+ * wall; two arms at the plank's ends would miss a narrow tower and stick out into the air.)
+ */
+export const SIGN_HANG_X = 2.1;
+/** Where the wall's face sits behind the sign plane at the centre of the door (door depth plus the sign's stand-off). */
+export const SIGN_WALL_BEHIND = 0.55;
+/** How far the arm sinks into the wall, so it is seen to come out of the stone. */
+export const SIGN_ARM_SINK = 0.6;
+/** The arm's front end is at the beam (just in front of the sign plane). */
+export const SIGN_ARM_FRONT = 0.12;
+
+/** Length of the arm, from the beam back into the wall. */
+export const SIGN_ARM_LENGTH = SIGN_ARM_FRONT + SIGN_WALL_BEHIND + SIGN_ARM_SINK;

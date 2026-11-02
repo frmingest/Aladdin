@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { makeCloser } from "../lib/closer";
 import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from "react";
 import { createPortal } from "react-dom";
 import { ApiError, api, fetchDocumentFile } from "../lib/api";
@@ -117,7 +118,7 @@ export function DocumentReader({
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [closing, setClosing] = useState(false);
-  const closeTimer = useRef<number | undefined>(undefined);
+  const closer = useRef(makeCloser());
 
   // Game mode G28: the report opens as a parchment scroll. Off = this reader exactly as before.
   const { gameMode } = useGameMode();
@@ -223,11 +224,17 @@ export function DocumentReader({
     e.preventDefault();
   }
 
+  // The parent usually passes a new `onClosed` on every render (the 3D world re-renders all the time). The close timer reads it
+  // through a ref when it fires and is only cancelled when the reader is removed, so a re-render while the scroll rolls up can no
+  // longer cancel the close and leave the reader stuck on screen (lib/closer.ts).
+  const onClosedRef = useRef(onClosed);
+  onClosedRef.current = onClosed;
   const close = useCallback(() => {
+    const ms = scroll && !reducedMotion ? SCROLL_MS.roll : EXIT_MS;
+    if (!closer.current.start(ms, () => onClosedRef.current)) return; // already closing
     setClosing(true);
     if (scroll && !reducedMotion) setPhase("rolling");
-    closeTimer.current = window.setTimeout(onClosed, scroll && !reducedMotion ? SCROLL_MS.roll : EXIT_MS);
-  }, [onClosed, scroll, reducedMotion]);
+  }, [scroll, reducedMotion]);
 
   // The scroll opens by itself: seal, crack, unroll. It never blocks reading (any key skips it).
   useEffect(() => {
@@ -280,9 +287,14 @@ export function DocumentReader({
     return () => {
       window.removeEventListener("keydown", onKey);
       window.document.body.style.overflow = previousOverflow;
-      window.clearTimeout(closeTimer.current);
     };
   }, [close]);
+
+  // Only leaving the page cancels a pending close.
+  useEffect(() => {
+    const c = closer.current;
+    return () => c.cancel();
+  }, []);
 
   async function download() {
     try {

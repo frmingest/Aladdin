@@ -27,6 +27,9 @@ export const STREET_PLOTS: readonly { x: number; z: number }[] = [
   { x: 19.5, z: 33.8 },
   { x: 22.9, z: 31.6 },
   { x: 32.9, z: 30.7 },
+  // An eighth stand (found by searching the cobbles with the clearance rules of the street, booth and perch tests), so a company
+  // you add to a watchlist of seven does not fall off the end of the street.
+  { x: 37.2, z: 28.8 },
 ];
 
 /** The most stalls that can stand. */
