@@ -149,6 +149,8 @@ Order is the recommended order. Sizes are relative (S, M, L), not hours.
 
 ### S17: the siege yard, full simulator (S to M)
 
+**Status (2026-11-02): written on `feature/game3d-siege-yard`, not merged, not clicked through: the drill panel now lists the worst-hit towers, the whole-book figures and the "?" fog block from the flat page's own helpers ([write-up](game3d-siege-yard-2026-11-02.md)).**
+
 *For:* the missing half of the Siege Simulator: results per holding.
 - The Storm Drill panel gains the flat page's per-holding rows (the "SiegeStrip" facts, the weighted beta line, the "Not modelled" fog with the one fix instruction). Fixed-size camp stays (decision 2026-10-31); **no model grows with the fall**.
 - Siege tower and ram: skipped (cut line, still absent from both KayKit and Kenney).
