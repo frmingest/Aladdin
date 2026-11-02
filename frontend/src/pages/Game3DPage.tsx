@@ -38,6 +38,8 @@ import { typingInField } from "../game3d/useKeys";
 import { stallPrompt, storeDoor } from "../game3d/stallDoor";
 import { BUILDINGS, buildingPrompt, doorAction, exitPrompt, gatePrompt } from "../game3d/townPlan";
 import type { BuildingId } from "../game3d/townPlan";
+import { boardById, doorsOfBoard, hallDoorPrompt, hallPrompt } from "../game3d/townHallRoom";
+import type { BoardId } from "../game3d/townHallRoom";
 import type { PlaceId } from "../game3d/parity3d";
 import { boothPrompt } from "../game3d/boothPlan";
 import type { BoothId } from "../game3d/boothPlan";
@@ -146,6 +148,11 @@ export default function Game3DPage() {
   const [inTown, setInTown] = useState(false);
   const [atGate, setAtGate] = useState(false);
   const [townNear, setTownNear] = useState<BuildingId | null>(null);
+  // Inside the Town Hall: whether you are in it, which board you stand at, whether the door is in reach, and which pages the menu is narrowed to.
+  const [inHall, setInHall] = useState(false);
+  const [nearBoard, setNearBoard] = useState<BoardId | null>(null);
+  const [atHallDoor, setAtHallDoor] = useState(false);
+  const [onlyRoutes, setOnlyRoutes] = useState<readonly string[] | null>(null);
   const [atTownExit, setAtTownExit] = useState(false);
   const [onlyPlace, setOnlyPlace] = useState<PlaceId | null>(null);
   const [nearShelf, setNearShelf] = useState<ShelfId | null>(null);
@@ -319,11 +326,13 @@ export default function Game3DPage() {
     });
     setWorldPage(null);
     setOnlyPlace(null);
+    setOnlyRoutes(null);
   }, []);
   const closeWhere = useCallback(() => {
     setWhereOpen(false);
     setWorldPage(null);
     setOnlyPlace(null);
+    setOnlyRoutes(null);
   }, []);
   const pickDoor = useCallback((door: Door) => setWorldPage(door), []);
   // E at a stall: that company's store, in the world panel (the flat store page itself).
@@ -359,6 +368,8 @@ export default function Game3DPage() {
     setAtGate(false);
     setTownNear(null);
     setAtTownExit(false);
+    setNearBoard(null);
+    setAtHallDoor(false);
   }, []);
   const enterTown = useCallback(() => {
     clearNears();
@@ -373,10 +384,41 @@ export default function Game3DPage() {
   }, [clearNears]);
   const leaveTown = useCallback(() => {
     clearNears();
+    setInHall(false);
     setInTown(false);
   }, [clearNears]);
+  // Into the Town Hall and back out to its door. The Town's watchers are unmounted while inside, so the nears are cleared.
+  const enterHall = useCallback(() => {
+    clearNears();
+    setInHall(true);
+  }, [clearNears]);
+  const leaveHall = useCallback(() => {
+    clearNears();
+    setInHall(false);
+  }, [clearNears]);
+  // E at a board: one page opens as it is; a pair opens a menu of just those two pages.
+  const openBoard = useCallback((id: BoardId) => {
+    const board = boardById(id);
+    const rows = doorsOfBoard(board);
+    if (rows.length === 0) return;
+    if (document.pointerLockElement) document.exitPointerLock();
+    setWhereOpen(true);
+    if (rows.length === 1) {
+      setOnlyPlace(null);
+      setOnlyRoutes(null);
+      setWorldPage(rows[0]);
+    } else {
+      setWorldPage(null);
+      setOnlyPlace("townhall");
+      setOnlyRoutes(board.routes);
+    }
+  }, []);
   // E at a building: its page in the world panel, or (the Workshop) the menu of its place.
   const openBuilding = useCallback((id: BuildingId) => {
+    if (id === "townhall") {
+      enterHall();
+      return;
+    }
     const b = BUILDINGS.find((x) => x.id === id);
     const action = b ? doorAction(b) : null;
     if (!action) return;
@@ -389,7 +431,7 @@ export default function Game3DPage() {
       setWorldPage(null);
       setOnlyPlace(action.place);
     }
-  }, []);
+  }, [enterHall]);
 
   const enterTower = useCallback((id: string) => {
     if (document.pointerLockElement) {
@@ -485,6 +527,15 @@ export default function Game3DPage() {
       const el = e.target as HTMLElement | null;
       if (typingInField(el)) return;
       if (boothOpen || lampOpen) return;
+      if (inHall) {
+        // In the Town Hall: E opens the board you stand at, or takes the door back out.
+        if (whereOpen) return;
+        if (!nearBoard && !atHallDoor) return;
+        e.preventDefault();
+        if (nearBoard) openBoard(nearBoard);
+        else leaveHall();
+        return;
+      }
       if (inTown) {
         // In the Town: E knocks at the door you stand at, or takes the road back.
         if (whereOpen) return;
@@ -577,7 +628,7 @@ export default function Game3DPage() {
     };
     window.addEventListener("keydown", onTalk);
     return () => window.removeEventListener("keydown", onTalk);
-  }, [inTown, whereOpen, townNear, atTownExit, atGate, openBuilding, leaveTown, enterTown, near, talking, atDesk, atVault, vaultOpen, atWatch, watchOpen, atPerch, perchOpen, ravens, atRealm, realmOpen, lampOpen, state, atDrill, atSign, nearStall, nearBooth, boothOpen, openBooth, openStore, toggleWhere, drillOpen, deskOpen, room, nearShelf, atDoor, atTable, report, readShelf, nearTower, enterTower, leaveTower, openReport]);
+  }, [inHall, nearBoard, atHallDoor, openBoard, leaveHall, inTown, whereOpen, townNear, atTownExit, atGate, openBuilding, leaveTown, enterTown, near, talking, atDesk, atVault, vaultOpen, atWatch, watchOpen, atPerch, perchOpen, ravens, atRealm, realmOpen, lampOpen, state, atDrill, atSign, nearStall, nearBooth, boothOpen, openBooth, openStore, toggleWhere, drillOpen, deskOpen, room, nearShelf, atDoor, atTable, report, readShelf, nearTower, enterTower, leaveTower, openReport]);
 
   useEffect(() => {
     const onPanelKey = (e: KeyboardEvent) => {
@@ -661,6 +712,9 @@ export default function Game3DPage() {
             townNear={townNear}
             onNearBuilding={setTownNear}
             onNearTownExit={setAtTownExit}
+            inHall={inHall}
+            onNearBoard={setNearBoard}
+            onNearHallDoor={setAtHallDoor}
           />
         </Suspense>
       </SceneBoundary>
@@ -676,7 +730,7 @@ export default function Game3DPage() {
         whereOpen={whereOpen}
         onToggleWhere={toggleWhere}
       />
-      {whereOpen && !worldPage && <WhereToPanel onPick={pickDoor} onClose={closeWhere} only={onlyPlace} />}
+      {whereOpen && !worldPage && <WhereToPanel onPick={pickDoor} onClose={closeWhere} only={onlyPlace} onlyRoutes={onlyRoutes} />}
       {whereOpen && worldPage && <WorldPanel door={worldPage} onBack={() => setWorldPage(null)} onClose={closeWhere} />}
       {panels.towers && <TowerPanel world={shownWorld} loading={loading} error={error} onRetry={load} onClose={() => flip("towers")} />}
       {panels.quests && <QuestLog quest={quest} reviews={reviews} demo={world.demo} standing={standingText} wires={standing && !standingFailed ? (standing.wires ?? []) : undefined} onLookAtWire={lookAtWire} onRefreshStanding={refreshStanding} drill={drillQuest} onClose={() => flip("quests")} />}
@@ -753,7 +807,16 @@ export default function Game3DPage() {
         </button>
       )}
 
-      {inTown && (
+      {inHall && (
+        <button
+          type="button"
+          onClick={leaveHall}
+          className="absolute left-3 top-14 rounded border border-border bg-surface/90 px-3 py-1.5 text-sm text-ink hover:opacity-80"
+        >
+          ← Back to the Town
+        </button>
+      )}
+      {inTown && !inHall && (
         <button
           type="button"
           onClick={leaveTown}
@@ -762,12 +825,22 @@ export default function Game3DPage() {
           ← Back to the courtyard
         </button>
       )}
-      {inTown && !whereOpen && townNear && (
+      {inHall && !whereOpen && nearBoard && (
+        <p className="pointer-events-none absolute bottom-16 left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-sm text-white">
+          {hallPrompt(boardById(nearBoard))}
+        </p>
+      )}
+      {inHall && !whereOpen && !nearBoard && atHallDoor && (
+        <p className="pointer-events-none absolute bottom-16 left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-sm text-white">
+          {hallDoorPrompt}
+        </p>
+      )}
+      {inTown && !inHall && !whereOpen && townNear && (
         <p className="pointer-events-none absolute bottom-16 left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-sm text-white">
           {buildingPrompt(BUILDINGS.find((b) => b.id === townNear) ?? BUILDINGS[0])}
         </p>
       )}
-      {inTown && !whereOpen && !townNear && atTownExit && (
+      {inTown && !inHall && !whereOpen && !townNear && atTownExit && (
         <p className="pointer-events-none absolute bottom-16 left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-sm text-white">
           {exitPrompt}
         </p>
