@@ -6,6 +6,8 @@
  * over the world. Nothing is copied: the dialogs, their words and their one write each (add to the watchlist) are
  * the flat page's own components. A stand carries no fact, only a sign.
  */
+import { CLIP } from "./animClips";
+import type { ModelId } from "./modelFit";
 import { yawToward } from "./npcs";
 
 export type BoothId = "sal" | "hype";
@@ -21,7 +23,12 @@ export interface Booth {
   prompt: string;
   /** Roof cloth. Never red or green. */
   cloth: string;
+  /** The person behind the counter: a body from the character files, a held clip. No name, no words, no data. */
+  merchant: { model: ModelId; pose: string; height: number };
 }
+
+/** Where the merchant stands in the stand's own frame (x right, z toward the courtyard): behind the counter, under the roof. */
+export const MERCHANT_AT = { lx: 0, lz: -0.25 } as const;
 
 /** Reach, and a wider reach to leave, so standing on the edge does not flicker. */
 export const BOOTH_RANGE = 3.0;
@@ -39,8 +46,8 @@ const AT: Record<BoothId, { x: number; z: number }> = {
 };
 
 export const BOOTHS: readonly Booth[] = [
-  { id: "sal", ...AT.sal, yaw: yawToward(AT.sal, MIDDLE), sign: "Sal's counter", prompt: "Press E to talk to Sal: open a new stall", cloth: "#0ca5b0" },
-  { id: "hype", ...AT.hype, yaw: yawToward(AT.hype, MIDDLE), sign: "Hype Booth", prompt: "Press E to test a tip at the Hype Booth", cloth: "#e6b93a" },
+  { id: "sal", ...AT.sal, yaw: yawToward(AT.sal, MIDDLE), sign: "Sal's counter", prompt: "Press E to talk to Sal: open a new stall", cloth: "#0ca5b0", merchant: { model: "merchantSal", pose: CLIP.interact, height: 1.9 } },
+  { id: "hype", ...AT.hype, yaw: yawToward(AT.hype, MIDDLE), sign: "Hype Booth", prompt: "Press E to test a tip at the Hype Booth", cloth: "#e6b93a", merchant: { model: "merchantHype", pose: CLIP.cheer, height: 1.9 } },
 ];
 
 /** The stand you can reach: the nearest one inside `range`, or null. Ties go to the earlier stand. */

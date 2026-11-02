@@ -3,6 +3,11 @@
 Completed milestones and retired status, moved out of `docs/PROGRESS.md` under the rolling-log rules
 in `CLAUDE.md` ("Progress file rules"). Newest snapshot first. Older: [PROGRESS-full-2026-09-30.md](PROGRESS-full-2026-09-30.md).
 
+## Closed 2026-11-02 (night) — the playtest fix pass (#260) and the scribe and vault keeper (#261)
+
+- **Merged as #260** (`68d2c53`): fixes from the first walk-through (hero load flash, ravens, reader stuck open, Market Street stand, tower signs).
+- **Merged as #261** (`9014939`): a scribe sits in the desk chair and a vault keeper stands at the chest, played from the `Sit_Chair_Idle` and `Use_Item` clips in the existing Mage and Barbarian files ([write-up](../game/game3d-workers-2026-11-02.md)). Seen only by tests and headless browsers.
+
 ## Closed 2026-11-02 (afternoon, last) — S18 PR 5, the Hall of Records interior (#258), and S20 clips (#259)
 
 - **Merged as #258** (`05b164d`): E at the castle door walks into an archive room with one same-size book per decision (leather and letter from the flat Hall's own mapping, a ribbon when a review is owed, seals told apart by shape); E at the shelves opens the flat Records page ([write-up](../game/game3d-records-hall-interior-2026-11-02.md)). S18 is complete.
