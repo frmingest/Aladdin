@@ -3,6 +3,10 @@ import { Link } from "react-router-dom";
 import { api } from "../lib/api";
 import { describeError } from "../lib/errors";
 import type { DocumentSummary, GameState, HoldingAdvisors, Watchlist, Journal, JournalEntryInput, NightWatch, Ravens, Standing, StormDrillInput, StormDrills } from "../lib/types";
+import MagicLamp from "../components/fortress/MagicLamp";
+import RealmPanel from "../game3d/RealmPanel";
+import { REALM_PROMPT } from "../game3d/realmWordsV1";
+import { summarizeRealm } from "../lib/realmVerdict";
 import { loadSeen, markSeen, saveSeen, unseen } from "../lib/ravens";
 import { DocumentReader } from "../components/DocumentReader";
 import { latestReport } from "../game3d/libraryReport";
@@ -108,6 +112,10 @@ export default function Game3DPage() {
   const [watchOpen, setWatchOpen] = useState(false);
   const [atPerch, setAtPerch] = useState(false);
   const [perchOpen, setPerchOpen] = useState(false);
+  // The Great Keep banner (the flat verdict on the whole fortress) and the desk lamp (the Genie).
+  const [atRealm, setAtRealm] = useState(false);
+  const [realmOpen, setRealmOpen] = useState(false);
+  const [lampOpen, setLampOpen] = useState(false);
   // The dispatch (decides the lantern) and the ravens (decide the birds). Each is read on its own: if one cannot be read the
   // lantern stays dark with a "?" and the perch stays bare, and the panel says so.
   const [nightWatch, setNightWatch] = useState<NightWatch | null>(null);
@@ -199,6 +207,7 @@ export default function Game3DPage() {
       return next;
     });
   }, []);
+  const realm = useMemo(() => (state ? summarizeRealm(state) : null), [state]);
   const unseenRavens = useMemo(() => unseen(ravens?.ravens ?? [], seenRavens).length, [ravens, seenRavens]);
 
   // After a desk entry is saved, read the journal and the Standing again: the shelf and the level are
@@ -340,6 +349,7 @@ export default function Game3DPage() {
     setAtVault(false);
     setAtWatch(false);
     setAtPerch(false);
+    setAtRealm(false);
     setAtDrill(false);
     setAtSign(false);
     setNearStall(null);
@@ -355,6 +365,8 @@ export default function Game3DPage() {
     setVaultOpen(false);
     setWatchOpen(false);
     setPerchOpen(false);
+    setRealmOpen(false);
+    setLampOpen(false);
     setDrillOpen(false);
     setInTown(true);
   }, [clearNears]);
@@ -451,6 +463,13 @@ export default function Game3DPage() {
   useEffect(() => {
     if (perchOpen && (!atPerch || talking)) setPerchOpen(false);
   }, [atPerch, perchOpen, talking]);
+  useEffect(() => {
+    if (realmOpen && (!atRealm || talking)) setRealmOpen(false);
+  }, [atRealm, realmOpen, talking]);
+  // Walking away from the desk shuts the lamp too.
+  useEffect(() => {
+    if (lampOpen && !deskOpen) setLampOpen(false);
+  }, [lampOpen, deskOpen]);
 
   // Walking away from the drill post ends the drill (the camp goes); so does starting a talk.
   useEffect(() => {
@@ -489,7 +508,7 @@ export default function Game3DPage() {
         } else leaveTower();
         return;
       }
-      if (!near && !nearTower && !atDesk && !atVault && !atWatch && !atPerch && !atDrill && !atSign && !nearStall && !nearBooth && !atGate) return;
+      if (!near && !nearTower && !atDesk && !atVault && !atWatch && !atPerch && !atRealm && !atDrill && !atSign && !nearStall && !nearBooth && !atGate) return;
       e.preventDefault();
       if (!near && nearTower) {
         enterTower(nearTower);
@@ -513,6 +532,13 @@ export default function Game3DPage() {
           if (!ravens) return;
           if (!perchOpen && document.pointerLockElement) document.exitPointerLock();
           setPerchOpen((v) => !v);
+          return;
+        }
+        if (atRealm && !atDesk && !atVault && !atWatch && !atPerch && !atDrill && !atSign && !nearStall && !nearBooth && !atGate) {
+          // Only the Great Keep banner is in reach: E opens or closes the verdict on the whole fortress. Without a fortress there is nothing to open.
+          if (!state) return;
+          if (!realmOpen && document.pointerLockElement) document.exitPointerLock();
+          setRealmOpen((v) => !v);
           return;
         }
         if (!atDesk && !atDrill && !atSign && !nearStall && !nearBooth && atGate) {
@@ -553,7 +579,7 @@ export default function Game3DPage() {
     };
     window.addEventListener("keydown", onTalk);
     return () => window.removeEventListener("keydown", onTalk);
-  }, [inTown, whereOpen, townNear, atTownExit, atGate, openBuilding, leaveTown, enterTown, near, talking, atDesk, atVault, vaultOpen, atWatch, watchOpen, atPerch, perchOpen, ravens, atDrill, atSign, nearStall, nearBooth, boothOpen, openBooth, openStore, toggleWhere, drillOpen, deskOpen, room, nearShelf, atDoor, atTable, report, readShelf, nearTower, enterTower, leaveTower, openReport]);
+  }, [inTown, whereOpen, townNear, atTownExit, atGate, openBuilding, leaveTown, enterTown, near, talking, atDesk, atVault, vaultOpen, atWatch, watchOpen, atPerch, perchOpen, ravens, atRealm, realmOpen, state, atDrill, atSign, nearStall, nearBooth, boothOpen, openBooth, openStore, toggleWhere, drillOpen, deskOpen, room, nearShelf, atDoor, atTable, report, readShelf, nearTower, enterTower, leaveTower, openReport]);
 
   useEffect(() => {
     const onPanelKey = (e: KeyboardEvent) => {
@@ -618,6 +644,9 @@ export default function Game3DPage() {
             onNearVault={setAtVault}
             watchStatus={nightWatch?.status ?? null}
             onNearWatch={setAtWatch}
+            weather={state?.siege?.level ?? null}
+            realmLevel={realm ? realm.level : null}
+            onNearRealm={setAtRealm}
             unseenRavens={unseenRavens}
             onNearPerch={setAtPerch}
             drillOpen={drillOpen}
@@ -655,6 +684,8 @@ export default function Game3DPage() {
       {panels.quests && <QuestLog quest={quest} reviews={reviews} demo={world.demo} standing={standingText} wires={standing && !standingFailed ? (standing.wires ?? []) : undefined} onLookAtWire={lookAtWire} onRefreshStanding={refreshStanding} drill={drillQuest} onClose={() => flip("quests")} />}
       {vaultOpen && state && <VaultPanel state={state} onChanged={load} onClose={() => setVaultOpen(false)} />}
       {watchOpen && <WatchPanel onClose={() => setWatchOpen(false)} />}
+      {realmOpen && state && realm && <RealmPanel verdict={realm} count={state.towers.length} weather={state.siege?.level ?? null} onClose={() => setRealmOpen(false)} />}
+      {lampOpen && <MagicLamp openOnMount onClosed={() => setLampOpen(false)} />}
       {perchOpen && ravens && <RavensPanel ravens={ravens} seen={seenRavens} onSeen={onRavensSeen} onClose={() => setPerchOpen(false)} />}
       {deskOpen && (
         // Hidden, not unmounted, while the old books are open: what you typed stays where it is.
@@ -669,6 +700,7 @@ export default function Game3DPage() {
           entries={journal?.entries.length ?? 0}
           due={journal?.reviews_due ?? 0}
           onReadBooks={journalFailed ? undefined : () => setBooksOpen(true)}
+          onRubLamp={() => setLampOpen(true)}
         />
         </div>
       )}
@@ -781,6 +813,12 @@ export default function Game3DPage() {
       {atPerch && !perchOpen && ravens && !talking && !nearTower && !atDesk && !atVault && !atDrill && !atSign && !nearStall && !nearBooth && !room && (
         <p className="pointer-events-none absolute bottom-16 left-1/2 w-max -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-sm text-white">
           {PERCH_PROMPT}
+        </p>
+      )}
+
+      {atRealm && !realmOpen && state && !talking && !nearTower && !atDesk && !atVault && !atDrill && !atSign && !nearStall && !nearBooth && !room && (
+        <p className="pointer-events-none absolute bottom-16 left-1/2 w-max -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-sm text-white">
+          {REALM_PROMPT}
         </p>
       )}
 
