@@ -42,4 +42,15 @@ export const MODELS3D: Partial<Record<ModelId, ModelSpec>> = {
     url: "/models/Rogue.glb",
     hide: ["Knife_Offhand", "1H_Crossbow", "2H_Crossbow", "Knife", "Throwable"],
   },
+  // The scribe (S20): the Mage file again, with the open spellbook in his lap and the wand and staff put away.
+  // Same file as the Oracle, so it costs no extra download.
+  scribe: {
+    url: "/models/Mage.glb",
+    hide: ["Spellbook", "1H_Wand", "2H_Staff"],
+  },
+  // The vault keeper (S20): the Barbarian file again, holding his mug, without axes or shield.
+  keeper: {
+    url: "/models/Barbarian.glb",
+    hide: ["1H_Axe_Offhand", "Barbarian_Round_Shield", "1H_Axe", "2H_Axe"],
+  },
 };

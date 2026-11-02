@@ -21,8 +21,8 @@ describe("fitting a model", () => {
     expect(fitToHeight({ x: 0, y: 0, z: 0 }, { x: 1, y: NaN, z: 1 }, 2).scale).toBe(1);
   });
 
-  it("registers the hero, the Oracle, the Partner and the two townsfolk, weapons hidden", () => {
-    expect(Object.keys(MODELS3D)).toEqual(["hero", "oracle", "partner", "guard", "scout"]);
+  it("registers the hero, the Oracle, the Partner the two townsfolk and the two workers, weapons hidden", () => {
+    expect(Object.keys(MODELS3D)).toEqual(["hero", "oracle", "partner", "guard", "scout", "scribe", "keeper"]);
     expect(MODELS3D.hero?.url).toBe("/models/Rogue_Hooded.glb");
     expect(MODELS3D.hero?.hide).toContain("1H_Crossbow");
     expect(MODELS3D.oracle?.url).toBe("/models/Mage.glb");
