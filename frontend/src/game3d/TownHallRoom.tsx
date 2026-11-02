@@ -18,6 +18,8 @@ import {
   nearestBoard,
 } from "./townHallRoom";
 import type { Board, BoardId, BoardSlot } from "./townHallRoom";
+import { boardHeadline } from "./boardHeadlines";
+import { useBoardHeadlines } from "./useBoardHeadlines";
 
 const PLASTER = "#d8c6a4";
 const FLOOR = "#7a5638";
@@ -26,8 +28,8 @@ const LENGTH_Z = HALL.maxZ - HALL.minZ;
 const MID_Z = (HALL.maxZ + HALL.minZ) / 2;
 const WIDTH_X = HALL.maxX - HALL.minX;
 
-/** One notice board: a frame, a pale face, a title and a line. Words only; no number, no colour that reads as a verdict. */
-function BoardMesh({ board, slot, active }: { board: Board; slot: BoardSlot; active: boolean }) {
+/** One notice board: a frame, a pale face, a title, a line and, when it is known, one headline number from the flat page's own function. No colour that reads as a verdict. */
+function BoardMesh({ board, slot, active, headline }: { board: Board; slot: BoardSlot; active: boolean; headline: string | null }) {
   const { w, h } = BOARD_SIZE;
   return (
     <group position={[slot.x, 0, slot.z]} rotation={[0, slot.yaw, 0]}>
@@ -66,6 +68,7 @@ function BoardMesh({ board, slot, active }: { board: Board; slot: BoardSlot; act
         <div className="rounded bg-black/70 px-3 py-1.5 text-center text-white" style={{ maxWidth: 220 }}>
           <div className="text-sm font-semibold">{board.title}</div>
           <div className="text-xs opacity-80">{board.line}</div>
+          {headline && <div className="tabular mt-1 text-sm font-semibold">{headline}</div>}
         </div>
       </Html>
     </group>
@@ -115,6 +118,7 @@ interface Props {
  */
 export default function TownHallRoom({ pos, onBoard, onDoor }: Props) {
   const [active, setActive] = useState<BoardId | null>(null);
+  const headlines = useBoardHeadlines();
   const doorGap = HALL_DOOR.width / 2;
   const sideLen = (WIDTH_X - HALL_DOOR.width) / 2;
   return (
@@ -183,7 +187,7 @@ export default function TownHallRoom({ pos, onBoard, onDoor }: Props) {
 
       {BOARD_SLOTS.map((slot) => {
         const board = BOARDS.find((b) => b.id === slot.id);
-        return board ? <BoardMesh key={slot.id} board={board} slot={slot} active={active === slot.id} /> : null;
+        return board ? <BoardMesh key={slot.id} board={board} slot={slot} active={active === slot.id} headline={boardHeadline(board.id, headlines)} /> : null;
       })}
 
       <HallWatch pos={pos} onBoard={onBoard} onDoor={onDoor} setActive={setActive} />

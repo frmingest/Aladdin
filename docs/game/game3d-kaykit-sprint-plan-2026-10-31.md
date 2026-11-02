@@ -158,7 +158,7 @@ Order is the recommended order. Sizes are relative (S, M, L), not hours.
 
 ### S18: interiors and the Town Hall rooms (M; needs S15)
 
-**Status (2026-11-02): PR 1 (the Town Hall building and its menu door) written on `feature/game3d-town-hall` ([write-up](game3d-town-hall-2026-11-02.md)); PR 2 (the interior hall with six boards, words only) is written on `feature/game3d-town-hall-interior` ([write-up](game3d-town-hall-interior-2026-11-02.md)); headline numbers on the boards and the Records Hall interior are not started.**
+**Status (2026-11-02): PR 1 (the Town Hall building and its menu door) is merged (#253, [write-up](game3d-town-hall-2026-11-02.md)); PR 2 (the interior hall with six boards) was merged into the door branch just after #253 landed, so it is re-opened against main as #255 ([write-up](game3d-town-hall-interior-2026-11-02.md)); PR 3 (a headline number on four of the six boards, from functions the flat pages share) is written on `feature/game3d-town-hall-numbers`, stacked on #255, not merged ([write-up](game3d-town-hall-numbers-2026-11-02.md)). Numbers for Macro, Thesis monitor and Precious metals, and the Records Hall interior, are not started.**
 
 *For:* rooms you can walk into for the pages that are lists, not pictures.
 - Reuse the library's scene-swap pattern (hero moved through a door). Interiors from **KayKit Dungeon Remastered** (flat-style floors, walls, doorways, stairs, shelves, tables) and Furniture Bits (rugs, lamps, shelves, books).

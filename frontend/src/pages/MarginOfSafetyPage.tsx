@@ -7,6 +7,7 @@ import type { BoardRow, BoardZone, MarginOfSafetyBoard, PriceAssumes } from "../
 import { Button, Card, EmptyState, PageHeader, SnapshotStamp, VerdictBadge } from "../components/ui";
 import { InfoTooltip } from "../components/InfoTooltip";
 import { GLOSSARY } from "../lib/glossary";
+import { rankedCounts } from "../lib/headlines";
 import { shortReason } from "../lib/unrankable";
 import { describePriceAssumes } from "../lib/priceAssumes";
 
@@ -391,7 +392,7 @@ export default function MarginOfSafetyPage() {
           {unavailable.length > 0 && (
             <Card>
               <h2 className="text-sm font-semibold text-ink">
-                Can't be ranked yet ({unavailable.length})
+                Can't be ranked yet ({rankedCounts(board).unavailable})
               </h2>
               <p className="mt-0.5 text-xs text-ink-faint">
                 Usually missing financial history. Open the holding and import from SEC EDGAR or upload

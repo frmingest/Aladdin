@@ -17,6 +17,7 @@ import type { DailyValue, PortfolioPerformance } from "../lib/types";
 import { Button, Card, EmptyState, PageHeader, SectionTitle, SnapshotStamp } from "../components/ui";
 import { InfoTooltip } from "../components/InfoTooltip";
 import { GLOSSARY } from "../lib/glossary";
+import { totalReturnText } from "../lib/headlines";
 
 /** Sprint 13 — daily portfolio value history and a benchmark comparison,
  * from GET /performance/portfolio (backend/app/services/performance/).
@@ -259,7 +260,7 @@ export default function PerformancePage() {
             <div className="mb-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
               <StatTile
                 label="Total return"
-                value={perf.total_return_pct !== null ? formatPct100(perf.total_return_pct, 2) : "—"}
+                value={totalReturnText(perf)}
                 tone={toneFor(perf.total_return_pct)}
                 hint={perf.full_coverage_from ? `since ${formatDate(perf.full_coverage_from)}` : undefined}
               />
