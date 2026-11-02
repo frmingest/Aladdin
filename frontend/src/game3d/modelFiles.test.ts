@@ -30,7 +30,7 @@ describe("the model files the registry points at", () => {
       const bytes = statSync(join(__dirname, "../../public", spec!.url)).size;
       expect(bytes).toBeLessThanOrEqual(1.5 * 1024 * 1024);
       const { clips } = glbHeader(spec!.url);
-      for (const clip of ["Idle", "Walking_A", "Running_A", "Cheer", "Interact", "Spellcasting"]) {
+      for (const clip of ["Idle", "Walking_A", "Running_A", "Cheer", "Interact", "Spellcasting", "Sit_Chair_Idle", "Use_Item"]) {
         expect(clips).toContain(clip);
       }
     });

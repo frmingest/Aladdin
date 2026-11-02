@@ -9,7 +9,11 @@ export interface Motion {
   running: boolean;
 }
 
-export const CLIP = { idle: "Idle", walk: "Walking_A", run: "Running_A", cheer: "Cheer", cast: "Spellcasting" } as const;
+export const CLIP = { idle: "Idle", walk: "Walking_A", run: "Running_A", cheer: "Cheer", cast: "Spellcasting",
+  // In every character file since S20 (2026-11-02), not played yet: a seated scribe, a keeper using an item.
+  sit: "Sit_Chair_Idle",
+  useItem: "Use_Item",
+} as const;
 
 /** The clip we want for this motion. With reduced motion the character holds Idle. */
 export function wantedClip(motion: Motion, reducedMotion: boolean): string {
