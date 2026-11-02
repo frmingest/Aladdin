@@ -3,6 +3,9 @@ import { PAL, Part } from "./Inked";
 import { DESK, DESK_FACING, SHELF, bookSlots } from "./desk";
 
 /** Fixed colours by slot, never by data: the books are told apart by being there, not by colour. */
+/** Warm brass, the family of the Vault coins. Never red or green. */
+const LAMP_BRASS = "#e6b93a";
+
 const BOOK_COLORS = [PAL.teal, PAL.cream, PAL.teal, PAL.cream] as const;
 
 /**
@@ -34,6 +37,16 @@ export default function Desk({ books }: { books: number }) {
         </Part>
         <Part color={PAL.iron} position={[0.6, 1.17, -0.2]} grow={1.2}>
           <cylinderGeometry args={[0.1, 0.12, 0.2, 10]} />
+        </Part>
+        {/* The Magic Lamp: brass, decoration around the Genie panel that already works (open the desk, "Rub the lamp"). */}
+        <Part color={LAMP_BRASS} position={[-0.85, 1.2, -0.15]} scale={[1, 0.62, 0.8]} grow={1.12}>
+          <sphereGeometry args={[0.2, 14, 10]} />
+        </Part>
+        <Part color={LAMP_BRASS} position={[-0.6, 1.26, -0.15]} rotation={[0, 0, -0.9]} grow={1.2}>
+          <cylinderGeometry args={[0.025, 0.05, 0.26, 8]} />
+        </Part>
+        <Part color={LAMP_BRASS} position={[-1.08, 1.27, -0.15]} grow={1.25}>
+          <torusGeometry args={[0.07, 0.022, 6, 10]} />
         </Part>
         {/* Chair, on the courtyard side of the desk. */}
         <Part color={PAL.timber} position={[0, 0.5, 1.15]} grow={1.12}>
