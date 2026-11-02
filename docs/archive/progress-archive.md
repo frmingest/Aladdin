@@ -3,6 +3,10 @@
 Completed milestones and retired status, moved out of `docs/PROGRESS.md` under the rolling-log rules
 in `CLAUDE.md` ("Progress file rules"). Newest snapshot first. Older: [PROGRESS-full-2026-09-30.md](PROGRESS-full-2026-09-30.md).
 
+## Closed 2026-11-02 (late night) — merchants behind the Market Street stands (#262)
+
+- **Merged as #262** (`15b19ed`): Sal (Rogue, `Interact`) and the Hype Booth barker (hooded Rogue, `Cheer`, Idle under reduced motion) stand behind their counters, no new download ([write-up](../game/game3d-merchants-2026-11-02.md)). Not seen in a browser by Claude; deploy not checked.
+
 ## Closed 2026-11-02 (night) — the playtest fix pass (#260) and the scribe and vault keeper (#261)
 
 - **Merged as #260** (`68d2c53`): fixes from the first walk-through (hero load flash, ravens, reader stuck open, Market Street stand, tower signs).
