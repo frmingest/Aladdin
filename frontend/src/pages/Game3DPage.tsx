@@ -5,7 +5,7 @@ import { describeError } from "../lib/errors";
 import type { DocumentSummary, GameState, HoldingAdvisors, Watchlist, Journal, JournalEntryInput, NightWatch, Ravens, Standing, StormDrillInput, StormDrills } from "../lib/types";
 import { loadSeen, markSeen, saveSeen, splitRavens } from "../lib/ravens";
 import { DocumentReader } from "../components/DocumentReader";
-import { latestReport } from "../game3d/libraryReport";
+import { latestReport, markReportOpened } from "../game3d/libraryReport";
 import SceneBoundary from "../game3d/SceneBoundary";
 import TowerPanel from "../game3d/TowerPanel";
 import QuestLog from "../game3d/QuestLog";
@@ -503,6 +503,7 @@ export default function Game3DPage() {
       .then((docs) => {
         const doc = latestReport(docs);
         if (doc) {
+          markReportOpened(doc);
           setReport(doc);
           setTableNote(null);
         } else setTableNote("No report on the table yet.");

@@ -1,4 +1,4 @@
-import { scrollDate } from "../lib/scrolls";
+import { loadOpened, saveOpened, scrollDate, withOpened } from "../lib/scrolls";
 import type { DocumentSummary } from "../lib/types";
 
 const FINANCIAL = new Set(["annual_report", "quarterly_report"]);
@@ -21,4 +21,15 @@ export function latestReport(documents: DocumentSummary[]): DocumentSummary | nu
     }
   }
   return best;
+}
+
+/**
+ * Reading the latest report at the table counts as opening it, same as on the Scrolls page: the same
+ * per-browser flag, so the survey's "report opened" check clears. Opened, not understood.
+ */
+export function markReportOpened(doc: Pick<DocumentSummary, "id">, storage?: Parameters<typeof loadOpened>[0] & Parameters<typeof saveOpened>[1]): void {
+  const opened = storage === undefined ? loadOpened() : loadOpened(storage);
+  const next = withOpened(opened, doc.id);
+  if (storage === undefined) saveOpened(next);
+  else saveOpened(next, storage);
 }
