@@ -110,6 +110,8 @@ interface Props {
   talking?: NpcId | null;
   /** A new number starts the quest-done cheer and confetti, once. */
   cheerKey?: number | null;
+  /** A move between places is under way (S22): the hero stands still. */
+  hold?: boolean;
   /** The Standing level (0 to 4); null when it could not be read. One Standing torch burns per level. */
   standingLevel?: number | null;
   /** Called only when it changes: which tower's door you stand at (null: none). */
@@ -197,6 +199,7 @@ function World({
   near,
   talking,
   cheerKey,
+  hold,
   standingLevel,
   books,
   onNearDesk,
@@ -253,6 +256,7 @@ function World({
   stalls: readonly Stall[];
   talking: NpcId | null;
   cheerKey: number | null;
+  hold: boolean;
   standingLevel: number | null;
   onNearTower: (id: string | null) => void;
   area: AreaRef;
@@ -397,7 +401,7 @@ function World({
         </>
       )}
       <group userData={{ perfGroup: "hero" }}>
-        <Player keys={keys} orbit={orbit} pos={pos} teleport={teleport} cheerKey={cheerKey} />
+        <Player keys={keys} orbit={orbit} pos={pos} teleport={teleport} cheerKey={cheerKey} hold={hold} />
       </group>
     </Physics>
   );
@@ -433,6 +437,7 @@ export default function Scene({
   stalls = NO_STALLS,
   talking = null,
   cheerKey = null,
+  hold = false,
   standingLevel = null,
   onNearTower = noop,
   area = COURTYARD,
@@ -526,6 +531,7 @@ export default function Scene({
           stalls={stalls}
           talking={talking}
           cheerKey={cheerKey}
+          hold={hold}
           standingLevel={standingLevel}
           onNearTower={onNearTower}
           area={area}

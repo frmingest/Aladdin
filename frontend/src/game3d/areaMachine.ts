@@ -1,8 +1,11 @@
 /**
- * Which place you are in (S21). A pure reducer; the page holds it with one useReducer instead of four flags.
+ * Which place you are in, and the step between two places (S21, S22). A pure reducer; the page holds it with one
+ * useReducer and a few timers.
  *
- * `phase` stays "idle" for now. S22 adds the fade, and will use `ready` and `fadeDone` to walk it through
- * fadingOut, loading and fadingIn. The actions exist already so the page is wired once.
+ * A move walks four phases: `fadingOut` (the screen darkens, you stay where you are) → `loading` (you are in the new
+ * place, the screen is dark, the floor is made) → `fadingIn` (the screen clears, the name plate shows) → `idle`.
+ * While the phase is not `idle` nothing else can start a move, so two quick presses never stack. With reduced motion
+ * a move is a cut: `instant` skips every phase.
  */
 import { AREAS, parentOf, sameArea } from "./areas";
 import type { AreaRef } from "./areas";
@@ -14,11 +17,27 @@ export interface AreaState {
   /** The place you just came from (null at the start). */
   from: AreaRef | null;
   phase: AreaPhase;
+  /** Where the fade is taking you; only set while `fadingOut`. */
+  next: AreaRef | null;
+  /** True after a move that failed to load and sent you back; cleared by the next move. */
+  failed: boolean;
 }
 
-export type AreaAction = { type: "enter"; ref: AreaRef } | { type: "leave" } | { type: "ready" } | { type: "fadeDone" };
+export type AreaAction =
+  | { type: "enter"; ref: AreaRef; instant?: boolean }
+  | { type: "leave"; instant?: boolean }
+  | { type: "fadeDone" }
+  | { type: "ready" }
+  | { type: "fail" };
 
-export const INITIAL_AREA: AreaState = { current: { id: "courtyard" }, from: null, phase: "idle" };
+export const INITIAL_AREA: AreaState = { current: { id: "courtyard" }, from: null, phase: "idle", next: null, failed: false };
+
+function begin(state: AreaState, target: AreaRef, instant: boolean): AreaState {
+  // One move at a time. A cut (reduced motion, or putting you back after a lost tower) always goes through.
+  if (state.phase !== "idle" && !instant) return state;
+  if (instant) return { current: target, from: state.current, phase: "idle", next: null, failed: false };
+  return { ...state, phase: "fadingOut", next: target, failed: false };
+}
 
 export function areaReducer(state: AreaState, action: AreaAction): AreaState {
   switch (action.type) {
@@ -28,16 +47,25 @@ export function areaReducer(state: AreaState, action: AreaAction): AreaState {
       const ref = action.ref.id === "library" && !action.ref.holdingId ? INITIAL_AREA.current : action.ref;
       if (!(ref.id in AREAS)) return state;
       if (sameArea(state.current, ref)) return state;
-      return { current: ref, from: state.current, phase: "idle" };
+      return begin(state, ref, action.instant === true);
     }
     case "leave": {
       const parent = parentOf(state.current);
       if (!parent) return state;
-      return { current: parent, from: state.current, phase: "idle" };
+      return begin(state, parent, action.instant === true);
     }
-    case "ready":
     case "fadeDone":
-      // Nothing to wait for yet: S22 moves the phase here.
+      if (state.phase === "fadingOut" && state.next) return { ...state, current: state.next, from: state.current, phase: "loading", next: null };
+      if (state.phase === "fadingIn") return { ...state, phase: "idle" };
       return state;
+    case "ready":
+      return state.phase === "loading" ? { ...state, phase: "fadingIn" } : state;
+    case "fail":
+      // The new place never appeared: go back to where you were.
+      if (state.phase !== "loading") return state;
+      return { current: state.from ?? INITIAL_AREA.current, from: state.current, phase: "fadingIn", next: null, failed: true };
   }
 }
+
+/** Where the hero must not move or press E: any time a move is under way. */
+export const isMoving = (s: AreaState): boolean => s.phase !== "idle";

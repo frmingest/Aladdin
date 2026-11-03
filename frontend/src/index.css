@@ -1025,3 +1025,12 @@
 .g3d-field:focus { outline: none; box-shadow: inset 0 0 0 2px #f2d27a; }
 .g3d-field:disabled { opacity: 0.55; }
 .g3d-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* Between two places in /game3d (S22): the veil and the name plate. Reduced motion = a cut, not a fade. */
+.g3d-veil { position: absolute; inset: 0; z-index: 45; pointer-events: none; background: #0b0805; box-shadow: inset 0 0 0 2px #a07b3a, inset 0 0 60px 6px rgb(0 0 0 / 0.6); transition-property: opacity; transition-timing-function: ease-in-out; }
+.g3d-plate { padding: 0.4rem 1.1rem; border-radius: 8px; font-family: "Space Grotesk", Inter, system-ui, sans-serif; font-size: 1rem; font-weight: 700; letter-spacing: 0.02em; color: #2a1d0c; background: linear-gradient(180deg, #f6e3ae, #d9b866); box-shadow: inset 0 0 0 1px #000, inset 0 0 0 2px #a07b3a, 0 8px 20px -8px rgb(0 0 0 / 0.9); animation: g3d-plate-in 300ms ease-out; }
+@keyframes g3d-plate-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .g3d-veil { transition-duration: 0ms !important; }
+  .g3d-plate { animation: none; }
+}

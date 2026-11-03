@@ -43,6 +43,8 @@ interface Props {
   teleport?: Teleport | null;
   /** A new number starts one short cheer. */
   cheerKey?: number | null;
+  /** Stand still (a move between places is under way). */
+  hold?: boolean;
 }
 
 export interface Teleport {
@@ -57,7 +59,7 @@ export interface Teleport {
  * The hero: a Rapier capsule driven by WASD, with a solid figure from simple shapes (a
  * rigged model can replace it later). Camera follows behind and above.
  */
-export default function Player({ keys, orbit, pos: posOut, teleport = null, cheerKey = null }: Props) {
+export default function Player({ keys, orbit, pos: posOut, teleport = null, cheerKey = null, hold = false }: Props) {
   const body = useRef<RapierRigidBody>(null);
   const model = useRef<THREE.Group>(null);
   const facing = useRef(0);
@@ -66,6 +68,8 @@ export default function Player({ keys, orbit, pos: posOut, teleport = null, chee
   // After a door the hero hovers until the scene has settled: the first frames of a new room hitch (shaders,
   // models), and one long physics step drops a falling hero straight through the floor.
   const hover = useRef<{ frames: number; until: number } | null>(null);
+  const holdRef = useRef(hold);
+  holdRef.current = hold;
   // Where to put the hero back if it ever falls out of the world.
   const home = useRef<{ x: number; z: number }>({ x: SPAWN.x, z: SPAWN.z });
 
@@ -98,6 +102,11 @@ export default function Player({ keys, orbit, pos: posOut, teleport = null, chee
     // Hovering after a door: no gravity, no walking, until a few calm frames have passed.
     const h = hover.current;
     let frozen = false;
+    if (holdRef.current) {
+      // A move between places: stand still until the new floor is there and the screen has cleared.
+      frozen = true;
+      rb.setLinvel({ x: 0, y: rb.linvel().y, z: 0 }, true);
+    }
     if (h) {
       if (delta < 0.05) h.frames -= 1;
       if (h.frames <= 0 || performance.now() > h.until) {

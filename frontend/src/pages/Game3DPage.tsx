@@ -36,7 +36,11 @@ import type { CouncilInput, ShelfId } from "../game3d/libraryShelves";
 import type { RoomView } from "../game3d/Scene";
 import { COURTYARD } from "../game3d/areas";
 import type { AreaRef } from "../game3d/areas";
-import { INITIAL_AREA, areaReducer } from "../game3d/areaMachine";
+import AreaFade from "../game3d/AreaFade";
+import { INITIAL_AREA, areaReducer, isMoving } from "../game3d/areaMachine";
+import type { AreaAction, AreaState } from "../game3d/areaMachine";
+import { AREA_STUCK, areaLine, areaName } from "../game3d/areaWordsV1";
+import { prefersReducedMotion } from "../game3d/motionPref";
 import { standingAt } from "../game3d/near";
 import type { Nears } from "../game3d/near";
 import { deskBlock } from "../game3d/deskForm";
@@ -85,6 +89,12 @@ function Unavailable() {
       </Link>
     </div>
   );
+}
+
+/** A move is a cut, not a fade, for people who asked their system for less motion (S22). An explicit `instant` wins. */
+function areaReducerWithMotion(state: AreaState, action: AreaAction): AreaState {
+  if (action.type === "enter" || action.type === "leave") return areaReducer(state, { ...action, instant: action.instant ?? prefersReducedMotion() });
+  return areaReducer(state, action);
 }
 
 /**
@@ -152,7 +162,7 @@ export default function Game3DPage() {
   // The tower library: which door you stand at, which tower you are inside, and what you stand at in there.
   const [nearTower, setNearTower] = useState<string | null>(null);
   // Which place you are in: one value, not four flags. A tower's library is `library` with the holding's id.
-  const [areaState, dispatchArea] = useReducer(areaReducer, INITIAL_AREA);
+  const [areaState, dispatchArea] = useReducer(areaReducerWithMotion, INITIAL_AREA);
   const room = areaState.current.id === "library" ? areaState.current.holdingId : null;
   // The Town beyond the gate: whether you are in it, and which door or the gate road you stand at.
   const [atGate, setAtGate] = useState(false);
@@ -267,7 +277,6 @@ export default function Game3DPage() {
   );
 
   useEffect(() => {
-    document.title = "3D courtyard · Aladdin";
     if (supported) load();
   }, [supported, load]);
 
@@ -328,13 +337,58 @@ export default function Game3DPage() {
   }, [room, state, shownWorld, councilInput]);
   // A fresh load that drops the tower (or the state) puts you back outside rather than in an empty room.
   useEffect(() => {
-    if (room && !roomView) dispatchArea({ type: "enter", ref: COURTYARD });
+    if (room && !roomView) dispatchArea({ type: "enter", ref: COURTYARD, instant: true });
   }, [room, roomView]);
   // The place the scene draws: a library whose tower is gone is not a place, so it reads as the courtyard.
   const area: AreaRef = areaState.current.id === "library" && !roomView ? COURTYARD : areaState.current;
   const inTown = area.id === "town";
   const inHall = area.id === "townhall";
   const inRecords = area.id === "records";
+
+  // The place's name in the tab title (S22).
+  const placeName = areaName(area, roomView?.name);
+  useEffect(() => {
+    document.title = `${placeName} · Aladdin`;
+  }, [placeName]);
+
+  // A move between places (S22): fade out, arrive in the dark, wait for the floor, fade in. The hero stands still throughout.
+  const movePhase = areaState.phase;
+  useEffect(() => {
+    if (movePhase === "fadingOut" || movePhase === "fadingIn") {
+      const t = setTimeout(() => dispatchArea({ type: "fadeDone" }), movePhase === "fadingOut" ? 350 : 450);
+      return () => clearTimeout(t);
+    }
+    if (movePhase === "loading") {
+      // The scene moves the hero the moment the place changes; two frames later its floor exists.
+      let second = 0;
+      const first = requestAnimationFrame(() => {
+        second = requestAnimationFrame(() => dispatchArea({ type: "ready" }));
+      });
+      // If it never does, go back to where you were.
+      const giveUp = setTimeout(() => dispatchArea({ type: "fail" }), 3000);
+      return () => {
+        cancelAnimationFrame(first);
+        cancelAnimationFrame(second);
+        clearTimeout(giveUp);
+      };
+    }
+  }, [movePhase]);
+
+  // The name plate: on arrival (after the fade, or straight away with reduced motion), for a couple of seconds.
+  const [plate, setPlate] = useState<string | null>(null);
+  const plateFor = useRef("");
+  useEffect(() => {
+    if (!areaState.from || (movePhase !== "fadingIn" && movePhase !== "idle")) return;
+    const key = `${areaState.current.id}:${"holdingId" in areaState.current ? areaState.current.holdingId : ""}:${areaState.failed}`;
+    if (plateFor.current === key) return;
+    plateFor.current = key;
+    setPlate(areaState.failed ? AREA_STUCK : areaLine(areaState.current, roomView?.name));
+  }, [areaState, movePhase, roomView]);
+  useEffect(() => {
+    if (!plate) return;
+    const t = setTimeout(() => setPlate(null), 2200);
+    return () => clearTimeout(t);
+  }, [plate]);
 
   // Opening the menu frees the mouse so the buttons can be clicked; shutting it never leaves a page open.
   const toggleWhere = useCallback(() => {
@@ -598,6 +652,8 @@ export default function Game3DPage() {
       const el = e.target as HTMLElement | null;
       if (typingInField(el)) return;
       if (boothOpen || lampOpen) return;
+      // Mid-move (S22): no second door while the screen is dark.
+      if (isMoving(areaState)) return;
       const at = atSpot;
       switch (area.id) {
         case "records":
@@ -690,7 +746,7 @@ export default function Game3DPage() {
     };
     window.addEventListener("keydown", onTalk);
     return () => window.removeEventListener("keydown", onTalk);
-  }, [area, atSpot, whereOpen, openShelves, leaveRecords, openBoard, leaveHall, openBuilding, leaveTown, enterTown, talking, vaultOpen, watchOpen, perchOpen, ravens, realmOpen, lampOpen, state, boothOpen, openBooth, openStore, toggleWhere, drillOpen, deskOpen, room, report, readShelf, enterTower, leaveTower, openReport]);
+  }, [area, areaState, atSpot, whereOpen, openShelves, leaveRecords, openBoard, leaveHall, openBuilding, leaveTown, enterTown, talking, vaultOpen, watchOpen, perchOpen, ravens, realmOpen, lampOpen, state, boothOpen, openBooth, openStore, toggleWhere, drillOpen, deskOpen, room, report, readShelf, enterTower, leaveTower, openReport]);
 
   useEffect(() => {
     const onPanelKey = (e: KeyboardEvent) => {
@@ -828,6 +884,7 @@ export default function Game3DPage() {
             stalls={street.stalls}
             talking={talking}
             cheerKey={cheerKey}
+            hold={isMoving(areaState)}
             onNearTower={setNearTower}
             area={area}
             room={roomView}
@@ -845,6 +902,8 @@ export default function Game3DPage() {
           />
         </Suspense>
       </SceneBoundary>
+
+      <AreaFade phase={movePhase} plate={plate} />
 
       <Toolbar
         open={panels}
