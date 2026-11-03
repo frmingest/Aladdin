@@ -2,7 +2,7 @@ import { Suspense, lazy, useCallback, useEffect, useMemo, useReducer, useRef, us
 import { Link } from "react-router-dom";
 import { api } from "../lib/api";
 import { describeError } from "../lib/errors";
-import type { DocumentSummary, GameState, HoldingAdvisors, Watchlist, Journal, JournalEntryInput, NightWatch, Ravens, Standing, StormDrillInput, StormDrills } from "../lib/types";
+import type { DecisionRecord, DocumentSummary, GameState, HoldingAdvisors, Watchlist, Journal, JournalEntryInput, NightWatch, Ravens, Standing, StormDrillInput, StormDrills } from "../lib/types";
 import { loadSeen, markSeen, saveSeen, splitRavens } from "../lib/ravens";
 import { DocumentReader } from "../components/DocumentReader";
 import { latestReport, markReportOpened } from "../game3d/libraryReport";
@@ -31,7 +31,11 @@ import { PLAIN_VIEW, PLAIN_VIEW_TITLE, SIGN_PROMPT } from "../game3d/worldWordsV
 import { drillBlock, stormDrillQuest } from "../game3d/stormDrill";
 import { DRILL_PROMPT } from "../game3d/stormDrillWordsV1";
 import ShelfPanel from "../game3d/ShelfPanel";
-import { gateStoneFor, landRadius, workplaceCondition } from "../game3d/holdingLand";
+import { gateStoneFor, landRadius, lanternsFor, workplaceCondition } from "../game3d/holdingLand";
+import { LANTERN_WORDS } from "../game3d/landLanternWordsV1";
+import { loadOpened } from "../lib/scrolls";
+import { surveyTower } from "../lib/survey";
+import type { SurveyCheckId } from "../lib/survey";
 import { LAND_WORDS } from "../game3d/holdingLandWordsV1";
 import { shelvesFor } from "../game3d/libraryShelves";
 import type { CouncilInput, ShelfId } from "../game3d/libraryShelves";
@@ -345,6 +349,24 @@ export default function Game3DPage() {
   }, [room, isSample]);
   const councilInput: CouncilInput = isSample ? "sample" : council && council.holdingId === room ? council.data : null;
 
+  // The survey lanterns (fog of war): the same four checks as the flat Cartographer's table, read for the one holding
+  // you walked into. Until the report list and the decision records have answered (or failed), the lanterns stay hooded.
+  const [landSurvey, setLandSurvey] = useState<{ holdingId: string; docs: DocumentSummary[] | null; records: DecisionRecord[] | null } | null>(null);
+  const [openedTick, setOpenedTick] = useState(0);
+  useEffect(() => {
+    if (!room || isSample) return;
+    let live = true;
+    void Promise.all([
+      api.listDocuments(room).catch(() => null),
+      api.getRecords().then((r) => r.records).catch(() => null),
+    ]).then(([docs, records]) => live && setLandSurvey({ holdingId: room, docs, records }));
+    return () => {
+      live = false;
+    };
+  }, [room, isSample]);
+  const [atLantern, setAtLantern] = useState<SurveyCheckId | null>(null);
+  const [lanternOpen, setLanternOpen] = useState<SurveyCheckId | null>(null);
+
   // The land you are in: the stored row for that holding, turned into a gate stone and seven shelves. Nothing is stored here.
   const roomView = useMemo<RoomView | null>(() => {
     if (!room || !state) return null;
@@ -360,8 +382,17 @@ export default function Game3DPage() {
       gate: gateStoneFor(tower, surveyed),
       radius: landRadius(tower.size_class),
       shelves: shelvesFor(tower, councilInput),
+      lanterns: lanternsFor(
+        isSample
+          ? surveyTower(tower, { state, records: null, documents: {}, opened: new Set() })
+          : landSurvey && landSurvey.holdingId === room
+            ? surveyTower(tower, { state, records: landSurvey.records, documents: { [room]: landSurvey.docs }, opened: loadOpened() })
+            : null,
+      ),
     };
-  }, [room, state, shownWorld, councilInput]);
+    // `openedTick` makes the "report opened" lantern re-read the opened list after you read the report.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [room, state, shownWorld, councilInput, landSurvey, isSample, openedTick]);
   // A fresh load that drops the tower (or the state) puts you back outside rather than in an empty room.
   useEffect(() => {
     if (room && !roomView) dispatchArea({ type: "enter", ref: COURTYARD, instant: true });
@@ -583,6 +614,8 @@ export default function Game3DPage() {
     setNearShelf(null);
     setAtLandGate(false);
     setAtTable(false);
+    setAtLantern(null);
+    setLanternOpen(null);
     setReport(null);
     setTableNote(null);
     setReadShelf(null);
@@ -593,6 +626,8 @@ export default function Game3DPage() {
     setNearShelf(null);
     setAtLandGate(false);
     setAtTable(false);
+    setAtLantern(null);
+    setLanternOpen(null);
     setReport(null);
     setTableNote(null);
     dispatchArea({ type: "leave" });
@@ -607,6 +642,7 @@ export default function Game3DPage() {
         const doc = latestReport(docs);
         if (doc) {
           markReportOpened(doc);
+          setOpenedTick((n) => n + 1);
           setReport(doc);
           setTableNote(null);
         } else setTableNote("No report on the table yet.");
@@ -618,6 +654,11 @@ export default function Game3DPage() {
   useEffect(() => {
     if (readShelf && nearShelf !== readShelf) setReadShelf(null);
   }, [nearShelf, readShelf]);
+
+  // Walking away from a lantern puts its plate away.
+  useEffect(() => {
+    if (lanternOpen && atLantern !== lanternOpen) setLanternOpen(null);
+  }, [atLantern, lanternOpen]);
 
   // Walking away from the table puts its note away.
   useEffect(() => {
@@ -675,6 +716,7 @@ export default function Game3DPage() {
       realm: atRealm,
       shelf: nearShelf,
       table: atTable,
+      lantern: atLantern,
       landGate: atLandGate,
       building: townNear,
       townExit: atTownExit,
@@ -683,7 +725,7 @@ export default function Game3DPage() {
       shelves: atShelves,
       archiveDoor: atArchiveDoor,
     }),
-    [near, nearTower, atDesk, atDrill, atSign, nearBooth, nearStall, atGate, atVault, atWatch, atPerch, atRealm, nearShelf, atTable, atLandGate, townNear, atTownExit, nearBoard, atHallDoor, atShelves, atArchiveDoor],
+    [near, nearTower, atDesk, atDrill, atSign, nearBooth, nearStall, atGate, atVault, atWatch, atPerch, atRealm, nearShelf, atTable, atLantern, atLandGate, townNear, atTownExit, nearBoard, atHallDoor, atShelves, atArchiveDoor],
   );
   const atSpot = useMemo(() => standingAt(area, nears), [area, nears]);
 
@@ -723,7 +765,10 @@ export default function Game3DPage() {
           if (report || at.kind === "none" || !room) return;
           e.preventDefault();
           if (at.kind === "table") openReport(room);
-          else if (at.kind === "shelf") {
+          else if (at.kind === "lantern") {
+            const c = at.check;
+            setLanternOpen((v) => (v === c ? null : c));
+          } else if (at.kind === "shelf") {
             if (readShelf !== at.id && document.pointerLockElement) document.exitPointerLock();
             setReadShelf((v) => (v === at.id ? null : at.id));
           } else leaveTower();
@@ -893,6 +938,11 @@ export default function Game3DPage() {
     case "shelf":
       if (!readShelf) spotPrompt = `Press E to read ${roomView?.shelves.find((s) => s.id === atSpot.id)?.title ?? "the shelf"}`;
       break;
+    case "lantern": {
+      const lan = roomView?.lanterns.find((l) => l.check === atSpot.check);
+      if (lan) spotPrompt = lanternOpen === lan.check ? LANTERN_WORDS.plate(lan.label, lan.reason) : LANTERN_WORDS.prompt(lan.label);
+      break;
+    }
     case "table":
       if (!report) spotPrompt = tableNote ?? "Press E to open the latest report";
       break;
@@ -973,6 +1023,7 @@ export default function Game3DPage() {
             room={roomView}
             onNearShelf={setNearShelf}
             onNearTable={setAtTable}
+            onNearLantern={setAtLantern}
             onNearLandGate={setAtLandGate}
             onNearGate={setAtGate}
             townNear={townNear}

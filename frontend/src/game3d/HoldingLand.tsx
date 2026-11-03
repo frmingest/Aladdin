@@ -6,6 +6,7 @@ import { Html } from "@react-three/drei";
 import { DoubleSide } from "three";
 import { PAL, Part } from "./Inked";
 import { Bay } from "./LibraryBay";
+import LanternPost from "./LanternPost";
 import StaticBatch from "./StaticBatch";
 import {
   BAY_SCALE,
@@ -21,8 +22,10 @@ import {
   TABLE_LEAVE_RANGE,
   TABLE_RANGE,
   nearLandTable,
+  nearestLantern,
 } from "./holdingLand";
-import type { GateStone } from "./holdingLand";
+import type { GateStone, Lantern } from "./holdingLand";
+import type { SurveyCheckId } from "../lib/survey";
 import { LAND_WORDS } from "./holdingLandWordsV1";
 import { nearestShelf } from "./libraryRoom";
 import type { Shelf, ShelfId } from "./libraryShelves";
@@ -67,14 +70,19 @@ function LandWatch({
   onShelf,
   onGate,
   onTable,
+  lanterns,
+  onLantern,
   setActive,
 }: {
   pos: MutableRefObject<{ x: number; z: number }>;
   onShelf: (id: ShelfId | null) => void;
   onGate: (near: boolean) => void;
   onTable: (near: boolean) => void;
+  lanterns: readonly Lantern[];
+  onLantern: (check: SurveyCheckId | null) => void;
   setActive: (id: ShelfId | null) => void;
 }) {
+  const lastLantern = useRef<SurveyCheckId | null>(null);
   const lastShelf = useRef<ShelfId | null>(null);
   const lastGate = useRef(false);
   const lastTable = useRef(false);
@@ -90,6 +98,11 @@ function LandWatch({
     if (g !== lastGate.current) {
       lastGate.current = g;
       onGate(g);
+    }
+    const l = nearestLantern(pos.current, lanterns, lastLantern.current);
+    if (l !== lastLantern.current) {
+      lastLantern.current = l;
+      onLantern(l);
     }
     const t = nearLandTable(pos.current, lastTable.current ? TABLE_LEAVE_RANGE : TABLE_RANGE);
     if (t !== lastTable.current) {
@@ -113,16 +126,20 @@ interface Props {
   onShelf: (id: ShelfId | null) => void;
   onGate: (near: boolean) => void;
   onTable: (near: boolean) => void;
+  /** The four survey lanterns (fog of war), from the survey; a survey not read yet gives four hooded lanterns. */
+  lanterns: readonly Lantern[];
+  onLantern: (check: SurveyCheckId | null) => void;
 }
 
 /**
  * A holding's own land (S25 PR 1, plain version). Every holding gets the same layout: a gate you arrive through, a
  * gate stone with the name, weight and value, and the records house with the seven shelves and the reading table.
  * Only the size of the ground follows the size class. Nothing here reads a verdict, and nothing is red or green.
- * The middle of the land stays bare until the survey lanterns and the holding's own tower arrive (PR 2, PR 3).
+ * The four survey lanterns stand in an arc across the land (PR 2); the holding's own tower comes in PR 3.
  */
-export default function HoldingLand({ ticker, gap = null, gate, radius, shelves, pos, onShelf, onGate, onTable }: Props) {
+export default function HoldingLand({ ticker, gap = null, gate, radius, shelves, pos, onShelf, onGate, onTable, lanterns, onLantern }: Props) {
   const [active, setActive] = useState<ShelfId | null>(null);
+  const [activeLantern, setActiveLantern] = useState<SurveyCheckId | null>(null);
   const byId = new Map(shelves.map((s) => [s.id, s]));
   const { x: hx0, z: hz0, hx, hz } = RECORDS_HOUSE;
   const west = hx0 - hx;
@@ -254,7 +271,23 @@ export default function HoldingLand({ ticker, gap = null, gate, radius, shelves,
         return shelf ? <Bay key={slot.id} shelf={shelf} x={slot.x} z={slot.z} yaw={slot.yaw} active={active === slot.id} scale={BAY_SCALE} /> : null;
       })}
 
-      <LandWatch pos={pos} onShelf={onShelf} onGate={onGate} onTable={onTable} setActive={setActive} />
+      {/* The survey lanterns carry facts, so they sit outside the batch of still pieces. */}
+      {lanterns.map((l) => (
+        <LanternPost key={l.check} lantern={l} active={activeLantern === l.check} />
+      ))}
+
+      <LandWatch
+        pos={pos}
+        onShelf={onShelf}
+        onGate={onGate}
+        onTable={onTable}
+        lanterns={lanterns}
+        onLantern={(c) => {
+          setActiveLantern(c);
+          onLantern(c);
+        }}
+        setActive={setActive}
+      />
     </group>
   );
 }
