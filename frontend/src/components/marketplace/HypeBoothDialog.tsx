@@ -65,6 +65,8 @@ export default function HypeBoothDialog({
   const [notes, setNotes] = useState<string[]>([]);
   const [summary, setSummary] = useState<CaptureSummary | null>(null);
   const [noteSaved, setNoteSaved] = useState(false);
+  /** The tip-note save failed. Shown beside the button that asked for it (it used to be set where no phase showed it). */
+  const [noteError, setNoteError] = useState<string | null>(null);
   const [seed] = useState(() => Math.floor(Math.random() * 1000));
   const mounted = useRef(true);
 
@@ -131,11 +133,12 @@ export default function HypeBoothDialog({
   async function saveNote() {
     const entry = rows.find((r) => r.holding_id === holdingId) ?? data?.row;
     if (!entry) return;
+    setNoteError(null);
     try {
       await api.updateWatchlistEntry(entry.id, { notes: withHeardNote(entry.notes, heardNote(heard, detail, today())) });
       if (mounted.current) setNoteSaved(true);
     } catch (err) {
-      if (mounted.current) setNotes((n) => [...n, `Could not save the tip note: ${errMsg(err, "failed")}`]);
+      if (mounted.current) setNoteError(`Couldn't save the tip note. Try again. (${errMsg(err, "no answer")})`);
     }
   }
 
@@ -217,6 +220,7 @@ export default function HypeBoothDialog({
     setSummary(null);
     setNotes([]);
     setNoteSaved(false);
+    setNoteError(null);
     setPhase("form");
   }
 
@@ -398,6 +402,7 @@ export default function HypeBoothDialog({
                       Keep the tip note
                     </button>
                   )}
+                  {noteError && !noteSaved && <span className="self-center text-xs text-[#f2c98a]" role="alert">{noteError}</span>}
                   {noteSaved && <span className="self-center text-xs text-[#7fe0a0]">Tip note saved on the watchlist entry.</span>}
                   <button type="button" className="sal-btn-ghost" onClick={another}>
                     Another tip

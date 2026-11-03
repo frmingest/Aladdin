@@ -1,5 +1,6 @@
 import type { Shelf, ShelfTone } from "./libraryShelves";
 import { SHELF_MARK, shelfMark } from "./libraryShelves";
+import { SHELF_STATE_WORDS as STATE_WORDS } from "./shelfSignsV2";
 
 interface Props {
   name: string;
@@ -9,14 +10,13 @@ interface Props {
   onClose: () => void;
 }
 
-const STATE_WORDS = { known: "", unknown: "Not surveyed", na: "Doesn't apply" } as const;
 
 function Mark({ tone, mark }: { tone: ShelfTone; mark?: string }) {
   return <span aria-hidden="true">{mark ?? SHELF_MARK[tone]} </span>;
 }
 
 /**
- * The facts of one shelf, in words (the plain view of what you stand at). Unknown stays "Not surveyed".
+ * The facts of one shelf, in words (the plain view of what you stand at). Unknown stays "In fog".
  */
 export default function ShelfPanel({ name, shelf: s, demo, onClose }: Props) {
   return (

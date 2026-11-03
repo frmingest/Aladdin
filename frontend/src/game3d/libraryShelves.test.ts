@@ -31,7 +31,7 @@ describe("tower library shelves", () => {
     const s = shelvesFor(tower());
     const text = (id: ShelfId) => by(s, id).lines.map((l) => l.text).join(" | ");
     expect(text("walls")).toContain("Granite walls");
-    expect(text("walls")).toContain("net debt / EBITDA: 1.40×");
+    expect(text("walls")).toContain("Debt vs yearly profit: 1.40 times");
     expect(text("walls")).toContain("Low debt, steady cash.");
     expect(text("land")).toContain("18.3%");
     // The stored analyst rating is never shown in 3D (the game never says buy or sell), whatever it says.
@@ -66,7 +66,7 @@ describe("tower library shelves", () => {
       expect(s.state).toBe("unknown");
       expect(s.books).toBe(0);
       expect(s.tone).toBe("fog");
-      expect(describeShelf(s)).toContain("not surveyed");
+      expect(describeShelf(s)).toContain("in fog");
     }
     expect(SHELF_MARK.fog).toBe("?");
   });
@@ -133,7 +133,7 @@ describe("the Council's words shelf (the seventh)", () => {
 
   it("shows each advisor line in the advisor's name and the stored words, then the disclaimer", () => {
     const s = councilShelf(advisors([{ advisor: "partner", tone: "warning", text: "A tripwire is lit.", facts: ["1 tripwire fired", "Alpha"] }]));
-    expect(s.title).toBe("The Council's words");
+    expect(s.title).toBe("The Council");
     expect(s.lines[0]).toEqual({ label: "The Partner", text: "A tripwire is lit.", tone: "warn" });
     expect(s.lines[1]).toEqual({ label: "Why", text: "1 tripwire fired · Alpha" });
     expect(s.lines[s.lines.length - 1].text).toBe("Hand-written lines chosen by fixed rules. Not advice.");
@@ -160,8 +160,8 @@ describe("the Council's words shelf (the seventh)", () => {
       expect(s.tone).toBe("fog");
       expect(s.books).toBe(0);
     }
-    expect(councilShelf(null).lines[0].text).toContain("not answered yet");
-    expect(councilShelf("failed").lines[0].text).toContain("could not be reached");
+    expect(councilShelf(null).lines[0].text).toContain("still thinking");
+    expect(councilShelf("failed").lines[0].text).toContain("Can't reach the Council");
     expect(councilShelf("sample").lines[0].text).toContain("sample fortress");
   });
 

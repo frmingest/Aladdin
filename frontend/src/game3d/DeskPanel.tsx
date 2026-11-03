@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import type { JournalEntryInput } from "../lib/types";
-import { describeError } from "../lib/errors";
+import { saveErrorDetail } from "./saveError";
 import { DESK_BLOCK_WORDS, deskInput, deskReady } from "./deskForm";
 import type { DeskBlock } from "./deskForm";
 import { DESK_READ_BOOKS, deskDueLine } from "./journalWordsV1";
@@ -78,7 +78,7 @@ export default function DeskPanel({
       if (next) setHoldingId(next.holdingId);
     } catch (e) {
       // Keep what was typed so nothing is lost.
-      setError(describeError(e, "your journal").message);
+      setError(saveErrorDetail(e) || SAVE_FAILED);
     } finally {
       setSaving(false);
     }

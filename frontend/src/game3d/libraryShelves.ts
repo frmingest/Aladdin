@@ -12,18 +12,26 @@
 import type { GameAdvisorTone, GameTower, HoldingAdvisors } from "../lib/types";
 import {
   ADVISOR_NAME,
-  EXPOSURE_LABEL,
-  FRESHNESS_LABEL,
-  LAND_LABEL,
   MOAT_LABEL,
   SIZE_LABEL,
   STRUCTURE_LABEL,
-  THESIS_LABEL,
   WALL_LABEL,
-  describeSiegeExposure,
+  formatShock,
   formatWallInput,
   knifeEdgeSummary,
 } from "../lib/fortress";
+import {
+  COUNCIL_WORDS,
+  FOG_LINE,
+  FRESH_WORDS,
+  LAND_WORDS,
+  NA_LINE,
+  SHELF_SIGN,
+  STORM_WORDS,
+  WHY_WORDS,
+  describeShelfWords,
+  wallInputLine,
+} from "./shelfSignsV2";
 import { WALL_LOOK } from "./stateToWorld";
 
 export const MAX_SHELF_BOOKS = 8;
@@ -102,24 +110,24 @@ function pct1(value: string | null): string | null {
 
 function walls(t: GameTower): Shelf {
   const asks = "Can it take a hit?";
-  if (t.wall === "unsurveyed") return unknown("walls", "The Walls", asks, [{ label: "", text: WALL_LABEL.unsurveyed, tone: "fog" }]);
-  if (t.wall === "not_applicable") return notApplicable("walls", "The Walls", asks, [{ label: "", text: WALL_LABEL.not_applicable }]);
+  if (t.wall === "unsurveyed") return unknown("walls", SHELF_SIGN.walls, asks, [{ label: "", text: FOG_LINE.walls, tone: "fog" }]);
+  if (t.wall === "not_applicable") return notApplicable("walls", SHELF_SIGN.walls, asks, [{ label: "", text: NA_LINE.walls }]);
   const integrity = WALL_LOOK[t.wall].integrity ?? 0;
   const lines: ShelfLine[] = [{ label: "Walls", text: WALL_LABEL[t.wall], tone: WALL_TONE[t.wall] }];
   if (t.wall_reason) lines.push({ label: "Why", text: t.wall_reason });
-  for (const [k, v] of Object.entries(t.wall_inputs ?? {})) lines.push({ label: "", text: formatWallInput(k, v) });
+  for (const [k, v] of Object.entries(t.wall_inputs ?? {})) lines.push({ label: "", text: wallInputLine(k, v, formatWallInput(k, v)) });
   const edge = knifeEdgeSummary(t);
   if (edge) lines.push({ label: "Close to the line", text: edge, tone: "warn" });
-  return known({ id: "walls", title: "The Walls", asks, tone: WALL_TONE[t.wall] ?? "", books: Math.max(1, Math.round(integrity * MAX_SHELF_BOOKS)), lines });
+  return known({ id: "walls", title: SHELF_SIGN.walls, asks, tone: WALL_TONE[t.wall] ?? "", books: Math.max(1, Math.round(integrity * MAX_SHELF_BOOKS)), lines });
 }
 
 function moat(t: GameTower): Shelf {
   const asks = "Can rivals cross it?";
-  if (t.moat === "unsurveyed") return unknown("moat", "The Moat", asks, [{ label: "", text: MOAT_LABEL.unsurveyed, tone: "fog" }]);
-  if (t.moat === "not_applicable") return notApplicable("moat", "The Moat", asks, [{ label: "", text: MOAT_LABEL.not_applicable }]);
+  if (t.moat === "unsurveyed") return unknown("moat", SHELF_SIGN.moat, asks, [{ label: "", text: FOG_LINE.moat, tone: "fog" }]);
+  if (t.moat === "not_applicable") return notApplicable("moat", SHELF_SIGN.moat, asks, [{ label: "", text: NA_LINE.moat }]);
   return known({
     id: "moat",
-    title: "The Moat",
+    title: SHELF_SIGN.moat,
     asks,
     tone: MOAT_TONE[t.moat] ?? "",
     books: MOAT_BOOKS[t.moat] ?? 0,
@@ -129,13 +137,13 @@ function moat(t: GameTower): Shelf {
 
 function land(t: GameTower): Shelf {
   const asks = "Is the price fair?";
-  if (t.land === "fog") return unknown("land", "The Land", asks, [{ label: "", text: LAND_LABEL.fog, tone: "fog" }]);
-  const lines: ShelfLine[] = [{ label: "Price", text: LAND_LABEL[t.land], tone: LAND_TONE[t.land] }];
+  if (t.land === "fog") return unknown("land", SHELF_SIGN.land, asks, [{ label: "", text: LAND_WORDS.fog, tone: "fog" }]);
+  const lines: ShelfLine[] = [{ label: "Price", text: LAND_WORDS[t.land], tone: LAND_TONE[t.land] }];
   if (t.land_reason) lines.push({ label: "Why", text: t.land_reason });
   const mos = pct1(t.margin_of_safety_pct);
   if (mos) lines.push({ label: "Cushion", text: mos });
   // The stored analyst rating (it can read Buy, Sell or Avoid) is not shown in 3D: the game never says buy or sell. It stays on the flat page.
-  return known({ id: "land", title: "The Land", asks, tone: LAND_TONE[t.land] ?? "", books: LAND_BOOKS[t.land] ?? 0, lines });
+  return known({ id: "land", title: SHELF_SIGN.land, asks, tone: LAND_TONE[t.land] ?? "", books: LAND_BOOKS[t.land] ?? 0, lines });
 }
 
 function oath(t: GameTower): Shelf {
@@ -145,21 +153,21 @@ function oath(t: GameTower): Shelf {
     const age = t.analysis_age_days;
     lines.push({
       label: "Reading",
-      text: `${FRESHNESS_LABEL[t.freshness]}${age !== null && t.freshness !== "unsurveyed" ? ` (${age} day${age === 1 ? "" : "s"} old)` : ""}`,
+      text: `${FRESH_WORDS[t.freshness]}${age !== null && t.freshness !== "unsurveyed" ? ` (${age} day${age === 1 ? "" : "s"} old)` : ""}`,
       tone: t.freshness === "fresh" ? "good" : t.freshness === "unsurveyed" ? "fog" : "warn",
     });
   }
-  if (t.thesis === "not_analyzed") return unknown("oath", "The Oath", asks, [{ label: "", text: THESIS_LABEL.not_analyzed, tone: "fog" }, ...lines]);
-  if (t.thesis === "not_applicable") return notApplicable("oath", "The Oath", asks, [{ label: "", text: THESIS_LABEL.not_applicable }, ...lines]);
+  if (t.thesis === "not_analyzed") return unknown("oath", SHELF_SIGN.oath, asks, [{ label: "", text: WHY_WORDS.not_analyzed, tone: "fog" }, ...lines]);
+  if (t.thesis === "not_applicable") return notApplicable("oath", SHELF_SIGN.oath, asks, [{ label: "", text: WHY_WORDS.not_applicable }, ...lines]);
   const fired = t.tripwires_fired;
   return known({
     id: "oath",
-    title: "The Oath",
+    title: SHELF_SIGN.oath,
     asks,
     tone: THESIS_TONE[t.thesis] ?? "",
     books: THESIS_BOOKS[t.thesis] ?? 0,
     lines: [
-      { label: "Your why", text: THESIS_LABEL[t.thesis], tone: THESIS_TONE[t.thesis] },
+      { label: "Your why", text: WHY_WORDS[t.thesis], tone: THESIS_TONE[t.thesis] },
       { label: "Wires", text: fired === 0 ? "None rang" : `${fired} rang`, tone: fired === 0 ? "good" : "bad" },
       ...lines,
     ],
@@ -171,15 +179,15 @@ function storm(t: GameTower): Shelf {
   const neighbours: ShelfLine[] =
     t.shared_wall_with.length > 0 ? [{ label: "Shares a weak wall with", text: t.shared_wall_with.join(", "), tone: "warn" }] : [];
   if (t.siege_exposure === "unsurveyed" || t.siege_shock_pct === null) {
-    return unknown("storm", "The Storm Test", asks, [{ label: "", text: EXPOSURE_LABEL.unsurveyed, tone: "fog" }, ...neighbours]);
+    return unknown("storm", SHELF_SIGN.storm, asks, [{ label: "", text: STORM_WORDS.unsurveyed, tone: "fog" }, ...neighbours]);
   }
   return known({
     id: "storm",
-    title: "The Storm Test",
+    title: SHELF_SIGN.storm,
     asks,
     tone: SIEGE_TONE[t.siege_exposure] ?? "",
     books: SIEGE_BOOKS[t.siege_exposure] ?? 0,
-    lines: [{ label: "In the storm", text: describeSiegeExposure(t), tone: SIEGE_TONE[t.siege_exposure] }, ...neighbours],
+    lines: [{ label: "In the storm", text: `${STORM_WORDS[t.siege_exposure]}: ${formatShock(t.siege_shock_pct)}`, tone: SIEGE_TONE[t.siege_exposure] }, ...neighbours],
   });
 }
 
@@ -192,8 +200,8 @@ function treasury(t: GameTower): Shelf {
   if (v) lines.push({ label: "Worth", text: v });
   if (t.sector) lines.push({ label: "Line of business", text: t.sector });
   lines.push({ label: "Kind", text: STRUCTURE_LABEL[t.structure] });
-  if (t.size_class === "unknown") return unknown("treasury", "The Treasury", asks, lines);
-  return known({ id: "treasury", title: "The Treasury", asks, tone: "", books: SIZE_BOOKS[t.size_class] ?? 0, lines });
+  if (t.size_class === "unknown") return unknown("treasury", SHELF_SIGN.treasury, asks, lines);
+  return known({ id: "treasury", title: SHELF_SIGN.treasury, asks, tone: "", books: SIZE_BOOKS[t.size_class] ?? 0, lines });
 }
 
 /**
@@ -205,25 +213,25 @@ function treasury(t: GameTower): Shelf {
  */
 export type CouncilInput = HoldingAdvisors | "failed" | "sample" | null | undefined;
 
-const COUNCIL_TITLE = "The Council's words";
-const COUNCIL_ASKS = "What do the advisors say?";
+const COUNCIL_TITLE = SHELF_SIGN.council;
+const COUNCIL_ASKS = COUNCIL_WORDS.asks;
 /** Tone marks only; the shelf's own tone stays empty because the lines can differ. */
 const ADVISOR_SHELF_TONE: Record<GameAdvisorTone, ShelfTone> = { warning: "warn", note: "", calm: "good" };
 
 /** The seventh shelf. Books count the lines the advisors wrote, not how good they are: the plaque tone stays plain. */
 export function councilShelf(input: CouncilInput): Shelf {
   if (input === "sample") {
-    return unknown("council", COUNCIL_TITLE, COUNCIL_ASKS, [{ label: "", text: "The advisors do not speak for the sample fortress.", tone: "fog" }]);
+    return unknown("council", COUNCIL_TITLE, COUNCIL_ASKS, [{ label: "", text: COUNCIL_WORDS.sample, tone: "fog" }]);
   }
   if (input === "failed") {
-    return unknown("council", COUNCIL_TITLE, COUNCIL_ASKS, [{ label: "", text: "The council could not be reached just now.", tone: "fog" }]);
+    return unknown("council", COUNCIL_TITLE, COUNCIL_ASKS, [{ label: "", text: COUNCIL_WORDS.failed, tone: "fog" }]);
   }
   if (!input) {
-    return unknown("council", COUNCIL_TITLE, COUNCIL_ASKS, [{ label: "", text: "The council has not answered yet.", tone: "fog" }]);
+    return unknown("council", COUNCIL_TITLE, COUNCIL_ASKS, [{ label: "", text: COUNCIL_WORDS.waiting, tone: "fog" }]);
   }
   if (input.lines.length === 0) {
     return notApplicable("council", COUNCIL_TITLE, COUNCIL_ASKS, [
-      { label: "", text: "No advisor rule is about this holding. Silence is not \"all is well\"." },
+      { label: "", text: COUNCIL_WORDS.silent },
       { label: "", text: input.disclaimer },
     ]);
   }
@@ -252,7 +260,5 @@ export function shelvesFor(t: GameTower, council?: CouncilInput): Shelf[] {
 
 /** One sentence for screen readers and the plaque tooltip. */
 export function describeShelf(s: Shelf): string {
-  if (s.state === "unknown") return `${s.title}: not surveyed`;
-  if (s.state === "na") return `${s.title}: does not apply`;
-  return `${s.title}: ${s.lines[0]?.text ?? ""}`;
+  return describeShelfWords(s.title, s.state, s.lines[0]?.text ?? "");
 }

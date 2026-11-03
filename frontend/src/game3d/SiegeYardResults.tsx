@@ -2,13 +2,14 @@ import { Link } from "react-router-dom";
 import type { YardView } from "./siegeYard";
 import type { YardState } from "./useSiegeYard";
 import {
-  YARD_BETA,
+  YARD_SWAY,
+  YARD_SWAY_HOVER,
+  YARD_GAP_HOVER,
   YARD_BOOK,
   YARD_COVERAGE,
   YARD_EMPTY,
   YARD_FAILED,
   YARD_FLAT,
-  YARD_GAP,
   YARD_LOSS,
   YARD_READING,
   YARD_REFRESHING,
@@ -17,7 +18,7 @@ import {
   YARD_UNKNOWN,
   yardFogTitle,
   yardMoreLine,
-} from "./siegeYardWordsV1";
+} from "./siegeYardWordsV2";
 
 /** The results block of the Storm Drill panel: what the chosen fall does to each tower. Read-only. */
 export function YardResults({ state }: { state: YardState }) {
@@ -46,7 +47,7 @@ function YardBody({ view, refreshing }: { view: YardView; refreshing: boolean })
         <dl className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
           <div><dt className="g3d-muted">{YARD_BOOK}</dt><dd>{view.book.shock}</dd></div>
           <div><dt className="g3d-muted">{YARD_LOSS}</dt><dd>{view.book.loss}</dd></div>
-          <div><dt className="g3d-muted">{YARD_BETA}</dt><dd>{view.book.beta}</dd></div>
+          <div><dt className="g3d-muted" title={YARD_SWAY_HOVER}>{YARD_SWAY}</dt><dd>{view.book.beta}</dd></div>
           <div><dt className="g3d-muted">{YARD_COVERAGE}</dt><dd>{view.book.coverage}</dd></div>
         </dl>
       )}
@@ -64,7 +65,7 @@ function YardBody({ view, refreshing }: { view: YardView; refreshing: boolean })
             <p className="g3d-muted text-xs">
               {r.status}
               {r.rough ? ` · ${YARD_ROUGH}` : ""}
-              {r.gap ? ` · ${YARD_GAP}` : ""}
+              {r.gap ? <span title={YARD_GAP_HOVER}>{` · ${r.gap}`}</span> : null}
             </p>
           </li>
         ))}

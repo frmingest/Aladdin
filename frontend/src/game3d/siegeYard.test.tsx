@@ -3,11 +3,11 @@ import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import { formatNok } from "../lib/format";
 import { formatShock } from "../lib/fortress";
-import { coverageLine, headline, holdingLine, rowStatus } from "../lib/siege";
+import { holdingLine } from "../lib/siege";
 import type { SiegeSim, SiegeSimHolding } from "../lib/types";
 import { YardResults } from "./SiegeYardResults";
 import { YARD_MAX_ROWS, yardView } from "./siegeYard";
-import * as words from "./siegeYardWordsV1";
+import * as words from "./siegeYardWordsV2";
 
 function holding(o: Partial<SiegeSimHolding>): SiegeSimHolding {
   return {
@@ -40,7 +40,7 @@ describe("yardView: the same numbers and words as the flat Siege Simulator", () 
     expect(v.rows.map((r) => r.name)).toEqual(["Alpha", "Beta", "Gamma"]);
     expect(v.rows[0].shock).toBe(formatShock("-0.40"));
     expect(v.rows[0].loss).toBe(formatNok("400"));
-    expect(v.rows[0].status).toBe(rowStatus(hurt));
+    expect(v.rows[0].status).toBe("Exposed");
     expect(v.rows[0].line).toBe(holdingLine(hurt));
     expect(v.rows[2].status).toBe("Gains");
   });
@@ -48,8 +48,8 @@ describe("yardView: the same numbers and words as the flat Siege Simulator", () 
   it("uses the flat headline and coverage sentences and the whole-book figures", () => {
     const s = sim([hurt, mild, fog]);
     const v = yardView(s);
-    expect(v.headline).toBe(headline(s));
-    expect(v.book?.coverageLine).toBe(coverageLine(s));
+    expect(v.headline).toBe("A 30% market fall costs the fortress 25.0%. Crosses the storm line.");
+    expect(v.book?.coverageLine).toBe("Tested 2 of 3 towers, 90% of the fortress by value.");
     expect(v.book?.shock).toBe(formatShock("-0.25"));
     expect(v.book?.loss).toBe(formatNok("2500"));
     expect(v.book?.beta).toBe("0.95");

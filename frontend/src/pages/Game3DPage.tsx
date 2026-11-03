@@ -74,7 +74,7 @@ import { celebrationDue } from "../game3d/celebrate";
 import { sixMonthReckoning } from "../game3d/quest";
 import { unwrittenThesisV2 } from "../game3d/questV2";
 import type { NpcId } from "../game3d/npcs";
-import { buildStreet, streetOverflowLine } from "../game3d/streetPlan";
+import { buildStreet, emptyStreetNote, streetOverflowLine } from "../game3d/streetPlan";
 import { stateToWorld } from "../game3d/stateToWorld";
 import { withGaps } from "../game3d/standingGaps";
 import { wordsFor } from "../game3d/standingWordsV3";
@@ -965,7 +965,10 @@ export default function Game3DPage() {
       if (!whereOpen) spotPrompt = SIGN_PROMPT;
       break;
     case "booth":
-      if (!boothOpen && !whereOpen) spotPrompt = boothPrompt(atSpot.id);
+      if (!boothOpen && !whereOpen) {
+        spotPrompt = boothPrompt(atSpot.id);
+        spotNote = emptyStreetNote(atSpot.id, watchlist ? watchlist.rows.length : null);
+      }
       break;
     case "stall":
       if (!whereOpen) {

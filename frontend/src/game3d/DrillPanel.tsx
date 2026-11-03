@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { describeError } from "../lib/errors";
+import { saveErrorDetail } from "./saveError";
 import type { StormDrillInput } from "../lib/types";
 import { YardResults } from "./SiegeYardResults";
 import { SAVE_FAILED } from "./voiceV2";
@@ -53,7 +53,7 @@ export default function DrillPanel({
       setSaved(true);
       setPlan("");
     } catch (e) {
-      setError(describeError(e, "your drills").message);
+      setError(saveErrorDetail(e) || SAVE_FAILED);
     } finally {
       setSaving(false);
     }
