@@ -24,7 +24,7 @@ export default function RealmPanel({ state, onClose }: { state: GameState; onClo
         </span>
       </header>
       <div className="mt-2 min-h-0 flex-1 overflow-y-auto rounded bg-surface p-2">
-        <RealmVerdict verdict={summarizeRealm(state)} count={state.towers.length} onOpenHolding={(id) => navigate(`/holdings/${id}`)} />
+        <RealmVerdict game verdict={summarizeRealm(state)} count={state.towers.length} onOpenHolding={(id) => navigate(`/holdings/${id}`)} />
       </div>
     </aside>
   );
