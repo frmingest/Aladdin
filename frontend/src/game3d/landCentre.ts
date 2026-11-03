@@ -28,8 +28,8 @@ export interface LandCentreSlot {
 
 /** Which themes have a dressing built. PR 2 to PR 5 flip these one at a time; until then the plain tower stands. */
 export const DRESSING_BUILT: Record<Theme3dId, boolean> = {
-  mine: false,
-  quarry: false,
+  mine: true,
+  quarry: true,
   ingots: false,
   farm: true,
   stall: false,

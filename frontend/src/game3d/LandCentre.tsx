@@ -4,6 +4,7 @@ import StreamBand from "./StreamBand";
 import { TowerBody } from "./TowerMesh";
 import { WORKPLACE } from "./holdingLand";
 import MillDressing from "./MillDressing";
+import MineDressing from "./MineDressing";
 import { centreChoice } from "./landCentre";
 import type { LandCentreSlot } from "./landCentre";
 import type { Theme3dId } from "../lib/sectors";
@@ -18,10 +19,20 @@ function FarmSlot({ slot }: { slot: LandCentreSlot }) {
   );
 }
 
+function MineSlot({ slot }: { slot: LandCentreSlot }) {
+  return (
+    <group position={[WORKPLACE.x, 0, WORKPLACE.z]}>
+      <MineDressing theme={slot.theme === "quarry" ? "quarry" : "mine"} condition={slot.condition} />
+    </group>
+  );
+}
+
 const DRESSINGS: Partial<Record<Theme3dId, ComponentType<{ slot: LandCentreSlot }>>> = {
   windmill: MillDressing,
   watermill: MillDressing,
   farm: FarmSlot,
+  mine: MineSlot,
+  quarry: MineSlot,
 };
 
 /**
