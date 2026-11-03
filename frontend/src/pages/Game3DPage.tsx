@@ -79,6 +79,9 @@ import type { PerfStats } from "../game3d/PerfProbe";
 // The 3D engine and the physics are heavy, so they only download on this page.
 const Scene = lazy(() => import("../game3d/Scene"));
 
+/** The frame-rate button is a developer tool: it shows with ?debug. P and F3 still toggle the readout for anyone. */
+const DEBUG_STATS = typeof window !== "undefined" && new URLSearchParams(window.location.search).has("debug");
+
 function Unavailable() {
   return (
     <div className="mx-auto max-w-md p-8 text-center">
@@ -996,6 +999,7 @@ export default function Game3DPage() {
         statsOn={showPerf}
         statsLabel={stats ? `${stats.fps} fps · ${stats.calls} draws · ${Math.round(stats.triangles / 1000)}k tris` : "Measuring..."}
         onToggleStats={() => setShowPerf((v) => !v)}
+        showStats={DEBUG_STATS}
         whereOpen={whereOpen}
         onToggleWhere={toggleWhere}
       />

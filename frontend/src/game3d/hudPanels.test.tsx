@@ -62,6 +62,12 @@ describe("Toolbar", () => {
     expect(h).toContain(">7<");
   });
 
+  it("keeps the frame-rate button out of the player's toolbar unless it is asked for (?debug), but never hides it while on", () => {
+    expect(html()).toContain("Stats");
+    expect(html({ showStats: false })).not.toContain("Stats");
+    expect(html({ showStats: false, statsOn: true, statsLabel: "60 fps" })).toContain("60 fps");
+  });
+
   it("marks open panels as pressed and hides a zero badge", () => {
     const h = html({ open: { quests: true, towers: false }, questsWaiting: 0 });
     expect(h.match(/aria-pressed="true"/g)).toHaveLength(1);

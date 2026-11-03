@@ -74,4 +74,13 @@ describe("the Town Hall inside", () => {
     }
     expect(hallDoorPrompt).not.toMatch(BUY_SELL);
   });
+
+  it("reads \"Press E to read <title>\" without doubling a word (was \"at the The Big Board board\")", () => {
+    for (const b of BOARDS) {
+      const p = hallPrompt(b);
+      expect(p).toBe(`Press E to read ${b.title}`);
+      expect(p).not.toMatch(/\bthe the\b/i);
+      expect(p).not.toMatch(/board board/i);
+    }
+  });
 });

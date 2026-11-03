@@ -80,7 +80,7 @@ export const BOARD_LEAVE_RANGE = 4.4;
 export const HALL_DOOR_RANGE = 3.4;
 export const HALL_DOOR_LEAVE_RANGE = 4.6;
 
-export const hallPrompt = (b: Board): string => `Press E at the ${b.title} board`;
+export const hallPrompt = (b: Board): string => `Press E to read ${b.title}`;
 export const hallDoorPrompt = "Press E to go back out into the Town";
 
 export function boardById(id: BoardId): Board {
