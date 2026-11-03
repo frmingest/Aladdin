@@ -8,9 +8,9 @@ import { PAL, Part } from "./Inked";
 import { Bay } from "./LibraryBay";
 import LanternPost from "./LanternPost";
 import PricePost from "./PricePost";
-import { TowerBody } from "./TowerMesh";
+import LandCentre from "./LandCentre";
+import type { LandCentreSlot } from "./landCentre";
 import type { PricePost as PricePostData } from "./holdingLand";
-import type { TowerView } from "./stateToWorld";
 import StaticBatch from "./StaticBatch";
 import {
   BAY_SCALE,
@@ -134,7 +134,7 @@ interface Props {
   lanterns: readonly Lantern[];
   onLantern: (check: SurveyCheckId | null) => void;
   /** The holding's own tower for the middle (`centreTowerFor`), and the price post's facts (`pricePostFor`). */
-  centre: TowerView;
+  centre: LandCentreSlot;
   price: PricePostData;
 }
 
@@ -279,7 +279,7 @@ export default function HoldingLand({ ticker, gap = null, gate, radius, shelves,
       })}
 
       {/* The holding's own tower in the middle: its real wall, crown, cracks and moat, or a pale ghost when unknown. */}
-      <TowerBody t={centre} door={false} />
+      <LandCentre slot={centre} />
       <PricePost post={price} pos={pos} />
 
       {/* The survey lanterns carry facts, so they sit outside the batch of still pieces. */}

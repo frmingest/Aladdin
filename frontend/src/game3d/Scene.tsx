@@ -2,7 +2,7 @@ import { Fragment, Suspense, useEffect, useMemo, useRef, useState } from "react"
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Physics } from "@react-three/rapier";
 import Courtyard from "./Courtyard";
-import type { TowerView, WorldModel } from "./stateToWorld";
+import type { WorldModel } from "./stateToWorld";
 import PerfProbe from "./PerfProbe";
 import type { PerfStats } from "./PerfProbe";
 import Player from "./Player";
@@ -48,6 +48,7 @@ import { DESK, DESK_LEAVE_RANGE, DESK_RANGE } from "./desk";
 import { PROPS } from "./props";
 import HoldingLand from "./HoldingLand";
 import type { GateStone, Lantern, PricePost } from "./holdingLand";
+import type { LandCentreSlot } from "./landCentre";
 import type { SurveyCheckId } from "../lib/survey";
 import Town from "./Town";
 import TownHallRoom from "./TownHallRoom";
@@ -150,7 +151,7 @@ export interface RoomView {
   /** The four survey lanterns of this holding (fog of war). */
   lanterns: Lantern[];
   /** The holding's own tower for the middle of the land, and the price post's facts. */
-  centre: TowerView;
+  centre: LandCentreSlot;
   price: PricePost;
   /** The ground radius for the holding's size class. */
   radius: number;
