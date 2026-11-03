@@ -3,6 +3,10 @@
 Completed milestones and retired status, moved out of `docs/PROGRESS.md` under the rolling-log rules
 in `CLAUDE.md` ("Progress file rules"). Newest snapshot first. Older: [PROGRESS-full-2026-09-30.md](PROGRESS-full-2026-09-30.md).
 
+## 2026-11-03 — S25 PR 1 (#276, merged)
+
+Every tower door leads to that holding's own land: gate stone (name, weight, value), records house with seven shelves and the table, hedge, gate. Looked at in a headless browser (92 draws, budget 120); real-browser look-over still on Faiz's list.
+
 ## Closed 2026-11-02 (late night) — merchants behind the Market Street stands (#262)
 
 - **Merged as #262** (`15b19ed`): Sal (Rogue, `Interact`) and the Hype Booth barker (hooded Rogue, `Cheer`, Idle under reduced motion) stand behind their counters, no new download ([write-up](../game/game3d-merchants-2026-11-02.md)). Not seen in a browser by Claude; deploy not checked.
