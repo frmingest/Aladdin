@@ -1,3 +1,4 @@
+import FarmDressing from "./FarmDressing";
 import LandBlock from "./LandBlock";
 import StreamBand from "./StreamBand";
 import { TowerBody } from "./TowerMesh";
@@ -17,7 +18,13 @@ export default function LandCentre({ slot }: { slot: LandCentreSlot }) {
   const at: [number, number, number] = [WORKPLACE.x, 0, WORKPLACE.z];
   return (
     <>
-      <LandBlock condition={slot.condition} position={at} />
+      {choice === "dressing" && slot.theme === "farm" ? (
+        <group position={at}>
+          <FarmDressing condition={slot.condition} fish={!!slot.fish} />
+        </group>
+      ) : (
+        <LandBlock condition={slot.condition} position={at} />
+      )}
       <StreamBand stream={slot.stream} position={at} />
     </>
   );

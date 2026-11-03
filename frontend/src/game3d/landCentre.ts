@@ -11,6 +11,7 @@ import type { Theme3dId } from "../lib/sectors";
 import type { GameTower } from "../lib/types";
 import { landCondition } from "./landCondition";
 import type { LandCondition } from "./landCondition";
+import { isFishFarm } from "./farmDressing";
 import { landStream } from "./landStream";
 import type { LandStream } from "./landStream";
 import type { TowerView } from "./stateToWorld";
@@ -21,6 +22,8 @@ export interface LandCentreSlot {
   stream: LandStream;
   /** The holding's own tower (S25), kept for themes without a dressing yet. */
   tower: TowerView;
+  /** A fish or aquaculture holding: the farm dressing shows tanks (scenery only). */
+  fish?: boolean;
 }
 
 /** Which themes have a dressing built. PR 2 to PR 5 flip these one at a time; until then the plain tower stands. */
@@ -28,7 +31,7 @@ export const DRESSING_BUILT: Record<Theme3dId, boolean> = {
   mine: false,
   quarry: false,
   ingots: false,
-  farm: false,
+  farm: true,
   stall: false,
   bank: false,
   factory: false,
@@ -53,8 +56,8 @@ export function themeOf(t: Pick<GameTower, "sector" | "holding_id" | "structure"
   return holdingTheme3d(t.sector, t.holding_id, t.structure);
 }
 
-export function centreSlotFor(t: Pick<GameTower, "sector" | "holding_id" | "structure" | "wall" | "moat">, tower: TowerView): LandCentreSlot {
-  return { theme: themeOf(t), condition: landCondition(t.wall), stream: landStream(t.moat), tower };
+export function centreSlotFor(t: Pick<GameTower, "sector" | "holding_id" | "structure" | "wall" | "moat"> & { name?: string }, tower: TowerView): LandCentreSlot {
+  return { theme: themeOf(t), condition: landCondition(t.wall), stream: landStream(t.moat), tower, fish: isFishFarm(t) };
 }
 
 export interface ThemeRow {
