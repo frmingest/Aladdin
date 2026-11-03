@@ -3,6 +3,10 @@ import { REALM_LEVEL_LABEL, REALM_RULES, type RealmLevel, type RealmTone, type R
 import { formatPct100 } from "../../lib/format";
 import { Card, VerdictBadge } from "../ui";
 import VerdictKeep from "./kit/VerdictKeep";
+import {
+  REALM_HIDE_NUMBERS, REALM_LEVEL_WORD, REALM_LOOK_FIRST, REALM_RULES_CLOSE, REALM_RULES_LINES, REALM_RULES_OPEN,
+  REALM_SHOW_NUMBERS, REALM_SIGN, REALM_TONE_WORD,
+} from "./realmGameWords";
 
 /**
  * The summary verdict on the whole fortress: what you read after pressing the
@@ -29,12 +33,29 @@ export default function RealmVerdict({
   verdict,
   count,
   onOpenHolding,
+  game = false,
 }: {
   verdict: Verdict;
   count: number;
   onOpenHolding: (id: string) => void;
+  /** The 3D courtyard's reading: a sign and one word per row, numbers one tap away, no analyst Buy/Sell. */
+  game?: boolean;
 }) {
   const [showRules, setShowRules] = useState(false);
+  const [showNumbers, setShowNumbers] = useState(false);
+  if (game) {
+    return (
+      <GameRealm
+        verdict={verdict}
+        count={count}
+        onOpenHolding={onOpenHolding}
+        showNumbers={showNumbers}
+        setShowNumbers={setShowNumbers}
+        showRules={showRules}
+        setShowRules={setShowRules}
+      />
+    );
+  }
   const R = REALM_RULES;
   return (
     <Card>
@@ -145,5 +166,84 @@ export default function RealmVerdict({
         </div>
       )}
     </Card>
+  );
+}
+
+function GameRealm({
+  verdict, count, onOpenHolding, showNumbers, setShowNumbers, showRules, setShowRules,
+}: {
+  verdict: Verdict;
+  count: number;
+  onOpenHolding: (id: string) => void;
+  showNumbers: boolean;
+  setShowNumbers: (v: boolean) => void;
+  showRules: boolean;
+  setShowRules: (v: boolean) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-3" data-testid="realm-game">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <VerdictKeep level={verdict.level} />
+          <div>
+            <p className="font-display text-lg font-semibold text-ink">All {count} {count === 1 ? "tower" : "towers"}</p>
+            <p className="text-sm text-ink">{verdict.headline}</p>
+          </div>
+        </div>
+        <span className={`whitespace-nowrap rounded-full px-3 py-1 text-sm font-semibold ${LEVEL_STYLE[verdict.level]}`}>
+          {REALM_LEVEL_WORD[verdict.level]}
+        </span>
+      </div>
+
+      <ul className="grid grid-cols-1 gap-1.5 sm:grid-cols-2" aria-label="What the verdict rests on">
+        {verdict.lines.map((l) => {
+          const mark = TONE_MARK[l.tone];
+          return (
+            <li key={l.id} className="rounded-md border border-border-subtle bg-raised px-3 py-1.5" title={l.text}>
+              <div className="flex items-center gap-2">
+                <span className={`w-4 shrink-0 text-center ${mark.cls}`} role="img" aria-label={mark.label}>{mark.symbol}</span>
+                <span className="font-medium text-ink">{REALM_SIGN[l.id] ?? l.title}</span>
+                <span className="ml-auto text-xs text-ink-muted">{REALM_TONE_WORD[l.tone]}</span>
+              </div>
+              {showNumbers && <p className="mt-1 pl-6 text-xs text-ink-muted">{l.text}</p>}
+            </li>
+          );
+        })}
+      </ul>
+
+      <div className="flex flex-wrap items-center gap-3 text-xs">
+        <button type="button" className="underline underline-offset-2 text-ink-muted hover:text-ink" aria-expanded={showNumbers} onClick={() => setShowNumbers(!showNumbers)}>
+          {showNumbers ? REALM_HIDE_NUMBERS : REALM_SHOW_NUMBERS}
+        </button>
+        <button type="button" className="underline underline-offset-2 text-ink-muted hover:text-ink" aria-expanded={showRules} onClick={() => setShowRules(!showRules)}>
+          {showRules ? REALM_RULES_CLOSE : REALM_RULES_OPEN}
+        </button>
+      </div>
+      {showRules && (
+        <ol className="list-decimal space-y-1 rounded-md bg-raised p-3 pl-7 text-xs text-ink-muted">
+          {REALM_RULES_LINES.map((t) => <li key={t}>{t}</li>)}
+        </ol>
+      )}
+
+      {verdict.lookFirst.length > 0 && (
+        <div>
+          <p className="text-xs font-semibold text-ink-faint">{REALM_LOOK_FIRST}</p>
+          <ul className="mt-1.5 flex flex-wrap gap-1.5">
+            {verdict.lookFirst.map((l) => (
+              <li key={l.holdingId}>
+                <button
+                  type="button"
+                  onClick={() => onOpenHolding(l.holdingId)}
+                  title={l.reasons.join(", ")}
+                  className="rounded-md border border-border bg-raised px-3 py-1 text-sm text-ink hover:border-accent"
+                >
+                  {l.name}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
   );
 }

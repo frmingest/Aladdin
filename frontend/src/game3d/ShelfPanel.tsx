@@ -34,12 +34,14 @@ export default function ShelfPanel({ name, shelf: s, demo, onClose }: Props) {
         {name} · {s.asks}
         {s.state !== "known" && <span className="g3d-chip fog ml-2">{STATE_WORDS[s.state]}</span>}
       </p>
-      <ul className="mt-2 space-y-1">
+      <ul className="mt-3 space-y-1.5">
         {s.lines.map((l, i) => (
-          <li key={i} className="g3d-muted">
-            {l.tone !== undefined && <Mark tone={l.tone} />}
-            {l.label && <strong className="font-semibold text-[#fff1cf]">{l.label}: </strong>}
-            {l.text}
+          <li key={i} className="flex items-baseline justify-between gap-3 border-b border-white/10 pb-1 text-[#fff1cf]">
+            <span className="g3d-muted">
+              {l.tone !== undefined && <Mark tone={l.tone} />}
+              {l.label}
+            </span>
+            <span className={l.label ? "text-right font-semibold" : "font-semibold"}>{l.text}</span>
           </li>
         ))}
       </ul>
