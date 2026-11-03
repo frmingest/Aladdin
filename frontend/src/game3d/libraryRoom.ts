@@ -6,12 +6,13 @@
  * centred near the origin. The courtyard is not drawn while you are in here, so the room can sit at the
  * origin without touching anything.
  */
+import { INTERIOR_BOX, INTERIOR_DOOR } from "./interiorBox";
 import type { Spot } from "./layout";
 import { SHELF_ORDER, type ShelfId } from "./libraryShelves";
 
-export const HALL = { minX: -11, maxX: 11, minZ: -10, maxZ: 9, height: 7 } as const;
+export const HALL = INTERIOR_BOX;
 /** The door is a closed pair of doors in the south wall; E beside it leads back out. */
-export const HALL_DOOR = { x: 0, z: HALL.maxZ, width: 3.2 } as const;
+export const HALL_DOOR = INTERIOR_DOOR;
 /** Far enough into the hall that the follow camera (about 6 behind) is still inside the south wall. */
 export const ROOM_SPAWN = { x: -3.4, y: 1.5, z: 2.2 } as const;
 

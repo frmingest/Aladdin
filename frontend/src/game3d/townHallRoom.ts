@@ -11,14 +11,15 @@
  * Local coordinates: x east, z south, y up, the hall centred near the origin. The Town is not drawn while
  * you are in here, so the room sits at the origin without touching anything (like the tower library).
  */
+import { INTERIOR_BOX, INTERIOR_DOOR } from "./interiorBox";
 import type { Spot } from "./layout";
 import { doorsAt } from "./parity3d";
 import type { Door } from "./parity3d";
 import { BUILDINGS, doorSpot } from "./townPlan";
 
-export const HALL = { minX: -11, maxX: 11, minZ: -10, maxZ: 9, height: 7 } as const;
+export const HALL = INTERIOR_BOX;
 /** A closed pair of doors in the south wall; E beside it leads back out into the Town. */
-export const HALL_DOOR = { x: 0, z: HALL.maxZ, width: 3.2 } as const;
+export const HALL_DOOR = INTERIOR_DOOR;
 /** Far enough in that the follow camera (about 6 behind) is still inside the south wall. */
 export const HALL_SPAWN = { x: 0, y: 1.5, z: 3 } as const;
 /** Camera yaw 0 puts the hero looking north, toward the boards. */
