@@ -134,6 +134,36 @@ export function lanternsFor(fog: TowerFog | null): Lantern[] {
   });
 }
 
+/**
+ * How each look is drawn. Shape and mark carry the meaning, never colour alone (colour-blind safe), and no two looks
+ * share both: lit = an open flame in a glass cage with a tick; mist = a hooded lamp with a "?"; bare = a bare post with
+ * a dash. Fixed here so a test can pin it (the same idea as `patchSignature` on the flat Map).
+ */
+export const LANTERN_LOOKS: Record<LanternLook, { shape: "flame" | "hood" | "post"; mark: string }> = {
+  lit: { shape: "flame", mark: "\u2713" },
+  mist: { shape: "hood", mark: "?" },
+  bare: { shape: "post", mark: "\u2013" },
+};
+
+/** The lantern you stand at, or null. A lantern already in reach stays in reach a little further out, so the edge does not flicker. */
+export function nearestLantern(
+  p: { x: number; z: number },
+  lanterns: readonly { check: SurveyCheckId; x: number; z: number }[],
+  current: SurveyCheckId | null,
+): SurveyCheckId | null {
+  let best: SurveyCheckId | null = null;
+  let bestD = Infinity;
+  for (const l of lanterns) {
+    const d = Math.hypot(l.x - p.x, l.z - p.z);
+    const reach = l.check === current ? LANTERN_LEAVE_RANGE : LANTERN_RANGE;
+    if (d <= reach && d < bestD) {
+      best = l.check;
+      bestD = d;
+    }
+  }
+  return best;
+}
+
 /** "2 of 4 lanterns lit", or "Not surveyed yet" when nothing was read. */
 export function lanternSummary(lanterns: readonly Lantern[]): string {
   const judged = lanterns.filter((l) => l.look !== "bare").length;

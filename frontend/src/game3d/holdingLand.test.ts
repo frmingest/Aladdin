@@ -19,6 +19,9 @@ import {
   LAND_RADIUS,
   LAND_SPAWN,
   LAND_SPOTS,
+  LANTERN_LOOKS,
+  LANTERN_LEAVE_RANGE,
+  LANTERN_RANGE,
   LANTERN_SPOTS,
   MIN_LAND_RADIUS,
   PRICE_POST,
@@ -30,6 +33,7 @@ import {
   lanternSummary,
   lanternsFor,
   moatLook,
+  nearestLantern,
   pricePostFor,
   workplaceCondition,
 } from "./holdingLand";
@@ -88,6 +92,38 @@ describe("survey lanterns (fog of war)", () => {
 
   it("says not surveyed when nothing is judged", () => {
     expect(lanternSummary(lanternsFor(fog(["not_judged", "not_judged", "not_judged", "not_judged"])))).toBe("Not surveyed yet");
+  });
+});
+
+describe("lantern looks and reach", () => {
+  it("gives each look its own shape and its own mark, so colour is never the only signal", () => {
+    const looks = Object.values(LANTERN_LOOKS);
+    expect(new Set(looks.map((l) => l.shape)).size).toBe(3);
+    expect(new Set(looks.map((l) => l.mark)).size).toBe(3);
+  });
+
+  it("never draws a not-judged or fogged check as lit", () => {
+    const l = lanternsFor(fog(["fog", "not_judged", "fog", "not_judged"]));
+    expect(l.some((x) => x.look === "lit")).toBe(false);
+  });
+
+  it("finds the lantern you stand at, and none from far off", () => {
+    const [a, b] = LANTERN_SPOTS;
+    expect(nearestLantern({ x: a.x, z: a.z + 0.5 }, LANTERN_SPOTS, null)).toBe(a.check);
+    expect(nearestLantern({ x: b.x, z: b.z }, LANTERN_SPOTS, null)).toBe(b.check);
+    expect(nearestLantern({ x: 0, z: 20 }, LANTERN_SPOTS, null)).toBeNull();
+  });
+
+  it("keeps a lantern in reach a little further out, so the edge does not flicker", () => {
+    const a = LANTERN_SPOTS[0];
+    const p = { x: a.x, z: a.z + (LANTERN_RANGE + LANTERN_LEAVE_RANGE) / 2 };
+    expect(nearestLantern(p, LANTERN_SPOTS, null)).toBeNull();
+    expect(nearestLantern(p, LANTERN_SPOTS, a.check)).toBe(a.check);
+  });
+
+  it("never offers a lantern at the spot you arrive, or at the gate", () => {
+    expect(nearestLantern(LAND_SPAWN, LANTERN_SPOTS, null)).toBeNull();
+    expect(nearestLantern(LAND_GATE, LANTERN_SPOTS, null)).toBeNull();
   });
 });
 
