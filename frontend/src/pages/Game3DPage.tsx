@@ -31,6 +31,7 @@ import { PLAIN_VIEW, PLAIN_VIEW_TITLE, SIGN_PROMPT } from "../game3d/worldWordsV
 import { drillBlock, stormDrillQuest } from "../game3d/stormDrill";
 import { DRILL_PROMPT } from "../game3d/stormDrillWordsV1";
 import ShelfPanel from "../game3d/ShelfPanel";
+import { centreSlotFor } from "../game3d/landCentre";
 import { centreTowerFor, gateStoneFor, landRadius, lanternsFor, pricePostFor, workplaceCondition } from "../game3d/holdingLand";
 import { LANTERN_WORDS } from "../game3d/landLanternWordsV1";
 import { loadOpened } from "../lib/scrolls";
@@ -384,7 +385,7 @@ export default function Game3DPage() {
       gap: view.gap ?? null,
       gate: gateStoneFor(tower, surveyed),
       radius: landRadius(tower.size_class),
-      centre: centreTowerFor(view),
+      centre: centreSlotFor(tower, centreTowerFor(view)),
       price: pricePostFor(tower),
       shelves: shelvesFor(tower, councilInput),
       lanterns: lanternsFor(
