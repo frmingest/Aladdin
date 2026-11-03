@@ -60,6 +60,13 @@ describe("page parity register", () => {
     }
   });
 
+  it("keeps finance words off the menu face (the flat name lives in plainName, a hover)", () => {
+    const jargon = /\b(thesis|margin of safety|macro|tripwire|beta|ebitda|analysis queue|tag review|dashboard)\b/i;
+    for (const d of REGISTER) {
+      expect(`${d.title} ${d.blurb}`, d.title).not.toMatch(jargon);
+    }
+  });
+
   it("has unique routes and titles", () => {
     expect(new Set(REGISTER.map((d) => d.route ?? d.title)).size).toBe(REGISTER.length);
     expect(new Set(REGISTER.map((d) => d.title)).size).toBe(REGISTER.length);

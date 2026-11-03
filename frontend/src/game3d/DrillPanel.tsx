@@ -2,6 +2,7 @@ import { useState } from "react";
 import { describeError } from "../lib/errors";
 import type { StormDrillInput } from "../lib/types";
 import { YardResults } from "./SiegeYardResults";
+import { SAVE_FAILED } from "./voiceV2";
 import { useSiegeYard } from "./useSiegeYard";
 import { FALL_DEFAULT, FALL_MAX, FALL_MIN, FALL_STEP, drillInput, drillReady, fallPercent } from "./stormDrill";
 import type { DrillBlock } from "./stormDrill";
@@ -108,7 +109,7 @@ export default function DrillPanel({
 
       <div aria-live="polite">
         {saved && !error && <p className="g3d-muted mt-2">Written down.</p>}
-        {error && <p className="g3d-demo" role="alert">Not saved: {error} Your words are still here.</p>}
+        {error && <p className="g3d-demo" role="alert" title={error}>{SAVE_FAILED} Your words are still here.</p>}
       </div>
 
     </aside>

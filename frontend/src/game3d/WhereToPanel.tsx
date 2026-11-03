@@ -1,6 +1,6 @@
 import { doorsAt, placesWithDoors } from "./parity3d";
 import type { Door, PlaceId } from "./parity3d";
-import { MENU_HINT, MENU_INTRO, MENU_TITLE } from "./worldWordsV1";
+import { MENU_HINT, MENU_INTRO, MENU_TITLE } from "./worldWordsV2";
 
 interface Props {
   onPick: (door: Door) => void;
@@ -34,7 +34,7 @@ export default function WhereToPanel({ onPick, onClose, only = null, onlyRoutes 
           <ul className="mt-1 space-y-1">
             {doorsAt(place.id).filter((d) => !onlyRoutes || (d.route !== null && onlyRoutes.includes(d.route))).map((d) => (
               <li key={d.route}>
-                <button type="button" className="g3d-btn w-full text-left" onClick={() => onPick(d)}>
+                <button type="button" className="g3d-btn w-full text-left" title={d.plainName ? `Plain view name: ${d.plainName}` : undefined} onClick={() => onPick(d)}>
                   <strong>{d.title}</strong>
                   <span className="g3d-muted block">{d.blurb}</span>
                 </button>

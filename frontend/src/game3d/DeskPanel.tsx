@@ -6,6 +6,7 @@ import { DESK_BLOCK_WORDS, deskInput, deskReady } from "./deskForm";
 import type { DeskBlock } from "./deskForm";
 import { DESK_READ_BOOKS, deskDueLine } from "./journalWordsV1";
 import { LAMP_BUTTON, LAMP_HINT } from "./realmWordsV1";
+import { SAVE_FAILED } from "./voiceV2";
 import type { TowerView } from "./stateToWorld";
 
 /**
@@ -126,7 +127,7 @@ export default function DeskPanel({
 
       <div aria-live="polite">
         {savedName && !error && <p className="g3d-muted mt-2">Written down for {savedName}.</p>}
-        {error && <p className="g3d-demo" role="alert">Not saved: {error} Your words are still here.</p>}
+        {error && <p className="g3d-demo" role="alert" title={error}>{SAVE_FAILED} Your words are still here.</p>}
       </div>
 
       {onReadBooks && (

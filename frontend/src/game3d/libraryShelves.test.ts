@@ -34,7 +34,12 @@ describe("tower library shelves", () => {
     expect(text("walls")).toContain("net debt / EBITDA: 1.40×");
     expect(text("walls")).toContain("Low debt, steady cash.");
     expect(text("land")).toContain("18.3%");
-    expect(text("land")).toContain("Hold");
+    // The stored analyst rating is never shown in 3D (the game never says buy or sell), whatever it says.
+    for (const rating of ["Hold", "Buy", "Strong Buy", "Sell", "Avoid"]) {
+      const land = shelvesFor(tower({ verdict_rating: rating } as Partial<GameTower>)).find((x) => x.id === "land")!;
+      expect(land.lines.map((l) => `${l.label} ${l.text}`).join(" | ")).not.toContain(rating);
+      expect(land.lines.map((l) => l.label)).not.toContain("Last verdict");
+    }
     expect(text("treasury")).toContain("12.3%");
     expect(text("treasury")).toContain("125");
     expect(text("storm")).toContain("−12.0%");
@@ -83,7 +88,7 @@ describe("tower library shelves", () => {
     const bad = shelvesFor(tower({ wall: "rotted", moat: "none", land: "overpriced", thesis: "breached", tripwires_fired: 2, siege_exposure: "breach_risk" }));
     for (const id of ["walls", "moat", "land", "oath", "storm"] as const) expect(by(bad, id).tone).toBe("bad");
     expect(by(bad, "walls").books).toBeGreaterThan(0); // a rotted wall is a weak shelf, not an empty one
-    expect(by(bad, "oath").lines.map((l) => l.text)).toContain("2 fired");
+    expect(by(bad, "oath").lines.map((l) => l.text)).toContain("2 rang");
     expect(new Set(Object.values(SHELF_MARK)).size).toBe(Object.keys(SHELF_MARK).length);
   });
 

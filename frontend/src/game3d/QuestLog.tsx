@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { withStop } from "./voiceV2";
 import { QUEST_TITLE, REVIEW_QUEST_GOAL, REVIEW_QUEST_TITLE, whichWords } from "./quest";
 import { QUEST_V2_BAR_LABEL, QUEST_V2_DONE, QUEST_V2_GOAL } from "./questV2";
 import type { QuestState, ReviewQuestState } from "./quest";
@@ -93,8 +94,8 @@ export default function QuestLog({
             {standing.headline}
           </h3>
           {standing.next && <p className="g3d-muted">{standing.next}</p>}
-          {standing.watch && <p className="g3d-muted">{standing.watch}.</p>}
-          {standing.ledger && <p className="g3d-muted">{standing.ledger}.</p>}
+          {standing.watch && <p className="g3d-muted">{withStop(standing.watch)}</p>}
+          {standing.ledger && <p className="g3d-muted">{withStop(standing.ledger)}</p>}
         </section>
       )}
 

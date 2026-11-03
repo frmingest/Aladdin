@@ -146,6 +146,7 @@ Game mode (Fortress): concept, sprint plans and reviews, visual identity, art pa
 - [fortress-section-art-2026-10-29.md](game/fortress-section-art-2026-10-29.md) — More graphics for the Fortress sections (whole-fortress verdict, Walls on the rise, Night Watch, Vault, then Spread, Reports, legend): design-team brief, Stitch prompts, what shipped
 - [remove-council-chronicle-2026-10-18.md](game/remove-council-chronicle-2026-10-18.md) — Council and Chronicle removed from Game mode: what went, what was kept (Stitch pictures, Night Watch, stored frames), how to restore
 - [records-shelf-books-2026-10-18.md](game/records-shelf-books-2026-10-18.md) — Records: shelf books as wide as their nameplates
+- [game3d-text-review-2026-11-03.md](game/game3d-text-review-2026-11-03.md) — every player-visible line in /game3d reviewed (design feel, engagement, plain words), the Sign/Line/Caption/Look-closer/Rules structure, house rules and what pass 1 changed; catalogue of all 1,341 lines: [xlsx](game/game3d-text-review-catalogue-2026-11-03.xlsx)
 
 ### ingestion/
 
