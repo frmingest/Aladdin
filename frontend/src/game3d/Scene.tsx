@@ -1,4 +1,4 @@
-import { Fragment, Suspense, useEffect, useRef, useState } from "react";
+import { Fragment, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Physics } from "@react-three/rapier";
 import Courtyard from "./Courtyard";
@@ -9,7 +9,7 @@ import Player from "./Player";
 import type { Teleport } from "./Player";
 import { useKeys } from "./useKeys";
 import { useOrbit } from "./useOrbit";
-import { LEAVE_RANGE, NPCS, TALK_RANGE, nearestNpc } from "./npcs";
+import { LEAVE_RANGE, NPCS, TALK_RANGE } from "./npcs";
 import type { NpcId } from "./npcs";
 import NpcMesh from "./NpcMesh";
 import PropMesh from "./PropMesh";
@@ -17,7 +17,7 @@ import Scenery from "./Scenery";
 import Market from "./Market";
 import MarketStreet from "./MarketStreet";
 import Booths from "./Booths";
-import { BOOTH_LEAVE_RANGE, BOOTH_RANGE, nearestBooth } from "./boothPlan";
+import { BOOTHS, BOOTH_LEAVE_RANGE, BOOTH_RANGE } from "./boothPlan";
 import type { BoothId } from "./boothPlan";
 import type { Stall } from "./streetPlan";
 import StandingTorches from "./StandingTorches";
@@ -28,36 +28,37 @@ import Workers from "./Workers";
 import Confetti from "./Confetti";
 import Desk from "./Desk";
 import Vault from "./Vault";
-import { VAULT_LEAVE_RANGE, VAULT_RANGE, nearVault } from "./vaultPlan";
+import { VAULT, VAULT_LEAVE_RANGE, VAULT_RANGE } from "./vaultPlan";
 import type { FortressSiegeLevel, FortressVaultLevel, NightWatchStatus } from "../lib/types";
 import WatchPost from "./WatchPost";
 import RavenBirds from "./RavenBirds";
 import RealmPost from "./RealmPost";
 import Weather from "./Weather";
-import { REALM_LEAVE_RANGE, REALM_RANGE, nearRealm } from "./realmPlan";
+import { REALM_LEAVE_RANGE, REALM_POST, REALM_RANGE } from "./realmPlan";
 import { weatherLook } from "./weatherPlan";
 import type { RealmLevel } from "../lib/realmVerdict";
-import { PERCH_LEAVE_RANGE, PERCH_RANGE, WATCH_LEAVE_RANGE, WATCH_RANGE, nearPerch, nearWatch } from "./watchPlan";
+import { PERCH, PERCH_LEAVE_RANGE, PERCH_RANGE, WATCH_LEAVE_RANGE, WATCH_POST, WATCH_RANGE } from "./watchPlan";
 import DrillCamp from "./DrillCamp";
 import DrillPost from "./DrillPost";
 import Signpost from "./Signpost";
-import { SIGN_LEAVE_RANGE, SIGN_RANGE, nearSign } from "./signpost";
-import { STALL_LEAVE_RANGE, STALL_RANGE, nearestStall } from "./stallDoor";
-import { DRILL_LEAVE_RANGE, DRILL_RANGE, nearDrillPost } from "./stormDrill";
-import { DESK_LEAVE_RANGE, DESK_RANGE, nearDesk } from "./desk";
+import { SIGN, SIGN_LEAVE_RANGE, SIGN_RANGE } from "./signpost";
+import { STALL_LEAVE_RANGE, STALL_RANGE } from "./stallDoor";
+import { DRILL_LEAVE_RANGE, DRILL_POST, DRILL_RANGE } from "./stormDrill";
+import { DESK, DESK_LEAVE_RANGE, DESK_RANGE } from "./desk";
 import { PROPS } from "./props";
 import Library from "./Library";
 import Town from "./Town";
 import TownHallRoom from "./TownHallRoom";
 import RecordsHallRoom from "./RecordsHallRoom";
-import { ARCHIVE_SPAWN, ARCHIVE_YAW, archiveExit } from "./recordsHallRoom";
-import { HALL_SPAWN, HALL_YAW, hallExit } from "./townHallRoom";
 import type { BoardId } from "./townHallRoom";
-import { GATE_RETURN, GATE_RETURN_YAW, GATE_LEAVE_RANGE, GATE_RANGE, TOWN_SPAWN, TOWN_YAW, nearGate } from "./townPlan";
+import { GATE_LEAVE_RANGE, GATE_RANGE, GATE_SPOT } from "./townPlan";
 import type { BuildingId } from "./townPlan";
-import { ROOM_SPAWN, ROOM_YAW } from "./libraryRoom";
+import { AREAS, COURTYARD, sameArea, transitionSpot } from "./areas";
+import type { AreaRef } from "./areas";
+import { pickNear } from "./near";
+import type { NearTarget } from "./near";
 import type { Shelf, ShelfId } from "./libraryShelves";
-import { ENTER_LEAVE_REACH, ENTER_REACH, exitCameraYaw, exitSpot, nearestTower } from "./towerDoor";
+import { ENTER_LEAVE_REACH, ENTER_REACH } from "./towerDoor";
 
 const HALL_DARK = "#1d1712";
 const noop = () => {};
@@ -113,25 +114,23 @@ interface Props {
   standingLevel?: number | null;
   /** Called only when it changes: which tower's door you stand at (null: none). */
   onNearTower?: (id: string | null) => void;
-  /** The tower library you are in, or null for the courtyard. The courtyard is not drawn while you are inside. */
+  /** Which place the hero is in. Only that place is drawn. */
+  area?: AreaRef;
+  /** The tower library's contents, when `area` is a library. */
   room?: RoomView | null;
   onNearShelf?: (id: ShelfId | null) => void;
   onNearDoor?: (near: boolean) => void;
   onNearTable?: (near: boolean) => void;
-  /** The Town beyond the gate is where the hero is (the courtyard is not drawn while there). */
-  inTown?: boolean;
   /** Courtyard: the hero stands at the gate road. */
   onNearGate?: (near: boolean) => void;
   /** Town: which building's door the hero stands at, and whether the road back is in reach. */
   townNear?: BuildingId | null;
   onNearBuilding?: (id: BuildingId | null) => void;
   onNearTownExit?: (near: boolean) => void;
-  /** Inside the Town Hall (the Town is not drawn while there), which board you stand at, and whether the door is in reach. */
-  inHall?: boolean;
+  /** Inside the Town Hall: which board you stand at, and whether the door is in reach. */
   onNearBoard?: (id: BoardId | null) => void;
   onNearHallDoor?: (near: boolean) => void;
-  /** Inside the Hall of Records (the Town is not drawn while there), whether you stand at the shelves, and whether the door is in reach. */
-  inRecords?: boolean;
+  /** Inside the Hall of Records: whether you stand at the shelves, and whether the door is in reach. */
   onNearShelves?: (near: boolean) => void;
   onNearArchiveDoor?: (near: boolean) => void;
 }
@@ -144,176 +143,52 @@ export interface RoomView {
   shelves: Shelf[];
 }
 
-/** Tells the page when the hero walks up to, or away from, someone. */
-function NearNpc({ pos, onNear }: { pos: { current: { x: number; z: number } }; onNear: (id: NpcId | null) => void }) {
-  const last = useRef<NpcId | null>(null);
-  useFrame(() => {
-    // Wider range to leave than to arrive, so standing on the edge doesn't flicker.
-    const n = nearestNpc(pos.current, NPCS, last.current ? LEAVE_RANGE : TALK_RANGE);
-    const id = n ? n.id : null;
-    if (id !== last.current) {
-      last.current = id;
-      onNear(id);
-    }
-  });
-  return null;
-}
-
 /** A stable empty list, so a missing watchlist never re-renders the street. */
 const NO_STALLS: readonly Stall[] = [];
 
-/** Tells the page when the hero walks up to, or away from, the writing desk. */
-function NearDeskWatch({ pos, onNearDesk }: { pos: { current: { x: number; z: number } }; onNearDesk: (near: boolean) => void }) {
-  const last = useRef(false);
-  useFrame(() => {
-    const now = nearDesk(pos.current, last.current ? DESK_LEAVE_RANGE : DESK_RANGE);
-    if (now !== last.current) {
-      last.current = now;
-      onNearDesk(now);
-    }
-  });
-  return null;
-}
-
-/** Tells the page when the hero walks up to, or away from, the drill post. */
-function NearDrillWatch({ pos, onNearDrill }: { pos: { current: { x: number; z: number } }; onNearDrill: (near: boolean) => void }) {
-  const last = useRef(false);
-  useFrame(() => {
-    const now = nearDrillPost(pos.current, last.current ? DRILL_LEAVE_RANGE : DRILL_RANGE);
-    if (now !== last.current) {
-      last.current = now;
-      onNearDrill(now);
-    }
-  });
-  return null;
-}
-
-/** Tells the page when the hero stands at the gate road (the way out to the Town). */
-function NearGateWatch({ pos, onNearGate }: { pos: { current: { x: number; z: number } }; onNearGate: (near: boolean) => void }) {
-  const last = useRef(false);
-  useFrame(() => {
-    const now = nearGate(pos.current, last.current ? GATE_LEAVE_RANGE : GATE_RANGE);
-    if (now !== last.current) {
-      last.current = now;
-      onNearGate(now);
-    }
-  });
-  return null;
-}
-
-/** Tells the page when the hero walks up to, or away from, the signpost by the gate. */
-function NearSignWatch({ pos, onNearSign }: { pos: { current: { x: number; z: number } }; onNearSign: (near: boolean) => void }) {
-  const last = useRef(false);
-  useFrame(() => {
-    const now = nearSign(pos.current, last.current ? SIGN_LEAVE_RANGE : SIGN_RANGE);
-    if (now !== last.current) {
-      last.current = now;
-      onNearSign(now);
-    }
-  });
-  return null;
-}
-
-/** Tells the page when the hero walks up to, or away from, a stall on Market Street. */
-function NearStallWatch({ pos, stalls, onNearStall }: { pos: { current: { x: number; z: number } }; stalls: readonly Stall[]; onNearStall: (id: string | null) => void }) {
-  const last = useRef<string | null>(null);
-  useFrame(() => {
-    if (stalls.length === 0 && last.current === null) return;
-    const now = nearestStall(pos.current, stalls, last.current ? STALL_LEAVE_RANGE : STALL_RANGE);
-    if (now !== last.current) {
-      last.current = now;
-      onNearStall(now);
-    }
-  });
-  return null;
-}
-
-/** Tells the page when the hero walks up to, or away from, Sal's counter or the Hype Booth. */
-function NearBoothWatch({ pos, onNearBooth }: { pos: { current: { x: number; z: number } }; onNearBooth: (id: BoothId | null) => void }) {
-  const last = useRef<BoothId | null>(null);
-  useFrame(() => {
-    const now = nearestBooth(pos.current, undefined, last.current ? BOOTH_LEAVE_RANGE : BOOTH_RANGE);
-    if (now !== last.current) {
-      last.current = now;
-      onNearBooth(now);
-    }
-  });
-  return null;
-}
-
-/** Tells the page when the hero walks up to, or away from, the vault chest. */
-function NearVaultWatch({ pos, onNearVault }: { pos: { current: { x: number; z: number } }; onNearVault: (near: boolean) => void }) {
-  const last = useRef(false);
-  useFrame(() => {
-    const now = nearVault(pos.current, last.current ? VAULT_LEAVE_RANGE : VAULT_RANGE);
-    if (now !== last.current) {
-      last.current = now;
-      onNearVault(now);
-    }
-  });
-  return null;
-}
-
-/** Tells the page when the hero walks up to, or away from, the Realm post. */
-function NearRealmWatch({ pos, onNearRealm }: { pos: { current: { x: number; z: number } }; onNearRealm: (near: boolean) => void }) {
-  const last = useRef(false);
-  useFrame(() => {
-    const now = nearRealm(pos.current, last.current ? REALM_LEAVE_RANGE : REALM_RANGE);
-    if (now !== last.current) {
-      last.current = now;
-      onNearRealm(now);
-    }
-  });
-  return null;
-}
-
-/** Tells the page when the hero walks up to, or away from, the Night Watch post. */
-function NearWatchWatch({ pos, onNearWatch }: { pos: { current: { x: number; z: number } }; onNearWatch: (near: boolean) => void }) {
-  const last = useRef(false);
-  useFrame(() => {
-    const now = nearWatch(pos.current, last.current ? WATCH_LEAVE_RANGE : WATCH_RANGE);
-    if (now !== last.current) {
-      last.current = now;
-      onNearWatch(now);
-    }
-  });
-  return null;
-}
-
-/** Tells the page when the hero walks up to, or away from, the raven perch. */
-function NearPerchWatch({ pos, onNearPerch }: { pos: { current: { x: number; z: number } }; onNearPerch: (near: boolean) => void }) {
-  const last = useRef(false);
-  useFrame(() => {
-    const now = nearPerch(pos.current, last.current ? PERCH_LEAVE_RANGE : PERCH_RANGE);
-    if (now !== last.current) {
-      last.current = now;
-      onNearPerch(now);
-    }
-  });
-  return null;
-}
-
-/** Tells the page when the hero walks up to, or away from, a tower's door. */
-function NearTowerWatch({
+/**
+ * Tells the page when the hero walks up to, or away from, one of `targets`. The one watcher behind every
+ * courtyard "near" (it replaced twelve copies). Only calls `onChange` when the answer changes.
+ */
+function NearWatch<K>({
   pos,
-  world,
-  onNearTower,
+  targets,
+  onChange,
 }: {
   pos: { current: { x: number; z: number } };
-  world: WorldModel;
-  onNearTower: (id: string | null) => void;
+  targets: readonly NearTarget<K>[];
+  onChange: (id: K | null) => void;
 }) {
-  const last = useRef<string | null>(null);
+  const last = useRef<K | null>(null);
+  const cb = useRef(onChange);
+  useEffect(() => {
+    cb.current = onChange;
+  }, [onChange]);
   useFrame(() => {
-    const t = nearestTower(pos.current, world.towers, last.current ? ENTER_LEAVE_REACH : ENTER_REACH);
-    const id = t ? t.holdingId : null;
-    if (id !== last.current) {
-      last.current = id;
-      onNearTower(id);
+    if (targets.length === 0 && last.current === null) return;
+    const now = pickNear(pos.current, targets, last.current);
+    if (now !== last.current) {
+      last.current = now;
+      cb.current(now);
     }
   });
   return null;
 }
+
+/** One fixed spot as a target list (the "near or not" spots). */
+const spotTarget = (p: { x: number; z: number }, range: number, leaveRange: number): readonly NearTarget<true>[] => [
+  { id: true, x: p.x, z: p.z, range, leaveRange },
+];
+const DESK_T = spotTarget(DESK, DESK_RANGE, DESK_LEAVE_RANGE);
+const DRILL_T = spotTarget(DRILL_POST, DRILL_RANGE, DRILL_LEAVE_RANGE);
+const SIGN_T = spotTarget(SIGN, SIGN_RANGE, SIGN_LEAVE_RANGE);
+const GATE_T = spotTarget(GATE_SPOT, GATE_RANGE, GATE_LEAVE_RANGE);
+const VAULT_T = spotTarget(VAULT, VAULT_RANGE, VAULT_LEAVE_RANGE);
+const REALM_T = spotTarget(REALM_POST, REALM_RANGE, REALM_LEAVE_RANGE);
+const WATCH_T = spotTarget(WATCH_POST, WATCH_RANGE, WATCH_LEAVE_RANGE);
+const PERCH_T = spotTarget(PERCH, PERCH_RANGE, PERCH_LEAVE_RANGE);
+const NPC_T: readonly NearTarget<NpcId>[] = NPCS.map((n) => ({ id: n.id, x: n.x, z: n.z, range: TALK_RANGE, leaveRange: LEAVE_RANGE }));
+const BOOTH_T: readonly NearTarget<BoothId>[] = BOOTHS.map((b) => ({ id: b.id, x: b.x, z: b.z, range: BOOTH_RANGE, leaveRange: BOOTH_LEAVE_RANGE }));
 
 function World({
   onLockChange,
@@ -341,19 +216,17 @@ function World({
   drillOpen,
   stalls,
   onNearTower,
+  area,
   room,
   onNearShelf,
   onNearDoor,
   onNearTable,
-  inTown,
   onNearGate,
   townNear,
   onNearBuilding,
   onNearTownExit,
-  inHall,
   onNearBoard,
   onNearHallDoor,
-  inRecords,
   onNearShelves,
   onNearArchiveDoor,
 }: {
@@ -382,19 +255,17 @@ function World({
   cheerKey: number | null;
   standingLevel: number | null;
   onNearTower: (id: string | null) => void;
+  area: AreaRef;
   room: RoomView | null;
   onNearShelf: (id: ShelfId | null) => void;
   onNearDoor: (near: boolean) => void;
   onNearTable: (near: boolean) => void;
-  inTown: boolean;
   onNearGate: (near: boolean) => void;
   townNear: BuildingId | null;
   onNearBuilding: (id: BuildingId | null) => void;
   onNearTownExit: (near: boolean) => void;
-  inHall: boolean;
   onNearBoard: (id: BoardId | null) => void;
   onNearHallDoor: (near: boolean) => void;
-  inRecords: boolean;
   onNearShelves: (near: boolean) => void;
   onNearArchiveDoor: (near: boolean) => void;
 }) {
@@ -402,74 +273,57 @@ function World({
   const pos = useRef({ x: 0, z: 0 });
   const orbit = useOrbit(onLockChange);
 
-  // Through a tower door: into the library at its spawn, and back out in front of the same door.
+  // One teleport for every door: in at the area's spawn, out at the spot in front of the door you came through.
   const [teleport, setTeleport] = useState<Teleport | null>(null);
-  const prevRoom = useRef<string | null>(null);
+  const prevArea = useRef<AreaRef>(COURTYARD);
   const count = useRef(0);
   useEffect(() => {
-    const id = room ? room.holdingId : null;
-    if (id === prevRoom.current) return;
-    const left = prevRoom.current;
-    prevRoom.current = id;
-    if (id) {
-      setTeleport({ key: ++count.current, x: ROOM_SPAWN.x, z: ROOM_SPAWN.z, yaw: ROOM_YAW });
-    } else if (left) {
-      const t = world.towers.find((w) => w.holdingId === left);
-      if (t) {
-        const out = exitSpot(t.spot, t.radius);
-        setTeleport({ key: ++count.current, x: out.x, z: out.z, yaw: exitCameraYaw(t.spot, out) });
-      }
-    }
-  }, [room, world.towers]);
+    if (sameArea(area, prevArea.current)) return;
+    const from = prevArea.current;
+    prevArea.current = area;
+    const spot = transitionSpot(from, area, world.towers);
+    if (spot) setTeleport({ key: ++count.current, x: spot.x, z: spot.z, yaw: spot.yaw });
+  }, [area, world.towers]);
 
-  // Through the gate: into the Town at its north end, and back out inside the gate.
-  const prevTown = useRef(false);
-  useEffect(() => {
-    if (inTown === prevTown.current) return;
-    prevTown.current = inTown;
-    if (inTown) setTeleport({ key: ++count.current, x: TOWN_SPAWN.x, z: TOWN_SPAWN.z, yaw: TOWN_YAW });
-    else setTeleport({ key: ++count.current, x: GATE_RETURN.x, z: GATE_RETURN.z, yaw: GATE_RETURN_YAW });
-  }, [inTown]);
-
-  // Through the Town Hall door: into the hall, and back out at the door spot in the Town.
-  const prevHall = useRef(false);
-  useEffect(() => {
-    if (inHall === prevHall.current) return;
-    prevHall.current = inHall;
-    if (inHall) setTeleport({ key: ++count.current, x: HALL_SPAWN.x, z: HALL_SPAWN.z, yaw: HALL_YAW });
-    else {
-      const out = hallExit();
-      setTeleport({ key: ++count.current, x: out.x, z: out.z, yaw: out.yaw });
-    }
-  }, [inHall]);
-
-  // Through the Hall of Records door: into the archive, and back out at the door spot in the Town.
-  const prevRecords = useRef(false);
-  useEffect(() => {
-    if (inRecords === prevRecords.current) return;
-    prevRecords.current = inRecords;
-    if (inRecords) setTeleport({ key: ++count.current, x: ARCHIVE_SPAWN.x, z: ARCHIVE_SPAWN.z, yaw: ARCHIVE_YAW });
-    else {
-      const out = archiveExit();
-      setTeleport({ key: ++count.current, x: out.x, z: out.z, yaw: out.yaw });
-    }
-  }, [inRecords]);
+  const stallTargets = useMemo<readonly NearTarget<string>[]>(
+    () => stalls.map((s) => ({ id: s.holdingId, x: s.x, z: s.z, range: STALL_RANGE, leaveRange: STALL_LEAVE_RANGE })),
+    [stalls],
+  );
+  // A tower's reach is counted from its wall, not its middle: fat towers are not easier to enter.
+  const towerTargets = useMemo<readonly NearTarget<string>[]>(
+    () =>
+      world.towers.map((t) => ({
+        id: t.holdingId,
+        x: t.spot.x,
+        z: t.spot.z,
+        range: ENTER_REACH + t.radius,
+        leaveRange: ENTER_LEAVE_REACH + t.radius,
+      })),
+    [world.towers],
+  );
+  const isYes = (f: (v: boolean) => void) => (id: true | null) => f(id !== null);
 
   return (
     <Physics gravity={[0, -25, 0]} timeStep="vary">
-      {inRecords && !room ? (
-        <group userData={{ perfGroup: "records" }}><RecordsHallRoom pos={pos} onShelves={onNearShelves} onDoor={onNearArchiveDoor} /></group>
-      ) : inHall && !room ? (
-        <group userData={{ perfGroup: "hall" }}><TownHallRoom pos={pos} onBoard={onNearBoard} onDoor={onNearHallDoor} /></group>
-      ) : inTown && !room ? (
+      {area.id === "records" ? (
+        <group userData={{ perfGroup: "records" }}>
+          <RecordsHallRoom pos={pos} onShelves={onNearShelves} onDoor={onNearArchiveDoor} />
+        </group>
+      ) : area.id === "townhall" ? (
+        <group userData={{ perfGroup: "hall" }}>
+          <TownHallRoom pos={pos} onBoard={onNearBoard} onDoor={onNearHallDoor} />
+        </group>
+      ) : area.id === "town" ? (
         <>
           <group userData={{ perfGroup: "backdrop" }}>
             <Backdrop />
           </group>
           <group userData={{ perfGroup: "town" }}><Town pos={pos} near={townNear} onNearBuilding={onNearBuilding} onNearExit={onNearTownExit} /></group>
         </>
-      ) : room ? (
-        <group userData={{ perfGroup: "library" }}><Library name={room.name} ticker={room.ticker} gap={room.gap} shelves={room.shelves} pos={pos} onShelf={onNearShelf} onDoor={onNearDoor} onTable={onNearTable} /></group>
+      ) : area.id === "library" && room ? (
+        <group userData={{ perfGroup: "library" }}>
+          <Library name={room.name} ticker={room.ticker} gap={room.gap} shelves={room.shelves} pos={pos} onShelf={onNearShelf} onDoor={onNearDoor} onTable={onNearTable} />
+        </group>
       ) : (
         <>
           <group userData={{ perfGroup: "backdrop" }}>
@@ -514,18 +368,18 @@ function World({
             <Workers />
           </group>
           <Confetti burstKey={cheerKey} />
-          <NearNpc pos={pos} onNear={onNear} />
-          <NearDeskWatch pos={pos} onNearDesk={onNearDesk} />
-          <NearDrillWatch pos={pos} onNearDrill={onNearDrill} />
-          <NearSignWatch pos={pos} onNearSign={onNearSign} />
-          <NearGateWatch pos={pos} onNearGate={onNearGate} />
-          <NearStallWatch pos={pos} stalls={stalls} onNearStall={onNearStall} />
-          <NearBoothWatch pos={pos} onNearBooth={onNearBooth} />
-          <NearVaultWatch pos={pos} onNearVault={onNearVault} />
-          <NearWatchWatch pos={pos} onNearWatch={onNearWatch} />
-          <NearPerchWatch pos={pos} onNearPerch={onNearPerch} />
-          <NearRealmWatch pos={pos} onNearRealm={onNearRealm} />
-          <NearTowerWatch pos={pos} world={world} onNearTower={onNearTower} />
+          <NearWatch pos={pos} targets={NPC_T} onChange={onNear} />
+          <NearWatch pos={pos} targets={DESK_T} onChange={isYes(onNearDesk)} />
+          <NearWatch pos={pos} targets={DRILL_T} onChange={isYes(onNearDrill)} />
+          <NearWatch pos={pos} targets={SIGN_T} onChange={isYes(onNearSign)} />
+          <NearWatch pos={pos} targets={GATE_T} onChange={isYes(onNearGate)} />
+          <NearWatch pos={pos} targets={stallTargets} onChange={onNearStall} />
+          <NearWatch pos={pos} targets={BOOTH_T} onChange={onNearBooth} />
+          <NearWatch pos={pos} targets={VAULT_T} onChange={isYes(onNearVault)} />
+          <NearWatch pos={pos} targets={WATCH_T} onChange={isYes(onNearWatch)} />
+          <NearWatch pos={pos} targets={PERCH_T} onChange={isYes(onNearPerch)} />
+          <NearWatch pos={pos} targets={REALM_T} onChange={isYes(onNearRealm)} />
+          <NearWatch pos={pos} targets={towerTargets} onChange={onNearTower} />
         </>
       )}
       <group userData={{ perfGroup: "hero" }}>
@@ -567,23 +421,21 @@ export default function Scene({
   cheerKey = null,
   standingLevel = null,
   onNearTower = noop,
+  area = COURTYARD,
   room = null,
   onNearShelf = noop,
   onNearDoor = noop,
   onNearTable = noop,
-  inTown = false,
   onNearGate = noop,
   townNear = null,
   onNearBuilding = noop,
   onNearTownExit = noop,
-  inHall = false,
   onNearBoard = noop,
   onNearHallDoor = noop,
-  inRecords = false,
   onNearShelves = noop,
   onNearArchiveDoor = noop,
 }: Props) {
-  const inside = room !== null || inHall || inRecords;
+  const inside = AREAS[area.id].lighting === "indoor";
   // The weather: only the sky and fog colour change (calm keeps the courtyard's own sky); lights stay as they are.
   const wx = weatherLook(siegeLevel);
   return (
@@ -662,19 +514,17 @@ export default function Scene({
           cheerKey={cheerKey}
           standingLevel={standingLevel}
           onNearTower={onNearTower}
+          area={area}
           room={room}
           onNearShelf={onNearShelf}
           onNearDoor={onNearDoor}
           onNearTable={onNearTable}
-          inTown={inTown}
           onNearGate={onNearGate}
           townNear={townNear}
           onNearBuilding={onNearBuilding}
           onNearTownExit={onNearTownExit}
-          inHall={inHall}
           onNearBoard={onNearBoard}
           onNearHallDoor={onNearHallDoor}
-          inRecords={inRecords}
           onNearShelves={onNearShelves}
           onNearArchiveDoor={onNearArchiveDoor}
         />

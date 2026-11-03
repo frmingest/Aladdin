@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../lib/api";
 import { describeError } from "../lib/errors";
@@ -34,6 +34,11 @@ import ShelfPanel from "../game3d/ShelfPanel";
 import { shelvesFor } from "../game3d/libraryShelves";
 import type { CouncilInput, ShelfId } from "../game3d/libraryShelves";
 import type { RoomView } from "../game3d/Scene";
+import { COURTYARD } from "../game3d/areas";
+import type { AreaRef } from "../game3d/areas";
+import { INITIAL_AREA, areaReducer } from "../game3d/areaMachine";
+import { standingAt } from "../game3d/near";
+import type { Nears } from "../game3d/near";
 import { deskBlock } from "../game3d/deskForm";
 import PerfBreakdown from "../game3d/PerfBreakdown";
 import Toolbar from "../game3d/Toolbar";
@@ -146,17 +151,16 @@ export default function Game3DPage() {
   const [watchlist, setWatchlist] = useState<Watchlist | null>(null);
   // The tower library: which door you stand at, which tower you are inside, and what you stand at in there.
   const [nearTower, setNearTower] = useState<string | null>(null);
-  const [room, setRoom] = useState<string | null>(null);
+  // Which place you are in: one value, not four flags. A tower's library is `library` with the holding's id.
+  const [areaState, dispatchArea] = useReducer(areaReducer, INITIAL_AREA);
+  const room = areaState.current.id === "library" ? areaState.current.holdingId : null;
   // The Town beyond the gate: whether you are in it, and which door or the gate road you stand at.
-  const [inTown, setInTown] = useState(false);
   const [atGate, setAtGate] = useState(false);
   const [townNear, setTownNear] = useState<BuildingId | null>(null);
   // Inside the Town Hall: whether you are in it, which board you stand at, whether the door is in reach, and which pages the menu is narrowed to.
-  const [inHall, setInHall] = useState(false);
   const [nearBoard, setNearBoard] = useState<BoardId | null>(null);
   const [atHallDoor, setAtHallDoor] = useState(false);
   // Inside the Hall of Records: whether you are in it, whether you stand at the shelves, and whether the door is in reach.
-  const [inRecords, setInRecords] = useState(false);
   const [atShelves, setAtShelves] = useState(false);
   const [atArchiveDoor, setAtArchiveDoor] = useState(false);
   const [onlyRoutes, setOnlyRoutes] = useState<readonly string[] | null>(null);
@@ -324,8 +328,13 @@ export default function Game3DPage() {
   }, [room, state, shownWorld, councilInput]);
   // A fresh load that drops the tower (or the state) puts you back outside rather than in an empty room.
   useEffect(() => {
-    if (room && !roomView) setRoom(null);
+    if (room && !roomView) dispatchArea({ type: "enter", ref: COURTYARD });
   }, [room, roomView]);
+  // The place the scene draws: a library whose tower is gone is not a place, so it reads as the courtyard.
+  const area: AreaRef = areaState.current.id === "library" && !roomView ? COURTYARD : areaState.current;
+  const inTown = area.id === "town";
+  const inHall = area.id === "townhall";
+  const inRecords = area.id === "records";
 
   // Opening the menu frees the mouse so the buttons can be clicked; shutting it never leaves a page open.
   const toggleWhere = useCallback(() => {
@@ -391,31 +400,29 @@ export default function Game3DPage() {
     setRealmOpen(false);
     setLampOpen(false);
     setDrillOpen(false);
-    setInTown(true);
+    dispatchArea({ type: "enter", ref: { id: "town" } });
   }, [clearNears]);
   const leaveTown = useCallback(() => {
     clearNears();
-    setInHall(false);
-    setInRecords(false);
-    setInTown(false);
+    dispatchArea({ type: "leave" });
   }, [clearNears]);
   // Into the Town Hall and back out to its door. The Town's watchers are unmounted while inside, so the nears are cleared.
   const enterHall = useCallback(() => {
     clearNears();
-    setInHall(true);
+    dispatchArea({ type: "enter", ref: { id: "townhall" } });
   }, [clearNears]);
   const leaveHall = useCallback(() => {
     clearNears();
-    setInHall(false);
+    dispatchArea({ type: "leave" });
   }, [clearNears]);
   // Into the Hall of Records and back out to its door; E at the shelves opens the flat Hall of Records page in the world panel.
   const enterRecords = useCallback(() => {
     clearNears();
-    setInRecords(true);
+    dispatchArea({ type: "enter", ref: { id: "records" } });
   }, [clearNears]);
   const leaveRecords = useCallback(() => {
     clearNears();
-    setInRecords(false);
+    dispatchArea({ type: "leave" });
   }, [clearNears]);
   const openShelves = useCallback(() => {
     const row = REGISTER.find((d) => d.route === RECORDS_ROUTE);
@@ -484,7 +491,7 @@ export default function Game3DPage() {
     setReport(null);
     setTableNote(null);
     setReadShelf(null);
-    setRoom(id);
+    dispatchArea({ type: "enter", ref: { id: "library", holdingId: id } });
   }, []);
   const leaveTower = useCallback(() => {
     setReadShelf(null);
@@ -493,7 +500,7 @@ export default function Game3DPage() {
     setAtTable(false);
     setReport(null);
     setTableNote(null);
-    setRoom(null);
+    dispatchArea({ type: "leave" });
   }, []);
   const openReport = useCallback((holdingId: string) => {
     if (document.pointerLockElement) document.exitPointerLock();
@@ -556,123 +563,134 @@ export default function Game3DPage() {
     if (talking && near !== talking) setTalking(null);
   }, [near, talking]);
 
+  // One answer to "what am I standing at": the E key and the prompt below both read it.
+  const nears = useMemo<Nears>(
+    () => ({
+      npc: near,
+      tower: nearTower,
+      desk: atDesk,
+      drill: atDrill,
+      sign: atSign,
+      booth: nearBooth,
+      stall: nearStall,
+      gate: atGate,
+      vault: atVault,
+      watch: atWatch,
+      perch: atPerch,
+      realm: atRealm,
+      shelf: nearShelf,
+      table: atTable,
+      libraryDoor: atDoor,
+      building: townNear,
+      townExit: atTownExit,
+      board: nearBoard,
+      hallDoor: atHallDoor,
+      shelves: atShelves,
+      archiveDoor: atArchiveDoor,
+    }),
+    [near, nearTower, atDesk, atDrill, atSign, nearBooth, nearStall, atGate, atVault, atWatch, atPerch, atRealm, nearShelf, atTable, atDoor, townNear, atTownExit, nearBoard, atHallDoor, atShelves, atArchiveDoor],
+  );
+  const atSpot = useMemo(() => standingAt(area, nears), [area, nears]);
+
   useEffect(() => {
     const onTalk = (e: KeyboardEvent) => {
       if (e.code !== "KeyE") return;
       const el = e.target as HTMLElement | null;
       if (typingInField(el)) return;
       if (boothOpen || lampOpen) return;
-      if (inRecords) {
-        // In the Hall of Records: E reads the shelves, or takes the door back out.
-        if (whereOpen) return;
-        if (!atShelves && !atArchiveDoor) return;
-        e.preventDefault();
-        if (atShelves) openShelves();
-        else leaveRecords();
-        return;
+      const at = atSpot;
+      switch (area.id) {
+        case "records":
+          // In the Hall of Records: E reads the shelves, or takes the door back out.
+          if (whereOpen || at.kind === "none") return;
+          e.preventDefault();
+          if (at.kind === "shelves") openShelves();
+          else leaveRecords();
+          return;
+        case "townhall":
+          // In the Town Hall: E opens the board you stand at, or takes the door back out.
+          if (whereOpen || at.kind === "none") return;
+          e.preventDefault();
+          if (at.kind === "board") openBoard(at.id);
+          else leaveHall();
+          return;
+        case "town":
+          // In the Town: E knocks at the door you stand at, or takes the road back.
+          if (whereOpen || at.kind === "none") return;
+          e.preventDefault();
+          if (at.kind === "building") openBuilding(at.id);
+          else leaveTown();
+          return;
+        case "library":
+          // Inside a tower: E reads the shelf you stand at, opens the latest report at the table, or takes the door back out.
+          if (report || at.kind === "none" || !room) return;
+          e.preventDefault();
+          if (at.kind === "table") openReport(room);
+          else if (at.kind === "shelf") {
+            if (readShelf !== at.id && document.pointerLockElement) document.exitPointerLock();
+            setReadShelf((v) => (v === at.id ? null : at.id));
+          } else leaveTower();
+          return;
       }
-      if (inHall) {
-        // In the Town Hall: E opens the board you stand at, or takes the door back out.
-        if (whereOpen) return;
-        if (!nearBoard && !atHallDoor) return;
-        e.preventDefault();
-        if (nearBoard) openBoard(nearBoard);
-        else leaveHall();
-        return;
-      }
-      if (inTown) {
-        // In the Town: E knocks at the door you stand at, or takes the road back.
-        if (whereOpen) return;
-        if (!townNear && !atTownExit) return;
-        e.preventDefault();
-        if (townNear) openBuilding(townNear);
-        else leaveTown();
-        return;
-      }
-      if (room) {
-        // Inside a tower: E reads the shelf you stand at, opens the latest report at the table, or takes the door back out.
-        if (report) return;
-        if (!nearShelf && !atDoor && !atTable) return;
-        e.preventDefault();
-        if (!nearShelf && atTable) openReport(room);
-        else if (nearShelf) {
-          if (readShelf !== nearShelf && document.pointerLockElement) document.exitPointerLock();
-          setReadShelf((v) => (v === nearShelf ? null : nearShelf));
-        } else leaveTower();
-        return;
-      }
-      if (!near && !nearTower && !atDesk && !atVault && !atWatch && !atPerch && !atRealm && !atDrill && !atSign && !nearStall && !nearBooth && !atGate) return;
+      // The courtyard: E does the one thing `atSpot` names (the prompt shows the same thing).
+      if (at.kind === "none") return;
       e.preventDefault();
-      if (!near && nearTower) {
-        enterTower(nearTower);
-        return;
-      }
-      if (!near) {
-        if (atVault && !atDesk && !atDrill && !atSign && !nearStall && !nearBooth && !atGate) {
-          // Only the vault chest is in reach: E opens or closes it.
+      switch (at.kind) {
+        case "npc":
+          if (talking) setTalking(null);
+          else {
+            // Free the mouse so the Close and Try again buttons can be clicked.
+            if (document.pointerLockElement) document.exitPointerLock();
+            setTalking(at.id);
+          }
+          return;
+        case "tower":
+          enterTower(at.holdingId);
+          return;
+        case "desk":
+          if (!deskOpen && document.pointerLockElement) document.exitPointerLock();
+          setDeskOpen((v) => !v);
+          return;
+        case "drill":
+          if (!drillOpen && document.pointerLockElement) document.exitPointerLock();
+          setDrillOpen((v) => !v);
+          return;
+        case "sign":
+          toggleWhere();
+          return;
+        case "booth":
+          openBooth(at.id);
+          return;
+        case "stall":
+          openStore(at.holdingId);
+          return;
+        case "gate":
+          enterTown();
+          return;
+        case "vault":
           if (!vaultOpen && document.pointerLockElement) document.exitPointerLock();
           setVaultOpen((v) => !v);
           return;
-        }
-        if (atRealm && !atDesk && !atVault && !atWatch && !atPerch && !atDrill && !atSign && !nearStall && !nearBooth && !atGate) {
-          // Only the Realm post is in reach: E opens or closes the verdict. Without a readable fortress there is nothing to open.
-          if (!state) return;
-          if (!realmOpen && document.pointerLockElement) document.exitPointerLock();
-          setRealmOpen((v) => !v);
-          return;
-        }
-        if (atWatch && !atDesk && !atVault && !atDrill && !atSign && !nearStall && !nearBooth && !atGate) {
-          // Only the Night Watch post is in reach: E opens or closes the dispatch.
+        case "watch":
           if (!watchOpen && document.pointerLockElement) document.exitPointerLock();
           setWatchOpen((v) => !v);
           return;
-        }
-        if (atPerch && !atDesk && !atVault && !atDrill && !atSign && !nearStall && !nearBooth && !atGate) {
-          // Only the raven perch is in reach: E opens or closes the ravens. Without data there is nothing to open.
+        case "perch":
+          // Without data there is nothing to open.
           if (!ravens) return;
           if (!perchOpen && document.pointerLockElement) document.exitPointerLock();
           setPerchOpen((v) => !v);
           return;
-        }
-        if (!atDesk && !atDrill && !atSign && !nearStall && !nearBooth && atGate) {
-          enterTown();
+        case "realm":
+          if (!state) return;
+          if (!realmOpen && document.pointerLockElement) document.exitPointerLock();
+          setRealmOpen((v) => !v);
           return;
-        }
-        if (!atDesk && !atDrill && !atSign && !nearStall && nearBooth) {
-          openBooth(nearBooth);
-          return;
-        }
-        if (!atDesk && !atDrill && !atSign && nearStall) {
-          openStore(nearStall);
-          return;
-        }
-        if (!atDesk && !atDrill) {
-          // Only the signpost is in reach: E opens or shuts the "Where to?" menu.
-          toggleWhere();
-          return;
-        }
-        if (!atDesk) {
-          // Only the drill post is in reach: E starts or ends a drill.
-          if (!drillOpen && document.pointerLockElement) document.exitPointerLock();
-          setDrillOpen((v) => !v);
-          return;
-        }
-        // Only the desk is in reach: E opens or closes it.
-        if (!deskOpen && document.pointerLockElement) document.exitPointerLock();
-        setDeskOpen((v) => !v);
-        return;
-      }
-      if (talking) {
-        setTalking(null);
-      } else {
-        // Free the mouse so the Close and Try again buttons can be clicked.
-        if (document.pointerLockElement) document.exitPointerLock();
-        setTalking(near);
       }
     };
     window.addEventListener("keydown", onTalk);
     return () => window.removeEventListener("keydown", onTalk);
-  }, [inRecords, atShelves, atArchiveDoor, openShelves, leaveRecords, inHall, nearBoard, atHallDoor, openBoard, leaveHall, inTown, whereOpen, townNear, atTownExit, atGate, openBuilding, leaveTown, enterTown, near, talking, atDesk, atVault, vaultOpen, atWatch, watchOpen, atPerch, perchOpen, ravens, atRealm, realmOpen, lampOpen, state, atDrill, atSign, nearStall, nearBooth, boothOpen, openBooth, openStore, toggleWhere, drillOpen, deskOpen, room, nearShelf, atDoor, atTable, report, readShelf, nearTower, enterTower, leaveTower, openReport]);
+  }, [area, atSpot, whereOpen, openShelves, leaveRecords, openBoard, leaveHall, openBuilding, leaveTown, enterTown, talking, vaultOpen, watchOpen, perchOpen, ravens, realmOpen, lampOpen, state, boothOpen, openBooth, openStore, toggleWhere, drillOpen, deskOpen, room, report, readShelf, enterTower, leaveTower, openReport]);
 
   useEffect(() => {
     const onPanelKey = (e: KeyboardEvent) => {
@@ -716,6 +734,69 @@ export default function Game3DPage() {
 
   if (!supported) return <Unavailable />;
 
+  // The prompt is the E key's own answer (`atSpot`), so it never promises something E does not do.
+  let spotPrompt: string | null = null;
+  let spotNote: string | null = null;
+  switch (atSpot.kind) {
+    case "shelves":
+      if (!whereOpen) spotPrompt = shelfPrompt;
+      break;
+    case "board":
+      if (!whereOpen) spotPrompt = hallPrompt(boardById(atSpot.id));
+      break;
+    case "building":
+      if (!whereOpen) spotPrompt = buildingPrompt(BUILDINGS.find((b) => b.id === atSpot.id) ?? BUILDINGS[0]);
+      break;
+    case "leave":
+      if (area.id === "library") spotPrompt = "Press E to go back outside";
+      else if (!whereOpen) spotPrompt = area.id === "records" ? archiveDoorPrompt : area.id === "townhall" ? hallDoorPrompt : exitPrompt;
+      break;
+    case "shelf":
+      if (!readShelf) spotPrompt = `Press E to read ${roomView?.shelves.find((s) => s.id === atSpot.id)?.title ?? "the shelf"}`;
+      break;
+    case "table":
+      if (!report) spotPrompt = tableNote ?? "Press E to open the latest report";
+      break;
+    case "tower":
+      spotPrompt = `Press E to go into ${world.plain.find((t) => t.holdingId === atSpot.holdingId)?.name ?? "the tower"}`;
+      break;
+    case "desk":
+      if (!deskOpen) spotPrompt = "Press E to write at the desk";
+      break;
+    case "drill":
+      if (!drillOpen) spotPrompt = DRILL_PROMPT;
+      break;
+    case "sign":
+      if (!whereOpen) spotPrompt = SIGN_PROMPT;
+      break;
+    case "booth":
+      if (!boothOpen && !whereOpen) spotPrompt = boothPrompt(atSpot.id);
+      break;
+    case "stall":
+      if (!whereOpen) {
+        spotPrompt = stallPrompt(street.stalls.find((s) => s.holdingId === atSpot.holdingId)?.name ?? "this company");
+        if (street.overflow.length > 0) spotNote = streetOverflowLine(street.overflow.length);
+      }
+      break;
+    case "gate":
+      if (!whereOpen) spotPrompt = gatePrompt;
+      break;
+    case "vault":
+      if (!vaultOpen) spotPrompt = VAULT_PROMPT;
+      break;
+    case "watch":
+      if (!watchOpen) spotPrompt = WATCH_PROMPT;
+      break;
+    case "perch":
+      if (!perchOpen && ravens) spotPrompt = PERCH_PROMPT;
+      break;
+    case "realm":
+      if (!realmOpen && state) spotPrompt = REALM_PROMPT;
+      break;
+    default:
+      break;
+  }
+
   return (
     <div className="relative h-[calc(100dvh-5rem)] min-h-[480px] w-full overflow-hidden bg-surface">
       <SceneBoundary fallback={<Unavailable />}>
@@ -748,19 +829,17 @@ export default function Game3DPage() {
             talking={talking}
             cheerKey={cheerKey}
             onNearTower={setNearTower}
+            area={area}
             room={roomView}
             onNearShelf={setNearShelf}
             onNearTable={setAtTable}
             onNearDoor={setAtDoor}
-            inTown={inTown}
             onNearGate={setAtGate}
             townNear={townNear}
             onNearBuilding={setTownNear}
             onNearTownExit={setAtTownExit}
-            inHall={inHall}
             onNearBoard={setNearBoard}
             onNearHallDoor={setAtHallDoor}
-            inRecords={inRecords}
             onNearShelves={setAtShelves}
             onNearArchiveDoor={setAtArchiveDoor}
           />
@@ -883,118 +962,13 @@ export default function Game3DPage() {
           ← Back to the courtyard
         </button>
       )}
-      {inHall && !whereOpen && nearBoard && (
-        <p className="pointer-events-none absolute bottom-16 left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-sm text-white">
-          {hallPrompt(boardById(nearBoard))}
-        </p>
-      )}
-      {inHall && !whereOpen && !nearBoard && atHallDoor && (
-        <p className="pointer-events-none absolute bottom-16 left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-sm text-white">
-          {hallDoorPrompt}
-        </p>
-      )}
-      {inRecords && !whereOpen && atShelves && (
-        <p className="pointer-events-none absolute bottom-16 left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-sm text-white">
-          {shelfPrompt}
-        </p>
-      )}
-      {inRecords && !whereOpen && !atShelves && atArchiveDoor && (
-        <p className="pointer-events-none absolute bottom-16 left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-sm text-white">
-          {archiveDoorPrompt}
-        </p>
-      )}
-      {inTown && !inHall && !inRecords && !whereOpen && townNear && (
-        <p className="pointer-events-none absolute bottom-16 left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-sm text-white">
-          {buildingPrompt(BUILDINGS.find((b) => b.id === townNear) ?? BUILDINGS[0])}
-        </p>
-      )}
-      {inTown && !inHall && !inRecords && !whereOpen && !townNear && atTownExit && (
-        <p className="pointer-events-none absolute bottom-16 left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-sm text-white">
-          {exitPrompt}
-        </p>
-      )}
-      {!inTown && atGate && !whereOpen && !talking && !nearTower && !atSign && !atDesk && !atDrill && !nearStall && !nearBooth && !room && (
-        <p className="pointer-events-none absolute bottom-16 left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-sm text-white">
-          {gatePrompt}
-        </p>
-      )}
-
-      {!room && nearTower && !near && !talking && (
-        <p className="pointer-events-none absolute bottom-16 left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-sm text-white">
-          Press E to go into {world.plain.find((t) => t.holdingId === nearTower)?.name ?? "the tower"}
-        </p>
-      )}
-      {room && nearShelf && !readShelf && (
-        <p className="pointer-events-none absolute bottom-16 left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-sm text-white">
-          Press E to read {roomView?.shelves.find((s) => s.id === nearShelf)?.title ?? "the shelf"}
-        </p>
-      )}
-      {room && atTable && !nearShelf && !report && (
-        <p className="pointer-events-none absolute bottom-16 left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-sm text-white">
-          {tableNote ?? "Press E to open the latest report"}
-        </p>
-      )}
-      {room && atDoor && !nearShelf && !atTable && (
-        <p className="pointer-events-none absolute bottom-16 left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-sm text-white">
-          Press E to go back outside
-        </p>
-      )}
-
-      {atVault && !vaultOpen && !talking && !nearTower && !atDesk && !atDrill && !atSign && !nearStall && !nearBooth && !room && (
-        <p className="pointer-events-none absolute bottom-16 left-1/2 w-max -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-sm text-white">
-          {VAULT_PROMPT}
-        </p>
-      )}
-
-      {atWatch && !watchOpen && !talking && !nearTower && !atDesk && !atVault && !atDrill && !atSign && !nearStall && !nearBooth && !room && (
-        <p className="pointer-events-none absolute bottom-16 left-1/2 w-max -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-sm text-white">
-          {WATCH_PROMPT}
-        </p>
-      )}
-
-      {atRealm && !realmOpen && state && !talking && !nearTower && !atDesk && !atVault && !atWatch && !atPerch && !atDrill && !atSign && !nearStall && !nearBooth && !room && (
-        <p className="pointer-events-none absolute bottom-16 left-1/2 w-max -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-sm text-white">
-          {REALM_PROMPT}
-        </p>
-      )}
-
-      {atPerch && !perchOpen && ravens && !talking && !nearTower && !atDesk && !atVault && !atDrill && !atSign && !nearStall && !nearBooth && !room && (
-        <p className="pointer-events-none absolute bottom-16 left-1/2 w-max -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-sm text-white">
-          {PERCH_PROMPT}
-        </p>
-      )}
-
-      {atDesk && !deskOpen && !talking && !nearTower && (
-        <p className="pointer-events-none absolute bottom-16 left-1/2 w-max -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-sm text-white">
-          Press E to write at the desk
-        </p>
-      )}
-
-      {atDrill && !drillOpen && !talking && !nearTower && !atDesk && (
-        <p className="pointer-events-none absolute bottom-16 left-1/2 w-max -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-sm text-white">
-          {DRILL_PROMPT}
-        </p>
-      )}
-
-      {nearStall && !whereOpen && !talking && !nearTower && !atSign && !atDesk && !atDrill && !room && (
-        <p className="pointer-events-none absolute bottom-16 left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-center text-sm text-white">
-          {stallPrompt(street.stalls.find((s) => s.holdingId === nearStall)?.name ?? "this company")}
-          {street.overflow.length > 0 && <span className="block text-xs opacity-80">{streetOverflowLine(street.overflow.length)}</span>}
-        </p>
-      )}
-
-      {nearBooth && !boothOpen && !whereOpen && !talking && !nearTower && !nearStall && !atSign && !atDesk && !atDrill && !room && (
-        <p className="pointer-events-none absolute bottom-16 left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-center text-sm text-white">
-          {boothPrompt(nearBooth)}
-        </p>
-      )}
-
       {boothOpen === "sal" && <SalesRepDialog demoMode={demoMode === true} rows={watchlist?.rows ?? []} onClose={closeBooth} onAdded={setWatchlist} />}
       {boothOpen === "hype" && <HypeBoothDialog demoMode={demoMode === true} rows={watchlist?.rows ?? []} onClose={closeBooth} onAdded={setWatchlist} />}
 
-      {atSign && !whereOpen && !talking && !nearTower && !atDesk && !atDrill && !room && (
-        <p className="pointer-events-none absolute bottom-16 left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-sm text-white">
-          {SIGN_PROMPT}
+      {spotPrompt && (
+        <p className="pointer-events-none absolute bottom-16 left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-center text-sm text-white">
+          {spotPrompt}
+          {spotNote && <span className="block text-xs opacity-80">{spotNote}</span>}
         </p>
       )}
 
