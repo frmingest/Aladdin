@@ -26,9 +26,8 @@ const tower = {} as TowerView;
 const NONE_BUILT: Record<Theme3dId, boolean> = { ...DRESSING_BUILT };
 
 describe("the centre slot (S26 PR 1)", () => {
-  it("builds no dressing yet, so every theme keeps S25's plain tower", () => {
-    expect(Object.values(DRESSING_BUILT).some(Boolean)).toBe(false);
-    for (const theme of Object.keys(DRESSING_BUILT) as Theme3dId[]) {
+  it("a theme with no dressing built keeps S25's plain tower", () => {
+    for (const theme of (Object.keys(DRESSING_BUILT) as Theme3dId[]).filter((t) => !DRESSING_BUILT[t])) {
       for (const wall of ["basalt", "rotted", "unsurveyed", "not_applicable"] as const) {
         const slot = centreSlotFor({ ...DEMO[0]!, wall }, tower);
         expect(centreChoice({ theme, condition: slot.condition })).toBe("tower");
@@ -67,12 +66,12 @@ describe("the centre slot (S26 PR 1)", () => {
     expect(themeOf({ sector: "Materials", holding_id: "x", structure: "bullion" })).toBe("ingots");
   });
 
-  it("prints the theme of every demo holding, and none of them changes yet", () => {
+  it("prints the theme of every demo holding", () => {
     const rows = themeReadout(DEMO);
     const table = themeReadoutTable(rows);
     console.log(`\n${table}\n`);
     expect(rows).toHaveLength(10);
-    expect(rows.every((r) => !r.changes)).toBe(true);
+    expect(rows.every((r) => r.changes === (r.theme !== "plain" && DRESSING_BUILT[r.theme]))).toBe(true);
     const byName = Object.fromEntries(rows.map((r) => [r.name, r.theme]));
     expect(byName["Exxon Mobil Corp."]).toMatch(/^(windmill|watermill)$/);
     expect(byName["Procter & Gamble Co."]).toMatch(/^(farm|stall)$/);
