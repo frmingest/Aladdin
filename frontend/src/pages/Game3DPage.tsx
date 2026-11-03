@@ -40,6 +40,7 @@ import { INITIAL_AREA, areaReducer } from "../game3d/areaMachine";
 import { standingAt } from "../game3d/near";
 import type { Nears } from "../game3d/near";
 import { deskBlock } from "../game3d/deskForm";
+import PerfBreakdown from "../game3d/PerfBreakdown";
 import Toolbar from "../game3d/Toolbar";
 import { typingInField } from "../game3d/useKeys";
 import { stallPrompt, storeDoor } from "../game3d/stallDoor";
@@ -805,6 +806,7 @@ export default function Game3DPage() {
             standingLevel={standingText.lit}
             onLockChange={setLocked}
             onStats={setStats}
+            statsDetail={showPerf}
             onNear={setNear}
             near={near}
             books={quest.written}
@@ -855,6 +857,7 @@ export default function Game3DPage() {
         whereOpen={whereOpen}
         onToggleWhere={toggleWhere}
       />
+      {showPerf && <PerfBreakdown stats={stats} />}
       {whereOpen && !worldPage && <WhereToPanel onPick={pickDoor} onClose={closeWhere} only={onlyPlace} onlyRoutes={onlyRoutes} />}
       {whereOpen && worldPage && <WorldPanel door={worldPage} onBack={() => setWorldPage(null)} onClose={closeWhere} />}
       {panels.towers && <TowerPanel world={shownWorld} loading={loading} error={error} onRetry={load} onClose={() => flip("towers")} />}

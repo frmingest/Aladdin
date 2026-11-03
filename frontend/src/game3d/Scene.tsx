@@ -67,6 +67,8 @@ interface Props {
   world: WorldModel;
   onLockChange: (locked: boolean) => void;
   onStats: (s: PerfStats) => void;
+  /** Per-group draw-call walk for the stats overlay; off unless the overlay is open. */
+  statsDetail?: boolean;
   /** Who is close enough to talk to (null: nobody). Called only when it changes. */
   onNear: (id: NpcId | null) => void;
   near: NpcId | null;
@@ -304,43 +306,67 @@ function World({
   return (
     <Physics gravity={[0, -25, 0]} timeStep="vary">
       {area.id === "records" ? (
-        <RecordsHallRoom pos={pos} onShelves={onNearShelves} onDoor={onNearArchiveDoor} />
+        <group userData={{ perfGroup: "records" }}>
+          <RecordsHallRoom pos={pos} onShelves={onNearShelves} onDoor={onNearArchiveDoor} />
+        </group>
       ) : area.id === "townhall" ? (
-        <TownHallRoom pos={pos} onBoard={onNearBoard} onDoor={onNearHallDoor} />
+        <group userData={{ perfGroup: "hall" }}>
+          <TownHallRoom pos={pos} onBoard={onNearBoard} onDoor={onNearHallDoor} />
+        </group>
       ) : area.id === "town" ? (
         <>
-          <Backdrop />
-          <Town pos={pos} near={townNear} onNearBuilding={onNearBuilding} onNearExit={onNearTownExit} />
+          <group userData={{ perfGroup: "backdrop" }}>
+            <Backdrop />
+          </group>
+          <group userData={{ perfGroup: "town" }}><Town pos={pos} near={townNear} onNearBuilding={onNearBuilding} onNearExit={onNearTownExit} /></group>
         </>
       ) : area.id === "library" && room ? (
-        <Library name={room.name} ticker={room.ticker} gap={room.gap} shelves={room.shelves} pos={pos} onShelf={onNearShelf} onDoor={onNearDoor} onTable={onNearTable} />
+        <group userData={{ perfGroup: "library" }}>
+          <Library name={room.name} ticker={room.ticker} gap={room.gap} shelves={room.shelves} pos={pos} onShelf={onNearShelf} onDoor={onNearDoor} onTable={onNearTable} />
+        </group>
       ) : (
         <>
-          <Backdrop />
-          <Horizon />
-          <Courtyard world={world} />
-          {PROPS.map((p) => (
-            <PropMesh key={p.id} prop={p} />
-          ))}
-          <Scenery />
-          <Market />
-          <MarketStreet stalls={stalls} />
-          <Booths />
-          <StandingTorches level={standingLevel} />
-          <Desk books={books} />
-          <Vault level={vaultLevel} />
-          <WatchPost status={watchStatus} />
-          <RavenBirds count={unseenRavens} />
-          <RealmPost level={realmLevel} siege={siegeLevel} />
-          <Weather level={siegeLevel} />
-          <DrillPost />
-          <Signpost />
-          {drillOpen && <DrillCamp />}
-          {NPCS.map((n) => (
-            <NpcMesh key={n.id} npc={n} active={near === n.id} playerPos={pos} talking={talking === n.id} cheerKey={cheerKey} />
-          ))}
-          <Townsfolk cheerKey={cheerKey} />
-          <Workers />
+          <group userData={{ perfGroup: "backdrop" }}>
+            <Backdrop />
+          </group>
+          <group userData={{ perfGroup: "horizon" }}>
+            <Horizon />
+          </group>
+          <group userData={{ perfGroup: "courtyard" }}>
+            <Courtyard world={world} />
+            {PROPS.map((p) => (
+              <PropMesh key={p.id} prop={p} />
+            ))}
+          </group>
+          <group userData={{ perfGroup: "scenery" }}>
+            <Scenery />
+          </group>
+          <group userData={{ perfGroup: "market" }}>
+            <Market />
+            <MarketStreet stalls={stalls} />
+            <Booths />
+          </group>
+          <group userData={{ perfGroup: "posts" }}>
+            <StandingTorches level={standingLevel} />
+            <Desk books={books} />
+            <Vault level={vaultLevel} />
+            <WatchPost status={watchStatus} />
+            <RavenBirds count={unseenRavens} />
+            <RealmPost level={realmLevel} siege={siegeLevel} />
+            <DrillPost />
+            <Signpost />
+            {drillOpen && <DrillCamp />}
+          </group>
+          <group userData={{ perfGroup: "weather" }}>
+            <Weather level={siegeLevel} />
+          </group>
+          <group userData={{ perfGroup: "people" }}>
+            {NPCS.map((n) => (
+              <NpcMesh key={n.id} npc={n} active={near === n.id} playerPos={pos} talking={talking === n.id} cheerKey={cheerKey} />
+            ))}
+            <Townsfolk cheerKey={cheerKey} />
+            <Workers />
+          </group>
           <Confetti burstKey={cheerKey} />
           <NearWatch pos={pos} targets={NPC_T} onChange={onNear} />
           <NearWatch pos={pos} targets={DESK_T} onChange={isYes(onNearDesk)} />
@@ -356,7 +382,9 @@ function World({
           <NearWatch pos={pos} targets={towerTargets} onChange={onNearTower} />
         </>
       )}
-      <Player keys={keys} orbit={orbit} pos={pos} teleport={teleport} cheerKey={cheerKey} />
+      <group userData={{ perfGroup: "hero" }}>
+        <Player keys={keys} orbit={orbit} pos={pos} teleport={teleport} cheerKey={cheerKey} />
+      </group>
     </Physics>
   );
 }
@@ -369,6 +397,7 @@ export default function Scene({
   world,
   onLockChange,
   onStats,
+  statsDetail = false,
   onNear,
   near,
   books = 0,
@@ -500,7 +529,7 @@ export default function Scene({
           onNearArchiveDoor={onNearArchiveDoor}
         />
       </Suspense>
-      <PerfProbe onStats={onStats} />
+      <PerfProbe onStats={onStats} detail={statsDetail} />
     </Canvas>
   );
 }
