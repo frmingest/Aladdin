@@ -3,6 +3,10 @@
 Completed milestones and retired status, moved out of `docs/PROGRESS.md` under the rolling-log rules
 in `CLAUDE.md` ("Progress file rules"). Newest snapshot first. Older: [PROGRESS-full-2026-09-30.md](PROGRESS-full-2026-09-30.md).
 
+## 2026-11-03 — S25 PR 2 and 3, text passes 1 and 2 (#277 to #280, merged)
+
+Survey lanterns (fog of war in a holding's land), the holding's own tower and the price post by the exit, text pass 1 (words) and pass 2 (whole-fortress card, writing desk, shelf panel). Real-browser look-over still on Faiz's list ([lanterns](../game/game3d-s25-lanterns-2026-11-03.md), [centre tower](../game/game3d-s25-centre-tower-2026-11-03.md), [text review](../game/game3d-text-review-2026-11-03.md)).
+
 ## 2026-11-03 — S25 PR 1 (#276, merged)
 
 Every tower door leads to that holding's own land: gate stone (name, weight, value), records house with seven shelves and the table, hedge, gate. Looked at in a headless browser (92 draws, budget 120); real-browser look-over still on Faiz's list.
