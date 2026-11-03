@@ -7,19 +7,22 @@ import type { AreaRef } from "./areas";
 
 const KEY = "at";
 
-/** The link value for a place: `courtyard`, `town`, `townhall`, `records` or `library:<holdingId>`. */
+/** The link value for a place: `courtyard`, `town`, `townhall`, `records` or `holding:<holdingId>`. */
 export function placeToken(ref: AreaRef): string {
-  return ref.id === "library" ? `library:${ref.holdingId}` : ref.id;
+  return ref.id === "holding" ? `holding:${ref.holdingId}` : ref.id;
 }
 
 /** The place a token names, or the courtyard when it names nothing we know. */
 export function parsePlace(token: string | null | undefined): AreaRef {
   if (!token) return { id: "courtyard" };
-  if (token.startsWith("library:")) {
-    const holdingId = token.slice("library:".length);
-    return holdingId ? { id: "library", holdingId } : { id: "courtyard" };
+  // `library:<id>` was the name before S25 (F1): an old link still opens that holding's land, silently.
+  for (const prefix of ["holding:", "library:"]) {
+    if (token.startsWith(prefix)) {
+      const holdingId = token.slice(prefix.length);
+      return holdingId ? { id: "holding", holdingId } : { id: "courtyard" };
+    }
   }
-  if (token === "library") return { id: "courtyard" };
+  if (token === "holding" || token === "library") return { id: "courtyard" };
   return token in AREAS ? ({ id: token } as AreaRef) : { id: "courtyard" };
 }
 

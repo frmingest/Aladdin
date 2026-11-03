@@ -1,20 +1,15 @@
 /**
  * The map of places (S21). Pure data and maths, no three.js and no React.
  *
- * Every place you can stand in (the courtyard, the Town, the Town Hall, the Hall of Records, a tower's library)
+ * Every place you can stand in (the courtyard, the Town, the Town Hall, the Hall of Records, a holding's land)
  * is one entry here: where you arrive, where its doors are, how it is lit and where "leave" takes you. The numbers
  * are NOT new: each entry points at the spawn, door and exit constants that already live in the room modules, so
- * adding this list moved nothing. `holding`, `siege` and `market` are reserved names for later sprints.
+ * adding this list moved nothing. `siege` and `market` are reserved names for later sprints. A tower door now leads to that holding's
+ * own land (S25); the shared library room it used to open is no longer a place.
  */
 import { WALL_RADIUS } from "./layout";
 import { INTERIOR_BOX } from "./interiorBox";
-import {
-  DOOR_LEAVE_RANGE as LIBRARY_DOOR_LEAVE_RANGE,
-  DOOR_RANGE as LIBRARY_DOOR_RANGE,
-  HALL_DOOR as LIBRARY_DOOR,
-  ROOM_SPAWN,
-  ROOM_YAW,
-} from "./libraryRoom";
+import { GATE_LEAVE_RANGE as LAND_GATE_LEAVE_RANGE, GATE_RANGE as LAND_GATE_RANGE, LAND_GATE, LAND_SPAWN, MIN_LAND_RADIUS } from "./holdingLand";
 import { HALL_DOOR, HALL_DOOR_LEAVE_RANGE, HALL_DOOR_RANGE, HALL_SPAWN, HALL_YAW, hallExit } from "./townHallRoom";
 import {
   ARCHIVE,
@@ -54,12 +49,12 @@ export type AreaRef =
   | { id: "town" }
   | { id: "townhall" }
   | { id: "records" }
-  | { id: "library"; holdingId: string };
+  | { id: "holding"; holdingId: string };
 
 export type AreaId = AreaRef["id"];
 
-/** Names held back for later sprints (a holding's own land, the Siege Field, the Market Quarter). Not places yet. */
-export const RESERVED_AREA_IDS = ["holding", "siege", "market"] as const;
+/** Names held back for later sprints (the Siege Field, the Market Quarter). Not places yet. */
+export const RESERVED_AREA_IDS = ["siege", "market"] as const;
 
 export interface AreaBox {
   minX: number;
@@ -146,16 +141,15 @@ export const AREAS: Record<AreaId, AreaDef> = {
       { id: "door", x: ARCHIVE_DOOR.x, z: ARCHIVE_DOOR.z, range: ARCHIVE_DOOR_RANGE, leaveRange: ARCHIVE_DOOR_LEAVE_RANGE, to: "parent" },
     ],
   },
-  library: {
-    id: "library",
+  holding: {
+    id: "holding",
     parent: "courtyard",
-    kind: "indoor",
-    lighting: "indoor",
-    bounds: insideBox(INTERIOR_BOX),
-    spawn: { x: ROOM_SPAWN.x, z: ROOM_SPAWN.z, yaw: ROOM_YAW },
-    doors: [
-      { id: "door", x: LIBRARY_DOOR.x, z: LIBRARY_DOOR.z, range: LIBRARY_DOOR_RANGE, leaveRange: LIBRARY_DOOR_LEAVE_RANGE, to: "parent" },
-    ],
+    kind: "outdoor",
+    lighting: "outdoor",
+    // The smallest land: every land is at least this big, and the ground only grows with the size class.
+    bounds: circleBox(MIN_LAND_RADIUS),
+    spawn: { x: LAND_SPAWN.x, z: LAND_SPAWN.z, yaw: LAND_SPAWN.yaw },
+    doors: [{ id: "gate", x: LAND_GATE.x, z: LAND_GATE.z, range: LAND_GATE_RANGE, leaveRange: LAND_GATE_LEAVE_RANGE, to: "parent" }],
   },
 };
 
@@ -167,13 +161,13 @@ export function areaDef(ref: AreaRef): AreaDef {
 
 export function sameArea(a: AreaRef, b: AreaRef): boolean {
   if (a.id !== b.id) return false;
-  return a.id === "library" && b.id === "library" ? a.holdingId === b.holdingId : true;
+  return a.id === "holding" && b.id === "holding" ? a.holdingId === b.holdingId : true;
 }
 
-/** The place "leave" takes you to, or null at the courtyard. A library's parent is the courtyard. */
+/** The place "leave" takes you to, or null at the courtyard. A holding's land has the courtyard as its parent. */
 export function parentOf(ref: AreaRef): AreaRef | null {
   const p = AREAS[ref.id].parent;
-  return p === null ? null : { id: p as Exclude<AreaId, "library"> };
+  return p === null ? null : { id: p as Exclude<AreaId, "holding"> };
 }
 
 export interface Arrival {
@@ -184,7 +178,7 @@ export interface Arrival {
 
 /** Where the hero stands on stepping back out of `from` into `to` (its parent). Null when it cannot be worked out. */
 export function returnSpot(from: AreaRef, to: AreaRef, towers: readonly Enterable[]): Arrival | null {
-  if (from.id === "library" && to.id === "courtyard") {
+  if (from.id === "holding" && to.id === "courtyard") {
     const t = towers.find((w) => w.holdingId === from.holdingId);
     if (!t) return null;
     const out = exitSpot(t.spot, t.radius);

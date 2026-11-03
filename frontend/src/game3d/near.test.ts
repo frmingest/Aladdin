@@ -56,14 +56,14 @@ describe("standingAt: the one answer for E and for the prompt", () => {
       expect(standingAt(court, nears(rest)).kind).toBe(kinds[i]);
     });
   });
-  it("reads the shelf before the table, and the table before the door, in a library", () => {
-    const lib = { id: "library", holdingId: "h1" } as const;
-    expect(standingAt(lib, nears({ shelf: "wall" as never, table: true, libraryDoor: true })).kind).toBe("shelf");
-    expect(standingAt(lib, nears({ table: true, libraryDoor: true })).kind).toBe("table");
-    expect(standingAt(lib, nears({ libraryDoor: true })).kind).toBe("leave");
+  it("reads the shelf before the table, and the table before the gate, in a holding's land", () => {
+    const lib = { id: "holding", holdingId: "h1" } as const;
+    expect(standingAt(lib, nears({ shelf: "wall" as never, table: true, landGate: true })).kind).toBe("shelf");
+    expect(standingAt(lib, nears({ table: true, landGate: true })).kind).toBe("table");
+    expect(standingAt(lib, nears({ landGate: true })).kind).toBe("leave");
   });
   it("ignores courtyard spots while inside, and inside spots while outside", () => {
-    expect(standingAt({ id: "library", holdingId: "h1" }, nears({ desk: true, gate: true }))).toEqual({ kind: "none" });
+    expect(standingAt({ id: "holding", holdingId: "h1" }, nears({ desk: true, gate: true }))).toEqual({ kind: "none" });
     expect(standingAt(court, nears({ shelves: true, table: true, hallDoor: true }))).toEqual({ kind: "none" });
   });
   it("covers the Town, the Town Hall and the Hall of Records", () => {

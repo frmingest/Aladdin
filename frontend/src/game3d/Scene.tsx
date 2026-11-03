@@ -46,7 +46,8 @@ import { STALL_LEAVE_RANGE, STALL_RANGE } from "./stallDoor";
 import { DRILL_LEAVE_RANGE, DRILL_POST, DRILL_RANGE } from "./stormDrill";
 import { DESK, DESK_LEAVE_RANGE, DESK_RANGE } from "./desk";
 import { PROPS } from "./props";
-import Library from "./Library";
+import HoldingLand from "./HoldingLand";
+import type { GateStone } from "./holdingLand";
 import Town from "./Town";
 import TownHallRoom from "./TownHallRoom";
 import RecordsHallRoom from "./RecordsHallRoom";
@@ -121,7 +122,7 @@ interface Props {
   /** The tower library's contents, when `area` is a library. */
   room?: RoomView | null;
   onNearShelf?: (id: ShelfId | null) => void;
-  onNearDoor?: (near: boolean) => void;
+  onNearLandGate?: (near: boolean) => void;
   onNearTable?: (near: boolean) => void;
   /** Courtyard: the hero stands at the gate road. */
   onNearGate?: (near: boolean) => void;
@@ -142,6 +143,10 @@ export interface RoomView {
   name: string;
   ticker: string;
   gap?: string | null;
+  /** The gate stone's words and numbers, from the stored row (unknown stays unknown). */
+  gate: GateStone;
+  /** The ground radius for the holding's size class. */
+  radius: number;
   shelves: Shelf[];
 }
 
@@ -222,7 +227,7 @@ function World({
   area,
   room,
   onNearShelf,
-  onNearDoor,
+  onNearLandGate,
   onNearTable,
   onNearGate,
   townNear,
@@ -262,7 +267,7 @@ function World({
   area: AreaRef;
   room: RoomView | null;
   onNearShelf: (id: ShelfId | null) => void;
-  onNearDoor: (near: boolean) => void;
+  onNearLandGate: (near: boolean) => void;
   onNearTable: (near: boolean) => void;
   onNearGate: (near: boolean) => void;
   townNear: BuildingId | null;
@@ -324,10 +329,15 @@ function World({
           </group>
           <group userData={{ perfGroup: "town" }}><Town pos={pos} near={townNear} onNearBuilding={onNearBuilding} onNearExit={onNearTownExit} /></group>
         </>
-      ) : area.id === "library" && room ? (
-        <group userData={{ perfGroup: "library" }}>
-          <Library name={room.name} ticker={room.ticker} gap={room.gap} shelves={room.shelves} pos={pos} onShelf={onNearShelf} onDoor={onNearDoor} onTable={onNearTable} />
-        </group>
+      ) : area.id === "holding" && room ? (
+        <>
+          <group userData={{ perfGroup: "backdrop" }}>
+            <Backdrop />
+          </group>
+          <group userData={{ perfGroup: "holding" }}>
+            <HoldingLand ticker={room.ticker} gap={room.gap} gate={room.gate} radius={room.radius} shelves={room.shelves} pos={pos} onShelf={onNearShelf} onGate={onNearLandGate} onTable={onNearTable} />
+          </group>
+        </>
       ) : (
         <>
           <group userData={{ perfGroup: "backdrop" }}>
@@ -443,7 +453,7 @@ export default function Scene({
   area = COURTYARD,
   room = null,
   onNearShelf = noop,
-  onNearDoor = noop,
+  onNearLandGate = noop,
   onNearTable = noop,
   onNearGate = noop,
   townNear = null,
@@ -537,7 +547,7 @@ export default function Scene({
           area={area}
           room={room}
           onNearShelf={onNearShelf}
-          onNearDoor={onNearDoor}
+          onNearLandGate={onNearLandGate}
           onNearTable={onNearTable}
           onNearGate={onNearGate}
           townNear={townNear}

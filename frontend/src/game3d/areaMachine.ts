@@ -43,8 +43,8 @@ export function areaReducer(state: AreaState, action: AreaAction): AreaState {
   switch (action.type) {
     case "enter": {
       if (sameArea(state.current, action.ref)) return state;
-      // A library without a holding is not a place; fall back to the courtyard.
-      const ref = action.ref.id === "library" && !action.ref.holdingId ? INITIAL_AREA.current : action.ref;
+      // A land without a holding is not a place; fall back to the courtyard.
+      const ref = action.ref.id === "holding" && !action.ref.holdingId ? INITIAL_AREA.current : action.ref;
       if (!(ref.id in AREAS)) return state;
       if (sameArea(state.current, ref)) return state;
       return begin(state, ref, action.instant === true);
