@@ -36,6 +36,9 @@ import type { CouncilInput, ShelfId } from "../game3d/libraryShelves";
 import type { RoomView } from "../game3d/Scene";
 import { COURTYARD } from "../game3d/areas";
 import type { AreaRef } from "../game3d/areas";
+import { canGoBack, escapeTarget } from "../game3d/layers";
+import type { OpenLayers } from "../game3d/layers";
+import { placeFromSearch, searchFor } from "../game3d/placeLink";
 import AreaFade from "../game3d/AreaFade";
 import { INITIAL_AREA, areaReducer, isMoving } from "../game3d/areaMachine";
 import type { AreaAction, AreaState } from "../game3d/areaMachine";
@@ -92,6 +95,17 @@ function Unavailable() {
 }
 
 /** A move is a cut, not a fade, for people who asked their system for less motion (S22). An explicit `instant` wins. */
+// The place a link names, or the courtyard. A library link is held back until its tower has loaded.
+function startingArea(init: AreaState): AreaState {
+  if (typeof window === "undefined") return init;
+  const ref = placeFromSearch(window.location.search);
+  return ref.id === "library" ? init : { ...init, current: ref };
+}
+function libraryLink(search: string): string | null {
+  const ref = placeFromSearch(search);
+  return ref.id === "library" ? ref.holdingId : null;
+}
+
 function areaReducerWithMotion(state: AreaState, action: AreaAction): AreaState {
   if (action.type === "enter" || action.type === "leave") return areaReducer(state, { ...action, instant: action.instant ?? prefersReducedMotion() });
   return areaReducer(state, action);
@@ -162,7 +176,9 @@ export default function Game3DPage() {
   // The tower library: which door you stand at, which tower you are inside, and what you stand at in there.
   const [nearTower, setNearTower] = useState<string | null>(null);
   // Which place you are in: one value, not four flags. A tower's library is `library` with the holding's id.
-  const [areaState, dispatchArea] = useReducer(areaReducerWithMotion, INITIAL_AREA);
+  const [areaState, dispatchArea] = useReducer(areaReducerWithMotion, INITIAL_AREA, startingArea);
+  // A `?at=library:<id>` link waits for the towers to load (a library needs its tower); the other places open at once.
+  const linkedLibrary = useRef<string | null>(typeof window === "undefined" ? null : libraryLink(window.location.search));
   const room = areaState.current.id === "library" ? areaState.current.holdingId : null;
   // The Town beyond the gate: whether you are in it, and which door or the gate road you stand at.
   const [atGate, setAtGate] = useState(false);
@@ -344,6 +360,20 @@ export default function Game3DPage() {
   const inTown = area.id === "town";
   const inHall = area.id === "townhall";
   const inRecords = area.id === "records";
+
+  // The address follows the place (replace, not push, so the browser's Back leaves the page instead of re-walking your steps).
+  useEffect(() => {
+    if (typeof window === "undefined" || linkedLibrary.current) return;
+    const next = searchFor(area, window.location.search);
+    if (next !== window.location.search) window.history.replaceState(null, "", `${window.location.pathname}${next}${window.location.hash}`);
+  }, [area]);
+  // A library link: once the towers are known, go in if that tower exists; otherwise stay in the courtyard.
+  useEffect(() => {
+    const id = linkedLibrary.current;
+    if (!id || !state) return;
+    linkedLibrary.current = null;
+    if (state.towers.some((t) => t.holding_id === id)) dispatchArea({ type: "enter", ref: { id: "library", holdingId: id }, instant: true });
+  }, [state]);
 
   // The place's name in the tab title (S22).
   const placeName = areaName(area, roomView?.name);
@@ -772,21 +802,63 @@ export default function Game3DPage() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  // G opens or shuts the "Where to?" menu from anywhere; Esc backs out of a page, then the menu.
+  // B walks back out of the place you are in: the same call each room's own door makes.
+  const goBack = useCallback(() => {
+    if (area.id === "library") leaveTower();
+    else if (area.id === "townhall") leaveHall();
+    else if (area.id === "records") leaveRecords();
+    else if (area.id === "town") leaveTown();
+  }, [area.id, leaveTower, leaveHall, leaveRecords, leaveTown]);
+
+  // G opens or shuts the "Where to?" menu from anywhere. Esc closes what is on top (the panel drawn over the others), and
+  // B walks back out once nothing is open over the world.
+  const layers: OpenLayers = {
+    booth: !!boothOpen,
+    lamp: lampOpen,
+    report: !!report,
+    books: deskOpen && booksOpen,
+    shelf: !!readShelf,
+    talking: !!talking,
+    desk: deskOpen,
+    drill: drillOpen,
+    vault: vaultOpen,
+    realm: realmOpen,
+    watch: watchOpen,
+    perch: perchOpen,
+    worldPage: whereOpen && !!worldPage,
+    where: whereOpen,
+  };
+  const layerKey = JSON.stringify(layers);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey || e.altKey || typingInField(e.target)) return;
+      const open = JSON.parse(layerKey) as OpenLayers;
       if (e.code === "KeyG") {
         e.preventDefault();
         toggleWhere();
-      } else if (e.code === "Escape" && whereOpen) {
-        if (worldPage) setWorldPage(null);
-        else closeWhere();
+      } else if (e.code === "Escape") {
+        switch (escapeTarget(open)) {
+          case "books": return setBooksOpen(false);
+          case "shelf": return setReadShelf(null);
+          case "talking": return setTalking(null);
+          case "desk": return setDeskOpen(false);
+          case "drill": return setDrillOpen(false);
+          case "vault": return setVaultOpen(false);
+          case "realm": return setRealmOpen(false);
+          case "watch": return setWatchOpen(false);
+          case "perch": return setPerchOpen(false);
+          case "worldPage": return setWorldPage(null);
+          case "where": return closeWhere();
+          default: return;
+        }
+      } else if (e.code === "KeyB" && canGoBack(open) && !isMoving(areaState) && area.id !== "courtyard") {
+        e.preventDefault();
+        goBack();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [toggleWhere, closeWhere, whereOpen, worldPage]);
+  }, [toggleWhere, closeWhere, goBack, layerKey, areaState, area.id]);
 
   if (!supported) return <Unavailable />;
 
