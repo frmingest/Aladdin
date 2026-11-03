@@ -19,6 +19,7 @@ import { SURVEY_CHECKS } from "../lib/survey";
 import type { SurveyCheckId, SurveyState, TowerFog } from "../lib/survey";
 import type { FortressLand, FortressSiegeExposure, FortressSize, FortressThesis, GameTower } from "../lib/types";
 import type { Spot } from "./layout";
+import type { TowerView } from "./stateToWorld";
 import { SHELF_ORDER } from "./libraryShelves";
 import type { ShelfSlot } from "./libraryRoom";
 
@@ -185,6 +186,28 @@ export function workplaceCondition(wall: GameTower["wall"] | null, fog: boolean)
   return "cracked";
 }
 
+/**
+ * The holding's own tower in the middle (S25 PR 3). It is the courtyard tower's wall, crown, cracks, ivy and moat, drawn
+ * on a fixed footprint so every land has the same layout: the radius, the moat gap and the moat widths are fixed here, and
+ * only the height follows the size class (capped, so the camera sees over it). The thesis flag is dropped: the price
+ * post's scroll carries the thesis, and the flag is red and green.
+ */
+export const LAND_TOWER = { radius: 1.8, maxHeight: 11, moatGap: 0.8, moatWide: 1.4, moatNarrow: 0.7 } as const;
+
+/** The farthest the tower's moat reaches from the land's centre. Must stay clear of the lanterns and the records house. */
+export const LAND_TOWER_REACH = LAND_TOWER.radius + LAND_TOWER.moatGap + LAND_TOWER.moatWide;
+
+export function centreTowerFor(t: TowerView): TowerView {
+  return {
+    ...t,
+    spot: { x: WORKPLACE.x, z: WORKPLACE.z },
+    radius: LAND_TOWER.radius,
+    height: Math.min(t.height, LAND_TOWER.maxHeight),
+    moatWidth: t.moatWidth <= 0 ? 0 : t.moatWidth >= 2 ? LAND_TOWER.moatWide : LAND_TOWER.moatNarrow,
+    flag: "none",
+  };
+}
+
 export type MoatLook = "wide" | "narrow" | "none" | "mist";
 
 /** The stream round the land: wide, narrow, none, or mist when the moat tier is not surveyed. */
@@ -258,6 +281,25 @@ export function pricePostFor(t: Pick<GameTower, "land" | "land_reason" | "thesis
     gaugeReason: t.land_reason,
   };
 }
+
+/**
+ * How the price post draws each state. Shape carries the meaning (never colour alone), and "unknown" is always mist
+ * with a "?", never a middle grade. `fill` is how far up the plank gauge the marker sits (0 to 1), null when unknown.
+ */
+export const GAUGE_FILL: Record<GaugeLook, number | null> = {
+  bargain: 1,
+  discount: 0.75,
+  full_price: 0.5,
+  overpriced: 0.25,
+  fog: null,
+};
+/** The banner's shape: a long pennant when exposed, a notched one at breach risk, a short square when sheltered. */
+export const BANNER_SHAPE: Record<BannerLook, "short" | "pennant" | "notched" | "mist"> = {
+  sheltered: "short",
+  exposed: "pennant",
+  breach_risk: "notched",
+  fog: "mist",
+};
 
 /** The spots every land has, by name, for tests and for the scene to loop over. */
 export const LAND_SPOT_NAMES = ["gateStone", "lanterns", "workplace", "records", "pricePost"] as const;

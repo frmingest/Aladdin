@@ -225,8 +225,11 @@ function NameSign({ t }: { t: TowerView }) {
   );
 }
 
-/** One holding as a tower. Everything here comes from the TowerView, nothing else. */
-export default function TowerMesh({ t }: { t: TowerView }) {
+/**
+ * One holding as a tower. Everything here comes from the TowerView, nothing else. Shared by the courtyard (with the
+ * library door and name sign) and by a holding's own land (S25 PR 3, `door={false}`: the gate is the way out there).
+ */
+export function TowerBody({ t, door = true }: { t: TowerView; door?: boolean }) {
   const bodyColor = t.fog ? FOG_COLOR : t.wallColor;
   const sides = t.shape === "keep" ? 14 : t.shape === "outpost" ? 4 : 8;
   const ivy =
@@ -277,7 +280,7 @@ export default function TowerMesh({ t }: { t: TowerView }) {
           </mesh>
         </RigidBody>
 
-        <LibraryDoor t={t} />
+        {door && <LibraryDoor t={t} />}
 
         {!t.fog && <Crown t={t} />}
         {!t.fog && <Cracks t={t} />}
@@ -311,4 +314,8 @@ export default function TowerMesh({ t }: { t: TowerView }) {
       </StaticBatch>
     </group>
   );
+}
+
+export default function TowerMesh({ t }: { t: TowerView }) {
+  return <TowerBody t={t} />;
 }

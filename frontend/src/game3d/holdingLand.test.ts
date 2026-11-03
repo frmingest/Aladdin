@@ -1,10 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { SURVEY_CHECKS } from "../lib/survey";
+import type { TowerView } from "./stateToWorld";
 import type { TowerFog } from "../lib/survey";
 import { SHELF_ORDER } from "./libraryShelves";
 import { nearestShelf, readingSpot } from "./libraryRoom";
 import {
+  BANNER_SHAPE,
   BAY_SCALE,
+  GAUGE_FILL,
+  LAND_TOWER,
+  LAND_TOWER_REACH,
+  centreTowerFor,
   GATE_LEAVE_RANGE,
   GATE_RANGE,
   GATE_STONE,
@@ -243,5 +249,77 @@ describe("arriving and leaving", () => {
 
   it("keeps the gate stone, the gate and the price post on every land, whatever its size", () => {
     for (const r of Object.values(LAND_RADIUS)) for (const p of [GATE_STONE, LAND_GATE, PRICE_POST, LAND_SPAWN]) expect(insideLand(p, r)).toBe(true);
+  });
+});
+
+describe("the centre tower and the price post (S25 PR 3)", () => {
+  const view = (over: Partial<TowerView> = {}): TowerView => ({
+    slot: 0,
+    spot: { x: 40, z: -30 },
+    holdingId: "h1",
+    name: "Test",
+    ticker: "TST",
+    shape: "tower",
+    height: 15,
+    radius: 2.1,
+    wallColor: "#4a4f57",
+    strength: "strong",
+    crenels: 8,
+    cracks: 0,
+    moatWidth: 2.2,
+    moatFog: false,
+    fog: false,
+    freshness: "fresh",
+    flag: "intact",
+    facts: { size: "great", wall: "basalt", moat: "wide", thesis: "intact", weightPct: "10", wallReason: "" },
+    ...over,
+  } as TowerView);
+
+  it("stands on the fixed centre with a fixed footprint, whatever the size class", () => {
+    for (const r of [2.1, 1.8, 1.5, 1.2, 1.3]) {
+      const c = centreTowerFor(view({ radius: r }));
+      expect(c.spot).toEqual({ x: WORKPLACE.x, z: WORKPLACE.z });
+      expect(c.radius).toBe(LAND_TOWER.radius);
+    }
+    expect(centreTowerFor(view({ height: 15 })).height).toBe(LAND_TOWER.maxHeight);
+    expect(centreTowerFor(view({ height: 5.5 })).height).toBe(5.5);
+  });
+
+  it("keeps the tower and its moat clear of the lanterns, the records house and the gate", () => {
+    expect(LAND_TOWER_REACH).toBeLessThan(WORKPLACE.r + 1.5);
+    for (const l of LANTERN_SPOTS) expect(Math.hypot(l.x - WORKPLACE.x, l.z - WORKPLACE.z)).toBeGreaterThan(LAND_TOWER_REACH + 0.5);
+    expect(WORKPLACE.x - LAND_TOWER_REACH).toBeGreaterThan(RECORDS_HOUSE.x + RECORDS_HOUSE.hx);
+  });
+
+  it("keeps each moat tier its own width and mist, and drops the red and green flag", () => {
+    expect(centreTowerFor(view({ moatWidth: 2.2 })).moatWidth).toBe(LAND_TOWER.moatWide);
+    expect(centreTowerFor(view({ moatWidth: 1 })).moatWidth).toBe(LAND_TOWER.moatNarrow);
+    expect(centreTowerFor(view({ moatWidth: 0 })).moatWidth).toBe(0);
+    expect(centreTowerFor(view({ moatFog: true, moatWidth: 0 })).moatFog).toBe(true);
+    expect(centreTowerFor(view()).flag).toBe("none");
+  });
+
+  it("changes nothing about wall, crown, cracks, fog or ivy: a weak tower is not prettier", () => {
+    const weak = view({ wallColor: "#5f6a4f", crenels: 2, cracks: 4, freshness: "overgrown" });
+    const c = centreTowerFor(weak);
+    expect(c.wallColor).toBe(weak.wallColor);
+    expect(c.crenels).toBe(2);
+    expect(c.cracks).toBe(4);
+    expect(c.freshness).toBe("overgrown");
+    expect(centreTowerFor(view({ fog: true })).fog).toBe(true);
+  });
+
+  it("draws the price post from stored facts only, and unknown as mist", () => {
+    const p = pricePostFor({ land: "fog", land_reason: "no result", thesis: "not_analyzed", siege_exposure: "unsurveyed" });
+    expect(GAUGE_FILL[p.gauge]).toBeNull();
+    expect(p.scroll).toBe("fog");
+    expect(BANNER_SHAPE[p.banner]).toBe("mist");
+  });
+
+  it("gives a better margin of safety a higher marker and every known banner its own shape", () => {
+    const f = (["overpriced", "full_price", "discount", "bargain"] as const).map((k) => GAUGE_FILL[k] as number);
+    expect([...f].sort((a, b) => a - b)).toEqual(f);
+    expect(new Set(f).size).toBe(4);
+    expect(new Set(["sheltered", "exposed", "breach_risk"].map((b) => BANNER_SHAPE[b as keyof typeof BANNER_SHAPE])).size).toBe(3);
   });
 });
