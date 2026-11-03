@@ -7,7 +7,7 @@ import type { PerfStats } from "./PerfProbe";
  */
 export default function PerfBreakdown({ stats }: { stats: PerfStats | null }) {
   if (!stats) return null;
-  const { shown, more } = topGroups(stats.groups ?? []);
+  const { shown, more } = topGroups(stats.groups ?? [], 10);
   const counted = (stats.groups ?? []).reduce((sum, g) => sum + g.calls, 0);
   return (
     <div

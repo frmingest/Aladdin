@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { useGLTF } from "@react-three/drei";
 import { CuboidCollider, CylinderCollider, RigidBody } from "@react-three/rapier";
 import type { Object3D } from "three";
+import StaticBatch from "./StaticBatch";
 import { MARKET, MARKET_URL } from "./marketPieces";
 import type { MarketPiece } from "./marketPieces";
 
@@ -48,11 +49,11 @@ function Piece({ piece, source }: { piece: MarketPiece; source: Object3D }) {
 function Pieces() {
   const gltf = useGLTF(MARKET_URL);
   return (
-    <>
+    <StaticBatch>
       {MARKET.map((p) => (
         <Piece key={p.id} piece={p} source={gltf.scene} />
       ))}
-    </>
+    </StaticBatch>
   );
 }
 

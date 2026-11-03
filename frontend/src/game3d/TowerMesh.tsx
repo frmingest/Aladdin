@@ -1,10 +1,21 @@
+import StaticBatch from "./StaticBatch";
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { CylinderCollider, RigidBody } from "@react-three/rapier";
-import { CanvasTexture, Object3D, SRGBColorSpace, type InstancedMesh } from "three";
+import {
+  CanvasTexture,
+  Object3D,
+  SRGBColorSpace,
+  type InstancedMesh,
+} from "three";
 import type { Flag, TowerView } from "./stateToWorld";
 import { INK, PAL, Part } from "./Inked";
 import { doorYaw } from "./towerDoor";
-import { SIGN_ARM_FRONT, SIGN_ARM_LENGTH, SIGN_HANG_X as HANG_X, signWords } from "./signText";
+import {
+  SIGN_ARM_FRONT,
+  SIGN_ARM_LENGTH,
+  SIGN_HANG_X as HANG_X,
+  signWords,
+} from "./signText";
 
 /** Pad top, so towers stand on it. */
 const PAD_TOP = 0.5;
@@ -29,7 +40,11 @@ function Crown({ t }: { t: TowerView }) {
     if (!m) return;
     for (let i = 0; i < MAX_CRENELS; i++) {
       const a = (i / MAX_CRENELS) * Math.PI * 2;
-      dummy.position.set(Math.sin(a) * t.radius, PAD_TOP + t.height + 0.3, Math.cos(a) * t.radius);
+      dummy.position.set(
+        Math.sin(a) * t.radius,
+        PAD_TOP + t.height + 0.3,
+        Math.cos(a) * t.radius,
+      );
       dummy.rotation.set(0, a, 0);
       dummy.scale.setScalar(i < t.crenels ? 1 : 0); // scale 0 hides the missing teeth
       dummy.updateMatrix();
@@ -39,7 +54,11 @@ function Crown({ t }: { t: TowerView }) {
   }, [t.crenels, t.radius, t.height]);
   if (t.crenels === 0) return null;
   return (
-    <instancedMesh ref={ref} args={[undefined, undefined, MAX_CRENELS]} castShadow>
+    <instancedMesh
+      ref={ref}
+      args={[undefined, undefined, MAX_CRENELS]}
+      castShadow
+    >
       <boxGeometry args={[0.8, 0.6, 0.8]} />
       <meshStandardMaterial color={t.wallColor} flatShading />
     </instancedMesh>
@@ -54,7 +73,11 @@ function Cracks({ t }: { t: TowerView }) {
     if (!m) return;
     for (let i = 0; i < t.cracks; i++) {
       const a = 0.6 + i * 1.4;
-      dummy.position.set(Math.sin(a) * (t.radius + 0.02), PAD_TOP + t.height * (0.35 + 0.12 * i), Math.cos(a) * (t.radius + 0.02));
+      dummy.position.set(
+        Math.sin(a) * (t.radius + 0.02),
+        PAD_TOP + t.height * (0.35 + 0.12 * i),
+        Math.cos(a) * (t.radius + 0.02),
+      );
       dummy.rotation.set(0, a, (i % 2 ? 1 : -1) * 0.25);
       dummy.scale.set(1, 1, 1);
       dummy.updateMatrix();
@@ -79,7 +102,10 @@ function LibraryDoor({ t }: { t: TowerView }) {
   const yaw = doorYaw(t.spot);
   const out = t.radius + 0.2;
   return (
-    <group position={[Math.sin(yaw) * out, PAD_TOP, Math.cos(yaw) * out]} rotation={[0, yaw, 0]}>
+    <group
+      position={[Math.sin(yaw) * out, PAD_TOP, Math.cos(yaw) * out]}
+      rotation={[0, yaw, 0]}
+    >
       <Part color={PAL.timber} position={[0, 0.85, 0]} grow={1.08}>
         <boxGeometry args={[1, 1.7, 0.24]} />
       </Part>
@@ -95,7 +121,6 @@ function LibraryDoor({ t }: { t: TowerView }) {
   );
 }
 
-
 /** Signboard size in world units, and the canvas it is painted on (2:1 plank). */
 const SIGN_W = 5.6;
 const SIGN_H = 2.0;
@@ -103,7 +128,11 @@ const SIGN_PX_W = 704;
 const SIGN_PX_H = 256;
 
 /** Paint the name (and the "not surveyed" note) on a canvas. Dark ink on cream, so it reads against any sky. */
-function paintSign(name: string, fog: boolean, gap: string | undefined): HTMLCanvasElement {
+function paintSign(
+  name: string,
+  fog: boolean,
+  gap: string | undefined,
+): HTMLCanvasElement {
   const { lines, note } = signWords(name, fog, gap);
   const c = document.createElement("canvas");
   c.width = SIGN_PX_W;
@@ -120,7 +149,8 @@ function paintSign(name: string, fog: boolean, gap: string | undefined): HTMLCan
   g.textBaseline = "middle";
   const noteH = note ? 44 : 0;
   const area = c.height - 28 - noteH;
-  const size = lines.length > 1 ? Math.min(92, area / 2.1) : Math.min(124, area * 0.8);
+  const size =
+    lines.length > 1 ? Math.min(92, area / 2.1) : Math.min(124, area * 0.8);
   g.font = `700 ${size}px "Segoe UI", system-ui, sans-serif`;
   lines.forEach((l, i) => {
     const y = 14 + (area * (i + 0.5)) / lines.length;
@@ -162,7 +192,11 @@ function NameSign({ t }: { t: TowerView }) {
   return (
     <group position={[0, 4.3, 0.35]}>
       {/* One iron arm from the wall to the middle of the beam (the plank is wider than the tower). */}
-      <Part color={PAL.iron} position={[0, BEAM_Y, SIGN_ARM_FRONT - SIGN_ARM_LENGTH / 2]} grow={1.2}>
+      <Part
+        color={PAL.iron}
+        position={[0, BEAM_Y, SIGN_ARM_FRONT - SIGN_ARM_LENGTH / 2]}
+        grow={1.2}
+      >
         <boxGeometry args={[0.2, 0.2, SIGN_ARM_LENGTH]} />
       </Part>
       {/* The beam the plank hangs from. */}
@@ -171,7 +205,12 @@ function NameSign({ t }: { t: TowerView }) {
       </Part>
       {/* Two hangers from the beam down to the plank. */}
       {[-HANG_X, HANG_X].map((x) => (
-        <Part key={`hanger${x}`} color={PAL.iron} position={[x, PLANK_TOP + HANGER_LEN / 2, 0]} grow={1.3}>
+        <Part
+          key={`hanger${x}`}
+          color={PAL.iron}
+          position={[x, PLANK_TOP + HANGER_LEN / 2, 0]}
+          grow={1.3}
+        >
           <boxGeometry args={[0.07, HANGER_LEN, 0.07]} />
         </Part>
       ))}
@@ -190,58 +229,86 @@ function NameSign({ t }: { t: TowerView }) {
 export default function TowerMesh({ t }: { t: TowerView }) {
   const bodyColor = t.fog ? FOG_COLOR : t.wallColor;
   const sides = t.shape === "keep" ? 14 : t.shape === "outpost" ? 4 : 8;
-  const ivy = t.freshness === "weathered" ? 0.25 : t.freshness === "overgrown" ? 0.55 : 0;
+  const ivy =
+    t.freshness === "weathered" ? 0.25 : t.freshness === "overgrown" ? 0.55 : 0;
   const flag = t.flag === "none" || t.fog ? null : t.flag;
   return (
     <group position={[t.spot.x, 0, t.spot.z]}>
-      {/* Moat: water ring when surveyed, pale mist when not. Visual only. */}
-      {(t.moatWidth > 0 || t.moatFog) && (
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.07, 0]}>
-          <ringGeometry args={[t.radius + 2.2, t.radius + 2.2 + (t.moatFog ? 1 : t.moatWidth), 32]} />
-          <meshStandardMaterial
-            color={t.moatFog ? FOG_COLOR : WATER_COLOR}
-            transparent={t.moatFog}
-            opacity={t.moatFog ? 0.45 : 1}
-            flatShading
-          />
-        </mesh>
-      )}
-
-      <RigidBody type="fixed" colliders={false} position={[0, PAD_TOP + t.height / 2, 0]}>
-        <CylinderCollider args={[t.height / 2, t.radius]} />
-        <mesh castShadow receiveShadow rotation={[0, sides === 4 ? Math.PI / 4 : 0, 0]}>
-          <cylinderGeometry args={[t.radius, t.radius + 0.25, t.height, sides]} />
-          <meshStandardMaterial color={bodyColor} flatShading transparent={t.fog} opacity={t.fog ? 0.55 : 1} />
-        </mesh>
-      </RigidBody>
-
-      <LibraryDoor t={t} />
-
-      {!t.fog && <Crown t={t} />}
-      {!t.fog && <Cracks t={t} />}
-
-      {/* Ivy band: ageing or stale analysis. */}
-      {ivy > 0 && !t.fog && (
-        <mesh position={[0, PAD_TOP + (t.height * ivy) / 2, 0]}>
-          <cylinderGeometry args={[t.radius + 0.28, t.radius + 0.33, t.height * ivy, sides]} />
-          <meshStandardMaterial color={IVY_COLOR} flatShading />
-        </mesh>
-      )}
-
-      {/* Thesis flag on a pole. Breached hangs low and askew. */}
-      {flag && (
-        <group position={[0, PAD_TOP + t.height + 0.6, 0]}>
-          <mesh position={[0, 1.2, 0]}>
-            <cylinderGeometry args={[0.07, 0.07, 2.4, 6]} />
-            <meshStandardMaterial color="#3a3028" flatShading />
+      <StaticBatch rebuildKey={JSON.stringify(t)}>
+        {/* Moat: water ring when surveyed, pale mist when not. Visual only. */}
+        {(t.moatWidth > 0 || t.moatFog) && (
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.07, 0]}>
+            <ringGeometry
+              args={[
+                t.radius + 2.2,
+                t.radius + 2.2 + (t.moatFog ? 1 : t.moatWidth),
+                32,
+              ]}
+            />
+            <meshStandardMaterial
+              color={t.moatFog ? FOG_COLOR : WATER_COLOR}
+              transparent={t.moatFog}
+              opacity={t.moatFog ? 0.45 : 1}
+              flatShading
+            />
           </mesh>
-          <mesh position={[0.55, flag === "breached" ? 1.1 : 2, 0]} rotation={[0, 0, flag === "breached" ? -0.5 : 0]}>
-            <boxGeometry args={[1.1, 0.7, 0.05]} />
-            <meshStandardMaterial color={FLAG_COLOR[flag]} flatShading />
-          </mesh>
-        </group>
-      )}
+        )}
 
+        <RigidBody
+          type="fixed"
+          colliders={false}
+          position={[0, PAD_TOP + t.height / 2, 0]}
+        >
+          <CylinderCollider args={[t.height / 2, t.radius]} />
+          <mesh
+            castShadow
+            receiveShadow
+            rotation={[0, sides === 4 ? Math.PI / 4 : 0, 0]}
+          >
+            <cylinderGeometry
+              args={[t.radius, t.radius + 0.25, t.height, sides]}
+            />
+            <meshStandardMaterial
+              color={bodyColor}
+              flatShading
+              transparent={t.fog}
+              opacity={t.fog ? 0.55 : 1}
+            />
+          </mesh>
+        </RigidBody>
+
+        <LibraryDoor t={t} />
+
+        {!t.fog && <Crown t={t} />}
+        {!t.fog && <Cracks t={t} />}
+
+        {/* Ivy band: ageing or stale analysis. */}
+        {ivy > 0 && !t.fog && (
+          <mesh position={[0, PAD_TOP + (t.height * ivy) / 2, 0]}>
+            <cylinderGeometry
+              args={[t.radius + 0.28, t.radius + 0.33, t.height * ivy, sides]}
+            />
+            <meshStandardMaterial color={IVY_COLOR} flatShading />
+          </mesh>
+        )}
+
+        {/* Thesis flag on a pole. Breached hangs low and askew. */}
+        {flag && (
+          <group position={[0, PAD_TOP + t.height + 0.6, 0]}>
+            <mesh position={[0, 1.2, 0]}>
+              <cylinderGeometry args={[0.07, 0.07, 2.4, 6]} />
+              <meshStandardMaterial color="#3a3028" flatShading />
+            </mesh>
+            <mesh
+              position={[0.55, flag === "breached" ? 1.1 : 2, 0]}
+              rotation={[0, 0, flag === "breached" ? -0.5 : 0]}
+            >
+              <boxGeometry args={[1.1, 0.7, 0.05]} />
+              <meshStandardMaterial color={FLAG_COLOR[flag]} flatShading />
+            </mesh>
+          </group>
+        )}
+      </StaticBatch>
     </group>
   );
 }

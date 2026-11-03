@@ -29,7 +29,7 @@ describe("stats breakdown", () => {
   });
 
   it("folds the long tail into a count", () => {
-    const groups = Array.from({ length: 9 }, (_, i) => ({ group: `g${i}`, calls: 9 - i, triangles: 1000, instanced: 0 }));
+    const groups = Array.from({ length: 13 }, (_, i) => ({ group: `g${i}`, calls: 13 - i, triangles: 1000, instanced: 0 }));
     expect(renderToStaticMarkup(<PerfBreakdown stats={{ ...base, groups }} />)).toContain("3 more");
   });
 });

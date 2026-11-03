@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { useGLTF } from "@react-three/drei";
 import { CylinderCollider, RigidBody } from "@react-three/rapier";
 import type { Object3D } from "three";
+import StaticBatch from "./StaticBatch";
 import { SCENERY, SCENERY_URL } from "./sceneryPieces";
 import type { SceneryPiece } from "./sceneryPieces";
 
@@ -43,11 +44,11 @@ function Piece({ piece, source }: { piece: SceneryPiece; source: Object3D }) {
 function Pieces() {
   const gltf = useGLTF(SCENERY_URL);
   return (
-    <>
+    <StaticBatch>
       {SCENERY.map((p) => (
         <Piece key={p.id} piece={p} source={gltf.scene} />
       ))}
-    </>
+    </StaticBatch>
   );
 }
 

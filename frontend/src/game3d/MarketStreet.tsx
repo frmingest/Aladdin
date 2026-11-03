@@ -1,3 +1,4 @@
+import StaticBatch from "./StaticBatch";
 import { Component, Suspense, useEffect, useMemo } from "react";
 import type { ReactNode } from "react";
 import { useGLTF } from "@react-three/drei";
@@ -10,7 +11,10 @@ import type { PennantShape, Stall } from "./streetPlan";
 import { TOWN_FILES, TOWN_SCALE } from "./townPieces";
 
 /** If the town market file fails to load, draw nothing (colliders included): the ground is open again. */
-class StreetBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+class StreetBoundary extends Component<
+  { children: ReactNode },
+  { failed: boolean }
+> {
   state = { failed: false };
   static getDerivedStateFromError() {
     return { failed: true };
@@ -24,8 +28,14 @@ class StreetBoundary extends Component<{ children: ReactNode }, { failed: boolea
 }
 
 /** Flags on the pole: [width, height, offset up the pole]. The shape says the tone, colour only helps. */
-const FLAGS: Record<PennantShape, readonly (readonly [number, number, number])[]> = {
-  double: [[0.9, 0.32, 0], [0.9, 0.32, -0.5]],
+const FLAGS: Record<
+  PennantShape,
+  readonly (readonly [number, number, number])[]
+> = {
+  double: [
+    [0.9, 0.32, 0],
+    [0.9, 0.32, -0.5],
+  ],
   long: [[1.5, 0.34, 0]],
   short: [[0.7, 0.34, 0]],
   none: [],
@@ -40,7 +50,12 @@ function Pennant({ stall }: { stall: Stall }) {
         <boxGeometry args={[0.12, 3.8, 0.12]} />
       </Part>
       {FLAGS[stall.pennant].map(([w, h, dy]) => (
-        <Part key={dy} color={colour} position={[w / 2 + 0.06, 3.5 + dy, 0]} grow={1.12}>
+        <Part
+          key={dy}
+          color={colour}
+          position={[w / 2 + 0.06, 3.5 + dy, 0]}
+          grow={1.12}
+        >
           <boxGeometry args={[w, h, 0.05]} />
         </Part>
       ))}
@@ -114,8 +129,16 @@ function StallPiece({ stall, source }: { stall: Stall; source: Object3D }) {
   }, [source, stall.model]);
   if (!object) return null;
   return (
-    <RigidBody type="fixed" colliders={false} position={[stall.x, 0, stall.z]} rotation={[0, stall.yaw, 0]}>
-      <CuboidCollider args={[STALL_SOLID.hx, 1, STALL_SOLID.hz]} position={[0, 1, 0]} />
+    <RigidBody
+      type="fixed"
+      colliders={false}
+      position={[stall.x, 0, stall.z]}
+      rotation={[0, stall.yaw, 0]}
+    >
+      <CuboidCollider
+        args={[STALL_SOLID.hx, 1, STALL_SOLID.hz]}
+        position={[0, 1, 0]}
+      />
       <primitive object={object} scale={TOWN_SCALE.kenney} />
       <Pennant stall={stall} />
       <Plate stall={stall} />
@@ -126,11 +149,11 @@ function StallPiece({ stall, source }: { stall: Stall; source: Object3D }) {
 function Stalls({ stalls }: { stalls: readonly Stall[] }) {
   const gltf = useGLTF(TOWN_FILES.market);
   return (
-    <>
+    <StaticBatch rebuildKey={JSON.stringify(stalls)}>
       {stalls.map((s) => (
         <StallPiece key={s.holdingId} stall={s} source={gltf.scene} />
       ))}
-    </>
+    </StaticBatch>
   );
 }
 
