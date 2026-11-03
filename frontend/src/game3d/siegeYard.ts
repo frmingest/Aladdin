@@ -12,19 +12,16 @@
  */
 import { formatNok } from "../lib/format";
 import { formatShock } from "../lib/fortress";
-import {
-  SIM_LEVEL_LABEL,
-  coverageLine,
-  damageWidth,
-  headline,
-  holdingLine,
-  isRoughGuide,
-  parseBenchmarkChoice,
-  rowStatus,
-  stressGapNote,
-} from "../lib/siege";
+import { damageWidth, fallSubject, formatDrop, holdingLine, isRoughGuide, parseBenchmarkChoice, stressGapNote } from "../lib/siege";
 import type { SiegeBenchmarkKey, SiegeSim, SiegeSimHolding } from "../lib/types";
-import { YARD_UNKNOWN } from "./siegeYardWordsV1";
+import {
+  YARD_GAP,
+  YARD_LEVEL_NAME,
+  YARD_STATUS,
+  YARD_UNKNOWN,
+  yardCoverageLine,
+  yardHeadline,
+} from "./siegeYardWordsV2";
 
 /** How many modelled towers the panel lists; the rest are counted and left to the flat page. */
 export const YARD_MAX_ROWS = 8;
@@ -43,7 +40,7 @@ export interface YardRow {
   /** 0 to 100, how much of the wall is lost. */
   bar: number;
   rough: boolean;
-  /** The flat page's note when the fall differs from the stored stress case, or null. */
+  /** The short flag when the fall differs from the saved fortress test, or null. The long note is the hover. */
   gap: string | null;
 }
 
@@ -79,13 +76,13 @@ function row(h: SiegeSimHolding): YardRow {
   return {
     id: h.holding_id,
     name: h.name,
-    status: rowStatus(h),
+    status: !h.modelled ? YARD_STATUS.unmodelled : Number(h.shock_pct) < 0 ? YARD_STATUS[h.exposure as "sheltered" | "exposed" | "breach_risk"] : YARD_STATUS.gains,
     shock: formatShock(h.shock_pct),
     loss: formatNok(h.loss_nok),
     line: holdingLine(h),
     bar: damageWidth(h.shock_pct),
     rough: isRoughGuide(h),
-    gap: stressGapNote(h),
+    gap: stressGapNote(h) === null ? null : YARD_GAP,
   };
 }
 
@@ -98,20 +95,30 @@ export function yardView(sim: SiegeSim): YardView {
   const modelled = sim.holdings.filter((h) => h.modelled && h.shock_pct !== null).slice().sort(byDamage);
   const fog = sim.holdings
     .filter((h) => !h.modelled)
-    .map((h) => ({ id: h.holding_id, name: h.name, reason: h.reason ?? "Not modelled." }));
+    .map((h) => ({ id: h.holding_id, name: h.name, reason: h.reason ?? "Too little price history." }));
   const book: YardBook | null =
     sim.portfolio_shock_pct === null
       ? null
       : {
           shock: formatShock(sim.portfolio_shock_pct),
           loss: formatNok(sim.portfolio_loss_nok),
-          beta: sim.weighted_beta ?? "—",
-          coverage: sim.coverage === null ? "—" : `${(Number(sim.coverage) * 100).toFixed(0)}%`,
-          coverageLine: coverageLine(sim),
+          beta: sim.weighted_beta ?? YARD_UNKNOWN,
+          coverage: sim.coverage === null ? YARD_UNKNOWN : `${(Number(sim.coverage) * 100).toFixed(0)}%`,
+          coverageLine: yardCoverageLine(
+            sim.holdings.filter((h) => h.modelled).length,
+            sim.holdings.length,
+            sim.coverage === null ? YARD_UNKNOWN : `${(Number(sim.coverage) * 100).toFixed(0)}%`,
+          ),
         };
   return {
-    level: SIM_LEVEL_LABEL[sim.level],
-    headline: headline(sim),
+    level: YARD_LEVEL_NAME[sim.level],
+    headline: yardHeadline(
+      formatDrop(sim.market_drop),
+      fallSubject(sim).sentence,
+      sim.level,
+      sim.portfolio_shock_pct === null ? null : (Math.abs(Number(sim.portfolio_shock_pct)) * 100).toFixed(1),
+      Number(sim.portfolio_shock_pct) < 0 ? "costs" : "adds to",
+    ),
     rows: modelled.slice(0, YARD_MAX_ROWS).map(row),
     more: Math.max(0, modelled.length - YARD_MAX_ROWS),
     fog,

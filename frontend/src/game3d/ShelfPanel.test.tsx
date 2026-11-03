@@ -23,13 +23,13 @@ describe("ShelfPanel (plain view of one shelf)", () => {
     expect(html).toContain("The Walls");
     expect(html).toContain("Granite walls");
     expect(html).toContain("Low debt.");
-    for (const other of ["The Moat", "The Land", "The Oath", "The Treasury", "The Storm Test"]) expect(html).not.toContain(other);
+    for (const other of ["The Moat", "The Land", "The Oath", "The Treasury", "The Storm Drill"]) expect(html).not.toContain(other);
     expect(html).not.toContain("<details");
   });
 
-  it("says unknown is not surveyed, and does not apply is not applicable, with their own marks", () => {
+  it("says unknown is in fog, and does not apply is not applicable, with their own marks", () => {
     const fog = renderToStaticMarkup(<ShelfPanel name="Alpha" shelf={shelf("moat", { moat: "unsurveyed" })} demo={false} onClose={noop} />);
-    expect(fog).toContain("Not surveyed");
+    expect(fog).toContain("In fog");
     expect(fog).toContain("? </span>");
     const na = renderToStaticMarkup(<ShelfPanel name="Alpha" shelf={shelf("oath", { thesis: "not_applicable" })} demo={false} onClose={noop} />);
     expect(na).toContain("Doesn&#x27;t apply");

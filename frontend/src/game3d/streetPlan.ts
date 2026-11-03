@@ -123,7 +123,18 @@ export function buildStreet(rows: readonly WatchlistRow[] | null | undefined): S
 }
 
 /** Words for the little prompt and the overflow line. Short and playful. */
-export const STREET_EMPTY = "No stalls yet. Add a company to your watchlist.";
+export const STREET_EMPTY = "No stalls yet. Sal opens the first one.";
+/** At Sal's own counter the next step is right there. */
+export const STREET_EMPTY_AT_SAL = "No stalls yet. Press E and Sal opens the first one.";
+
+/**
+ * The hint under a stand's prompt when the watchlist was read and holds nothing: it points the player to Sal.
+ * Null while the watchlist is unread (`count` null) or has stalls, so a street that failed to load never claims to be empty.
+ */
+export function emptyStreetNote(booth: "sal" | "hype", count: number | null): string | null {
+  if (count !== 0) return null;
+  return booth === "sal" ? STREET_EMPTY_AT_SAL : STREET_EMPTY;
+}
 export const streetOverflowLine = (n: number): string => `${n} more ${n === 1 ? "stall has" : "stalls have"} no stand here. Open the Marketplace to see them.`;
 
 /** What the little plate under a stall says: the company name (cut to fit) and the flat page's short word plus the signed gap. */

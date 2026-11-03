@@ -1,7 +1,25 @@
 import { Link } from "react-router-dom";
 import { withStop } from "./voiceV2";
-import { QUEST_TITLE, REVIEW_QUEST_GOAL, REVIEW_QUEST_TITLE, whichWords } from "./quest";
-import { QUEST_V2_BAR_LABEL, QUEST_V2_DONE, QUEST_V2_GOAL } from "./questV2";
+import { whichWords } from "./quest";
+import {
+  DRILL_CARD_STATUS,
+  DRILL_CARD_WHERE,
+  LOOKBACK_GOAL,
+  LOOKBACK_JOURNAL,
+  LOOKBACK_STATUS,
+  LOOKBACK_TITLE,
+  QUEST_SAMPLE,
+  WHYS_BAR_LABEL,
+  WHYS_GOAL,
+  WHYS_STATUS,
+  WHYS_STILL,
+  WHYS_TITLE,
+  WHYS_WHERE,
+  drillCardDone,
+  lookbackCount,
+  talkHint,
+  whysCount,
+} from "./questWordsV3";
 import type { QuestState, ReviewQuestState } from "./quest";
 import { NPCS } from "./npcs";
 import type { StandingWords } from "./standingWordsV1";
@@ -11,23 +29,7 @@ import type { StandingWire } from "../lib/types";
 import WireList from "./WireList";
 import { fallPercent } from "./stormDrill";
 import type { DrillQuestState } from "./stormDrill";
-import { DRILL_GOAL, DRILL_STATUS_WORDS, DRILL_TITLE } from "./stormDrillWordsV1";
-
-const STATUS_WORDS: Record<QuestState["status"], string> = {
-  loading: "Reading your journal...",
-  unreadable: "Can't read your journal right now.",
-  empty: "No holdings yet, so nothing to write.",
-  open: "Open",
-  done: QUEST_V2_DONE,
-};
-
-const REVIEW_STATUS_WORDS: Record<ReviewQuestState["status"], string> = {
-  loading: "Reading your journal...",
-  unreadable: "Can't read your journal right now.",
-  empty: "No journal entries yet, so nothing to review.",
-  open: "Open",
-  clear: "Clear! No review is waiting.",
-};
+import { DRILL_GOAL, DRILL_TITLE } from "./stormDrillWordsV1";
 
 /** A short row of name chips, then "+N more" so a long list never grows the panel. */
 function Chips({ items, max }: { items: string[]; max: number }) {
@@ -84,7 +86,7 @@ export default function QuestLog({
           <button type="button" className="g3d-x" aria-label="Close quests" onClick={onClose}>×</button>
         )}
       </header>
-      {demo && <p className="g3d-demo">Sample journal, not yours.</p>}
+      {demo && <p className="g3d-demo">{QUEST_SAMPLE}</p>}
 
       {standing && (
         <section className="g3d-card" aria-label="Standing">
@@ -93,7 +95,7 @@ export default function QuestLog({
             <span aria-hidden>{"🔥".repeat(standing.lit) || "·"} </span>
             {standing.headline}
           </h3>
-          {standing.next && <p className="g3d-muted">{standing.next}</p>}
+          {standing.next && <p className="g3d-muted">{withStop(standing.next)}</p>}
           {standing.watch && <p className="g3d-muted">{withStop(standing.watch)}</p>}
           {standing.ledger && <p className="g3d-muted">{withStop(standing.ledger)}</p>}
         </section>
@@ -105,38 +107,38 @@ export default function QuestLog({
 
       <section className="g3d-card">
         <p className="g3d-tag">Quest</p>
-        <h3>{QUEST_TITLE}</h3>
-        <p className="g3d-muted">{QUEST_V2_GOAL}</p>
-        <p className="mt-2"><Pill done={questDone}>{STATUS_WORDS[quest.status]}</Pill></p>
+        <h3>{WHYS_TITLE}</h3>
+        <p className="g3d-muted">{WHYS_GOAL}</p>
+        <p className="mt-2"><Pill done={questDone}>{WHYS_STATUS[quest.status]}</Pill></p>
         {counted && (
           <>
-            <div className="g3d-bar" role="progressbar" aria-label={QUEST_V2_BAR_LABEL} aria-valuemin={0} aria-valuemax={quest.total} aria-valuenow={quest.written}>
+            <div className="g3d-bar" role="progressbar" aria-label={WHYS_BAR_LABEL} aria-valuemin={0} aria-valuemax={quest.total} aria-valuenow={quest.written}>
               <i style={{ width: `${pct}%` }} />
             </div>
-            <p className="g3d-muted mt-1">{quest.written} of {quest.total} written</p>
+            <p className="g3d-muted mt-1">{whysCount(quest.written, quest.total)}</p>
           </>
         )}
         {quest.status === "open" && (
           <>
-            <p className="g3d-muted mt-2">Still missing:</p>
+            <p className="g3d-muted mt-2">{WHYS_STILL}</p>
             <Chips items={quest.missing.map((m) => m.name)} max={6} />
-            <p className="g3d-muted mt-2">Write them at the desk by the keep door.</p>
+            <p className="g3d-muted mt-2">{WHYS_WHERE}</p>
           </>
         )}
       </section>
 
       <section className="g3d-card">
         <p className="g3d-tag">Quest</p>
-        <h3>{REVIEW_QUEST_TITLE}</h3>
-        <p className="g3d-muted">{REVIEW_QUEST_GOAL}</p>
-        <p className="mt-2"><Pill done={reviewsClear}>{REVIEW_STATUS_WORDS[reviews.status]}</Pill></p>
+        <h3>{LOOKBACK_TITLE}</h3>
+        <p className="g3d-muted">{LOOKBACK_GOAL}</p>
+        <p className="mt-2"><Pill done={reviewsClear}>{LOOKBACK_STATUS[reviews.status]}</Pill></p>
         {reviews.status === "open" && (
           <>
-            <p className="g3d-muted mt-2">{reviews.due.length} waiting:</p>
+            <p className="g3d-muted mt-2">{lookbackCount(reviews.due.length)}</p>
             <Chips items={reviews.due.map((d) => `${d.name} (${whichWords(d.which)})`)} max={4} />
           </>
         )}
-        <Link to="/journal" className="g3d-btn mt-3 inline-block">Old entries: the journal</Link>
+        <Link to="/journal" className="g3d-btn mt-3 inline-block">{LOOKBACK_JOURNAL}</Link>
       </section>
 
       {drill && (
@@ -144,18 +146,18 @@ export default function QuestLog({
           <p className="g3d-tag">Quest</p>
           <h3>{DRILL_TITLE}</h3>
           <p className="g3d-muted">{DRILL_GOAL}</p>
-          <p className="mt-2"><Pill done={drill.status === "done"}>{DRILL_STATUS_WORDS[drill.status]}</Pill></p>
+          <p className="mt-2"><Pill done={drill.status === "done"}>{DRILL_CARD_STATUS[drill.status]}</Pill></p>
           {drill.status === "done" && (
             <p className="g3d-muted mt-1">
-              {drill.count} written{drill.latestFall !== null ? `, the last for a ${fallPercent(drill.latestFall)} fall` : ""}.
+              {drillCardDone(drill.count, drill.latestFall !== null ? fallPercent(drill.latestFall) : null)}
             </p>
           )}
-          {drill.status === "open" && <p className="g3d-muted mt-2">Find the drill post in the south-west.</p>}
+          {drill.status === "open" && <p className="g3d-muted mt-2">{DRILL_CARD_WHERE}</p>}
         </section>
       )}
 
       <p className="g3d-muted mt-3">
-        Walk up to {NPCS.map((n) => n.name).join(" or ")} and press E.
+        {talkHint(NPCS.map((n) => n.name))}
       </p>
     </aside>
   );

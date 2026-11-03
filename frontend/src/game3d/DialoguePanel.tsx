@@ -1,7 +1,6 @@
 import { NPCS } from "./npcs";
 import type { NpcId } from "./npcs";
-import { IMPORT_PATH, pointsToImport } from "./dialogueV2";
-import { talk } from "./dialogueV3";
+import { IMPORT_PATH, pointsToImport, talk } from "./dialogueV4";
 import type { QuestState, ReviewQuestState } from "./quest";
 
 interface Props {
@@ -40,7 +39,7 @@ export default function DialoguePanel({ npc, quest, reviews, onClose, onRetry }:
         {quest.status === "unreadable" && (
           <button type="button" onClick={onRetry} className="g3d-btn">Try again</button>
         )}
-        <button type="button" onClick={onClose} className="g3d-btn">Close (E)</button>
+        <button type="button" onClick={onClose} className="g3d-btn">Goodbye (E)</button>
       </div>
     </section>
   );

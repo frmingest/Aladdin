@@ -71,7 +71,7 @@ describe("courtyard dialogue v1", () => {
     expect(html).toContain("Try again");
     const ok = renderToStaticMarkup(<DialoguePanel npc="partner" quest={quests[4]} reviews={sixMonthReckoning([], false)} onClose={() => {}} onRetry={() => {}} />);
     expect(ok).not.toContain("Try again");
-    expect(ok).toContain("Close (E)");
+    expect(ok).toContain("Goodbye (E)");
   });
 });
 
