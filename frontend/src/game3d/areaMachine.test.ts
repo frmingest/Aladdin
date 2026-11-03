@@ -41,7 +41,7 @@ describe("area reducer", () => {
 
   it("does not stack: a second enter or leave during a move is ignored", () => {
     const out = areaReducer(INITIAL_AREA, { type: "enter", ref: { id: "town" } });
-    expect(areaReducer(out, { type: "enter", ref: { id: "library", holdingId: "h1" } })).toBe(out);
+    expect(areaReducer(out, { type: "enter", ref: { id: "holding", holdingId: "h1" } })).toBe(out);
     expect(areaReducer(out, { type: "leave" })).toBe(out);
     const loading = areaReducer(out, { type: "fadeDone" });
     expect(areaReducer(loading, { type: "enter", ref: { id: "townhall" } })).toBe(loading);
@@ -73,10 +73,10 @@ describe("area reducer", () => {
     expect(areaReducer(idle, { type: "enter", ref: { id: "town" } }).failed).toBe(false);
   });
 
-  it("leaves a tower library to the courtyard", () => {
-    const s = go(go(INITIAL_AREA, { type: "enter", ref: { id: "library", holdingId: "h1" } }), { type: "leave" });
+  it("leaves a holding's land to the courtyard", () => {
+    const s = go(go(INITIAL_AREA, { type: "enter", ref: { id: "holding", holdingId: "h1" } }), { type: "leave" });
     expect(s.current.id).toBe("courtyard");
-    expect(s.from).toEqual({ id: "library", holdingId: "h1" });
+    expect(s.from).toEqual({ id: "holding", holdingId: "h1" });
   });
 
   it("does nothing on leave at the courtyard", () => {
@@ -84,15 +84,15 @@ describe("area reducer", () => {
   });
 
   it("ignores entering where you already are, but not another holding", () => {
-    const a = go(INITIAL_AREA, { type: "enter", ref: { id: "library", holdingId: "h1" } });
-    expect(areaReducer(a, { type: "enter", ref: { id: "library", holdingId: "h1" } })).toBe(a);
-    expect(areaReducer(a, { type: "enter", ref: { id: "library", holdingId: "h2" } }).next).toEqual({ id: "library", holdingId: "h2" });
+    const a = go(INITIAL_AREA, { type: "enter", ref: { id: "holding", holdingId: "h1" } });
+    expect(areaReducer(a, { type: "enter", ref: { id: "holding", holdingId: "h1" } })).toBe(a);
+    expect(areaReducer(a, { type: "enter", ref: { id: "holding", holdingId: "h2" } }).next).toEqual({ id: "holding", holdingId: "h2" });
   });
 
-  it("falls back to the courtyard for a library with no holding", () => {
-    const a = go(INITIAL_AREA, { type: "enter", ref: { id: "library", holdingId: "h1" } });
-    expect(areaReducer(a, { type: "enter", ref: { id: "library", holdingId: "" } }).next?.id).toBe("courtyard");
-    expect(areaReducer(INITIAL_AREA, { type: "enter", ref: { id: "library", holdingId: "" } })).toBe(INITIAL_AREA);
+  it("falls back to the courtyard for a land with no holding", () => {
+    const a = go(INITIAL_AREA, { type: "enter", ref: { id: "holding", holdingId: "h1" } });
+    expect(areaReducer(a, { type: "enter", ref: { id: "holding", holdingId: "" } }).next?.id).toBe("courtyard");
+    expect(areaReducer(INITIAL_AREA, { type: "enter", ref: { id: "holding", holdingId: "" } })).toBe(INITIAL_AREA);
   });
 });
 

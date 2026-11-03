@@ -1,8 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { SURVEY_CHECKS } from "../lib/survey";
 import type { TowerFog } from "../lib/survey";
+import { SHELF_ORDER } from "./libraryShelves";
+import { nearestShelf, readingSpot } from "./libraryRoom";
 import {
+  BAY_SCALE,
+  GATE_LEAVE_RANGE,
+  GATE_RANGE,
   GATE_STONE,
+  LAND_SHELF_SLOTS,
+  LAND_TABLE,
+  LAND_TABLE_SPOT,
+  SHELF_RANGE,
+  TABLE_RANGE,
+  nearLandTable,
   LAND_SPOT_NAMES,
   LAND_GATE,
   LAND_RADIUS,
@@ -117,5 +128,84 @@ describe("price post", () => {
     const f = pricePostFor({ land: "fog", land_reason: "none", thesis: "not_analyzed", siege_exposure: "unsurveyed" });
     expect(f.scroll).toBe("fog");
     expect(f.banner).toBe("fog");
+  });
+});
+
+describe("the records house", () => {
+  const { x, z, hx, hz } = RECORDS_HOUSE;
+  const inside = (p: { x: number; z: number }, pad = 0) => p.x >= x - hx + pad && p.x <= x + hx - pad && p.z >= z - hz + pad && p.z <= z + hz - pad;
+
+  it("holds all seven shelves, in the library's order, each exactly once", () => {
+    expect(LAND_SHELF_SLOTS.map((s) => s.id)).toEqual([...SHELF_ORDER]);
+    expect(new Set(LAND_SHELF_SLOTS.map((s) => s.id)).size).toBe(7);
+  });
+
+  it("keeps every bay inside the house walls, and every reading spot inside the house too", () => {
+    for (const s of LAND_SHELF_SLOTS) {
+      expect(inside(s)).toBe(true);
+      expect(inside(readingSpot(s))).toBe(true);
+    }
+  });
+
+  it("keeps the bays from overlapping each other (bays are 3.6 wide at full size)", () => {
+    const w = 3.6 * BAY_SCALE;
+    for (let i = 0; i < LAND_SHELF_SLOTS.length; i++)
+      for (let j = i + 1; j < LAND_SHELF_SLOTS.length; j++) {
+        const a = LAND_SHELF_SLOTS[i];
+        const b = LAND_SHELF_SLOTS[j];
+        // Each bay is a w x 0.8*scale box turned by its yaw; compare the boxes' axis-aligned extents (yaw is a multiple of a quarter turn).
+        const ext = (s: (typeof a)) => {
+          const turned = Math.abs(Math.sin(s.yaw)) > 0.5;
+          const hxs = (turned ? 0.8 * BAY_SCALE : w) / 2;
+          const hzs = (turned ? w : 0.8 * BAY_SCALE) / 2;
+          return { minX: s.x - hxs, maxX: s.x + hxs, minZ: s.z - hzs, maxZ: s.z + hzs };
+        };
+        const A = ext(a);
+        const B = ext(b);
+        const apart = A.maxX <= B.minX || B.maxX <= A.minX || A.maxZ <= B.minZ || B.maxZ <= A.minZ;
+        expect(apart).toBe(true);
+      }
+  });
+
+  it("fits inside the smallest land with the walls, so no size can push the house onto the hedge", () => {
+    for (const corner of [
+      { x: x - hx - 0.3, z: z - hz - 0.3 },
+      { x: x - hx - 0.3, z: z + hz + 0.3 },
+    ])
+      expect(insideLand(corner, MIN_LAND_RADIUS - 0.5)).toBe(true);
+  });
+
+  it("puts the table in the open middle, away from the shelves and from the walls", () => {
+    expect(inside(LAND_TABLE, LAND_TABLE.hx)).toBe(true);
+    expect(LAND_TABLE_SPOT.z).toBeGreaterThan(LAND_TABLE.z + LAND_TABLE.hz);
+    for (const s of LAND_SHELF_SLOTS) {
+      const d = Math.hypot(readingSpot(s).x - LAND_TABLE_SPOT.x, readingSpot(s).z - LAND_TABLE_SPOT.z);
+      expect(d).toBeGreaterThan(SHELF_RANGE);
+      expect(d).toBeGreaterThan(TABLE_RANGE);
+    }
+  });
+
+  it("finds exactly the shelf you stand at, and the table only at its own spot", () => {
+    for (const s of LAND_SHELF_SLOTS) expect(nearestShelf(readingSpot(s), LAND_SHELF_SLOTS, SHELF_RANGE)?.id).toBe(s.id);
+    expect(nearestShelf(LAND_TABLE_SPOT, LAND_SHELF_SLOTS, SHELF_RANGE)).toBeNull();
+    expect(nearLandTable(LAND_TABLE_SPOT)).toBe(true);
+    expect(nearLandTable({ x: 0, z: 0 })).toBe(false);
+  });
+});
+
+describe("arriving and leaving", () => {
+  it("never puts you at the gate, the stone or a shelf on arrival", () => {
+    expect(Math.hypot(LAND_SPAWN.x - LAND_GATE.x, LAND_SPAWN.z - LAND_GATE.z)).toBeGreaterThan(GATE_RANGE);
+    expect(Math.hypot(LAND_SPAWN.x - GATE_STONE.x, LAND_SPAWN.z - GATE_STONE.z)).toBeGreaterThan(1.5);
+    expect(nearestShelf(LAND_SPAWN, LAND_SHELF_SLOTS, SHELF_RANGE)).toBeNull();
+    expect(nearLandTable(LAND_SPAWN)).toBe(false);
+  });
+
+  it("is wider to leave the gate than to arrive at it, so the edge does not flicker", () => {
+    expect(GATE_LEAVE_RANGE).toBeGreaterThan(GATE_RANGE);
+  });
+
+  it("keeps the gate stone, the gate and the price post on every land, whatever its size", () => {
+    for (const r of Object.values(LAND_RADIUS)) for (const p of [GATE_STONE, LAND_GATE, PRICE_POST, LAND_SPAWN]) expect(insideLand(p, r)).toBe(true);
   });
 });

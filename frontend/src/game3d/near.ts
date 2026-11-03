@@ -57,7 +57,8 @@ export interface Nears {
   realm: boolean;
   shelf: ShelfId | null;
   table: boolean;
-  libraryDoor: boolean;
+  /** At the gate of a holding's land. */
+  landGate: boolean;
   building: BuildingId | null;
   townExit: boolean;
   board: BoardId | null;
@@ -81,7 +82,7 @@ export const NO_NEARS: Nears = {
   realm: false,
   shelf: null,
   table: false,
-  libraryDoor: false,
+  landGate: false,
   building: null,
   townExit: false,
   board: null,
@@ -120,10 +121,10 @@ export function standingAt(area: AreaRef, n: Nears): Standing {
     case "town":
       if (n.building) return { kind: "building", id: n.building };
       return n.townExit ? { kind: "leave" } : { kind: "none" };
-    case "library":
+    case "holding":
       if (n.shelf) return { kind: "shelf", id: n.shelf };
       if (n.table) return { kind: "table" };
-      return n.libraryDoor ? { kind: "leave" } : { kind: "none" };
+      return n.landGate ? { kind: "leave" } : { kind: "none" };
     case "courtyard":
       if (n.npc) return { kind: "npc", id: n.npc };
       if (n.tower) return { kind: "tower", holdingId: n.tower };

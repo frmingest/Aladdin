@@ -31,6 +31,8 @@ import { PLAIN_VIEW, PLAIN_VIEW_TITLE, SIGN_PROMPT } from "../game3d/worldWordsV
 import { drillBlock, stormDrillQuest } from "../game3d/stormDrill";
 import { DRILL_PROMPT } from "../game3d/stormDrillWordsV1";
 import ShelfPanel from "../game3d/ShelfPanel";
+import { gateStoneFor, landRadius, workplaceCondition } from "../game3d/holdingLand";
+import { LAND_WORDS } from "../game3d/holdingLandWordsV1";
 import { shelvesFor } from "../game3d/libraryShelves";
 import type { CouncilInput, ShelfId } from "../game3d/libraryShelves";
 import type { RoomView } from "../game3d/Scene";
@@ -95,15 +97,15 @@ function Unavailable() {
 }
 
 /** A move is a cut, not a fade, for people who asked their system for less motion (S22). An explicit `instant` wins. */
-// The place a link names, or the courtyard. A library link is held back until its tower has loaded.
+// The place a link names, or the courtyard. A land link is held back until its tower has loaded.
 function startingArea(init: AreaState): AreaState {
   if (typeof window === "undefined") return init;
   const ref = placeFromSearch(window.location.search);
-  return ref.id === "library" ? init : { ...init, current: ref };
+  return ref.id === "holding" ? init : { ...init, current: ref };
 }
-function libraryLink(search: string): string | null {
+function landLink(search: string): string | null {
   const ref = placeFromSearch(search);
-  return ref.id === "library" ? ref.holdingId : null;
+  return ref.id === "holding" ? ref.holdingId : null;
 }
 
 function areaReducerWithMotion(state: AreaState, action: AreaAction): AreaState {
@@ -173,13 +175,13 @@ export default function Game3DPage() {
   const [drillsFailed, setDrillsFailed] = useState(false);
   // Market Street: the watchlist is separate too; if it cannot be read, the street simply has no stalls.
   const [watchlist, setWatchlist] = useState<Watchlist | null>(null);
-  // The tower library: which door you stand at, which tower you are inside, and what you stand at in there.
+  // A tower door: which one you stand at; and, once inside the holding's land, which shelf, the gate or the table you stand at.
   const [nearTower, setNearTower] = useState<string | null>(null);
-  // Which place you are in: one value, not four flags. A tower's library is `library` with the holding's id.
+  // Which place you are in: one value, not four flags. A tower's land is `holding` with the holding's id.
   const [areaState, dispatchArea] = useReducer(areaReducerWithMotion, INITIAL_AREA, startingArea);
-  // A `?at=library:<id>` link waits for the towers to load (a library needs its tower); the other places open at once.
-  const linkedLibrary = useRef<string | null>(typeof window === "undefined" ? null : libraryLink(window.location.search));
-  const room = areaState.current.id === "library" ? areaState.current.holdingId : null;
+  // A `?at=holding:<id>` link waits for the towers to load (a land needs its tower); the other places open at once.
+  const linkedLand = useRef<string | null>(typeof window === "undefined" ? null : landLink(window.location.search));
+  const room = areaState.current.id === "holding" ? areaState.current.holdingId : null;
   // The Town beyond the gate: whether you are in it, and which door or the gate road you stand at.
   const [atGate, setAtGate] = useState(false);
   const [townNear, setTownNear] = useState<BuildingId | null>(null);
@@ -193,7 +195,7 @@ export default function Game3DPage() {
   const [atTownExit, setAtTownExit] = useState(false);
   const [onlyPlace, setOnlyPlace] = useState<PlaceId | null>(null);
   const [nearShelf, setNearShelf] = useState<ShelfId | null>(null);
-  const [atDoor, setAtDoor] = useState(false);
+  const [atLandGate, setAtLandGate] = useState(false);
   const [readShelf, setReadShelf] = useState<ShelfId | null>(null);
   // The reading table: whether you stand at it, the report it opened, and a short note when there is none.
   const [atTable, setAtTable] = useState(false);
@@ -326,7 +328,7 @@ export default function Game3DPage() {
   const reviews = useMemo(() => sixMonthReckoning(journal?.entries ?? null, journalFailed), [journal, journalFailed]);
 
 
-  // The Council's words (the seventh shelf): the advisor lines for the holding whose library you are in. Asked when you
+  // The Council's words (the seventh shelf): the advisor lines for the holding whose land you are in. Asked when you
   // walk in; the sample fortress has no advisors to ask. The shelf says "not answered yet" or "could not be reached" until then.
   const [council, setCouncil] = useState<{ holdingId: string; data: HoldingAdvisors | "failed" } | null>(null);
   const isSample = state?.demo === true;
@@ -343,36 +345,45 @@ export default function Game3DPage() {
   }, [room, isSample]);
   const councilInput: CouncilInput = isSample ? "sample" : council && council.holdingId === room ? council.data : null;
 
-  // The library you are in: the stored row for that holding, turned into seven shelves. Nothing is stored here.
+  // The land you are in: the stored row for that holding, turned into a gate stone and seven shelves. Nothing is stored here.
   const roomView = useMemo<RoomView | null>(() => {
     if (!room || !state) return null;
     const tower = state.towers.find((t) => t.holding_id === room);
     const view = shownWorld.plain.find((t) => t.holdingId === room);
     if (!tower || !view) return null;
-    return { holdingId: room, name: tower.name, ticker: tower.ticker, gap: view.gap ?? null, shelves: shelvesFor(tower, councilInput) };
+    const surveyed = workplaceCondition(tower.wall, false) !== "unknown";
+    return {
+      holdingId: room,
+      name: tower.name,
+      ticker: tower.ticker,
+      gap: view.gap ?? null,
+      gate: gateStoneFor(tower, surveyed),
+      radius: landRadius(tower.size_class),
+      shelves: shelvesFor(tower, councilInput),
+    };
   }, [room, state, shownWorld, councilInput]);
   // A fresh load that drops the tower (or the state) puts you back outside rather than in an empty room.
   useEffect(() => {
     if (room && !roomView) dispatchArea({ type: "enter", ref: COURTYARD, instant: true });
   }, [room, roomView]);
-  // The place the scene draws: a library whose tower is gone is not a place, so it reads as the courtyard.
-  const area: AreaRef = areaState.current.id === "library" && !roomView ? COURTYARD : areaState.current;
+  // The place the scene draws: a land whose tower is gone is not a place, so it reads as the courtyard.
+  const area: AreaRef = areaState.current.id === "holding" && !roomView ? COURTYARD : areaState.current;
   const inTown = area.id === "town";
   const inHall = area.id === "townhall";
   const inRecords = area.id === "records";
 
   // The address follows the place (replace, not push, so the browser's Back leaves the page instead of re-walking your steps).
   useEffect(() => {
-    if (typeof window === "undefined" || linkedLibrary.current) return;
+    if (typeof window === "undefined" || linkedLand.current) return;
     const next = searchFor(area, window.location.search);
     if (next !== window.location.search) window.history.replaceState(null, "", `${window.location.pathname}${next}${window.location.hash}`);
   }, [area]);
-  // A library link: once the towers are known, go in if that tower exists; otherwise stay in the courtyard.
+  // A land link: once the towers are known, go in if that tower exists; otherwise stay in the courtyard.
   useEffect(() => {
-    const id = linkedLibrary.current;
+    const id = linkedLand.current;
     if (!id || !state) return;
-    linkedLibrary.current = null;
-    if (state.towers.some((t) => t.holding_id === id)) dispatchArea({ type: "enter", ref: { id: "library", holdingId: id }, instant: true });
+    linkedLand.current = null;
+    if (state.towers.some((t) => t.holding_id === id)) dispatchArea({ type: "enter", ref: { id: "holding", holdingId: id }, instant: true });
   }, [state]);
 
   // The place's name in the tab title (S22).
@@ -570,17 +581,17 @@ export default function Game3DPage() {
     setAtDesk(false);
     setNearTower(null);
     setNearShelf(null);
-    setAtDoor(false);
+    setAtLandGate(false);
     setAtTable(false);
     setReport(null);
     setTableNote(null);
     setReadShelf(null);
-    dispatchArea({ type: "enter", ref: { id: "library", holdingId: id } });
+    dispatchArea({ type: "enter", ref: { id: "holding", holdingId: id } });
   }, []);
   const leaveTower = useCallback(() => {
     setReadShelf(null);
     setNearShelf(null);
-    setAtDoor(false);
+    setAtLandGate(false);
     setAtTable(false);
     setReport(null);
     setTableNote(null);
@@ -664,7 +675,7 @@ export default function Game3DPage() {
       realm: atRealm,
       shelf: nearShelf,
       table: atTable,
-      libraryDoor: atDoor,
+      landGate: atLandGate,
       building: townNear,
       townExit: atTownExit,
       board: nearBoard,
@@ -672,7 +683,7 @@ export default function Game3DPage() {
       shelves: atShelves,
       archiveDoor: atArchiveDoor,
     }),
-    [near, nearTower, atDesk, atDrill, atSign, nearBooth, nearStall, atGate, atVault, atWatch, atPerch, atRealm, nearShelf, atTable, atDoor, townNear, atTownExit, nearBoard, atHallDoor, atShelves, atArchiveDoor],
+    [near, nearTower, atDesk, atDrill, atSign, nearBooth, nearStall, atGate, atVault, atWatch, atPerch, atRealm, nearShelf, atTable, atLandGate, townNear, atTownExit, nearBoard, atHallDoor, atShelves, atArchiveDoor],
   );
   const atSpot = useMemo(() => standingAt(area, nears), [area, nears]);
 
@@ -707,8 +718,8 @@ export default function Game3DPage() {
           if (at.kind === "building") openBuilding(at.id);
           else leaveTown();
           return;
-        case "library":
-          // Inside a tower: E reads the shelf you stand at, opens the latest report at the table, or takes the door back out.
+        case "holding":
+          // In a holding's land: E reads the shelf you stand at, opens the latest report at the table, or takes the door back out.
           if (report || at.kind === "none" || !room) return;
           e.preventDefault();
           if (at.kind === "table") openReport(room);
@@ -804,7 +815,7 @@ export default function Game3DPage() {
 
   // B walks back out of the place you are in: the same call each room's own door makes.
   const goBack = useCallback(() => {
-    if (area.id === "library") leaveTower();
+    if (area.id === "holding") leaveTower();
     else if (area.id === "townhall") leaveHall();
     else if (area.id === "records") leaveRecords();
     else if (area.id === "town") leaveTown();
@@ -876,7 +887,7 @@ export default function Game3DPage() {
       if (!whereOpen) spotPrompt = buildingPrompt(BUILDINGS.find((b) => b.id === atSpot.id) ?? BUILDINGS[0]);
       break;
     case "leave":
-      if (area.id === "library") spotPrompt = "Press E to go back outside";
+      if (area.id === "holding") spotPrompt = LAND_WORDS.gatePrompt;
       else if (!whereOpen) spotPrompt = area.id === "records" ? archiveDoorPrompt : area.id === "townhall" ? hallDoorPrompt : exitPrompt;
       break;
     case "shelf":
@@ -962,7 +973,7 @@ export default function Game3DPage() {
             room={roomView}
             onNearShelf={setNearShelf}
             onNearTable={setAtTable}
-            onNearDoor={setAtDoor}
+            onNearLandGate={setAtLandGate}
             onNearGate={setAtGate}
             townNear={townNear}
             onNearBuilding={setTownNear}

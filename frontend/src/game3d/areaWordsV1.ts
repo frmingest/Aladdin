@@ -3,6 +3,7 @@
  * shown for real is a NEW version file (areaWordsV2.ts), never an edit of this one.
  */
 import type { AreaRef } from "./areas";
+import { LAND_WORDS } from "./holdingLandWordsV1";
 
 export const AREA_WORDS_VERSION = "v1";
 
@@ -18,7 +19,7 @@ export const AREA_STUCK = "The door is stuck. Try again?";
 
 /** The plate for a place. A tower names its own holding, so nothing is invented. */
 export function areaLine(ref: AreaRef, holdingName?: string | null): string {
-  if (ref.id === "library") return holdingName ? `Into ${holdingName}'s library` : "Into the library";
+  if (ref.id === "holding") return holdingName ? LAND_WORDS.plate(holdingName) : LAND_WORDS.plateNoName;
   return AREA_LINES[ref.id];
 }
 
@@ -33,7 +34,7 @@ export function areaName(ref: AreaRef, holdingName?: string | null): string {
       return "Town Hall";
     case "records":
       return "Hall of Records";
-    case "library":
-      return holdingName ? `${holdingName}'s library` : "Library";
+    case "holding":
+      return holdingName ? LAND_WORDS.title(holdingName) : LAND_WORDS.titleNoName;
   }
 }

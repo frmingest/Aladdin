@@ -19,14 +19,16 @@ import { SURVEY_CHECKS } from "../lib/survey";
 import type { SurveyCheckId, SurveyState, TowerFog } from "../lib/survey";
 import type { FortressLand, FortressSiegeExposure, FortressSize, FortressThesis, GameTower } from "../lib/types";
 import type { Spot } from "./layout";
+import { SHELF_ORDER } from "./libraryShelves";
+import type { ShelfSlot } from "./libraryRoom";
 
 /** The ground radius per size class. Four fixed sizes; an unknown size takes the small one, never a flattering one. */
 export const LAND_RADIUS: Record<FortressSize, number> = {
-  great: 18,
-  medium: 15.5,
-  small: 13,
-  tiny: 11,
-  unknown: 13,
+  great: 22,
+  medium: 19.5,
+  small: 17.5,
+  tiny: 16.5,
+  unknown: 17.5,
 };
 
 /** The smallest land. Every spot sits inside it, so no size can push a spot off the ground. */
@@ -37,11 +39,11 @@ export function landRadius(size: FortressSize): number {
 }
 
 /** Where you stand on arriving, just inside the gate, looking north (camera yaw 0, as in the library). */
-export const LAND_SPAWN = { x: 0, z: 7, yaw: 0 } as const;
-/** The gate stone stands beside the arrival spot. */
-export const GATE_STONE = { x: 0, z: 8.4 } as const;
-/** Leaving: the gate in the south edge. E here takes you back to the courtyard. */
-export const LAND_GATE = { x: 0, z: 9.6 } as const;
+export const LAND_SPAWN = { x: 0, z: 10.2, yaw: 0 } as const;
+/** The gate stone stands ahead and to the west of where you arrive, so it is the first thing you read. */
+export const GATE_STONE = { x: -3, z: 8.4 } as const;
+/** Leaving: the gate near the south end. E here takes you back to the courtyard. */
+export const LAND_GATE = { x: 0, z: 14.2 } as const;
 export const GATE_RANGE = 2.6;
 export const GATE_LEAVE_RANGE = 3.6;
 
@@ -58,15 +60,47 @@ export const LANTERN_LEAVE_RANGE = 3.2;
 /** The workplace in the middle. `r` is the footprint radius. */
 export const WORKPLACE = { x: 0, z: -3, r: 3 } as const;
 
-/** The records house on the west side, open on its east front. */
-export const RECORDS_HOUSE = { x: -7.2, z: -3.5, hx: 2.4, hz: 3.6 } as const;
+/**
+ * The records house on the west side, open on its east front. `hx` and `hz` are the half sizes of the room inside
+ * the walls. Seven bays fit round it at three quarters of the library's size: two on the north wall, three on the
+ * west wall, two on the south wall; the reading table stands in the open middle.
+ */
+export const RECORDS_HOUSE = { x: -9, z: -3, hx: 3.3, hz: 5.2 } as const;
+/** The bays are drawn at this share of the library's size, so seven fit in a house that fits the smallest land. */
+export const BAY_SCALE = 0.75;
 /** You stand in the open front to read a shelf or the table. */
-export const RECORDS_FRONT = { x: -4.2, z: -3.5 } as const;
-export const RECORDS_RANGE = 3.2;
-export const RECORDS_LEAVE_RANGE = 4.4;
+export const RECORDS_FRONT = { x: RECORDS_HOUSE.x + RECORDS_HOUSE.hx, z: RECORDS_HOUSE.z } as const;
+/** Closer than the library's reach: the house is small, so each spot is claimed from a short way off. */
+export const SHELF_RANGE = 1.5;
+export const SHELF_LEAVE_RANGE = 2.2;
+export const TABLE_RANGE = 1.3;
+export const TABLE_LEAVE_RANGE = 2.0;
+
+const BAY_DEPTH_CENTRE = 0.55 * BAY_SCALE;
+const HOUSE_WEST = RECORDS_HOUSE.x - RECORDS_HOUSE.hx;
+const HOUSE_NORTH = RECORDS_HOUSE.z - RECORDS_HOUSE.hz;
+const HOUSE_SOUTH = RECORDS_HOUSE.z + RECORDS_HOUSE.hz;
+
+/** The seven bays, in the order of SHELF_ORDER: two north, three west (top to bottom), two south. */
+export const LAND_SHELF_SLOTS: readonly ShelfSlot[] = [
+  { id: SHELF_ORDER[0], x: -10, z: HOUSE_NORTH + BAY_DEPTH_CENTRE, yaw: 0 },
+  { id: SHELF_ORDER[1], x: -7.3, z: HOUSE_NORTH + BAY_DEPTH_CENTRE, yaw: 0 },
+  { id: SHELF_ORDER[2], x: HOUSE_WEST + BAY_DEPTH_CENTRE, z: -6, yaw: Math.PI / 2 },
+  { id: SHELF_ORDER[3], x: HOUSE_WEST + BAY_DEPTH_CENTRE, z: -3, yaw: Math.PI / 2 },
+  { id: SHELF_ORDER[4], x: HOUSE_WEST + BAY_DEPTH_CENTRE, z: 0, yaw: Math.PI / 2 },
+  { id: SHELF_ORDER[5], x: -10, z: HOUSE_SOUTH - BAY_DEPTH_CENTRE, yaw: Math.PI },
+  { id: SHELF_ORDER[6], x: -7.3, z: HOUSE_SOUTH - BAY_DEPTH_CENTRE, yaw: Math.PI },
+];
+
+/** The reading table in the open middle of the house; you stand on its south side to open the latest report. */
+export const LAND_TABLE = { x: -7.9, z: -3.4, hx: 1.15, hz: 0.6 } as const;
+export const LAND_TABLE_SPOT = { x: -7.9, z: -2.4 } as const;
+export function nearLandTable(pos: { x: number; z: number }, range: number = TABLE_RANGE): boolean {
+  return Math.hypot(LAND_TABLE_SPOT.x - pos.x, LAND_TABLE_SPOT.z - pos.z) <= range;
+}
 
 /** The price post by the exit, on the east side of the gate. */
-export const PRICE_POST = { x: 5, z: 7.4 } as const;
+export const PRICE_POST = { x: 5.5, z: 12.6 } as const;
 export const PRICE_RANGE = 2.6;
 export const PRICE_LEAVE_RANGE = 3.6;
 
