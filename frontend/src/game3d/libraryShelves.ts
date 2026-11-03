@@ -91,7 +91,7 @@ function nok(value: string | null): string | null {
   if (value === null) return null;
   const n = Number(value);
   if (!Number.isFinite(n)) return null;
-  return `${Math.round(n).toLocaleString("nb-NO")} NOK`;
+  return `${Math.round(n).toLocaleString("nb-NO")} kr`;
 }
 
 function pct1(value: string | null): string | null {
@@ -133,8 +133,8 @@ function land(t: GameTower): Shelf {
   const lines: ShelfLine[] = [{ label: "Price", text: LAND_LABEL[t.land], tone: LAND_TONE[t.land] }];
   if (t.land_reason) lines.push({ label: "Why", text: t.land_reason });
   const mos = pct1(t.margin_of_safety_pct);
-  if (mos) lines.push({ label: "Margin of safety", text: mos });
-  if (t.verdict_rating) lines.push({ label: "Last verdict", text: t.verdict_rating });
+  if (mos) lines.push({ label: "Cushion", text: mos });
+  // The stored analyst rating (it can read Buy, Sell or Avoid) is not shown in 3D: the game never says buy or sell. It stays on the flat page.
   return known({ id: "land", title: "The Land", asks, tone: LAND_TONE[t.land] ?? "", books: LAND_BOOKS[t.land] ?? 0, lines });
 }
 
@@ -159,8 +159,8 @@ function oath(t: GameTower): Shelf {
     tone: THESIS_TONE[t.thesis] ?? "",
     books: THESIS_BOOKS[t.thesis] ?? 0,
     lines: [
-      { label: "Thesis", text: THESIS_LABEL[t.thesis], tone: THESIS_TONE[t.thesis] },
-      { label: "Tripwires", text: fired === 0 ? "None fired" : `${fired} fired`, tone: fired === 0 ? "good" : "bad" },
+      { label: "Your why", text: THESIS_LABEL[t.thesis], tone: THESIS_TONE[t.thesis] },
+      { label: "Wires", text: fired === 0 ? "None rang" : `${fired} rang`, tone: fired === 0 ? "good" : "bad" },
       ...lines,
     ],
   });
@@ -179,7 +179,7 @@ function storm(t: GameTower): Shelf {
     asks,
     tone: SIEGE_TONE[t.siege_exposure] ?? "",
     books: SIEGE_BOOKS[t.siege_exposure] ?? 0,
-    lines: [{ label: "Stress", text: describeSiegeExposure(t), tone: SIEGE_TONE[t.siege_exposure] }, ...neighbours],
+    lines: [{ label: "In the storm", text: describeSiegeExposure(t), tone: SIEGE_TONE[t.siege_exposure] }, ...neighbours],
   });
 }
 
@@ -190,7 +190,7 @@ function treasury(t: GameTower): Shelf {
   if (w) lines.push({ label: "Share of the fortress", text: w });
   const v = nok(t.value_nok);
   if (v) lines.push({ label: "Worth", text: v });
-  if (t.sector) lines.push({ label: "Sector", text: t.sector });
+  if (t.sector) lines.push({ label: "Line of business", text: t.sector });
   lines.push({ label: "Kind", text: STRUCTURE_LABEL[t.structure] });
   if (t.size_class === "unknown") return unknown("treasury", "The Treasury", asks, lines);
   return known({ id: "treasury", title: "The Treasury", asks, tone: "", books: SIZE_BOOKS[t.size_class] ?? 0, lines });
