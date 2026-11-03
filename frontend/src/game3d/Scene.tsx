@@ -2,7 +2,7 @@ import { Fragment, Suspense, useEffect, useMemo, useRef, useState } from "react"
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Physics } from "@react-three/rapier";
 import Courtyard from "./Courtyard";
-import type { WorldModel } from "./stateToWorld";
+import type { TowerView, WorldModel } from "./stateToWorld";
 import PerfProbe from "./PerfProbe";
 import type { PerfStats } from "./PerfProbe";
 import Player from "./Player";
@@ -47,7 +47,7 @@ import { DRILL_LEAVE_RANGE, DRILL_POST, DRILL_RANGE } from "./stormDrill";
 import { DESK, DESK_LEAVE_RANGE, DESK_RANGE } from "./desk";
 import { PROPS } from "./props";
 import HoldingLand from "./HoldingLand";
-import type { GateStone, Lantern } from "./holdingLand";
+import type { GateStone, Lantern, PricePost } from "./holdingLand";
 import type { SurveyCheckId } from "../lib/survey";
 import Town from "./Town";
 import TownHallRoom from "./TownHallRoom";
@@ -149,6 +149,9 @@ export interface RoomView {
   gate: GateStone;
   /** The four survey lanterns of this holding (fog of war). */
   lanterns: Lantern[];
+  /** The holding's own tower for the middle of the land, and the price post's facts. */
+  centre: TowerView;
+  price: PricePost;
   /** The ground radius for the holding's size class. */
   radius: number;
   shelves: Shelf[];
@@ -341,7 +344,7 @@ function World({
             <Backdrop />
           </group>
           <group userData={{ perfGroup: "holding" }}>
-            <HoldingLand ticker={room.ticker} gap={room.gap} gate={room.gate} radius={room.radius} shelves={room.shelves} pos={pos} onShelf={onNearShelf} onGate={onNearLandGate} onTable={onNearTable} lanterns={room.lanterns} onLantern={onNearLantern} />
+            <HoldingLand ticker={room.ticker} gap={room.gap} gate={room.gate} radius={room.radius} shelves={room.shelves} pos={pos} onShelf={onNearShelf} onGate={onNearLandGate} onTable={onNearTable} lanterns={room.lanterns} onLantern={onNearLantern} centre={room.centre} price={room.price} />
           </group>
         </>
       ) : (

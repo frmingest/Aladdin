@@ -7,6 +7,10 @@ import { DoubleSide } from "three";
 import { PAL, Part } from "./Inked";
 import { Bay } from "./LibraryBay";
 import LanternPost from "./LanternPost";
+import PricePost from "./PricePost";
+import { TowerBody } from "./TowerMesh";
+import type { PricePost as PricePostData } from "./holdingLand";
+import type { TowerView } from "./stateToWorld";
 import StaticBatch from "./StaticBatch";
 import {
   BAY_SCALE,
@@ -129,15 +133,18 @@ interface Props {
   /** The four survey lanterns (fog of war), from the survey; a survey not read yet gives four hooded lanterns. */
   lanterns: readonly Lantern[];
   onLantern: (check: SurveyCheckId | null) => void;
+  /** The holding's own tower for the middle (`centreTowerFor`), and the price post's facts (`pricePostFor`). */
+  centre: TowerView;
+  price: PricePostData;
 }
 
 /**
  * A holding's own land (S25 PR 1, plain version). Every holding gets the same layout: a gate you arrive through, a
  * gate stone with the name, weight and value, and the records house with the seven shelves and the reading table.
  * Only the size of the ground follows the size class. Nothing here reads a verdict, and nothing is red or green.
- * The four survey lanterns stand in an arc across the land (PR 2); the holding's own tower comes in PR 3.
+ * The four survey lanterns stand in an arc across the land (PR 2); the holding's own tower and the price post stand in PR 3.
  */
-export default function HoldingLand({ ticker, gap = null, gate, radius, shelves, pos, onShelf, onGate, onTable, lanterns, onLantern }: Props) {
+export default function HoldingLand({ ticker, gap = null, gate, radius, shelves, pos, onShelf, onGate, onTable, lanterns, onLantern, centre, price }: Props) {
   const [active, setActive] = useState<ShelfId | null>(null);
   const [activeLantern, setActiveLantern] = useState<SurveyCheckId | null>(null);
   const byId = new Map(shelves.map((s) => [s.id, s]));
@@ -270,6 +277,10 @@ export default function HoldingLand({ ticker, gap = null, gate, radius, shelves,
         const shelf = byId.get(slot.id);
         return shelf ? <Bay key={slot.id} shelf={shelf} x={slot.x} z={slot.z} yaw={slot.yaw} active={active === slot.id} scale={BAY_SCALE} /> : null;
       })}
+
+      {/* The holding's own tower in the middle: its real wall, crown, cracks and moat, or a pale ghost when unknown. */}
+      <TowerBody t={centre} door={false} />
+      <PricePost post={price} pos={pos} />
 
       {/* The survey lanterns carry facts, so they sit outside the batch of still pieces. */}
       {lanterns.map((l) => (
