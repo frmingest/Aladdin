@@ -1,5 +1,6 @@
 import { CuboidCollider, RigidBody } from "@react-three/rapier";
 import { PAL, Part } from "./Inked";
+import StaticBatch from "./StaticBatch";
 import { DESK, DESK_FACING, SHELF, bookSlots } from "./desk";
 
 /** Fixed colours by slot, never by data: the books are told apart by being there, not by colour. */
@@ -17,32 +18,57 @@ const BOOK_COLORS = [PAL.teal, PAL.cream, PAL.teal, PAL.cream] as const;
 export default function Desk({ books }: { books: number }) {
   const slots = bookSlots(books);
   return (
-    <group>
+    <StaticBatch rebuildKey={books}>
       {/* The desk: top, four legs and a chair. */}
-      <RigidBody type="fixed" colliders={false} position={[DESK.x, 0, DESK.z]} rotation={[0, DESK_FACING, 0]}>
+      <RigidBody
+        type="fixed"
+        colliders={false}
+        position={[DESK.x, 0, DESK.z]}
+        rotation={[0, DESK_FACING, 0]}
+      >
         <CuboidCollider args={[1.15, 0.5, 0.6]} position={[0, 0.5, 0]} />
         <Part color={PAL.timberLight} position={[0, 1.02, 0]} grow={1.1}>
           <boxGeometry args={[2.3, 0.1, 1.2]} />
         </Part>
         {([-1, 1] as const).flatMap((sx) =>
           ([-1, 1] as const).map((sz) => (
-            <Part key={`${sx}${sz}`} color={PAL.timberDark} position={[sx * 1.0, 0.5, sz * 0.48]} grow={1.25}>
+            <Part
+              key={`${sx}${sz}`}
+              color={PAL.timberDark}
+              position={[sx * 1.0, 0.5, sz * 0.48]}
+              grow={1.25}
+            >
               <boxGeometry args={[0.14, 1, 0.14]} />
             </Part>
           )),
         )}
         {/* A page and an ink pot on the desk: a plain sheet, nothing written on it. */}
-        <Part color={PAL.cream} position={[-0.3, 1.09, 0.05]} grow={1.15} ink={false}>
+        <Part
+          color={PAL.cream}
+          position={[-0.3, 1.09, 0.05]}
+          grow={1.15}
+          ink={false}
+        >
           <boxGeometry args={[0.7, 0.03, 0.5]} />
         </Part>
         <Part color={PAL.iron} position={[0.6, 1.17, -0.2]} grow={1.2}>
           <cylinderGeometry args={[0.1, 0.12, 0.2, 10]} />
         </Part>
         {/* The Magic Lamp: brass, decoration around the Genie panel that already works (open the desk, "Rub the lamp"). */}
-        <Part color={LAMP_BRASS} position={[-0.85, 1.2, -0.15]} scale={[1, 0.62, 0.8]} grow={1.12}>
+        <Part
+          color={LAMP_BRASS}
+          position={[-0.85, 1.2, -0.15]}
+          scale={[1, 0.62, 0.8]}
+          grow={1.12}
+        >
           <sphereGeometry args={[0.2, 14, 10]} />
         </Part>
-        <Part color={LAMP_BRASS} position={[-0.6, 1.26, -0.15]} rotation={[0, 0, -0.9]} grow={1.2}>
+        <Part
+          color={LAMP_BRASS}
+          position={[-0.6, 1.26, -0.15]}
+          rotation={[0, 0, -0.9]}
+          grow={1.2}
+        >
           <cylinderGeometry args={[0.025, 0.05, 0.26, 8]} />
         </Part>
         <Part color={LAMP_BRASS} position={[-1.08, 1.27, -0.15]} grow={1.25}>
@@ -61,7 +87,12 @@ export default function Desk({ books }: { books: number }) {
       </RigidBody>
 
       {/* The shelf of written reasons: one book for every holding with both lines. */}
-      <RigidBody type="fixed" colliders={false} position={[SHELF.x, 0, SHELF.z]} rotation={[0, DESK_FACING, 0]}>
+      <RigidBody
+        type="fixed"
+        colliders={false}
+        position={[SHELF.x, 0, SHELF.z]}
+        rotation={[0, DESK_FACING, 0]}
+      >
         <CuboidCollider args={[1.1, 1.15, 0.3]} position={[0, 1.15, 0]} />
         <Part color={PAL.timberDark} position={[0, 1.15, -0.2]} grow={1.04}>
           <boxGeometry args={[2.2, 2.3, 0.08]} />
@@ -72,16 +103,26 @@ export default function Desk({ books }: { books: number }) {
           </Part>
         ))}
         {[0.2, 1.2, 2.25].map((y) => (
-          <Part key={y} color={PAL.timberLight} position={[0, y, 0]} grow={1.12}>
+          <Part
+            key={y}
+            color={PAL.timberLight}
+            position={[0, y, 0]}
+            grow={1.12}
+          >
             <boxGeometry args={[2.2, 0.1, 0.5]} />
           </Part>
         ))}
         {slots.map((s, i) => (
-          <Part key={i} color={BOOK_COLORS[i % BOOK_COLORS.length]} position={[s.x, s.y + s.h / 2 + 0.05, 0]} grow={1.14}>
+          <Part
+            key={i}
+            color={BOOK_COLORS[i % BOOK_COLORS.length]}
+            position={[s.x, s.y + s.h / 2 + 0.05, 0]}
+            grow={1.14}
+          >
             <boxGeometry args={[0.34, s.h, 0.38]} />
           </Part>
         ))}
       </RigidBody>
-    </group>
+    </StaticBatch>
   );
 }

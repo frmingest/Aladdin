@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { CuboidCollider, CylinderCollider, RigidBody } from "@react-three/rapier";
 import TowerMesh from "./TowerMesh";
+import StaticBatch from "./StaticBatch";
 import { ModelClone, WithFallback } from "./KeepModels";
 import { CORNER_TOWER_MODEL, CORNER_TOWER_SCALE, KEEP_MODEL, KEEP_MODEL_SCALE, KEEP_URL, cornerTowerFootprint, keepModelFootprint } from "./keepModels";
 import type { WorldModel } from "./stateToWorld";
@@ -64,15 +65,17 @@ export default function Courtyard({ world }: { world: WorldModel }) {
       </mesh>
 
       {/* Curtain wall. */}
-      {walls.map((s, i) => (
-        <RigidBody key={i} type="fixed" colliders={false} position={[s.x, WALL_HEIGHT / 2, s.z]} rotation={[0, s.rotY, 0]}>
-          <CuboidCollider args={[s.length / 2, WALL_HEIGHT / 2, WALL_THICKNESS / 2]} />
-          <mesh castShadow receiveShadow>
-            <boxGeometry args={[s.length, WALL_HEIGHT, WALL_THICKNESS]} />
-            <meshStandardMaterial color={COLORS.stone} flatShading />
-          </mesh>
-        </RigidBody>
-      ))}
+      <StaticBatch>
+        {walls.map((s, i) => (
+          <RigidBody key={i} type="fixed" colliders={false} position={[s.x, WALL_HEIGHT / 2, s.z]} rotation={[0, s.rotY, 0]}>
+            <CuboidCollider args={[s.length / 2, WALL_HEIGHT / 2, WALL_THICKNESS / 2]} />
+            <mesh castShadow receiveShadow>
+              <boxGeometry args={[s.length, WALL_HEIGHT, WALL_THICKNESS]} />
+              <meshStandardMaterial color={COLORS.stone} flatShading />
+            </mesh>
+          </RigidBody>
+        ))}
+      </StaticBatch>
 
       {/* Corner towers: KayKit model, plain shapes if the file does not load. */}
       {corners.map((t, i) => (
@@ -100,15 +103,17 @@ export default function Courtyard({ world }: { world: WorldModel }) {
       />
 
       {/* Eight pads. A holding raises a tower on its pad; empty pads stay bare. */}
-      {spots.map((s, i) => (
-        <RigidBody key={i} type="fixed" colliders={false} position={[s.x, 0.25, s.z]}>
-          <CuboidCollider args={[SPOT_SIZE / 2, 0.25, SPOT_SIZE / 2]} />
-          <mesh castShadow receiveShadow>
-            <boxGeometry args={[SPOT_SIZE, 0.5, SPOT_SIZE]} />
-            <meshStandardMaterial color={COLORS.spot} flatShading />
-          </mesh>
-        </RigidBody>
-      ))}
+      <StaticBatch>
+        {spots.map((s, i) => (
+          <RigidBody key={i} type="fixed" colliders={false} position={[s.x, 0.25, s.z]}>
+            <CuboidCollider args={[SPOT_SIZE / 2, 0.25, SPOT_SIZE / 2]} />
+            <mesh castShadow receiveShadow>
+              <boxGeometry args={[SPOT_SIZE, 0.5, SPOT_SIZE]} />
+              <meshStandardMaterial color={COLORS.spot} flatShading />
+            </mesh>
+          </RigidBody>
+        ))}
+      </StaticBatch>
 
       {world.towers.map((t) => (
         <TowerMesh key={t.holdingId} t={t} />

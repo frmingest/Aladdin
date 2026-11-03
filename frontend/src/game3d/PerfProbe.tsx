@@ -1,5 +1,6 @@
 import { useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
+import { Frustum, Matrix4 } from "three";
 import { tallyScene } from "./perfGroups";
 import type { GroupTally } from "./perfGroups";
 
@@ -25,6 +26,8 @@ const DETAIL_EVERY = 4;
 export default function PerfProbe({ onStats, detail = false }: { onStats: (s: PerfStats) => void; detail?: boolean }) {
   const gl = useThree((s) => s.gl);
   const scene = useThree((s) => s.scene);
+  const camera = useThree((s) => s.camera);
+  const view = useRef({ frustum: new Frustum(), matrix: new Matrix4() });
   const frames = useRef(0);
   const elapsed = useRef(0);
   const reports = useRef(0);
@@ -35,7 +38,12 @@ export default function PerfProbe({ onStats, detail = false }: { onStats: (s: Pe
     elapsed.current += delta;
     if (elapsed.current >= 0.5) {
       if (detail) {
-        if (reports.current % DETAIL_EVERY === 0) groups.current = tallyScene(scene);
+        if (reports.current % DETAIL_EVERY === 0) {
+          camera.updateMatrixWorld();
+          const { frustum, matrix } = view.current;
+          frustum.setFromProjectionMatrix(matrix.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
+          groups.current = tallyScene(scene, frustum);
+        }
       } else {
         groups.current = undefined;
       }

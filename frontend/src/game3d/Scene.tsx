@@ -346,16 +346,30 @@ function World({
             <MarketStreet stalls={stalls} />
             <Booths />
           </group>
-          <group userData={{ perfGroup: "posts" }}>
+          <group userData={{ perfGroup: "torches" }}>
             <StandingTorches level={standingLevel} />
+          </group>
+          <group userData={{ perfGroup: "desk" }}>
             <Desk books={books} />
+          </group>
+          <group userData={{ perfGroup: "vault" }}>
             <Vault level={vaultLevel} />
+          </group>
+          <group userData={{ perfGroup: "watch" }}>
             <WatchPost status={watchStatus} />
+          </group>
+          <group userData={{ perfGroup: "ravens" }}>
             <RavenBirds count={unseenRavens} />
+          </group>
+          <group userData={{ perfGroup: "realm" }}>
             <RealmPost level={realmLevel} siege={siegeLevel} />
+          </group>
+          <group userData={{ perfGroup: "drill" }}>
             <DrillPost />
-            <Signpost />
             {drillOpen && <DrillCamp />}
+          </group>
+          <group userData={{ perfGroup: "signpost" }}>
+            <Signpost />
           </group>
           <group userData={{ perfGroup: "weather" }}>
             <Weather level={siegeLevel} />

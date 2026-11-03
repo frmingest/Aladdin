@@ -1,8 +1,14 @@
 import { useEffect, useMemo } from "react";
 import { CuboidCollider, RigidBody } from "@react-three/rapier";
+import StaticBatch from "./StaticBatch";
 import { CanvasTexture, SRGBColorSpace } from "three";
 import { INK, PAL, Part } from "./Inked";
-import { REALM_FACING, REALM_POST, REALM_SOLID, pennantLook } from "./realmPlan";
+import {
+  REALM_FACING,
+  REALM_POST,
+  REALM_SOLID,
+  pennantLook,
+} from "./realmPlan";
 import type { PennantShape } from "./realmPlan";
 import { REALM_PLATE } from "./realmWordsV1";
 import { SIEGE_LABEL } from "../lib/fortress";
@@ -41,7 +47,13 @@ function usePlate(text: string, size: number): CanvasTexture {
 }
 
 /** One shape per level, so the pennant reads without colour. */
-function PennantShapeMesh({ shape, color }: { shape: PennantShape; color: string }) {
+function PennantShapeMesh({
+  shape,
+  color,
+}: {
+  shape: PennantShape;
+  color: string;
+}) {
   switch (shape) {
     case "square":
       return (
@@ -51,7 +63,11 @@ function PennantShapeMesh({ shape, color }: { shape: PennantShape; color: string
       );
     case "triangle":
       return (
-        <Part color={color} rotation={[Math.PI / 2, 0, -Math.PI / 2]} grow={1.08}>
+        <Part
+          color={color}
+          rotation={[Math.PI / 2, 0, -Math.PI / 2]}
+          grow={1.08}
+        >
           <cylinderGeometry args={[0.6, 0.6, 0.06, 3]} />
         </Part>
       );
@@ -76,41 +92,57 @@ function PennantShapeMesh({ shape, color }: { shape: PennantShape; color: string
  * (one level, by shape and word); a second plate says the weather in the flat page's own words. Code-built, the usual
  * ink outline, no light, no animation. Press E and the flat verdict card opens in a panel.
  */
-export default function RealmPost({ level, siege }: { level: RealmLevel | null; siege: FortressSiegeLevel | null }) {
+export default function RealmPost({
+  level,
+  siege,
+}: {
+  level: RealmLevel | null;
+  siege: FortressSiegeLevel | null;
+}) {
   const look = pennantLook(level);
   const verdictTex = usePlate(REALM_PLATE[look.level], 40);
   const weatherTex = usePlate(SIEGE_LABEL[siege ?? "unsurveyed"], 34);
   return (
-    <RigidBody type="fixed" colliders={false} position={[REALM_POST.x, 0, REALM_POST.z]} rotation={[0, REALM_FACING, 0]}>
-      <CuboidCollider args={[REALM_SOLID, 2.2, REALM_SOLID]} position={[0, 2.2, 0]} />
-      <Part color={PAL.slateDark} position={[0, 0.15, 0]} grow={1.06}>
-        <cylinderGeometry args={[0.6, 0.66, 0.3, 9]} />
-      </Part>
-      <Part color={PAL.timberDark} position={[0, 2.1, 0]} grow={1.12}>
-        <boxGeometry args={[0.24, 3.8, 0.24]} />
-      </Part>
-      {/* Arm and pennant at the top. */}
-      <Part color={PAL.timber} position={[0.55, 3.75, 0]} grow={1.12}>
-        <boxGeometry args={[1.1, 0.12, 0.12]} />
-      </Part>
-      <group position={[0.75, 3.2, 0]}>
-        <PennantShapeMesh shape={look.shape} color={look.color} />
-      </group>
-      {/* Verdict plate (the word for the pennant) and weather plate (the flat page's own weather words). */}
-      <Part color={PAL.timber} position={[0, 1.75, 0.16]} grow={1.04}>
-        <boxGeometry args={[1.0, 0.42, 0.06]} />
-      </Part>
-      <mesh position={[0, 1.75, 0.2]}>
-        <planeGeometry args={[0.92, 0.35]} />
-        <meshBasicMaterial map={verdictTex} toneMapped={false} />
-      </mesh>
-      <Part color={PAL.timber} position={[0, 1.25, 0.16]} grow={1.04}>
-        <boxGeometry args={[1.0, 0.42, 0.06]} />
-      </Part>
-      <mesh position={[0, 1.25, 0.2]}>
-        <planeGeometry args={[0.92, 0.35]} />
-        <meshBasicMaterial map={weatherTex} toneMapped={false} />
-      </mesh>
+    <RigidBody
+      type="fixed"
+      colliders={false}
+      position={[REALM_POST.x, 0, REALM_POST.z]}
+      rotation={[0, REALM_FACING, 0]}
+    >
+      <CuboidCollider
+        args={[REALM_SOLID, 2.2, REALM_SOLID]}
+        position={[0, 2.2, 0]}
+      />
+      <StaticBatch rebuildKey={`${look.level}|${siege ?? "unsurveyed"}`}>
+        <Part color={PAL.slateDark} position={[0, 0.15, 0]} grow={1.06}>
+          <cylinderGeometry args={[0.6, 0.66, 0.3, 9]} />
+        </Part>
+        <Part color={PAL.timberDark} position={[0, 2.1, 0]} grow={1.12}>
+          <boxGeometry args={[0.24, 3.8, 0.24]} />
+        </Part>
+        {/* Arm and pennant at the top. */}
+        <Part color={PAL.timber} position={[0.55, 3.75, 0]} grow={1.12}>
+          <boxGeometry args={[1.1, 0.12, 0.12]} />
+        </Part>
+        <group position={[0.75, 3.2, 0]}>
+          <PennantShapeMesh shape={look.shape} color={look.color} />
+        </group>
+        {/* Verdict plate (the word for the pennant) and weather plate (the flat page's own weather words). */}
+        <Part color={PAL.timber} position={[0, 1.75, 0.16]} grow={1.04}>
+          <boxGeometry args={[1.0, 0.42, 0.06]} />
+        </Part>
+        <mesh position={[0, 1.75, 0.2]}>
+          <planeGeometry args={[0.92, 0.35]} />
+          <meshBasicMaterial map={verdictTex} toneMapped={false} />
+        </mesh>
+        <Part color={PAL.timber} position={[0, 1.25, 0.16]} grow={1.04}>
+          <boxGeometry args={[1.0, 0.42, 0.06]} />
+        </Part>
+        <mesh position={[0, 1.25, 0.2]}>
+          <planeGeometry args={[0.92, 0.35]} />
+          <meshBasicMaterial map={weatherTex} toneMapped={false} />
+        </mesh>
+      </StaticBatch>
     </RigidBody>
   );
 }

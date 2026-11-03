@@ -1,4 +1,5 @@
-import type { Object3D } from "three";
+import { Sphere } from "three";
+import type { Frustum, Object3D } from "three";
 
 /**
  * Measuring only (S23 PR 1). Walks the 3D scene and says which part of it owns how many
@@ -7,8 +8,8 @@ import type { Object3D } from "three";
  * A part tags itself with `userData.perfGroup` on a wrapping group; the nearest tagged
  * ancestor owns every mesh below it. Anything untagged lands in "other".
  *
- * These are shares of the scene, not the renderer's own total: the renderer also draws
- * shadows and the ink outline pass. The overlay shows both, so the gap is visible.
+ * These are shares of the scene, not the renderer's own total: the renderer also draws the
+ * shadow pass. The overlay shows both, so the gap is visible.
  */
 
 export const OTHER_GROUP = "other";
@@ -25,6 +26,7 @@ export interface GroupTally {
 
 interface MeshLike extends Object3D {
   isMesh?: boolean;
+  frustumCulled: boolean;
   isInstancedMesh?: boolean;
   count?: number;
   material?: unknown;
@@ -32,6 +34,8 @@ interface MeshLike extends Object3D {
     index?: { count: number } | null;
     attributes?: { position?: { count: number } };
     drawRange?: { start: number; count: number };
+    boundingSphere: Sphere | null;
+    computeBoundingSphere(): void;
   };
 }
 
@@ -63,13 +67,32 @@ function triangleCount(mesh: MeshLike): number {
   return Math.floor(drawn / 3) * copies;
 }
 
-/** Sorted biggest first (calls, then triangles, then name) so the order is stable. */
-export function tallyScene(root: Object3D): GroupTally[] {
+const reach = new Sphere();
+
+/** True when the renderer would skip this mesh because it is outside the camera's view. */
+function outOfView(mesh: MeshLike, view: Frustum): boolean {
+  if (!mesh.frustumCulled || mesh.isInstancedMesh) return false; // the renderer draws these whatever the view
+  const geo = mesh.geometry;
+  if (!geo) return false;
+  if (!geo.boundingSphere) geo.computeBoundingSphere();
+  if (!geo.boundingSphere) return false;
+  reach.copy(geo.boundingSphere).applyMatrix4(mesh.matrixWorld);
+  return !view.intersectsSphere(reach);
+}
+
+/**
+ * Sorted biggest first (calls, then triangles, then name) so the order is stable. Pass the camera's
+ * view and meshes outside it are left out, as the renderer leaves them out; the parts then add up to
+ * at most the renderer's own total (which also draws shadows).
+ */
+export function tallyScene(root: Object3D, view?: Frustum): GroupTally[] {
   const byGroup = new Map<string, GroupTally>();
+  root.updateWorldMatrix(true, true);
   root.traverse((node) => {
     const mesh = node as MeshLike;
     if (!mesh.isMesh) return;
     if (hiddenByParent(mesh)) return;
+    if (view && outOfView(mesh, view)) return;
     const group = ownerGroup(mesh);
     const row = byGroup.get(group) ?? { group, calls: 0, triangles: 0, instanced: 0 };
     row.calls += Array.isArray(mesh.material) ? Math.max(1, mesh.material.length) : 1;

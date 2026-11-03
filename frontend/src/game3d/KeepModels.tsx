@@ -2,6 +2,7 @@ import { Component, Suspense, useMemo } from "react";
 import type { ReactNode } from "react";
 import { useGLTF } from "@react-three/drei";
 import type { Object3D } from "three";
+import StaticBatch from "./StaticBatch";
 
 /** If keep.glb fails to load, draw the fallback (the plain shapes) instead. */
 export class ModelBoundary extends Component<{ children: ReactNode; fallback: ReactNode }, { failed: boolean }> {
@@ -31,7 +32,11 @@ export function ModelClone({ url, node, scale }: { url: string; node: string; sc
     return copy;
   }, [gltf, node]);
   if (!object) return null;
-  return <primitive object={object} scale={scale} />;
+  return (
+    <StaticBatch>
+      <primitive object={object} scale={scale} />
+    </StaticBatch>
+  );
 }
 
 /** The model while it loads shows the fallback, so the courtyard is never missing its keep. */

@@ -1,4 +1,4 @@
-import { BoxGeometry, Group, InstancedMesh, Mesh, MeshBasicMaterial } from "three";
+import { BoxGeometry, Frustum, Group, InstancedMesh, Matrix4, Mesh, MeshBasicMaterial, PerspectiveCamera } from "three";
 import { describe, expect, it } from "vitest";
 import { OTHER_GROUP, groupLine, tallyScene, topGroups } from "./perfGroups";
 
@@ -71,6 +71,42 @@ describe("tallyScene", () => {
 
   it("returns nothing for an empty scene", () => {
     expect(tallyScene(new Group())).toEqual([]);
+  });
+});
+
+describe("tallyScene with a view", () => {
+  function viewFromOrigin(): Frustum {
+    const camera = new PerspectiveCamera(60, 1, 0.1, 100); // looks down -z
+    camera.updateMatrixWorld();
+    return new Frustum().setFromProjectionMatrix(new Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
+  }
+  const at = (x: number, y: number, z: number) => {
+    const m = box();
+    m.position.set(x, y, z);
+    return m;
+  };
+
+  it("leaves out meshes the camera cannot see, as the renderer does", () => {
+    const root = new Group();
+    root.add(tagged("scenery", at(0, 0, -10), at(0, 0, 10), at(500, 0, -10)));
+    const row = tallyScene(root, viewFromOrigin()).find((r) => r.group === "scenery");
+    expect(row?.calls).toBe(1);
+  });
+
+  it("counts everything when there is no view", () => {
+    const root = new Group();
+    root.add(tagged("scenery", at(0, 0, -10), at(0, 0, 10)));
+    expect(tallyScene(root)[0].calls).toBe(2);
+  });
+
+  it("still counts a mesh that opted out of culling, and instanced meshes", () => {
+    const root = new Group();
+    const always = at(0, 0, 50);
+    always.frustumCulled = false;
+    const trees = new InstancedMesh(new BoxGeometry(), mat(), 3);
+    trees.position.set(0, 0, 50);
+    root.add(tagged("horizon", always, trees as unknown as Mesh));
+    expect(tallyScene(root, viewFromOrigin())[0].calls).toBe(2);
   });
 });
 
