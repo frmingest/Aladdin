@@ -3,8 +3,26 @@ import LandBlock from "./LandBlock";
 import StreamBand from "./StreamBand";
 import { TowerBody } from "./TowerMesh";
 import { WORKPLACE } from "./holdingLand";
+import MillDressing from "./MillDressing";
 import { centreChoice } from "./landCentre";
 import type { LandCentreSlot } from "./landCentre";
+import type { Theme3dId } from "../lib/sectors";
+import type { ComponentType } from "react";
+
+/** One line per theme: PR 2 to PR 5 each add theirs. A theme with no line here keeps the placeholder block. */
+function FarmSlot({ slot }: { slot: LandCentreSlot }) {
+  return (
+    <group position={[WORKPLACE.x, 0, WORKPLACE.z]}>
+      <FarmDressing condition={slot.condition} fish={!!slot.fish} />
+    </group>
+  );
+}
+
+const DRESSINGS: Partial<Record<Theme3dId, ComponentType<{ slot: LandCentreSlot }>>> = {
+  windmill: MillDressing,
+  watermill: MillDressing,
+  farm: FarmSlot,
+};
 
 /**
  * The land's centre slot (S26 PR 1). It takes { theme, condition, stream } and decides what stands in the middle:
@@ -16,15 +34,10 @@ export default function LandCentre({ slot }: { slot: LandCentreSlot }) {
   const choice = centreChoice(slot);
   if (choice === "tower") return <TowerBody t={slot.tower} door={false} />;
   const at: [number, number, number] = [WORKPLACE.x, 0, WORKPLACE.z];
+  const Dressing = choice === "dressing" ? DRESSINGS[slot.theme] : undefined;
   return (
     <>
-      {choice === "dressing" && slot.theme === "farm" ? (
-        <group position={at}>
-          <FarmDressing condition={slot.condition} fish={!!slot.fish} />
-        </group>
-      ) : (
-        <LandBlock condition={slot.condition} position={at} />
-      )}
+      {Dressing ? <Dressing slot={slot} /> : <LandBlock condition={slot.condition} position={at} />}
       <StreamBand stream={slot.stream} position={at} />
     </>
   );
