@@ -1,7 +1,8 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
-import { REALM_LEVEL_LABEL, summarizeRealm } from "../lib/realmVerdict";
+import { summarizeRealm } from "../lib/realmVerdict";
+import { REALM_LEVEL_WORD } from "../components/fortress/realmGameWords";
 import type { GameState, GameTower } from "../lib/types";
 import RealmPanel from "./RealmPanel";
 import { pennantLook } from "./realmPlan";
@@ -42,7 +43,7 @@ describe("RealmPanel (the realm post's panel)", () => {
     const v = summarizeRealm(state);
     const h = html(state);
     expect(h).toContain("The whole fortress");
-    expect(h).toContain(REALM_LEVEL_LABEL[v.level]);
+    expect(h).toContain(REALM_LEVEL_WORD[v.level]);
     expect(h).toContain('href="/fortress"');
     expect(h).toContain("Open the flat page");
     expect(h).toContain('aria-label="Close"');
@@ -56,7 +57,7 @@ describe("RealmPanel (the realm post's panel)", () => {
     ]) {
       const level = summarizeRealm(state).level;
       expect(pennantLook(level).level).toBe(level);
-      expect(html(state)).toContain(REALM_LEVEL_LABEL[level]);
+      expect(html(state)).toContain(REALM_LEVEL_WORD[level]);
       expect(REALM_PLATE[level]).toBeTruthy();
     }
   });
@@ -64,6 +65,29 @@ describe("RealmPanel (the realm post's panel)", () => {
   it("says a tower that was never surveyed is unknown, not sound (the card's rule, kept)", () => {
     const state = stateOf([tower({ holding_id: "a", freshness: "unsurveyed", wall: "unsurveyed", weight_pct: "100" })]);
     expect(summarizeRealm(state).level).toBe("unknown");
-    expect(html(state)).toContain(REALM_LEVEL_LABEL.unknown);
+    expect(html(state)).toContain(REALM_LEVEL_WORD.unknown);
+  });
+});
+
+describe("RealmPanel in game voice (text review 2026-11-03)", () => {
+  const state = stateOf([tower({ holding_id: "a", wall: "rotted", weight_pct: "60" }), tower({ holding_id: "b", name: "Beta", weight_pct: "40" })]);
+
+  it("gives every row a short sign and one word, with no bracketed jargon and no analyst Buy/Sell", () => {
+    const h = html(state);
+    for (const sign of ["Walls", "Moats", "Fresh reads", "Prices", "Weather", "Cash", "Spread"]) expect(h).toContain(sign);
+    expect(h).not.toMatch(/balance sheets|competitive position|market stress|tripwires|Analyst verdicts|Ratings as stored/i);
+    expect(h).not.toMatch(/\b(Buy|Sell|Avoid|Hold)\b/);
+  });
+
+  it("keeps the long factual line out of sight until 'Show the numbers', but on hover", () => {
+    const h = html(state);
+    expect(h).toContain("Show the numbers");
+    expect(h).toContain('title="'); // the sentence is still there on hover
+    expect(h).not.toContain("<p class=\"mt-1 pl-6");
+  });
+
+  it("every row still carries a mark besides colour", () => {
+    const h = html(state);
+    expect(h).toMatch(/role="img" aria-label="(No flag|Watch|Needs a look|Unknown)"/);
   });
 });

@@ -5,7 +5,8 @@ import { describeError } from "../lib/errors";
 import { DESK_BLOCK_WORDS, deskInput, deskReady } from "./deskForm";
 import type { DeskBlock } from "./deskForm";
 import { DESK_READ_BOOKS, deskDueLine } from "./journalWordsV1";
-import { LAMP_BUTTON, LAMP_HINT } from "./realmWordsV1";
+import { DESK_JOURNAL_LEAD, DESK_JOURNAL_LINK, DESK_LAMP_HINT, DESK_PROGRESS, DESK_PROGRESS_LABEL } from "./deskWordsV2";
+import { LAMP_BUTTON } from "./realmWordsV1";
 import { SAVE_FAILED } from "./voiceV2";
 import type { TowerView } from "./stateToWorld";
 
@@ -93,7 +94,12 @@ export default function DeskPanel({
       {block ? (
         <p className="g3d-demo" role="status">{DESK_BLOCK_WORDS[block]}</p>
       ) : (
-        <p className="g3d-muted mt-1">{written} of {total} holdings have both lines.</p>
+        <div className="mt-1" role="group" aria-label={DESK_PROGRESS_LABEL}>
+          <p className="g3d-muted flex justify-between"><span>{DESK_PROGRESS_LABEL}</span><span>{DESK_PROGRESS(written, total)}</span></p>
+          <div className="mt-1 h-1.5 overflow-hidden rounded bg-white/10" aria-hidden="true">
+            <div className="h-full rounded bg-[#f2d27a]" style={{ width: `${total > 0 ? Math.round((written / total) * 100) : 0}%` }} />
+          </div>
+        </div>
       )}
 
       <label className="g3d-label" htmlFor="desk-holding">Holding</label>
@@ -144,12 +150,12 @@ export default function DeskPanel({
           <button type="button" className="g3d-btn" onClick={onRubLamp}>
             {LAMP_BUTTON}
           </button>
-          <p className="g3d-muted mt-1">{LAMP_HINT}</p>
+          <p className="g3d-muted mt-1">{DESK_LAMP_HINT}</p>
         </div>
       )}
 
       <p className="g3d-muted mt-3">
-        Old entries and real buys or sells: <Link to="/journal" className="underline">the journal</Link>.
+        {DESK_JOURNAL_LEAD} <Link to="/journal" className="underline">{DESK_JOURNAL_LINK}</Link>.
       </p>
     </aside>
   );

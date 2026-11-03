@@ -35,7 +35,7 @@ describe("DeskPanel (writing desk)", () => {
     expect(h).toContain("Why I own it");
     expect(h).toContain("What proves me wrong");
     expect(h).toContain("Write it down");
-    expect(h).toContain("0 of 2 holdings have both lines.");
+    expect(h).toContain("Whys written");
     expect(h).toContain("Alpha");
     expect(h).toContain("Beta");
   });
@@ -57,7 +57,7 @@ describe("DeskPanel (writing desk)", () => {
     expect(html("unreadable")).toContain("Can&#x27;t read your journal right now. Nothing is saved.");
   });
 
-  it("keeps a way to the Journal page for old entries and real buys or sells", () => {
+  it("keeps a way to the Journal page for older notes and real trades", () => {
     expect(html(null)).toContain('href="/journal"');
   });
 
@@ -96,7 +96,7 @@ describe("DeskPanel (the Magic Lamp on the desk)", () => {
   it("offers the lamp when the page can open the Genie", () => {
     const h = render(() => {});
     expect(h).toContain("Rub the lamp");
-    expect(h).toContain("Three wishes for the analysis queue");
+    expect(h).toContain("Three wishes: it studies a tower for you.");
   });
 
   it("has no lamp button when nothing can open it", () => {
