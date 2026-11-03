@@ -56,6 +56,13 @@ describe("standingAt: the one answer for E and for the prompt", () => {
       expect(standingAt(court, nears(rest)).kind).toBe(kinds[i]);
     });
   });
+  it("reads a lantern after the shelf and the table but before the gate, in a holding's land", () => {
+    const land = { id: "holding", holdingId: "h1" } as const;
+    expect(standingAt(land, nears({ lantern: "analysis", landGate: true }))).toEqual({ kind: "lantern", check: "analysis" });
+    expect(standingAt(land, nears({ lantern: "analysis", table: true })).kind).toBe("table");
+    expect(standingAt({ id: "courtyard" }, nears({ lantern: "analysis" }))).toEqual({ kind: "none" });
+  });
+
   it("reads the shelf before the table, and the table before the gate, in a holding's land", () => {
     const lib = { id: "holding", holdingId: "h1" } as const;
     expect(standingAt(lib, nears({ shelf: "wall" as never, table: true, landGate: true })).kind).toBe("shelf");

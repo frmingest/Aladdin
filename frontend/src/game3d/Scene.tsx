@@ -47,7 +47,8 @@ import { DRILL_LEAVE_RANGE, DRILL_POST, DRILL_RANGE } from "./stormDrill";
 import { DESK, DESK_LEAVE_RANGE, DESK_RANGE } from "./desk";
 import { PROPS } from "./props";
 import HoldingLand from "./HoldingLand";
-import type { GateStone } from "./holdingLand";
+import type { GateStone, Lantern } from "./holdingLand";
+import type { SurveyCheckId } from "../lib/survey";
 import Town from "./Town";
 import TownHallRoom from "./TownHallRoom";
 import RecordsHallRoom from "./RecordsHallRoom";
@@ -124,6 +125,7 @@ interface Props {
   onNearShelf?: (id: ShelfId | null) => void;
   onNearLandGate?: (near: boolean) => void;
   onNearTable?: (near: boolean) => void;
+  onNearLantern?: (check: SurveyCheckId | null) => void;
   /** Courtyard: the hero stands at the gate road. */
   onNearGate?: (near: boolean) => void;
   /** Town: which building's door the hero stands at, and whether the road back is in reach. */
@@ -145,6 +147,8 @@ export interface RoomView {
   gap?: string | null;
   /** The gate stone's words and numbers, from the stored row (unknown stays unknown). */
   gate: GateStone;
+  /** The four survey lanterns of this holding (fog of war). */
+  lanterns: Lantern[];
   /** The ground radius for the holding's size class. */
   radius: number;
   shelves: Shelf[];
@@ -229,6 +233,7 @@ function World({
   onNearShelf,
   onNearLandGate,
   onNearTable,
+  onNearLantern,
   onNearGate,
   townNear,
   onNearBuilding,
@@ -269,6 +274,7 @@ function World({
   onNearShelf: (id: ShelfId | null) => void;
   onNearLandGate: (near: boolean) => void;
   onNearTable: (near: boolean) => void;
+  onNearLantern: (check: SurveyCheckId | null) => void;
   onNearGate: (near: boolean) => void;
   townNear: BuildingId | null;
   onNearBuilding: (id: BuildingId | null) => void;
@@ -335,7 +341,7 @@ function World({
             <Backdrop />
           </group>
           <group userData={{ perfGroup: "holding" }}>
-            <HoldingLand ticker={room.ticker} gap={room.gap} gate={room.gate} radius={room.radius} shelves={room.shelves} pos={pos} onShelf={onNearShelf} onGate={onNearLandGate} onTable={onNearTable} />
+            <HoldingLand ticker={room.ticker} gap={room.gap} gate={room.gate} radius={room.radius} shelves={room.shelves} pos={pos} onShelf={onNearShelf} onGate={onNearLandGate} onTable={onNearTable} lanterns={room.lanterns} onLantern={onNearLantern} />
           </group>
         </>
       ) : (
@@ -455,6 +461,7 @@ export default function Scene({
   onNearShelf = noop,
   onNearLandGate = noop,
   onNearTable = noop,
+  onNearLantern = noop,
   onNearGate = noop,
   townNear = null,
   onNearBuilding = noop,
@@ -549,6 +556,7 @@ export default function Scene({
           onNearShelf={onNearShelf}
           onNearLandGate={onNearLandGate}
           onNearTable={onNearTable}
+          onNearLantern={onNearLantern}
           onNearGate={onNearGate}
           townNear={townNear}
           onNearBuilding={onNearBuilding}

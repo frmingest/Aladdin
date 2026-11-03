@@ -9,6 +9,7 @@ import type { BoothId } from "./boothPlan";
 import type { NpcId } from "./npcs";
 import type { ShelfId } from "./libraryShelves";
 import type { BoardId } from "./townHallRoom";
+import type { SurveyCheckId } from "../lib/survey";
 import type { BuildingId } from "./townPlan";
 
 export interface NearTarget<K> {
@@ -57,6 +58,8 @@ export interface Nears {
   realm: boolean;
   shelf: ShelfId | null;
   table: boolean;
+  /** Which survey lantern you stand at in a holding's land. */
+  lantern: SurveyCheckId | null;
   /** At the gate of a holding's land. */
   landGate: boolean;
   building: BuildingId | null;
@@ -82,6 +85,7 @@ export const NO_NEARS: Nears = {
   realm: false,
   shelf: null,
   table: false,
+  lantern: null,
   landGate: false,
   building: null,
   townExit: false,
@@ -99,6 +103,7 @@ export type Standing =
   | { kind: "booth"; id: BoothId }
   | { kind: "stall"; holdingId: string }
   | { kind: "shelf"; id: ShelfId }
+  | { kind: "lantern"; check: SurveyCheckId }
   | { kind: "building"; id: BuildingId }
   | { kind: "board"; id: BoardId }
   /** The door back out of an interior, or the road back from the Town. */
@@ -124,6 +129,7 @@ export function standingAt(area: AreaRef, n: Nears): Standing {
     case "holding":
       if (n.shelf) return { kind: "shelf", id: n.shelf };
       if (n.table) return { kind: "table" };
+      if (n.lantern) return { kind: "lantern", check: n.lantern };
       return n.landGate ? { kind: "leave" } : { kind: "none" };
     case "courtyard":
       if (n.npc) return { kind: "npc", id: n.npc };
