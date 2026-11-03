@@ -32,8 +32,8 @@ export const DRESSING_BUILT: Record<Theme3dId, boolean> = {
   stall: false,
   bank: false,
   factory: false,
-  windmill: false,
-  watermill: false,
+  windmill: true,
+  watermill: true,
   fountain: true,
   plain: false,
 };
