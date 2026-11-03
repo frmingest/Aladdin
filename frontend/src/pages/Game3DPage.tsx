@@ -27,7 +27,7 @@ import WorldPanel from "../game3d/WorldPanel";
 import { REGISTER } from "../game3d/parity3d";
 import type { Door } from "../game3d/parity3d";
 import { RECORDS_ROUTE, archiveDoorPrompt, shelfPrompt } from "../game3d/recordsHallRoom";
-import { PLAIN_VIEW, PLAIN_VIEW_TITLE, SIGN_PROMPT } from "../game3d/worldWordsV1";
+import { PLAIN_VIEW, PLAIN_VIEW_TITLE, SIGN_PROMPT } from "../game3d/worldWordsV2";
 import { drillBlock, stormDrillQuest } from "../game3d/stormDrill";
 import { DRILL_PROMPT } from "../game3d/stormDrillWordsV1";
 import ShelfPanel from "../game3d/ShelfPanel";

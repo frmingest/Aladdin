@@ -27,6 +27,8 @@ export interface Door {
   /** For a route with a `:param`: the listed page you reach it from. It gets no door of its own. */
   via?: string;
   title: string;
+  /** What the flat app calls this page, when the world gives it a world name (shown in a hover, never on the face). */
+  plainName?: string;
   /** One short, playful line. Words only; no number. */
   blurb: string;
   place: PlaceId;
@@ -58,33 +60,33 @@ export const WORLD_ROUTE = "/game3d";
 
 export const REGISTER: readonly Door[] = [
   // The Fortress
-  { route: "/fortress", title: "Plain fortress", blurb: "The flat fortress, same towers in a table.", place: "fortress", level: "C", sprint: "S16" },
+  { route: "/fortress", title: "Plain fortress", blurb: "Same towers, shown as a table.", place: "fortress", level: "C", sprint: "S16" },
   { route: "/fortress/siege", title: "Siege Simulator", blurb: "What a big fall does to every holding.", place: "fortress", level: "A", sprint: "S17" },
-  { route: "/holdings/:id", via: "/holdings", title: "A holding's page", blurb: "Pick a holding in Holdings to read its page.", place: "fortress", level: "B", sprint: "S16" },
+  { route: "/holdings/:id", via: "/holdings", title: "A holding's page", blurb: "Pick a holding in Roll Call to read its page.", place: "fortress", level: "B", sprint: "S16" },
   // Market Street
   { route: "/fortress/marketplace", title: "Marketplace", blurb: "Which companies are near the price you named.", place: "market", level: "A", sprint: "S14" },
   { route: "/fortress/marketplace/:holdingId", via: "/fortress/marketplace", title: "A store", blurb: "Step into a store from the Marketplace.", place: "market", level: "A", sprint: "S14" },
   // The Town
-  { route: "/fortress/records", title: "Hall of Records", blurb: "Look-backs, calibration and time capsules.", place: "town", level: "A", sprint: "S15" },
+  { route: "/fortress/records", title: "Hall of Records", blurb: "Old guesses, checked. Time capsules.", place: "town", level: "A", sprint: "S15" },
   { route: "/fortress/map", title: "Cartographer", blurb: "The map, with fog where nobody has looked.", place: "town", level: "A", sprint: "S15" },
   { route: "/glossary", title: "Archive", blurb: "Words and ideas, in plain language.", place: "town", level: "A", sprint: "S15" },
   // Town Hall
-  { route: "/", title: "Dashboard", blurb: "The whole portfolio at a glance.", place: "townhall", level: "A", sprint: "S18" },
-  { route: "/holdings", title: "Holdings", blurb: "Every company you own.", place: "townhall", level: "A", sprint: "S18" },
-  { route: "/portfolio", title: "Portfolio", blurb: "Accounts, imports and snapshots.", place: "townhall", level: "A", sprint: "S18" },
-  { route: "/performance", title: "Performance", blurb: "How the portfolio has done.", place: "townhall", level: "A", sprint: "S18" },
-  { route: "/risk", title: "Risk", blurb: "How the portfolio behaves when things get rough.", place: "townhall", level: "A", sprint: "S18" },
-  { route: "/margin-of-safety", title: "Margin of safety", blurb: "How far price sits from value.", place: "townhall", level: "A", sprint: "S18" },
-  { route: "/macro", title: "Macro", blurb: "The wide weather: rates, growth, prices.", place: "townhall", level: "A", sprint: "S18" },
-  { route: "/sectors/:sector", via: "/macro", title: "A sector", blurb: "Pick a sector in Macro to read about it.", place: "townhall", level: "A", sprint: "S18" },
-  { route: "/thesis", title: "Thesis monitor", blurb: "Is each reason still standing?", place: "townhall", level: "A", sprint: "S18" },
-  { route: "/precious-metals", title: "Precious metals", blurb: "Gold, silver and friends.", place: "townhall", level: "A", sprint: "S18" },
+  { route: "/", title: "The Big Board", plainName: "Dashboard", blurb: "Everything you own, at a glance.", place: "townhall", level: "A", sprint: "S18" },
+  { route: "/holdings", title: "Roll Call", plainName: "Holdings", blurb: "Every company you own.", place: "townhall", level: "A", sprint: "S18" },
+  { route: "/portfolio", title: "Purse", plainName: "Portfolio", blurb: "Your accounts and what you loaded in.", place: "townhall", level: "A", sprint: "S18" },
+  { route: "/performance", title: "Scoreboard", plainName: "Performance", blurb: "How it has done so far.", place: "townhall", level: "A", sprint: "S18" },
+  { route: "/risk", title: "Storm", plainName: "Risk", blurb: "How it behaves when things get rough.", place: "townhall", level: "A", sprint: "S18" },
+  { route: "/margin-of-safety", title: "Cushion", plainName: "Margin of safety", blurb: "How far the price sits from what a company seems worth.", place: "townhall", level: "A", sprint: "S18" },
+  { route: "/macro", title: "The Wide Weather", plainName: "Macro", blurb: "Rates, growth and prices.", place: "townhall", level: "A", sprint: "S18" },
+  { route: "/sectors/:sector", via: "/macro", title: "A sector", blurb: "Pick a sector in The Wide Weather to read about it.", place: "townhall", level: "A", sprint: "S18" },
+  { route: "/thesis", title: "Reasons", plainName: "Thesis monitor", blurb: "Is each reason still standing?", place: "townhall", level: "A", sprint: "S18" },
+  { route: "/precious-metals", title: "Shiny Metal", plainName: "Precious metals", blurb: "Gold, silver and friends.", place: "townhall", level: "A", sprint: "S18" },
   { route: "/watchlist", title: "Watchlist", blurb: "Companies you are keeping an eye on.", place: "townhall", level: "A", sprint: "S18" },
   // The Workshop
-  { route: "/analysis-queue", title: "Analysis queue", blurb: "Reports waiting their turn.", place: "workshop", level: "A", sprint: "S15" },
+  { route: "/analysis-queue", title: "Report line", plainName: "Analysis queue", blurb: "Reports waiting their turn.", place: "workshop", level: "A", sprint: "S15" },
   { route: "/status", title: "System status", blurb: "Are the machines humming?", place: "workshop", level: "A", sprint: "S15" },
   { route: "/settings", title: "Settings", blurb: "Switches and keys.", place: "workshop", level: "A", sprint: "S15" },
-  { route: "/tag-review", title: "Tag review", blurb: "Check the labels on the numbers.", place: "workshop", level: "A", sprint: "S15" },
+  { route: "/tag-review", title: "Label check", plainName: "Tag review", blurb: "Check the labels on the numbers.", place: "workshop", level: "A", sprint: "S15" },
   // The Keep
   { route: "/journal", title: "Journal", blurb: "Your reasons, written down.", place: "keep", level: "A", sprint: "S16" },
   // Planned: no route yet. The row keeps the place reserved and the rule honest.

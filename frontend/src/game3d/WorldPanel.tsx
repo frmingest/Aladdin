@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { embedUrl, flatUrl } from "./parity3d";
 import type { Door } from "./parity3d";
-import { BACK_TO_MENU, CLOSE_PAGE, LOADING_PAGE, OPEN_FLAT } from "./worldWordsV1";
+import { BACK_TO_MENU, CLOSE_PAGE, LOADING_PAGE, OPEN_FLAT } from "./worldWordsV2";
 
 interface Props {
   door: Door;
