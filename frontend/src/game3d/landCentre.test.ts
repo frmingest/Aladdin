@@ -26,9 +26,11 @@ const tower = {} as TowerView;
 const NONE_BUILT: Record<Theme3dId, boolean> = { ...DRESSING_BUILT };
 
 describe("the centre slot (S26 PR 1)", () => {
-  it("builds no dressing yet, so every theme keeps S25's plain tower", () => {
-    expect(Object.values(DRESSING_BUILT).some(Boolean)).toBe(false);
+  it("builds only the dressings that exist, so every other theme keeps S25's plain tower", () => {
+    const BUILT_NOW: Theme3dId[] = ["fountain"];
+    expect(Object.entries(DRESSING_BUILT).filter(([, v]) => v).map(([k]) => k).sort()).toEqual([...BUILT_NOW].sort());
     for (const theme of Object.keys(DRESSING_BUILT) as Theme3dId[]) {
+      if (BUILT_NOW.includes(theme)) continue;
       for (const wall of ["basalt", "rotted", "unsurveyed", "not_applicable"] as const) {
         const slot = centreSlotFor({ ...DEMO[0]!, wall }, tower);
         expect(centreChoice({ theme, condition: slot.condition })).toBe("tower");
@@ -41,7 +43,8 @@ describe("the centre slot (S26 PR 1)", () => {
     for (const theme of ["mine", "farm", "windmill", "fountain"] as const) {
       const c = (wall: GameTower["wall"]) => centreChoice({ theme, condition: centreSlotFor({ ...DEMO[0]!, wall }, tower).condition }, built);
       expect(c("unsurveyed")).toBe("ghost");
-      expect(c("not_applicable")).toBe("neutral");
+      // The fountain draws its own neutral (funds have no walls); every other theme gets the plain neutral block.
+      expect(c("not_applicable")).toBe(theme === "fountain" ? "dressing" : "neutral");
       expect(c("basalt")).toBe("dressing");
       expect(c("rotted")).toBe("dressing");
     }
@@ -67,7 +70,7 @@ describe("the centre slot (S26 PR 1)", () => {
     expect(themeOf({ sector: "Materials", holding_id: "x", structure: "bullion" })).toBe("ingots");
   });
 
-  it("prints the theme of every demo holding, and none of them changes yet", () => {
+  it("prints the theme of every demo holding, and none changes yet (no fund among them)", () => {
     const rows = themeReadout(DEMO);
     const table = themeReadoutTable(rows);
     console.log(`\n${table}\n`);

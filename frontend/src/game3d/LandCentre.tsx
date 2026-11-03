@@ -1,3 +1,4 @@
+import FountainDressing from "./FountainDressing";
 import LandBlock from "./LandBlock";
 import StreamBand from "./StreamBand";
 import { TowerBody } from "./TowerMesh";
@@ -17,8 +18,17 @@ export default function LandCentre({ slot }: { slot: LandCentreSlot }) {
   const at: [number, number, number] = [WORKPLACE.x, 0, WORKPLACE.z];
   return (
     <>
-      <LandBlock condition={slot.condition} position={at} />
+      {choice === "dressing" ? <Dressing slot={slot} /> : <LandBlock condition={slot.condition} position={at} />}
       <StreamBand stream={slot.stream} position={at} />
     </>
   );
+}
+
+/** One line per theme: PR 2 to PR 5 each add theirs. A built theme with no case here falls back to the plain block. */
+function Dressing({ slot }: { slot: LandCentreSlot }) {
+  const at: [number, number, number] = [WORKPLACE.x, 0, WORKPLACE.z];
+  switch (slot.theme) {
+    case "fountain": return <FountainDressing condition={slot.condition} />;
+    default: return <LandBlock condition={slot.condition} position={at} />;
+  }
 }
