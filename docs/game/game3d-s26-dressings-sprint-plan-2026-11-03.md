@@ -1,6 +1,6 @@
 # 3D S26: the first four dressings for the holding lands (sprint plan, 2026-11-03)
 
-**Status: plan only. No app code changed.** Written against `main` `5c2bd93` (#267). Part of the approved [discovery plan](game3d-discovery-sprint-plan-2026-11-02.md) (D1 to D16 approved by Faiz on 2026-11-02). It follows the [S25 plan](game3d-s25-holding-land-sprint-plan-2026-11-03.md) (the land itself, plain version) and the [S22 and S23 plan](game3d-s22-s23-sprint-plan-2026-11-02.md). Nothing was run for this plan and nothing was looked at in a browser.
+**Status: plan only, approved. Faiz, 2026-11-03 06:41: "Decisions all are ok"; G1 to G4 are settled as recommended. No app code changed.** Written against `main` `5c2bd93` (#267). Part of the approved [discovery plan](game3d-discovery-sprint-plan-2026-11-02.md) (D1 to D16 approved by Faiz on 2026-11-02). It follows the [S25 plan](game3d-s25-holding-land-sprint-plan-2026-11-03.md) (the land itself, plain version) and the [S22 and S23 plan](game3d-s22-s23-sprint-plan-2026-11-02.md). Nothing was run for this plan and nothing was looked at in a browser.
 
 ## What a sprint is for (plain words)
 
@@ -150,9 +150,9 @@ A dressing adds no presses. Courtyard to a shelf stays **2 E** (door, shelf); re
 - **The code-built crack, tanks and fish may look off** next to the KayKit pieces. They are the first things cut.
 - **Work clips are unseen.** The PR 5 spike decides; no promise before it.
 
-## Decisions for Faiz
+## Decisions (settled 2026-11-03: all as recommended)
 
-Everything big is decided (D1 to D16). Only small ones are left; the recommendation is in bold.
+Everything big was decided earlier (D1 to D16). These four small ones are now settled too; the choice is in bold.
 
 | # | Question | Recommendation |
 |---|---|---|
