@@ -26,7 +26,8 @@ const tower = {} as TowerView;
 const NONE_BUILT: Record<Theme3dId, boolean> = { ...DRESSING_BUILT };
 
 describe("the centre slot (S26 PR 1)", () => {
-  it("a theme with no dressing built keeps S25's plain tower", () => {
+  it("keeps S25's plain tower for every theme with no dressing built, and for the plain theme", () => {
+    expect(DRESSING_BUILT.plain).toBe(false);
     for (const theme of (Object.keys(DRESSING_BUILT) as Theme3dId[]).filter((t) => !DRESSING_BUILT[t])) {
       for (const wall of ["basalt", "rotted", "unsurveyed", "not_applicable"] as const) {
         const slot = centreSlotFor({ ...DEMO[0]!, wall }, tower);
@@ -48,6 +49,11 @@ describe("the centre slot (S26 PR 1)", () => {
     expect(centreChoice({ theme: "plain", condition: centreSlotFor(DEMO[0]!, tower).condition }, { ...built, plain: true })).toBe("tower");
   });
 
+  it("flags a fish farm from the sector or the name only (the farm dressing's tanks)", () => {
+    expect(centreSlotFor({ ...DEMO[0]!, sector: "Consumer Staples", name: "Salmon Evolution" }, tower).fish).toBe(true);
+    expect(centreSlotFor({ ...DEMO[5]! }, tower).fish).toBe(false);
+  });
+
   it("takes condition from the wall alone and stream from the moat alone, whatever the sector", () => {
     const a = centreSlotFor({ ...DEMO[0]!, sector: "Energy" }, tower);
     const b = centreSlotFor({ ...DEMO[0]!, sector: "Materials" }, tower);
@@ -67,7 +73,7 @@ describe("the centre slot (S26 PR 1)", () => {
     expect(themeOf({ sector: "Materials", holding_id: "x", structure: "bullion" })).toBe("ingots");
   });
 
-  it("prints the theme of every demo holding", () => {
+  it("prints the theme of every demo holding; a land changes only when its theme has a dressing", () => {
     const rows = themeReadout(DEMO);
     const table = themeReadoutTable(rows);
     console.log(`\n${table}\n`);

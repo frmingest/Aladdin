@@ -1,3 +1,4 @@
+import FarmDressing from "./FarmDressing";
 import FountainDressing from "./FountainDressing";
 import LandBlock from "./LandBlock";
 import StreamBand from "./StreamBand";
@@ -11,6 +12,14 @@ import type { Theme3dId } from "../lib/sectors";
 import type { ComponentType } from "react";
 
 /** One line per theme: PR 2 to PR 5 each add theirs. A theme with no line here keeps the placeholder block. */
+function FarmSlot({ slot }: { slot: LandCentreSlot }) {
+  return (
+    <group position={[WORKPLACE.x, 0, WORKPLACE.z]}>
+      <FarmDressing condition={slot.condition} fish={!!slot.fish} />
+    </group>
+  );
+}
+
 function FountainSlot({ slot }: { slot: LandCentreSlot }) {
   return <FountainDressing condition={slot.condition} />;
 }
@@ -26,6 +35,7 @@ function MineSlot({ slot }: { slot: LandCentreSlot }) {
 const DRESSINGS: Partial<Record<Theme3dId, ComponentType<{ slot: LandCentreSlot }>>> = {
   windmill: MillDressing,
   watermill: MillDressing,
+  farm: FarmSlot,
   fountain: FountainSlot,
   mine: MineSlot,
   quarry: MineSlot,
