@@ -1,3 +1,4 @@
+import BankDressing from "./BankDressing";
 import FarmDressing from "./FarmDressing";
 import FountainDressing from "./FountainDressing";
 import IngotsDressing from "./IngotsDressing";
@@ -29,6 +30,10 @@ function IngotsSlot({ slot }: { slot: LandCentreSlot }) {
   return <IngotsDressing condition={slot.condition} />;
 }
 
+function BankSlot({ slot }: { slot: LandCentreSlot }) {
+  return <BankDressing condition={slot.condition} />;
+}
+
 function MineSlot({ slot }: { slot: LandCentreSlot }) {
   return (
     <group position={[WORKPLACE.x, 0, WORKPLACE.z]}>
@@ -42,6 +47,7 @@ const DRESSINGS: Partial<Record<Theme3dId, ComponentType<{ slot: LandCentreSlot 
   watermill: MillDressing,
   farm: FarmSlot,
   fountain: FountainSlot,
+  bank: BankSlot,
   ingots: IngotsSlot,
   mine: MineSlot,
   quarry: MineSlot,

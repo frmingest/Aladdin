@@ -33,7 +33,7 @@ export const DRESSING_BUILT: Record<Theme3dId, boolean> = {
   ingots: true,
   farm: true,
   stall: false,
-  bank: false,
+  bank: true,
   factory: false,
   windmill: true,
   watermill: true,
@@ -48,7 +48,7 @@ export const DRESSING_BUILT: Record<Theme3dId, boolean> = {
  * balance sheet to judge. The dressing draws it with the NEUTRAL condition
  * (undamaged, no footing or trim), so it still never reads as Sound.
  */
-export const DRESSING_DRAWS_NEUTRAL: Partial<Record<Theme3dId, boolean>> = { fountain: true, ingots: true };
+export const DRESSING_DRAWS_NEUTRAL: Partial<Record<Theme3dId, boolean>> = { fountain: true, ingots: true, bank: true };
 
 export type CentreChoice = "tower" | "ghost" | "neutral" | "dressing";
 

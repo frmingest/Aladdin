@@ -1,9 +1,6 @@
-import { useMemo } from "react";
-import { useGLTF } from "@react-three/drei";
-import type { Object3D } from "three";
 import StaticBatch from "./StaticBatch";
 import { INK, PAL } from "./Inked";
-import { HOLDING_URL } from "./holdingPieces";
+import HoldingPiece from "./HoldingPiece";
 import { BARRIER_RING, BARRIER_SCALE, PILES, barrierAt, ingotsPlan } from "./ingotsDressing";
 import type { LandCondition } from "./landCondition";
 import { WORKPLACE } from "./holdingLand";
@@ -13,21 +10,8 @@ import { WithFallback } from "./KeepModels";
 const DEG = Math.PI / 180;
 const at = (angle: number, r: number): [number, number, number] => [Math.cos(angle) * r, 0, Math.sin(angle) * r];
 
-/** One clone of a named node, placed. The pieces are still and carry no fact, so they ride the static batch. */
-function Piece({ node, scale, position, rotation = [0, 0, 0] }: { node: string; scale: number; position: [number, number, number]; rotation?: [number, number, number] }) {
-  const gltf = useGLTF(HOLDING_URL("ingots"));
-  const object = useMemo<Object3D | null>(() => {
-    const found = gltf.scene.getObjectByName(node);
-    if (!found) return null;
-    const copy = found.clone(true);
-    copy.traverse((o) => {
-      o.castShadow = true;
-      o.receiveShadow = true;
-    });
-    return copy;
-  }, [gltf, node]);
-  if (!object) return null;
-  return <primitive object={object} scale={scale} position={position} rotation={rotation} />;
+function Piece(props: { node: string; scale: number; position: [number, number, number]; rotation?: [number, number, number] }) {
+  return <HoldingPiece theme="ingots" {...props} />;
 }
 
 /**
