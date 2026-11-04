@@ -1,6 +1,6 @@
 # Aladdin — Progress
 
-**Last updated:** 2026-11-04 (S31 outdoor-holdings plan added). Rolling log: active status only, under 100 lines, at most 7 tasks (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
+**Last updated:** 2026-11-04 (S31 PR 1, outdoor plots, opened). Rolling log: active status only, under 100 lines, at most 7 tasks (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
 
 ## Current Objective
 
@@ -10,7 +10,7 @@ State: `main` at `5400975` (#280, S25 PR 3 the centre tower, merged). S21 to S25
 
 ## Active Tasks
 
-- [ ] **S31 plan (Faiz decided H1 to H3 on 2026-11-04; plan PR open):** holdings leave the fortress and stand in the landscape, door still into the land. PR 1 (plots and tracks, data only) is next; it starts after the dressings #281 to #287 are merged ([plan](game/game3d-outdoor-holdings-sprint-plan-2026-11-04.md))
+- [ ] **S31 outdoor holdings (Faiz decided H1 to H3 on 2026-11-04):** holdings leave the fortress and stand in the landscape, door still into the land. **PR 1 (plots and tracks, data only) is open on `feature/game3d-s31-outdoor-plots`: tests, type-check and lint pass; nothing drawn, no browser.** It measured the walk: hill foot 163 to 191 units from the gate, road edge 17 to 30. PR 2 (river, tracks, fields) and PR 3 (the move) wait for review ([write-up](game/game3d-s31-outdoor-plots-2026-11-04.md), [plan](game/game3d-outdoor-holdings-sprint-plan-2026-11-04.md))
 - [ ] **Review #281 (Faiz, S26 PR 1) and #282 (text pass 3), then merge.** #281: look at the ladder picture (`docs/game/game3d-s26-ladder-2026-11-03.png`; the widest stream band is clipped at its left edge) and run the theme readout on your real holdings to see which dressing goes first. #282: open the Quest log, the Siege Yard panel, an advisor chat and a shelf in `/game3d` and say if a word is off.
 - [ ] **Text pass 4 (Claude, after #282):** Vault, Night Watch, ravens, Realm panel, store gates, backend-written text, the failed look-back save, Sal and Hype Booth speech, Where-to names, `stormDrillWordsV1`. Faiz decides what "Last verdict" on the Land shelf should say ([review](game/game3d-text-review-2026-11-03.md)).
 - [ ] **Look over the S25 land and its lanterns (Faiz, after the PRs; lanterns: E at each, compare with the Cartographer's table, read the report at the table and see the first one light): open `/game3d`, walk into two or three towers (one strong, one in fog), read the gate stone, walk to the records house, E at a shelf and at the table, leave by the gate and by B; press P and send the fps.** Also, from S23 (merged): P in the courtyard (before: 650 draws), and try `?nobatch` if anything looks off. Say if the house feels cramped or a word is off. [Write-up](game/game3d-s25-holding-land-2026-11-03.md)
