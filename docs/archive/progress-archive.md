@@ -3,6 +3,10 @@
 Completed milestones and retired status, moved out of `docs/PROGRESS.md` under the rolling-log rules
 in `CLAUDE.md` ("Progress file rules"). Newest snapshot first. Older: [PROGRESS-full-2026-09-30.md](PROGRESS-full-2026-09-30.md).
 
+## 2026-11-04 — S26 ladder, mills, mine, fountain, farm; text pass 3; S31 PR 1 (#281 to #289, merged)
+
+The condition ladder and moat stream (#281), the windmill and watermill (#284), mine and quarry (#285), fountain square (#286), farmhouse and fish farm (#287), text pass 3 (#282, #283) and the S31 plan and outdoor plots (#288, #289). Look-over in a real browser still on Faiz's list, now one line in `PROGRESS.md` ([ladder](../game/game3d-s26-ladder-stream-2026-11-03.md), [mills](../game/game3d-s26-mills-2026-11-03.md), [mine](../game/game3d-s26-mine-quarry-2026-11-03.md), [farm](../game/game3d-s26-farm-2026-11-03.md), [text pass 3](../game/game3d-text-pass-3-2026-11-03.md), [plots](../game/game3d-s31-outdoor-plots-2026-11-04.md)).
+
 ## 2026-11-03 — S25 PR 2 and 3, text passes 1 and 2 (#277 to #280, merged)
 
 Survey lanterns (fog of war in a holding's land), the holding's own tower and the price post by the exit, text pass 1 (words) and pass 2 (whole-fortress card, writing desk, shelf panel). Real-browser look-over still on Faiz's list ([lanterns](../game/game3d-s25-lanterns-2026-11-03.md), [centre tower](../game/game3d-s25-centre-tower-2026-11-03.md), [text review](../game/game3d-text-review-2026-11-03.md)).

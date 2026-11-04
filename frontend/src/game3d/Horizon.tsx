@@ -5,7 +5,8 @@ import { CuboidCollider, RigidBody } from "@react-three/rapier";
 import { Euler, InstancedMesh, Matrix4, Mesh, Quaternion, Vector3 } from "three";
 import type { Object3D } from "three";
 import { wallSegments } from "./layout";
-import { HORIZON, HORIZON_LIMIT, HORIZON_URL } from "./horizonPieces";
+import { HORIZON_LIMIT, HORIZON_URL } from "./horizonPieces";
+import { thinnedHorizon } from "./countryside";
 import type { HorizonModel, HorizonPiece } from "./horizonPieces";
 
 /** If the horizon file fails to load, draw and collide with nothing: the courtyard stays as it was. */
@@ -67,10 +68,10 @@ function Pieces() {
   const gltf = useGLTF(HORIZON_URL);
   const byModel = useMemo(() => {
     const map = new Map<HorizonModel, HorizonPiece[]>();
-    for (const p of HORIZON) map.set(p.model, [...(map.get(p.model) ?? []), p]);
+    for (const p of thinnedHorizon()) map.set(p.model, [...(map.get(p.model) ?? []), p]);
     return [...map.entries()];
   }, []);
-  const solids = useMemo(() => HORIZON.filter((p) => p.solid > 0), []);
+  const solids = useMemo(() => thinnedHorizon().filter((p) => p.solid > 0), []);
   const ring = useMemo(() => wallSegments(HORIZON_LIMIT, 48, 0), []);
   return (
     <>
