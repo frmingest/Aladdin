@@ -17,6 +17,26 @@ export interface Enterable {
   holdingId: string;
   spot: Spot;
   radius: number;
+  /** Set for a holding that stands outside the wall: where its door faces. */
+  outdoorDoorYaw?: number;
+}
+
+/** A tower view seen as something you can enter. Outside, the reach is counted from the building's footprint. */
+export function enterableOf(t: {
+  holdingId: string;
+  spot: Spot;
+  radius: number;
+  plot?: { footprint: number; doorYaw: number };
+}): Enterable {
+  return t.plot
+    ? { holdingId: t.holdingId, spot: t.spot, radius: t.plot.footprint, outdoorDoorYaw: t.plot.doorYaw }
+    : { holdingId: t.holdingId, spot: t.spot, radius: t.radius };
+}
+
+/** In front of an outdoor door, on the lane side, just clear of the building's footprint. */
+export function outdoorExit(spot: Spot, doorYawOut: number, footprint: number): Spot {
+  const d = footprint + 2;
+  return { x: spot.x + Math.sin(doorYawOut) * d, z: spot.z + Math.cos(doorYawOut) * d };
 }
 
 /** Yaw (about the vertical axis, 0 = facing +z) from a tower toward the middle of the courtyard. */

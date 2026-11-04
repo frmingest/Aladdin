@@ -22,54 +22,60 @@ import type {
   GameTower,
 } from "../lib/types";
 import { sortTowers } from "../lib/fortress";
-import { towerSpots, type Spot } from "./layout";
+import { TOWER_SPOT_COUNT, towerSpots, type Spot } from "./layout";
+import { MOAT_WIDTH, SIZE_HEIGHT, SIZE_RADIUS, WALL_LOOK } from "./towerLook";
+import { assignPlots, type OutdoorZone, type Plot } from "./outdoorPlan";
+import { doorPoint } from "./countryside";
+import { isFishFarm } from "./farmDressing";
+import { holdingTheme3d, type Theme3dId } from "../lib/sectors";
+
+export { MOAT_WIDTH, SIZE_HEIGHT, SIZE_RADIUS, WALL_LOOK };
 
 /** How the walls read at a glance. "unknown" is fog, never a middle grade. */
 export type Strength = "strong" | "fair" | "weak" | "unknown";
 
-/** Fixed look per wall material. `integrity` orders them: higher is sturdier. */
-export const WALL_LOOK: Record<FortressWall, { color: string; integrity: number | null; crenels: number; cracks: number }> = {
-  basalt: { color: "#4a4f57", integrity: 1, crenels: 8, cracks: 0 },
-  granite: { color: "#8d8a85", integrity: 0.8, crenels: 8, cracks: 0 },
-  brick: { color: "#a35f4a", integrity: 0.6, crenels: 6, cracks: 1 },
-  timber: { color: "#8a6a43", integrity: 0.35, crenels: 4, cracks: 2 },
-  rotted: { color: "#5f6a4f", integrity: 0.1, crenels: 2, cracks: 4 },
-  unsurveyed: { color: "#cfd6dc", integrity: null, crenels: 0, cracks: 0 },
-  not_applicable: { color: "#b9b2a6", integrity: null, crenels: 0, cracks: 0 },
-};
 
-/** Tower height (world units) by size class. Unknown size is a low stub, drawn in fog. */
-export const SIZE_HEIGHT: Record<FortressSize, number> = {
-  great: 15,
-  medium: 11,
-  small: 8,
-  tiny: 5.5,
-  unknown: 4,
-};
 
-export const SIZE_RADIUS: Record<FortressSize, number> = {
-  great: 2.1,
-  medium: 1.8,
-  small: 1.5,
-  tiny: 1.2,
-  unknown: 1.3,
-};
 
-/** Moat ring width by tier. Not surveyed is fog, drawn as mist (see `moatFog`). */
-export const MOAT_WIDTH: Record<FortressMoat, number> = {
-  wide: 2.2,
-  narrow: 1,
-  none: 0,
-  unsurveyed: 0,
-  not_applicable: 0,
-};
 
 export type Flag = "intact" | "review" | "breached" | "none";
 
+/**
+ * Where a holding stands on the meadow outside the wall (S31 PR 3). Set by `stateToWorld` unless the caller hands it
+ * its own spots. It comes from the plan (theme and weight order only), never from a verdict, a wall or a moat.
+ */
+export interface OutdoorPlot {
+  zone: OutdoorZone;
+  index: number;
+  theme: Theme3dId;
+  fish: boolean;
+  /** How wide the building stands: the door is reached from this, not from the middle. */
+  footprint: number;
+  /** The end of the lane that serves this plot, where the door stands. */
+  door: Spot;
+  /** Yaw (0 = facing +z) from the middle of the plot toward the door. */
+  doorYaw: number;
+}
+
+export function outdoorPlotOf(p: Plot): OutdoorPlot {
+  const door = doorPoint(p.zone, p.index);
+  return {
+    zone: p.zone,
+    index: p.index,
+    theme: p.theme,
+    fish: p.fish,
+    footprint: p.footprint,
+    door,
+    doorYaw: Math.atan2(door.x - p.spot.x, door.z - p.spot.z),
+  };
+}
+
 export interface TowerView {
-  /** Which pad (0 = west end of the arc). */
+  /** Which pad (0 = west end of the arc), or which plot in weight order when the holding stands outside. */
   slot: number;
   spot: Spot;
+  /** Set when the holding stands on the meadow outside the wall. Absent for the old horseshoe pads. */
+  plot?: OutdoorPlot;
   holdingId: string;
   name: string;
   ticker: string;
@@ -159,15 +165,29 @@ function viewOf(t: GameTower, slot: number, spot: Spot): TowerView {
 }
 
 /**
- * The courtyard has `spots.length` pads. The biggest holdings take them
- * (same order as the flat Fortress); the rest are counted, not drawn, and stay
- * in the plain list. With no state yet, the result is an empty courtyard.
+ * The meadow has room for `TOWER_SPOT_COUNT` holdings. The biggest take it (same order as the flat Fortress); the rest
+ * are counted, not drawn, and stay in the plain list. By default each stands on its outdoor plot (S31); a caller that
+ * hands in `spots` gets the old pad positions instead. With no state yet, the result is an empty world.
  */
-export function stateToWorld(state: GameState | null, spots: Spot[] = towerSpots()): WorldModel {
+export function stateToWorld(state: GameState | null, spots?: Spot[]): WorldModel {
   if (!state) return { demo: false, asOf: null, towers: [], hiddenCount: 0, plain: [] };
   const ordered = sortTowers(state.towers);
-  const plain = ordered.map((t, i) => viewOf(t, i, spots[i] ?? { x: 0, z: 0 }));
-  const towers = plain.slice(0, spots.length);
+  const limit = spots ? spots.length : TOWER_SPOT_COUNT;
+  const plots = spots
+    ? null
+    : assignPlots(
+        ordered.slice(0, limit).map((t) => ({
+          holdingId: t.holding_id,
+          theme: holdingTheme3d(t.sector, t.holding_id, t.structure),
+          fish: isFishFarm(t),
+        })),
+      );
+  const plain = ordered.map((t, i) => {
+    const plot = plots?.find((p) => p.holdingId === t.holding_id);
+    if (plot) return { ...viewOf(t, i, plot.spot), plot: outdoorPlotOf(plot) };
+    return viewOf(t, i, (spots ?? towerSpots())[i] ?? { x: 0, z: 0 });
+  });
+  const towers = plain.slice(0, limit);
   return {
     demo: state.demo,
     asOf: state.as_of,

@@ -99,7 +99,7 @@ function Cracks({ t }: { t: TowerView }) {
  * courtyard. Every tower has one, so it carries no fact (a weak tower is not harder to enter). Press E near it.
  */
 function LibraryDoor({ t }: { t: TowerView }) {
-  const yaw = doorYaw(t.spot);
+  const yaw = t.plot?.doorYaw ?? doorYaw(t.spot);
   const out = t.radius + 0.2;
   return (
     <group
@@ -312,6 +312,33 @@ export function TowerBody({ t, door = true }: { t: TowerView; door?: boolean }) 
           </group>
         )}
       </StaticBatch>
+    </group>
+  );
+}
+
+/**
+ * The door post of a building that stands outside (S31 PR 3): two timber posts and a lintel with a lamp, and the same
+ * name sign as the towers, on the lane side of the plot. Every holding has one, so it carries no fact. Press E near it.
+ */
+export function OutdoorDoor({ t }: { t: TowerView }) {
+  const plot = t.plot;
+  if (!plot) return null;
+  const out = plot.footprint + 0.6;
+  return (
+    <group position={[t.spot.x + Math.sin(plot.doorYaw) * out, 0, t.spot.z + Math.cos(plot.doorYaw) * out]} rotation={[0, plot.doorYaw, 0]}>
+      {[-0.9, 0.9].map((x) => (
+        <Part key={x} color={PAL.timber} position={[x, 1.1, 0]} grow={1.08}>
+          <boxGeometry args={[0.3, 2.2, 0.3]} />
+        </Part>
+      ))}
+      <Part color={PAL.timberDark} position={[0, 2.3, 0]} grow={1.1}>
+        <boxGeometry args={[2.3, 0.22, 0.34]} />
+      </Part>
+      <mesh position={[0, 1.7, 0.2]}>
+        <sphereGeometry args={[0.14, 8, 6]} />
+        <meshBasicMaterial color="#f2d27a" />
+      </mesh>
+      <NameSign t={t} />
     </group>
   );
 }

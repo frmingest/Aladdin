@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { CuboidCollider, CylinderCollider, RigidBody } from "@react-three/rapier";
-import TowerMesh from "./TowerMesh";
+import OutdoorHoldings from "./OutdoorHoldings";
 import StaticBatch from "./StaticBatch";
 import { ModelClone, WithFallback } from "./KeepModels";
 import { CORNER_TOWER_MODEL, CORNER_TOWER_SCALE, KEEP_MODEL, KEEP_MODEL_SCALE, KEEP_URL, cornerTowerFootprint, keepModelFootprint } from "./keepModels";
@@ -12,7 +12,6 @@ import {
   WALL_RADIUS,
   WALL_THICKNESS,
   cornerTowers,
-  towerSpots,
   wallSegments,
 } from "./layout";
 
@@ -24,22 +23,19 @@ const COLORS = {
   stoneDark: "#6f6c68",
   roof: "#7b3f3a",
   gate: "#5b4636",
-  spot: "#c9c1b3",
 };
 
 const CORNER_TOWER_RADIUS = 3.2;
 const CORNER_TOWER_HEIGHT = WALL_HEIGHT + 4;
-const SPOT_SIZE = 3.4;
 
 /**
  * The walled courtyard. Everything is built from plain shapes that double as
  * colliders: the same shapes are what you see and what stops you.
- * Each holding in `world` stands on one of the eight pads as a tower.
+ * The holdings in `world` stand outside the wall (OutdoorHoldings).
  */
 export default function Courtyard({ world }: { world: WorldModel }) {
   const walls = useMemo(() => wallSegments(), []);
   const corners = useMemo(() => cornerTowers(), []);
-  const spots = useMemo(() => towerSpots(), []);
   const tower = useMemo(() => cornerTowerFootprint(), []);
   const keepModel = useMemo(() => keepModelFootprint(), []);
 
@@ -102,22 +98,8 @@ export default function Courtyard({ world }: { world: WorldModel }) {
         }
       />
 
-      {/* Eight pads. A holding raises a tower on its pad; empty pads stay bare. */}
-      <StaticBatch>
-        {spots.map((s, i) => (
-          <RigidBody key={i} type="fixed" colliders={false} position={[s.x, 0.25, s.z]}>
-            <CuboidCollider args={[SPOT_SIZE / 2, 0.25, SPOT_SIZE / 2]} />
-            <mesh castShadow receiveShadow>
-              <boxGeometry args={[SPOT_SIZE, 0.5, SPOT_SIZE]} />
-              <meshStandardMaterial color={COLORS.spot} flatShading />
-            </mesh>
-          </RigidBody>
-        ))}
-      </StaticBatch>
-
-      {world.towers.map((t) => (
-        <TowerMesh key={t.holdingId} t={t} />
-      ))}
+      {/* The holdings stand outside on the meadow (S31); the fortress yard stays empty for now. */}
+      <OutdoorHoldings towers={world.towers} />
     </group>
   );
 }

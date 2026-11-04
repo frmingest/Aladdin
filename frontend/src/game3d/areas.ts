@@ -37,7 +37,7 @@ import {
   TOWN_YAW,
   doorSpot,
 } from "./townPlan";
-import { exitCameraYaw, exitSpot } from "./towerDoor";
+import { exitCameraYaw, exitSpot, outdoorExit } from "./towerDoor";
 import type { Enterable } from "./towerDoor";
 
 /** Where the lights come from. Never from a verdict: nothing flatters a weak tower. */
@@ -181,7 +181,7 @@ export function returnSpot(from: AreaRef, to: AreaRef, towers: readonly Enterabl
   if (from.id === "holding" && to.id === "courtyard") {
     const t = towers.find((w) => w.holdingId === from.holdingId);
     if (!t) return null;
-    const out = exitSpot(t.spot, t.radius);
+    const out = t.outdoorDoorYaw !== undefined ? outdoorExit(t.spot, t.outdoorDoorYaw, t.radius) : exitSpot(t.spot, t.radius);
     return { x: out.x, z: out.z, yaw: exitCameraYaw(t.spot, out) };
   }
   if (from.id === "town" && to.id === "courtyard") return { x: GATE_RETURN.x, z: GATE_RETURN.z, yaw: GATE_RETURN_YAW };

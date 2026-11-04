@@ -62,7 +62,7 @@ import type { AreaRef } from "./areas";
 import { pickNear } from "./near";
 import type { NearTarget } from "./near";
 import type { Shelf, ShelfId } from "./libraryShelves";
-import { ENTER_LEAVE_REACH, ENTER_REACH } from "./towerDoor";
+import { ENTER_LEAVE_REACH, ENTER_REACH, enterableOf } from "./towerDoor";
 
 const HALL_DARK = "#1d1712";
 const noop = () => {};
@@ -301,7 +301,7 @@ function World({
     if (sameArea(area, prevArea.current)) return;
     const from = prevArea.current;
     prevArea.current = area;
-    const spot = transitionSpot(from, area, world.towers);
+    const spot = transitionSpot(from, area, world.towers.map(enterableOf));
     if (spot) setTeleport({ key: ++count.current, x: spot.x, z: spot.z, yaw: spot.yaw });
   }, [area, world.towers]);
 
@@ -316,8 +316,8 @@ function World({
         id: t.holdingId,
         x: t.spot.x,
         z: t.spot.z,
-        range: ENTER_REACH + t.radius,
-        leaveRange: ENTER_LEAVE_REACH + t.radius,
+        range: ENTER_REACH + (t.plot?.footprint ?? t.radius),
+        leaveRange: ENTER_LEAVE_REACH + (t.plot?.footprint ?? t.radius),
       })),
     [world.towers],
   );
