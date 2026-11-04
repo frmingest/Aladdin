@@ -1,4 +1,5 @@
 import BankDressing from "./BankDressing";
+import FactoryDressing from "./FactoryDressing";
 import FarmDressing from "./FarmDressing";
 import FountainDressing from "./FountainDressing";
 import IngotsDressing from "./IngotsDressing";
@@ -8,6 +9,7 @@ import { TowerBody } from "./TowerMesh";
 import { WORKPLACE } from "./holdingLand";
 import MillDressing from "./MillDressing";
 import MineDressing from "./MineDressing";
+import StallDressing from "./StallDressing";
 import { centreChoice } from "./landCentre";
 import type { LandCentreSlot } from "./landCentre";
 import type { Theme3dId } from "../lib/sectors";
@@ -34,6 +36,14 @@ function BankSlot({ slot }: { slot: LandCentreSlot }) {
   return <BankDressing condition={slot.condition} />;
 }
 
+function FactorySlot({ slot }: { slot: LandCentreSlot }) {
+  return <FactoryDressing condition={slot.condition} />;
+}
+
+function StallSlot({ slot }: { slot: LandCentreSlot }) {
+  return <StallDressing condition={slot.condition} />;
+}
+
 function MineSlot({ slot }: { slot: LandCentreSlot }) {
   return (
     <group position={[WORKPLACE.x, 0, WORKPLACE.z]}>
@@ -49,6 +59,8 @@ const DRESSINGS: Partial<Record<Theme3dId, ComponentType<{ slot: LandCentreSlot 
   fountain: FountainSlot,
   bank: BankSlot,
   ingots: IngotsSlot,
+  factory: FactorySlot,
+  stall: StallSlot,
   mine: MineSlot,
   quarry: MineSlot,
 };
