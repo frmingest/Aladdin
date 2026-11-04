@@ -23,6 +23,7 @@ import type { Stall } from "./streetPlan";
 import StandingTorches from "./StandingTorches";
 import Horizon from "./Horizon";
 import Countryside from "./Countryside";
+import MeadowPlants from "./MeadowPlants";
 import Backdrop from "./Backdrop";
 import Townsfolk from "./Townsfolk";
 import Workers from "./Workers";
@@ -357,6 +358,7 @@ function World({
           <group userData={{ perfGroup: "horizon" }}>
             <Horizon />
             <Countryside />
+            <MeadowPlants />
           </group>
           <group userData={{ perfGroup: "courtyard" }}>
             <Courtyard world={world} />
