@@ -40,7 +40,8 @@ describe("the centre slot (S26 PR 1)", () => {
     for (const theme of ["mine", "farm", "windmill", "fountain"] as const) {
       const c = (wall: GameTower["wall"]) => centreChoice({ theme, condition: centreSlotFor({ ...DEMO[0]!, wall }, tower).condition }, built);
       expect(c("unsurveyed")).toBe("ghost");
-      expect(c("not_applicable")).toBe("neutral");
+      // The fountain draws its own neutral (funds have no walls); every other theme gets the plain neutral block.
+      expect(c("not_applicable")).toBe(theme === "fountain" ? "dressing" : "neutral");
       expect(c("basalt")).toBe("dressing");
       expect(c("rotted")).toBe("dressing");
     }
