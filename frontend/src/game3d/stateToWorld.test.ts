@@ -55,15 +55,17 @@ describe("stateToWorld", () => {
     expect(w.hiddenCount).toBe(0);
   });
 
-  it("puts the biggest holdings on the pads, first pad first", () => {
+  it("puts the biggest holdings first, on the pads when pads are handed in", () => {
     const w = stateToWorld(
       state([
         tower({ holding_id: "small", name: "Small", weight_pct: "2" }),
         tower({ holding_id: "big", name: "Big", weight_pct: "40" }),
       ]),
+      towerSpots(),
     );
     expect(w.towers.map((t) => t.holdingId)).toEqual(["big", "small"]);
     expect(w.towers[0].spot).toEqual(towerSpots()[0]);
+    expect(w.towers[0].plot).toBeUndefined();
   });
 
   it("counts holdings that do not fit on the pads and keeps them in the plain list", () => {

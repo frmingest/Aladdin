@@ -18,7 +18,7 @@ import { WALL_RADIUS, WALL_THICKNESS, type Spot } from "./layout";
 import { HORIZON_LIMIT } from "./horizonPieces";
 import { LAND_TOWER_REACH } from "./holdingLand";
 import { FENCE_RADIUS } from "./farmDressing";
-import { MOAT_WIDTH, SIZE_RADIUS } from "./stateToWorld";
+import { MOAT_WIDTH, SIZE_RADIUS } from "./towerLook";
 
 export type OutdoorZone = "river" | "rise" | "fields" | "hill" | "road";
 

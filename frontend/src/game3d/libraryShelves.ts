@@ -32,7 +32,7 @@ import {
   describeShelfWords,
   wallInputLine,
 } from "./shelfSignsV2";
-import { WALL_LOOK } from "./stateToWorld";
+import { WALL_LOOK } from "./towerLook";
 
 export const MAX_SHELF_BOOKS = 8;
 
