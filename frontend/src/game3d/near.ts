@@ -68,6 +68,10 @@ export interface Nears {
   hallDoor: boolean;
   shelves: boolean;
   archiveDoor: boolean;
+  /** Courtyard: at the gate to the Siege Field. */
+  siegeGate: boolean;
+  /** Siege Field: the road back is in reach. */
+  fieldExit: boolean;
 }
 
 export const NO_NEARS: Nears = {
@@ -93,13 +97,15 @@ export const NO_NEARS: Nears = {
   hallDoor: false,
   shelves: false,
   archiveDoor: false,
+  siegeGate: false,
+  fieldExit: false,
 };
 
 export type Standing =
   | { kind: "none" }
   | { kind: "npc"; id: NpcId }
   | { kind: "tower"; holdingId: string }
-  | { kind: "desk" | "drill" | "sign" | "gate" | "vault" | "watch" | "perch" | "realm" | "table" | "shelves" }
+  | { kind: "desk" | "drill" | "siegeGate" | "sign" | "gate" | "vault" | "watch" | "perch" | "realm" | "table" | "shelves" }
   | { kind: "booth"; id: BoothId }
   | { kind: "stall"; holdingId: string }
   | { kind: "shelf"; id: ShelfId }
@@ -123,6 +129,8 @@ export function standingAt(area: AreaRef, n: Nears): Standing {
     case "townhall":
       if (n.board) return { kind: "board", id: n.board };
       return n.hallDoor ? { kind: "leave" } : { kind: "none" };
+    case "siege":
+      return n.fieldExit ? { kind: "leave" } : { kind: "none" };
     case "town":
       if (n.building) return { kind: "building", id: n.building };
       return n.townExit ? { kind: "leave" } : { kind: "none" };
@@ -136,6 +144,7 @@ export function standingAt(area: AreaRef, n: Nears): Standing {
       if (n.tower) return { kind: "tower", holdingId: n.tower };
       if (n.desk) return { kind: "desk" };
       if (n.drill) return { kind: "drill" };
+      if (n.siegeGate) return { kind: "siegeGate" };
       if (n.sign) return { kind: "sign" };
       if (n.booth) return { kind: "booth", id: n.booth };
       if (n.stall) return { kind: "stall", holdingId: n.stall };

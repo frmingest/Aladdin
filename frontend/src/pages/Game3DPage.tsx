@@ -50,6 +50,7 @@ import AreaFade from "../game3d/AreaFade";
 import { INITIAL_AREA, areaReducer, isMoving } from "../game3d/areaMachine";
 import type { AreaAction, AreaState } from "../game3d/areaMachine";
 import { AREA_STUCK, areaLine, areaName } from "../game3d/areaWordsV1";
+import { FIELD_WORDS } from "../game3d/siegeFieldWordsV1";
 import { prefersReducedMotion } from "../game3d/motionPref";
 import { standingAt } from "../game3d/near";
 import type { Nears } from "../game3d/near";
@@ -201,6 +202,9 @@ export default function Game3DPage() {
   const [atArchiveDoor, setAtArchiveDoor] = useState(false);
   const [onlyRoutes, setOnlyRoutes] = useState<readonly string[] | null>(null);
   const [atTownExit, setAtTownExit] = useState(false);
+  // The Siege Field: whether you stand at its gate in the courtyard, and whether its road back is in reach.
+  const [atSiegeGate, setAtSiegeGate] = useState(false);
+  const [atFieldExit, setAtFieldExit] = useState(false);
   const [onlyPlace, setOnlyPlace] = useState<PlaceId | null>(null);
   const [nearShelf, setNearShelf] = useState<ShelfId | null>(null);
   const [atLandGate, setAtLandGate] = useState(false);
@@ -518,6 +522,8 @@ export default function Game3DPage() {
     setAtGate(false);
     setTownNear(null);
     setAtTownExit(false);
+    setAtSiegeGate(false);
+    setAtFieldExit(false);
     setNearBoard(null);
     setAtHallDoor(false);
     setAtShelves(false);
@@ -533,6 +539,22 @@ export default function Game3DPage() {
     setLampOpen(false);
     setDrillOpen(false);
     dispatchArea({ type: "enter", ref: { id: "town" } });
+  }, [clearNears]);
+  // Out to the Siege Field and back to its gate. The courtyard's watchers are unmounted while there, so the nears are cleared.
+  const enterField = useCallback(() => {
+    clearNears();
+    setDeskOpen(false);
+    setVaultOpen(false);
+    setWatchOpen(false);
+    setPerchOpen(false);
+    setRealmOpen(false);
+    setLampOpen(false);
+    setDrillOpen(false);
+    dispatchArea({ type: "enter", ref: { id: "siege" } });
+  }, [clearNears]);
+  const leaveField = useCallback(() => {
+    clearNears();
+    dispatchArea({ type: "leave" });
   }, [clearNears]);
   const leaveTown = useCallback(() => {
     clearNears();
@@ -730,8 +752,10 @@ export default function Game3DPage() {
       hallDoor: atHallDoor,
       shelves: atShelves,
       archiveDoor: atArchiveDoor,
+      siegeGate: atSiegeGate,
+      fieldExit: atFieldExit,
     }),
-    [near, nearTower, atDesk, atDrill, atSign, nearBooth, nearStall, atGate, atVault, atWatch, atPerch, atRealm, nearShelf, atTable, atLantern, atLandGate, townNear, atTownExit, nearBoard, atHallDoor, atShelves, atArchiveDoor],
+    [near, nearTower, atDesk, atDrill, atSign, nearBooth, nearStall, atGate, atVault, atWatch, atPerch, atRealm, nearShelf, atTable, atLantern, atLandGate, townNear, atTownExit, nearBoard, atHallDoor, atShelves, atArchiveDoor, atSiegeGate, atFieldExit],
   );
   const atSpot = useMemo(() => standingAt(area, nears), [area, nears]);
 
@@ -758,6 +782,12 @@ export default function Game3DPage() {
           e.preventDefault();
           if (at.kind === "board") openBoard(at.id);
           else leaveHall();
+          return;
+        case "siege":
+          // In the Siege Field: E takes the road back.
+          if (whereOpen || at.kind === "none") return;
+          e.preventDefault();
+          leaveField();
           return;
         case "town":
           // In the Town: E knocks at the door you stand at, or takes the road back.
@@ -815,6 +845,9 @@ export default function Game3DPage() {
         case "gate":
           enterTown();
           return;
+        case "siegeGate":
+          enterField();
+          return;
         case "vault":
           if (!vaultOpen && document.pointerLockElement) document.exitPointerLock();
           setVaultOpen((v) => !v);
@@ -838,7 +871,7 @@ export default function Game3DPage() {
     };
     window.addEventListener("keydown", onTalk);
     return () => window.removeEventListener("keydown", onTalk);
-  }, [area, areaState, atSpot, whereOpen, openShelves, leaveRecords, openBoard, leaveHall, openBuilding, leaveTown, enterTown, talking, vaultOpen, watchOpen, perchOpen, ravens, realmOpen, lampOpen, state, boothOpen, openBooth, openStore, toggleWhere, drillOpen, deskOpen, room, report, readShelf, enterTower, leaveTower, openReport]);
+  }, [area, areaState, atSpot, whereOpen, openShelves, leaveRecords, enterField, leaveField, openBoard, leaveHall, openBuilding, leaveTown, enterTown, talking, vaultOpen, watchOpen, perchOpen, ravens, realmOpen, lampOpen, state, boothOpen, openBooth, openStore, toggleWhere, drillOpen, deskOpen, room, report, readShelf, enterTower, leaveTower, openReport]);
 
   useEffect(() => {
     const onPanelKey = (e: KeyboardEvent) => {
@@ -870,7 +903,8 @@ export default function Game3DPage() {
     else if (area.id === "townhall") leaveHall();
     else if (area.id === "records") leaveRecords();
     else if (area.id === "town") leaveTown();
-  }, [area.id, leaveTower, leaveHall, leaveRecords, leaveTown]);
+    else if (area.id === "siege") leaveField();
+  }, [area.id, leaveTower, leaveHall, leaveRecords, leaveTown, leaveField]);
 
   // G opens or shuts the "Where to?" menu from anywhere. Esc closes what is on top (the panel drawn over the others), and
   // B walks back out once nothing is open over the world.
@@ -939,6 +973,7 @@ export default function Game3DPage() {
       break;
     case "leave":
       if (area.id === "holding") spotPrompt = LAND_WORDS.gatePrompt;
+      else if (area.id === "siege") spotPrompt = FIELD_WORDS.exitPrompt;
       else if (!whereOpen) spotPrompt = area.id === "records" ? archiveDoorPrompt : area.id === "townhall" ? hallDoorPrompt : exitPrompt;
       break;
     case "shelf":
@@ -960,6 +995,9 @@ export default function Game3DPage() {
       break;
     case "drill":
       if (!drillOpen) spotPrompt = DRILL_PROMPT;
+      break;
+    case "siegeGate":
+      if (!whereOpen) spotPrompt = FIELD_WORDS.gatePrompt;
       break;
     case "sign":
       if (!whereOpen) spotPrompt = SIGN_PROMPT;
@@ -1038,6 +1076,8 @@ export default function Game3DPage() {
             townNear={townNear}
             onNearBuilding={setTownNear}
             onNearTownExit={setAtTownExit}
+            onNearSiegeGate={setAtSiegeGate}
+            onNearFieldExit={setAtFieldExit}
             onNearBoard={setNearBoard}
             onNearHallDoor={setAtHallDoor}
             onNearShelves={setAtShelves}

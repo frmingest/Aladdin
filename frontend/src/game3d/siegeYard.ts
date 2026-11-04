@@ -91,7 +91,7 @@ function byDamage(a: SiegeSimHolding, b: SiegeSimHolding): number {
   return Number(a.shock_pct) - Number(b.shock_pct);
 }
 
-export function yardView(sim: SiegeSim): YardView {
+export function yardView(sim: SiegeSim, maxRows: number = YARD_MAX_ROWS): YardView {
   const modelled = sim.holdings.filter((h) => h.modelled && h.shock_pct !== null).slice().sort(byDamage);
   const fog = sim.holdings
     .filter((h) => !h.modelled)
@@ -119,8 +119,8 @@ export function yardView(sim: SiegeSim): YardView {
       sim.portfolio_shock_pct === null ? null : (Math.abs(Number(sim.portfolio_shock_pct)) * 100).toFixed(1),
       Number(sim.portfolio_shock_pct) < 0 ? "costs" : "adds to",
     ),
-    rows: modelled.slice(0, YARD_MAX_ROWS).map(row),
-    more: Math.max(0, modelled.length - YARD_MAX_ROWS),
+    rows: modelled.slice(0, maxRows).map(row),
+    more: Math.max(0, modelled.length - maxRows),
     fog,
     book,
     towers: sim.holdings.length,
