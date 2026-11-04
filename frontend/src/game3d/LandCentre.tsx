@@ -1,4 +1,5 @@
 import FarmDressing from "./FarmDressing";
+import FountainDressing from "./FountainDressing";
 import LandBlock from "./LandBlock";
 import StreamBand from "./StreamBand";
 import { TowerBody } from "./TowerMesh";
@@ -19,6 +20,10 @@ function FarmSlot({ slot }: { slot: LandCentreSlot }) {
   );
 }
 
+function FountainSlot({ slot }: { slot: LandCentreSlot }) {
+  return <FountainDressing condition={slot.condition} />;
+}
+
 function MineSlot({ slot }: { slot: LandCentreSlot }) {
   return (
     <group position={[WORKPLACE.x, 0, WORKPLACE.z]}>
@@ -31,6 +36,7 @@ const DRESSINGS: Partial<Record<Theme3dId, ComponentType<{ slot: LandCentreSlot 
   windmill: MillDressing,
   watermill: MillDressing,
   farm: FarmSlot,
+  fountain: FountainSlot,
   mine: MineSlot,
   quarry: MineSlot,
 };

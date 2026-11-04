@@ -37,9 +37,17 @@ export const DRESSING_BUILT: Record<Theme3dId, boolean> = {
   factory: false,
   windmill: true,
   watermill: true,
-  fountain: false,
+  fountain: true,
   plain: false,
 };
+
+/**
+ * Themes whose dressing also draws the neutral (no walls read as "not applicable"). The slot draws the plain block for the
+ * neutral of every other theme; the fountain is the exception because funds have no balance sheet, so the neutral IS the
+ * usual state of a fund's land and a block there would hide the dressing. The dressing draws it with the NEUTRAL condition
+ * (undamaged, no footing or trim), so it still never reads as Sound.
+ */
+export const DRESSING_DRAWS_NEUTRAL: Partial<Record<Theme3dId, boolean>> = { fountain: true };
 
 export type CentreChoice = "tower" | "ghost" | "neutral" | "dressing";
 
@@ -47,7 +55,7 @@ export type CentreChoice = "tower" | "ghost" | "neutral" | "dressing";
 export function centreChoice(slot: Pick<LandCentreSlot, "theme" | "condition">, built: Record<Theme3dId, boolean> = DRESSING_BUILT): CentreChoice {
   if (slot.theme === "plain" || !built[slot.theme]) return "tower";
   if (slot.condition.state === "ghost") return "ghost";
-  if (slot.condition.state === "neutral") return "neutral";
+  if (slot.condition.state === "neutral" && !DRESSING_DRAWS_NEUTRAL[slot.theme]) return "neutral";
   return "dressing";
 }
 
