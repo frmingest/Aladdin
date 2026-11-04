@@ -30,7 +30,7 @@ export interface LandCentreSlot {
 export const DRESSING_BUILT: Record<Theme3dId, boolean> = {
   mine: true,
   quarry: true,
-  ingots: false,
+  ingots: true,
   farm: true,
   stall: false,
   bank: false,
@@ -44,10 +44,11 @@ export const DRESSING_BUILT: Record<Theme3dId, boolean> = {
 /**
  * Themes whose dressing also draws the neutral (no walls read as "not applicable"). The slot draws the plain block for the
  * neutral of every other theme; the fountain is the exception because funds have no balance sheet, so the neutral IS the
- * usual state of a fund's land and a block there would hide the dressing. The dressing draws it with the NEUTRAL condition
+ * usual state of a fund's land and a block there would hide the dressing. The same holds for physical gold (`ingots`): bullion has no
+ * balance sheet to judge. The dressing draws it with the NEUTRAL condition
  * (undamaged, no footing or trim), so it still never reads as Sound.
  */
-export const DRESSING_DRAWS_NEUTRAL: Partial<Record<Theme3dId, boolean>> = { fountain: true };
+export const DRESSING_DRAWS_NEUTRAL: Partial<Record<Theme3dId, boolean>> = { fountain: true, ingots: true };
 
 export type CentreChoice = "tower" | "ghost" | "neutral" | "dressing";
 
