@@ -1,6 +1,6 @@
 # 3D asset sprint plan: put the art we already own on the map (2026-11-04)
 
-**Status: plan, decisions made, A1 written (PR open, see PROGRESS). Not seen in a browser, not deployed.** Written against `main` `2ad6fb6` (#291). Faiz's ask: assess what 3D assets the game still lacks, check the nine packs in `frontend/src/assets/art/3D`, and start implementing on priority. "You decide": the decisions below are Claude's, recommended and applied; say so if one is wrong.
+**Status: plan, decisions made, A1 merged (#292), A2 written (PR open, see PROGRESS). Not seen in a browser, not deployed.** Written against `main` `2ad6fb6` (#291). Faiz's ask: assess what 3D assets the game still lacks, check the nine packs in `frontend/src/assets/art/3D`, and start implementing on priority. "You decide": the decisions below are Claude's, recommended and applied; say so if one is wrong.
 
 ## What a sprint is for (plain words)
 
@@ -28,7 +28,7 @@ Priority is **how many of Faiz's holdings stand as a plain tower outdoors today*
 | Sprint | What you will see | Size | Needs |
 |---|---|---|---|
 | **A1 gold bullion vault** (this PR) | A bullion holding's land and outdoor building: a gold chest, fixed bar and coin piles inside a ring of six low barred barriers that wear the wall ladder | S | none |
-| **A2 bank vault** | Alfred Berg and any bank: barred walls, keys, chest, open journal | M | A1 pattern |
+| **A2 bank vault** (PR open) | Alfred Berg and any bank: six barred walls, gold chest, coins, a writing desk with open journal, pencil, key and candle | M | A1 pattern |
 | **A3 factory and market stall** | Industrials as a workshop (blacksmith, cogs, anvil); retail as a stall (cloth, crates, flags) | M | A1 pattern |
 | **A4 meadow plants** | Forest Nature trees, bushes, grass tufts and rocks on the meadow, instanced, off every plot, lane, river and field | M | import Forest Nature (`scripts/import-pack.mjs`), new `forest.glb` at most 600 KB |
 | **A5 Siege Field** | `siege.glb` engines and Skeleton attackers, wall line breach from the Dungeon pieces | L | S28 plan, D14 approved |
