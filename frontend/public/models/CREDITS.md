@@ -90,3 +90,10 @@ Prepared, not wired into the scene yet. All CC0 1.0. Every file's contents are l
 Licence texts: `LICENSE-KayKit-RPG-Tools-Bits.txt`, `LICENSE-KayKit-Resource-Bits.txt`, `LICENSE-Kenney-Castle-Kit.txt`, `LICENSE-KayKit-Skeletons.txt` (plus the Hexagon and Dungeon texts above), all copied by `scripts/import-pack.mjs`.
 
 **Modified:** merged with `scripts/pack-holdings.mjs` and `scripts/pack-siege.mjs` (plain float vertices, no compression, no animation). Pieces whose picture reads red or green were left out (checked by `scripts/glb-colour-audit.mjs`). In `siege.glb` Kenney's one palette is **retinted** as for the town kit (red cells slate blue, green cells teal), and pieces are renamed (`siege-catapult-demolished` is `siege_catapult_wrecked`). The Skeletons were cut to seven clips with `scripts/optimize-models.mjs --keep=...` and their red cells (Mage robe, Rogue cape) and green cells recoloured slate blue and teal with `scripts/retint-skeletons.mjs`; skins are untouched. `clips-work.glb` holds six clips and the bone nodes only (`scripts/export-work-clips.mjs`). The KayKit Character Animations 1.2 free download was checked and **not used** (it holds one old six-bone character; see the doc).
+
+## Meadow plants (asset sprint A4, 2026-11-04)
+
+`forest.glb` is one file holding 15 pieces from the KayKit Forest Nature Pack 1.0 (six trees, four bushes, two grass tufts, three rocks, the `Color1` variants), each a top-level node named after the piece (`tree_1_a`, `bush_3_a`, ...). All CC0 1.0. Author: Kay Lousberg (KayKit), https://kaylousberg.com/game-assets, pack dated 2025-04-29, fetched 2026-11-04. Placed by `frontend/src/game3d/meadowPlants.ts`.
+
+Licence text: `LICENSE-KayKit-Forest-Nature.txt` (copied by `scripts/import-pack.mjs`). **Modified:** merged into one file with `scripts/pack-forest.mjs` (plain float vertices, no compression, no animation); geometry and the one shared texture unchanged. `scripts/glb-colour-audit.mjs`: 0 percent red on every piece; leaf green on trees, bushes and grass is scenery (allow-listed), the rocks are grey.
+
