@@ -12,9 +12,14 @@ describe("place links", () => {
   });
 
   it("a broken link opens the courtyard", () => {
-    for (const bad of [null, undefined, "", "nowhere", "holding", "holding:", "library", "library:", "siege", "TOWN"]) {
+    for (const bad of [null, undefined, "", "nowhere", "holding", "holding:", "library", "library:", "TOWN"]) {
       expect(parsePlace(bad)).toEqual({ id: "courtyard" });
     }
+  });
+
+  it("opens the Siege Field from ?at=siege", () => {
+    expect(placeFromSearch("?at=siege")).toEqual({ id: "siege" });
+    expect(searchFor({ id: "siege" })).toBe("?at=siege");
   });
 
   it("keeps the old library:<id> link working as that holding's land (F1)", () => {

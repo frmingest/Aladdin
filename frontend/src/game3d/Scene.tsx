@@ -42,6 +42,9 @@ import type { RealmLevel } from "../lib/realmVerdict";
 import { PERCH, PERCH_LEAVE_RANGE, PERCH_RANGE, WATCH_LEAVE_RANGE, WATCH_POST, WATCH_RANGE } from "./watchPlan";
 import DrillCamp from "./DrillCamp";
 import DrillPost from "./DrillPost";
+import SiegeField from "./SiegeField";
+import SiegeGate from "./SiegeGate";
+import { SIEGE_GATE, SIEGE_GATE_LEAVE_RANGE, SIEGE_GATE_RANGE } from "./siegeField";
 import Signpost from "./Signpost";
 import { SIGN, SIGN_LEAVE_RANGE, SIGN_RANGE } from "./signpost";
 import { STALL_LEAVE_RANGE, STALL_RANGE } from "./stallDoor";
@@ -141,6 +144,10 @@ interface Props {
   /** Inside the Hall of Records: whether you stand at the shelves, and whether the door is in reach. */
   onNearShelves?: (near: boolean) => void;
   onNearArchiveDoor?: (near: boolean) => void;
+  /** Courtyard: the hero stands at the gate to the Siege Field. */
+  onNearSiegeGate?: (near: boolean) => void;
+  /** Siege Field: the road back is in reach. */
+  onNearFieldExit?: (near: boolean) => void;
 }
 
 export interface RoomView {
@@ -199,6 +206,7 @@ const spotTarget = (p: { x: number; z: number }, range: number, leaveRange: numb
 const DESK_T = spotTarget(DESK, DESK_RANGE, DESK_LEAVE_RANGE);
 const DRILL_T = spotTarget(DRILL_POST, DRILL_RANGE, DRILL_LEAVE_RANGE);
 const SIGN_T = spotTarget(SIGN, SIGN_RANGE, SIGN_LEAVE_RANGE);
+const SIEGE_GATE_T = spotTarget(SIEGE_GATE, SIEGE_GATE_RANGE, SIEGE_GATE_LEAVE_RANGE);
 const GATE_T = spotTarget(GATE_SPOT, GATE_RANGE, GATE_LEAVE_RANGE);
 const VAULT_T = spotTarget(VAULT, VAULT_RANGE, VAULT_LEAVE_RANGE);
 const REALM_T = spotTarget(REALM_POST, REALM_RANGE, REALM_LEAVE_RANGE);
@@ -248,6 +256,8 @@ function World({
   onNearHallDoor,
   onNearShelves,
   onNearArchiveDoor,
+  onNearSiegeGate,
+  onNearFieldExit,
 }: {
   onLockChange: (locked: boolean) => void;
   world: WorldModel;
@@ -289,6 +299,8 @@ function World({
   onNearHallDoor: (near: boolean) => void;
   onNearShelves: (near: boolean) => void;
   onNearArchiveDoor: (near: boolean) => void;
+  onNearSiegeGate: (near: boolean) => void;
+  onNearFieldExit: (near: boolean) => void;
 }) {
   const keys = useKeys();
   const pos = useRef({ x: 0, z: 0 });
@@ -334,6 +346,15 @@ function World({
         <group userData={{ perfGroup: "hall" }}>
           <TownHallRoom pos={pos} onBoard={onNearBoard} onDoor={onNearHallDoor} />
         </group>
+      ) : area.id === "siege" ? (
+        <>
+          <group userData={{ perfGroup: "backdrop" }}>
+            <Backdrop />
+          </group>
+          <group userData={{ perfGroup: "siege" }}>
+            <SiegeField pos={pos} onNearExit={onNearFieldExit} />
+          </group>
+        </>
       ) : area.id === "town" ? (
         <>
           <group userData={{ perfGroup: "backdrop" }}>
@@ -395,6 +416,7 @@ function World({
           <group userData={{ perfGroup: "drill" }}>
             <DrillPost />
             {drillOpen && <DrillCamp />}
+            <SiegeGate />
           </group>
           <group userData={{ perfGroup: "signpost" }}>
             <Signpost />
@@ -413,6 +435,7 @@ function World({
           <NearWatch pos={pos} targets={NPC_T} onChange={onNear} />
           <NearWatch pos={pos} targets={DESK_T} onChange={isYes(onNearDesk)} />
           <NearWatch pos={pos} targets={DRILL_T} onChange={isYes(onNearDrill)} />
+          <NearWatch pos={pos} targets={SIEGE_GATE_T} onChange={isYes(onNearSiegeGate)} />
           <NearWatch pos={pos} targets={SIGN_T} onChange={isYes(onNearSign)} />
           <NearWatch pos={pos} targets={GATE_T} onChange={isYes(onNearGate)} />
           <NearWatch pos={pos} targets={stallTargets} onChange={onNearStall} />
@@ -478,6 +501,8 @@ export default function Scene({
   onNearHallDoor = noop,
   onNearShelves = noop,
   onNearArchiveDoor = noop,
+  onNearSiegeGate = noop,
+  onNearFieldExit = noop,
 }: Props) {
   const inside = AREAS[area.id].lighting === "indoor";
   // The weather: only the sky and fog colour change (calm keeps the courtyard's own sky); lights stay as they are.
@@ -573,6 +598,8 @@ export default function Scene({
           onNearHallDoor={onNearHallDoor}
           onNearShelves={onNearShelves}
           onNearArchiveDoor={onNearArchiveDoor}
+          onNearSiegeGate={onNearSiegeGate}
+          onNearFieldExit={onNearFieldExit}
         />
       </Suspense>
       <PerfProbe onStats={onStats} detail={statsDetail} />

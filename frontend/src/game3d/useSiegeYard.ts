@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "../lib/api";
-import { yardBenchmark, yardView } from "./siegeYard";
+import { YARD_MAX_ROWS, yardBenchmark, yardView } from "./siegeYard";
 import type { YardView } from "./siegeYard";
 
 export type YardState =
@@ -12,7 +12,7 @@ export type YardState =
  * Asks the backend what a fall does to each tower: the same call the flat Siege Simulator makes. Debounced while the
  * slider moves; the newest answer wins; a failed read says so and leaves the rest of the panel working.
  */
-export function useSiegeYard(fall: number): YardState {
+export function useSiegeYard(fall: number, maxRows: number = YARD_MAX_ROWS): YardState {
   const [state, setState] = useState<YardState>({ status: "reading" });
   const latest = useRef(0);
   useEffect(() => {
@@ -22,13 +22,13 @@ export function useSiegeYard(fall: number): YardState {
       api
         .getSiegeSim(fall, yardBenchmark())
         .then((sim) => {
-          if (id === latest.current) setState({ status: "ready", view: yardView(sim), refreshing: false });
+          if (id === latest.current) setState({ status: "ready", view: yardView(sim, maxRows), refreshing: false });
         })
         .catch(() => {
           if (id === latest.current) setState({ status: "failed" });
         });
     }, 250);
     return () => window.clearTimeout(timer);
-  }, [fall]);
+  }, [fall, maxRows]);
   return state;
 }
