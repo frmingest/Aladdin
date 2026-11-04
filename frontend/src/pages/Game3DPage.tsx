@@ -51,6 +51,8 @@ import { INITIAL_AREA, areaReducer, isMoving } from "../game3d/areaMachine";
 import type { AreaAction, AreaState } from "../game3d/areaMachine";
 import { AREA_STUCK, areaLine, areaName } from "../game3d/areaWordsV1";
 import { FIELD_WORDS } from "../game3d/siegeFieldWordsV1";
+import { buildQuarter } from "../game3d/quarterPlan";
+import { QUARTER_WORDS } from "../game3d/quarterWordsV1";
 import { prefersReducedMotion } from "../game3d/motionPref";
 import { standingAt } from "../game3d/near";
 import type { Nears } from "../game3d/near";
@@ -205,6 +207,9 @@ export default function Game3DPage() {
   // The Siege Field: whether you stand at its gate in the courtyard, and whether its road back is in reach.
   const [atSiegeGate, setAtSiegeGate] = useState(false);
   const [atFieldExit, setAtFieldExit] = useState(false);
+  // The Market Quarter: whether you stand at its arch in the courtyard, and whether its road back is in reach.
+  const [atQuarterGate, setAtQuarterGate] = useState(false);
+  const [atQuarterExit, setAtQuarterExit] = useState(false);
   const [onlyPlace, setOnlyPlace] = useState<PlaceId | null>(null);
   const [nearShelf, setNearShelf] = useState<ShelfId | null>(null);
   const [atLandGate, setAtLandGate] = useState(false);
@@ -314,6 +319,9 @@ export default function Game3DPage() {
   const realmLevel = useMemo(() => (state ? summarizeRealm(state).level : null), [state]);
   // One stall per watchlist company, in the flat Marketplace's order; no watchlist means no stalls.
   const street = useMemo(() => buildStreet(watchlist?.rows), [watchlist]);
+  // The Market Quarter: the same companies, up to twelve, laid up one lane. The arch counts them all; an unread watchlist counts nothing.
+  const quarter = useMemo(() => buildQuarter(watchlist?.rows), [watchlist]);
+  const archCounts = useMemo(() => (watchlist ? { total: quarter.total, inRange: quarter.inRange } : null), [watchlist, quarter]);
   // Never invent towers: no state means bare pads.
   const world = useMemo(() => stateToWorld(state), [state]);
   // What is drawn and listed: the same world, with the Standing's named gaps labelled on their towers.
@@ -524,6 +532,8 @@ export default function Game3DPage() {
     setAtTownExit(false);
     setAtSiegeGate(false);
     setAtFieldExit(false);
+    setAtQuarterGate(false);
+    setAtQuarterExit(false);
     setNearBoard(null);
     setAtHallDoor(false);
     setAtShelves(false);
@@ -553,6 +563,22 @@ export default function Game3DPage() {
     dispatchArea({ type: "enter", ref: { id: "siege" } });
   }, [clearNears]);
   const leaveField = useCallback(() => {
+    clearNears();
+    dispatchArea({ type: "leave" });
+  }, [clearNears]);
+  // Under the arch to the Market Quarter and back out beside it. Same shape as the Siege Field's gate.
+  const enterQuarter = useCallback(() => {
+    clearNears();
+    setDeskOpen(false);
+    setVaultOpen(false);
+    setWatchOpen(false);
+    setPerchOpen(false);
+    setRealmOpen(false);
+    setLampOpen(false);
+    setDrillOpen(false);
+    dispatchArea({ type: "enter", ref: { id: "quarter" } });
+  }, [clearNears]);
+  const leaveQuarter = useCallback(() => {
     clearNears();
     dispatchArea({ type: "leave" });
   }, [clearNears]);
@@ -754,8 +780,10 @@ export default function Game3DPage() {
       archiveDoor: atArchiveDoor,
       siegeGate: atSiegeGate,
       fieldExit: atFieldExit,
+      quarterGate: atQuarterGate,
+      quarterExit: atQuarterExit,
     }),
-    [near, nearTower, atDesk, atDrill, atSign, nearBooth, nearStall, atGate, atVault, atWatch, atPerch, atRealm, nearShelf, atTable, atLantern, atLandGate, townNear, atTownExit, nearBoard, atHallDoor, atShelves, atArchiveDoor, atSiegeGate, atFieldExit],
+    [near, nearTower, atDesk, atDrill, atSign, nearBooth, nearStall, atGate, atVault, atWatch, atPerch, atRealm, nearShelf, atTable, atLantern, atLandGate, townNear, atTownExit, nearBoard, atHallDoor, atShelves, atArchiveDoor, atSiegeGate, atFieldExit, atQuarterGate, atQuarterExit],
   );
   const atSpot = useMemo(() => standingAt(area, nears), [area, nears]);
 
@@ -788,6 +816,13 @@ export default function Game3DPage() {
           if (whereOpen || at.kind === "none") return;
           e.preventDefault();
           leaveField();
+          return;
+        case "quarter":
+          // In the Market Quarter: E steps into the store of the stall you stand at, or takes the road back.
+          if (whereOpen || at.kind === "none") return;
+          e.preventDefault();
+          if (at.kind === "stall") openStore(at.holdingId);
+          else leaveQuarter();
           return;
         case "town":
           // In the Town: E knocks at the door you stand at, or takes the road back.
@@ -848,6 +883,9 @@ export default function Game3DPage() {
         case "siegeGate":
           enterField();
           return;
+        case "quarterGate":
+          enterQuarter();
+          return;
         case "vault":
           if (!vaultOpen && document.pointerLockElement) document.exitPointerLock();
           setVaultOpen((v) => !v);
@@ -871,7 +909,7 @@ export default function Game3DPage() {
     };
     window.addEventListener("keydown", onTalk);
     return () => window.removeEventListener("keydown", onTalk);
-  }, [area, areaState, atSpot, whereOpen, openShelves, leaveRecords, enterField, leaveField, openBoard, leaveHall, openBuilding, leaveTown, enterTown, talking, vaultOpen, watchOpen, perchOpen, ravens, realmOpen, lampOpen, state, boothOpen, openBooth, openStore, toggleWhere, drillOpen, deskOpen, room, report, readShelf, enterTower, leaveTower, openReport]);
+  }, [area, areaState, atSpot, whereOpen, openShelves, leaveRecords, enterField, leaveField, enterQuarter, leaveQuarter, openBoard, leaveHall, openBuilding, leaveTown, enterTown, talking, vaultOpen, watchOpen, perchOpen, ravens, realmOpen, lampOpen, state, boothOpen, openBooth, openStore, toggleWhere, drillOpen, deskOpen, room, report, readShelf, enterTower, leaveTower, openReport]);
 
   useEffect(() => {
     const onPanelKey = (e: KeyboardEvent) => {
@@ -904,7 +942,8 @@ export default function Game3DPage() {
     else if (area.id === "records") leaveRecords();
     else if (area.id === "town") leaveTown();
     else if (area.id === "siege") leaveField();
-  }, [area.id, leaveTower, leaveHall, leaveRecords, leaveTown, leaveField]);
+    else if (area.id === "quarter") leaveQuarter();
+  }, [area.id, leaveTower, leaveHall, leaveRecords, leaveTown, leaveField, leaveQuarter]);
 
   // G opens or shuts the "Where to?" menu from anywhere. Esc closes what is on top (the panel drawn over the others), and
   // B walks back out once nothing is open over the world.
@@ -974,6 +1013,7 @@ export default function Game3DPage() {
     case "leave":
       if (area.id === "holding") spotPrompt = LAND_WORDS.gatePrompt;
       else if (area.id === "siege") spotPrompt = FIELD_WORDS.exitPrompt;
+      else if (area.id === "quarter") spotPrompt = QUARTER_WORDS.exitPrompt;
       else if (!whereOpen) spotPrompt = area.id === "records" ? archiveDoorPrompt : area.id === "townhall" ? hallDoorPrompt : exitPrompt;
       break;
     case "shelf":
@@ -999,6 +1039,9 @@ export default function Game3DPage() {
     case "siegeGate":
       if (!whereOpen) spotPrompt = FIELD_WORDS.gatePrompt;
       break;
+    case "quarterGate":
+      if (!whereOpen) spotPrompt = QUARTER_WORDS.gatePrompt;
+      break;
     case "sign":
       if (!whereOpen) spotPrompt = SIGN_PROMPT;
       break;
@@ -1010,8 +1053,10 @@ export default function Game3DPage() {
       break;
     case "stall":
       if (!whereOpen) {
-        spotPrompt = stallPrompt(street.stalls.find((s) => s.holdingId === atSpot.holdingId)?.name ?? "this company");
-        if (street.overflow.length > 0) spotNote = streetOverflowLine(street.overflow.length);
+        const inQuarter = area.id === "quarter";
+        const where = inQuarter ? quarter : street;
+        spotPrompt = stallPrompt(where.stalls.find((s) => s.holdingId === atSpot.holdingId)?.name ?? "this company");
+        if (where.overflow.length > 0) spotNote = streetOverflowLine(where.overflow.length);
       }
       break;
     case "gate":
@@ -1078,6 +1123,10 @@ export default function Game3DPage() {
             onNearTownExit={setAtTownExit}
             onNearSiegeGate={setAtSiegeGate}
             onNearFieldExit={setAtFieldExit}
+            quarter={quarter}
+            archCounts={archCounts}
+            onNearQuarterGate={setAtQuarterGate}
+            onNearQuarterExit={setAtQuarterExit}
             onNearBoard={setNearBoard}
             onNearHallDoor={setAtHallDoor}
             onNearShelves={setAtShelves}

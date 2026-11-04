@@ -92,7 +92,7 @@ export function stableIndex(id: string, mod: number): number {
   return h % mod;
 }
 
-function toStall(row: WatchlistRow, plot: { x: number; z: number }): Stall {
+export function toStall(row: WatchlistRow, plot: { x: number; z: number }): Stall {
   const front = shopFront(row);
   return {
     holdingId: row.holding_id,

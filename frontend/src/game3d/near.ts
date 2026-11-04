@@ -72,6 +72,10 @@ export interface Nears {
   siegeGate: boolean;
   /** Siege Field: the road back is in reach. */
   fieldExit: boolean;
+  /** Courtyard: at the arch to the Market Quarter. */
+  quarterGate: boolean;
+  /** Market Quarter: the road back is in reach. */
+  quarterExit: boolean;
 }
 
 export const NO_NEARS: Nears = {
@@ -99,13 +103,15 @@ export const NO_NEARS: Nears = {
   archiveDoor: false,
   siegeGate: false,
   fieldExit: false,
+  quarterGate: false,
+  quarterExit: false,
 };
 
 export type Standing =
   | { kind: "none" }
   | { kind: "npc"; id: NpcId }
   | { kind: "tower"; holdingId: string }
-  | { kind: "desk" | "drill" | "siegeGate" | "sign" | "gate" | "vault" | "watch" | "perch" | "realm" | "table" | "shelves" }
+  | { kind: "desk" | "drill" | "siegeGate" | "quarterGate" | "sign" | "gate" | "vault" | "watch" | "perch" | "realm" | "table" | "shelves" }
   | { kind: "booth"; id: BoothId }
   | { kind: "stall"; holdingId: string }
   | { kind: "shelf"; id: ShelfId }
@@ -131,6 +137,10 @@ export function standingAt(area: AreaRef, n: Nears): Standing {
       return n.hallDoor ? { kind: "leave" } : { kind: "none" };
     case "siege":
       return n.fieldExit ? { kind: "leave" } : { kind: "none" };
+    case "quarter":
+      // A stall beats the road back, like a door beats the desk: the exit stands far from every stall (test).
+      if (n.stall) return { kind: "stall", holdingId: n.stall };
+      return n.quarterExit ? { kind: "leave" } : { kind: "none" };
     case "town":
       if (n.building) return { kind: "building", id: n.building };
       return n.townExit ? { kind: "leave" } : { kind: "none" };
@@ -145,6 +155,7 @@ export function standingAt(area: AreaRef, n: Nears): Standing {
       if (n.desk) return { kind: "desk" };
       if (n.drill) return { kind: "drill" };
       if (n.siegeGate) return { kind: "siegeGate" };
+      if (n.quarterGate) return { kind: "quarterGate" };
       if (n.sign) return { kind: "sign" };
       if (n.booth) return { kind: "booth", id: n.booth };
       if (n.stall) return { kind: "stall", holdingId: n.stall };
