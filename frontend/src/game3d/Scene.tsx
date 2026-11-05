@@ -43,6 +43,8 @@ import { PERCH, PERCH_LEAVE_RANGE, PERCH_RANGE, WATCH_LEAVE_RANGE, WATCH_POST, W
 import DrillCamp from "./DrillCamp";
 import DrillPost from "./DrillPost";
 import SiegeField from "./SiegeField";
+import { DEFAULT_TOOLS } from "./siegeFieldTools";
+import type { FieldSpotId, FieldTools } from "./siegeFieldTools";
 import SiegeGate from "./SiegeGate";
 import MarketQuarter from "./MarketQuarter";
 import QuarterArch from "./QuarterArch";
@@ -152,6 +154,10 @@ interface Props {
   onNearSiegeGate?: (near: boolean) => void;
   /** Siege Field: the road back is in reach. */
   onNearFieldExit?: (near: boolean) => void;
+  /** Siege Field: the winch, a marker stone or a yardstick banner in reach, and the fall and yardstick they steer. */
+  onNearFieldSpot?: (id: FieldSpotId | null) => void;
+  fieldTools?: FieldTools;
+  onFieldPresets?: (p: { toStorm: number | null; toSiege: number | null; min: number; max: number }) => void;
   /** Market Quarter: one stall per watchlist company, laid out up the lane (quarterPlan.ts). */
   quarter?: Quarter;
   /** The arch's count line: how many stalls, how many in range. Null while the watchlist is unread. */
@@ -273,6 +279,9 @@ function World({
   onNearArchiveDoor,
   onNearSiegeGate,
   onNearFieldExit,
+  onNearFieldSpot,
+  fieldTools,
+  onFieldPresets,
   quarter,
   archCounts,
   onNearQuarterGate,
@@ -320,6 +329,9 @@ function World({
   onNearArchiveDoor: (near: boolean) => void;
   onNearSiegeGate: (near: boolean) => void;
   onNearFieldExit: (near: boolean) => void;
+  onNearFieldSpot: (id: FieldSpotId | null) => void;
+  fieldTools: FieldTools;
+  onFieldPresets: (p: { toStorm: number | null; toSiege: number | null; min: number; max: number }) => void;
   quarter: Quarter;
   archCounts: { total: number; inRange: number } | null;
   onNearQuarterGate: (near: boolean) => void;
@@ -379,7 +391,7 @@ function World({
             <Backdrop />
           </group>
           <group userData={{ perfGroup: "siege" }}>
-            <SiegeField pos={pos} onNearExit={onNearFieldExit} />
+            <SiegeField pos={pos} onNearExit={onNearFieldExit} onNearSpot={onNearFieldSpot} tools={fieldTools} onPresets={onFieldPresets} />
           </group>
         </>
       ) : area.id === "quarter" ? (
@@ -543,6 +555,9 @@ export default function Scene({
   onNearArchiveDoor = noop,
   onNearSiegeGate = noop,
   onNearFieldExit = noop,
+  onNearFieldSpot = noop,
+  fieldTools = DEFAULT_TOOLS("local"),
+  onFieldPresets = noop,
   quarter = NO_QUARTER,
   archCounts = null,
   onNearQuarterGate = noop,
@@ -644,6 +659,9 @@ export default function Scene({
           onNearArchiveDoor={onNearArchiveDoor}
           onNearSiegeGate={onNearSiegeGate}
           onNearFieldExit={onNearFieldExit}
+          onNearFieldSpot={onNearFieldSpot}
+          fieldTools={fieldTools}
+          onFieldPresets={onFieldPresets}
           quarter={quarter}
           archCounts={archCounts}
           onNearQuarterGate={onNearQuarterGate}

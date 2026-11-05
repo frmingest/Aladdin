@@ -12,7 +12,7 @@
  */
 import { formatNok } from "../lib/format";
 import { formatShock } from "../lib/fortress";
-import { damageWidth, fallSubject, formatDrop, holdingLine, isRoughGuide, parseBenchmarkChoice, stressGapNote } from "../lib/siege";
+import { damageWidth, fallSubject, formatDrop, holdingLine, isRoughGuide, parseBenchmarkChoice, presetDrop, stressGapNote } from "../lib/siege";
 import type { SiegeBenchmarkKey, SiegeSim, SiegeSimHolding } from "../lib/types";
 import {
   YARD_GAP,
@@ -70,6 +70,13 @@ export interface YardView {
   /** The whole-book figures, or null when the book could not be modelled at all. */
   book: YardBook | null;
   towers: number;
+  /** The whole-percent fall that reaches the storm line, or null when it is never reached inside the range (the flat page's own preset). */
+  toStorm: number | null;
+  /** The same for the siege line. */
+  toSiege: number | null;
+  /** The backend's fall range, the same one the flat slider uses. */
+  dropMin: number;
+  dropMax: number;
 }
 
 function row(h: SiegeSimHolding): YardRow {
@@ -124,7 +131,21 @@ export function yardView(sim: SiegeSim, maxRows: number = YARD_MAX_ROWS): YardVi
     fog,
     book,
     towers: sim.holdings.length,
+    toStorm: presetDrop(sim.drop_to_gathering, dropMin(sim), dropMax(sim)),
+    toSiege: presetDrop(sim.drop_to_besieged, dropMin(sim), dropMax(sim)),
+    dropMin: dropMin(sim),
+    dropMax: dropMax(sim),
   };
+}
+
+/** The flat page reads these two off the answer too, with the same fallbacks. */
+function dropMin(sim: SiegeSim): number {
+  const n = Number(sim.drop_min);
+  return Number.isFinite(n) ? n : 0.05;
+}
+function dropMax(sim: SiegeSim): number {
+  const n = Number(sim.drop_max);
+  return Number.isFinite(n) ? n : 0.6;
 }
 
 /** What a tower with no usable beta prints where a number would go. */
@@ -138,5 +159,14 @@ export function yardBenchmark(): SiegeBenchmarkKey {
     return parseBenchmarkChoice(window.localStorage.getItem(BENCHMARK_STORAGE_KEY));
   } catch {
     return "local";
+  }
+}
+
+/** Remembers the yardstick in the same place the flat Siege Simulator does, so a swap here shows up there. */
+export function setYardBenchmark(key: SiegeBenchmarkKey): void {
+  try {
+    window.localStorage.setItem(BENCHMARK_STORAGE_KEY, key);
+  } catch {
+    /* storage is a convenience; the choice still holds for this visit */
   }
 }

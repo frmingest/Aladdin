@@ -1,6 +1,6 @@
 # 3D asset sprint plan: put the art we already own on the map (2026-11-04)
 
-**Status: plan, decisions made, A1 merged (#292), A2 merged (#293), A3 merged (#294), A4 merged (#295), A5 merged (#296), A6 merged (#297), A7 written (PR open, see PROGRESS). Not seen in a browser, not deployed.** Written against `main` `2ad6fb6` (#291). Faiz's ask: assess what 3D assets the game still lacks, check the nine packs in `frontend/src/assets/art/3D`, and start implementing on priority. "You decide": the decisions below are Claude's, recommended and applied; say so if one is wrong.
+**Status: plan, decisions made, A1 merged (#292), A2 merged (#293), A3 merged (#294), A4 merged (#295), A5 merged (#296), A6 merged (#297), A7 merged (#298), A8 written (Siege Field tools, PR open, see PROGRESS). Not seen in a browser, not deployed.** Written against `main` `2ad6fb6` (#291). Faiz's ask: assess what 3D assets the game still lacks, check the nine packs in `frontend/src/assets/art/3D`, and start implementing on priority. "You decide": the decisions below are Claude's, recommended and applied; say so if one is wrong.
 
 ## What a sprint is for (plain words)
 

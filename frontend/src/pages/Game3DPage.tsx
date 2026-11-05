@@ -51,6 +51,9 @@ import { INITIAL_AREA, areaReducer, isMoving } from "../game3d/areaMachine";
 import type { AreaAction, AreaState } from "../game3d/areaMachine";
 import { AREA_STUCK, areaLine, areaName } from "../game3d/areaWordsV1";
 import { FIELD_WORDS } from "../game3d/siegeFieldWordsV1";
+import { DEFAULT_TOOLS, applySpot, spotPrompt as fieldSpotPrompt } from "../game3d/siegeFieldTools";
+import type { FieldSpotId, FieldTools } from "../game3d/siegeFieldTools";
+import { setYardBenchmark, yardBenchmark } from "../game3d/siegeYard";
 import { buildQuarter } from "../game3d/quarterPlan";
 import { QUARTER_WORDS } from "../game3d/quarterWordsV1";
 import { prefersReducedMotion } from "../game3d/motionPref";
@@ -207,6 +210,14 @@ export default function Game3DPage() {
   // The Siege Field: whether you stand at its gate in the courtyard, and whether its road back is in reach.
   const [atSiegeGate, setAtSiegeGate] = useState(false);
   const [atFieldExit, setAtFieldExit] = useState(false);
+  // Inside the field: the tool in reach, and the fall and yardstick the winch, stones and banners steer.
+  const [fieldSpot, setFieldSpot] = useState<FieldSpotId | null>(null);
+  const [fieldTools, setFieldTools] = useState<FieldTools>(() => DEFAULT_TOOLS(yardBenchmark()));
+  const onFieldPresets = useCallback(
+    (p: { toStorm: number | null; toSiege: number | null; min: number; max: number }) =>
+      setFieldTools((t) => (t.toStorm === p.toStorm && t.toSiege === p.toSiege && t.min === p.min && t.max === p.max ? t : { ...t, ...p })),
+    [],
+  );
   // The Market Quarter: whether you stand at its arch in the courtyard, and whether its road back is in reach.
   const [atQuarterGate, setAtQuarterGate] = useState(false);
   const [atQuarterExit, setAtQuarterExit] = useState(false);
@@ -532,6 +543,7 @@ export default function Game3DPage() {
     setAtTownExit(false);
     setAtSiegeGate(false);
     setAtFieldExit(false);
+    setFieldSpot(null);
     setAtQuarterGate(false);
     setAtQuarterExit(false);
     setNearBoard(null);
@@ -566,6 +578,16 @@ export default function Game3DPage() {
     clearNears();
     dispatchArea({ type: "leave" });
   }, [clearNears]);
+  // E at the winch, a marker stone or a yardstick banner: the same what-if, a different fall or yardstick.
+  const workFieldSpot = useCallback((id: FieldSpotId) => {
+    setFieldTools((t) => {
+      const next = applySpot(id, t);
+      if (next === null) return t;
+      // The yardstick is shared with the flat Siege Simulator (same storage key), so both pages answer alike.
+      if (next.benchmark !== t.benchmark) setYardBenchmark(next.benchmark);
+      return next;
+    });
+  }, []);
   // Under the arch to the Market Quarter and back out beside it. Same shape as the Siege Field's gate.
   const enterQuarter = useCallback(() => {
     clearNears();
@@ -780,10 +802,11 @@ export default function Game3DPage() {
       archiveDoor: atArchiveDoor,
       siegeGate: atSiegeGate,
       fieldExit: atFieldExit,
+      fieldSpot,
       quarterGate: atQuarterGate,
       quarterExit: atQuarterExit,
     }),
-    [near, nearTower, atDesk, atDrill, atSign, nearBooth, nearStall, atGate, atVault, atWatch, atPerch, atRealm, nearShelf, atTable, atLantern, atLandGate, townNear, atTownExit, nearBoard, atHallDoor, atShelves, atArchiveDoor, atSiegeGate, atFieldExit, atQuarterGate, atQuarterExit],
+    [near, nearTower, atDesk, atDrill, atSign, nearBooth, nearStall, atGate, atVault, atWatch, atPerch, atRealm, nearShelf, atTable, atLantern, atLandGate, townNear, atTownExit, nearBoard, atHallDoor, atShelves, atArchiveDoor, atSiegeGate, atFieldExit, fieldSpot, atQuarterGate, atQuarterExit],
   );
   const atSpot = useMemo(() => standingAt(area, nears), [area, nears]);
 
@@ -812,10 +835,11 @@ export default function Game3DPage() {
           else leaveHall();
           return;
         case "siege":
-          // In the Siege Field: E takes the road back.
+          // In the Siege Field: E works the winch, a stone or a banner in reach, or takes the road back.
           if (whereOpen || at.kind === "none") return;
           e.preventDefault();
-          leaveField();
+          if (at.kind === "fieldSpot") workFieldSpot(at.id);
+          else leaveField();
           return;
         case "quarter":
           // In the Market Quarter: E steps into the store of the stall you stand at, or takes the road back.
@@ -909,7 +933,7 @@ export default function Game3DPage() {
     };
     window.addEventListener("keydown", onTalk);
     return () => window.removeEventListener("keydown", onTalk);
-  }, [area, areaState, atSpot, whereOpen, openShelves, leaveRecords, enterField, leaveField, enterQuarter, leaveQuarter, openBoard, leaveHall, openBuilding, leaveTown, enterTown, talking, vaultOpen, watchOpen, perchOpen, ravens, realmOpen, lampOpen, state, boothOpen, openBooth, openStore, toggleWhere, drillOpen, deskOpen, room, report, readShelf, enterTower, leaveTower, openReport]);
+  }, [area, areaState, atSpot, whereOpen, openShelves, leaveRecords, enterField, leaveField, workFieldSpot, enterQuarter, leaveQuarter, openBoard, leaveHall, openBuilding, leaveTown, enterTown, talking, vaultOpen, watchOpen, perchOpen, ravens, realmOpen, lampOpen, state, boothOpen, openBooth, openStore, toggleWhere, drillOpen, deskOpen, room, report, readShelf, enterTower, leaveTower, openReport]);
 
   useEffect(() => {
     const onPanelKey = (e: KeyboardEvent) => {
@@ -1039,6 +1063,9 @@ export default function Game3DPage() {
     case "siegeGate":
       if (!whereOpen) spotPrompt = FIELD_WORDS.gatePrompt;
       break;
+    case "fieldSpot":
+      if (!whereOpen) spotPrompt = fieldSpotPrompt(atSpot.id, fieldTools);
+      break;
     case "quarterGate":
       if (!whereOpen) spotPrompt = QUARTER_WORDS.gatePrompt;
       break;
@@ -1123,6 +1150,9 @@ export default function Game3DPage() {
             onNearTownExit={setAtTownExit}
             onNearSiegeGate={setAtSiegeGate}
             onNearFieldExit={setAtFieldExit}
+            onNearFieldSpot={setFieldSpot}
+            fieldTools={fieldTools}
+            onFieldPresets={onFieldPresets}
             quarter={quarter}
             archCounts={archCounts}
             onNearQuarterGate={setAtQuarterGate}

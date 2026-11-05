@@ -8,6 +8,7 @@ import type { AreaRef } from "./areas";
 import type { BoothId } from "./boothPlan";
 import type { NpcId } from "./npcs";
 import type { ShelfId } from "./libraryShelves";
+import type { FieldSpotId } from "./siegeFieldTools";
 import type { BoardId } from "./townHallRoom";
 import type { SurveyCheckId } from "../lib/survey";
 import type { BuildingId } from "./townPlan";
@@ -72,6 +73,8 @@ export interface Nears {
   siegeGate: boolean;
   /** Siege Field: the road back is in reach. */
   fieldExit: boolean;
+  /** Siege Field: the winch, a marker stone or a yardstick banner within reach. */
+  fieldSpot: FieldSpotId | null;
   /** Courtyard: at the arch to the Market Quarter. */
   quarterGate: boolean;
   /** Market Quarter: the road back is in reach. */
@@ -103,6 +106,7 @@ export const NO_NEARS: Nears = {
   archiveDoor: false,
   siegeGate: false,
   fieldExit: false,
+  fieldSpot: null,
   quarterGate: false,
   quarterExit: false,
 };
@@ -117,6 +121,7 @@ export type Standing =
   | { kind: "shelf"; id: ShelfId }
   | { kind: "lantern"; check: SurveyCheckId }
   | { kind: "building"; id: BuildingId }
+  | { kind: "fieldSpot"; id: FieldSpotId }
   | { kind: "board"; id: BoardId }
   /** The door back out of an interior, or the road back from the Town. */
   | { kind: "leave" };
@@ -136,6 +141,8 @@ export function standingAt(area: AreaRef, n: Nears): Standing {
       if (n.board) return { kind: "board", id: n.board };
       return n.hallDoor ? { kind: "leave" } : { kind: "none" };
     case "siege":
+      // A tool beats the road back; the exit stands far from every tool (test).
+      if (n.fieldSpot) return { kind: "fieldSpot", id: n.fieldSpot };
       return n.fieldExit ? { kind: "leave" } : { kind: "none" };
     case "quarter":
       // A stall beats the road back, like a door beats the desk: the exit stands far from every stall (test).
