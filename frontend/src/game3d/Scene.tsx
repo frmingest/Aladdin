@@ -44,6 +44,10 @@ import DrillCamp from "./DrillCamp";
 import DrillPost from "./DrillPost";
 import SiegeField from "./SiegeField";
 import SiegeGate from "./SiegeGate";
+import MarketQuarter from "./MarketQuarter";
+import QuarterArch from "./QuarterArch";
+import { QUARTER_EXIT, QUARTER_EXIT_LEAVE_RANGE, QUARTER_EXIT_RANGE, QUARTER_GATE, QUARTER_GATE_LEAVE_RANGE, QUARTER_GATE_RANGE } from "./quarterPlan";
+import type { Quarter } from "./quarterPlan";
 import { SIEGE_GATE, SIEGE_GATE_LEAVE_RANGE, SIEGE_GATE_RANGE } from "./siegeField";
 import Signpost from "./Signpost";
 import { SIGN, SIGN_LEAVE_RANGE, SIGN_RANGE } from "./signpost";
@@ -148,6 +152,14 @@ interface Props {
   onNearSiegeGate?: (near: boolean) => void;
   /** Siege Field: the road back is in reach. */
   onNearFieldExit?: (near: boolean) => void;
+  /** Market Quarter: one stall per watchlist company, laid out up the lane (quarterPlan.ts). */
+  quarter?: Quarter;
+  /** The arch's count line: how many stalls, how many in range. Null while the watchlist is unread. */
+  archCounts?: { total: number; inRange: number } | null;
+  /** Courtyard: the hero stands at the arch to the Market Quarter. */
+  onNearQuarterGate?: (near: boolean) => void;
+  /** Market Quarter: the road back is in reach. */
+  onNearQuarterExit?: (near: boolean) => void;
 }
 
 export interface RoomView {
@@ -207,6 +219,9 @@ const DESK_T = spotTarget(DESK, DESK_RANGE, DESK_LEAVE_RANGE);
 const DRILL_T = spotTarget(DRILL_POST, DRILL_RANGE, DRILL_LEAVE_RANGE);
 const SIGN_T = spotTarget(SIGN, SIGN_RANGE, SIGN_LEAVE_RANGE);
 const SIEGE_GATE_T = spotTarget(SIEGE_GATE, SIEGE_GATE_RANGE, SIEGE_GATE_LEAVE_RANGE);
+const QUARTER_GATE_T = spotTarget(QUARTER_GATE, QUARTER_GATE_RANGE, QUARTER_GATE_LEAVE_RANGE);
+const QUARTER_EXIT_T = spotTarget(QUARTER_EXIT, QUARTER_EXIT_RANGE, QUARTER_EXIT_LEAVE_RANGE);
+const NO_QUARTER: Quarter = { stalls: [], overflow: [], fogZ: null, total: 0, inRange: 0 };
 const GATE_T = spotTarget(GATE_SPOT, GATE_RANGE, GATE_LEAVE_RANGE);
 const VAULT_T = spotTarget(VAULT, VAULT_RANGE, VAULT_LEAVE_RANGE);
 const REALM_T = spotTarget(REALM_POST, REALM_RANGE, REALM_LEAVE_RANGE);
@@ -258,6 +273,10 @@ function World({
   onNearArchiveDoor,
   onNearSiegeGate,
   onNearFieldExit,
+  quarter,
+  archCounts,
+  onNearQuarterGate,
+  onNearQuarterExit,
 }: {
   onLockChange: (locked: boolean) => void;
   world: WorldModel;
@@ -301,6 +320,10 @@ function World({
   onNearArchiveDoor: (near: boolean) => void;
   onNearSiegeGate: (near: boolean) => void;
   onNearFieldExit: (near: boolean) => void;
+  quarter: Quarter;
+  archCounts: { total: number; inRange: number } | null;
+  onNearQuarterGate: (near: boolean) => void;
+  onNearQuarterExit: (near: boolean) => void;
 }) {
   const keys = useKeys();
   const pos = useRef({ x: 0, z: 0 });
@@ -321,6 +344,10 @@ function World({
   const stallTargets = useMemo<readonly NearTarget<string>[]>(
     () => stalls.map((s) => ({ id: s.holdingId, x: s.x, z: s.z, range: STALL_RANGE, leaveRange: STALL_LEAVE_RANGE })),
     [stalls],
+  );
+  const quarterStallTargets = useMemo<readonly NearTarget<string>[]>(
+    () => quarter.stalls.map((s) => ({ id: s.holdingId, x: s.x, z: s.z, range: STALL_RANGE, leaveRange: STALL_LEAVE_RANGE })),
+    [quarter],
   );
   // A tower's reach is counted from its wall, not its middle: fat towers are not easier to enter.
   const towerTargets = useMemo<readonly NearTarget<string>[]>(
@@ -354,6 +381,17 @@ function World({
           <group userData={{ perfGroup: "siege" }}>
             <SiegeField pos={pos} onNearExit={onNearFieldExit} />
           </group>
+        </>
+      ) : area.id === "quarter" ? (
+        <>
+          <group userData={{ perfGroup: "backdrop" }}>
+            <Backdrop />
+          </group>
+          <group userData={{ perfGroup: "quarter" }}>
+            <MarketQuarter quarter={quarter} />
+          </group>
+          <NearWatch pos={pos} targets={quarterStallTargets} onChange={onNearStall} />
+          <NearWatch pos={pos} targets={QUARTER_EXIT_T} onChange={isYes(onNearQuarterExit)} />
         </>
       ) : area.id === "town" ? (
         <>
@@ -417,6 +455,7 @@ function World({
             <DrillPost />
             {drillOpen && <DrillCamp />}
             <SiegeGate />
+            <QuarterArch counts={archCounts} />
           </group>
           <group userData={{ perfGroup: "signpost" }}>
             <Signpost />
@@ -436,6 +475,7 @@ function World({
           <NearWatch pos={pos} targets={DESK_T} onChange={isYes(onNearDesk)} />
           <NearWatch pos={pos} targets={DRILL_T} onChange={isYes(onNearDrill)} />
           <NearWatch pos={pos} targets={SIEGE_GATE_T} onChange={isYes(onNearSiegeGate)} />
+          <NearWatch pos={pos} targets={QUARTER_GATE_T} onChange={isYes(onNearQuarterGate)} />
           <NearWatch pos={pos} targets={SIGN_T} onChange={isYes(onNearSign)} />
           <NearWatch pos={pos} targets={GATE_T} onChange={isYes(onNearGate)} />
           <NearWatch pos={pos} targets={stallTargets} onChange={onNearStall} />
@@ -503,6 +543,10 @@ export default function Scene({
   onNearArchiveDoor = noop,
   onNearSiegeGate = noop,
   onNearFieldExit = noop,
+  quarter = NO_QUARTER,
+  archCounts = null,
+  onNearQuarterGate = noop,
+  onNearQuarterExit = noop,
 }: Props) {
   const inside = AREAS[area.id].lighting === "indoor";
   // The weather: only the sky and fog colour change (calm keeps the courtyard's own sky); lights stay as they are.
@@ -600,6 +644,10 @@ export default function Scene({
           onNearArchiveDoor={onNearArchiveDoor}
           onNearSiegeGate={onNearSiegeGate}
           onNearFieldExit={onNearFieldExit}
+          quarter={quarter}
+          archCounts={archCounts}
+          onNearQuarterGate={onNearQuarterGate}
+          onNearQuarterExit={onNearQuarterExit}
         />
       </Suspense>
       <PerfProbe onStats={onStats} detail={statsDetail} />

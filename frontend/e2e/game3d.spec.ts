@@ -30,6 +30,17 @@ for (const p of PLACES) {
   });
 }
 
+// The Market Quarter has no Back button (like the Siege Field): B and the post at the south end walk back out.
+test("opens the Market Quarter from its link and goes back with B", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await page.goto("/game3d?at=quarter");
+  await expect(page).toHaveTitle(/Market Quarter/);
+  await page.keyboard.press("b");
+  await expect(page).toHaveURL((u) => u.search === "");
+  expect(errors).toEqual([]);
+});
+
 test("a broken place link opens the courtyard", async ({ page }) => {
   await page.goto("/game3d?at=nowhere");
   await expect(page).toHaveTitle(/3D courtyard/);

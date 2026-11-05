@@ -3,6 +3,10 @@
 Completed milestones and retired status, moved out of `docs/PROGRESS.md` under the rolling-log rules
 in `CLAUDE.md` ("Progress file rules"). Newest snapshot first. Older: [PROGRESS-full-2026-09-30.md](PROGRESS-full-2026-09-30.md).
 
+## 2026-11-04 — 3D asset plan A1 to A5 (#292 to #296, merged)
+
+The gold bullion vault (#292), bank vault (#293), workshop and market stall (#294), meadow plants from Forest Nature (#295) and the Siege Field as its own place (#296). Look-over in a real browser still on Faiz's list, now one line in `PROGRESS.md` ([plan](../game/game3d-asset-sprint-plan-2026-11-04.md), [A5](../game/game3d-a5-siege-field-2026-11-04.md)).
+
 ## 2026-11-04 — S26 ladder, mills, mine, fountain, farm; text pass 3; S31 PR 1 (#281 to #289, merged)
 
 The condition ladder and moat stream (#281), the windmill and watermill (#284), mine and quarry (#285), fountain square (#286), farmhouse and fish farm (#287), text pass 3 (#282, #283) and the S31 plan and outdoor plots (#288, #289). Look-over in a real browser still on Faiz's list, now one line in `PROGRESS.md` ([ladder](../game/game3d-s26-ladder-stream-2026-11-03.md), [mills](../game/game3d-s26-mills-2026-11-03.md), [mine](../game/game3d-s26-mine-quarry-2026-11-03.md), [farm](../game/game3d-s26-farm-2026-11-03.md), [text pass 3](../game/game3d-text-pass-3-2026-11-03.md), [plots](../game/game3d-s31-outdoor-plots-2026-11-04.md)).

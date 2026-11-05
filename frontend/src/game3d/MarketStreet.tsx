@@ -116,7 +116,7 @@ function Plate({ stall }: { stall: Stall }) {
   );
 }
 
-function StallPiece({ stall, source }: { stall: Stall; source: Object3D }) {
+export function StallPiece({ stall, source }: { stall: Stall; source: Object3D }) {
   const object = useMemo(() => {
     const node = source.getObjectByName(stall.model);
     if (!node) return null;

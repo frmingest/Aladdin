@@ -4,7 +4,7 @@
  * Every place you can stand in (the courtyard, the Town, the Town Hall, the Hall of Records, a holding's land)
  * is one entry here: where you arrive, where its doors are, how it is lit and where "leave" takes you. The numbers
  * are NOT new: each entry points at the spawn, door and exit constants that already live in the room modules, so
- * adding this list moved nothing. `market` is a reserved name for a later sprint; `siege` is the Siege Field (asset plan A5). A tower door now leads to that holding's
+ * adding this list moved nothing. `siege` is the Siege Field (asset plan A5) and `quarter` the Market Quarter (A6). A tower door now leads to that holding's
  * own land (S25); the shared library room it used to open is no longer a place.
  */
 import { WALL_RADIUS } from "./layout";
@@ -50,6 +50,18 @@ import {
   SIEGE_GATE_RETURN,
   SIEGE_GATE_RETURN_YAW,
 } from "./siegeField";
+import {
+  QUARTER_EXIT,
+  QUARTER_EXIT_LEAVE_RANGE,
+  QUARTER_EXIT_RANGE,
+  QUARTER_GATE,
+  QUARTER_GATE_LEAVE_RANGE,
+  QUARTER_GATE_RANGE,
+  QUARTER_GATE_RETURN,
+  QUARTER_GATE_RETURN_YAW,
+  QUARTER_RADIUS,
+  QUARTER_SPAWN,
+} from "./quarterPlan";
 import type { Enterable } from "./towerDoor";
 
 /** Where the lights come from. Never from a verdict: nothing flatters a weak tower. */
@@ -62,12 +74,13 @@ export type AreaRef =
   | { id: "townhall" }
   | { id: "records" }
   | { id: "siege" }
+  | { id: "quarter" }
   | { id: "holding"; holdingId: string };
 
 export type AreaId = AreaRef["id"];
 
-/** Names held back for later sprints (the Market Quarter). Not places yet. */
-export const RESERVED_AREA_IDS = ["market"] as const;
+/** Names held back for later sprints. None now: the Market Quarter became the place `quarter` (asset plan A6). */
+export const RESERVED_AREA_IDS: readonly string[] = [];
 
 export interface AreaBox {
   minX: number;
@@ -122,6 +135,7 @@ export const AREAS: Record<AreaId, AreaDef> = {
     doors: [
       { id: "gate", x: GATE_SPOT.x, z: GATE_SPOT.z, range: GATE_RANGE, leaveRange: GATE_LEAVE_RANGE, to: "town" },
       { id: "siege", x: SIEGE_GATE.x, z: SIEGE_GATE.z, range: SIEGE_GATE_RANGE, leaveRange: SIEGE_GATE_LEAVE_RANGE, to: "siege" },
+      { id: "quarter", x: QUARTER_GATE.x, z: QUARTER_GATE.z, range: QUARTER_GATE_RANGE, leaveRange: QUARTER_GATE_LEAVE_RANGE, to: "quarter" },
     ],
   },
   town: {
@@ -165,6 +179,15 @@ export const AREAS: Record<AreaId, AreaDef> = {
     bounds: circleBox(FIELD_RADIUS),
     spawn: { x: FIELD_SPAWN.x, z: FIELD_SPAWN.z, yaw: FIELD_SPAWN.yaw },
     doors: [{ id: "exit", x: FIELD_EXIT.x, z: FIELD_EXIT.z, range: FIELD_EXIT_RANGE, leaveRange: FIELD_EXIT_LEAVE_RANGE, to: "parent" }],
+  },
+  quarter: {
+    id: "quarter",
+    parent: "courtyard",
+    kind: "outdoor",
+    lighting: "outdoor",
+    bounds: circleBox(QUARTER_RADIUS),
+    spawn: { x: QUARTER_SPAWN.x, z: QUARTER_SPAWN.z, yaw: QUARTER_SPAWN.yaw },
+    doors: [{ id: "exit", x: QUARTER_EXIT.x, z: QUARTER_EXIT.z, range: QUARTER_EXIT_RANGE, leaveRange: QUARTER_EXIT_LEAVE_RANGE, to: "parent" }],
   },
   holding: {
     id: "holding",
@@ -211,6 +234,7 @@ export function returnSpot(from: AreaRef, to: AreaRef, towers: readonly Enterabl
   }
   if (from.id === "town" && to.id === "courtyard") return { x: GATE_RETURN.x, z: GATE_RETURN.z, yaw: GATE_RETURN_YAW };
   if (from.id === "siege" && to.id === "courtyard") return { x: SIEGE_GATE_RETURN.x, z: SIEGE_GATE_RETURN.z, yaw: SIEGE_GATE_RETURN_YAW };
+  if (from.id === "quarter" && to.id === "courtyard") return { x: QUARTER_GATE_RETURN.x, z: QUARTER_GATE_RETURN.z, yaw: QUARTER_GATE_RETURN_YAW };
   if (from.id === "townhall" && to.id === "town") return hallExit();
   if (from.id === "records" && to.id === "town") return archiveExit();
   return null;
