@@ -123,6 +123,8 @@ import mapGoldIngots from "../assets/art/map-gold-ingots.webp";
 import mapGoldMine from "../assets/art/map-gold-mine.webp";
 import mapFountainSquare from "../assets/art/map-fountain-square.webp";
 import mapQuarry from "../assets/art/map-quarry.webp";
+import mapArmouryYard from "../assets/art/map-armoury-yard.webp";
+import mapApothecary from "../assets/art/map-apothecary.webp";
 import badgeTripwire from "../assets/art/badge-tripwire.webp";
 import badgeThesis from "../assets/art/badge-thesis.webp";
 import badgeVault from "../assets/art/badge-vault.webp";
@@ -312,6 +314,8 @@ export const ART_MANIFEST = {
   "map-gold-mine": { src: mapGoldMine, width: 320, height: 309, alt: "" },
   "map-fountain-square": { src: mapFountainSquare, width: 320, height: 249, alt: "" },
   "map-quarry": { src: mapQuarry, width: 320, height: 319, alt: "" },
+  "map-armoury-yard": { src: mapArmouryYard, width: 395, height: 320, alt: "" },
+  "map-apothecary": { src: mapApothecary, width: 306, height: 320, alt: "" },
   "badge-tripwire": { src: badgeTripwire, width: 96, height: 96, alt: "" },
   "badge-thesis": { src: badgeThesis, width: 96, height: 96, alt: "" },
   "badge-vault": { src: badgeVault, width: 96, height: 96, alt: "" },

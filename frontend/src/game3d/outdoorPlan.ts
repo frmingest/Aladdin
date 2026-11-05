@@ -46,6 +46,8 @@ export const FOOTPRINT: Record<Theme3dId, number> = {
   windmill: LAND_TOWER_REACH,
   watermill: LAND_TOWER_REACH,
   fountain: LAND_TOWER_REACH,
+  armoury: WIDE_TOWER,
+  apothecary: WIDE_TOWER,
   plain: WIDE_TOWER,
 };
 
@@ -114,7 +116,7 @@ export function zoneOf(theme: Theme3dId, fish = false): OutdoorZone {
     case "quarry":
       return "hill";
     default:
-      // fountain, bank, stall, factory, ingots and the plain tower: the road edge until their own building arrives.
+      // fountain, bank, stall, factory, ingots, armoury, apothecary and the plain tower: the road edge until their own place on the meadow is chosen.
       return "road";
   }
 }

@@ -17,7 +17,9 @@ import { join } from "node:path";
 const [hexRoot, dungeonDir, rpgDir, resDir, outDir, ...only] = process.argv.slice(2);
 if (!hexRoot || !dungeonDir || !rpgDir || !resDir || !outDir) throw new Error("usage: node pack-holdings.mjs <hex root> <dungeon dir> <rpg dir> <resource dir> <out dir> [theme ...]");
 mkdirSync(outDir, { recursive: true });
-const ROOT = { hex: hexRoot, dun: dungeonDir, rpg: rpgDir, res: resDir };
+// A7 (2026-11-05) adds two optional packs for the armoury and the apothecary: FW_DIR (Fantasy Weapons Bits gltf dir) and
+// REST_DIR (Restaurant Bits gltf dir), passed as environment variables so the old four-argument call still works.
+const ROOT = { hex: hexRoot, dun: dungeonDir, rpg: rpgDir, res: resDir, fw: process.env.FW_DIR, rest: process.env.REST_DIR };
 
 // [node id, source pack, source file name without extension]
 export const THEMES = {
@@ -229,6 +231,27 @@ export const THEMES = {
     ["torch_lit", "dun", "torch_lit"],
     ["coin", "dun", "coin"],
     ["gold_bars_stack_small", "res", "Gold_Bars_Stack_Small"],
+  ],
+  armoury: [
+    ["fence_wood", "hex", "fence_wood_straight"],
+    ["fence_wood_gate", "hex", "fence_wood_straight_gate"],
+    ["sword_A", "fw", "sword_A"],
+    ["sword_B", "fw", "sword_B"],
+    ["spear_A", "fw", "spear_A"],
+    ["halberd", "fw", "halberd"],
+    ["shield_A", "fw", "shield_A"],
+  ],
+  // Brown bottles read red-orange in the colour audit (B and C over the 8 percent line, A at 6), so no bottles at all; jars carry the shelf.
+  apothecary: [
+    ["shelf_small_candles", "dun", "shelf_small_candles"],
+    ["table_decorated", "dun", "table_medium_decorated_A"],
+    ["candle_lit", "dun", "candle_lit"],
+    ["barrel_small", "dun", "barrel_small"],
+    ["box_small", "dun", "box_small_decorated"],
+    ["jar_A", "rest", "jar_A_small"],
+    ["jar_B", "rest", "jar_B_medium"],
+    ["jar_C", "rest", "jar_C_large"],
+    ["jar_D", "rest", "jar_D_small"],
   ],
 };
 

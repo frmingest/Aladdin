@@ -38,6 +38,8 @@ export const DRESSING_BUILT: Record<Theme3dId, boolean> = {
   windmill: true,
   watermill: true,
   fountain: true,
+  armoury: true,
+  apothecary: true,
   plain: false,
 };
 

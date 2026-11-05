@@ -97,3 +97,9 @@ Licence texts: `LICENSE-KayKit-RPG-Tools-Bits.txt`, `LICENSE-KayKit-Resource-Bit
 
 Licence text: `LICENSE-KayKit-Forest-Nature.txt` (copied by `scripts/import-pack.mjs`). **Modified:** merged into one file with `scripts/pack-forest.mjs` (plain float vertices, no compression, no animation); geometry and the one shared texture unchanged. `scripts/glb-colour-audit.mjs`: 0 percent red on every piece; leaf green on trees, bushes and grass is scenery (allow-listed), the rocks are grey.
 
+
+## Armoury yard and apothecary (asset sprint A7, 2026-11-05)
+
+`holding-armoury.glb` (about 240 KB) and `holding-apothecary.glb` (about 214 KB). All CC0 1.0. Pieces come from KayKit Fantasy Weapons Bits (swords, spear, halberd, shield), KayKit Restaurant Bits (shelf with candles, decorated table, candle, small barrel and box, four jars), KayKit Medieval Hexagon (wooden fences and gate) and KayKit Dungeon Remastered. The barracks hut and the market building are reused from `town-buildings.glb`, not copied. Author: Kay Lousberg (KayKit), https://kaylousberg.com/game-assets, fetched 2026-11-05. Placed by `frontend/src/game3d/armouryDressing.ts` and `apothecaryDressing.ts`.
+
+Licence texts: `LICENSE-KayKit-Fantasy-Weapons-Bits.txt`, `LICENSE-KayKit-Restaurant-Bits.txt`. **Modified:** merged with `scripts/pack-holdings.mjs` (plain float vertices, no compression, no animation); geometry unchanged. `scripts/glb-colour-audit.mjs`: the brown Restaurant bottles read red-orange and were left out; the packed pieces pass the 8 percent threshold. The two Map pictures (`map-armoury-yard.webp`, `map-apothecary.webp`) are Faiz's Stitch designs, hand-cut to transparent webp.

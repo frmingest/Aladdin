@@ -7,7 +7,7 @@
  * code-built); no pile, stack or crowd may grow with a gain; no piece is red or green (the colour audit is
  * scripts/glb-colour-audit.mjs). A theme never picks its own light.
  */
-export const HOLDING_THEMES = ["mine","quarry","ingots","farm","stall","bank","factory","windmill","watermill","fountain"] as const;
+export const HOLDING_THEMES = ["mine","quarry","ingots","farm","stall","bank","factory","windmill","watermill","fountain","armoury","apothecary"] as const;
 export type HoldingTheme = (typeof HOLDING_THEMES)[number];
 
 /** Node names inside holding-<theme>.glb (each piece is a top-level node). */
@@ -22,6 +22,10 @@ export const HOLDING_OWN: Record<HoldingTheme, readonly string[]> = {
   windmill: ["windmill","grain_field","dirt_field","fence_wood","fence_wood_gate","sack","wheelbarrow","crate_A_big","barrel","rock_B","pallet","planks_small","cog","lantern"],
   watermill: ["watermill","water_tile","bridge_A","bridge_B","rock_A","rock_D","sack","barrel","bucket_water","fence_wood","planks_small","cog"],
   fountain: ["well","water_tile","rock_A","rock_E","bucket_water","flag_blue","flag_yellow","barrel","crate_A_small","barrier_corner","column","candle_lit","torch_lit","coin","gold_bars_stack_small"],
+  // A7: Fantasy Weapons Bits (swords, spear, halberd, shield) and the Hexagon fences. No brown bottles: they read red-orange in the colour audit.
+  armoury: ["fence_wood","fence_wood_gate","sword_A","sword_B","spear_A","halberd","shield_A"],
+  // A7: jars from Restaurant Bits, the rest from Dungeon Remastered.
+  apothecary: ["shelf_small_candles","table_decorated","candle_lit","barrel_small","box_small","jar_A","jar_B","jar_C","jar_D"],
 };
 
 /** Pieces a theme borrows from files that already exist, instead of packing them twice. */
@@ -36,6 +40,8 @@ export const HOLDING_REUSE: Record<HoldingTheme, readonly { file: string; nodes:
   windmill: [{ file: "town-buildings.glb", nodes: ["mill"] }],
   watermill: [{ file: "town-buildings.glb", nodes: ["watermill"] }],
   fountain: [{ file: "town-nature.glb", nodes: ["fountain_round", "fountain_round_detail"] }, { file: "market.glb", nodes: ["well"] }],
+  armoury: [{ file: "town-buildings.glb", nodes: ["barracks"] }],
+  apothecary: [{ file: "town-buildings.glb", nodes: ["market"] }],
 };
 
 export const HOLDING_URL = (theme: HoldingTheme): string => `/models/holding-${theme}.glb`;

@@ -69,7 +69,8 @@ describe("the centre slot (S26 PR 1)", () => {
 
   it("reads the theme from the same call the flat Map uses", () => {
     expect(themeOf({ sector: "Diversified Fund", holding_id: "x", structure: "keep" })).toBe("fountain");
-    expect(themeOf({ sector: "Health Care", holding_id: "x", structure: "keep" })).toBe("plain");
+    expect(themeOf({ sector: "Health Care", holding_id: "x", structure: "keep" })).toBe("apothecary");
+    expect(themeOf({ sector: "Information Technology", holding_id: "x", structure: "keep" })).toBe("plain");
     expect(themeOf({ sector: "Materials", holding_id: "x", structure: "bullion" })).toBe("ingots");
   });
 

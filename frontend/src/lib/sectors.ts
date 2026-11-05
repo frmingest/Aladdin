@@ -14,7 +14,7 @@ import { hashString } from "./worldMap";
 
 export type SceneId = "mines" | "forge" | "mill" | "farm" | "exchange" | "clinic" | "workshop" | "bank" | "tech";
 
-export type Theme3dId = "mine" | "quarry" | "ingots" | "farm" | "stall" | "bank" | "factory" | "windmill" | "watermill" | "fountain" | "plain";
+export type Theme3dId = "mine" | "quarry" | "ingots" | "farm" | "stall" | "bank" | "factory" | "windmill" | "watermill" | "fountain" | "armoury" | "apothecary" | "plain";
 
 export interface SectorRow {
   /** Matched loosely, case-insensitive: the sector comes from the user's own data. */
@@ -25,7 +25,7 @@ export interface SectorRow {
   diveScene: SceneId;
 }
 
-/** First match wins. Rows with no Map picture keep their own dive scene (health, tech, defence...). */
+/** First match wins. Rows with no Map picture keep their own dive scene (tech, real estate...). */
 export const SECTOR_ROWS: readonly SectorRow[] = [
   { match: /diversif|fund|etf/i, mapArt: ["map-fountain-square"], diveScene: "exchange" },
   { match: /energy|oil|petrol|gas\b/i, mapArt: ["map-windmill", "map-watermill"], diveScene: "mill" },
@@ -33,14 +33,14 @@ export const SECTOR_ROWS: readonly SectorRow[] = [
   { match: /renewable|solar|wind|hydro|water/i, mapArt: [], diveScene: "mill" },
   { match: /financ|bank|insur/i, mapArt: ["map-bank-vault"], diveScene: "bank" },
   { match: /industr|manufactur|transport/i, mapArt: ["map-factory"], diveScene: "forge" },
-  { match: /defen[cs]e|aerospace|weapon|arms\b|military|machin/i, mapArt: [], diveScene: "forge" },
+  { match: /defen[cs]e|aerospace|weapon|arms\b|military|machin/i, mapArt: ["map-armoury-yard"], diveScene: "forge" },
   { match: /staple|food|agri|beverage/i, mapArt: ["map-farmhouse", "map-market-stall"], diveScene: "farm" },
   { match: /farm|grain/i, mapArt: [], diveScene: "farm" },
   { match: /discretionary|retail|consumer/i, mapArt: ["map-market-stall"], diveScene: "exchange" },
   { match: /cyclical|leisure|apparel|luxury|automobile|\bautos?\b|homebuild|furnitur|hotel|restaurant/i, mapArt: [], diveScene: "workshop" },
   { match: /material|mining|metal|gold|commodit/i, mapArt: ["map-gold-mine", "map-quarry", "map-gold-ingots"], diveScene: "mines" },
   { match: /silver|copper|platinum|palladium|bullion|miners?\b|quarr/i, mapArt: [], diveScene: "mines" },
-  { match: /health|pharma|medic|biotech|hospital|drug|life science/i, mapArt: [], diveScene: "clinic" },
+  { match: /health|pharma|medic|biotech|hospital|drug|life science/i, mapArt: ["map-apothecary"], diveScene: "clinic" },
   { match: /information|technolog|software|semiconduct|hardware|internet|communicat|telecom|\bit\b/i, mapArt: [], diveScene: "tech" },
   { match: /exchange|broker/i, mapArt: [], diveScene: "exchange" },
 ];
@@ -67,6 +67,8 @@ const THEME_OF_ART: Partial<Record<ObjectArtId, Theme3dId>> = {
   "map-windmill": "windmill",
   "map-watermill": "watermill",
   "map-fountain-square": "fountain",
+  "map-armoury-yard": "armoury",
+  "map-apothecary": "apothecary",
 };
 
 export function theme3dOfArt(art: ObjectArtId | null): Theme3dId {
