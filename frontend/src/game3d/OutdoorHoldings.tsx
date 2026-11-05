@@ -21,7 +21,7 @@ export function slotOf(t: TowerView): LandCentreSlot | null {
   return { theme: t.plot.theme, condition: landCondition(t.facts.wall), stream: landStream(t.facts.moat), tower: t, fish: t.plot.fish };
 }
 
-/** A tower with no building art yet (defence, tech, health, banks...): the old tower on a small plinth, door on the lane side. */
+/** A tower with no building art yet (tech, real estate, anything the sector table does not know): the old tower on a small plinth, door on the lane side. */
 function PlainOutside({ t }: { t: TowerView }) {
   return (
     <>

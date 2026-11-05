@@ -23,7 +23,7 @@ afterEach(() => {
 
 const checks = SURVEY_CHECKS.map((c) => ({ ...c, state: "fog" as const, reason: "test" }));
 const tower = (holdingId: string, name: string): TowerFog => ({ holdingId, name, ticker: name.slice(0, 3), weightPct: 10, checks, clear: 0, judged: 0 });
-const SECTOR_IDS = ["map-gold-mine", "map-gold-ingots", "map-quarry", "map-farmhouse", "map-market-stall", "map-bank-vault", "map-factory", "map-windmill", "map-watermill", "map-fountain-square"];
+const SECTOR_IDS = ["map-gold-mine", "map-gold-ingots", "map-quarry", "map-farmhouse", "map-market-stall", "map-bank-vault", "map-factory", "map-windmill", "map-watermill", "map-fountain-square", "map-armoury-yard", "map-apothecary"];
 
 function render(sectors: Record<string, string | null>, game: boolean, kinds?: Record<string, SettlementKind>) {
   stub(game);

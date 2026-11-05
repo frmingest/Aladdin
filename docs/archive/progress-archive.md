@@ -3,6 +3,10 @@
 Completed milestones and retired status, moved out of `docs/PROGRESS.md` under the rolling-log rules
 in `CLAUDE.md` ("Progress file rules"). Newest snapshot first. Older: [PROGRESS-full-2026-09-30.md](PROGRESS-full-2026-09-30.md).
 
+## 2026-11-05 — 3D asset plan A6 (#297, merged)
+
+The Market Quarter: its own place through an arch east of the market corner, a stall per watchlist company (up to twelve) nearest your price nearest the arch, goods from `market-quarter.glb`. Look-over in a real browser still pending.
+
 ## 2026-11-04 — 3D asset plan A1 to A5 (#292 to #296, merged)
 
 The gold bullion vault (#292), bank vault (#293), workshop and market stall (#294), meadow plants from Forest Nature (#295) and the Siege Field as its own place (#296). Look-over in a real browser still on Faiz's list, now one line in `PROGRESS.md` ([plan](../game/game3d-asset-sprint-plan-2026-11-04.md), [A5](../game/game3d-a5-siege-field-2026-11-04.md)).

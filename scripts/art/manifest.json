@@ -1119,6 +1119,20 @@
    "quality": 78
   },
   {
+   "id": "map-armoury-yard",
+   "source": "stitch_armoury_yard_2026_11_05",
+   "max_side": 320,
+   "quality": 88,
+   "_note": "Stitch picture from 2026-11-05 (fenced yard, barracks, weapon rack, archery target); cut out by hand, not by pack.py, so the master is not in Design_master"
+  },
+  {
+   "id": "map-apothecary",
+   "source": "stitch_apothecary_2026_11_05",
+   "max_side": 320,
+   "quality": 88,
+   "_note": "Stitch picture from 2026-11-05 (herb shop); cut out by hand, not by pack.py, so the master is not in Design_master"
+  },
+  {
    "id": "badge-tripwire",
    "source": "a_single_standalone_fantasy_game_crest_prop_asset_council_agenda_badge_1_of_8",
    "key": "white",

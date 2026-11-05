@@ -1,3 +1,5 @@
+import ApothecaryDressing from "./ApothecaryDressing";
+import ArmouryDressing from "./ArmouryDressing";
 import BankDressing from "./BankDressing";
 import FactoryDressing from "./FactoryDressing";
 import FarmDressing from "./FarmDressing";
@@ -40,6 +42,14 @@ function FactorySlot({ slot }: { slot: LandCentreSlot }) {
   return <FactoryDressing condition={slot.condition} />;
 }
 
+function ArmourySlot({ slot }: { slot: LandCentreSlot }) {
+  return <ArmouryDressing condition={slot.condition} />;
+}
+
+function ApothecarySlot({ slot }: { slot: LandCentreSlot }) {
+  return <ApothecaryDressing condition={slot.condition} />;
+}
+
 function StallSlot({ slot }: { slot: LandCentreSlot }) {
   return <StallDressing condition={slot.condition} />;
 }
@@ -61,6 +71,8 @@ const DRESSINGS: Partial<Record<Theme3dId, ComponentType<{ slot: LandCentreSlot 
   ingots: IngotsSlot,
   factory: FactorySlot,
   stall: StallSlot,
+  armoury: ArmourySlot,
+  apothecary: ApothecarySlot,
   mine: MineSlot,
   quarry: MineSlot,
 };

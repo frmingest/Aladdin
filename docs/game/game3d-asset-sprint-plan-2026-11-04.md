@@ -1,6 +1,6 @@
 # 3D asset sprint plan: put the art we already own on the map (2026-11-04)
 
-**Status: plan, decisions made, A1 merged (#292), A2 merged (#293), A3 merged (#294), A4 merged (#295), A5 merged (#296), A6 written (PR open, see PROGRESS). Not seen in a browser, not deployed.** Written against `main` `2ad6fb6` (#291). Faiz's ask: assess what 3D assets the game still lacks, check the nine packs in `frontend/src/assets/art/3D`, and start implementing on priority. "You decide": the decisions below are Claude's, recommended and applied; say so if one is wrong.
+**Status: plan, decisions made, A1 merged (#292), A2 merged (#293), A3 merged (#294), A4 merged (#295), A5 merged (#296), A6 merged (#297), A7 written (PR open, see PROGRESS). Not seen in a browser, not deployed.** Written against `main` `2ad6fb6` (#291). Faiz's ask: assess what 3D assets the game still lacks, check the nine packs in `frontend/src/assets/art/3D`, and start implementing on priority. "You decide": the decisions below are Claude's, recommended and applied; say so if one is wrong.
 
 ## What a sprint is for (plain words)
 
@@ -17,7 +17,7 @@ A sprint is one small, finished step you can look at and judge. This plan is the
 | Forest Nature 1.0 | **Not imported** | **Import**, meadow plants (A4) |
 | Restaurant Bits 1.0 | Not imported | Mostly kitchen. Borrow at most a few crates and jars, only if a dressing needs them |
 | Furniture Bits 1.0 | Not imported | Library and interiors, later, no priority |
-| Fantasy Weapons Bits 1.0 | Not imported | With the defence dressing (A7), later |
+| Fantasy Weapons Bits 1.0 | Used in A7 | Armoury yard rack, shield |
 
 Correction to the first assessment of today: it said bank, factory and market stall needed new composition from these packs. They are already composed and packed; only the dressing code is missing.
 
@@ -32,8 +32,8 @@ Priority is **how many of Faiz's holdings stand as a plain tower outdoors today*
 | **A3 factory and market stall** (merged #294, [doc](game3d-a3-factory-stall-2026-11-04.md)) | Industrials as a workshop (blacksmith, cogs, anvil); retail as a stall (cloth, crates, flags) | M | A1 pattern |
 | **A4 meadow plants** (merged #295, [doc](game3d-a4-meadow-plants-2026-11-04.md)) | Forest Nature trees, bushes, grass tufts and rocks on the meadow, instanced, off every plot, lane, river and field | M | import Forest Nature (`scripts/import-pack.mjs`), new `forest.glb` at most 600 KB |
 | **A5 Siege Field** (merged #296, [doc](game3d-a5-siege-field-2026-11-04.md)) | `siege.glb` engines and Skeleton attackers, wall line breach from the Dungeon pieces | L | S28 plan, D14 approved |
-| **A6 Market Quarter** (PR open, [doc](game3d-a6-market-quarter-2026-11-04.md)) | `market-quarter.glb` lane | M | S30 plan |
-| **A7 defence and health** | Armoury yard (barracks, archery target, rack, Fantasy Weapons) and apothecary | M | Map pictures first (below) |
+| **A6 Market Quarter** (merged #297, [doc](game3d-a6-market-quarter-2026-11-04.md)) | `market-quarter.glb` lane | M | S30 plan |
+| **A7 defence and health** (PR open, [doc](game3d-a7-armoury-apothecary-2026-11-05.md)) | Armoury yard (barracks, archery target, rack, Fantasy Weapons) and apothecary | M | Map pictures first (below) |
 
 Cut first if time is short: A7, then A6, then the grass tufts in A4. Never the ladder, the ghost and neutral states, or the truth tests.
 

@@ -24,12 +24,15 @@ describe("one sector table", () => {
     expect(holdingTheme3d("Consumer Discretionary", "x")).toBe("stall");
     expect(holdingTheme3d("Diversified Fund", "x")).toBe("fountain");
     expect(holdingTheme3d("Industrials", "x")).toBe("factory");
+    expect(holdingTheme3d("Aerospace & Defense", "x")).toBe("armoury");
+    expect(holdingTheme3d("Health Care", "x")).toBe("apothecary");
+    expect(holdingTheme3d("Pharmaceuticals & Biotech", "x")).toBe("apothecary");
     expect(holdingTheme3d("Materials", "xetra-gold", "bullion")).toBe("ingots");
     const mat = new Set<Theme3dId>(IDS.map((id) => holdingTheme3d("Materials", id, "keep")));
     expect([...mat].every((t) => t === "mine" || t === "quarry")).toBe(true);
     const en = new Set<Theme3dId>(IDS.map((id) => holdingTheme3d("Energy", id)));
     expect([...en].every((t) => t === "windmill" || t === "watermill")).toBe(true);
-    for (const none of ["Health Care", "Information Technology", "Real Estate", "No sector set", "", null, undefined]) expect(holdingTheme3d(none, "x")).toBe("plain");
+    for (const none of ["Information Technology", "Real Estate", "No sector set", "", null, undefined]) expect(holdingTheme3d(none, "x")).toBe("plain");
   });
 
   it("is stable: the same holding always gets the same theme", () => {
@@ -40,7 +43,7 @@ describe("one sector table", () => {
     const sceneOfArt: Record<string, string> = {
       "map-fountain-square": "exchange", "map-windmill": "mill", "map-watermill": "mill", "map-bank-vault": "bank",
       "map-factory": "forge", "map-farmhouse": "farm", "map-market-stall": "exchange|farm", "map-gold-mine": "mines",
-      "map-quarry": "mines", "map-gold-ingots": "mines",
+      "map-quarry": "mines", "map-gold-ingots": "mines", "map-armoury-yard": "forge", "map-apothecary": "clinic",
     };
     for (const s of SECTORS) {
       for (const art of sectorLandmarkIds(s)) expect(sceneOfArt[art]!.split("|"), `${s} ${art}`).toContain(sceneFor({ sector: s }));
@@ -53,7 +56,7 @@ describe("one sector table", () => {
     expect(sceneOfRow("Automobiles")).toBe("workshop");
   });
 
-  it("keeps the scenes the Map has no picture for: health, tech, defence", () => {
+  it("keeps the dive scenes of health, tech and defence now that the Map has pictures for health and defence (A7)", () => {
     expect(sceneFor({ sector: "Health Care" })).toBe("clinic");
     expect(sceneFor({ sector: "Information Technology" })).toBe("tech");
     expect(sceneFor({ sector: "Aerospace & Defense" })).toBe("forge");
