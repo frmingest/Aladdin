@@ -19,7 +19,6 @@ import {
   FIELD_EXIT,
   FIELD_EXIT_LEAVE_RANGE,
   FIELD_EXIT_RANGE,
-  FIELD_FALL,
   FIELD_HALF,
   FIELD_MAX_SECTIONS,
   FIELD_ROCKS,
@@ -32,6 +31,10 @@ import {
 } from "./siegeField";
 import type { Attacker, Section } from "./siegeField";
 import { FIELD_WORDS } from "./siegeFieldWordsV1";
+import { BANNER_FOR, SIEGE_STONE, STORM_STONE, WINCH, fieldSpotAt, stonePlate, winchPosition, yardstickName } from "./siegeFieldTools";
+import type { FieldSpotId, FieldTools } from "./siegeFieldTools";
+import { FIELD_TOOLS_WORDS } from "./siegeFieldToolsWordsV1";
+import { fallPercent } from "./stormDrill";
 import { YARD_FAILED, YARD_READING, yardFogTitle, yardMoreLine } from "./siegeYardWordsV2";
 import { useSiegeYard } from "./useSiegeYard";
 import type { YardView } from "./siegeYard";
@@ -210,7 +213,7 @@ function Attackers() {
   );
 }
 
-function Scatter({ source }: { source: Object3D }) {
+function Scatter({ source, tools }: { source: Object3D; tools: FieldTools }) {
   return (
     <>
       {FIELD_ROCKS.map((r) => (
@@ -218,22 +221,93 @@ function Scatter({ source }: { source: Object3D }) {
           <Model source={source} name={r.model} scale={r.scale} />
         </group>
       ))}
-      {FIELD_BANNERS.map((b) => (
-        <group key={b.id} position={[b.x, 0, b.z]}>
-          <Model source={source} name="flag_banner_long" scale={b.scale} />
-        </group>
-      ))}
+      {/* The two yardstick banners: the one in use flies full height, the other hangs low. Shape, not colour. */}
+      {FIELD_BANNERS.map((b) => {
+        const key = b.id === BANNER_FOR.local ? "local" : "global";
+        const active = tools.benchmark === key;
+        return (
+          <group key={b.id} position={[b.x, 0, b.z]}>
+            <Model source={source} name="flag_banner_long" scale={active ? b.scale : b.scale * 0.65} />
+            <Html position={[0, active ? 6 : 4.3, 0]} center distanceFactor={16} zIndexRange={[10, 0]} style={{ pointerEvents: "none" }}>
+              <div className="g3d-nameplate" aria-hidden="true">
+                {yardstickName(key)}
+                {active ? ` · ${FIELD_TOOLS_WORDS.bannerNow}` : ""}
+              </div>
+            </Html>
+          </group>
+        );
+      })}
     </>
   );
 }
 
-function SiegePieces({ view }: { view: YardView | null }) {
+/** The fall winch: a frame, a rope and a weight that sits higher the bigger the fall. It only mirrors the fall. */
+function Winch({ tools }: { tools: FieldTools }) {
+  const t = winchPosition(tools.fall, tools.min, tools.max);
+  const weightY = 0.9 + t * 2.4;
+  return (
+    <group position={[WINCH.x, 0, WINCH.z]}>
+      <RigidBody type="fixed" colliders={false}>
+        <CylinderCollider args={[1.2, 0.7]} position={[0, 1.2, 0]} />
+      </RigidBody>
+      <Part color={PAL.timberDark} position={[-0.6, 1.9, 0]} grow={1.1}>
+        <boxGeometry args={[0.22, 3.8, 0.22]} />
+      </Part>
+      <Part color={PAL.timberDark} position={[0.6, 1.9, 0]} grow={1.1}>
+        <boxGeometry args={[0.22, 3.8, 0.22]} />
+      </Part>
+      <Part color={PAL.timberLight} position={[0, 3.8, 0]} grow={1.1}>
+        <boxGeometry args={[1.5, 0.22, 0.22]} />
+      </Part>
+      <Part color={PAL.timberLight} position={[0, 2.35, 0]} grow={1.05}>
+        <boxGeometry args={[0.05, 2.9, 0.05]} />
+      </Part>
+      <Part color={PAL.teal} position={[0, weightY, 0]} grow={1.15}>
+        <boxGeometry args={[0.55, 0.5, 0.55]} />
+      </Part>
+      <Html position={[0, 4.7, 0]} center distanceFactor={16} zIndexRange={[10, 0]} style={{ pointerEvents: "none" }}>
+        <div className="g3d-nameplate" aria-hidden="true">
+          {FIELD_TOOLS_WORDS.winchPlate(fallPercent(tools.fall))}
+        </div>
+      </Html>
+    </group>
+  );
+}
+
+/** A marker stone: "Storm line" or "Siege line", with the fall that reaches it. A pennant tops the one the fall is at. */
+function MarkerStone({ source, id, tools }: { source: Object3D; id: "storm" | "siege"; tools: FieldTools }) {
+  const at = id === "storm" ? STORM_STONE : SIEGE_STONE;
+  const fall = id === "storm" ? tools.toStorm : tools.toSiege;
+  const chosen = fall !== null && fall === tools.fall;
+  return (
+    <group position={[at.x, 0, at.z]}>
+      <RigidBody type="fixed" colliders={false}>
+        <CylinderCollider args={[0.8, 0.9]} position={[0, 0.8, 0]} />
+      </RigidBody>
+      <Model source={source} name="rocks_large" scale={1.9} />
+      {chosen && (
+        <Part color={PAL.teal} position={[0, 2.5, 0]} grow={1.15}>
+          <boxGeometry args={[0.7, 0.3, 0.05]} />
+        </Part>
+      )}
+      <Html position={[0, 3.3, 0]} center distanceFactor={16} zIndexRange={[10, 0]} style={{ pointerEvents: "none" }}>
+        <div className="g3d-nameplate" aria-hidden="true">
+          {stonePlate(id, tools)}
+        </div>
+      </Html>
+    </group>
+  );
+}
+
+function SiegePieces({ view, tools }: { view: YardView | null; tools: FieldTools }) {
   const gltf = useGLTF(SIEGE_URL);
   return (
     <>
       {view && <Wall view={view} source={gltf.scene} />}
       <Engines source={gltf.scene} />
-      <Scatter source={gltf.scene} />
+      <Scatter source={gltf.scene} tools={tools} />
+      <MarkerStone source={gltf.scene} id="storm" tools={tools} />
+      <MarkerStone source={gltf.scene} id="siege" tools={tools} />
     </>
   );
 }
@@ -305,9 +379,27 @@ function ExitWatch({ pos, onNearExit }: { pos: MutableRefObject<{ x: number; z: 
   return null;
 }
 
+/** Tells the page which tool is in reach (the winch, a stone or a banner). Only on change. */
+function SpotWatch({ pos, onNearSpot }: { pos: MutableRefObject<{ x: number; z: number }>; onNearSpot: (id: FieldSpotId | null) => void }) {
+  const last = useRef<FieldSpotId | null>(null);
+  useFrame(() => {
+    const now = fieldSpotAt(pos.current, last.current);
+    if (now !== last.current) {
+      last.current = now;
+      onNearSpot(now);
+    }
+  });
+  return null;
+}
+
 interface Props {
   pos: MutableRefObject<{ x: number; z: number }>;
   onNearExit: (near: boolean) => void;
+  onNearSpot: (id: FieldSpotId | null) => void;
+  /** The fall and yardstick being drawn (the page owns them, so E can change them). */
+  tools: FieldTools;
+  /** The preset falls and range the backend answered with, so the stones know their numbers. */
+  onPresets: (p: { toStorm: number | null; toSiege: number | null; min: number; max: number }) => void;
 }
 
 /**
@@ -316,9 +408,17 @@ interface Props {
  * ground, the invisible walls, the road back and the plates are code-built, so a failed model load leaves a bare but
  * working field. The camp is the same whatever the fall says; only the wall line carries a number.
  */
-export default function SiegeField({ pos, onNearExit }: Props) {
-  const yard = useSiegeYard(FIELD_FALL, FIELD_MAX_SECTIONS);
+export default function SiegeField({ pos, onNearExit, onNearSpot, tools, onPresets }: Props) {
+  const yard = useSiegeYard(tools.fall, FIELD_MAX_SECTIONS, tools.benchmark);
   const view = yard.status === "ready" ? yard.view : null;
+  // The stones' numbers come from the same answer the wall line is drawn from.
+  const toStorm = view?.toStorm ?? null;
+  const toSiege = view?.toSiege ?? null;
+  const dropMin = view?.dropMin;
+  const dropMax = view?.dropMax;
+  useEffect(() => {
+    if (dropMin !== undefined && dropMax !== undefined) onPresets({ toStorm, toSiege, min: dropMin, max: dropMax });
+  }, [toStorm, toSiege, dropMin, dropMax, onPresets]);
   return (
     <group>
       <RigidBody type="fixed" colliders={false}>
@@ -336,9 +436,11 @@ export default function SiegeField({ pos, onNearExit }: Props) {
       </mesh>
       <ExitPost />
       <ExitWatch pos={pos} onNearExit={onNearExit} />
+      <SpotWatch pos={pos} onNearSpot={onNearSpot} />
+      <Winch tools={tools} />
       <PiecesBoundary what="pieces">
         <Suspense fallback={null}>
-          <SiegePieces view={view} />
+          <SiegePieces view={view} tools={tools} />
         </Suspense>
       </PiecesBoundary>
       <Attackers />
