@@ -1,5 +1,7 @@
 # Sprint 15 plan + economic/mathematical review + doc cleanup (2026-09-26)
 
+> **CLOSED 2026-11-06.** Items 1, 2, 4 and 5 were built. Items 3 (rate sensitivity per holding) and 6 (PDF memo) were never built, and no code for either exists on `main`; they are active in [remaining-work](../sprints/remaining-work-2026-11-06.md) section 2.
+
 > **Status update 2026-10-04:** point-in-time audit and plan. Its Sprint 15 proposals were built (see PROGRESS.md). The "flagged" `cwo-design-redesign.md` in §4 was confirmed obsolete (pre-rebuild, described deleted code) and removed on 2026-10-04.
 
 Full project pass at Faiz's request: re-read the whole build (progress.md, the rebuild sprint plan,

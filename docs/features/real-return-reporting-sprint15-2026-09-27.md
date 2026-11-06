@@ -4,7 +4,7 @@ Built 2026-09-27, committed and pushed, not yet confirmed live.
 
 ## 1. Why
 
-The 2026-09-26 economic/mathematical review (`docs/sprints/sprint15-plan-and-quarterly-review-2026-09-26.md` §1)
+The 2026-09-26 economic/mathematical review (`docs/archive/sprint15-plan-and-quarterly-review-2026-09-26.md` §1)
 flagged that Sprint 13's Performance page reports nominal NOK returns only — a reviewer checking
 "investment-grade" claims would ask about real (inflation-adjusted) returns first, and the macro
 catalogue (Sprint 7) already stores the CPI series needed to answer that cheaply. This was item #2
@@ -82,4 +82,4 @@ with actual Norges Bank/SSB-sourced CPI observations yet.
   ever matters more than the NOK-purchasing-power one built here.
 - The rest of the quarterly-review Sprint 15 plan (LLM usage ledger, rate sensitivity per holding,
   Norway yield-curve/credit-spread sourcing, nightly tripwire check, PDF export) is still open — see
-  `docs/sprints/sprint15-plan-and-quarterly-review-2026-09-26.md` §2.1.
+  `docs/archive/sprint15-plan-and-quarterly-review-2026-09-26.md` §2.1.

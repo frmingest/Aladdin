@@ -1,5 +1,7 @@
 # Game design sprint plan: Contest 3 (2026-10-15)
 
+> **PARKED 2026-11-06 (Faiz).** Flat Game mode ideas are set aside while work is on 3D. E1 to E3 were built and removed (see the 2026-10-16 note below); E4, E5 and the bucket B1 to B13 were never started, so the "proposed, not started" line below is accurate only for those. Moved from `docs/sprints/` to the archive. Pull an item back by adding it to [remaining-work](../sprints/remaining-work-2026-11-06.md).
+
 > **2026-10-16:** E1 Blindfold Years, E2 Winter Rehearsal and E3 The Hearth were built, then removed at Faiz's request. Their sections below are kept as a record only; do not build from them without a new ruling.
 
 Status: **proposed, not started. Nothing in this plan is built, committed or deployed.** It comes from a four-expert design contest run on 2026-10-15 (progression, narrative, core mechanics, UX and game feel), judged by Claude. The experts worked from the Claude project docs only; none of them verified the repo. Every "already shipped" and "not shipped" claim below comes from those docs. **First step of every sprint: `git status`, `git log --oneline -15`, and `grep`/`find` for the files a sprint claims to build on** (this plan was written against `main` at `872029b`, #155, on 2026-10-15; `E:\Aladdin` can be stale, so `git pull` first).
@@ -630,5 +632,5 @@ Targets are inferred from the docs, not re-scored with screenshots.
 
 ## Documentation changes with this plan (when it is accepted)
 
-- New: this plan in the Claude project; repo copy at `docs/sprints/game-design-sprint-plan-2026-10-15.md` with one line in `docs/README.md` (done, PR opened 2026-10-15; not merged).
+- New: this plan in the Claude project; repo copy at `docs/archive/game-design-sprint-plan-2026-10-15.md` with one line in `docs/README.md` (done, PR opened 2026-10-15; not merged).
 - `progress.md` and `docs/PROGRESS.md`: Active Tasks gain "Contest 3 sprint plan: Faiz to rule on D1 to D8 and start Stitch batch for E1"; no more than the file's 7-item limit.

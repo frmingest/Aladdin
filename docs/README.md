@@ -18,7 +18,7 @@ Find a doc by topic folder below, or `grep -ril <term> docs/`. Folder = topic, n
 - **[llm-local/](llm-local/)** — Local LLM (Ollama), the worker and queue, evidence packets, LLM usage ledger.
 - **[ops/](ops/)** — Running the app: hosting, auth gate, page-load, background jobs, audits, live checks.
 - **[features/](features/)** — Feature and UI notes: dashboard, watchlist, thesis tracking, performance, reader, polish and noise audits.
-- **[sprints/](sprints/)** — Cross-cutting sprint plans and the hardening sprint.
+- **[sprints/](sprints/)** — The open-work list (remaining-work).
 - **[archive/](archive/)** — Finished progress history. Move completed milestones here from PROGRESS.md.
 
 ### reference/
@@ -277,18 +277,19 @@ Feature and UI notes: dashboard, watchlist, thesis tracking, performance, reader
 
 ### sprints/
 
-Cross-cutting sprint plans and the hardening sprint.
+The open-work list.
 
-- [game-design-sprint-plan-2026-10-15.md](sprints/game-design-sprint-plan-2026-10-15.md) — Contest 3 game design sprint plan: 5 main sprints (E1-E5), 13-item bucket, Stitch asks for each (2026-10-15, proposed, not started)
-- [hardening-sprint-2026-10-12.md](sprints/hardening-sprint-2026-10-12.md) — Hardening sprint (2026-10-12)
-- [sprint15-plan-and-quarterly-review-2026-09-26.md](sprints/sprint15-plan-and-quarterly-review-2026-09-26.md) — Sprint 15 plan + economic/mathematical review + doc cleanup (2026-09-26)
+- [remaining-work-2026-11-06.md](sprints/remaining-work-2026-11-06.md) — Everything still open: 3D (incl. Hall of Records idea), analysis depth, parked flat game, hardening leftovers
 
 ### archive/
 
-Finished progress history. Move completed milestones here from PROGRESS.md.
+Finished progress history and closed or parked plans. Move completed milestones here from PROGRESS.md.
 
 - [PROGRESS-full-2026-09-30.md](archive/PROGRESS-full-2026-09-30.md) — Aladdin — Progress
 - [progress-archive.md](archive/progress-archive.md) — Aladdin — Progress archive
+- [game-design-sprint-plan-2026-10-15.md](archive/game-design-sprint-plan-2026-10-15.md) — Flat Game mode contest plan E1-E5 and bucket B1-B13. PARKED 2026-11-06
+- [hardening-sprint-2026-10-12.md](archive/hardening-sprint-2026-10-12.md) — Hardening sprint. Closed (#121, #125)
+- [sprint15-plan-and-quarterly-review-2026-09-26.md](archive/sprint15-plan-and-quarterly-review-2026-09-26.md) — Sprint 15 plan and economic review. Closed; items 3 and 6 carried to remaining-work
 
 ## Rules for adding docs
 

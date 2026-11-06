@@ -1,5 +1,7 @@
 # Hardening sprint (2026-10-12)
 
+> **CLOSED 2026-11-06.** The baseline (#121) and the remainder (#125) are both merged. What was left (mypy, Fortress performance, Dashboard macro chart, ECON-007, visual-regression baselines, live-site e2e) now lives in [remaining-work](../sprints/remaining-work-2026-11-06.md) section 4.
+
 Status (2026-10-13): the baseline merged to `main` with #121. The remainder (error states, LLM-failure messages, upload edge cases, Lighthouse and phone-width pass) is on `fix/hardening-remainder`, written, not merged, not deployed; see section 4.
 
 Branch `hardening-sprint`, cut from `feature/design-sprint-11-circle` (which sits on Sprint 9). Tag `pre-hardening` marks the state before any change. Merge order: Sprint 9, Sprint 11, then this branch. No new graphics until it is merged.
