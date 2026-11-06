@@ -3,6 +3,10 @@
 Completed milestones and retired status, moved out of `docs/PROGRESS.md` under the rolling-log rules
 in `CLAUDE.md` ("Progress file rules"). Newest snapshot first. Older: [PROGRESS-full-2026-09-30.md](PROGRESS-full-2026-09-30.md).
 
+## 2026-11-06 — 3D asset plan A7, A8 and S29 (#298 to #300, merged)
+
+The armoury yard and apothecary (#298, [doc](../game/game3d-a7-armoury-apothecary-2026-11-05.md)), the Siege Field tools: fall winch, marker stones, yardstick banners (#299, [doc](../game/game3d-a8-siege-field-tools-2026-11-05.md)), and the old battlefield with scorch and chalk bars plus the war table (#300, [doc](../game/game3d-s29-battlefield-2026-11-06.md)). A1 to A8 were looked over by Faiz on 2026-11-05 (OK); S29 has not been seen in a browser.
+
 ## 2026-11-05 — 3D asset plan A6 (#297, merged)
 
 The Market Quarter: its own place through an arch east of the market corner, a stall per watchlist company (up to twelve) nearest your price nearest the arch, goods from `market-quarter.glb`. Look-over in a real browser still pending.
@@ -145,7 +149,7 @@ Faiz marked these done on 2026-10-13; the repo (`git log` on `origin/main`, 2026
 - **Reviewed on real data (Faiz):** Siege Simulator art, Sprint 1 to 6 art, the room art (Council, Records, Chronicle, Map table), the merged game PRs, Knife-edge and Long Memory after deploy.
 - **Housekeeping (Faiz):** `npm ci` on Windows; the game-pages smoke test (a manual phone-width check had found no problems).
 - **Optional, closed without work:** more Stitch pictures (smiling shopkeeper, curtain-wall variants, five room crests, a second advisor chair).
-- **Hardening sprint:** marked done; only the baseline had merged, so the remainder was done on 2026-10-13 (see [the sprint doc](../sprints/hardening-sprint-2026-10-12.md)).
+- **Hardening sprint:** marked done; only the baseline had merged, so the remainder was done on 2026-10-13 (see [the sprint doc](../archive/hardening-sprint-2026-10-12.md)).
 
 ## Closed 2026-10-12 — Design Master Sprints 8, 10, 12 and 13 (merged, deploy not verified)
 
