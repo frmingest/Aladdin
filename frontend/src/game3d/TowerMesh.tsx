@@ -10,6 +10,7 @@ import {
 import type { Flag, TowerView } from "./stateToWorld";
 import { INK, PAL, Part } from "./Inked";
 import { doorYaw } from "./towerDoor";
+import DoorLeaf from "./DoorLeaf";
 import {
   SIGN_ARM_FRONT,
   SIGN_ARM_LENGTH,
@@ -106,9 +107,16 @@ function LibraryDoor({ t }: { t: TowerView }) {
       position={[Math.sin(yaw) * out, PAD_TOP, Math.cos(yaw) * out]}
       rotation={[0, yaw, 0]}
     >
-      <Part color={PAL.timber} position={[0, 0.85, 0]} grow={1.08}>
-        <boxGeometry args={[1, 1.7, 0.24]} />
-      </Part>
+      {/* The dark opening behind the leaf; hidden inside the slab while the door is shut. */}
+      <mesh position={[0, 0.85, 0.01]}>
+        <planeGeometry args={[1, 1.7]} />
+        <meshBasicMaterial color="#2a1f18" />
+      </mesh>
+      <DoorLeaf holdingId={t.holdingId} hingeX={-0.5} extend={1} width={1} swing="out">
+        <Part color={PAL.timber} position={[0, 0.85, 0]} grow={1.08}>
+          <boxGeometry args={[1, 1.7, 0.24]} />
+        </Part>
+      </DoorLeaf>
       <Part color={PAL.timberDark} position={[0, 1.78, 0]} grow={1.1}>
         <boxGeometry args={[1.3, 0.2, 0.3]} />
       </Part>
@@ -334,6 +342,14 @@ export function OutdoorDoor({ t }: { t: TowerView }) {
       <Part color={PAL.timberDark} position={[0, 2.3, 0]} grow={1.1}>
         <boxGeometry args={[2.3, 0.22, 0.34]} />
       </Part>
+      {/* A two-leaf gate between the posts; it swings in towards the building. */}
+      {([-1, 1] as const).map((side) => (
+        <DoorLeaf key={side} holdingId={t.holdingId} hingeX={side * 0.75} extend={(-side) as 1 | -1} width={0.75} swing="in">
+          <Part color={PAL.timber} position={[0, 1.05, 0]} grow={1.08}>
+            <boxGeometry args={[0.72, 2.1, 0.1]} />
+          </Part>
+        </DoorLeaf>
+      ))}
       <mesh position={[0, 1.7, 0.2]}>
         <sphereGeometry args={[0.14, 8, 6]} />
         <meshBasicMaterial color="#f2d27a" />

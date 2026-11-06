@@ -4,14 +4,14 @@
 
 ## Current Objective
 
-**Plans consolidated (#301, merged).** One open-work list, [`sprints/remaining-work-2026-11-06.md`](sprints/remaining-work-2026-11-06.md), replaces the game design plan (parked), the hardening sprint (closed) and the Sprint 15 plan (closed); all three moved to `archive/`. Now building the 3D polish pass in small PRs ([audit](game/game3d-polish-audit-2026-11-06.md)): PRs 1 and 2 are merged, PR 3 (doors, #304) and PR 4 (sky and soft shadows, #305) are open for review. Hall of Records design note is next.
+**Plans consolidated (#301, merged).** One open-work list, [`sprints/remaining-work-2026-11-06.md`](sprints/remaining-work-2026-11-06.md), replaces the game design plan (parked), the hardening sprint (closed) and the Sprint 15 plan (closed); all three moved to `archive/`. Now building the 3D polish pass in small PRs ([audit](game/game3d-polish-audit-2026-11-06.md)): PRs 1 to 3 are merged, PR 4 (sky and soft shadows, #305) is open for review. Hall of Records design note is next.
 
 State: `main` at `b9203f4` (#303). S21 to S31 and A1 to A8 are merged; S29 and the asset batch have not been seen in a browser by Claude and deploy is not checked, say if Railway has redeployed. Database is Railway Postgres, files on Cloudflare R2 (Supabase retired 2026-10-14). Migration head `z1b2c3d4e5f6` (none added). Live URLs: frontend `https://exciting-gratitude-production-71b5.up.railway.app`, backend `https://aladdin-production-bd25.up.railway.app`.
 
 ## Active Tasks
 
 - [ ] **Hall of Records, design note (Claude):** a 3D place for interest-rate and macro data; relate it to the Town Hall Macro board and the Records Hall, list the series, give a visual verb and scene line. No code until you approve the note.
-- [ ] **3D polish pass (Claude):** PR 1 outlines and PR 2 smoke and sparks merged, PR 3 doors (#304) and PR 4 sky gradient and soft shadows open. Then opt-in sound ([audit](game/game3d-polish-audit-2026-11-06.md)). Faiz: press P in the town to check draw calls.
+- [ ] **3D polish pass (Claude):** PRs 1 to 3 (outlines, smoke and sparks, door swings) merged, PR 4 sky gradient and soft shadows (#305) open. Then opt-in sound ([audit](game/game3d-polish-audit-2026-11-06.md)). Faiz: press P in the town to check draw calls.
 - [ ] **Rate sensitivity per holding, then the PDF memo (Claude):** neither exists on `main`; the rate work feeds the Hall of Records.
 - [ ] **Text pass 4 (Claude):** Vault, Night Watch, ravens, Realm panel, store gates, backend text, Sal and Hype Booth speech, Where-to names, `stormDrillWordsV1`. Faiz decides what "Last verdict" on the Land shelf says ([review](game/game3d-text-review-2026-11-03.md))
 - [ ] **Look-over in `/game3d` (Faiz):** S29 battlefield (west strip scorch and chalk bars, war table on the east flank, bluer river); press P for fps.
