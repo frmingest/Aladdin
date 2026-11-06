@@ -69,6 +69,7 @@ import { GATE_LEAVE_RANGE, GATE_RANGE, GATE_SPOT } from "./townPlan";
 import type { BuildingId } from "./townPlan";
 import { AREAS, COURTYARD, sameArea, transitionSpot } from "./areas";
 import type { AreaRef } from "./areas";
+import { setOpenDoor } from "./doorSwing";
 import { pickNear } from "./near";
 import type { NearTarget } from "./near";
 import type { Shelf, ShelfId } from "./libraryShelves";
@@ -496,7 +497,7 @@ function World({
           <NearWatch pos={pos} targets={WATCH_T} onChange={isYes(onNearWatch)} />
           <NearWatch pos={pos} targets={PERCH_T} onChange={isYes(onNearPerch)} />
           <NearWatch pos={pos} targets={REALM_T} onChange={isYes(onNearRealm)} />
-          <NearWatch pos={pos} targets={towerTargets} onChange={onNearTower} />
+          <NearWatch pos={pos} targets={towerTargets} onChange={(id) => { setOpenDoor(id); onNearTower(id); }} />
         </>
       )}
       <group userData={{ perfGroup: "hero" }}>
