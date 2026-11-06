@@ -9,7 +9,7 @@ Source: the "Making today's 3D look and run better" list and S31 in [the discove
 | Ink outline on town buildings | Characters, the Siege Field and code-built `Part` shapes have it; the town GLB buildings (`Town.tsx`) did not | **PR 1 (this one)**: `addOutlines` on each building, line `TOWN_OUTLINE_WORLD` = 0.07 |
 | Soft shadows (round blobs under people and stalls) | Sun and a wide shadow map only (`Scene.tsx`) | Not built |
 | Sky gradient | Flat sky colour tinted by siege level (`weatherPlan.ts`) | Not built |
-| Doors that swing | Nothing swings; S22 fade and name plate exist | Not built |
+| Doors that swing | Nothing swung; S22 fade and name plate exist | **PR 3**: the tower door leaf and a new two-leaf gate on each outdoor building's door post open while the hero stands at that holding's door (`doorSwing.ts`, `DoorLeaf.tsx`) |
 | Chimney smoke, forge sparks, dust | Six Kenney sprites in `public/fx` (CC0), no code used them | **PR 2**: smoke on the Archive and Workshop chimneys, sparks over the workshop forge. Dust not built |
 | Sound, opt-in only | Kenney `.ogg` files in `public/audio`, no player, no switch | Not built |
 
@@ -24,8 +24,13 @@ Source: the "Making today's 3D look and run better" list and S31 in [the discove
 - **Chimney spots are estimates.** The building file has no chimney node, so `CHIMNEYS` in `fxPlan.ts` is a guess from the roof geometry. Faiz: look at the Archive and Workshop; if smoke does not leave a chimney, nudge those two lines. Same for `FORGE_FIRE_HEIGHT`.
 - Not seen on screen. Checks: `tsc`, `eslint`, `vitest` (src/game3d, 932 passing).
 
+## PR 3 notes (door swings)
+
+- The leaf opens about 83 degrees in 0.4 s, shuts when the hero leaves; a cut under reduced motion. Tower door swings out, the gate swings in. Opens on the same "near" signal as the E prompt, so it never promises anything E does not do.
+- Town buildings (GLB models) and the Town Hall / Records Hall doors are not touched: they have no door leaf in the art.
+- Tests: swing maths, direction signs, shared open-door value. Not seen in a browser.
+
 ## Next PRs (order)
 
-1. Door swings on the tower and building doors, a quick cut under reduced motion.
-2. Sky gradient and soft blob shadows.
-3. Sound, off by default, never on a trade.
+1. Sky gradient and soft blob shadows.
+2. Sound, off by default, never on a trade.
