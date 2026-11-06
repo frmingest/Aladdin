@@ -1,10 +1,11 @@
-import { Component, Suspense, useMemo, useRef } from "react";
+import { Component, Suspense, useEffect, useMemo, useRef } from "react";
 import type { MutableRefObject, ReactNode } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useGLTF, Html } from "@react-three/drei";
 import { CuboidCollider, CylinderCollider, RigidBody } from "@react-three/rapier";
 import type { Object3D } from "three";
 import { PAL, Part } from "./Inked";
+import { TOWN_OUTLINE_WORLD, addOutlines } from "./outline";
 import { TOWN_FILES } from "./townPieces";
 import { BUILDINGS, DOOR_LEAVE_RANGE, DOOR_RANGE, EXIT_LEAVE_RANGE, EXIT_RANGE, TOWN_EXIT, TOWN_RADIUS, WELL, doorSpot, nearTownExit, nearestBuilding } from "./townPlan";
 import type { Building, BuildingId } from "./townPlan";
@@ -37,6 +38,8 @@ function Model({ source, name, scale }: { source: Object3D; name: string; scale:
     });
     return copy;
   }, [source, name]);
+  // The same ink line the people and code-built shapes have, so a building is not the odd one out (polish pass, outlines).
+  useEffect(() => (object ? addOutlines(object, TOWN_OUTLINE_WORLD / scale) : undefined), [object, scale]);
   return object ? <primitive object={object} scale={scale} /> : null;
 }
 
