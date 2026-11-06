@@ -269,8 +269,8 @@ export function mergeStrips(strips: readonly Strip[]): Strip {
 const hex = (h: string): [number, number, number] => [parseInt(h.slice(1, 3), 16) / 255, parseInt(h.slice(3, 5), 16) / 255, parseInt(h.slice(5, 7), 16) / 255];
 export const COUNTRYSIDE_COLORS = {
   bank: hex("#9a8566"),
-  water: hex("#6f93ad"),
-  flow: hex("#9dbccd"),
+  water: hex("#3f86c4"),
+  flow: hex("#8fc3ea"),
   track: hex("#b8a888"),
   soil: hex("#8a7050"),
   furrow: hex("#6b573b"),

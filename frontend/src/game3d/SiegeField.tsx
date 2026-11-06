@@ -6,6 +6,7 @@ import { CuboidCollider, CylinderCollider, RigidBody } from "@react-three/rapier
 import { AnimationMixer, Box3, LoopRepeat } from "three";
 import type { Group, Mesh, Object3D } from "three";
 import { clone } from "three/examples/jsm/utils/SkeletonUtils.js";
+import Battlefield from "./Battlefield";
 import { CAMP_URL } from "./campPieces";
 import { SIEGE_URL, SKELETON_URL } from "./holdingPieces";
 import { PAL, Part } from "./Inked";
@@ -444,6 +445,7 @@ export default function SiegeField({ pos, onNearExit, onNearSpot, tools, onPrese
         </Suspense>
       </PiecesBoundary>
       <Attackers />
+      <Battlefield />
       <PiecesBoundary what="tent">
         <Suspense fallback={null}>
           <Tent status={yard.status === "ready" ? yard.view : yard.status} />
