@@ -1,5 +1,6 @@
 import { CylinderCollider, RigidBody } from "@react-three/rapier";
 import Avatar from "./Avatar";
+import BlobShadow from "./BlobShadow";
 import { HeroFigure } from "./Figures";
 import { WORKERS } from "./workers";
 
@@ -14,6 +15,7 @@ export default function Workers() {
       {WORKERS.map((w) => (
         <RigidBody key={w.id} type="fixed" colliders={false} position={[w.x, 0, w.z]} rotation={[0, w.facing, 0]}>
           <CylinderCollider args={w.seated ? [0.5, 0.4] : [0.9, 0.5]} position={[0, w.seated ? 0.5 : 0.9, 0]} />
+          <BlobShadow radius={w.seated ? 0.8 : 0.65} />
           <Avatar
             id={w.id}
             height={w.height}

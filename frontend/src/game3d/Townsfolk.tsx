@@ -1,5 +1,6 @@
 import { CylinderCollider, RigidBody } from "@react-three/rapier";
 import Avatar from "./Avatar";
+import BlobShadow from "./BlobShadow";
 import { HeroFigure } from "./Figures";
 import { TOWNSFOLK } from "./townsfolk";
 
@@ -13,6 +14,7 @@ export default function Townsfolk({ cheerKey = null }: { cheerKey?: number | nul
       {TOWNSFOLK.map((t) => (
         <RigidBody key={t.id} type="fixed" colliders={false} position={[t.x, 0, t.z]} rotation={[0, t.facing, 0]}>
           <CylinderCollider args={[0.9, 0.5]} position={[0, 0.9, 0]} />
+          <BlobShadow radius={0.65} />
           <Avatar
             id={t.id}
             height={t.height}

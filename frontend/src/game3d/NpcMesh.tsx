@@ -5,6 +5,7 @@ import { CylinderCollider, RigidBody } from "@react-three/rapier";
 import { Html } from "@react-three/drei";
 import type { Group } from "three";
 import Avatar from "./Avatar";
+import BlobShadow from "./BlobShadow";
 import { CLIP } from "./animClips";
 import { OracleFigure, PartnerFigure } from "./Figures";
 import { shortestAngle } from "./movement";
@@ -49,6 +50,7 @@ export default function NpcMesh({
   return (
     <RigidBody type="fixed" colliders={false} position={[npc.x, 0, npc.z]} rotation={[0, npc.facing, 0]}>
       <CylinderCollider args={[0.9, 0.5]} position={[0, 0.9, 0]} />
+      <BlobShadow radius={0.65} />
       <group ref={turn}>
         <Avatar
           id={npc.art}

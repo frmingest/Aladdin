@@ -18,8 +18,10 @@ import type { FortressSiegeLevel } from "../lib/types";
 export const SKY_CALM = "#cfe3f1";
 
 export interface WeatherLook {
-  /** Sky and fog colour. */
+  /** Sky and fog colour. This is the horizon colour of the gradient dome, so the fog melts into it. */
   sky: string;
+  /** Colour straight overhead. Equal to `sky` for the mist: unknown stays a flat fog, never a pretty sky. */
+  skyTop: string;
   fogNear: number;
   fogFar: number;
   /** How many painted clouds hang over the walls (0 to MAX_CLOUDS). */
@@ -41,15 +43,25 @@ export function weatherLook(level: FortressSiegeLevel | null | undefined): Weath
   const clouds = cloudCount(level);
   switch (level) {
     case "gathering":
-      return { sky: "#b7c3cf", fogNear: 90, fogFar: 215, clouds, cloudColor: "#a9b3bd", mist: false };
+      return { sky: "#b7c3cf", skyTop: "#97a6b6", fogNear: 90, fogFar: 215, clouds, cloudColor: "#a9b3bd", mist: false };
     case "besieged":
-      return { sky: "#8f9aa8", fogNear: 80, fogFar: 195, clouds, cloudColor: "#737d89", mist: false };
+      return { sky: "#8f9aa8", skyTop: "#707c8c", fogNear: 80, fogFar: 195, clouds, cloudColor: "#737d89", mist: false };
     case "calm":
-      return { sky: SKY_CALM, fogNear: 100, fogFar: 230, clouds: 0, cloudColor: "#ffffff", mist: false };
+      return { sky: SKY_CALM, skyTop: "#9cc2de", fogNear: 100, fogFar: 230, clouds: 0, cloudColor: "#ffffff", mist: false };
     default:
       // Not surveyed or unreadable: a pale mist that closes in, never a calm sky.
-      return { sky: "#dbe3e8", fogNear: 60, fogFar: 150, clouds: 0, cloudColor: "#ffffff", mist: true };
+      return { sky: "#dbe3e8", skyTop: "#dbe3e8", fogNear: 60, fogFar: 150, clouds: 0, cloudColor: "#ffffff", mist: true };
   }
+}
+
+/**
+ * How far up the gradient a point on the sky dome is: 0 at and below the horizon (the fog colour), 1 straight overhead.
+ * `y` is the point's height on the unit sphere (-1 to 1). Eased, so the horizon band stays wide and calm.
+ */
+export function skyBlend(y: number): number {
+  if (!Number.isFinite(y)) return 0;
+  const t = Math.max(0, Math.min(1, y / 0.65));
+  return t * t * (3 - 2 * t);
 }
 
 export interface CloudSlot {
