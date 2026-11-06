@@ -17,6 +17,9 @@ import { INK } from "./Inked";
 /** Outline width in courtyard units (a person is about 1.9 high). */
 export const OUTLINE_WORLD = 0.03;
 
+/** Town buildings are several times a person's size, so their line is thicker to read at the same distance. */
+export const TOWN_OUTLINE_WORLD = 0.07;
+
 /** Marks the shell meshes, so fitting and tests can tell them from the model's own meshes. */
 export const OUTLINE_FLAG = "isOutlineShell";
 

@@ -12,7 +12,7 @@ import {
   Uint16BufferAttribute,
 } from "three";
 import { INK } from "./Inked";
-import { OUTLINE_FLAG, OUTLINE_WORLD, addOutlines, makeOutlineMaterial, patchOutlineVertex } from "./outline";
+import { OUTLINE_FLAG, OUTLINE_WORLD, TOWN_OUTLINE_WORLD, addOutlines, makeOutlineMaterial, patchOutlineVertex } from "./outline";
 
 function skinnedBox(name: string): SkinnedMesh {
   const geometry = new BoxGeometry(1, 1, 1);
@@ -87,5 +87,23 @@ describe("outline shell for skinned models", () => {
   it("keeps the outline thin in world units", () => {
     expect(OUTLINE_WORLD).toBeGreaterThan(0);
     expect(OUTLINE_WORLD).toBeLessThan(0.1);
+  });
+});
+
+describe("outline on a static building (polish pass)", () => {
+  it("adds one shell per mesh at the town thickness and takes them all away again", () => {
+    const building = new Group();
+    for (const n of ["wall", "roof"]) {
+      const m = new Mesh(new BoxGeometry(1, 1, 1), new MeshStandardMaterial());
+      m.name = n;
+      building.add(m);
+    }
+    const remove = addOutlines(building, TOWN_OUTLINE_WORLD / 5.5);
+    const shells = building.children.filter((c) => c.userData[OUTLINE_FLAG]);
+    expect(shells).toHaveLength(2);
+    expect(TOWN_OUTLINE_WORLD).toBeGreaterThan(OUTLINE_WORLD);
+    remove();
+    expect(building.children).toHaveLength(2);
+    expect(building.children.some((c) => c.userData[OUTLINE_FLAG])).toBe(false);
   });
 });
