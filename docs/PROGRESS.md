@@ -4,9 +4,9 @@
 
 ## Current Objective
 
-**Plans consolidated (#301, merged).** One open-work list, [`sprints/remaining-work-2026-11-06.md`](sprints/remaining-work-2026-11-06.md), replaces the game design plan (parked), the hardening sprint (closed) and the Sprint 15 plan (closed); all three moved to `archive/`. Now building the 3D polish pass in small PRs, PR 1 (outlines on town buildings, [audit](game/game3d-polish-audit-2026-11-06.md)) is open for review. Hall of Records design note is next.
+**Plans consolidated (#301, merged).** One open-work list, [`sprints/remaining-work-2026-11-06.md`](sprints/remaining-work-2026-11-06.md), replaces the game design plan (parked), the hardening sprint (closed) and the Sprint 15 plan (closed); all three moved to `archive/`. Now building the 3D polish pass in small PRs ([audit](game/game3d-polish-audit-2026-11-06.md)): PRs 1 and 2 are merged, PR 3 (doors, #304) and PR 4 (sky and soft shadows, #305) are open for review. Hall of Records design note is next.
 
-State: `main` at `a345e9b` (#301). S21 to S31 and A1 to A8 are merged; S29 and the asset batch have not been seen in a browser by Claude and deploy is not checked, say if Railway has redeployed. Database is Railway Postgres, files on Cloudflare R2 (Supabase retired 2026-10-14). Migration head `z1b2c3d4e5f6` (none added). Live URLs: frontend `https://exciting-gratitude-production-71b5.up.railway.app`, backend `https://aladdin-production-bd25.up.railway.app`.
+State: `main` at `b9203f4` (#303). S21 to S31 and A1 to A8 are merged; S29 and the asset batch have not been seen in a browser by Claude and deploy is not checked, say if Railway has redeployed. Database is Railway Postgres, files on Cloudflare R2 (Supabase retired 2026-10-14). Migration head `z1b2c3d4e5f6` (none added). Live URLs: frontend `https://exciting-gratitude-production-71b5.up.railway.app`, backend `https://aladdin-production-bd25.up.railway.app`.
 
 ## Active Tasks
 
