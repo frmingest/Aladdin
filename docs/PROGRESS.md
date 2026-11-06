@@ -1,6 +1,6 @@
 # Aladdin — Progress
 
-**Last updated:** 2026-11-06 (plans consolidated, #301 merged; polish pass PR 1). Rolling log: active status only, under 100 lines, at most 7 tasks (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
+**Last updated:** 2026-11-06 (plans consolidated, #301 merged; polish pass PR 2). Rolling log: active status only, under 100 lines, at most 7 tasks (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
 
 ## Current Objective
 
@@ -11,7 +11,7 @@ State: `main` at `a345e9b` (#301). S21 to S31 and A1 to A8 are merged; S29 and t
 ## Active Tasks
 
 - [ ] **Hall of Records, design note (Claude):** a 3D place for interest-rate and macro data; relate it to the Town Hall Macro board and the Records Hall, list the series, give a visual verb and scene line. No code until you approve the note.
-- [ ] **3D polish pass (Claude):** PR 1 outlines on town buildings (open). Then smoke and sparks, door swings, sky gradient and soft shadows, opt-in sound ([audit](game/game3d-polish-audit-2026-11-06.md)). Faiz: press P in the town to check draw calls.
+- [ ] **3D polish pass (Claude):** PR 1 outlines (merged #302), PR 2 smoke and sparks (open). Then door swings, sky gradient and soft shadows, opt-in sound ([audit](game/game3d-polish-audit-2026-11-06.md)). Faiz: press P in the town to check draw calls.
 - [ ] **Rate sensitivity per holding, then the PDF memo (Claude):** neither exists on `main`; the rate work feeds the Hall of Records.
 - [ ] **Text pass 4 (Claude):** Vault, Night Watch, ravens, Realm panel, store gates, backend text, Sal and Hype Booth speech, Where-to names, `stormDrillWordsV1`. Faiz decides what "Last verdict" on the Land shelf says ([review](game/game3d-text-review-2026-11-03.md))
 - [ ] **Look-over in `/game3d` (Faiz):** S29 battlefield (west strip scorch and chalk bars, war table on the east flank, bluer river); press P for fps.

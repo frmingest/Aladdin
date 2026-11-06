@@ -6,6 +6,8 @@ import { CuboidCollider, CylinderCollider, RigidBody } from "@react-three/rapier
 import type { Object3D } from "three";
 import { PAL, Part } from "./Inked";
 import { TOWN_OUTLINE_WORLD, addOutlines } from "./outline";
+import { Smoke } from "./Embers";
+import { CHIMNEYS } from "./fxPlan";
 import { TOWN_FILES } from "./townPieces";
 import { BUILDINGS, DOOR_LEAVE_RANGE, DOOR_RANGE, EXIT_LEAVE_RANGE, EXIT_RANGE, TOWN_EXIT, TOWN_RADIUS, WELL, doorSpot, nearTownExit, nearestBuilding } from "./townPlan";
 import type { Building, BuildingId } from "./townPlan";
@@ -48,6 +50,9 @@ function BuildingMesh({ b, source }: { b: Building; source: Object3D }) {
     <RigidBody type="fixed" colliders={false} position={[b.x, 0, b.z]} rotation={[0, b.yaw, 0]}>
       <CuboidCollider args={[b.hx, 2, b.hz]} position={[0, 2, 0]} />
       <Model source={source} name={b.model} scale={5.5} />
+      {CHIMNEYS.filter((c) => c.model === b.model).map((c) => (
+        <Smoke key={c.model} position={[c.x * 5.5, c.y * 5.5, c.z * 5.5]} />
+      ))}
     </RigidBody>
   );
 }

@@ -5,6 +5,8 @@ import { PIECES, STOCK_RING, factoryPlan, stockAt, stockNode } from "./factoryDr
 import type { LandCondition } from "./landCondition";
 import { WORKPLACE } from "./holdingLand";
 import LandBlock from "./LandBlock";
+import { Sparks } from "./Embers";
+import { FORGE_FIRE_HEIGHT } from "./fxPlan";
 import { WithFallback } from "./KeepModels";
 
 const DEG = Math.PI / 180;
@@ -58,6 +60,7 @@ export default function FactoryDressing({ condition }: { condition: LandConditio
   return (
     <group position={[WORKPLACE.x, 0, WORKPLACE.z]}>
       <WithFallback model={<Workshop condition={condition} />} fallback={<LandBlock condition={condition} />} />
+      <Sparks position={[0, factoryPlan(condition).footing + FORGE_FIRE_HEIGHT, 0]} />
     </group>
   );
 }
