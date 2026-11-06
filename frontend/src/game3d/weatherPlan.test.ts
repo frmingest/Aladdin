@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { siegeSky } from "../lib/fortress";
 import type { FortressSiegeLevel } from "../lib/types";
-import { MAX_CLOUDS, SKY_CALM, cloudSlots, weatherLook } from "./weatherPlan";
+import { MAX_CLOUDS, SKY_CALM, cloudSlots, skyBlend, weatherLook } from "./weatherPlan";
 
 const LEVELS: FortressSiegeLevel[] = ["calm", "gathering", "besieged", "unsurveyed"];
 
@@ -48,5 +48,33 @@ describe("weather look", () => {
     expect(cloudSlots(0)).toEqual([]);
     expect(cloudSlots(99)).toHaveLength(MAX_CLOUDS);
     expect(cloudSlots(Number.NaN)).toEqual([]);
+  });
+});
+
+describe("sky gradient", () => {
+  it("is the fog colour at and below the horizon and fully the top colour overhead", () => {
+    expect(skyBlend(0)).toBe(0);
+    expect(skyBlend(-0.8)).toBe(0);
+    expect(skyBlend(1)).toBe(1);
+  });
+
+  it("rises smoothly and never leaves 0 to 1", () => {
+    let last = 0;
+    for (let y = -1; y <= 1; y += 0.05) {
+      const b = skyBlend(y);
+      expect(b).toBeGreaterThanOrEqual(last);
+      expect(b).toBeLessThanOrEqual(1);
+      last = b;
+    }
+    expect(skyBlend(Number.NaN)).toBe(0);
+  });
+
+  it("keeps calm's horizon the courtyard's own sky, and the mist a flat fog", () => {
+    expect(weatherLook("calm").sky).toBe(SKY_CALM);
+    for (const l of ["unsurveyed", null, undefined] as const) {
+      const w = weatherLook(l);
+      expect(w.skyTop).toBe(w.sky);
+    }
+    for (const l of ["calm", "gathering", "besieged"] as const) expect(weatherLook(l).skyTop).not.toBe(weatherLook(l).sky);
   });
 });

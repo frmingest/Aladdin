@@ -7,8 +7,8 @@ Source: the "Making today's 3D look and run better" list and S31 in [the discove
 | Item | On `main` before | PR |
 |---|---|---|
 | Ink outline on town buildings | Characters, the Siege Field and code-built `Part` shapes have it; the town GLB buildings (`Town.tsx`) did not | **PR 1 (this one)**: `addOutlines` on each building, line `TOWN_OUTLINE_WORLD` = 0.07 |
-| Soft shadows (round blobs under people and stalls) | Sun and a wide shadow map only (`Scene.tsx`) | Not built |
-| Sky gradient | Flat sky colour tinted by siege level (`weatherPlan.ts`) | Not built |
+| Soft shadows (round blobs under people and stalls) | Sun and a wide shadow map only (`Scene.tsx`) | **PR 4**: round blob under every person and the holding stall (`BlobShadow.tsx`) |
+| Sky gradient | Flat sky colour tinted by siege level (`weatherPlan.ts`) | **PR 4**: gradient dome (`SkyDome.tsx`), horizon = fog colour, deeper overhead |
 | Doors that swing | Nothing swung; S22 fade and name plate exist | **PR 3**: the tower door leaf and a new two-leaf gate on each outdoor building's door post open while the hero stands at that holding's door (`doorSwing.ts`, `DoorLeaf.tsx`) |
 | Chimney smoke, forge sparks, dust | Six Kenney sprites in `public/fx` (CC0), no code used them | **PR 2**: smoke on the Archive and Workshop chimneys, sparks over the workshop forge. Dust not built |
 | Sound, opt-in only | Kenney `.ogg` files in `public/audio`, no player, no switch | Not built |
@@ -30,7 +30,13 @@ Source: the "Making today's 3D look and run better" list and S31 in [the discove
 - Town buildings (GLB models) and the Town Hall / Records Hall doors are not touched: they have no door leaf in the art.
 - Tests: swing maths, direction signs, shared open-door value. Not seen in a browser.
 
+## PR 4 notes (sky and soft shadows)
+
+- `SkyDome.tsx`: one sphere with vertex colours, follows the camera, outdoors only. Horizon colour is the weather's own `sky` (calm is still `#cfe3f1` there), so fog melts into it; `skyTop` is deeper overhead. **Mist stays a flat fog** (`skyTop` = `sky`), unknown never gets a pretty sky. `skyBlend` is pure and tested.
+- `BlobShadow.tsx`: one shared soft texture, a flat plane at ground level. Under NPCs, townsfolk, workers (the seated scribe a bit wider) and the holding stall. Same size for every one of a kind; carries no fact. The sun's shadow map is untouched.
+- **Not seen on screen.** Faiz: look at calm, gathering and besieged skies, and that the blobs sit under feet on sloped or raised ground (they are flat at y 0.03; if one floats or sinks in a land, tell me which).
+- Checks: `tsc`, `eslint` (3 warnings, none new), `vitest` 1814 passing, `vite build`.
+
 ## Next PRs (order)
 
-1. Sky gradient and soft blob shadows.
-2. Sound, off by default, never on a trade.
+1. Sound, off by default, never on a trade.

@@ -36,6 +36,7 @@ import WatchPost from "./WatchPost";
 import RavenBirds from "./RavenBirds";
 import RealmPost from "./RealmPost";
 import Weather from "./Weather";
+import SkyDome from "./SkyDome";
 import { REALM_LEAVE_RANGE, REALM_POST, REALM_RANGE } from "./realmPlan";
 import { weatherLook } from "./weatherPlan";
 import type { RealmLevel } from "../lib/realmVerdict";
@@ -599,6 +600,7 @@ export default function Scene({
       ) : (
         <Fragment key="out">
           <color attach="background" args={[wx.sky]} />
+          <SkyDome look={wx} />
           <fog attach="fog" args={[wx.sky, wx.fogNear, wx.fogFar]} />
           <hemisphereLight args={["#ffffff", "#9aa88a", 0.9]} />
           <directionalLight

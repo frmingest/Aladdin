@@ -7,6 +7,7 @@ import type { LandCondition } from "./landCondition";
 import { WORKPLACE } from "./holdingLand";
 import LandBlock from "./LandBlock";
 import { WithFallback } from "./KeepModels";
+import BlobShadow from "./BlobShadow";
 
 const DEG = Math.PI / 180;
 const at = (angle: number, r: number): [number, number, number] => [Math.cos(angle) * r, 0, Math.sin(angle) * r];
@@ -76,6 +77,7 @@ function Stall({ condition }: { condition: LandCondition }) {
 export default function StallDressing({ condition }: { condition: LandCondition }) {
   return (
     <group position={[WORKPLACE.x, 0, WORKPLACE.z]}>
+      <BlobShadow radius={1.8} />
       <WithFallback model={<Stall condition={condition} />} fallback={<LandBlock condition={condition} />} />
     </group>
   );
