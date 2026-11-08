@@ -3,7 +3,7 @@ import { PAL, Part } from "./Inked";
 import StaticBatch from "./StaticBatch";
 import { QUARTER_GATE, QUARTER_GATE_FACING } from "./quarterPlan";
 import { QUARTER_WORDS, archLine } from "./quarterWordsV1";
-import WorldLabel from "./WorldLabel";
+import WorldSign from "./WorldSign";
 
 /**
  * The arch to the Market Quarter: two stout timber posts, a wide lintel and a cream and teal awning strip, east of the market
@@ -34,15 +34,7 @@ export default function QuarterArch({ counts }: { counts: { total: number; inRan
           <boxGeometry args={[0.8, 0.46, 0.08]} />
         </Part>
       </StaticBatch>
-      <WorldLabel position={[0, 5.2, 0]} distanceFactor={14} ariaHidden>
-          {QUARTER_WORDS.gateLabel}
-          {line && (
-            <>
-              <br />
-              {line}
-            </>
-          )}
-        </WorldLabel>
+      <WorldSign spec={{ kind: "plank", lines: line ? [QUARTER_WORDS.gateLabel, line] : [QUARTER_WORDS.gateLabel] }} position={[0, 4.9, 0.1]} width={3.6} />
     </RigidBody>
   );
 }

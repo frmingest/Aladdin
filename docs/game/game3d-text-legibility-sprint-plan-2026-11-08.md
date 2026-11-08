@@ -54,6 +54,8 @@ The fog explanation, the gate-stone text and the hall notes leave the sky. In th
 
 **Status (2026-11-08):** T1 built, written and tested, not yet deployed: `WorldLabel`, `labelPlan.ts` (tested, not wired until T4 turns on the near-only reveal), `gameTokens.ts` with the contrast test, and all 29 labels swapped (grep finds no `g3d-nameplate` or `bg-black/` in world labels). T1 took the recommended defaults for decisions 1 and 2. T2 is built on top of T1 in its own PR: `ActionPrompt` splits "Press E to ..." strings into a key cap and the action, the NPC tag is a plain name, the three "Door · back ..." labels are gone (the page already shows the door prompt), and a tap on the prompt sends E.
 
+**T3 (2026-11-08, written, not yet deployed, not seen in a browser):** `signTexture.ts` (one painter for plank, banner and stone; `chalkFor` is tested: loss is a stripe plus glyph plus number, unknown is a "?" seal with no number; chalk-on-board and ink-on-stone pass 4.5:1) and `WorldSign.tsx`. Applied to: siege wall sections (banner with name and chalked loss), fog ghosts (fog seal), Town door planks on a two-post sign, Quarter arch, siege gate, holding-land gate stone and records house, and the Battlefield title. Left as T1 plates for T4: the battlefield row notes, the board sentences under the title, the gate-stone note, the tent text, winch, marker stones, yardstick banners and the fog sentence. The three older `paintSign` copies (`TowerMesh`, `Booths`, `MarketQuarter`) are untouched and can fold into `signTexture` later.
+
 Cut line: T3 for the Market Quarter and the Library bays (they keep the T1 parchment tag). Never cut: the fog look, Plain view, the screenshots.
 
 ## 4. Checklist section A

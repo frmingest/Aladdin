@@ -3,7 +3,7 @@ import { PAL, Part } from "./Inked";
 import StaticBatch from "./StaticBatch";
 import { SIEGE_GATE, SIEGE_GATE_FACING } from "./siegeField";
 import { FIELD_WORDS } from "./siegeFieldWordsV1";
-import WorldLabel from "./WorldLabel";
+import WorldSign from "./WorldSign";
 
 /**
  * The gate to the Siege Field: two timber posts, a lintel and a teal pennant beside the drill camp. Plain code-built
@@ -29,9 +29,7 @@ export default function SiegeGate() {
           <boxGeometry args={[0.8, 1.2, 0.05]} />
         </Part>
       </StaticBatch>
-      <WorldLabel position={[0, 4.4, 0]} distanceFactor={14} ariaHidden>
-          {FIELD_WORDS.gateLabel}
-        </WorldLabel>
+      <WorldSign spec={{ kind: "plank", lines: [FIELD_WORDS.gateLabel] }} position={[0, 4.15, 0.2]} width={3.4} />
     </RigidBody>
   );
 }

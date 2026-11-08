@@ -11,7 +11,7 @@ import { CHIMNEYS } from "./fxPlan";
 import { TOWN_FILES } from "./townPieces";
 import { BUILDINGS, DOOR_LEAVE_RANGE, DOOR_RANGE, EXIT_LEAVE_RANGE, EXIT_RANGE, TOWN_EXIT, TOWN_RADIUS, WELL, doorSpot, nearTownExit, nearestBuilding } from "./townPlan";
 import type { Building, BuildingId } from "./townPlan";
-import WorldLabel from "./WorldLabel";
+import WorldSign from "./WorldSign";
 
 /** The same flat palette as the courtyard, so nothing in the Town is flattered by its colour. */
 const COLORS = { grass: "#7a9e5c", cobble: "#a89f91" } as const;
@@ -81,7 +81,15 @@ function DoorMark({ b, active }: { b: Building; active: boolean }) {
       <Part color={active ? PAL.teal : PAL.cream} position={[0, 0.09, 0]} rotation={[0, b.yaw, 0]} grow={1.05}>
         <boxGeometry args={[2.6, 0.08, 1.4]} />
       </Part>
-      <WorldLabel position={[0, 2.2, 0]} distanceFactor={14} ariaHidden>{b.label}</WorldLabel>
+      {/* The name hangs on a two-post sign over the mat, so it stands on something. */}
+      <group rotation={[0, b.yaw, 0]}>
+        {([-1.6, 1.6] as const).map((x) => (
+          <Part key={x} color={PAL.timberDark} position={[x, 1.3, 0]} grow={1.12}>
+            <boxGeometry args={[0.16, 2.6, 0.16]} />
+          </Part>
+        ))}
+        <WorldSign spec={{ kind: "plank", lines: [b.label] }} position={[0, 2.25, 0]} width={2.8} />
+      </group>
     </group>
   );
 }
