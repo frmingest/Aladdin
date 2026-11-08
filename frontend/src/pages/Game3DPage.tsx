@@ -79,7 +79,9 @@ import type { PanelId } from "../game3d/hudPanels";
 import { celebrationDue } from "../game3d/celebrate";
 import { sixMonthReckoning } from "../game3d/quest";
 import { unwrittenThesisV2 } from "../game3d/questV2";
+import { NPCS } from "../game3d/npcs";
 import type { NpcId } from "../game3d/npcs";
+import ActionPrompt from "../game3d/ActionPrompt";
 import { buildStreet, emptyStreetNote, streetOverflowLine } from "../game3d/streetPlan";
 import { stateToWorld } from "../game3d/stateToWorld";
 import { withGaps } from "../game3d/standingGaps";
@@ -1021,10 +1023,16 @@ export default function Game3DPage() {
 
   if (!supported) return <Unavailable />;
 
+  /** The prompt is also a button: a tap does what the E key does. */
+  const pressE = () => document.body.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyE", bubbles: true }));
+
   // The prompt is the E key's own answer (`atSpot`), so it never promises something E does not do.
   let spotPrompt: string | null = null;
   let spotNote: string | null = null;
   switch (atSpot.kind) {
+    case "npc":
+      if (!talking) spotPrompt = `Press E to talk to ${NPCS.find((n) => n.id === atSpot.id)?.name ?? "them"}`;
+      break;
     case "shelves":
       if (!whereOpen) spotPrompt = shelfPrompt;
       break;
@@ -1287,12 +1295,7 @@ export default function Game3DPage() {
       {boothOpen === "sal" && <SalesRepDialog demoMode={demoMode === true} rows={watchlist?.rows ?? []} onClose={closeBooth} onAdded={setWatchlist} />}
       {boothOpen === "hype" && <HypeBoothDialog demoMode={demoMode === true} rows={watchlist?.rows ?? []} onClose={closeBooth} onAdded={setWatchlist} />}
 
-      {spotPrompt && (
-        <p className="pointer-events-none absolute bottom-16 left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-center text-sm text-white">
-          {spotPrompt}
-          {spotNote && <span className="block text-xs opacity-80">{spotNote}</span>}
-        </p>
-      )}
+      {spotPrompt && <ActionPrompt text={spotPrompt} note={spotNote} onPress={pressE} />}
 
       {!locked && !talking && (
         <p className="pointer-events-none absolute bottom-4 left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-center text-sm text-white">
