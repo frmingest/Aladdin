@@ -16,6 +16,7 @@ import {
 import type { BattleRow } from "./battlefield";
 import { useBattlefield } from "./useBattlefield";
 import WorldLabel from "./WorldLabel";
+import WorldSign from "./WorldSign";
 
 /** One holding's two bars on the flat ground: scorch (what happened) over chalk (what the page said). No colliders: you walk over them. */
 function Row({ r }: { r: BattleRow }) {
@@ -52,11 +53,17 @@ function Row({ r }: { r: BattleRow }) {
 
 function Board({ lines }: { lines: string[] }) {
   return (
-    <WorldLabel position={[BATTLE_BOARD.x, 3.2, BATTLE_BOARD.z]} distanceFactor={16} ariaHidden>
-        {lines.map((l, i) => (
-          <div key={i}>{l}</div>
-        ))}
-      </WorldLabel>
+    <>
+      {/* The title is painted on a banner; the lines under it stay a plate until they move into a panel. */}
+      <WorldSign spec={{ kind: "banner", lines: [lines[0] ?? ""] }} position={[BATTLE_BOARD.x, 4.4, BATTLE_BOARD.z]} width={4} />
+      {lines.length > 1 && (
+        <WorldLabel position={[BATTLE_BOARD.x, 2.6, BATTLE_BOARD.z]} distanceFactor={16} ariaHidden>
+          {lines.slice(1).map((l, i) => (
+            <div key={i}>{l}</div>
+          ))}
+        </WorldLabel>
+      )}
+    </>
   );
 }
 

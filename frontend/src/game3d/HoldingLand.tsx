@@ -33,6 +33,7 @@ import { LAND_WORDS } from "./holdingLandWordsV1";
 import { nearestShelf } from "./libraryRoom";
 import type { Shelf, ShelfId } from "./libraryShelves";
 import WorldLabel from "./WorldLabel";
+import WorldSign from "./WorldSign";
 
 const GRASS = "#7a9e5c";
 const PADDOCK = "#8fb06b";
@@ -193,16 +194,18 @@ export default function HoldingLand({ ticker, gap = null, gate, radius, shelves,
           <boxGeometry args={[2, 0.16, 1]} />
         </Part>
       </RigidBody>
-      <WorldLabel position={[GATE_STONE.x, 2.3, GATE_STONE.z]} distanceFactor={9}>
-          <div className="whitespace-nowrap text-sm font-semibold">{gate.title}</div>
-          <div className="whitespace-nowrap text-xs opacity-80">
-            {ticker}
-            {gap ? ` · Gap: ${gap}` : ""}
-          </div>
-          <div className="whitespace-nowrap text-xs">{gate.weight}</div>
-          <div className="whitespace-nowrap text-xs">{gate.value}</div>
-          {gate.note && <div className="whitespace-nowrap text-xs italic opacity-90">{gate.note}</div>}
+      {/* Carved on the stone's face: name, ticker, weight, value. Unknown stays the flat page's own words. */}
+      <WorldSign
+        spec={{ kind: "stone", lines: [gate.title, `${ticker}${gap ? ` · Gap: ${gap}` : ""}`, gate.weight, gate.value] }}
+        position={[GATE_STONE.x, 0.78, GATE_STONE.z + 0.4]}
+        width={1.5}
+        both={false}
+      />
+      {gate.note && (
+        <WorldLabel position={[GATE_STONE.x, 1.9, GATE_STONE.z]} distanceFactor={9}>
+          <div className="whitespace-nowrap text-xs italic">{gate.note}</div>
         </WorldLabel>
+      )}
 
       {/* The records house: three walls and a ceiling drawn from inside only (so the camera can sit outside them), open to the east. */}
       <RigidBody type="fixed" colliders={false}>
@@ -242,7 +245,7 @@ export default function HoldingLand({ ticker, gap = null, gate, radius, shelves,
       <Part color={PAL.timberDark} position={[east, WALL_H + 0.1, hz0]} grow={1.04}>
         <boxGeometry args={[0.4, 0.3, hz * 2 + 0.4]} />
       </Part>
-      <WorldLabel position={[east, WALL_H + 0.9, hz0]} distanceFactor={9}>{LAND_WORDS.houseLabel}</WorldLabel>
+      <WorldSign spec={{ kind: "plank", lines: [LAND_WORDS.houseLabel] }} position={[east, WALL_H + 0.75, hz0]} width={3} yaw={Math.PI / 2} />
 
       {/* A rug, the reading table and an open book: furniture, no facts. */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[LAND_TABLE.x, 0.05, LAND_TABLE.z]} receiveShadow>

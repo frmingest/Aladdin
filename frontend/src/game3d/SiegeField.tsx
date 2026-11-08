@@ -40,6 +40,8 @@ import { YARD_FAILED, YARD_READING, yardFogTitle, yardMoreLine } from "./siegeYa
 import { useSiegeYard } from "./useSiegeYard";
 import type { YardView } from "./siegeYard";
 import WorldLabel from "./WorldLabel";
+import WorldSign from "./WorldSign";
+import { chalkFor, signHeight } from "./signTexture";
 
 /** The same flat ground colour as the Town and the courtyard, so nothing here is flattered by colour. */
 const GRASS = "#7a9e5c";
@@ -88,12 +90,24 @@ function WallSection({ s, source }: { s: Section; source: Object3D }) {
   );
 }
 
-/** A name over each section, in the flat page's own words: the tower, the share lost. */
+/** Banner width on a wall section; it is a little narrower than the wall so it hangs inside the stonework. */
+const BANNER_W = SECTION_WIDTH - 0.4;
+
+/**
+ * A banner hung on the face of each section: the tower's name, and under it the share lost chalked on a board
+ * (stripe, glyph and the number as the flat page prints it). It is on the wall, so it hides behind scenery and
+ * a fallen wall carries a low banner. Words are the same as before; only where they live changed.
+ */
 function SectionPlate({ s }: { s: Section }) {
+  const bh = signHeight("banner", BANNER_W);
+  const y = Math.max(s.height - 0.25 - bh / 2, bh / 2 + 0.05);
   return (
-    <WorldLabel position={[s.x, Math.max(s.height, 0.8) + 1.4, s.z]} distanceFactor={16} ariaHidden>
-        {s.name} {s.shock}
-      </WorldLabel>
+    <WorldSign
+      spec={{ kind: "banner", lines: [s.name], chalk: chalkFor(s.shock) }}
+      position={[s.x, y, s.z + SECTION_THICKNESS / 2 + 0.06]}
+      width={BANNER_W}
+      both={false}
+    />
   );
 }
 
@@ -115,9 +129,12 @@ function Wall({ view, source }: { view: YardView; source: Object3D }) {
             <boxGeometry args={[SECTION_WIDTH * 1.2, 4.4, SECTION_THICKNESS * 1.6]} />
             <meshStandardMaterial color="#e8eef2" transparent opacity={0.3} depthWrite={false} />
           </mesh>
-          <WorldLabel position={[0, 5.2, 0]} distanceFactor={16} ariaHidden>
-              {g.name} {FIELD_WORDS.fogMark}
-            </WorldLabel>
+          <WorldSign
+            spec={{ kind: "banner", lines: [g.name], chalk: chalkFor(null), fog: true }}
+            position={[0, 5.2, SECTION_THICKNESS * 0.8 + 0.06]}
+            width={BANNER_W}
+            both={false}
+          />
         </group>
       ))}
       {view.fog.length > 0 && (
