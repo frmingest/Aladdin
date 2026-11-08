@@ -22,6 +22,7 @@ import {
   type CaptureSummary,
   type Mood,
 } from "../../lib/salesRep";
+import { addedLineV2, captureLineV2 } from "../../game3d/salHypeWordsV2";
 import type { Watchlist, WatchlistRow } from "../../lib/types";
 import { CoinBurst, RunnerStrip } from "./SalesRepArt";
 import SalPortrait from "./SalPortrait";
@@ -84,8 +85,11 @@ export default function SalesRepDialog({
   rows,
   onClose,
   onAdded,
+  voice = "flat",
 }: {
   demoMode: boolean;
+  /** "game" is the /game3d wording; the flat Marketplace keeps "flat". */
+  voice?: "flat" | "game";
   /** The street as loaded, to catch a ticker that already has a stall. */
   rows: WatchlistRow[];
   onClose: () => void;
@@ -240,7 +244,7 @@ export default function SalesRepDialog({
   } else if (phase === "added" && created) {
     const facts = { name: created.name, ticker: created.ticker, owned: created.owned, hasPrice, oslo: checkTicker(created.ticker).oslo };
     mood = addedMood(facts);
-    line = addedLine(facts, seed);
+    line = voice === "game" ? addedLineV2(facts, seed) : addedLine(facts, seed);
   } else if (phase === "duplicate") {
     mood = "think";
     line = DUPLICATE_LINE(dupRow.current?.name ?? (check.ticker || "That company"));
@@ -249,7 +253,7 @@ export default function SalesRepDialog({
     line = tick === 0 ? captureStartLine(seed) : captureProgressLine(tick - 1);
   } else if (phase === "done" && summary) {
     mood = captureMood(summary.outcome);
-    line = captureLine(summary);
+    line = voice === "game" ? captureLineV2(summary) : captureLine(summary);
   }
 
   const storeTo = created ? storePath(created.holding_id) : null;
@@ -449,7 +453,7 @@ export default function SalesRepDialog({
         </div>
 
         <p className="border-t border-[#3b2a16] px-4 py-2 text-[0.7rem] leading-snug text-[#a8977a] sm:px-5">
-          Sal is an invented character, not a real person. He opens stalls and fetches filings; he never tells you what to buy or sell, and nothing here trades anything. Newsweb reports are free and need no key.
+          Sal is an invented character, not a real person. He opens stalls and fetches {voice === "game" ? "reports" : "filings"}; he never tells you what to buy or sell, and nothing here trades anything. Newsweb reports are free and need no key.
         </p>
       </div>
     </div>
