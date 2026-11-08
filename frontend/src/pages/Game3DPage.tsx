@@ -1292,8 +1292,8 @@ export default function Game3DPage() {
           ← Back to the courtyard
         </button>
       )}
-      {boothOpen === "sal" && <SalesRepDialog demoMode={demoMode === true} rows={watchlist?.rows ?? []} onClose={closeBooth} onAdded={setWatchlist} />}
-      {boothOpen === "hype" && <HypeBoothDialog demoMode={demoMode === true} rows={watchlist?.rows ?? []} onClose={closeBooth} onAdded={setWatchlist} />}
+      {boothOpen === "sal" && <SalesRepDialog voice="game" demoMode={demoMode === true} rows={watchlist?.rows ?? []} onClose={closeBooth} onAdded={setWatchlist} />}
+      {boothOpen === "hype" && <HypeBoothDialog voice="game" demoMode={demoMode === true} rows={watchlist?.rows ?? []} onClose={closeBooth} onAdded={setWatchlist} />}
 
       {spotPrompt && <ActionPrompt text={spotPrompt} note={spotNote} onPress={pressE} />}
 

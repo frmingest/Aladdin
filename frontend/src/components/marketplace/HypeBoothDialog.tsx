@@ -14,6 +14,13 @@ import {
   type HeardFrom,
   type HypeReading,
 } from "../../lib/hype";
+import {
+  CANT_READ_V2,
+  NOT_ANALYSED_YET_V2,
+  PARTNER_BUSY_V2,
+  QUEUE_FAILED_V2,
+  readingV2,
+} from "../../game3d/salHypeWordsV2";
 import { storePath, STORE_LEVEL_LABEL } from "../../lib/marketplace";
 import { CURRENCIES, checkTicker, hintText, normalizeTicker, summariseCapture, type CaptureSummary } from "../../lib/salesRep";
 import type { Watchlist, WatchlistRow } from "../../lib/types";
@@ -43,8 +50,11 @@ export default function HypeBoothDialog({
   rows,
   onClose,
   onAdded,
+  voice = "flat",
 }: {
   demoMode: boolean;
+  /** "game" is the /game3d wording (glossary words, no system talk); the flat Marketplace keeps "flat". */
+  voice?: "flat" | "game";
   /** The street as loaded, to recognise a ticker that already has a stall. */
   rows: WatchlistRow[];
   onClose: () => void;
@@ -99,6 +109,12 @@ export default function HypeBoothDialog({
   const today = () => new Date().toISOString();
 
   /** Find the ticker among the street's stalls, then among all holdings; load the stored picture if found. */
+  const game = voice === "game";
+  const tip = (d: StoreData | null): HypeReading => {
+    const r = readTip(d, check.oslo);
+    return game ? readingV2(r) : r;
+  };
+
   async function reread(): Promise<{ data: StoreData | null; id: string | null }> {
     let id = rows.find((r) => r.ticker.toUpperCase() === ticker)?.holding_id ?? null;
     if (id === null) {
@@ -123,10 +139,10 @@ export default function HypeBoothDialog({
       if (!mounted.current) return;
       setData(found.data);
       setHoldingId(found.id);
-      setReading(readTip(found.data, check.oslo));
+      setReading(tip(found.data));
     } catch (err) {
       if (!mounted.current) return;
-      setLoadError(errMsg(err, "Could not read what is stored."));
+      setLoadError(errMsg(err, game ? CANT_READ_V2 : "Could not read what is stored."));
     }
   }
 
@@ -188,7 +204,7 @@ export default function HypeBoothDialog({
       patch({ queue: "ok" });
     } catch (err) {
       patch({ queue: "failed" });
-      if (mounted.current) setNotes((n) => [...n, `The analysis was not queued: ${errMsg(err, "failed")} It may need filings first; try again from the Analysis queue page once reports are in.`]);
+      if (mounted.current) setNotes((n) => [...n, game ? QUEUE_FAILED_V2 : `The analysis was not queued: ${errMsg(err, "failed")} It may need filings first; try again from the Analysis queue page once reports are in.`]);
     }
     if (mounted.current) setPhase("done");
   }
@@ -201,10 +217,10 @@ export default function HypeBoothDialog({
       if (!mounted.current) return;
       setData(found.data);
       setHoldingId(found.id);
-      setReading(readTip(found.data, check.oslo));
+      setReading(tip(found.data));
       setPhase("verdict");
     } catch (err) {
-      if (mounted.current) setLoadError(errMsg(err, "Could not read what is stored."));
+      if (mounted.current) setLoadError(errMsg(err, game ? CANT_READ_V2 : "Could not read what is stored."));
     }
   }
 
@@ -319,7 +335,7 @@ export default function HypeBoothDialog({
                   </>
                 ) : reading === null ? (
                   <p className="sal-status" role="status">
-                    <span className="sal-spin" aria-hidden /> The Partner is going through what is stored…
+                    <span className="sal-spin" aria-hidden /> {game ? PARTNER_BUSY_V2 : "The Partner is going through what is stored…"}
                   </p>
                 ) : (
                   <button type="button" className="sal-btn" onClick={() => setPhase("verdict")} autoFocus>
@@ -428,7 +444,7 @@ export default function HypeBoothDialog({
                 {notes.map((n) => <p key={n} className="text-xs text-[#f2c98a]">{n}</p>)}
                 {phase === "done" && (
                   <>
-                    <p className="text-sm text-[#f3e4bf]">{NOT_ANALYSED_YET}</p>
+                    <p className="text-sm text-[#f3e4bf]">{game ? NOT_ANALYSED_YET_V2 : NOT_ANALYSED_YET}</p>
                     <div className="flex flex-wrap gap-2">
                       {storeTo && <Link to={storeTo} className="sal-btn" onClick={onClose}>Enter the store</Link>}
                       <Link to="/analysis-queue" className="sal-btn-ghost" onClick={onClose}>Watch the queue</Link>
