@@ -4,6 +4,7 @@ import { api, ApiError } from "../lib/api";
 import { formatDate, formatDecimal, formatPct100 } from "../lib/format";
 import type { Holding, JournalAction, JournalEntry } from "../lib/types";
 import { JOURNAL_ACTIONS as ACTIONS } from "../lib/types";
+import { saveErrorDetail } from "../game3d/saveError";
 import { Button, Card, VerdictBadge } from "./ui";
 
 /** Decision journal building blocks (feature F6), shared by the Journal
@@ -222,25 +223,34 @@ function ReturnValue({ pct, action }: { pct: string | null; action: JournalActio
   );
 }
 
-/** The look-back box of a journal entry whose 6- or 12-month review is due. Exported so the 3D writing desk can use the same box and the same save. */
+/** The look-back box of a journal entry whose 6- or 12-month review is due. Exported so the 3D writing desk can use the same box and the same save.
+ *  `voice="game"` is the 3D wording (glossary: look-back, why); flat mode keeps its neutral words. A failed save always shows. */
 export function ReviewField({
   entry,
   which,
   onSaved,
+  voice = "plain",
 }: {
   entry: JournalEntry;
   which: "review_6m" | "review_12m";
   onSaved: () => void;
+  voice?: "plain" | "game";
 }) {
   const [text, setText] = useState(entry[which] ?? "");
   const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState<string | null>(null);
+  const game = voice === "game";
   const label = which === "review_6m" ? "6-month review" : "12-month review";
+  const gameLabel = which === "review_6m" ? "6-month look-back" : "12-month look-back";
 
   async function save() {
     setBusy(true);
+    setFailed(null);
     try {
       await api.updateJournalEntry(entry.id, { [which]: text.trim() || null });
       onSaved();
+    } catch (e) {
+      setFailed(saveErrorDetail(e));
     } finally {
       setBusy(false);
     }
@@ -248,11 +258,18 @@ export function ReviewField({
 
   return (
     <div className="mt-3 rounded-md border border-caution/40 bg-caution-subtle/50 p-3">
-      <p className="text-xs font-medium text-caution">{label} due: was the reasoning right, and does the thesis still hold?</p>
+      <p className="text-xs font-medium text-caution">
+        {game ? `${gameLabel} due: was the why right, and does it still stand?` : `${label} due: was the reasoning right, and does the thesis still hold?`}
+      </p>
       <textarea className={`${input} mt-2 min-h-[3rem]`} value={text} onChange={(e) => setText(e.target.value)} />
-      <div className="mt-2 text-right">
+      <div className="mt-2 flex items-center justify-end gap-3">
+        {failed !== null && (
+          <span role="alert" className="text-xs text-negative" title={failed || undefined}>
+            {game ? "Couldn't save that. Try again." : "Couldn't save the review. Try again."}
+          </span>
+        )}
         <Button variant="secondary" onClick={save} disabled={busy || !text.trim()}>
-          Save review
+          {game ? "Save look-back" : "Save review"}
         </Button>
       </div>
     </div>

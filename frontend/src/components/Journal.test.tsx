@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import type { JournalEntry } from "../lib/types";
-import { JournalEntryCard, JournalEntryForm } from "./Journal";
+import { JournalEntryCard, JournalEntryForm, ReviewField } from "./Journal";
 
 const entry: JournalEntry = {
   id: "e1",
@@ -66,5 +66,20 @@ describe("journal entry editing", () => {
     expect(html).toContain("Save entry");
     expect(html).toContain("Choose…");
     expect(html).not.toContain("6-month review");
+  });
+});
+
+describe("look-back box wording", () => {
+  const e = { id: "e1", ticker: "EQNR.OL", company_name: "Equinor", thesis: "x", invalidation: "y", review_6m: null, review_12m: null } as unknown as JournalEntry;
+  it("keeps the neutral flat wording by default", () => {
+    const h = renderToStaticMarkup(<ReviewField entry={e} which="review_6m" onSaved={() => {}} />);
+    expect(h).toContain("6-month review due");
+    expect(h).toContain("Save review");
+  });
+  it("speaks the game words in 3D (look-back, why), with no flat finance word", () => {
+    const h = renderToStaticMarkup(<ReviewField entry={e} which="review_12m" onSaved={() => {}} voice="game" />);
+    expect(h).toContain("12-month look-back due");
+    expect(h).toContain("Save look-back");
+    expect(h).not.toMatch(/thesis|review/);
   });
 });

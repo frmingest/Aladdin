@@ -41,20 +41,21 @@ describe("JournalBooksPanel (the old books)", () => {
 
   it("is read only: no edit, no delete, no save box when no look-back is due", () => {
     const h = html([entry()]);
-    expect(h).not.toMatch(/Edit|Delete|Save review/);
+    expect(h).not.toMatch(/Edit|Delete|Save review|Save look-back/);
   });
 
   it("offers the flat journal's own look-back box when the 6-month review is due, and nothing else to write", () => {
     const h = html([entry({ outcome: outcome({ review_6m_due: true }) })]);
-    expect(h).toContain("6-month review due");
-    expect(h).toContain("Save review");
+    expect(h).toContain("6-month look-back due");
+    expect(h).toContain("Save look-back");
+    expect(h).not.toMatch(/thesis|Save review/);
     expect(h).not.toMatch(/Delete/);
   });
 
   it("shows a written review and says plainly when the wrong-if line was never written", () => {
     const h = html([entry({ invalidation: null, review_6m: "Held up." })]);
     expect(h).toContain("Not written");
-    expect(h).toContain("6-month review: ");
+    expect(h).toContain("6-month look-back: ");
     expect(h).toContain("Held up.");
   });
 
