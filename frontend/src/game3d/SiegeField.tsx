@@ -36,7 +36,8 @@ import { BANNER_FOR, SIEGE_STONE, STORM_STONE, WINCH, fieldSpotAt, stonePlate, w
 import type { FieldSpotId, FieldTools } from "./siegeFieldTools";
 import { FIELD_TOOLS_WORDS } from "./siegeFieldToolsWordsV1";
 import { fallPercent } from "./stormDrill";
-import { YARD_FAILED, YARD_READING, yardFogTitle, yardMoreLine } from "./siegeYardWordsV2";
+import { YARD_READING } from "./siegeYardWordsV2";
+import { YARD_FAILED_TAG, yardFogTag } from "./siegeYardWordsV3";
 import { useSiegeYard } from "./useSiegeYard";
 import type { YardView } from "./siegeYard";
 import WorldLabel from "./WorldLabel";
@@ -138,9 +139,9 @@ function Wall({ view, source }: { view: YardView; source: Object3D }) {
         </group>
       ))}
       {view.fog.length > 0 && (
-        <WorldLabel position={[0, 7.4, ghosts[0]?.z ?? -30]} distanceFactor={16} ariaHidden>
-            {yardFogTitle(view.fog.length)}
-          </WorldLabel>
+        <WorldLabel position={[0, 7.4, ghosts[0]?.z ?? -30]} distanceFactor={16} fog ariaHidden>
+          {yardFogTag(view.fog.length)}
+        </WorldLabel>
       )}
     </>
   );
@@ -328,27 +329,19 @@ function Tent({ status }: { status: "reading" | "failed" | YardView }) {
         <CylinderCollider args={[1.5, FIELD_TENT.solid]} position={[0, 1.5, 0]} />
         <Model source={camp.scene} name="tent" scale={FIELD_TENT.scale} />
       </RigidBody>
-      <WorldLabel position={[FIELD_TENT.x, 6, FIELD_TENT.z]} distanceFactor={16} wrap maxWidth={260} ariaHidden>
-          {status === "reading" ? (
-            YARD_READING
-          ) : status === "failed" ? (
-            YARD_FAILED
-          ) : (
-            <>
-              <strong>{status.level}</strong>
-              <br />
-              {status.headline}
-              <br />
-              {status.more > 0 && (
-                <>
-                  {yardMoreLine(status.more)}
-                  <br />
-                </>
-              )}
-              <em>{FIELD_WORDS.whatIf}</em>
-            </>
-          )}
-        </WorldLabel>
+      <WorldLabel position={[FIELD_TENT.x, 6, FIELD_TENT.z]} distanceFactor={16} ariaHidden>
+        {status === "reading" ? (
+          YARD_READING
+        ) : status === "failed" ? (
+          YARD_FAILED_TAG
+        ) : (
+          <>
+            <strong>{status.level}</strong>
+            <br />
+            <em>{FIELD_WORDS.whatIf}</em>
+          </>
+        )}
+      </WorldLabel>
     </>
   );
 }
