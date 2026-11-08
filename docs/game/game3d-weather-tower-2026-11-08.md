@@ -38,7 +38,7 @@ Give the interest-rate and macro numbers a place of their own in the 3D town, on
 - **Identity before -> after:** Weather Tower new, 3 on paper (scene, one kit of dials, a fact in each needle and trace and in the post heights, Plain view = flat `/macro`); to be re-scored from screenshots. Town unchanged (2 or 3).
 - **Visual win:** the dial wall and the curve rail. Visual verb + scene: **read**, a ring of brass instruments in a tower. Real facts encoded: each series' place in its own 24-month range, its history, and the shape of Norway's curve.
 - **Look-and-judge screenshots:** not taken (no browser in this session). Open question for the look: the Weather Tower reuses the watchtower model that the Cartographer uses, so the two outside look alike.
-- **Interaction cost:** two taps from the Town (E at the door, then walk to a dial; E at the dials opens the page). Not measured in a real browser.
+- **Interaction cost:** one E at the door to go in; walking up to any dial shows its card with no press; one E at the dials opens the full page. Not measured in a real browser.
 - **Words:** short and game-voiced, in a versioned file; no buy, sell, good or bad words (test).
 
 ## Not in this build
