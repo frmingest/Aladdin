@@ -146,7 +146,6 @@ export default function Library({ name, ticker, gap = null, shelves, pos, onShel
       <Part color={PAL.iron} position={[0, 1.6, HALL.maxZ - 0.3]} grow={1.2}>
         <torusGeometry args={[0.18, 0.04, 6, 14]} />
       </Part>
-      <WorldLabel position={[0, 3.9, HALL.maxZ - 0.3]} distanceFactor={9}>Door · back outside</WorldLabel>
 
       {/* A rug, a reading table and an open book: furniture, no facts. */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, -1]} receiveShadow>
