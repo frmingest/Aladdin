@@ -2,7 +2,8 @@ import { Link } from "react-router-dom";
 import TemperamentCard from "../components/fortress/TemperamentCard";
 import VaultCard from "../components/fortress/VaultCard";
 import type { GameState } from "../lib/types";
-import { VAULT_CLOSE, VAULT_PANEL_TITLE, VAULT_PLAIN } from "./vaultWordsV1";
+import { VAULT_CLOSE, VAULT_PANEL_TITLE } from "./vaultWordsV1";
+import { PLAIN_VIEW_LINK } from "./glossaryWordsV1";
 
 /**
  * The Vault panel (S16, PR 1): the flat Fortress's own Vault card and Temperament meter, in the world. Every
@@ -27,7 +28,7 @@ export default function VaultPanel({
       <header className="g3d-head">
         <h2>{VAULT_PANEL_TITLE}</h2>
         <span className="flex items-center gap-2">
-          <Link to="/fortress" className="g3d-btn">{VAULT_PLAIN}</Link>
+          <Link to="/fortress" className="g3d-btn">{PLAIN_VIEW_LINK}</Link>
           <button type="button" className="g3d-x" aria-label={VAULT_CLOSE} onClick={onClose}>×</button>
         </span>
       </header>

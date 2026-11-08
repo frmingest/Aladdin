@@ -45,7 +45,7 @@ describe("RealmPanel (the realm post's panel)", () => {
     expect(h).toContain("The whole fortress");
     expect(h).toContain(REALM_LEVEL_WORD[v.level]);
     expect(h).toContain('href="/fortress"');
-    expect(h).toContain("Open the flat page");
+    expect(h).toContain("Open Plain view");
     expect(h).toContain('aria-label="Close"');
   });
 

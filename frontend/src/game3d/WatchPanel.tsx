@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import NightWatchCard from "../components/fortress/NightWatchCard";
-import { PANEL_CLOSE, PANEL_PLAIN, WATCH_PANEL_TITLE } from "./watchWordsV1";
+import { PANEL_CLOSE, WATCH_PANEL_TITLE } from "./watchWordsV1";
+import { PLAIN_VIEW_LINK } from "./glossaryWordsV1";
 
 /**
  * The Night Watch panel (S16, PR 2): the flat Fortress's own Night Watch card in the world. It reads the dispatch the
@@ -15,7 +16,7 @@ export default function WatchPanel({ onClose }: { onClose: () => void }) {
       <header className="g3d-head">
         <h2>{WATCH_PANEL_TITLE}</h2>
         <span className="flex items-center gap-2">
-          <Link to="/fortress" className="g3d-btn">{PANEL_PLAIN}</Link>
+          <Link to="/fortress" className="g3d-btn">{PLAIN_VIEW_LINK}</Link>
           <button type="button" className="g3d-x" aria-label={PANEL_CLOSE} onClick={onClose}>×</button>
         </span>
       </header>

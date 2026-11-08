@@ -1,7 +1,8 @@
 import { Link } from "react-router-dom";
 import RavensCard from "../components/fortress/RavensCard";
 import type { Ravens } from "../lib/types";
-import { PANEL_CLOSE, PANEL_PLAIN, RAVENS_PANEL_TITLE } from "./watchWordsV1";
+import { PANEL_CLOSE, RAVENS_PANEL_TITLE } from "./watchWordsV1";
+import { PLAIN_VIEW_LINK } from "./glossaryWordsV1";
 
 /**
  * The ravens panel (S16, PR 2): the flat Fortress's own Ravens card in the world, with its own "Read the report" button
@@ -27,7 +28,7 @@ export default function RavensPanel({
       <header className="g3d-head">
         <h2>{RAVENS_PANEL_TITLE}</h2>
         <span className="flex items-center gap-2">
-          <Link to="/fortress" className="g3d-btn">{PANEL_PLAIN}</Link>
+          <Link to="/fortress" className="g3d-btn">{PLAIN_VIEW_LINK}</Link>
           <button type="button" className="g3d-x" aria-label={PANEL_CLOSE} onClick={onClose}>×</button>
         </span>
       </header>

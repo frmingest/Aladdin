@@ -30,8 +30,8 @@ describe("tower sign words", () => {
 
   it("adds a note only for an unsurveyed tower, with the named gap", () => {
     expect(signWords("Equinor", false).note).toBe("");
-    expect(signWords("Jæren", true).note).toBe("not surveyed");
-    expect(signWords("Jæren", true, "no tagged filing").note).toBe("not surveyed: no tagged filing");
+    expect(signWords("Jæren", true).note).toBe("in fog");
+    expect(signWords("Jæren", true, "no tagged filing").note).toBe("in fog: no tagged filing");
   });
 });
 

@@ -4,7 +4,7 @@ import { useFrame } from "@react-three/fiber";
 import { PAL, Part } from "./Inked";
 import { BANNER_SHAPE, GAUGE_FILL, PRICE_LEAVE_RANGE, PRICE_POST, PRICE_RANGE } from "./holdingLand";
 import type { PricePost as PricePostData } from "./holdingLand";
-import { PRICE_WORDS } from "./pricePostWordsV1";
+import { PRICE_WORDS } from "./pricePostWordsV2";
 import WorldLabel from "./WorldLabel";
 
 const MIST = "#cfd6dc";
