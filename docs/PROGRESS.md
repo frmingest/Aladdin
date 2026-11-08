@@ -1,6 +1,6 @@
 # Aladdin — Progress
 
-**Last updated:** 2026-11-06 (polish pass PR 4). Rolling log: active status only, under 100 lines, at most 7 tasks (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
+**Last updated:** 2026-11-08 (3D text and labels plan). Rolling log: active status only, under 100 lines, at most 7 tasks (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
 
 ## Current Objective
 
@@ -13,6 +13,7 @@ State: `main` at `b9203f4` (#303). S21 to S31 and A1 to A8 are merged; S29 and t
 - [ ] **Hall of Records, design note (Claude):** a 3D place for interest-rate and macro data; relate it to the Town Hall Macro board and the Records Hall, list the series, give a visual verb and scene line. No code until you approve the note.
 - [ ] **3D polish pass (Claude):** PRs 1 to 3 (outlines, smoke and sparks, door swings) merged, PR 4 sky gradient and soft shadows (#305) open. Then opt-in sound ([audit](game/game3d-polish-audit-2026-11-06.md)). Faiz: press P in the town to check draw calls.
 - [ ] **Rate sensitivity per holding, then the PDF memo (Claude):** neither exists on `main`; the rate work feeds the Hall of Records.
+- [ ] **3D text and labels (Claude, plan in PR):** white labels lost on the light sky (`g3d-nameplate` never defined), black boxes, floating sentences. Signs on objects, parchment nameplates near you, one `[E]` prompt, sentences in panels; T1 to T5. Faiz: 4 decisions in section 5 ([plan](game/game3d-text-legibility-sprint-plan-2026-11-08.md))
 - [ ] **Text pass 4 (Claude):** Vault, Night Watch, ravens, Realm panel, store gates, backend text, Sal and Hype Booth speech, Where-to names, `stormDrillWordsV1`. Faiz decides what "Last verdict" on the Land shelf says ([review](game/game3d-text-review-2026-11-03.md))
 - [ ] **Look-over in `/game3d` (Faiz):** S29 battlefield (west strip scorch and chalk bars, war table on the east flank, bluer river); press P for fps.
 - [ ] **Data chores (Faiz):** Newsweb watch job green (#195); *Fetch all reports* on JAREN.OL (#194); The Printer amounts call ([plan](game/the-printer-sprint-plan-2026-10-20.md))
