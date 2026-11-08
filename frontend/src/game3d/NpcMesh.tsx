@@ -62,7 +62,6 @@ export default function NpcMesh({
       </group>
       <WorldLabel position={[0, npc.height + 0.5, 0]} distanceFactor={14}>
         {npc.name}
-        {active ? " · press E" : ""}
       </WorldLabel>
     </RigidBody>
   );

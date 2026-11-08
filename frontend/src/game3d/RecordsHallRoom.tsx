@@ -204,7 +204,6 @@ export default function RecordsHallRoom({ pos, onShelves, onDoor }: Props) {
       <Part color={PAL.iron} position={[0, 1.6, ARCHIVE.maxZ - 0.3]} grow={1.2}>
         <torusGeometry args={[0.18, 0.04, 6, 14]} />
       </Part>
-      <WorldLabel position={[0, 3.9, ARCHIVE.maxZ - 0.3]} distanceFactor={9}>Door · back to the Town</WorldLabel>
 
       {/* A rug in front of the shelves: furniture, no fact. */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, ARCHIVE.minZ + 4.2]} receiveShadow>

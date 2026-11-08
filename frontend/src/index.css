@@ -1007,6 +1007,10 @@
 .g3d-worldtag.wrap { white-space: normal; }
 .g3d-worldtag.fog { color: #2e2d38; background: #d9d4c8; border: 1.5px dashed #6b6e8a; }
 .g3d-worldtag.now { color: #2a1a06; background: #f2d27a; }
+/* The HUD prompt: a key cap and the action. Same parchment ink as the world labels. */
+.g3d-prompt { pointer-events: auto; display: inline-flex; align-items: center; gap: 0.6rem; padding: 0.35rem 0.9rem 0.35rem 0.4rem; border-radius: 8px; font-size: 0.9rem; font-weight: 600; color: #2a1a06; background: #F6EFE0; border: 1.5px solid #8a6a32; box-shadow: 0 0 0 1px #26253B, 0 4px 12px rgb(0 0 0 / 0.4); }
+.g3d-keycap { display: inline-grid; place-items: center; min-width: 1.7rem; height: 1.7rem; border-radius: 5px; font-family: "Space Grotesk", Inter, system-ui, sans-serif; font-size: 0.95rem; font-weight: 800; color: #F6EFE0; background: #26253B; box-shadow: inset 0 -2px 0 #0e0d16; }
+.g3d-prompt-note { display: block; margin-top: 0.3rem; text-align: center; font-size: 0.75rem; color: #F6EFE0; text-shadow: 0 1px 3px #000; }
 .g3d-weight { flex: none; font-size: 0.75rem; font-weight: 700; color: #f2d27a; }
 .g3d-btn { display: inline-block; padding: 0.3rem 0.7rem; border-radius: 5px; font-size: 0.75rem; font-weight: 600; color: #f3e4bf; background: rgb(255 255 255 / 0.05); box-shadow: inset 0 0 0 1px #8a6a32; }
 .g3d-btn:hover { background: rgb(255 255 255 / 0.12); }
