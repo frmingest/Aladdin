@@ -52,6 +52,8 @@ The fog explanation, the gate-stone text and the hall notes leave the sky. In th
 | T4 | **Declutter.** Near-only reveal and 12 px floor; sentences moved into panels with a fog seal in the world. | `WorldLabel`, `SiegeField`, `siegeYardWordsV3.ts` (new version, V2 untouched), `HoldingLand` | From the siege camp at most about 3 nameplates show; no sentence in the sky. |
 | T5 | **Look and judge.** Before/after screenshots of Faiz's four spots plus Library, Town Hall and the Town at night; fps with P. | Review doc | Checklist section B answered. |
 
+**Status (2026-11-08):** T1 built, written and tested, not yet deployed: `WorldLabel`, `labelPlan.ts` (tested, not wired until T4 turns on the near-only reveal), `gameTokens.ts` with the contrast test, and all 29 labels swapped (grep finds no `g3d-nameplate` or `bg-black/` in world labels). T1 took the recommended defaults for decisions 1 and 2. T2 is built on top of T1 in its own PR: `ActionPrompt` splits "Press E to ..." strings into a key cap and the action, the NPC tag is a plain name, the three "Door · back ..." labels are gone (the page already shows the door prompt), and a tap on the prompt sends E.
+
 Cut line: T3 for the Market Quarter and the Library bays (they keep the T1 parchment tag). Never cut: the fog look, Plain view, the screenshots.
 
 ## 4. Checklist section A

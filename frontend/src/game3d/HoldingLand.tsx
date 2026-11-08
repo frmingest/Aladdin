@@ -2,7 +2,6 @@ import { useMemo, useRef, useState } from "react";
 import type { MutableRefObject } from "react";
 import { useFrame } from "@react-three/fiber";
 import { CuboidCollider, RigidBody } from "@react-three/rapier";
-import { Html } from "@react-three/drei";
 import { DoubleSide } from "three";
 import { PAL, Part } from "./Inked";
 import { Bay } from "./LibraryBay";
@@ -33,6 +32,7 @@ import type { SurveyCheckId } from "../lib/survey";
 import { LAND_WORDS } from "./holdingLandWordsV1";
 import { nearestShelf } from "./libraryRoom";
 import type { Shelf, ShelfId } from "./libraryShelves";
+import WorldLabel from "./WorldLabel";
 
 const GRASS = "#7a9e5c";
 const PADDOCK = "#8fb06b";
@@ -193,8 +193,7 @@ export default function HoldingLand({ ticker, gap = null, gate, radius, shelves,
           <boxGeometry args={[2, 0.16, 1]} />
         </Part>
       </RigidBody>
-      <Html position={[GATE_STONE.x, 2.3, GATE_STONE.z]} center distanceFactor={9} zIndexRange={[10, 0]}>
-        <div className="pointer-events-none rounded bg-black/70 px-3 py-1 text-center text-white">
+      <WorldLabel position={[GATE_STONE.x, 2.3, GATE_STONE.z]} distanceFactor={9}>
           <div className="whitespace-nowrap text-sm font-semibold">{gate.title}</div>
           <div className="whitespace-nowrap text-xs opacity-80">
             {ticker}
@@ -203,8 +202,7 @@ export default function HoldingLand({ ticker, gap = null, gate, radius, shelves,
           <div className="whitespace-nowrap text-xs">{gate.weight}</div>
           <div className="whitespace-nowrap text-xs">{gate.value}</div>
           {gate.note && <div className="whitespace-nowrap text-xs italic opacity-90">{gate.note}</div>}
-        </div>
-      </Html>
+        </WorldLabel>
 
       {/* The records house: three walls and a ceiling drawn from inside only (so the camera can sit outside them), open to the east. */}
       <RigidBody type="fixed" colliders={false}>
@@ -244,9 +242,7 @@ export default function HoldingLand({ ticker, gap = null, gate, radius, shelves,
       <Part color={PAL.timberDark} position={[east, WALL_H + 0.1, hz0]} grow={1.04}>
         <boxGeometry args={[0.4, 0.3, hz * 2 + 0.4]} />
       </Part>
-      <Html position={[east, WALL_H + 0.9, hz0]} center distanceFactor={9} zIndexRange={[10, 0]}>
-        <div className="pointer-events-none whitespace-nowrap rounded bg-black/65 px-2 py-0.5 text-xs text-white">{LAND_WORDS.houseLabel}</div>
-      </Html>
+      <WorldLabel position={[east, WALL_H + 0.9, hz0]} distanceFactor={9}>{LAND_WORDS.houseLabel}</WorldLabel>
 
       {/* A rug, the reading table and an open book: furniture, no facts. */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[LAND_TABLE.x, 0.05, LAND_TABLE.z]} receiveShadow>

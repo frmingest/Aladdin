@@ -2,7 +2,6 @@ import { useMemo, useRef } from "react";
 import type { MutableRefObject } from "react";
 import { useFrame } from "@react-three/fiber";
 import { CuboidCollider, RigidBody } from "@react-three/rapier";
-import { Html } from "@react-three/drei";
 import { api } from "../lib/api";
 import { useCachedQuery } from "../lib/queryCache";
 import type { Records } from "../lib/types";
@@ -26,6 +25,7 @@ import {
   shelfPlate,
 } from "./recordsHallRoom";
 import type { BookPlan } from "./recordsHallRoom";
+import WorldLabel from "./WorldLabel";
 
 const STONE = "#b9b2a4";
 const FLOOR = "#6b5a4a";
@@ -204,9 +204,7 @@ export default function RecordsHallRoom({ pos, onShelves, onDoor }: Props) {
       <Part color={PAL.iron} position={[0, 1.6, ARCHIVE.maxZ - 0.3]} grow={1.2}>
         <torusGeometry args={[0.18, 0.04, 6, 14]} />
       </Part>
-      <Html position={[0, 3.9, ARCHIVE.maxZ - 0.3]} center distanceFactor={9} zIndexRange={[10, 0]}>
-        <div className="pointer-events-none whitespace-nowrap rounded bg-black/65 px-2 py-0.5 text-xs text-white">Door · back to the Town</div>
-      </Html>
+      <WorldLabel position={[0, 3.9, ARCHIVE.maxZ - 0.3]} distanceFactor={9}>Door · back to the Town</WorldLabel>
 
       {/* A rug in front of the shelves: furniture, no fact. */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, ARCHIVE.minZ + 4.2]} receiveShadow>
@@ -221,15 +219,13 @@ export default function RecordsHallRoom({ pos, onShelves, onDoor }: Props) {
         <Book key={b.id} b={b} />
       ))}
 
-      <Html position={[0, 4.4, ARCHIVE.minZ + 0.9]} center distanceFactor={9} zIndexRange={[10, 0]} style={{ pointerEvents: "none" }}>
-        <div className="rounded bg-black/70 px-3 py-1.5 text-center text-white" style={{ maxWidth: 260 }}>
+      <WorldLabel position={[0, 4.4, ARCHIVE.minZ + 0.9]} distanceFactor={9} wrap maxWidth={260}>
           {plate.map((line, i) => (
             <div key={line} className={i === 0 ? "text-sm font-semibold" : "text-xs opacity-80"}>
               {line}
             </div>
           ))}
-        </div>
-      </Html>
+        </WorldLabel>
 
       <ArchiveWatch pos={pos} onShelves={onShelves} onDoor={onDoor} />
     </group>

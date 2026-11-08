@@ -2,7 +2,6 @@ import { useRef } from "react";
 import type { MutableRefObject } from "react";
 import { useFrame } from "@react-three/fiber";
 import { CylinderCollider, RigidBody } from "@react-three/rapier";
-import { Html } from "@react-three/drei";
 import type { Group } from "three";
 import Avatar from "./Avatar";
 import BlobShadow from "./BlobShadow";
@@ -11,6 +10,7 @@ import { OracleFigure, PartnerFigure } from "./Figures";
 import { shortestAngle } from "./movement";
 import { yawToward } from "./npcs";
 import type { Npc } from "./npcs";
+import WorldLabel from "./WorldLabel";
 
 const TURN_RATE = 6;
 
@@ -60,12 +60,10 @@ export default function NpcMesh({
           cheerKey={cheerKey}
         />
       </group>
-      <Html position={[0, npc.height + 0.5, 0]} center distanceFactor={14} zIndexRange={[10, 0]}>
-        <div className="pointer-events-none whitespace-nowrap rounded bg-black/55 px-2 py-0.5 text-xs text-white">
-          {npc.name}
-          {active ? " · press E" : ""}
-        </div>
-      </Html>
+      <WorldLabel position={[0, npc.height + 0.5, 0]} distanceFactor={14}>
+        {npc.name}
+        {active ? " · press E" : ""}
+      </WorldLabel>
     </RigidBody>
   );
 }

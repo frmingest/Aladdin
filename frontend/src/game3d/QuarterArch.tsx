@@ -1,9 +1,9 @@
-import { Html } from "@react-three/drei";
 import { CuboidCollider, RigidBody } from "@react-three/rapier";
 import { PAL, Part } from "./Inked";
 import StaticBatch from "./StaticBatch";
 import { QUARTER_GATE, QUARTER_GATE_FACING } from "./quarterPlan";
 import { QUARTER_WORDS, archLine } from "./quarterWordsV1";
+import WorldLabel from "./WorldLabel";
 
 /**
  * The arch to the Market Quarter: two stout timber posts, a wide lintel and a cream and teal awning strip, east of the market
@@ -34,8 +34,7 @@ export default function QuarterArch({ counts }: { counts: { total: number; inRan
           <boxGeometry args={[0.8, 0.46, 0.08]} />
         </Part>
       </StaticBatch>
-      <Html position={[0, 5.2, 0]} center distanceFactor={14} zIndexRange={[10, 0]} style={{ pointerEvents: "none" }}>
-        <div className="g3d-nameplate" style={{ textAlign: "center", whiteSpace: "nowrap" }} aria-hidden="true">
+      <WorldLabel position={[0, 5.2, 0]} distanceFactor={14} ariaHidden>
           {QUARTER_WORDS.gateLabel}
           {line && (
             <>
@@ -43,8 +42,7 @@ export default function QuarterArch({ counts }: { counts: { total: number; inRan
               {line}
             </>
           )}
-        </div>
-      </Html>
+        </WorldLabel>
     </RigidBody>
   );
 }

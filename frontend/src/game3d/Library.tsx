@@ -2,7 +2,6 @@ import { useRef, useState } from "react";
 import type { MutableRefObject } from "react";
 import { useFrame } from "@react-three/fiber";
 import { CuboidCollider, RigidBody } from "@react-three/rapier";
-import { Html } from "@react-three/drei";
 import { PAL, Part } from "./Inked";
 import { Bay } from "./LibraryBay";
 import {
@@ -20,6 +19,7 @@ import {
   nearestShelf,
 } from "./libraryRoom";
 import type { Shelf, ShelfId } from "./libraryShelves";
+import WorldLabel from "./WorldLabel";
 
 const PLASTER = "#d8c6a4";
 const FLOOR = "#7a5638";
@@ -146,9 +146,7 @@ export default function Library({ name, ticker, gap = null, shelves, pos, onShel
       <Part color={PAL.iron} position={[0, 1.6, HALL.maxZ - 0.3]} grow={1.2}>
         <torusGeometry args={[0.18, 0.04, 6, 14]} />
       </Part>
-      <Html position={[0, 3.9, HALL.maxZ - 0.3]} center distanceFactor={9} zIndexRange={[10, 0]}>
-        <div className="pointer-events-none whitespace-nowrap rounded bg-black/65 px-2 py-0.5 text-xs text-white">Door · back outside</div>
-      </Html>
+      <WorldLabel position={[0, 3.9, HALL.maxZ - 0.3]} distanceFactor={9}>Door · back outside</WorldLabel>
 
       {/* A rug, a reading table and an open book: furniture, no facts. */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, -1]} receiveShadow>
@@ -180,15 +178,13 @@ export default function Library({ name, ticker, gap = null, shelves, pos, onShel
         <planeGeometry args={[2.1, 2.9]} />
         <meshBasicMaterial color="#a9cfe8" />
       </mesh>
-      <Html position={[0, 5.9, HALL.minZ + 0.3]} center distanceFactor={9} zIndexRange={[10, 0]}>
-        <div className="pointer-events-none rounded bg-black/70 px-3 py-1 text-center text-white">
+      <WorldLabel position={[0, 5.9, HALL.minZ + 0.3]} distanceFactor={9}>
           <div className="whitespace-nowrap text-sm font-semibold">{name}</div>
           <div className="text-xs opacity-80">
             {ticker}
             {gap ? ` · Gap: ${gap}` : ""}
           </div>
-        </div>
-      </Html>
+        </WorldLabel>
 
       {SHELF_SLOTS.map((slot) => {
         const shelf = byId.get(slot.id);

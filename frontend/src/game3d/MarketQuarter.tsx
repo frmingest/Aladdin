@@ -1,6 +1,6 @@
 import { Component, Suspense, useEffect, useMemo } from "react";
 import type { ReactNode } from "react";
-import { Html, useGLTF } from "@react-three/drei";
+import { useGLTF } from "@react-three/drei";
 import { CuboidCollider, RigidBody } from "@react-three/rapier";
 import { CanvasTexture, SRGBColorSpace } from "three";
 import type { Object3D } from "three";
@@ -22,6 +22,7 @@ import type { Quarter } from "./quarterPlan";
 import { QUARTER_WORDS } from "./quarterWordsV1";
 import { streetOverflowLine } from "./streetPlan";
 import { TOWN_FILES } from "./townPieces";
+import WorldLabel from "./WorldLabel";
 
 /** The same flat ground colour as the Town, the Siege Field and the courtyard, so nothing here is flattered by colour. */
 const GRASS = "#7a9e5c";
@@ -197,11 +198,9 @@ function Signs({ overflow }: { overflow: number }) {
       </group>
       <SignBoard text={QUARTER_WORDS.laneSign} width={3.6} position={[LANE_SIGN.x, 2, LANE_SIGN.z + 0.02]} />
       {overflow > 0 && (
-        <Html position={[0, 4.4, LANE_HOUSE.z + 5]} center distanceFactor={16} zIndexRange={[10, 0]} style={{ pointerEvents: "none" }}>
-          <div className="g3d-nameplate" style={{ maxWidth: 260, whiteSpace: "normal", textAlign: "center" }} aria-hidden="true">
+        <WorldLabel position={[0, 4.4, LANE_HOUSE.z + 5]} distanceFactor={16} wrap maxWidth={260} ariaHidden>
             {streetOverflowLine(overflow)}
-          </div>
-        </Html>
+          </WorldLabel>
       )}
     </>
   );
