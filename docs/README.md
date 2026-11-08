@@ -170,6 +170,8 @@ Game mode (Fortress): concept, sprint plans and reviews, visual identity, art pa
 - [game3d-text-pass-3-2026-11-03.md](game/game3d-text-pass-3-2026-11-03.md) — text pass 3: Quest log, Siege Yard (Sway), advisor voices (dialogue v4), shelf signs, five verified bugs; what is left for pass 4
 - [game3d-polish-audit-2026-11-06.md](game/game3d-polish-audit-2026-11-06.md) — 3D polish pass: what already exists (outlines, shadows, sky, doors, smoke, sound), PR 1 outlines on town buildings, next PRs
 - [game3d-text-legibility-sprint-plan-2026-11-08.md](game/game3d-text-legibility-sprint-plan-2026-11-08.md) — 3D text and labels: why labels vanish on the light sky, proposal (painted signs, parchment nameplates near you, HUD `[E]` prompt, sentences in panels), PRs T1 to T5 (plan only)
+- [game3d-macro-room-design-note-2026-11-08.md](game/game3d-macro-room-design-note-2026-11-08.md) — the 3D macro room: why "Hall of Records" could not be its name, the name chosen (The Weather Tower), series it shows, relation to the Wide Weather board, visual verb, decisions
+- [game3d-weather-tower-2026-11-08.md](game/game3d-weather-tower-2026-11-08.md) — The Weather Tower built: dial per macro series, curve rail, catalogue v3 (Norway curve 6M to 7Y), what changes in analysis input, what to do after deploy
 
 ### ingestion/
 

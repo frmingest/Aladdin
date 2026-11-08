@@ -9,7 +9,7 @@ import pytest
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 
-from app.config.settings import Settings
+from app.config.settings import Settings, get_settings
 from app.domain.macro_series import get_derived_indicators, get_macro_series
 from app.models import Base
 from app.models.macro import MacroObservation, MacroSeriesStatus
@@ -36,6 +36,8 @@ from app.services.macro.refresh import refresh_macro_data, refresh_series, store
 from app.services.macro.scheduler import MacroRefreshScheduler
 
 SPECS = {s.key: s for s in get_macro_series("v1")}
+# The series a refresh actually walks: whatever catalogue version is active (v3 since the Weather Tower).
+ACTIVE_KEYS = [s.key for s in get_macro_series(get_settings().active_macro_series_version)]
 NOW = datetime(2026, 9, 24, 6, 0, tzinfo=timezone.utc)
 
 
@@ -66,6 +68,19 @@ def test_catalogue_v2_adds_norway_curve_without_new_fetches():
     assert {d.key for d in get_derived_indicators("v1")} < set(derived)
     curve = derived["no_curve_10y_3m"]
     assert (curve.left, curve.right, curve.region) == ("no_10y", "no_3m_bill", "NO")
+
+
+def test_catalogue_v3_adds_five_norway_curve_points_and_leaves_v2_alone():
+    v3 = {s.key: s for s in get_macro_series("v3")}
+    assert set(v3) - set(SPECS) == {"no_6m_bill", "no_12m_bill", "no_3y", "no_5y", "no_7y"}
+    assert {s.key for s in get_macro_series("v2")} == set(SPECS)  # v2 untouched (Rule 3)
+    for key in ("no_6m_bill", "no_12m_bill", "no_3y", "no_5y", "no_7y"):
+        spec = v3[key]
+        assert (spec.source, spec.region, spec.group, spec.frequency) == ("norges_bank", "NO", "rates", "daily")
+        assert spec.source_series_id.startswith("GOVT_GENERIC_RATES/B.")
+    assert v3["no_5y"].source_series_id == "GOVT_GENERIC_RATES/B.5Y.GBON"
+    assert v3["no_12m_bill"].source_series_id == "GOVT_GENERIC_RATES/B.12M.TBIL"
+    assert {d.key for d in get_derived_indicators("v3")} == {d.key for d in get_derived_indicators("v2")}
 
 
 def test_unknown_series_version_raises():
@@ -213,7 +228,7 @@ def test_yoy_series_fetches_an_extra_year_first_time():
 def test_one_failing_publisher_does_not_stop_the_others():
     db = _session()
     provider = FakeProvider(
-        {k: _daily(["1.0"], date(2026, 9, 22)) for k in SPECS}, fail={"us_10y"}
+        {k: _daily(["1.0"], date(2026, 9, 22)) for k in ACTIVE_KEYS}, fail={"us_10y"}
     )
     results = {r.key: r for r in refresh_macro_data(db, provider, now=NOW)}
     assert results["us_10y"].status == "failed" and "down" in results["us_10y"].error
@@ -231,7 +246,7 @@ def test_empty_response_counts_as_failure():
 
 def test_only_stale_skips_fresh_and_recently_failed_series():
     db = _session()
-    data = {k: _daily(["1.0"], date(2026, 9, 22)) for k in SPECS}
+    data = {k: _daily(["1.0"], date(2026, 9, 22)) for k in ACTIVE_KEYS}
     provider = FakeProvider(data, fail={"us_hy_spread"})
     refresh_macro_data(db, provider, now=NOW)
     provider.calls.clear()
@@ -245,7 +260,7 @@ def test_only_stale_skips_fresh_and_recently_failed_series():
 
     provider.calls.clear()
     refresh_macro_data(db, provider, only_stale=True, now=NOW + timedelta(hours=21))
-    assert len(provider.calls) == len(SPECS)  # past MACRO_STALE_AFTER_HOURS (20)
+    assert len(provider.calls) == len(ACTIVE_KEYS)  # past MACRO_STALE_AFTER_HOURS (20)
 
 
 def test_composite_routes_by_source():

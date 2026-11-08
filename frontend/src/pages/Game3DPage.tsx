@@ -27,6 +27,7 @@ import WorldPanel from "../game3d/WorldPanel";
 import { REGISTER } from "../game3d/parity3d";
 import type { Door } from "../game3d/parity3d";
 import { RECORDS_ROUTE, archiveDoorPrompt, shelfPrompt } from "../game3d/recordsHallRoom";
+import { MACRO_ROUTE, dialsPrompt, towerDoorPrompt } from "../game3d/weatherTowerRoom";
 import { PLAIN_VIEW, PLAIN_VIEW_TITLE, SIGN_PROMPT } from "../game3d/worldWordsV2";
 import { drillBlock, stormDrillQuest } from "../game3d/stormDrill";
 import { DRILL_PROMPT } from "../game3d/stormDrillWordsV1";
@@ -207,6 +208,8 @@ export default function Game3DPage() {
   // Inside the Hall of Records: whether you are in it, whether you stand at the shelves, and whether the door is in reach.
   const [atShelves, setAtShelves] = useState(false);
   const [atArchiveDoor, setAtArchiveDoor] = useState(false);
+  const [atDials, setAtDials] = useState(false);
+  const [atWeatherDoor, setAtWeatherDoor] = useState(false);
   const [onlyRoutes, setOnlyRoutes] = useState<readonly string[] | null>(null);
   const [atTownExit, setAtTownExit] = useState(false);
   // The Siege Field: whether you stand at its gate in the courtyard, and whether its road back is in reach.
@@ -552,6 +555,8 @@ export default function Game3DPage() {
     setAtHallDoor(false);
     setAtShelves(false);
     setAtArchiveDoor(false);
+    setAtDials(false);
+    setAtWeatherDoor(false);
   }, []);
   const enterTown = useCallback(() => {
     clearNears();
@@ -628,6 +633,24 @@ export default function Game3DPage() {
     clearNears();
     dispatchArea({ type: "leave" });
   }, [clearNears]);
+  // Into the Weather Tower and back out to its door; E at the dials opens the flat Macro page in the world panel.
+  const enterWeather = useCallback(() => {
+    clearNears();
+    dispatchArea({ type: "enter", ref: { id: "weather" } });
+  }, [clearNears]);
+  const leaveWeather = useCallback(() => {
+    clearNears();
+    dispatchArea({ type: "leave" });
+  }, [clearNears]);
+  const openDials = useCallback(() => {
+    const row = REGISTER.find((d) => d.route === MACRO_ROUTE);
+    if (!row) return;
+    if (document.pointerLockElement) document.exitPointerLock();
+    setWhereOpen(true);
+    setOnlyPlace(null);
+    setOnlyRoutes(null);
+    setWorldPage(row);
+  }, []);
   const openShelves = useCallback(() => {
     const row = REGISTER.find((d) => d.route === RECORDS_ROUTE);
     if (!row) return;
@@ -664,6 +687,10 @@ export default function Game3DPage() {
       enterRecords();
       return;
     }
+    if (id === "weather") {
+      enterWeather();
+      return;
+    }
     const b = BUILDINGS.find((x) => x.id === id);
     const action = b ? doorAction(b) : null;
     if (!action) return;
@@ -676,7 +703,7 @@ export default function Game3DPage() {
       setWorldPage(null);
       setOnlyPlace(action.place);
     }
-  }, [enterHall, enterRecords]);
+  }, [enterHall, enterRecords, enterWeather]);
 
   const enterTower = useCallback((id: string) => {
     if (document.pointerLockElement) {
@@ -802,13 +829,15 @@ export default function Game3DPage() {
       hallDoor: atHallDoor,
       shelves: atShelves,
       archiveDoor: atArchiveDoor,
+      dials: atDials,
+      weatherDoor: atWeatherDoor,
       siegeGate: atSiegeGate,
       fieldExit: atFieldExit,
       fieldSpot,
       quarterGate: atQuarterGate,
       quarterExit: atQuarterExit,
     }),
-    [near, nearTower, atDesk, atDrill, atSign, nearBooth, nearStall, atGate, atVault, atWatch, atPerch, atRealm, nearShelf, atTable, atLantern, atLandGate, townNear, atTownExit, nearBoard, atHallDoor, atShelves, atArchiveDoor, atSiegeGate, atFieldExit, fieldSpot, atQuarterGate, atQuarterExit],
+    [near, nearTower, atDesk, atDrill, atSign, nearBooth, nearStall, atGate, atVault, atWatch, atPerch, atRealm, nearShelf, atTable, atLantern, atLandGate, townNear, atTownExit, nearBoard, atHallDoor, atShelves, atArchiveDoor, atDials, atWeatherDoor, atSiegeGate, atFieldExit, fieldSpot, atQuarterGate, atQuarterExit],
   );
   const atSpot = useMemo(() => standingAt(area, nears), [area, nears]);
 
@@ -828,6 +857,13 @@ export default function Game3DPage() {
           e.preventDefault();
           if (at.kind === "shelves") openShelves();
           else leaveRecords();
+          return;
+        case "weather":
+          // In the Weather Tower: E opens the full weather page at the dials, or takes the door back out.
+          if (whereOpen || at.kind === "none") return;
+          e.preventDefault();
+          if (at.kind === "dials") openDials();
+          else leaveWeather();
           return;
         case "townhall":
           // In the Town Hall: E opens the board you stand at, or takes the door back out.
@@ -935,7 +971,7 @@ export default function Game3DPage() {
     };
     window.addEventListener("keydown", onTalk);
     return () => window.removeEventListener("keydown", onTalk);
-  }, [area, areaState, atSpot, whereOpen, openShelves, leaveRecords, enterField, leaveField, workFieldSpot, enterQuarter, leaveQuarter, openBoard, leaveHall, openBuilding, leaveTown, enterTown, talking, vaultOpen, watchOpen, perchOpen, ravens, realmOpen, lampOpen, state, boothOpen, openBooth, openStore, toggleWhere, drillOpen, deskOpen, room, report, readShelf, enterTower, leaveTower, openReport]);
+  }, [area, areaState, atSpot, whereOpen, openShelves, leaveRecords, openDials, leaveWeather, enterField, leaveField, workFieldSpot, enterQuarter, leaveQuarter, openBoard, leaveHall, openBuilding, leaveTown, enterTown, talking, vaultOpen, watchOpen, perchOpen, ravens, realmOpen, lampOpen, state, boothOpen, openBooth, openStore, toggleWhere, drillOpen, deskOpen, room, report, readShelf, enterTower, leaveTower, openReport]);
 
   useEffect(() => {
     const onPanelKey = (e: KeyboardEvent) => {
@@ -966,10 +1002,11 @@ export default function Game3DPage() {
     if (area.id === "holding") leaveTower();
     else if (area.id === "townhall") leaveHall();
     else if (area.id === "records") leaveRecords();
+    else if (area.id === "weather") leaveWeather();
     else if (area.id === "town") leaveTown();
     else if (area.id === "siege") leaveField();
     else if (area.id === "quarter") leaveQuarter();
-  }, [area.id, leaveTower, leaveHall, leaveRecords, leaveTown, leaveField, leaveQuarter]);
+  }, [area.id, leaveTower, leaveHall, leaveRecords, leaveWeather, leaveTown, leaveField, leaveQuarter]);
 
   // G opens or shuts the "Where to?" menu from anywhere. Esc closes what is on top (the panel drawn over the others), and
   // B walks back out once nothing is open over the world.
@@ -1036,6 +1073,9 @@ export default function Game3DPage() {
     case "shelves":
       if (!whereOpen) spotPrompt = shelfPrompt;
       break;
+    case "dials":
+      if (!whereOpen) spotPrompt = dialsPrompt;
+      break;
     case "board":
       if (!whereOpen) spotPrompt = hallPrompt(boardById(atSpot.id));
       break;
@@ -1046,7 +1086,7 @@ export default function Game3DPage() {
       if (area.id === "holding") spotPrompt = LAND_WORDS.gatePrompt;
       else if (area.id === "siege") spotPrompt = FIELD_WORDS.exitPrompt;
       else if (area.id === "quarter") spotPrompt = QUARTER_WORDS.exitPrompt;
-      else if (!whereOpen) spotPrompt = area.id === "records" ? archiveDoorPrompt : area.id === "townhall" ? hallDoorPrompt : exitPrompt;
+      else if (!whereOpen) spotPrompt = area.id === "records" ? archiveDoorPrompt : area.id === "weather" ? towerDoorPrompt : area.id === "townhall" ? hallDoorPrompt : exitPrompt;
       break;
     case "shelf":
       if (!readShelf) spotPrompt = `Press E to read ${roomView?.shelves.find((s) => s.id === atSpot.id)?.title ?? "the shelf"}`;
@@ -1169,6 +1209,8 @@ export default function Game3DPage() {
             onNearHallDoor={setAtHallDoor}
             onNearShelves={setAtShelves}
             onNearArchiveDoor={setAtArchiveDoor}
+            onNearDials={setAtDials}
+            onNearWeatherDoor={setAtWeatherDoor}
           />
         </Suspense>
       </SceneBoundary>
@@ -1278,6 +1320,15 @@ export default function Game3DPage() {
         <button
           type="button"
           onClick={leaveRecords}
+          className="absolute left-3 top-14 rounded border border-border bg-surface/90 px-3 py-1.5 text-sm text-ink hover:opacity-80"
+        >
+          ← Back to the Town
+        </button>
+      )}
+      {area.id === "weather" && (
+        <button
+          type="button"
+          onClick={leaveWeather}
           className="absolute left-3 top-14 rounded border border-border bg-surface/90 px-3 py-1.5 text-sm text-ink hover:opacity-80"
         >
           ← Back to the Town

@@ -35,7 +35,7 @@ export const EXIT_LEAVE_RANGE = 6;
 /** The ground the Town may use: nothing stands outside this radius. */
 export const TOWN_RADIUS = 46;
 
-export type BuildingId = "records" | "cartographer" | "archive" | "workshop" | "townhall";
+export type BuildingId = "records" | "cartographer" | "archive" | "workshop" | "townhall" | "weather";
 
 export interface Building {
   id: BuildingId;
@@ -83,7 +83,7 @@ function building(
  * The five buildings, round a plaza and all facing it. Proposed models; a look decides (the plan's gate).
  * Records: the castle, the big one at the far end. Cartographer: the watchtower, west. Archive: the house, east.
  * Workshop: the lumber mill, north-east. Town Hall (S18): the market hall, north-west, across the plaza from the
- * Workshop. A well stands in the middle of the plaza.
+ * Workshop. A well stands in the middle of the plaza. The Weather Tower (macro dials) stands north of the Town Hall.
  */
 export const BUILDINGS: readonly Building[] = [
   building("records", "castle", "Hall of Records", 0, 26, Math.PI, { route: "/fortress/records" }),
@@ -91,6 +91,8 @@ export const BUILDINGS: readonly Building[] = [
   building("archive", "house", "Archive", 26, 4, -Math.PI / 2, { route: "/glossary" }),
   building("workshop", "lumbermill", "Workshop", 26, -17, -Math.PI / 2, { place: "workshop" }),
   building("townhall", "market", "Town Hall", -26, -17, Math.PI / 2, { place: "townhall" }),
+  // The Weather Tower (2026-11-08): north of the Town Hall, facing the road to the courtyard. Opens as its own place (the Game page intercepts it, like the Hall of Records; the route is the fallback).
+  building("weather", "watchtower", "Weather Tower", -20, -33, Math.PI / 2, { route: "/macro" }),
 ];
 
 /** The well in the middle of the plaza: decoration with a round base. */

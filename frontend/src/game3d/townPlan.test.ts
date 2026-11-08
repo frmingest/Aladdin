@@ -30,8 +30,8 @@ describe("the Town beyond the gate", () => {
     for (const b of BUILDINGS) expect(TOWN_PIECES.buildings as readonly string[]).toContain(b.model);
   });
 
-  it("has five buildings with distinct ids, all inside the ground", () => {
-    expect(new Set(BUILDINGS.map((b) => b.id)).size).toBe(5);
+  it("has six buildings with distinct ids, all inside the ground", () => {
+    expect(new Set(BUILDINGS.map((b) => b.id)).size).toBe(6);
     for (const b of BUILDINGS) expect(Math.hypot(b.x, b.z) + Math.hypot(b.hx, b.hz)).toBeLessThan(TOWN_RADIUS);
   });
 
