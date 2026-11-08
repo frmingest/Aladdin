@@ -1,7 +1,7 @@
 import { Component, Suspense, useEffect, useMemo, useRef } from "react";
 import type { MutableRefObject, ReactNode } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Html, useGLTF } from "@react-three/drei";
+import { useGLTF } from "@react-three/drei";
 import { CuboidCollider, CylinderCollider, RigidBody } from "@react-three/rapier";
 import { AnimationMixer, Box3, LoopRepeat } from "three";
 import type { Group, Mesh, Object3D } from "three";
@@ -39,6 +39,7 @@ import { fallPercent } from "./stormDrill";
 import { YARD_FAILED, YARD_READING, yardFogTitle, yardMoreLine } from "./siegeYardWordsV2";
 import { useSiegeYard } from "./useSiegeYard";
 import type { YardView } from "./siegeYard";
+import WorldLabel from "./WorldLabel";
 
 /** The same flat ground colour as the Town and the courtyard, so nothing here is flattered by colour. */
 const GRASS = "#7a9e5c";
@@ -90,11 +91,9 @@ function WallSection({ s, source }: { s: Section; source: Object3D }) {
 /** A name over each section, in the flat page's own words: the tower, the share lost. */
 function SectionPlate({ s }: { s: Section }) {
   return (
-    <Html position={[s.x, Math.max(s.height, 0.8) + 1.4, s.z]} center distanceFactor={16} zIndexRange={[10, 0]} style={{ pointerEvents: "none" }}>
-      <div className="g3d-nameplate" aria-hidden="true">
+    <WorldLabel position={[s.x, Math.max(s.height, 0.8) + 1.4, s.z]} distanceFactor={16} ariaHidden>
         {s.name} {s.shock}
-      </div>
-    </Html>
+      </WorldLabel>
   );
 }
 
@@ -116,19 +115,15 @@ function Wall({ view, source }: { view: YardView; source: Object3D }) {
             <boxGeometry args={[SECTION_WIDTH * 1.2, 4.4, SECTION_THICKNESS * 1.6]} />
             <meshStandardMaterial color="#e8eef2" transparent opacity={0.3} depthWrite={false} />
           </mesh>
-          <Html position={[0, 5.2, 0]} center distanceFactor={16} zIndexRange={[10, 0]} style={{ pointerEvents: "none" }}>
-            <div className="g3d-nameplate" aria-hidden="true">
+          <WorldLabel position={[0, 5.2, 0]} distanceFactor={16} ariaHidden>
               {g.name} {FIELD_WORDS.fogMark}
-            </div>
-          </Html>
+            </WorldLabel>
         </group>
       ))}
       {view.fog.length > 0 && (
-        <Html position={[0, 7.4, ghosts[0]?.z ?? -30]} center distanceFactor={16} zIndexRange={[10, 0]} style={{ pointerEvents: "none" }}>
-          <div className="g3d-nameplate" aria-hidden="true">
+        <WorldLabel position={[0, 7.4, ghosts[0]?.z ?? -30]} distanceFactor={16} ariaHidden>
             {yardFogTitle(view.fog.length)}
-          </div>
-        </Html>
+          </WorldLabel>
       )}
     </>
   );
@@ -229,12 +224,10 @@ function Scatter({ source, tools }: { source: Object3D; tools: FieldTools }) {
         return (
           <group key={b.id} position={[b.x, 0, b.z]}>
             <Model source={source} name="flag_banner_long" scale={active ? b.scale : b.scale * 0.65} />
-            <Html position={[0, active ? 6 : 4.3, 0]} center distanceFactor={16} zIndexRange={[10, 0]} style={{ pointerEvents: "none" }}>
-              <div className="g3d-nameplate" aria-hidden="true">
+            <WorldLabel position={[0, active ? 6 : 4.3, 0]} distanceFactor={16} ariaHidden>
                 {yardstickName(key)}
                 {active ? ` · ${FIELD_TOOLS_WORDS.bannerNow}` : ""}
-              </div>
-            </Html>
+              </WorldLabel>
           </group>
         );
       })}
@@ -266,11 +259,9 @@ function Winch({ tools }: { tools: FieldTools }) {
       <Part color={PAL.teal} position={[0, weightY, 0]} grow={1.15}>
         <boxGeometry args={[0.55, 0.5, 0.55]} />
       </Part>
-      <Html position={[0, 4.7, 0]} center distanceFactor={16} zIndexRange={[10, 0]} style={{ pointerEvents: "none" }}>
-        <div className="g3d-nameplate" aria-hidden="true">
+      <WorldLabel position={[0, 4.7, 0]} distanceFactor={16} ariaHidden>
           {FIELD_TOOLS_WORDS.winchPlate(fallPercent(tools.fall))}
-        </div>
-      </Html>
+        </WorldLabel>
     </group>
   );
 }
@@ -291,11 +282,9 @@ function MarkerStone({ source, id, tools }: { source: Object3D; id: "storm" | "s
           <boxGeometry args={[0.7, 0.3, 0.05]} />
         </Part>
       )}
-      <Html position={[0, 3.3, 0]} center distanceFactor={16} zIndexRange={[10, 0]} style={{ pointerEvents: "none" }}>
-        <div className="g3d-nameplate" aria-hidden="true">
+      <WorldLabel position={[0, 3.3, 0]} distanceFactor={16} ariaHidden>
           {stonePlate(id, tools)}
-        </div>
-      </Html>
+        </WorldLabel>
     </group>
   );
 }
@@ -322,8 +311,7 @@ function Tent({ status }: { status: "reading" | "failed" | YardView }) {
         <CylinderCollider args={[1.5, FIELD_TENT.solid]} position={[0, 1.5, 0]} />
         <Model source={camp.scene} name="tent" scale={FIELD_TENT.scale} />
       </RigidBody>
-      <Html position={[FIELD_TENT.x, 6, FIELD_TENT.z]} center distanceFactor={16} zIndexRange={[10, 0]} style={{ pointerEvents: "none" }}>
-        <div className="g3d-nameplate" style={{ maxWidth: 260, whiteSpace: "normal", textAlign: "center" }} aria-hidden="true">
+      <WorldLabel position={[FIELD_TENT.x, 6, FIELD_TENT.z]} distanceFactor={16} wrap maxWidth={260} ariaHidden>
           {status === "reading" ? (
             YARD_READING
           ) : status === "failed" ? (
@@ -343,8 +331,7 @@ function Tent({ status }: { status: "reading" | "failed" | YardView }) {
               <em>{FIELD_WORDS.whatIf}</em>
             </>
           )}
-        </div>
-      </Html>
+        </WorldLabel>
     </>
   );
 }

@@ -1,9 +1,9 @@
 import { useEffect, useMemo } from "react";
 import { Color, Float32BufferAttribute, MeshStandardMaterial, RingGeometry } from "three";
-import { Html } from "@react-three/drei";
 import { PAL } from "./Inked";
 import { STREAM_INNER } from "./landStream";
 import type { LandStream } from "./landStream";
+import WorldLabel from "./WorldLabel";
 
 /** The one flat material every stream band shares: the tint rides on vertex colours, so a tier never needs its own material. */
 const STREAM_MATERIAL = new MeshStandardMaterial({ vertexColors: true, flatShading: true });
@@ -39,9 +39,7 @@ export default function StreamBand({ stream, position = [0, 0, 0], inner = STREA
           );
         })}
       {stream.mark && (
-        <Html position={[0, 0.6, mid]} center distanceFactor={9} zIndexRange={[10, 0]}>
-          <div className="pointer-events-none rounded bg-black/65 px-2 py-0.5 text-xs text-white">{stream.mark}</div>
-        </Html>
+        <WorldLabel position={[0, 0.6, mid]} distanceFactor={9}>{stream.mark}</WorldLabel>
       )}
     </group>
   );

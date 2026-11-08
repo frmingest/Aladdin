@@ -1,7 +1,7 @@
 import { Component, Suspense, useEffect, useMemo, useRef } from "react";
 import type { MutableRefObject, ReactNode } from "react";
 import { useFrame } from "@react-three/fiber";
-import { useGLTF, Html } from "@react-three/drei";
+import { useGLTF } from "@react-three/drei";
 import { CuboidCollider, CylinderCollider, RigidBody } from "@react-three/rapier";
 import type { Object3D } from "three";
 import { PAL, Part } from "./Inked";
@@ -11,6 +11,7 @@ import { CHIMNEYS } from "./fxPlan";
 import { TOWN_FILES } from "./townPieces";
 import { BUILDINGS, DOOR_LEAVE_RANGE, DOOR_RANGE, EXIT_LEAVE_RANGE, EXIT_RANGE, TOWN_EXIT, TOWN_RADIUS, WELL, doorSpot, nearTownExit, nearestBuilding } from "./townPlan";
 import type { Building, BuildingId } from "./townPlan";
+import WorldLabel from "./WorldLabel";
 
 /** The same flat palette as the courtyard, so nothing in the Town is flattered by its colour. */
 const COLORS = { grass: "#7a9e5c", cobble: "#a89f91" } as const;
@@ -80,9 +81,7 @@ function DoorMark({ b, active }: { b: Building; active: boolean }) {
       <Part color={active ? PAL.teal : PAL.cream} position={[0, 0.09, 0]} rotation={[0, b.yaw, 0]} grow={1.05}>
         <boxGeometry args={[2.6, 0.08, 1.4]} />
       </Part>
-      <Html position={[0, 2.2, 0]} center distanceFactor={14} zIndexRange={[10, 0]} style={{ pointerEvents: "none" }}>
-        <div className="g3d-nameplate" aria-hidden="true">{b.label}</div>
-      </Html>
+      <WorldLabel position={[0, 2.2, 0]} distanceFactor={14} ariaHidden>{b.label}</WorldLabel>
     </group>
   );
 }

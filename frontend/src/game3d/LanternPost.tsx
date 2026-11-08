@@ -1,7 +1,7 @@
-import { Html } from "@react-three/drei";
 import { PAL, Part } from "./Inked";
 import { LANTERN_LOOKS } from "./holdingLand";
 import type { Lantern } from "./holdingLand";
+import WorldLabel from "./WorldLabel";
 
 const FLAME = "#f4c35a";
 const GLASS = "#e9e2c8";
@@ -53,16 +53,12 @@ export default function LanternPost({ lantern, active }: { lantern: Lantern; act
           <boxGeometry args={[0.34, 0.1, 0.1]} />
         </Part>
       )}
-      <Html position={[0, 2.9, 0]} center distanceFactor={9} zIndexRange={[10, 0]}>
-        <div
-          className={`pointer-events-none whitespace-nowrap rounded px-2 py-0.5 text-xs text-white ${active ? "bg-black/85 ring-1 ring-white/60" : "bg-black/60"}`}
-        >
+      <WorldLabel position={[0, 2.9, 0]} distanceFactor={9} now={active}>
           <span aria-hidden="true" className="mr-1 font-bold">
             {mark}
           </span>
           {lantern.label}
-        </div>
-      </Html>
+        </WorldLabel>
     </group>
   );
 }

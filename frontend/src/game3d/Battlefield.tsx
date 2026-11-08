@@ -1,4 +1,3 @@
-import { Html } from "@react-three/drei";
 import { useMemo } from "react";
 import {
   BATTLE_BOARD,
@@ -16,8 +15,7 @@ import {
 } from "./battlefield";
 import type { BattleRow } from "./battlefield";
 import { useBattlefield } from "./useBattlefield";
-
-const PLATE_STYLE = { pointerEvents: "none" } as const;
+import WorldLabel from "./WorldLabel";
 
 /** One holding's two bars on the flat ground: scorch (what happened) over chalk (what the page said). No colliders: you walk over them. */
 function Row({ r }: { r: BattleRow }) {
@@ -45,24 +43,20 @@ function Row({ r }: { r: BattleRow }) {
           <meshStandardMaterial color={BATTLE_COLORS.fog} transparent opacity={0.35} depthWrite={false} />
         </mesh>
       )}
-      <Html position={[BATTLE_X0 + 6, 1.1, r.z + 0.4]} center distanceFactor={16} zIndexRange={[10, 0]} style={PLATE_STYLE}>
-        <div className="g3d-nameplate" aria-hidden="true">
+      <WorldLabel position={[BATTLE_X0 + 6, 1.1, r.z + 0.4]} distanceFactor={16} ariaHidden>
           {r.plate}
-        </div>
-      </Html>
+        </WorldLabel>
     </group>
   );
 }
 
 function Board({ lines }: { lines: string[] }) {
   return (
-    <Html position={[BATTLE_BOARD.x, 3.2, BATTLE_BOARD.z]} center distanceFactor={16} zIndexRange={[10, 0]} style={PLATE_STYLE}>
-      <div className="g3d-nameplate" aria-hidden="true">
+    <WorldLabel position={[BATTLE_BOARD.x, 3.2, BATTLE_BOARD.z]} distanceFactor={16} ariaHidden>
         {lines.map((l, i) => (
           <div key={i}>{l}</div>
         ))}
-      </div>
-    </Html>
+      </WorldLabel>
   );
 }
 
@@ -89,13 +83,11 @@ function WarTable({ lines, pinned }: { lines: string[]; pinned: number }) {
           <meshStandardMaterial color={BATTLE_COLORS.parchment} flatShading />
         </mesh>
       ))}
-      <Html position={[0, height + 3, 0]} center distanceFactor={16} zIndexRange={[10, 0]} style={PLATE_STYLE}>
-        <div className="g3d-nameplate" aria-hidden="true">
+      <WorldLabel position={[0, height + 3, 0]} distanceFactor={16} ariaHidden>
           {lines.map((l, i) => (
             <div key={i}>{l}</div>
           ))}
-        </div>
-      </Html>
+        </WorldLabel>
     </group>
   );
 }

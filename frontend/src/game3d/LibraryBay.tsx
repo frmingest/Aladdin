@@ -1,11 +1,11 @@
 import { useMemo } from "react";
 import { CuboidCollider, RigidBody } from "@react-three/rapier";
-import { Html } from "@react-three/drei";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 import { PAL, Part } from "./Inked";
 import StaticBatch from "./StaticBatch";
 import { describeShelf, shelfMark } from "./libraryShelves";
 import type { Shelf } from "./libraryShelves";
+import WorldLabel from "./WorldLabel";
 
 const MIST = "#dfe5ea";
 const LAMP = "#f2d27a";
@@ -125,14 +125,9 @@ export function Bay({ shelf, x, z, yaw, active, scale = 1 }: { shelf: Shelf; x: 
             ))}
           </group>
         )}
-        <Html position={[0, 2.95, 0.45]} center distanceFactor={9} zIndexRange={[10, 0]}>
-          <div
-            className="pointer-events-none whitespace-nowrap rounded bg-black/65 px-2 py-0.5 text-xs text-white"
-            title={describeShelf(shelf)}
-          >
+        <WorldLabel position={[0, 2.95, 0.45]} distanceFactor={9} title={describeShelf(shelf)}>
             {shelfMark(shelf)} {shelf.title}
-          </div>
-        </Html>
+          </WorldLabel>
       </group>
     </RigidBody>
   );

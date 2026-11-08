@@ -1,11 +1,11 @@
 import { useRef, useState } from "react";
 import type { MutableRefObject } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Html } from "@react-three/drei";
 import { PAL, Part } from "./Inked";
 import { BANNER_SHAPE, GAUGE_FILL, PRICE_LEAVE_RANGE, PRICE_POST, PRICE_RANGE } from "./holdingLand";
 import type { PricePost as PricePostData } from "./holdingLand";
 import { PRICE_WORDS } from "./pricePostWordsV1";
+import WorldLabel from "./WorldLabel";
 
 const MIST = "#cfd6dc";
 const GAUGE_H = 2.2;
@@ -119,8 +119,7 @@ export default function PricePost({ post, pos }: { post: PricePostData; pos: Mut
         </mesh>
       )}
 
-      <Html position={[0, 3.1, 0]} center distanceFactor={9} zIndexRange={[10, 0]}>
-        <div className="pointer-events-none rounded bg-black/65 px-2 py-0.5 text-center text-xs text-white">
+      <WorldLabel position={[0, 3.1, 0]} distanceFactor={9}>
           <div className="whitespace-nowrap font-semibold">{PRICE_WORDS.title}</div>
           {near && (
             <>
@@ -130,8 +129,7 @@ export default function PricePost({ post, pos }: { post: PricePostData; pos: Mut
               {post.gaugeReason && <div className="max-w-[16rem] whitespace-normal text-[11px] italic opacity-90">{post.gaugeReason}</div>}
             </>
           )}
-        </div>
-      </Html>
+        </WorldLabel>
     </group>
   );
 }

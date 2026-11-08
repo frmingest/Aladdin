@@ -2,7 +2,6 @@ import { useRef, useState } from "react";
 import type { MutableRefObject } from "react";
 import { useFrame } from "@react-three/fiber";
 import { CuboidCollider, RigidBody } from "@react-three/rapier";
-import { Html } from "@react-three/drei";
 import { PAL, Part } from "./Inked";
 import {
   BOARDS,
@@ -20,6 +19,7 @@ import {
 import type { Board, BoardId, BoardSlot } from "./townHallRoom";
 import { boardHeadline } from "./boardHeadlines";
 import { useBoardHeadlines } from "./useBoardHeadlines";
+import WorldLabel from "./WorldLabel";
 
 const PLASTER = "#d8c6a4";
 const FLOOR = "#7a5638";
@@ -64,13 +64,11 @@ function BoardMesh({ board, slot, active, headline }: { board: Board; slot: Boar
           ))}
         </group>
       )}
-      <Html position={[0, 2.2, 0.05]} center distanceFactor={9} zIndexRange={[10, 0]} style={{ pointerEvents: "none" }}>
-        <div className="rounded bg-black/70 px-3 py-1.5 text-center text-white" style={{ maxWidth: 220 }}>
+      <WorldLabel position={[0, 2.2, 0.05]} distanceFactor={9} wrap maxWidth={220}>
           <div className="text-sm font-semibold">{board.title}</div>
           <div className="text-xs opacity-80">{board.line}</div>
           {headline && <div className="tabular mt-1 whitespace-pre-line text-sm font-semibold">{headline}</div>}
-        </div>
-      </Html>
+        </WorldLabel>
     </group>
   );
 }
@@ -175,9 +173,7 @@ export default function TownHallRoom({ pos, onBoard, onDoor }: Props) {
       <Part color={PAL.iron} position={[0, 1.6, HALL.maxZ - 0.3]} grow={1.2}>
         <torusGeometry args={[0.18, 0.04, 6, 14]} />
       </Part>
-      <Html position={[0, 3.9, HALL.maxZ - 0.3]} center distanceFactor={9} zIndexRange={[10, 0]}>
-        <div className="pointer-events-none whitespace-nowrap rounded bg-black/65 px-2 py-0.5 text-xs text-white">Door · back to the Town</div>
-      </Html>
+      <WorldLabel position={[0, 3.9, HALL.maxZ - 0.3]} distanceFactor={9}>Door · back to the Town</WorldLabel>
 
       {/* A rug in the middle: furniture, no fact. */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, -1]} receiveShadow>
