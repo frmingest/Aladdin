@@ -79,18 +79,18 @@ function Book({ entry: e, onChanged }: { entry: JournalEntry; onChanged: () => v
       <p className="whitespace-pre-line text-ink">{e.invalidation ?? <span className="text-ink-faint">{BOOKS_NOT_WRITTEN}</span>}</p>
       {e.review_6m && (
         <p className="mt-1 text-ink">
-          <span className="text-xs font-medium text-ink-muted">6-month review: </span>
+          <span className="text-xs font-medium text-ink-muted">6-month look-back: </span>
           {e.review_6m}
         </p>
       )}
       {e.review_12m && (
         <p className="mt-1 text-ink">
-          <span className="text-xs font-medium text-ink-muted">12-month review: </span>
+          <span className="text-xs font-medium text-ink-muted">12-month look-back: </span>
           {e.review_12m}
         </p>
       )}
-      {o.review_6m_due && <ReviewField entry={e} which="review_6m" onSaved={onChanged} />}
-      {!o.review_6m_due && o.review_12m_due && <ReviewField entry={e} which="review_12m" onSaved={onChanged} />}
+      {o.review_6m_due && <ReviewField entry={e} which="review_6m" onSaved={onChanged} voice="game" />}
+      {!o.review_6m_due && o.review_12m_due && <ReviewField entry={e} which="review_12m" onSaved={onChanged} voice="game" />}
     </article>
   );
 }
