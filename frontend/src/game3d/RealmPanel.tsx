@@ -2,7 +2,8 @@ import { Link, useNavigate } from "react-router-dom";
 import RealmVerdict from "../components/fortress/RealmVerdict";
 import { summarizeRealm } from "../lib/realmVerdict";
 import type { GameState } from "../lib/types";
-import { REALM_CLOSE, REALM_PANEL_TITLE, REALM_PLAIN } from "./realmWordsV1";
+import { REALM_CLOSE, REALM_PANEL_TITLE } from "./realmWordsV1";
+import { PLAIN_VIEW_LINK } from "./glossaryWordsV1";
 
 /**
  * The Realm panel (S16, PR 3): the flat Fortress's own verdict card on the whole fortress, in the world. The level, the
@@ -19,7 +20,7 @@ export default function RealmPanel({ state, onClose }: { state: GameState; onClo
       <header className="g3d-head">
         <h2>{REALM_PANEL_TITLE}</h2>
         <span className="flex items-center gap-2">
-          <Link to="/fortress" className="g3d-btn">{REALM_PLAIN}</Link>
+          <Link to="/fortress" className="g3d-btn">{PLAIN_VIEW_LINK}</Link>
           <button type="button" className="g3d-x" aria-label={REALM_CLOSE} onClick={onClose}>×</button>
         </span>
       </header>

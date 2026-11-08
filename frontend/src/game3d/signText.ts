@@ -3,6 +3,7 @@
  * The sign shows the holding's name in at most two lines; an unsurveyed tower adds a small second note.
  * Nothing here decides a fact: the name and the gap label come from the TowerView as they are.
  */
+import { IN_FOG } from "./glossaryWordsV1";
 
 export const SIGN_MAX_LINES = 2;
 export const SIGN_LINE_CHARS = 16;
@@ -44,7 +45,7 @@ export function wrapName(name: string, perLine = SIGN_LINE_CHARS, maxLines = SIG
 export function signWords(name: string, fog: boolean, gap?: string | null): SignWords {
   return {
     lines: wrapName(name),
-    note: fog ? (gap ? `not surveyed: ${gap}` : "not surveyed") : "",
+    note: fog ? (gap ? `${IN_FOG}: ${gap}` : IN_FOG) : "",
   };
 }
 

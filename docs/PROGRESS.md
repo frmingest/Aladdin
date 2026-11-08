@@ -1,6 +1,6 @@
 # Aladdin — Progress
 
-**Last updated:** 2026-11-08 (3D text T2 rebased). Rolling log: active status only, under 100 lines, at most 7 tasks (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
+**Last updated:** 2026-11-08 (3D text T2 merged #311; text pass 4a and 4b in PRs). Rolling log: active status only, under 100 lines, at most 7 tasks (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
 
 ## Current Objective
 
@@ -13,8 +13,8 @@ State: `main` at `32e6967` (#309). S21 to S31 and A1 to A8 are merged; S29 and t
 - [ ] **Hall of Records, design note (Claude):** a 3D place for interest-rate and macro data; relate it to the Town Hall Macro board and the Records Hall, list the series, give a visual verb and scene line. No code until you approve the note.
 - [ ] **3D polish pass (Claude):** PRs 1 to 4 (outlines, smoke and sparks, door swings, sky gradient and soft shadows #305) merged. Then opt-in sound ([audit](game/game3d-polish-audit-2026-11-06.md)). Faiz: press P in the town to check draw calls.
 - [ ] **Rate sensitivity per holding, then the PDF memo (Claude):** neither exists on `main`; the rate work feeds the Hall of Records.
-- [ ] **3D text and labels (Claude):** T1 (#307) and T3 painted signs (#309) are merged. T2 `[E]` HUD prompt is rebased onto `main` and in a PR for review. T4 declutter (#310) is merged: tags show only when near with a 12 px floor, the Siege Field fog sentence and tent headline are out of the sky, and a CSS class clash that gave every world label the door-fade's gold look is fixed; written and tested, not seen in a browser. Next T5 look and judge, which needs a browser ([plan](game/game3d-text-legibility-sprint-plan-2026-11-08.md))
-- [ ] **Text pass 4 (Claude):** Vault, Night Watch, ravens, Realm panel, store gates, backend text, Sal and Hype Booth speech, Where-to names, `stormDrillWordsV1`. Faiz decides what "Last verdict" on the Land shelf says ([review](game/game3d-text-review-2026-11-03.md))
+- [ ] **3D text and labels (Claude):** T1 (#307) and T3 painted signs (#309) are merged. T2 `[E]` HUD prompt is merged (#311). T4 declutter (#310) is merged: tags show only when near with a 12 px floor, the Siege Field fog sentence and tent headline are out of the sky, and a CSS class clash that gave every world label the door-fade's gold look is fixed; written and tested, not seen in a browser. Next T5 look and judge, which needs a browser ([plan](game/game3d-text-legibility-sprint-plan-2026-11-08.md))
+- [ ] **Text pass 4 (Claude):** 4a (look-back save error shows, old books say "look-back" and "why") and 4b (glossary sweep: "Open Plain view" on four panels, price post says "why", fog note on tower signs says "in fog") are in PRs for review; written and tested, not seen in a browser. Still open: Vault, Night Watch and temperament game-voice layer, backend-written text, Sal and Hype Booth speech, Realm verdict "Buy/Sell" decision, market stall plates (their words come from the flat page). Faiz decides what "Last verdict" says ([review](game/game3d-text-review-2026-11-03.md))
 - [ ] **Look-over in `/game3d` (Faiz):** S29 battlefield (west strip scorch and chalk bars, war table on the east flank, bluer river); press P for fps.
 - [ ] **Data chores (Faiz):** Newsweb watch job green (#195); *Fetch all reports* on JAREN.OL (#194); The Printer amounts call ([plan](game/the-printer-sprint-plan-2026-10-20.md))
 

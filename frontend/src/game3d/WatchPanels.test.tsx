@@ -34,7 +34,7 @@ describe("RavensPanel (the perch's panel)", () => {
     expect(h).toContain("Equinor");
     expect(h).toContain("Mark as seen");
     expect(h).toContain('href="/fortress"');
-    expect(h).toContain("Open the flat page");
+    expect(h).toContain("Open Plain view");
     expect(h).toContain('aria-label="Close"');
   });
 

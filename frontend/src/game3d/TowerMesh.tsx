@@ -135,7 +135,7 @@ const SIGN_H = 2.0;
 const SIGN_PX_W = 704;
 const SIGN_PX_H = 256;
 
-/** Paint the name (and the "not surveyed" note) on a canvas. Dark ink on cream, so it reads against any sky. */
+/** Paint the name (and the "in fog" note) on a canvas. Dark ink on cream, so it reads against any sky. */
 function paintSign(
   name: string,
   fog: boolean,
@@ -187,7 +187,7 @@ const BEAM_Y = PLANK_TOP + HANGER_LEN + 0.07;
  * The tower's name on a timber signboard above its door, facing the middle of the courtyard. It hangs like an
  * inn sign: one iron arm sticks out of the wall, a beam crosses it, and the plank hangs from the beam on two
  * short hangers, so every part is held by something and nothing dangles. Name only: the facts stay in the panel.
- * Fog towers say "not surveyed" in small type, as before.
+ * Fog towers say "in fog" in small type.
  */
 function NameSign({ t }: { t: TowerView }) {
   const tex = useMemo(() => {

@@ -30,7 +30,7 @@ describe("VaultPanel (the vault chest's panel)", () => {
     expect(h).toContain("in cash");
     expect(h).toContain("Update cash");
     expect(h).toContain('href="/fortress"');
-    expect(h).toContain("Open the flat page");
+    expect(h).toContain("Open Plain view");
   });
 
   it("keeps fog for cash that was never typed in: no amount, and the card says so", () => {
