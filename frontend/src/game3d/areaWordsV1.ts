@@ -6,6 +6,7 @@ import type { AreaRef } from "./areas";
 import { LAND_WORDS } from "./holdingLandWordsV1";
 import { QUARTER_WORDS } from "./quarterWordsV1";
 import { FIELD_WORDS } from "./siegeFieldWordsV1";
+import { WEATHER_WORDS } from "./weatherTowerWordsV1";
 
 export const AREA_WORDS_VERSION = "v1";
 
@@ -14,6 +15,7 @@ export const AREA_LINES = {
   town: "The Town",
   townhall: "Into the Town Hall",
   records: "Hall of Records",
+  weather: WEATHER_WORDS.plate,
 } as const;
 
 /** Shown when the new place never appeared and you were sent back. */
@@ -38,6 +40,8 @@ export function areaName(ref: AreaRef, holdingName?: string | null): string {
       return "Town Hall";
     case "records":
       return "Hall of Records";
+    case "weather":
+      return WEATHER_WORDS.pageTitle;
     case "siege":
       return FIELD_WORDS.title;
     case "quarter":

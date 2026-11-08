@@ -121,11 +121,12 @@ def test_fully_prepared_holding_is_ready_and_only_costs_the_two_passes():
 def _all_fresh_macro(db):
     """One current value per catalogue series (13 monthly index points for
     the y/y series, so their 12-month change exists)."""
+    from app.config.settings import get_settings
     from app.domain.macro_series import get_macro_series
     from app.models.macro import MacroObservation
 
     now = datetime.now(timezone.utc)
-    for spec in get_macro_series("v1"):
+    for spec in get_macro_series(get_settings().active_macro_series_version):
         months = 13 if spec.transform == "yoy_pct" else 1
         for back in range(months):
             month_index = now.year * 12 + now.month - 1 - back

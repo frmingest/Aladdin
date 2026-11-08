@@ -6,7 +6,7 @@ One place for what is still open. It replaces three plans that were archived on 
 
 Merged: S21 to S27, S28 (as A5), S29 (#300), S30 (as A6), S31 outdoor holdings, A1 to A8, text passes 1 to 3. Plans: [discovery](../game/game3d-discovery-sprint-plan-2026-11-02.md), [assets](../game/game3d-asset-sprint-plan-2026-11-04.md), [outdoor holdings](../game/game3d-outdoor-holdings-sprint-plan-2026-11-04.md).
 
-- [ ] **Hall of Records (idea, Faiz 2026-11-06, not specced).** A 3D place that shows a lot of interest-rate and macro data, with room to grow later. First step is a short design note, not code: how it relates to the Town Hall's Macro board and the Records Hall that PROGRESS listed as next, which series it shows (the macro catalogue and the Norway curve already store several), and the rule that the room carries no fact in its art. Needs a visual verb and scene line and an identity score (CLAUDE.md).
+- [ ] **Weather Tower (was "Hall of Records", Faiz 2026-11-06).** "Hall of Records" is the existing journal building, so the macro room is **The Weather Tower**. Design note approved 2026-11-08 ([note](../game/game3d-macro-room-design-note-2026-11-08.md)); first build written, tested, not seen in a browser, in a PR ([build](../game/game3d-weather-tower-2026-11-08.md)): a dial for each stored macro series, a curve rail, catalogue v3 with Norway 6M to 7Y. Growth slots: rate sensitivity per holding, Printer levers moving the dials.
 - [ ] **Polish pass (approved, "yes").** From the discovery plan: one outline style on town buildings, softer shadows and sky, doors that swing, chimney smoke and forge sparks, sound only if switched on. Not checked line by line against the code; the first PR should print what already exists.
 - [ ] **Text and labels in 3D (proposed 2026-11-08, Faiz asked).** White labels vanish on the light sky (`g3d-nameplate` is used 14 times but never defined in CSS), 15 black debug-style boxes, sentences floating in the sky. Proposal: names painted on planks and banners, a parchment nameplate shown only near you, one `[E]` prompt on the HUD, sentences in panels. Five PRs T1 to T5; T1 fixes the bug. Faiz decides plate style, chalked percentages, reveal distance and order ([plan](../game/game3d-text-legibility-sprint-plan-2026-11-08.md)).
 - [ ] **Text pass 4.** Vault, Night Watch, ravens, Realm panel, store gates, backend-written text, the failed look-back save, Sal and Hype Booth speech, Where-to names, `stormDrillWordsV1`. Faiz decides what "Last verdict" on the Land shelf says ([review](../game/game3d-text-review-2026-11-03.md)).
@@ -16,7 +16,7 @@ Merged: S21 to S27, S28 (as A5), S29 (#300), S30 (as A6), S31 outdoor holdings, 
 
 ## 2. Analysis depth (active, from the Sprint 15 plan)
 
-- [ ] **Rate sensitivity per holding.** Floating against fixed debt, refinancing wall against the policy-rate and yield series already ingested. No code exists. Natural data source for the Hall of Records above.
+- [ ] **Rate sensitivity per holding.** Floating against fixed debt, refinancing wall against the policy-rate and yield series already ingested. No code exists. Natural data source for the Weather Tower above (its next growth slot).
 - [ ] **PDF memo.** One holding or the whole portfolio, from an analysis run. No code exists.
 - Backlog, unchanged: fund annual-report holdings parser, fund look-through valuation, liquidity tier for whisky and metals, alerts delivery channel (email or push, Faiz to pick).
 

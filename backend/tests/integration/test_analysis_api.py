@@ -353,7 +353,10 @@ def test_run_refreshes_stale_macro_data_and_cites_it(client, db_session):
         _clear_overrides()
     assert body["status"] == "COMPLETED"
     assert body["evidence_packet_version"] == "v7"
-    assert _Macro.calls == 13
+    from app.config.settings import get_settings
+    from app.domain.macro_series import get_macro_series
+
+    assert _Macro.calls == len(get_macro_series(get_settings().active_macro_series_version))
     macro_items = [i for i in body["evidence_items"] if i["category"] == "macro_indicator"]
     policy = next(i for i in macro_items if i["label"] == "Norges Bank policy rate (NO)")
     assert "4.25%" in policy["content"] and "IR/B.KPRA.SD.R" in policy["citation"]

@@ -187,8 +187,34 @@ _DERIVED_V2: tuple[DerivedIndicatorSpec, ...] = _DERIVED_V1 + (
     ),
 )
 
-MACRO_SERIES_VERSIONS: dict[str, tuple[MacroSeriesSpec, ...]] = {"v1": _V1, "v2": _V1}
-DERIVED_INDICATOR_VERSIONS: dict[str, tuple[DerivedIndicatorSpec, ...]] = {"v1": _DERIVED_V1, "v2": _DERIVED_V2}
+def _norway_curve_point(key: str, label: str, series_id: str, tenor: str) -> MacroSeriesSpec:
+    return MacroSeriesSpec(
+        key=key, label=label, source="norges_bank", source_series_id=series_id, region="NO",
+        unit="percent", display_unit="%", frequency="daily",
+        description=f"Generic {tenor} Norwegian government yield (Norges Bank GOVT_GENERIC_RATES).",
+    )
+
+
+# v3 (2026-11-08, 3D Weather Tower): v2's series plus five more points on Norway's
+# own curve from the same Norges Bank dataset already used for the 3M bill and the
+# 10Y bond (6M and 12M bills, 3Y, 5Y and 7Y bonds). The series ids follow the
+# 3M/10Y pattern; the first live fetch happens after deploy (this build sandbox
+# cannot reach Norges Bank), and a series that fails is shown as missing, never
+# invented. v1 and v2 are untouched (Rule 3). Derived indicators are v2's.
+_V3: tuple[MacroSeriesSpec, ...] = _V1 + (
+    _norway_curve_point("no_6m_bill", "Norway 6-month T-bill yield", "GOVT_GENERIC_RATES/B.6M.TBIL", "6-month"),
+    _norway_curve_point("no_12m_bill", "Norway 12-month T-bill yield", "GOVT_GENERIC_RATES/B.12M.TBIL", "12-month"),
+    _norway_curve_point("no_3y", "Norway 3-year government bond yield", "GOVT_GENERIC_RATES/B.3Y.GBON", "3-year"),
+    _norway_curve_point("no_5y", "Norway 5-year government bond yield", "GOVT_GENERIC_RATES/B.5Y.GBON", "5-year"),
+    _norway_curve_point("no_7y", "Norway 7-year government bond yield", "GOVT_GENERIC_RATES/B.7Y.GBON", "7-year"),
+)
+
+MACRO_SERIES_VERSIONS: dict[str, tuple[MacroSeriesSpec, ...]] = {"v1": _V1, "v2": _V1, "v3": _V3}
+DERIVED_INDICATOR_VERSIONS: dict[str, tuple[DerivedIndicatorSpec, ...]] = {
+    "v1": _DERIVED_V1,
+    "v2": _DERIVED_V2,
+    "v3": _DERIVED_V2,
+}
 
 
 def get_macro_series(version: str) -> tuple[MacroSeriesSpec, ...]:

@@ -69,6 +69,9 @@ export interface Nears {
   hallDoor: boolean;
   shelves: boolean;
   archiveDoor: boolean;
+  /** Weather Tower: in front of the dials, and at the door. */
+  dials: boolean;
+  weatherDoor: boolean;
   /** Courtyard: at the gate to the Siege Field. */
   siegeGate: boolean;
   /** Siege Field: the road back is in reach. */
@@ -104,6 +107,8 @@ export const NO_NEARS: Nears = {
   hallDoor: false,
   shelves: false,
   archiveDoor: false,
+  dials: false,
+  weatherDoor: false,
   siegeGate: false,
   fieldExit: false,
   fieldSpot: null,
@@ -115,7 +120,7 @@ export type Standing =
   | { kind: "none" }
   | { kind: "npc"; id: NpcId }
   | { kind: "tower"; holdingId: string }
-  | { kind: "desk" | "drill" | "siegeGate" | "quarterGate" | "sign" | "gate" | "vault" | "watch" | "perch" | "realm" | "table" | "shelves" }
+  | { kind: "desk" | "drill" | "siegeGate" | "quarterGate" | "sign" | "gate" | "vault" | "watch" | "perch" | "realm" | "table" | "shelves" | "dials" }
   | { kind: "booth"; id: BoothId }
   | { kind: "stall"; holdingId: string }
   | { kind: "shelf"; id: ShelfId }
@@ -137,6 +142,9 @@ export function standingAt(area: AreaRef, n: Nears): Standing {
     case "records":
       if (n.shelves) return { kind: "shelves" };
       return n.archiveDoor ? { kind: "leave" } : { kind: "none" };
+    case "weather":
+      if (n.dials) return { kind: "dials" };
+      return n.weatherDoor ? { kind: "leave" } : { kind: "none" };
     case "townhall":
       if (n.board) return { kind: "board", id: n.board };
       return n.hallDoor ? { kind: "leave" } : { kind: "none" };

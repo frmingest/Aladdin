@@ -65,6 +65,7 @@ import type { SurveyCheckId } from "../lib/survey";
 import Town from "./Town";
 import TownHallRoom from "./TownHallRoom";
 import RecordsHallRoom from "./RecordsHallRoom";
+import WeatherTowerRoom from "./WeatherTowerRoom";
 import type { BoardId } from "./townHallRoom";
 import { GATE_LEAVE_RANGE, GATE_RANGE, GATE_SPOT } from "./townPlan";
 import type { BuildingId } from "./townPlan";
@@ -152,6 +153,9 @@ interface Props {
   /** Inside the Hall of Records: whether you stand at the shelves, and whether the door is in reach. */
   onNearShelves?: (near: boolean) => void;
   onNearArchiveDoor?: (near: boolean) => void;
+  /** Inside the Weather Tower: whether you stand at the dials, and whether the door is in reach. */
+  onNearDials?: (near: boolean) => void;
+  onNearWeatherDoor?: (near: boolean) => void;
   /** Courtyard: the hero stands at the gate to the Siege Field. */
   onNearSiegeGate?: (near: boolean) => void;
   /** Siege Field: the road back is in reach. */
@@ -279,6 +283,8 @@ function World({
   onNearHallDoor,
   onNearShelves,
   onNearArchiveDoor,
+  onNearDials,
+  onNearWeatherDoor,
   onNearSiegeGate,
   onNearFieldExit,
   onNearFieldSpot,
@@ -329,6 +335,8 @@ function World({
   onNearHallDoor: (near: boolean) => void;
   onNearShelves: (near: boolean) => void;
   onNearArchiveDoor: (near: boolean) => void;
+  onNearDials: (near: boolean) => void;
+  onNearWeatherDoor: (near: boolean) => void;
   onNearSiegeGate: (near: boolean) => void;
   onNearFieldExit: (near: boolean) => void;
   onNearFieldSpot: (id: FieldSpotId | null) => void;
@@ -382,6 +390,10 @@ function World({
       {area.id === "records" ? (
         <group userData={{ perfGroup: "records" }}>
           <RecordsHallRoom pos={pos} onShelves={onNearShelves} onDoor={onNearArchiveDoor} />
+        </group>
+      ) : area.id === "weather" ? (
+        <group userData={{ perfGroup: "weather" }}>
+          <WeatherTowerRoom pos={pos} onDials={onNearDials} onDoor={onNearWeatherDoor} />
         </group>
       ) : area.id === "townhall" ? (
         <group userData={{ perfGroup: "hall" }}>
@@ -555,6 +567,8 @@ export default function Scene({
   onNearHallDoor = noop,
   onNearShelves = noop,
   onNearArchiveDoor = noop,
+  onNearDials = noop,
+  onNearWeatherDoor = noop,
   onNearSiegeGate = noop,
   onNearFieldExit = noop,
   onNearFieldSpot = noop,
@@ -660,6 +674,8 @@ export default function Scene({
           onNearHallDoor={onNearHallDoor}
           onNearShelves={onNearShelves}
           onNearArchiveDoor={onNearArchiveDoor}
+          onNearDials={onNearDials}
+          onNearWeatherDoor={onNearWeatherDoor}
           onNearSiegeGate={onNearSiegeGate}
           onNearFieldExit={onNearFieldExit}
           onNearFieldSpot={onNearFieldSpot}
