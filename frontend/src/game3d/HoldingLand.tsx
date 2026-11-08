@@ -202,7 +202,7 @@ export default function HoldingLand({ ticker, gap = null, gate, radius, shelves,
         both={false}
       />
       {gate.note && (
-        <WorldLabel position={[GATE_STONE.x, 1.9, GATE_STONE.z]} distanceFactor={9}>
+        <WorldLabel position={[GATE_STONE.x, 1.9, GATE_STONE.z]} distanceFactor={9} fog>
           <div className="whitespace-nowrap text-xs italic">{gate.note}</div>
         </WorldLabel>
       )}

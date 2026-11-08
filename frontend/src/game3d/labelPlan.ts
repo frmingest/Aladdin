@@ -40,3 +40,29 @@ export function labelFor({ kind, distance, focused, fog }: LabelInput): LabelLoo
   const opacity = (NEAR_GONE - distance) / (NEAR_GONE - NEAR_FULL);
   return { tier: "plate", opacity, fog };
 }
+
+/** The tag's font size in CSS px (`.g3d-worldtag` is 0.75rem on a 16 px root). */
+export const LABEL_FONT_PX = 12;
+/** A label that would be drawn smaller than this hides instead of shrinking. */
+export const MIN_LABEL_PX = 12;
+
+/**
+ * How big a label is on screen. drei scales an `Html` label by `distanceFactor / (2 tan(fov/2) * distance)`, so the size
+ * follows from the camera alone and no DOM measuring is needed. Closer than the floor it is bigger, farther it is smaller.
+ */
+export function labelPx(distanceFactor: number, fovDeg: number, distance: number, fontPx: number = LABEL_FONT_PX): number {
+  if (distance <= 0) return Infinity;
+  const scale = distanceFactor / (2 * Math.tan((fovDeg * Math.PI) / 360) * distance);
+  return fontPx * scale;
+}
+
+/**
+ * The opacity a label is drawn at: the plan's look, then the size floor. The thing you face skips the floor.
+ * Reduced motion: no fade, a label is fully there or not there.
+ */
+export function labelOpacity(look: LabelLook, px: number, focused: boolean, reducedMotion: boolean): number {
+  if (look.tier === "hidden") return 0;
+  if (!focused && px < MIN_LABEL_PX) return 0;
+  if (reducedMotion) return look.opacity >= 0.5 ? 1 : 0;
+  return look.opacity;
+}
