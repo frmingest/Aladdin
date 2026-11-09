@@ -62,6 +62,14 @@ describe("Toolbar", () => {
     expect(h).toContain(">7<");
   });
 
+  it("shows a Sound button only when the browser can play sound, and says whether it is on", () => {
+    expect(html()).not.toContain("Sound");
+    expect(html({ sound: { on: false, onToggle: () => {} } })).toContain("Sound off");
+    const on = html({ sound: { on: true, onToggle: () => {} } });
+    expect(on).toContain("Sound on");
+    expect(on).toContain('aria-pressed="true"');
+  });
+
   it("keeps the frame-rate button out of the player's toolbar unless it is asked for (?debug), but never hides it while on", () => {
     expect(html()).toContain("Stats");
     expect(html({ showStats: false })).not.toContain("Stats");

@@ -6,7 +6,8 @@ import { CuboidCollider, RigidBody } from "@react-three/rapier";
 import { CanvasTexture, SRGBColorSpace } from "three";
 import type { Object3D } from "three";
 import { INK, PAL, Part } from "./Inked";
-import { PENNANT_COLOUR, STALL_SOLID, plateWords } from "./streetPlan";
+import { PENNANT_COLOUR, STALL_SOLID } from "./streetPlan";
+import { stallPlateWords } from "./stallPlateWordsV1";
 import type { PennantShape, Stall } from "./streetPlan";
 import { TOWN_FILES, TOWN_SCALE } from "./townPieces";
 
@@ -66,7 +67,7 @@ function Pennant({ stall }: { stall: Stall }) {
 const PLATE_W = 2.4;
 const PLATE_H = 0.8;
 
-/** Dark ink on cream, like the tower signboards: the name on top, the flat page's word and gap below. */
+/** Dark ink on cream, like the tower signboards: the name on top, a game-voice word and the gap below (stallPlateWordsV1). */
 function paintPlate(name: string, line: string): HTMLCanvasElement {
   const c = document.createElement("canvas");
   c.width = 384;
@@ -91,7 +92,7 @@ function paintPlate(name: string, line: string): HTMLCanvasElement {
 /** A small plate on two stakes in front of the stall. It is words only; the flag above says the same in a shape. */
 function Plate({ stall }: { stall: Stall }) {
   const tex = useMemo(() => {
-    const { name, line } = plateWords(stall);
+    const { name, line } = stallPlateWords(stall);
     const x = new CanvasTexture(paintPlate(name, line));
     x.colorSpace = SRGBColorSpace;
     x.anisotropy = 4;

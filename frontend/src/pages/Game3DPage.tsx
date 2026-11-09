@@ -76,6 +76,8 @@ import SalesRepDialog from "../components/marketplace/SalesRepDialog";
 import HypeBoothDialog from "../components/marketplace/HypeBoothDialog";
 import { useDemoMode } from "../lib/demoMode";
 import { PANEL_KEYS, loadPanels, savePanels, togglePanel } from "../game3d/hudPanels";
+import { SOUND_KEY, ambienceLevel } from "../game3d/soundPlan";
+import { useAmbience } from "../game3d/useAmbience";
 import type { PanelId } from "../game3d/hudPanels";
 import { celebrationDue } from "../game3d/celebrate";
 import { sixMonthReckoning } from "../game3d/quest";
@@ -433,6 +435,8 @@ export default function Game3DPage() {
   }, [room, roomView]);
   // The place the scene draws: a land whose tower is gone is not a place, so it reads as the courtyard.
   const area: AreaRef = areaState.current.id === "holding" && !roomView ? COURTYARD : areaState.current;
+  // Opt-in sound: off on every load, follows the same stored siege level as the sky, quiet indoors.
+  const sound = useAmbience(ambienceLevel(area.id, state?.siege?.level ?? null));
   const inTown = area.id === "town";
   const inHall = area.id === "townhall";
   const inRecords = area.id === "records";
@@ -986,6 +990,17 @@ export default function Game3DPage() {
   }, [flip]);
 
   useEffect(() => {
+    const onSoundKey = (e: KeyboardEvent) => {
+      if (e.code !== SOUND_KEY || e.ctrlKey || e.metaKey || e.altKey || e.repeat || !sound.supported) return;
+      if (typingInField(e.target)) return;
+      e.preventDefault();
+      sound.toggle();
+    };
+    window.addEventListener("keydown", onSoundKey);
+    return () => window.removeEventListener("keydown", onSoundKey);
+  }, [sound]);
+
+  useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       // F3 is often grabbed by the browser or editor ("find"), so P works too.
       if ((e.code === "F3" || e.code === "KeyP") && !e.ctrlKey && !e.metaKey && !e.altKey && !typingInField(e.target)) {
@@ -1228,6 +1243,7 @@ export default function Game3DPage() {
         showStats={DEBUG_STATS}
         whereOpen={whereOpen}
         onToggleWhere={toggleWhere}
+        sound={sound.supported ? { on: sound.on, onToggle: sound.toggle } : undefined}
       />
       {showPerf && <PerfBreakdown stats={stats} />}
       {whereOpen && !worldPage && <WhereToPanel onPick={pickDoor} onClose={closeWhere} only={onlyPlace} onlyRoutes={onlyRoutes} />}

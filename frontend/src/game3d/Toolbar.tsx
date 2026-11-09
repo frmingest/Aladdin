@@ -1,4 +1,5 @@
 import type { OpenPanels, PanelId } from "./hudPanels";
+import { soundLabel } from "./soundPlan";
 
 interface Props {
   open: OpenPanels;
@@ -14,6 +15,8 @@ interface Props {
   /** The "Where to?" signpost menu: open or not, and a way to flip it. */
   whereOpen: boolean;
   onToggleWhere: () => void;
+  /** Opt-in sound. Left out where the browser has no Web Audio, so no dead button shows. */
+  sound?: { on: boolean; onToggle: () => void };
 }
 
 function Tool({
@@ -42,12 +45,13 @@ function Tool({
 }
 
 /** The little menu at the top: open or shut each panel, so the scene stays clear until you want a panel. */
-export default function Toolbar({ open, onToggle, questsWaiting, towerCount, statsOn, statsLabel, onToggleStats, showStats = true, whereOpen, onToggleWhere }: Props) {
+export default function Toolbar({ open, onToggle, questsWaiting, towerCount, statsOn, statsLabel, onToggleStats, showStats = true, whereOpen, onToggleWhere, sound }: Props) {
   return (
     <div role="toolbar" aria-label="Courtyard menu" className="g3d-toolbar absolute left-1/2 top-3 z-30 -translate-x-1/2">
       <Tool label="Quests" hint="Q" icon="📜" pressed={open.quests} badge={questsWaiting} onClick={() => onToggle("quests")} />
       <Tool label="Towers" hint="T" icon="🏰" pressed={open.towers} badge={towerCount} onClick={() => onToggle("towers")} />
       <Tool label="Where to?" hint="G" icon="🪧" pressed={whereOpen} onClick={onToggleWhere} />
+      {sound && <Tool label={soundLabel(sound.on).label} hint="M" icon={soundLabel(sound.on).icon} pressed={sound.on} onClick={sound.onToggle} />}
       {(showStats || statsOn) && <Tool label={statsOn ? statsLabel : "Stats"} hint="P" icon="📊" pressed={statsOn} onClick={onToggleStats} />}
     </div>
   );
