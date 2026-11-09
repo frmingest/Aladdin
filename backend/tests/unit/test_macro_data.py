@@ -28,6 +28,7 @@ from app.services.macro.evidence import (
     ensure_macro_fresh,
 )
 from app.services.macro.indicators import (
+    build_derived,
     build_snapshot,
     get_macro_indicators,
     yoy_series,
@@ -354,6 +355,30 @@ def test_indicators_from_db_with_derived_real_rate():
     assert real.observed_on == date(2026, 8, 1)
     assert "minus Norway CPI inflation" in real.formula
     assert {d.key: d for d in result.derived}["no_us_10y_spread"].value is None
+
+
+def test_derived_indicator_carries_a_month_aligned_history():
+    left = build_snapshot(
+        SPECS["no_10y"], [(date(2026, 6, 30), Decimal("4.00")), (date(2026, 7, 31), Decimal("4.10")),
+                          (date(2026, 8, 29), Decimal("4.30"))], today=date(2026, 9, 1),
+    )
+    right = build_snapshot(
+        {s.key: s for s in get_macro_series("v3")}["no_3m_bill"], [(date(2026, 7, 30), Decimal("4.20")), (date(2026, 8, 31), Decimal("4.25"))],
+        today=date(2026, 9, 1),
+    )
+    spec = {d.key: d for d in get_derived_indicators("v2")}["no_curve_10y_3m"]
+    derived = build_derived(spec, left, right, today=date(2026, 9, 1))
+    # June has no right-hand point, so it is left out, not filled in.
+    assert [(p.observed_on, p.value) for p in derived.history] == [
+        (date(2026, 7, 30), Decimal("-0.10")), (date(2026, 8, 29), Decimal("0.05")),
+    ]
+
+
+def test_derived_history_is_empty_when_a_side_has_no_history():
+    left = build_snapshot(SPECS["no_10y"], [(date(2026, 8, 29), Decimal("4.30"))], today=date(2026, 9, 1))
+    right = build_snapshot({s.key: s for s in get_macro_series("v3")}["no_3m_bill"], [], today=date(2026, 9, 1))
+    spec = {d.key: d for d in get_derived_indicators("v2")}["no_curve_10y_3m"]
+    assert build_derived(spec, left, right, today=date(2026, 9, 1)).history == []
 
 
 # --- evidence ---------------------------------------------------------------------------
