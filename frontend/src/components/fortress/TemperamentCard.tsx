@@ -13,6 +13,7 @@ import { formatDate } from "../../lib/format";
 import type { FortressTemperamentLevel, GameTemperament } from "../../lib/types";
 import { Card } from "../ui";
 import { TEMPER_LABEL_V2, TEMPER_TEXT_V2, TEMPER_V2, type Voice } from "../../game3d/vaultWatchWordsV2";
+import { gameRemodelCounts } from "../../game3d/remodelWordsV1";
 import { TEMPER_RULE_LABEL_V1, gameTemperExplanation, gameTemperSummary } from "../../game3d/temperWordsV1";
 
 /** Game mode G6: the temperament meter. Every line comes from a fixed rule over
@@ -185,8 +186,14 @@ export default function TemperamentCard({
             {t.turnover.map((o) => (
               <li key={`${o.account_name}-${o.to_at}`}>
                 <span className="text-ink">{o.account_name}</span> ({day(o.from_at)} to {day(o.to_at)}):{" "}
-                {o.added} added, {o.removed} removed, {o.resized} resized
-                {o.turnover_pct !== null && <> · about {Number(o.turnover_pct).toFixed(0)}% of positions changed</>}
+                {g ? (
+                  gameRemodelCounts(o)
+                ) : (
+                  <>
+                    {o.added} added, {o.removed} removed, {o.resized} resized
+                    {o.turnover_pct !== null && <> · about {Number(o.turnover_pct).toFixed(0)}% of positions changed</>}
+                  </>
+                )}
               </li>
             ))}
           </ul>
