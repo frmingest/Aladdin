@@ -136,11 +136,3 @@ export function emptyStreetNote(booth: "sal" | "hype", count: number | null): st
   return booth === "sal" ? STREET_EMPTY_AT_SAL : STREET_EMPTY;
 }
 export const streetOverflowLine = (n: number): string => `${n} more ${n === 1 ? "stall has" : "stalls have"} no stand here. Open the Marketplace to see them.`;
-
-/** What the little plate under a stall says: the company name (cut to fit) and the flat page's short word plus the signed gap. */
-export const PLATE_NAME_CHARS = 18;
-export function plateWords(stall: Pick<Stall, "name" | "word" | "gap">): { name: string; line: string } {
-  const n = stall.name.trim();
-  const name = n.length <= PLATE_NAME_CHARS ? n : n.slice(0, PLATE_NAME_CHARS - 1).trimEnd() + "…";
-  return { name, line: stall.gap ? `${stall.word} · ${stall.gap}` : stall.word };
-}

@@ -13,7 +13,7 @@ import { STANDING_TORCHES } from "./standingTorches";
 import { TOWNSFOLK } from "./townsfolk";
 import { SPAWN } from "./layout";
 import {
-  MAX_STALLS, PLATE_NAME_CHARS, PENNANT_COLOUR, PENNANT_SHAPE, STALL_MODELS, STALL_SOLID, STREET_PLOTS, buildStreet, plateWords, stableIndex, streetOverflowLine,
+  MAX_STALLS, PENNANT_COLOUR, PENNANT_SHAPE, STALL_MODELS, STALL_SOLID, STREET_PLOTS, buildStreet, stableIndex, streetOverflowLine,
 } from "./streetPlan";
 
 const row = (n: number, over: Partial<WatchlistRow> = {}): WatchlistRow =>
@@ -132,15 +132,5 @@ describe("buildStreet", () => {
   it("uses no buy or sell word in the overflow line", () => {
     expect(streetOverflowLine(3)).not.toMatch(/\b(buy|sell)\b/i);
     expect(streetOverflowLine(1)).toContain("1 more stall has");
-  });
-});
-
-describe("plateWords", () => {
-  it("prints the name and the flat page's word with the signed gap, and cuts a long name", () => {
-    expect(plateWords({ name: "Equinor", word: "Near", gap: "+4%" })).toEqual({ name: "Equinor", line: "Near · +4%" });
-    expect(plateWords({ name: "Equinor", word: "No price", gap: null }).line).toBe("No price");
-    const long = plateWords({ name: "A very long company name indeed", word: "Above", gap: "30%" });
-    expect(long.name.length).toBeLessThanOrEqual(PLATE_NAME_CHARS);
-    expect(long.name.endsWith("…")).toBe(true);
   });
 });
