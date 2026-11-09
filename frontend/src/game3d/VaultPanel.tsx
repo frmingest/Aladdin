@@ -33,8 +33,8 @@ export default function VaultPanel({
         </span>
       </header>
       <div className="mt-2 min-h-0 flex-1 space-y-3 overflow-y-auto rounded bg-surface p-2">
-        <VaultCard vault={state.vault} demo={state.demo} onChanged={onChanged} />
-        <TemperamentCard temperament={state.temperament} />
+        <VaultCard vault={state.vault} demo={state.demo} onChanged={onChanged} voice="game" />
+        <TemperamentCard temperament={state.temperament} voice="game" />
       </div>
     </aside>
   );

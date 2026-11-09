@@ -12,6 +12,7 @@ import {
 import { formatDate } from "../../lib/format";
 import type { FortressTemperamentLevel, GameTemperament } from "../../lib/types";
 import { Card } from "../ui";
+import { TEMPER_LABEL_V2, TEMPER_TEXT_V2, TEMPER_V2, type Voice } from "../../game3d/vaultWatchWordsV2";
 
 /** Game mode G6: the temperament meter. Every line comes from a fixed rule over
  * the decision journal and stored snapshots (backend/app/services/game/temperament.py).
@@ -97,8 +98,16 @@ function Dial({ level, needle }: { level: FortressTemperamentLevel; needle: numb
   );
 }
 
-export default function TemperamentCard({ temperament }: { temperament: GameTemperament | null | undefined }) {
+export default function TemperamentCard({
+  temperament,
+  voice = "flat",
+}: {
+  temperament: GameTemperament | null | undefined;
+  /** "game" is the /game3d wording; the flat Fortress keeps the neutral words. */
+  voice?: Voice;
+}) {
   const [showAll, setShowAll] = useState(false);
+  const g = voice === "game";
   if (!temperament) return null;
   const t = temperament;
   const needle = needlePct(t.needle_pct);
@@ -110,21 +119,21 @@ export default function TemperamentCard({ temperament }: { temperament: GameTemp
         <Dial level={t.level} needle={needle} />
         <div className="min-w-0">
           <p className={`text-base font-semibold ${LEVEL_CLASS[t.level]}`}>
-            {TEMPERAMENT_LABEL[t.level]}
+            {(g && TEMPER_LABEL_V2[t.level]) || TEMPERAMENT_LABEL[t.level]}
             {needle !== null && <span className="tabular ml-2 text-sm font-normal text-ink-muted">{needle.toFixed(0)} / 100</span>}
             {t.low_confidence && (
               <span className="ml-2 rounded-full bg-caution-subtle px-2 py-0.5 align-middle text-xs font-semibold text-caution">
-                Low confidence
+                {g ? TEMPER_V2.lowConfidence : "Low confidence"}
               </span>
             )}
           </p>
-          <p className="text-sm text-ink-muted">{TEMPERAMENT_TEXT[t.level]}</p>
+          <p className="text-sm text-ink-muted">{(g && TEMPER_TEXT_V2[t.level]) || TEMPERAMENT_TEXT[t.level]}</p>
           <p className="mt-1 text-xs text-ink-faint">{t.summary}</p>
           {t.restores + t.drains > 0 && (
             <p className="tabular mt-2 text-sm">
-              <span className="text-positive">▲ {t.restores} restored</span>
+              <span className="text-positive">▲ {t.restores} {g ? TEMPER_V2.restored : "restored"}</span>
               <span className="mx-2 text-ink-faint">·</span>
-              <span className="text-negative">▼ {t.drains} drained</span>
+              <span className="text-negative">▼ {t.drains} {g ? TEMPER_V2.drained : "drained"}</span>
             </p>
           )}
         </div>
@@ -150,7 +159,7 @@ export default function TemperamentCard({ temperament }: { temperament: GameTemp
                   </p>
                   <p className="text-ink-muted">{e.explanation}</p>
                   <p className="text-xs text-ink-faint">
-                    {day(e.on)} · from {e.source === "journal" ? "your journal" : "portfolio snapshots"}
+                    {day(e.on)} · from {e.source === "journal" ? TEMPER_V2.fromJournal : g ? TEMPER_V2.fromSnapshots : "portfolio snapshots"}
                   </p>
                 </div>
               </li>
@@ -170,7 +179,7 @@ export default function TemperamentCard({ temperament }: { temperament: GameTemp
 
       {t.turnover.length > 0 && (
         <div className="mt-4">
-          <h3 className="text-xs uppercase tracking-wide text-ink-faint">Remodelling between the last two snapshots</h3>
+          <h3 className="text-xs uppercase tracking-wide text-ink-faint">{g ? TEMPER_V2.remodelling : "Remodelling between the last two snapshots"}</h3>
           <ul className="mt-1 space-y-1 text-sm text-ink-muted">
             {t.turnover.map((o) => (
               <li key={`${o.account_name}-${o.to_at}`}>
@@ -180,17 +189,18 @@ export default function TemperamentCard({ temperament }: { temperament: GameTemp
               </li>
             ))}
           </ul>
-          <p className="mt-1 text-xs text-ink-faint">Counts only: there is no fee data to price this in kroner.</p>
+          <p className="mt-1 text-xs text-ink-faint">{g ? TEMPER_V2.countsOnly : "Counts only: there is no fee data to price this in kroner."}</p>
         </div>
       )}
 
       <p className="mt-3 text-xs text-ink-faint">
-        Only what you log in the{" "}
+        {g ? TEMPER_V2.footerPre : "Only what you log in the"}{" "}
         <Link to="/journal" className="text-accent underline underline-offset-2">
           decision journal
         </Link>{" "}
-        and what stored snapshots show is read; it cannot see feelings. Informational only — nothing here blocks or
-        suggests a trade, and trading never earns points.
+        {g
+          ? TEMPER_V2.footerPost
+          : "and what stored snapshots show is read; it cannot see feelings. Informational only — nothing here blocks or suggests a trade, and trading never earns points."}
       </p>
     </Card>
   );
