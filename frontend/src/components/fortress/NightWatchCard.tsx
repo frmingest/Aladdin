@@ -9,6 +9,7 @@ import { Card, Disclosure } from "../ui";
 import DispatchDisclosure from "./DispatchDisclosure";
 import WatchBeacon from "./kit/WatchBeacon";
 import { WATCH_STATE_V2, WATCH_STATUS_V2, WATCH_V2, stampLineV2, type Voice } from "../../game3d/vaultWatchWordsV2";
+import { gameWatchText } from "../../game3d/watchLinesWordsV1";
 
 /** Game mode G16, Night Watch: the nightly tripwire check as a morning dispatch. It reads what the
  * worker stored overnight (GET /game/night-watch) and never runs a check, calls a provider or tells
@@ -59,8 +60,8 @@ export default function NightWatchCard({ voice = "flat" }: { voice?: Voice } = {
 
   const details = (
     <>
-      <p className="text-sm font-medium text-ink">{watch.headline}</p>
-      <LineList lines={detailLines} />
+      <p className="text-sm font-medium text-ink">{g ? gameWatchText(watch.headline) : watch.headline}</p>
+      <LineList lines={detailLines} game={g} />
       <DispatchNote game={g} />
     </>
   );
@@ -83,7 +84,7 @@ export default function NightWatchCard({ voice = "flat" }: { voice?: Voice } = {
       {quiet ? (
         <>
           <p className="mt-1 text-xs text-ink-faint">{stamp(watch)}</p>
-          <LineList lines={reportLines} />
+          <LineList lines={reportLines} game={g} />
           {gameMode ? (
             <DispatchDisclosure lineCount={detailLines.length}>{details}</DispatchDisclosure>
           ) : (
@@ -94,9 +95,9 @@ export default function NightWatchCard({ voice = "flat" }: { voice?: Voice } = {
         </>
       ) : (
         <>
-          <p className="mt-2 text-sm font-medium text-ink">{watch.headline}</p>
+          <p className="mt-2 text-sm font-medium text-ink">{g ? gameWatchText(watch.headline) : watch.headline}</p>
           <p className="text-xs text-ink-faint">{stamp(watch)}</p>
-          <LineList lines={detailLines} />
+          <LineList lines={detailLines} game={g} />
           <DispatchNote game={g} />
         </>
       )}
@@ -114,7 +115,8 @@ function DispatchNote({ game = false }: { game?: boolean }) {
   );
 }
 
-function LineList({ lines }: { lines: NightWatch["lines"] }) {
+function LineList({ lines, game = false }: { lines: NightWatch["lines"]; game?: boolean }) {
+  const say = (t: string) => (game ? gameWatchText(t) : t);
   if (lines.length === 0) return null;
   return (
     <ul className="mt-2 divide-y divide-border-subtle">
@@ -131,13 +133,13 @@ function LineList({ lines }: { lines: NightWatch["lines"] }) {
                     {line.holding_name}
                   </Link>
                   {": "}
-                  {line.text}
+                  {say(line.text)}
                 </>
               ) : (
-                line.text
+                say(line.text)
               )}
             </p>
-            {line.facts.length > 0 && <p className="text-xs text-ink-faint">{line.facts.join(" · ")}</p>}
+            {line.facts.length > 0 && <p className="text-xs text-ink-faint">{line.facts.map(say).join(" · ")}</p>}
           </div>
         </li>
       ))}
