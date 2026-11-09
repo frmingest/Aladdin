@@ -13,6 +13,7 @@ import { formatDate } from "../../lib/format";
 import type { FortressTemperamentLevel, GameTemperament } from "../../lib/types";
 import { Card } from "../ui";
 import { TEMPER_LABEL_V2, TEMPER_TEXT_V2, TEMPER_V2, type Voice } from "../../game3d/vaultWatchWordsV2";
+import { TEMPER_RULE_LABEL_V1, gameTemperExplanation, gameTemperSummary } from "../../game3d/temperWordsV1";
 
 /** Game mode G6: the temperament meter. Every line comes from a fixed rule over
  * the decision journal and stored snapshots (backend/app/services/game/temperament.py).
@@ -128,7 +129,7 @@ export default function TemperamentCard({
             )}
           </p>
           <p className="text-sm text-ink-muted">{(g && TEMPER_TEXT_V2[t.level]) || TEMPERAMENT_TEXT[t.level]}</p>
-          <p className="mt-1 text-xs text-ink-faint">{t.summary}</p>
+          <p className="mt-1 text-xs text-ink-faint">{g ? gameTemperSummary(t.summary) : t.summary}</p>
           {t.restores + t.drains > 0 && (
             <p className="tabular mt-2 text-sm">
               <span className="text-positive">▲ {t.restores} {g ? TEMPER_V2.restored : "restored"}</span>
@@ -154,10 +155,10 @@ export default function TemperamentCard({
                 <div className="min-w-0">
                   <p className="text-ink">
                     <span className="sr-only">{e.kind === "restore" ? "Restored: " : "Drained: "}</span>
-                    <span className="font-medium">{temperamentRuleLabel(e.rule)}</span>
+                    <span className="font-medium">{(g && TEMPER_RULE_LABEL_V1[e.rule]) || temperamentRuleLabel(e.rule)}</span>
                     <span className="text-ink-muted"> · {e.holding_name}</span>
                   </p>
-                  <p className="text-ink-muted">{e.explanation}</p>
+                  <p className="text-ink-muted">{g ? gameTemperExplanation(e.explanation) : e.explanation}</p>
                   <p className="text-xs text-ink-faint">
                     {day(e.on)} · from {e.source === "journal" ? TEMPER_V2.fromJournal : g ? TEMPER_V2.fromSnapshots : "portfolio snapshots"}
                   </p>

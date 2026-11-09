@@ -216,7 +216,21 @@ def build_derived(
     if left.value_3m_ago is not None and right.value_3m_ago is not None:
         snap.value_3m_ago = left.value_3m_ago - right.value_3m_ago
         snap.change_3m = snap.value - snap.value_3m_ago
+    snap.history = _derived_history(left.history, right.history)
     return snap
+
+
+def _derived_history(left: list[HistoryPoint], right: list[HistoryPoint]) -> list[HistoryPoint]:
+    """Left minus right for each month both series have a stored monthly point. A month one side lacks is left out,
+    never filled in, so a thin series gives a short (or empty) history rather than an invented one."""
+    right_by_month = {(p.observed_on.year, p.observed_on.month): p for p in right}
+    out: list[HistoryPoint] = []
+    for point in left:
+        match = right_by_month.get((point.observed_on.year, point.observed_on.month))
+        if match is None:
+            continue
+        out.append(HistoryPoint(min(point.observed_on, match.observed_on), _q(point.value - match.value, "0.01")))
+    return sorted(out, key=lambda item: item.observed_on)
 
 
 def _unit_suffix(snap: IndicatorSnapshot) -> str:
