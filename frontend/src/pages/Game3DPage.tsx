@@ -89,6 +89,7 @@ import { buildStreet, emptyStreetNote, streetOverflowLine } from "../game3d/stre
 import { stateToWorld } from "../game3d/stateToWorld";
 import { withGaps } from "../game3d/standingGaps";
 import { wordsFor } from "../game3d/standingWordsV3";
+import { withGameStandingLabels } from "../game3d/standingLabelsWordsV1";
 import { webglSupported } from "../game3d/webgl";
 import type { PerfStats } from "../game3d/PerfProbe";
 
@@ -344,7 +345,7 @@ export default function Game3DPage() {
   const world = useMemo(() => stateToWorld(state), [state]);
   // What is drawn and listed: the same world, with the Standing's named gaps labelled on their towers.
   const shownWorld = useMemo(() => withGaps(world, standing?.gaps ?? []), [world, standing]);
-  const standingText = useMemo(() => wordsFor(standing, standingFailed), [standing, standingFailed]);
+  const standingText = useMemo(() => withGameStandingLabels(wordsFor(standing, standingFailed)), [standing, standingFailed]);
   // The quest is worked out from the journal every render; nothing about it is stored.
   const quest = useMemo(
     () =>
