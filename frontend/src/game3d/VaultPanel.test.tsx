@@ -27,23 +27,23 @@ describe("VaultPanel (the vault chest's panel)", () => {
     const h = html(vault({}));
     expect(h).toContain("The Vault");
     expect(h).toContain("Stocked vault");
-    expect(h).toContain("in cash");
-    expect(h).toContain("Update cash");
+    expect(h).toContain("in the chest");
+    expect(h).toContain("Count the cash again");
     expect(h).toContain('href="/fortress"');
     expect(h).toContain("Open Plain view");
   });
 
   it("keeps fog for cash that was never typed in: no amount, and the card says so", () => {
     const h = html(vault({ level: "unsurveyed", cash_nok: null, cash_share_pct: null, accounts_with_cash: 0, accounts: [{ account_id: "acc-1", name: "ASK", cash_nok: null, cash_as_of: null, stale: false }] }));
-    expect(h).toContain("Cash not entered");
-    expect(h).toContain("Not entered yet");
-    expect(h).toContain("Enter cash");
+    expect(h).toContain("Cash in fog");
+    expect(h).toContain("The chest is empty: no figure yet");
+    expect(h).toContain("Put in cash");
   });
 
   it("cannot save on the sample fortress: no cash button, and the card says why", () => {
     const h = html(vault({}), true);
-    expect(h).toContain("Demo data: cash cannot be edited while demo mode is on.");
-    expect(h).not.toContain("Update cash");
+    expect(h).toContain("Sample fortress: the cash can");
+    expect(h).not.toContain("Count the cash again");
   });
 
   it("closes with a labelled button", () => {

@@ -8,11 +8,14 @@ import type { NightWatch } from "../../lib/types";
 import { Card, Disclosure } from "../ui";
 import DispatchDisclosure from "./DispatchDisclosure";
 import WatchBeacon from "./kit/WatchBeacon";
+import { WATCH_STATE_V2, WATCH_STATUS_V2, WATCH_V2, stampLineV2, type Voice } from "../../game3d/vaultWatchWordsV2";
 
 /** Game mode G16, Night Watch: the nightly tripwire check as a morning dispatch. It reads what the
  * worker stored overnight (GET /game/night-watch) and never runs a check, calls a provider or tells
  * you to trade. A watch that has not reported in is "not reporting", never "quiet". */
-export default function NightWatchCard() {
+export default function NightWatchCard({ voice = "flat" }: { voice?: Voice } = {}) {
+  const g = voice === "game";
+  const stamp = (w: NightWatch) => (g ? stampLineV2(w) : stampLine(w));
   const [watch, setWatch] = useState<NightWatch | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { gameMode } = useGameMode();
@@ -43,7 +46,7 @@ export default function NightWatchCard() {
       <Card className="min-h-[6.5rem] py-3">
         <div aria-busy="true">
           <h2 className="section-title">Night Watch</h2>
-          <p className="text-xs text-ink-faint">Reading the overnight dispatch…</p>
+          <p className="text-xs text-ink-faint">{g ? WATCH_V2.loading : "Reading the overnight dispatch…"}</p>
         </div>
       </Card>
     );
@@ -58,7 +61,7 @@ export default function NightWatchCard() {
     <>
       <p className="text-sm font-medium text-ink">{watch.headline}</p>
       <LineList lines={detailLines} />
-      <DispatchNote />
+      <DispatchNote game={g} />
     </>
   );
 
@@ -70,16 +73,16 @@ export default function NightWatchCard() {
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <h2 className="section-title mb-0">Night Watch</h2>
         <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${STATUS_CLASS[watch.status]}`}>
-          {STATUS_LABEL[watch.status]}
+          {g ? WATCH_STATUS_V2[watch.status] : STATUS_LABEL[watch.status]}
         </span>
         {watch.demo && (
-          <span className="rounded-full bg-caution-subtle px-2.5 py-0.5 text-xs font-semibold text-caution">Demo data</span>
+          <span className="rounded-full bg-caution-subtle px-2.5 py-0.5 text-xs font-semibold text-caution">{g ? WATCH_V2.demo : "Demo data"}</span>
         )}
-        <span className="text-xs text-ink-faint">{WATCH_STATE_LABEL[watch.watch_state]}</span>
+        <span className="text-xs text-ink-faint">{g ? WATCH_STATE_V2[watch.watch_state] : WATCH_STATE_LABEL[watch.watch_state]}</span>
       </div>
       {quiet ? (
         <>
-          <p className="mt-1 text-xs text-ink-faint">{stampLine(watch)}</p>
+          <p className="mt-1 text-xs text-ink-faint">{stamp(watch)}</p>
           <LineList lines={reportLines} />
           {gameMode ? (
             <DispatchDisclosure lineCount={detailLines.length}>{details}</DispatchDisclosure>
@@ -92,9 +95,9 @@ export default function NightWatchCard() {
       ) : (
         <>
           <p className="mt-2 text-sm font-medium text-ink">{watch.headline}</p>
-          <p className="text-xs text-ink-faint">{stampLine(watch)}</p>
+          <p className="text-xs text-ink-faint">{stamp(watch)}</p>
           <LineList lines={detailLines} />
-          <DispatchNote />
+          <DispatchNote game={g} />
         </>
       )}
       </div>
@@ -103,10 +106,10 @@ export default function NightWatchCard() {
   );
 }
 
-function DispatchNote() {
+function DispatchNote({ game = false }: { game?: boolean }) {
   return (
     <p className="mt-2 text-xs text-ink-faint">
-      A reading of what the worker stored. It never runs the check itself and never says what to do.
+      {game ? WATCH_V2.note : "A reading of what the worker stored. It never runs the check itself and never says what to do."}
     </p>
   );
 }

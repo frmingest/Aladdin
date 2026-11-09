@@ -6,6 +6,7 @@ import { Button, Card } from "../ui";
 import VaultEditor from "./VaultEditor";
 import VaultCutaway from "./kit/VaultCutaway";
 import { accountPips } from "../../lib/sectionScene";
+import { VAULT_LABEL_V2, VAULT_V2, type Voice } from "../../game3d/vaultWatchWordsV2";
 
 /** How full the vault picture is drawn. Chosen by the backend's level, never
  * by this file. */
@@ -47,8 +48,8 @@ function VaultPicture({ level }: { level: FortressVaultLevel }) {
 
 /** Game mode: the empty cutaway with the gold drawn by code from the backend's level (so a picture never claims money);
  * with pictures off the drawn vault stays. */
-function VaultView({ level }: { level: FortressVaultLevel }) {
-  return <VaultCutaway level={level} label={VAULT_LABEL[level]} fallback={<VaultPicture level={level} />} />;
+function VaultView({ level, label }: { level: FortressVaultLevel; label?: string }) {
+  return <VaultCutaway level={level} label={label ?? VAULT_LABEL[level]} fallback={<VaultPicture level={level} />} />;
 }
 
 function AccountPips({ withCash, total }: { withCash: number; total: number }) {
@@ -71,31 +72,35 @@ export default function VaultCard({
   vault,
   demo = false,
   onChanged,
+  voice = "flat",
 }: {
   vault: GameVault;
   demo?: boolean;
   onChanged?: () => void;
+  /** "game" is the /game3d wording; the flat Fortress keeps the neutral words. */
+  voice?: Voice;
 }) {
+  const g = voice === "game";
   const [editing, setEditing] = useState(false);
   const gold = Number(vault.gold_oz);
   const silver = Number(vault.silver_oz);
   return (
     <Card>
-      <h2 className="section-title">Vault</h2>
+      <h2 className="section-title">{g ? VAULT_V2.title : "Vault"}</h2>
       <div className="flex items-center gap-4">
-        <VaultView level={vault.level} />
+        <VaultView level={vault.level} label={g ? VAULT_LABEL_V2[vault.level] : undefined} />
         <div className="min-w-0 text-sm">
-          <p className="font-semibold text-ink">{VAULT_LABEL[vault.level]}</p>
+          <p className="font-semibold text-ink">{(g && VAULT_LABEL_V2[vault.level]) || VAULT_LABEL[vault.level]}</p>
           {vault.cash_nok === null ? (
             <p className="mt-1 text-ink-muted">
-              Not entered yet. Enter your cash below and the vault fills from your own figure.
+              {g ? VAULT_V2.noCash : "Not entered yet. Enter your cash below and the vault fills from your own figure."}
             </p>
           ) : (
             <p className="mt-1 text-ink-muted">
-              <span className="tabular text-ink">{formatNok(vault.cash_nok)}</span> in cash
+              <span className="tabular text-ink">{formatNok(vault.cash_nok)}</span> {g ? VAULT_V2.inCash : "in cash"}
               {vault.cash_share_pct !== null && (
                 <>
-                  , <span className="tabular">{formatPct100(vault.cash_share_pct)}</span> of cash plus portfolio
+                  , <span className="tabular">{formatPct100(vault.cash_share_pct)}</span> {g ? VAULT_V2.shareOf : "of cash plus portfolio"}
                 </>
               )}
               .
@@ -104,26 +109,32 @@ export default function VaultCard({
           {vault.accounts_with_cash > 0 && (
             <p className="mt-1 text-xs text-ink-faint">
               <AccountPips withCash={vault.accounts_with_cash} total={vault.accounts_total} />{" "}
-              {vault.accounts_with_cash} of {vault.accounts_total} accounts have a cash figure
-              {vault.cash_oldest_as_of ? `; oldest entered ${formatDate(vault.cash_oldest_as_of)}` : ""}.
+              {g ? (
+                VAULT_V2.accountsLine(vault.accounts_with_cash, vault.accounts_total, vault.cash_oldest_as_of ? formatDate(vault.cash_oldest_as_of) : null)
+              ) : (
+                <>
+                  {vault.accounts_with_cash} of {vault.accounts_total} accounts have a cash figure
+                  {vault.cash_oldest_as_of ? `; oldest entered ${formatDate(vault.cash_oldest_as_of)}` : ""}.
+                </>
+              )}
             </p>
           )}
           {vault.cash_stale && (
             <p className="mt-1 text-xs text-caution">
-              Some cash figures are more than a month old. Update them so the vault is not drawn from an old number.
+              {g ? VAULT_V2.stale : "Some cash figures are more than a month old. Update them so the vault is not drawn from an old number."}
             </p>
           )}
           {(gold > 0 || silver > 0) && (
             <p className="mt-1 text-xs text-ink-muted">
-              Physical coins: {gold > 0 ? `${gold} oz gold` : ""}
+              {g ? VAULT_V2.coins : "Physical coins"}: {gold > 0 ? `${gold} oz gold` : ""}
               {gold > 0 && silver > 0 ? ", " : ""}
-              {silver > 0 ? `${silver} oz silver` : ""} (ounces only; not valued here).
+              {silver > 0 ? `${silver} oz silver` : ""} {g ? VAULT_V2.coinsNote : "(ounces only; not valued here)."}
             </p>
           )}
         </div>
       </div>
       {demo ? (
-        <p className="mt-3 text-xs text-ink-faint">Demo data: cash cannot be edited while demo mode is on.</p>
+        <p className="mt-3 text-xs text-ink-faint">{g ? VAULT_V2.demo : "Demo data: cash cannot be edited while demo mode is on."}</p>
       ) : (
         onChanged &&
         vault.accounts.length > 0 &&
@@ -132,7 +143,7 @@ export default function VaultCard({
         ) : (
           <div className="mt-3">
             <Button type="button" variant="secondary" onClick={() => setEditing(true)}>
-              {vault.accounts_with_cash === 0 ? "Enter cash" : "Update cash"}
+              {vault.accounts_with_cash === 0 ? (g ? VAULT_V2.enter : "Enter cash") : g ? VAULT_V2.update : "Update cash"}
             </Button>
           </div>
         ))
