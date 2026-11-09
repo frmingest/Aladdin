@@ -53,7 +53,7 @@ describe("Vault, temperament and Night Watch game voice (3D)", () => {
     expect(text).toContain("55 / 100");
     expect(text).toContain("▲ 2 calmed");
     expect(text).toContain("▼ 1 rattled");
-    expect(text).toContain("1 added, 0 removed, 2 resized");
+    expect(text).toContain("1 tower added, 0 removed, 2 resized");
   });
 
   it("every Night Watch state has a game word and the stamp keeps its numbers", () => {

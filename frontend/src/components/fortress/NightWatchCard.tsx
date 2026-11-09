@@ -10,6 +10,7 @@ import DispatchDisclosure from "./DispatchDisclosure";
 import WatchBeacon from "./kit/WatchBeacon";
 import { WATCH_STATE_V2, WATCH_STATUS_V2, WATCH_V2, stampLineV2, type Voice } from "../../game3d/vaultWatchWordsV2";
 import { gameWatchText } from "../../game3d/watchLinesWordsV1";
+import { gameFrameChangeText } from "../../game3d/frameChangeWordsV1";
 
 /** Game mode G16, Night Watch: the nightly tripwire check as a morning dispatch. It reads what the
  * worker stored overnight (GET /game/night-watch) and never runs a check, calls a provider or tells
@@ -116,7 +117,7 @@ function DispatchNote({ game = false }: { game?: boolean }) {
 }
 
 function LineList({ lines, game = false }: { lines: NightWatch["lines"]; game?: boolean }) {
-  const say = (t: string) => (game ? gameWatchText(t) : t);
+  const say = (t: string) => (game ? gameFrameChangeText(gameWatchText(t)) : t);
   if (lines.length === 0) return null;
   return (
     <ul className="mt-2 divide-y divide-border-subtle">
