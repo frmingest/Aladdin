@@ -1,6 +1,6 @@
 # Aladdin — Progress
 
-**Last updated:** 2026-11-09 (4h merged #320; 4i Council and Standing words in a PR). Rolling log: active status only, under 100 lines, at most 7 tasks (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
+**Last updated:** 2026-11-09 (4h merged #320; 4i Council and Standing words in a PR, #321). Rolling log: active status only, under 100 lines, at most 7 tasks (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
 
 ## Current Objective
 
@@ -10,7 +10,7 @@ State: `main` at `9f5c5d8` (#320). S21 to S31 and A1 to A8 are merged; S29 and t
 
 ## Active Tasks
 
-- [ ] **Text pass 4 (Claude):** 4a to 4h merged (#312 to #320). 4i (the Library Council shelf: advisor lines, facts and footnote in `advisorLinesWordsV1.ts`; three leftover Standing labels in `standingLabelsWordsV1.ts`) is in a PR, written and tested, not deployed, no backend change needed. Still open: only the Realm verdict "Buy/Sell" decision (Faiz), and what "Last verdict" says on the Land shelf ([4i note](game/game3d-text-4i-council-standing-2026-11-09.md), [review](game/game3d-text-review-2026-11-03.md))
+- [ ] **Text pass 4 (Claude):** 4a to 4h merged (#312 to #320). 4i (the Library Council shelf: advisor lines, facts and footnote in `advisorLinesWordsV1.ts`; three leftover Standing labels in `standingLabelsWordsV1.ts`) is in a PR (#321), written and tested, not deployed, no backend change needed. Still open: only the Realm verdict "Buy/Sell" decision (Faiz), and what "Last verdict" says on the Land shelf ([4i note](game/game3d-text-4i-council-standing-2026-11-09.md), [review](game/game3d-text-review-2026-11-03.md))
 - [ ] **3D text T5 look and judge (Claude, half done):** first look at the live site on 2026-11-09: Siege Field banners and chalked losses read well; the four north-wall dials had no needle; cause found (spreads had no stored history), fix merged (#319) but not yet seen deployed, see the 4g note. Not yet seen: Library, Town Hall, Town at night, Battlefield, holding land, desktop width, fps ([note](game/game3d-text-4f-and-t5-look-2026-11-09.md), [plan](game/game3d-text-legibility-sprint-plan-2026-11-08.md))
 - [ ] **Weather Tower (Claude):** merged (#315), live. The north-wall ("gaps") dials get a needle and trace once the spread-history fix (#319, `build_derived`) is deployed. Faiz: after deploy press Refresh data on the Macro page and look at the north wall; check `ACTIVE_MACRO_SERIES_VERSION` in Railway if set ([build](game/game3d-weather-tower-2026-11-08.md), [4g note](game/game3d-dials-and-text-4g-2026-11-09.md))
 - [ ] **Rate sensitivity per holding, then the PDF memo (Claude):** neither exists on `main`. Rate sensitivity has no data to stand on: the app stores no floating/fixed split or debt maturity schedule per company, so it first needs a way to read that from filings. The PDF memo needs a PDF writer (only `pymupdf` is installed). Both are bigger than one sprint; need a plan first.

@@ -1,6 +1,6 @@
 # Text pass 4i: the Council's words and the Standing labels, 2026-11-09
 
-Two small pieces from [remaining work](../sprints/remaining-work-2026-11-06.md), in one PR. Written and tested in a local workspace; not deployed and not seen in a browser.
+Two small pieces from [remaining work](../sprints/remaining-work-2026-11-06.md), in one PR (#321). Written and tested in a local workspace; not deployed and not seen in a browser.
 
 The text review said Council and standing labels "need a backend wording version". They do not: the Council lines carry their rule id and a fixed template, so the same 3D-only layer used for 4f and 4h works, and the flat Fortress and the backend are not edited. Version files stay new files.
 
