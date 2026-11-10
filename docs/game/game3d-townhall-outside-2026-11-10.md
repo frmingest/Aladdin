@@ -1,7 +1,9 @@
 # 3D: the whole Town moves outside the gate, and the holdings spread round the meadow (2026-11-10)
 
 Faiz's ask: the holdings should be spread around the kingdom outside, and the Town should stand right outside the
-gate (first the Town Hall, then "the whole town"), so you walk up t## What changed, in plain words
+gate (first the Town Hall, then "the whole town"), so you walk up to it instead of being teleported to it.
+
+## What changed, in plain words
 
 - **The whole Town stands on the meadow**, either side of the gate road, a few steps out of the gate. Six buildings in two
   rows facing the road. West side, from the gate out: Town Hall, Cartographer, Weather Tower. East side: Archive, Workshop,
@@ -13,8 +15,7 @@ gate (first the Town Hall, then "the whole town"), so you walk up t## What chang
   meadow, one in each quarter round the wall: south-east first (the shortest walk), then south-west, north-east, north-west.
   Mines and quarries (hill foot, north), farms (fields, west), watermills and fish farms (river, east) and windmills
   (rise by the river) keep their places.
-
-ad is clear** apart from the Town Hall.
+- **The gate road is clear** between the two rows of buildings.
 
 ## Rules kept
 
