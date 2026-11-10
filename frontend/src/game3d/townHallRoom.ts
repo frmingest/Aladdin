@@ -15,10 +15,10 @@ import { INTERIOR_BOX, INTERIOR_DOOR } from "./interiorBox";
 import type { Spot } from "./layout";
 import { doorsAt } from "./parity3d";
 import type { Door } from "./parity3d";
-import { BUILDINGS, doorSpot } from "./townPlan";
+import { TOWN_HALL_RETURN, TOWN_HALL_RETURN_YAW } from "./townHallOutside";
 
 export const HALL = INTERIOR_BOX;
-/** A closed pair of doors in the south wall; E beside it leads back out into the Town. */
+/** A closed pair of doors in the south wall; E beside it leads back out onto the meadow. */
 export const HALL_DOOR = INTERIOR_DOOR;
 /** Far enough in that the follow camera (about 6 behind) is still inside the south wall. */
 export const HALL_SPAWN = { x: 0, y: 1.5, z: 3 } as const;
@@ -81,7 +81,7 @@ export const HALL_DOOR_RANGE = 3.4;
 export const HALL_DOOR_LEAVE_RANGE = 4.6;
 
 export const hallPrompt = (b: Board): string => `Press E to read ${b.title}`;
-export const hallDoorPrompt = "Press E to go back out into the Town";
+export const hallDoorPrompt = "Press E to step back outside";
 
 export function boardById(id: BoardId): Board {
   return BOARDS.find((b) => b.id === id) ?? BOARDS[0];
@@ -119,11 +119,7 @@ export function doorsOfBoard(board: Board, townHallDoors: readonly Door[] = door
   return board.routes.map((r) => townHallDoors.find((d) => d.route === r)).filter((d): d is Door => d !== undefined);
 }
 
-/** Where the hero stands in the Town, and the camera yaw, when stepping out of the Town Hall door. */
+/** Where the hero stands on the meadow, and the camera yaw, when stepping out of the Town Hall door (the hall's door is outside the gate now). */
 export function hallExit(): { x: number; z: number; yaw: number } {
-  const b = BUILDINGS.find((x) => x.id === "townhall");
-  if (!b) return { x: 0, z: 0, yaw: 0 };
-  const s = doorSpot(b);
-  // Same convention as stepping out of a tower: the camera sits on the building's side, so the hero looks away from it.
-  return { x: s.x, z: s.z, yaw: Math.atan2(b.x - s.x, b.z - s.z) };
+  return { x: TOWN_HALL_RETURN.x, z: TOWN_HALL_RETURN.z, yaw: TOWN_HALL_RETURN_YAW };
 }

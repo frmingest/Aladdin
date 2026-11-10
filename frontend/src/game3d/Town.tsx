@@ -17,7 +17,7 @@ import WorldSign from "./WorldSign";
 const COLORS = { grass: "#7a9e5c", cobble: "#a89f91" } as const;
 
 /** If the buildings file fails to load, the buildings (and their colliders) are left out; the ground, signs and road back stay. */
-class BuildingsBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+export class BuildingsBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
   state = { failed: false };
   static getDerivedStateFromError() {
     return { failed: true };
@@ -46,7 +46,7 @@ function Model({ source, name, scale }: { source: Object3D; name: string; scale:
   return object ? <primitive object={object} scale={scale} /> : null;
 }
 
-function BuildingMesh({ b, source }: { b: Building; source: Object3D }) {
+export function BuildingMesh({ b, source }: { b: Building; source: Object3D }) {
   return (
     <RigidBody type="fixed" colliders={false} position={[b.x, 0, b.z]} rotation={[0, b.yaw, 0]}>
       <CuboidCollider args={[b.hx, 2, b.hz]} position={[0, 2, 0]} />
@@ -74,7 +74,7 @@ function Buildings() {
 }
 
 /** A name over a door and a doormat on the ground, so you know where to stand. Code-built; it carries no fact. */
-function DoorMark({ b, active }: { b: Building; active: boolean }) {
+export function DoorMark({ b, active }: { b: Building; active: boolean }) {
   const s = doorSpot(b);
   return (
     <group position={[s.x, 0, s.z]}>

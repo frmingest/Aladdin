@@ -66,7 +66,8 @@ const NATIVE = {
 
 const K = TOWN_SCALE.builder;
 
-function building(
+/** One building's record: its footprint comes from the model's measured size. Exported so the Town Hall outside the gate is made the same way. */
+export function building(
   id: BuildingId,
   model: Building["model"],
   label: string,
@@ -82,16 +83,16 @@ function building(
 /**
  * The five buildings, round a plaza and all facing it. Proposed models; a look decides (the plan's gate).
  * Records: the castle, the big one at the far end. Cartographer: the watchtower, west. Archive: the house, east.
- * Workshop: the lumber mill, north-east. Town Hall (S18): the market hall, north-west, across the plaza from the
- * Workshop. A well stands in the middle of the plaza. The Weather Tower (macro dials) stands north of the Town Hall.
+ * Workshop: the lumber mill, north-east. A well stands in the middle of the plaza. The Weather Tower (macro dials) stands in the
+ * north-west, where the Town Hall (S18) stood until 2026-11-10; the Town Hall now stands outside the gate (townHallOutside.ts).
  */
 export const BUILDINGS: readonly Building[] = [
   building("records", "castle", "Hall of Records", 0, 26, Math.PI, { route: "/fortress/records" }),
   building("cartographer", "watchtower", "Cartographer", -26, 4, Math.PI / 2, { route: "/fortress/map" }),
   building("archive", "house", "Archive", 26, 4, -Math.PI / 2, { route: "/glossary" }),
   building("workshop", "lumbermill", "Workshop", 26, -17, -Math.PI / 2, { place: "workshop" }),
-  building("townhall", "market", "Town Hall", -26, -17, Math.PI / 2, { place: "townhall" }),
-  // The Weather Tower (2026-11-08): north of the Town Hall, facing the road to the courtyard. Opens as its own place (the Game page intercepts it, like the Hall of Records; the route is the fallback).
+  // The Town Hall left the Town (2026-11-10): it stands on the meadow just outside the gate (townHallOutside.ts).
+  // The Weather Tower (2026-11-08): in the north-west, facing the road to the courtyard. Opens as its own place (the Game page intercepts it, like the Hall of Records; the route is the fallback).
   building("weather", "watchtower", "Weather Tower", -20, -33, Math.PI / 2, { route: "/macro" }),
 ];
 

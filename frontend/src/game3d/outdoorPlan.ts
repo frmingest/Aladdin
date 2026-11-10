@@ -2,8 +2,12 @@
  * Where the holdings stand out in the landscape (S31 PR 1). Pure data and maths, no three.js and no React.
  *
  * The fortress stays where it is; its holdings step out onto the meadow beyond the wall. Each theme has a home zone with
- * more spots than it can ever need (a river bend, a rise by the river, fields, the hill foot, the road edge). Holdings
+ * more spots than it can ever need (a river bend, a rise by the river, fields, the hill foot, the open meadow). Holdings
  * fill their zone from the best spot outward, heaviest first; if a zone is full they spill to a fixed fallback order.
+ *
+ * Spread (2026-11-10): the themes with no landscape of their own used to share a "road edge" strip beside the gate road, so
+ * the gate looked crowded. They now stand on the open meadow, one in each quarter round the wall (south-east, south-west,
+ * north-east, north-west), and the gate road is kept for the Town Hall (townHallOutside.ts).
  *
  * THE RULE: the landscape may not carry a fact. A spot depends on the holding's THEME and its ORDER (weight rank)
  * only, the same rule the horseshoe uses today. Never the verdict, the margin of safety, the thesis, the wall or
@@ -20,9 +24,9 @@ import { LAND_TOWER_REACH } from "./holdingLand";
 import { FENCE_RADIUS } from "./farmDressing";
 import { MOAT_WIDTH, SIZE_RADIUS } from "./towerLook";
 
-export type OutdoorZone = "river" | "rise" | "fields" | "hill" | "road";
+export type OutdoorZone = "river" | "rise" | "fields" | "hill" | "meadow";
 
-export const OUTDOOR_ZONES: readonly OutdoorZone[] = ["river", "rise", "fields", "hill", "road"];
+export const OUTDOOR_ZONES: readonly OutdoorZone[] = ["river", "rise", "fields", "hill", "meadow"];
 
 /** Words for the readout and tests. Not shown to the player (PR 3 decides what a door post says). */
 export const ZONE_LABEL: Record<OutdoorZone, string> = {
@@ -30,7 +34,7 @@ export const ZONE_LABEL: Record<OutdoorZone, string> = {
   rise: "Rise by the river",
   fields: "Fields",
   hill: "Hill foot",
-  road: "Road edge",
+  meadow: "Open meadow",
 };
 
 /** How wide each theme stands on the ground, from the centre to the edge of its stream band (or fence, or moat). */
@@ -56,7 +60,7 @@ export const PLOT_FOOTPRINT_MAX = Math.max(...Object.values(FOOTPRINT));
 /** Open ground kept between two buildings (edge to edge), and between a building and the wall or the road. */
 export const PLOT_GAP = 2;
 export const WALL_GAP = 3;
-/** The gate road is 6 wide (Courtyard.tsx); a building's edge stays this far from its edge. */
+/** The gate road is 6 wide (Courtyard.tsx); a building's edge stays this far from its edge. The Town Hall stands beside it (townHallOutside.ts). */
 export const ROAD_HALF = 3;
 export const ROAD_GAP = 4;
 /** Where the road ends and the plots to the south of it may no longer line up with it. */
@@ -69,8 +73,9 @@ export function footprintOf(theme: Theme3dId): number {
 /**
  * The spots, per zone, best first. Fixed numbers, never computed from a holding. Coordinates (x, z) in world units.
  * The river runs down from the northern hills and bends past the east and south-east of the wall; the watermill and the
- * fish farm stand on it, a windmill on a rise beside it; the fields lie to the west; the hill foot is the north; the road
- * edge is the strip either side of the gate road, a short walk from the gate.
+ * fish farm stand on it, a windmill on a rise beside it; the fields lie to the west; the hill foot is the north; the open
+ * meadow is the four quarters between them, south-east first (the shortest walk from the gate), then south-west, north-east
+ * and north-west, so the first holdings that have no landscape of their own stand far apart.
  */
 export const OUTDOOR_SPOTS: Readonly<Record<OutdoorZone, readonly Spot[]>> = {
   river: [
@@ -92,11 +97,11 @@ export const OUTDOOR_SPOTS: Readonly<Record<OutdoorZone, readonly Spot[]>> = {
     { x: -30, z: -70 },
     { x: 30, z: -72 },
   ],
-  road: [
-    { x: -16, z: 62 },
-    { x: 16, z: 62 },
-    { x: -18, z: 80 },
-    { x: 18, z: 80 },
+  meadow: [
+    { x: 35, z: 70 },
+    { x: -50, z: 60 },
+    { x: 61, z: -48 },
+    { x: -57, z: -53 },
   ],
 };
 
@@ -116,18 +121,18 @@ export function zoneOf(theme: Theme3dId, fish = false): OutdoorZone {
     case "quarry":
       return "hill";
     default:
-      // fountain, bank, stall, factory, ingots, armoury, apothecary and the plain tower: the road edge until their own place on the meadow is chosen.
-      return "road";
+      // fountain, bank, stall, factory, ingots, armoury, apothecary and the plain tower: the open meadow until each has its own place.
+      return "meadow";
   }
 }
 
 /** If a zone is full, the next zones to try, in this order. Fixed, so the same inputs always give the same plots. */
 export const FALLBACK: Readonly<Record<OutdoorZone, readonly OutdoorZone[]>> = {
-  river: ["river", "rise", "fields", "road", "hill"],
-  rise: ["rise", "river", "fields", "road", "hill"],
-  fields: ["fields", "road", "rise", "river", "hill"],
-  hill: ["hill", "fields", "river", "rise", "road"],
-  road: ["road", "fields", "river", "hill", "rise"],
+  river: ["river", "rise", "fields", "meadow", "hill"],
+  rise: ["rise", "river", "fields", "meadow", "hill"],
+  fields: ["fields", "meadow", "rise", "river", "hill"],
+  hill: ["hill", "fields", "river", "rise", "meadow"],
+  meadow: ["meadow", "fields", "river", "hill", "rise"],
 };
 
 /** What a holding must tell the plan: its identity, its theme and whether it is a fish farm. Nothing about its state. */
