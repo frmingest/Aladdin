@@ -139,6 +139,15 @@ describe("the Council's words shelf (the seventh)", () => {
     expect(s.lines[s.lines.length - 1].text).toBe("Hand-written lines chosen by fixed rules. Not advice.");
   });
 
+  it("puts the backend's sentences, facts and footnote into game voice (text pass 4i), numbers exact", () => {
+    const backend = "Kongsberg is 12.3% of the portfolio and its walls are timber. A big position should have the strongest balance sheet you own, not the weakest. Invert it: what would have to go wrong for this to hurt?";
+    const note = "Written for Aladdin in the spirit of a patient owner and a blunt sceptic. These are not quotations from Warren Buffett or Charlie Munger, and nothing here is advice to trade.";
+    const s = councilShelf({ ...advisors([{ advisor: "partner", tone: "warning", text: backend, facts: ["weight 12.3%", "wall: timber"] }]), disclaimer: note });
+    expect(s.lines[0].text).toMatch(/^Kongsberg holds 12\.3% of the fortress and its walls are patched\./);
+    expect(s.lines[1]).toEqual({ label: "Why", text: "share 12.3% · walls: patched" });
+    expect(s.lines[s.lines.length - 1].text).toMatch(/^Hand-written in the spirit of a patient owner/);
+  });
+
   it("counts books by lines written, one each up to the shelf, and keeps the plaque tone plain", () => {
     expect(councilShelf(advisors([{}])).books).toBe(1);
     expect(councilShelf(advisors([{}, {}, {}])).books).toBe(3);

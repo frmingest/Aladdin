@@ -111,9 +111,9 @@ const world = stateToWorld({
 describe("named gaps on towers", () => {
   it("label only the tower they belong to, in both lists, and leave the look alone", () => {
     const w = withGaps(world, [{ ticker: "JAREN.OL", label: "no tagged filing" }]);
-    expect(w.plain.find((t) => t.ticker === "JAREN.OL")?.gap).toBe("no tagged filing");
+    expect(w.plain.find((t) => t.ticker === "JAREN.OL")?.gap).toBe("no tagged report");
     expect(w.plain.find((t) => t.ticker === "OTHER.OL")?.gap).toBeUndefined();
-    expect(w.towers.find((t) => t.ticker === "JAREN.OL")?.gap).toBe("no tagged filing");
+    expect(w.towers.find((t) => t.ticker === "JAREN.OL")?.gap).toBe("no tagged report");
     const before = world.plain.find((t) => t.ticker === "JAREN.OL");
     const after = w.plain.find((t) => t.ticker === "JAREN.OL");
     expect({ ...after, gap: undefined }).toEqual({ ...before, gap: undefined });

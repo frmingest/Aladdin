@@ -1,9 +1,10 @@
 import type { StandingGap } from "../lib/types";
 import type { TowerView, WorldModel } from "./stateToWorld";
+import { gameStandingText } from "./standingLabelsWordsV1";
 
 /**
  * Put the Standing's named gaps on the towers they belong to (matched by ticker). A gap is only
- * a label ("no tagged filing"): the tower stays fog and nothing about its look changes.
+ * a label ("no tagged report"): the tower stays fog and nothing about its look changes.
  * Towers without a gap keep the very same object, and a world with no gaps is returned as is.
  */
 export function withGaps(world: WorldModel, gaps: readonly StandingGap[]): WorldModel {
@@ -11,7 +12,7 @@ export function withGaps(world: WorldModel, gaps: readonly StandingGap[]): World
   const byTicker = new Map(gaps.map((g) => [g.ticker, g.label]));
   const mark = (t: TowerView): TowerView => {
     const label = byTicker.get(t.ticker);
-    return label ? { ...t, gap: label } : t;
+    return label ? { ...t, gap: gameStandingText(label) } : t;
   };
   const plain = world.plain.map(mark);
   const bySlot = new Map(plain.map((t) => [t.holdingId, t]));

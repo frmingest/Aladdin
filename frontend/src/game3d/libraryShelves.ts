@@ -33,6 +33,7 @@ import {
   wallInputLine,
 } from "./shelfSignsV2";
 import { WALL_LOOK } from "./towerLook";
+import { gameAdvisorDisclaimer, gameAdvisorFact, gameAdvisorLine } from "./advisorLinesWordsV1";
 
 export const MAX_SHELF_BOOKS = 8;
 
@@ -232,15 +233,15 @@ export function councilShelf(input: CouncilInput): Shelf {
   if (input.lines.length === 0) {
     return notApplicable("council", COUNCIL_TITLE, COUNCIL_ASKS, [
       { label: "", text: COUNCIL_WORDS.silent },
-      { label: "", text: input.disclaimer },
+      { label: "", text: gameAdvisorDisclaimer(input.disclaimer) },
     ]);
   }
   const lines: ShelfLine[] = [];
   for (const l of input.lines) {
-    lines.push({ label: ADVISOR_NAME[l.advisor], text: l.text, tone: ADVISOR_SHELF_TONE[l.tone] });
-    if (l.facts.length > 0) lines.push({ label: "Why", text: l.facts.join(" · ") });
+    lines.push({ label: ADVISOR_NAME[l.advisor], text: gameAdvisorLine(l.text), tone: ADVISOR_SHELF_TONE[l.tone] });
+    if (l.facts.length > 0) lines.push({ label: "Why", text: l.facts.map(gameAdvisorFact).join(" · ") });
   }
-  lines.push({ label: "", text: input.disclaimer });
+  lines.push({ label: "", text: gameAdvisorDisclaimer(input.disclaimer) });
   return known({ id: "council", title: COUNCIL_TITLE, asks: COUNCIL_ASKS, tone: "", books: Math.min(MAX_SHELF_BOOKS, input.lines.length), lines });
 }
 
