@@ -15,7 +15,7 @@ import { WALL_RADIUS, WALL_THICKNESS } from "./layout";
 import { HORIZON_LIMIT, onGateRoad, seeded } from "./horizonPieces";
 import { FIELDS, RIVER_HALF, THIN_MARGIN, distToPolyline, fieldReach, riverLine, thinnedHorizon, tracks } from "./countryside";
 import { OUTDOOR_SPOTS, OUTDOOR_ZONES, PLOT_FOOTPRINT_MAX } from "./outdoorPlan";
-import { TOWN_HALL_OUTSIDE, TOWN_HALL_REACH } from "./townHallOutside";
+import { BUILDINGS, VILLAGE_MARGIN, buildingReach } from "./townPlan";
 
 export const FOREST_URL = "/models/forest.glb";
 
@@ -114,7 +114,7 @@ export function blocked(x: number, z: number, reach: number): boolean {
   for (const t of o.tracks) if (distToPolyline(at, t.points) < t.width / 2 + r) return true;
   for (const f of FIELDS) if (Math.hypot(x - f.x, z - f.z) < fieldReach(f) + r) return true;
   for (const zone of OUTDOOR_ZONES) for (const s of OUTDOOR_SPOTS[zone]) if (Math.hypot(x - s.x, z - s.z) < PLOT_FOOTPRINT_MAX + r) return true;
-  if (Math.hypot(x - TOWN_HALL_OUTSIDE.x, z - TOWN_HALL_OUTSIDE.z) < TOWN_HALL_REACH + r) return true;
+  for (const b of BUILDINGS) if (Math.hypot(x - b.x, z - b.z) < buildingReach(b) + VILLAGE_MARGIN + r) return true;
   for (const g of o.grove) if (Math.hypot(x - g.x, z - g.z) < g.r + reach + 0.5) return true;
   return false;
 }

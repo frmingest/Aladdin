@@ -120,7 +120,7 @@ describe("thinning the grove", () => {
     for (const p of dropped) expect(inTheWay(p), p.id).toBe(true);
     for (const p of kept) expect(inTheWay(p), p.id).toBe(false);
     const woods = HORIZON.filter((p) => p.ring === "grove" || p.ring === "rock");
-    expect(woods.length - dropped.length).toBeGreaterThanOrEqual(woods.length * 0.4);
+    expect(woods.length - dropped.length).toBeGreaterThanOrEqual(woods.length * 0.35);
   });
   it("keeps the horizon inside its piece and draw-call ceilings", () => {
     expect(kept.length).toBeLessThanOrEqual(HORIZON_MAX_PIECES);

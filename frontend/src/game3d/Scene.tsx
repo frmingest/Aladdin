@@ -62,14 +62,11 @@ import HoldingLand from "./HoldingLand";
 import type { GateStone, Lantern, PricePost } from "./holdingLand";
 import type { LandCentreSlot } from "./landCentre";
 import type { SurveyCheckId } from "../lib/survey";
-import Town from "./Town";
-import TownHallOutside from "./TownHallOutside";
-import { TOWN_HALL_GATE, TOWN_HALL_GATE_LEAVE_RANGE, TOWN_HALL_GATE_RANGE } from "./townHallOutside";
+import Village from "./Village";
 import TownHallRoom from "./TownHallRoom";
 import RecordsHallRoom from "./RecordsHallRoom";
 import WeatherTowerRoom from "./WeatherTowerRoom";
 import type { BoardId } from "./townHallRoom";
-import { GATE_LEAVE_RANGE, GATE_RANGE, GATE_SPOT } from "./townPlan";
 import type { BuildingId } from "./townPlan";
 import { AREAS, COURTYARD, sameArea, transitionSpot } from "./areas";
 import type { AreaRef } from "./areas";
@@ -144,11 +141,9 @@ interface Props {
   onNearTable?: (near: boolean) => void;
   onNearLantern?: (check: SurveyCheckId | null) => void;
   /** Courtyard: the hero stands at the gate road. */
-  onNearGate?: (near: boolean) => void;
   /** Town: which building's door the hero stands at, and whether the road back is in reach. */
   townNear?: BuildingId | null;
   onNearBuilding?: (id: BuildingId | null) => void;
-  onNearTownExit?: (near: boolean) => void;
   /** Inside the Town Hall: which board you stand at, and whether the door is in reach. */
   onNearBoard?: (id: BoardId | null) => void;
   onNearHallDoor?: (near: boolean) => void;
@@ -173,8 +168,6 @@ interface Props {
   /** Courtyard: the hero stands at the arch to the Market Quarter. */
   onNearQuarterGate?: (near: boolean) => void;
   /** Courtyard: the hero stands at the Town Hall's door on the meadow outside the gate, and whether to light its doormat. */
-  onNearHallGate?: (near: boolean) => void;
-  hallGateNear?: boolean;
   /** Market Quarter: the road back is in reach. */
   onNearQuarterExit?: (near: boolean) => void;
 }
@@ -236,11 +229,9 @@ const DESK_T = spotTarget(DESK, DESK_RANGE, DESK_LEAVE_RANGE);
 const DRILL_T = spotTarget(DRILL_POST, DRILL_RANGE, DRILL_LEAVE_RANGE);
 const SIGN_T = spotTarget(SIGN, SIGN_RANGE, SIGN_LEAVE_RANGE);
 const SIEGE_GATE_T = spotTarget(SIEGE_GATE, SIEGE_GATE_RANGE, SIEGE_GATE_LEAVE_RANGE);
-const HALL_GATE_T = spotTarget(TOWN_HALL_GATE, TOWN_HALL_GATE_RANGE, TOWN_HALL_GATE_LEAVE_RANGE);
 const QUARTER_GATE_T = spotTarget(QUARTER_GATE, QUARTER_GATE_RANGE, QUARTER_GATE_LEAVE_RANGE);
 const QUARTER_EXIT_T = spotTarget(QUARTER_EXIT, QUARTER_EXIT_RANGE, QUARTER_EXIT_LEAVE_RANGE);
 const NO_QUARTER: Quarter = { stalls: [], overflow: [], fogZ: null, total: 0, inRange: 0 };
-const GATE_T = spotTarget(GATE_SPOT, GATE_RANGE, GATE_LEAVE_RANGE);
 const VAULT_T = spotTarget(VAULT, VAULT_RANGE, VAULT_LEAVE_RANGE);
 const REALM_T = spotTarget(REALM_POST, REALM_RANGE, REALM_LEAVE_RANGE);
 const WATCH_T = spotTarget(WATCH_POST, WATCH_RANGE, WATCH_LEAVE_RANGE);
@@ -281,10 +272,8 @@ function World({
   onNearLandGate,
   onNearTable,
   onNearLantern,
-  onNearGate,
   townNear,
   onNearBuilding,
-  onNearTownExit,
   onNearBoard,
   onNearHallDoor,
   onNearShelves,
@@ -300,8 +289,6 @@ function World({
   archCounts,
   onNearQuarterGate,
   onNearQuarterExit,
-  onNearHallGate,
-  hallGateNear,
 }: {
   onLockChange: (locked: boolean) => void;
   world: WorldModel;
@@ -335,10 +322,8 @@ function World({
   onNearLandGate: (near: boolean) => void;
   onNearTable: (near: boolean) => void;
   onNearLantern: (check: SurveyCheckId | null) => void;
-  onNearGate: (near: boolean) => void;
   townNear: BuildingId | null;
   onNearBuilding: (id: BuildingId | null) => void;
-  onNearTownExit: (near: boolean) => void;
   onNearBoard: (id: BoardId | null) => void;
   onNearHallDoor: (near: boolean) => void;
   onNearShelves: (near: boolean) => void;
@@ -354,8 +339,6 @@ function World({
   archCounts: { total: number; inRange: number } | null;
   onNearQuarterGate: (near: boolean) => void;
   onNearQuarterExit: (near: boolean) => void;
-  onNearHallGate: (near: boolean) => void;
-  hallGateNear: boolean;
 }) {
   const keys = useKeys();
   const pos = useRef({ x: 0, z: 0 });
@@ -429,13 +412,6 @@ function World({
           <NearWatch pos={pos} targets={quarterStallTargets} onChange={onNearStall} />
           <NearWatch pos={pos} targets={QUARTER_EXIT_T} onChange={isYes(onNearQuarterExit)} />
         </>
-      ) : area.id === "town" ? (
-        <>
-          <group userData={{ perfGroup: "backdrop" }}>
-            <Backdrop />
-          </group>
-          <group userData={{ perfGroup: "town" }}><Town pos={pos} near={townNear} onNearBuilding={onNearBuilding} onNearExit={onNearTownExit} /></group>
-        </>
       ) : area.id === "holding" && room ? (
         <>
           <group userData={{ perfGroup: "backdrop" }}>
@@ -457,7 +433,7 @@ function World({
           </group>
           <group userData={{ perfGroup: "courtyard" }}>
             <Courtyard world={world} />
-            <TownHallOutside active={hallGateNear} />
+            <Village pos={pos} near={townNear} onNearBuilding={onNearBuilding} />
             {PROPS.map((p) => (
               <PropMesh key={p.id} prop={p} />
             ))}
@@ -513,9 +489,7 @@ function World({
           <NearWatch pos={pos} targets={DRILL_T} onChange={isYes(onNearDrill)} />
           <NearWatch pos={pos} targets={SIEGE_GATE_T} onChange={isYes(onNearSiegeGate)} />
           <NearWatch pos={pos} targets={QUARTER_GATE_T} onChange={isYes(onNearQuarterGate)} />
-          <NearWatch pos={pos} targets={HALL_GATE_T} onChange={isYes(onNearHallGate)} />
           <NearWatch pos={pos} targets={SIGN_T} onChange={isYes(onNearSign)} />
-          <NearWatch pos={pos} targets={GATE_T} onChange={isYes(onNearGate)} />
           <NearWatch pos={pos} targets={stallTargets} onChange={onNearStall} />
           <NearWatch pos={pos} targets={BOOTH_T} onChange={onNearBooth} />
           <NearWatch pos={pos} targets={VAULT_T} onChange={isYes(onNearVault)} />
@@ -571,10 +545,8 @@ export default function Scene({
   onNearLandGate = noop,
   onNearTable = noop,
   onNearLantern = noop,
-  onNearGate = noop,
   townNear = null,
   onNearBuilding = noop,
-  onNearTownExit = noop,
   onNearBoard = noop,
   onNearHallDoor = noop,
   onNearShelves = noop,
@@ -589,8 +561,6 @@ export default function Scene({
   quarter = NO_QUARTER,
   archCounts = null,
   onNearQuarterGate = noop,
-  onNearHallGate = noop,
-  hallGateNear = false,
   onNearQuarterExit = noop,
 }: Props) {
   const inside = AREAS[area.id].lighting === "indoor";
@@ -680,10 +650,8 @@ export default function Scene({
           onNearLandGate={onNearLandGate}
           onNearTable={onNearTable}
           onNearLantern={onNearLantern}
-          onNearGate={onNearGate}
           townNear={townNear}
           onNearBuilding={onNearBuilding}
-          onNearTownExit={onNearTownExit}
           onNearBoard={onNearBoard}
           onNearHallDoor={onNearHallDoor}
           onNearShelves={onNearShelves}
@@ -698,8 +666,6 @@ export default function Scene({
           quarter={quarter}
           archCounts={archCounts}
           onNearQuarterGate={onNearQuarterGate}
-          onNearHallGate={onNearHallGate}
-          hallGateNear={hallGateNear}
           onNearQuarterExit={onNearQuarterExit}
         />
       </Suspense>

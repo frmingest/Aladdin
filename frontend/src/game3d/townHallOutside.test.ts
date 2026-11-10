@@ -19,10 +19,10 @@ import {
 const GATE_ROAD_HALF = 3;
 
 describe("the Town Hall outside the gate", () => {
-  it("is the Town Hall, no longer a building of the Town", () => {
+  it("is the Town Hall, one of the Town buildings", () => {
     expect(TOWN_HALL_OUTSIDE.id).toBe("townhall");
     expect(TOWN_HALL_OUTSIDE.label).toBe("Town Hall");
-    expect(BUILDINGS.some((b) => b.id === "townhall")).toBe(false);
+    expect(BUILDINGS.some((b) => b.id === "townhall")).toBe(true);
   });
 
   it("stands on the meadow just outside the wall, a few steps from the gate road", () => {
@@ -57,7 +57,7 @@ describe("the Town Hall outside the gate", () => {
 
   it("is a door of the courtyard now: one step in, one step out, no Town in between", () => {
     expect(AREAS.townhall.parent).toBe("courtyard");
-    expect(AREAS.town.doors.some((d) => d.to === "townhall")).toBe(false);
+    expect(AREAS.courtyard.doors.some((d) => d.to === "townhall")).toBe(true);
     expect(transitionSpot({ id: "courtyard" }, { id: "townhall" }, [])).toEqual(AREAS.townhall.spawn);
     expect(returnSpot({ id: "townhall" }, { id: "courtyard" }, [])).toEqual(hallExit());
   });

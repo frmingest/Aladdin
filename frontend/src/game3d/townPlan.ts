@@ -1,39 +1,29 @@
 /**
- * The Town beyond the gate (3D sprint S15). Pure data and maths, no three.js and no React.
+ * The Town (3D sprint S15; moved outside the gate 2026-11-10). Pure data and maths, no three.js and no React.
  *
- * A second zone, entered like a tower door: stand at the gate road, press E, and the courtyard gives way to the
- * Town (the courtyard is not drawn while you are there, so its 60 fps and its budget stay as they were). Five
- * finished KayKit Builder buildings (CC0, S9) stand round a plaza, each one the door to flat pages that are not
- * stores: Records, Map, Codex, the plumbing pages, and (Town Hall, S18) the big-picture pages of the main app. The buildings are decoration; the facts stay in the
- * panels, which are the flat pages themselves (S13).
+ * It used to be a second zone behind a teleport: stand at the gate, press E, and the courtyard gave way to the Town. Now the
+ * Town stands on the meadow just outside the gate: six finished KayKit Builder buildings (CC0, S9) in two rows either side of
+ * the gate road, all facing it. Each one is the door to flat pages that are not stores: Records, Map, Codex, the Workshop's
+ * pages, the Weather Tower (macro dials), and (Town Hall, S18) the big-picture pages of the main app. The buildings are
+ * decoration; the facts stay in the panels, which are the flat pages themselves (S13). The Town Hall, the Hall of Records and
+ * the Weather Tower open their own rooms (areas whose parent is the courtyard); the rest open a page in the world panel.
  *
- * Local coordinates: x east, z south, y up, the plaza at the origin. A building's yaw 0 faces south (like the
- * market pieces); its front is local +z. Buildings are centred on their own origin (measured, S15).
+ * Coordinates are the courtyard's: x east, z south, y up, the gate road at x 0 (6 wide, from the gate south). A building's yaw 0
+ * faces south (like the market pieces); its front is local +z. Buildings are centred on their own origin (measured, S15).
  */
 import { REGISTER } from "./parity3d";
 import type { Door, PlaceId } from "./parity3d";
 import { TOWN_SCALE } from "./townPieces";
 import { WALL_RADIUS } from "./layout";
 
-/** Where the hero stands in the courtyard to take the road out, and how near counts. */
+/** The gate road inside the wall: the courtyard spawn is just in from it, out of every reach. */
 export const GATE_SPOT = { x: 0, z: WALL_RADIUS - 4 } as const;
 export const GATE_RANGE = 4.5;
 export const GATE_LEAVE_RANGE = 6;
-/** Where the hero comes back out in the courtyard: inside the gate, out of the gate prompt's reach. */
+/** Where the hero comes back out in the courtyard: inside the gate, out of the gate road's reach. */
 export const GATE_RETURN = { x: 0, z: GATE_SPOT.z - GATE_LEAVE_RANGE - 1 } as const;
 /** Camera yaw 0 looks north into the courtyard. */
 export const GATE_RETURN_YAW = 0;
-
-/** The north end of the Town: where you arrive, and where the road back stands. */
-export const TOWN_EXIT = { x: 0, z: -30 } as const;
-export const TOWN_SPAWN = { x: 0, y: 1.5, z: -21 } as const;
-/** Camera yaw PI looks south, down the Town road. */
-export const TOWN_YAW = Math.PI;
-export const EXIT_RANGE = 4.5;
-export const EXIT_LEAVE_RANGE = 6;
-
-/** The ground the Town may use: nothing stands outside this radius. */
-export const TOWN_RADIUS = 46;
 
 export type BuildingId = "records" | "cartographer" | "archive" | "workshop" | "townhall" | "weather";
 
@@ -81,23 +71,26 @@ export function building(
 }
 
 /**
- * The five buildings, round a plaza and all facing it. Proposed models; a look decides (the plan's gate).
- * Records: the castle, the big one at the far end. Cartographer: the watchtower, west. Archive: the house, east.
- * Workshop: the lumber mill, north-east. A well stands in the middle of the plaza. The Weather Tower (macro dials) stands in the
- * north-west, where the Town Hall (S18) stood until 2026-11-10; the Town Hall now stands outside the gate (townHallOutside.ts).
+ * The six buildings, in two rows of three either side of the gate road, all facing it (rows at z 66, 79 and 92). West side,
+ * from the gate out: Town Hall (the market hall), Cartographer (the watchtower), Weather Tower (a watchtower, macro dials). East
+ * side: Archive (the house), Workshop (the lumber mill), Hall of Records (the castle, the big one at the far end). Proposed
+ * models; a look decides (the plan's gate). The Town Hall's door stands where it first stood outside the gate (2026-11-10).
  */
 export const BUILDINGS: readonly Building[] = [
-  building("records", "castle", "Hall of Records", 0, 26, Math.PI, { route: "/fortress/records" }),
-  building("cartographer", "watchtower", "Cartographer", -26, 4, Math.PI / 2, { route: "/fortress/map" }),
-  building("archive", "house", "Archive", 26, 4, -Math.PI / 2, { route: "/glossary" }),
-  building("workshop", "lumbermill", "Workshop", 26, -17, -Math.PI / 2, { place: "workshop" }),
-  // The Town Hall left the Town (2026-11-10): it stands on the meadow just outside the gate (townHallOutside.ts).
-  // The Weather Tower (2026-11-08): in the north-west, facing the road to the courtyard. Opens as its own place (the Game page intercepts it, like the Hall of Records; the route is the fallback).
-  building("weather", "watchtower", "Weather Tower", -20, -33, Math.PI / 2, { route: "/macro" }),
+  building("townhall", "market", "Town Hall", -12.5, 66, Math.PI / 2, { place: "townhall" }),
+  building("cartographer", "watchtower", "Cartographer", -12.5, 79, Math.PI / 2, { route: "/fortress/map" }),
+  // The Weather Tower opens as its own place (the Game page intercepts it, like the Hall of Records; the route is the fallback).
+  building("weather", "watchtower", "Weather Tower", -12.5, 92, Math.PI / 2, { route: "/macro" }),
+  building("archive", "house", "Archive", 12.5, 66, -Math.PI / 2, { route: "/glossary" }),
+  building("workshop", "lumbermill", "Workshop", 12.5, 79, -Math.PI / 2, { place: "workshop" }),
+  building("records", "castle", "Hall of Records", 12.5, 92, -Math.PI / 2, { route: "/fortress/records" }),
 ];
 
-/** The well in the middle of the plaza: decoration with a round base. */
-export const WELL = { x: 0, z: 2, scale: K, r: 2.9 } as const;
+/** Extra clear ground round a building, so the door mat in front of it is not planted over. */
+export const VILLAGE_MARGIN = 2.5;
+
+/** How far a building's ground reaches from its middle (half the diagonal of its footprint): trees and plants keep off it. */
+export const buildingReach = (b: Building): number => Math.hypot(b.hx, b.hz);
 
 export const DOOR_RANGE = 3.4;
 /** Wider to leave than to arrive, so standing on the edge does not flicker. */
@@ -130,12 +123,13 @@ export function nearestBuilding(
   return best;
 }
 
-export function nearGate(pos: { x: number; z: number }, range: number = GATE_RANGE): boolean {
-  return Math.hypot(GATE_SPOT.x - pos.x, GATE_SPOT.z - pos.z) <= range;
-}
-
-export function nearTownExit(pos: { x: number; z: number }, range: number = EXIT_RANGE): boolean {
-  return Math.hypot(TOWN_EXIT.x - pos.x, TOWN_EXIT.z - pos.z) <= range;
+/** Where the hero stands, and the camera yaw, on stepping back out of a building's door: a few steps out on the road side, facing it. */
+export function stepOutOf(b: Building): { x: number; z: number; yaw: number } {
+  const s = doorSpot(b);
+  const out = DOOR_LEAVE_RANGE + 1.8;
+  const x = s.x + Math.sin(b.yaw) * out;
+  const z = s.z + Math.cos(b.yaw) * out;
+  return { x, z, yaw: Math.atan2(s.x - x, s.z - z) };
 }
 
 /** What E does at a building: open one page's register row, or open the menu of a place. */
@@ -148,6 +142,4 @@ export function doorAction(b: Building, register: readonly Door[] = REGISTER): D
   return door ? { kind: "page", door } : null;
 }
 
-export const gatePrompt = "Press E to walk on to the Town";
-export const exitPrompt = "Press E to walk back to the courtyard";
 export const buildingPrompt = (b: Building): string => `Press E to go into the ${b.label}`;

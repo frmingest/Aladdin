@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { formatIndicatorChange, formatIndicatorValue } from "../lib/format";
 import type { MacroIndicator } from "../lib/types";
 import { AREAS, pathToCourtyard, transitionSpot } from "./areas";
-import { BUILDINGS, DOOR_RANGE, doorSpot, nearestBuilding } from "./townPlan";
+import { BUILDINGS, DOOR_LEAVE_RANGE, DOOR_RANGE, doorSpot, nearestBuilding } from "./townPlan";
 import {
   CAPACITY_PER_WALL,
   COLUMNS,
@@ -281,20 +281,19 @@ describe("the place", () => {
     expect(b.opens).toEqual({ route: "/macro" });
     expect(nearestBuilding(doorSpot(b), BUILDINGS, DOOR_RANGE)).toBe("weather");
     const out = towerExit();
-    expect(out.x).toBeCloseTo(doorSpot(b).x);
-    expect(out.z).toBeCloseTo(doorSpot(b).z);
-    expect(AREAS.town.doors.some((d) => d.to === "weather")).toBe(true);
-    expect(AREAS.weather.parent).toBe("town");
-    expect(pathToCourtyard("weather")).toEqual(["weather", "town", "courtyard"]);
-    expect(transitionSpot({ id: "weather" }, { id: "town" }, [])).toMatchObject({ x: out.x, z: out.z });
+    expect(Math.hypot(out.x - doorSpot(b).x, out.z - doorSpot(b).z)).toBeGreaterThan(DOOR_LEAVE_RANGE);
+    expect(AREAS.courtyard.doors.some((d) => d.to === "weather")).toBe(true);
+    expect(AREAS.weather.parent).toBe("courtyard");
+    expect(pathToCourtyard("weather")).toEqual(["weather", "courtyard"]);
+    expect(transitionSpot({ id: "weather" }, { id: "courtyard" }, [])).toMatchObject({ x: out.x, z: out.z });
   });
 
-  it("stands clear of the other buildings and inside the Town", () => {
+  it("stands clear of the other buildings and inside the horizon", () => {
     const b = BUILDINGS.find((x) => x.id === "weather")!;
     for (const o of BUILDINGS.filter((x) => x.id !== "weather")) {
-      expect(Math.hypot(o.x - b.x, o.z - b.z), o.id).toBeGreaterThan(12);
+      expect(Math.hypot(o.x - b.x, o.z - b.z), o.id).toBeGreaterThan(10);
     }
-    expect(Math.hypot(b.x, b.z)).toBeLessThan(44);
+    expect(Math.hypot(b.x, b.z)).toBeLessThan(100);
   });
 
   it("starts you away from the dials and the door, with the dials and the door far apart", () => {
