@@ -1271,7 +1271,7 @@ export default function Game3DPage() {
         />
       )}
       {report && <DocumentReader document={report} origin="50% 50%" onClosed={() => setReport(null)} />}
-      {talking && <DialoguePanel npc={talking} quest={quest} reviews={reviews} onClose={() => setTalking(null)} onRetry={load} />}
+      {talking && <DialoguePanel npc={talking} quest={quest} reviews={reviews} drill={drillQuest} onClose={() => setTalking(null)} onRetry={load} />}
 
       <Link
         to="/fortress"
