@@ -27,7 +27,7 @@ export const WEATHER_WORDS = {
   east: "United States",
   north: "The gaps",
   dialsPrompt: "Press E to read the full weather page",
-  doorPrompt: "Press E to go back out into the Town",
+  doorPrompt: "Press E to step back outside",
   /** The label over the door of the building in the Town. */
   signLabel: "Weather Tower",
 } as const;

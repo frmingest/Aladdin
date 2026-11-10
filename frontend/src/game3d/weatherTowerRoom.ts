@@ -16,7 +16,7 @@
 import { formatIndicatorChange, formatIndicatorValue } from "../lib/format";
 import type { MacroIndicator, MacroIndicators } from "../lib/types";
 import type { Spot } from "./layout";
-import { BUILDINGS, doorSpot } from "./townPlan";
+import { BUILDINGS, stepOutOf } from "./townPlan";
 import { WEATHER_WORDS } from "./weatherTowerWordsV1";
 
 export const TOWER = { minX: -10, maxX: 10, minZ: -10, maxZ: 10, height: 7 } as const;
@@ -330,11 +330,9 @@ export function nearTowerDoor(pos: { x: number; z: number }, range: number = TOW
 export const dialsPrompt = WEATHER_WORDS.dialsPrompt;
 export const towerDoorPrompt = WEATHER_WORDS.doorPrompt;
 
-/** Where the hero stands in the Town, and the camera yaw, when stepping out of the Weather Tower door. */
+/** Where the hero stands on the meadow, and the camera yaw, when stepping out of the Weather Tower door. */
 export function towerExit(): { x: number; z: number; yaw: number } {
   const b = BUILDINGS.find((x) => x.id === "weather");
   if (!b) return { x: 0, z: 0, yaw: 0 };
-  const s = doorSpot(b);
-  // Same convention as the other buildings: the camera sits on the building's side, so the hero looks away from it.
-  return { x: s.x, z: s.z, yaw: Math.atan2(b.x - s.x, b.z - s.z) };
+  return stepOutOf(b);
 }

@@ -12,7 +12,6 @@ export const AREA_WORDS_VERSION = "v1";
 
 export const AREA_LINES = {
   courtyard: "Back in the courtyard",
-  town: "The Town",
   townhall: "Into the Town Hall",
   records: "Hall of Records",
   weather: WEATHER_WORDS.plate,
@@ -34,8 +33,6 @@ export function areaName(ref: AreaRef, holdingName?: string | null): string {
   switch (ref.id) {
     case "courtyard":
       return "3D courtyard";
-    case "town":
-      return "The Town";
     case "townhall":
       return "Town Hall";
     case "records":

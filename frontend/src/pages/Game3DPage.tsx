@@ -65,11 +65,10 @@ import PerfBreakdown from "../game3d/PerfBreakdown";
 import Toolbar from "../game3d/Toolbar";
 import { typingInField } from "../game3d/useKeys";
 import { stallPrompt, storeDoor } from "../game3d/stallDoor";
-import { BUILDINGS, buildingPrompt, doorAction, exitPrompt, gatePrompt } from "../game3d/townPlan";
+import { BUILDINGS, buildingPrompt, doorAction } from "../game3d/townPlan";
 import type { BuildingId } from "../game3d/townPlan";
 import { boardById, doorsOfBoard, hallDoorPrompt, hallPrompt } from "../game3d/townHallRoom";
 import type { BoardId } from "../game3d/townHallRoom";
-import { townHallGatePrompt } from "../game3d/townHallOutside";
 import type { PlaceId } from "../game3d/parity3d";
 import { boothPrompt } from "../game3d/boothPlan";
 import type { BoothId } from "../game3d/boothPlan";
@@ -204,7 +203,6 @@ export default function Game3DPage() {
   const linkedLand = useRef<string | null>(typeof window === "undefined" ? null : landLink(window.location.search));
   const room = areaState.current.id === "holding" ? areaState.current.holdingId : null;
   // The Town beyond the gate: whether you are in it, and which door or the gate road you stand at.
-  const [atGate, setAtGate] = useState(false);
   const [townNear, setTownNear] = useState<BuildingId | null>(null);
   // Inside the Town Hall: whether you are in it, which board you stand at, whether the door is in reach, and which pages the menu is narrowed to.
   const [nearBoard, setNearBoard] = useState<BoardId | null>(null);
@@ -215,7 +213,6 @@ export default function Game3DPage() {
   const [atDials, setAtDials] = useState(false);
   const [atWeatherDoor, setAtWeatherDoor] = useState(false);
   const [onlyRoutes, setOnlyRoutes] = useState<readonly string[] | null>(null);
-  const [atTownExit, setAtTownExit] = useState(false);
   // The Siege Field: whether you stand at its gate in the courtyard, and whether its road back is in reach.
   const [atSiegeGate, setAtSiegeGate] = useState(false);
   const [atFieldExit, setAtFieldExit] = useState(false);
@@ -230,7 +227,6 @@ export default function Game3DPage() {
   // The Market Quarter: whether you stand at its arch in the courtyard, and whether its road back is in reach.
   const [atQuarterGate, setAtQuarterGate] = useState(false);
   // The Town Hall stands on the meadow outside the gate: whether you stand at its door.
-  const [atHallGate, setAtHallGate] = useState(false);
   const [atQuarterExit, setAtQuarterExit] = useState(false);
   const [onlyPlace, setOnlyPlace] = useState<PlaceId | null>(null);
   const [nearShelf, setNearShelf] = useState<ShelfId | null>(null);
@@ -441,7 +437,6 @@ export default function Game3DPage() {
   const area: AreaRef = areaState.current.id === "holding" && !roomView ? COURTYARD : areaState.current;
   // Opt-in sound: off on every load, follows the same stored siege level as the sky, quiet indoors.
   const sound = useAmbience(ambienceLevel(area.id, state?.siege?.level ?? null));
-  const inTown = area.id === "town";
   const inHall = area.id === "townhall";
   const inRecords = area.id === "records";
 
@@ -551,15 +546,12 @@ export default function Game3DPage() {
     setNearStall(null);
     setNearBooth(null);
     setNearTower(null);
-    setAtGate(false);
     setTownNear(null);
-    setAtTownExit(false);
     setAtSiegeGate(false);
     setAtFieldExit(false);
     setFieldSpot(null);
     setAtQuarterGate(false);
     setAtQuarterExit(false);
-    setAtHallGate(false);
     setNearBoard(null);
     setAtHallDoor(false);
     setAtShelves(false);
@@ -567,17 +559,6 @@ export default function Game3DPage() {
     setAtDials(false);
     setAtWeatherDoor(false);
   }, []);
-  const enterTown = useCallback(() => {
-    clearNears();
-    setDeskOpen(false);
-    setVaultOpen(false);
-    setWatchOpen(false);
-    setPerchOpen(false);
-    setRealmOpen(false);
-    setLampOpen(false);
-    setDrillOpen(false);
-    dispatchArea({ type: "enter", ref: { id: "town" } });
-  }, [clearNears]);
   // Out to the Siege Field and back to its gate. The courtyard's watchers are unmounted while there, so the nears are cleared.
   const enterField = useCallback(() => {
     clearNears();
@@ -617,10 +598,6 @@ export default function Game3DPage() {
     dispatchArea({ type: "enter", ref: { id: "quarter" } });
   }, [clearNears]);
   const leaveQuarter = useCallback(() => {
-    clearNears();
-    dispatchArea({ type: "leave" });
-  }, [clearNears]);
-  const leaveTown = useCallback(() => {
     clearNears();
     dispatchArea({ type: "leave" });
   }, [clearNears]);
@@ -688,6 +665,10 @@ export default function Game3DPage() {
   }, []);
   // E at a building: its page in the world panel, or (the Workshop) the menu of its place.
   const openBuilding = useCallback((id: BuildingId) => {
+    if (id === "townhall") {
+      enterHall();
+      return;
+    }
     if (id === "records") {
       enterRecords();
       return;
@@ -708,7 +689,7 @@ export default function Game3DPage() {
       setWorldPage(null);
       setOnlyPlace(action.place);
     }
-  }, [enterRecords, enterWeather]);
+  }, [enterHall, enterRecords, enterWeather]);
 
   const enterTower = useCallback((id: string) => {
     if (document.pointerLockElement) {
@@ -819,7 +800,6 @@ export default function Game3DPage() {
       sign: atSign,
       booth: nearBooth,
       stall: nearStall,
-      gate: atGate,
       vault: atVault,
       watch: atWatch,
       perch: atPerch,
@@ -829,7 +809,6 @@ export default function Game3DPage() {
       lantern: atLantern,
       landGate: atLandGate,
       building: townNear,
-      townExit: atTownExit,
       board: nearBoard,
       hallDoor: atHallDoor,
       shelves: atShelves,
@@ -840,10 +819,9 @@ export default function Game3DPage() {
       fieldExit: atFieldExit,
       fieldSpot,
       quarterGate: atQuarterGate,
-      hallGate: atHallGate,
       quarterExit: atQuarterExit,
     }),
-    [near, nearTower, atDesk, atDrill, atSign, nearBooth, nearStall, atGate, atVault, atWatch, atPerch, atRealm, nearShelf, atTable, atLantern, atLandGate, townNear, atTownExit, nearBoard, atHallDoor, atShelves, atArchiveDoor, atDials, atWeatherDoor, atSiegeGate, atFieldExit, fieldSpot, atQuarterGate, atQuarterExit, atHallGate],
+    [near, nearTower, atDesk, atDrill, atSign, nearBooth, nearStall, atVault, atWatch, atPerch, atRealm, nearShelf, atTable, atLantern, atLandGate, townNear, nearBoard, atHallDoor, atShelves, atArchiveDoor, atDials, atWeatherDoor, atSiegeGate, atFieldExit, fieldSpot, atQuarterGate, atQuarterExit],
   );
   const atSpot = useMemo(() => standingAt(area, nears), [area, nears]);
 
@@ -892,13 +870,6 @@ export default function Game3DPage() {
           if (at.kind === "stall") openStore(at.holdingId);
           else leaveQuarter();
           return;
-        case "town":
-          // In the Town: E knocks at the door you stand at, or takes the road back.
-          if (whereOpen || at.kind === "none") return;
-          e.preventDefault();
-          if (at.kind === "building") openBuilding(at.id);
-          else leaveTown();
-          return;
         case "holding":
           // In a holding's land: E reads the shelf you stand at, opens the latest report at the table, or takes the door back out.
           if (report || at.kind === "none" || !room) return;
@@ -945,17 +916,14 @@ export default function Game3DPage() {
         case "stall":
           openStore(at.holdingId);
           return;
-        case "gate":
-          enterTown();
+        case "building":
+          openBuilding(at.id);
           return;
         case "siegeGate":
           enterField();
           return;
         case "quarterGate":
           enterQuarter();
-          return;
-        case "hallGate":
-          enterHall();
           return;
         case "vault":
           if (!vaultOpen && document.pointerLockElement) document.exitPointerLock();
@@ -980,7 +948,7 @@ export default function Game3DPage() {
     };
     window.addEventListener("keydown", onTalk);
     return () => window.removeEventListener("keydown", onTalk);
-  }, [area, areaState, atSpot, whereOpen, openShelves, leaveRecords, openDials, leaveWeather, enterField, leaveField, workFieldSpot, enterQuarter, leaveQuarter, enterHall, openBoard, leaveHall, openBuilding, leaveTown, enterTown, talking, vaultOpen, watchOpen, perchOpen, ravens, realmOpen, lampOpen, state, boothOpen, openBooth, openStore, toggleWhere, drillOpen, deskOpen, room, report, readShelf, enterTower, leaveTower, openReport]);
+  }, [area, areaState, atSpot, whereOpen, openShelves, leaveRecords, openDials, leaveWeather, enterField, leaveField, workFieldSpot, enterQuarter, leaveQuarter, enterHall, openBoard, leaveHall, openBuilding, talking, vaultOpen, watchOpen, perchOpen, ravens, realmOpen, lampOpen, state, boothOpen, openBooth, openStore, toggleWhere, drillOpen, deskOpen, room, report, readShelf, enterTower, leaveTower, openReport]);
 
   useEffect(() => {
     const onPanelKey = (e: KeyboardEvent) => {
@@ -1023,10 +991,9 @@ export default function Game3DPage() {
     else if (area.id === "townhall") leaveHall();
     else if (area.id === "records") leaveRecords();
     else if (area.id === "weather") leaveWeather();
-    else if (area.id === "town") leaveTown();
     else if (area.id === "siege") leaveField();
     else if (area.id === "quarter") leaveQuarter();
-  }, [area.id, leaveTower, leaveHall, leaveRecords, leaveWeather, leaveTown, leaveField, leaveQuarter]);
+  }, [area.id, leaveTower, leaveHall, leaveRecords, leaveWeather, leaveField, leaveQuarter]);
 
   // G opens or shuts the "Where to?" menu from anywhere. Esc closes what is on top (the panel drawn over the others), and
   // B walks back out once nothing is open over the world.
@@ -1106,7 +1073,7 @@ export default function Game3DPage() {
       if (area.id === "holding") spotPrompt = LAND_WORDS.gatePrompt;
       else if (area.id === "siege") spotPrompt = FIELD_WORDS.exitPrompt;
       else if (area.id === "quarter") spotPrompt = QUARTER_WORDS.exitPrompt;
-      else if (!whereOpen) spotPrompt = area.id === "records" ? archiveDoorPrompt : area.id === "weather" ? towerDoorPrompt : area.id === "townhall" ? hallDoorPrompt : exitPrompt;
+      else if (!whereOpen) spotPrompt = area.id === "records" ? archiveDoorPrompt : area.id === "weather" ? towerDoorPrompt : hallDoorPrompt;
       break;
     case "shelf":
       if (!readShelf) spotPrompt = `Press E to read ${roomView?.shelves.find((s) => s.id === atSpot.id)?.title ?? "the shelf"}`;
@@ -1137,9 +1104,6 @@ export default function Game3DPage() {
     case "quarterGate":
       if (!whereOpen) spotPrompt = QUARTER_WORDS.gatePrompt;
       break;
-    case "hallGate":
-      if (!whereOpen) spotPrompt = townHallGatePrompt;
-      break;
     case "sign":
       if (!whereOpen) spotPrompt = SIGN_PROMPT;
       break;
@@ -1156,9 +1120,6 @@ export default function Game3DPage() {
         spotPrompt = stallPrompt(where.stalls.find((s) => s.holdingId === atSpot.holdingId)?.name ?? "this company");
         if (where.overflow.length > 0) spotNote = streetOverflowLine(where.overflow.length);
       }
-      break;
-    case "gate":
-      if (!whereOpen) spotPrompt = gatePrompt;
       break;
     case "vault":
       if (!vaultOpen) spotPrompt = VAULT_PROMPT;
@@ -1215,10 +1176,8 @@ export default function Game3DPage() {
             onNearTable={setAtTable}
             onNearLantern={setAtLantern}
             onNearLandGate={setAtLandGate}
-            onNearGate={setAtGate}
             townNear={townNear}
             onNearBuilding={setTownNear}
-            onNearTownExit={setAtTownExit}
             onNearSiegeGate={setAtSiegeGate}
             onNearFieldExit={setAtFieldExit}
             onNearFieldSpot={setFieldSpot}
@@ -1227,8 +1186,6 @@ export default function Game3DPage() {
             quarter={quarter}
             archCounts={archCounts}
             onNearQuarterGate={setAtQuarterGate}
-            onNearHallGate={setAtHallGate}
-            hallGateNear={atHallGate}
             onNearQuarterExit={setAtQuarterExit}
             onNearBoard={setNearBoard}
             onNearHallDoor={setAtHallDoor}
@@ -1339,7 +1296,7 @@ export default function Game3DPage() {
           onClick={leaveHall}
           className="absolute left-3 top-14 rounded border border-border bg-surface/90 px-3 py-1.5 text-sm text-ink hover:opacity-80"
         >
-          ← Back to the Town
+          ← Back outside
         </button>
       )}
       {inRecords && (
@@ -1348,7 +1305,7 @@ export default function Game3DPage() {
           onClick={leaveRecords}
           className="absolute left-3 top-14 rounded border border-border bg-surface/90 px-3 py-1.5 text-sm text-ink hover:opacity-80"
         >
-          ← Back to the Town
+          ← Back outside
         </button>
       )}
       {area.id === "weather" && (
@@ -1357,16 +1314,7 @@ export default function Game3DPage() {
           onClick={leaveWeather}
           className="absolute left-3 top-14 rounded border border-border bg-surface/90 px-3 py-1.5 text-sm text-ink hover:opacity-80"
         >
-          ← Back to the Town
-        </button>
-      )}
-      {inTown && !inHall && !inRecords && (
-        <button
-          type="button"
-          onClick={leaveTown}
-          className="absolute left-3 top-14 rounded border border-border bg-surface/90 px-3 py-1.5 text-sm text-ink hover:opacity-80"
-        >
-          ← Back to the courtyard
+          ← Back outside
         </button>
       )}
       {boothOpen === "sal" && <SalesRepDialog voice="game" demoMode={demoMode === true} rows={watchlist?.rows ?? []} onClose={closeBooth} onAdded={setWatchlist} />}

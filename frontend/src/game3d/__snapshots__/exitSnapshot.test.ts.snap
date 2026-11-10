@@ -232,9 +232,9 @@ exports[`exit spots (locked before S21) > tower pads 1`] = `
 exports[`exit spots (locked before S21) > town hall, records hall and the gate 1`] = `
 {
   "archive": [
-    0,
-    18.9195,
-    -0,
+    -0.9805,
+    92,
+    1.570796,
   ],
   "gate": [
     0,
