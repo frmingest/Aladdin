@@ -48,9 +48,9 @@ describe("standingAt: the one answer for E and for the prompt", () => {
     expect(standingAt(court, nears({ tower: "h1", desk: true }))).toEqual({ kind: "tower", holdingId: "h1" });
   });
   it("follows the order E always used for the rest", () => {
-    const order: (keyof Nears)[] = ["desk", "drill", "sign", "booth", "stall", "gate", "vault", "watch", "perch", "realm"];
+    const order: (keyof Nears)[] = ["desk", "drill", "sign", "booth", "stall", "building", "vault", "watch", "perch", "realm"];
     const val = (k: keyof Nears) => (k === "booth" ? "sal" : k === "stall" ? "h9" : true);
-    const kinds = ["desk", "drill", "sign", "booth", "stall", "gate", "vault", "watch", "perch", "realm"];
+    const kinds = ["desk", "drill", "sign", "booth", "stall", "building", "vault", "watch", "perch", "realm"];
     order.forEach((k, i) => {
       const rest = order.slice(i).reduce((acc, key) => ({ ...acc, [key]: val(key) }), {} as Partial<Nears>);
       expect(standingAt(court, nears(rest)).kind).toBe(kinds[i]);
@@ -70,12 +70,12 @@ describe("standingAt: the one answer for E and for the prompt", () => {
     expect(standingAt(lib, nears({ landGate: true })).kind).toBe("leave");
   });
   it("ignores courtyard spots while inside, and inside spots while outside", () => {
-    expect(standingAt({ id: "holding", holdingId: "h1" }, nears({ desk: true, gate: true }))).toEqual({ kind: "none" });
+    expect(standingAt({ id: "holding", holdingId: "h1" }, nears({ desk: true, landGate: true }))).toEqual({ kind: "leave" });
     expect(standingAt(court, nears({ shelves: true, table: true, hallDoor: true }))).toEqual({ kind: "none" });
   });
-  it("covers the Town, the Town Hall and the Hall of Records", () => {
-    expect(standingAt({ id: "town" }, nears({ building: "townhall", townExit: true }))).toEqual({ kind: "building", id: "townhall" });
-    expect(standingAt({ id: "town" }, nears({ townExit: true }))).toEqual({ kind: "leave" });
+  it("covers the Town doors on the meadow, the Town Hall and the Hall of Records", () => {
+    expect(standingAt(court, nears({ building: "townhall" }))).toEqual({ kind: "building", id: "townhall" });
+    expect(standingAt(court, nears({ building: "archive", desk: true }))).toEqual({ kind: "desk" });
     expect(standingAt({ id: "townhall" }, nears({ board: "ledger" as never, hallDoor: true })).kind).toBe("board");
     expect(standingAt({ id: "townhall" }, nears({ hallDoor: true }))).toEqual({ kind: "leave" });
     expect(standingAt({ id: "records" }, nears({ shelves: true, archiveDoor: true })).kind).toBe("shelves");

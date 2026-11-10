@@ -16,7 +16,7 @@ import type { Tome } from "../lib/hall";
 import type { CapsuleState } from "../lib/capsules";
 import type { DecisionRecord } from "../lib/types";
 import type { Spot } from "./layout";
-import { BUILDINGS, doorSpot } from "./townPlan";
+import { BUILDINGS, stepOutOf } from "./townPlan";
 
 export const ARCHIVE = { minX: -9, maxX: 9, minZ: -8, maxZ: 8, height: 6 } as const;
 /** A closed pair of doors in the south wall; E beside it leads back out into the Town. */
@@ -48,7 +48,7 @@ export const ARCHIVE_DOOR_LEAVE_RANGE = 4.6;
 export const SHELF_SPOT: Spot = { x: 0, z: ARCHIVE.minZ + 4 };
 
 export const shelfPrompt = "Press E at the shelves to read the Hall of Records";
-export const archiveDoorPrompt = "Press E to go back out into the Town";
+export const archiveDoorPrompt = "Press E to step back outside";
 
 export interface BookPlan {
   id: string;
@@ -119,11 +119,9 @@ export function nearArchiveDoor(pos: { x: number; z: number }, range: number = A
   return Math.hypot(ARCHIVE_DOOR.x - pos.x, ARCHIVE_DOOR.z - pos.z) <= range;
 }
 
-/** Where the hero stands in the Town, and the camera yaw, when stepping out of the Hall of Records door. */
+/** Where the hero stands on the meadow, and the camera yaw, when stepping out of the Hall of Records door. */
 export function archiveExit(): { x: number; z: number; yaw: number } {
   const b = BUILDINGS.find((x) => x.id === "records");
   if (!b) return { x: 0, z: 0, yaw: 0 };
-  const s = doorSpot(b);
-  // Same convention as stepping out of a tower: the camera sits on the building's side, so the hero looks away from it.
-  return { x: s.x, z: s.z, yaw: Math.atan2(b.x - s.x, b.z - s.z) };
+  return stepOutOf(b);
 }

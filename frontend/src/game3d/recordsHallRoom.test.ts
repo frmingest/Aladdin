@@ -20,7 +20,7 @@ import {
   shelfPlate,
   SEAL_SHAPE_OF,
 } from "./recordsHallRoom";
-import { BUILDINGS, DOOR_RANGE, nearestBuilding } from "./townPlan";
+import { BUILDINGS, DOOR_LEAVE_RANGE, DOOR_RANGE, doorSpot, nearestBuilding } from "./townPlan";
 import { SEAL_LOOK, tomeFor } from "../lib/hall";
 import type { DecisionRecord, RecordReviewState } from "../lib/types";
 
@@ -60,11 +60,12 @@ describe("the Hall of Records inside", () => {
     expect(row?.place).toBe("town");
   });
 
-  it("is entered at the Hall of Records building's door, and steps out there again", () => {
+  it("is entered at the Hall of Records building's door, and steps out a few steps from it, out of its reach", () => {
     const b = BUILDINGS.find((x) => x.id === "records");
     expect(b).toBeDefined();
     const out = archiveExit();
-    expect(nearestBuilding(out, BUILDINGS, DOOR_RANGE)).toBe("records");
+    expect(nearestBuilding(doorSpot(b!), BUILDINGS, DOOR_RANGE)).toBe("records");
+    expect(nearestBuilding(out, BUILDINGS, DOOR_LEAVE_RANGE)).toBeNull();
   });
 
   it("keeps the spawn, the shelf spot and the door inside the room, the spawn clear of the door and the shelves", () => {

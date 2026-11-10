@@ -14,7 +14,7 @@ import { WALL_RADIUS, WALL_THICKNESS } from "./layout";
 import { HORIZON, HORIZON_LIMIT, ROAD_END_Z } from "./horizonPieces";
 import type { HorizonPiece } from "./horizonPieces";
 import { OUTDOOR_SPOTS, OUTDOOR_ZONES, PLOT_FOOTPRINT_MAX, type OutdoorZone } from "./outdoorPlan";
-import { TOWN_HALL_OUTSIDE, TOWN_HALL_REACH } from "./townHallOutside";
+import { BUILDINGS, VILLAGE_MARGIN, buildingReach } from "./townPlan";
 
 /* ---------------------------------------------------------------- small maths */
 
@@ -311,8 +311,8 @@ export function inTheWay(p: HorizonPiece): boolean {
   for (const t of tracks()) if (distToPolyline(at, t.points) < t.width / 2 + reach) return true;
   for (const f of FIELDS) if (Math.hypot(p.x - f.x, p.z - f.z) < fieldReach(f) + reach) return true;
   for (const zone of OUTDOOR_ZONES) for (const s of OUTDOOR_SPOTS[zone]) if (Math.hypot(p.x - s.x, p.z - s.z) < PLOT_FOOTPRINT_MAX + reach) return true;
-  // The Town Hall beside the gate road keeps its ground clear too.
-  if (Math.hypot(p.x - TOWN_HALL_OUTSIDE.x, p.z - TOWN_HALL_OUTSIDE.z) < TOWN_HALL_REACH + reach) return true;
+  // The Town beside the gate road keeps its ground clear too, door mats included.
+  for (const b of BUILDINGS) if (Math.hypot(p.x - b.x, p.z - b.z) < buildingReach(b) + VILLAGE_MARGIN + reach) return true;
   return false;
 }
 

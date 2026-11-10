@@ -8,7 +8,6 @@ import { hallExit, HALL as HALL_BOX } from "./townHallRoom";
 import { HALL as LIB_BOX } from "./libraryRoom";
 import { INTERIOR_BOX } from "./interiorBox";
 import { archiveExit } from "./recordsHallRoom";
-import { GATE_RETURN, GATE_RETURN_YAW } from "./townPlan";
 
 const IDS = Object.keys(AREAS) as AreaId[];
 const towers: Enterable[] = towerSpots().map((spot, i) => ({ holdingId: `h${i}`, spot, radius: 1.5 + (i % 3) * 0.3 }));
@@ -74,10 +73,10 @@ describe("area registry", () => {
   });
 
   it("compares areas by id and holding", () => {
-    expect(sameArea({ id: "town" }, { id: "town" })).toBe(true);
+    expect(sameArea({ id: "records" }, { id: "records" })).toBe(true);
     expect(sameArea({ id: "holding", holdingId: "a" }, { id: "holding", holdingId: "a" })).toBe(true);
     expect(sameArea({ id: "holding", holdingId: "a" }, { id: "holding", holdingId: "b" })).toBe(false);
-    expect(sameArea({ id: "town" }, { id: "courtyard" })).toBe(false);
+    expect(sameArea({ id: "records" }, { id: "courtyard" })).toBe(false);
   });
 });
 
@@ -95,16 +94,15 @@ describe("returnSpot (same numbers as before S21)", () => {
   it("gives nothing for a land whose tower is gone", () => {
     expect(returnSpot({ id: "holding", holdingId: "nope" }, { id: "courtyard" }, towers)).toBeNull();
   });
-  it("steps out of the Town, the Town Hall (onto the meadow) and the Hall of Records", () => {
-    expect(returnSpot({ id: "town" }, { id: "courtyard" }, [])).toEqual({ x: GATE_RETURN.x, z: GATE_RETURN.z, yaw: GATE_RETURN_YAW });
+  it("steps out of the Town Hall, the Hall of Records and the Weather Tower onto the meadow", () => {
     expect(returnSpot({ id: "townhall" }, { id: "courtyard" }, [])).toEqual(hallExit());
-    expect(returnSpot({ id: "records" }, { id: "town" }, [])).toEqual(archiveExit());
+    expect(returnSpot({ id: "records" }, { id: "courtyard" }, [])).toEqual(archiveExit());
   });
   it("transitionSpot: in goes to the spawn, out goes to the return spot", () => {
     const land: AreaRef = { id: "holding", holdingId: "h0" };
     expect(transitionSpot({ id: "courtyard" }, land, towers)).toEqual(AREAS.holding.spawn);
     expect(transitionSpot(land, { id: "courtyard" }, towers)).toEqual(returnSpot(land, { id: "courtyard" }, towers));
     expect(transitionSpot({ id: "courtyard" }, { id: "townhall" }, [])).toEqual(AREAS.townhall.spawn);
-    expect(transitionSpot({ id: "town" }, { id: "town" }, [])).toBeNull();
+    expect(transitionSpot({ id: "records" }, { id: "records" }, [])).toBeNull();
   });
 });

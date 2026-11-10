@@ -1,50 +1,51 @@
 import { describe, expect, it } from "vitest";
-import { TOWN_HALL_OUTSIDE } from "./townHallOutside";
 import { MARKET } from "./marketPieces";
 import { REGISTER, doorsAt } from "./parity3d";
 import {
   BUILDINGS,
+  DOOR_LEAVE_RANGE,
   DOOR_RANGE,
+  GATE_LEAVE_RANGE,
   GATE_RANGE,
   GATE_RETURN,
   GATE_SPOT,
-  TOWN_EXIT,
-  TOWN_RADIUS,
-  TOWN_SPAWN,
-  WELL,
   buildingPrompt,
+  buildingReach,
   doorAction,
   doorSpot,
-  exitPrompt,
-  gatePrompt,
-  nearGate,
-  nearTownExit,
   nearestBuilding,
+  stepOutOf,
 } from "./townPlan";
 import { TOWN_PIECES } from "./townPieces";
-import { WALL_RADIUS } from "./layout";
+import { WALL_RADIUS, WALL_THICKNESS } from "./layout";
 
 const BUY_SELL = /\b(buy|sell|trade|invest)\b/i;
 
-describe("the Town beyond the gate", () => {
+describe("the Town beside the gate road", () => {
   it("uses only models that the town-buildings file holds", () => {
     for (const b of BUILDINGS) expect(TOWN_PIECES.buildings as readonly string[]).toContain(b.model);
   });
 
-  it("has five buildings with distinct ids, all inside the ground (the Town Hall stands outside the gate now)", () => {
-    expect(new Set(BUILDINGS.map((b) => b.id)).size).toBe(5);
-    for (const b of BUILDINGS) expect(Math.hypot(b.x, b.z) + Math.hypot(b.hx, b.hz)).toBeLessThan(TOWN_RADIUS);
+  it("has six buildings with distinct ids, all on the meadow outside the wall", () => {
+    expect(new Set(BUILDINGS.map((b) => b.id)).size).toBe(6);
+    for (const b of BUILDINGS) expect(Math.hypot(b.x, b.z) - buildingReach(b), b.id).toBeGreaterThan(WALL_RADIUS + WALL_THICKNESS + 3);
   });
 
-  it("keeps buildings, the well and the arrival clear of each other", () => {
-    const things = [
-      ...BUILDINGS.map((b) => ({ id: b.id, x: b.x, z: b.z, r: Math.hypot(b.hx, b.hz) })),
-      { id: "well", x: WELL.x, z: WELL.z, r: WELL.r },
-    ];
-    for (let i = 0; i < things.length; i++)
-      for (let j = i + 1; j < things.length; j++)
-        expect(Math.hypot(things[i].x - things[j].x, things[i].z - things[j].z), `${things[i].id} / ${things[j].id}`).toBeGreaterThan(things[i].r + things[j].r - 1);
-    for (const t of things) expect(Math.hypot(t.x - TOWN_SPAWN.x, t.z - TOWN_SPAWN.z), `spawn / ${t.id}`).toBeGreaterThan(t.r + 2);
+  it("keeps the buildings clear of each other and of the gate road, with the door mats on open ground", () => {
+    for (let i = 0; i < BUILDINGS.length; i++)
+      for (let j = i + 1; j < BUILDINGS.length; j++) {
+        const a = BUILDINGS[i];
+        const b = BUILDINGS[j];
+        expect(Math.hypot(a.x - b.x, a.z - b.z), `${a.id} / ${b.id}`).toBeGreaterThan(buildingReach(a) + buildingReach(b));
+      }
+    for (const b of BUILDINGS) {
+      const wide = Math.abs(Math.sin(b.yaw)) * b.hz + Math.abs(Math.cos(b.yaw)) * b.hx;
+      expect(Math.abs(b.x) - wide, `${b.id} off the road`).toBeGreaterThanOrEqual(5);
+    }
+  });
+
+  it("faces every building at the road", () => {
+    for (const b of BUILDINGS) expect(Math.sign(Math.sin(b.yaw)), b.id).toBe(-Math.sign(b.x));
   });
 
   it("puts every door spot on open ground, in reach of exactly one door", () => {
@@ -53,17 +54,21 @@ describe("the Town beyond the gate", () => {
       expect(nearestBuilding(s), b.id).toBe(b.id);
       for (const o of BUILDINGS) {
         if (o.id === b.id) continue;
-        expect(Math.hypot(s.x - o.x, s.z - o.z), `${b.id} door in ${o.id}`).toBeGreaterThan(Math.hypot(o.hx, o.hz));
+        expect(Math.hypot(s.x - o.x, s.z - o.z), `${b.id} door in ${o.id}`).toBeGreaterThan(buildingReach(o));
+        expect(Math.hypot(s.x - doorSpot(o).x, s.z - doorSpot(o).z), `${b.id} / ${o.id} doors`).toBeGreaterThan(DOOR_LEAVE_RANGE);
       }
-      expect(Math.hypot(s.x - WELL.x, s.z - WELL.z)).toBeGreaterThan(WELL.r);
     }
   });
 
-  it("leaves the spawn and the road back out of reach of every door", () => {
-    expect(nearestBuilding(TOWN_SPAWN)).toBeNull();
-    expect(nearTownExit(TOWN_SPAWN)).toBe(false);
-    expect(nearTownExit(TOWN_EXIT)).toBe(true);
-    for (const b of BUILDINGS) expect(nearTownExit(doorSpot(b))).toBe(false);
+  it("steps out of a door past its reach, on the road side, looking at the door", () => {
+    for (const b of BUILDINGS) {
+      const out = stepOutOf(b);
+      const s = doorSpot(b);
+      expect(Math.hypot(out.x - s.x, out.z - s.z), b.id).toBeGreaterThan(DOOR_LEAVE_RANGE);
+      expect(nearestBuilding(out, BUILDINGS, DOOR_LEAVE_RANGE), b.id).toBeNull();
+      expect(Math.abs(out.x), b.id).toBeLessThan(Math.abs(s.x));
+      expect(Math.sin(out.yaw) * (s.x - out.x), b.id).toBeGreaterThanOrEqual(0);
+    }
   });
 
   it("opens a real register row, or a place that has doors", () => {
@@ -77,8 +82,7 @@ describe("the Town beyond the gate", () => {
 
   it("covers every register row placed in the Town, the Workshop or the Town Hall", () => {
     const routes = new Set<string>();
-    // The Town Hall stands outside the gate (townHallOutside.ts), so its pages count here too.
-    for (const b of [...BUILDINGS, TOWN_HALL_OUTSIDE]) {
+    for (const b of BUILDINGS) {
       const a = doorAction(b);
       if (a?.kind === "page" && a.door.route) routes.add(a.door.route);
       if (a?.kind === "place") for (const d of doorsAt(a.place)) if (d.route) routes.add(d.route);
@@ -87,16 +91,14 @@ describe("the Town beyond the gate", () => {
       expect(routes.has(d.route as string), `${d.route} has a building`).toBe(true);
   });
 
-  it("returns the hero to the courtyard out of reach of the gate prompt", () => {
-    expect(nearGate(GATE_SPOT)).toBe(true);
-    expect(nearGate(GATE_RETURN)).toBe(false);
+  it("returns the hero to the courtyard spawn out of reach of the gate road, with the market pieces clear of it", () => {
+    expect(Math.hypot(GATE_SPOT.x - GATE_RETURN.x, GATE_SPOT.z - GATE_RETURN.z)).toBeGreaterThan(GATE_LEAVE_RANGE);
     expect(Math.hypot(GATE_SPOT.x, GATE_SPOT.z)).toBeLessThan(WALL_RADIUS);
-    // No courtyard market piece sits on the gate road.
     for (const m of MARKET) expect(Math.hypot(m.x - GATE_SPOT.x, m.z - GATE_SPOT.z), m.id).toBeGreaterThan(GATE_RANGE + 2);
   });
 
   it("speaks plainly: no buy or sell words", () => {
-    for (const s of [gatePrompt, exitPrompt, ...BUILDINGS.map(buildingPrompt)]) expect(s).not.toMatch(BUY_SELL);
+    for (const s of BUILDINGS.map(buildingPrompt)) expect(s).not.toMatch(BUY_SELL);
     expect(DOOR_RANGE).toBeGreaterThan(0);
   });
 });

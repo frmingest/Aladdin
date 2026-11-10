@@ -31,9 +31,9 @@ describe("place links", () => {
   it("reads and writes the query string, keeping other parameters", () => {
     expect(placeFromSearch("?at=records")).toEqual({ id: "records" });
     expect(placeFromSearch("")).toEqual({ id: "courtyard" });
-    expect(searchFor({ id: "town" })).toBe("?at=town");
-    expect(searchFor({ id: "courtyard" }, "?at=town")).toBe("");
-    expect(searchFor({ id: "townhall" }, "?demo=1&at=town")).toBe("?demo=1&at=townhall");
-    expect(searchFor({ id: "courtyard" }, "?demo=1&at=town")).toBe("?demo=1");
+    expect(searchFor({ id: "records" })).toBe("?at=records");
+    expect(searchFor({ id: "courtyard" }, "?at=records")).toBe("");
+    expect(searchFor({ id: "townhall" }, "?demo=1&at=records")).toBe("?demo=1&at=townhall");
+    expect(searchFor({ id: "courtyard" }, "?demo=1&at=records")).toBe("?demo=1");
   });
 });
