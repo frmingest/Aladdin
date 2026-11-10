@@ -13,16 +13,25 @@ describe("area reducer", () => {
     expect(INITIAL_AREA.phase).toBe("idle");
   });
 
-  it("goes in through the gate, into the hall, and back out one step at a time", () => {
+  it("goes in through the gate, into the Hall of Records, and back out one step at a time", () => {
     const town = go(INITIAL_AREA, { type: "enter", ref: { id: "town" } });
     expect(town.current.id).toBe("town");
     expect(town.from?.id).toBe("courtyard");
-    const hall = go(town, { type: "enter", ref: { id: "townhall" } });
-    expect(hall.current.id).toBe("townhall");
-    const back = go(hall, { type: "leave" });
+    const records = go(town, { type: "enter", ref: { id: "records" } });
+    expect(records.current.id).toBe("records");
+    const back = go(records, { type: "leave" });
     expect(back.current.id).toBe("town");
-    expect(back.from?.id).toBe("townhall");
+    expect(back.from?.id).toBe("records");
     expect(go(back, { type: "leave" }).current.id).toBe("courtyard");
+  });
+
+  it("goes into the Town Hall straight from the meadow outside the gate, and back out in one step", () => {
+    const hall = go(INITIAL_AREA, { type: "enter", ref: { id: "townhall" } });
+    expect(hall.current.id).toBe("townhall");
+    expect(hall.from?.id).toBe("courtyard");
+    const back = go(hall, { type: "leave" });
+    expect(back.current.id).toBe("courtyard");
+    expect(back.from?.id).toBe("townhall");
   });
 
   it("walks fadingOut, loading, fadingIn, idle, and stays in the old place until the screen is dark", () => {

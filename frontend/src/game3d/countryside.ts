@@ -14,6 +14,7 @@ import { WALL_RADIUS, WALL_THICKNESS } from "./layout";
 import { HORIZON, HORIZON_LIMIT, ROAD_END_Z } from "./horizonPieces";
 import type { HorizonPiece } from "./horizonPieces";
 import { OUTDOOR_SPOTS, OUTDOOR_ZONES, PLOT_FOOTPRINT_MAX, type OutdoorZone } from "./outdoorPlan";
+import { TOWN_HALL_OUTSIDE, TOWN_HALL_REACH } from "./townHallOutside";
 
 /* ---------------------------------------------------------------- small maths */
 
@@ -119,7 +120,7 @@ export const ROAD_RUN_TO_Z = 92;
 /** How far a door stands from the middle of its plot: the widest footprint plus a half unit of open ground. */
 export const DOOR_REACH = PLOT_FOOTPRINT_MAX + 0.5;
 
-export type TrackKind = "ring" | "branch" | "road-run" | "stub";
+export type TrackKind = "ring" | "branch" | "road-run";
 
 export interface Track {
   id: string;
@@ -139,10 +140,9 @@ export function ringLine(steps = 120): Spot[] {
   return Array.from({ length: steps + 1 }, (_, i) => ringAt((i / steps) * Math.PI * 2));
 }
 
-/** The road-edge plots face the road; every other plot faces the wall (its door is on the side towards the middle). */
+/** Every plot faces the wall: its door is on the side towards the middle. */
 export function doorPoint(zone: OutdoorZone, index: number): Spot {
   const s = OUTDOOR_SPOTS[zone][index];
-  if (zone === "road") return { x: s.x - Math.sign(s.x) * DOOR_REACH, z: s.z };
   const r = Math.hypot(s.x, s.z);
   const k = (r - DOOR_REACH) / r;
   return { x: s.x * k, z: s.z * k };
@@ -157,13 +157,8 @@ export function tracks(): Track[] {
     OUTDOOR_SPOTS[zone].forEach((s, index) => {
       const door = doorPoint(zone, index);
       const to = { zone, index };
-      if (zone === "road") {
-        // A short stub from the road's middle (the road hides its first half) straight to the door.
-        out.push({ id: `${zone}-${index}`, kind: "stub", width: BRANCH_WIDTH, points: [{ x: 0, z: s.z }, door], to });
-      } else {
-        // A straight branch from the ring, at the same bearing as the plot, to the door.
-        out.push({ id: `${zone}-${index}`, kind: "branch", width: BRANCH_WIDTH, points: [ringAt(Math.atan2(s.x, s.z)), door], to });
-      }
+      // A straight branch from the ring, at the same bearing as the plot, to the door.
+      out.push({ id: `${zone}-${index}`, kind: "branch", width: BRANCH_WIDTH, points: [ringAt(Math.atan2(s.x, s.z)), door], to });
     });
   }
   return out;
@@ -316,6 +311,8 @@ export function inTheWay(p: HorizonPiece): boolean {
   for (const t of tracks()) if (distToPolyline(at, t.points) < t.width / 2 + reach) return true;
   for (const f of FIELDS) if (Math.hypot(p.x - f.x, p.z - f.z) < fieldReach(f) + reach) return true;
   for (const zone of OUTDOOR_ZONES) for (const s of OUTDOOR_SPOTS[zone]) if (Math.hypot(p.x - s.x, p.z - s.z) < PLOT_FOOTPRINT_MAX + reach) return true;
+  // The Town Hall beside the gate road keeps its ground clear too.
+  if (Math.hypot(p.x - TOWN_HALL_OUTSIDE.x, p.z - TOWN_HALL_OUTSIDE.z) < TOWN_HALL_REACH + reach) return true;
   return false;
 }
 

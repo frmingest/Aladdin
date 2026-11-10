@@ -16,7 +16,8 @@ import {
   nearestBoard,
   readingSpot,
 } from "./townHallRoom";
-import { BUILDINGS, DOOR_RANGE, nearestBuilding } from "./townPlan";
+import { DOOR_LEAVE_RANGE, DOOR_RANGE, nearestBuilding } from "./townPlan";
+import { TOWN_HALL_OUTSIDE } from "./townHallOutside";
 
 const BUY_SELL = /\b(buy|sell|trade|invest)\b/i;
 
@@ -62,9 +63,10 @@ describe("the Town Hall inside", () => {
     expect(nearHallDoor({ x: HALL_DOOR.x, z: HALL_DOOR.z - 1 })).toBe(true);
   });
 
-  it("steps out at the Town Hall's own door spot", () => {
+  it("steps out onto the meadow, just past the Town Hall's door reach", () => {
     const out = hallExit();
-    expect(nearestBuilding(out, BUILDINGS, DOOR_RANGE)).toBe("townhall");
+    expect(nearestBuilding(out, [TOWN_HALL_OUTSIDE], DOOR_RANGE)).toBeNull();
+    expect(nearestBuilding(out, [TOWN_HALL_OUTSIDE], DOOR_LEAVE_RANGE + 2)).toBe("townhall");
   });
 
   it("uses short words with no number and no buy or sell", () => {

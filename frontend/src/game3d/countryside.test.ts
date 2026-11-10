@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { WALL_RADIUS } from "./layout";
 import { cornerTowerFootprint } from "./keepModels";
 import { HORIZON, HORIZON_MAX_MODELS, HORIZON_MAX_PIECES } from "./horizonPieces";
-import { FOOTPRINT, OUTDOOR_SPOTS, OUTDOOR_ZONES, PLOT_FOOTPRINT_MAX, ROAD_HALF } from "./outdoorPlan";
+import { OUTDOOR_SPOTS, OUTDOOR_ZONES, PLOT_FOOTPRINT_MAX, ROAD_HALF } from "./outdoorPlan";
 import * as C from "./countryside";
 import {
   DOOR_REACH, FIELDS, RING_RADIUS, RIVER_HALF, WATER_NEAR_MAX, WATER_NEAR_MIN, THIN_MARGIN,
@@ -51,7 +51,7 @@ describe("the tracks", () => {
     const edge = RING_RADIUS - all[0].width / 2;
     expect(edge).toBeGreaterThan(WALL_RADIUS + cornerTowerFootprint().radius);
   });
-  it("every one of the plots has a track to its door, starting on the ring or the road", () => {
+  it("every one of the plots has a track to its door, starting on the ring", () => {
     for (const s of spots) {
       const t = all.find((x) => x.to?.zone === s.zone && x.to.index === s.index);
       expect(t, `${s.zone}[${s.index}]`).toBeDefined();
@@ -61,21 +61,19 @@ describe("the tracks", () => {
       expect(Math.hypot(door.x - s.spot.x, door.z - s.spot.z)).toBeCloseTo(DOOR_REACH, 6);
       const start = t!.points[0];
       const onRing = Math.abs(Math.hypot(start.x, start.z) - RING_RADIUS) < 1e-6;
-      expect(onRing || start.x === 0, `${s.zone}[${s.index}] start`).toBe(true);
+      expect(onRing, `${s.zone}[${s.index}] start`).toBe(true);
     }
   });
   it("no track runs through a plot that is not its own", () => {
     for (const t of all) {
       for (const s of spots) {
         if (t.to?.zone === s.zone && t.to.index === s.index) continue;
-        // The lane passes the road-edge plots, which hold the plain-tower footprint at most (the farm fence lives in the fields).
-        const room = s.zone === "road" ? FOOTPRINT.plain : PLOT_FOOTPRINT_MAX;
-        expect(distToPolyline(s.spot, t.points) - t.width / 2, `${t.id} vs ${s.zone}[${s.index}]`).toBeGreaterThanOrEqual(room);
+        expect(distToPolyline(s.spot, t.points) - t.width / 2, `${t.id} vs ${s.zone}[${s.index}]`).toBeGreaterThanOrEqual(PLOT_FOOTPRINT_MAX);
       }
     }
   });
   it("a branch stays outside the wall", () => {
-    for (const t of all) for (const p of t.points) if (t.kind !== "stub") expect(Math.hypot(p.x, p.z)).toBeGreaterThan(WALL_RADIUS + 3);
+    for (const t of all) for (const p of t.points) expect(Math.hypot(p.x, p.z)).toBeGreaterThan(WALL_RADIUS + 3);
   });
 });
 

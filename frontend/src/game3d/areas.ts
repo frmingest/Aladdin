@@ -1,16 +1,17 @@
 /**
  * The map of places (S21). Pure data and maths, no three.js and no React.
  *
- * Every place you can stand in (the courtyard, the Town, the Town Hall, the Hall of Records, the Weather Tower, a holding's land)
+ * Every place you can stand in (the courtyard, the Town, the Town Hall (its door is on the meadow outside the gate), the Hall of Records, the Weather Tower, a holding's land)
  * is one entry here: where you arrive, where its doors are, how it is lit and where "leave" takes you. The numbers
  * are NOT new: each entry points at the spawn, door and exit constants that already live in the room modules, so
  * adding this list moved nothing. `siege` is the Siege Field (asset plan A5) and `quarter` the Market Quarter (A6). A tower door now leads to that holding's
  * own land (S25); the shared library room it used to open is no longer a place.
  */
-import { WALL_RADIUS } from "./layout";
+import { HORIZON_LIMIT } from "./horizonPieces";
 import { INTERIOR_BOX } from "./interiorBox";
 import { GATE_LEAVE_RANGE as LAND_GATE_LEAVE_RANGE, GATE_RANGE as LAND_GATE_RANGE, LAND_GATE, LAND_SPAWN, MIN_LAND_RADIUS } from "./holdingLand";
 import { HALL_DOOR, HALL_DOOR_LEAVE_RANGE, HALL_DOOR_RANGE, HALL_SPAWN, HALL_YAW, hallExit } from "./townHallRoom";
+import { TOWN_HALL_GATE, TOWN_HALL_GATE_LEAVE_RANGE, TOWN_HALL_GATE_RANGE } from "./townHallOutside";
 import {
   ARCHIVE,
   ARCHIVE_DOOR,
@@ -127,7 +128,7 @@ export interface AreaDef {
 const circleBox = (r: number): AreaBox => ({ minX: -r, maxX: r, minZ: -r, maxZ: r });
 const insideBox = (b: AreaBox): AreaBox => ({ minX: b.minX, maxX: b.maxX, minZ: b.minZ, maxZ: b.maxZ });
 
-const buildingDoor = (id: "townhall" | "records" | "weather"): AreaDoor => {
+const buildingDoor = (id: "records" | "weather"): AreaDoor => {
   const b = BUILDINGS.find((x) => x.id === id);
   const s = b ? doorSpot(b) : { x: 0, z: 0 };
   return { id, x: s.x, z: s.z, range: BUILDING_DOOR_RANGE, leaveRange: BUILDING_DOOR_LEAVE_RANGE, to: id };
@@ -139,13 +140,16 @@ export const AREAS: Record<AreaId, AreaDef> = {
     parent: null,
     kind: "outdoor",
     lighting: "outdoor",
-    bounds: circleBox(WALL_RADIUS),
+    // The walled courtyard and the meadow round it (the holdings and the Town Hall stand out there), out to where the horizon begins.
+    bounds: circleBox(HORIZON_LIMIT),
     spawn: { x: GATE_RETURN.x, z: GATE_RETURN.z, yaw: GATE_RETURN_YAW },
     // Tower doors stand wherever the towers do (see towerDoor.ts); the gate is the one fixed door.
     doors: [
       { id: "gate", x: GATE_SPOT.x, z: GATE_SPOT.z, range: GATE_RANGE, leaveRange: GATE_LEAVE_RANGE, to: "town" },
       { id: "siege", x: SIEGE_GATE.x, z: SIEGE_GATE.z, range: SIEGE_GATE_RANGE, leaveRange: SIEGE_GATE_LEAVE_RANGE, to: "siege" },
       { id: "quarter", x: QUARTER_GATE.x, z: QUARTER_GATE.z, range: QUARTER_GATE_RANGE, leaveRange: QUARTER_GATE_LEAVE_RANGE, to: "quarter" },
+      // The Town Hall stands on the meadow just outside the gate; its door leads straight in (2026-11-10).
+      { id: "townhall", x: TOWN_HALL_GATE.x, z: TOWN_HALL_GATE.z, range: TOWN_HALL_GATE_RANGE, leaveRange: TOWN_HALL_GATE_LEAVE_RANGE, to: "townhall" },
     ],
   },
   town: {
@@ -157,14 +161,13 @@ export const AREAS: Record<AreaId, AreaDef> = {
     spawn: { x: TOWN_SPAWN.x, z: TOWN_SPAWN.z, yaw: TOWN_YAW },
     doors: [
       { id: "exit", x: TOWN_EXIT.x, z: TOWN_EXIT.z, range: EXIT_RANGE, leaveRange: EXIT_LEAVE_RANGE, to: "parent" },
-      buildingDoor("townhall"),
       buildingDoor("records"),
       buildingDoor("weather"),
     ],
   },
   townhall: {
     id: "townhall",
-    parent: "town",
+    parent: "courtyard",
     kind: "indoor",
     lighting: "indoor",
     bounds: insideBox(INTERIOR_BOX),
@@ -255,7 +258,7 @@ export function returnSpot(from: AreaRef, to: AreaRef, towers: readonly Enterabl
   if (from.id === "town" && to.id === "courtyard") return { x: GATE_RETURN.x, z: GATE_RETURN.z, yaw: GATE_RETURN_YAW };
   if (from.id === "siege" && to.id === "courtyard") return { x: SIEGE_GATE_RETURN.x, z: SIEGE_GATE_RETURN.z, yaw: SIEGE_GATE_RETURN_YAW };
   if (from.id === "quarter" && to.id === "courtyard") return { x: QUARTER_GATE_RETURN.x, z: QUARTER_GATE_RETURN.z, yaw: QUARTER_GATE_RETURN_YAW };
-  if (from.id === "townhall" && to.id === "town") return hallExit();
+  if (from.id === "townhall" && to.id === "courtyard") return hallExit();
   if (from.id === "records" && to.id === "town") return archiveExit();
   if (from.id === "weather" && to.id === "town") return towerExit();
   return null;

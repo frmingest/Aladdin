@@ -7,6 +7,7 @@ import { FENCE_RADIUS } from "./farmDressing";
 import { MARKET_CENTER } from "./marketPieces";
 import { CAMP_CENTER, CAMP_REACH } from "./campPieces";
 import { PERCH, WATCH_POST } from "./watchPlan";
+import { TOWN_HALL_OUTSIDE, TOWN_HALL_REACH } from "./townHallOutside";
 import {
   FALLBACK,
   FOOTPRINT,
@@ -80,6 +81,21 @@ describe("outdoor spots: the ground rules", () => {
     }
   });
 
+  it("every spot is clear of the Town Hall beside the gate road", () => {
+    for (const { zone, index, spot } of allSpots()) {
+      expect(Math.hypot(spot.x - TOWN_HALL_OUTSIDE.x, spot.z - TOWN_HALL_OUTSIDE.z), `${zone}[${index}]`).toBeGreaterThanOrEqual(TOWN_HALL_REACH + PLOT_FOOTPRINT_MAX + PLOT_GAP);
+    }
+  });
+
+  it("the open meadow spreads round the wall: one holding in each quarter, nowhere near the gate road crowd", () => {
+    const quarter = (s: { x: number; z: number }) => `${s.z > 0 ? "S" : "N"}${s.x > 0 ? "E" : "W"}`;
+    expect(OUTDOOR_SPOTS.meadow.map(quarter).sort()).toEqual(["NE", "NW", "SE", "SW"]);
+    // The first holdings that have no landscape of their own stand far apart: the first four are at least 50 from each other.
+    const p = assignPlots(["fountain", "bank", "stall", "factory"].map((t, i) => input(t as Theme3dId, i)));
+    for (let i = 0; i < p.length; i++)
+      for (let j = i + 1; j < p.length; j++) expect(Math.hypot(p[i].spot.x - p[j].spot.x, p[i].spot.z - p[j].spot.z)).toBeGreaterThanOrEqual(50);
+  });
+
   it("every spot is clear of the market corner, the drill camp, the watch post and the perch", () => {
     const held = [
       { ...MARKET_CENTER, r: 12 },
@@ -109,10 +125,10 @@ describe("assignPlots", () => {
     expect(zoneOf("windmill")).toBe("rise");
     expect(zoneOf("mine")).toBe("hill");
     expect(zoneOf("quarry")).toBe("hill");
-    for (const t of ["fountain", "bank", "stall", "factory", "ingots", "plain"] as const) expect(zoneOf(t)).toBe("road");
+    for (const t of ["fountain", "bank", "stall", "factory", "ingots", "armoury", "apothecary", "plain"] as const) expect(zoneOf(t)).toBe("meadow");
 
     const p = assignPlots([input("windmill", 0), input("watermill", 1), input("farm", 2), input("mine", 3), input("fountain", 4)]);
-    expect(p.map((x) => x.zone)).toEqual(["rise", "river", "fields", "hill", "road"]);
+    expect(p.map((x) => x.zone)).toEqual(["rise", "river", "fields", "hill", "meadow"]);
     for (const x of p) expect(x.index).toBe(0);
     expect(p[0].spot).toEqual(OUTDOOR_SPOTS.rise[0]);
   });
@@ -130,9 +146,9 @@ describe("assignPlots", () => {
     expect(q.map((x) => x.zone)).toEqual(["rise", "rise", "river", "river"]);
   });
 
-  it("a holding with no building yet stands as a plain tower on the road edge", () => {
+  it("a holding with no building yet stands as a plain tower on the open meadow", () => {
     const p = assignPlots([input("plain", 0), input("ingots", 1)]);
-    expect(p.map((x) => x.zone)).toEqual(["road", "road"]);
+    expect(p.map((x) => x.zone)).toEqual(["meadow", "meadow"]);
     expect(p[0].footprint).toBe(FOOTPRINT.plain);
   });
 
@@ -230,7 +246,7 @@ describe("readout", () => {
       expect(w.farthest).toBeGreaterThanOrEqual(w.nearest);
       expect(w.farthest).toBeLessThan(250);
     }
-    expect(walkFromGate(OUTDOOR_SPOTS.road[0])).toBeLessThan(walkFromGate(OUTDOOR_SPOTS.hill[0]));
+    expect(walkFromGate(OUTDOOR_SPOTS.meadow[0])).toBeLessThan(walkFromGate(OUTDOOR_SPOTS.hill[0]));
   });
 
   it("the walk goes round the wall, never through it", () => {
@@ -238,10 +254,9 @@ describe("readout", () => {
     for (const spot of OUTDOOR_SPOTS.hill) {
       expect(walkFromGate(spot)).toBeGreaterThan(Math.hypot(spot.x - GATE_OUTSIDE.x, spot.z - GATE_OUTSIDE.z) + 20);
     }
-    // The road edge is in plain view of the gate: the straight line.
-    for (const spot of OUTDOOR_SPOTS.road) {
-      expect(walkFromGate(spot)).toBeCloseTo(Math.hypot(spot.x - GATE_OUTSIDE.x, spot.z - GATE_OUTSIDE.z), 6);
-    }
+    // The first meadow spot (south-east) is in plain view of the gate: the straight line.
+    const near = OUTDOOR_SPOTS.meadow[0];
+    expect(walkFromGate(near)).toBeCloseTo(Math.hypot(near.x - GATE_OUTSIDE.x, near.z - GATE_OUTSIDE.z), 6);
     // Never shorter than the straight line.
     for (const { spot } of allSpots()) {
       expect(walkFromGate(spot)).toBeGreaterThanOrEqual(Math.hypot(spot.x - GATE_OUTSIDE.x, spot.z - GATE_OUTSIDE.z) - 1e-9);
@@ -255,6 +270,6 @@ describe("readout", () => {
     expect(t).toContain("farm (fish)");
     const f = footprintTable();
     for (const theme of THEMES) expect(f).toContain(`| ${theme} |`);
-    expect(f).toContain("Road edge");
+    expect(f).toContain("Open meadow");
   });
 });
