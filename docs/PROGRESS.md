@@ -1,6 +1,6 @@
 # Aladdin — Progress
 
-**Last updated:** 2026-11-10 (#322 merged: Town Hall outside the gate and holdings spread; the rest of the Town follows in a PR). Rolling log: active status only, under 100 lines, at most 7 tasks (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
+**Last updated:** 2026-11-10 (the whole Town outside the gate is merged, #323; the Oracle drill-post line and the Quest log pill fix are in a PR). Rolling log: active status only, under 100 lines, at most 7 tasks (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
 
 ## Current Objective
 
@@ -22,7 +22,7 @@ State: `main` at `269c0a7` (#322). S21 to S31 and A1 to A8 are merged (#322 is m
 
 - **Backend loose end:** clear the Supabase leftovers (`backend/.env.example`, the `config/database.py` docstring) and commit the Supabase-to-Railway runbook ([list](architecture.md#11-known-gaps-and-loose-ends))
 - **Case collision in the repo:** 29 pairs in `frontend/src/game3d` (`ActionPrompt.tsx` next to `actionPrompt.ts`, `Confetti`, `StaticBatch`, `KeepModels` and 25 more) are both tracked; on Windows (case-insensitive) `./Name` can resolve to the `.ts` file, so a local `tsc` or `npm run build` fails. Linux CI is fine. Renaming all 29 is its own PR.
-- **3D ideas not built** (calibration in 3D is in the [discovery plan](game/game3d-discovery-sprint-plan-2026-11-02.md)): Storm Drill camp following the siege level, an Oracle line pointing at the drill post; on a phone the green "Done!" pill in the Quest log wraps into a fat oval
+- **3D ideas not built** (calibration in 3D is in the [discovery plan](game/game3d-discovery-sprint-plan-2026-11-02.md)): Storm Drill camp following the siege level. The Oracle drill-post line and the phone "Done!" pill are in a PR ([note](game/game3d-oracle-drill-pill-2026-11-10.md))
 - **Parked:** flat Game mode ideas (E4, E5, B1 to B13), see [archive](archive/game-design-sprint-plan-2026-10-15.md). Hardening leftovers (mypy, Fortress performance, ECON-007) are in [remaining-work](sprints/remaining-work-2026-11-06.md) section 4
 - **Owner-earnings check (#150):** Refresh Margin of safety, "Can't be ranked yet" then "Why" on Vend, Salmon Evolution and Vår Energi ([doc](valuation/loss-making-price-assumes-2026-10-14.md))
 - **Kongsberg P/S jump at FY2024:** a data question, not a task ([doc](valuation/kongsberg-multiples-display-2026-10-14.md))
