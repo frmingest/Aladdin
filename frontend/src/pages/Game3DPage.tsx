@@ -81,6 +81,17 @@ import { useAmbience } from "../game3d/useAmbience";
 import type { PanelId } from "../game3d/hudPanels";
 import { celebrationDue } from "../game3d/celebrate";
 import { sixMonthReckoning } from "../game3d/quest";
+import {
+  guideMarks,
+  guideStatus,
+  loadGuide,
+  markSalVisited,
+  markWeatherVisited,
+  onGuideTalk,
+  replayGuide,
+  saveGuide,
+} from "../game3d/guideQuests";
+import type { GuideSaved, GuideStatus } from "../game3d/guideQuests";
 import { unwrittenThesisV2 } from "../game3d/questV2";
 import { NPCS, alsoHereNote } from "../game3d/npcs";
 import type { NpcId } from "../game3d/npcs";
@@ -140,6 +151,15 @@ function areaReducerWithMotion(state: AreaState, action: AreaAction): AreaState 
  * courtyard (press E near them); the two quests are read from the decision journal. The flat Fortress stays the
  * full-fidelity view and the fallback.
  */
+/** The browser's own storage, or null when it is blocked (private mode, a locked-down page). The Guide then just does not remember. */
+function guideStorage(): Storage | null {
+  try {
+    return typeof window !== "undefined" ? window.localStorage : null;
+  } catch {
+    return null;
+  }
+}
+
 export default function Game3DPage() {
   const supported = useMemo(webglSupported, []);
   const [locked, setLocked] = useState(false);
@@ -353,6 +373,31 @@ export default function Game3DPage() {
       ),
     [world, state, error, journal, journalFailed],
   );
+  // The Guide (First Steps): five small quests. Two read real facts (a stall exists, a why exists); the three "you went
+  // there" steps are the only thing saved, in this browser. On the sample fortress the real facts are unknown, so those steps stay open.
+  const [guideSaved, setGuideSaved] = useState<GuideSaved>(() => loadGuide(guideStorage()));
+  const guideFacts = useMemo(
+    () => ({
+      stalls: demoMode === true || watchlist === null ? null : watchlist.rows.length,
+      whys: demoMode === true || !(quest.status === "open" || quest.status === "done") ? null : quest.written,
+    }),
+    [demoMode, watchlist, quest],
+  );
+  const guide = useMemo(() => guideStatus(guideSaved, guideFacts), [guideSaved, guideFacts]);
+  const questMarks = useMemo(() => guideMarks(guide, guideSaved), [guide, guideSaved]);
+  useEffect(() => {
+    saveGuide(guideStorage(), guideSaved);
+  }, [guideSaved]);
+  // What the Guide looked like when you walked up to an advisor, so the words match the step you came for.
+  const [guideTalkSnap, setGuideTalkSnap] = useState<{ status: GuideStatus; met: readonly NpcId[] } | null>(null);
+  const guideNow = useRef({ saved: guideSaved, facts: guideFacts });
+  guideNow.current = { saved: guideSaved, facts: guideFacts };
+  const startGuideTalk = useCallback((id: NpcId) => {
+    const { saved, facts } = guideNow.current;
+    setGuideTalkSnap({ status: guideStatus(saved, facts), met: saved.met });
+    setGuideSaved(onGuideTalk(saved, facts, id));
+  }, []);
+  const replayGuideNow = useCallback(() => setGuideSaved(replayGuide(guideNow.current.facts)), []);
   useEffect(() => {
     if (celebrationDue(quest.status, world.demo, cheered.current)) {
       cheered.current = true;
@@ -548,6 +593,7 @@ export default function Game3DPage() {
   // E at a stand: the flat page's own Sal dialog or Hype Booth dialog, over the world.
   const openBooth = useCallback((id: BoothId) => {
     if (document.pointerLockElement) document.exitPointerLock();
+    if (id === "sal") setGuideSaved(markSalVisited);
     setBoothOpen(id);
   }, []);
   const closeBooth = useCallback(() => setBoothOpen(null), []);
@@ -641,6 +687,7 @@ export default function Game3DPage() {
   }, [clearNears]);
   // Into the Weather Tower and back out to its door; E at the dials opens the flat Macro page in the world panel.
   const enterWeather = useCallback(() => {
+    setGuideSaved(markWeatherVisited);
     clearNears();
     dispatchArea({ type: "enter", ref: { id: "weather" } });
   }, [clearNears]);
@@ -913,6 +960,7 @@ export default function Game3DPage() {
           else {
             // Free the mouse so the Close and Try again buttons can be clicked.
             if (document.pointerLockElement) document.exitPointerLock();
+            startGuideTalk(at.id);
             setTalking(at.id);
           }
           return;
@@ -968,7 +1016,7 @@ export default function Game3DPage() {
     };
     window.addEventListener("keydown", onTalk);
     return () => window.removeEventListener("keydown", onTalk);
-  }, [area, areaState, atSpot, whereOpen, openShelves, leaveRecords, openDials, leaveWeather, enterField, leaveField, workFieldSpot, enterQuarter, leaveQuarter, enterHall, openBoard, leaveHall, openBuilding, talking, vaultOpen, watchOpen, perchOpen, ravens, realmOpen, lampOpen, state, boothOpen, openBooth, openStore, toggleWhere, drillOpen, deskOpen, room, report, readShelf, enterTower, leaveTower, openReport]);
+  }, [area, areaState, atSpot, whereOpen, openShelves, leaveRecords, openDials, leaveWeather, enterField, leaveField, workFieldSpot, enterQuarter, leaveQuarter, enterHall, openBoard, leaveHall, openBuilding, talking, vaultOpen, watchOpen, perchOpen, ravens, realmOpen, lampOpen, state, boothOpen, openBooth, openStore, toggleWhere, drillOpen, deskOpen, room, report, readShelf, enterTower, leaveTower, openReport, startGuideTalk]);
 
   useEffect(() => {
     const onPanelKey = (e: KeyboardEvent) => {
@@ -1188,6 +1236,7 @@ export default function Game3DPage() {
             siegeLevel={state?.siege?.level ?? null}
             onNearRealm={setAtRealm}
             drillOpen={drillOpen}
+            questMarks={questMarks}
             talking={talking}
             cheerKey={cheerKey}
             hold={isMoving(areaState)}
@@ -1238,7 +1287,7 @@ export default function Game3DPage() {
       {whereOpen && !worldPage && <WhereToPanel onPick={pickDoor} onClose={closeWhere} only={onlyPlace} onlyRoutes={onlyRoutes} />}
       {whereOpen && worldPage && <WorldPanel door={worldPage} onBack={() => setWorldPage(null)} onClose={closeWhere} />}
       {panels.towers && <TowerPanel world={shownWorld} loading={loading} error={error} onRetry={load} onClose={() => flip("towers")} />}
-      {panels.quests && <QuestLog quest={quest} reviews={reviews} demo={world.demo} standing={standingText} wires={standing && !standingFailed ? (standing.wires ?? []) : undefined} onLookAtWire={lookAtWire} onRefreshStanding={refreshStanding} drill={drillQuest} onClose={() => flip("quests")} />}
+      {panels.quests && <QuestLog quest={quest} reviews={reviews} demo={world.demo} standing={standingText} wires={standing && !standingFailed ? (standing.wires ?? []) : undefined} onLookAtWire={lookAtWire} onRefreshStanding={refreshStanding} drill={drillQuest} guide={{ status: guide, saved: guideSaved, onReplay: replayGuideNow }} onClose={() => flip("quests")} />}
       {vaultOpen && state && <VaultPanel state={state} onChanged={load} onClose={() => setVaultOpen(false)} />}
       {realmOpen && state && <RealmPanel state={state} onClose={() => setRealmOpen(false)} />}
       {watchOpen && <WatchPanel onClose={() => setWatchOpen(false)} />}
@@ -1293,7 +1342,7 @@ export default function Game3DPage() {
         />
       )}
       {report && <DocumentReader document={report} origin="50% 50%" onClosed={() => setReport(null)} />}
-      {talking && <DialoguePanel npc={talking} quest={quest} reviews={reviews} drill={drillQuest} onClose={() => setTalking(null)} onRetry={load} />}
+      {talking && <DialoguePanel npc={talking} quest={quest} reviews={reviews} drill={drillQuest} guide={guideTalkSnap} onClose={() => setTalking(null)} onRetry={load} />}
 
       <Link
         to="/fortress"

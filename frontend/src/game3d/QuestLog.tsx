@@ -23,6 +23,20 @@ import {
 import type { QuestState, ReviewQuestState } from "./quest";
 import { NPCS } from "./npcs";
 import type { StandingWords } from "./standingWordsV1";
+import { GUIDE_STEPS } from "./guideQuests";
+import type { GuideSaved, GuideStatus } from "./guideQuests";
+import {
+  GUIDE_ALL_DONE,
+  GUIDE_DONE_PILL,
+  GUIDE_REPLAY,
+  GUIDE_SAMPLE,
+  GUIDE_STEP_GOAL,
+  GUIDE_STEP_TITLE,
+  GUIDE_TAG,
+  GUIDE_TODO_PILL,
+  guideTitle,
+  guideWhere,
+} from "./guideWordsV1";
 
 type ShownStanding = StandingWords & { watch?: string | null; ledger?: string | null };
 import type { StandingWire } from "../lib/types";
@@ -59,6 +73,7 @@ export default function QuestLog({
   onLookAtWire,
   onRefreshStanding,
   drill,
+  guide,
   onClose,
 }: {
   quest: QuestState;
@@ -72,6 +87,8 @@ export default function QuestLog({
   onRefreshStanding?: () => Promise<unknown>;
   /** Storm Drill state; left out, the third card is not shown. */
   drill?: DrillQuestState;
+  /** The Guide (First Steps); left out, the card is not shown. */
+  guide?: { status: GuideStatus; saved: GuideSaved; onReplay: () => void };
   onClose?: () => void;
 }) {
   const questDone = quest.status === "done";
@@ -87,6 +104,32 @@ export default function QuestLog({
         )}
       </header>
       {demo && <p className="g3d-demo">{QUEST_SAMPLE}</p>}
+
+      {guide && (
+        <section className="g3d-card" aria-label="First Steps">
+          <p className="g3d-tag">{GUIDE_TAG}</p>
+          <h3>{guideTitle(guide.status.level)}</h3>
+          <ol className="mt-2 space-y-1">
+            {GUIDE_STEPS.map((s) => (
+              <li key={s} className={s === guide.status.current ? "font-semibold" : "g3d-muted"}>
+                <span aria-hidden>{guide.status.done[s] ? "✓ " : s === guide.status.current ? "→ " : "· "}</span>
+                {GUIDE_STEP_TITLE[s]}
+                <span className="sr-only">{guide.status.done[s] ? ` (${GUIDE_DONE_PILL})` : s === guide.status.current ? ` (${GUIDE_TODO_PILL})` : ""}</span>
+              </li>
+            ))}
+          </ol>
+          {guide.status.current ? (
+            <>
+              <p className="mt-2">{GUIDE_STEP_GOAL[guide.status.current]}</p>
+              <p className="g3d-muted">{guideWhere(guide.status.current, guide.saved.taken.includes(guide.status.current))}</p>
+              {demo && (guide.status.current === "stall" || guide.status.current === "why") && <p className="g3d-muted">{GUIDE_SAMPLE}</p>}
+            </>
+          ) : (
+            <p className="g3d-muted mt-2">{GUIDE_ALL_DONE}</p>
+          )}
+          <button type="button" className="g3d-btn mt-2" onClick={guide.onReplay}>{GUIDE_REPLAY}</button>
+        </section>
+      )}
 
       {standing && (
         <section className="g3d-card" aria-label="Standing">
