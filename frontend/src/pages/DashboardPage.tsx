@@ -13,6 +13,7 @@ import type {
 import { ANALYZABLE_TYPES, INSTRUMENT_TYPE_LABELS } from "../lib/types";
 import { Card, Disclosure, EmptyState, PageHeader, SectionTitle, VerdictBadge } from "../components/ui";
 import { CheckTripwiresButton } from "../components/TripwireBanner";
+import { NewswebNewCard } from "../components/NewswebNewCard";
 import { WarningStack } from "../components/WarningStack";
 import { buildAttention } from "../lib/attention";
 import { portfolioValueText } from "../lib/headlines";
@@ -435,6 +436,8 @@ export default function DashboardPage() {
           <HoldingCardsRow positions={overview.positions} />
 
           <NeedsAttentionCard overview={overview} thesisRows={thesisRows} onChecked={loadThesis} />
+
+          <NewswebNewCard />
 
           <QuickLinks />
 

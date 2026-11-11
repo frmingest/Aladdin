@@ -32,7 +32,6 @@ scheduler were the patterns to follow.
 - Tests: `tests/unit/test_newsweb_watch.py`, `tests/integration/test_newsweb_watch_api.py`
 
 ## Not done yet
-- No frontend: nothing shows the unread announcements or calls acknowledge yet (API only).
-- Not yet watched: new annual or interim *reports* (the existing manual import stays manual).
+- ~~No frontend~~ and ~~reports stay manual~~: both closed on 2026-11-11, see [newsweb-auto-report-fetch-2026-11-11.md](newsweb-auto-report-fetch-2026-11-11.md).
 - Unverified: Newsweb from Railway's IP (the endpoint is public; the System status page will show
   failures per ticker in the job summary after the first deploy).
