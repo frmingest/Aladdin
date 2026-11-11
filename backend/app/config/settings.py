@@ -351,6 +351,13 @@ class Settings(BaseSettings):
     newsweb_watch_lookback_days: int = 30
     newsweb_watch_timeout_seconds: float = 20.0
     newsweb_watch_pause_seconds: float = 1.0
+    # Automatic report fetch (2026-11-11): after a watch pass the Railway backend
+    # imports new annual and half-year/quarterly reports for the same holdings,
+    # at most every N minutes (0 = off). The window is short because reports
+    # already on file are skipped and older ones are the button's job.
+    newsweb_report_fetch_interval_minutes: int = 360
+    newsweb_report_fetch_lookback_days: int = 60
+    newsweb_report_fetch_pause_seconds: float = 2.0
     # How many of the most recent announcements go into the analysis
     # evidence packet (all are still stored and shown in the UI).
     announcements_in_evidence_packet: int = 15

@@ -91,6 +91,11 @@ class NewswebImportError(Exception):
     """Import could not run — the message is safe to show the user."""
 
 
+class NewswebNothingFoundError(NewswebImportError):
+    """Newsweb listed no report of this kind in the window. A normal outcome
+    for the automatic fetch (nothing new), an error message for the button."""
+
+
 @dataclass
 class NewswebImportResult:
     message_id: str
@@ -308,7 +313,7 @@ def _import_all_reports_from_newsweb(
     except NewswebFilingUnavailableError as exc:
         raise NewswebImportError(str(exc)) from exc
     if not refs:
-        raise NewswebImportError(
+        raise NewswebNothingFoundError(
             f"no {report_label} announcement with an attachment found on Newsweb for {issuer_sign} "
             f"since {since.isoformat()} — check newsweb.oslobors.no directly, or upload reports by hand"
         )

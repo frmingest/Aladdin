@@ -190,6 +190,7 @@ def build_background_jobs(
     jobs.append(_catalogue(db, settings, now, worker_online=worker_online))
     jobs.append(_macro(db, settings, now))
     jobs.append(_newsweb_watch(db, settings, now))
+    jobs.append(_newsweb_reports(db, settings, now))
     return jobs
 
 
@@ -246,4 +247,21 @@ def _newsweb_watch(db: Session, settings: Settings, now: datetime) -> JobItem:
     if now - last > timedelta(minutes=minutes * 3):
         return JobItem(key, label, BACKEND, schedule, last, WARN,
                        "Overdue. The backend has not completed a pass for a long time.")
+    return JobItem(key, label, BACKEND, schedule, last, OK, summary or "")
+
+
+def _newsweb_reports(db: Session, settings: Settings, now: datetime) -> JobItem:
+    key, label = "newsweb_reports", "Newsweb report fetch (new annual and quarterly reports)"
+    minutes = settings.newsweb_report_fetch_interval_minutes
+    schedule = f"every {minutes // 60} h" if minutes >= 60 and minutes % 60 == 0 else f"every {minutes} min"
+    last, summary = read_job_run(db, key)
+    if minutes <= 0 or settings.newsweb_filing_provider != "newsweb":
+        return JobItem(key, label, BACKEND, "off", last, OFF,
+                       "Switched off (interval 0 or filing provider is not newsweb).")
+    if last is None:
+        return JobItem(key, label, BACKEND, schedule, None, WARN,
+                       "Has not run yet. It runs after a Newsweb watch pass, so give it an hour after deploy.")
+    if now - last > timedelta(minutes=minutes * 3):
+        return JobItem(key, label, BACKEND, schedule, last, WARN,
+                       "Overdue. The backend has not completed a report pass for a long time.")
     return JobItem(key, label, BACKEND, schedule, last, OK, summary or "")

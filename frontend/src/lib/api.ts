@@ -85,6 +85,7 @@ import type {
   SourceEligibility,
   SystemStatus,
   TagReextractResult,
+  NewswebNew,
   TagReview,
   TagRule,
   TagRuleExport,
@@ -383,6 +384,14 @@ export const api = {
   getThenAndNow: (entryId: string) => request<ThenAndNow>(`/journal/${entryId}/then-and-now`),
   deleteJournalEntry: (id: string) =>
     request<void>(`/journal/${id}`, { method: "DELETE", query: { confirm: true } }),
+
+  /** Newsweb watch: announcements found by the hourly check and not yet marked seen. Database only. */
+  getNewswebNew: () => request<NewswebNew>("/sources/newsweb/new"),
+  acknowledgeNewsweb: (holdingId?: string) =>
+    request<{ acknowledged: number }>("/sources/newsweb/acknowledge", {
+      method: "POST",
+      body: JSON.stringify(holdingId ? { holding_id: holdingId } : {}),
+    }),
 
   /** F4 — configuration, data freshness and failures. Never calls a provider. */
   getSystemStatus: () => request<SystemStatus>("/system/status"),

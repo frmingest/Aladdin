@@ -2748,3 +2748,23 @@ export interface Standing {
   /** Fired, unseen wires on towers that stand; empty for the sample fortress. */
   wires?: StandingWire[];
 }
+
+/** GET /sources/newsweb/new: announcements the hourly Newsweb watch found that are not yet marked seen. */
+export interface NewswebNewItem {
+  id: string;
+  holding_id: string;
+  ticker: string;
+  holding_name: string;
+  title: string;
+  summary: string | null;
+  source_url: string;
+  published_at: string | null;
+  first_seen_at: string;
+}
+
+export interface NewswebNew {
+  count: number;
+  items: NewswebNewItem[];
+  last_checked_at: string | null;
+  last_summary: string | null;
+}
