@@ -82,7 +82,7 @@ import type { PanelId } from "../game3d/hudPanels";
 import { celebrationDue } from "../game3d/celebrate";
 import { sixMonthReckoning } from "../game3d/quest";
 import { unwrittenThesisV2 } from "../game3d/questV2";
-import { NPCS } from "../game3d/npcs";
+import { NPCS, alsoHereNote } from "../game3d/npcs";
 import type { NpcId } from "../game3d/npcs";
 import ActionPrompt from "../game3d/ActionPrompt";
 import { emptyStreetNote, streetOverflowLine } from "../game3d/streetPlan";
@@ -1075,7 +1075,11 @@ export default function Game3DPage() {
   let spotNote: string | null = null;
   switch (atSpot.kind) {
     case "npc":
-      if (!talking) spotPrompt = `Press E to talk to ${NPCS.find((n) => n.id === atSpot.id)?.name ?? "them"}`;
+      if (!talking) {
+        spotPrompt = `Press E to talk to ${NPCS.find((n) => n.id === atSpot.id)?.name ?? "them"}`;
+        // The two advisors stand side by side, so say who else is within reach (a step toward them makes them the answer).
+        spotNote = alsoHereNote(atSpot.id);
+      }
       break;
     case "shelves":
       if (!whereOpen) spotPrompt = shelfPrompt;
