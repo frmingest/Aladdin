@@ -354,10 +354,17 @@ class OllamaProvider(LedgerRecordingMixin, LLMProvider):
         may use a larger context). Raises when nothing sits fully on the GPU."""
         self._model = self._primary_model
         candidates = [self._primary_model]
+        skipped_fallback = ""
         if self._fallback_model:
             installed = self._installed_models()
             if installed is None or any(_model_matches(self._fallback_model, n) for n in installed):
                 candidates.append(self._fallback_model)
+            else:
+                # Say so: a silently skipped fallback made the "Tried ..." list
+                # look as if only the main model existed (2026-11-11).
+                skipped_fallback = (
+                    f"{self._fallback_model} (not installed -- run: ollama pull {self._fallback_model})"
+                )
         tried: list[str] = []
         now = time.monotonic()
         for model in candidates:
@@ -382,7 +389,7 @@ class OllamaProvider(LedgerRecordingMixin, LLMProvider):
             tried.append(f"{model}@{ctx}: {share:.0%} on GPU")
         raise LLMUnavailableError(
             "No model fits fully on the GPU for this call (needs "
-            f"~{needed_tokens:,} tokens of context). Tried " + "; ".join(tried) + ". "
+            f"~{needed_tokens:,} tokens of context). Tried " + "; ".join(tried + ([skipped_fallback] if skipped_fallback else [])) + ". "
             "Trim the evidence packet, close other GPU-heavy apps, check OLLAMA_FLASH_ATTENTION=1 and "
             "OLLAMA_KV_CACHE_TYPE=q8_0 are set for the Ollama server, or raise OLLAMA_FALLBACK_NUM_CTX. "
             "Set OLLAMA_MIN_GPU_SHARE=0 to run anyway (slow)."

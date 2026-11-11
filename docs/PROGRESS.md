@@ -1,6 +1,6 @@
 # Aladdin — Progress
 
-**Last updated:** 2026-11-11 (the whole Town outside the gate is merged, #323; the Oracle drill-post line and the Quest log pill fix, and the live-prices and courtyard-booths fix, are in PRs; Sal's shop with the Oslo shelves is in a PR). Rolling log: active status only, under 100 lines, at most 7 tasks (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
+**Last updated:** 2026-11-11 (a PR fixes the misleading "evidence too large" message on GPU-fit failures; the whole Town outside the gate is merged, #323; the Oracle drill-post line and the Quest log pill fix, and the live-prices and courtyard-booths fix, are in PRs; Sal's shop with the Oslo shelves is in a PR). Rolling log: active status only, under 100 lines, at most 7 tasks (rules in [CLAUDE.md](../CLAUDE.md), "Progress file rules"). Architecture: [architecture.md](architecture.md).
 
 ## Current Objective
 
@@ -16,7 +16,7 @@ State: `main` at `269c0a7` (#322). S21 to S31 and A1 to A8 are merged (#322 is m
 - [ ] **Town outside the gate (Claude):** the whole Town (six buildings) now stands on the meadow either side of the gate road (E at a door goes straight in, no teleport), and the holdings with no landscape of their own spread one per quarter round the wall instead of crowding the road. The Town Hall and the holdings are merged (#322); moving the other five buildings is in a PR, written and tested (tsc, lint, vitest, build), not deployed, not seen in a browser ([note](game/game3d-townhall-outside-2026-11-10.md))
 - [ ] **Rate sensitivity per holding, then the PDF memo (Claude):** neither exists on `main`. Rate sensitivity has no data to stand on: the app stores no floating/fixed split or debt maturity schedule per company, so it first needs a way to read that from filings. The PDF memo needs a PDF writer (only `pymupdf` is installed). Both are bigger than one sprint; need a plan first.
 - [ ] **Look-over in `/game3d` (Faiz):** S29 battlefield; press M (sound) in the courtyard and walk into the Town Hall (it stands outside the gate now); press P for fps. After the 2026-11-11 PR deploys: save a price in a store page, close it, and the Market Quarter stall should leave "No price yet"; the courtyard should hold no stock booths ([note](game/game3d-live-prices-courtyard-booths-2026-11-11.md)) Weather Tower (merged #315): after the #319 fix deploys, press Refresh data on the Macro page and look at the north wall ([build](game/game3d-weather-tower-2026-11-08.md), [4g note](game/game3d-dials-and-text-4g-2026-11-09.md)).
-- [ ] **Data chores (Faiz):** Newsweb watch job green (#195); *Fetch all reports* on JAREN.OL (#194); The Printer amounts call ([plan](game/the-printer-sprint-plan-2026-10-20.md))
+- [ ] **Data chores (Faiz):** local queue failed on the GPU 2026-11-11 (mislabelled "evidence too large"; `ollama list`, `ollama pull qwen3:8b`, close GPU-heavy apps, re-queue; message fix in a PR, [note](llm-local/gpu-fit-error-messages-2026-11-11.md)); Newsweb watch job green (#195); *Fetch all reports* on JAREN.OL (#194); The Printer amounts call ([plan](game/the-printer-sprint-plan-2026-10-20.md))
 
 ## Recent Blockers / Open Questions
 

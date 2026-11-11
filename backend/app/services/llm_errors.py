@@ -43,6 +43,12 @@ _RULES: list[tuple[str, re.Pattern[str]]] = [
         re.compile(r"connecterror|connection refused|ollama request failed|all connection attempts failed", re.IGNORECASE),
     ),
     (
+        ("The local model does not fit on your GPU for this run, so it was stopped instead of running slowly "
+         "on the CPU. Make sure the fallback model is installed (`ollama pull qwen3:8b`), close GPU-heavy "
+         "apps (browsers, Discord, Steam) and run it again."),
+        re.compile(r"no model fits|of the model is on the gpu", re.IGNORECASE),
+    ),
+    (
         "Ollama does not have the model installed. Pull it with `ollama pull <model>` and run it again.",
         re.compile(r"ollama pull|ollama doesn't have model", re.IGNORECASE),
     ),
@@ -87,7 +93,8 @@ def explain_llm_failure(message: str | BaseException | None, *, detail_chars: in
     """One plain sentence for the cause, then the start of the original text.
 
     The first matching rule wins, in the order above (a budget message is
-    checked before the generic 429 rule, a missing key before a refused key).
+    checked before the generic 429 rule, a missing key before a refused key, and
+    the GPU-fit messages before the context rule, because they also mention num_ctx).
     Unknown text gets the generic sentence and keeps its detail.
     """
     raw = _squash(str(message)) if message is not None else ""
