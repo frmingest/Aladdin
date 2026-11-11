@@ -12,6 +12,8 @@ import { useOrbit } from "./useOrbit";
 import { LEAVE_RANGE, NPCS, TALK_RANGE } from "./npcs";
 import type { NpcId } from "./npcs";
 import NpcMesh from "./NpcMesh";
+import QuestMarks from "./QuestMarks";
+import type { GuideMark } from "./guideQuests";
 import PropMesh from "./PropMesh";
 import Scenery from "./Scenery";
 import Market from "./Market";
@@ -76,6 +78,7 @@ import { ENTER_LEAVE_REACH, ENTER_REACH, enterableOf } from "./towerDoor";
 
 const HALL_DARK = "#1d1712";
 const noop = () => {};
+const NO_MARKS: readonly GuideMark[] = [];
 
 interface Props {
   world: WorldModel;
@@ -118,6 +121,8 @@ interface Props {
   onNearRealm?: (near: boolean) => void;
   /** A Storm Drill is open: the camp stands. */
   drillOpen?: boolean;
+  /** The Guide's quest marks (over a giver's head or over the place a step leads to). */
+  questMarks?: readonly GuideMark[];
   /** Whose dialogue is open (the Oracle casts while he talks). */
   talking?: NpcId | null;
   /** A new number starts the quest-done cheer and confetti, once. */
@@ -258,6 +263,7 @@ function World({
   siegeLevel,
   onNearRealm,
   drillOpen,
+  questMarks,
   onNearTower,
   area,
   room,
@@ -303,6 +309,7 @@ function World({
   siegeLevel: FortressSiegeLevel | null;
   onNearRealm: (near: boolean) => void;
   drillOpen: boolean;
+  questMarks: readonly GuideMark[];
   talking: NpcId | null;
   cheerKey: number | null;
   hold: boolean;
@@ -470,6 +477,7 @@ function World({
             <Townsfolk cheerKey={cheerKey} />
             <Workers />
           </group>
+          <QuestMarks marks={questMarks} />
           <Confetti burstKey={cheerKey} />
           <NearWatch pos={pos} targets={NPC_T} onChange={onNear} />
           <NearWatch pos={pos} targets={DESK_T} onChange={isYes(onNearDesk)} />
@@ -519,6 +527,7 @@ export default function Scene({
   siegeLevel = null,
   onNearRealm = noop,
   drillOpen = false,
+  questMarks = NO_MARKS,
   talking = null,
   cheerKey = null,
   hold = false,
@@ -623,6 +632,7 @@ export default function Scene({
           siegeLevel={siegeLevel}
           onNearRealm={onNearRealm}
           drillOpen={drillOpen}
+          questMarks={questMarks}
           talking={talking}
           cheerKey={cheerKey}
           hold={hold}
