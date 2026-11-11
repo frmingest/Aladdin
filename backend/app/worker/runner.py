@@ -34,6 +34,7 @@ from sqlalchemy.orm import Session
 from app.config.settings import Settings
 from app.models.holding import Holding
 from app.providers.base import (
+    CatalogueProvider,
     LLMProvider,
     MarketDataProvider,
     ResearchProvider,
@@ -93,6 +94,8 @@ class WorkerProviders:
     # Numeric macro data (2026-09-24): stale series are re-fetched on the
     # PC before a run. Default None keeps older call sites/tests working.
     macro_data: MacroDataProvider | None = None
+    # Oslo ticker catalogue for Sal's shop (2026-11-11). None builds the yfinance one on first use.
+    catalogue: CatalogueProvider | None = None
 
 
 class AnalysisWorker:
@@ -132,6 +135,7 @@ class AnalysisWorker:
         self._warm_attempts: dict[uuid.UUID, float] = {}
         self._last_keepwarm = float("-inf")
         self._last_siege_history = float("-inf")
+        self._last_catalogue_attempt = float("-inf")
         # 2026-10-07: the housekeeping jobs run on their own thread so a slow
         # one (a snapshot refresh took 13+ minutes) can never stop the queue
         # from being polled. `_bg_job` is (name, started_at) while one runs.
@@ -385,6 +389,29 @@ class AnalysisWorker:
         except Exception:
             log.exception("siege price history refresh failed")
 
+    def maybe_refresh_ticker_catalogue(self) -> None:
+        """2026-11-11, Sal's shop: list every company on Oslo from Yahoo into the ticker catalogue. Runs at
+        first start (empty table), then once per `ticker_catalogue_refresh_hours`; a failed pass is retried
+        after `ticker_catalogue_retry_seconds`, never on every poll. Needs the market data provider switched
+        on (the same Yahoo access), runs here because Yahoo answers the home IP. Never raises."""
+        if not self.settings.ticker_catalogue_enabled or self.providers.market_data is None:
+            return
+        try:
+            from app.providers.yfinance_catalogue import YFinanceCatalogueProvider
+            from app.services import ticker_catalogue
+
+            with self.session_factory() as db:
+                if not ticker_catalogue.is_due(db, interval_hours=self.settings.ticker_catalogue_refresh_hours):
+                    return
+                now = time.monotonic()
+                if now - self._last_catalogue_attempt < self.settings.ticker_catalogue_retry_seconds:
+                    return
+                self._last_catalogue_attempt = now
+                provider = self.providers.catalogue or YFinanceCatalogueProvider()
+                ticker_catalogue.refresh(db, provider)
+        except Exception:
+            log.exception("ticker catalogue refresh failed")
+
     def maybe_keep_snapshots_warm(self) -> None:
         """Sprint 20: rebuild stored pages whose inputs changed (an import, a
         finished analysis, a watchlist change), at most once per
@@ -423,6 +450,7 @@ class AnalysisWorker:
             ("Fortress history", self.maybe_store_game_state),
             ("holding warm-up", self.maybe_warm_cold_holdings),
             ("siege price history", self.maybe_refresh_siege_history),
+            ("Oslo ticker catalogue", self.maybe_refresh_ticker_catalogue),
             ("keep pages warm", self.maybe_keep_snapshots_warm),
         ]
 

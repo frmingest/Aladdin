@@ -1,0 +1,72 @@
+/* Sal's shelves (2026-11-11). Painted pieces keep fixed colours like the rest of Sal's booth (index.css .sal-*);
+   motion is a small lift on hover, off under reduced motion. Size is never colour-only: coins plus a word. */
+.shop { border-radius: 8px; overflow: hidden; background: linear-gradient(180deg, #221810, #17110b); box-shadow: inset 0 0 0 1px #3b2a16; }
+.shop-awning { display: block; width: 100%; height: 30px; filter: drop-shadow(0 4px 3px rgb(0 0 0 / 0.45)); }
+.shop-body { padding: 0.7rem 0.8rem 0.8rem; display: grid; gap: 0.6rem; }
+.shop-controls { display: grid; gap: 0.5rem; }
+@media (min-width: 640px) { .shop-controls { grid-template-columns: minmax(0, 1fr) auto; align-items: center; } }
+.shop-search { margin: 0; }
+.shop-sizes { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+
+.shop-chip, .shop-shelf {
+  color: #f3e4bf;
+  background: rgb(255 255 255 / 0.04);
+  box-shadow: inset 0 0 0 1px #6b5328;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  line-height: 1.1;
+  cursor: pointer;
+}
+.shop-chip { padding: 0.4rem 0.75rem; min-height: 2rem; }
+.shop-chip:hover, .shop-shelf:hover { background: rgb(255 255 255 / 0.1); }
+.shop-chip[aria-pressed="true"], .shop-shelf[aria-pressed="true"] { color: #2a1a05; background: linear-gradient(180deg, #f6dc7e, #d8aa34); box-shadow: inset 0 0 0 1px #6e4a12; font-weight: 700; }
+.shop-chip:focus-visible, .shop-shelf:focus-visible, .shop-card:focus-visible { outline: 2px solid #f2c94c; outline-offset: 2px; }
+
+/* The shelves: a strip you swipe on a phone, a rail down the left on a wider screen. */
+.shop-layout { display: grid; gap: 0.6rem; min-width: 0; }
+.shop-results { display: grid; gap: 0.5rem; min-width: 0; align-content: start; }
+.shop-shelves { display: flex; gap: 0.35rem; overflow-x: auto; padding-bottom: 0.2rem; scroll-snap-type: x proximity; }
+@media (min-width: 768px) {
+  .shop-layout { grid-template-columns: 12.5rem minmax(0, 1fr); gap: 0.8rem; }
+  .shop-shelves { flex-direction: column; overflow-x: visible; overflow-y: auto; max-height: min(52vh, 30rem); padding: 0 0.2rem 0.3rem 0; overscroll-behavior: contain; }
+  .shop-shelf { width: 100%; border-radius: 8px; }
+}
+.shop-shelf { display: flex; flex-direction: column; align-items: flex-start; gap: 0.12rem; padding: 0.35rem 0.7rem; border-radius: 10px; min-height: 2.4rem; flex: 0 0 auto; scroll-snap-align: start; text-align: left; }
+.shop-shelf-title { font-weight: 600; font-size: 0.8rem; white-space: nowrap; }
+.shop-shelf-count { font-size: 0.68rem; opacity: 0.8; margin-left: 0.2rem; }
+.shop-shelf-real { font-size: 0.64rem; opacity: 0.72; white-space: nowrap; }
+
+.shop-count { font-size: 0.72rem; color: #cdbb97; margin: 0; }
+.shop-empty { padding: 1.2rem 0.5rem; text-align: center; font-size: 0.88rem; color: #cdbb97; }
+
+.shop-grid { list-style: none; margin: 0; padding: 0.1rem 0.15rem 0.3rem 0; display: grid; gap: 0.55rem; grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr)); max-height: min(52vh, 30rem); overflow-y: auto; overscroll-behavior: contain; }
+@media (max-width: 639px) { .shop-grid { max-height: none; overflow: visible; grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr)); } }
+
+.shop-card {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 0.2rem; width: 100%; height: 100%;
+  padding: 0.55rem 0.65rem 0.5rem; text-align: left; color: #f3e4bf; cursor: pointer;
+  border-radius: 6px 6px 3px 3px;
+  background: linear-gradient(180deg, #2f2214, #1e150c);
+  box-shadow: inset 0 0 0 1px #6b5328, 0 5px 0 -1px #5a3d1c, 0 7px 6px -3px rgb(0 0 0 / 0.7); /* the plank it stands on */
+}
+.shop-card:hover:not(:disabled) { box-shadow: inset 0 0 0 1px #f2c94c, 0 5px 0 -1px #7a5624, 0 7px 6px -3px rgb(0 0 0 / 0.7); }
+.shop-card:disabled { cursor: not-allowed; }
+.shop-card[data-taken="true"] { opacity: 0.62; box-shadow: inset 0 0 0 1px #4a3a22, 0 5px 0 -1px #3e2b14; }
+.shop-card[data-band="unknown"] .shop-card-name { font-style: italic; }
+.shop-card-top { display: flex; align-items: center; gap: 0.4rem; }
+.shop-coins { width: 3.6rem; height: 0.8rem; flex: 0 0 auto; }
+.shop-card-size { font-size: 0.66rem; letter-spacing: 0.02em; text-transform: uppercase; color: #cdbb97; }
+.shop-card-name { font-weight: 700; font-size: 0.9rem; line-height: 1.2; overflow-wrap: anywhere; }
+.shop-card-meta { font-size: 0.72rem; color: #cdbb97; }
+.shop-card-shelf { font-size: 0.64rem; color: #a8977a; }
+.shop-card-act { margin-top: auto; padding-top: 0.15rem; font-size: 0.72rem; font-weight: 700; color: #f2d16b; }
+.shop-card[data-taken="true"] .shop-card-act { color: #a8977a; font-weight: 600; }
+
+.shop-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.9rem; justify-content: space-between; }
+.shop-stocked { font-size: 0.68rem; color: #a8977a; flex: 1 1 auto; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .shop-card { transition: transform 0.12s ease, box-shadow 0.12s ease; }
+  .shop-card:hover:not(:disabled) { transform: translateY(-2px); }
+  .shop-card:active:not(:disabled) { transform: translateY(1px); }
+}

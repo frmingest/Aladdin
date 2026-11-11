@@ -368,3 +368,36 @@ class FundamentalsProvider(ABC):
     @abstractmethod
     def get_annual_fundamentals(self, company_id: str) -> CompanyFundamentals:
         raise NotImplementedError
+
+
+@dataclass(frozen=True)
+class CatalogueRecord:
+    """One company a catalogue provider found on an exchange (Sal's shop, 2026-11-11)."""
+
+    ticker: str  # Yahoo symbol, upper case, e.g. "EQNR.OL"
+    name: str
+    exchange: str  # Yahoo exchange code, e.g. "OSL"
+    currency: str  # trading currency, 3 letters
+    yahoo_sector: str | None = None  # the provider's own sector name, as received
+    market_cap: Decimal | None = None  # in `currency`; the provider's figure, never computed here
+
+
+@dataclass
+class CatalogueFetch:
+    """What one catalogue pass brought back. `complete` is False when any part of the pass failed:
+    the records are still real companies, but a missing one proves nothing."""
+
+    records: list[CatalogueRecord]
+    complete: bool
+    problems: list[str]
+
+
+class CatalogueProvider(ABC):
+    """Lists the companies quoted on Oslo, for the ticker catalogue behind Sal's shop."""
+
+    name: str
+
+    @abstractmethod
+    def fetch_oslo(self) -> CatalogueFetch:
+        """Never raises for a provider failure: report it in `problems` and set `complete` False."""
+        raise NotImplementedError

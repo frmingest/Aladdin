@@ -187,9 +187,33 @@ def build_background_jobs(
                f"every {settings.siege_history_refresh_interval_seconds // 3600} h",
                enabled=settings.siege_history_refresh_enabled, last_at=siege_at, summary=siege_summary),
     ]
+    jobs.append(_catalogue(db, settings, now, worker_online=worker_online))
     jobs.append(_macro(db, settings, now))
     jobs.append(_newsweb_watch(db, settings, now))
     return jobs
+
+
+def _catalogue(db: Session, settings: Settings, now: datetime, *, worker_online: bool) -> JobItem:
+    """Sal's shop (2026-11-11): the Oslo ticker catalogue the PC worker keeps stocked."""
+    from app.services import ticker_catalogue
+
+    key, label = "ticker_catalogue", "Oslo ticker catalogue (Sal's shop)"
+    hours = settings.ticker_catalogue_refresh_hours
+    schedule = f"at first start, then every {hours} h"
+    ok_at, ok_summary = ticker_catalogue.last_success(db)
+    bad_at, bad_summary = ticker_catalogue.last_problem(db)
+    ok_at, bad_at = _aware(ok_at), _aware(bad_at)
+    if not settings.ticker_catalogue_enabled or settings.market_data_provider != "yfinance":
+        return JobItem(key, label, WORKER, schedule, ok_at, OFF, "Switched off (setting off, or market data is not yfinance).")
+    if bad_at is not None and (ok_at is None or bad_at > ok_at):
+        return JobItem(key, label, WORKER, schedule, ok_at, WARN, f"Last pass had a problem: {bad_summary or ''}".strip())
+    if ok_at is None:
+        if worker_online:
+            return JobItem(key, label, WORKER, schedule, None, WARN, "Has not run yet. The shop shelves stay empty until it does.")
+        return JobItem(key, label, WORKER, schedule, None, OFF, "Has not run yet. It runs on the PC worker.")
+    if now - ok_at > timedelta(hours=hours * 2):
+        return JobItem(key, label, WORKER, schedule, ok_at, WARN, "Overdue. The PC worker has not refreshed the shelves for a long time.")
+    return JobItem(key, label, WORKER, schedule, ok_at, OK, ok_summary or "")
 
 
 def _macro(db: Session, settings: Settings, now: datetime) -> JobItem:

@@ -18,6 +18,7 @@ from fastapi.responses import JSONResponse
 
 from app.api.accounts import router as accounts_router
 from app.api.analysis import router as analysis_router
+from app.api.catalogue import router as catalogue_router
 from app.api.documents import router as documents_router
 from app.api.funds import router as funds_router
 from app.api.game import router as game_router
@@ -137,6 +138,7 @@ app.include_router(sources_router)
 app.include_router(newsweb_watch_router)
 app.include_router(system_router)
 app.include_router(watchlist_router)
+app.include_router(catalogue_router)
 app.include_router(journal_router)
 app.include_router(funds_router)
 app.include_router(macro_router)

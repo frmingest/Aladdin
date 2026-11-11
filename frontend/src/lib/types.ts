@@ -1240,6 +1240,28 @@ export interface Watchlist {
   snapshot_at?: string | null;
 }
 
+/** Ticker catalogue behind Sal's shop (backend/app/api/catalogue.py): every company on Oslo, stocked by the PC worker. */
+export type CatalogueSizeBand = "giant" | "big" | "small" | "tiny" | "unknown";
+
+export interface CatalogueItem {
+  ticker: string;
+  name: string;
+  currency: string;
+  /** The app's sector; null = not classified. */
+  sector: string | null;
+  size_band: CatalogueSizeBand;
+  /** Market value at the last refresh, in `currency`. null = unknown. */
+  market_cap: string | null;
+}
+
+export interface Catalogue {
+  status: "ready" | "empty";
+  as_of: string | null;
+  total: number;
+  rules_version: string;
+  items: CatalogueItem[];
+}
+
 export interface WatchlistCreateInput {
   holding_id?: string;
   ticker?: string;
