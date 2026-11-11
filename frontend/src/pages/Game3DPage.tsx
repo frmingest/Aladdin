@@ -85,7 +85,7 @@ import { unwrittenThesisV2 } from "../game3d/questV2";
 import { NPCS } from "../game3d/npcs";
 import type { NpcId } from "../game3d/npcs";
 import ActionPrompt from "../game3d/ActionPrompt";
-import { buildStreet, emptyStreetNote, streetOverflowLine } from "../game3d/streetPlan";
+import { emptyStreetNote, streetOverflowLine } from "../game3d/streetPlan";
 import { stateToWorld } from "../game3d/stateToWorld";
 import { withGaps } from "../game3d/standingGaps";
 import { wordsFor } from "../game3d/standingWordsV3";
@@ -335,8 +335,6 @@ export default function Game3DPage() {
 
   // The verdict on the whole fortress, by the flat page's own function. A fortress that could not be read is "unknown", never "sound".
   const realmLevel = useMemo(() => (state ? summarizeRealm(state).level : null), [state]);
-  // One stall per watchlist company, in the flat Marketplace's order; no watchlist means no stalls.
-  const street = useMemo(() => buildStreet(watchlist?.rows), [watchlist]);
   // The Market Quarter: the same companies, up to twelve, laid up one lane. The arch counts them all; an unread watchlist counts nothing.
   const quarter = useMemo(() => buildQuarter(watchlist?.rows), [watchlist]);
   const archCounts = useMemo(() => (watchlist ? { total: quarter.total, inRange: quarter.inRange } : null), [watchlist, quarter]);
@@ -524,6 +522,28 @@ export default function Game3DPage() {
     setWhereOpen(true);
     setWorldPage(door);
   }, []);
+
+  // The world reads the watchlist from the same facts as the flat Marketplace. A price saved in a store page, or a company added, changes
+  // those facts behind the world's back, so read the watchlist again whenever a store page or the Where-to panel closes or goes back,
+  // and whenever you change place. A failed read keeps what the world already shows (no stalls vanish because of one bad request).
+  const refreshWatchlist = useCallback(() => {
+    api
+      .getWatchlist()
+      .then(setWatchlist)
+      .catch(() => undefined);
+  }, []);
+  const watchedPage = useRef<boolean>(false);
+  useEffect(() => {
+    const open = whereOpen && !!worldPage;
+    if (watchedPage.current && !open) refreshWatchlist();
+    watchedPage.current = open;
+  }, [whereOpen, worldPage, refreshWatchlist]);
+  const watchedPlace = useRef<string | null>(null);
+  useEffect(() => {
+    const key = `${areaState.current.id}:${"holdingId" in areaState.current ? areaState.current.holdingId : ""}`;
+    if (watchedPlace.current !== null && watchedPlace.current !== key) refreshWatchlist();
+    watchedPlace.current = key;
+  }, [areaState, refreshWatchlist]);
 
   // E at a stand: the flat page's own Sal dialog or Hype Booth dialog, over the world.
   const openBooth = useCallback((id: BoothId) => {
@@ -1115,10 +1135,9 @@ export default function Game3DPage() {
       break;
     case "stall":
       if (!whereOpen) {
-        const inQuarter = area.id === "quarter";
-        const where = inQuarter ? quarter : street;
-        spotPrompt = stallPrompt(where.stalls.find((s) => s.holdingId === atSpot.holdingId)?.name ?? "this company");
-        if (where.overflow.length > 0) spotNote = streetOverflowLine(where.overflow.length);
+        // Stalls stand only in the Market Quarter; the courtyard keeps the arch, Sal's counter and the Hype Booth.
+        spotPrompt = stallPrompt(quarter.stalls.find((s) => s.holdingId === atSpot.holdingId)?.name ?? "this company");
+        if (quarter.overflow.length > 0) spotNote = streetOverflowLine(quarter.overflow.length);
       }
       break;
     case "vault":
@@ -1165,7 +1184,6 @@ export default function Game3DPage() {
             siegeLevel={state?.siege?.level ?? null}
             onNearRealm={setAtRealm}
             drillOpen={drillOpen}
-            stalls={street.stalls}
             talking={talking}
             cheerKey={cheerKey}
             hold={isMoving(areaState)}
