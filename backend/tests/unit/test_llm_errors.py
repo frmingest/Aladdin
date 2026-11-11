@@ -102,3 +102,13 @@ def test_gpu_fit_message_is_not_labelled_as_an_oversized_evidence_packet():
     )
     assert "context window" not in message.split("(Technical detail:")[0]
     assert "ollama pull qwen3:8b" in message
+
+
+def test_output_limit_message_is_not_labelled_as_an_oversized_evidence_packet():
+    # 2026-11-11 (Heimdal reconciliation): the message ends "... or OLLAMA_NUM_CTX".
+    message = explain_llm_failure(
+        "Ollama stopped at the output limit (8192/8192 tokens) before finishing the JSON (model=qwen3:8b) "
+        "- raise LLM_MAX_OUTPUT_TOKENS (LLM_MAX_OUTPUT_TOKENS_FUND for a fund/ETF) or OLLAMA_NUM_CTX."
+    )
+    assert "ran out of output space" in message
+    assert "context window" not in message.split("(Technical detail:")[0]
