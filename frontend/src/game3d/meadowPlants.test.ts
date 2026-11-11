@@ -3,7 +3,6 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { FIELDS, RIVER_HALF, distToPolyline, fieldReach, riverLine, thinnedHorizon, tracks } from "./countryside";
 import { onGateRoad } from "./horizonPieces";
-import { OUTDOOR_SPOTS, OUTDOOR_ZONES, PLOT_FOOTPRINT_MAX } from "./outdoorPlan";
 import {
   COUNTS,
   FOREST_URL,
@@ -64,15 +63,13 @@ describe("meadow plants: open ground only", () => {
     }
   });
 
-  it("none stands in the river, on a track, on a field or on a plot", () => {
+  it("none stands in the river, on a track or on a field", () => {
     const river = riverLine();
     for (const p of PLANTS) {
       const at = { x: p.x, z: p.z };
       expect(distToPolyline(at, river), `${p.id} river`).toBeGreaterThan(RIVER_HALF + p.reach);
       for (const t of tracks()) expect(distToPolyline(at, t.points), `${p.id} ${t.id}`).toBeGreaterThan(t.width / 2 + p.reach);
       for (const f of FIELDS) expect(Math.hypot(p.x - f.x, p.z - f.z), `${p.id} ${f.id}`).toBeGreaterThan(fieldReach(f) + p.reach);
-      for (const zone of OUTDOOR_ZONES)
-        for (const s of OUTDOOR_SPOTS[zone]) expect(Math.hypot(p.x - s.x, p.z - s.z), `${p.id} ${zone}`).toBeGreaterThan(PLOT_FOOTPRINT_MAX + p.reach);
     }
   });
 

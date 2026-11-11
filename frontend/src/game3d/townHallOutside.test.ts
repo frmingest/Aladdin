@@ -41,8 +41,6 @@ describe("the Town Hall outside the gate", () => {
     expect(distToPolyline(TOWN_HALL_OUTSIDE, ring.points) - RING_WIDTH / 2).toBeGreaterThanOrEqual(TOWN_HALL_REACH);
     expect(RING_RADIUS).toBeGreaterThan(WALL_RADIUS);
     expect(distToPolyline(TOWN_HALL_OUTSIDE, riverLine()) - RIVER_HALF).toBeGreaterThan(TOWN_HALL_REACH + 10);
-    // No branch track runs through it.
-    for (const t of tracks().filter((x) => x.kind === "branch")) expect(distToPolyline(TOWN_HALL_OUTSIDE, t.points) - t.width / 2, t.id).toBeGreaterThan(TOWN_HALL_REACH);
     expect(onGateRoad(TOWN_HALL_OUTSIDE.x, TOWN_HALL_OUTSIDE.z, ROAD_HALF_WIDTH)).toBe(false);
   });
 

@@ -1,275 +1,181 @@
 import { describe, expect, it } from "vitest";
 import type { Theme3dId } from "../lib/sectors";
-import { WALL_RADIUS, TOWER_SPOT_COUNT } from "./layout";
-import { HORIZON_LIMIT } from "./horizonPieces";
+import { COBBLE_RADIUS, KEEP, SPAWN, TOWER_SPOT_COUNT, WALL_RADIUS, WALL_THICKNESS, cornerTowers } from "./layout";
+import { cornerTowerFootprint, keepModelFootprint } from "./keepModels";
 import { LAND_TOWER_REACH } from "./holdingLand";
 import { FENCE_RADIUS } from "./farmDressing";
-import { MARKET_CENTER } from "./marketPieces";
+import { MARKET_CENTER, MARKET_REACH } from "./marketPieces";
 import { CAMP_CENTER, CAMP_REACH } from "./campPieces";
-import { PERCH, WATCH_POST } from "./watchPlan";
-import { TOWN_HALL_OUTSIDE, TOWN_HALL_REACH } from "./townHallOutside";
+import { PERCH } from "./watchPlan";
+import { QUARTER_GATE } from "./quarterPlan";
+import { SIEGE_GATE } from "./siegeField";
+import { DRILL_POST } from "./stormDrill";
+import { DESK, SHELF } from "./desk";
+import { VAULT } from "./vaultPlan";
+import { REALM_POST } from "./realmPlan";
+import { NPCS } from "./npcs";
+import { PROPS } from "./props";
+import { SCENERY } from "./sceneryPieces";
+import { MARKET } from "./marketPieces";
+import { CAMP } from "./campPieces";
+import { BOOTHS } from "./boothPlan";
+import { STANDING_TORCHES } from "./standingTorches";
 import {
-  FALLBACK,
+  DOOR_REACH,
   FOOTPRINT,
-  GATE_OUTSIDE,
-  OUTDOOR_SPOTS,
-  OUTDOOR_SPOT_COUNT,
-  OUTDOOR_ZONES,
+  HOLDING_RING_FROM,
+  HOLDING_RING_RADIUS,
+  HOLDING_RING_STEP,
+  HOLDING_RING_TO,
+  HOLDING_SPOTS,
   PLOT_FOOTPRINT_MAX,
   PLOT_GAP,
-  ROAD_GAP,
-  ROAD_HALF,
-  ROAD_START_Z,
+  SPOTS_PER_SIDE,
   WALL_GAP,
   assignPlots,
-  footprintTable,
-  groundLimits,
+  doorPointOf,
+  footprintOf,
   plotsTable,
-  walkFromGate,
-  zoneOf,
-  zoneWalks,
   type PlotInput,
 } from "./outdoorPlan";
 
-const THEMES: Theme3dId[] = ["mine", "quarry", "ingots", "farm", "stall", "bank", "factory", "windmill", "watermill", "fountain", "plain"];
-
-/** One input per holding, with a made-up id. */
+const THEMES = Object.keys(FOOTPRINT) as Theme3dId[];
 const input = (theme: Theme3dId, i: number, fish = false): PlotInput => ({ holdingId: `h${i}`, theme, fish });
+const dist = (a: { x: number; z: number }, b: { x: number; z: number }) => Math.hypot(a.x - b.x, a.z - b.z);
+const bearing = (s: { x: number; z: number }) => Math.atan2(s.x, s.z);
 
-function allSpots() {
-  return OUTDOOR_ZONES.flatMap((zone) => OUTDOOR_SPOTS[zone].map((spot, index) => ({ zone, index, spot })));
-}
-
-describe("outdoor spots: the ground rules", () => {
-  it("has more spots than the fortress can show", () => {
-    expect(OUTDOOR_SPOT_COUNT).toBeGreaterThanOrEqual(TOWER_SPOT_COUNT);
-    expect(allSpots()).toHaveLength(OUTDOOR_SPOT_COUNT);
+describe("holding spots: inside the wall, evenly round it", () => {
+  it("has exactly the eight spots the fortress shows, four on each side", () => {
+    expect(HOLDING_SPOTS).toHaveLength(TOWER_SPOT_COUNT);
+    expect(HOLDING_SPOTS.filter((s) => s.x > 0)).toHaveLength(SPOTS_PER_SIDE);
+    expect(HOLDING_SPOTS.filter((s) => s.x < 0)).toHaveLength(SPOTS_PER_SIDE);
   });
 
-  it("every zone has a spot, and every zone's fallback list visits every zone once", () => {
-    for (const zone of OUTDOOR_ZONES) {
-      expect(OUTDOOR_SPOTS[zone].length).toBeGreaterThan(0);
-      expect([...FALLBACK[zone]].sort()).toEqual([...OUTDOOR_ZONES].sort());
-      expect(FALLBACK[zone][0]).toBe(zone);
+  it("stands every spot inside the wall, with its whole footprint on the cobbles and clear of the wall", () => {
+    for (const s of HOLDING_SPOTS) {
+      const r = Math.hypot(s.x, s.z);
+      expect(r + PLOT_FOOTPRINT_MAX, "inside the cobbles").toBeLessThanOrEqual(COBBLE_RADIUS + 0.5);
+      expect(WALL_RADIUS - WALL_THICKNESS / 2 - (r + PLOT_FOOTPRINT_MAX), "wall room").toBeGreaterThanOrEqual(WALL_GAP);
     }
   });
 
-  it("every spot stands outside the wall with room to spare, and inside the walkable meadow", () => {
-    for (const { zone, index, spot } of allSpots()) {
-      const g = groundLimits(spot, PLOT_FOOTPRINT_MAX);
-      expect(g.wallRoom, `${zone}[${index}] wall room`).toBeGreaterThanOrEqual(WALL_GAP);
-      expect(g.limitRoom, `${zone}[${index}] meadow room`).toBeGreaterThanOrEqual(2);
-      expect(g.fromMiddle).toBeGreaterThan(WALL_RADIUS);
-      expect(g.fromMiddle).toBeLessThan(HORIZON_LIMIT);
+  it("puts every spot on one ring round the middle", () => {
+    for (const s of HOLDING_SPOTS) expect(Math.hypot(s.x, s.z)).toBeCloseTo(HOLDING_RING_RADIUS, 9);
+  });
+
+  it("spaces neighbours on a side by the same angle, and mirrors the east side in the west", () => {
+    for (const side of [1, -1]) {
+      const angles = HOLDING_SPOTS.filter((s) => Math.sign(s.x) === side)
+        .map((s) => Math.abs(bearing(s)))
+        .sort((a, b) => a - b);
+      expect(angles[0]).toBeCloseTo(HOLDING_RING_FROM, 9);
+      expect(angles[angles.length - 1]).toBeCloseTo(HOLDING_RING_TO, 9);
+      for (let i = 1; i < angles.length; i++) expect(angles[i] - angles[i - 1]).toBeCloseTo(HOLDING_RING_STEP, 9);
+    }
+    for (const s of HOLDING_SPOTS) {
+      const twin = HOLDING_SPOTS.find((o) => Math.abs(o.x + s.x) < 1e-9 && Math.abs(o.z - s.z) < 1e-9);
+      expect(twin, `${s.x}, ${s.z}`).toBeDefined();
     }
   });
 
-  it("every spot is off the gate road", () => {
-    for (const { zone, index, spot } of allSpots()) {
-      if (spot.z < ROAD_START_Z - PLOT_FOOTPRINT_MAX) continue;
-      expect(Math.abs(spot.x) - PLOT_FOOTPRINT_MAX, `${zone}[${index}] road room`).toBeGreaterThanOrEqual(ROAD_HALF + ROAD_GAP);
+  it("keeps two buildings of the widest footprint apart, edge to edge", () => {
+    for (let i = 0; i < HOLDING_SPOTS.length; i++)
+      for (let j = i + 1; j < HOLDING_SPOTS.length; j++)
+        expect(dist(HOLDING_SPOTS[i], HOLDING_SPOTS[j]) - 2 * PLOT_FOOTPRINT_MAX, `${i}/${j}`).toBeGreaterThanOrEqual(PLOT_GAP);
+  });
+
+  it("leaves the gate road, the middle walk to the keep, the spawn and the keep door clear", () => {
+    for (const s of HOLDING_SPOTS) {
+      expect(Math.abs(s.x) - PLOT_FOOTPRINT_MAX, "middle walk").toBeGreaterThan(8);
+      expect(dist(s, SPAWN) - PLOT_FOOTPRINT_MAX, "spawn").toBeGreaterThan(15);
     }
   });
 
-  it("every spot is a building-width from every other", () => {
-    const spots = allSpots();
-    for (let i = 0; i < spots.length; i++) {
-      for (let j = i + 1; j < spots.length; j++) {
-        const d = Math.hypot(spots[i].spot.x - spots[j].spot.x, spots[i].spot.z - spots[j].spot.z);
-        expect(d, `${spots[i].zone}[${spots[i].index}] to ${spots[j].zone}[${spots[j].index}]`).toBeGreaterThanOrEqual(2 * PLOT_FOOTPRINT_MAX + PLOT_GAP);
-      }
+  it("keeps off the keep (and its wider plain-shape fallback), the corner towers and the keep's own props", () => {
+    const keep = keepModelFootprint();
+    for (const s of HOLDING_SPOTS) {
+      const nearKeep = Math.abs(s.x - KEEP.x) < KEEP.width / 2 + PLOT_FOOTPRINT_MAX && Math.abs(s.z - KEEP.z) < KEEP.depth / 2 + PLOT_FOOTPRINT_MAX;
+      expect(nearKeep, "plain keep").toBe(false);
+      const nearModel = Math.abs(s.x) < keep.width / 2 + PLOT_FOOTPRINT_MAX && Math.abs(s.z - keep.centerZ) < keep.depth / 2 + PLOT_FOOTPRINT_MAX;
+      expect(nearModel, "keep model").toBe(false);
+      for (const c of cornerTowers()) expect(dist(s, c) - PLOT_FOOTPRINT_MAX - cornerTowerFootprint().radius, "corner tower").toBeGreaterThan(PLOT_GAP);
     }
   });
 
-  it("every spot is clear of the Town Hall beside the gate road", () => {
-    for (const { zone, index, spot } of allSpots()) {
-      expect(Math.hypot(spot.x - TOWN_HALL_OUTSIDE.x, spot.z - TOWN_HALL_OUTSIDE.z), `${zone}[${index}]`).toBeGreaterThanOrEqual(TOWN_HALL_REACH + PLOT_FOOTPRINT_MAX + PLOT_GAP);
+  it("keeps off the market corner, the quarter gate, the drill camp and the siege gate", () => {
+    for (const s of HOLDING_SPOTS) {
+      expect(dist(s, MARKET_CENTER) - MARKET_REACH - PLOT_FOOTPRINT_MAX, "market").toBeGreaterThan(0);
+      expect(dist(s, CAMP_CENTER) - CAMP_REACH - PLOT_FOOTPRINT_MAX, "camp").toBeGreaterThan(0);
+      expect(dist(s, QUARTER_GATE) - PLOT_FOOTPRINT_MAX, "quarter gate").toBeGreaterThan(8);
+      expect(dist(s, SIEGE_GATE) - PLOT_FOOTPRINT_MAX, "siege gate").toBeGreaterThan(8);
+      expect(dist(s, DRILL_POST) - PLOT_FOOTPRINT_MAX, "drill post").toBeGreaterThan(8);
+      expect(dist(s, PERCH) - PLOT_FOOTPRINT_MAX, "perch").toBeGreaterThan(4);
     }
   });
 
-  it("the open meadow spreads round the wall: one holding in each quarter, nowhere near the gate road crowd", () => {
-    const quarter = (s: { x: number; z: number }) => `${s.z > 0 ? "S" : "N"}${s.x > 0 ? "E" : "W"}`;
-    expect(OUTDOOR_SPOTS.meadow.map(quarter).sort()).toEqual(["NE", "NW", "SE", "SW"]);
-    // The first holdings that have no landscape of their own stand far apart: the first four are at least 50 from each other.
-    const p = assignPlots(["fountain", "bank", "stall", "factory"].map((t, i) => input(t as Theme3dId, i)));
-    for (let i = 0; i < p.length; i++)
-      for (let j = i + 1; j < p.length; j++) expect(Math.hypot(p[i].spot.x - p[j].spot.x, p[i].spot.z - p[j].spot.z)).toBeGreaterThanOrEqual(50);
+  it("keeps off the desk, the vault, the realm post, the people and every prop, piece of scenery and booth in the yard", () => {
+    const fixed = [DESK, SHELF, VAULT, REALM_POST, ...NPCS, ...PROPS, ...SCENERY.filter((p) => p.y === 0), ...MARKET, ...CAMP, ...BOOTHS, ...STANDING_TORCHES];
+    for (const s of HOLDING_SPOTS)
+      for (const p of fixed) expect(dist(s, p) - PLOT_FOOTPRINT_MAX, `${(p as { id?: string }).id ?? "fixed"} at ${p.x}, ${p.z}`).toBeGreaterThan(1);
   });
+});
 
-  it("every spot is clear of the market corner, the drill camp, the watch post and the perch", () => {
-    const held = [
-      { ...MARKET_CENTER, r: 12 },
-      { ...CAMP_CENTER, r: CAMP_REACH },
-      { ...WATCH_POST, r: 3 },
-      { ...PERCH, r: 3 },
-    ];
-    for (const { zone, index, spot } of allSpots()) {
-      for (const h of held) {
-        expect(Math.hypot(spot.x - h.x, spot.z - h.z), `${zone}[${index}]`).toBeGreaterThanOrEqual(h.r + PLOT_FOOTPRINT_MAX);
-      }
+describe("footprints", () => {
+  it("never exceeds the widest, and the widest is what the spacing was made for", () => {
+    for (const t of THEMES) expect(footprintOf(t)).toBeLessThanOrEqual(PLOT_FOOTPRINT_MAX);
+    expect(PLOT_FOOTPRINT_MAX).toBe(Math.max(LAND_TOWER_REACH, FENCE_RADIUS + 0.5, ...Object.values(FOOTPRINT)));
+  });
+});
+
+describe("doors face the middle of the yard", () => {
+  it("stands the door post one door-reach from the building, on the line to the middle", () => {
+    for (const s of HOLDING_SPOTS) {
+      const d = doorPointOf(s);
+      expect(dist(d, s)).toBeCloseTo(DOOR_REACH, 9);
+      expect(Math.hypot(d.x, d.z)).toBeLessThan(Math.hypot(s.x, s.z));
+      expect(Math.atan2(d.x, d.z)).toBeCloseTo(bearing(s), 9);
     }
   });
 
-  it("the footprints cover what each dressing draws", () => {
-    for (const t of THEMES) expect(FOOTPRINT[t]).toBeGreaterThanOrEqual(LAND_TOWER_REACH);
-    expect(FOOTPRINT.farm).toBeGreaterThan(FENCE_RADIUS);
-    expect(PLOT_FOOTPRINT_MAX).toBe(Math.max(...THEMES.map((t) => FOOTPRINT[t])));
+  it("keeps every door post inside the wall and clear of the next building", () => {
+    for (const s of HOLDING_SPOTS) {
+      const d = doorPointOf(s);
+      expect(Math.hypot(d.x, d.z)).toBeLessThan(WALL_RADIUS - WALL_THICKNESS / 2);
+      for (const o of HOLDING_SPOTS) if (o !== s) expect(dist(d, o), "door vs neighbour").toBeGreaterThan(PLOT_FOOTPRINT_MAX);
+    }
   });
 });
 
 describe("assignPlots", () => {
-  it("gives each theme its home zone, best spot first", () => {
-    expect(zoneOf("watermill")).toBe("river");
-    expect(zoneOf("farm", true)).toBe("river");
-    expect(zoneOf("farm")).toBe("fields");
-    expect(zoneOf("windmill")).toBe("rise");
-    expect(zoneOf("mine")).toBe("hill");
-    expect(zoneOf("quarry")).toBe("hill");
-    for (const t of ["fountain", "bank", "stall", "factory", "ingots", "armoury", "apothecary", "plain"] as const) expect(zoneOf(t)).toBe("meadow");
-
-    const p = assignPlots([input("windmill", 0), input("watermill", 1), input("farm", 2), input("mine", 3), input("fountain", 4)]);
-    expect(p.map((x) => x.zone)).toEqual(["rise", "river", "fields", "hill", "meadow"]);
-    for (const x of p) expect(x.index).toBe(0);
-    expect(p[0].spot).toEqual(OUTDOOR_SPOTS.rise[0]);
+  it("gives the n-th holding the n-th spot, whatever its theme", () => {
+    const plots = assignPlots(THEMES.slice(0, 8).map((t, i) => input(t, i)));
+    expect(plots.map((p) => p.spot)).toEqual(HOLDING_SPOTS);
+    expect(plots.map((p) => p.index)).toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
   });
 
-  it("heaviest first: the first holding of a theme takes the best spot, the next the next", () => {
-    const p = assignPlots([input("watermill", 0), input("watermill", 1), input("watermill", 2)]);
-    expect(p.map((x) => x.index)).toEqual([0, 1, 2]);
-    expect(p.map((x) => x.zone)).toEqual(["river", "river", "river"]);
-  });
-
-  it("a full zone spills down the fixed fallback list", () => {
-    const p = assignPlots([0, 1, 2, 3, 4].map((i) => input("watermill", i)));
-    expect(p.map((x) => x.zone)).toEqual(["river", "river", "river", "rise", "rise"]);
-    const q = assignPlots([0, 1, 2, 3].map((i) => input("windmill", i)));
-    expect(q.map((x) => x.zone)).toEqual(["rise", "rise", "river", "river"]);
-  });
-
-  it("a holding with no building yet stands as a plain tower on the open meadow", () => {
-    const p = assignPlots([input("plain", 0), input("ingots", 1)]);
-    expect(p.map((x) => x.zone)).toEqual(["meadow", "meadow"]);
-    expect(p[0].footprint).toBe(FOOTPRINT.plain);
-  });
-
-  it("is deterministic: the same inputs give the same plots", () => {
-    const inputs = THEMES.slice(0, 8).map((t, i) => input(t, i, i === 3));
-    expect(assignPlots(inputs)).toEqual(assignPlots(inputs));
-    expect(assignPlots(inputs)).toEqual(assignPlots(inputs.map((x) => ({ ...x }))));
-  });
-
-  it("only theme, fish and order decide the spot: holdings that differ in anything else get the same spot", () => {
-    const base = [input("watermill", 0), input("farm", 1, true), input("mine", 2), input("fountain", 3)];
-    const decorated = base.map((b, i) => ({
-      ...b,
-      // Everything the landscape must never read. assignPlots takes PlotInput, so this is dropped by structure.
-      verdict: i % 2 ? "breached" : "intact",
-      margin_of_safety: i * 10,
-      wall: i % 2 ? "rotted" : "basalt",
-      moat: i % 2 ? "none" : "wide",
-      thesis: i % 2 ? "breached" : "intact",
-    }));
-    const a = assignPlots(base);
-    const b = assignPlots(decorated);
+  it("decides the spot by weight order only: the theme changes the width, never the place", () => {
+    const a = assignPlots(THEMES.slice(0, 8).map((t, i) => input(t, i)));
+    const b = assignPlots(THEMES.slice(3, 11).map((t, i) => input(t, i, i % 2 === 0)));
     expect(b.map((p) => p.spot)).toEqual(a.map((p) => p.spot));
-    expect(b.map((p) => p.zone)).toEqual(a.map((p) => p.zone));
-    // And the spot of a holding does not depend on which holding it is, only on its place in the order.
-    const swapped = assignPlots([{ holdingId: "x", theme: "watermill" }, { holdingId: "y", theme: "watermill" }]);
-    const other = assignPlots([{ holdingId: "y", theme: "watermill" }, { holdingId: "x", theme: "watermill" }]);
-    expect(swapped.map((p) => p.spot)).toEqual(other.map((p) => p.spot));
+    expect(b.map((p) => p.footprint)).toEqual(THEMES.slice(3, 11).map(footprintOf));
   });
 
-  it("never gives two holdings the same spot, for every order of up to eight holdings over six representative themes", () => {
-    // 6^8 = 1.7 million orders. Each representative stands for its zone (and the fish farm for the river).
-    const reps: PlotInput[] = [
-      { holdingId: "a", theme: "watermill" },
-      { holdingId: "b", theme: "windmill" },
-      { holdingId: "c", theme: "farm" },
-      { holdingId: "d", theme: "mine" },
-      { holdingId: "e", theme: "fountain" },
-      { holdingId: "f", theme: "farm", fish: true },
-    ];
-    const keyOf = new Map<string, number>();
-    allSpots().forEach(({ zone, index }, n) => keyOf.set(`${zone}:${index}`, n));
-    const seq: PlotInput[] = new Array(8);
-    const digits = new Array(8).fill(0);
-    const total = reps.length ** 8;
-    for (let n = 0; n < total; n++) {
-      let k = n;
-      for (let i = 0; i < 8; i++) {
-        digits[i] = k % reps.length;
-        k = Math.floor(k / reps.length);
-        seq[i] = { ...reps[digits[i]], holdingId: `h${i}` };
-      }
-      const plots = assignPlots(seq);
-      if (plots.length !== 8) throw new Error(`only ${plots.length} placed for ${digits.join("")}`);
-      const seen = new Set<number>();
-      for (const p of plots) {
-        const id = keyOf.get(`${p.zone}:${p.index}`)!;
-        if (seen.has(id)) throw new Error(`spot reused for ${digits.join("")}`);
-        seen.add(id);
-      }
-    }
-    expect(total).toBe(1679616);
-  }, 60_000);
-
-  it("places every holding of any mix of the eleven themes, up to eight, on distinct spots that are in the ground rules", () => {
-    let seed = 12345;
-    const rand = () => ((seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 4294967296);
-    const valid = new Set(allSpots().map(({ spot }) => `${spot.x},${spot.z}`));
-    for (let run = 0; run < 20000; run++) {
-      const n = 1 + Math.floor(rand() * 8);
-      const inputs = Array.from({ length: n }, (_, i) => input(THEMES[Math.floor(rand() * THEMES.length)], i, rand() < 0.3));
-      const plots = assignPlots(inputs);
-      expect(plots).toHaveLength(n);
-      expect(plots.map((p) => p.holdingId)).toEqual(inputs.map((x) => x.holdingId));
-      const spots = plots.map((p) => `${p.spot.x},${p.spot.z}`);
-      expect(new Set(spots).size).toBe(n);
-      for (const s of spots) expect(valid.has(s)).toBe(true);
-    }
+  it("is deterministic and leaves the rest without a plot when there are more than eight", () => {
+    const many = Array.from({ length: 11 }, (_, i) => input("plain", i));
+    expect(assignPlots(many)).toEqual(assignPlots(many));
+    expect(assignPlots(many)).toHaveLength(TOWER_SPOT_COUNT);
   });
 
-  it("leaves the extras without a plot instead of stacking them, if there are more holdings than spots", () => {
-    const inputs = Array.from({ length: OUTDOOR_SPOT_COUNT + 3 }, (_, i) => input("plain", i));
-    const plots = assignPlots(inputs);
-    expect(plots).toHaveLength(OUTDOOR_SPOT_COUNT);
-    expect(new Set(plots.map((p) => `${p.spot.x},${p.spot.z}`)).size).toBe(OUTDOOR_SPOT_COUNT);
-  });
-});
-
-describe("readout", () => {
-  it("walks: every zone is reachable and nothing is farther than a quarter of a kilometre", () => {
-    const walks = zoneWalks();
-    expect(walks.map((w) => w.zone)).toEqual([...OUTDOOR_ZONES]);
-    for (const w of walks) {
-      expect(w.nearest).toBeGreaterThan(0);
-      expect(w.farthest).toBeGreaterThanOrEqual(w.nearest);
-      expect(w.farthest).toBeLessThan(250);
-    }
-    expect(walkFromGate(OUTDOOR_SPOTS.meadow[0])).toBeLessThan(walkFromGate(OUTDOOR_SPOTS.hill[0]));
+  it("puts the biggest holding on the east spot nearest the gate and the next on the west spot facing it", () => {
+    const [a, b] = assignPlots([input("plain", 0), input("plain", 1)]);
+    expect(a.spot.x).toBeGreaterThan(0);
+    expect(b.spot.x).toBeLessThan(0);
+    expect(a.spot.z).toBeCloseTo(b.spot.z, 9);
   });
 
-  it("the walk goes round the wall, never through it", () => {
-    // The hill foot is straight across the fortress from the gate: the walk is longer than the straight line.
-    for (const spot of OUTDOOR_SPOTS.hill) {
-      expect(walkFromGate(spot)).toBeGreaterThan(Math.hypot(spot.x - GATE_OUTSIDE.x, spot.z - GATE_OUTSIDE.z) + 20);
-    }
-    // The first meadow spot (south-east) is in plain view of the gate: the straight line.
-    const near = OUTDOOR_SPOTS.meadow[0];
-    expect(walkFromGate(near)).toBeCloseTo(Math.hypot(near.x - GATE_OUTSIDE.x, near.z - GATE_OUTSIDE.z), 6);
-    // Never shorter than the straight line.
-    for (const { spot } of allSpots()) {
-      expect(walkFromGate(spot)).toBeGreaterThanOrEqual(Math.hypot(spot.x - GATE_OUTSIDE.x, spot.z - GATE_OUTSIDE.z) - 1e-9);
-    }
-  });
-
-  it("prints the plots and the footprints as plain tables", () => {
-    const plots = assignPlots([input("watermill", 0), input("farm", 1, true), input("plain", 2)]);
-    const t = plotsTable(plots, (id) => `Holding ${id}`);
-    expect(t).toContain("| Holding h0 | watermill | River bend |");
-    expect(t).toContain("farm (fish)");
-    const f = footprintTable();
-    for (const theme of THEMES) expect(f).toContain(`| ${theme} |`);
-    expect(f).toContain("Open meadow");
+  it("writes a plain table", () => {
+    const table = plotsTable(assignPlots([input("mine", 0), input("farm", 1, true)]), (id) => `Name ${id}`);
+    expect(table).toContain("Name h0");
+    expect(table).toContain("farm (fish)");
   });
 });

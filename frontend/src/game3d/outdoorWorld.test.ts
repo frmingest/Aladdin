@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { GameState, GameTower } from "../lib/types";
 import { stateToWorld } from "./stateToWorld";
-import { WALL_RADIUS } from "./layout";
+import { WALL_RADIUS, WALL_THICKNESS } from "./layout";
 import { ENTER_REACH, enterableOf, nearestTower, outdoorExit } from "./towerDoor";
 import { returnSpot } from "./areas";
 import { centreChoice } from "./landCentre";
@@ -24,15 +24,16 @@ const SECTORS = ["Energy", "Materials", "Industrials", "Financials", "Consumer S
 const eight = (o: (i: number) => Partial<GameTower> = () => ({})) =>
   SECTORS.map((sector, i) => tower({ holding_id: `h${i}`, name: `H${i}`, sector, weight_pct: String(30 - i), ...o(i) }));
 
-describe("holdings on the meadow (S31 PR 3)", () => {
-  it("stands every holding outside the wall, each on its own plot", () => {
+describe("holdings inside the wall (S31, moved in 2026-11-11)", () => {
+  it("stands every holding inside the wall, each on its own plot, door facing the middle of the yard", () => {
     const w = stateToWorld(state(eight()));
     expect(w.towers).toHaveLength(8);
     const keys = new Set(w.towers.map((t) => `${t.spot.x},${t.spot.z}`));
     expect(keys.size).toBe(8);
     for (const t of w.towers) {
       expect(t.plot).toBeDefined();
-      expect(Math.hypot(t.spot.x, t.spot.z)).toBeGreaterThan(WALL_RADIUS + 3);
+      expect(Math.hypot(t.spot.x, t.spot.z) + t.plot!.footprint).toBeLessThan(WALL_RADIUS - WALL_THICKNESS / 2);
+      expect(Math.hypot(t.plot!.door.x, t.plot!.door.z)).toBeLessThan(Math.hypot(t.spot.x, t.spot.z));
     }
   });
 
@@ -44,7 +45,7 @@ describe("holdings on the meadow (S31 PR 3)", () => {
     expect(b.towers.map((t) => t.spot)).toEqual(a.towers.map((t) => t.spot));
   });
 
-  it("keeps the rest in the plain list, not on the meadow", () => {
+  it("keeps the rest in the plain list, not in the yard", () => {
     const many = Array.from({ length: 11 }, (_, i) => tower({ holding_id: `m${i}`, name: `M${i}`, weight_pct: String(20 - i) }));
     const w = stateToWorld(state(many));
     expect(w.towers).toHaveLength(8);
