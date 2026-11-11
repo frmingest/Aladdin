@@ -23,19 +23,31 @@ import {
   type Mood,
 } from "../../lib/salesRep";
 import { addedLineV2, captureLineV2 } from "../../game3d/salHypeWordsV2";
-import type { Watchlist, WatchlistRow } from "../../lib/types";
+import {
+  BACK_TO_SHELVES_LABEL,
+  SHELVES_EMPTY_LINE,
+  SHELVES_ERROR_LINE,
+  STOCKING_LINE,
+  shopIntroLine,
+  stallInput,
+  takenTickers,
+} from "../../lib/salShop";
+import type { Catalogue, CatalogueItem, Watchlist, WatchlistRow } from "../../lib/types";
 import { CoinBurst, RunnerStrip } from "./SalesRepArt";
 import SalPortrait from "./SalPortrait";
+import SalesShop from "./SalesShop";
 
 /**
- * Sal's booth as a pop-up (game mode, Marketplace). One short conversation:
- *   form → adding → added (price check) → [Newsweb runners → done]
+ * Sal's booth as a pop-up (game mode, Marketplace and /game3d). One short conversation:
+ *   shop (pick a company from the shelves) or form (type a ticker) → adding → added (price check) → [Newsweb runners → done]
+ * The shelves (2026-11-11) are the Oslo ticker catalogue the PC worker stocks; the typed form stays for anything not
+ * on them (other exchanges) and for a shelf that is empty or unreachable.
  * The only writes are the ones the Watchlist page already makes: add a company to the watchlist,
  * and fetch its reports from Oslo Børs Newsweb. Nothing is bought or sold. Sal's words are in
  * lib/salesRep.ts; this file only draws and sequences them.
  */
 
-type Phase = "form" | "adding" | "added" | "duplicate" | "capturing" | "done";
+type Phase = "shop" | "form" | "adding" | "added" | "duplicate" | "capturing" | "done";
 
 const reducedMotion = (): boolean => typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -96,7 +108,9 @@ export default function SalesRepDialog({
   /** Called with the freshly priced watchlist so the street can update without a second load. */
   onAdded: (list: Watchlist) => void;
 }) {
-  const [phase, setPhase] = useState<Phase>("form");
+  const [phase, setPhase] = useState<Phase>("shop");
+  const [catalogue, setCatalogue] = useState<Catalogue | null>(null);
+  const [formNote, setFormNote] = useState<"empty" | "error" | null>(null);
   const [tickerRaw, setTickerRaw] = useState("");
   const [name, setName] = useState("");
   const [currency, setCurrency] = useState("NOK");
@@ -121,6 +135,28 @@ export default function SalesRepDialog({
   }, []);
 
   const check = useMemo(() => checkTicker(tickerRaw), [tickerRaw]);
+  const taken = useMemo(() => takenTickers(rows), [rows]);
+
+  // Stock the shelves once. An empty or unreachable catalogue drops you straight into the typed form, with a word from Sal.
+  useEffect(() => {
+    let alive = true;
+    const fallBack = (note: "empty" | "error") => {
+      if (!alive) return;
+      setFormNote(note);
+      setPhase((p) => (p === "shop" ? "form" : p));
+    };
+    api
+      .getCatalogue()
+      .then((c) => {
+        if (!alive) return;
+        if (c.status === "ready" && c.items.length > 0) setCatalogue(c);
+        else fallBack("empty");
+      })
+      .catch(() => fallBack("error"));
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   // The symbol decides the currency until the user picks one themselves.
   useEffect(() => {
@@ -162,8 +198,23 @@ export default function SalesRepDialog({
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!canSubmit) return;
+    await openStall({ ticker: check.ticker, name: name.trim(), currency: currency.trim().toUpperCase() });
+  }
+
+  /** One tap on a shelf card: fill the details in (so a failed add leaves the form ready) and open the stall. */
+  function pickFromShelf(item: CatalogueItem) {
+    if (demoMode) return;
+    const input = stallInput(item);
+    setTickerRaw(input.ticker);
+    setName(input.name);
+    setCurrency(input.currency);
+    setCurrencyTouched(true);
+    void openStall(input);
+  }
+
+  async function openStall(input: { ticker: string; name: string; currency: string; sector?: string | null }) {
     setFormError(null);
-    const existing = rows.find((r) => r.ticker.toUpperCase() === check.ticker);
+    const existing = rows.find((r) => r.ticker.toUpperCase() === input.ticker);
     if (existing) {
       dupRow.current = existing;
       setCreated(existing);
@@ -172,7 +223,13 @@ export default function SalesRepDialog({
     }
     setPhase("adding");
     try {
-      const row = await api.addToWatchlist({ ticker: check.ticker, name: name.trim(), trading_currency: currency.trim().toUpperCase() });
+      // The shelf's sector rides along so the Map and the sector pages know the company from day one.
+      const row = await api.addToWatchlist({
+        ticker: input.ticker,
+        name: input.name,
+        trading_currency: input.currency,
+        ...(input.sector ? { sector: input.sector } : {}),
+      });
       if (!mounted.current) return;
       setCreated(row);
       setHasPrice(null);
@@ -224,19 +281,25 @@ export default function SalesRepDialog({
     setSummary(null);
     setHasPrice(null);
     setFormError(null);
-    setPhase("form");
+    setPhase(catalogue ? "shop" : "form");
   }
 
   // What Sal says, and how he looks while saying it.
   let mood: Mood = "pitch";
   let line = introLine(seed);
-  if (phase === "form") {
+  if (phase === "shop") {
+    line = demoMode ? DEMO_LINE : shopIntroLine(seed);
+    mood = demoMode ? "think" : "pitch";
+  } else if (phase === "form") {
     if (demoMode) {
       line = DEMO_LINE;
       mood = "think";
     } else if (formError) {
       line = FAILED_ADD_LINE(formError);
       mood = "oops";
+    } else if (formNote) {
+      line = formNote === "empty" ? SHELVES_EMPTY_LINE : SHELVES_ERROR_LINE;
+      mood = "think";
     }
   } else if (phase === "adding") {
     mood = "think";
@@ -262,7 +325,17 @@ export default function SalesRepDialog({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
       <button type="button" aria-label="Close Sal's booth" className="absolute inset-0 bg-black/70" onClick={close} tabIndex={-1} />
-      <div role="dialog" aria-modal="true" aria-label="Sal's booth" className="sal-panel relative w-full max-w-2xl">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Sal's booth"
+        className={`sal-panel relative w-full ${phase === "shop" ? "max-w-4xl" : "max-w-2xl"}`}
+        // In /game3d the world listens for letters on the window (A walks, M toggles sound, Q/T/G open panels).
+        // Typing in the shop's search after tapping a shelf chip must not reach them. Escape and Ctrl/Cmd combos still pass.
+        onKeyDown={(e) => {
+          if (e.key !== "Escape" && !e.ctrlKey && !e.metaKey && !e.altKey) e.stopPropagation();
+        }}
+      >
         <div className="sal-panel-head">
           <span className="font-display text-sm tracking-wide text-[#f2d16b]">SAL&rsquo;S BOOTH · NEW STALLS &amp; NEWS RUNS</span>
           <button type="button" aria-label="Close" onClick={close} disabled={busy} className="sal-x">
@@ -270,6 +343,27 @@ export default function SalesRepDialog({
           </button>
         </div>
 
+        {phase === "shop" ? (
+          <div className="space-y-3 p-4 sm:p-5">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="w-[84px] shrink-0 sm:w-[96px]">
+                <div className="sal-figure">
+                  <SalPortrait mood={mood} size={96} className="h-auto w-full" />
+                </div>
+              </div>
+              <div className="min-w-0 flex-1">
+                <Bubble key={`${phase}-${mood}`} text={line} mood={mood} />
+              </div>
+            </div>
+            {catalogue ? (
+              <SalesShop catalogue={catalogue} taken={taken} disabled={demoMode} onPick={pickFromShelf} onTypeInstead={() => setPhase("form")} />
+            ) : (
+              <p className="sal-status" role="status">
+                <span className="sal-spin" aria-hidden /> {STOCKING_LINE}
+              </p>
+            )}
+          </div>
+        ) : (
         <div className="grid gap-3 p-4 sm:grid-cols-[150px_1fr] sm:gap-5 sm:p-5">
           <div className="relative mx-auto w-[120px] sm:w-[150px]">
             <div className="sal-figure">
@@ -340,6 +434,11 @@ export default function SalesRepDialog({
                   <button type="submit" className="sal-btn" disabled={!canSubmit}>
                     Open the stall
                   </button>
+                  {catalogue && (
+                    <button type="button" className="sal-btn-ghost" onClick={() => setPhase("shop")}>
+                      {BACK_TO_SHELVES_LABEL}
+                    </button>
+                  )}
                   <button type="button" className="sal-btn-ghost" onClick={close}>
                     Not today
                   </button>
@@ -451,6 +550,7 @@ export default function SalesRepDialog({
             )}
           </div>
         </div>
+        )}
 
         <p className="border-t border-[#3b2a16] px-4 py-2 text-[0.7rem] leading-snug text-[#a8977a] sm:px-5">
           Sal is an invented character, not a real person. He opens stalls and fetches {voice === "game" ? "reports" : "filings"}; he never tells you what to buy or sell, and nothing here trades anything. Newsweb reports are free and need no key.

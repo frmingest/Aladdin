@@ -258,6 +258,11 @@ class Settings(BaseSettings):
     # the Siege Simulator (v2) measures betas from. Cheap when the stored history is fresh.
     siege_history_refresh_enabled: bool = True
     siege_history_refresh_interval_seconds: int = 6 * 3600
+    # Sal's shop (2026-11-11): the PC worker lists every company on Oslo from Yahoo into `ticker_catalogue`
+    # (once at first start, then weekly). A failed pass is retried after `ticker_catalogue_retry_seconds`.
+    ticker_catalogue_enabled: bool = True
+    ticker_catalogue_refresh_hours: int = 7 * 24
+    ticker_catalogue_retry_seconds: int = 3600
     active_time_and_filings_version: str = "v1"
     active_rituals_version: str = "v1"
     active_calibration_version: str = "v1"

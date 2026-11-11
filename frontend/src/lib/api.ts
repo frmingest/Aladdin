@@ -20,6 +20,7 @@ import type {
   AnalysisReadiness,
   AnalysisRun,
   AccountUpdateInput,
+  Catalogue,
   CompanyResearch,
   DeletionResult,
   DocumentDetail,
@@ -363,6 +364,8 @@ export const api = {
       { method: "POST" },
     ),
   getWatchlistEntry: (holdingId: string) => request<WatchlistRow | null>(`/watchlist/holdings/${holdingId}`),
+  /** Every company on Oslo (Sal's shop shelves). Database only; empty until the PC worker has stocked it. */
+  getCatalogue: () => request<Catalogue>("/catalogue"),
   addToWatchlist: (input: WatchlistCreateInput) =>
     request<WatchlistRow>("/watchlist", { method: "POST", body: JSON.stringify(input) }),
   updateWatchlistEntry: (id: string, input: WatchlistUpdateInput) =>
