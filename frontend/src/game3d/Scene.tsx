@@ -15,11 +15,9 @@ import NpcMesh from "./NpcMesh";
 import PropMesh from "./PropMesh";
 import Scenery from "./Scenery";
 import Market from "./Market";
-import MarketStreet from "./MarketStreet";
 import Booths from "./Booths";
 import { BOOTHS, BOOTH_LEAVE_RANGE, BOOTH_RANGE } from "./boothPlan";
 import type { BoothId } from "./boothPlan";
-import type { Stall } from "./streetPlan";
 import StandingTorches from "./StandingTorches";
 import Horizon from "./Horizon";
 import Countryside from "./Countryside";
@@ -118,8 +116,6 @@ interface Props {
   siegeLevel?: FortressSiegeLevel | null;
   /** Whether the Realm post is within reach. Called only when it changes. */
   onNearRealm?: (near: boolean) => void;
-  /** Market Street: one stall per watchlist company, already worked out (marketStreet.ts). */
-  stalls?: readonly Stall[];
   /** A Storm Drill is open: the camp stands. */
   drillOpen?: boolean;
   /** Whose dialogue is open (the Oracle casts while he talks). */
@@ -189,8 +185,6 @@ export interface RoomView {
   shelves: Shelf[];
 }
 
-/** A stable empty list, so a missing watchlist never re-renders the street. */
-const NO_STALLS: readonly Stall[] = [];
 
 /**
  * Tells the page when the hero walks up to, or away from, one of `targets`. The one watcher behind every
@@ -264,7 +258,6 @@ function World({
   siegeLevel,
   onNearRealm,
   drillOpen,
-  stalls,
   onNearTower,
   area,
   room,
@@ -310,7 +303,6 @@ function World({
   siegeLevel: FortressSiegeLevel | null;
   onNearRealm: (near: boolean) => void;
   drillOpen: boolean;
-  stalls: readonly Stall[];
   talking: NpcId | null;
   cheerKey: number | null;
   hold: boolean;
@@ -356,10 +348,6 @@ function World({
     if (spot) setTeleport({ key: ++count.current, x: spot.x, z: spot.z, yaw: spot.yaw });
   }, [area, world.towers]);
 
-  const stallTargets = useMemo<readonly NearTarget<string>[]>(
-    () => stalls.map((s) => ({ id: s.holdingId, x: s.x, z: s.z, range: STALL_RANGE, leaveRange: STALL_LEAVE_RANGE })),
-    [stalls],
-  );
   const quarterStallTargets = useMemo<readonly NearTarget<string>[]>(
     () => quarter.stalls.map((s) => ({ id: s.holdingId, x: s.x, z: s.z, range: STALL_RANGE, leaveRange: STALL_LEAVE_RANGE })),
     [quarter],
@@ -443,7 +431,6 @@ function World({
           </group>
           <group userData={{ perfGroup: "market" }}>
             <Market />
-            <MarketStreet stalls={stalls} />
             <Booths />
           </group>
           <group userData={{ perfGroup: "torches" }}>
@@ -490,7 +477,6 @@ function World({
           <NearWatch pos={pos} targets={SIEGE_GATE_T} onChange={isYes(onNearSiegeGate)} />
           <NearWatch pos={pos} targets={QUARTER_GATE_T} onChange={isYes(onNearQuarterGate)} />
           <NearWatch pos={pos} targets={SIGN_T} onChange={isYes(onNearSign)} />
-          <NearWatch pos={pos} targets={stallTargets} onChange={onNearStall} />
           <NearWatch pos={pos} targets={BOOTH_T} onChange={onNearBooth} />
           <NearWatch pos={pos} targets={VAULT_T} onChange={isYes(onNearVault)} />
           <NearWatch pos={pos} targets={WATCH_T} onChange={isYes(onNearWatch)} />
@@ -533,7 +519,6 @@ export default function Scene({
   siegeLevel = null,
   onNearRealm = noop,
   drillOpen = false,
-  stalls = NO_STALLS,
   talking = null,
   cheerKey = null,
   hold = false,
@@ -638,7 +623,6 @@ export default function Scene({
           siegeLevel={siegeLevel}
           onNearRealm={onNearRealm}
           drillOpen={drillOpen}
-          stalls={stalls}
           talking={talking}
           cheerKey={cheerKey}
           hold={hold}
