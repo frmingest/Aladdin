@@ -26,6 +26,8 @@ GEMINI_QUOTA = (
         ("Ollama request timed out after 600 s (model=qwen)", "took too long"),
         ("Ollama stalled with no tokens for 120 s", "took too long"),
         ("Ollama hit num_ctx 8192: the evidence is too long", "context window"),
+        ("No model fits fully on the GPU for this call (needs ~24,868 tokens of context). Tried qwen3:14b: needs 24,868 tokens, max context 24,576. Trim the evidence packet, or raise OLLAMA_FALLBACK_NUM_CTX.", "does not fit on your GPU"),
+        ("Stopped early (model=qwen3:14b): only 78% of the model is on the GPU. Close apps, lower OLLAMA_NUM_CTX", "does not fit on your GPU"),
         ("Gemini API call failed (model=g): 503 UNAVAILABLE. The model is overloaded", "overloaded"),
         ("Gemini returned an empty response (model=g)", "answered with nothing"),
         ("blind pass response failed schema validation: 3 validation errors", "did not match the required format"),
@@ -91,3 +93,22 @@ def test_other_providers_keep_their_own_503_text():
 
     response = asyncio.run(provider_unavailable(None, ResearchUnavailableError("TAVILY_API_KEY is not set")))  # type: ignore[arg-type]
     assert json.loads(response.body)["detail"] == "TAVILY_API_KEY is not set"
+
+
+def test_gpu_fit_message_is_not_labelled_as_an_oversized_evidence_packet():
+    # 2026-11-11: it mentions OLLAMA_FALLBACK_NUM_CTX, which the context rule matches.
+    message = explain_llm_failure(
+        "No model fits fully on the GPU for this call. Tried qwen3:14b@20480 (skipped). raise OLLAMA_FALLBACK_NUM_CTX"
+    )
+    assert "context window" not in message.split("(Technical detail:")[0]
+    assert "ollama pull qwen3:8b" in message
+
+
+def test_output_limit_message_is_not_labelled_as_an_oversized_evidence_packet():
+    # 2026-11-11 (Heimdal reconciliation): the message ends "... or OLLAMA_NUM_CTX".
+    message = explain_llm_failure(
+        "Ollama stopped at the output limit (8192/8192 tokens) before finishing the JSON (model=qwen3:8b) "
+        "- raise LLM_MAX_OUTPUT_TOKENS (LLM_MAX_OUTPUT_TOKENS_FUND for a fund/ETF) or OLLAMA_NUM_CTX."
+    )
+    assert "ran out of output space" in message
+    assert "context window" not in message.split("(Technical detail:")[0]

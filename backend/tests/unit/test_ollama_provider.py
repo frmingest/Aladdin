@@ -416,6 +416,19 @@ def test_adaptive_fit_fails_clearly_when_nothing_fits(monkeypatch):
     assert "qwen3:14b@24576: 78%" in str(err.value)
 
 
+def test_adaptive_fit_says_when_the_fallback_model_is_not_installed(monkeypatch):
+    loads: list = []
+    handler, state = _router({}, loads, installed=("qwen3:14b",))
+    monkeypatch.setattr(op, "gpu_share", lambda **kw: {("qwen3:14b", 24576): 0.78}.get(state.get("loaded")))
+    provider, _ = _provider(
+        handler, min_gpu_share=0.95, adaptive_fit=True, fallback_model="qwen3:8b", num_ctx=24576,
+    )
+    with pytest.raises(LLMUnavailableError, match="No model fits fully on the GPU") as err:
+        _call_needing(provider, 14000)
+    assert "qwen3:8b (not installed -- run: ollama pull qwen3:8b)" in str(err.value)
+    assert all(model == "qwen3:14b" for model, _ in loads)
+
+
 def test_adaptive_fit_refuses_a_call_bigger_than_every_model_can_hold(monkeypatch):
     provider, _ = _fit_provider(monkeypatch, {}, [])
     with pytest.raises(LLMUnavailableError, match="max context 32,768"):

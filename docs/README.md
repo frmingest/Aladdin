@@ -235,6 +235,7 @@ Valuation and analysis numbers: DCF, ROIC/ROE, margin of safety, data gaps, fund
 Local LLM (Ollama), the worker and queue, evidence packets, LLM usage ledger.
 
 - [evidence-packet-token-budget-2026-10-02.md](llm-local/evidence-packet-token-budget-2026-10-02.md) — Evidence packet token budget — big holdings can no longer outgrow the local model
+- [gpu-fit-error-messages-2026-11-11.md](llm-local/gpu-fit-error-messages-2026-11-11.md) — The "evidence too large" message was hiding a GPU-fit failure (missing qwen3:8b fallback)
 - [evidence-quality-sprint6-2026-09-24.md](llm-local/evidence-quality-sprint6-2026-09-24.md) — Sprint 6 — Evidence quality: uploaded document text in the analysis
 - [llm-usage-ledger-sprint15-2026-09-28.md](llm-local/llm-usage-ledger-sprint15-2026-09-28.md) — LLM usage ledger — Sprint 15 #1 (F27), 2026-09-28
 - [local-llm-data-scaling-analysis-2026-09-27.md](llm-local/local-llm-data-scaling-analysis-2026-09-27.md) — Local LLM data scaling — will more holdings/documents break Ollama? (2026-09-27)

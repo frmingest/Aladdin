@@ -43,6 +43,12 @@ _RULES: list[tuple[str, re.Pattern[str]]] = [
         re.compile(r"connecterror|connection refused|ollama request failed|all connection attempts failed", re.IGNORECASE),
     ),
     (
+        ("The local model does not fit on your GPU for this run, so it was stopped instead of running slowly "
+         "on the CPU. Make sure the fallback model is installed (`ollama pull qwen3:8b`), close GPU-heavy "
+         "apps (browsers, Discord, Steam) and run it again."),
+        re.compile(r"no model fits|of the model is on the gpu", re.IGNORECASE),
+    ),
+    (
         "Ollama does not have the model installed. Pull it with `ollama pull <model>` and run it again.",
         re.compile(r"ollama pull|ollama doesn't have model", re.IGNORECASE),
     ),
@@ -55,12 +61,12 @@ _RULES: list[tuple[str, re.Pattern[str]]] = [
         re.compile(r"timed? ?out|timeout|stalled", re.IGNORECASE),
     ),
     (
-        "The evidence was too large for the model's context window. Lower the evidence budget or use a model with a longer context.",
-        re.compile(r"context (length|window)|num_ctx|too many tokens|token limit exceeded", re.IGNORECASE),
+        "The model ran out of output space before finishing its answer. Raise the output token limit and run it again.",
+        re.compile(r"max_output_tokens|LLM_MAX_OUTPUT_TOKENS|output limit|finish_reason.*length|truncated", re.IGNORECASE),
     ),
     (
-        "The model ran out of output space before finishing its answer. Raise the output token limit and run it again.",
-        re.compile(r"max_output_tokens|LLM_MAX_OUTPUT_TOKENS|finish_reason.*length|truncated", re.IGNORECASE),
+        "The evidence was too large for the model's context window. Lower the evidence budget or use a model with a longer context.",
+        re.compile(r"context (length|window)|num_ctx|too many tokens|token limit exceeded", re.IGNORECASE),
     ),
     (
         "The AI provider is overloaded right now. Run it again in a few minutes.",
@@ -87,7 +93,9 @@ def explain_llm_failure(message: str | BaseException | None, *, detail_chars: in
     """One plain sentence for the cause, then the start of the original text.
 
     The first matching rule wins, in the order above (a budget message is
-    checked before the generic 429 rule, a missing key before a refused key).
+    checked before the generic 429 rule, a missing key before a refused key, and
+    the GPU-fit and output-limit messages before the context rule, because they
+    also mention num_ctx).
     Unknown text gets the generic sentence and keeps its detail.
     """
     raw = _squash(str(message)) if message is not None else ""
