@@ -31,7 +31,7 @@ const CORNER_TOWER_HEIGHT = WALL_HEIGHT + 4;
 /**
  * The walled courtyard. Everything is built from plain shapes that double as
  * colliders: the same shapes are what you see and what stops you.
- * The holdings in `world` stand outside the wall (OutdoorHoldings).
+ * The holdings in `world` stand inside the wall, spread round its inside (OutdoorHoldings).
  */
 export default function Courtyard({ world }: { world: WorldModel }) {
   const walls = useMemo(() => wallSegments(), []);
@@ -98,7 +98,7 @@ export default function Courtyard({ world }: { world: WorldModel }) {
         }
       />
 
-      {/* The holdings stand outside on the meadow (S31); the fortress yard stays empty for now. */}
+      {/* The holdings stand inside the wall on a ring of eight spots (S31, moved in 2026-11-11). */}
       <OutdoorHoldings towers={world.towers} />
     </group>
   );

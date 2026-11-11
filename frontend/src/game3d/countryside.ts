@@ -1,5 +1,5 @@
 /**
- * The countryside round the fortress (S31 PR 2): a river, the tracks to every plot, and the fields. Pure data and maths,
+ * The countryside round the fortress (S31 PR 2): a river, the ring lane and the road run, and the fields. Pure data and maths,
  * no three.js and no React. `Countryside.tsx` draws it.
  *
  * THE RULE: the landscape may not carry a fact. Everything here is a fixed number: the same river, the same tracks and
@@ -13,7 +13,6 @@ import type { Spot } from "./layout";
 import { WALL_RADIUS, WALL_THICKNESS } from "./layout";
 import { HORIZON, HORIZON_LIMIT, ROAD_END_Z } from "./horizonPieces";
 import type { HorizonPiece } from "./horizonPieces";
-import { OUTDOOR_SPOTS, OUTDOOR_ZONES, PLOT_FOOTPRINT_MAX, type OutdoorZone } from "./outdoorPlan";
 import { BUILDINGS, VILLAGE_MARGIN, buildingReach } from "./townPlan";
 
 /* ---------------------------------------------------------------- small maths */
@@ -112,23 +111,17 @@ export const WATER_NEAR_MAX = 15;
 /** The lane round the outside of the wall. Its inner edge clears the corner towers (3.3 wide, standing on the wall line). */
 export const RING_RADIUS = 58.6;
 export const RING_WIDTH = 1.6;
-export const BRANCH_WIDTH = 2;
-/** The gate road is 6 wide and ends at z 79 (Courtyard.tsx); the plots further out are reached by running it on. */
+/** The gate road is 6 wide and ends at z 79 (Courtyard.tsx); the road run carries it on to the Town Hall. */
 export const ROAD_WIDTH = 6;
 export const ROAD_RUN_FROM_Z = 78;
 export const ROAD_RUN_TO_Z = 92;
-/** How far a door stands from the middle of its plot: the widest footprint plus a half unit of open ground. */
-export const DOOR_REACH = PLOT_FOOTPRINT_MAX + 0.5;
-
-export type TrackKind = "ring" | "branch" | "road-run";
+export type TrackKind = "ring" | "road-run";
 
 export interface Track {
   id: string;
   kind: TrackKind;
   width: number;
   points: Spot[];
-  /** The zone and spot this track ends at (a door); absent for the ring and the road run. */
-  to?: { zone: OutdoorZone; index: number };
 }
 
 function ringAt(angle: number): Spot {
@@ -140,27 +133,11 @@ export function ringLine(steps = 120): Spot[] {
   return Array.from({ length: steps + 1 }, (_, i) => ringAt((i / steps) * Math.PI * 2));
 }
 
-/** Every plot faces the wall: its door is on the side towards the middle. */
-export function doorPoint(zone: OutdoorZone, index: number): Spot {
-  const s = OUTDOOR_SPOTS[zone][index];
-  const r = Math.hypot(s.x, s.z);
-  const k = (r - DOOR_REACH) / r;
-  return { x: s.x * k, z: s.z * k };
-}
-
 export function tracks(): Track[] {
   const out: Track[] = [
     { id: "ring", kind: "ring", width: RING_WIDTH, points: ringLine() },
     { id: "road-run", kind: "road-run", width: ROAD_WIDTH, points: [{ x: 0, z: ROAD_RUN_FROM_Z }, { x: 0, z: ROAD_RUN_TO_Z }] },
   ];
-  for (const zone of OUTDOOR_ZONES) {
-    OUTDOOR_SPOTS[zone].forEach((s, index) => {
-      const door = doorPoint(zone, index);
-      const to = { zone, index };
-      // A straight branch from the ring, at the same bearing as the plot, to the door.
-      out.push({ id: `${zone}-${index}`, kind: "branch", width: BRANCH_WIDTH, points: [ringAt(Math.atan2(s.x, s.z)), door], to });
-    });
-  }
   return out;
 }
 
@@ -178,7 +155,7 @@ export interface FieldPatch {
   furrows: number;
 }
 
-/** Tilled patches round the farm plots in the west. Fixed: they do not grow, shrink or change colour with anything. */
+/** Tilled patches in the west. Fixed: they do not grow, shrink or change colour with anything. */
 export const FIELDS: readonly FieldPatch[] = [
   { id: "f1", x: -73, z: 17, w: 12, d: 8, yaw: 0.35, furrows: 6 },
   { id: "f2", x: -76, z: -11, w: 12, d: 8, yaw: -0.3, furrows: 6 },
@@ -310,7 +287,6 @@ export function inTheWay(p: HorizonPiece): boolean {
   if (distToPolyline(at, riverLine()) < RIVER_HALF + reach) return true;
   for (const t of tracks()) if (distToPolyline(at, t.points) < t.width / 2 + reach) return true;
   for (const f of FIELDS) if (Math.hypot(p.x - f.x, p.z - f.z) < fieldReach(f) + reach) return true;
-  for (const zone of OUTDOOR_ZONES) for (const s of OUTDOOR_SPOTS[zone]) if (Math.hypot(p.x - s.x, p.z - s.z) < PLOT_FOOTPRINT_MAX + reach) return true;
   // The Town beside the gate road keeps its ground clear too, door mats included.
   for (const b of BUILDINGS) if (Math.hypot(p.x - b.x, p.z - b.z) < buildingReach(b) + VILLAGE_MARGIN + reach) return true;
   return false;

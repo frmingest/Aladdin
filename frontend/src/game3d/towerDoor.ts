@@ -17,7 +17,7 @@ export interface Enterable {
   holdingId: string;
   spot: Spot;
   radius: number;
-  /** Set for a holding that stands outside the wall: where its door faces. */
+  /** Set for a holding that stands on the ring inside the wall: where its door faces (towards the middle of the yard). */
   outdoorDoorYaw?: number;
 }
 

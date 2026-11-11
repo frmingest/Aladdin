@@ -2,15 +2,14 @@ import { describe, expect, it } from "vitest";
 import { WALL_RADIUS } from "./layout";
 import { cornerTowerFootprint } from "./keepModels";
 import { HORIZON, HORIZON_MAX_MODELS, HORIZON_MAX_PIECES } from "./horizonPieces";
-import { OUTDOOR_SPOTS, OUTDOOR_ZONES, PLOT_FOOTPRINT_MAX, ROAD_HALF } from "./outdoorPlan";
 import * as C from "./countryside";
 import {
-  DOOR_REACH, FIELDS, RING_RADIUS, RIVER_HALF, WATER_NEAR_MAX, WATER_NEAR_MIN, THIN_MARGIN,
-  countrysideMesh, distToPolyline, doorPoint, fieldReach, inTheWay, polylineGap, riverLine, ringLine, thinnedHorizon, tracks,
+  FIELDS, RING_RADIUS, RIVER_HALF, THIN_MARGIN,
+  countrysideMesh, distToPolyline, fieldReach, inTheWay, polylineGap, riverLine, ringLine, thinnedHorizon, tracks,
 } from "./countryside";
 
-const spots = OUTDOOR_ZONES.flatMap((zone) => OUTDOOR_SPOTS[zone].map((spot, index) => ({ zone, index, spot })));
-const WATER_ZONES = ["river", "rise"];
+/** The gate road is 6 wide. */
+const ROAD_HALF = 3;
 
 describe("the river", () => {
   const river = riverLine();
@@ -20,18 +19,6 @@ describe("the river", () => {
   });
   it("flows on the ground (inside the 160 meadow disc)", () => {
     for (const p of river) expect(Math.hypot(p.x, p.z)).toBeLessThan(150);
-  });
-  it("runs beside the river and rise plots, never under them", () => {
-    for (const s of spots.filter((x) => WATER_ZONES.includes(x.zone))) {
-      const d = distToPolyline(s.spot, river);
-      expect(d, `${s.zone}[${s.index}]`).toBeGreaterThanOrEqual(WATER_NEAR_MIN);
-      expect(d, `${s.zone}[${s.index}]`).toBeLessThanOrEqual(WATER_NEAR_MAX);
-    }
-  });
-  it("leaves every other plot dry, with room for its building", () => {
-    for (const s of spots.filter((x) => !WATER_ZONES.includes(x.zone))) {
-      expect(distToPolyline(s.spot, river), `${s.zone}[${s.index}]`).toBeGreaterThanOrEqual(RIVER_HALF + PLOT_FOOTPRINT_MAX);
-    }
   });
   it("never crosses a track", () => {
     for (const t of tracks()) expect(polylineGap(t.points, river), t.id).toBeGreaterThan(RIVER_HALF + t.width / 2);
@@ -51,37 +38,15 @@ describe("the tracks", () => {
     const edge = RING_RADIUS - all[0].width / 2;
     expect(edge).toBeGreaterThan(WALL_RADIUS + cornerTowerFootprint().radius);
   });
-  it("every one of the plots has a track to its door, starting on the ring", () => {
-    for (const s of spots) {
-      const t = all.find((x) => x.to?.zone === s.zone && x.to.index === s.index);
-      expect(t, `${s.zone}[${s.index}]`).toBeDefined();
-      const door = doorPoint(s.zone, s.index);
-      const end = t!.points[t!.points.length - 1];
-      expect(end).toEqual(door);
-      expect(Math.hypot(door.x - s.spot.x, door.z - s.spot.z)).toBeCloseTo(DOOR_REACH, 6);
-      const start = t!.points[0];
-      const onRing = Math.abs(Math.hypot(start.x, start.z) - RING_RADIUS) < 1e-6;
-      expect(onRing, `${s.zone}[${s.index}] start`).toBe(true);
-    }
-  });
-  it("no track runs through a plot that is not its own", () => {
-    for (const t of all) {
-      for (const s of spots) {
-        if (t.to?.zone === s.zone && t.to.index === s.index) continue;
-        expect(distToPolyline(s.spot, t.points) - t.width / 2, `${t.id} vs ${s.zone}[${s.index}]`).toBeGreaterThanOrEqual(PLOT_FOOTPRINT_MAX);
-      }
-    }
-  });
-  it("a branch stays outside the wall", () => {
+  it("stays outside the wall", () => {
     for (const t of all) for (const p of t.points) expect(Math.hypot(p.x, p.z)).toBeGreaterThan(WALL_RADIUS + 3);
   });
 });
 
 describe("the fields", () => {
-  it("stay on the meadow, off every plot, track and the river", () => {
+  it("stay on the meadow, off every track and the river", () => {
     for (const f of FIELDS) {
       expect(Math.hypot(f.x, f.z) + fieldReach(f), f.id).toBeLessThanOrEqual(104 - 2);
-      for (const s of spots) expect(Math.hypot(s.spot.x - f.x, s.spot.z - f.z) - fieldReach(f), `${f.id} vs ${s.zone}[${s.index}]`).toBeGreaterThanOrEqual(PLOT_FOOTPRINT_MAX);
       for (const t of tracks()) expect(distToPolyline(f, t.points) - t.width / 2 - fieldReach(f), `${f.id} vs ${t.id}`).toBeGreaterThan(0);
       expect(distToPolyline(f, riverLine()) - RIVER_HALF - fieldReach(f), f.id).toBeGreaterThan(0);
     }
@@ -126,10 +91,9 @@ describe("thinning the grove", () => {
     expect(kept.length).toBeLessThanOrEqual(HORIZON_MAX_PIECES);
     expect(new Set(kept.map((p) => p.model)).size).toBeLessThanOrEqual(HORIZON_MAX_MODELS);
   });
-  it("no kept tree stands in the river, on a track or on a plot", () => {
+  it("no kept tree stands in the river or on a track", () => {
     for (const p of kept.filter((q) => q.ring === "grove" || q.ring === "rock")) {
       expect(distToPolyline(p, riverLine()), p.id).toBeGreaterThan(RIVER_HALF + THIN_MARGIN);
-      for (const s of spots) expect(Math.hypot(p.x - s.spot.x, p.z - s.spot.z), p.id).toBeGreaterThan(PLOT_FOOTPRINT_MAX + THIN_MARGIN);
     }
   });
 });

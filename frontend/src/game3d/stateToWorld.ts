@@ -24,8 +24,7 @@ import type {
 import { sortTowers } from "../lib/fortress";
 import { TOWER_SPOT_COUNT, towerSpots, type Spot } from "./layout";
 import { MOAT_WIDTH, SIZE_HEIGHT, SIZE_RADIUS, WALL_LOOK } from "./towerLook";
-import { assignPlots, type OutdoorZone, type Plot } from "./outdoorPlan";
-import { doorPoint } from "./countryside";
+import { assignPlots, doorPointOf, type Plot } from "./outdoorPlan";
 import { isFishFarm } from "./farmDressing";
 import { holdingTheme3d, type Theme3dId } from "../lib/sectors";
 
@@ -41,26 +40,26 @@ export type Strength = "strong" | "fair" | "weak" | "unknown";
 export type Flag = "intact" | "review" | "breached" | "none";
 
 /**
- * Where a holding stands on the meadow outside the wall (S31 PR 3). Set by `stateToWorld` unless the caller hands it
- * its own spots. It comes from the plan (theme and weight order only), never from a verdict, a wall or a moat.
+ * Where a holding stands inside the wall, on the ring of spots (moved back inside 2026-11-11; the name is from when
+ * holdings stood outside). Set by `stateToWorld` unless the caller hands it its own spots. It comes from the plan
+ * (weight order and theme width only), never from a verdict, a wall or a moat.
  */
 export interface OutdoorPlot {
-  zone: OutdoorZone;
+  /** Which spot on the ring (0 = best). */
   index: number;
   theme: Theme3dId;
   fish: boolean;
   /** How wide the building stands: the door is reached from this, not from the middle. */
   footprint: number;
-  /** The end of the lane that serves this plot, where the door stands. */
+  /** Where the door stands: on the side of the building towards the middle of the yard. */
   door: Spot;
   /** Yaw (0 = facing +z) from the middle of the plot toward the door. */
   doorYaw: number;
 }
 
 export function outdoorPlotOf(p: Plot): OutdoorPlot {
-  const door = doorPoint(p.zone, p.index);
+  const door = doorPointOf(p.spot);
   return {
-    zone: p.zone,
     index: p.index,
     theme: p.theme,
     fish: p.fish,
@@ -71,10 +70,10 @@ export function outdoorPlotOf(p: Plot): OutdoorPlot {
 }
 
 export interface TowerView {
-  /** Which pad (0 = west end of the arc), or which plot in weight order when the holding stands outside. */
+  /** Which pad (0 = west end of the arc), or which spot of the ring in weight order. */
   slot: number;
   spot: Spot;
-  /** Set when the holding stands on the meadow outside the wall. Absent for the old horseshoe pads. */
+  /** Set when the holding stands on the ring of spots inside the wall. Absent for the old horseshoe pads. */
   plot?: OutdoorPlot;
   holdingId: string;
   name: string;
@@ -165,8 +164,8 @@ function viewOf(t: GameTower, slot: number, spot: Spot): TowerView {
 }
 
 /**
- * The meadow has room for `TOWER_SPOT_COUNT` holdings. The biggest take it (same order as the flat Fortress); the rest
- * are counted, not drawn, and stay in the plain list. By default each stands on its outdoor plot (S31); a caller that
+ * The yard has room for `TOWER_SPOT_COUNT` holdings. The biggest take it (same order as the flat Fortress); the rest
+ * are counted, not drawn, and stay in the plain list. By default each stands on its spot of the ring (S31); a caller that
  * hands in `spots` gets the old pad positions instead. With no state yet, the result is an empty world.
  */
 export function stateToWorld(state: GameState | null, spots?: Spot[]): WorldModel {

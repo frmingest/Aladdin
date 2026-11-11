@@ -12,7 +12,7 @@ import type { TowerView } from "./stateToWorld";
 
 const PLINTH = 3.4;
 const PLINTH_COLOR = "#c9c1b3";
-/** The solid core of a dressed building, as a share of its footprint: the door post and the lane stay outside it. */
+/** The solid core of a dressed building, as a share of its footprint: the door post stays outside it. */
 const CORE_SHARE = 0.7;
 
 /** What stands in the building's place: its theme, the wear from the wall tier and the stream from the moat tier only. */
@@ -39,7 +39,7 @@ function PlainOutside({ t }: { t: TowerView }) {
   );
 }
 
-/** One holding standing on the meadow: its own building from the land (moved from the land's middle to its plot) and a door post. */
+/** One holding standing on its spot inside the wall: its own building from the land (moved from the land's middle to its plot) and a door post. */
 function Building({ t, slot }: { t: TowerView; slot: LandCentreSlot }) {
   const plot = t.plot!;
   const model = (
@@ -59,9 +59,9 @@ function Building({ t, slot }: { t: TowerView; slot: LandCentreSlot }) {
 }
 
 /**
- * The holdings on the meadow (S31 PR 3). Where each stands comes from the plan (theme and weight order); what it looks
+ * The holdings inside the wall, spread evenly round it (S31; moved in 2026-11-11). Where each stands comes from the plan (weight order only; the theme sets only the width); what it looks
  * like comes from its theme, its wall tier and its moat tier, exactly as in its own land. A theme with no building yet
- * keeps the plain tower. The fortress yard is left empty.
+ * keeps the plain tower.
  */
 export default function OutdoorHoldings({ towers }: { towers: readonly TowerView[] }) {
   return (
