@@ -35,16 +35,18 @@ export default function SettingsPage() {
       <PageHeader title="Settings" subtitle="App-wide settings for this deployment." />
 
       <Card>
-        <SectionTitle hint="Show a fixed, fabricated portfolio instead of real data">
+        <SectionTitle hint="Show seven random watchlist stocks with made-up numbers instead of real data">
           Demo mode
         </SectionTitle>
 
         <div className="flex items-start justify-between gap-6">
           <div className="max-w-md space-y-2 text-sm text-ink-muted">
             <p>
-              Turns every page into a fixed set of fabricated US large-cap holdings — accounts,
-              prices, valuations, verdicts, thesis tripwires, risk, performance, precious metals,
-              journal, watchlist and macro data are all made up.
+              Turns every page into a demo portfolio of seven stocks picked at random from your
+              watchlist each time you switch it on. Only the company names come from the watchlist;
+              accounts, quantities, prices, valuations, verdicts, thesis tripwires, risk,
+              performance, precious metals, journal and macro data are all made up. If the watchlist
+              has fewer than seven stocks, the rest are made-up US large caps.
             </p>
             <p className="font-medium text-ink">
               Real portfolio data, documents and research are never read while this is on. Every

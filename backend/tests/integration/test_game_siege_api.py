@@ -134,5 +134,5 @@ def test_demo_mode_shows_invented_data_and_never_real_betas(client, db_session):
     tickers = set(_by(body))
     assert not tickers & {"CASH.OL", "GEAR.OL", "BANK.OL", "FUND", "BARE.OL"}
     assert all(h["beta"] is None or D(h["beta"]) < 3 for h in body["holdings"])
-    assert _by(body)["V"]["modelled"] is False                  # the demo's deliberate gap
+    assert _by(body)["JPM"]["modelled"] is False                  # the demo's deliberate gap
     assert body["level"] in {"calm", "gathering", "besieged"}

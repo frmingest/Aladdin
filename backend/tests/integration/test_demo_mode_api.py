@@ -33,7 +33,8 @@ from app.providers.factory import (
 
 D = Decimal
 
-DEMO_TICKERS = {"AAPL", "MSFT", "GOOGL", "JNJ", "PG", "KO", "JPM", "V", "HD", "XOM"}
+# With an empty watchlist, demo mode shows the first seven fabricated stocks.
+DEMO_TICKERS = {"AAPL", "MSFT", "GOOGL", "JNJ", "PG", "KO", "JPM"}
 
 
 # --- Fakes for the live-data dependencies some mutating endpoints still
@@ -173,7 +174,7 @@ def test_portfolio_overview_is_fabricated_in_demo_mode(client):
     body = response.json()
     tickers = {p["ticker"] for p in body["positions"]}
     assert tickers == DEMO_TICKERS
-    assert body["holding_count"] == 10
+    assert body["holding_count"] == 7
 
 
 def test_accounts_are_fabricated_in_demo_mode(client):
@@ -205,7 +206,7 @@ def test_journal_is_fabricated_in_demo_mode(client):
     response = client.get("/journal")
     assert response.status_code == 200
     tickers = {e["ticker"] for e in response.json()["entries"]}
-    assert tickers == {"AAPL", "MSFT", "XOM"}
+    assert tickers == {"AAPL", "MSFT", "GOOGL"}
 
 
 def test_precious_metals_overview_is_fabricated_in_demo_mode(client):
@@ -396,3 +397,74 @@ def test_upload_endpoints_are_blocked_in_demo_mode(client):
     assert client.post("/portfolio/import-csv", files=files).status_code == 403
     response = client.post(f"/funds/{NIL_UUID}/holdings/import", files=files)
     assert response.status_code == 403
+
+
+# --- Issue #404: demo mode shows seven random watchlist stocks ---------------
+
+
+def _watch(client, n: int) -> set[str]:
+    tickers = {f"WL{i}.OL" for i in range(n)}
+    for t in sorted(tickers):
+        response = client.post("/watchlist", json={"ticker": t, "name": f"Watched {t}", "trading_currency": "NOK"})
+        assert response.status_code == 201, response.text
+    return tickers
+
+
+def _demo_tickers(client) -> set[str]:
+    return {h["ticker"] for h in client.get("/holdings").json()}
+
+
+def test_demo_mode_shows_seven_random_watchlist_stocks(client):
+    watched = _watch(client, 12)
+    _enable_demo(client)
+    shown = _demo_tickers(client)
+    assert len(shown) == 7
+    assert shown <= watched
+    # the numbers are still invented, and every page agrees on the same seven
+    overview = client.get("/portfolio/overview").json()
+    assert {p["ticker"] for p in overview["positions"]} == shown
+    assert {r["ticker"] for r in client.get("/valuation/board").json()["rows"]} == shown
+    assert {t["ticker"] for t in client.get("/game/state").json()["towers"]} == shown
+
+
+def test_demo_picks_stay_the_same_until_demo_is_switched_off_and_on(client):
+    _watch(client, 30)
+    _enable_demo(client)
+    first = _demo_tickers(client)
+    _enable_demo(client)  # already on: keeps the stocks being shown
+    assert _demo_tickers(client) == first
+    client.put("/settings/demo-mode", json={"enabled": False})
+    seen = {frozenset(first)}
+    for _ in range(8):  # 30 choose 7 is huge; a repeat of the same seven eight times running is not plausible
+        client.put("/settings/demo-mode", json={"enabled": False})
+        _enable_demo(client)
+        seen.add(frozenset(_demo_tickers(client)))
+    assert len(seen) > 1
+
+
+def test_demo_mode_tops_up_a_short_watchlist_with_fabricated_stocks(client):
+    watched = _watch(client, 3)
+    _enable_demo(client)
+    shown = _demo_tickers(client)
+    assert len(shown) == 7
+    assert watched <= shown
+    assert len(shown - watched) == 4 and (shown - watched) <= DEMO_TICKERS | {"V", "HD", "XOM"}
+
+
+def test_demo_picks_never_expose_real_holdings_or_numbers(client):
+    _watch(client, 9)
+    real = _seed_real_holding(client)
+    _enable_demo(client)
+    assert "REAL1" not in _demo_tickers(client)
+    assert real not in {h["id"] for h in client.get("/holdings").json()}
+
+
+def test_demo_picks_are_cleared_when_demo_mode_is_switched_off(client, db_session):
+    from app.models.app_setting import AppSetting
+
+    _watch(client, 9)
+    _enable_demo(client)
+    assert db_session.query(AppSetting).filter(AppSetting.key.like("demo_pick_%")).count() == 7
+    client.put("/settings/demo-mode", json={"enabled": False})
+    db_session.expire_all()
+    assert db_session.query(AppSetting).filter(AppSetting.key.like("demo_pick_%")).count() == 0

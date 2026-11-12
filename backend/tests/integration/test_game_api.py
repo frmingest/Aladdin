@@ -13,7 +13,7 @@ from app.models.precious_metal import PreciousMetalHolding
 
 D = Decimal
 NOW = datetime.now(timezone.utc)
-DEMO_TICKERS = {"AAPL", "MSFT", "GOOGL", "JNJ", "PG", "KO", "JPM", "V", "HD", "XOM"}
+DEMO_TICKERS = {"AAPL", "MSFT", "GOOGL", "JNJ", "PG", "KO", "JPM"}  # empty watchlist: first seven fabricated
 
 
 def _facts(db, doc, holding, **values):
