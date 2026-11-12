@@ -67,13 +67,10 @@ status` first instead of trusting the doc.
 
 ## Documentation sync
 
-Every real change to this project's state (a decision, a sprint milestone, a discovered
-discrepancy, a "what's actually true now") gets written to the Claude project docs
-(`claude/progress.md` and the active sprint plan doc) **and** mirrored into this repo's `docs/`
-folder (`docs/PROGRESS.md` and the matching sprint plan file) in the same change, so GitHub always
-shows current state too — not just claude.ai. Don't update one and skip the other. If `docs/`
-doesn't have a file the project doc list does, that's a signal to add it, not a reason to skip the
-repo copy.
+Sprint status, backlog and history live on the GitHub Project "Aladdin" (see "Sprint board rules"). Write-ups
+(decisions, discovered discrepancies, a "what's actually true now") still go to the Claude project docs and are
+mirrored into this repo's `docs/` folder in the same change. Don't update one and skip the other. If `docs/`
+doesn't have a file the project doc list does, that's a signal to add it, not a reason to skip the repo copy.
 
 ## Docs layout
 
@@ -84,25 +81,19 @@ topic folder with its dated filename, gets one line in `docs/README.md` in the s
 by full path (`docs/game/...`). Claude project docs under `claude/` stay flat: `claude/<name>.md` mirrors
 `docs/<folder>/<name>.md`.
 
-## Progress file rules (`progress.md` / `docs/PROGRESS.md`)
+## Sprint board rules
 
-The progress file is a rolling log, not a history. These rules apply to both copies (the Claude
-project's `claude/progress.md` and the repo's `docs/PROGRESS.md`), which stay in sync per
-"Documentation sync" above.
+The sprint backlog and the sprint history live on the GitHub Project "Aladdin", not in a progress file
+(`docs/PROGRESS.md` is only a pointer now; how it works: `docs/ops/github-projects-workflow-2026-11-12.md`).
 
-1. **Rolling log.** The main file holds only Active Status and the Current Sprint/Milestone.
-   Completed tasks never accumulate in it.
-2. **Four sections only, in this order, each short:**
-   - **Current Objective:** 1-2 sentences on what is being built or fixed right now.
-   - **Active Tasks:** a checklist of at most 5-7 immediate pending steps. Delete or check off items as they finish.
-   - **Recent Blockers / Open Questions:** temporary notes on current roadblocks that need resolution.
-   - **Archive Pointer:** a brief note, e.g. "Completed milestones moved to `/docs/archive/progress-archive.md`".
-3. **Mandatory archiving.** When a major milestone or sprint completes, move its finished task
-   blocks out of `progress.md` and append them to `docs/archive/progress-archive.md` *before*
-   writing new updates. Summarize completed work; don't carry granular historical logs in the active file.
-4. **Overwrite, don't append.** Update by overwriting or pruning completed lines, not by adding text
-   at the bottom. Keep the whole file under 100 lines (hard ceiling); if an update would exceed it,
-   archive first.
+1. **A sprint is a milestone; a work item is an issue.** Closed milestones are finished sprints, each with a
+   `Sprint:` issue listing its PRs and docs. Never delete history; close it.
+2. **Every piece of work has an issue.** Open one from the Work item or Bug template before starting, unless one exists.
+   The PR body ends with `Closes #N` and the PR is attached to the sprint milestone.
+3. **Keep the board true.** When work starts, finishes or is blocked, update the issue (Status field, labels
+   `owner:faiz`/`owner:claude`, `needs-decision`) in the same session. New work discovered on the way becomes a new issue.
+4. **Closing a sprint:** close its milestone and write a one-line outcome in the milestone description.
+5. **Status honesty still applies:** an issue says "written, not deployed" until the live check has been done.
 
 ## Git discipline
 
@@ -151,7 +142,7 @@ chat, without being asked again:
    changes `tsc --noEmit`, `npm run lint`, `npm test`, `npm run build`. Don't open a PR with a known red check.
 3. Commit with a real message, push the branch, open the PR against `main` with a short body:
    what changed and why, how it was verified, and anything Faiz must do after deploy. Give Faiz the PR link.
-4. Update `docs/PROGRESS.md` (and the Claude project's `progress.md`) in the same PR.
+4. Link the PR to its issue (`Closes #N`), attach the sprint milestone, and update the issue's labels and status in the same session.
 5. Watch the PR's checks; if one goes red, fix it on the same branch.
 6. Never merge for Faiz. A merge to `main` is a production deploy.
 
