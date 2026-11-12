@@ -97,6 +97,9 @@ jobs:
     name: E2E (Playwright, demo stack)
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: read
+      pull-requests: write # only to post the postcards comment below
     # Pre-merge browser tests (docs/ops/test-strategy-2026-11-12.md). A throw-away stack (Postgres 16, the backend and the
     # Vite dev server) is started, switched to demo mode (fabricated data, every write refused) and driven by Playwright.
     # Nothing here touches Railway, real data or an LLM key. The daily post-deploy `smoke` project is separate (smoke.yml).
@@ -160,6 +163,24 @@ jobs:
       - name: Stack logs
         if: failure()
         run: tail -n 80 /tmp/backend.log /tmp/frontend.log
+      - uses: actions/upload-artifact@v7
+        id: postcards
+        if: always()
+        with:
+          name: postcards
+          path: frontend/postcards
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Postcards comment on the PR
+        # One comment per PR, edited on every push. Same-repo PRs only: a fork's token cannot write comments.
+        if: always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && steps.postcards.outputs.artifact-url != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          URL: ${{ steps.postcards.outputs.artifact-url }}
+        run: |
+          printf '%s\n' "**Postcards** (3D yard, Town Hall, Hall of Records, Weather Tower, Siege Field, Market Quarter and one holding's land, demo portfolio, software WebGL): [download the 7 pictures]($URL). Commit ${GITHUB_SHA::7}. Colours are close, frame rate is not measured; a person still judges the look." > /tmp/postcards.md
+          gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body-file /tmp/postcards.md --edit-last --create-if-none
       - uses: actions/upload-artifact@v7
         if: always()
         with:
