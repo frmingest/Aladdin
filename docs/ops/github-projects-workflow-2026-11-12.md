@@ -17,6 +17,10 @@ The sprint backlog and the sprint history live on the GitHub Project **Aladdin**
 
 37 closed milestones titled `YYYY-MM-DD · name`, each with one closed issue `Sprint: name` that lists its PRs and the docs written in that window. All 333 PRs are attached to their milestone. The grouping was done from PR numbers and titles; the S/A/G codes in PR titles come from the older plans and do not match the milestone names. Written write-ups stay under `docs/`; `docs/archive/progress-archive.md` and `docs/archive/PROGRESS-snapshot-2026-11-12.md` keep the old log.
 
+## The rule
+
+All development happens from the board. Every branch and PR maps to an issue (`Closes #N` in the PR body); the *PR has a linked issue* check fails a PR without one unless it carries the `no-issue` label. If Faiz asks for something new, Claude opens the issue first.
+
 ## Running a sprint
 
 1. **Plan.** Create a milestone `YYYY-MM-DD · short name` with a one-line description. Move the chosen backlog items into it (Status: Ready).
@@ -33,4 +37,4 @@ The sprint backlog and the sprint history live on the GitHub Project **Aladdin**
 
 ## Limits of this setup
 
-Creating the Project itself and its fields needs the GitHub web UI; Claude Code cloud sessions cannot call the Projects GraphQL API. Issues, milestones, labels and PR links are all done through the repo REST API.
+Creating the Project itself needs the GitHub web UI; Claude Code cloud sessions cannot call the Projects GraphQL API. Issues, milestones, labels and PR links are done through the repo REST API. The Project's *Auto-add to project* workflow (filter `is:issue,pr`) puts every new or updated issue and PR on the board; the built-in workflows move closed issues and merged PRs to Done. Status (Backlog, Ready, In progress, In review) is moved by hand on the board.

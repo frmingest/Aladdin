@@ -1,0 +1,29 @@
+name: PR has a linked issue
+
+# All development happens from the sprint board: every PR closes an issue.
+# Add the `no-issue` label for a trivial typo or link fix.
+on:
+  pull_request:
+    types: [opened, edited, reopened, labeled, unlabeled, synchronize]
+
+permissions:
+  contents: read
+
+jobs:
+  linked-issue:
+    name: PR has a linked issue
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require "Closes #N" or the no-issue label
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+        run: |
+          if echo ",$PR_LABELS," | grep -q ",no-issue,"; then
+            echo "no-issue label present, skipping."; exit 0
+          fi
+          if printf '%s' "$PR_BODY" | grep -Eiq '(close[sd]?|fix(e[sd])?|resolve[sd]?)[[:space:]]+#[0-9]+'; then
+            echo "Linked issue found."; exit 0
+          fi
+          echo "::error::Add 'Closes #N' to the PR body (all work starts from an issue on the board), or label the PR no-issue."
+          exit 1

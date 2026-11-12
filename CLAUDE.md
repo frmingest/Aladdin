@@ -86,6 +86,11 @@ by full path (`docs/game/...`). Claude project docs under `claude/` stay flat: `
 The sprint backlog and the sprint history live on the GitHub Project "Aladdin", not in a progress file
 (`docs/PROGRESS.md` is only a pointer now; how it works: `docs/ops/github-projects-workflow-2026-11-12.md`).
 
+0. **All development starts from the board.** At the start of a session, read the open issues
+   (`GET /repos/frmingest/Aladdin/issues?state=open`, labels `backlog`, `owner:claude`) and pick work from there, in
+   the order Faiz sets (Status Ready first, then Backlog). If Faiz asks for something that is not on the board, open
+   the issue first, tell him its number, then start. No branch, commit or PR without an issue number; the only
+   exception is a PR labelled `no-issue` for a trivial typo or link fix.
 1. **A sprint is a milestone; a work item is an issue.** Closed milestones are finished sprints, each with a
    `Sprint:` issue listing its PRs and docs. Never delete history; close it.
 2. **Every piece of work has an issue.** Open one from the Work item or Bug template before starting, unless one exists.
