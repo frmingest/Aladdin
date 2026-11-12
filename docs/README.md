@@ -317,3 +317,4 @@ Finished progress history and closed or parked plans. Move completed milestones 
 - Only `PROGRESS.md`, `architecture.md` and the active sprint plan live at the docs root.
 - Reference docs by full path (`docs/game/...`) in code comments and other docs so grep finds them.
 - Claude project docs under `claude/` are flat. Mirror by filename: `claude/<name>.md` is `docs/<folder>/<name>.md`. This index says which folder.
+- [game3d-c2-clear-the-screen-2026-11-12.md](game/game3d-c2-clear-the-screen-2026-11-12.md) — C2 Clear the screen: key hint on first visits only, one Back button, sidebar folds away on /game3d (issue #400, 2026-11-12)
