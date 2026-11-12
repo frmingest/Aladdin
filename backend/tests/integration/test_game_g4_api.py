@@ -242,10 +242,10 @@ def test_demo_mode_shows_every_g4_state_from_invented_data(client, db_session):
     assert not set(towers) & {"AAA.OL", "BBB.OL", "CCC.OL", "DDD.OL"}
     assert body["siege"]["level"] == "gathering"            # invented -27% scenario, baseline regime
     assert body["siege"]["regime"] == "baseline"
-    assert body["siege"]["breached_count"] == 1 and towers["HD"]["thesis"] == "breached"
+    assert body["siege"]["breached_count"] == 1 and towers["JNJ"]["thesis"] == "breached"
     assert towers["PG"]["thesis"] == "review"
     assert {t["siege_exposure"] for t in towers.values()} >= {"sheltered", "exposed", "breach_risk"}
     assert {t["land"] for t in towers.values()} == {"bargain", "discount", "full_price", "overpriced", "fog"}
-    assert towers["XOM"]["margin_of_safety_pct"] is None            # fog never carries a number
+    assert towers["JPM"]["margin_of_safety_pct"] is None            # fog never carries a number
     assert towers["AAPL"]["shared_wall_with"] and "Apple Inc." not in towers["AAPL"]["shared_wall_with"]
     assert uuid.UUID(towers["AAPL"]["holding_id"])

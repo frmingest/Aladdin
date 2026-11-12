@@ -52,7 +52,7 @@ from app.services.game.backtest_view import (
     stored_backtest_inputs,
 )
 from app.services.game.demo import (
-    DEMO_BETAS,
+    demo_beta,
     demo_game_state,
     demo_night_watch,
     demo_ravens,
@@ -120,7 +120,7 @@ def get_siege(
         )
     if is_demo_mode(db):
         state = demo_game_state(mapping.version)
-        demo_lookup = lambda ticker: Sensitivity(DEMO_BETAS.get(ticker), METHOD_DEMO)
+        demo_lookup = lambda ticker: Sensitivity(demo_beta(ticker), METHOD_DEMO)
         return build_siege_sim(state, demo_lookup, drop, mapping, scenarios)
     state = get_game_state(db, mapping.version)
     return build_siege_sim(state, stored_sensitivity_lookup(db, scenarios), drop, mapping, scenarios)
@@ -168,7 +168,7 @@ def get_printer(
     scenarios = get_siege_scenarios(get_settings().active_siege_scenarios_version)
     if is_demo_mode(db):
         state = demo_game_state(mapping.version)
-        demo_lookup = lambda ticker: Sensitivity(DEMO_BETAS.get(ticker), METHOD_DEMO)
+        demo_lookup = lambda ticker: Sensitivity(demo_beta(ticker), METHOD_DEMO)
         return printer_view.build_printer(state, demo_lookup, pulls, horizon)
     state = get_game_state(db, mapping.version)
     return printer_view.build_printer(state, stored_sensitivity_lookup(db, scenarios), pulls, horizon)

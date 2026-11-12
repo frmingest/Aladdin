@@ -140,7 +140,7 @@ function DemoModeBanner() {
     <div className="flex flex-wrap items-center justify-center gap-2 bg-caution px-4 py-2 text-center text-xs font-semibold text-onfill sm:gap-3 sm:text-sm">
       <span aria-hidden>●</span>
       <span>
-        DEMO MODE — every page shows fabricated data. Real portfolio data, documents and research
+        DEMO MODE — every page shows made-up numbers. Real portfolio data, documents and research
         are never read while this is on.
       </span>
       <NavLink to="/settings" className="underline underline-offset-2 hover:opacity-80">

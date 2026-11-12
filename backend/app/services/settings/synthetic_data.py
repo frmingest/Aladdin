@@ -20,6 +20,8 @@ accepted or used by the demo_* functions here; that is the whole point
 """
 from __future__ import annotations
 
+import hashlib
+import threading
 import uuid
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
@@ -164,13 +166,71 @@ _RAW_STOCKS = [
 ]
 
 
-def _build_rows():
-    total_usd = Decimal(0)
+# Demo mode shows DEMO_UNIVERSE_SIZE stocks. When demo mode is switched on, the app picks that many at
+# random from the watchlist (app/services/settings/demo_mode.py) and hands the picks to `set_demo_universe`.
+# Only the ticker, name and sector are real; every number below is invented. A watchlist with fewer
+# stocks is topped up from the fabricated set above, so the demo always has a full portfolio.
+DEMO_UNIVERSE_SIZE = 7
+
+_VERDICTS = ["Strong Buy", "Buy", "Buy", "Hold", "Hold", "Hold"]
+_MOATS = ["Wide", "Wide", "Narrow", "Narrow", "None"]
+
+
+def _generated_stock(ticker: str, name: str, sector: str | None, slot: int) -> dict:
+    """Invented numbers for a real ticker, derived from the ticker itself so the same ticker always
+    gets the same figures. Nothing here is read from the database or a provider."""
+    h = hashlib.sha256(ticker.encode()).digest()
+    price = Decimal(20 + h[0] * 2 + h[1] % 50)
+    quantity = Decimal(10 + h[2] % 40 * 5)
+    cost_basis = (price * Decimal(55 + h[3] % 50) / Decimal(100)).quantize(Decimal("0.01"))
+    return {
+        "ticker": ticker,
+        "name": name,
+        "sector": sector or "Unclassified",
+        "price": str(price),
+        "quantity": str(quantity),
+        "cost_basis": str(cost_basis),
+        "verdict": _VERDICTS[h[4] % len(_VERDICTS)],
+        "moat": _MOATS[h[5] % len(_MOATS)],
+        "bear": str((price * Decimal(78 + h[6] % 12) / Decimal(100)).quantize(Decimal("0.01"))),
+        "base": str((price * Decimal(112 + h[7] % 20) / Decimal(100)).quantize(Decimal("0.01"))),
+        "bull": str((price * Decimal(140 + h[8] % 30) / Decimal(100)).quantize(Decimal("0.01"))),
+        "discount_rate": str(Decimal("6.5") + Decimal(h[9] % 6) / Decimal(2)),
+        "account": 0 if slot < 4 else 1,
+    }
+
+
+def universe_stocks(picks: list[tuple[str, str, str | None]]) -> list[dict]:
+    """The raw stock dicts for a set of watchlist picks (ticker, name, sector), topped up to
+    DEMO_UNIVERSE_SIZE from the fabricated set. With no picks this is the first seven fabricated stocks."""
+    fabricated = {s["ticker"]: s for s in _RAW_STOCKS}
+    chosen: list[dict] = []
+    seen: set[str] = set()
+    for ticker, name, sector in picks[:DEMO_UNIVERSE_SIZE]:
+        ticker = ticker.strip().upper()
+        if not ticker or ticker in seen:
+            continue
+        seen.add(ticker)
+        base = fabricated.get(ticker) or _generated_stock(ticker, name or ticker, sector, len(chosen))
+        chosen.append({**base, "name": name or base["name"], "sector": sector or base["sector"]})
     for s in _RAW_STOCKS:
+        if len(chosen) >= DEMO_UNIVERSE_SIZE:
+            break
+        if s["ticker"] not in seen:
+            seen.add(s["ticker"])
+            chosen.append(dict(s))
+    for slot, s in enumerate(chosen):
+        s["account"] = 0 if slot < 4 else 1
+    return chosen
+
+
+def _build_rows(raw_stocks: list[dict]):
+    total_usd = Decimal(0)
+    for s in raw_stocks:
         total_usd += _d(s["price"]) * _d(s["quantity"])
 
     rows: list[dict] = []
-    for s in _RAW_STOCKS:
+    for s in raw_stocks:
         price = _d(s["price"])
         qty = _d(s["quantity"])
         value_usd = price * qty
@@ -203,14 +263,9 @@ def _build_rows():
     return rows, (total_usd * _FX_USD_NOK).quantize(Decimal("0.01"))
 
 
-_ROWS, _TOTAL_VALUE_NOK = _build_rows()
-_ROWS_BY_ID: dict[uuid.UUID, dict] = {r["id"]: r for r in _ROWS}
-_ROWS_BY_TICKER: dict[str, dict] = {r["ticker"]: r for r in _ROWS}
-
-
-def _account_row(i: int) -> dict:
+def _account_row(i: int, rows: list[dict]) -> dict:
     acc = _RAW_ACCOUNTS[i]
-    members = [r for r in _ROWS if r["account_index"] == i]
+    members = [r for r in rows if r["account_index"] == i]
     value_nok = sum((r["value_nok"] for r in members), Decimal(0))
     return {
         "id": _account_id(i),
@@ -221,8 +276,43 @@ def _account_row(i: int) -> dict:
     }
 
 
-_ACCOUNT_ROWS = [_account_row(i) for i in range(len(_RAW_ACCOUNTS))]
-_ACCOUNT_ROWS_BY_ID: dict[uuid.UUID, dict] = {a["id"]: a for a in _ACCOUNT_ROWS}
+_universe_lock = threading.Lock()
+_universe_signature: tuple[str, ...] | None = None
+_ROWS: list[dict] = []
+_TOTAL_VALUE_NOK = Decimal(0)
+_ROWS_BY_ID: dict[uuid.UUID, dict] = {}
+_ROWS_BY_TICKER: dict[str, dict] = {}
+_ACCOUNT_ROWS: list[dict] = []
+_ACCOUNT_ROWS_BY_ID: dict[uuid.UUID, dict] = {}
+
+
+def demo_ticker_slots() -> dict[str, int]:
+    """Ticker -> position (0..6) in the demo universe. Per-stock demo facts (walls, shocks, tripwires)
+    are attached to a slot, not a ticker, because the tickers change each time demo mode is switched on."""
+    return {r["ticker"]: i for i, r in enumerate(_ROWS)}
+
+
+def set_demo_universe(picks: list[tuple[str, str, str | None]]) -> None:
+    """Make the demo portfolio the given watchlist picks (plus fabricated top-up). A no-op when the
+    universe is already this one, so calling it on every demo request is cheap."""
+    global _universe_signature, _ROWS, _TOTAL_VALUE_NOK, _ROWS_BY_ID, _ROWS_BY_TICKER
+    global _ACCOUNT_ROWS, _ACCOUNT_ROWS_BY_ID
+    raw = universe_stocks(picks)
+    signature = tuple(f"{s['ticker']}|{s['name']}|{s['sector']}" for s in raw)
+    with _universe_lock:
+        if signature == _universe_signature:
+            return
+        rows, total = _build_rows(raw)
+        accounts = [_account_row(i, rows) for i in range(len(_RAW_ACCOUNTS))]
+        _ROWS, _TOTAL_VALUE_NOK = rows, total
+        _ROWS_BY_ID = {r["id"]: r for r in rows}
+        _ROWS_BY_TICKER = {r["ticker"]: r for r in rows}
+        _ACCOUNT_ROWS = accounts
+        _ACCOUNT_ROWS_BY_ID = {a["id"]: a for a in accounts}
+        _universe_signature = signature
+
+
+set_demo_universe([])
 
 
 # --- Holdings ---------------------------------------------------------------
@@ -727,22 +817,28 @@ def demo_thesis_monitor() -> MonitorOut:
 def demo_risk() -> PortfolioRiskOut:
     tickers = [r["ticker"] for r in _ROWS]
     pairs = []
-    fixed_correlations = {
-        ("AAPL", "MSFT"): "0.62", ("AAPL", "GOOGL"): "0.58", ("MSFT", "GOOGL"): "0.65",
-        ("JNJ", "PG"): "0.55", ("JPM", "V"): "0.60", ("KO", "PG"): "0.48",
-    }
-    for (a, b), corr in fixed_correlations.items():
-        pairs.append(CorrelationPairOut(ticker_a=a, ticker_b=b, correlation=_d(corr), overlap_days=250))
+    # Correlations between neighbouring demo stocks: a tight trio (the cluster), then two pairs.
+    slot_pairs = [(0, 1, "0.62"), (0, 2, "0.58"), (1, 2, "0.65"), (3, 4, "0.55"), (5, 6, "0.60")]
+    for i, j, corr in slot_pairs:
+        if max(i, j) < len(_ROWS):
+            pairs.append(
+                CorrelationPairOut(
+                    ticker_a=_ROWS[i]["ticker"], ticker_b=_ROWS[j]["ticker"], correlation=_d(corr), overlap_days=250
+                )
+            )
 
-    clusters = [
-        ClusterFlagOut(
-            tickers=["AAPL", "MSFT", "GOOGL"], names=["Apple Inc.", "Microsoft Corporation", "Alphabet Inc. Class A"],
-            correlation=_d("0.62"),
-            combined_weight_pct=sum(
-                (r["weight_pct"] for r in _ROWS if r["ticker"] in ("AAPL", "MSFT", "GOOGL")), Decimal(0)
-            ),
-        )
-    ]
+    cluster_rows = _ROWS[:3]
+    clusters = (
+        [
+            ClusterFlagOut(
+                tickers=[r["ticker"] for r in cluster_rows], names=[r["name"] for r in cluster_rows],
+                correlation=_d("0.62"),
+                combined_weight_pct=sum((r["weight_pct"] for r in cluster_rows), Decimal(0)),
+            )
+        ]
+        if len(cluster_rows) == 3
+        else []
+    )
 
     stress_holdings = [
         HoldingStressOut(
@@ -921,35 +1017,39 @@ def _journal_outcome(latest_price: Decimal, decision_price: Decimal) -> JournalO
 
 
 def demo_journal() -> JournalOut:
-    aapl = _ROWS_BY_TICKER["AAPL"]
-    msft = _ROWS_BY_TICKER["MSFT"]
-    xom = _ROWS_BY_TICKER["XOM"]
+    # Three invented decisions on the first three demo stocks, at prices relative to today's invented price.
+    first, second, third = _ROWS[0], _ROWS[1], _ROWS[2]
+
+    def at(row: dict, pct: str) -> Decimal:
+        return (row["price"] * Decimal(pct) / Decimal(100)).quantize(Decimal("0.01"))
+
+    p1, p2, p3 = at(first, "84"), at(second, "91"), at(third, "93")
     entries = [
         JournalEntryOut(
-            id=_other_id("journal", "1"), holding_id=aapl["id"], ticker="AAPL", company_name=aapl["name"],
-            action="buy", decided_on=_TODAY - timedelta(days=180), price=Decimal("190.00"), currency="USD",
+            id=_other_id("journal", "1"), holding_id=first["id"], ticker=first["ticker"], company_name=first["name"],
+            action="buy", decided_on=_TODAY - timedelta(days=180), price=p1, currency="USD",
             quantity=Decimal(50), thesis=f"{DEMO_NOTE} Bought into strength ahead of a new product cycle.",
             invalidation=f"{DEMO_NOTE} Would exit if margins compress materially.", confidence=4,
             verdict_at_decision="Buy", review_6m=None, review_12m=None,
             created_at=_NOW - timedelta(days=180), updated_at=_NOW - timedelta(days=180),
-            outcome=_journal_outcome(aapl["price"], Decimal("190.00")),
+            outcome=_journal_outcome(first["price"], p1),
         ),
         JournalEntryOut(
-            id=_other_id("journal", "2"), holding_id=msft["id"], ticker="MSFT", company_name=msft["name"],
-            action="add", decided_on=_TODAY - timedelta(days=90), price=Decimal("390.00"), currency="USD",
-            quantity=Decimal(20), thesis=f"{DEMO_NOTE} Added on cloud growth reacceleration.",
-            invalidation=f"{DEMO_NOTE} Would exit on sustained cloud deceleration.", confidence=5,
+            id=_other_id("journal", "2"), holding_id=second["id"], ticker=second["ticker"], company_name=second["name"],
+            action="add", decided_on=_TODAY - timedelta(days=90), price=p2, currency="USD",
+            quantity=Decimal(20), thesis=f"{DEMO_NOTE} Added on growth reacceleration.",
+            invalidation=f"{DEMO_NOTE} Would exit on sustained growth deceleration.", confidence=5,
             verdict_at_decision="Strong Buy", review_6m=None, review_12m=None,
             created_at=_NOW - timedelta(days=90), updated_at=_NOW - timedelta(days=90),
-            outcome=_journal_outcome(msft["price"], Decimal("390.00")),
+            outcome=_journal_outcome(second["price"], p2),
         ),
         JournalEntryOut(
-            id=_other_id("journal", "3"), holding_id=xom["id"], ticker="XOM", company_name=xom["name"],
-            action="trim", decided_on=_TODAY - timedelta(days=300), price=Decimal("110.00"), currency="USD",
+            id=_other_id("journal", "3"), holding_id=third["id"], ticker=third["ticker"], company_name=third["name"],
+            action="trim", decided_on=_TODAY - timedelta(days=300), price=p3, currency="USD",
             quantity=Decimal(30), thesis=f"{DEMO_NOTE} Trimmed after a strong run to rebalance.",
             invalidation=None, confidence=3, verdict_at_decision="Hold", review_6m=DEMO_NOTE, review_12m=None,
             created_at=_NOW - timedelta(days=300), updated_at=_NOW - timedelta(days=120),
-            outcome=_journal_outcome(xom["price"], Decimal("110.00")),
+            outcome=_journal_outcome(third["price"], p3),
         ),
     ]
     return JournalOut(entries=entries, reviews_due=0)

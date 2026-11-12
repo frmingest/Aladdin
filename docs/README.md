@@ -273,6 +273,7 @@ Running the app: hosting, auth gate, page-load, background jobs, audits, live ch
 - [game3d-postcards-2026-11-12.md](game/game3d-postcards-2026-11-12.md) — Postcards: seven pictures of the 3D world attached to every PR from the demo stack (D1 of the roadmap, 2026-11-12)
 - [page-load-root-cause-2026-10-03.md](ops/page-load-root-cause-2026-10-03.md) — Page load: root cause found and options (2026-10-03)
 - [page-load-snapshots-2026-09-30.md](ops/page-load-snapshots-2026-09-30.md) — Page-load fix: timing header, stored snapshots, no live price fetch in GET (2026-09-30)
+- [demo-mode-watchlist-picks-2026-11-12.md](ops/demo-mode-watchlist-picks-2026-11-12.md) — Demo mode shows seven random watchlist stocks with invented numbers (#404, 2026-11-12)
 - [remove-unused-manual-portfolio-endpoints-2026-10-14.md](ops/remove-unused-manual-portfolio-endpoints-2026-10-14.md) — Removed: four unused manual portfolio endpoints (2026-10-14)
 - [sprint20-speed-2026-10-03.md](ops/sprint20-speed-2026-10-03.md) — Sprint 20: speed (2026-10-03)
 

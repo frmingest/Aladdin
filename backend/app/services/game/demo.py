@@ -30,60 +30,63 @@ from app.services.settings.synthetic_data import (
     demo_journal,
     demo_portfolio_overview,
     demo_thesis_monitor,
+    demo_ticker_slots,
     demo_valuation_board,
 )
 
 D = Decimal
 
-# Invented figures, one per demo ticker: (net debt, EBITDA, interest cover).
-# Net debt -> negative means net cash. Chosen to show every wall material.
-_DEMO_WALLS: dict[str, tuple[str, str, str]] = {
-    "AAPL": ("-5000", "130000", "40"),
-    "MSFT": ("-20000", "120000", "50"),
-    "GOOGL": ("-60000", "100000", "80"),
-    "JNJ": ("20000", "30000", "20"),
-    "PG": ("90000", "20000", "25"),
-    "KO": ("30000", "17000", "9"),
-    "HD": ("48000", "20000", "2"),
-    "XOM": ("5000", "70000", "30"),
+# Invented per-stock facts are attached to a SLOT (the stock's position, 0-6, in the demo portfolio), not to a
+# ticker: the demo stocks are drawn at random from the watchlist each time demo mode is switched on, so any
+# ticker can sit in any slot. The slots are chosen so the demo still shows every kind of tower.
+
+# (net debt, EBITDA, interest cover) per slot. Negative net debt means net cash. Slot 6 is judged as a
+# financial instead (below). Chosen to show every wall material.
+_DEMO_WALLS: dict[int, tuple[str, str, str]] = {
+    0: ("-5000", "130000", "40"),
+    1: ("20000", "30000", "20"),
+    2: ("-60000", "100000", "80"),
+    3: ("48000", "20000", "2"),
+    4: ("90000", "20000", "25"),
+    5: ("30000", "17000", "9"),
 }
 
-# Invented betas for the Siege Simulator in demo mode (G13). Illustrative only;
-# one demo ticker (V) is left out on purpose so the "not modelled" path shows.
-DEMO_BETAS: dict[str, Decimal] = {
-    "AAPL": D("1.20"), "MSFT": D("1.05"), "GOOGL": D("1.10"), "JNJ": D("0.55"),
-    "PG": D("0.45"), "KO": D("0.55"), "JPM": D("1.15"), "HD": D("1.00"), "XOM": D("0.90"),
+# Invented betas for the Siege Simulator in demo mode (G13). Illustrative only; slot 6 is left out on
+# purpose so the "not modelled" path shows.
+_DEMO_BETAS: dict[int, Decimal] = {
+    0: D("1.20"), 1: D("1.05"), 2: D("1.10"), 3: D("1.00"), 4: D("0.45"), 5: D("0.55"),
 }
+
+
+def demo_beta(ticker: str) -> Decimal | None:
+    slot = demo_ticker_slots().get(ticker)
+    return _DEMO_BETAS.get(slot) if slot is not None else None
+
 
 # Financial-sector demo names are judged on equity / total assets.
-_DEMO_FINANCIALS: dict[str, tuple[str, str]] = {
-    "JPM": ("320000", "3900000"),
-    "V": ("38000", "90000"),
-}
+_DEMO_FINANCIALS: dict[int, tuple[str, str]] = {6: ("320000", "3900000")}
 
 
 # Invented one-in-a-book stress losses (fractions, negative = a loss), chosen
 # so the demo shows sheltered, exposed and breach-risk towers.
-_DEMO_SHOCKS: dict[str, str] = {
-    "AAPL": "-0.18", "MSFT": "-0.15", "GOOGL": "-0.22", "JNJ": "-0.10", "PG": "-0.12",
-    "KO": "-0.09", "JPM": "-0.30", "V": "-0.14", "HD": "-0.45", "XOM": "-0.33",
-}
-_DEMO_CLUSTER = ("AAPL", "MSFT", "GOOGL")
+_DEMO_SHOCKS: dict[int, str] = {0: "-0.18", 1: "-0.15", 2: "-0.22", 3: "-0.45", 4: "-0.12", 5: "-0.09", 6: "-0.30"}
+_DEMO_CLUSTER = (0, 1, 2)
 # The invented demo board puts every name in one zone; these overrides make the
-# demo show every kind of land. (zone, valuation status). XOM is fog: withheld.
-_DEMO_LAND: dict[str, tuple[str, str]] = {
-    "KO": ("below_bear", "ok"),
-    "MSFT": ("base_to_bull", "ok"),
-    "AAPL": ("above_bull", "ok"),
-    "XOM": ("below_bear", "implausible"),
+# demo show every kind of land. (zone, valuation status). Slot 6 is fog: withheld.
+_DEMO_LAND: dict[int, tuple[str, str]] = {
+    5: ("below_bear", "ok"),
+    1: ("base_to_bull", "ok"),
+    0: ("above_bull", "ok"),
+    6: ("below_bear", "implausible"),
 }
 # Invented thesis states so game mode shows a review mark and a breach.
-_DEMO_THESIS: dict[str, tuple[str, int]] = {"PG": ("review", 0), "HD": ("tripwire_fired", 1)}
+_DEMO_THESIS: dict[int, tuple[str, int]] = {4: ("review", 0), 3: ("tripwire_fired", 1)}
 
 
 def _demo_risk(overview, now: datetime) -> RiskFacts:
-    by_ticker = {p.ticker: p for p in overview.positions}
-    cluster_positions = [by_ticker[t] for t in _DEMO_CLUSTER if t in by_ticker]
+    slots = demo_ticker_slots()
+    by_slot = {slots[p.ticker]: p for p in overview.positions if p.ticker in slots}
+    cluster_positions = [by_slot[i] for i in _DEMO_CLUSTER if i in by_slot]
     return RiskFacts(
         regime="baseline",
         regime_explanation="Demo data: an invented, calm macro backdrop.",
@@ -92,7 +95,7 @@ def _demo_risk(overview, now: datetime) -> RiskFacts:
         portfolio_drawdown_nok=None,
         snapshot_at=now - timedelta(days=1),
         holding_shocks={
-            by_ticker[t].holding_id: (D(v), "volatility") for t, v in _DEMO_SHOCKS.items() if t in by_ticker
+            by_slot[i].holding_id: (D(v), "volatility") for i, v in _DEMO_SHOCKS.items() if i in by_slot
         },
         clusters=[
             ClusterFact(
@@ -110,7 +113,8 @@ def _demo_risk(overview, now: datetime) -> RiskFacts:
 def _demo_temperament(overview, now: datetime) -> TemperamentInputs:
     """The demo journal plus a few invented decisions, so the demo meter shows
     every kind of line (drains and restores) without touching real data."""
-    by_ticker = {p.ticker: p for p in overview.positions}
+    slots = demo_ticker_slots()
+    by_slot = {slots[p.ticker]: p for p in overview.positions if p.ticker in slots}
     today = now.date()
     decisions = [
         DecisionFact(
@@ -123,24 +127,24 @@ def _demo_temperament(overview, now: datetime) -> TemperamentInputs:
         for e in demo_journal().entries
     ]
 
-    def invented(ticker: str, action: str, days_ago: int, *, verdict: str | None = "Hold", invalidation=True):
-        p = by_ticker.get(ticker)
+    def invented(slot: int, action: str, days_ago: int, *, verdict: str | None = "Hold", invalidation=True):
+        p = by_slot.get(slot)
         if p is None:
             return
         decisions.append(
             DecisionFact(
-                entry_id=None, holding_id=p.holding_id, ticker=ticker, name=p.name, action=action,
+                entry_id=None, holding_id=p.holding_id, ticker=p.ticker, name=p.name, action=action,
                 decided_on=today - timedelta(days=days_ago), verdict_at_decision=verdict,
                 has_invalidation=invalidation,
             )
         )
 
-    invented("KO", "buy", 40, verdict="Buy", invalidation=False)  # drain: no invalidation written
-    invented("HD", "trim", 20)  # restore: acted after the (invented) tripwire fired
+    invented(5, "buy", 40, verdict="Buy", invalidation=False)  # drain: no invalidation written
+    invented(3, "trim", 20)  # restore: acted after the (invented) tripwire fired
     for days in (70, 45, 15):  # drain: churn
-        invented("PG", "add" if days != 45 else "trim", days)
+        invented(4, "add" if days != 45 else "trim", days)
     steps = []
-    jnj = by_ticker.get("JNJ")
+    jnj = by_slot.get(2)
     if jnj is not None:
         steps.append(
             PositionStep(
@@ -149,7 +153,7 @@ def _demo_temperament(overview, now: datetime) -> TemperamentInputs:
                 price_before=D("170"), price_after=D("142"),
             )
         )
-    fired = {by_ticker["HD"].holding_id: [now - timedelta(days=30)]} if "HD" in by_ticker else {}
+    fired = {by_slot[3].holding_id: [now - timedelta(days=30)]} if 3 in by_slot else {}
     turnover = [
         TurnoverFact(
             account_name=demo_accounts()[0].name, from_at=now - timedelta(days=30), to_at=now - timedelta(days=2),
@@ -162,14 +166,16 @@ def _demo_temperament(overview, now: datetime) -> TemperamentInputs:
 def demo_game_state(version: str) -> GameStateOut:
     overview = demo_portfolio_overview()
     walls: dict = {}
+    slots = demo_ticker_slots()
     for position in overview.positions:
-        if position.ticker in _DEMO_FINANCIALS:
-            equity, assets = _DEMO_FINANCIALS[position.ticker]
+        slot = slots.get(position.ticker)
+        if slot in _DEMO_FINANCIALS:
+            equity, assets = _DEMO_FINANCIALS[slot]
             walls[position.holding_id] = WallFacts(
                 period="FY-DEMO", total_equity=D(equity), total_assets=D(assets)
             )
             continue
-        row = _DEMO_WALLS.get(position.ticker)
+        row = _DEMO_WALLS.get(slot)
         if row is None:
             continue
         net_debt, ebitda, cover = (D(x) for x in row)
@@ -177,11 +183,11 @@ def demo_game_state(version: str) -> GameStateOut:
             period="FY-DEMO", net_debt=net_debt, ebitda=ebitda, interest_coverage=cover
         )
     now = datetime.now(timezone.utc)
-    tickers = {p.holding_id: p.ticker for p in overview.positions}
+    slot_of = {p.holding_id: slots.get(p.ticker) for p in overview.positions}
     # The demo board stores margins as percent; the real board stores fractions.
     land = {}
     for r in demo_valuation_board().rows:
-        zone, status = _DEMO_LAND.get(tickers.get(r.holding_id, ""), (r.zone, "ok"))
+        zone, status = _DEMO_LAND.get(slot_of.get(r.holding_id), (r.zone, "ok"))
         land[r.holding_id] = LandFacts(
             zone=zone,
             valuation_status=status,
@@ -190,7 +196,7 @@ def demo_game_state(version: str) -> GameStateOut:
         )
     thesis: dict = {}
     for row in demo_thesis_monitor().rows:
-        status, fired = _DEMO_THESIS.get(tickers.get(row.holding_id, ""), (row.status, row.firing_count))
+        status, fired = _DEMO_THESIS.get(slot_of.get(row.holding_id), (row.status, row.firing_count))
         thesis[row.holding_id] = ThesisFacts(status=status, firing_count=fired)
     inputs = GameInputs(
         overview=overview,
