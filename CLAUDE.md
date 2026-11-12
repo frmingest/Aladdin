@@ -123,6 +123,10 @@ project's `claude/progress.md` and the repo's `docs/PROGRESS.md`), which stay in
   `backend/requirements-dev.txt`; bump it there and in the pre-commit `rev` together.
 - `frontend/e2e/smoke.spec.ts` (`npm run smoke`, workflow `smoke.yml`) is the post-deploy check.
   It must stay read-only: no non-GET requests, no endpoint that can spend LLM quota.
+- `frontend/e2e/regression/` (`npm run e2e`, CI job *E2E (Playwright, demo stack)*) is the pre-merge browser check. It runs
+  against a throw-away stack in demo mode (`frontend/e2e/regression/stack.setup.ts`), never against Railway. Strategy and
+  open findings: `docs/ops/test-strategy-2026-11-12.md`. A new entry in the allow-lists of `frontend/e2e/support/guard.ts`
+  needs a written reason.
 
 ## Destructive operations
 

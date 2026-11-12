@@ -267,6 +267,7 @@ Running the app: hosting, auth gate, page-load, background jobs, audits, live ch
 - [macro-data-and-guardrails-sprint7-2026-09-24.md](ops/macro-data-and-guardrails-sprint7-2026-09-24.md) — Numeric macro data (Fed / Norges Bank) + Sprint 7 guardrail tooling
 - [mypy-report-only-2026-10-14.md](ops/mypy-report-only-2026-10-14.md) — Backend type check in CI: mypy, report only (2026-10-14)
 - [object-storage-free-tier-alternatives-2026-09-27.md](ops/object-storage-free-tier-alternatives-2026-09-27.md) — Object storage: free-tier alternatives to Supabase Storage (2026-09-27)
+- [test-strategy-2026-11-12.md](ops/test-strategy-2026-11-12.md) — Test strategy and the Playwright framework: levels, demo-stack E2E in CI, rule-to-test map, findings F-0 to F-3 (2026-11-12)
 - [page-load-root-cause-2026-10-03.md](ops/page-load-root-cause-2026-10-03.md) — Page load: root cause found and options (2026-10-03)
 - [page-load-snapshots-2026-09-30.md](ops/page-load-snapshots-2026-09-30.md) — Page-load fix: timing header, stored snapshots, no live price fetch in GET (2026-09-30)
 - [remove-unused-manual-portfolio-endpoints-2026-10-14.md](ops/remove-unused-manual-portfolio-endpoints-2026-10-14.md) — Removed: four unused manual portfolio endpoints (2026-10-14)
