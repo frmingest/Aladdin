@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "test": "vitest run",
-    "smoke": "playwright test"
+    "smoke": "playwright test --project=smoke",
+    "e2e": "playwright test --project=regression"
   },
   "dependencies": {
     "@react-three/drei": "9.122.0",

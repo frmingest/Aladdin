@@ -8,9 +8,9 @@ import { expect, test } from "@playwright/test";
  * Software-only graphics can be very slow, so this checks the page chrome (title, buttons, address), not frame rates.
  */
 const PLACES: { at: string; title: RegExp; back: string; after: string }[] = [
-  { at: "town", title: /The Town/, back: "← Back to the courtyard", after: "" },
-  { at: "townhall", title: /Town Hall/, back: "← Back to the Town", after: "?at=town" },
-  { at: "records", title: /Hall of Records/, back: "← Back to the Town", after: "?at=town" },
+  // The Town stopped being a place on 2026-11-10 (the Town Hall now stands outside the gate), so both halls lead back to the courtyard.
+  { at: "townhall", title: /Town Hall/, back: "← Back outside", after: "" },
+  { at: "records", title: /Hall of Records/, back: "← Back outside", after: "" },
 ];
 
 test.beforeEach(async ({ page }) => {
