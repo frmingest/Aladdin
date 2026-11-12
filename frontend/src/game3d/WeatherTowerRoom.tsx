@@ -1,16 +1,16 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { MutableRefObject } from "react";
-import { Line } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { CuboidCollider, RigidBody } from "@react-three/rapier";
+import { CanvasTexture, LinearMipmapLinearFilter, SRGBColorSpace } from "three";
 import { api } from "../lib/api";
 import { useCachedQuery } from "../lib/queryCache";
 import type { MacroIndicators } from "../lib/types";
-import { INK, PAL, Part } from "./Inked";
+import { PAL, Part } from "./Inked";
 import {
   DIALS_LEAVE_RANGE,
   DIALS_RANGE,
-  DIAL_RADIUS,
+  PLATE,
   RAIL,
   READOUT_LEAVE_RANGE,
   READOUT_RANGE,
@@ -27,67 +27,79 @@ import {
   towerPlate,
 } from "./weatherTowerRoom";
 import type { DialPlan, RailPost } from "./weatherTowerRoom";
-import { WEATHER_WORDS } from "./weatherTowerWordsV1";
-import WorldLabel from "./WorldLabel";
+import { BANNER_PX, PLATE_PX, POST_PX, drawBanner, drawPlate, drawPost } from "./weatherPlateArt";
+import { WEATHER_WORDS } from "./weatherTowerWordsV2";
 
 const STONE = "#b9b2a4";
 const FLOOR = "#5d5a66";
 const BRASS = "#c79a3a";
-const FACE = "#eee4d3";
-const FACE_EMPTY = "#a3a6c0";
 const LENGTH_Z = TOWER.maxZ - TOWER.minZ;
 const MID_Z = (TOWER.maxZ + TOWER.minZ) / 2;
 const WIDTH_X = TOWER.maxX - TOWER.minX;
 
+/** A texture drawn once on a 2D canvas: crisp text and lines, no DOM label, no per-frame work. */
+function makeTexture(size: { w: number; h: number }, draw: (ctx: CanvasRenderingContext2D) => void): CanvasTexture {
+  const canvas = document.createElement("canvas");
+  canvas.width = size.w;
+  canvas.height = size.h;
+  const ctx = canvas.getContext("2d");
+  if (ctx) draw(ctx);
+  const t = new CanvasTexture(canvas);
+  t.colorSpace = SRGBColorSpace;
+  t.anisotropy = 8;
+  t.minFilter = LinearMipmapLinearFilter;
+  return t;
+}
+
+/** Throws a texture away when it is replaced or the mesh goes. */
+function useDispose(texture: CanvasTexture) {
+  useEffect(() => () => texture.dispose(), [texture]);
+}
+
+/** One flat picture on a wall or post: unlit, so the words read the same wherever you stand. */
+function Sheet({ texture, width, height }: { texture: CanvasTexture; width: number; height: number }) {
+  return (
+    <mesh>
+      <planeGeometry args={[width, height]} />
+      <meshBasicMaterial map={texture} transparent toneMapped={false} />
+    </mesh>
+  );
+}
+
 /**
- * One dial: a brass-rimmed face, a needle that shows where the value sits in its own 24-month range, and a paper trace
- * of those 24 months under it. State is told by shape: no reading = a grey face with no needle; stale = a hood over the
- * top half. Colour never carries it alone, and nothing here says good or bad.
+ * One plate: the series' name and number always in big type, its last 24 months as a line, and a low-to-high bar with a
+ * dot for where today sits in that range. Replaces the clock face (issue #402). State is told by shape and word: no
+ * reading = dashed rim and "No reading"; stale = a slate tab that says "stale". The plate you stand beside gets a gold
+ * rim. Nothing here says good or bad.
  */
-function Dial({ d }: { d: DialPlan }) {
-  const turn: [number, number, number] = [Math.PI / 2, 0, 0];
+function Plate({ d, lit }: { d: DialPlan; lit: boolean }) {
+  const texture = useMemo(() => makeTexture(PLATE_PX, (ctx) => drawPlate(ctx, d, lit)), [d, lit]);
+  useDispose(texture);
   return (
     <group position={[d.x, d.y, d.z]} rotation={[0, d.yaw, 0]}>
-      <Part color={BRASS} rotation={turn} grow={1.05}>
-        <cylinderGeometry args={[DIAL_RADIUS + 0.1, DIAL_RADIUS + 0.1, 0.12, 20]} />
-      </Part>
-      <mesh position={[0, 0, 0.07]} rotation={turn}>
-        <cylinderGeometry args={[DIAL_RADIUS, DIAL_RADIUS, 0.02, 20]} />
-        <meshBasicMaterial color={d.state === "empty" ? FACE_EMPTY : FACE} />
-      </mesh>
-      {d.needle !== null && (
-        <group position={[0, 0, 0.1]} rotation={[0, 0, d.needle]}>
-          <mesh position={[0, DIAL_RADIUS * 0.38, 0]}>
-            <boxGeometry args={[0.07, DIAL_RADIUS * 0.76, 0.03]} />
-            <meshBasicMaterial color={INK} />
-          </mesh>
-        </group>
-      )}
-      <mesh position={[0, 0, 0.12]} rotation={turn}>
-        <cylinderGeometry args={[0.09, 0.09, 0.04, 10]} />
-        <meshBasicMaterial color={BRASS} />
-      </mesh>
-      {d.state === "stale" && (
-        <mesh position={[0, 0, 0.14]} rotation={turn}>
-          <cylinderGeometry args={[DIAL_RADIUS * 0.98, DIAL_RADIUS * 0.98, 0.02, 20, 1, false, -Math.PI / 2, Math.PI]} />
-          <meshBasicMaterial color={PAL.slateDark} />
-        </mesh>
-      )}
-      {d.trace.length >= 2 && (
-        <group position={[0, -DIAL_RADIUS - 0.62, 0.05]}>
-          <mesh>
-            <planeGeometry args={[1.7, 0.62]} />
-            <meshBasicMaterial color={FACE} />
-          </mesh>
-          <Line points={d.trace.map(([x, y]) => [x, y - 0.25, 0.01] as [number, number, number])} color={INK} lineWidth={1.5} />
-        </group>
-      )}
+      <group position={[0, 0, 0.05]}>
+        <Sheet texture={texture} width={PLATE.width} height={PLATE.height} />
+      </group>
     </group>
   );
 }
 
-/** One post on the curve rail: its height is the yield itself on a fixed scale; a stale reading wears a grey cap. */
+/** A wide wall banner (a heading or a key). */
+function Banner({ position, yaw, width, big, small }: { position: [number, number, number]; yaw: number; width: number; big: string; small: string | null }) {
+  const texture = useMemo(() => makeTexture(BANNER_PX, (ctx) => drawBanner(ctx, big, small)), [big, small]);
+  useDispose(texture);
+  return (
+    <group position={position} rotation={[0, yaw, 0]}>
+      <Sheet texture={texture} width={width} height={(width * BANNER_PX.h) / BANNER_PX.w} />
+    </group>
+  );
+}
+
+/** One post on the curve rail: its height is the yield itself on a fixed scale; a stale reading wears a grey cap and a "stale" word. */
 function Post({ p }: { p: RailPost }) {
+  const { tenor, text, stale } = p;
+  const texture = useMemo(() => makeTexture(POST_PX, (ctx) => drawPost(ctx, tenor, text, stale)), [tenor, text, stale]);
+  useDispose(texture);
   return (
     <group position={[p.x, 0, RAIL.z]}>
       <Part color={PAL.timber} position={[0, p.height / 2, 0]} grow={1.08}>
@@ -96,13 +108,9 @@ function Post({ p }: { p: RailPost }) {
       <Part color={p.stale ? PAL.slateDark : BRASS} position={[0, p.height + 0.1, 0]} grow={1.1}>
         <sphereGeometry args={[0.2, 10, 8]} />
       </Part>
-      <WorldLabel position={[0, p.height + 0.7, 0]} distanceFactor={8}>
-        <div className="text-xs font-semibold">{p.tenor}</div>
-        <div className="text-xs opacity-80">
-          {p.text}
-          {p.stale ? ` (${WEATHER_WORDS.stale})` : ""}
-        </div>
-      </WorldLabel>
+      <group position={[0, p.height + 0.62, 0.05]}>
+        <Sheet texture={texture} width={1.1} height={(1.1 * POST_PX.h) / POST_PX.w} />
+      </group>
     </group>
   );
 }
@@ -150,11 +158,11 @@ interface Props {
 }
 
 /**
- * The inside of the Weather Tower: one dial for each stored macro series, Norway west, the United States east, the
+ * The inside of the Weather Tower: one wall plate for each stored macro series (name, number, 24-month line, low-to-high dot), Norway west, the United States east, the
  * computed gaps north, and a rail of posts down the middle for Norway's own curve. Read through the same call as the flat
  * Macro page (`getMacroIndicators`, same cache key as the Town Hall board); a failed read leaves the walls bare with the
  * plain plate, never a guess. Walls are drawn from inside only so the follow camera can sit outside them. The room is
- * furniture: every needle, trace and post is decided by code from the stored numbers.
+ * furniture: every plate and post is decided by code from the stored numbers.
  */
 export default function WeatherTowerRoom({ pos, onDials, onDoor }: Props) {
   const macro = useCachedQuery<MacroIndicators>("macro-indicators", () => api.getMacroIndicators());
@@ -163,7 +171,6 @@ export default function WeatherTowerRoom({ pos, onDials, onDoor }: Props) {
   const posts = useMemo(() => curvePosts(data), [data]);
   const plate = towerPlate(towerFacts(data));
   const [readoutKey, setReadoutKey] = useState<string | null>(null);
-  const readout = readoutKey ? layout.dials.find((d) => d.key === readoutKey) ?? null : null;
   const doorGap = TOWER_DOOR.width / 2;
   const sideLen = (WIDTH_X - TOWER_DOOR.width) / 2;
   const railW = RAIL.maxX - RAIL.minX + 1.4;
@@ -223,37 +230,16 @@ export default function WeatherTowerRoom({ pos, onDials, onDoor }: Props) {
       {posts.map((p) => (
         <Post key={p.key} p={p} />
       ))}
-      <WorldLabel position={[0, 0.9, RAIL.z + 0.7]} distanceFactor={8}>
-        <div className="text-xs opacity-80">{WEATHER_WORDS.railKey}</div>
-      </WorldLabel>
+      <Banner position={[0, 0.42, RAIL.z + 0.9]} yaw={0} width={4.2} big={WEATHER_WORDS.railKey} small={null} />
 
       {layout.dials.map((d) => (
-        <Dial key={d.key} d={d} />
+        <Plate key={d.key} d={d} lit={d.key === readoutKey} />
       ))}
 
-      <WorldLabel position={[0, 6.4, TOWER.minZ + 0.5]} distanceFactor={9} wrap maxWidth={300} reveal="always">
-        {plate.map((line, i) => (
-          <div key={line} className={i === 0 ? "text-sm font-semibold" : "text-xs opacity-80"}>
-            {line}
-          </div>
-        ))}
-        <div className="text-xs opacity-80">{WEATHER_WORDS.needleKey}</div>
-      </WorldLabel>
-      {readout && (
-        <WorldLabel position={[readout.x, readout.y + DIAL_RADIUS + 0.55, readout.z]} distanceFactor={7} wrap maxWidth={240} now reveal="always">
-          {readout.readout.map((line, i) => (
-            <div key={line} className={i === 0 ? "text-sm font-semibold" : "text-xs opacity-80"}>
-              {line}
-            </div>
-          ))}
-        </WorldLabel>
-      )}
-      <WorldLabel position={[TOWER.minX + 0.4, 6.4, MID_Z]} distanceFactor={9} reveal="always">
-        <div className="text-xs font-semibold">{WEATHER_WORDS.west}</div>
-      </WorldLabel>
-      <WorldLabel position={[TOWER.maxX - 0.4, 6.4, MID_Z]} distanceFactor={9} reveal="always">
-        <div className="text-xs font-semibold">{WEATHER_WORDS.east}</div>
-      </WorldLabel>
+      <Banner position={[0, 6.45, TOWER.minZ + 0.1]} yaw={0} width={6} big={plate[0]} small={plate.length > 1 ? plate.slice(1).join(" · ") : null} />
+      <Banner position={[0, 0.42, TOWER.minZ + 0.1]} yaw={0} width={5} big={WEATHER_WORDS.dotKey} small={null} />
+      <Banner position={[TOWER.minX + 0.1, 6.45, MID_Z]} yaw={Math.PI / 2} width={3.6} big={WEATHER_WORDS.west} small={null} />
+      <Banner position={[TOWER.maxX - 0.1, 6.45, MID_Z]} yaw={-Math.PI / 2} width={3.6} big={WEATHER_WORDS.east} small={null} />
 
       <TowerWatch pos={pos} dials={layout.dials} onDials={onDials} onDoor={onDoor} onReadout={setReadoutKey} />
     </group>

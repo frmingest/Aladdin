@@ -30,7 +30,7 @@ import {
   tracePoints,
   wallSlot,
 } from "./weatherTowerRoom";
-import { WEATHER_WORDS } from "./weatherTowerWordsV1";
+import { WEATHER_WORDS } from "./weatherTowerWordsV2";
 
 const HISTORY = ["3.00", "3.50", "4.00", "4.50", "5.00"].map((value, i) => ({ date: `2025-0${i + 1}-28`, value }));
 
@@ -261,7 +261,7 @@ describe("the plate and the words", () => {
     const facts = towerFacts(m)!;
     expect(facts.total).toBe(22);
     expect(facts.reading).toBe(21);
-    expect(towerPlate(facts)[1]).toBe("21 of 22 dials reading");
+    expect(towerPlate(facts)[1]).toBe("21 of 22 plates reading");
   });
 
   it("uses no buy, sell, good or bad words and no picture characters", () => {

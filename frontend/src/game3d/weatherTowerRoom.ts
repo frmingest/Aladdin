@@ -17,7 +17,7 @@ import { formatIndicatorChange, formatIndicatorValue } from "../lib/format";
 import type { MacroIndicator, MacroIndicators } from "../lib/types";
 import type { Spot } from "./layout";
 import { BUILDINGS, stepOutOf } from "./townPlan";
-import { WEATHER_WORDS } from "./weatherTowerWordsV1";
+import { WEATHER_WORDS } from "./weatherTowerWordsV2";
 
 export const TOWER = { minX: -10, maxX: 10, minZ: -10, maxZ: 10, height: 7 } as const;
 /** A closed pair of doors in the south wall; E beside it leads back out into the Town. */
@@ -41,6 +41,9 @@ export const READOUT_RANGE = 2.6;
 export const READOUT_LEAVE_RANGE = 3.4;
 
 export const DIAL_RADIUS = 0.8;
+
+/** The wall plate that replaced the round dial face (issue #402): size in metres. One plate per series, name and number always readable. */
+export const PLATE = { width: 1.95, height: 1.5 } as const;
 /** The needle sweeps this far each side of straight up: low on the left, high on the right. */
 export const NEEDLE_SWEEP = (2 * Math.PI) / 3;
 
@@ -93,6 +96,8 @@ export interface DialPlan {
   /** Which way the dial faces (rotation about y): local +z turned to look into the room. */
   yaw: number;
   state: DialState;
+  /** Where today sits in the series' own 24-month range, 0 = low, 1 = high; null when there is no honest place to put the dot. */
+  fraction: number | null;
   /** Needle rotation about the dial's own axis, or null when there is no honest place to point (no reading, or no history). */
   needle: number | null;
   /** The 24-month trace as [x, y] offsets from the dial's trace origin, left to right; empty when there is none to draw. */
@@ -239,6 +244,7 @@ export function towerLayout(macro: Pick<MacroIndicators, "indicators" | "derived
           wall,
           ...wallSlot(wall, r, c, row.length),
           state: dialState(snap),
+          fraction,
           needle: needleAngle(fraction),
           trace: tracePoints(snap),
           readout: dialReadout(snap),
