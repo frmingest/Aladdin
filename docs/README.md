@@ -5,7 +5,7 @@ Find a doc by topic folder below, or `grep -ril <term> docs/`. Folder = topic, n
 
 ## Always-current (docs root)
 
-- [PROGRESS.md](PROGRESS.md) — Current status, active tasks, blockers. Rolling log, under 100 lines.
+- [PROGRESS.md](PROGRESS.md) — Pointer to the sprint board (GitHub Project **Aladdin**), where backlog and history now live.
 - [architecture.md](architecture.md) — System diagram, analysis paths, deployment, background jobs, data model (ER diagram), game mode, frontend map, known gaps. Rewritten 2026-10-19.
 - [buffett-munger-rebuild-sprint-plan-2026-09-21.md](buffett-munger-rebuild-sprint-plan-2026-09-21.md) — The active rebuild sprint plan and the analyst prompt ("the Brain").
 
@@ -257,6 +257,7 @@ Local LLM (Ollama), the worker and queue, evidence packets, LLM usage ledger.
 
 Running the app: hosting, auth gate, page-load, background jobs, audits, live checks.
 
+- [github-projects-workflow-2026-11-12.md](ops/github-projects-workflow-2026-11-12.md) — How the sprint board, milestones, issues and labels work (replaces the rolling progress log)
 - [agentic-coding-audit-2026-09-27.md](ops/agentic-coding-audit-2026-09-27.md) — Agentic-coding audit — 2026-09-27
 - [agentic-coding-audit-2026-11-01.md](ops/agentic-coding-audit-2026-11-01.md) — Agentic-coding audit of PRs #147 to #246: rule breaks and rule contradictions (2026-11-01)
 - [backend-auth-cors-gate-2026-09-27.md](ops/backend-auth-cors-gate-2026-09-27.md) — Backend auth gate + CORS lockdown — 2026-09-27
