@@ -60,3 +60,4 @@ scripts/art/contact-sheet.png
 # --- 3D art review downloads (2026-11-01): 175 MB of raw packs, only the vetted
 # licence texts and packed .glb files in frontend/public/models are committed ---
 frontend/3D art review/
+frontend/postcards/
