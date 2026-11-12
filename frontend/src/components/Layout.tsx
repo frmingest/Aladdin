@@ -303,6 +303,8 @@ function useRouteTitle() {
 function FullLayout({ children }: { children: React.ReactNode }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  // The 3D courtyard wants the whole screen (C2): the desktop sidebar folds away there, and a Menu button brings it back.
+  const [peekNav, setPeekNav] = useState(false);
   useRouteTitle();
   const { gameMode } = useGameMode();
 
@@ -310,6 +312,7 @@ function FullLayout({ children }: { children: React.ReactNode }) {
     s.items.map((i) => ({ label: i.label, to: i.to, group: s.title })),
   );
   const { pathname } = useLocation();
+  const foldNav = pathname.startsWith("/game3d") && !peekNav;
 
   // Ctrl/⌘+K opens quick search from anywhere.
   useEffect(() => {
@@ -404,7 +407,10 @@ function FullLayout({ children }: { children: React.ReactNode }) {
 
       <div className="flex min-h-0 flex-1">
         {/* Desktop fixed sidebar (lg+). */}
-        <nav className="hidden w-56 shrink-0 flex-col border-r border-border bg-surface px-4 py-6 lg:flex print:hidden">
+        <nav
+          aria-label="Main"
+          className={`hidden w-56 shrink-0 flex-col border-r border-border bg-surface px-4 py-6 print:hidden ${foldNav ? "" : "lg:flex"}`}
+        >
           <div className="mb-8">
             <Brand />
           </div>
@@ -412,7 +418,19 @@ function FullLayout({ children }: { children: React.ReactNode }) {
         </nav>
         <div className="flex min-w-0 flex-1 flex-col">
           {/* Slim top bar (lg+): the game-mode switch. Below lg the switch sits in the mobile bar. */}
-          <div className="hidden items-center justify-end border-b border-border bg-surface px-6 py-2 lg:flex print:hidden">
+          <div className="hidden items-center justify-between border-b border-border bg-surface px-6 py-2 lg:flex print:hidden">
+            {pathname.startsWith("/game3d") ? (
+              <button
+                type="button"
+                aria-expanded={!foldNav}
+                onClick={() => setPeekNav((v) => !v)}
+                className="rounded border border-border bg-raised px-2.5 py-1 text-xs font-medium text-ink-muted hover:text-ink"
+              >
+                {foldNav ? "☰ Menu" : "Hide menu"}
+              </button>
+            ) : (
+              <span />
+            )}
             <GameModeToggle />
           </div>
           {gameMode && isFortressPath(pathname) && (

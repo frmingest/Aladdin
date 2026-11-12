@@ -76,6 +76,7 @@ import SalesRepDialog from "../components/marketplace/SalesRepDialog";
 import HypeBoothDialog from "../components/marketplace/HypeBoothDialog";
 import { useDemoMode } from "../lib/demoMode";
 import { PANEL_KEYS, loadPanels, savePanels, togglePanel } from "../game3d/hudPanels";
+import { HINT_TEXT, countVisit, hintWanted } from "../game3d/hintLine";
 import { SOUND_KEY, ambienceLevel } from "../game3d/soundPlan";
 import { useAmbience } from "../game3d/useAmbience";
 import type { PanelId } from "../game3d/hudPanels";
@@ -261,6 +262,8 @@ export default function Game3DPage() {
   const cheered = useRef(false);
   // Panels start shut (or as you left them) so the scene is not covered.
   const [panels, setPanels] = useState(loadPanels);
+  // The key hint teaches the controls, so it shows on the first few visits only (C2).
+  const [showHint] = useState(() => hintWanted(countVisit()));
   const flip = useCallback((id: PanelId) => setPanels((p) => togglePanel(p, id)), []);
   useEffect(() => savePanels(panels), [panels]);
 
@@ -1208,6 +1211,12 @@ export default function Game3DPage() {
       break;
   }
 
+  // One Back button for every room (C2): the Town Hall, the Hall of Records, the Weather Tower and a holding's tower.
+  const backOutside = roomView ? leaveTower : inHall ? leaveHall : inRecords ? leaveRecords : area.id === "weather" ? leaveWeather : null;
+  // Any panel or dialog on screen: the hint line steps aside for it.
+  const anyPanelOpen =
+    panels.quests || panels.towers || whereOpen || vaultOpen || realmOpen || watchOpen || perchOpen || deskOpen || drillOpen || lampOpen || boothOpen !== null || report !== null;
+
   return (
     <div className="relative h-[calc(100dvh-5rem)] min-h-[480px] w-full overflow-hidden bg-surface">
       <SceneBoundary fallback={<Unavailable />}>
@@ -1351,38 +1360,10 @@ export default function Game3DPage() {
       >
         {PLAIN_VIEW}
       </Link>
-      {roomView && (
+      {backOutside && (
         <button
           type="button"
-          onClick={leaveTower}
-          className="absolute left-3 top-14 rounded border border-border bg-surface/90 px-3 py-1.5 text-sm text-ink hover:opacity-80"
-        >
-          ← Back outside
-        </button>
-      )}
-
-      {inHall && (
-        <button
-          type="button"
-          onClick={leaveHall}
-          className="absolute left-3 top-14 rounded border border-border bg-surface/90 px-3 py-1.5 text-sm text-ink hover:opacity-80"
-        >
-          ← Back outside
-        </button>
-      )}
-      {inRecords && (
-        <button
-          type="button"
-          onClick={leaveRecords}
-          className="absolute left-3 top-14 rounded border border-border bg-surface/90 px-3 py-1.5 text-sm text-ink hover:opacity-80"
-        >
-          ← Back outside
-        </button>
-      )}
-      {area.id === "weather" && (
-        <button
-          type="button"
-          onClick={leaveWeather}
+          onClick={backOutside}
           className="absolute left-3 top-14 rounded border border-border bg-surface/90 px-3 py-1.5 text-sm text-ink hover:opacity-80"
         >
           ← Back outside
@@ -1393,9 +1374,9 @@ export default function Game3DPage() {
 
       {spotPrompt && <ActionPrompt text={spotPrompt} note={spotNote} onPress={pressE} />}
 
-      {!locked && !talking && (
+      {showHint && !locked && !talking && !anyPanelOpen && (
         <p className="pointer-events-none absolute bottom-4 left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-center text-sm text-white">
-          Click to look around · W A S D walk · Shift run · Space jump · Wheel zoom · Esc frees the mouse · Q quests · T towers · G where to
+          {HINT_TEXT}
         </p>
       )}
     </div>
