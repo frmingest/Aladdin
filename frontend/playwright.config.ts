@@ -23,7 +23,14 @@ import { defineConfig, devices } from "@playwright/test";
  *
  * First run on a machine: `npx playwright install chromium`.
  */
-const SMOKE_FILES = ["smoke.spec.ts", "game-pages.spec.ts", "game-errors.spec.ts", "game3d.spec.ts"];
+// The 3D check is its own project so a slow software-WebGL page cannot eat the budget of the fast checks, and the
+// workflow can give each its own step timeout (a hang then fails one named step instead of cancelling the whole job).
+const SMOKE_FAST_FILES = ["smoke.spec.ts", "game-pages.spec.ts", "game-errors.spec.ts"];
+const SMOKE_3D_FILES = ["game3d.spec.ts"];
+// A bare file name in testMatch also matches the same name in a sub-folder. Until 2026-11-13 the "smoke" project
+// therefore picked up e2e/regression/game3d.spec.ts too (14 extra 3D page loads against the live site, written for the
+// demo stack with a 90 s timeout), which pushed the daily run past its 15-minute limit. Keep the regression folder out.
+const SMOKE_IGNORE = ["**/regression/**"];
 
 const chromiumPath = process.env.SMOKE_CHROMIUM_PATH;
 const launchOptions = chromiumPath ? { executablePath: chromiumPath } : {};
@@ -33,7 +40,9 @@ export default defineConfig({
   timeout: 45_000,
   expect: { timeout: 15_000 },
   retries: process.env.CI ? 1 : 0,
-  reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : "list",
+  // "github" writes each failure as an annotation on the run, which the REST API can read; log and artifact
+  // downloads are blocked from cloud sessions, so without it a red smoke run could not be diagnosed there.
+  reporter: process.env.CI ? [["list"], ["github"], ["html", { open: "never" }]] : "list",
   use: {
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
@@ -43,7 +52,19 @@ export default defineConfig({
   projects: [
     {
       name: "smoke",
-      testMatch: SMOKE_FILES,
+      testMatch: SMOKE_FAST_FILES,
+      testIgnore: SMOKE_IGNORE,
+      use: { baseURL: process.env.SMOKE_FRONTEND_URL },
+    },
+    {
+      // Same live-site, read-only rules as "smoke". Software WebGL on a CI runner is slow, so: longer test timeout,
+      // no retry (a retry only doubles the wait), one at a time.
+      name: "smoke-3d",
+      testMatch: SMOKE_3D_FILES,
+      testIgnore: SMOKE_IGNORE,
+      timeout: 90_000,
+      retries: 0,
+      fullyParallel: false,
       use: { baseURL: process.env.SMOKE_FRONTEND_URL },
     },
     {

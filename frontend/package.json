@@ -9,7 +9,9 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "test": "vitest run",
-    "smoke": "playwright test --project=smoke",
+    "smoke": "playwright test --project=smoke --project=smoke-3d",
+    "smoke:fast": "playwright test --project=smoke",
+    "smoke:3d": "playwright test --project=smoke-3d",
     "e2e": "playwright test --project=regression"
   },
   "dependencies": {
