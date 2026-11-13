@@ -39,6 +39,9 @@ def has_foreign_suffix(ticker: str) -> bool:
     return "." in ticker.strip()
 
 
+def newsweb_applies_to(ticker: str, trading_currency: str | None) -> bool:
+    return ticker.strip().upper().endswith(".OL") or (trading_currency or "").upper() == "NOK"
+
+
 def newsweb_applies(holding: Holding) -> bool:
-    ticker = holding.ticker.strip().upper()
-    return ticker.endswith(".OL") or (holding.trading_currency or "").upper() == "NOK"
+    return newsweb_applies_to(holding.ticker, holding.trading_currency)

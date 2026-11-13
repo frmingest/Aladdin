@@ -85,7 +85,7 @@ CI has no GPU: Chromium draws with software WebGL. The suite therefore never ass
 | ID | Finding | Status |
 |---|---|---|
 | F-0 | Three tests in `e2e/game3d.spec.ts` (smoke project) had been wrong since 2026-11-10 when "The Town" stopped being a place: they expected `?at=town` and a "Back to the Town" button. They would have failed the next daily smoke run. Fixed in this change (both halls lead "Back outside" to the courtyard). | fixed |
-| F-1 | `GET /sources/holdings/{id}` is a read-only hint but calls `require_not_demo`, so in demo mode the Sources panel on every holding page gets a 403. | **open**; allow-listed by exact URL in `e2e/support/guard.ts`; remove the guard in `backend/app/api/sources.py` (`get_eligibility`), then delete the allow-list entry |
+| F-1 | `GET /sources/holdings/{id}` is a read-only hint but calls `require_not_demo`, so in demo mode the Sources panel on every holding page gets a 403. | **fixed 2026-11-13** (#383): in demo mode `get_eligibility` answers from the fabricated holding with that id (404 for any other id) and never reads the database. Not "remove the guard": that would have let a real holding's ticker out in demo mode, and an existing test asserted the 403 on purpose. The allow-list entry is gone. |
 | F-2 | Opening `/game3d` logs two console errors in Chromium ("BufferGeometryUtils: mergeAttributes failed", "mergeGeometries failed ... uv attribute"): some model has a UV attribute of a different type. Nothing visibly missing; not seen on a real GPU. | **open**; allow-listed in `guard.ts` so the suite can still catch new errors |
 | F-3 | `main` has no branch protection and no required checks (2026-11-01 audit, finding 1). Until it does, a red E2E job warns but cannot stop a merge. | open, Faiz's call |
 
@@ -98,12 +98,12 @@ CI has no GPU: Chromium draws with software WebGL. The suite therefore never ass
 ## 9. Metrics (what to watch)
 
 - E2E duration (about 2.5 minutes for the 3D tests locally with software WebGL; CI is not measured yet; plan for a few minutes more) and flaky tests: a test that needs the one CI retry twice in a month is rewritten or removed.
-- Allow-list size in `guard.ts` (three entries today: F-1, F-2 and unreachable web fonts); it should shrink.
+- Allow-list size in `guard.ts` (two entries today: F-2 and unreachable web fonts); it should shrink.
 - Share of game PRs whose body says "not seen in a browser" (20 of 37 on 2026-11-01).
 
 ## 10. Next steps (not in this PR)
 
 1. Faiz decides on branch protection and then adds the **E2E (Playwright, demo stack)** job to the required checks.
-2. Fix F-1 (one line) and look into F-2.
+2. Look into F-2 (F-1 is fixed).
 3. Extend the regression project, in this order: the 3D quest and talk flow, holding page tabs, Fortress rooms, Marketplace store pages. Each new test says which risk row it closes.
 4. Decide whether the semantic rule checks (architecture rules 1 to 4) should run as a CI step; today only pytest holds them.

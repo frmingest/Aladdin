@@ -16,11 +16,6 @@ import { E2E_API } from "./api";
  */
 const KNOWN_CONSOLE_NOISE: { match: RegExp; why: string; url?: RegExp }[] = [
   {
-    match: /Failed to load resource: the server responded with a status of 403/,
-    url: /\/sources\/holdings\/[0-9a-f-]+$/,
-    why: "FINDING F-1: GET /sources/holdings/{id} is a read-only hint endpoint but calls require_not_demo, so in demo mode the Sources panel on every holding page gets a 403. Remove the guard from that GET (backend/app/api/sources.py, get_eligibility), then delete this entry.",
-  },
-  {
     match: /THREE\.BufferGeometryUtils: \.merge(Attributes|Geometries)\(\) failed/,
     why: "Courtyard asset merge warning, logged on every load of /game3d with the CC0 models. Visible in the console, nothing missing on screen. Tracked in docs/ops/test-strategy-2026-11-12.md (known findings).",
   },
