@@ -264,10 +264,28 @@ def test_documents_sources_research_funds_are_blocked_outright_in_demo_mode(clie
     _enable_demo(client)
     assert client.get("/documents").status_code == 403
     assert client.get(f"/documents/{NIL_UUID}").status_code == 403
-    assert client.get(f"/sources/holdings/{NIL_UUID}").status_code == 403
+    # F-1: the read-only eligibility hint is answered from demo data (see test below), not blocked.
+    assert client.get(f"/sources/holdings/{NIL_UUID}").status_code == 404
+    assert client.get(f"/sources/holdings/{NIL_UUID}/sec-edgar").status_code == 403
     assert client.get(f"/research/holdings/{NIL_UUID}").status_code == 403
     assert client.get("/research/macro").status_code == 403
     assert client.get(f"/funds/{NIL_UUID}").status_code == 403
+
+
+def test_source_eligibility_is_answered_from_demo_data_and_never_reads_a_real_holding(client):
+    real_id = _seed_real_holding(client)
+    _enable_demo(client)
+    # A real holding's id is unknown in demo mode: a 404, and no real ticker in the answer.
+    leak = client.get(f"/sources/holdings/{real_id}")
+    assert leak.status_code == 404
+    # A demo holding's id gets the hint, built from the fabricated holding.
+    demo = client.get("/holdings").json()[0]
+    r = client.get(f"/sources/holdings/{demo['id']}")
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["holding_id"] == demo["id"]
+    assert body["ticker"] == demo["ticker"]
+    assert body["sec_edgar"] is True
 
 
 def test_every_mutating_endpoint_is_blocked_in_demo_mode(client):
