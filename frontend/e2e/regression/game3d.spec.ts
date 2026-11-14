@@ -97,14 +97,18 @@ test.describe("places opened by their link", () => {
 // One list drives every "am I near it?", the prompt and the E key (#411). This walks the hero up to a thing, reads the
 // prompt, presses E and checks that what the prompt promised is what happened; then it does the same at the door.
 test.describe("things you can walk up to", () => {
-  /** Holds a key until the prompt says `text` (software WebGL is slow, so this waits on the prompt, not on a clock). */
+  /**
+   * Walks with `key` until the prompt says `text`. It waits on the prompt, not on a clock (software WebGL is slow), and it
+   * walks in short steps: a key pressed before the world has finished loading is not heard, so one long press could be lost.
+   */
   async function walkUntil(page: Page, key: string, text: RegExp) {
-    await page.keyboard.down(key);
-    try {
-      await expect(page.locator(".g3d-prompt")).toContainText(text, { timeout: 45_000 });
-    } finally {
+    const prompt = page.locator(".g3d-prompt");
+    await expect(async () => {
+      await page.keyboard.down(key);
+      await page.waitForTimeout(350);
       await page.keyboard.up(key);
-    }
+      await expect(prompt).toContainText(text, { timeout: 400 });
+    }).toPass({ timeout: 60_000, intervals: [50] });
   }
 
   test("Hall of Records: the shelves open their page with E, and E at the door walks back out", async ({ page }) => {
