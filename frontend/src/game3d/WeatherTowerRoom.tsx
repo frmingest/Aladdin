@@ -8,19 +8,13 @@ import { useCachedQuery } from "../lib/queryCache";
 import type { MacroIndicators } from "../lib/types";
 import { PAL, Part } from "./Inked";
 import {
-  DIALS_LEAVE_RANGE,
-  DIALS_RANGE,
   PLATE,
   RAIL,
   READOUT_LEAVE_RANGE,
   READOUT_RANGE,
   TOWER,
   TOWER_DOOR,
-  TOWER_DOOR_LEAVE_RANGE,
-  TOWER_DOOR_RANGE,
   curvePosts,
-  nearDials,
-  nearTowerDoor,
   nearestDial,
   towerFacts,
   towerLayout,
@@ -118,27 +112,13 @@ function Post({ p }: { p: RailPost }) {
 interface WatchProps {
   pos: MutableRefObject<{ x: number; z: number }>;
   dials: readonly DialPlan[];
-  onDials: (near: boolean) => void;
-  onDoor: (near: boolean) => void;
   onReadout: (key: string | null) => void;
 }
 
-/** Tells the page whether you stand at the dials and at the door, and the readout which dial you stand beside. Only on change. */
-function TowerWatch({ pos, dials, onDials, onDoor, onReadout }: WatchProps) {
-  const lastDials = useRef(false);
-  const lastDoor = useRef(false);
+/** Tells the readout which dial you stand beside. Only on change. (The E spots, the dials and the door, are in near.ts.) */
+function ReadoutWatch({ pos, dials, onReadout }: WatchProps) {
   const lastKey = useRef<string | null>(null);
   useFrame(() => {
-    const a = nearDials(pos.current, lastDials.current ? DIALS_LEAVE_RANGE : DIALS_RANGE);
-    if (a !== lastDials.current) {
-      lastDials.current = a;
-      onDials(a);
-    }
-    const d = nearTowerDoor(pos.current, lastDoor.current ? TOWER_DOOR_LEAVE_RANGE : TOWER_DOOR_RANGE);
-    if (d !== lastDoor.current) {
-      lastDoor.current = d;
-      onDoor(d);
-    }
     const held = lastKey.current === null ? null : dials.find((x) => x.key === lastKey.current) ?? null;
     const range = held ? READOUT_LEAVE_RANGE : READOUT_RANGE;
     const near = nearestDial(pos.current, dials, range);
@@ -153,8 +133,6 @@ function TowerWatch({ pos, dials, onDials, onDoor, onReadout }: WatchProps) {
 
 interface Props {
   pos: MutableRefObject<{ x: number; z: number }>;
-  onDials: (near: boolean) => void;
-  onDoor: (near: boolean) => void;
 }
 
 /**
@@ -164,7 +142,7 @@ interface Props {
  * plain plate, never a guess. Walls are drawn from inside only so the follow camera can sit outside them. The room is
  * furniture: every plate and post is decided by code from the stored numbers.
  */
-export default function WeatherTowerRoom({ pos, onDials, onDoor }: Props) {
+export default function WeatherTowerRoom({ pos }: Props) {
   const macro = useCachedQuery<MacroIndicators>("macro-indicators", () => api.getMacroIndicators());
   const data = macro.data ?? null;
   const layout = useMemo(() => towerLayout(data), [data]);
@@ -241,7 +219,7 @@ export default function WeatherTowerRoom({ pos, onDials, onDoor }: Props) {
       <Banner position={[TOWER.minX + 0.1, 6.45, MID_Z]} yaw={Math.PI / 2} width={3.6} big={WEATHER_WORDS.west} small={null} />
       <Banner position={[TOWER.maxX - 0.1, 6.45, MID_Z]} yaw={-Math.PI / 2} width={3.6} big={WEATHER_WORDS.east} small={null} />
 
-      <TowerWatch pos={pos} dials={layout.dials} onDials={onDials} onDoor={onDoor} onReadout={setReadoutKey} />
+      <ReadoutWatch pos={pos} dials={layout.dials} onReadout={setReadoutKey} />
     </group>
   );
 }

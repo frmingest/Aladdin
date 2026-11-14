@@ -1,22 +1,14 @@
-import { useRef, useState } from "react";
-import type { MutableRefObject } from "react";
-import { useFrame } from "@react-three/fiber";
+import { useNear } from "./nearStore";
 import { CuboidCollider, RigidBody } from "@react-three/rapier";
 import { PAL, Part } from "./Inked";
 import {
   BOARDS,
-  BOARD_LEAVE_RANGE,
-  BOARD_RANGE,
   BOARD_SIZE,
   BOARD_SLOTS,
   HALL,
   HALL_DOOR,
-  HALL_DOOR_LEAVE_RANGE,
-  HALL_DOOR_RANGE,
-  nearHallDoor,
-  nearestBoard,
 } from "./townHallRoom";
-import type { Board, BoardId, BoardSlot } from "./townHallRoom";
+import type { Board, BoardSlot } from "./townHallRoom";
 import { boardHeadline } from "./boardHeadlines";
 import { useBoardHeadlines } from "./useBoardHeadlines";
 import WorldLabel from "./WorldLabel";
@@ -73,49 +65,14 @@ function BoardMesh({ board, slot, active, headline }: { board: Board; slot: Boar
   );
 }
 
-/** Tells the page which board you stand at and whether you stand by the door. Only on change. */
-function HallWatch({
-  pos,
-  onBoard,
-  onDoor,
-  setActive,
-}: {
-  pos: MutableRefObject<{ x: number; z: number }>;
-  onBoard: (id: BoardId | null) => void;
-  onDoor: (near: boolean) => void;
-  setActive: (id: BoardId | null) => void;
-}) {
-  const lastBoard = useRef<BoardId | null>(null);
-  const lastDoor = useRef(false);
-  useFrame(() => {
-    const id = nearestBoard(pos.current, BOARD_SLOTS, lastBoard.current ? BOARD_LEAVE_RANGE : BOARD_RANGE);
-    if (id !== lastBoard.current) {
-      lastBoard.current = id;
-      onBoard(id);
-      setActive(id);
-    }
-    const d = nearHallDoor(pos.current, lastDoor.current ? HALL_DOOR_LEAVE_RANGE : HALL_DOOR_RANGE);
-    if (d !== lastDoor.current) {
-      lastDoor.current = d;
-      onDoor(d);
-    }
-  });
-  return null;
-}
-
-interface Props {
-  pos: MutableRefObject<{ x: number; z: number }>;
-  onBoard: (id: BoardId | null) => void;
-  onDoor: (near: boolean) => void;
-}
-
 /**
  * The inside of the Town Hall: one hall, six notice boards, a door. Code-built shapes with the same ink outline
  * as the rest; the room is furniture only and carries no fact. Walls are drawn from inside only (single-sided),
  * so the follow camera can sit outside them without a wall in the way. Nothing animates.
  */
-export default function TownHallRoom({ pos, onBoard, onDoor }: Props) {
-  const [active, setActive] = useState<BoardId | null>(null);
+export default function TownHallRoom() {
+  // The board you stand at lights up; the one watcher (near.ts) says which.
+  const active = useNear("board");
   const headlines = useBoardHeadlines();
   const doorGap = HALL_DOOR.width / 2;
   const sideLen = (WIDTH_X - HALL_DOOR.width) / 2;
@@ -185,7 +142,6 @@ export default function TownHallRoom({ pos, onBoard, onDoor }: Props) {
         return board ? <BoardMesh key={slot.id} board={board} slot={slot} active={active === slot.id} headline={boardHeadline(board.id, headlines)} /> : null;
       })}
 
-      <HallWatch pos={pos} onBoard={onBoard} onDoor={onDoor} setActive={setActive} />
     </group>
   );
 }

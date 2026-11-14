@@ -6,6 +6,8 @@ import type { RapierRigidBody } from "@react-three/rapier";
 import * as THREE from "three";
 import Avatar from "./Avatar";
 import type { Motion } from "./animClips";
+import { CAMERA_HIDE_HERO_WITHIN, cameraPull } from "./cameraRoom";
+import type { CameraRoom } from "./cameraRoom";
 import { HeroFigure } from "./Figures";
 import { SPAWN } from "./layout";
 import {
@@ -45,6 +47,8 @@ interface Props {
   cheerKey?: number | null;
   /** Stand still (a move between places is under way). */
   hold?: boolean;
+  /** The room the hero is in, when it has walls: the camera stays inside it. Null on open ground. */
+  room?: CameraRoom | null;
 }
 
 export interface Teleport {
@@ -59,7 +63,7 @@ export interface Teleport {
  * The hero: a Rapier capsule driven by WASD, with a solid figure from simple shapes (a
  * rigged model can replace it later). Camera follows behind and above.
  */
-export default function Player({ keys, orbit, pos: posOut, teleport = null, cheerKey = null, hold = false }: Props) {
+export default function Player({ keys, orbit, pos: posOut, teleport = null, cheerKey = null, hold = false, room = null }: Props) {
   const body = useRef<RapierRigidBody>(null);
   const model = useRef<THREE.Group>(null);
   const facing = useRef(0);
@@ -70,6 +74,8 @@ export default function Player({ keys, orbit, pos: posOut, teleport = null, chee
   const hover = useRef<{ frames: number; until: number } | null>(null);
   const holdRef = useRef(hold);
   holdRef.current = hold;
+  const roomRef = useRef(room);
+  roomRef.current = room;
   // Where to put the hero back if it ever falls out of the world.
   const home = useRef<{ x: number; z: number }>({ x: SPAWN.x, z: SPAWN.z });
 
@@ -148,9 +154,20 @@ export default function Player({ keys, orbit, pos: posOut, teleport = null, chee
     const fx = pos.x;
     const fy = pos.y - CENTRE_HEIGHT + FOCUS_HEIGHT;
     const fz = pos.z;
+    // In a room the camera comes in along its own line of sight until it is inside the walls (same view, closer).
+    const walls = roomRef.current;
+    const pull = walls ? cameraPull([fx, fy, fz], [ox, oy, oz], walls) : 1;
     const cam = state.camera;
-    cam.position.lerp(new THREE.Vector3(fx + ox, fy + oy, fz + oz), 1 - Math.exp(-CAMERA_FOLLOW * dt));
-    cam.lookAt(fx, fy + lookUpHeight(o.pitch, o.distance), fz);
+    cam.position.lerp(new THREE.Vector3(fx + ox * pull, fy + oy * pull, fz + oz * pull), 1 - Math.exp(-CAMERA_FOLLOW * dt));
+    if (walls) {
+      // The easing starts from wherever the camera was (outside, on walking in): never let it show the room from behind a wall.
+      cam.position.x = THREE.MathUtils.clamp(cam.position.x, walls.minX + 0.05, walls.maxX - 0.05);
+      cam.position.z = THREE.MathUtils.clamp(cam.position.z, walls.minZ + 0.05, walls.maxZ - 0.05);
+      cam.position.y = Math.min(cam.position.y, walls.height - 0.05);
+    }
+    cam.lookAt(fx, fy + lookUpHeight(o.pitch, o.distance * pull), fz);
+    // Backed against a wall the camera ends up at her shoulder: do not draw her from the inside.
+    if (model.current) model.current.visible = !walls || Math.hypot(cam.position.x - fx, cam.position.y - fy, cam.position.z - fz) > CAMERA_HIDE_HERO_WITHIN;
   });
 
   return (
