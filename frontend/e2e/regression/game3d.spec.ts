@@ -218,7 +218,7 @@ test.describe("things you can walk up to", () => {
       await expect(page).toHaveTitle(/3D courtyard/);
       await expect(page).toHaveURL((u) => u.search === "");
     } catch (e) {
-      throw new Error(`${(e as Error).message}\nPrompts heard after each step (last 25):\n${trail.slice(-25).join("\n")}`);
+      throw new Error(`${(e as Error).message}\nPrompts heard after each step (${trail.length} steps; first 40, then last 10):\n${[...trail.slice(0, 40), "...", ...trail.slice(-10)].join("\n")}`);
     }
     await problems.assertNone();
   });
