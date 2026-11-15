@@ -268,6 +268,17 @@ function World({ onLockChange, world, area, room, hold, look, onFieldPresets }: 
     if (spot) setTeleport({ key: ++count.current, x: spot.x, z: spot.z, yaw: spot.yaw });
   }, [area, world.towers]);
 
+  // Browser tests place the hero at an exact spot (a key press moves her several metres on a slow software-rendered frame, so
+  // walking cannot aim). Development builds only: the production build drops this hook.
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    const w = window as unknown as { __g3dPlace?: (x: number, z: number) => void };
+    w.__g3dPlace = (x, z) => setTeleport({ key: ++count.current, x, z, yaw: 0 });
+    return () => {
+      delete w.__g3dPlace;
+    };
+  }, []);
+
   // The parts of the list that follow the data: the towers that stand, the stalls up the lane, this land's lanterns.
   const lanterns = room?.lanterns ?? NO_LANTERNS;
   const mintLevers = useMemo(() => leverLayout(look.mint.levers).plans, [look.mint.levers]);
