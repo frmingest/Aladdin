@@ -19,3 +19,9 @@ def test_v1_never_gentler_than_baseline_and_crisis_is_widest():
 def test_unknown_version_raises():
     with pytest.raises(ValueError, match="Unknown risk bands version"):
         get_risk_bands("v99")
+
+
+def test_v1_covers_exactly_the_regimes_the_classifier_can_return():
+    from app.services.risk.regime import REGIME_BASELINE, REGIME_CRISIS, REGIME_STAGFLATION
+
+    assert set(get_risk_bands("v1").shock_multiplier) == {REGIME_BASELINE, REGIME_STAGFLATION, REGIME_CRISIS}
