@@ -178,9 +178,14 @@ test.describe("things you can walk up to", () => {
     test.setTimeout(300_000);
     const problems = watch(page);
     trail.length = 0;
+    // The levers on the wall come from the ledger: if it does not load, no lever prompt can ever show. Say so first.
+    const ledgerAsked = page.waitForResponse((r) => r.url().includes("/game/printer/ledger"), { timeout: 60_000 });
     await page.goto("/game3d?at=mint");
     await expect(page.locator("canvas")).toHaveCount(1, { timeout: 60_000 });
     await expect(page).toHaveTitle(/Royal Mint/);
+    const ledgerAnswer = await ledgerAsked;
+    expect(ledgerAnswer.status(), "the ledger answers").toBe(200);
+    expect(((await ledgerAnswer.json()) as { levers: unknown[] }).levers.length, "the ledger lists levers").toBeGreaterThan(0);
     try {
       // Up to the press with nothing pulled: it says so and promises nothing.
       await walkUntil(page, "w", /Pull a lever first, then STAMP/, 300);
