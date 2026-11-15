@@ -196,6 +196,10 @@ test.describe("things you can walk up to", () => {
       await page.keyboard.up("s");
       await expect(page.locator(".g3d-prompt")).not.toContainText(/STAMP/, { timeout: 400 });
     }).toPass({ timeout: 60_000, intervals: [50] });
+    // The loop above can leave her too far west for the door's reach: one step east (W, after the turn) brings her back in line.
+    await page.keyboard.down("w");
+    await page.waitForTimeout(200);
+    await page.keyboard.up("w");
     await walkUntil(page, "d", /Step back outside/);
     await page.keyboard.press("e");
     await expect(page).toHaveTitle(/3D courtyard/);

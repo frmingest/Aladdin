@@ -90,13 +90,13 @@ export function leverBaseCollider(x: number): { position: [number, number, numbe
   return { position: [x, LEVER_BASE.halfY, MINT.minZ + LEVER_BASE.offWall], half: [LEVER_BASE.halfX, LEVER_BASE.halfY, LEVER_BASE.halfZ] };
 }
 
-/** True when the camera already looks roughly at the result wall (within about 20 degrees sideways), so a stamp does not turn it again. */
-export function facesResultWall(from: { yaw: number }): boolean {
+/** True when the camera already looks roughly at the result wall (within about 20 degrees sideways and not steeply up or down), so a stamp does not turn it again. */
+export function facesResultWall(from: { yaw: number; pitch: number }): boolean {
   const twoPi = Math.PI * 2;
   let d = (MINT_RESULT_YAW - from.yaw) % twoPi;
   if (d > Math.PI) d -= twoPi;
   if (d < -Math.PI) d += twoPi;
-  return Math.abs(d) < 0.35;
+  return Math.abs(d) < 0.35 && Math.abs(from.pitch - MINT_RESULT_PITCH) < 0.3;
 }
 
 /**

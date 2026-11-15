@@ -402,10 +402,12 @@ describe("stamp view (#431)", () => {
   });
 
   it("does not turn again when the camera already faces the result wall", () => {
-    expect(facesResultWall({ yaw: MINT_RESULT_YAW })).toBe(true);
-    expect(facesResultWall({ yaw: MINT_RESULT_YAW + 0.3 })).toBe(true);
-    expect(facesResultWall({ yaw: 0 })).toBe(false);
-    expect(facesResultWall({ yaw: MINT_RESULT_YAW + Math.PI * 2 })).toBe(true);
+    const p = MINT_RESULT_PITCH;
+    expect(facesResultWall({ yaw: MINT_RESULT_YAW, pitch: p })).toBe(true);
+    expect(facesResultWall({ yaw: MINT_RESULT_YAW + 0.3, pitch: p })).toBe(true);
+    expect(facesResultWall({ yaw: 0, pitch: p })).toBe(false);
+    expect(facesResultWall({ yaw: MINT_RESULT_YAW + Math.PI * 2, pitch: p })).toBe(true);
+    expect(facesResultWall({ yaw: MINT_RESULT_YAW, pitch: 1.0 })).toBe(false); // facing east but looking steeply down
   });
 
   it("jumps when the system asks for less motion", () => {
