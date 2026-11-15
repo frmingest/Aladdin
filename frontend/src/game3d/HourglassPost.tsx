@@ -3,9 +3,6 @@ import { PAL, Part } from "./Inked";
 import StaticBatch from "./StaticBatch";
 import { HOURGLASS, HOURGLASS_FACING, HOURGLASS_SOLID } from "./hourglassPlan";
 
-/** Dry sand, warm and light. Never red or green, and it carries no verdict. */
-const SAND = "#e2c27a";
-
 /**
  * The Hourglass (#414): a timber stand with two glass bulbs and a little sand. Code-built shapes with the usual ink
  * outline; nothing moves and nothing here is data, so reduced motion needs nothing. It is furniture: the day you are
@@ -34,21 +31,15 @@ export default function HourglassPost() {
             </Part>
           );
         })}
-        {/* Lower bulb with the sand heaped in it, neck, upper bulb. */}
-        <Part color={PAL.glass} position={[0, 0.95, 0]} grow={1.04} ink>
+        {/* Sand below (the lower bulb is the sand), a brass neck, glass above with a little sand left in it. */}
+        <Part color={PAL.sand} position={[0, 0.95, 0]} grow={1.04} ink>
           <sphereGeometry args={[0.42, 10, 8]} />
-        </Part>
-        <Part color={SAND} position={[0, 0.78, 0]} grow={1.02}>
-          <sphereGeometry args={[0.3, 8, 6]} />
         </Part>
         <Part color={PAL.brass} position={[0, 1.6, 0]} grow={1.1}>
           <cylinderGeometry args={[0.07, 0.07, 0.3, 6]} />
         </Part>
         <Part color={PAL.glass} position={[0, 2.25, 0]} grow={1.04} ink>
           <sphereGeometry args={[0.42, 10, 8]} />
-        </Part>
-        <Part color={SAND} position={[0, 2.12, 0]} grow={1.02}>
-          <sphereGeometry args={[0.24, 8, 6]} />
         </Part>
       </StaticBatch>
     </RigidBody>

@@ -38,14 +38,14 @@ describe("HourglassPanel", () => {
     expect(h).toContain(">Today<");
     expect(h).toContain(">Earlier<");
     expect(h).toContain(">Play<");
-    expect(h).toContain("Never a forecast");
+    expect(h).toContain("never a forecast");
     expect(h).toContain('aria-label="Close"');
   });
 
-  it("shows a gap as an empty outline with its date and says so, never as a kept night", () => {
+  it("shows a gap as an empty outline with its date, never as a kept night (the banner says it in words, once)", () => {
     const h = html({ day: "2026-11-12", dayStatus: "gap" });
     expect(h).toContain("Thu 12 Nov 2026");
-    expect(h).toContain("No picture was kept this day.");
+    expect(h).not.toContain("No picture is kept for this day.");
     expect(h).toContain('aria-label="Thu 12 Nov 2026, no picture kept"');
     expect(h).toContain("bg-transparent");
     // The timeline runs to yesterday, so the 14th (nothing stored) is a gap too.
@@ -68,13 +68,17 @@ describe("HourglassPanel", () => {
     expect(h).toContain("Try again");
   });
 
+  it("has one way to choose a night (Earlier, Later and the strip), no slider", () => {
+    expect(html()).not.toContain('type="range"');
+  });
+
   it("offers Pause while it plays, and turns Earlier off on the oldest night", () => {
     expect(html({ playing: true, day: "2026-11-12", dayStatus: "gap" })).toContain(">Pause<");
     expect(html({ day: "2026-11-11", dayStatus: "frame" })).toMatch(/disabled=""[^>]*>Earlier</);
   });
 
   it("says one night, not one nights", () => {
-    expect(html({ timeline: buildTimeline(["2026-11-14"], "2026-11-15") })).toContain("1 night kept.");
+    expect(html({ timeline: buildTimeline(["2026-11-14"], "2026-11-15") })).toContain("1 night kept<");
   });
 
   it("has no buy or sell wording", () => {
@@ -83,15 +87,24 @@ describe("HourglassPanel", () => {
 });
 
 describe("HourglassBanner", () => {
+  const banner = (day: string, status: "frame" | "gap" | "failed", playing = false) =>
+    renderToStaticMarkup(<HourglassBanner day={day} status={status} playing={playing} onPlayToggle={noop} onToday={noop} />);
+
   it("always carries the date, that nothing can be written, and the key home", () => {
-    const h = renderToStaticMarkup(<HourglassBanner day="2026-11-03" status="frame" onToday={noop} />);
+    const h = banner("2026-11-03", "frame");
     expect(h).toContain("Tue 3 Nov 2026");
     expect(h).toContain("Nothing can be written");
     expect(h).toContain("Back to today (H)");
   });
-  it("says so when the day has no picture or could not be read", () => {
-    expect(renderToStaticMarkup(<HourglassBanner day="2026-11-12" status="gap" onToday={noop} />)).toContain("No picture was kept");
-    expect(renderToStaticMarkup(<HourglassBanner day="2026-11-12" status="failed" onToday={noop} />)).toContain("could not be read");
+  it("says so, once, when the day has no picture or could not be read", () => {
+    const gap = banner("2026-11-12", "gap");
+    expect(gap).toContain("No picture is kept for this day.");
+    expect(gap.match(/No picture is kept/g)).toHaveLength(1);
+    expect(banner("2026-11-12", "failed")).toContain("could not be read");
+  });
+  it("lets a replay be paused (or started) with the panel shut", () => {
+    expect(banner("2026-11-03", "frame", true)).toContain(">Pause<");
+    expect(banner("2026-11-03", "frame", false)).toContain(">Play<");
   });
 });
 

@@ -161,6 +161,9 @@ function areaReducerWithMotion(state: AreaState, action: AreaAction): AreaState 
   return areaReducer(state, action);
 }
 
+/** How many read nights the Hourglass keeps in memory (the replay moves forward, so older ones are read again if you go back). */
+const FRAME_CACHE_MAX = 30;
+
 /** The panels that open where you stand and shut when you walk away. Each is also a kind in the list of spots (near.ts). */
 const PANEL_SPOTS = ["desk", "drill", "vault", "realm", "watch", "perch", "hourglass"] as const;
 type PanelSpot = (typeof PANEL_SPOTS)[number];
@@ -229,6 +232,7 @@ export default function Game3DPage() {
   const [turning, setTurning] = useState(false);
   const [playing, setPlaying] = useState(false);
   const frameCache = useRef(new Map<string, GameState>());
+  const frameInflight = useRef(new Map<string, Promise<GameState>>());
   const turnSeq = useRef(0);
   const inPast = past !== null;
   // The signpost by the gate: whether the "Where to?" menu is open, and the flat page shown in the world panel.
@@ -268,7 +272,8 @@ export default function Game3DPage() {
   const [panels, setPanels] = useState(loadPanels);
   // The key hint teaches the controls, so it shows on the first few visits only (C2).
   const [showHint] = useState(() => hintWanted(countVisit()));
-  const flip = useCallback((id: PanelId) => setPanels((p) => togglePanel(p, id)), []);
+  // The Quest log holds the wires, so while you look back its key does nothing (it stays as you left it for today).
+  const flip = useCallback((id: PanelId) => { if (inPast && id === "quests") return; setPanels((p) => togglePanel(p, id)); }, [inPast]);
   // The sample fortress opens the Quests panel once so the made-up round shows with no tap; it never stores that (demo wins).
   const autoOpened = useRef(false);
   useEffect(() => {
@@ -653,9 +658,17 @@ export default function Game3DPage() {
       const cached = frameCache.current.get(day);
       if (cached) return { status: "frame", state: cached };
       try {
-        const f = await api.getGameFrame(day);
-        frameCache.current.set(day, f.state);
-        return { status: "frame", state: f.state };
+        // One request per day, even when a read-ahead and a step ask for the same night.
+        let pending = frameInflight.current.get(day);
+        if (!pending) {
+          pending = api.getGameFrame(day).then((f) => f.state).finally(() => frameInflight.current.delete(day));
+          frameInflight.current.set(day, pending);
+        }
+        const state = await pending;
+        // Keep the newest few nights only; the Map's order is oldest first.
+        frameCache.current.set(day, state);
+        while (frameCache.current.size > FRAME_CACHE_MAX) frameCache.current.delete(frameCache.current.keys().next().value as string);
+        return { status: "frame", state };
       } catch (e) {
         return e instanceof ApiError && e.status === 404 ? { status: "gap", state: null } : { status: "failed", state: null };
       }
@@ -704,6 +717,13 @@ export default function Game3DPage() {
     }, PLAY_STEP_MS);
     return () => window.clearTimeout(t);
   }, [playing, turning, pastDay, timeline, goToDay]);
+  // A replay does not run in a hidden tab (no reads, no rebuilds nobody sees).
+  useEffect(() => {
+    if (!playing) return;
+    const onHide = () => { if (document.hidden) setPlaying(false); };
+    document.addEventListener("visibilitychange", onHide);
+    return () => document.removeEventListener("visibilitychange", onHide);
+  }, [playing]);
   // H takes you home to today from anywhere while you look back.
   useEffect(() => {
     if (!inPast) return;
@@ -1322,7 +1342,13 @@ export default function Game3DPage() {
       {panels.quests && !inPast && <QuestLog quest={quest} reviews={reviews} demo={world.demo} standing={standingText} wires={standing && !standingFailed ? (standing.wires ?? []) : undefined} onLookAtWire={lookAtWire} onRefreshStanding={refreshStanding} drill={drillQuest} guide={{ status: guide, saved: guideSaved, onReplay: replayGuideNow }} round={round} onRoundAgain={roundOff ? startSampleAgain : undefined} onClose={() => flip("quests")} />}
       {vaultOpen && state && <VaultPanel state={state} onChanged={load} onClose={() => setSpotPanel("vault", false)} />}
       {realmOpen && viewState && <RealmPanel state={viewState} onClose={() => setSpotPanel("realm", false)} />}
-      {inPast && past && <HourglassBanner day={past.day} status={past.status} onToday={() => goToDay(null)} />}
+      {inPast && past && (
+        <>
+          {/* A still sand-coloured edge says "this is the past" without any motion. */}
+          <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-20" style={{ boxShadow: "inset 0 0 140px 24px rgba(226,194,122,0.32)" }} />
+          <HourglassBanner day={past.day} status={past.status} playing={playing} onPlayToggle={playToggle} onToday={() => goToDay(null)} />
+        </>
+      )}
       {hourglassOpen && (
         <HourglassPanel
           status={history.status}

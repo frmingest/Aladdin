@@ -24,6 +24,7 @@ export const PAL = {
   stone: "#b9b2a4",
   floor: "#5d5a66",
   brass: "#c79a3a",
+  sand: "#e2c27a",
 } as const;
 
 interface PartProps {

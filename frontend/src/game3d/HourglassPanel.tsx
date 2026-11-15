@@ -1,20 +1,17 @@
 import {
   HOURGLASS_EARLIER,
   HOURGLASS_EMPTY,
-  HOURGLASS_FRAME_FAILED,
-  HOURGLASS_GAP,
   HOURGLASS_INTRO,
   HOURGLASS_KEPT,
   HOURGLASS_LATER,
   HOURGLASS_LOADING,
   HOURGLASS_NIGHT_GAP,
+  HOURGLASS_NOW,
   HOURGLASS_PANEL_TITLE,
   HOURGLASS_PAUSE,
   HOURGLASS_PLAY,
-  HOURGLASS_RECORD,
   HOURGLASS_RETRY,
   HOURGLASS_SAMPLE,
-  HOURGLASS_SLIDER,
   HOURGLASS_STRIP,
   HOURGLASS_TODAY,
   HOURGLASS_UNREADABLE,
@@ -61,7 +58,7 @@ export default function HourglassPanel(p: Props) {
   return (
     <aside
       aria-label={HOURGLASS_PANEL_TITLE}
-      className="g3d-panel absolute inset-x-3 top-14 z-40 flex max-h-[calc(100%-4.5rem)] flex-col overflow-hidden p-2 text-sm md:inset-x-[25%]"
+      className="g3d-panel absolute inset-x-3 top-44 z-40 md:top-28 flex max-h-[calc(100%-12rem)] md:max-h-[calc(100%-8rem)] flex-col overflow-hidden p-2 text-sm md:inset-x-[25%]"
     >
       <header className="g3d-head">
         <h2>{HOURGLASS_PANEL_TITLE}</h2>
@@ -81,34 +78,18 @@ export default function HourglassPanel(p: Props) {
         {p.status === "ready" && !p.demo && p.timeline.length > 0 && (
           <>
             <p className="text-base font-semibold text-ink" aria-live="polite">
-              {p.day === null ? "Today" : dayLabel(p.day)}
+              {p.day === null ? HOURGLASS_NOW : dayLabel(p.day)}
             </p>
             {p.turning && <p role="status">{HOURGLASS_LOADING}</p>}
-            {!p.turning && p.dayStatus === "gap" && <p>{HOURGLASS_GAP}</p>}
-            {!p.turning && p.dayStatus === "failed" && (
-              <p role="alert">{HOURGLASS_FRAME_FAILED}</p>
-            )}
             <div className="flex flex-wrap items-center gap-2">
               <button type="button" className="g3d-btn" onClick={p.onEarlier} disabled={index === 0}>{HOURGLASS_EARLIER}</button>
               <button type="button" className="g3d-btn" onClick={p.onLater} disabled={p.day === null}>{HOURGLASS_LATER}</button>
               <button type="button" className="g3d-btn" onClick={p.onPlayToggle}>{p.playing ? HOURGLASS_PAUSE : HOURGLASS_PLAY}</button>
               <button type="button" className="g3d-btn" onClick={p.onToday} disabled={p.day === null}>{HOURGLASS_TODAY}</button>
             </div>
-            <label className="block">
-              <span className="text-ink-muted">{HOURGLASS_SLIDER}</span>
-              <input
-                type="range"
-                className="mt-1 w-full"
-                min={0}
-                max={p.timeline.length - 1}
-                value={index < 0 ? p.timeline.length - 1 : index}
-                onChange={(e) => p.onPick(p.timeline[Number(e.target.value)].day)}
-                aria-valuetext={p.day === null ? "Today" : dayLabel(p.day)}
-              />
-            </label>
             <div>
               <p className="text-ink-muted">{HOURGLASS_STRIP}</p>
-              <ul className="mt-1 flex flex-wrap gap-1" aria-label={HOURGLASS_STRIP}>
+              <ul className="mt-1 flex flex-wrap gap-1.5" aria-label={HOURGLASS_STRIP}>
                 {strip.map((t) => (
                   <li key={t.day}>
                     <button
@@ -118,13 +99,13 @@ export default function HourglassPanel(p: Props) {
                       aria-label={t.stored ? dayLabel(t.day) : `${dayLabel(t.day)}, ${HOURGLASS_NIGHT_GAP}`}
                       aria-pressed={t.day === p.day}
                       // A kept night is a solid block, a gap is an empty outline: the shape says it, not the colour.
-                      className={`h-4 w-3 rounded-sm border border-ink ${t.stored ? "bg-ink" : "bg-transparent"} ${t.day === p.day ? "ring-2 ring-offset-1" : ""}`}
+                      className={`h-8 w-6 rounded-sm border border-ink ${t.stored ? "bg-ink" : "bg-transparent"} ${t.day === p.day ? "ring-2 ring-ink ring-offset-2" : ""}`}
                     />
                   </li>
                 ))}
               </ul>
             </div>
-            <p className="text-ink-muted">{HOURGLASS_KEPT(kept, gaps)}. {HOURGLASS_RECORD}</p>
+            <p className="text-ink-muted">{HOURGLASS_KEPT(kept, gaps)}</p>
           </>
         )}
       </div>

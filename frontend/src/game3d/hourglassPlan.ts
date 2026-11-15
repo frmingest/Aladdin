@@ -19,7 +19,7 @@ export const HOURGLASS_RANGE = 3.4;
 /** Wider to leave than to arrive, so standing on the edge does not flicker. */
 export const HOURGLASS_LEAVE_RANGE = 4.8;
 /** Half the footprint of the stand you walk round. */
-export const HOURGLASS_SOLID = 0.7;
+export const HOURGLASS_SOLID = 0.8;
 
 /** How long the replay rests on each day. */
 export const PLAY_STEP_MS = 1400;
