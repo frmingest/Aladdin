@@ -5,6 +5,9 @@
  */
 export const ROUND_TITLE = "Today's round";
 export const ROUND_MAX_WORDS = 6;
+/** Under the title in the sample fortress, and the button that resets the sample's ticks. */
+export const ROUND_SAMPLE = "Made-up round. Tick it off.";
+export const ROUND_AGAIN = "Start again";
 
 export const ROUND_WORDS = {
   smoke: (name: string) => `Smoke at ${name}`,

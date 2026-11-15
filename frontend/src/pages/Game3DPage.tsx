@@ -60,7 +60,8 @@ import { QUARTER_WORDS } from "../game3d/quarterWordsV1";
 import { prefersReducedMotion } from "../game3d/motionPref";
 import { standingAt } from "../game3d/near";
 import { archLit, holdingMarks, litStalls, noticeSheets, placeMarks, recentRavenIds, stallsRead, unseenWireIds } from "../game3d/marks";
-import { MAX_DONE, buildRound, loadRound, pruneDone, ravenFactIds, saveRound, stopId, wireFactIds } from "../game3d/round";
+import { MAX_DONE, buildRound, loadRound, persistRound, pruneDone, ravenFactIds, stopId, wireFactIds } from "../game3d/round";
+import { SAMPLE_SHEETS, sampleLit, sampleMarks, sampleRound, sampleRoundFacts } from "../game3d/sampleRound";
 import type { Stop } from "../game3d/round";
 import type { MarkSource } from "../game3d/marks";
 import type { Standing as AtSpot } from "../game3d/near";
@@ -300,6 +301,8 @@ export default function Game3DPage() {
   const [visitAt] = useState(() => Date.now());
   const [roundDone, setRoundDone] = useState<string[]>(() => loadRound(guideStorage()).done);
   const roundOff = state?.demo === true || demoMode === true;
+  // The sample fortress has its own made-up round: ticks live in memory only, never in the real browser keys.
+  const [sampleDone, setSampleDone] = useState<string[]>([]);
   /** The latest facts and stops, for the event handlers below (read when you act, never while drawing). */
   const roundRef = useRef<{
     ravens: ReadonlyMap<string, string>;
@@ -313,16 +316,21 @@ export default function Game3DPage() {
   const roundCarry = useRef<Stop[]>([]);
   const tickStops = useCallback(
     (ids: string[]) => {
-      if (roundOff || ids.length === 0) return;
+      if (ids.length === 0) return;
       const shown = roundRef.current.stops.filter((s) => ids.includes(s.id));
       roundCarry.current = [...roundCarry.current.filter((c) => !ids.includes(c.id)), ...shown.map((s) => ({ ...s, done: true }))];
-      setRoundDone((d) => {
+      (roundOff ? setSampleDone : setRoundDone)((d) => {
         const add = ids.filter((i) => !d.includes(i));
         return add.length === 0 ? d : [...d, ...add].slice(-MAX_DONE);
       });
     },
     [roundOff],
   );
+  /** Sample fortress: tick everything off again so the made-up round can be replayed. */
+  const startSampleAgain = useCallback(() => {
+    roundCarry.current = [];
+    setSampleDone([]);
+  }, []);
   const onRavensSeen = useCallback((ids: string[]) => {
     const hit: string[] = [];
     roundRef.current.ravens.forEach((rid, h) => ids.includes(rid) && hit.push(stopId("raven", h, rid)));
@@ -811,7 +819,12 @@ export default function Game3DPage() {
       },
     },
     // Without data there is nothing to open.
-    perch: { prompt: () => (perchOpen || !ravens ? null : PERCH_PROMPT), press: () => ravens && openSpotPanel("perch") },
+    perch: { prompt: () => (perchOpen || !ravens ? null : PERCH_PROMPT), press: () => {
+        if (!ravens) return;
+        if (roundOff) tickStops([...roundRef.current.ravens].map(([h, rid]) => stopId("raven", h, rid)));
+        openSpotPanel("perch");
+      },
+    },
     realm: { prompt: () => (realmOpen || !state ? null : REALM_PROMPT), press: () => state && openSpotPanel("realm") },
     // A holding's land.
     shelf: {
@@ -965,8 +978,15 @@ export default function Game3DPage() {
 
   // The marks (#412 step 2): one pure mapping from the stored facts. A source that did not report gives no mark, never calm.
   const nowMs = useMemo(() => Date.now(), [watchlist, nightWatch, state]); // eslint-disable-line react-hooks/exhaustive-deps
-  const lit = useMemo(() => litStalls(watchlist?.rows, nowMs), [watchlist, nowMs]);
+  // The sample fortress gets made-up marks from its own towers and stall names; no real fact reaches them.
+  const sampleStalls = useMemo(() => quarter.stalls.map((s) => ({ holdingId: s.holdingId, ticker: s.ticker })), [quarter]);
+  const lit = useMemo(
+    () => (roundOff ? new Set(sampleLit(sampleStalls).map((s) => s.holdingId)) : litStalls(watchlist?.rows, nowMs)),
+    [roundOff, sampleStalls, watchlist, nowMs],
+  );
+  const sheets = roundOff ? SAMPLE_SHEETS : noticeSheets(nightWatch, nowMs);
   const marks = useMemo(() => {
+    if (roundOff) return sampleMarks(shownWorld.plain);
     const w = unseenWireIds(standing, standingFailed);
     return holdingMarks(shownWorld.plain, {
       recentRavenHoldingIds: recentRavenIds(ravens, seenRavens),
@@ -975,12 +995,13 @@ export default function Game3DPage() {
       watchState: nightWatch?.watch_state ?? null,
       stallsRead: stallsRead(watchlist?.rows, nowMs),
     });
-  }, [shownWorld, ravens, seenRavens, standing, standingFailed, nightWatch, watchlist, nowMs]);
+  }, [roundOff, shownWorld, ravens, seenRavens, standing, standingFailed, nightWatch, watchlist, nowMs]);
   const placedMarks = useMemo(() => placeMarks(shownWorld.towers, marks), [shownWorld, marks]);
 
-  // Today's round: the same marks, written as a short list. No real round in the sample fortress (step 4 adds a made-up one).
+  // Today's round: the same marks, written as a short list. The sample fortress shows a made-up one instead.
   const round = useMemo(() => {
-    if (roundOff || state === null) return undefined;
+    if (state === null) return undefined;
+    if (roundOff) return sampleRound(shownWorld.plain, sampleStalls, new Set(sampleDone), nowMs, roundCarry.current);
     const names = new Map<string, string>();
     for (const r of ravens?.ravens ?? []) names.set(r.holding_id, r.name);
     for (const r of watchlist?.rows ?? []) names.set(r.holding_id, r.name);
@@ -1006,8 +1027,16 @@ export default function Game3DPage() {
       { done: new Set(roundDone), since: roundSince, nowMs, pending },
       roundCarry.current,
     );
-  }, [roundOff, state, ravens, seenRavens, watchlist, shownWorld, marks, standing, standingFailed, nightWatch, nowMs, roundDone, roundSince, settled]);
+  }, [roundOff, state, sampleStalls, sampleDone, ravens, seenRavens, watchlist, shownWorld, marks, standing, standingFailed, nightWatch, nowMs, roundDone, roundSince, settled]);
   useEffect(() => {
+    if (roundOff) {
+      const f = sampleRoundFacts(shownWorld.plain, sampleStalls);
+      roundRef.current = {
+        ravens: f.ravenFacts, wires: f.wireFacts, lit: new Set(f.lit.map((l) => l.holdingId)),
+        noticeDay: f.noticeDay, noticeSheets: f.noticeSheets, stops: round?.stops ?? [],
+      };
+      return;
+    }
     roundRef.current = {
       ravens: ravenFactIds(ravens, seenRavens),
       wires: wireFactIds(standing, standingFailed),
@@ -1016,11 +1045,11 @@ export default function Game3DPage() {
       noticeSheets: noticeSheets(nightWatch, nowMs),
       stops: round?.stops ?? [],
     };
-  }, [ravens, seenRavens, standing, standingFailed, watchlist, nightWatch, nowMs, round]);
+  }, [roundOff, shownWorld, sampleStalls, ravens, seenRavens, standing, standingFailed, watchlist, nightWatch, nowMs, round]);
   // Remember the visit and what you dealt with (this browser only; nothing for the sample fortress).
   useEffect(() => {
-    if (roundOff || state === null) return;
-    saveRound(guideStorage(), { lastVisit: visitAt, done: pruneDone(roundDone, round?.stops ?? [], marks.sources) });
+    if (state === null) return;
+    persistRound(guideStorage(), roundOff, { lastVisit: visitAt, done: pruneDone(roundDone, round?.stops ?? [], marks.sources) });
   }, [roundOff, state, visitAt, roundDone, round, marks]);
   // The bell is dealt with when you open that holding's thesis shelf in its land.
   useEffect(() => {
@@ -1028,6 +1057,13 @@ export default function Game3DPage() {
     const id = stopId("bell", room, null);
     if (roundRef.current.stops.some((x) => x.id === id)) tickStops([id]);
   }, [room, readShelf, tickStops]);
+  // Sample fortress only: walking into the land of the holding with smoke is where you look at its wire.
+  useEffect(() => {
+    if (!room || !roundOff) return;
+    const hit: string[] = [];
+    roundRef.current.wires.forEach((wid, h) => h === room && hit.push(stopId("smoke", h, wid)));
+    tickStops(hit);
+  }, [room, roundOff, tickStops]);
 
   // What the world shows from the facts (the scene takes them as one thing, not one input each).
   const look = useMemo<SceneLook>(
@@ -1049,9 +1085,9 @@ export default function Game3DPage() {
       marks: placedMarks,
       litStalls: lit,
       archLit: archLit(lit),
-      noticeSheets: noticeSheets(nightWatch, nowMs),
+      noticeSheets: sheets,
     }),
-    [quest.written, state, nightWatch, unseenRavens, realmLevel, drillOpen, questMarks, talking, cheerKey, standingText.lit, fieldTools, quarter, archCounts, placedMarks, lit, nowMs],
+    [sheets, quest.written, state, nightWatch, unseenRavens, realmLevel, drillOpen, questMarks, talking, cheerKey, standingText.lit, fieldTools, quarter, archCounts, placedMarks, lit],
   );
 
   if (!supported) return <Unavailable />;
@@ -1096,8 +1132,8 @@ export default function Game3DPage() {
       {showPerf && <PerfBreakdown stats={stats} />}
       {whereOpen && !worldPage && <WhereToPanel onPick={pickDoor} onClose={closeWhere} only={onlyPlace} onlyRoutes={onlyRoutes} />}
       {whereOpen && worldPage && <WorldPanel door={worldPage} onBack={() => setWorldPage(null)} onClose={closeWhere} />}
-      {panels.towers && <TowerPanel world={shownWorld} loading={loading} error={error} onRetry={load} onClose={() => flip("towers")} marks={marks} lit={lit} noticeSheets={noticeSheets(nightWatch, nowMs)} />}
-      {panels.quests && <QuestLog quest={quest} reviews={reviews} demo={world.demo} standing={standingText} wires={standing && !standingFailed ? (standing.wires ?? []) : undefined} onLookAtWire={lookAtWire} onRefreshStanding={refreshStanding} drill={drillQuest} guide={{ status: guide, saved: guideSaved, onReplay: replayGuideNow }} round={round} onClose={() => flip("quests")} />}
+      {panels.towers && <TowerPanel world={shownWorld} loading={loading} error={error} onRetry={load} onClose={() => flip("towers")} marks={marks} lit={lit} noticeSheets={sheets} />}
+      {panels.quests && <QuestLog quest={quest} reviews={reviews} demo={world.demo} standing={standingText} wires={standing && !standingFailed ? (standing.wires ?? []) : undefined} onLookAtWire={lookAtWire} onRefreshStanding={refreshStanding} drill={drillQuest} guide={{ status: guide, saved: guideSaved, onReplay: replayGuideNow }} round={round} onRoundAgain={roundOff ? startSampleAgain : undefined} onClose={() => flip("quests")} />}
       {vaultOpen && state && <VaultPanel state={state} onChanged={load} onClose={() => setSpotPanel("vault", false)} />}
       {realmOpen && state && <RealmPanel state={state} onClose={() => setSpotPanel("realm", false)} />}
       {watchOpen && <WatchPanel onClose={() => setSpotPanel("watch", false)} />}

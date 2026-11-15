@@ -47,9 +47,16 @@ describe("Today's round in the quest log", () => {
     expect(html).toContain("The watch did not report in");
     expect(html).not.toMatch(/All quiet/);
   });
-  it("shows no round in the sample fortress, even if one is passed", () => {
-    expect(render({ demo: true, round: round() })).not.toContain("Smoke at Vår Energi");
-    expect(render({ demo: true, round: round() })).not.toContain("Today&#x27;s round");
+  it("in the sample fortress the same card says it is made up, and can start again", () => {
+    const html = render({ demo: true, round: round(), onRoundAgain: () => {} });
+    expect(html).toContain("Smoke at Vår Energi");
+    expect(html).toContain("Made-up round");
+    expect(html).toContain("Start again");
+  });
+  it("the real round carries no sample label and no start-again button", () => {
+    const html = render({ round: round(), onRoundAgain: () => {} });
+    expect(html).not.toContain("Made-up round");
+    expect(html).not.toContain("Start again");
   });
   it("shows no block when no round is passed", () => {
     expect(render({})).not.toContain("Today&#x27;s round");

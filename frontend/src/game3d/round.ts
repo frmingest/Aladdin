@@ -238,3 +238,13 @@ export function pruneDone(done: readonly string[], stops: readonly Stop[], sourc
   });
   return kept.slice(-MAX_DONE);
 }
+
+/**
+ * Remembers the round in this browser, unless this is the sample fortress: a made-up round never writes the real keys (demo
+ * wins both ways). Returns whether anything was written.
+ */
+export function persistRound(storage: StorageLike | null, sample: boolean, saved: RoundSaved): boolean {
+  if (sample) return false;
+  saveRound(storage, saved);
+  return true;
+}
