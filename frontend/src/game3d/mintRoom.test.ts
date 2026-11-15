@@ -19,6 +19,7 @@ import {
   SPAN_LEAVE_RANGE,
   SPAN_SPOT,
   bookPlate,
+  facesResultWall,
   holdingPlate,
   leverBaseCollider,
   leverLayout,
@@ -398,6 +399,13 @@ describe("stamp view (#431)", () => {
     const r = turnToResultWall({ yaw: Math.PI * 1.9, pitch: 0.3 }, 1 / 60, false);
     expect(r.yaw).toBeLessThan(Math.PI * 1.9); // the wall is 72 degrees back, not 288 forward
     expect(r.yaw).toBeGreaterThan(Math.PI * 1.5);
+  });
+
+  it("does not turn again when the camera already faces the result wall", () => {
+    expect(facesResultWall({ yaw: MINT_RESULT_YAW })).toBe(true);
+    expect(facesResultWall({ yaw: MINT_RESULT_YAW + 0.3 })).toBe(true);
+    expect(facesResultWall({ yaw: 0 })).toBe(false);
+    expect(facesResultWall({ yaw: MINT_RESULT_YAW + Math.PI * 2 })).toBe(true);
   });
 
   it("jumps when the system asks for less motion", () => {

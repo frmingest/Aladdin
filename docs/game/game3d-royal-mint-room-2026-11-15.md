@@ -40,7 +40,7 @@ Give the Printer (its engine and API are finished, nothing on screen uses them) 
 ## Game checklist
 
 - **Pages touched:** one new place (Royal Mint), the Town (one building), the parity register (the "planned" Printer row becomes a real door), Game3DPage and Scene (wiring).
-- **Identity:** the Mint is new; 3 on paper (scene, lever kit, a fact in each plate and the needle, Plain view = a side panel at the lectern (E) with the same words as the plates). Seen in a real browser on the demo stack on 2026-11-15; not yet seen by Faiz. Re-score from his screenshots.
+- **Identity:** the Mint is new; 3 on paper (scene, lever kit, a fact in each plate and the needle, Plain view = a side panel at the lectern (E) with the same words as the plates). The 2026-11-15 build (before #431) was clicked through in a real browser on the demo stack; the #431 changes below have not been seen in one. Not yet seen by Faiz. Re-score from his screenshots.
 - **Taps:** common task "see what a lever does to my book": walk in, E on a lever, E on the press = 2 presses.
 - **Cut line:** if it runs long, the needle and the span post go before the plain direction fallback.
 
@@ -56,8 +56,8 @@ Give the Printer (its engine and API are finished, nothing on screen uses them) 
 
 ## #431: stamp view, lever bases, phone (2026-11-15, written, not deployed, not seen in a browser)
 
-- **Stamp view.** When STAMP starts (the wall goes to "loading"), the camera turns once to face the east result wall (yaw a quarter turn west of north, pitch 0.3) and stays there; the player can look away at once. With less motion asked for it jumps. Code: `turnToResultWall` in `mintRoom.ts`, driven from `World` in `Scene.tsx`.
-- **What a unit test proves:** with the camera at its usual 7 metres, pulled in by the room walls, from the press, all 12 plate slots (their corners) lie inside a 16:9 view at 60 degrees. It does not prove how it looks.
+- **Stamp view.** When STAMP starts (the wall goes to "loading"), the camera turns once to face the east result wall (the camera stands west of the hero and looks east; pitch 0.3). It does not start if the camera already faces the wall, it stops the moment the player looks anywhere themselves, and it ends if they leave the room. With less motion asked for it jumps. Movement keys are camera-relative, so after the turn W walks east; the press is solid, so this is rarely felt. Code: `turnToResultWall` in `mintRoom.ts`, driven from `World` in `Scene.tsx`.
+- **What a unit test proves:** with the camera at its usual 7 metres (from the press it sits inside the room without being pulled in), aimed at the hero, all 12 plate slots (their corners) lie inside a 16:9 view at 60 degrees. It does not prove how it looks.
 - **Lever bases are solid.** One box collider per lever, the size and place of the iron base that is drawn (`leverBaseCollider`); the stand spot in front of each lever stays reachable (tested).
 - **Phone, not solved (issue #434).** In a portrait phone view the horizontal half-field is about 18 degrees, while the outer plates sit about 28 degrees off the middle from the camera, so on a portrait phone the outer columns are cut off at stamp time (arithmetic, not a measurement). Landscape phones are wide enough. A real fix (pull back further on a tall screen, or spread the plates less) needs a phone to look at.
 - **Playwright flow** (`e2e/regression/game3d.spec.ts`, "Royal Mint: pull a lever..."): enter, reach the press, pull a lever, STAMP asks `GET /game/printer` with the pulled lever and gets 200, the door walks back out. Steered by prompts only. It was written without a browser or the demo stack in this session, so the first run is CI's.

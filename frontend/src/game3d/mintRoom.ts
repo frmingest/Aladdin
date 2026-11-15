@@ -29,7 +29,7 @@ export const MINT_YAW = 0;
 export const MINT_RESULT_YAW = -Math.PI / 2;
 /** Camera pitch for that view: low enough that the top row of plates (y 4.3) stays inside the 60 degree view from the press. */
 export const MINT_RESULT_PITCH = 0.3;
-/** How fast the camera turns to the result wall when you stamp, per second (the follow camera's own turn is quicker than this, so it never snaps). */
+/** How fast the camera turns to the result wall when you stamp, per second. */
 export const MINT_TURN_RATE = 6;
 
 export const MINT_DOOR_RANGE = 3.4;
@@ -90,6 +90,15 @@ export function leverBaseCollider(x: number): { position: [number, number, numbe
   return { position: [x, LEVER_BASE.halfY, MINT.minZ + LEVER_BASE.offWall], half: [LEVER_BASE.halfX, LEVER_BASE.halfY, LEVER_BASE.halfZ] };
 }
 
+/** True when the camera already looks roughly at the result wall (within about 20 degrees sideways), so a stamp does not turn it again. */
+export function facesResultWall(from: { yaw: number }): boolean {
+  const twoPi = Math.PI * 2;
+  let d = (MINT_RESULT_YAW - from.yaw) % twoPi;
+  if (d > Math.PI) d -= twoPi;
+  if (d < -Math.PI) d += twoPi;
+  return Math.abs(d) < 0.35;
+}
+
 /**
  * One step of the camera turning to the result wall: yaw the shortest way to `MINT_RESULT_YAW` and pitch down to
  * `MINT_RESULT_PITCH`, never past either. With less motion asked for it jumps. Returns the new angles and whether it has arrived.
@@ -101,7 +110,7 @@ export function turnToResultWall(from: { yaw: number; pitch: number }, dt: numbe
   if (dy < -Math.PI) dy += twoPi;
   const dp = MINT_RESULT_PITCH - from.pitch;
   if (reduced || (Math.abs(dy) < 0.01 && Math.abs(dp) < 0.01)) return { yaw: MINT_RESULT_YAW, pitch: MINT_RESULT_PITCH, done: true };
-  const k = Math.min(1, dt * MINT_TURN_RATE);
+  const k = 1 - Math.exp(-MINT_TURN_RATE * dt);
   return { yaw: from.yaw + dy * k, pitch: from.pitch + dp * k, done: false };
 }
 

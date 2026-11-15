@@ -112,11 +112,11 @@ test.describe("things you can walk up to", () => {
    * Walks with `key` until the prompt says `text`. It waits on the prompt, not on a clock (software WebGL is slow), and it
    * walks in short steps: a key pressed before the world has finished loading is not heard, so one long press could be lost.
    */
-  async function walkUntil(page: Page, key: string, text: RegExp) {
+  async function walkUntil(page: Page, key: string, text: RegExp, holdMs = 350) {
     const prompt = page.locator(".g3d-prompt");
     await expect(async () => {
       await page.keyboard.down(key);
-      await page.waitForTimeout(350);
+      await page.waitForTimeout(holdMs);
       await page.keyboard.up(key);
       await expect(prompt).toContainText(text, { timeout: 400 });
     }).toPass({ timeout: 60_000, intervals: [50] });
@@ -167,33 +167,36 @@ test.describe("things you can walk up to", () => {
     await page.goto("/game3d?at=mint");
     await expect(page.locator("canvas")).toHaveCount(1, { timeout: 60_000 });
     await expect(page).toHaveTitle(/Royal Mint/);
-    const prompt = page.locator(".g3d-prompt");
-
+    // The prompt shows "Press E to X" as a key cap "E" plus "X" with its first letter capitalised (actionPrompt.ts), so the
+    // patterns below match that, not the sentence in mintWordsV1.ts. Short steps (200 ms, about 1.2 m) so no prompt is stepped over.
     // Up to the press with nothing pulled: it says so and promises nothing.
-    await walkUntil(page, "w", /Pull a lever first, then STAMP/);
-    // West along the room until the span post, then north along the wall of levers (the press is solid, so go round it).
-    await walkUntil(page, "a", /look (1 year|3 years) ahead/);
-    await walkUntil(page, "w", /pull (Toll Gate|Great Press)/);
+    await walkUntil(page, "w", /Pull a lever first, then STAMP/, 200);
+    // West along the room until the span post, then north along the lever wall (the press is solid, so go round it).
+    await walkUntil(page, "a", /look (1 year|3 years) ahead/, 200);
+    await walkUntil(page, "w", /^E\s*Pull (Toll Gate|Great Press)/, 200);
     await page.keyboard.press("e");
-    // Back east along the lever row to the middle lever, then south: the press either blocks the way (solid) or is passed, and
-    // either way its prompt now offers STAMP, because a lever is pulled.
-    await walkUntil(page, "d", /pull Great Melt/);
-    await walkUntil(page, "s", /Press E to STAMP/);
+    // Back east along the lever row to the middle lever, then south: the press either blocks the way (it is solid) or is
+    // passed, and either way its prompt now offers STAMP, because a lever is pulled.
+    await walkUntil(page, "d", /^E\s*Pull Great Melt/, 200);
+    await walkUntil(page, "s", /^E\s*STAMP/, 200);
 
     const asked = page.waitForResponse((r) => /\/game\/printer\?/.test(r.url()) && r.url().includes("pull="));
     await page.keyboard.press("e");
     const answer = await asked;
     expect(answer.status()).toBe(200);
     expect(new URL(answer.url()).searchParams.get("pull")).toMatch(/^(toll_gate|great_press):/);
+    // STAMP turns the camera to face east (#431), and walking keys follow the camera: W is east, S west, A north, D south.
+    // Give the turn time to finish (software WebGL is slow) before steering again.
+    await page.waitForTimeout(3_000);
 
-    // Round the press (it is solid), then out through the door.
+    // West round the press (it is solid), then south to the door and out.
     await expect(async () => {
-      await page.keyboard.down("a");
-      await page.waitForTimeout(350);
-      await page.keyboard.up("a");
-      await expect(prompt).not.toContainText(/STAMP/, { timeout: 400 });
+      await page.keyboard.down("s");
+      await page.waitForTimeout(200);
+      await page.keyboard.up("s");
+      await expect(page.locator(".g3d-prompt")).not.toContainText(/STAMP/, { timeout: 400 });
     }).toPass({ timeout: 60_000, intervals: [50] });
-    await walkUntil(page, "s", /Step back outside/);
+    await walkUntil(page, "d", /Step back outside/);
     await page.keyboard.press("e");
     await expect(page).toHaveTitle(/3D courtyard/);
     await expect(page).toHaveURL((u) => u.search === "");

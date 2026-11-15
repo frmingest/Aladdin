@@ -62,7 +62,7 @@ import MintRoom from "./MintRoom";
 import WeatherTowerRoom from "./WeatherTowerRoom";
 import { EMPTY_MINT } from "./useMint";
 import type { MintView } from "./useMint";
-import { leverLayout, turnToResultWall } from "./mintRoom";
+import { facesResultWall, leverLayout, turnToResultWall } from "./mintRoom";
 import { prefersReducedMotion } from "./motionPref";
 import { AREAS, COURTYARD, sameArea, transitionSpot } from "./areas";
 import type { AreaRef } from "./areas";
@@ -221,20 +221,36 @@ function World({ onLockChange, world, area, room, hold, look, onFieldPresets }: 
   const orbit = useOrbit(onLockChange);
 
   // The Royal Mint: when you stamp, the camera turns to face the result wall so the plates are in view as they print.
-  // It is one turn (you can look away again at once), and it jumps when the system asks for less motion.
+  // It is one short turn. It only starts if you are not already facing the wall, it stops the moment you look somewhere
+  // yourself (any change to the angles that we did not write), it ends if you leave the room, and it jumps when the system
+  // asks for less motion.
   const stampWall = look.mint.wall;
-  const stampTurn = useRef(false);
+  const inMint = area.id === "mint";
+  const stampTurn = useRef<{ yaw: number; pitch: number } | null>(null);
   const prevWall = useRef(stampWall);
   useEffect(() => {
-    if (area.id === "mint" && stampWall === "loading" && prevWall.current !== "loading") stampTurn.current = true;
+    if (inMint && stampWall === "loading" && prevWall.current !== "loading" && !facesResultWall(orbit.current)) {
+      stampTurn.current = { yaw: orbit.current.yaw, pitch: orbit.current.pitch };
+    }
     prevWall.current = stampWall;
-  }, [stampWall, area.id]);
+  }, [stampWall, inMint, orbit]);
+  useEffect(() => {
+    if (!inMint) stampTurn.current = null;
+  }, [inMint]);
   useFrame((_, dt) => {
-    if (!stampTurn.current) return;
-    const step = turnToResultWall(orbit.current, Math.min(dt, 0.05), prefersReducedMotion());
-    orbit.current.yaw = step.yaw;
-    orbit.current.pitch = step.pitch;
-    if (step.done) stampTurn.current = false;
+    const t = stampTurn.current;
+    if (!t) return;
+    const o = orbit.current;
+    // The player looked: the angles are no longer what the turn last wrote. Let go.
+    if (o.yaw !== t.yaw || o.pitch !== t.pitch) {
+      stampTurn.current = null;
+      return;
+    }
+    const step = turnToResultWall(o, Math.min(dt, 0.05), prefersReducedMotion());
+    o.yaw = step.yaw;
+    o.pitch = step.pitch;
+    if (step.done) stampTurn.current = null;
+    else stampTurn.current = { yaw: step.yaw, pitch: step.pitch };
   });
 
   // One teleport for every door: in at the area's spawn, out at the spot in front of the door you came through.
