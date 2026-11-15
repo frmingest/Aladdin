@@ -24,6 +24,9 @@ import type { QuestState, ReviewQuestState } from "./quest";
 import { NPCS } from "./npcs";
 import type { StandingWords } from "./standingWordsV1";
 import { GUIDE_STEPS } from "./guideQuests";
+import RoundGlyph from "./RoundGlyph";
+import type { Round } from "./round";
+import { ROUND_TITLE, ROUND_WORDS } from "./roundWordsV1";
 import type { GuideSaved, GuideStatus } from "./guideQuests";
 import {
   GUIDE_ALL_DONE,
@@ -74,6 +77,7 @@ export default function QuestLog({
   onRefreshStanding,
   drill,
   guide,
+  round,
   onClose,
 }: {
   quest: QuestState;
@@ -89,6 +93,8 @@ export default function QuestLog({
   drill?: DrillQuestState;
   /** The Guide (First Steps); left out, the card is not shown. */
   guide?: { status: GuideStatus; saved: GuideSaved; onReplay: () => void };
+  /** Today's round (the marks as a short list). Left out, or in the sample fortress, no round is shown. */
+  round?: Round;
   onClose?: () => void;
 }) {
   const questDone = quest.status === "done";
@@ -104,6 +110,28 @@ export default function QuestLog({
         )}
       </header>
       {demo && <p className="g3d-demo">{QUEST_SAMPLE}</p>}
+
+      {round && !demo && (
+        <section className="g3d-card" aria-label={ROUND_TITLE}>
+          <h3 className="g3d-tag">{ROUND_TITLE}</h3>
+          <p className="sr-only" aria-live="polite">{round.open > 0 ? ROUND_WORDS.openSr(round.open) : ""}</p>
+          {round.stops.length > 0 && (
+            <ul className="mt-2 space-y-1">
+              {round.stops.map((s) => (
+                <li key={s.id} className={s.done ? "g3d-muted" : "font-semibold"}>
+                  <span aria-hidden>{s.done ? "✓ " : ""}</span>
+                  <RoundGlyph kind={s.kind} />
+                  {s.text}
+                  <span className="sr-only"> ({s.done ? ROUND_WORDS.doneSr : ROUND_WORDS.todoSr})</span>
+                  {s.offYard && <span className="g3d-muted font-normal"> ({ROUND_WORDS.offYard})</span>}
+                </li>
+              ))}
+            </ul>
+          )}
+          {round.moreLine && <p className="g3d-muted mt-1">{round.moreLine}</p>}
+          {round.line && <p className="g3d-muted mt-2">{round.line}</p>}
+        </section>
+      )}
 
       {guide && (
         <section className="g3d-card" aria-label="First Steps">
