@@ -159,8 +159,8 @@ describe("quiet day and the unknown state", () => {
   it("same day says today, not a weekday", () => {
     expect(buildRound(facts(t), { ...mem(), since: NOW - 3_600_000 }).line).toBe("All quiet today. Nothing to do.");
   });
-  it("a long gap says last week, not an ambiguous weekday", () => {
-    expect(buildRound(facts(t), { ...mem(), since: NOW - 20 * 86_400_000 }).line).toBe("All quiet since last week. Nothing to do.");
+  it("a long gap says for a while, not an ambiguous weekday or last week", () => {
+    expect(buildRound(facts(t), { ...mem(), since: NOW - 20 * 86_400_000 }).line).toBe("All quiet for a while. Nothing to do.");
   });
   it.each([
     ["ravens", { recentRavenHoldingIds: null }, "The ravens did not report in"],
@@ -198,6 +198,43 @@ describe("quiet day and the unknown state", () => {
     expect(r.open).toBe(0);
     expect(r.quiet).toBe(false);
     expect(r.line).toBe("Round done. Nothing left.");
+  });
+});
+
+describe("sources still loading", () => {
+  const t = many(3);
+  it("says nothing and never quiet while any source is pending", () => {
+    const r = buildRound(facts(t, { recentRavenHoldingIds: null }), { ...mem(), pending: new Set(["ravens"] as const) });
+    expect(r.line).toBeNull();
+    expect(r.quiet).toBe(false);
+  });
+  it("pending beats an open stop's unread line too, but stops still show", () => {
+    const r = buildRound(facts(many(2, () => ({ thesis: "review" })), { stallsRead: false }), { ...mem(), pending: new Set(["watch"] as const) });
+    expect(r.line).toBeNull();
+    expect(r.stops).toHaveLength(2);
+  });
+  it("once nothing is pending, a source that failed says 'did not report in'", () => {
+    const r = buildRound(facts(t, { recentRavenHoldingIds: null }), { ...mem(), pending: new Set() });
+    expect(r.line).toBe("The ravens did not report in");
+  });
+});
+
+describe("edge cases", () => {
+  it("a lamp with an empty ticker falls back to the name, then to 'A lamp is lit'", () => {
+    const t = many(1);
+    const a = buildRound(facts(t, {}, { lit: [{ holdingId: "h00", ticker: "" }], names: new Map([["h00", "Nvidia"]]) }), mem());
+    expect(a.stops[0].text).toBe("Lamp lit at the Nvidia stall");
+    const b = buildRound(facts(t, {}, { lit: [{ holdingId: "zz", ticker: " " }] }), mem());
+    expect(b.stops[0].text).toBe("A lamp is lit");
+    expect(b.stops[0].text).not.toMatch(/ {2}/);
+  });
+  it("a smoke stop with no fact id is handled and its id never matches a wire id", () => {
+    const t = many(2);
+    const r = buildRound(facts(t, { unseenWireHoldingIds: new Set(["h00"]) }), mem());
+    const s = r.stops.find((x) => x.kind === "smoke")!;
+    expect(s.factId).toBeNull();
+    expect(s.id).toBe("smoke:h00:");
+    expect(s.done).toBe(false);
   });
 });
 

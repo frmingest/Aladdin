@@ -24,6 +24,7 @@ import type { QuestState, ReviewQuestState } from "./quest";
 import { NPCS } from "./npcs";
 import type { StandingWords } from "./standingWordsV1";
 import { GUIDE_STEPS } from "./guideQuests";
+import RoundGlyph from "./RoundGlyph";
 import type { Round } from "./round";
 import { ROUND_TITLE, ROUND_WORDS } from "./roundWordsV1";
 import type { GuideSaved, GuideStatus } from "./guideQuests";
@@ -112,14 +113,16 @@ export default function QuestLog({
 
       {round && !demo && (
         <section className="g3d-card" aria-label={ROUND_TITLE}>
-          <p className="g3d-tag">{ROUND_TITLE}</p>
+          <h3 className="g3d-tag">{ROUND_TITLE}</h3>
+          <p className="sr-only" aria-live="polite">{round.open > 0 ? ROUND_WORDS.openSr(round.open) : ""}</p>
           {round.stops.length > 0 && (
             <ul className="mt-2 space-y-1">
               {round.stops.map((s) => (
                 <li key={s.id} className={s.done ? "g3d-muted" : "font-semibold"}>
-                  <span aria-hidden>{s.done ? "✓ " : "· "}</span>
+                  <span aria-hidden>{s.done ? "✓ " : ""}</span>
+                  <RoundGlyph kind={s.kind} />
                   {s.text}
-                  {s.done && <span className="sr-only"> ({ROUND_WORDS.doneSr})</span>}
+                  <span className="sr-only"> ({s.done ? ROUND_WORDS.doneSr : ROUND_WORDS.todoSr})</span>
                   {s.offYard && <span className="g3d-muted font-normal"> ({ROUND_WORDS.offYard})</span>}
                 </li>
               ))}

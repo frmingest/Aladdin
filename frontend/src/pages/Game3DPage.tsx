@@ -62,6 +62,7 @@ import { standingAt } from "../game3d/near";
 import { archLit, holdingMarks, litStalls, noticeSheets, placeMarks, recentRavenIds, stallsRead, unseenWireIds } from "../game3d/marks";
 import { MAX_DONE, buildRound, loadRound, pruneDone, ravenFactIds, saveRound, stopId, wireFactIds } from "../game3d/round";
 import type { Stop } from "../game3d/round";
+import type { MarkSource } from "../game3d/marks";
 import type { Standing as AtSpot } from "../game3d/near";
 import { useNears } from "../game3d/nearStore";
 import { deskBlock } from "../game3d/deskForm";
@@ -250,6 +251,9 @@ export default function Game3DPage() {
   const flip = useCallback((id: PanelId) => setPanels((p) => togglePanel(p, id)), []);
   useEffect(() => savePanels(panels), [panels]);
 
+  // Which of the round's own reads have answered (well or badly). Until they have, the round says nothing about them.
+  const [settled, setSettled] = useState({ stalls: false, watch: false, ravens: false });
+  const settle = useCallback((k: "stalls" | "watch" | "ravens") => setSettled((v) => (v[k] ? v : { ...v, [k]: true })), []);
   const load = useCallback(() => {
     setLoading(true);
     setError(null);
@@ -272,7 +276,8 @@ export default function Game3DPage() {
     api
       .getWatchlist()
       .then(setWatchlist)
-      .catch(() => setWatchlist(null));
+      .catch(() => setWatchlist(null))
+      .finally(() => settle("stalls"));
     setStandingFailed(false);
     api
       .getStanding()
@@ -281,12 +286,14 @@ export default function Game3DPage() {
     api
       .getNightWatch()
       .then(setNightWatch)
-      .catch(() => setNightWatch(null));
+      .catch(() => setNightWatch(null))
+      .finally(() => settle("watch"));
     api
       .getRavens()
       .then(setRavens)
-      .catch(() => setRavens(null));
-  }, []);
+      .catch(() => setRavens(null))
+      .finally(() => settle("ravens"));
+  }, [settle]);
   // Today's round (#412 step 3): what you dealt with, kept in this browser like the Guide. A stop is ticked only when you did the
   // thing at the spot; walking past ticks nothing. The sample fortress never ticks, never saves and never shows a real round.
   const [roundSince] = useState(() => loadRound(guideStorage()).lastVisit);
@@ -977,6 +984,12 @@ export default function Game3DPage() {
     const names = new Map<string, string>();
     for (const r of ravens?.ravens ?? []) names.set(r.holding_id, r.name);
     for (const r of watchlist?.rows ?? []) names.set(r.holding_id, r.name);
+    const standingPending = standing === null && !standingFailed;
+    const pending = new Set<MarkSource>();
+    if (!settled.ravens) pending.add("ravens");
+    if (!settled.watch) pending.add("watch");
+    if (!settled.stalls) pending.add("stalls");
+    if (standingPending || !settled.watch) pending.add("wires");
     const litSet = litStalls(watchlist?.rows, nowMs);
     const tickers = new Map((watchlist?.rows ?? []).map((r) => [r.holding_id, r.ticker]));
     return buildRound(
@@ -990,10 +1003,10 @@ export default function Game3DPage() {
         noticeSheets: noticeSheets(nightWatch, nowMs),
         noticeDay: nightWatch?.last_frame_day ?? null,
       },
-      { done: new Set(roundDone), since: roundSince, nowMs },
+      { done: new Set(roundDone), since: roundSince, nowMs, pending },
       roundCarry.current,
     );
-  }, [roundOff, state, ravens, seenRavens, watchlist, shownWorld, marks, standing, standingFailed, nightWatch, nowMs, roundDone, roundSince]);
+  }, [roundOff, state, ravens, seenRavens, watchlist, shownWorld, marks, standing, standingFailed, nightWatch, nowMs, roundDone, roundSince, settled]);
   useEffect(() => {
     roundRef.current = {
       ravens: ravenFactIds(ravens, seenRavens),

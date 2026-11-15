@@ -11,21 +11,27 @@ export const ROUND_WORDS = {
   raven: (name: string) => `A raven for ${name}`,
   bell: (name: string) => `Bell: ${name} is due a look`,
   lamp: (ticker: string) => `Lamp lit at the ${ticker} stall`,
+  /** No ticker and no name to say. */
+  lampPlain: "A lamp is lit",
   notice: "A notice at the watch post",
   /** A holding we cannot name (it has no tower and no stall). */
   someone: "a holding",
   more: (n: number) => `and ${n} more`,
   /** Said beside a stop that has no room in the yard, so no walk target. */
-  offYard: "No room in the yard",
+  offYard: "No room",
   doneSr: "done",
+  todoSr: "to do",
+  /** Spoken count of open stops. */
+  openSr: (n: number) => (n === 1 ? "1 stop to do" : `${n} stops to do`),
   /** All stops dealt with. */
   allDone: "Round done. Nothing left.",
 } as const;
 
 /** Said only when every source was read and nothing is open. `since` is a weekday name, or null on a first visit. */
-export function quietLine(since: string | null, sameDay: boolean): string {
+export function quietLine(since: string | null, sameDay: boolean, longGap = false): string {
   if (since === null) return "All quiet. Nothing to do.";
   if (sameDay) return "All quiet today. Nothing to do.";
+  if (longGap) return "All quiet for a while. Nothing to do.";
   return `All quiet since ${since}. Nothing to do.`;
 }
 

@@ -53,6 +53,8 @@ export interface RoundFacts {
 }
 
 export interface RoundMemory {
+  /** Sources still loading (not failed): while any is pending no line is said, and never "quiet". */
+  pending?: ReadonlySet<MarkSource>;
   done: ReadonlySet<string>;
   /** When you were last here, or null on a first visit. */
   since: number | null;
@@ -135,7 +137,8 @@ export function buildRound(facts: RoundFacts, memory: RoundMemory, carry: readon
     if (has("raven")) add("raven", id, facts.ravenFacts.get(id) ?? null, fit(ROUND_WORDS.raven, name, ticker), off);
   }
   for (const s of [...facts.lit].sort((a, b) => a.holdingId.localeCompare(b.holdingId))) {
-    add("stall", s.holdingId, null, fit(ROUND_WORDS.lamp, s.ticker, null), false);
+    const label = s.ticker.trim() || (facts.names?.get(s.holdingId) ?? towerOf.get(s.holdingId)?.name ?? "").trim();
+    add("stall", s.holdingId, null, label ? fit(ROUND_WORDS.lamp, label, null) : ROUND_WORDS.lampPlain, false);
   }
   if (facts.noticeSheets > 0) add("notice", null, facts.noticeDay, ROUND_WORDS.notice, false);
 
@@ -151,12 +154,19 @@ export function buildRound(facts: RoundFacts, memory: RoundMemory, carry: readon
   const open = all.filter((s) => !s.done).length;
   const more = Math.max(0, all.length - MAX_STOPS);
 
-  const unread = (Object.keys(UNREAD_LINE) as MarkSource[]).filter((k) => facts.marks.sources[k] === ("unread" as SourceState));
-  const quiet = unread.length === 0 && all.length === 0 && facts.towers.length > 0;
+  // A source still loading says nothing yet; "did not report in" is only for one that has settled as unread.
+  const pending = memory.pending && memory.pending.size > 0;
+  const unread = (Object.keys(UNREAD_LINE) as MarkSource[]).filter(
+    (k) => facts.marks.sources[k] === ("unread" as SourceState) && !memory.pending?.has(k),
+  );
+  const quiet = !pending && unread.length === 0 && all.length === 0 && facts.towers.length > 0;
   let line: string | null = null;
-  if (quiet) {
+  if (pending) {
+    line = null;
+  } else if (quiet) {
     const sameDay = memory.since !== null && localDay(memory.since) === localDay(memory.nowMs);
-    line = quietLine(memory.since === null ? null : sinceWords(memory.since, memory.nowMs), sameDay);
+    const longGap = memory.since !== null && memory.nowMs - memory.since > 6 * 86_400_000;
+    line = quietLine(memory.since === null ? null : sinceWords(memory.since), sameDay, longGap);
   } else if (unread.length > 0) {
     line = UNREAD_LINE[unread[0]];
   } else if (all.length > 0 && open === 0) {
@@ -170,9 +180,8 @@ const localDay = (ms: number) => {
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 };
 
-/** "Tuesday" for the last six days, "last week" past that. The weekday is the player's own local day. */
-function sinceWords(since: number, nowMs: number): string {
-  if (nowMs - since > 6 * 86_400_000) return "last week";
+/** The weekday of the last visit, the player's own local day. Gaps over six days are worded by `quietLine` ("for a while"). */
+function sinceWords(since: number): string {
   return WEEKDAYS[new Date(since).getDay()];
 }
 

@@ -26,7 +26,20 @@ describe("Today's round in the quest log", () => {
   it("a ticked stop says done in words too, and an off-yard stop says it has no room", () => {
     const html = render({ round: round({ stops: [stop({ done: true, offYard: true })], open: 0 }) });
     expect(html).toContain("(done)");
-    expect(html).toContain("No room in the yard");
+    expect(html).toContain("No room");
+  });
+  it("each stop has a hidden kind glyph, and unticked stops say 'to do' for screen readers", () => {
+    const html = render({ round: round({ stops: [stop({ kind: "raven" }), stop({ id: "b", kind: "bell" }), stop({ id: "d", done: true })], open: 2 }) });
+    expect(html).toContain('data-glyph="raven"');
+    expect(html).toContain('data-glyph="bell"');
+    expect(html).toContain("(to do)");
+    expect(html).toContain("(done)");
+  });
+  it("is a heading and announces the open count politely", () => {
+    const html = render({ round: round({ open: 2 }) });
+    expect(html).toMatch(/<h3[^>]*>Today&#x27;s round/);
+    expect(html).toContain('aria-live="polite"');
+    expect(html).toContain("2 stops to do");
   });
   it("shows the more line and the source line", () => {
     const html = render({ round: round({ moreLine: "and 3 more", line: "The watch did not report in" }) });
