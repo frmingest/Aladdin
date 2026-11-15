@@ -152,3 +152,29 @@ def test_hook_ignores_everything_else():
         "gh api repos/frmingest/Aladdin/pulls/427 -X PATCH -f state=closed",
     ):
         assert _hook(cmd).returncode == 0, cmd
+
+
+def test_hook_leaves_commands_that_only_mention_the_phrase_alone():
+    for cmd in (
+        'git commit -m "docs: gh pr create guardrail"',
+        'echo "use gh pr create later"',
+        "cd /tmp && grep -r 'gh pr create' .",
+    ):
+        assert _hook(cmd).returncode == 0, cmd
+
+
+def test_hook_still_catches_the_real_command_behind_prefixes(tmp_path):
+    bad = tmp_path / "bad.md"
+    bad.write_text(HAND_WRITTEN)
+    good = tmp_path / "good.md"
+    good.write_text(good_body())
+    assert _hook(f"cd /tmp && GH_TOKEN=x gh pr create -t t --body-file {bad}").returncode == 2
+    assert _hook(f"gh pr create -t t -F {bad}").returncode == 2
+    assert _hook(f"gh pr create -t t -F {good}").returncode == 0
+    assert _hook(f"gh pr create -t t -b body_file_is_{bad.name}").returncode == 2
+
+
+def test_hook_catches_a_graphql_pull_request_and_survives_bad_input():
+    assert _hook("gh api graphql -f query='mutation{createPullRequest(input:{title:\"x\"}){clientMutationId}}'").returncode == 2
+    p = subprocess.run([sys.executable, str(HOOK)], input="not json", capture_output=True, text=True, cwd=ROOT, check=False)
+    assert p.returncode == 0

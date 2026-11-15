@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Check a pull request body against .github/pull_request_template.md.
 
 One checker, two callers, so they cannot drift apart:
@@ -77,11 +76,11 @@ def check(body: str, changed_files: list[str] | None = None) -> list[str]:
         errors.append("'After deploy (Faiz)' is empty; say what Faiz must do, or 'nothing, written not deployed' and why")
 
     verified = secs["How it was verified"]
-    boxes = re.findall(r"^\s*-\s*\[([ xX])\]\s*(.*)$", verified, flags=re.M)
+    boxes = re.findall(r"^\s*-\s*\[([ xX])\]\s*(.*)$", verified, flags=re.MULTILINE)
     if not any(state.lower() == "x" for state, _ in boxes):
         errors.append("'How it was verified': tick at least one check that actually ran")
     for state, text in boxes:
-        if state == " " and not re.search(r"not run|not applicable|no \w+ files changed|skipped|because|ci runs", text, re.I):
+        if state == " " and not re.search(r"not run|not applicable|no \w+ files changed|skipped|because|ci runs", text, re.IGNORECASE):
             errors.append(f"unticked check without a reason: '{text.strip()[:60]}' (say why it was not run)")
     m = re.search(r"Seen in a browser\?\s*(.*)", verified)
     if not m or len(m.group(1).strip()) < 3:
@@ -113,7 +112,7 @@ def check(body: str, changed_files: list[str] | None = None) -> list[str]:
             errors.append(f"`{role}` must run for this change ({reason}); it is marked '{row[1].strip() or 'empty'}'")
 
     if any(BACKEND_PATH.match(f) for f in files):
-        must_run("rules-auditor", "backend files changed, CLAUDE.md Pull requests step 2")
+        must_run("rules-auditor", "backend files changed, CLAUDE.md Pull requests step 3")
     if any(BACKEND_PATH.match(f) or f.startswith("docs/") for f in files):
         must_run("docs-sync-checker", "backend or docs changed, claims must be checked against git")
     if any(GAME_UI_PATH.match(f) for f in files):
