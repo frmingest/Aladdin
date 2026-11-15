@@ -1,7 +1,7 @@
 # The Morning Round: plan, and step 1 as built (2026-11-15)
 
 Issue #412, item 2 of 4 from the 3D review of 2026-11-14.
-Status: **step 1 written and tested, not merged, not deployed. Steps 2 to 4 planned, not started.**
+Status: **step 1 merged in PR #416 (331fe05), not deployed (not checked). Step 2 written on branch `feature/3d-morning-round-marks`, PR #420 (issue #421) open for review, not merged, not deployed. Steps 3 and 4 planned, not started.**
 
 ## What this is for
 
@@ -16,8 +16,8 @@ it never rewards a trade.
 
 | Step | What you get | Status |
 | --- | --- | --- |
-| 1. A place for everyone | Every holding has a building and a land to walk into. The yard held 8; it now holds 18 | Built, this PR |
-| 2. The marks | A raven circling, smoke, a bell, a lit stall: one mark per kind of change, standing where the change is | Planned |
+| 1. A place for everyone | Every holding has a building and a land to walk into. The yard held 8; it now holds 18 | Built, merged in #416 |
+| 2. The marks | A raven circling, smoke, a bell, a lit stall: one mark per kind of change, standing where the change is | Written, PR open. Spec: `docs/game/game3d-morning-round-marks-spec-2026-11-15.md` |
 | 3. Today's round | A short list in the quest log, one line per stop, each ticked off when you have dealt with it; "since last visit" is remembered; a quiet day says "All quiet" | Planned |
 | 4. The sample round | The sample fortress shows a made-up round, so the feature can be seen without real data | Planned |
 

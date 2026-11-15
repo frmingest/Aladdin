@@ -45,6 +45,9 @@ import type { FieldTools } from "./siegeFieldTools";
 import SiegeGate from "./SiegeGate";
 import MarketQuarter from "./MarketQuarter";
 import QuarterArch from "./QuarterArch";
+import MarkLayer from "./MarkLayer";
+import { NO_MARKS } from "./marks";
+import type { PlacedMarks } from "./marks";
 import type { Quarter } from "./quarterPlan";
 import Signpost from "./Signpost";
 import { PROPS } from "./props";
@@ -67,6 +70,7 @@ import { enterableOf } from "./towerDoor";
 const HALL_DARK = "#1d1712";
 const noop = () => {};
 const NO_LANTERNS: readonly Lantern[] = [];
+const NO_LIT: ReadonlySet<string> = new Set();
 
 /** What the world shows that the page works out from the facts. None of it is about where the hero stands. */
 export interface SceneLook {
@@ -98,6 +102,14 @@ export interface SceneLook {
   quarter: Quarter;
   /** The arch's count line: how many stalls, how many in range. Null while the watchlist is unread. */
   archCounts: { total: number; inRange: number } | null;
+  /** The marks that stand in the yard (raven, smoke, bell), worked out from stored facts by marks.ts. */
+  marks: PlacedMarks;
+  /** Watchlist companies whose stall is lit (in your range, with a fresh price). */
+  litStalls: ReadonlySet<string>;
+  /** Some stall is lit: one lamp hangs under the arch. */
+  archLit: boolean;
+  /** Sheets pinned on the Watch Post, 0 to 3. */
+  noticeSheets: number;
 }
 
 /** A world with nothing read yet: bare, dark and honest. */
@@ -116,6 +128,10 @@ const EMPTY_LOOK: SceneLook = {
   fieldTools: DEFAULT_TOOLS("local"),
   quarter: { stalls: [], overflow: [], fogZ: null, total: 0, inRange: 0 },
   archCounts: null,
+  marks: NO_MARKS,
+  litStalls: NO_LIT,
+  archLit: false,
+  noticeSheets: 0,
 };
 
 interface WorldProps {
@@ -241,7 +257,7 @@ function World({ onLockChange, world, area, room, hold, look, onFieldPresets }: 
             <Backdrop />
           </group>
           <group userData={{ perfGroup: "quarter" }}>
-            <MarketQuarter quarter={look.quarter} />
+            <MarketQuarter quarter={look.quarter} lit={look.litStalls} />
           </group>
         </>
       ) : area.id === "holding" && room ? (
@@ -270,6 +286,11 @@ function World({ onLockChange, world, area, room, hold, look, onFieldPresets }: 
               <PropMesh key={p.id} prop={p} />
             ))}
           </group>
+          <group userData={{ perfGroup: "marks" }}>
+            <Suspense fallback={null}>
+              <MarkLayer placed={look.marks} />
+            </Suspense>
+          </group>
           <group userData={{ perfGroup: "scenery" }}>
             <Scenery />
           </group>
@@ -287,7 +308,7 @@ function World({ onLockChange, world, area, room, hold, look, onFieldPresets }: 
             <Vault level={look.vaultLevel} />
           </group>
           <group userData={{ perfGroup: "watch" }}>
-            <WatchPost status={look.watchStatus} />
+            <WatchPost status={look.watchStatus} notices={look.noticeSheets} />
           </group>
           <group userData={{ perfGroup: "ravens" }}>
             <RavenBirds count={look.unseenRavens} />
@@ -299,7 +320,7 @@ function World({ onLockChange, world, area, room, hold, look, onFieldPresets }: 
             <DrillPost />
             {look.drillOpen && <DrillCamp />}
             <SiegeGate />
-            <QuarterArch counts={look.archCounts} />
+            <QuarterArch counts={look.archCounts} lit={look.archLit} />
           </group>
           <group userData={{ perfGroup: "signpost" }}>
             <Signpost />

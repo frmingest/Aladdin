@@ -4,6 +4,11 @@ import StaticBatch from "./StaticBatch";
 import { QUARTER_GATE, QUARTER_GATE_FACING } from "./quarterPlan";
 import { QUARTER_WORDS, archLine } from "./quarterWordsV1";
 import WorldSign from "./WorldSign";
+import { HangingLamps } from "./MarkLayer";
+import { ARCH_LAMP } from "./marks";
+
+const ARCH_LAMPS = [{ x: ARCH_LAMP.x, y: ARCH_LAMP.y, z: ARCH_LAMP.z }];
+const NO_LAMPS: readonly { x: number; y: number; z: number }[] = [];
 
 /**
  * The arch to the Market Quarter: two stout timber posts, a wide lintel and a cream and teal awning strip, east of the market
@@ -11,7 +16,7 @@ import WorldSign from "./WorldSign";
  * many are in range, in the flat page's own word; it says nothing while the watchlist is unread. The arch itself carries no fact
  * and does not move. The gap between the posts is open ground, so it never blocks a path.
  */
-export default function QuarterArch({ counts }: { counts: { total: number; inRange: number } | null }) {
+export default function QuarterArch({ counts, lit = false }: { counts: { total: number; inRange: number } | null; lit?: boolean }) {
   const line = archLine(counts);
   return (
     <RigidBody type="fixed" colliders={false} position={[QUARTER_GATE.x, 0, QUARTER_GATE.z]} rotation={[0, QUARTER_GATE_FACING, 0]}>
@@ -34,6 +39,7 @@ export default function QuarterArch({ counts }: { counts: { total: number; inRan
           <boxGeometry args={[0.8, 0.46, 0.08]} />
         </Part>
       </StaticBatch>
+      <HangingLamps lamps={lit ? ARCH_LAMPS : NO_LAMPS} perfGroup="marks" />
       <WorldSign spec={{ kind: "plank", lines: line ? [QUARTER_WORDS.gateLabel, line] : [QUARTER_WORDS.gateLabel] }} position={[0, 4.9, 0.1]} width={3.6} />
     </RigidBody>
   );

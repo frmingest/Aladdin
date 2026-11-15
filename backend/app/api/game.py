@@ -247,7 +247,8 @@ def get_standing(db: Session = Depends(get_db)) -> StandingOut:
         )
         names = {t.holding_id: t for t in state.towers}
         wire_list = [
-            StandingWireOut(tripwire_id=w.id, ticker=names[w.holding_id].ticker, name=names[w.holding_id].name, label=w.label)
+            StandingWireOut(tripwire_id=w.id, ticker=names[w.holding_id].ticker, name=names[w.holding_id].name, label=w.label,
+                           holding_id=w.holding_id)
             for w in rows
         ]
         unseen = len(wire_list)

@@ -2733,6 +2733,8 @@ export interface StandingWire {
   ticker: string;
   name: string;
   label: string | null;
+  /** Which holding the wire belongs to (smoke in the 3D yard). Absent or null from an older server: no smoke is drawn. */
+  holding_id?: string | null;
 }
 
 export interface Standing {

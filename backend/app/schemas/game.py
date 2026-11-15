@@ -615,6 +615,7 @@ class StandingWireOut(BaseModel):
     ticker: str
     name: str
     label: str | None
+    holding_id: UUID | None = None  # the tower the wire stands on (exact id, never matched by ticker)
 
 
 class StandingOut(BaseModel):

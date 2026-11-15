@@ -7,6 +7,13 @@ import { WATCH_FACING, WATCH_POST, WATCH_SOLID, watchLook } from "./watchPlan";
 import { WATCH_SIGN } from "./watchWordsV1";
 import type { NightWatchStatus } from "../lib/types";
 
+/** Where the notice sheets are pinned (above the plate, below the arm): a stagger, so they read as separate papers. */
+const NOTICE_SHEETS = [
+  { x: 0.0, y: 2.05, tilt: 0.06 },
+  { x: 0.14, y: 2.5, tilt: -0.1 },
+  { x: -0.14, y: 2.3, tilt: 0.12 },
+] as const;
+
 /** Warm lantern light, never red or green. */
 const FLAME = "#ffd36b";
 
@@ -43,8 +50,11 @@ function paintPlate(mark: string): HTMLCanvasElement {
  */
 export default function WatchPost({
   status,
+  notices = 0,
 }: {
   status: NightWatchStatus | null;
+  /** Sheets pinned on the post (0 to 3): the Night Watch reported changes. Shape only; none when it did not report. */
+  notices?: number;
 }) {
   const look = watchLook(status);
   const tex = useMemo(() => {
@@ -65,7 +75,7 @@ export default function WatchPost({
         args={[WATCH_SOLID, 1.8, WATCH_SOLID]}
         position={[0, 1.8, 0]}
       />
-      <StaticBatch rebuildKey={`${look.mark}|${look.lit}`}>
+      <StaticBatch rebuildKey={`${look.mark}|${look.lit}|${notices}`}>
         <Part color={PAL.slateDark} position={[0, 0.15, 0]} grow={1.06}>
           <cylinderGeometry args={[0.6, 0.66, 0.3, 9]} />
         </Part>
@@ -90,6 +100,12 @@ export default function WatchPost({
         <Part color={PAL.iron} position={[0.8, 2.34, 0]} grow={1.12}>
           <boxGeometry args={[0.46, 0.08, 0.46]} />
         </Part>
+        {/* Sheets pinned above the plate: one per change the Night Watch listed, up to three. No sheet is not "quiet". */}
+        {NOTICE_SHEETS.slice(0, Math.max(0, Math.min(3, notices))).map((s, i) => (
+          <Part key={i} color={PAL.cream} position={[s.x, s.y, 0.15]} rotation={[0, 0, s.tilt]} grow={1.08}>
+            <boxGeometry args={[0.36, 0.44, 0.03]} />
+          </Part>
+        ))}
         {/* Name plate on the post. */}
         <Part color={PAL.timber} position={[0, 1.35, 0.16]} grow={1.04}>
           <boxGeometry args={[1.0, 0.42, 0.06]} />

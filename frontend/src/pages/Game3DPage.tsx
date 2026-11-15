@@ -59,6 +59,7 @@ import { buildQuarter } from "../game3d/quarterPlan";
 import { QUARTER_WORDS } from "../game3d/quarterWordsV1";
 import { prefersReducedMotion } from "../game3d/motionPref";
 import { standingAt } from "../game3d/near";
+import { archLit, holdingMarks, litStalls, noticeSheets, placeMarks, recentRavenIds, stallsRead, unseenWireIds } from "../game3d/marks";
 import type { Standing as AtSpot } from "../game3d/near";
 import { useNears } from "../game3d/nearStore";
 import { deskBlock } from "../game3d/deskForm";
@@ -905,6 +906,21 @@ export default function Game3DPage() {
     return () => window.removeEventListener("keydown", onKey);
   }, [toggleWhere, closeWhere, goBack, layerKey, areaState, area.id, setSpotPanel]);
 
+  // The marks (#412 step 2): one pure mapping from the stored facts. A source that did not report gives no mark, never calm.
+  const nowMs = useMemo(() => Date.now(), [watchlist, nightWatch, state]); // eslint-disable-line react-hooks/exhaustive-deps
+  const lit = useMemo(() => litStalls(watchlist?.rows, nowMs), [watchlist, nowMs]);
+  const marks = useMemo(() => {
+    const w = unseenWireIds(standing, standingFailed);
+    return holdingMarks(shownWorld.plain, {
+      recentRavenHoldingIds: recentRavenIds(ravens, seenRavens),
+      unseenWireHoldingIds: w.ids,
+      wiresUnmatched: w.unmatched,
+      watchState: nightWatch?.watch_state ?? null,
+      stallsRead: stallsRead(watchlist?.rows, nowMs),
+    });
+  }, [shownWorld, ravens, seenRavens, standing, standingFailed, nightWatch, watchlist, nowMs]);
+  const placedMarks = useMemo(() => placeMarks(shownWorld.towers, marks), [shownWorld, marks]);
+
   // What the world shows from the facts (the scene takes them as one thing, not one input each).
   const look = useMemo<SceneLook>(
     () => ({
@@ -922,8 +938,12 @@ export default function Game3DPage() {
       fieldTools,
       quarter,
       archCounts,
+      marks: placedMarks,
+      litStalls: lit,
+      archLit: archLit(lit),
+      noticeSheets: noticeSheets(nightWatch, nowMs),
     }),
-    [quest.written, state, nightWatch, unseenRavens, realmLevel, drillOpen, questMarks, talking, cheerKey, standingText.lit, fieldTools, quarter, archCounts],
+    [quest.written, state, nightWatch, unseenRavens, realmLevel, drillOpen, questMarks, talking, cheerKey, standingText.lit, fieldTools, quarter, archCounts, placedMarks, lit, nowMs],
   );
 
   if (!supported) return <Unavailable />;
@@ -968,7 +988,7 @@ export default function Game3DPage() {
       {showPerf && <PerfBreakdown stats={stats} />}
       {whereOpen && !worldPage && <WhereToPanel onPick={pickDoor} onClose={closeWhere} only={onlyPlace} onlyRoutes={onlyRoutes} />}
       {whereOpen && worldPage && <WorldPanel door={worldPage} onBack={() => setWorldPage(null)} onClose={closeWhere} />}
-      {panels.towers && <TowerPanel world={shownWorld} loading={loading} error={error} onRetry={load} onClose={() => flip("towers")} />}
+      {panels.towers && <TowerPanel world={shownWorld} loading={loading} error={error} onRetry={load} onClose={() => flip("towers")} marks={marks} lit={lit} noticeSheets={noticeSheets(nightWatch, nowMs)} />}
       {panels.quests && <QuestLog quest={quest} reviews={reviews} demo={world.demo} standing={standingText} wires={standing && !standingFailed ? (standing.wires ?? []) : undefined} onLookAtWire={lookAtWire} onRefreshStanding={refreshStanding} drill={drillQuest} guide={{ status: guide, saved: guideSaved, onReplay: replayGuideNow }} onClose={() => flip("quests")} />}
       {vaultOpen && state && <VaultPanel state={state} onChanged={load} onClose={() => setSpotPanel("vault", false)} />}
       {realmOpen && state && <RealmPanel state={state} onClose={() => setSpotPanel("realm", false)} />}
