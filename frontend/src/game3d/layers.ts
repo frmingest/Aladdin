@@ -17,6 +17,7 @@ export type LayerId =
   | "realm"
   | "watch"
   | "perch"
+  | "hourglass"
   | "worldPage"
   | "where";
 
@@ -36,6 +37,7 @@ export const LAYER_ORDER: readonly LayerId[] = [
   "realm",
   "watch",
   "perch",
+  "hourglass",
   "worldPage",
   "where",
 ];

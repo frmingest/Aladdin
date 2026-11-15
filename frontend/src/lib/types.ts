@@ -2470,6 +2470,19 @@ export interface NightWatchFired {
   fired_at: string;
 }
 
+/** The Hourglass (#414): the days that have a stored frame, oldest first. A day not listed is a gap. */
+export interface HistoryDays {
+  demo: boolean;
+  days: string[];
+}
+
+/** One stored day, as stored: a record of what the fortress looked like then, never live state. */
+export interface HistoryFrame {
+  day: string;
+  stored_at: string;
+  state: GameState;
+}
+
 export interface NightWatch {
   rules_version: string;
   demo: boolean;

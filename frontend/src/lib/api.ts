@@ -45,6 +45,8 @@ import type {
   HoldingAdvisors,
   Records,
   Calibration,
+  HistoryDays,
+  HistoryFrame,
   NightWatch,
   Ravens,
   Holding,
@@ -438,6 +440,9 @@ export const api = {
   // Sprint 24: recently captured reports (G15), the nightly check as a dispatch (G16). All read-only.
   getRavens: () => request<Ravens>("/game/ravens"),
   getNightWatch: () => request<NightWatch>("/game/night-watch"),
+  // The Hourglass (#414): the stored days, and one stored day's frame (a 404 is a gap, never filled in).
+  getGameHistory: () => request<HistoryDays>("/game/history"),
+  getGameFrame: (day: string) => request<HistoryFrame>(`/game/history/${encodeURIComponent(day)}`),
   // Sprint 25 rituals: Hall of Records (G18), per-holding advisor lines (G20).
   getRecords: () => request<Records>("/game/records"),
   /** C2 hit rate: counts only, gated by the server (opens at min_n outcomes). */

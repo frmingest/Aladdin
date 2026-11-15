@@ -1,8 +1,8 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { api } from "../lib/api";
+import { ApiError, api } from "../lib/api";
 import { describeError } from "../lib/errors";
-import type { DecisionRecord, DocumentSummary, GameState, HoldingAdvisors, Watchlist, Journal, JournalEntryInput, NightWatch, Ravens, Standing, StormDrillInput, StormDrills } from "../lib/types";
+import type { DecisionRecord, DocumentSummary, GameState, HistoryDays, HoldingAdvisors, Watchlist, Journal, JournalEntryInput, NightWatch, Ravens, Standing, StormDrillInput, StormDrills } from "../lib/types";
 import { loadSeen, markSeen, saveSeen, splitRavens } from "../lib/ravens";
 import { DocumentReader } from "../components/DocumentReader";
 import { latestReport, markReportOpened } from "../game3d/libraryReport";
@@ -18,6 +18,11 @@ import WatchPanel from "../game3d/WatchPanel";
 import RavensPanel from "../game3d/RavensPanel";
 import RealmPanel from "../game3d/RealmPanel";
 import { REALM_PROMPT } from "../game3d/realmWordsV1";
+import HourglassBanner from "../game3d/HourglassBanner";
+import HourglassPanel from "../game3d/HourglassPanel";
+import type { DayStatus, HistoryStatus } from "../game3d/HourglassPanel";
+import { PLAY_STEP_MS, buildTimeline, openInThePast, playNext, stepDay, todayUtc } from "../game3d/hourglassPlan";
+import { HOURGLASS_PROMPT, HOURGLASS_SHUT } from "../game3d/hourglassWordsV1";
 import MagicLamp from "../components/fortress/MagicLamp";
 import { summarizeRealm } from "../lib/realmVerdict";
 import { PERCH_PROMPT, WATCH_PROMPT } from "../game3d/watchWordsV1";
@@ -64,7 +69,7 @@ import { buildQuarter } from "../game3d/quarterPlan";
 import { QUARTER_WORDS } from "../game3d/quarterWordsV1";
 import { prefersReducedMotion } from "../game3d/motionPref";
 import { standingAt } from "../game3d/near";
-import { archLit, holdingMarks, litStalls, noticeSheets, placeMarks, recentRavenIds, stallsRead, unseenWireIds } from "../game3d/marks";
+import { NO_MARKS, archLit, holdingMarks, litStalls, noticeSheets, placeMarks, recentRavenIds, stallsRead, unseenWireIds } from "../game3d/marks";
 import { MAX_DONE, buildRound, roundChipCount, loadRound, persistRound, pruneDone, ravenFactIds, stopId, wireFactIds } from "../game3d/round";
 import { SAMPLE_SHEETS, sampleLit, sampleMarks, sampleRound, sampleRoundFacts } from "../game3d/sampleRound";
 import type { Stop } from "../game3d/round";
@@ -157,10 +162,10 @@ function areaReducerWithMotion(state: AreaState, action: AreaAction): AreaState 
 }
 
 /** The panels that open where you stand and shut when you walk away. Each is also a kind in the list of spots (near.ts). */
-const PANEL_SPOTS = ["desk", "drill", "vault", "realm", "watch", "perch"] as const;
+const PANEL_SPOTS = ["desk", "drill", "vault", "realm", "watch", "perch", "hourglass"] as const;
 type PanelSpot = (typeof PANEL_SPOTS)[number];
 type SpotPanels = Record<PanelSpot, boolean>;
-const NO_SPOT_PANELS: SpotPanels = { desk: false, drill: false, vault: false, realm: false, watch: false, perch: false };
+const NO_SPOT_PANELS: SpotPanels = { desk: false, drill: false, vault: false, realm: false, watch: false, perch: false, hourglass: false };
 const NOWHERE: AtSpot = { kind: "none" };
 /** What one kind of spot does: its prompt (null while silent), an optional second line, and what E does. */
 interface SpotAct<S> {
@@ -206,7 +211,7 @@ export default function Game3DPage() {
   // The panels that open where you stand (the writing desk, the drill post whose camp stands while it is open, the vault
   // chest, the Realm post, the Night Watch post, the raven perch): which of them are open.
   const [spotPanels, setSpotPanels] = useState<SpotPanels>(NO_SPOT_PANELS);
-  const { desk: deskOpen, drill: drillOpen, vault: vaultOpen, realm: realmOpen, watch: watchOpen, perch: perchOpen } = spotPanels;
+  const { desk: deskOpen, drill: drillOpen, vault: vaultOpen, realm: realmOpen, watch: watchOpen, perch: perchOpen, hourglass: hourglassOpen } = spotPanels;
   const setSpotPanel = useCallback((id: PanelSpot, open: boolean) => setSpotPanels((p) => (p[id] === open ? p : { ...p, [id]: open })), []);
   // The old books (past journal entries), opened from the desk panel; and the Magic Lamp on the writing desk (the Genie).
   const [booksOpen, setBooksOpen] = useState(false);
@@ -217,6 +222,15 @@ export default function Game3DPage() {
   const [ravens, setRavens] = useState<Ravens | null>(null);
   // "Seen" is the flat page's own per-browser list, so a raven marked here is marked there too.
   const [seenRavens, setSeenRavens] = useState<Set<string>>(() => loadSeen());
+  // The Hourglass (#414): the stored days, and the one day you are looking back at (null is today, the live fortress).
+  // A day is set only once it has been read, so the date on screen is always the day that is drawn.
+  const [history, setHistory] = useState<{ status: HistoryStatus; demo: boolean; days: string[] }>({ status: "idle", demo: false, days: [] });
+  const [past, setPast] = useState<{ day: string; status: DayStatus; state: GameState | null } | null>(null);
+  const [turning, setTurning] = useState(false);
+  const [playing, setPlaying] = useState(false);
+  const frameCache = useRef(new Map<string, GameState>());
+  const turnSeq = useRef(0);
+  const inPast = past !== null;
   // The signpost by the gate: whether the "Where to?" menu is open, and the flat page shown in the world panel.
   const [whereOpen, setWhereOpen] = useState(false);
   const [worldPage, setWorldPage] = useState<Door | null>(null);
@@ -411,15 +425,17 @@ export default function Game3DPage() {
     if (supported) load();
   }, [supported, load]);
 
+  // Looking back, everything drawn comes from the stored day's own state (a gap or an unreadable day has none: bare pads and fog).
+  const viewState = inPast ? past.state : state;
   // The verdict on the whole fortress, by the flat page's own function. A fortress that could not be read is "unknown", never "sound".
-  const realmLevel = useMemo(() => (state ? summarizeRealm(state).level : null), [state]);
+  const realmLevel = useMemo(() => (viewState ? summarizeRealm(viewState).level : null), [viewState]);
   // The Market Quarter: the same companies, up to twelve, laid up one lane. The arch counts them all; an unread watchlist counts nothing.
   const quarter = useMemo(() => buildQuarter(watchlist?.rows), [watchlist]);
   const archCounts = useMemo(() => (watchlist ? { total: quarter.total, inRange: quarter.inRange } : null), [watchlist, quarter]);
   // Never invent towers: no state means bare pads.
-  const world = useMemo(() => stateToWorld(state), [state]);
-  // What is drawn and listed: the same world, with the Standing's named gaps labelled on their towers.
-  const shownWorld = useMemo(() => withGaps(world, standing?.gaps ?? []), [world, standing]);
+  const world = useMemo(() => stateToWorld(viewState), [viewState]);
+  // What is drawn and listed: the same world, with the Standing's named gaps labelled on their towers (today's gaps, so not in the past).
+  const shownWorld = useMemo(() => (inPast ? world : withGaps(world, standing?.gaps ?? [])), [inPast, world, standing]);
   const standingText = useMemo(() => withGameStandingLabels(wordsFor(standing, standingFailed)), [standing, standingFailed]);
   // The quest is worked out from the journal every render; nothing about it is stored.
   const quest = useMemo(
@@ -604,6 +620,8 @@ export default function Game3DPage() {
 
   // Opening the menu frees the mouse so the buttons can be clicked; shutting it never leaves a page open.
   const toggleWhere = useCallback(() => {
+    // The flat pages behind this menu can write, so the menu stays shut while you look back (#414).
+    if (inPast) return;
     setWhereOpen((open) => {
       if (!open && document.pointerLockElement) document.exitPointerLock();
       return !open;
@@ -611,13 +629,104 @@ export default function Game3DPage() {
     setWorldPage(null);
     setOnlyPlace(null);
     setOnlyRoutes(null);
-  }, []);
+  }, [inPast]);
   const closeWhere = useCallback(() => {
     setWhereOpen(false);
     setWorldPage(null);
     setOnlyPlace(null);
     setOnlyRoutes(null);
   }, []);
+  // --- The Hourglass (#414) -------------------------------------------------------------------------------------
+  const today = useMemo(() => todayUtc(new Date()), []);
+  const timeline = useMemo(() => buildTimeline(history.days, today), [history.days, today]);
+  const loadHistory = useCallback(() => {
+    setHistory((h) => ({ ...h, status: "loading" }));
+    api
+      .getGameHistory()
+      .then((r: HistoryDays) => setHistory({ status: "ready", demo: r.demo, days: r.days }))
+      .catch(() => setHistory((h) => ({ ...h, status: "failed" })));
+  }, []);
+  /** One stored day as a picture: a stored frame, a gap (nothing stored, or a 404) or a day that could not be read. */
+  const readDay = useCallback(
+    async (day: string): Promise<{ status: DayStatus; state: GameState | null }> => {
+      if (!history.days.includes(day)) return { status: "gap", state: null };
+      const cached = frameCache.current.get(day);
+      if (cached) return { status: "frame", state: cached };
+      try {
+        const f = await api.getGameFrame(day);
+        frameCache.current.set(day, f.state);
+        return { status: "frame", state: f.state };
+      } catch (e) {
+        return e instanceof ApiError && e.status === 404 ? { status: "gap", state: null } : { status: "failed", state: null };
+      }
+    },
+    [history.days],
+  );
+  /** Look at a night, or go back to today (null). The day is set only after it has been read, so the date always matches what is drawn. */
+  const goToDay = useCallback(
+    (day: string | null) => {
+      const seq = ++turnSeq.current;
+      if (day === null) {
+        setPast(null);
+        setPlaying(false);
+        setTurning(false);
+        return;
+      }
+      setTurning(true);
+      readDay(day).then((r) => {
+        if (seq !== turnSeq.current) return;
+        setPast({ day, ...r });
+        setTurning(false);
+        // Read the next night ahead of the replay so it does not stall.
+        const next = playNext(timeline, day);
+        if (next && history.days.includes(next) && !frameCache.current.has(next)) void readDay(next);
+      });
+    },
+    [readDay, timeline, history.days],
+  );
+  const pastDay = past?.day ?? null;
+  const playToggle = useCallback(() => {
+    if (playing) return setPlaying(false);
+    if (pastDay === null) {
+      const first = timeline[0]?.day;
+      if (!first) return;
+      goToDay(first);
+    }
+    setPlaying(true);
+  }, [playing, pastDay, timeline, goToDay]);
+  // The replay rests on each night, then turns to the next; at the newest night it stops (never loops, never leaves the past by itself).
+  useEffect(() => {
+    if (!playing || turning || pastDay === null) return;
+    const t = window.setTimeout(() => {
+      const next = playNext(timeline, pastDay);
+      if (next === null) setPlaying(false);
+      else goToDay(next);
+    }, PLAY_STEP_MS);
+    return () => window.clearTimeout(t);
+  }, [playing, turning, pastDay, timeline, goToDay]);
+  // H takes you home to today from anywhere while you look back.
+  useEffect(() => {
+    if (!inPast) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code !== "KeyH" || e.ctrlKey || e.metaKey || e.altKey || typingInField(e.target)) return;
+      e.preventDefault();
+      goToDay(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [inPast, goToDay]);
+  // Going back shuts whatever could write (a panel left open, the flat pages, a dialog) before the past is drawn.
+  useEffect(() => {
+    if (!inPast) return;
+    setWhereOpen(false);
+    setWorldPage(null);
+    setBoothOpen(null);
+    setTalking(null);
+    setBooksOpen(false);
+    setLampOpen(false);
+    setSpotPanels((p) => (p.desk || p.drill || p.vault || p.watch || p.perch ? { ...p, desk: false, drill: false, vault: false, watch: false, perch: false } : p));
+  }, [inPast]);
+
   // E at a stall: that company's store, in the world panel (the flat store page itself).
   const openStore = useCallback((holdingId: string) => {
     const door = storeDoor(holdingId);
@@ -857,7 +966,15 @@ export default function Game3DPage() {
         openSpotPanel("perch");
       },
     },
-    realm: { prompt: () => (realmOpen || !state ? null : REALM_PROMPT), press: () => state && openSpotPanel("realm") },
+    realm: { prompt: () => (realmOpen || !viewState ? null : REALM_PROMPT), press: () => viewState && openSpotPanel("realm") },
+    // The Hourglass: opening it reads the stored days (read-only); the panel then chooses the night.
+    hourglass: {
+      prompt: () => (hourglassOpen ? null : HOURGLASS_PROMPT),
+      press: () => {
+        if (!hourglassOpen && history.status !== "ready" && history.status !== "loading") loadHistory();
+        openSpotPanel("hourglass");
+      },
+    },
     // A holding's land.
     shelf: {
       prompt: (at) => (readShelf ? null : `Press E to read ${roomView?.shelves.find((s) => s.id === at.id)?.title ?? "the shelf"}`),
@@ -930,7 +1047,10 @@ export default function Game3DPage() {
       press: leaveArea,
     },
   };
-  const spotAct = atSpot.kind === "none" ? null : (acts[atSpot.kind] as SpotAct<AtSpot>);
+  // Looking back, only places that read stay open (the hourglass, the Realm post): every other place says it is shut and does nothing (#414).
+  const shutAct: SpotAct<AtSpot> = { prompt: () => HOURGLASS_SHUT, press: () => {} };
+  const spotAct =
+    atSpot.kind === "none" ? null : inPast && !openInThePast(atSpot.kind) ? shutAct : (acts[atSpot.kind] as SpotAct<AtSpot>);
   // E waits while something covers the world: a page over a room or a field, the report in a holding's land.
   const eBlocked = boothOpen !== null || lampOpen || isMoving(areaState) || (area.id === "holding" ? !!report || !room : area.id !== "courtyard" && whereOpen);
   const pressSpot = useRef<(() => void) | null>(null);
@@ -1000,6 +1120,7 @@ export default function Game3DPage() {
     realm: realmOpen,
     watch: watchOpen,
     perch: perchOpen,
+    hourglass: hourglassOpen,
     worldPage: whereOpen && !!worldPage,
     where: whereOpen,
   };
@@ -1022,6 +1143,7 @@ export default function Game3DPage() {
           case "realm": return setSpotPanel("realm", false);
           case "watch": return setSpotPanel("watch", false);
           case "perch": return setSpotPanel("perch", false);
+          case "hourglass": return setSpotPanel("hourglass", false);
           case "worldPage": return setWorldPage(null);
           case "where": return closeWhere();
           default: return;
@@ -1127,27 +1249,29 @@ export default function Game3DPage() {
   // What the world shows from the facts (the scene takes them as one thing, not one input each).
   const look = useMemo<SceneLook>(
     () => ({
-      books: quest.written,
-      vaultLevel: state?.vault.level ?? null,
-      watchStatus: nightWatch?.status ?? null,
-      unseenRavens,
+      // Looking back, the world draws only what the stored day held (vault, weather, towers). Today's facts (the desk's books,
+      // the watch, ravens, marks, quest marks, the Standing) stay out of it rather than sit on a past yard.
+      books: inPast ? 0 : quest.written,
+      vaultLevel: viewState?.vault.level ?? null,
+      watchStatus: inPast ? null : (nightWatch?.status ?? null),
+      unseenRavens: inPast ? 0 : unseenRavens,
       realmLevel,
-      siegeLevel: state?.siege?.level ?? null,
+      siegeLevel: viewState?.siege?.level ?? null,
       drillOpen,
-      questMarks,
+      questMarks: inPast ? [] : questMarks,
       talking,
       cheerKey,
-      standingLevel: standingText.lit,
+      standingLevel: inPast ? null : standingText.lit,
       fieldTools,
       quarter,
       archCounts,
-      marks: placedMarks,
+      marks: inPast ? NO_MARKS : placedMarks,
       litStalls: lit,
       archLit: archLit(lit),
-      noticeSheets: sheets,
+      noticeSheets: inPast ? 0 : sheets,
       mint: mint.view,
     }),
-    [mint.view, sheets, quest.written, state, nightWatch, unseenRavens, realmLevel, drillOpen, questMarks, talking, cheerKey, standingText.lit, fieldTools, quarter, archCounts, placedMarks, lit],
+    [inPast, viewState, mint.view, sheets, quest.written, nightWatch, unseenRavens, realmLevel, drillOpen, questMarks, talking, cheerKey, standingText.lit, fieldTools, quarter, archCounts, placedMarks, lit],
   );
 
   if (!supported) return <Unavailable />;
@@ -1164,7 +1288,7 @@ export default function Game3DPage() {
   const backOutside = roomView || inHall || inRecords || area.id === "weather" || area.id === "mint" ? leaveArea : null;
   // Any panel or dialog on screen: the hint line steps aside for it.
   const anyPanelOpen =
-    panels.quests || panels.towers || whereOpen || vaultOpen || realmOpen || watchOpen || perchOpen || deskOpen || drillOpen || lampOpen || boothOpen !== null || report !== null;
+    panels.quests || panels.towers || whereOpen || vaultOpen || realmOpen || watchOpen || perchOpen || hourglassOpen || deskOpen || drillOpen || lampOpen || boothOpen !== null || report !== null;
 
   return (
     <div className="relative h-[calc(100dvh-5rem)] min-h-[480px] w-full overflow-hidden bg-surface">
@@ -1192,12 +1316,34 @@ export default function Game3DPage() {
       />
       {showPerf && <PerfBreakdown stats={stats} />}
       {area.id === "mint" && plainOpen && <MintPlainPanel result={mint.view.result} stale={mint.view.wall === "stale"} onClose={() => setPlainOpen(false)} />}
-      {whereOpen && !worldPage && <WhereToPanel onPick={pickDoor} onClose={closeWhere} only={onlyPlace} onlyRoutes={onlyRoutes} />}
-      {whereOpen && worldPage && <WorldPanel door={worldPage} onBack={() => setWorldPage(null)} onClose={closeWhere} />}
-      {panels.towers && <TowerPanel world={shownWorld} loading={loading} error={error} onRetry={load} onClose={() => flip("towers")} marks={marks} lit={lit} noticeSheets={sheets} />}
-      {panels.quests && <QuestLog quest={quest} reviews={reviews} demo={world.demo} standing={standingText} wires={standing && !standingFailed ? (standing.wires ?? []) : undefined} onLookAtWire={lookAtWire} onRefreshStanding={refreshStanding} drill={drillQuest} guide={{ status: guide, saved: guideSaved, onReplay: replayGuideNow }} round={round} onRoundAgain={roundOff ? startSampleAgain : undefined} onClose={() => flip("quests")} />}
+      {whereOpen && !inPast && !worldPage && <WhereToPanel onPick={pickDoor} onClose={closeWhere} only={onlyPlace} onlyRoutes={onlyRoutes} />}
+      {whereOpen && !inPast && worldPage && <WorldPanel door={worldPage} onBack={() => setWorldPage(null)} onClose={closeWhere} />}
+      {panels.towers && <TowerPanel world={shownWorld} loading={loading} error={error} onRetry={load} onClose={() => flip("towers")} marks={inPast ? undefined : marks} lit={inPast ? undefined : lit} noticeSheets={inPast ? 0 : sheets} />}
+      {panels.quests && !inPast && <QuestLog quest={quest} reviews={reviews} demo={world.demo} standing={standingText} wires={standing && !standingFailed ? (standing.wires ?? []) : undefined} onLookAtWire={lookAtWire} onRefreshStanding={refreshStanding} drill={drillQuest} guide={{ status: guide, saved: guideSaved, onReplay: replayGuideNow }} round={round} onRoundAgain={roundOff ? startSampleAgain : undefined} onClose={() => flip("quests")} />}
       {vaultOpen && state && <VaultPanel state={state} onChanged={load} onClose={() => setSpotPanel("vault", false)} />}
-      {realmOpen && state && <RealmPanel state={state} onClose={() => setSpotPanel("realm", false)} />}
+      {realmOpen && viewState && <RealmPanel state={viewState} onClose={() => setSpotPanel("realm", false)} />}
+      {inPast && past && <HourglassBanner day={past.day} status={past.status} onToday={() => goToDay(null)} />}
+      {hourglassOpen && (
+        <HourglassPanel
+          status={history.status}
+          demo={history.demo}
+          timeline={timeline}
+          day={pastDay}
+          dayStatus={past?.status ?? null}
+          turning={turning}
+          playing={playing}
+          onPick={goToDay}
+          onEarlier={() => {
+            const d = stepDay(timeline, pastDay, -1);
+            if (d !== null) goToDay(d);
+          }}
+          onLater={() => goToDay(stepDay(timeline, pastDay, 1))}
+          onPlayToggle={playToggle}
+          onToday={() => goToDay(null)}
+          onRetry={loadHistory}
+          onClose={() => setSpotPanel("hourglass", false)}
+        />
+      )}
       {watchOpen && <WatchPanel onClose={() => setSpotPanel("watch", false)} />}
       {perchOpen && ravens && <RavensPanel ravens={ravens} seen={seenRavens} onSeen={onRavensSeen} onClose={() => setSpotPanel("perch", false)} />}
       {deskOpen && (
