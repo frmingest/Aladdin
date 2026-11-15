@@ -112,12 +112,15 @@ test.describe("things you can walk up to", () => {
    * Walks with `key` until the prompt says `text`. It waits on the prompt, not on a clock (software WebGL is slow), and it
    * walks in short steps: a key pressed before the world has finished loading is not heard, so one long press could be lost.
    */
+  /** What the prompt said after each step, newest last: when a walk times out, the test failure shows where it was heard. */
+  const trail: string[] = [];
   async function walkUntil(page: Page, key: string, text: RegExp, holdMs = 350) {
     const prompt = page.locator(".g3d-prompt");
     await expect(async () => {
       await page.keyboard.down(key);
       await page.waitForTimeout(holdMs);
       await page.keyboard.up(key);
+      trail.push(`${key}: ${(await prompt.allInnerTexts()).join("|") || "(no prompt)"}`);
       await expect(prompt).toContainText(text, { timeout: 400 });
     }).toPass({ timeout: 60_000, intervals: [50] });
   }
@@ -157,60 +160,66 @@ test.describe("things you can walk up to", () => {
     await problems.assertNone();
   });
 
+  /** Walks with `key` until no prompt matches `text` (a missing prompt counts as not matching). */
+  async function walkUntilGone(page: Page, key: string, text: RegExp, holdMs = 300) {
+    const prompt = page.locator(".g3d-prompt");
+    await expect(async () => {
+      await page.keyboard.down(key);
+      await page.waitForTimeout(holdMs);
+      await page.keyboard.up(key);
+      const said = (await prompt.allInnerTexts()).join("|");
+      trail.push(`${key}: ${said || "(no prompt)"}`);
+      expect(said).not.toMatch(text);
+    }).toPass({ timeout: 60_000, intervals: [50] });
+  }
+
   // #431: the whole Royal Mint round, steered only by the prompts (a fixed time of walking is not reliable on software WebGL).
   // The lever wall is Toll Gate, Great Press, Great Melt, Coin Rain, Harbour Guard, west to east (backend printer ledger order).
   // CI cannot see the picture, so it cannot judge that the result wall is in view or that plates read; it checks that the
   // pull is heard, that STAMP asks the backend with the pulled lever, and that the door leads back out.
+  // The prompt shows "Press E to X" as a key cap "E" plus "X" with its first letter capitalised (actionPrompt.ts), so the
+  // patterns match that, not the sentence in mintWordsV1.ts. Steps of 300 ms (about 1.8 m).
   test("Royal Mint: pull a lever, STAMP asks the backend, and the door walks back out", async ({ page }) => {
-    test.setTimeout(180_000);
+    test.setTimeout(300_000);
     const problems = watch(page);
+    trail.length = 0;
     await page.goto("/game3d?at=mint");
     await expect(page.locator("canvas")).toHaveCount(1, { timeout: 60_000 });
     await expect(page).toHaveTitle(/Royal Mint/);
-    const prompt = page.locator(".g3d-prompt");
-    // The prompt shows "Press E to X" as a key cap "E" plus "X" with its first letter capitalised (actionPrompt.ts), so the
-    // patterns below match that, not the sentence in mintWordsV1.ts. Steps of 300 ms (about 1.8 m): long enough that a key press is seen on a slow frame, short enough not to step over a prompt.
-    // Up to the press with nothing pulled: it says so and promises nothing.
-    await walkUntil(page, "w", /Pull a lever first, then STAMP/, 300);
-    // West until the press prompt lets go (the press is solid, so go round it), then north along the lever wall: from there
-    // the Toll Gate (x -5.6) or the Great Press (x -2.8) is in reach, whichever the hero lands nearer.
-    await expect(async () => {
-      await page.keyboard.down("a");
-      await page.waitForTimeout(300);
-      await page.keyboard.up("a");
-      await expect(prompt).not.toContainText(/STAMP/, { timeout: 400 });
-    }).toPass({ timeout: 60_000, intervals: [50] });
-    await walkUntil(page, "w", /^E\s*Pull (Toll Gate|Great Press)/, 300);
-    await page.keyboard.press("e");
-    // Back east along the lever row to the middle lever, then south: the press either blocks the way (it is solid) or is
-    // passed, and either way its prompt now offers STAMP, because a lever is pulled.
-    await walkUntil(page, "d", /^E\s*Pull Great Melt/, 300);
-    await walkUntil(page, "s", /^E\s*STAMP/, 300);
+    try {
+      // Up to the press with nothing pulled: it says so and promises nothing.
+      await walkUntil(page, "w", /Pull a lever first, then STAMP/, 300);
+      // West until the press prompt lets go (the press is solid, so go round it), then north along the lever wall: from
+      // there the Toll Gate (x -5.6) or the Great Press (x -2.8) is in reach, whichever the hero lands nearer.
+      await walkUntilGone(page, "a", /STAMP/);
+      await walkUntil(page, "w", /^E\s*Pull (Toll Gate|Great Press)/, 300);
+      await page.keyboard.press("e");
+      // Back east along the lever row to the middle lever, then south: the press either blocks the way (it is solid) or is
+      // passed, and either way its prompt now offers STAMP, because a lever is pulled.
+      await walkUntil(page, "d", /^E\s*Pull Great Melt/, 300);
+      await walkUntil(page, "s", /^E\s*STAMP/, 300);
 
-    const asked = page.waitForResponse((r) => /\/game\/printer\?/.test(r.url()) && r.url().includes("pull="));
-    await page.keyboard.press("e");
-    const answer = await asked;
-    expect(answer.status()).toBe(200);
-    expect(new URL(answer.url()).searchParams.get("pull")).toMatch(/^(toll_gate|great_press):/);
-    // STAMP turns the camera to face east (#431), and walking keys follow the camera: W is east, S west, A north, D south.
-    // Give the turn time to finish (software WebGL is slow) before steering again.
-    await page.waitForTimeout(3_000);
+      const asked = page.waitForResponse((r) => /\/game\/printer\?/.test(r.url()) && r.url().includes("pull="));
+      await page.keyboard.press("e");
+      const answer = await asked;
+      expect(answer.status()).toBe(200);
+      expect(new URL(answer.url()).searchParams.get("pull")).toMatch(/^(toll_gate|great_press):/);
+      // STAMP turns the camera to face east (#431), and walking keys follow the camera: W is east, S west, A north, D south.
+      // Give the turn time to finish (software WebGL is slow) before steering again.
+      await page.waitForTimeout(3_000);
 
-    // West round the press (it is solid), then south to the door and out.
-    await expect(async () => {
-      await page.keyboard.down("s");
-      await page.waitForTimeout(300);
-      await page.keyboard.up("s");
-      await expect(page.locator(".g3d-prompt")).not.toContainText(/STAMP/, { timeout: 400 });
-    }).toPass({ timeout: 60_000, intervals: [50] });
-    // The loop above can leave her too far west for the door's reach: one step east (W, after the turn) brings her back in line.
-    await page.keyboard.down("w");
-    await page.waitForTimeout(200);
-    await page.keyboard.up("w");
-    await walkUntil(page, "d", /Step back outside/);
-    await page.keyboard.press("e");
-    await expect(page).toHaveTitle(/3D courtyard/);
-    await expect(page).toHaveURL((u) => u.search === "");
+      // West round the press (it is solid), one step back east, then south to the door and out.
+      await walkUntilGone(page, "s", /STAMP/);
+      await page.keyboard.down("w");
+      await page.waitForTimeout(200);
+      await page.keyboard.up("w");
+      await walkUntil(page, "d", /Step back outside/);
+      await page.keyboard.press("e");
+      await expect(page).toHaveTitle(/3D courtyard/);
+      await expect(page).toHaveURL((u) => u.search === "");
+    } catch (e) {
+      throw new Error(`${(e as Error).message}\nPrompts heard after each step (last 25):\n${trail.slice(-25).join("\n")}`);
+    }
     await problems.assertNone();
   });
 });
