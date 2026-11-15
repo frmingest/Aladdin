@@ -72,7 +72,13 @@ export interface Round {
   quiet: boolean;
   /** The one line under the list: the quiet line, the round-done line, or the first unread source. Null when there is none. */
   line: string | null;
+  /** A source is still loading: the round says nothing about calm, and the toolbar chip shows no count. */
+  pending: boolean;
 }
+
+/** The count on the shut Quests chip: stops still open, or 0 (show nothing) when none are open or a source is still loading. */
+export const roundChipCount = (round: Pick<Round, "open" | "pending"> | null | undefined): number =>
+  !round || round.pending ? 0 : round.open;
 
 export const stopId = (kind: StopKind, holdingId: string | null, factId: string | null): string =>
   `${kind}:${holdingId ?? ""}:${factId ?? ""}`;
@@ -172,7 +178,7 @@ export function buildRound(facts: RoundFacts, memory: RoundMemory, carry: readon
   } else if (all.length > 0 && open === 0) {
     line = ROUND_WORDS.allDone;
   }
-  return { stops: all.slice(0, MAX_STOPS), more, moreLine: more > 0 ? ROUND_WORDS.more(more) : null, open, quiet, line };
+  return { stops: all.slice(0, MAX_STOPS), more, moreLine: more > 0 ? ROUND_WORDS.more(more) : null, open, quiet, line, pending: pending === true };
 }
 
 const localDay = (ms: number) => {

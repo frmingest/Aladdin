@@ -60,7 +60,7 @@ import { QUARTER_WORDS } from "../game3d/quarterWordsV1";
 import { prefersReducedMotion } from "../game3d/motionPref";
 import { standingAt } from "../game3d/near";
 import { archLit, holdingMarks, litStalls, noticeSheets, placeMarks, recentRavenIds, stallsRead, unseenWireIds } from "../game3d/marks";
-import { MAX_DONE, buildRound, loadRound, persistRound, pruneDone, ravenFactIds, stopId, wireFactIds } from "../game3d/round";
+import { MAX_DONE, buildRound, roundChipCount, loadRound, persistRound, pruneDone, ravenFactIds, stopId, wireFactIds } from "../game3d/round";
 import { SAMPLE_SHEETS, sampleLit, sampleMarks, sampleRound, sampleRoundFacts } from "../game3d/sampleRound";
 import type { Stop } from "../game3d/round";
 import type { MarkSource } from "../game3d/marks";
@@ -81,7 +81,7 @@ import type { BoothId } from "../game3d/boothPlan";
 import SalesRepDialog from "../components/marketplace/SalesRepDialog";
 import HypeBoothDialog from "../components/marketplace/HypeBoothDialog";
 import { useDemoMode } from "../lib/demoMode";
-import { PANEL_KEYS, loadPanels, savePanels, togglePanel } from "../game3d/hudPanels";
+import { PANEL_KEYS, autoOpenQuests, loadPanels, savePanels, togglePanel } from "../game3d/hudPanels";
 import { HINT_TEXT, countVisit, hintWanted } from "../game3d/hintLine";
 import { SOUND_KEY, ambienceLevel } from "../game3d/soundPlan";
 import { useAmbience } from "../game3d/useAmbience";
@@ -250,7 +250,18 @@ export default function Game3DPage() {
   // The key hint teaches the controls, so it shows on the first few visits only (C2).
   const [showHint] = useState(() => hintWanted(countVisit()));
   const flip = useCallback((id: PanelId) => setPanels((p) => togglePanel(p, id)), []);
-  useEffect(() => savePanels(panels), [panels]);
+  // The sample fortress opens the Quests panel once so the made-up round shows with no tap; it never stores that (demo wins).
+  const autoOpened = useRef(false);
+  useEffect(() => {
+    if (state === null || !(state.demo === true || demoMode === true)) return;
+    const next = autoOpenQuests(panels, true, autoOpened.current);
+    autoOpened.current = true;
+    if (next) setPanels(next);
+  }, [state, demoMode]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (state?.demo === true || demoMode === true) return;
+    savePanels(panels);
+  }, [panels, state, demoMode]);
 
   // Which of the round's own reads have answered (well or badly). Until they have, the round says nothing about them.
   const [settled, setSettled] = useState({ stalls: false, watch: false, ravens: false });
@@ -1119,6 +1130,7 @@ export default function Game3DPage() {
       <Toolbar
         open={panels}
         onToggle={flip}
+        roundOpen={roundChipCount(round)}
         questsWaiting={(quest.status === "open" ? 1 : 0) + (reviews.status === "open" ? 1 : 0)}
         towerCount={world.plain.length}
         statsOn={showPerf}

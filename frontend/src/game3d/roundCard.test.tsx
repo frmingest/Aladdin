@@ -15,7 +15,7 @@ const render = (extra: Partial<Parameters<typeof QuestLog>[0]>) =>
 const stop = (o: Partial<Round["stops"][number]> = {}) => ({
   id: "smoke:h:w", kind: "smoke" as const, holdingId: "h", factId: "w", text: "Smoke at Vår Energi", offYard: false, done: false, ...o,
 });
-const round = (o: Partial<Round> = {}): Round => ({ stops: [stop()], more: 0, moreLine: null, open: 1, quiet: false, line: null, ...o });
+const round = (o: Partial<Round> = {}): Round => ({ stops: [stop()], more: 0, moreLine: null, open: 1, quiet: false, line: null, pending: false, ...o });
 
 describe("Today's round in the quest log", () => {
   it("shows the stops at the top, before the Guide, with no tap needed", () => {

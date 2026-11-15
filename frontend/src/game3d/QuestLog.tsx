@@ -105,7 +105,7 @@ export default function QuestLog({
   const counted = quest.status === "open" || quest.status === "done";
   const pct = counted && quest.total > 0 ? Math.round((quest.written / quest.total) * 100) : 0;
   return (
-    <aside aria-label="Quest log" className="g3d-panel g3d-slide absolute left-3 top-14 z-20 max-h-[calc(100%-4.5rem)] w-72 max-w-[40%] overflow-y-auto p-3 text-sm">
+    <aside aria-label="Quest log" className="g3d-panel g3d-quests g3d-slide absolute left-3 top-14 z-20 max-h-[calc(100%-4.5rem)] w-72 max-w-[40%] overflow-y-auto p-3 text-sm">
       <header className="g3d-head">
         <h2>📜 Quests</h2>
         {onClose && (
@@ -115,7 +115,7 @@ export default function QuestLog({
       {demo && <p className="g3d-demo">{QUEST_SAMPLE}</p>}
 
       {round && (
-        <section className="g3d-card" aria-label={ROUND_TITLE}>
+        <section className="g3d-card g3d-round" aria-label={ROUND_TITLE}>
           <h3 className="g3d-tag">{ROUND_TITLE}</h3>
           <p className="sr-only" aria-live="polite">{round.open > 0 ? ROUND_WORDS.openSr(round.open) : ""}</p>
           {demo && <p className="g3d-muted">{ROUND_SAMPLE}</p>}

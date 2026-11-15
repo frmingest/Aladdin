@@ -2,6 +2,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { DEFAULT_PANELS, PANEL_KEYS, loadPanels, savePanels, togglePanel } from "./hudPanels";
 import Toolbar from "./Toolbar";
+import { autoOpenQuests } from "./hudPanels";
+import { roundChipCount } from "./round";
 import { KEY_ACTIONS } from "./movement";
 
 const memory = () => {
@@ -80,5 +82,37 @@ describe("Toolbar", () => {
     const h = html({ open: { quests: true, towers: false }, questsWaiting: 0 });
     expect(h.match(/aria-pressed="true"/g)).toHaveLength(1);
     expect(h).not.toContain(">0<");
+  });
+});
+
+describe("the round on the Quests chip", () => {
+  const html = (o: Partial<Parameters<typeof Toolbar>[0]> = {}) =>
+    renderToStaticMarkup(
+      <Toolbar open={DEFAULT_PANELS} onToggle={() => {}} questsWaiting={0} towerCount={7} statsOn={false} statsLabel="" onToggleStats={() => {}} whereOpen={false} onToggleWhere={() => {}} {...o} />,
+    );
+  it("shows the open count with an accessible name", () => {
+    const h = html({ roundOpen: 5 });
+    expect(h).toContain(">5<");
+    expect(h).toContain('aria-label="Quests, 5 stops open"');
+  });
+  it("shows nothing for the round when none are open", () => {
+    const h = html({ roundOpen: 0 });
+    expect(h).not.toContain("stops open");
+    expect(h).not.toContain("g3d-badge\">0");
+  });
+  it("the count is zero while a source is pending, with no round, and when all are done", () => {
+    expect(roundChipCount({ open: 5, pending: true })).toBe(0);
+    expect(roundChipCount(undefined)).toBe(0);
+    expect(roundChipCount({ open: 0, pending: false })).toBe(0);
+    expect(roundChipCount({ open: 5, pending: false })).toBe(5);
+  });
+});
+
+describe("auto-open of the sample round", () => {
+  it("opens Quests once in the sample fortress, never twice, never for the real one", () => {
+    expect(autoOpenQuests(DEFAULT_PANELS, true, false)).toEqual({ quests: true, towers: false });
+    expect(autoOpenQuests(DEFAULT_PANELS, true, true)).toBeNull();
+    expect(autoOpenQuests(DEFAULT_PANELS, false, false)).toBeNull();
+    expect(autoOpenQuests({ quests: true, towers: false }, true, false)).toBeNull();
   });
 });

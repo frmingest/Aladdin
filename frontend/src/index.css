@@ -1025,6 +1025,15 @@
 .g3d-tool[aria-pressed="true"] .g3d-badge { background: #6b2a1d; }
 .g3d-kbd { padding: 0 0.3rem; border-radius: 3px; font-family: inherit; font-size: 0.62rem; opacity: 0.7; box-shadow: inset 0 0 0 1px currentColor; }
 
+/* Phone: the quest panel keeps to under half the height and scrolls inside; the round block is tight; key hints go (no keyboard). */
+@media (max-width: 640px) {
+  .g3d-panel.g3d-quests { max-height: min(45dvh, calc(100% - 4.5rem)); }
+  .g3d-round { padding: 0.35rem 0.5rem; }
+  .g3d-round ul { margin-top: 0.2rem; }
+  .g3d-round li { font-size: 0.78rem; line-height: 1.25; }
+  .g3d-kbd { display: none; }
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .g3d-slide { animation: g3d-in 0.18s ease-out; }
   @keyframes g3d-in { from { opacity: 0; } to { opacity: 1; } }

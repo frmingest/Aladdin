@@ -44,6 +44,15 @@ export function savePanels(open: OpenPanels, store: Store | null = browserStore(
   }
 }
 
+/**
+ * The sample fortress opens the Quests panel once per page load, so the made-up round is on screen with no tap. The real
+ * fortress never auto-opens. Returns the panels to set, or null to leave them. In memory only: nothing is stored for it.
+ */
+export function autoOpenQuests(open: OpenPanels, sample: boolean, alreadyDone: boolean): OpenPanels | null {
+  if (!sample || alreadyDone) return null;
+  return open.quests ? null : { ...open, quests: true };
+}
+
 export function togglePanel(open: OpenPanels, id: PanelId): OpenPanels {
   return { ...open, [id]: !open[id] };
 }
