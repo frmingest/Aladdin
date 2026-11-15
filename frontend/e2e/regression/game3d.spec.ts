@@ -156,4 +156,47 @@ test.describe("things you can walk up to", () => {
     await expect(page.getByRole("complementary", { name: title })).toBeVisible();
     await problems.assertNone();
   });
+
+  // #431: the whole Royal Mint round, steered only by the prompts (a fixed time of walking is not reliable on software WebGL).
+  // The lever wall is Toll Gate, Great Press, Great Melt, Coin Rain, Harbour Guard, west to east (backend printer ledger order).
+  // CI cannot see the picture, so it cannot judge that the result wall is in view or that plates read; it checks that the
+  // pull is heard, that STAMP asks the backend with the pulled lever, and that the door leads back out.
+  test("Royal Mint: pull a lever, STAMP asks the backend, and the door walks back out", async ({ page }) => {
+    test.setTimeout(180_000);
+    const problems = watch(page);
+    await page.goto("/game3d?at=mint");
+    await expect(page.locator("canvas")).toHaveCount(1, { timeout: 60_000 });
+    await expect(page).toHaveTitle(/Royal Mint/);
+    const prompt = page.locator(".g3d-prompt");
+
+    // Up to the press with nothing pulled: it says so and promises nothing.
+    await walkUntil(page, "w", /Pull a lever first, then STAMP/);
+    // West along the room until the span post, then north along the wall of levers (the press is solid, so go round it).
+    await walkUntil(page, "a", /look (1 year|3 years) ahead/);
+    await walkUntil(page, "w", /pull (Toll Gate|Great Press)/);
+    await page.keyboard.press("e");
+    // Back east along the lever row to the middle lever, then south: the press either blocks the way (solid) or is passed, and
+    // either way its prompt now offers STAMP, because a lever is pulled.
+    await walkUntil(page, "d", /pull Great Melt/);
+    await walkUntil(page, "s", /Press E to STAMP/);
+
+    const asked = page.waitForResponse((r) => /\/game\/printer\?/.test(r.url()) && r.url().includes("pull="));
+    await page.keyboard.press("e");
+    const answer = await asked;
+    expect(answer.status()).toBe(200);
+    expect(new URL(answer.url()).searchParams.get("pull")).toMatch(/^(toll_gate|great_press):/);
+
+    // Round the press (it is solid), then out through the door.
+    await expect(async () => {
+      await page.keyboard.down("a");
+      await page.waitForTimeout(350);
+      await page.keyboard.up("a");
+      await expect(prompt).not.toContainText(/STAMP/, { timeout: 400 });
+    }).toPass({ timeout: 60_000, intervals: [50] });
+    await walkUntil(page, "s", /Step back outside/);
+    await page.keyboard.press("e");
+    await expect(page).toHaveTitle(/3D courtyard/);
+    await expect(page).toHaveURL((u) => u.search === "");
+    await problems.assertNone();
+  });
 });

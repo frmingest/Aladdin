@@ -7,7 +7,10 @@ import {
   LEVER_LEAVE_RANGE,
   LEVER_MAX_TILT,
   LEVER_Z,
+  LEVER_BASE,
   MINT,
+  MINT_RESULT_PITCH,
+  MINT_RESULT_YAW,
   MINT_DOOR,
   MINT_DOOR_LEAVE_RANGE,
   PLATE_CAPACITY,
@@ -17,6 +20,7 @@ import {
   SPAN_SPOT,
   bookPlate,
   holdingPlate,
+  leverBaseCollider,
   leverLayout,
   leverReadout,
   leverTilt,
@@ -33,10 +37,13 @@ import {
   plateSlot,
   pullKey,
   pullsFrom,
+  turnToResultWall,
   wallHeading,
   wallPlates,
   wallStateOf,
 } from "./mintRoom";
+import { cameraOffset, MAX_PITCH, MIN_PITCH } from "./movement";
+import { cameraPull } from "./cameraRoom";
 import { MINT_WORDS } from "./mintWordsV1";
 import { BUILDINGS, doorSpot } from "./townPlan";
 
@@ -374,5 +381,67 @@ describe("the room", () => {
     const out = mintExit();
     const s = doorSpot(b!);
     expect(Math.hypot(out.x - s.x, out.z - s.z)).toBeGreaterThan(4.6);
+  });
+});
+
+describe("stamp view (#431)", () => {
+  it("turns the camera to the result wall and stops there, by the shortest way", () => {
+    let o = { yaw: 0, pitch: 0.45 };
+    for (let i = 0; i < 200; i++) {
+      const r = turnToResultWall(o, 1 / 60, false);
+      o = { yaw: r.yaw, pitch: r.pitch };
+      if (r.done) break;
+    }
+    expect(o.yaw).toBeCloseTo(MINT_RESULT_YAW, 5);
+    expect(o.pitch).toBeCloseTo(MINT_RESULT_PITCH, 5);
+    // From just past a full turn the short way round is taken, not the long one.
+    const r = turnToResultWall({ yaw: Math.PI * 1.9, pitch: 0.3 }, 1 / 60, false);
+    expect(r.yaw).toBeLessThan(Math.PI * 1.9); // the wall is 72 degrees back, not 288 forward
+    expect(r.yaw).toBeGreaterThan(Math.PI * 1.5);
+  });
+
+  it("jumps when the system asks for less motion", () => {
+    const r = turnToResultWall({ yaw: 2, pitch: 1 }, 1 / 60, true);
+    expect(r).toEqual({ yaw: MINT_RESULT_YAW, pitch: MINT_RESULT_PITCH, done: true });
+  });
+
+  it("keeps the pitch inside what the player may look at", () => {
+    expect(MINT_RESULT_PITCH).toBeGreaterThanOrEqual(MIN_PITCH);
+    expect(MINT_RESULT_PITCH).toBeLessThanOrEqual(MAX_PITCH);
+  });
+
+  it("has every plate in a 16:9 view from the press (the camera at its usual 7 metres, pulled in by the walls)", () => {
+    const fov = (60 * Math.PI) / 180;
+    const halfV = fov / 2;
+    const halfH = Math.atan(Math.tan(halfV) * (16 / 9));
+    const focus: [number, number, number] = [PRESS_SPOT.x, 1.5, PRESS_SPOT.z];
+    const off = cameraOffset(MINT_RESULT_YAW, MINT_RESULT_PITCH, 7);
+    const pull = cameraPull(focus, off, MINT);
+    const cam = [focus[0] + off[0] * pull, focus[1] + off[1] * pull, focus[2] + off[2] * pull];
+    expect(cam[0]).toBeGreaterThan(MINT.minX); // the camera sits inside the room, west of the press
+    expect(cam[0]).toBeLessThan(focus[0]);
+    // The view axis: from the camera to the hero.
+    const axisPitch = Math.atan2(cam[1] - focus[1], Math.hypot(cam[0] - focus[0], cam[2] - focus[2]));
+    for (let i = 0; i < PLATE_CAPACITY; i++) {
+      const s = plateSlot(i);
+      for (const dz of [-1, 1]) for (const dy of [-0.75, 0.75]) {
+        const dx = s.x - cam[0];
+        const horizontal = Math.abs(Math.atan2(s.z + dz - cam[2], dx));
+        const vertical = Math.abs(Math.atan2(s.y + dy - cam[1], dx) + axisPitch);
+        expect(horizontal, `plate ${i} sideways`).toBeLessThan(halfH);
+        expect(vertical, `plate ${i} up/down`).toBeLessThan(halfV);
+      }
+    }
+  });
+
+  it("gives every lever a solid base that matches the iron block drawn, clear of the spot you stand at", () => {
+    const { plans } = leverLayout(Array.from({ length: LEVER_CAPACITY }, (_, i) => lever(`l${i}`, "0", "1")));
+    for (const p of plans) {
+      const c = leverBaseCollider(p.x);
+      expect(c.half).toEqual([LEVER_BASE.halfX, LEVER_BASE.halfY, LEVER_BASE.halfZ]);
+      expect(c.position[1]).toBe(LEVER_BASE.halfY); // stands on the floor
+      expect(c.position[2] + c.half[2]).toBeLessThan(p.spotZ - 0.35); // the hero (radius 0.35) can still reach the stand spot
+      expect(c.position[2] - c.half[2]).toBeGreaterThanOrEqual(MINT.minZ); // inside the room
+    }
   });
 });

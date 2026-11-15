@@ -25,6 +25,12 @@ export const MINT_DOOR = { x: 0, z: MINT.maxZ, width: 3.2 } as const;
 export const MINT_SPAWN = { x: 0, y: 1.5, z: 4 } as const;
 /** Camera yaw 0 puts the hero looking north, toward the lever wall. */
 export const MINT_YAW = 0;
+/** Camera yaw that looks east, at the result wall: the camera stands west of the hero (yaw 0 is north, a quarter turn the other way is east). */
+export const MINT_RESULT_YAW = -Math.PI / 2;
+/** Camera pitch for that view: low enough that the top row of plates (y 4.3) stays inside the 60 degree view from the press. */
+export const MINT_RESULT_PITCH = 0.3;
+/** How fast the camera turns to the result wall when you stamp, per second (the follow camera's own turn is quicker than this, so it never snaps). */
+export const MINT_TURN_RATE = 6;
 
 export const MINT_DOOR_RANGE = 3.4;
 export const MINT_DOOR_LEAVE_RANGE = 4.6;
@@ -73,6 +79,30 @@ export function leverLayout(levers: readonly PrinterLever[]): { plans: LeverPlan
     return { key: l.key, name: l.name, x, spotX: x, spotZ: LEVER_Z };
   });
   return { plans, more: levers.length - shown.length };
+}
+
+/**
+ * A solid block under each lever, so the hero walks round it and not through it. Half-sizes and the centre match the iron base
+ * `MintRoom` draws (0.9 wide, 0.9 tall, 0.5 deep, standing 0.4 off the north wall); a pure function so a test can hold the two together.
+ */
+export const LEVER_BASE = { halfX: 0.45, halfY: 0.45, halfZ: 0.25, offWall: 0.4 } as const;
+export function leverBaseCollider(x: number): { position: [number, number, number]; half: [number, number, number] } {
+  return { position: [x, LEVER_BASE.halfY, MINT.minZ + LEVER_BASE.offWall], half: [LEVER_BASE.halfX, LEVER_BASE.halfY, LEVER_BASE.halfZ] };
+}
+
+/**
+ * One step of the camera turning to the result wall: yaw the shortest way to `MINT_RESULT_YAW` and pitch down to
+ * `MINT_RESULT_PITCH`, never past either. With less motion asked for it jumps. Returns the new angles and whether it has arrived.
+ */
+export function turnToResultWall(from: { yaw: number; pitch: number }, dt: number, reduced: boolean): { yaw: number; pitch: number; done: boolean } {
+  const twoPi = Math.PI * 2;
+  let dy = (MINT_RESULT_YAW - from.yaw) % twoPi;
+  if (dy > Math.PI) dy -= twoPi;
+  if (dy < -Math.PI) dy += twoPi;
+  const dp = MINT_RESULT_PITCH - from.pitch;
+  if (reduced || (Math.abs(dy) < 0.01 && Math.abs(dp) < 0.01)) return { yaw: MINT_RESULT_YAW, pitch: MINT_RESULT_PITCH, done: true };
+  const k = Math.min(1, dt * MINT_TURN_RATE);
+  return { yaw: from.yaw + dy * k, pitch: from.pitch + dp * k, done: false };
 }
 
 /** The lever you stand at, or null. The one you already hold keeps the wider leave range. */

@@ -62,7 +62,8 @@ import MintRoom from "./MintRoom";
 import WeatherTowerRoom from "./WeatherTowerRoom";
 import { EMPTY_MINT } from "./useMint";
 import type { MintView } from "./useMint";
-import { leverLayout } from "./mintRoom";
+import { leverLayout, turnToResultWall } from "./mintRoom";
+import { prefersReducedMotion } from "./motionPref";
 import { AREAS, COURTYARD, sameArea, transitionSpot } from "./areas";
 import type { AreaRef } from "./areas";
 import { cameraRoomOf } from "./cameraRoom";
@@ -218,6 +219,23 @@ function World({ onLockChange, world, area, room, hold, look, onFieldPresets }: 
   const keys = useKeys();
   const pos = useRef({ x: 0, z: 0 });
   const orbit = useOrbit(onLockChange);
+
+  // The Royal Mint: when you stamp, the camera turns to face the result wall so the plates are in view as they print.
+  // It is one turn (you can look away again at once), and it jumps when the system asks for less motion.
+  const stampWall = look.mint.wall;
+  const stampTurn = useRef(false);
+  const prevWall = useRef(stampWall);
+  useEffect(() => {
+    if (area.id === "mint" && stampWall === "loading" && prevWall.current !== "loading") stampTurn.current = true;
+    prevWall.current = stampWall;
+  }, [stampWall, area.id]);
+  useFrame((_, dt) => {
+    if (!stampTurn.current) return;
+    const step = turnToResultWall(orbit.current, Math.min(dt, 0.05), prefersReducedMotion());
+    orbit.current.yaw = step.yaw;
+    orbit.current.pitch = step.pitch;
+    if (step.done) stampTurn.current = false;
+  });
 
   // One teleport for every door: in at the area's spawn, out at the spot in front of the door you came through.
   const [teleport, setTeleport] = useState<Teleport | null>(null);
