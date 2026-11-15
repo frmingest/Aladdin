@@ -92,7 +92,8 @@ def test_a_measured_coefficient_replaces_the_sector_guess_and_earns_medium():
     measured = P.run([_holding(long_rate_coef=D("-6"), krone_coef=D("0.4"))], pulls).holdings[0]
     by = {t.channel: t for t in measured.terms}
     assert by[T.LONG_RATE].basis == "measured" and by[T.LONG_RATE].coefficient == D("-6")
-    assert by[T.LONG_RATE].confidence in (T.MEDIUM, T.LOW)  # capped by the table cell's own confidence
+    # the Toll Gate's long-rate cell is game judgement (Low), so a measured holding term cannot beat it
+    assert by[T.LONG_RATE].confidence == T.LOW
     assert {t.channel: t.basis for t in guess.terms}[T.LONG_RATE] == "sector_guess"
     # the guessed krone term of a Utilities holding is zero; a measured one now appears
     assert T.USDNOK in by and T.USDNOK not in {t.channel for t in guess.terms}
@@ -102,3 +103,22 @@ def test_unmeasured_holdings_behave_exactly_as_before():
     pulls = [P.Pull("toll_gate", D("1"))]
     a = P.run([_holding()], pulls).holdings[0]
     assert all(t.basis in ("beta", "sector_guess") for t in a.terms)
+
+
+def _toll_gate(**kw):
+    return P.run([_holding(**kw)], [P.Pull("toll_gate", D("1"))]).holdings[0]
+
+
+def test_small_measured_sensitivity_lets_the_toll_gate_show_an_amount_but_a_big_one_does_not():
+    """The only route to a NOK range in v1: a measured small rate and krone term is no longer a material guess."""
+    assert _toll_gate().show_amount is False  # sector guess (Utilities, -8 per pp) is material and Low
+    calm = _toll_gate(long_rate_coef=D("-1"), krone_coef=D("0.1"))
+    assert calm.confidence == T.MEDIUM and calm.show_amount is True
+    sensitive = _toll_gate(long_rate_coef=D("-6"), krone_coef=D("0.4"))
+    assert sensitive.confidence == T.LOW and sensitive.show_amount is False
+
+
+def test_measuring_the_holding_cannot_lift_a_lever_whose_own_cells_are_judgement():
+    """Great Press: equity cell is Low, so a measured holding stays direction-only however clear the fit."""
+    r = P.run([_holding(long_rate_coef=D("-1"), krone_coef=D("0.1"))], [P.Pull("great_press", D("2"))]).holdings[0]
+    assert r.confidence == T.LOW and r.show_amount is False

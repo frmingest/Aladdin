@@ -1,6 +1,6 @@
 # Printer P1.5: measured rate and krone sensitivity (2026-11-15)
 
-Status: **written, not merged, not deployed.** Issue #426. Decision: #374 resolved by Faiz on 2026-11-15, "measure sensitivities first" (option 1 in [P1 doc](printer-p1-ledger-engine-2026-10-20.md)). Unblocks #413 (the Royal Mint 3D room).
+Status: **written, not merged, not deployed.** Issue #426. Decision: Faiz chose "measure sensitivities first" (option 1 in [P1 doc](printer-p1-ledger-engine-2026-10-20.md)) for #374 in chat on 2026-11-15; #374 stays open until this is merged and checked on the real portfolio. Does **not** unblock #413 by itself, see "What it can and cannot do".
 
 ## What changed, in plain words
 
@@ -24,10 +24,24 @@ Weekly returns (last stored close in each week), one regression per holding:
 
 A measured term earns Medium (still capped by the lever table's own confidence for that channel). Every term in `/game/printer` now carries `basis`: `measured`, `sector_guess` or `beta`, so the Ledger of Truth and the Mint room can say which is which.
 
+## What it can and cannot do (checked against the engine, 2026-11-15)
+
+A holding's confidence is the lowest confidence among its *material* terms (a term is material when its range is at least a quarter of all terms' ranges). A term's confidence is the lower of the holding's coefficient and the **lever table's channel cell**. Measuring the holding fixes the first; it cannot fix the second, and most lever cells are "game judgement, Low" in `printer_v1.py`.
+
+| Lever, 1 year | Equity cell | Long-rate cell | Krone cell | Effect of P1.5 |
+|---|---|---|---|---|
+| Toll Gate | Medium | Low | Low | **Helps, narrowly.** A measured small rate and krone sensitivity shrinks the guessed terms below "material", so the reading can become Medium and show a NOK range. A holding measured as strongly rate-sensitive stays Low (direction only). |
+| Great Melt | Low | Medium | Low | None: the equity term is Low and material. |
+| Great Press | Low | Medium | Low | None, same reason. |
+| Coin Rain | Low | Low | Low | None. |
+| Harbour Guard (sterilised) | High | High | Low | Little to change; most terms are already zero by definition. |
+
+So after P1.5, NOK ranges are possible mainly for the Toll Gate at 1 year. The 3-year column is judgement almost everywhere and stays direction-only. Showing amounts for the other levers needs sourced evidence in the lever table (Claude researches and cites each cell), not better holding profiles. That is a separate, larger piece of work and a decision for Faiz.
+
 ## Honest limits
 
 - Past behaviour over a few years is not a forecast; rate and krone effects move between regimes.
-- A lever's own cell can still be Low (for example Coin Rain), and then even a measured holding coefficient gives direction only. P1.5 helps most for the Toll Gate, whose channel cells are Medium.
+- A holding with no clear measurement (short history, |t| under 2, collinear inputs) keeps the sector guess and stays Low.
 - Whether this is enough for #413's "a range per holding" can only be judged on Faiz's real portfolio after deploy: look at `/game/printer?pull=toll_gate:1` and count holdings with `show_amount: true`.
 
 ## Files
