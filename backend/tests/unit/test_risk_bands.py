@@ -22,6 +22,10 @@ def test_unknown_version_raises():
 
 
 def test_v1_covers_exactly_the_regimes_the_classifier_can_return():
-    from app.services.risk.regime import REGIME_BASELINE, REGIME_CRISIS, REGIME_STAGFLATION
+    from app.services.risk.regime import (
+        REGIME_BASELINE,
+        REGIME_CRISIS,
+        REGIME_STAGFLATION,
+    )
 
     assert set(get_risk_bands("v1").shock_multiplier) == {REGIME_BASELINE, REGIME_STAGFLATION, REGIME_CRISIS}
