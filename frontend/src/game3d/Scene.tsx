@@ -238,6 +238,9 @@ function World({ onLockChange, world, area, room, hold, look, onFieldPresets }: 
     if (!inMint) stampTurn.current = null;
   }, [inMint]);
   useFrame((_, dt) => {
+    // Browser tests steer by where the hero is, not by how long a key was held (a software-rendered frame is slow and its length
+    // varies). Development builds only: the production build drops this line.
+    if (import.meta.env.DEV) (window as unknown as { __g3dHero?: { x: number; z: number } }).__g3dHero = { x: pos.current.x, z: pos.current.z };
     const t = stampTurn.current;
     if (!t) return;
     const o = orbit.current;
