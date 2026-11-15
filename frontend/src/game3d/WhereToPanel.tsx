@@ -33,7 +33,7 @@ export default function WhereToPanel({ onPick, onClose, only = null, onlyRoutes 
           <p className="g3d-tag">{place.will}</p>
           <ul className="mt-1 space-y-1">
             {doorsAt(place.id).filter((d) => !onlyRoutes || (d.route !== null && onlyRoutes.includes(d.route))).map((d) => (
-              <li key={d.route}>
+              <li key={d.route ?? d.title}>
                 <button type="button" className="g3d-btn w-full text-left" title={d.plainName ? `Plain view name: ${d.plainName}` : undefined} onClick={() => onPick(d)}>
                   <strong>{d.title}</strong>
                   <span className="g3d-muted block">{d.blurb}</span>

@@ -8,7 +8,8 @@
  *
  * Levels: A = reachable (a sign, door or menu in the world opens the page in a panel, two taps or fewer,
  * with a link to the flat page). B = shown (the page's main fact is drawn in the world by code).
- * C = played (the page's job is done by walking and pressing E). "planned" = not built yet anywhere.
+ * C = played (the page's job is done by walking and pressing E). "planned" = not built yet anywhere. A row with `world` is a
+ * place that has no flat page at all (the Royal Mint): the room is the page, so it has no route and no Plain flat link.
  *
  * Nothing here is a fact about the portfolio. The panel shows the flat page itself, so every number
  * comes from the same code that draws it on the flat route.
@@ -20,10 +21,12 @@ export type ParityLevel = "A" | "B" | "C" | "planned";
 export type PlaceId = "fortress" | "market" | "town" | "townhall" | "workshop" | "keep" | "mint";
 
 export interface Door {
-  /** The route pattern exactly as App.tsx spells it. `null` only for a page that is not built yet. */
+  /** The route pattern exactly as App.tsx spells it. `null` only for a page that is not built yet, or a world-only place (`world`). */
   route: string | null;
   /** What to open in the panel. Defaults to `route`; a route with a `:param` opens its parent instead. */
   open?: string;
+  /** A place that exists only in the world and has no flat page (the Royal Mint). Its door walks you into that place; `route` stays null. */
+  world?: "mint";
   /** For a route with a `:param`: the listed page you reach it from. It gets no door of its own. */
   via?: string;
   title: string;
@@ -52,7 +55,7 @@ export const PLACES: readonly Place[] = [
   { id: "townhall", title: "Town Hall", will: "the big picture pages" },
   { id: "workshop", title: "The Workshop", will: "queues, status and settings" },
   { id: "keep", title: "The Keep", will: "your journal and the vault" },
-  { id: "mint", title: "The Royal Mint", will: "the Printer (not built yet)" },
+  { id: "mint", title: "The Royal Mint", will: "the Printer: pull a lever, stamp, read what it does" },
 ];
 
 /** The route the world is itself (never listed as a door). */
@@ -89,8 +92,8 @@ export const REGISTER: readonly Door[] = [
   { route: "/tag-review", title: "Label check", plainName: "Tag review", blurb: "Check the labels on the numbers.", place: "workshop", level: "A", sprint: "S15" },
   // The Keep
   { route: "/journal", title: "Journal", blurb: "Your reasons, written down.", place: "keep", level: "A", sprint: "S16" },
-  // Planned: no route yet. The row keeps the place reserved and the rule honest.
-  { route: null, title: "The Printer", blurb: "Not built yet.", place: "mint", level: "planned", sprint: "S19" },
+  // World-only: no flat page, the room is the page. The door walks you in (issue #413).
+  { route: null, world: "mint", title: "The Printer", blurb: "Pull a lever, stamp, see what it does.", place: "mint", level: "C", sprint: "S19" },
 ];
 
 /** Every route App.tsx declares (its `<Route path="...">` lines), in order. */
@@ -112,7 +115,7 @@ export function staleRows(appRoutes: readonly string[], register: readonly Door[
 
 /** The rows that get a door in the signpost menu: built pages, except those reached through another page. */
 export function doors(register: readonly Door[] = REGISTER): Door[] {
-  return register.filter((d) => d.route !== null && d.via === undefined);
+  return register.filter((d) => (d.route !== null || d.world !== undefined) && d.via === undefined);
 }
 
 /** The doors of one place, in register order. */

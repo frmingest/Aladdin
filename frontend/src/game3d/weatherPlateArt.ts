@@ -71,7 +71,7 @@ function rimPath(ctx: CanvasRenderingContext2D, w: number, h: number, inset: num
   ctx.roundRect(inset, inset, w - inset * 2, h - inset * 2, 16);
 }
 
-function paper(ctx: CanvasRenderingContext2D, w: number, h: number, empty: boolean, lit: boolean) {
+export function paper(ctx: CanvasRenderingContext2D, w: number, h: number, empty: boolean, lit: boolean) {
   ctx.fillStyle = OUTLINE;
   rimPath(ctx, w, h, 0);
   ctx.fill();
@@ -93,7 +93,7 @@ function paper(ctx: CanvasRenderingContext2D, w: number, h: number, empty: boole
 }
 
 /** Largest font (px, bold) from `sizes` at which `text` fits in `maxLines` lines of `maxW`; falls back to the smallest, clipped by a trailing cut. */
-function fitText(ctx: CanvasRenderingContext2D, text: string, maxW: number, maxLines: number, sizes: readonly number[]): { size: number; lines: string[] } {
+export function fitText(ctx: CanvasRenderingContext2D, text: string, maxW: number, maxLines: number, sizes: readonly number[]): { size: number; lines: string[] } {
   for (const size of sizes) {
     ctx.font = `700 ${size}px ${FONT}`;
     const lines = wrapWords(text, maxW, maxLines, (t) => ctx.measureText(t).width);

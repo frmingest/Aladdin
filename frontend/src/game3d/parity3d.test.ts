@@ -46,7 +46,17 @@ describe("page parity register", () => {
       expect(d.route, d.title).toBeNull();
       expect(d.sprint, d.title).toMatch(/^S\d+$/);
     }
-    expect(REGISTER.filter((r) => r.route === null).every((r) => r.level === "planned")).toBe(true);
+    // A row with no route is either not built yet, or a place that exists only in the world.
+    expect(REGISTER.filter((r) => r.route === null).every((r) => r.level === "planned" || r.world !== undefined)).toBe(true);
+  });
+
+  it("gives the world-only Royal Mint a real door that is played, not planned", () => {
+    const mint = REGISTER.find((d) => d.world === "mint");
+    expect(mint).toBeDefined();
+    expect(mint?.route).toBeNull();
+    expect(mint?.level).toBe("C");
+    expect(doorsAt("mint").map((d) => d.title)).toContain("The Printer");
+    expect(placesWithDoors().map((p) => p.id)).toContain("mint");
   });
 
   it("gives every row a sprint, a known place, a title and a short playful line", () => {
@@ -78,7 +88,7 @@ describe("page parity register", () => {
       expect(d.via, d.title).toBeDefined();
       expect(listed.has(d.via ?? ""), d.title).toBe(true);
     }
-    for (const d of doors()) expect(d.route?.includes(":"), d.title).toBe(false);
+    for (const d of doors()) expect(d.route?.includes(":") ?? false, d.title).toBe(false);
   });
 
   it("opens every door in two taps or fewer: each built page has a door or a parent door", () => {
@@ -97,7 +107,6 @@ describe("page parity register", () => {
     const placed = placesWithDoors();
     expect(placed.length).toBeGreaterThan(3);
     for (const p of placed) expect(doorsAt(p.id).length).toBeGreaterThan(0);
-    expect(placed.map((p) => p.id)).not.toContain("mint");
   });
 
   it("loads the page itself with the embed flag, and links the flat page without it", () => {

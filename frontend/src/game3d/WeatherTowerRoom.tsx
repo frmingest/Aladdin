@@ -24,9 +24,9 @@ import type { DialPlan, RailPost } from "./weatherTowerRoom";
 import { BANNER_PX, PLATE_PX, POST_PX, drawBanner, drawPlate, drawPost } from "./weatherPlateArt";
 import { WEATHER_WORDS } from "./weatherTowerWordsV2";
 
-const STONE = "#b9b2a4";
-const FLOOR = "#5d5a66";
-const BRASS = "#c79a3a";
+const STONE = PAL.stone;
+const FLOOR = PAL.floor;
+const BRASS = PAL.brass;
 const LENGTH_Z = TOWER.maxZ - TOWER.minZ;
 const MID_Z = (TOWER.maxZ + TOWER.minZ) / 2;
 const WIDTH_X = TOWER.maxX - TOWER.minX;

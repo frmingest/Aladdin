@@ -7,6 +7,7 @@
  */
 import type { AreaId } from "./areas";
 import { INTERIOR_BOX } from "./interiorBox";
+import { MINT } from "./mintRoom";
 import { ARCHIVE } from "./recordsHallRoom";
 import { TOWER } from "./weatherTowerRoom";
 
@@ -24,6 +25,7 @@ export const CAMERA_ROOMS: Partial<Record<AreaId, CameraRoom>> = {
   townhall: INTERIOR_BOX,
   records: ARCHIVE,
   weather: TOWER,
+  mint: MINT,
 };
 
 export function cameraRoomOf(area: AreaId): CameraRoom | null {

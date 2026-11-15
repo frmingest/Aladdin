@@ -26,8 +26,8 @@ describe("the Town beside the gate road", () => {
     for (const b of BUILDINGS) expect(TOWN_PIECES.buildings as readonly string[]).toContain(b.model);
   });
 
-  it("has six buildings with distinct ids, all on the meadow outside the wall", () => {
-    expect(new Set(BUILDINGS.map((b) => b.id)).size).toBe(6);
+  it("has seven buildings with distinct ids, all on the meadow outside the wall", () => {
+    expect(new Set(BUILDINGS.map((b) => b.id)).size).toBe(7);
     for (const b of BUILDINGS) expect(Math.hypot(b.x, b.z) - buildingReach(b), b.id).toBeGreaterThan(WALL_RADIUS + WALL_THICKNESS + 3);
   });
 
@@ -76,7 +76,7 @@ describe("the Town beside the gate road", () => {
       const a = doorAction(b);
       expect(a, b.id).not.toBeNull();
       if (a?.kind === "page") expect(a.door.route).toBe((b.opens as { route: string }).route);
-      if (a?.kind === "place") expect(doorsAt(a.place).length).toBeGreaterThan(1);
+      if (a?.kind === "place") expect(doorsAt(a.place).length).toBeGreaterThan(b.id === "mint" ? 0 : 1);
     }
   });
 

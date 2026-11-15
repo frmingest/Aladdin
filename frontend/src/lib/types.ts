@@ -2770,3 +2770,91 @@ export interface NewswebNew {
   last_checked_at: string | null;
   last_summary: string | null;
 }
+
+// --- The Printer (Royal Mint). Mirrors backend/app/schemas/printer.py: money and ranges arrive as decimal strings. ---
+
+export type PrinterConfidence = "high" | "medium" | "low";
+
+export interface PrinterRange {
+  low: string;
+  base: string;
+  high: string;
+}
+
+export interface PrinterLever {
+  key: string;
+  name: string;
+  real_tool: string;
+  tide: string;
+  unit_label: string;
+  size_min: string;
+  size_max: string;
+  size_default: string;
+  variants: string[];
+}
+
+export interface PrinterLedger {
+  version: string;
+  banner: string;
+  levers: PrinterLever[];
+}
+
+/** One term of a holding's reaction: how the pulled levers reach it through one channel. */
+export interface PrinterTerm {
+  channel: string;
+  coefficient: string;
+  pct: PrinterRange;
+  confidence: PrinterConfidence;
+  basis: "measured" | "sector_guess" | "beta";
+}
+
+export interface PrinterHolding {
+  holding_id: string;
+  ticker: string;
+  name: string;
+  sector: string | null;
+  value_nok: string | null;
+  status: "modelled" | "not_modelled";
+  reason: string | null;
+  confidence: PrinterConfidence | null;
+  pct: PrinterRange | null;
+  real_pct: PrinterRange | null;
+  /** The only gate on showing NOK: false means direction words only. */
+  show_amount: boolean;
+  nok: PrinterRange | null;
+  real_nok: PrinterRange | null;
+  direction: string;
+  real_direction: string;
+  why: string;
+  terms: PrinterTerm[];
+}
+
+export interface PrinterResult {
+  version: string;
+  banner: string;
+  demo: boolean;
+  horizon: number;
+  pulls: Array<{ lever: string; size: string; variant: string }>;
+  holdings: PrinterHolding[];
+  portfolio_confidence: PrinterConfidence | null;
+  portfolio_pct: PrinterRange | null;
+  portfolio_real_pct: PrinterRange | null;
+  show_portfolio_amount: boolean;
+  portfolio_nok: PrinterRange | null;
+  portfolio_real_nok: PrinterRange | null;
+  portfolio_direction: string;
+  covered_value_nok: string;
+  total_value_nok: string;
+  coverage: string | null;
+  /** The backend's own flag for a wild pull (many levers or a very big one). */
+  wild: boolean;
+  warnings: string[];
+  notes: string[];
+}
+
+/** One lever pull as the API takes it. */
+export interface PrinterPull {
+  lever: string;
+  size: string;
+  variant: string;
+}
