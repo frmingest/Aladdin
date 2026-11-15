@@ -41,7 +41,7 @@ import type { SurveyCheckId } from "../lib/survey";
 import { LAND_WORDS } from "../game3d/holdingLandWordsV1";
 import { shelvesFor } from "../game3d/libraryShelves";
 import type { CouncilInput, ShelfId } from "../game3d/libraryShelves";
-import type { RoomView } from "../game3d/Scene";
+import type { RoomView, SceneLook } from "../game3d/Scene";
 import { COURTYARD } from "../game3d/areas";
 import type { AreaRef } from "../game3d/areas";
 import { canGoBack, escapeTarget } from "../game3d/layers";
@@ -59,7 +59,8 @@ import { buildQuarter } from "../game3d/quarterPlan";
 import { QUARTER_WORDS } from "../game3d/quarterWordsV1";
 import { prefersReducedMotion } from "../game3d/motionPref";
 import { standingAt } from "../game3d/near";
-import type { Nears } from "../game3d/near";
+import type { Standing as AtSpot } from "../game3d/near";
+import { useNears } from "../game3d/nearStore";
 import { deskBlock } from "../game3d/deskForm";
 import PerfBreakdown from "../game3d/PerfBreakdown";
 import Toolbar from "../game3d/Toolbar";
@@ -145,6 +146,21 @@ function areaReducerWithMotion(state: AreaState, action: AreaAction): AreaState 
   return areaReducer(state, action);
 }
 
+/** The panels that open where you stand and shut when you walk away. Each is also a kind in the list of spots (near.ts). */
+const PANEL_SPOTS = ["desk", "drill", "vault", "realm", "watch", "perch"] as const;
+type PanelSpot = (typeof PANEL_SPOTS)[number];
+type SpotPanels = Record<PanelSpot, boolean>;
+const NO_SPOT_PANELS: SpotPanels = { desk: false, drill: false, vault: false, realm: false, watch: false, perch: false };
+const NOWHERE: AtSpot = { kind: "none" };
+/** What one kind of spot does: its prompt (null while silent), an optional second line, and what E does. */
+interface SpotAct<S> {
+  prompt: (at: S) => string | null;
+  note?: (at: S) => string | null;
+  press: (at: S) => void;
+}
+/** One entry per kind in the list of things you can walk up to. A new kind does not compile until it has one. */
+type SpotActs = { [S in Exclude<AtSpot, { kind: "none" }> as S["kind"]]: SpotAct<S> };
+
 /**
  * 3D courtyard (prototype, week 4): a walled courtyard you can walk round with
  * W A S D and the mouse. Each holding from /game/state stands on a pad as a
@@ -174,24 +190,16 @@ export default function Game3DPage() {
   const [standing, setStanding] = useState<Standing | null>(null);
   const [standingFailed, setStandingFailed] = useState(false);
   const [journalFailed, setJournalFailed] = useState(false);
-  const [near, setNear] = useState<NpcId | null>(null);
+  // Where the hero stands: the scene's one watcher writes it and the page reads it (near.ts, #411).
+  const nears = useNears();
   const [talking, setTalking] = useState<NpcId | null>(null);
-  // The writing desk: whether you stand at it, and whether its panel is open.
-  const [atDesk, setAtDesk] = useState(false);
-  const [deskOpen, setDeskOpen] = useState(false);
-  // The old books (past journal entries), opened from the desk panel.
+  // The panels that open where you stand (the writing desk, the drill post whose camp stands while it is open, the vault
+  // chest, the Realm post, the Night Watch post, the raven perch): which of them are open.
+  const [spotPanels, setSpotPanels] = useState<SpotPanels>(NO_SPOT_PANELS);
+  const { desk: deskOpen, drill: drillOpen, vault: vaultOpen, realm: realmOpen, watch: watchOpen, perch: perchOpen } = spotPanels;
+  const setSpotPanel = useCallback((id: PanelSpot, open: boolean) => setSpotPanels((p) => (p[id] === open ? p : { ...p, [id]: open })), []);
+  // The old books (past journal entries), opened from the desk panel; and the Magic Lamp on the writing desk (the Genie).
   const [booksOpen, setBooksOpen] = useState(false);
-  // The vault chest east of the keep door: whether you stand at it, and whether its panel (Vault and Temperament) is open.
-  const [atVault, setAtVault] = useState(false);
-  const [vaultOpen, setVaultOpen] = useState(false);
-  // The Night Watch post inside the gate and the raven perch east of the fountain: whether you stand at each, and whether its panel is open.
-  const [atWatch, setAtWatch] = useState(false);
-  const [watchOpen, setWatchOpen] = useState(false);
-  const [atPerch, setAtPerch] = useState(false);
-  const [perchOpen, setPerchOpen] = useState(false);
-  // The Realm post on the road to the keep (the verdict on the whole fortress), and the Magic Lamp on the writing desk (the Genie).
-  const [atRealm, setAtRealm] = useState(false);
-  const [realmOpen, setRealmOpen] = useState(false);
   const [lampOpen, setLampOpen] = useState(false);
   // The dispatch (decides the lantern) and the ravens (decide the birds). Each is read on its own: if one cannot be read the
   // lantern stays dark with a "?" and the perch stays bare, and the panel says so.
@@ -199,62 +207,34 @@ export default function Game3DPage() {
   const [ravens, setRavens] = useState<Ravens | null>(null);
   // "Seen" is the flat page's own per-browser list, so a raven marked here is marked there too.
   const [seenRavens, setSeenRavens] = useState<Set<string>>(() => loadSeen());
-  // The signpost by the gate: whether you stand at it, whether the "Where to?" menu is open, and the flat page shown in the world panel.
-  const [atSign, setAtSign] = useState(false);
+  // The signpost by the gate: whether the "Where to?" menu is open, and the flat page shown in the world panel.
   const [whereOpen, setWhereOpen] = useState(false);
   const [worldPage, setWorldPage] = useState<Door | null>(null);
-  // Market Street: which stall (holding id) you stand at.
-  const [nearStall, setNearStall] = useState<string | null>(null);
-  // Market Street stands: which one you stand at, and which flat-page dialog (Sal or the Hype Booth) is open over the world.
-  const [nearBooth, setNearBooth] = useState<BoothId | null>(null);
+  // Which flat-page dialog (Sal or the Hype Booth) is open over the world.
   const [boothOpen, setBoothOpen] = useState<BoothId | null>(null);
   const { demoMode } = useDemoMode();
-  // The Storm Drill: whether you stand at the drill post, whether a drill is open (the camp stands while it is), and the stored drills.
-  const [atDrill, setAtDrill] = useState(false);
-  const [drillOpen, setDrillOpen] = useState(false);
+  // The Storm Drill: the stored drills.
   const [drills, setDrills] = useState<StormDrills | null>(null);
   const [drillsFailed, setDrillsFailed] = useState(false);
   // Market Street: the watchlist is separate too; if it cannot be read, the street simply has no stalls.
   const [watchlist, setWatchlist] = useState<Watchlist | null>(null);
-  // A tower door: which one you stand at; and, once inside the holding's land, which shelf, the gate or the table you stand at.
-  const [nearTower, setNearTower] = useState<string | null>(null);
   // Which place you are in: one value, not four flags. A tower's land is `holding` with the holding's id.
   const [areaState, dispatchArea] = useReducer(areaReducerWithMotion, INITIAL_AREA, startingArea);
   // A `?at=holding:<id>` link waits for the towers to load (a land needs its tower); the other places open at once.
   const linkedLand = useRef<string | null>(typeof window === "undefined" ? null : landLink(window.location.search));
   const room = areaState.current.id === "holding" ? areaState.current.holdingId : null;
-  // The Town beyond the gate: whether you are in it, and which door or the gate road you stand at.
-  const [townNear, setTownNear] = useState<BuildingId | null>(null);
-  // Inside the Town Hall: whether you are in it, which board you stand at, whether the door is in reach, and which pages the menu is narrowed to.
-  const [nearBoard, setNearBoard] = useState<BoardId | null>(null);
-  const [atHallDoor, setAtHallDoor] = useState(false);
-  // Inside the Hall of Records: whether you are in it, whether you stand at the shelves, and whether the door is in reach.
-  const [atShelves, setAtShelves] = useState(false);
-  const [atArchiveDoor, setAtArchiveDoor] = useState(false);
-  const [atDials, setAtDials] = useState(false);
-  const [atWeatherDoor, setAtWeatherDoor] = useState(false);
+  // The "Where to?" menu narrowed to one board's pages or one building's place.
   const [onlyRoutes, setOnlyRoutes] = useState<readonly string[] | null>(null);
-  // The Siege Field: whether you stand at its gate in the courtyard, and whether its road back is in reach.
-  const [atSiegeGate, setAtSiegeGate] = useState(false);
-  const [atFieldExit, setAtFieldExit] = useState(false);
-  // Inside the field: the tool in reach, and the fall and yardstick the winch, stones and banners steer.
-  const [fieldSpot, setFieldSpot] = useState<FieldSpotId | null>(null);
+  const [onlyPlace, setOnlyPlace] = useState<PlaceId | null>(null);
+  // Inside the Siege Field: the fall and yardstick the winch, stones and banners steer.
   const [fieldTools, setFieldTools] = useState<FieldTools>(() => DEFAULT_TOOLS(yardBenchmark()));
   const onFieldPresets = useCallback(
     (p: { toStorm: number | null; toSiege: number | null; min: number; max: number }) =>
       setFieldTools((t) => (t.toStorm === p.toStorm && t.toSiege === p.toSiege && t.min === p.min && t.max === p.max ? t : { ...t, ...p })),
     [],
   );
-  // The Market Quarter: whether you stand at its arch in the courtyard, and whether its road back is in reach.
-  const [atQuarterGate, setAtQuarterGate] = useState(false);
-  // The Town Hall stands on the meadow outside the gate: whether you stand at its door.
-  const [atQuarterExit, setAtQuarterExit] = useState(false);
-  const [onlyPlace, setOnlyPlace] = useState<PlaceId | null>(null);
-  const [nearShelf, setNearShelf] = useState<ShelfId | null>(null);
-  const [atLandGate, setAtLandGate] = useState(false);
+  // A holding's land: the shelf being read, the report the reading table opened, and a short note when there is none.
   const [readShelf, setReadShelf] = useState<ShelfId | null>(null);
-  // The reading table: whether you stand at it, the report it opened, and a short note when there is none.
-  const [atTable, setAtTable] = useState(false);
   const [report, setReport] = useState<DocumentSummary | null>(null);
   const [tableNote, setTableNote] = useState<string | null>(null);
   // The quest-done cheer: a new number starts it, once per page load, never on the sample journal.
@@ -444,7 +424,6 @@ export default function Game3DPage() {
       live = false;
     };
   }, [room, isSample]);
-  const [atLantern, setAtLantern] = useState<SurveyCheckId | null>(null);
   const [lanternOpen, setLanternOpen] = useState<SurveyCheckId | null>(null);
 
   // The land you are in: the stored row for that holding, turned into a gate stone and seven shelves. Nothing is stored here.
@@ -601,49 +580,29 @@ export default function Game3DPage() {
   }, []);
   const closeBooth = useCallback(() => setBoothOpen(null), []);
 
-  // Through the gate and back. The watchers of the other zone are unmounted, so every "near" is cleared on the way.
-  const clearNears = useCallback(() => {
-    setNear(null);
-    setTalking(null);
-    setAtDesk(false);
-    setAtVault(false);
-    setAtWatch(false);
-    setAtPerch(false);
-    setAtRealm(false);
-    setAtDrill(false);
-    setAtSign(false);
-    setNearStall(null);
-    setNearBooth(null);
-    setNearTower(null);
-    setTownNear(null);
-    setAtSiegeGate(false);
-    setAtFieldExit(false);
-    setFieldSpot(null);
-    setAtQuarterGate(false);
-    setAtQuarterExit(false);
-    setNearBoard(null);
-    setAtHallDoor(false);
-    setAtShelves(false);
-    setAtArchiveDoor(false);
-    setAtDials(false);
-    setAtWeatherDoor(false);
+  // Through a door, any door: put away what is open where you stood, then go. The scene's watcher forgets the old
+  // place's spots on arrival, so there is nothing to clear by hand.
+  const closeLand = useCallback(() => {
+    setReadShelf(null);
+    setLanternOpen(null);
+    setReport(null);
+    setTableNote(null);
   }, []);
-  // Out to the Siege Field and back to its gate. The courtyard's watchers are unmounted while there, so the nears are cleared.
-  const enterField = useCallback(() => {
-    clearNears();
-    setDeskOpen(false);
-    setVaultOpen(false);
-    setWatchOpen(false);
-    setPerchOpen(false);
-    setRealmOpen(false);
-    setLampOpen(false);
-    setDrillOpen(false);
-    dispatchArea({ type: "enter", ref: { id: "siege" } });
-  }, [clearNears]);
-  const leaveField = useCallback(() => {
-    clearNears();
+  const enterArea = useCallback(
+    (ref: AreaRef) => {
+      setTalking(null);
+      setSpotPanels(NO_SPOT_PANELS);
+      setLampOpen(false);
+      closeLand();
+      if (ref.id === "weather") setGuideSaved(markWeatherVisited);
+      dispatchArea({ type: "enter", ref });
+    },
+    [closeLand],
+  );
+  const leaveArea = useCallback(() => {
+    closeLand();
     dispatchArea({ type: "leave" });
-  }, [clearNears]);
+  }, [closeLand]);
   // E at the winch, a marker stone or a yardstick banner: the same what-if, a different fall or yardstick.
   const workFieldSpot = useCallback((id: FieldSpotId) => {
     setFieldTools((t) => {
@@ -654,61 +613,9 @@ export default function Game3DPage() {
       return next;
     });
   }, []);
-  // Under the arch to the Market Quarter and back out beside it. Same shape as the Siege Field's gate.
-  const enterQuarter = useCallback(() => {
-    clearNears();
-    setDeskOpen(false);
-    setVaultOpen(false);
-    setWatchOpen(false);
-    setPerchOpen(false);
-    setRealmOpen(false);
-    setLampOpen(false);
-    setDrillOpen(false);
-    dispatchArea({ type: "enter", ref: { id: "quarter" } });
-  }, [clearNears]);
-  const leaveQuarter = useCallback(() => {
-    clearNears();
-    dispatchArea({ type: "leave" });
-  }, [clearNears]);
-  // Into the Town Hall and back out to its door. The Town's watchers are unmounted while inside, so the nears are cleared.
-  const enterHall = useCallback(() => {
-    clearNears();
-    dispatchArea({ type: "enter", ref: { id: "townhall" } });
-  }, [clearNears]);
-  const leaveHall = useCallback(() => {
-    clearNears();
-    dispatchArea({ type: "leave" });
-  }, [clearNears]);
-  // Into the Hall of Records and back out to its door; E at the shelves opens the flat Hall of Records page in the world panel.
-  const enterRecords = useCallback(() => {
-    clearNears();
-    dispatchArea({ type: "enter", ref: { id: "records" } });
-  }, [clearNears]);
-  const leaveRecords = useCallback(() => {
-    clearNears();
-    dispatchArea({ type: "leave" });
-  }, [clearNears]);
-  // Into the Weather Tower and back out to its door; E at the dials opens the flat Macro page in the world panel.
-  const enterWeather = useCallback(() => {
-    setGuideSaved(markWeatherVisited);
-    clearNears();
-    dispatchArea({ type: "enter", ref: { id: "weather" } });
-  }, [clearNears]);
-  const leaveWeather = useCallback(() => {
-    clearNears();
-    dispatchArea({ type: "leave" });
-  }, [clearNears]);
-  const openDials = useCallback(() => {
-    const row = REGISTER.find((d) => d.route === MACRO_ROUTE);
-    if (!row) return;
-    if (document.pointerLockElement) document.exitPointerLock();
-    setWhereOpen(true);
-    setOnlyPlace(null);
-    setOnlyRoutes(null);
-    setWorldPage(row);
-  }, []);
-  const openShelves = useCallback(() => {
-    const row = REGISTER.find((d) => d.route === RECORDS_ROUTE);
+  // E at the dials or the archive shelves: that room's flat page (the Macro page, the Hall of Records) in the world panel.
+  const openPage = useCallback((route: string) => {
+    const row = REGISTER.find((d) => d.route === route);
     if (!row) return;
     if (document.pointerLockElement) document.exitPointerLock();
     setWhereOpen(true);
@@ -733,66 +640,25 @@ export default function Game3DPage() {
       setOnlyRoutes(board.routes);
     }
   }, []);
-  // E at a building: its page in the world panel, or (the Workshop) the menu of its place.
-  const openBuilding = useCallback((id: BuildingId) => {
-    if (id === "townhall") {
-      enterHall();
-      return;
-    }
-    if (id === "records") {
-      enterRecords();
-      return;
-    }
-    if (id === "weather") {
-      enterWeather();
-      return;
-    }
-    const b = BUILDINGS.find((x) => x.id === id);
-    const action = b ? doorAction(b) : null;
-    if (!action) return;
-    if (document.pointerLockElement) document.exitPointerLock();
-    setWhereOpen(true);
-    if (action.kind === "page") {
-      setOnlyPlace(null);
-      setWorldPage(action.door);
-    } else {
-      setWorldPage(null);
-      setOnlyPlace(action.place);
-    }
-  }, [enterHall, enterRecords, enterWeather]);
-
-  const enterTower = useCallback((id: string) => {
-    if (document.pointerLockElement) {
-      // Keep the mouse look going through the door: only free it if something else is open.
-    }
-    setTalking(null);
-    setDeskOpen(false);
-    setDrillOpen(false);
-    setAtDrill(false);
-    setNear(null);
-    setAtDesk(false);
-    setNearTower(null);
-    setNearShelf(null);
-    setAtLandGate(false);
-    setAtTable(false);
-    setAtLantern(null);
-    setLanternOpen(null);
-    setReport(null);
-    setTableNote(null);
-    setReadShelf(null);
-    dispatchArea({ type: "enter", ref: { id: "holding", holdingId: id } });
-  }, []);
-  const leaveTower = useCallback(() => {
-    setReadShelf(null);
-    setNearShelf(null);
-    setAtLandGate(false);
-    setAtTable(false);
-    setAtLantern(null);
-    setLanternOpen(null);
-    setReport(null);
-    setTableNote(null);
-    dispatchArea({ type: "leave" });
-  }, []);
+  // E at a building: a room of its own, its page in the world panel, or (the Workshop) the menu of its place.
+  const openBuilding = useCallback(
+    (id: BuildingId) => {
+      if (id === "townhall" || id === "records" || id === "weather") return enterArea({ id });
+      const b = BUILDINGS.find((x) => x.id === id);
+      const action = b ? doorAction(b) : null;
+      if (!action) return;
+      if (document.pointerLockElement) document.exitPointerLock();
+      setWhereOpen(true);
+      if (action.kind === "page") {
+        setOnlyPlace(null);
+        setWorldPage(action.door);
+      } else {
+        setWorldPage(null);
+        setOnlyPlace(action.place);
+      }
+    },
+    [enterArea],
+  );
   const openReport = useCallback((holdingId: string) => {
     if (document.pointerLockElement) document.exitPointerLock();
     setReadShelf(null);
@@ -813,213 +679,143 @@ export default function Game3DPage() {
 
   // Walking away from a shelf closes its page.
   useEffect(() => {
-    if (readShelf && nearShelf !== readShelf) setReadShelf(null);
-  }, [nearShelf, readShelf]);
+    if (readShelf && nears.shelf !== readShelf) setReadShelf(null);
+  }, [nears.shelf, readShelf]);
 
   // Walking away from a lantern puts its plate away.
   useEffect(() => {
-    if (lanternOpen && atLantern !== lanternOpen) setLanternOpen(null);
-  }, [atLantern, lanternOpen]);
+    if (lanternOpen && nears.lantern !== lanternOpen) setLanternOpen(null);
+  }, [nears.lantern, lanternOpen]);
 
   // Walking away from the table puts its note away.
   useEffect(() => {
-    if (!atTable) setTableNote(null);
-  }, [atTable]);
+    if (!nears.table) setTableNote(null);
+  }, [nears.table]);
 
-  // Walking away from the desk closes it; so does starting a talk.
+  // Walking away from the desk, the drill post, the vault, the Realm post, the watch post or the perch closes its panel
+  // (the drill's camp goes with it); so does starting a talk.
   useEffect(() => {
-    if (deskOpen && (!atDesk || talking)) setDeskOpen(false);
-  }, [atDesk, deskOpen, talking]);
+    setSpotPanels((p) => {
+      const shut = PANEL_SPOTS.filter((id) => p[id] && (!nears[id] || talking));
+      return shut.length === 0 ? p : { ...p, ...Object.fromEntries(shut.map((id) => [id, false])) };
+    });
+  }, [nears, talking, spotPanels]);
   // The old books belong to the desk: they close with it.
   useEffect(() => {
     if (booksOpen && !deskOpen) setBooksOpen(false);
   }, [booksOpen, deskOpen]);
-  // Walking away from the vault closes it too, and so does starting a talk.
-  useEffect(() => {
-    if (vaultOpen && (!atVault || talking)) setVaultOpen(false);
-  }, [atVault, vaultOpen, talking]);
-  // The Realm post: the same.
-  useEffect(() => {
-    if (realmOpen && (!atRealm || talking)) setRealmOpen(false);
-  }, [atRealm, realmOpen, talking]);
-  // The same for the watch post and the perch.
-  useEffect(() => {
-    if (watchOpen && (!atWatch || talking)) setWatchOpen(false);
-  }, [atWatch, watchOpen, talking]);
-  useEffect(() => {
-    if (perchOpen && (!atPerch || talking)) setPerchOpen(false);
-  }, [atPerch, perchOpen, talking]);
-
-  // Walking away from the drill post ends the drill (the camp goes); so does starting a talk.
-  useEffect(() => {
-    if (drillOpen && (!atDrill || talking)) setDrillOpen(false);
-  }, [atDrill, drillOpen, talking]);
 
   // Walking away ends the talk.
   useEffect(() => {
-    if (talking && near !== talking) setTalking(null);
-  }, [near, talking]);
+    if (talking && nears.npc !== talking) setTalking(null);
+  }, [nears.npc, talking]);
 
-  // One answer to "what am I standing at": the E key and the prompt below both read it.
-  const nears = useMemo<Nears>(
-    () => ({
-      npc: near,
-      tower: nearTower,
-      desk: atDesk,
-      drill: atDrill,
-      sign: atSign,
-      booth: nearBooth,
-      stall: nearStall,
-      vault: atVault,
-      watch: atWatch,
-      perch: atPerch,
-      realm: atRealm,
-      shelf: nearShelf,
-      table: atTable,
-      lantern: atLantern,
-      landGate: atLandGate,
-      building: townNear,
-      board: nearBoard,
-      hallDoor: atHallDoor,
-      shelves: atShelves,
-      archiveDoor: atArchiveDoor,
-      dials: atDials,
-      weatherDoor: atWeatherDoor,
-      siegeGate: atSiegeGate,
-      fieldExit: atFieldExit,
-      fieldSpot,
-      quarterGate: atQuarterGate,
-      quarterExit: atQuarterExit,
-    }),
-    [near, nearTower, atDesk, atDrill, atSign, nearBooth, nearStall, atVault, atWatch, atPerch, atRealm, nearShelf, atTable, atLantern, atLandGate, townNear, nearBoard, atHallDoor, atShelves, atArchiveDoor, atDials, atWeatherDoor, atSiegeGate, atFieldExit, fieldSpot, atQuarterGate, atQuarterExit],
-  );
-  const atSpot = useMemo(() => standingAt(area, nears), [area, nears]);
+  // One answer to "what am I standing at": the E key and the prompt below both read it. Nothing is in reach on the way out of a door.
+  const atSpot = useMemo<AtSpot>(() => (areaState.phase === "fadingOut" ? NOWHERE : standingAt(area, nears)), [area, nears, areaState.phase]);
 
+  // What E does at each thing you can walk up to, and what its prompt says (#411). One entry per kind in the list
+  // (`SPOTS`, near.ts); the compiler asks for an entry when the list grows. The prompt is silent while its panel is open.
+  const openSpotPanel = (id: PanelSpot) => {
+    if (!spotPanels[id] && document.pointerLockElement) document.exitPointerLock();
+    setSpotPanel(id, !spotPanels[id]);
+  };
+  const acts: SpotActs = {
+    npc: {
+      prompt: (at) => (talking ? null : `Press E to talk to ${NPCS.find((n) => n.id === at.id)?.name ?? "them"}`),
+      // The two advisors stand side by side, so say who else is within reach (a step toward them makes them the answer).
+      note: (at) => alsoHereNote(at.id),
+      press: (at) => {
+        if (talking) return setTalking(null);
+        // Free the mouse so the Close and Try again buttons can be clicked.
+        if (document.pointerLockElement) document.exitPointerLock();
+        startGuideTalk(at.id);
+        setTalking(at.id);
+      },
+    },
+    tower: {
+      prompt: (at) => `Press E to go into ${world.plain.find((t) => t.holdingId === at.id)?.name ?? "the tower"}`,
+      press: (at) => enterArea({ id: "holding", holdingId: at.id }),
+    },
+    desk: { prompt: () => (deskOpen ? null : "Press E to write at the desk"), press: () => openSpotPanel("desk") },
+    drill: { prompt: () => (drillOpen ? null : DRILL_PROMPT), press: () => openSpotPanel("drill") },
+    siegeGate: { prompt: () => (whereOpen ? null : FIELD_WORDS.gatePrompt), press: () => enterArea({ id: "siege" }) },
+    quarterGate: { prompt: () => (whereOpen ? null : QUARTER_WORDS.gatePrompt), press: () => enterArea({ id: "quarter" }) },
+    sign: { prompt: () => (whereOpen ? null : SIGN_PROMPT), press: toggleWhere },
+    booth: {
+      prompt: (at) => (boothOpen || whereOpen ? null : boothPrompt(at.id)),
+      note: (at) => emptyStreetNote(at.id, watchlist ? watchlist.rows.length : null),
+      press: (at) => openBooth(at.id),
+    },
+    building: {
+      prompt: (at) => (whereOpen ? null : buildingPrompt(BUILDINGS.find((b) => b.id === at.id) ?? BUILDINGS[0])),
+      press: (at) => openBuilding(at.id),
+    },
+    vault: { prompt: () => (vaultOpen ? null : VAULT_PROMPT), press: () => openSpotPanel("vault") },
+    watch: { prompt: () => (watchOpen ? null : WATCH_PROMPT), press: () => openSpotPanel("watch") },
+    // Without data there is nothing to open.
+    perch: { prompt: () => (perchOpen || !ravens ? null : PERCH_PROMPT), press: () => ravens && openSpotPanel("perch") },
+    realm: { prompt: () => (realmOpen || !state ? null : REALM_PROMPT), press: () => state && openSpotPanel("realm") },
+    // A holding's land.
+    shelf: {
+      prompt: (at) => (readShelf ? null : `Press E to read ${roomView?.shelves.find((s) => s.id === at.id)?.title ?? "the shelf"}`),
+      press: (at) => {
+        if (readShelf !== at.id && document.pointerLockElement) document.exitPointerLock();
+        setReadShelf((v) => (v === at.id ? null : at.id));
+      },
+    },
+    table: { prompt: () => (report ? null : (tableNote ?? "Press E to open the latest report")), press: () => room && openReport(room) },
+    lantern: {
+      prompt: (at) => {
+        const lan = roomView?.lanterns.find((l) => l.check === at.id);
+        return !lan ? null : lanternOpen === lan.check ? LANTERN_WORDS.plate(lan.label, lan.reason) : LANTERN_WORDS.prompt(lan.label);
+      },
+      press: (at) => setLanternOpen((v) => (v === at.id ? null : at.id)),
+    },
+    // The rooms and the fields.
+    shelves: { prompt: () => (whereOpen ? null : shelfPrompt), press: () => openPage(RECORDS_ROUTE) },
+    dials: { prompt: () => (whereOpen ? null : dialsPrompt), press: () => openPage(MACRO_ROUTE) },
+    board: { prompt: (at) => (whereOpen ? null : hallPrompt(boardById(at.id))), press: (at) => openBoard(at.id) },
+    fieldSpot: { prompt: (at) => (whereOpen ? null : fieldSpotPrompt(at.id, fieldTools)), press: (at) => workFieldSpot(at.id) },
+    stall: {
+      prompt: (at) => (whereOpen ? null : stallPrompt(quarter.stalls.find((s) => s.holdingId === at.id)?.name ?? "this company")),
+      note: () => (quarter.overflow.length > 0 ? streetOverflowLine(quarter.overflow.length) : null),
+      press: (at) => openStore(at.id),
+    },
+    // The way back out, whichever place you are in.
+    leave: {
+      prompt: () =>
+        area.id === "holding"
+          ? LAND_WORDS.gatePrompt
+          : area.id === "siege"
+            ? FIELD_WORDS.exitPrompt
+            : area.id === "quarter"
+              ? QUARTER_WORDS.exitPrompt
+              : whereOpen
+                ? null
+                : area.id === "records"
+                  ? archiveDoorPrompt
+                  : area.id === "weather"
+                    ? towerDoorPrompt
+                    : hallDoorPrompt,
+      press: leaveArea,
+    },
+  };
+  const spotAct = atSpot.kind === "none" ? null : (acts[atSpot.kind] as SpotAct<AtSpot>);
+  // E waits while something covers the world: a page over a room or a field, the report in a holding's land.
+  const eBlocked = boothOpen !== null || lampOpen || isMoving(areaState) || (area.id === "holding" ? !!report || !room : area.id !== "courtyard" && whereOpen);
+  const pressSpot = useRef<(() => void) | null>(null);
+  pressSpot.current = spotAct && !eBlocked ? () => spotAct.press(atSpot) : null;
+
+  // The E key: does the one thing `atSpot` names (the prompt shows the same thing).
   useEffect(() => {
-    const onTalk = (e: KeyboardEvent) => {
-      if (e.code !== "KeyE") return;
-      const el = e.target as HTMLElement | null;
-      if (typingInField(el)) return;
-      if (boothOpen || lampOpen) return;
-      // Mid-move (S22): no second door while the screen is dark.
-      if (isMoving(areaState)) return;
-      const at = atSpot;
-      switch (area.id) {
-        case "records":
-          // In the Hall of Records: E reads the shelves, or takes the door back out.
-          if (whereOpen || at.kind === "none") return;
-          e.preventDefault();
-          if (at.kind === "shelves") openShelves();
-          else leaveRecords();
-          return;
-        case "weather":
-          // In the Weather Tower: E opens the full weather page at the dials, or takes the door back out.
-          if (whereOpen || at.kind === "none") return;
-          e.preventDefault();
-          if (at.kind === "dials") openDials();
-          else leaveWeather();
-          return;
-        case "townhall":
-          // In the Town Hall: E opens the board you stand at, or takes the door back out.
-          if (whereOpen || at.kind === "none") return;
-          e.preventDefault();
-          if (at.kind === "board") openBoard(at.id);
-          else leaveHall();
-          return;
-        case "siege":
-          // In the Siege Field: E works the winch, a stone or a banner in reach, or takes the road back.
-          if (whereOpen || at.kind === "none") return;
-          e.preventDefault();
-          if (at.kind === "fieldSpot") workFieldSpot(at.id);
-          else leaveField();
-          return;
-        case "quarter":
-          // In the Market Quarter: E steps into the store of the stall you stand at, or takes the road back.
-          if (whereOpen || at.kind === "none") return;
-          e.preventDefault();
-          if (at.kind === "stall") openStore(at.holdingId);
-          else leaveQuarter();
-          return;
-        case "holding":
-          // In a holding's land: E reads the shelf you stand at, opens the latest report at the table, or takes the door back out.
-          if (report || at.kind === "none" || !room) return;
-          e.preventDefault();
-          if (at.kind === "table") openReport(room);
-          else if (at.kind === "lantern") {
-            const c = at.check;
-            setLanternOpen((v) => (v === c ? null : c));
-          } else if (at.kind === "shelf") {
-            if (readShelf !== at.id && document.pointerLockElement) document.exitPointerLock();
-            setReadShelf((v) => (v === at.id ? null : at.id));
-          } else leaveTower();
-          return;
-      }
-      // The courtyard: E does the one thing `atSpot` names (the prompt shows the same thing).
-      if (at.kind === "none") return;
+    const onE = (e: KeyboardEvent) => {
+      if (e.code !== "KeyE" || typingInField(e.target as HTMLElement | null) || !pressSpot.current) return;
       e.preventDefault();
-      switch (at.kind) {
-        case "npc":
-          if (talking) setTalking(null);
-          else {
-            // Free the mouse so the Close and Try again buttons can be clicked.
-            if (document.pointerLockElement) document.exitPointerLock();
-            startGuideTalk(at.id);
-            setTalking(at.id);
-          }
-          return;
-        case "tower":
-          enterTower(at.holdingId);
-          return;
-        case "desk":
-          if (!deskOpen && document.pointerLockElement) document.exitPointerLock();
-          setDeskOpen((v) => !v);
-          return;
-        case "drill":
-          if (!drillOpen && document.pointerLockElement) document.exitPointerLock();
-          setDrillOpen((v) => !v);
-          return;
-        case "sign":
-          toggleWhere();
-          return;
-        case "booth":
-          openBooth(at.id);
-          return;
-        case "stall":
-          openStore(at.holdingId);
-          return;
-        case "building":
-          openBuilding(at.id);
-          return;
-        case "siegeGate":
-          enterField();
-          return;
-        case "quarterGate":
-          enterQuarter();
-          return;
-        case "vault":
-          if (!vaultOpen && document.pointerLockElement) document.exitPointerLock();
-          setVaultOpen((v) => !v);
-          return;
-        case "watch":
-          if (!watchOpen && document.pointerLockElement) document.exitPointerLock();
-          setWatchOpen((v) => !v);
-          return;
-        case "perch":
-          // Without data there is nothing to open.
-          if (!ravens) return;
-          if (!perchOpen && document.pointerLockElement) document.exitPointerLock();
-          setPerchOpen((v) => !v);
-          return;
-        case "realm":
-          if (!state) return;
-          if (!realmOpen && document.pointerLockElement) document.exitPointerLock();
-          setRealmOpen((v) => !v);
-          return;
-      }
+      pressSpot.current();
     };
-    window.addEventListener("keydown", onTalk);
-    return () => window.removeEventListener("keydown", onTalk);
-  }, [area, areaState, atSpot, whereOpen, openShelves, leaveRecords, openDials, leaveWeather, enterField, leaveField, workFieldSpot, enterQuarter, leaveQuarter, enterHall, openBoard, leaveHall, openBuilding, talking, vaultOpen, watchOpen, perchOpen, ravens, realmOpen, lampOpen, state, boothOpen, openBooth, openStore, toggleWhere, drillOpen, deskOpen, room, report, readShelf, enterTower, leaveTower, openReport, startGuideTalk]);
+    window.addEventListener("keydown", onE);
+    return () => window.removeEventListener("keydown", onE);
+  }, []);
 
   useEffect(() => {
     const onPanelKey = (e: KeyboardEvent) => {
@@ -1057,14 +853,7 @@ export default function Game3DPage() {
   }, []);
 
   // B walks back out of the place you are in: the same call each room's own door makes.
-  const goBack = useCallback(() => {
-    if (area.id === "holding") leaveTower();
-    else if (area.id === "townhall") leaveHall();
-    else if (area.id === "records") leaveRecords();
-    else if (area.id === "weather") leaveWeather();
-    else if (area.id === "siege") leaveField();
-    else if (area.id === "quarter") leaveQuarter();
-  }, [area.id, leaveTower, leaveHall, leaveRecords, leaveWeather, leaveField, leaveQuarter]);
+  const goBack = leaveArea;
 
   // G opens or shuts the "Where to?" menu from anywhere. Esc closes what is on top (the panel drawn over the others), and
   // B walks back out once nothing is open over the world.
@@ -1097,12 +886,12 @@ export default function Game3DPage() {
           case "books": return setBooksOpen(false);
           case "shelf": return setReadShelf(null);
           case "talking": return setTalking(null);
-          case "desk": return setDeskOpen(false);
-          case "drill": return setDrillOpen(false);
-          case "vault": return setVaultOpen(false);
-          case "realm": return setRealmOpen(false);
-          case "watch": return setWatchOpen(false);
-          case "perch": return setPerchOpen(false);
+          case "desk": return setSpotPanel("desk", false);
+          case "drill": return setSpotPanel("drill", false);
+          case "vault": return setSpotPanel("vault", false);
+          case "realm": return setSpotPanel("realm", false);
+          case "watch": return setSpotPanel("watch", false);
+          case "perch": return setSpotPanel("perch", false);
           case "worldPage": return setWorldPage(null);
           case "where": return closeWhere();
           default: return;
@@ -1114,105 +903,41 @@ export default function Game3DPage() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [toggleWhere, closeWhere, goBack, layerKey, areaState, area.id]);
+  }, [toggleWhere, closeWhere, goBack, layerKey, areaState, area.id, setSpotPanel]);
+
+  // What the world shows from the facts (the scene takes them as one thing, not one input each).
+  const look = useMemo<SceneLook>(
+    () => ({
+      books: quest.written,
+      vaultLevel: state?.vault.level ?? null,
+      watchStatus: nightWatch?.status ?? null,
+      unseenRavens,
+      realmLevel,
+      siegeLevel: state?.siege?.level ?? null,
+      drillOpen,
+      questMarks,
+      talking,
+      cheerKey,
+      standingLevel: standingText.lit,
+      fieldTools,
+      quarter,
+      archCounts,
+    }),
+    [quest.written, state, nightWatch, unseenRavens, realmLevel, drillOpen, questMarks, talking, cheerKey, standingText.lit, fieldTools, quarter, archCounts],
+  );
 
   if (!supported) return <Unavailable />;
 
   /** The prompt is also a button: a tap does what the E key does. */
   const pressE = () => document.body.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyE", bubbles: true }));
 
-  // The prompt is the E key's own answer (`atSpot`), so it never promises something E does not do.
-  let spotPrompt: string | null = null;
-  let spotNote: string | null = null;
-  switch (atSpot.kind) {
-    case "npc":
-      if (!talking) {
-        spotPrompt = `Press E to talk to ${NPCS.find((n) => n.id === atSpot.id)?.name ?? "them"}`;
-        // The two advisors stand side by side, so say who else is within reach (a step toward them makes them the answer).
-        spotNote = alsoHereNote(atSpot.id);
-      }
-      break;
-    case "shelves":
-      if (!whereOpen) spotPrompt = shelfPrompt;
-      break;
-    case "dials":
-      if (!whereOpen) spotPrompt = dialsPrompt;
-      break;
-    case "board":
-      if (!whereOpen) spotPrompt = hallPrompt(boardById(atSpot.id));
-      break;
-    case "building":
-      if (!whereOpen) spotPrompt = buildingPrompt(BUILDINGS.find((b) => b.id === atSpot.id) ?? BUILDINGS[0]);
-      break;
-    case "leave":
-      if (area.id === "holding") spotPrompt = LAND_WORDS.gatePrompt;
-      else if (area.id === "siege") spotPrompt = FIELD_WORDS.exitPrompt;
-      else if (area.id === "quarter") spotPrompt = QUARTER_WORDS.exitPrompt;
-      else if (!whereOpen) spotPrompt = area.id === "records" ? archiveDoorPrompt : area.id === "weather" ? towerDoorPrompt : hallDoorPrompt;
-      break;
-    case "shelf":
-      if (!readShelf) spotPrompt = `Press E to read ${roomView?.shelves.find((s) => s.id === atSpot.id)?.title ?? "the shelf"}`;
-      break;
-    case "lantern": {
-      const lan = roomView?.lanterns.find((l) => l.check === atSpot.check);
-      if (lan) spotPrompt = lanternOpen === lan.check ? LANTERN_WORDS.plate(lan.label, lan.reason) : LANTERN_WORDS.prompt(lan.label);
-      break;
-    }
-    case "table":
-      if (!report) spotPrompt = tableNote ?? "Press E to open the latest report";
-      break;
-    case "tower":
-      spotPrompt = `Press E to go into ${world.plain.find((t) => t.holdingId === atSpot.holdingId)?.name ?? "the tower"}`;
-      break;
-    case "desk":
-      if (!deskOpen) spotPrompt = "Press E to write at the desk";
-      break;
-    case "drill":
-      if (!drillOpen) spotPrompt = DRILL_PROMPT;
-      break;
-    case "siegeGate":
-      if (!whereOpen) spotPrompt = FIELD_WORDS.gatePrompt;
-      break;
-    case "fieldSpot":
-      if (!whereOpen) spotPrompt = fieldSpotPrompt(atSpot.id, fieldTools);
-      break;
-    case "quarterGate":
-      if (!whereOpen) spotPrompt = QUARTER_WORDS.gatePrompt;
-      break;
-    case "sign":
-      if (!whereOpen) spotPrompt = SIGN_PROMPT;
-      break;
-    case "booth":
-      if (!boothOpen && !whereOpen) {
-        spotPrompt = boothPrompt(atSpot.id);
-        spotNote = emptyStreetNote(atSpot.id, watchlist ? watchlist.rows.length : null);
-      }
-      break;
-    case "stall":
-      if (!whereOpen) {
-        // Stalls stand only in the Market Quarter; the courtyard keeps the arch, Sal's counter and the Hype Booth.
-        spotPrompt = stallPrompt(quarter.stalls.find((s) => s.holdingId === atSpot.holdingId)?.name ?? "this company");
-        if (quarter.overflow.length > 0) spotNote = streetOverflowLine(quarter.overflow.length);
-      }
-      break;
-    case "vault":
-      if (!vaultOpen) spotPrompt = VAULT_PROMPT;
-      break;
-    case "watch":
-      if (!watchOpen) spotPrompt = WATCH_PROMPT;
-      break;
-    case "perch":
-      if (!perchOpen && ravens) spotPrompt = PERCH_PROMPT;
-      break;
-    case "realm":
-      if (!realmOpen && state) spotPrompt = REALM_PROMPT;
-      break;
-    default:
-      break;
-  }
+  // The prompt is the E key's own answer (`atSpot`), read from the same table, so it never promises something E does not do.
+  const spotPrompt = spotAct ? spotAct.prompt(atSpot) : null;
+  const spotNote = spotPrompt && spotAct?.note ? spotAct.note(atSpot) : null;
+
 
   // One Back button for every room (C2): the Town Hall, the Hall of Records, the Weather Tower and a holding's tower.
-  const backOutside = roomView ? leaveTower : inHall ? leaveHall : inRecords ? leaveRecords : area.id === "weather" ? leaveWeather : null;
+  const backOutside = roomView || inHall || inRecords || area.id === "weather" ? leaveArea : null;
   // Any panel or dialog on screen: the hint line steps aside for it.
   const anyPanelOpen =
     panels.quests || panels.towers || whereOpen || vaultOpen || realmOpen || watchOpen || perchOpen || deskOpen || drillOpen || lampOpen || boothOpen !== null || report !== null;
@@ -1221,59 +946,7 @@ export default function Game3DPage() {
     <div className="relative h-[calc(100dvh-5rem)] min-h-[480px] w-full overflow-hidden bg-surface">
       <SceneBoundary fallback={<Unavailable />}>
         <Suspense fallback={<p className="p-6 text-sm text-ink-muted">Raising the walls...</p>}>
-          <Scene
-            world={shownWorld}
-            standingLevel={standingText.lit}
-            onLockChange={setLocked}
-            onStats={setStats}
-            statsDetail={showPerf}
-            onNear={setNear}
-            near={near}
-            books={quest.written}
-            onNearDesk={setAtDesk}
-            onNearDrill={setAtDrill}
-            onNearSign={setAtSign}
-            onNearStall={setNearStall}
-            onNearBooth={setNearBooth}
-            vaultLevel={state?.vault.level ?? null}
-            onNearVault={setAtVault}
-            watchStatus={nightWatch?.status ?? null}
-            onNearWatch={setAtWatch}
-            unseenRavens={unseenRavens}
-            onNearPerch={setAtPerch}
-            realmLevel={realmLevel}
-            siegeLevel={state?.siege?.level ?? null}
-            onNearRealm={setAtRealm}
-            drillOpen={drillOpen}
-            questMarks={questMarks}
-            talking={talking}
-            cheerKey={cheerKey}
-            hold={isMoving(areaState)}
-            onNearTower={setNearTower}
-            area={area}
-            room={roomView}
-            onNearShelf={setNearShelf}
-            onNearTable={setAtTable}
-            onNearLantern={setAtLantern}
-            onNearLandGate={setAtLandGate}
-            townNear={townNear}
-            onNearBuilding={setTownNear}
-            onNearSiegeGate={setAtSiegeGate}
-            onNearFieldExit={setAtFieldExit}
-            onNearFieldSpot={setFieldSpot}
-            fieldTools={fieldTools}
-            onFieldPresets={onFieldPresets}
-            quarter={quarter}
-            archCounts={archCounts}
-            onNearQuarterGate={setAtQuarterGate}
-            onNearQuarterExit={setAtQuarterExit}
-            onNearBoard={setNearBoard}
-            onNearHallDoor={setAtHallDoor}
-            onNearShelves={setAtShelves}
-            onNearArchiveDoor={setAtArchiveDoor}
-            onNearDials={setAtDials}
-            onNearWeatherDoor={setAtWeatherDoor}
-          />
+          <Scene world={shownWorld} area={area} room={roomView} hold={isMoving(areaState)} look={look} onFieldPresets={onFieldPresets} onLockChange={setLocked} onStats={setStats} statsDetail={showPerf} />
         </Suspense>
       </SceneBoundary>
 
@@ -1297,10 +970,10 @@ export default function Game3DPage() {
       {whereOpen && worldPage && <WorldPanel door={worldPage} onBack={() => setWorldPage(null)} onClose={closeWhere} />}
       {panels.towers && <TowerPanel world={shownWorld} loading={loading} error={error} onRetry={load} onClose={() => flip("towers")} />}
       {panels.quests && <QuestLog quest={quest} reviews={reviews} demo={world.demo} standing={standingText} wires={standing && !standingFailed ? (standing.wires ?? []) : undefined} onLookAtWire={lookAtWire} onRefreshStanding={refreshStanding} drill={drillQuest} guide={{ status: guide, saved: guideSaved, onReplay: replayGuideNow }} onClose={() => flip("quests")} />}
-      {vaultOpen && state && <VaultPanel state={state} onChanged={load} onClose={() => setVaultOpen(false)} />}
-      {realmOpen && state && <RealmPanel state={state} onClose={() => setRealmOpen(false)} />}
-      {watchOpen && <WatchPanel onClose={() => setWatchOpen(false)} />}
-      {perchOpen && ravens && <RavensPanel ravens={ravens} seen={seenRavens} onSeen={onRavensSeen} onClose={() => setPerchOpen(false)} />}
+      {vaultOpen && state && <VaultPanel state={state} onChanged={load} onClose={() => setSpotPanel("vault", false)} />}
+      {realmOpen && state && <RealmPanel state={state} onClose={() => setSpotPanel("realm", false)} />}
+      {watchOpen && <WatchPanel onClose={() => setSpotPanel("watch", false)} />}
+      {perchOpen && ravens && <RavensPanel ravens={ravens} seen={seenRavens} onSeen={onRavensSeen} onClose={() => setSpotPanel("perch", false)} />}
       {deskOpen && (
         // Hidden, not unmounted, while the old books are open: what you typed stays where it is.
         <div style={{ display: booksOpen ? "none" : "contents" }}>
@@ -1310,7 +983,7 @@ export default function Game3DPage() {
           written={quest.written}
           block={deskBlock(world.demo, quest.status)}
           onSave={saveAtDesk}
-          onClose={() => setDeskOpen(false)}
+          onClose={() => setSpotPanel("desk", false)}
           entries={journal?.entries.length ?? 0}
           due={journal?.reviews_due ?? 0}
           onReadBooks={journalFailed ? undefined : () => setBooksOpen(true)}
@@ -1329,7 +1002,7 @@ export default function Game3DPage() {
           onBack={() => setBooksOpen(false)}
           onClose={() => {
             setBooksOpen(false);
-            setDeskOpen(false);
+            setSpotPanel("desk", false);
           }}
         />
       )}
@@ -1339,7 +1012,7 @@ export default function Game3DPage() {
           count={drillQuest.count}
           block={drillBlock(drillQuest)}
           onSave={saveDrill}
-          onClose={() => setDrillOpen(false)}
+          onClose={() => setSpotPanel("drill", false)}
         />
       )}
       {roomView && readShelf && (

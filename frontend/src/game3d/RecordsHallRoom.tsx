@@ -1,6 +1,4 @@
-import { useMemo, useRef } from "react";
-import type { MutableRefObject } from "react";
-import { useFrame } from "@react-three/fiber";
+import { useMemo } from "react";
 import { CuboidCollider, RigidBody } from "@react-three/rapier";
 import { api } from "../lib/api";
 import { useCachedQuery } from "../lib/queryCache";
@@ -10,17 +8,11 @@ import { PAL, Part } from "./Inked";
 import {
   ARCHIVE,
   ARCHIVE_DOOR,
-  ARCHIVE_DOOR_LEAVE_RANGE,
-  ARCHIVE_DOOR_RANGE,
   BOOK,
   BOOKCASE,
   BOOKCASE_XS,
   ROW_YS,
-  SHELF_LEAVE_RANGE,
-  SHELF_RANGE,
   bookPlans,
-  nearArchiveDoor,
-  nearShelves,
   shelfFacts,
   shelfPlate,
 } from "./recordsHallRoom";
@@ -107,46 +99,13 @@ function Bookcase({ x }: { x: number }) {
   );
 }
 
-/** Tells the page whether you stand at the shelves and whether you stand by the door. Only on change. */
-function ArchiveWatch({
-  pos,
-  onShelves,
-  onDoor,
-}: {
-  pos: MutableRefObject<{ x: number; z: number }>;
-  onShelves: (near: boolean) => void;
-  onDoor: (near: boolean) => void;
-}) {
-  const lastShelves = useRef(false);
-  const lastDoor = useRef(false);
-  useFrame(() => {
-    const s = nearShelves(pos.current, lastShelves.current ? SHELF_LEAVE_RANGE : SHELF_RANGE);
-    if (s !== lastShelves.current) {
-      lastShelves.current = s;
-      onShelves(s);
-    }
-    const d = nearArchiveDoor(pos.current, lastDoor.current ? ARCHIVE_DOOR_LEAVE_RANGE : ARCHIVE_DOOR_RANGE);
-    if (d !== lastDoor.current) {
-      lastDoor.current = d;
-      onDoor(d);
-    }
-  });
-  return null;
-}
-
-interface Props {
-  pos: MutableRefObject<{ x: number; z: number }>;
-  onShelves: (near: boolean) => void;
-  onDoor: (near: boolean) => void;
-}
-
 /**
  * The inside of the Hall of Records: one archive room, three bookcases, one same-size book per decision, a door.
  * Read through the same call as the flat page (`getRecords`); a failed read leaves the shelves bare with the plain
  * plate, never a guess. Code-built shapes with the same ink outline as the rest; walls are drawn from inside only so
  * the follow camera can sit outside them. The room is furniture and carries no fact beyond the books themselves.
  */
-export default function RecordsHallRoom({ pos, onShelves, onDoor }: Props) {
+export default function RecordsHallRoom() {
   const records = useCachedQuery<Records>("records", () => api.getRecords());
   const list = records.data?.records;
   const books = useMemo(() => (list ? bookPlans(list) : []), [list]);
@@ -226,7 +185,6 @@ export default function RecordsHallRoom({ pos, onShelves, onDoor }: Props) {
           ))}
         </WorldLabel>
 
-      <ArchiveWatch pos={pos} onShelves={onShelves} onDoor={onDoor} />
     </group>
   );
 }

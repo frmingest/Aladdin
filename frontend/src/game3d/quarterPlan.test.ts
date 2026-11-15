@@ -291,7 +291,7 @@ describe("the Market Quarter as a place", () => {
 
   it("answers E with the arch in the courtyard, a stall or the road back in the quarter", () => {
     expect(standingAt({ id: "courtyard" }, { ...NO_NEARS, quarterGate: true })).toEqual({ kind: "quarterGate" });
-    expect(standingAt({ id: "quarter" }, { ...NO_NEARS, stall: "h1" })).toEqual({ kind: "stall", holdingId: "h1" });
+    expect(standingAt({ id: "quarter" }, { ...NO_NEARS, stall: "h1" })).toEqual({ kind: "stall", id: "h1" });
     expect(standingAt({ id: "quarter" }, { ...NO_NEARS, quarterExit: true })).toEqual({ kind: "leave" });
     expect(standingAt({ id: "quarter" }, NO_NEARS)).toEqual({ kind: "none" });
     // The drill post and the Siege Field's gate still beat the arch when two are in reach (they stand far apart).

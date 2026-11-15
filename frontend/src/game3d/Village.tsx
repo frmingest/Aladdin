@@ -1,6 +1,6 @@
-import { Component, Suspense, useEffect, useMemo, useRef } from "react";
-import type { MutableRefObject, ReactNode } from "react";
-import { useFrame } from "@react-three/fiber";
+import { Component, Suspense, useEffect, useMemo } from "react";
+import { useNear } from "./nearStore";
+import type { ReactNode } from "react";
 import { useGLTF } from "@react-three/drei";
 import { CuboidCollider, RigidBody } from "@react-three/rapier";
 import type { Object3D } from "three";
@@ -9,8 +9,8 @@ import { TOWN_OUTLINE_WORLD, addOutlines } from "./outline";
 import { Smoke } from "./Embers";
 import { CHIMNEYS } from "./fxPlan";
 import { TOWN_FILES } from "./townPieces";
-import { BUILDINGS, DOOR_LEAVE_RANGE, DOOR_RANGE, doorSpot, nearestBuilding } from "./townPlan";
-import type { Building, BuildingId } from "./townPlan";
+import { BUILDINGS, doorSpot } from "./townPlan";
+import type { Building } from "./townPlan";
 import WorldSign from "./WorldSign";
 
 /** If the buildings file fails to load, the buildings (and their colliders) are left out; the door mats and name boards stay. */
@@ -87,32 +87,15 @@ export function DoorMark({ b, active }: { b: Building; active: boolean }) {
   );
 }
 
-/** Tells the page which door the hero is at. Only on change. */
-function VillageWatch({ pos, onNearBuilding }: { pos: MutableRefObject<{ x: number; z: number }>; onNearBuilding: (id: BuildingId | null) => void }) {
-  const last = useRef<BuildingId | null>(null);
-  useFrame(() => {
-    const b = nearestBuilding(pos.current, BUILDINGS, last.current ? DOOR_LEAVE_RANGE : DOOR_RANGE);
-    if (b !== last.current) {
-      last.current = b;
-      onNearBuilding(b);
-    }
-  });
-  return null;
-}
-
-interface Props {
-  pos: MutableRefObject<{ x: number; z: number }>;
-  near: BuildingId | null;
-  onNearBuilding: (id: BuildingId | null) => void;
-}
-
 /**
  * The Town on the meadow, just outside the gate (2026-11-10): six buildings in two rows either side of the gate road, each a
  * door (a mat on the ground and a name board) to the flat pages that are not stores, or to a room of its own. The ground and the
  * road are the courtyard's, so there is nothing to carry here but the buildings and their doors. If the models fail to load
  * the mats and boards stay, so every door can still be found and used.
  */
-export default function Village({ pos, near, onNearBuilding }: Props) {
+export default function Village() {
+  // The doormat you stand at lights up; the one watcher (near.ts) says which.
+  const near = useNear("building");
   return (
     <group>
       {BUILDINGS.map((b) => (
@@ -123,7 +106,6 @@ export default function Village({ pos, near, onNearBuilding }: Props) {
           <Buildings />
         </Suspense>
       </BuildingsBoundary>
-      <VillageWatch pos={pos} onNearBuilding={onNearBuilding} />
     </group>
   );
 }

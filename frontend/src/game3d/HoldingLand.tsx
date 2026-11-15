@@ -1,6 +1,6 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo } from "react";
+import { useNear } from "./nearStore";
 import type { MutableRefObject } from "react";
-import { useFrame } from "@react-three/fiber";
 import { CuboidCollider, RigidBody } from "@react-three/rapier";
 import { DoubleSide } from "three";
 import { PAL, Part } from "./Inked";
@@ -13,25 +13,15 @@ import type { PricePost as PricePostData } from "./holdingLand";
 import StaticBatch from "./StaticBatch";
 import {
   BAY_SCALE,
-  GATE_LEAVE_RANGE,
-  GATE_RANGE,
   GATE_STONE,
   LAND_GATE,
   LAND_SHELF_SLOTS,
   LAND_TABLE,
   RECORDS_HOUSE,
-  SHELF_LEAVE_RANGE,
-  SHELF_RANGE,
-  TABLE_LEAVE_RANGE,
-  TABLE_RANGE,
-  nearLandTable,
-  nearestLantern,
 } from "./holdingLand";
 import type { GateStone, Lantern } from "./holdingLand";
-import type { SurveyCheckId } from "../lib/survey";
 import { LAND_WORDS } from "./holdingLandWordsV1";
-import { nearestShelf } from "./libraryRoom";
-import type { Shelf, ShelfId } from "./libraryShelves";
+import type { Shelf } from "./libraryShelves";
 import WorldLabel from "./WorldLabel";
 import WorldSign from "./WorldSign";
 
@@ -69,55 +59,6 @@ function HedgeRing({ radius }: { radius: number }) {
   );
 }
 
-/** Tells the page which shelf you stand at, whether you stand at the gate or the table. Called only when it changes. */
-function LandWatch({
-  pos,
-  onShelf,
-  onGate,
-  onTable,
-  lanterns,
-  onLantern,
-  setActive,
-}: {
-  pos: MutableRefObject<{ x: number; z: number }>;
-  onShelf: (id: ShelfId | null) => void;
-  onGate: (near: boolean) => void;
-  onTable: (near: boolean) => void;
-  lanterns: readonly Lantern[];
-  onLantern: (check: SurveyCheckId | null) => void;
-  setActive: (id: ShelfId | null) => void;
-}) {
-  const lastLantern = useRef<SurveyCheckId | null>(null);
-  const lastShelf = useRef<ShelfId | null>(null);
-  const lastGate = useRef(false);
-  const lastTable = useRef(false);
-  useFrame(() => {
-    const s = nearestShelf(pos.current, LAND_SHELF_SLOTS, lastShelf.current ? SHELF_LEAVE_RANGE : SHELF_RANGE);
-    const id = s ? s.id : null;
-    if (id !== lastShelf.current) {
-      lastShelf.current = id;
-      onShelf(id);
-      setActive(id);
-    }
-    const g = Math.hypot(LAND_GATE.x - pos.current.x, LAND_GATE.z - pos.current.z) <= (lastGate.current ? GATE_LEAVE_RANGE : GATE_RANGE);
-    if (g !== lastGate.current) {
-      lastGate.current = g;
-      onGate(g);
-    }
-    const l = nearestLantern(pos.current, lanterns, lastLantern.current);
-    if (l !== lastLantern.current) {
-      lastLantern.current = l;
-      onLantern(l);
-    }
-    const t = nearLandTable(pos.current, lastTable.current ? TABLE_LEAVE_RANGE : TABLE_RANGE);
-    if (t !== lastTable.current) {
-      lastTable.current = t;
-      onTable(t);
-    }
-  });
-  return null;
-}
-
 interface Props {
   ticker: string;
   /** A named gap from the Standing ("no tagged filing"), shown honestly under the name. */
@@ -128,12 +69,8 @@ interface Props {
   radius: number;
   shelves: Shelf[];
   pos: MutableRefObject<{ x: number; z: number }>;
-  onShelf: (id: ShelfId | null) => void;
-  onGate: (near: boolean) => void;
-  onTable: (near: boolean) => void;
   /** The four survey lanterns (fog of war), from the survey; a survey not read yet gives four hooded lanterns. */
   lanterns: readonly Lantern[];
-  onLantern: (check: SurveyCheckId | null) => void;
   /** The holding's own tower for the middle (`centreTowerFor`), and the price post's facts (`pricePostFor`). */
   centre: LandCentreSlot;
   price: PricePostData;
@@ -145,9 +82,10 @@ interface Props {
  * Only the size of the ground follows the size class. Nothing here reads a verdict, and nothing is red or green.
  * The four survey lanterns stand in an arc across the land (PR 2); the holding's own tower and the price post stand in PR 3.
  */
-export default function HoldingLand({ ticker, gap = null, gate, radius, shelves, pos, onShelf, onGate, onTable, lanterns, onLantern, centre, price }: Props) {
-  const [active, setActive] = useState<ShelfId | null>(null);
-  const [activeLantern, setActiveLantern] = useState<SurveyCheckId | null>(null);
+export default function HoldingLand({ ticker, gap = null, gate, radius, shelves, pos, lanterns, centre, price }: Props) {
+  // The shelf and the lantern you stand at light up; the one watcher (near.ts) says which.
+  const active = useNear("shelf");
+  const activeLantern = useNear("lantern");
   const byId = new Map(shelves.map((s) => [s.id, s]));
   const { x: hx0, z: hz0, hx, hz } = RECORDS_HOUSE;
   const west = hx0 - hx;
@@ -285,19 +223,6 @@ export default function HoldingLand({ ticker, gap = null, gate, radius, shelves,
       {lanterns.map((l) => (
         <LanternPost key={l.check} lantern={l} active={activeLantern === l.check} />
       ))}
-
-      <LandWatch
-        pos={pos}
-        onShelf={onShelf}
-        onGate={onGate}
-        onTable={onTable}
-        lanterns={lanterns}
-        onLantern={(c) => {
-          setActiveLantern(c);
-          onLantern(c);
-        }}
-        setActive={setActive}
-      />
     </group>
   );
 }

@@ -184,6 +184,7 @@ Game mode (Fortress): concept, sprint plans and reviews, visual identity, art pa
 - [game3d-macro-room-design-note-2026-11-08.md](game/game3d-macro-room-design-note-2026-11-08.md) — the 3D macro room: why "Hall of Records" could not be its name, the name chosen (The Weather Tower), series it shows, relation to the Wide Weather board, visual verb, decisions
 - [game3d-weather-tower-2026-11-08.md](game/game3d-weather-tower-2026-11-08.md) — The Weather Tower built: dial per macro series, curve rail, catalogue v3 (Norway curve 6M to 7Y), what changes in analysis input, what to do after deploy
 - [game3d-weather-tower-plates-2026-11-12.md](game/game3d-weather-tower-plates-2026-11-12.md) — Weather Tower redo (issue #402): name-and-number plates with a 24-month line and low-to-high dot replace the clocks and the small tags
+- [game3d-one-list-camera-walls-2026-11-14.md](game/game3d-one-list-camera-walls-2026-11-14.md) — 3D tidy-up (#411): one list of things you can walk up to (near, prompt, E), and a camera that stays inside the rooms. How to add a new object.
 
 ### ingestion/
 

@@ -1,5 +1,5 @@
 import { Component, Suspense, useEffect, useMemo, useRef } from "react";
-import type { MutableRefObject, ReactNode } from "react";
+import type { ReactNode } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
 import { CuboidCollider, CylinderCollider, RigidBody } from "@react-three/rapier";
@@ -18,8 +18,6 @@ import {
   ENGINES,
   FIELD_BANNERS,
   FIELD_EXIT,
-  FIELD_EXIT_LEAVE_RANGE,
-  FIELD_EXIT_RANGE,
   FIELD_HALF,
   FIELD_MAX_SECTIONS,
   FIELD_ROCKS,
@@ -32,8 +30,8 @@ import {
 } from "./siegeField";
 import type { Attacker, Section } from "./siegeField";
 import { FIELD_WORDS } from "./siegeFieldWordsV1";
-import { BANNER_FOR, SIEGE_STONE, STORM_STONE, WINCH, fieldSpotAt, stonePlate, winchPosition, yardstickName } from "./siegeFieldTools";
-import type { FieldSpotId, FieldTools } from "./siegeFieldTools";
+import { BANNER_FOR, SIEGE_STONE, STORM_STONE, WINCH, stonePlate, winchPosition, yardstickName } from "./siegeFieldTools";
+import type { FieldTools } from "./siegeFieldTools";
 import { FIELD_TOOLS_WORDS } from "./siegeFieldToolsWordsV1";
 import { fallPercent } from "./stormDrill";
 import { YARD_READING } from "./siegeYardWordsV2";
@@ -363,37 +361,7 @@ function ExitPost() {
   );
 }
 
-/** Tells the page when the road back is in reach. Only on change. */
-function ExitWatch({ pos, onNearExit }: { pos: MutableRefObject<{ x: number; z: number }>; onNearExit: (near: boolean) => void }) {
-  const last = useRef(false);
-  useFrame(() => {
-    const d = Math.hypot(FIELD_EXIT.x - pos.current.x, FIELD_EXIT.z - pos.current.z);
-    const near = d <= (last.current ? FIELD_EXIT_LEAVE_RANGE : FIELD_EXIT_RANGE);
-    if (near !== last.current) {
-      last.current = near;
-      onNearExit(near);
-    }
-  });
-  return null;
-}
-
-/** Tells the page which tool is in reach (the winch, a stone or a banner). Only on change. */
-function SpotWatch({ pos, onNearSpot }: { pos: MutableRefObject<{ x: number; z: number }>; onNearSpot: (id: FieldSpotId | null) => void }) {
-  const last = useRef<FieldSpotId | null>(null);
-  useFrame(() => {
-    const now = fieldSpotAt(pos.current, last.current);
-    if (now !== last.current) {
-      last.current = now;
-      onNearSpot(now);
-    }
-  });
-  return null;
-}
-
 interface Props {
-  pos: MutableRefObject<{ x: number; z: number }>;
-  onNearExit: (near: boolean) => void;
-  onNearSpot: (id: FieldSpotId | null) => void;
   /** The fall and yardstick being drawn (the page owns them, so E can change them). */
   tools: FieldTools;
   /** The preset falls and range the backend answered with, so the stones know their numbers. */
@@ -406,7 +374,7 @@ interface Props {
  * ground, the invisible walls, the road back and the plates are code-built, so a failed model load leaves a bare but
  * working field. The camp is the same whatever the fall says; only the wall line carries a number.
  */
-export default function SiegeField({ pos, onNearExit, onNearSpot, tools, onPresets }: Props) {
+export default function SiegeField({ tools, onPresets }: Props) {
   const yard = useSiegeYard(tools.fall, FIELD_MAX_SECTIONS, tools.benchmark);
   const view = yard.status === "ready" ? yard.view : null;
   // The stones' numbers come from the same answer the wall line is drawn from.
@@ -433,8 +401,6 @@ export default function SiegeField({ pos, onNearExit, onNearSpot, tools, onPrese
         <meshStandardMaterial color={GRASS} flatShading />
       </mesh>
       <ExitPost />
-      <ExitWatch pos={pos} onNearExit={onNearExit} />
-      <SpotWatch pos={pos} onNearSpot={onNearSpot} />
       <Winch tools={tools} />
       <PiecesBoundary what="pieces">
         <Suspense fallback={null}>

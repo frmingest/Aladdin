@@ -93,3 +93,56 @@ test.describe("places opened by their link", () => {
     });
   }
 });
+
+// One list drives every "am I near it?", the prompt and the E key (#411). This walks the hero up to a thing, reads the
+// prompt, presses E and checks that what the prompt promised is what happened; then it does the same at the door.
+test.describe("things you can walk up to", () => {
+  /**
+   * Walks with `key` until the prompt says `text`. It waits on the prompt, not on a clock (software WebGL is slow), and it
+   * walks in short steps: a key pressed before the world has finished loading is not heard, so one long press could be lost.
+   */
+  async function walkUntil(page: Page, key: string, text: RegExp) {
+    const prompt = page.locator(".g3d-prompt");
+    await expect(async () => {
+      await page.keyboard.down(key);
+      await page.waitForTimeout(350);
+      await page.keyboard.up(key);
+      await expect(prompt).toContainText(text, { timeout: 400 });
+    }).toPass({ timeout: 60_000, intervals: [50] });
+  }
+
+  test("Hall of Records: the shelves open their page with E, and E at the door walks back out", async ({ page }) => {
+    const problems = watch(page);
+    await page.goto("/game3d?at=records");
+    await expect(page.locator("canvas")).toHaveCount(1, { timeout: 60_000 });
+    await expect(page).toHaveTitle(/Hall of Records/);
+    // Nothing is in reach where you arrive.
+    await expect(page.locator(".g3d-prompt")).toHaveCount(0);
+
+    await walkUntil(page, "w", /read the Hall of Records/i);
+    await page.keyboard.press("e");
+    await expect(page.getByRole("complementary", { name: "Hall of Records" })).toBeVisible();
+    // The prompt steps aside while its page is open, and E does nothing more.
+    await expect(page.locator(".g3d-prompt")).toHaveCount(0);
+    await page.keyboard.press("Escape");
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("complementary", { name: "Hall of Records" })).toHaveCount(0);
+
+    await walkUntil(page, "s", /Step back outside/);
+    await page.keyboard.press("e");
+    await expect(page).toHaveTitle(/3D courtyard/);
+    await expect(page).toHaveURL((u) => u.search === "");
+    await problems.assertNone();
+  });
+
+  test("Town Hall: a board lights its prompt and opens with E", async ({ page }) => {
+    const problems = watch(page);
+    await page.goto("/game3d?at=townhall");
+    await expect(page.locator("canvas")).toHaveCount(1, { timeout: 60_000 });
+    await walkUntil(page, "w", /^E\s*Read /);
+    const title = ((await page.locator(".g3d-prompt").innerText()).replace(/^E\s*Read\s*/, "")).trim();
+    await page.keyboard.press("e");
+    await expect(page.getByRole("complementary", { name: title })).toBeVisible();
+    await problems.assertNone();
+  });
+});

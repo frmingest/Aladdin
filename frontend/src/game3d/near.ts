@@ -1,17 +1,52 @@
 /**
- * "What am I standing at": the two pure pieces behind every E prompt (S21).
+ * "What am I standing at": one list of everything you can walk up to (S21, made one list in #411).
  *
- * `pickNear` is the one hysteresis rule that twelve hand-copied watchers used to repeat. `standingAt` is the one
- * answer the E key AND the prompt both read, so a prompt can never promise something E does not do.
+ * `SPOTS` is that list: each entry says which place it is in, where it stands and how far its reach goes. The scene
+ * runs one watcher over it (`watchSpots`), the page reads one answer from it (`standingAt`), and the E key and the
+ * prompt both follow that answer, so a prompt can never promise something E does not do. A new thing to walk up to
+ * is one entry here plus one entry in the page's action table (the compiler asks for it).
+ *
+ * Pure data and maths: no three.js, no React.
  */
-import type { AreaRef } from "./areas";
+import type { AreaId, AreaRef } from "./areas";
+import { BOOTHS, BOOTH_LEAVE_RANGE, BOOTH_RANGE } from "./boothPlan";
 import type { BoothId } from "./boothPlan";
-import type { NpcId } from "./npcs";
+import { DESK, DESK_LEAVE_RANGE, DESK_RANGE } from "./desk";
+import { setOpenDoor } from "./doorSwing";
+import {
+  GATE_LEAVE_RANGE as LAND_GATE_LEAVE_RANGE,
+  GATE_RANGE as LAND_GATE_RANGE,
+  LAND_GATE,
+  LAND_SHELF_SLOTS,
+  SHELF_LEAVE_RANGE as LAND_SHELF_LEAVE_RANGE,
+  SHELF_RANGE as LAND_SHELF_RANGE,
+  TABLE_LEAVE_RANGE,
+  TABLE_RANGE,
+  nearLandTable,
+  nearestLantern,
+} from "./holdingLand";
+import { nearestShelf } from "./libraryRoom";
 import type { ShelfId } from "./libraryShelves";
+import { LEAVE_RANGE, NPCS, TALK_RANGE } from "./npcs";
+import type { NpcId } from "./npcs";
+import { QUARTER_EXIT, QUARTER_EXIT_LEAVE_RANGE, QUARTER_EXIT_RANGE, QUARTER_GATE, QUARTER_GATE_LEAVE_RANGE, QUARTER_GATE_RANGE } from "./quarterPlan";
+import { REALM_LEAVE_RANGE, REALM_POST, REALM_RANGE } from "./realmPlan";
+import { ARCHIVE_DOOR_LEAVE_RANGE, ARCHIVE_DOOR_RANGE, SHELF_LEAVE_RANGE, SHELF_RANGE, nearArchiveDoor, nearShelves } from "./recordsHallRoom";
+import { FIELD_EXIT, FIELD_EXIT_LEAVE_RANGE, FIELD_EXIT_RANGE, SIEGE_GATE, SIEGE_GATE_LEAVE_RANGE, SIEGE_GATE_RANGE } from "./siegeField";
+import { fieldSpotAt } from "./siegeFieldTools";
 import type { FieldSpotId } from "./siegeFieldTools";
+import { SIGN, SIGN_LEAVE_RANGE, SIGN_RANGE } from "./signpost";
+import { STALL_LEAVE_RANGE, STALL_RANGE } from "./stallDoor";
+import { DRILL_LEAVE_RANGE, DRILL_POST, DRILL_RANGE } from "./stormDrill";
+import { ENTER_LEAVE_REACH, ENTER_REACH } from "./towerDoor";
+import { BOARD_LEAVE_RANGE, BOARD_RANGE, BOARD_SLOTS, HALL_DOOR_LEAVE_RANGE, HALL_DOOR_RANGE, nearHallDoor, nearestBoard } from "./townHallRoom";
 import type { BoardId } from "./townHallRoom";
-import type { SurveyCheckId } from "../lib/survey";
+import { BUILDINGS, DOOR_LEAVE_RANGE, DOOR_RANGE, nearestBuilding } from "./townPlan";
 import type { BuildingId } from "./townPlan";
+import { PERCH, PERCH_LEAVE_RANGE, PERCH_RANGE, WATCH_LEAVE_RANGE, WATCH_POST, WATCH_RANGE } from "./watchPlan";
+import { VAULT, VAULT_LEAVE_RANGE, VAULT_RANGE } from "./vaultPlan";
+import { DIALS_LEAVE_RANGE, DIALS_RANGE, TOWER_DOOR_LEAVE_RANGE, TOWER_DOOR_RANGE, nearDials, nearTowerDoor } from "./weatherTowerRoom";
+import type { SurveyCheckId } from "../lib/survey";
 
 export interface NearTarget<K> {
   id: K;
@@ -43,7 +78,7 @@ export function pickNear<K>(pos: { x: number; z: number }, targets: readonly Nea
   return best;
 }
 
-/** Everything the hero can be near, as the page has been told. One field per spot. */
+/** Everything the hero can be near. One field per entry of `SPOTS`: an id where there are several, yes or no where there is one. */
 export interface Nears {
   npc: NpcId | null;
   tower: string | null;
@@ -82,6 +117,8 @@ export interface Nears {
   quarterExit: boolean;
 }
 
+export type SpotKey = keyof Nears;
+
 export const NO_NEARS: Nears = {
   npc: null,
   tower: null,
@@ -112,66 +149,175 @@ export const NO_NEARS: Nears = {
   quarterExit: false,
 };
 
+/** The spots that are one of several: the answer carries which one. */
+type ManyKind = "npc" | "tower" | "booth" | "stall" | "shelf" | "lantern" | "building" | "fieldSpot" | "board";
+/** The spots there is one of. */
+type OneKind = "desk" | "drill" | "siegeGate" | "quarterGate" | "sign" | "vault" | "watch" | "perch" | "realm" | "table" | "shelves" | "dials";
+
 export type Standing =
   | { kind: "none" }
-  | { kind: "npc"; id: NpcId }
-  | { kind: "tower"; holdingId: string }
-  | { kind: "desk" | "drill" | "siegeGate" | "quarterGate" | "sign" | "vault" | "watch" | "perch" | "realm" | "table" | "shelves" | "dials" }
-  | { kind: "booth"; id: BoothId }
-  | { kind: "stall"; holdingId: string }
-  | { kind: "shelf"; id: ShelfId }
-  | { kind: "lantern"; check: SurveyCheckId }
-  | { kind: "building"; id: BuildingId }
-  | { kind: "fieldSpot"; id: FieldSpotId }
-  | { kind: "board"; id: BoardId }
-  /** The door back out of an interior, or the road back from the Town. */
+  | { [K in ManyKind]: { kind: K; id: NonNullable<Nears[K]> } }[ManyKind]
+  | { kind: OneKind }
+  /** The door back out of an interior, or the road back from a field. */
   | { kind: "leave" };
 
 export type StandingKind = Standing["kind"];
+/** Every kind E can act on. */
+export type SpotKind = Exclude<StandingKind, "none">;
+
+type Pos = { x: number; z: number };
+
+/** The parts of the world that move with the data: the towers that stand, the stalls up the lane, the lanterns of the land you are in. */
+export interface SpotWorld {
+  towers: readonly { holdingId: string; spot: Pos; radius: number; plot?: { footprint: number } | null }[];
+  stalls: readonly { holdingId: string; x: number; z: number }[];
+  lanterns: readonly { check: SurveyCheckId; x: number; z: number }[];
+}
+
+export const NO_SPOT_WORLD: SpotWorld = { towers: [], stalls: [], lanterns: [] };
+
+export interface Spot<K extends SpotKey = SpotKey> {
+  /** Its field in `Nears`. */
+  key: K;
+  /** What E does there. Usually the same word as the key; every way back out is "leave". */
+  kind: SpotKind;
+  /** The one place it stands in. */
+  area: AreaId;
+  /** Who is in reach now, given who was in reach a moment ago (the held one keeps the wider leave range). */
+  detect: (pos: Pos, held: Nears[K], world: SpotWorld) => Nears[K];
+  /** Told when the answer changes (the tower's door leaf swings). */
+  onChange?: (now: Nears[K]) => void;
+}
+
+/** One fixed spot: near or not, wider to leave than to arrive. */
+const single = (p: Pos, range: number, leaveRange: number) => (pos: Pos, held: boolean) =>
+  Math.hypot(p.x - pos.x, p.z - pos.z) <= (held ? Math.max(range, leaveRange) : range);
+/** A yes-or-no check that takes its own range. */
+const ranged = (near: (pos: Pos, range: number) => boolean, range: number, leaveRange: number) => (pos: Pos, held: boolean) =>
+  near(pos, held ? leaveRange : range);
+
+const NPC_T: readonly NearTarget<NpcId>[] = NPCS.map((n) => ({ id: n.id, x: n.x, z: n.z, range: TALK_RANGE, leaveRange: LEAVE_RANGE }));
+const BOOTH_T: readonly NearTarget<BoothId>[] = BOOTHS.map((b) => ({ id: b.id, x: b.x, z: b.z, range: BOOTH_RANGE, leaveRange: BOOTH_LEAVE_RANGE }));
+
+
+/** Targets built from a list that only changes when the data does: built once per list, not once per frame. */
+function targetsOf<T extends object>(build: (item: T) => NearTarget<string>): (list: readonly T[]) => readonly NearTarget<string>[] {
+  const cache = new WeakMap<readonly T[], readonly NearTarget<string>[]>();
+  return (list) => {
+    let hit = cache.get(list);
+    if (!hit) cache.set(list, (hit = list.map(build)));
+    return hit;
+  };
+}
+// A tower's reach is counted from its wall, not its middle: fat towers are not easier to enter.
+const towerTargets = targetsOf((t: SpotWorld["towers"][number]) => ({
+  id: t.holdingId,
+  x: t.spot.x,
+  z: t.spot.z,
+  range: ENTER_REACH + (t.plot?.footprint ?? t.radius),
+  leaveRange: ENTER_LEAVE_REACH + (t.plot?.footprint ?? t.radius),
+}));
+const stallTargets = targetsOf((s: SpotWorld["stalls"][number]) => ({ id: s.holdingId, x: s.x, z: s.z, range: STALL_RANGE, leaveRange: STALL_LEAVE_RANGE }));
+
+const spot = <K extends SpotKey>(s: Spot<K>): Spot => s as unknown as Spot;
 
 /**
- * The single thing E would do now. Order is the order the E key always used: a person beats a door, a door beats
- * the desk, and so on down to the Realm post. Whether the thing then has data to open is the page's business.
+ * Everything you can walk up to. Within one place the order is the order E has always used: a person beats a door,
+ * a door beats the desk, and so on down; the way back out comes last.
+ */
+export const SPOTS: readonly Spot[] = [
+  // The courtyard, and the Town on the meadow outside its gate.
+  spot({ key: "npc", kind: "npc", area: "courtyard", detect: (pos, held) => pickNear(pos, NPC_T, held) }),
+  spot({
+    key: "tower",
+    kind: "tower",
+    area: "courtyard",
+    detect: (pos, held, w) => pickNear(pos, towerTargets(w.towers), held),
+    onChange: setOpenDoor,
+  }),
+  spot({ key: "desk", kind: "desk", area: "courtyard", detect: single(DESK, DESK_RANGE, DESK_LEAVE_RANGE) }),
+  spot({ key: "drill", kind: "drill", area: "courtyard", detect: single(DRILL_POST, DRILL_RANGE, DRILL_LEAVE_RANGE) }),
+  spot({ key: "siegeGate", kind: "siegeGate", area: "courtyard", detect: single(SIEGE_GATE, SIEGE_GATE_RANGE, SIEGE_GATE_LEAVE_RANGE) }),
+  spot({ key: "quarterGate", kind: "quarterGate", area: "courtyard", detect: single(QUARTER_GATE, QUARTER_GATE_RANGE, QUARTER_GATE_LEAVE_RANGE) }),
+  spot({ key: "sign", kind: "sign", area: "courtyard", detect: single(SIGN, SIGN_RANGE, SIGN_LEAVE_RANGE) }),
+  spot({ key: "booth", kind: "booth", area: "courtyard", detect: (pos, held) => pickNear(pos, BOOTH_T, held) }),
+  spot({ key: "building", kind: "building", area: "courtyard", detect: (pos, held) => nearestBuilding(pos, BUILDINGS, held ? DOOR_LEAVE_RANGE : DOOR_RANGE) }),
+  spot({ key: "vault", kind: "vault", area: "courtyard", detect: single(VAULT, VAULT_RANGE, VAULT_LEAVE_RANGE) }),
+  spot({ key: "watch", kind: "watch", area: "courtyard", detect: single(WATCH_POST, WATCH_RANGE, WATCH_LEAVE_RANGE) }),
+  spot({ key: "perch", kind: "perch", area: "courtyard", detect: single(PERCH, PERCH_RANGE, PERCH_LEAVE_RANGE) }),
+  spot({ key: "realm", kind: "realm", area: "courtyard", detect: single(REALM_POST, REALM_RANGE, REALM_LEAVE_RANGE) }),
+
+  // A holding's land.
+  spot({
+    key: "shelf",
+    kind: "shelf",
+    area: "holding",
+    detect: (pos, held) => nearestShelf(pos, LAND_SHELF_SLOTS, held ? LAND_SHELF_LEAVE_RANGE : LAND_SHELF_RANGE)?.id ?? null,
+  }),
+  spot({ key: "table", kind: "table", area: "holding", detect: ranged(nearLandTable, TABLE_RANGE, TABLE_LEAVE_RANGE) }),
+  spot({ key: "lantern", kind: "lantern", area: "holding", detect: (pos, held, w) => nearestLantern(pos, w.lanterns, held) }),
+  spot({ key: "landGate", kind: "leave", area: "holding", detect: single(LAND_GATE, LAND_GATE_RANGE, LAND_GATE_LEAVE_RANGE) }),
+
+  // The Town Hall.
+  spot({ key: "board", kind: "board", area: "townhall", detect: (pos, held) => nearestBoard(pos, BOARD_SLOTS, held ? BOARD_LEAVE_RANGE : BOARD_RANGE) }),
+  spot({ key: "hallDoor", kind: "leave", area: "townhall", detect: ranged(nearHallDoor, HALL_DOOR_RANGE, HALL_DOOR_LEAVE_RANGE) }),
+
+  // The Hall of Records.
+  spot({ key: "shelves", kind: "shelves", area: "records", detect: ranged(nearShelves, SHELF_RANGE, SHELF_LEAVE_RANGE) }),
+  spot({ key: "archiveDoor", kind: "leave", area: "records", detect: ranged(nearArchiveDoor, ARCHIVE_DOOR_RANGE, ARCHIVE_DOOR_LEAVE_RANGE) }),
+
+  // The Weather Tower.
+  spot({ key: "dials", kind: "dials", area: "weather", detect: ranged(nearDials, DIALS_RANGE, DIALS_LEAVE_RANGE) }),
+  spot({ key: "weatherDoor", kind: "leave", area: "weather", detect: ranged(nearTowerDoor, TOWER_DOOR_RANGE, TOWER_DOOR_LEAVE_RANGE) }),
+
+  // The Siege Field: a tool beats the road back; the exit stands far from every tool (test).
+  spot({ key: "fieldSpot", kind: "fieldSpot", area: "siege", detect: (pos, held) => fieldSpotAt(pos, held) }),
+  spot({ key: "fieldExit", kind: "leave", area: "siege", detect: single(FIELD_EXIT, FIELD_EXIT_RANGE, FIELD_EXIT_LEAVE_RANGE) }),
+
+  // The Market Quarter: a stall beats the road back; the exit stands far from every stall (test).
+  spot({
+    key: "stall",
+    kind: "stall",
+    area: "quarter",
+    detect: (pos, held, w) => pickNear(pos, stallTargets(w.stalls), held),
+  }),
+  spot({ key: "quarterExit", kind: "leave", area: "quarter", detect: single(QUARTER_EXIT, QUARTER_EXIT_RANGE, QUARTER_EXIT_LEAVE_RANGE) }),
+];
+
+/** The spots of one place, in E order. */
+export function spotsOf(area: AreaId): readonly Spot[] {
+  return SPOTS.filter((s) => s.area === area);
+}
+
+const isNear = (v: Nears[SpotKey]): boolean => v !== null && v !== false;
+
+/**
+ * One pass of the watcher: asks every spot of the place who is in reach, and returns the fields that changed
+ * (null when nothing did). The scene runs this every frame and stores the answer; nothing else decides "near".
+ */
+export function watchSpots(area: AreaId, pos: Pos, held: Nears, world: SpotWorld): Partial<Nears> | null {
+  let changed: Partial<Record<SpotKey, Nears[SpotKey]>> | null = null;
+  for (const s of SPOTS) {
+    if (s.area !== area) continue;
+    const now = s.detect(pos, held[s.key], world);
+    if (now !== held[s.key]) {
+      (changed ??= {})[s.key] = now;
+      s.onChange?.(now);
+    }
+  }
+  return changed as Partial<Nears> | null;
+}
+
+/**
+ * The single thing E would do now: the first spot of this place, in list order, that is in reach. Whether the thing
+ * then has data to open is the page's business.
  */
 export function standingAt(area: AreaRef, n: Nears): Standing {
-  switch (area.id) {
-    case "records":
-      if (n.shelves) return { kind: "shelves" };
-      return n.archiveDoor ? { kind: "leave" } : { kind: "none" };
-    case "weather":
-      if (n.dials) return { kind: "dials" };
-      return n.weatherDoor ? { kind: "leave" } : { kind: "none" };
-    case "townhall":
-      if (n.board) return { kind: "board", id: n.board };
-      return n.hallDoor ? { kind: "leave" } : { kind: "none" };
-    case "siege":
-      // A tool beats the road back; the exit stands far from every tool (test).
-      if (n.fieldSpot) return { kind: "fieldSpot", id: n.fieldSpot };
-      return n.fieldExit ? { kind: "leave" } : { kind: "none" };
-    case "quarter":
-      // A stall beats the road back, like a door beats the desk: the exit stands far from every stall (test).
-      if (n.stall) return { kind: "stall", holdingId: n.stall };
-      return n.quarterExit ? { kind: "leave" } : { kind: "none" };
-    case "holding":
-      if (n.shelf) return { kind: "shelf", id: n.shelf };
-      if (n.table) return { kind: "table" };
-      if (n.lantern) return { kind: "lantern", check: n.lantern };
-      return n.landGate ? { kind: "leave" } : { kind: "none" };
-    case "courtyard":
-      if (n.npc) return { kind: "npc", id: n.npc };
-      if (n.tower) return { kind: "tower", holdingId: n.tower };
-      if (n.desk) return { kind: "desk" };
-      if (n.drill) return { kind: "drill" };
-      if (n.siegeGate) return { kind: "siegeGate" };
-      if (n.quarterGate) return { kind: "quarterGate" };
-      if (n.sign) return { kind: "sign" };
-      if (n.booth) return { kind: "booth", id: n.booth };
-      if (n.stall) return { kind: "stall", holdingId: n.stall };
-      if (n.building) return { kind: "building", id: n.building };
-      if (n.vault) return { kind: "vault" };
-      if (n.watch) return { kind: "watch" };
-      if (n.perch) return { kind: "perch" };
-      if (n.realm) return { kind: "realm" };
-      return { kind: "none" };
+  for (const s of SPOTS) {
+    if (s.area !== area.id) continue;
+    const v = n[s.key];
+    if (!isNear(v)) continue;
+    return (typeof v === "boolean" ? { kind: s.kind } : { kind: s.kind, id: v }) as Standing;
   }
+  return { kind: "none" };
 }
