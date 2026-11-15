@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Theme3dId } from "../lib/sectors";
-import { COBBLE_RADIUS, KEEP, SPAWN, TOWER_SPOT_COUNT, WALL_RADIUS, WALL_THICKNESS, cornerTowers } from "./layout";
+import { COBBLE_RADIUS, KEEP, SPAWN, WALL_RADIUS, WALL_THICKNESS, cornerTowers } from "./layout";
 import { cornerTowerFootprint, keepModelFootprint } from "./keepModels";
 import { LAND_TOWER_REACH } from "./holdingLand";
 import { FENCE_RADIUS } from "./farmDressing";
@@ -20,6 +20,10 @@ import { MARKET } from "./marketPieces";
 import { CAMP } from "./campPieces";
 import { BOOTHS } from "./boothPlan";
 import { STANDING_TORCHES } from "./standingTorches";
+import { TOWNSFOLK } from "./townsfolk";
+import { WORKERS } from "./workers";
+import { WATCH_POST } from "./watchPlan";
+import { SIGN } from "./signpost";
 import {
   DOOR_REACH,
   FOOTPRINT,
@@ -27,6 +31,8 @@ import {
   HOLDING_RING_RADIUS,
   HOLDING_RING_STEP,
   HOLDING_RING_TO,
+  HOLDING_RINGS,
+  HOLDING_SPOT_COUNT,
   HOLDING_SPOTS,
   PLOT_FOOTPRINT_MAX,
   PLOT_GAP,
@@ -45,10 +51,17 @@ const dist = (a: { x: number; z: number }, b: { x: number; z: number }) => Math.
 const bearing = (s: { x: number; z: number }) => Math.atan2(s.x, s.z);
 
 describe("holding spots: inside the wall, evenly round it", () => {
-  it("has exactly the eight spots the fortress shows, four on each side", () => {
-    expect(HOLDING_SPOTS).toHaveLength(TOWER_SPOT_COUNT);
-    expect(HOLDING_SPOTS.filter((s) => s.x > 0)).toHaveLength(SPOTS_PER_SIDE);
-    expect(HOLDING_SPOTS.filter((s) => s.x < 0)).toHaveLength(SPOTS_PER_SIDE);
+  it("keeps the outer ring of eight where it was, four on each side, and adds the inner rings after it", () => {
+    const outer = HOLDING_SPOTS.slice(0, 8);
+    expect(outer.filter((s) => s.x > 0)).toHaveLength(SPOTS_PER_SIDE);
+    expect(outer.filter((s) => s.x < 0)).toHaveLength(SPOTS_PER_SIDE);
+    for (const s of outer) expect(Math.hypot(s.x, s.z)).toBeCloseTo(HOLDING_RING_RADIUS, 9);
+    const angles = outer.filter((s) => s.x > 0).map((s) => bearing(s)).sort((x, y) => x - y);
+    expect(angles[0]).toBeCloseTo(HOLDING_RING_FROM, 9);
+    expect(angles[angles.length - 1]).toBeCloseTo(HOLDING_RING_TO, 9);
+    for (let i = 1; i < angles.length; i++) expect(angles[i] - angles[i - 1]).toBeCloseTo(HOLDING_RING_STEP, 9);
+    expect(HOLDING_SPOT_COUNT).toBe(HOLDING_RINGS.reduce((n, r) => n + r.perSide * 2, 0));
+    expect(HOLDING_SPOT_COUNT).toBeGreaterThan(8);
   });
 
   it("stands every spot inside the wall, with its whole footprint on the cobbles and clear of the wall", () => {
@@ -59,18 +72,22 @@ describe("holding spots: inside the wall, evenly round it", () => {
     }
   });
 
-  it("puts every spot on one ring round the middle", () => {
-    for (const s of HOLDING_SPOTS) expect(Math.hypot(s.x, s.z)).toBeCloseTo(HOLDING_RING_RADIUS, 9);
+  it("fills each ring outermost first: a spot is never closer to the wall than the one before its pair", () => {
+    const radii = HOLDING_SPOTS.map((s) => Math.hypot(s.x, s.z));
+    for (let i = 1; i < radii.length; i++) expect(radii[i]).toBeLessThanOrEqual(radii[i - 1] + 1e-9);
   });
 
-  it("spaces neighbours on a side by the same angle, and mirrors the east side in the west", () => {
-    for (const side of [1, -1]) {
-      const angles = HOLDING_SPOTS.filter((s) => Math.sign(s.x) === side)
-        .map((s) => Math.abs(bearing(s)))
-        .sort((a, b) => a - b);
-      expect(angles[0]).toBeCloseTo(HOLDING_RING_FROM, 9);
-      expect(angles[angles.length - 1]).toBeCloseTo(HOLDING_RING_TO, 9);
-      for (let i = 1; i < angles.length; i++) expect(angles[i] - angles[i - 1]).toBeCloseTo(HOLDING_RING_STEP, 9);
+  it("spaces neighbours on a ring side by the same angle, and mirrors the east side in the west", () => {
+    let at = 0;
+    for (const ring of HOLDING_RINGS) {
+      const spots = HOLDING_SPOTS.slice(at, at + ring.perSide * 2);
+      at += ring.perSide * 2;
+      for (const s of spots) expect(Math.hypot(s.x, s.z)).toBeCloseTo(ring.radius, 9);
+      const angles = spots.filter((s) => s.x > 0).map((s) => bearing(s)).sort((x, y) => x - y);
+      expect(angles).toHaveLength(ring.perSide);
+      expect(angles[0]).toBeCloseTo(ring.from, 9);
+      expect(angles[angles.length - 1]).toBeCloseTo(ring.to, 9);
+      for (let i = 2; i < angles.length; i++) expect(angles[i] - angles[i - 1]).toBeCloseTo(angles[1] - angles[0], 9);
     }
     for (const s of HOLDING_SPOTS) {
       const twin = HOLDING_SPOTS.find((o) => Math.abs(o.x + s.x) < 1e-9 && Math.abs(o.z - s.z) < 1e-9);
@@ -114,7 +131,7 @@ describe("holding spots: inside the wall, evenly round it", () => {
   });
 
   it("keeps off the desk, the vault, the realm post, the people and every prop, piece of scenery and booth in the yard", () => {
-    const fixed = [DESK, SHELF, VAULT, REALM_POST, ...NPCS, ...PROPS, ...SCENERY.filter((p) => p.y === 0), ...MARKET, ...CAMP, ...BOOTHS, ...STANDING_TORCHES];
+    const fixed = [DESK, SHELF, VAULT, REALM_POST, WATCH_POST, SIGN, ...TOWNSFOLK, ...WORKERS, ...NPCS, ...PROPS, ...SCENERY.filter((p) => p.y === 0), ...MARKET, ...CAMP, ...BOOTHS, ...STANDING_TORCHES];
     for (const s of HOLDING_SPOTS)
       for (const p of fixed) expect(dist(s, p) - PLOT_FOOTPRINT_MAX, `${(p as { id?: string }).id ?? "fixed"} at ${p.x}, ${p.z}`).toBeGreaterThan(1);
   });
@@ -141,7 +158,7 @@ describe("doors face the middle of the yard", () => {
     for (const s of HOLDING_SPOTS) {
       const d = doorPointOf(s);
       expect(Math.hypot(d.x, d.z)).toBeLessThan(WALL_RADIUS - WALL_THICKNESS / 2);
-      for (const o of HOLDING_SPOTS) if (o !== s) expect(dist(d, o), "door vs neighbour").toBeGreaterThan(PLOT_FOOTPRINT_MAX);
+      for (const o of HOLDING_SPOTS) if (o !== s) expect(dist(d, o), "door vs neighbour").toBeGreaterThan(PLOT_FOOTPRINT_MAX + 1);
     }
   });
 });
@@ -149,7 +166,7 @@ describe("doors face the middle of the yard", () => {
 describe("assignPlots", () => {
   it("gives the n-th holding the n-th spot, whatever its theme", () => {
     const plots = assignPlots(THEMES.slice(0, 8).map((t, i) => input(t, i)));
-    expect(plots.map((p) => p.spot)).toEqual(HOLDING_SPOTS);
+    expect(plots.map((p) => p.spot)).toEqual(HOLDING_SPOTS.slice(0, 8));
     expect(plots.map((p) => p.index)).toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
   });
 
@@ -160,10 +177,16 @@ describe("assignPlots", () => {
     expect(b.map((p) => p.footprint)).toEqual(THEMES.slice(3, 11).map(footprintOf));
   });
 
-  it("is deterministic and leaves the rest without a plot when there are more than eight", () => {
+  it("gives the ninth holding and those after it a place too, and never moves the first eight to do so", () => {
     const many = Array.from({ length: 11 }, (_, i) => input("plain", i));
     expect(assignPlots(many)).toEqual(assignPlots(many));
-    expect(assignPlots(many)).toHaveLength(TOWER_SPOT_COUNT);
+    expect(assignPlots(many)).toHaveLength(11);
+    expect(assignPlots(many).slice(0, 8)).toEqual(assignPlots(many.slice(0, 8)));
+  });
+
+  it("leaves only what the yard has no room for without a plot", () => {
+    const many = Array.from({ length: HOLDING_SPOT_COUNT + 3 }, (_, i) => input("plain", i));
+    expect(assignPlots(many)).toHaveLength(HOLDING_SPOT_COUNT);
   });
 
   it("puts the biggest holding on the east spot nearest the gate and the next on the west spot facing it", () => {

@@ -56,24 +56,49 @@ export const HOLDING_RING_RADIUS = 42;
 export const HOLDING_RING_FROM = (92 * Math.PI) / 180;
 /** The ring's northern end, either side: clear of the keep (and of its plain-shape fallback, which is wider). */
 export const HOLDING_RING_TO = (158 * Math.PI) / 180;
-/** Spots per side wall. Two sides make the eight the fortress shows. */
+/** Spots per side wall on the outer ring: eight in all, the first eight holdings by weight. */
 export const SPOTS_PER_SIDE = 4;
 /** The same angle between every pair of neighbours on a side. */
 export const HOLDING_RING_STEP = (HOLDING_RING_TO - HOLDING_RING_FROM) / (SPOTS_PER_SIDE - 1);
 
-function ringSpot(angle: number): Spot {
-  return { x: HOLDING_RING_RADIUS * Math.sin(angle), z: HOLDING_RING_RADIUS * Math.cos(angle) };
+/** One ring of spots: its radius, the angle of its first and last spot on a side (from the gate), and how many a side. */
+export interface HoldingRing {
+  radius: number;
+  from: number;
+  to: number;
+  perSide: number;
 }
 
+const DEG = Math.PI / 180;
+
 /**
- * The spots, best first: the biggest holding takes the east spot nearest the gate, the next the west spot facing it, and
- * so on up the walls towards the keep. Mirrored on purpose, like the old horseshoe: the yard reads as even.
+ * The rings, outermost first. The outer ring is the one from 2026-11-11 and has not moved, so a fortress of eight or
+ * fewer looks exactly as before. The inner rings were added for #412 (every holding has a place): each sits one
+ * building-and-a-lane closer to the middle, and its spots stand between the doors of the ring behind it, never in
+ * front of one. The numbers are fixed; a test walks every spot against everything else that stands in the yard.
  */
-export const HOLDING_SPOTS: readonly Spot[] = Array.from({ length: SPOTS_PER_SIDE * 2 }, (_, i) => {
-  const step = Math.floor(i / 2);
-  const side = i % 2 === 0 ? 1 : -1;
-  return ringSpot(side * (HOLDING_RING_FROM + step * HOLDING_RING_STEP));
+export const HOLDING_RINGS: readonly HoldingRing[] = [
+  { radius: HOLDING_RING_RADIUS, from: HOLDING_RING_FROM, to: HOLDING_RING_TO, perSide: SPOTS_PER_SIDE },
+  { radius: 29, from: 100 * DEG, to: 150 * DEG, perSide: 3 },
+  { radius: 17.5, from: 88 * DEG, to: 130 * DEG, perSide: 2 },
+];
+
+/**
+ * The spots, best first: the biggest holding takes the east spot of the outer ring nearest the gate, the next the west
+ * spot facing it, and so on up the walls towards the keep; then the same again on each ring further in. Mirrored on
+ * purpose, like the old horseshoe: the yard reads as even.
+ */
+export const HOLDING_SPOTS: readonly Spot[] = HOLDING_RINGS.flatMap((ring) => {
+  const step = ring.perSide > 1 ? (ring.to - ring.from) / (ring.perSide - 1) : 0;
+  return Array.from({ length: ring.perSide * 2 }, (_, i) => {
+    const angle = ring.from + Math.floor(i / 2) * step;
+    const side = i % 2 === 0 ? 1 : -1;
+    return { x: ring.radius * Math.sin(side * angle), z: ring.radius * Math.cos(angle) };
+  });
 });
+
+/** How many holdings the yard has a place for. */
+export const HOLDING_SPOT_COUNT = HOLDING_SPOTS.length;
 
 /** How far a door stands from the middle of its plot: the widest footprint plus a half unit of open ground. */
 export const DOOR_REACH = PLOT_FOOTPRINT_MAX + 0.5;
@@ -96,7 +121,7 @@ export interface Plot {
   holdingId: string;
   theme: Theme3dId;
   fish: boolean;
-  /** Which spot on the ring (0 = best, east of the gate side). */
+  /** Which spot (0 = best, east of the gate side on the outer ring). */
   index: number;
   spot: Spot;
   footprint: number;
@@ -104,7 +129,7 @@ export interface Plot {
 
 /**
  * Plots for holdings given in weight order (biggest first, the order of the flat Fortress): the n-th holding takes the
- * n-th spot. More holdings than spots leaves the rest without a plot (the fortress shows eight, the ring has eight).
+ * n-th spot. More holdings than spots leaves the rest without a plot (they stay in the plain list, counted).
  */
 export function assignPlots(holdings: readonly PlotInput[]): Plot[] {
   return holdings.slice(0, HOLDING_SPOTS.length).map((h, index) => ({

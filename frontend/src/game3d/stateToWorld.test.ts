@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { GameState, GameTower } from "../lib/types";
 import { MOAT_WIDTH, SIZE_HEIGHT, WALL_LOOK, stateToWorld, strengthOf } from "./stateToWorld";
 import { towerSpots } from "./layout";
+import { HOLDING_SPOT_COUNT } from "./outdoorPlan";
 
 function tower(o: Partial<GameTower> = {}): GameTower {
   return {
@@ -69,11 +70,19 @@ describe("stateToWorld", () => {
   });
 
   it("counts holdings that do not fit on the pads and keeps them in the plain list", () => {
+    const many = Array.from({ length: HOLDING_SPOT_COUNT + 3 }, (_, i) => tower({ holding_id: `h${i}`, name: `H${i}`, weight_pct: String(60 - i) }));
+    const w = stateToWorld(state(many));
+    expect(w.towers).toHaveLength(HOLDING_SPOT_COUNT);
+    expect(w.hiddenCount).toBe(3);
+    expect(w.plain).toHaveLength(HOLDING_SPOT_COUNT + 3);
+  });
+
+  it("gives an eleven-holding fortress eleven places (#412: no cap of eight)", () => {
     const many = Array.from({ length: 11 }, (_, i) => tower({ holding_id: `h${i}`, name: `H${i}`, weight_pct: String(20 - i) }));
     const w = stateToWorld(state(many));
-    expect(w.towers).toHaveLength(8);
-    expect(w.hiddenCount).toBe(3);
-    expect(w.plain).toHaveLength(11);
+    expect(w.towers).toHaveLength(11);
+    expect(w.hiddenCount).toBe(0);
+    expect(w.towers.every((t) => t.plot !== undefined)).toBe(true);
   });
 
   it("makes a weaker wall always look weaker: integrity, crown and cracks all agree", () => {
