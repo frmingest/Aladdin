@@ -185,7 +185,7 @@ test.describe("things you can walk up to", () => {
   // CI cannot see the picture, so it cannot judge that the result wall is in view or that plates read; it checks that the
   // pull is heard, that STAMP asks the backend with the pulled lever, and that the door leads back out.
   // The prompt shows "Press E to X" as a key cap "E" plus "X" with its first letter capitalised (actionPrompt.ts), so the
-  // patterns match that, not the sentence in mintWordsV1.ts. Steps of 300 ms (about 1.8 m).
+  // patterns match that, not the sentence in mintWordsV1.ts. CI moves the hero about 3 m in 150 ms, so steps are short (40 ms, under a metre) and checked against where she stands.
   test("Royal Mint: pull a lever, STAMP asks the backend, and the door walks back out", async ({ page }) => {
     test.setTimeout(300_000);
     const problems = watch(page);
@@ -195,6 +195,7 @@ test.describe("things you can walk up to", () => {
     await page.goto("/game3d?at=mint");
     await expect(page.locator("canvas")).toHaveCount(1, { timeout: 60_000 });
     await expect(page).toHaveTitle(/Royal Mint/);
+    const prompt = page.locator(".g3d-prompt");
     const ledgerAnswer = await ledgerAsked;
     expect(ledgerAnswer.status(), "the ledger answers").toBe(200);
     expect(((await ledgerAnswer.json()) as { levers: unknown[] }).levers.length, "the ledger lists levers").toBeGreaterThan(0);
@@ -202,8 +203,8 @@ test.describe("things you can walk up to", () => {
       // Up to the press with nothing pulled: it says so and promises nothing.
       await walkUntil(page, "w", /Pull a lever first, then STAMP/, 300);
       // West, then north, to the stand spot of the Toll Gate (x -5.6, z -6.4): the lever prompt is its own proof.
-      await walkTo(page, "a", (h) => h.x <= -5.4, "west to the Toll Gate's column", 150);
-      await walkTo(page, "w", (h) => h.z <= -6.2, "north to the lever row", 150);
+      await walkTo(page, "a", (h) => h.x <= -5.4, "west to the Toll Gate's column", 40);
+      await walkTo(page, "w", (h) => h.z <= -6.2, "north to the lever row", 40);
       await expect(prompt).toContainText(/^E\s*Pull Toll Gate/);
       // Its base is solid (#431): walking on north stops at the base, a hero's width short of the wall, not at the wall.
       let last = Infinity;
@@ -221,12 +222,12 @@ test.describe("things you can walk up to", () => {
       );
       expect(stopped.z, "stopped by the lever base, not the wall").toBeGreaterThan(-8.3);
       expect(stopped.z, "she did not walk through the base").toBeLessThan(-7.6);
-      await walkTo(page, "s", (h) => h.z >= -6.4, "back to the stand spot", 150);
+      await walkTo(page, "s", (h) => h.z >= -6.4, "back to the stand spot", 40);
       await expect(prompt).toContainText(/^E\s*Pull Toll Gate/);
       await page.keyboard.press("e");
       // East along the lever row to the middle lever, then south to the press: its prompt now offers STAMP, because a lever is pulled.
-      await walkTo(page, "d", (h) => h.x >= -0.4, "east to the middle lever", 150);
-      await walkUntil(page, "s", /^E\s*STAMP/, 300);
+      await walkTo(page, "d", (h) => h.x >= -0.4, "east to the middle lever", 40);
+      await walkUntil(page, "s", /^E\s*STAMP/, 100);
 
       const asked = page.waitForResponse((r) => /\/game\/printer\?/.test(r.url()) && r.url().includes("pull="));
       await page.keyboard.press("e");
@@ -238,9 +239,9 @@ test.describe("things you can walk up to", () => {
       await page.waitForTimeout(5_000);
 
       // The camera now looks east, so W is east and D is south. East clear of the press's side, then south to the door.
-      await walkTo(page, "w", (h) => h.x >= 2, "east, clear of the press", 200);
-      await walkTo(page, "d", (h) => h.z >= 6.5, "south to the door", 300);
-      await walkUntil(page, "d", /Step back outside/, 150);
+      await walkTo(page, "w", (h) => h.x >= 2, "east, clear of the press", 40);
+      await walkTo(page, "d", (h) => h.z >= 6.5, "south to the door", 100);
+      await walkUntil(page, "d", /Step back outside/, 40);
       await page.keyboard.press("e");
       await expect(page).toHaveTitle(/3D courtyard/);
       await expect(page).toHaveURL((u) => u.search === "");
