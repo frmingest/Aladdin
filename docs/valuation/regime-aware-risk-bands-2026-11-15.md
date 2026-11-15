@@ -6,7 +6,7 @@ Issue #392. Faiz left the reading of "regime-aware risk bands" to me; this is th
 ## What it does
 
 The Portfolio risk page shows a stress scenario: what each holding could lose over about a month.
-For holdings without their own DCF bear case (funds, ETFs, stocks with no DCF) that shock is
+For holdings without their own DCF bear case (funds, ETFs, stocks with no DCF; a holding with fewer than 30 price points shows "unavailable" instead) that shock is
 2 standard deviations of the holding's daily returns, scaled to 20 trading days.
 
 When the switch is on, that number is widened by the current macro regime
@@ -34,9 +34,9 @@ The multipliers are judgment calls, not fetched data. They live in a versioned f
 Off by default, like the regime-adjusted DCF (a change to a number you already read is your call).
 Set `REGIME_AWARE_RISK_BANDS_ENABLED=true` on the Railway backend service and redeploy.
 The Risk page is served from a stored snapshot, so press **Refresh** on it once (or wait for the
-04:00 UTC rebuild) before the change shows. When the regime is stagflation or crisis, the stress
+nightly 04:00 UTC rebuild, which needs the PC worker running) before the change shows. When the regime is stagflation or crisis, the stress
 heading's hint says how much it was widened; the API (`GET /risk/portfolio`, `stress`) also returns
-`regime`, `base_std_devs`, `band_multiplier` and `bands_version` (empty when the switch is off).
+`regime`, `base_std_devs`, `band_multiplier` and `bands_version` (all null when the switch is off).
 
 ## Where
 
@@ -45,8 +45,10 @@ heading's hint says how much it was widened; the API (`GET /risk/portfolio`, `st
 passes the widened std-devs to `compute_stress`), `app/schemas/risk.py` and `app/api/risk.py` (new
 optional fields, so older stored snapshots still load).
 
+In demo mode the page shows fabricated data, so the switch has no visible effect there.
+
 ## How it was checked
 
-Backend tests: 2 unit tests on the versions, 3 API tests (off by default changes nothing; crisis
-multiplies each volatility shock by 1.5 within 4-decimal rounding; baseline records the regime and
+Backend tests: 3 unit tests on the versions (incl. one that the regime names match the classifier's), 3 API tests (off by default changes nothing; crisis
+multiplies each volatility shock by 1.5 within a 0.0002 tolerance for 4-decimal rounding; baseline records the regime and
 changes nothing). Not run against the live app or real macro data.
