@@ -72,6 +72,10 @@ def _to_out(risk: PortfolioRisk) -> PortfolioRiskOut:
                 )
                 for h in risk.stress.holdings
             ],
+            regime=risk.stress.regime,
+            base_std_devs=risk.stress.base_std_devs,
+            band_multiplier=risk.stress.band_multiplier,
+            bands_version=risk.stress.bands_version,
         ),
         regime=RegimeOut(
             regime=risk.regime.regime,

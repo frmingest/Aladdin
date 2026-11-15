@@ -296,6 +296,12 @@ class Settings(BaseSettings):
     # return distribution, scaled to an annualized-ish shock (see
     # app/services/risk/stress.py's docstring for the exact scaling).
     risk_stress_shock_std_devs: str = "2"
+    # ECON-007 (2026-11-15): when true, the volatility-sized stress shock is
+    # widened by a per-regime multiplier from active_risk_bands_version
+    # (app/domain/risk_bands/). Off by default: like the regime-adjusted DCF it
+    # changes a number Faiz already reads, so it is his switch to turn on.
+    regime_aware_risk_bands_enabled: bool = False
+    active_risk_bands_version: str = "v1"
 
     # --- Portfolio performance (Sprint 13, 2026-09-27, app/services/performance/) ---
     # Reuses PriceHistoryObservation (Sprint 12) for tickers, FX pairs and the

@@ -53,6 +53,12 @@ class StressOut(BaseModel):
     portfolio_drawdown_nok: Decimal | None
     total_value_considered_nok: Decimal
     holdings: list[HoldingStressOut]
+    # ECON-007: present only when regime-aware bands were applied. Optional with
+    # defaults so stored page snapshots from before it still load.
+    regime: str | None = None
+    base_std_devs: Decimal | None = None
+    band_multiplier: Decimal | None = None
+    bands_version: str | None = None
 
 
 class RegimeInputOut(BaseModel):
