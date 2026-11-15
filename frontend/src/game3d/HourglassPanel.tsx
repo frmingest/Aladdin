@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import {
   HOURGLASS_EARLIER,
   HOURGLASS_EMPTY,
@@ -8,12 +9,10 @@ import {
   HOURGLASS_NIGHT_GAP,
   HOURGLASS_NOW,
   HOURGLASS_PANEL_TITLE,
-  HOURGLASS_PAUSE,
   HOURGLASS_PLAY,
   HOURGLASS_RETRY,
   HOURGLASS_SAMPLE,
   HOURGLASS_STRIP,
-  HOURGLASS_TODAY,
   HOURGLASS_UNREADABLE,
 } from "./hourglassWordsV1";
 import { dayLabel } from "./hourglassPlan";
@@ -55,6 +54,15 @@ export default function HourglassPanel(p: Props) {
   const kept = p.timeline.length - gaps;
   const index = p.day === null ? -1 : p.timeline.findIndex((t) => t.day === p.day);
   const strip = p.timeline.slice(-STRIP_NIGHTS);
+  // The row scrolls sideways; it starts at the newest night and keeps the chosen night in view.
+  const row = useRef<HTMLUListElement>(null);
+  useEffect(() => {
+    const el = row.current;
+    if (!el) return;
+    const chosen = el.querySelector<HTMLElement>("[aria-pressed='true']");
+    if (chosen) chosen.scrollIntoView({ inline: "center", block: "nearest" });
+    else el.scrollLeft = el.scrollWidth;
+  }, [p.day, p.status, strip.length]);
   return (
     <aside
       aria-label={HOURGLASS_PANEL_TITLE}
@@ -84,12 +92,12 @@ export default function HourglassPanel(p: Props) {
             <div className="flex flex-wrap items-center gap-2">
               <button type="button" className="g3d-btn" onClick={p.onEarlier} disabled={index === 0}>{HOURGLASS_EARLIER}</button>
               <button type="button" className="g3d-btn" onClick={p.onLater} disabled={p.day === null}>{HOURGLASS_LATER}</button>
-              <button type="button" className="g3d-btn" onClick={p.onPlayToggle}>{p.playing ? HOURGLASS_PAUSE : HOURGLASS_PLAY}</button>
-              <button type="button" className="g3d-btn" onClick={p.onToday} disabled={p.day === null}>{HOURGLASS_TODAY}</button>
+              {/* Looking back, Play, Pause and the way home live on the banner (once on screen, not twice). */}
+              {p.day === null && <button type="button" className="g3d-btn" onClick={p.onPlayToggle}>{HOURGLASS_PLAY}</button>}
             </div>
             <div>
               <p className="text-ink-muted">{HOURGLASS_STRIP}</p>
-              <ul className="mt-1 flex flex-wrap gap-1.5" aria-label={HOURGLASS_STRIP}>
+              <ul ref={row} className="mt-1 flex gap-1.5 overflow-x-auto pb-2" aria-label={HOURGLASS_STRIP}>
                 {strip.map((t) => (
                   <li key={t.day}>
                     <button
@@ -99,8 +107,10 @@ export default function HourglassPanel(p: Props) {
                       aria-label={t.stored ? dayLabel(t.day) : `${dayLabel(t.day)}, ${HOURGLASS_NIGHT_GAP}`}
                       aria-pressed={t.day === p.day}
                       // A kept night is a solid block, a gap is an empty outline: the shape says it, not the colour.
-                      className={`h-8 w-6 rounded-sm border border-ink ${t.stored ? "bg-ink" : "bg-transparent"} ${t.day === p.day ? "ring-2 ring-ink ring-offset-2" : ""}`}
-                    />
+                      className={`h-11 w-9 shrink-0 rounded-sm border border-ink text-xs ${t.stored ? "bg-ink text-surface" : "bg-transparent text-ink"} ${t.day === p.day ? "ring-2 ring-ink ring-offset-2" : ""}`}
+                    >
+                      {Number(t.day.slice(8))}
+                    </button>
                   </li>
                 ))}
               </ul>

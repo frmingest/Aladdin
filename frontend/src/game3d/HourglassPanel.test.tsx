@@ -47,7 +47,7 @@ describe("HourglassPanel", () => {
     expect(h).toContain("Thu 12 Nov 2026");
     expect(h).not.toContain("No picture is kept for this day.");
     expect(h).toContain('aria-label="Thu 12 Nov 2026, no picture kept"');
-    expect(h).toContain("bg-transparent");
+    expect(h).toContain("bg-transparent text-ink");
     // The timeline runs to yesterday, so the 14th (nothing stored) is a gap too.
     expect(h).toContain("2 nights kept, 2 with no picture");
   });
@@ -72,9 +72,21 @@ describe("HourglassPanel", () => {
     expect(html()).not.toContain('type="range"');
   });
 
-  it("offers Pause while it plays, and turns Earlier off on the oldest night", () => {
-    expect(html({ playing: true, day: "2026-11-12", dayStatus: "gap" })).toContain(">Pause<");
+  it("turns Earlier off on the oldest night", () => {
     expect(html({ day: "2026-11-11", dayStatus: "frame" })).toMatch(/disabled=""[^>]*>Earlier</);
+  });
+
+  it("never shows a control the banner also shows: looking back, Play, Pause and Back to today are the banner's", () => {
+    const back = html({ day: "2026-11-12", dayStatus: "gap", playing: true });
+    for (const word of [">Play<", ">Pause<", ">Back to today<"]) expect(back).not.toContain(word);
+    // On today there is no banner, so Play is the panel's.
+    expect(html()).toContain(">Play<");
+  });
+
+  it("gives each night a block with its day of the month and a real tap size", () => {
+    const h = html();
+    expect(h).toContain(">11</button>");
+    expect(h).toContain("h-11 w-9");
   });
 
   it("says one night, not one nights", () => {
