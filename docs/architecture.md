@@ -78,10 +78,9 @@ either runs on Gemini/Mistral, or is queued for the worker ("Run on my PC").
 
 **Hosting changed since the first version of this diagram.** Supabase is retired for Aladdin (Faiz's
 decision, 2026-10-14): the database is Railway Postgres and the uploaded originals are on Cloudflare R2
-(`OBJECT_STORAGE_PROVIDER=r2`). The code still *accepts* `supabase` as a storage provider name and
-`backend/.env.example` still shows Supabase connection strings as an example; those are leftovers, not
-the live setup. The cut-over is described in
-`supabase-to-railway-postgres-runbook-2026-10-09.md` (see [section 11](#11-known-gaps-and-loose-ends)).
+(`OBJECT_STORAGE_PROVIDER=r2`). The code still *accepts* `supabase` as a storage provider name (a
+leftover, not the live setup). The cut-over runbook is not in the repo (see
+[section 11](#11-known-gaps-and-loose-ends)); the file is still to be supplied (#381).
 This pass did not re-check the live Railway services.
 
 ---
