@@ -97,6 +97,9 @@ class SimHolding:
     value_nok: Decimal | None
     beta: Decimal | None
     beta_method: str | None = None  # price_history | vendor_beta | demo
+    # Printer P1.5: coefficients measured from this holding's own history, or None to keep the sector guess.
+    long_rate_coef: Decimal | None = None  # % price change per +1 pp long rate
+    krone_coef: Decimal | None = None  # % price change per +1% stronger krone against the dollar
 
 
 @dataclass
@@ -105,6 +108,7 @@ class Term:
     coefficient: Decimal
     pct: Range  # contribution to the holding's price change, percent
     confidence: str
+    basis: str = "sector_guess"  # measured | sector_guess | beta
 
 
 @dataclass
@@ -228,19 +232,26 @@ def read_holding(h: SimHolding, channels: dict[str, ChannelResult], horizon: int
 
     profile = T.SECTOR_PROFILES.get(h.sector or "", T.UNKNOWN_SECTOR_PROFILE)
     beta_conf = T.BETA_CONFIDENCE.get(h.beta_method or "", T.LOW)
+    # A measured coefficient (Printer P1.5) replaces the sector guess for that channel and earns Medium.
     coefficients = {
-        T.EQUITY: (h.beta, beta_conf),
-        T.LONG_RATE: (profile.long_rate, T.LOW),
-        T.USDNOK: (-profile.usd_share, T.LOW),
-        T.INFLATION: (profile.inflation, T.LOW),
-        T.SPREAD: (profile.spread, T.LOW),
+        T.EQUITY: (h.beta, beta_conf, "beta"),
+        T.LONG_RATE: (
+            (h.long_rate_coef, T.MEDIUM, "measured") if h.long_rate_coef is not None
+            else (profile.long_rate, T.LOW, "sector_guess")
+        ),
+        T.USDNOK: (
+            (h.krone_coef, T.MEDIUM, "measured") if h.krone_coef is not None
+            else (-profile.usd_share, T.LOW, "sector_guess")
+        ),
+        T.INFLATION: (profile.inflation, T.LOW, "sector_guess"),
+        T.SPREAD: (profile.spread, T.LOW, "sector_guess"),
     }
     terms: list[Term] = []
-    for ch, (coef, coef_conf) in coefficients.items():
+    for ch, (coef, coef_conf, basis) in coefficients.items():
         chan = channels[ch]
         if chan.range.is_zero or coef == ZERO:
             continue
-        terms.append(Term(ch, coef, chan.range.scaled(coef), _min_conf(coef_conf, chan.confidence)))
+        terms.append(Term(ch, coef, chan.range.scaled(coef), _min_conf(coef_conf, chan.confidence), basis))
     # The short rate has no sector coefficient in v1: it acts through the market and long-rate terms.
 
     total = ZERO_RANGE

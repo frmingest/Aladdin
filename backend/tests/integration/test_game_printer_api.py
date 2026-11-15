@@ -86,3 +86,39 @@ def test_demo_mode_uses_the_demo_book(client, monkeypatch):
     monkeypatch.setattr(game_api, "is_demo_mode", lambda db: True)
     body = client.get("/game/printer?pull=toll_gate:1").json()
     assert body["demo"] is True and body["holdings"]
+
+
+def test_measured_rate_and_krone_sensitivity_replaces_the_guess_where_history_is_clear(client, db_session):
+    """Printer P1.5: stored closes, the 10-year yield and USD/NOK give a measured term; a holding with
+    no history keeps the sector guess."""
+    from datetime import time
+
+    from app.models.macro import MacroObservation
+    from app.models.risk import PriceHistoryObservation
+    from tests.unit.test_printer_sensitivity import _series
+
+    _seed(db_session)
+    for ticker in ("CASH.OL", "GEAR.OL", "BANK.OL", "FUND", "BARE.OL"):
+        _beta(db_session, ticker, "1.0")
+    today = NOW.date()
+    start = today - timedelta(days=today.weekday() + 3) - timedelta(weeks=100)  # a Friday, 100 weeks back
+    asset, bench, rate, fx = _series(99, start=start)
+    for ticker, pts in (("FUND", asset), ("OSEBX.OL", bench)):
+        for day, close in pts:
+            db_session.add(PriceHistoryObservation(
+                ticker=ticker, observed_on=day, close=close, currency="NOK", provider="test", fetched_at=NOW,
+            ))
+    for key, pts, unit in (("no_10y", rate, "pct"), ("usd_nok", fx, "nok")):
+        for day, value in pts:
+            db_session.add(MacroObservation(
+                series_key=key, provider="test", region="NO", value=value, unit=unit,
+                observed_at=datetime.combine(day, time.min, tzinfo=timezone.utc),
+            ))
+    db_session.commit()
+    body = client.get("/game/printer?pull=toll_gate:1").json()
+    by = {h["ticker"]: h for h in body["holdings"] if h["status"] == "modelled"}
+    fund_terms = {t["channel"]: t for t in by["FUND"]["terms"]}
+    assert fund_terms["long_rate"]["basis"] == "measured"
+    assert abs(float(fund_terms["long_rate"]["coefficient"]) + 6) < 0.6
+    other = next(h for t, h in by.items() if t != "FUND")
+    assert all(t["basis"] != "measured" for t in other["terms"])
