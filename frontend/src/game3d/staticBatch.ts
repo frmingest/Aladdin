@@ -91,7 +91,7 @@ function joinable(obj: Object3D): obj is Mesh {
 }
 
 /** Keep the attributes every geometry has, drop the rest, and make indexing match, so they can be joined. */
-function normalised(geometries: BufferGeometry[]): BufferGeometry[] {
+export function normalised(geometries: BufferGeometry[]): BufferGeometry[] {
   const common = Object.keys(geometries[0].attributes).filter((name) =>
     geometries.every((g) => g.getAttribute(name)),
   );

@@ -1,9 +1,10 @@
 import { PAL, Part } from "./Inked";
 import { LANTERN_LOOKS } from "./holdingLand";
 import type { Lantern } from "./holdingLand";
+import { FLAME_COLOUR } from "./fxPlan";
 import WorldLabel from "./WorldLabel";
 
-const FLAME = "#f4c35a";
+const FLAME = FLAME_COLOUR;
 const GLASS = "#e9e2c8";
 const MIST = "#cfd6dc";
 
@@ -30,7 +31,6 @@ export default function LanternPost({ lantern, active }: { lantern: Lantern; act
             <coneGeometry args={[0.16, 0.36, 6]} />
             <meshStandardMaterial color={FLAME} emissive={FLAME} emissiveIntensity={0.9} flatShading />
           </mesh>
-          <pointLight position={[0, 1.95, 0]} intensity={0.6} distance={5} color={FLAME} />
         </>
       )}
       {shape === "hood" && (

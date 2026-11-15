@@ -23,6 +23,10 @@ import { QUARTER_WORDS } from "./quarterWordsV1";
 import { streetOverflowLine } from "./streetPlan";
 import { TOWN_FILES } from "./townPieces";
 import WorldLabel from "./WorldLabel";
+import { HangingLamps } from "./MarkLayer";
+import { stallLamps } from "./marks";
+
+const NONE_LIT: ReadonlySet<string> = new Set();
 
 /** The same flat ground colour as the Town, the Siege Field and the courtyard, so nothing here is flattered by colour. */
 const GRASS = "#7a9e5c";
@@ -229,7 +233,8 @@ function ExitPost() {
  * back are code-built, so a failed model load leaves a bare but working lane. The dressing is the same whatever the numbers say;
  * only a stall's pennant and plate carry a fact, and where it stands says how near your price it is.
  */
-export default function MarketQuarter({ quarter }: { quarter: Quarter }) {
+export default function MarketQuarter({ quarter, lit = NONE_LIT }: { quarter: Quarter; lit?: ReadonlySet<string> }) {
+  const lamps = useMemo(() => stallLamps(quarter.stalls, lit), [quarter.stalls, lit]);
   const unpriced = quarter.stalls.filter((s) => s.unpriced).length;
   return (
     <group>
@@ -247,6 +252,7 @@ export default function MarketQuarter({ quarter }: { quarter: Quarter }) {
         <meshStandardMaterial color={GRASS} flatShading />
       </mesh>
       <ExitPost />
+      <HangingLamps lamps={lamps} perfGroup="marks" />
       <Signs overflow={quarter.overflow.length} />
       {quarter.fogZ !== null && <QuietStretch fogZ={quarter.fogZ} count={unpriced} gate={unpriced < quarter.stalls.length} />}
       {quarter.stalls.length > 0 && (

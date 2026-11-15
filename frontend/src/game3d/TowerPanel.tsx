@@ -1,4 +1,7 @@
 import type { WorldModel } from "./stateToWorld";
+import { anyUnread, plainMarkLines } from "./marks";
+import type { HoldingMarks } from "./marks";
+import { MARK_WORDS } from "./marksWordsV1";
 import { MOAT_LABEL, SIZE_LABEL, THESIS_LABEL, WALL_LABEL } from "../lib/fortress";
 
 interface Props {
@@ -7,6 +10,11 @@ interface Props {
   error: string | null;
   onRetry: () => void;
   onClose?: () => void;
+  /** The marks in words (raven, smoke, bell), for every holding including those with no room in the yard. */
+  marks?: HoldingMarks;
+  /** Watchlist companies whose stall is lit, and the sheets pinned on the Watch Post (0 to 3): the same facts, in words. */
+  lit?: ReadonlySet<string>;
+  noticeSheets?: number;
 }
 
 type Tone = "good" | "warn" | "bad" | "fog" | "";
@@ -32,7 +40,7 @@ function Chip({ tone, children }: { tone: Tone; children: string }) {
  * walking, this list says exactly what each tower stands for. Unknown stays
  * "not surveyed" in the words, same as the fog in the picture.
  */
-export default function TowerPanel({ world, loading, error, onRetry, onClose }: Props) {
+export default function TowerPanel({ world, loading, error, onRetry, onClose, marks, lit, noticeSheets = 0 }: Props) {
   return (
     <aside
       aria-label="Your towers in words"
@@ -53,9 +61,15 @@ export default function TowerPanel({ world, loading, error, onRetry, onClose }: 
         </div>
       )}
       {!loading && !error && world.plain.length === 0 && <p className="g3d-muted mt-2">No towers yet. The pads are bare.</p>}
+      {marks && (anyUnread(marks) || noticeSheets > 0) && (
+        <p className="g3d-muted mt-2">
+          {MARK_WORDS.row}: {[noticeSheets > 0 ? MARK_WORDS.notice : null, anyUnread(marks) ? MARK_WORDS.unread : null].filter(Boolean).join(" · ")}
+        </p>
+      )}
       <ol className="mt-2 space-y-2">
         {world.plain.map((t) => {
           const f = t.facts;
+          const markLines = marks ? plainMarkLines(t, marks, lit) : [];
           return (
             <li key={t.holdingId} className="g3d-card !mt-0">
               <div className="flex items-baseline justify-between gap-2">
@@ -70,6 +84,11 @@ export default function TowerPanel({ world, loading, error, onRetry, onClose }: 
                 <Chip tone={THESIS_TONE[f.thesis] ?? "fog"}>{THESIS_LABEL[f.thesis]}</Chip>
                 {t.gap && <Chip tone="fog">{`Gap: ${t.gap}`}</Chip>}
               </ul>
+              {markLines.length > 0 && (
+                <p className="g3d-muted mt-1">
+                  {MARK_WORDS.row}: {markLines.join(" · ")}
+                </p>
+              )}
             </li>
           );
         })}

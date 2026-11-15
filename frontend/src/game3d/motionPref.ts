@@ -6,3 +6,14 @@ export function prefersReducedMotion(): boolean {
     return false;
   }
 }
+
+/** Subscribe to the system's reduced-motion setting, so a change while the page is open is followed. */
+export function subscribeReducedMotion(onChange: () => void): () => void {
+  try {
+    const q = window.matchMedia("(prefers-reduced-motion: reduce)");
+    q.addEventListener("change", onChange);
+    return () => q.removeEventListener("change", onChange);
+  } catch {
+    return () => {};
+  }
+}

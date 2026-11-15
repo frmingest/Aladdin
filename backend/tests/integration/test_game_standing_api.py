@@ -232,10 +232,28 @@ def test_fired_unseen_wires_are_listed_by_name_and_clear_once_acknowledged(clien
     wire.fired_at, wire.label = datetime.now(timezone.utc), "ROIC under 10%"
     db_session.commit()
     body = client.get("/game/standing").json()
-    assert body["wires"] == [{"tripwire_id": str(wire.id), "ticker": "CASH.OL", "name": body["wires"][0]["name"], "label": "ROIC under 10%"}]
+    assert body["wires"] == [{"tripwire_id": str(wire.id), "ticker": "CASH.OL", "name": body["wires"][0]["name"], "label": "ROIC under 10%", "holding_id": str(wire.holding_id)}]
     assert body["wires"][0]["name"]
     assert client.post(f"/thesis/tripwires/{wire.id}/acknowledge").status_code == 200
     assert client.get("/game/standing").json()["wires"] == []
+
+
+def test_a_listed_wire_carries_its_exact_holding_id_not_a_ticker_match(client, db_session):
+    from datetime import datetime, timezone
+
+    wire = _level_three_fortress(db_session)
+    wire.fired_at = datetime.now(timezone.utc)
+    db_session.commit()
+    (listed,) = client.get("/game/standing").json()["wires"]
+    assert listed["holding_id"] == str(wire.holding_id)
+    assert listed["holding_id"] == str(db_session.query(Holding).filter_by(ticker="CASH.OL").one().id)
+
+
+def test_holding_id_is_none_when_there_is_no_holding_match():
+    from app.schemas.game import StandingWireOut
+
+    w = StandingWireOut(tripwire_id="00000000-0000-0000-0000-000000000001", ticker="X", name="X", label=None)
+    assert w.holding_id is None and w.model_dump(mode="json")["holding_id"] is None
 
 
 def test_seen_and_inactive_wires_are_not_listed(client, db_session):

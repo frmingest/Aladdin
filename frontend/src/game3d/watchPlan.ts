@@ -35,6 +35,9 @@ export const PERCH = { x: 19.5, z: 18 } as const;
 export const PERCH_RANGE = 3.6;
 export const PERCH_LEAVE_RANGE = 5;
 
+/** Raven feather: near-black with a blue cast; never red or green. Shared by the perch birds and the raven mark. */
+export const FEATHER = "#2b2d3f";
+
 /** The cross-arm holds three birds, never more. */
 export const MAX_BIRDS = 3;
 

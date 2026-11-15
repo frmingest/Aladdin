@@ -5,6 +5,7 @@ import TowerPanel from "./TowerPanel";
 import { towerFacts } from "./towerFacts";
 import { stateToWorld } from "./stateToWorld";
 import { HOLDING_SPOT_COUNT } from "./outdoorPlan";
+import { holdingMarks } from "./marks";
 
 function tower(o: Partial<GameTower>): GameTower {
   return {
@@ -50,5 +51,20 @@ describe("TowerPanel (plain view of the 3D scene)", () => {
     const html = renderToStaticMarkup(<TowerPanel world={stateToWorld(state(many))} loading={false} error={null} onRetry={noop} />);
     expect(html).toContain("2 more than the yard has room for");
     expect(html).toContain("(no room in the yard)");
+  });
+
+  it("prints the marks in words, also for a holding with no room in the yard; unread says not reported", () => {
+    const n = HOLDING_SPOT_COUNT + 1;
+    const w = stateToWorld(state(Array.from({ length: n }, (_, i) => tower({ holding_id: `h${i}`, name: `N${i}`, weight_pct: String(90 - i), thesis: i === n - 1 ? "review" : "intact" }))));
+    const marks = holdingMarks(w.plain, { recentRavenHoldingIds: new Set(["h0"]), unseenWireHoldingIds: null });
+    const html = renderToStaticMarkup(<TowerPanel world={w} loading={false} error={null} onRetry={noop} marks={marks} noticeSheets={2} lit={new Set(["h1"])} />);
+    expect(html).toContain("Notice: night changes pinned");
+    expect(html).toContain("Lamp: in your range");
+    expect(html).toContain("Marks: Raven: new report · Not reported");
+    expect(html).toContain("Marks: Bell: due a look · Not reported");
+    expect(html).toContain("Marks: Notice: night changes pinned · Not reported");
+    // Once for the panel, plus the three marked cards (raven, bell, lamp); the other holdings repeat nothing.
+    expect(html.match(/Not reported/g)?.length).toBe(4);
+    expect(html).not.toMatch(/quiet|all clear/i);
   });
 });

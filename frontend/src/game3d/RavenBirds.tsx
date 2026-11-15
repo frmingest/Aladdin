@@ -1,8 +1,6 @@
 import { PAL, Part } from "./Inked";
-import { PERCH, birdSlots } from "./watchPlan";
+import { FEATHER, PERCH, birdSlots } from "./watchPlan";
 
-/** Near-black with a blue cast; never red or green. */
-const FEATHER = "#2b2d3f";
 
 /** The arm of the perch prop is at this height (PropModels.tsx), so a bird sits just above it. */
 const ARM_Y = 2.6 + 0.14;

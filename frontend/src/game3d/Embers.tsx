@@ -3,7 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import { useTexture } from "@react-three/drei";
 import { AdditiveBlending, NormalBlending, Object3D } from "three";
 import type { InstancedMesh } from "three";
-import { SMOKE, SPARKS, fxState } from "./fxPlan";
+import { SMOKE, SMOKE_COLOUR, SPARKS, fxState } from "./fxPlan";
 import type { FxSpec } from "./fxPlan";
 import { prefersReducedMotion } from "./motionPref";
 
@@ -52,7 +52,7 @@ export function Smoke({ position }: { position: [number, number, number] }) {
   return (
     <group position={position}>
       <Suspense fallback={null}>
-        <Column spec={SMOKE} url="/fx/smoke_soft.png" color="#c9c4bb" additive={false} />
+        <Column spec={SMOKE} url="/fx/smoke_soft.png" color={SMOKE_COLOUR} additive={false} />
       </Suspense>
     </group>
   );
