@@ -4,6 +4,20 @@ Issue #412, step 2 of 4. Plan: `docs/game/game3d-morning-round-plan-2026-11-15.m
 Status: **built on branch `feature/3d-morning-round-marks`, PR #420 open for review. Not merged, not deployed.** The spec was written
 from the code before the build; it records two defaults Faiz has not yet confirmed (price fresh for 5 days; bell for thesis review only).
 
+## As built: where the build differs from this spec
+
+Found by a real-browser playtest (software graphics, demo stack, mocked wire), then changed:
+
+- **Smoke stands straight above the holding's own roof**, not behind it (the table below and section 2 still say "behind";
+  they are the first plan). Behind the building it was never seen from the courtyard. Now 12 sprites, dark slate, 14 tall,
+  starting 0.6 above that holding's height; a test checks it clears the roof for every size. Seen after the change, but faint.
+- **Raven 1.8 times bigger** with a mid-slate body (black on Apple's black tower was lost); circles at least 3 above the roof.
+  A light outline copy was tried and dropped: it pushed the full yard past the 3,000 triangle budget.
+- **Bell 1.4 times bigger**, brighter bronze.
+- Cost with 54 marks: 4 draw calls, about 2,800 triangles, no lights.
+- The hanging lamps keep their own frame loop (they mount in the Quarter, apart from the yard layer), so there are two loops, not one.
+- Not seen: any mark on a real phone; a real, unmocked wire (the demo sends none).
+
 ## Spec card
 
 | Question | Answer |
