@@ -389,6 +389,23 @@ class FrameTowerOut(BaseModel):
     thesis: ThesisState
 
 
+class HistoryDaysOut(BaseModel):
+    """The Hourglass (#414): which UTC days have a stored frame, oldest first. Only stored days are listed; a day
+    between two of them with no frame is a gap and stays one (never filled in). The sample fortress stores nothing."""
+
+    demo: bool = False
+    days: list[date]
+
+
+class HistoryFrameOut(BaseModel):
+    """The Hourglass (#414): one stored day, exactly as it was stored. A record of what the fortress looked like
+    then, never live state and never a forecast."""
+
+    day: date
+    stored_at: datetime
+    state: GameStateOut
+
+
 class FrameOut(BaseModel):
     day: date
     at: datetime

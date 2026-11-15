@@ -107,9 +107,9 @@ describe("SPOTS: the one list of things you can walk up to", () => {
       }
     }
   });
-  it("keeps the courtyard's order: a person, a door, the desk, and on down to the Realm post", () => {
+  it("keeps the courtyard's order: a person, a door, the desk, and on down to the Realm post and the hourglass", () => {
     expect(spotsOf("courtyard").map((s) => s.key)).toEqual([
-      "npc", "tower", "desk", "drill", "siegeGate", "quarterGate", "sign", "booth", "building", "vault", "watch", "perch", "realm",
+      "npc", "tower", "desk", "drill", "siegeGate", "quarterGate", "sign", "booth", "building", "vault", "watch", "perch", "realm", "hourglass",
     ]);
   });
 });

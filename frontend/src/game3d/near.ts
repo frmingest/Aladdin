@@ -59,6 +59,7 @@ import { BOARD_LEAVE_RANGE, BOARD_RANGE, BOARD_SLOTS, HALL_DOOR_LEAVE_RANGE, HAL
 import type { BoardId } from "./townHallRoom";
 import { BUILDINGS, DOOR_LEAVE_RANGE, DOOR_RANGE, nearestBuilding } from "./townPlan";
 import type { BuildingId } from "./townPlan";
+import { HOURGLASS, HOURGLASS_LEAVE_RANGE, HOURGLASS_RANGE } from "./hourglassPlan";
 import { PERCH, PERCH_LEAVE_RANGE, PERCH_RANGE, WATCH_LEAVE_RANGE, WATCH_POST, WATCH_RANGE } from "./watchPlan";
 import { VAULT, VAULT_LEAVE_RANGE, VAULT_RANGE } from "./vaultPlan";
 import { DIALS_LEAVE_RANGE, DIALS_RANGE, TOWER_DOOR_LEAVE_RANGE, TOWER_DOOR_RANGE, nearDials, nearTowerDoor } from "./weatherTowerRoom";
@@ -107,6 +108,8 @@ export interface Nears {
   watch: boolean;
   perch: boolean;
   realm: boolean;
+  /** Courtyard: at the hourglass (replay the stored days). */
+  hourglass: boolean;
   shelf: ShelfId | null;
   table: boolean;
   /** Which survey lantern you stand at in a holding's land. */
@@ -153,6 +156,7 @@ export const NO_NEARS: Nears = {
   watch: false,
   perch: false,
   realm: false,
+  hourglass: false,
   shelf: null,
   table: false,
   lantern: null,
@@ -179,7 +183,7 @@ export const NO_NEARS: Nears = {
 /** The spots that are one of several: the answer carries which one. */
 type ManyKind = "npc" | "tower" | "booth" | "stall" | "shelf" | "lantern" | "building" | "fieldSpot" | "board" | "mintLever";
 /** The spots there is one of. */
-type OneKind = "desk" | "drill" | "siegeGate" | "quarterGate" | "sign" | "vault" | "watch" | "perch" | "realm" | "table" | "shelves" | "dials" | "mintSpan" | "mintPress" | "mintBook";
+type OneKind = "desk" | "drill" | "siegeGate" | "quarterGate" | "sign" | "vault" | "watch" | "perch" | "realm" | "hourglass" | "table" | "shelves" | "dials" | "mintSpan" | "mintPress" | "mintBook";
 
 export type Standing =
   | { kind: "none" }
@@ -275,6 +279,7 @@ export const SPOTS: readonly Spot[] = [
   spot({ key: "watch", kind: "watch", area: "courtyard", detect: single(WATCH_POST, WATCH_RANGE, WATCH_LEAVE_RANGE) }),
   spot({ key: "perch", kind: "perch", area: "courtyard", detect: single(PERCH, PERCH_RANGE, PERCH_LEAVE_RANGE) }),
   spot({ key: "realm", kind: "realm", area: "courtyard", detect: single(REALM_POST, REALM_RANGE, REALM_LEAVE_RANGE) }),
+  spot({ key: "hourglass", kind: "hourglass", area: "courtyard", detect: single(HOURGLASS, HOURGLASS_RANGE, HOURGLASS_LEAVE_RANGE) }),
 
   // A holding's land.
   spot({

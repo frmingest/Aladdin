@@ -7,7 +7,7 @@ read).
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from decimal import Decimal
 from typing import Literal
 from uuid import UUID
@@ -32,6 +32,8 @@ from app.schemas.game import (
     CalibrationOracleOut,
     CalibrationOut,
     GameStateOut,
+    HistoryDaysOut,
+    HistoryFrameOut,
     HoldingAdvisorsOut,
     NightWatchOut,
     RavensOut,
@@ -43,8 +45,8 @@ from app.schemas.game import (
 )
 from app.schemas.printer import PrinterLedgerOut, PrinterOut
 from app.services.game import calibration as calibration_svc
+from app.services.game import history, printer_view
 from app.services.game import printer as printer_engine
-from app.services.game import printer_view
 from app.services.game import rituals as rituals_svc
 from app.services.game.backtest_view import (
     build_backtest,
@@ -87,6 +89,28 @@ def get_state(db: Session = Depends(get_db)) -> GameStateOut:
     if is_demo_mode(db):
         return demo_game_state(version)
     return get_game_state(db, version)
+
+
+@router.get("/history", response_model=HistoryDaysOut)
+def get_history_days(db: Session = Depends(get_db)) -> HistoryDaysOut:
+    """The Hourglass (#414): the days that have a stored nightly frame, oldest first. Reads keys only; writes
+    nothing. The sample fortress is never stored, so with demo mode on the list is empty."""
+    if is_demo_mode(db):
+        return HistoryDaysOut(demo=True, days=[])
+    return HistoryDaysOut(days=history.stored_days(db))
+
+
+@router.get("/history/{day}", response_model=HistoryFrameOut)
+def get_history_frame(day: date, db: Session = Depends(get_db)) -> HistoryFrameOut:
+    """The Hourglass (#414): one stored day's frame, as stored. A day with no frame (or one that no longer
+    parses) is a 404, never a guess from its neighbours. Read-only; never read back as live state."""
+    if is_demo_mode(db):
+        raise HTTPException(status_code=404, detail="The sample fortress keeps no history.")
+    loaded = history.load_frame(db, day)
+    if loaded is None:
+        raise HTTPException(status_code=404, detail="Nothing was stored for that day.")
+    stored_at, state = loaded
+    return HistoryFrameOut(day=day, stored_at=stored_at, state=state)
 
 
 @router.get("/siege", response_model=SiegeSimOut)

@@ -31,6 +31,7 @@ import Desk from "./Desk";
 import Vault from "./Vault";
 import type { FortressSiegeLevel, FortressVaultLevel, NightWatchStatus } from "../lib/types";
 import WatchPost from "./WatchPost";
+import HourglassPost from "./HourglassPost";
 import RavenBirds from "./RavenBirds";
 import RealmPost from "./RealmPost";
 import Weather from "./Weather";
@@ -321,6 +322,9 @@ function World({ onLockChange, world, area, room, hold, look, onFieldPresets }: 
           </group>
           <group userData={{ perfGroup: "watch" }}>
             <WatchPost status={look.watchStatus} notices={look.noticeSheets} />
+          </group>
+          <group userData={{ perfGroup: "hourglass" }}>
+            <HourglassPost />
           </group>
           <group userData={{ perfGroup: "ravens" }}>
             <RavenBirds count={look.unseenRavens} />
