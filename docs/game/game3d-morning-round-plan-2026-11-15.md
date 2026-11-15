@@ -1,7 +1,7 @@
 # The Morning Round: plan, and step 1 as built (2026-11-15)
 
 Issue #412, item 2 of 4 from the 3D review of 2026-11-14.
-Status: **step 1 merged in PR #416 (331fe05), not deployed (not checked). Step 2 written on branch `feature/3d-morning-round-marks`, PR open for review, not merged, not deployed. Steps 3 and 4 planned, not started.**
+Status: **step 1 merged in PR #416 (331fe05), not deployed (not checked). Step 2 written on branch `feature/3d-morning-round-marks`, PR #420 (issue #421) open for review, not merged, not deployed. Steps 3 and 4 planned, not started.**
 
 ## What this is for
 
