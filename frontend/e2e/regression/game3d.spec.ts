@@ -167,18 +167,25 @@ test.describe("things you can walk up to", () => {
     await page.goto("/game3d?at=mint");
     await expect(page.locator("canvas")).toHaveCount(1, { timeout: 60_000 });
     await expect(page).toHaveTitle(/Royal Mint/);
+    const prompt = page.locator(".g3d-prompt");
     // The prompt shows "Press E to X" as a key cap "E" plus "X" with its first letter capitalised (actionPrompt.ts), so the
-    // patterns below match that, not the sentence in mintWordsV1.ts. Short steps (200 ms, about 1.2 m) so no prompt is stepped over.
+    // patterns below match that, not the sentence in mintWordsV1.ts. Steps of 300 ms (about 1.8 m): long enough that a key press is seen on a slow frame, short enough not to step over a prompt.
     // Up to the press with nothing pulled: it says so and promises nothing.
-    await walkUntil(page, "w", /Pull a lever first, then STAMP/, 200);
-    // West along the room until the span post, then north along the lever wall (the press is solid, so go round it).
-    await walkUntil(page, "a", /look (1 year|3 years) ahead/, 200);
-    await walkUntil(page, "w", /^E\s*Pull (Toll Gate|Great Press)/, 200);
+    await walkUntil(page, "w", /Pull a lever first, then STAMP/, 300);
+    // West until the press prompt lets go (the press is solid, so go round it), then north along the lever wall: from there
+    // the Toll Gate (x -5.6) or the Great Press (x -2.8) is in reach, whichever the hero lands nearer.
+    await expect(async () => {
+      await page.keyboard.down("a");
+      await page.waitForTimeout(300);
+      await page.keyboard.up("a");
+      await expect(prompt).not.toContainText(/STAMP/, { timeout: 400 });
+    }).toPass({ timeout: 60_000, intervals: [50] });
+    await walkUntil(page, "w", /^E\s*Pull (Toll Gate|Great Press)/, 300);
     await page.keyboard.press("e");
     // Back east along the lever row to the middle lever, then south: the press either blocks the way (it is solid) or is
     // passed, and either way its prompt now offers STAMP, because a lever is pulled.
-    await walkUntil(page, "d", /^E\s*Pull Great Melt/, 200);
-    await walkUntil(page, "s", /^E\s*STAMP/, 200);
+    await walkUntil(page, "d", /^E\s*Pull Great Melt/, 300);
+    await walkUntil(page, "s", /^E\s*STAMP/, 300);
 
     const asked = page.waitForResponse((r) => /\/game\/printer\?/.test(r.url()) && r.url().includes("pull="));
     await page.keyboard.press("e");
@@ -192,7 +199,7 @@ test.describe("things you can walk up to", () => {
     // West round the press (it is solid), then south to the door and out.
     await expect(async () => {
       await page.keyboard.down("s");
-      await page.waitForTimeout(200);
+      await page.waitForTimeout(300);
       await page.keyboard.up("s");
       await expect(page.locator(".g3d-prompt")).not.toContainText(/STAMP/, { timeout: 400 });
     }).toPass({ timeout: 60_000, intervals: [50] });
