@@ -15,7 +15,7 @@ const render = (extra: Partial<Parameters<typeof QuestLog>[0]>) =>
 const stop = (o: Partial<Round["stops"][number]> = {}) => ({
   id: "smoke:h:w", kind: "smoke" as const, holdingId: "h", factId: "w", text: "Smoke at Vår Energi", offYard: false, done: false, ...o,
 });
-const round = (o: Partial<Round> = {}): Round => ({ stops: [stop()], more: 0, moreLine: null, open: 1, quiet: false, line: null, ...o });
+const round = (o: Partial<Round> = {}): Round => ({ stops: [stop()], more: 0, moreLine: null, open: 1, quiet: false, line: null, pending: false, ...o });
 
 describe("Today's round in the quest log", () => {
   it("shows the stops at the top, before the Guide, with no tap needed", () => {
@@ -47,9 +47,16 @@ describe("Today's round in the quest log", () => {
     expect(html).toContain("The watch did not report in");
     expect(html).not.toMatch(/All quiet/);
   });
-  it("shows no round in the sample fortress, even if one is passed", () => {
-    expect(render({ demo: true, round: round() })).not.toContain("Smoke at Vår Energi");
-    expect(render({ demo: true, round: round() })).not.toContain("Today&#x27;s round");
+  it("in the sample fortress the same card says it is made up, and can start again", () => {
+    const html = render({ demo: true, round: round(), onRoundAgain: () => {} });
+    expect(html).toContain("Smoke at Vår Energi");
+    expect(html).toContain("Made-up round");
+    expect(html).toContain("Start again");
+  });
+  it("the real round carries no sample label and no start-again button", () => {
+    const html = render({ round: round(), onRoundAgain: () => {} });
+    expect(html).not.toContain("Made-up round");
+    expect(html).not.toContain("Start again");
   });
   it("shows no block when no round is passed", () => {
     expect(render({})).not.toContain("Today&#x27;s round");
