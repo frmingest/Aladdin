@@ -13,6 +13,7 @@ import {
   PRESS_SPOT,
   SPAN_SPOT,
   bookPlate,
+  leverBaseCollider,
   leverLayout,
   leverReadout,
   leverTilt,
@@ -127,6 +128,11 @@ export default function MintRoom({ mint }: Props) {
         <CuboidCollider args={[0.5, MINT.height / 2, LENGTH_Z / 2 + 1]} position={[MINT.minX - 0.5, MINT.height / 2, MID_Z]} />
         <CuboidCollider args={[0.5, MINT.height / 2, LENGTH_Z / 2 + 1]} position={[MINT.maxX + 0.5, MINT.height / 2, MID_Z]} />
         <CuboidCollider args={[WIDTH_X / 2 + 1, MINT.height / 2, 0.5]} position={[0, MINT.height / 2, MINT.maxZ + 0.5]} />
+        {/* Each lever's iron base is solid: you walk round it, not through it. */}
+        {plans.map((p) => {
+          const c = leverBaseCollider(p.x);
+          return <CuboidCollider key={p.key} args={c.half} position={c.position} />;
+        })}
         {/* The press stands in the middle: you walk round it. */}
         <CuboidCollider args={[0.9, 0.9, 0.7]} position={[PRESS_SPOT.x, 0.9, PRESS_SPOT.z - 1.0]} />
       </RigidBody>

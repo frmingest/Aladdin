@@ -112,12 +112,15 @@ test.describe("things you can walk up to", () => {
    * Walks with `key` until the prompt says `text`. It waits on the prompt, not on a clock (software WebGL is slow), and it
    * walks in short steps: a key pressed before the world has finished loading is not heard, so one long press could be lost.
    */
-  async function walkUntil(page: Page, key: string, text: RegExp) {
+  /** What the prompt said after each step, newest last: when a walk times out, the test failure shows where it was heard. */
+  const trail: string[] = [];
+  async function walkUntil(page: Page, key: string, text: RegExp, holdMs = 350) {
     const prompt = page.locator(".g3d-prompt");
     await expect(async () => {
       await page.keyboard.down(key);
-      await page.waitForTimeout(350);
+      await page.waitForTimeout(holdMs);
       await page.keyboard.up(key);
+      trail.push(`${key}: ${(await prompt.allInnerTexts()).join("|") || "(no prompt)"}`);
       await expect(prompt).toContainText(text, { timeout: 400 });
     }).toPass({ timeout: 60_000, intervals: [50] });
   }
@@ -154,6 +157,84 @@ test.describe("things you can walk up to", () => {
     const title = ((await page.locator(".g3d-prompt").innerText()).replace(/^E\s*Read\s*/, "")).trim();
     await page.keyboard.press("e");
     await expect(page.getByRole("complementary", { name: title })).toBeVisible();
+    await problems.assertNone();
+  });
+
+  /** Where the hero stands (development builds publish it every frame; see Scene.tsx). */
+  async function heroAt(page: Page): Promise<{ x: number; z: number }> {
+    const at = await page.evaluate(() => (window as unknown as { __g3dHero?: { x: number; z: number } }).__g3dHero ?? null);
+    expect(at, "the dev build publishes the hero's place").not.toBeNull();
+    return at!;
+  }
+
+  /**
+   * Puts the hero on an exact spot (development builds only, Scene.tsx). On a slow software-rendered frame one key press moves
+   * her several metres, so walking cannot aim at a stand spot. Then waits out the short hover that follows every placement.
+   */
+  async function placeAt(page: Page, x: number, z: number) {
+    await page.evaluate(([px, pz]) => (window as unknown as { __g3dPlace: (a: number, b: number) => void }).__g3dPlace(px, pz), [x, z]);
+    trail.push(`placed at x ${x}, z ${z}`);
+    await page.waitForTimeout(3_500);
+  }
+
+  // #431: the whole Royal Mint round. The hero is placed at each stand spot (a key press moves her several metres on a slow
+  // software-rendered frame, so walking cannot aim); the prompts, the solid lever base, STAMP and the door are then real.
+  // CI cannot see the picture, so it cannot judge that the result wall is in view or that plates read; it checks that the pull
+  // is heard, that STAMP asks the backend with the pulled lever, and that the door leads back out.
+  // The prompt shows "Press E to X" as a key cap "E" plus "X" with its first letter capitalised (actionPrompt.ts), so the
+  // patterns match that, not the sentence in mintWordsV1.ts.
+  test("Royal Mint: pull a lever, STAMP asks the backend, and the door walks back out", async ({ page }) => {
+    test.setTimeout(300_000);
+    const problems = watch(page);
+    trail.length = 0;
+    // The levers on the wall come from the ledger: if it does not load, no lever prompt can ever show. Say so first.
+    const ledgerAsked = page.waitForResponse((r) => r.url().includes("/game/printer/ledger"), { timeout: 60_000 });
+    await page.goto("/game3d?at=mint");
+    await expect(page.locator("canvas")).toHaveCount(1, { timeout: 60_000 });
+    await expect(page).toHaveTitle(/Royal Mint/);
+    const prompt = page.locator(".g3d-prompt");
+    const ledgerAnswer = await ledgerAsked;
+    expect(ledgerAnswer.status(), "the ledger answers").toBe(200);
+    expect(((await ledgerAnswer.json()) as { levers: unknown[] }).levers.length, "the ledger lists levers").toBeGreaterThan(0);
+    try {
+      // Up to the press by walking, with nothing pulled: it says so and promises nothing.
+      await walkUntil(page, "w", /Pull a lever first, then STAMP/, 100);
+      // At the Toll Gate's stand spot (x -5.6, z -6.4) its prompt shows.
+      await placeAt(page, -5.6, -6.4);
+      await expect(prompt).toContainText(/^E\s*Pull Toll Gate/);
+      // Its base is solid (#431): walking north from here stops at the base, a hero's width short of the wall (z -8.65), not at it.
+      await page.keyboard.down("w");
+      await page.waitForTimeout(1_000);
+      await page.keyboard.up("w");
+      await page.waitForTimeout(1_000);
+      const stopped = await heroAt(page);
+      trail.push(`walked north into the base: x ${stopped.x.toFixed(2)}, z ${stopped.z.toFixed(2)}`);
+      expect(stopped.z, "she moved north").toBeLessThan(-6.6);
+      expect(stopped.z, "stopped by the lever base, not the wall").toBeGreaterThan(-8.3);
+      await placeAt(page, -5.6, -6.4);
+      await page.keyboard.press("e");
+      // Beside the press: its prompt now offers STAMP, because a lever is pulled.
+      await placeAt(page, 1.2, -0.2);
+      await expect(prompt).toContainText(/^E\s*STAMP/);
+
+      const asked = page.waitForResponse((r) => /\/game\/printer\?/.test(r.url()) && r.url().includes("pull="));
+      await page.keyboard.press("e");
+      const answer = await asked;
+      expect(answer.status()).toBe(200);
+      expect(new URL(answer.url()).searchParams.get("pull")).toMatch(/^toll_gate:/);
+      // STAMP turns the camera to face east (#431), and walking keys follow the camera: W is east, S west, A north, D south.
+      // Give the turn time to finish (software WebGL is slow) before steering again.
+      await page.waitForTimeout(2_000);
+
+      // By the door: E walks back out.
+      await placeAt(page, 2, 6.5);
+      await expect(prompt).toContainText(/Step back outside/);
+      await page.keyboard.press("e");
+      await expect(page).toHaveTitle(/3D courtyard/);
+      await expect(page).toHaveURL((u) => u.search === "");
+    } catch (e) {
+      throw new Error(`${(e as Error).message}\nPrompts heard after each step (${trail.length} steps; first 40, then last 10):\n${[...trail.slice(0, 40), "...", ...trail.slice(-10)].join("\n")}`);
+    }
     await problems.assertNone();
   });
 });

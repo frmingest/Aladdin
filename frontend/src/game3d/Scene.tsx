@@ -62,7 +62,8 @@ import MintRoom from "./MintRoom";
 import WeatherTowerRoom from "./WeatherTowerRoom";
 import { EMPTY_MINT } from "./useMint";
 import type { MintView } from "./useMint";
-import { leverLayout } from "./mintRoom";
+import { facesResultWall, leverLayout, turnToResultWall } from "./mintRoom";
+import { prefersReducedMotion } from "./motionPref";
 import { AREAS, COURTYARD, sameArea, transitionSpot } from "./areas";
 import type { AreaRef } from "./areas";
 import { cameraRoomOf } from "./cameraRoom";
@@ -219,6 +220,42 @@ function World({ onLockChange, world, area, room, hold, look, onFieldPresets }: 
   const pos = useRef({ x: 0, z: 0 });
   const orbit = useOrbit(onLockChange);
 
+  // The Royal Mint: when you stamp, the camera turns to face the result wall so the plates are in view as they print.
+  // It is one short turn. It only starts if you are not already facing the wall, it stops the moment you look somewhere
+  // yourself (any change to the angles that we did not write), it ends if you leave the room, and it jumps when the system
+  // asks for less motion.
+  const stampWall = look.mint.wall;
+  const inMint = area.id === "mint";
+  const stampTurn = useRef<{ yaw: number; pitch: number } | null>(null);
+  const prevWall = useRef(stampWall);
+  useEffect(() => {
+    if (inMint && stampWall === "loading" && prevWall.current !== "loading" && !facesResultWall(orbit.current)) {
+      stampTurn.current = { yaw: orbit.current.yaw, pitch: orbit.current.pitch };
+    }
+    prevWall.current = stampWall;
+  }, [stampWall, inMint, orbit]);
+  useEffect(() => {
+    if (!inMint) stampTurn.current = null;
+  }, [inMint]);
+  useFrame((_, dt) => {
+    // Browser tests steer by where the hero is, not by how long a key was held (a software-rendered frame is slow and its length
+    // varies). Development builds only: the production build drops this line.
+    if (import.meta.env.DEV) (window as unknown as { __g3dHero?: { x: number; z: number } }).__g3dHero = { x: pos.current.x, z: pos.current.z };
+    const t = stampTurn.current;
+    if (!t) return;
+    const o = orbit.current;
+    // The player looked: the angles are no longer what the turn last wrote. Let go.
+    if (o.yaw !== t.yaw || o.pitch !== t.pitch) {
+      stampTurn.current = null;
+      return;
+    }
+    const step = turnToResultWall(o, Math.min(dt, 0.05), prefersReducedMotion());
+    o.yaw = step.yaw;
+    o.pitch = step.pitch;
+    if (step.done) stampTurn.current = null;
+    else stampTurn.current = { yaw: step.yaw, pitch: step.pitch };
+  });
+
   // One teleport for every door: in at the area's spawn, out at the spot in front of the door you came through.
   const [teleport, setTeleport] = useState<Teleport | null>(null);
   const prevArea = useRef<AreaRef>(COURTYARD);
@@ -230,6 +267,17 @@ function World({ onLockChange, world, area, room, hold, look, onFieldPresets }: 
     const spot = transitionSpot(from, area, world.towers.map(enterableOf));
     if (spot) setTeleport({ key: ++count.current, x: spot.x, z: spot.z, yaw: spot.yaw });
   }, [area, world.towers]);
+
+  // Browser tests place the hero at an exact spot (a key press moves her several metres on a slow software-rendered frame, so
+  // walking cannot aim). Development builds only: the production build drops this hook.
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    const w = window as unknown as { __g3dPlace?: (x: number, z: number) => void };
+    w.__g3dPlace = (x, z) => setTeleport({ key: ++count.current, x, z, yaw: 0 });
+    return () => {
+      delete w.__g3dPlace;
+    };
+  }, []);
 
   // The parts of the list that follow the data: the towers that stand, the stalls up the lane, this land's lanterns.
   const lanterns = room?.lanterns ?? NO_LANTERNS;

@@ -40,7 +40,7 @@ Give the Printer (its engine and API are finished, nothing on screen uses them) 
 ## Game checklist
 
 - **Pages touched:** one new place (Royal Mint), the Town (one building), the parity register (the "planned" Printer row becomes a real door), Game3DPage and Scene (wiring).
-- **Identity:** the Mint is new; 3 on paper (scene, lever kit, a fact in each plate and the needle, Plain view = a side panel at the lectern (E) with the same words as the plates). Seen in a real browser on the demo stack on 2026-11-15; not yet seen by Faiz. Re-score from his screenshots.
+- **Identity:** the Mint is new; 3 on paper (scene, lever kit, a fact in each plate and the needle, Plain view = a side panel at the lectern (E) with the same words as the plates). The 2026-11-15 build (before #431) was clicked through in a real browser on the demo stack; the #431 changes below have not been seen in one. Not yet seen by Faiz. Re-score from his screenshots.
 - **Taps:** common task "see what a lever does to my book": walk in, E on a lever, E on the press = 2 presses.
 - **Cut line:** if it runs long, the needle and the span post go before the plain direction fallback.
 
@@ -52,5 +52,14 @@ Give the Printer (its engine and API are finished, nothing on screen uses them) 
 ## What the player learns, and what is open
 - After a stamp the player learns which way each holding leans and why; unknown stays "Not modelled" and a moved lever marks the old answer. Nothing rewards pulling levers or coming back.
 - Game-voice labels: Toll Gate, Great Press, Great Melt, Coin Rain, Harbour Guard, STAMP, Ledger, Old answer, Not modelled, Direction only.
-- **Open (needs Faiz's eyes on a real GPU, desktop and phone):** the default camera shows the east wall only partly from the press, so the result wall is not in view at stamp time (a follow-up issue tracks framing it); plate legibility; phone profile; walking into lever bases (no colliders yet).
+- **Open (needs Faiz's eyes on a real GPU, desktop and phone):** plate legibility; phone profile (see below). The stamp view and the lever-base colliders are written for #431 (see below).
+
+## #431: stamp view, lever bases, phone (2026-11-15, written, not deployed, not seen in a browser)
+
+- **Stamp view.** When STAMP starts (the wall goes to "loading"), the camera turns once to face the east result wall (the camera stands west of the hero and looks east; pitch 0.3). It starts on every stamp unless the camera already faces the wall (so a player who looked back at the levers is turned again, on purpose), it stops the moment the player looks anywhere themselves, and it ends if they leave the room. With less motion asked for it jumps. Movement keys are camera-relative, so after the turn W walks east; the press is solid, so this is rarely felt. Code: `turnToResultWall` in `mintRoom.ts`, driven from `World` in `Scene.tsx`.
+- **What a unit test proves:** with the camera at its usual 7 metres (from the press it sits inside the room without being pulled in), aimed at the hero, all 12 plate slots (their corners) lie inside a 16:9 view at 60 degrees. It does not prove how it looks.
+- **Lever bases are solid.** One box collider per lever, the size and place of the iron base that is drawn (`leverBaseCollider`); the stand spot in front of each lever stays reachable (tested).
+- **Phone, not solved (issue #434).** In a portrait phone view the horizontal half-field is about 18 degrees, while the outer plates sit about 28 degrees off the middle from the camera, so on a portrait phone the outer columns are cut off at stamp time (arithmetic, not a measurement). Landscape phones are wide enough. A real fix (pull back further on a tall screen, or spread the plates less) needs a phone to look at.
+- **Playwright flow** (`e2e/regression/game3d.spec.ts`, "Royal Mint: pull a lever..."): green in CI on the demo stack. It walks up to the press, places the hero at the Toll Gate's stand spot, checks its prompt, walks north into the lever base and checks she stops at the base (z above -8.3) and not at the wall (-8.65), pulls the lever, checks the press now offers STAMP, STAMPs (`GET /game/printer` with `pull=toll_gate:...`, 200), and leaves by the door. A key press moves the hero several metres on a slow software-rendered frame, so the test places her with a development-build hook (`window.__g3dPlace`, and `window.__g3dHero` to read where she stands, both in `Scene.tsx`, dropped from the production build). It does not check the camera turn or what is on screen.
+- Not covered by CI: the camera turn itself in a browser, the east wall being in view and plates being legible on a real GPU; a person has to look.
 - Performance: the plate texture is drawn once per result; the Old-answer tab is a separate board so a lever pull redraws nothing. Not measured on a phone yet.
