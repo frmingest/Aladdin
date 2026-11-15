@@ -1,7 +1,7 @@
 # The Morning Round: plan, and step 1 as built (2026-11-15)
 
 Issue #412, item 2 of 4 from the 3D review of 2026-11-14.
-Status: **step 1 merged in PR #416 (331fe05), not deployed (not checked). Step 2 written on branch `feature/3d-morning-round-marks`, PR #420 (issue #421) open for review, not merged, not deployed. Steps 3 and 4 planned, not started.**
+Status: **steps 1 and 2 merged (PR #416, PR #420), not deployed (not checked). Step 3 (today's round) in PR #424 and step 4 (sample round) in PR #425, both open for review, not merged, not deployed.**
 
 ## What this is for
 
@@ -17,9 +17,9 @@ it never rewards a trade.
 | Step | What you get | Status |
 | --- | --- | --- |
 | 1. A place for everyone | Every holding has a building and a land to walk into. The yard held 8; it now holds 18 | Built, merged in #416 |
-| 2. The marks | A raven circling, smoke, a bell, a lit stall: one mark per kind of change, standing where the change is | Written, PR open. Spec: `docs/game/game3d-morning-round-marks-spec-2026-11-15.md` |
-| 3. Today's round | A short list in the quest log, one line per stop, each ticked off when you have dealt with it; "since last visit" is remembered; a quiet day says "All quiet" | Planned |
-| 4. The sample round | The sample fortress shows a made-up round, so the feature can be seen without real data | Planned |
+| 2. The marks | A raven circling, smoke, a bell, a lit stall: one mark per kind of change, standing where the change is | Merged in #420. Spec: `docs/game/game3d-morning-round-marks-spec-2026-11-15.md` |
+| 3. Today's round | A short list in the quest log, one line per stop, each ticked off when you have dealt with it; "since last visit" is remembered; a quiet day says "All quiet" | PR #424 open |
+| 4. The sample round | The sample fortress shows a made-up round, so the feature can be seen without real data | PR #425 open (stacked on #424) |
 
 ## Step 1 as built: no more cap of 8
 
@@ -107,9 +107,29 @@ describe it then: "a small bronze hand bell hanging from a wooden post, side vie
 8. **Rules:** shape before colour for every mark; reduced motion stops the circling, the swing and the smoke (the mark still stands); marks are few and instanced.
 9. **Taps:** 0 to see the round, 1 per stop.
 
+## As built (steps 3 and 4), and decisions taken
+
+Decisions taken by the assistant on 2026-11-15 after "you make decisions and go" (Faiz can reverse any of them):
+
+- "Since last visit" is kept in the browser. No database change. Phone and PC each keep their own last visit.
+- The yard stays at 18. Holdings past 18 show in words only (Towers list and the round's "No room" stops). No second yard yet.
+- A price counts as fresh for 5 days; the bell is for thesis review only (named constants in `marks.ts`).
+- In the sample, smoke ticks on entering that holding's land (the sample has no wire to press "I have looked" on).
+
+How it differs from the plan above:
+
+- **Taps:** the round itself costs one tap to read (open Quests). The 0-tap signal is the open count on the closed Quests chip ("Quests 5"). The sample fortress opens Quests once per page load; the real fortress never auto-opens. The plan said "0 taps to see the round"; this is the honest version.
+- A source still loading says nothing; "did not report in" shows only after a read has failed. The round never says quiet while a source is pending or unread.
+- Each stop has a small shape glyph; unticked stops say "(to do)" for screen readers.
+- On phones (640 px and under) the quest panel is capped at 45% of the screen height and scrolls inside; toolbar keyboard hints are hidden to make room for the count.
+
+Seen in a real browser (software graphics, demo stack): the sample round, glyphs, ticking at the spot (walking past does not tick), "Start again", the chip count, and the phone fit. Storage: the real round key is never written in demo.
+
+**Not verified:** "Round done. Nothing left." and the count vanishing at 0 (unit tests only); the lamp on its stall in the sample; the real round against real data (thesis, stall, wire and carried-over ticks); Plain view; a screen reader; a real phone and its frame rate. Still clipped on a 390 px phone: the Quests chip's left edge and the "Sound" chip (the clipping existed before; not compared with `main` on every chip).
+
 ## Open questions for Faiz
 
-1. **More than 18 holdings?** The yard inside the wall is now full at 18. If you hold more, the choice is a second
+1. **More than 18 holdings?** (Decided for now: stays 18, extras in words.) The yard inside the wall is now full at 18. If you hold more, the choice is a second
    yard through a gate, or leaving the smallest in the list only. How many holdings do you have today?
-2. **"Since last visit" kept in the browser** (recommended, no database change) or on the server (same on phone and PC,
+2. **"Since last visit" kept in the browser** (Decided: browser.) (recommended, no database change) or on the server (same on phone and PC,
    needs a small new table)?
