@@ -27,11 +27,10 @@ import {
 import type { Texture } from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { normalised } from "./staticBatch";
-import { FLAME_COLOUR, FROZEN_T, SMOKE_COLOUR, THIN_SMOKE, fxSide, fxStateInto, jitter } from "./fxPlan";
+import { BRONZE_COLOUR, FLAME_COLOUR, FROZEN_T, THIN_SMOKE, fxSide, fxStateInto, jitter } from "./fxPlan";
 import type { FxState } from "./fxPlan";
 import type { PlacedMarks } from "./marks";
 import { PAL } from "./Inked";
-import { FEATHER } from "./watchPlan";
 
 export const MARKS_GROUP = "marks";
 
@@ -99,6 +98,9 @@ export function lampCapGeometry(): BufferGeometry {
   ]);
 }
 
+/** Bigger than life so they read at yard distance. The raven body is mid slate, not near-black: it reads against a dark tower and a pale sky. */
+const RAVEN_SCALE = 1.8;
+const BELL_SCALE = 1.4;
 const RAVEN_SPEED = 0.3;
 const BELL_SWING = 0.32;
 const BELL_RATE = 1.5;
@@ -147,23 +149,23 @@ export class MarkRig {
     this.sides = new Float32Array(THIN_SMOKE.count * 2);
     for (let k = 0; k < THIN_SMOKE.count; k++) [this.sides[2 * k], this.sides[2 * k + 1]] = fxSide(k);
     if (ravens.length > 0) {
-      this.ravens = mesh(own(birdGeometry()), own(new MeshStandardMaterial({ color: FEATHER, flatShading: true })), ravens.length);
+      this.ravens = mesh(own(birdGeometry()), own(new MeshStandardMaterial({ color: PAL.slateDark, flatShading: true })), ravens.length);
       this.group.add(this.ravens);
     }
     if (smoke.length > 0 && map) {
-      const mt = own(new MeshBasicMaterial({ map, color: SMOKE_COLOUR, transparent: true, opacity: THIN_SMOKE.alpha, depthWrite: false, toneMapped: false, side: DoubleSide }));
+      const mt = own(new MeshBasicMaterial({ map, color: PAL.slateDark, transparent: true, opacity: THIN_SMOKE.alpha, depthWrite: false, toneMapped: false, side: DoubleSide }));
       this.smoke = mesh(own(new PlaneGeometry(1, 1)), mt, smoke.length * THIN_SMOKE.count);
       this.group.add(this.smoke);
     }
     if (bells.length > 0) {
-      this.bells = mesh(own(bellGeometry()), own(new MeshStandardMaterial({ color: PAL.timberLight, flatShading: true })), bells.length);
+      this.bells = mesh(own(bellGeometry()), own(new MeshStandardMaterial({ color: BRONZE_COLOUR, flatShading: true })), bells.length);
       this.posts = mesh(own(postGeometry()), own(new MeshStandardMaterial({ color: PAL.timberDark, flatShading: true })), bells.length);
       this.group.add(this.posts, this.bells);
       // The posts never move: posed once here, not per frame.
       bells.forEach((b, i) => {
         tmp.position.set(b.x, 0, b.z);
         tmp.rotation.set(0, b.yaw, 0);
-        tmp.scale.setScalar(1);
+        tmp.scale.setScalar(BELL_SCALE);
         tmp.updateMatrix();
         this.postMats.push(tmp.matrix.clone());
         this.posts!.setMatrixAt(i, tmp.matrix);
@@ -184,7 +186,7 @@ export class MarkRig {
       for (let i = 0; i < ravens.length; i++) {
         const r = ravens[i];
         const a = this.ravenPhase[i] + clock * RAVEN_SPEED;
-        tmp.scale.setScalar(1);
+        tmp.scale.setScalar(RAVEN_SCALE);
         tmp.position.set(r.x + Math.cos(a) * r.r, r.y + (reduced ? 0 : Math.sin(clock * 0.9 + i) * 0.12), r.z + Math.sin(a) * r.r);
         tmp.rotation.set(0, Math.atan2(-Math.sin(a), Math.cos(a)), reduced ? 0 : Math.sin(clock * 1.1 + i) * 0.08);
         tmp.updateMatrix();

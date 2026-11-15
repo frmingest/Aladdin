@@ -195,6 +195,20 @@ describe("anchors", () => {
     const b = many(1, () => ({ wall: "rotted", moat: "none", thesis: "breached" }))[0];
     expect(markAnchor(a)).toEqual(markAnchor(b));
   });
+  it("smoke starts above the holding's own roof, and the raven circles higher still", () => {
+    for (const size of ["great", "medium", "small", "tiny", "unknown"] as const) {
+      const t = many(1, () => ({ size_class: size }))[0];
+      const a = markAnchor(t)!;
+      expect(a.smoke.y).toBeGreaterThan(t.height);
+      expect(a.raven.y).toBeGreaterThan(t.height);
+      // Straight above the building, not hidden behind it.
+      expect(a.smoke.x).toBeCloseTo(t.spot.x);
+      expect(a.smoke.z).toBeCloseTo(t.spot.z);
+    }
+    const tall = many(1, () => ({ size_class: "great" }))[0];
+    const low = many(1, () => ({ size_class: "tiny" }))[0];
+    expect(markAnchor(tall)!.smoke.y).toBeGreaterThan(markAnchor(low)!.smoke.y);
+  });
   it("an off-yard tower has no anchor", () => {
     const big = many(HOLDING_SPOT_COUNT + 1);
     expect(markAnchor(big[big.length - 1])).toBeNull();

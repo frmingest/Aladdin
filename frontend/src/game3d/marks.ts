@@ -222,11 +222,14 @@ export function plainMarkLines(t: TowerView, marks: HoldingMarks, lit?: Readonly
 
 // --- Where each mark stands ------------------------------------------------------------------------------------------
 /** Fixed heights, estimated from the building models and not measured: a look decides, nudge here. */
+/** The raven circles at least this high, and always this far above the building's roof. */
 export const RAVEN_HEIGHT = 9;
-export const RAVEN_MAX_RADIUS = 2.4;
-export const SMOKE_BASE_HEIGHT = 4.2;
-/** How far behind the middle of the plot the smoke rises, as a share of the footprint. */
-export const SMOKE_BACK = 0.35;
+export const RAVEN_ABOVE_ROOF = 3;
+export const RAVEN_MAX_RADIUS = 3;
+/** The smoke starts this far above the roof of its holding (the tower's height), so no wall hides it from the yard. */
+export const SMOKE_ABOVE_ROOF = 0.6;
+/** How far behind the middle of the plot the smoke rises, as a share of the footprint (0: straight above the roof). */
+export const SMOKE_BACK = 0;
 /** The bell stands this far to the side of the door point. */
 export const BELL_SIDE = 1.8;
 /** The bell post keeps at least this far from every door point (its own too): it can never block a door. */
@@ -238,8 +241,8 @@ export interface MarkAnchor {
   bell: { x: number; z: number; yaw: number };
 }
 
-/** From the plot only (position, footprint, door): a mark never says anything about size, wall or moat. Null off-yard. */
-export function markAnchor(t: Pick<TowerView, "spot" | "plot">): MarkAnchor | null {
+/** From the plot (position, footprint, door) and the building's roof height, never wall, moat or verdict. Null off-yard. */
+export function markAnchor(t: Pick<TowerView, "spot" | "plot" | "height">): MarkAnchor | null {
   const p = t.plot;
   if (!p) return null;
   const s: Spot = t.spot;
@@ -248,8 +251,8 @@ export function markAnchor(t: Pick<TowerView, "spot" | "plot">): MarkAnchor | nu
   const len = Math.hypot(bx, bz) || 1;
   const back = p.footprint * SMOKE_BACK;
   return {
-    raven: { x: s.x, y: RAVEN_HEIGHT, z: s.z, r: Math.min(RAVEN_MAX_RADIUS, p.footprint * 0.5) },
-    smoke: { x: s.x + (bx / len) * back, y: SMOKE_BASE_HEIGHT, z: s.z + (bz / len) * back },
+    raven: { x: s.x, y: Math.max(RAVEN_HEIGHT, t.height + RAVEN_ABOVE_ROOF), z: s.z, r: Math.min(RAVEN_MAX_RADIUS, p.footprint * 0.5) },
+    smoke: { x: s.x + (bx / len) * back, y: t.height + SMOKE_ABOVE_ROOF, z: s.z + (bz / len) * back },
     bell: {
       x: p.door.x + Math.cos(p.doorYaw) * BELL_SIDE,
       z: p.door.z - Math.sin(p.doorYaw) * BELL_SIDE,

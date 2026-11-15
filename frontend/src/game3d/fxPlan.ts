@@ -23,11 +23,13 @@ export const SMOKE: FxSpec = { count: 7, life: 5, rise: 5, drift: 1.2, from: 0.6
 export const SPARKS: FxSpec = { count: 10, life: 1.1, rise: 1.3, drift: 0.7, from: 0.14, to: 0.04, alpha: 1 };
 
 /** A tall, thin column: the smoke mark of a wire that fired and is not yet looked at (marks.ts). Taller than any chimney plume. */
-export const THIN_SMOKE: FxSpec = { count: 6, life: 7, rise: 9, drift: 0.4, from: 0.5, to: 1.2, alpha: 0.55 };
+export const THIN_SMOKE: FxSpec = { count: 12, life: 8, rise: 14, drift: 0.5, from: 1.2, to: 2.6, alpha: 0.9 };
 
 /** Smoke grey and lantern flame: one place, shared by the chimney plume, the lantern post, the smoke mark and the stall lamp. */
 export const SMOKE_COLOUR = "#c9c4bb";
 export const FLAME_COLOUR = "#f4c35a";
+/** A brighter bronze for the bell, so it reads at yard distance. */
+export const BRONZE_COLOUR = "#d89a3c";
 
 /** The time a frozen column (reduced motion) is drawn at. Sprites are spread through the cycle, so it still reads as a column. */
 export const FROZEN_T = 3.5;
