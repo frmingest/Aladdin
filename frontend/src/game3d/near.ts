@@ -26,6 +26,22 @@ import {
   nearestLantern,
 } from "./holdingLand";
 import { nearestShelf } from "./libraryRoom";
+import {
+  BOOK_LEAVE_RANGE,
+  BOOK_RANGE,
+  MINT_DOOR_LEAVE_RANGE,
+  MINT_DOOR_RANGE,
+  PRESS_LEAVE_RANGE,
+  PRESS_RANGE,
+  SPAN_LEAVE_RANGE,
+  SPAN_RANGE,
+  nearBook,
+  nearMintDoor,
+  nearPress,
+  nearSpan,
+  nearestLever,
+} from "./mintRoom";
+import type { LeverPlan } from "./mintRoom";
 import type { ShelfId } from "./libraryShelves";
 import { LEAVE_RANGE, NPCS, TALK_RANGE } from "./npcs";
 import type { NpcId } from "./npcs";
@@ -105,6 +121,12 @@ export interface Nears {
   /** Weather Tower: in front of the dials, and at the door. */
   dials: boolean;
   weatherDoor: boolean;
+  /** Royal Mint: which lever you stand at, the span post, the press, the ledger lectern, and the door. */
+  mintLever: string | null;
+  mintSpan: boolean;
+  mintPress: boolean;
+  mintBook: boolean;
+  mintDoor: boolean;
   /** Courtyard: at the gate to the Siege Field. */
   siegeGate: boolean;
   /** Siege Field: the road back is in reach. */
@@ -142,6 +164,11 @@ export const NO_NEARS: Nears = {
   archiveDoor: false,
   dials: false,
   weatherDoor: false,
+  mintLever: null,
+  mintSpan: false,
+  mintPress: false,
+  mintBook: false,
+  mintDoor: false,
   siegeGate: false,
   fieldExit: false,
   fieldSpot: null,
@@ -150,9 +177,9 @@ export const NO_NEARS: Nears = {
 };
 
 /** The spots that are one of several: the answer carries which one. */
-type ManyKind = "npc" | "tower" | "booth" | "stall" | "shelf" | "lantern" | "building" | "fieldSpot" | "board";
+type ManyKind = "npc" | "tower" | "booth" | "stall" | "shelf" | "lantern" | "building" | "fieldSpot" | "board" | "mintLever";
 /** The spots there is one of. */
-type OneKind = "desk" | "drill" | "siegeGate" | "quarterGate" | "sign" | "vault" | "watch" | "perch" | "realm" | "table" | "shelves" | "dials";
+type OneKind = "desk" | "drill" | "siegeGate" | "quarterGate" | "sign" | "vault" | "watch" | "perch" | "realm" | "table" | "shelves" | "dials" | "mintSpan" | "mintPress" | "mintBook";
 
 export type Standing =
   | { kind: "none" }
@@ -172,9 +199,11 @@ export interface SpotWorld {
   towers: readonly { holdingId: string; spot: Pos; radius: number; plot?: { footprint: number } | null }[];
   stalls: readonly { holdingId: string; x: number; z: number }[];
   lanterns: readonly { check: SurveyCheckId; x: number; z: number }[];
+  /** The levers on the Royal Mint's wall (one for each lever the ledger lists). */
+  mintLevers: readonly LeverPlan[];
 }
 
-export const NO_SPOT_WORLD: SpotWorld = { towers: [], stalls: [], lanterns: [] };
+export const NO_SPOT_WORLD: SpotWorld = { towers: [], stalls: [], lanterns: [], mintLevers: [] };
 
 export interface Spot<K extends SpotKey = SpotKey> {
   /** Its field in `Nears`. */
@@ -269,6 +298,13 @@ export const SPOTS: readonly Spot[] = [
   // The Weather Tower.
   spot({ key: "dials", kind: "dials", area: "weather", detect: ranged(nearDials, DIALS_RANGE, DIALS_LEAVE_RANGE) }),
   spot({ key: "weatherDoor", kind: "leave", area: "weather", detect: ranged(nearTowerDoor, TOWER_DOOR_RANGE, TOWER_DOOR_LEAVE_RANGE) }),
+
+  // The Royal Mint: a lever beats the press, the press beats the span post and the lectern; the way out comes last.
+  spot({ key: "mintLever", kind: "mintLever", area: "mint", detect: (pos, held, w) => nearestLever(pos, w.mintLevers, held) }),
+  spot({ key: "mintPress", kind: "mintPress", area: "mint", detect: ranged(nearPress, PRESS_RANGE, PRESS_LEAVE_RANGE) }),
+  spot({ key: "mintSpan", kind: "mintSpan", area: "mint", detect: ranged(nearSpan, SPAN_RANGE, SPAN_LEAVE_RANGE) }),
+  spot({ key: "mintBook", kind: "mintBook", area: "mint", detect: ranged(nearBook, BOOK_RANGE, BOOK_LEAVE_RANGE) }),
+  spot({ key: "mintDoor", kind: "leave", area: "mint", detect: ranged(nearMintDoor, MINT_DOOR_RANGE, MINT_DOOR_LEAVE_RANGE) }),
 
   // The Siege Field: a tool beats the road back; the exit stands far from every tool (test).
   spot({ key: "fieldSpot", kind: "fieldSpot", area: "siege", detect: (pos, held) => fieldSpotAt(pos, held) }),

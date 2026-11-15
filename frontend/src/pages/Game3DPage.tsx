@@ -28,6 +28,11 @@ import { REGISTER } from "../game3d/parity3d";
 import type { Door } from "../game3d/parity3d";
 import { RECORDS_ROUTE, archiveDoorPrompt, shelfPrompt } from "../game3d/recordsHallRoom";
 import { MACRO_ROUTE, dialsPrompt, towerDoorPrompt } from "../game3d/weatherTowerRoom";
+import MintPlainPanel from "../game3d/MintPlainPanel";
+import { bookPrompt, doorPrompt as mintDoorPrompt } from "../game3d/mintRoom";
+import { leverReadout } from "../game3d/mintRoom";
+import { MINT_WORDS } from "../game3d/mintWordsV1";
+import { useMint } from "../game3d/useMint";
 import { PLAIN_VIEW, PLAIN_VIEW_TITLE, SIGN_PROMPT } from "../game3d/worldWordsV2";
 import { drillBlock, stormDrillQuest } from "../game3d/stormDrill";
 import { DRILL_PROMPT } from "../game3d/stormDrillWordsV1";
@@ -534,6 +539,9 @@ export default function Game3DPage() {
   const sound = useAmbience(ambienceLevel(area.id, state?.siege?.level ?? null));
   const inHall = area.id === "townhall";
   const inRecords = area.id === "records";
+  // The Royal Mint: the lever list is read the first time you go in; the stamped answer lives here, not in the scene.
+  const mint = useMint(area.id === "mint");
+  const [plainOpen, setPlainOpen] = useState(false);
 
   // The address follows the place (replace, not push, so the browser's Back leaves the page instead of re-walking your steps).
   useEffect(() => {
@@ -610,7 +618,6 @@ export default function Game3DPage() {
     setOnlyPlace(null);
     setOnlyRoutes(null);
   }, []);
-  const pickDoor = useCallback((door: Door) => setWorldPage(door), []);
   // E at a stall: that company's store, in the world panel (the flat store page itself).
   const openStore = useCallback((holdingId: string) => {
     const door = storeDoor(holdingId);
@@ -665,6 +672,7 @@ export default function Game3DPage() {
       setSpotPanels(NO_SPOT_PANELS);
       setLampOpen(false);
       closeLand();
+      setPlainOpen(false);
       if (ref.id === "weather") setGuideSaved(markWeatherVisited);
       dispatchArea({ type: "enter", ref });
     },
@@ -672,8 +680,21 @@ export default function Game3DPage() {
   );
   const leaveArea = useCallback(() => {
     closeLand();
+    setPlainOpen(false);
     dispatchArea({ type: "leave" });
   }, [closeLand]);
+  // A world-only door (the Royal Mint) has no page: picking it walks you in and puts the menu away.
+  const pickDoor = useCallback(
+    (door: Door) => {
+      if (door.world) {
+        closeWhere();
+        enterArea({ id: door.world });
+        return;
+      }
+      setWorldPage(door);
+    },
+    [closeWhere, enterArea],
+  );
   // E at the winch, a marker stone or a yardstick banner: the same what-if, a different fall or yardstick.
   const workFieldSpot = useCallback((id: FieldSpotId) => {
     setFieldTools((t) => {
@@ -714,7 +735,7 @@ export default function Game3DPage() {
   // E at a building: a room of its own, its page in the world panel, or (the Workshop) the menu of its place.
   const openBuilding = useCallback(
     (id: BuildingId) => {
-      if (id === "townhall" || id === "records" || id === "weather") return enterArea({ id });
+      if (id === "townhall" || id === "records" || id === "weather" || id === "mint") return enterArea({ id });
       const b = BUILDINGS.find((x) => x.id === id);
       const action = b ? doorAction(b) : null;
       if (!action) return;
@@ -856,6 +877,31 @@ export default function Game3DPage() {
     // The rooms and the fields.
     shelves: { prompt: () => (whereOpen ? null : shelfPrompt), press: () => openPage(RECORDS_ROUTE) },
     dials: { prompt: () => (whereOpen ? null : dialsPrompt), press: () => openPage(MACRO_ROUTE) },
+    // The Royal Mint: a lever moves one notch, the span post flips 1 and 3 years, the press stamps, the lectern opens the plain list.
+    mintLever: {
+      prompt: (at) => {
+        const lever = mint.view.levers.find((l) => l.key === at.id);
+        return lever ? MINT_WORDS.leverPrompt(lever.name) : null;
+      },
+      note: (at) => {
+        const lever = mint.view.levers.find((l) => l.key === at.id);
+        return lever ? leverReadout(lever, mint.view.leverState[lever.key] ?? -1) : null;
+      },
+      press: (at) => mint.pull(at.id),
+    },
+    mintPress: {
+      prompt: () => (mint.view.wall === "loading" ? MINT_WORDS.pressBusy : mint.canStamp ? MINT_WORDS.pressPrompt : MINT_WORDS.pressNeedsPull),
+      note: () => (mint.view.wall === "failed" ? MINT_WORDS.pressFailed : null),
+      press: () => mint.stamp(),
+    },
+    mintSpan: { prompt: () => MINT_WORDS.spanPrompt(mint.view.horizon), press: () => mint.toggleSpan() },
+    mintBook: {
+      prompt: () => (plainOpen ? null : bookPrompt),
+      press: () => {
+        if (document.pointerLockElement) document.exitPointerLock();
+        setPlainOpen(true);
+      },
+    },
     board: { prompt: (at) => (whereOpen ? null : hallPrompt(boardById(at.id))), press: (at) => openBoard(at.id) },
     fieldSpot: { prompt: (at) => (whereOpen ? null : fieldSpotPrompt(at.id, fieldTools)), press: (at) => workFieldSpot(at.id) },
     stall: {
@@ -878,7 +924,9 @@ export default function Game3DPage() {
                   ? archiveDoorPrompt
                   : area.id === "weather"
                     ? towerDoorPrompt
-                    : hallDoorPrompt,
+                    : area.id === "mint"
+                      ? mintDoorPrompt
+                      : hallDoorPrompt,
       press: leaveArea,
     },
   };
@@ -1097,8 +1145,9 @@ export default function Game3DPage() {
       litStalls: lit,
       archLit: archLit(lit),
       noticeSheets: sheets,
+      mint: mint.view,
     }),
-    [sheets, quest.written, state, nightWatch, unseenRavens, realmLevel, drillOpen, questMarks, talking, cheerKey, standingText.lit, fieldTools, quarter, archCounts, placedMarks, lit],
+    [mint.view, sheets, quest.written, state, nightWatch, unseenRavens, realmLevel, drillOpen, questMarks, talking, cheerKey, standingText.lit, fieldTools, quarter, archCounts, placedMarks, lit],
   );
 
   if (!supported) return <Unavailable />;
@@ -1112,7 +1161,7 @@ export default function Game3DPage() {
 
 
   // One Back button for every room (C2): the Town Hall, the Hall of Records, the Weather Tower and a holding's tower.
-  const backOutside = roomView || inHall || inRecords || area.id === "weather" ? leaveArea : null;
+  const backOutside = roomView || inHall || inRecords || area.id === "weather" || area.id === "mint" ? leaveArea : null;
   // Any panel or dialog on screen: the hint line steps aside for it.
   const anyPanelOpen =
     panels.quests || panels.towers || whereOpen || vaultOpen || realmOpen || watchOpen || perchOpen || deskOpen || drillOpen || lampOpen || boothOpen !== null || report !== null;
@@ -1142,6 +1191,7 @@ export default function Game3DPage() {
         sound={sound.supported ? { on: sound.on, onToggle: sound.toggle } : undefined}
       />
       {showPerf && <PerfBreakdown stats={stats} />}
+      {area.id === "mint" && plainOpen && <MintPlainPanel result={mint.view.result} stale={mint.view.wall === "stale"} onClose={() => setPlainOpen(false)} />}
       {whereOpen && !worldPage && <WhereToPanel onPick={pickDoor} onClose={closeWhere} only={onlyPlace} onlyRoutes={onlyRoutes} />}
       {whereOpen && worldPage && <WorldPanel door={worldPage} onBack={() => setWorldPage(null)} onClose={closeWhere} />}
       {panels.towers && <TowerPanel world={shownWorld} loading={loading} error={error} onRetry={load} onClose={() => flip("towers")} marks={marks} lit={lit} noticeSheets={sheets} />}

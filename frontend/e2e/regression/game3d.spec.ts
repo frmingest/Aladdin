@@ -16,6 +16,7 @@ const PLACES: { at: string; title: RegExp }[] = [
   { at: "weather", title: /Weather Tower/ },
   { at: "siege", title: /Siege/ },
   { at: "quarter", title: /Market Quarter/ },
+  { at: "mint", title: /Royal Mint/ },
 ];
 
 /** The side panels, the key that toggles each, and the name the panel carries. */

@@ -57,7 +57,11 @@ import type { LandCentreSlot } from "./landCentre";
 import Village from "./Village";
 import TownHallRoom from "./TownHallRoom";
 import RecordsHallRoom from "./RecordsHallRoom";
+import MintRoom from "./MintRoom";
 import WeatherTowerRoom from "./WeatherTowerRoom";
+import { EMPTY_MINT } from "./useMint";
+import type { MintView } from "./useMint";
+import { leverLayout } from "./mintRoom";
 import { AREAS, COURTYARD, sameArea, transitionSpot } from "./areas";
 import type { AreaRef } from "./areas";
 import { cameraRoomOf } from "./cameraRoom";
@@ -110,6 +114,8 @@ export interface SceneLook {
   archLit: boolean;
   /** Sheets pinned on the Watch Post, 0 to 3. */
   noticeSheets: number;
+  /** The Royal Mint: the levers, where each is set, the span and the last stamped answer. */
+  mint: MintView;
 }
 
 /** A world with nothing read yet: bare, dark and honest. */
@@ -132,6 +138,7 @@ const EMPTY_LOOK: SceneLook = {
   litStalls: NO_LIT,
   archLit: false,
   noticeSheets: 0,
+  mint: EMPTY_MINT,
 };
 
 interface WorldProps {
@@ -225,7 +232,8 @@ function World({ onLockChange, world, area, room, hold, look, onFieldPresets }: 
 
   // The parts of the list that follow the data: the towers that stand, the stalls up the lane, this land's lanterns.
   const lanterns = room?.lanterns ?? NO_LANTERNS;
-  const spotWorld = useMemo<SpotWorld>(() => ({ towers: world.towers, stalls: look.quarter.stalls, lanterns }), [world.towers, look.quarter.stalls, lanterns]);
+  const mintLevers = useMemo(() => leverLayout(look.mint.levers).plans, [look.mint.levers]);
+  const spotWorld = useMemo<SpotWorld>(() => ({ towers: world.towers, stalls: look.quarter.stalls, lanterns, mintLevers }), [world.towers, look.quarter.stalls, lanterns, mintLevers]);
   const { cheerKey } = look;
 
   return (
@@ -237,6 +245,10 @@ function World({ onLockChange, world, area, room, hold, look, onFieldPresets }: 
       ) : area.id === "weather" ? (
         <group userData={{ perfGroup: "weather" }}>
           <WeatherTowerRoom pos={pos} />
+        </group>
+      ) : area.id === "mint" ? (
+        <group userData={{ perfGroup: "mint" }}>
+          <MintRoom mint={look.mint} />
         </group>
       ) : area.id === "townhall" ? (
         <group userData={{ perfGroup: "hall" }}>

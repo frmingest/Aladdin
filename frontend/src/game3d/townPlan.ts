@@ -25,7 +25,7 @@ export const GATE_RETURN = { x: 0, z: GATE_SPOT.z - GATE_LEAVE_RANGE - 1 } as co
 /** Camera yaw 0 looks north into the courtyard. */
 export const GATE_RETURN_YAW = 0;
 
-export type BuildingId = "records" | "cartographer" | "archive" | "workshop" | "townhall" | "weather";
+export type BuildingId = "records" | "cartographer" | "archive" | "workshop" | "townhall" | "weather" | "mint";
 
 export interface Building {
   id: BuildingId;
@@ -71,7 +71,7 @@ export function building(
 }
 
 /**
- * The six buildings, in two rows of three either side of the gate road, all facing it (rows at z 66, 79 and 92). West side,
+ * The six buildings, in two rows of three either side of the gate road, all facing it (rows at z 66, 79 and 92), and the Royal Mint on the east lawn. West side,
  * from the gate out: Town Hall (the market hall), Cartographer (the watchtower), Weather Tower (a watchtower, macro dials). East
  * side: Archive (the house), Workshop (the lumber mill), Hall of Records (the castle, the big one at the far end). Proposed
  * models; a look decides (the plan's gate). The Town Hall's door stands where it first stood outside the gate (2026-11-10).
@@ -84,6 +84,10 @@ export const BUILDINGS: readonly Building[] = [
   building("archive", "house", "Archive", 12.5, 66, -Math.PI / 2, { route: "/glossary" }),
   building("workshop", "lumbermill", "Workshop", 12.5, 79, -Math.PI / 2, { place: "workshop" }),
   building("records", "castle", "Hall of Records", 12.5, 92, -Math.PI / 2, { route: "/fortress/records" }),
+  // The Royal Mint (#413) stands on the east lawn beside the road, between the Workshop's row and the Archive's: the six slots in
+  // the rows are full, and the head of the road is too cramped (the third row's step-out spots land there). It opens as its own
+  // place (the Game page intercepts it); a world-only door with no flat page.
+  building("mint", "castle", "Royal Mint", 28, 72, -Math.PI / 2, { place: "mint" }),
 ];
 
 /** Extra clear ground round a building, so the door mat in front of it is not planted over. */

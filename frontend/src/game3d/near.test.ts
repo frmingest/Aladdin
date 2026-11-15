@@ -143,6 +143,7 @@ describe("watchSpots: one watcher for every place", () => {
       towers: [{ holdingId: "h1", spot: { x: 200, z: 200 }, radius: 2 }],
       stalls: [{ holdingId: "s1", x: 300, z: 300 }],
       lanterns: [{ check: "analysis", x: 400, z: 400 }],
+      mintLevers: [],
     };
     expect(watchSpots("courtyard", { x: 200, z: 203 }, NO_NEARS, world)).toMatchObject({ tower: "h1" });
     expect(watchSpots("quarter", { x: 300, z: 300 }, NO_NEARS, world)).toMatchObject({ stall: "s1" });

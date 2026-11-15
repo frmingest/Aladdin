@@ -1,7 +1,7 @@
 /**
  * The map of places (S21). Pure data and maths, no three.js and no React.
  *
- * Every place you can stand in (the courtyard, the Town, the Town Hall (its door is on the meadow outside the gate), the Hall of Records, the Weather Tower, a holding's land)
+ * Every place you can stand in (the courtyard, the Town, the Town Hall (its door is on the meadow outside the gate), the Hall of Records, the Weather Tower, the Royal Mint, a holding's land)
  * is one entry here: where you arrive, where its doors are, how it is lit and where "leave" takes you. The numbers
  * are NOT new: each entry points at the spawn, door and exit constants that already live in the room modules, so
  * adding this list moved nothing. `siege` is the Siege Field (asset plan A5) and `quarter` the Market Quarter (A6). A tower door now leads to that holding's
@@ -20,6 +20,15 @@ import {
   ARCHIVE_YAW,
   archiveExit,
 } from "./recordsHallRoom";
+import {
+  MINT,
+  MINT_DOOR,
+  MINT_DOOR_LEAVE_RANGE,
+  MINT_DOOR_RANGE,
+  MINT_SPAWN,
+  MINT_YAW,
+  mintExit,
+} from "./mintRoom";
 import {
   TOWER,
   TOWER_DOOR,
@@ -73,6 +82,7 @@ export type AreaRef =
   | { id: "townhall" }
   | { id: "records" }
   | { id: "weather" }
+  | { id: "mint" }
   | { id: "siege" }
   | { id: "quarter" }
   | { id: "holding"; holdingId: string };
@@ -117,7 +127,7 @@ export interface AreaDef {
 const circleBox = (r: number): AreaBox => ({ minX: -r, maxX: r, minZ: -r, maxZ: r });
 const insideBox = (b: AreaBox): AreaBox => ({ minX: b.minX, maxX: b.maxX, minZ: b.minZ, maxZ: b.maxZ });
 
-const buildingDoor = (id: "townhall" | "records" | "weather"): AreaDoor => {
+const buildingDoor = (id: "townhall" | "records" | "weather" | "mint"): AreaDoor => {
   const b = BUILDINGS.find((x) => x.id === id);
   const s = b ? doorSpot(b) : { x: 0, z: 0 };
   return { id, x: s.x, z: s.z, range: BUILDING_DOOR_RANGE, leaveRange: BUILDING_DOOR_LEAVE_RANGE, to: id };
@@ -140,6 +150,7 @@ export const AREAS: Record<AreaId, AreaDef> = {
       buildingDoor("townhall"),
       buildingDoor("records"),
       buildingDoor("weather"),
+      buildingDoor("mint"),
     ],
   },
   townhall: {
@@ -170,6 +181,15 @@ export const AREAS: Record<AreaId, AreaDef> = {
     bounds: insideBox(TOWER),
     spawn: { x: TOWER_SPAWN.x, z: TOWER_SPAWN.z, yaw: TOWER_YAW },
     doors: [{ id: "door", x: TOWER_DOOR.x, z: TOWER_DOOR.z, range: TOWER_DOOR_RANGE, leaveRange: TOWER_DOOR_LEAVE_RANGE, to: "parent" }],
+  },
+  mint: {
+    id: "mint",
+    parent: "courtyard",
+    kind: "indoor",
+    lighting: "indoor",
+    bounds: insideBox(MINT),
+    spawn: { x: MINT_SPAWN.x, z: MINT_SPAWN.z, yaw: MINT_YAW },
+    doors: [{ id: "door", x: MINT_DOOR.x, z: MINT_DOOR.z, range: MINT_DOOR_RANGE, leaveRange: MINT_DOOR_LEAVE_RANGE, to: "parent" }],
   },
   siege: {
     id: "siege",
@@ -237,6 +257,7 @@ export function returnSpot(from: AreaRef, to: AreaRef, towers: readonly Enterabl
   if (from.id === "townhall" && to.id === "courtyard") return hallExit();
   if (from.id === "records" && to.id === "courtyard") return archiveExit();
   if (from.id === "weather" && to.id === "courtyard") return towerExit();
+  if (from.id === "mint" && to.id === "courtyard") return mintExit();
   return null;
 }
 

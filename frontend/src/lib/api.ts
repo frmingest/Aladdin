@@ -36,6 +36,9 @@ import type {
   FundReturn,
   GameState,
   Standing,
+  PrinterLedger,
+  PrinterPull,
+  PrinterResult,
   SiegeBacktest,
   SiegeBenchmarkKey,
   SiegeSim,
@@ -445,6 +448,15 @@ export const api = {
     request<SiegeSim>("/game/siege", {
       query: { market_drop: marketDrop === undefined ? undefined : marketDrop.toFixed(3), benchmark },
     }),
+
+  // The Printer (Royal Mint): a scenario over stored data, read-only, no LLM. Pulls go as repeated `pull=lever:size:variant`.
+  getPrinterLedger: () => request<PrinterLedger>("/game/printer/ledger"),
+  getPrinter: (pulls: readonly PrinterPull[], horizon: number) => {
+    const params = new URLSearchParams();
+    for (const p of pulls) params.append("pull", `${p.lever}:${p.size}:${p.variant}`);
+    params.set("horizon", String(horizon));
+    return request<PrinterResult>(`/game/printer?${params.toString()}`);
+  },
 
   // C1 Siege back-test: the Siege method checked against the benchmark's worst stored fall. Read-only.
   getSiegeBacktest: () => request<SiegeBacktest>("/game/siege/backtest"),
