@@ -185,6 +185,7 @@ Game mode (Fortress): concept, sprint plans and reviews, visual identity, art pa
 - [game3d-weather-tower-2026-11-08.md](game/game3d-weather-tower-2026-11-08.md) — The Weather Tower built: dial per macro series, curve rail, catalogue v3 (Norway curve 6M to 7Y), what changes in analysis input, what to do after deploy
 - [game3d-weather-tower-plates-2026-11-12.md](game/game3d-weather-tower-plates-2026-11-12.md) — Weather Tower redo (issue #402): name-and-number plates with a 24-month line and low-to-high dot replace the clocks and the small tags
 - [game3d-one-list-camera-walls-2026-11-14.md](game/game3d-one-list-camera-walls-2026-11-14.md) — 3D tidy-up (#411): one list of things you can walk up to (near, prompt, E), and a camera that stays inside the rooms. How to add a new object.
+- [game3d-morning-round-plan-2026-11-15.md](game/game3d-morning-round-plan-2026-11-15.md) — The Morning Round (#412): the four-step plan, and step 1 as built (every holding has a place: the yard holds 18, not 8).
 
 ### ingestion/
 

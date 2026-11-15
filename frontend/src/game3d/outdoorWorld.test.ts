@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { GameState, GameTower } from "../lib/types";
 import { stateToWorld } from "./stateToWorld";
+import { HOLDING_SPOT_COUNT } from "./outdoorPlan";
 import { WALL_RADIUS, WALL_THICKNESS } from "./layout";
 import { ENTER_REACH, enterableOf, nearestTower, outdoorExit } from "./towerDoor";
 import { returnSpot } from "./areas";
@@ -46,11 +47,11 @@ describe("holdings inside the wall (S31, moved in 2026-11-11)", () => {
   });
 
   it("keeps the rest in the plain list, not in the yard", () => {
-    const many = Array.from({ length: 11 }, (_, i) => tower({ holding_id: `m${i}`, name: `M${i}`, weight_pct: String(20 - i) }));
+    const many = Array.from({ length: HOLDING_SPOT_COUNT + 3 }, (_, i) => tower({ holding_id: `m${i}`, name: `M${i}`, weight_pct: String(60 - i) }));
     const w = stateToWorld(state(many));
-    expect(w.towers).toHaveLength(8);
+    expect(w.towers).toHaveLength(HOLDING_SPOT_COUNT);
     expect(w.hiddenCount).toBe(3);
-    expect(w.plain.slice(8).every((t) => t.plot === undefined)).toBe(true);
+    expect(w.plain.slice(HOLDING_SPOT_COUNT).every((t) => t.plot === undefined)).toBe(true);
   });
 
   it("faces every door along its lane, and the door post stands at the footprint", () => {
@@ -80,6 +81,27 @@ describe("holdings inside the wall (S31, moved in 2026-11-11)", () => {
       const back = returnSpot({ id: "holding", holdingId: t.holdingId } as never, { id: "courtyard" }, enter);
       expect(back?.x).toBeCloseTo(out.x, 9);
       expect(back?.z).toBeCloseTo(out.z, 9);
+    }
+  });
+
+  it("gives a full yard (#412) a door for every holding: each can be walked into, and you come out in front of your own door", () => {
+    const full = Array.from({ length: HOLDING_SPOT_COUNT }, (_, i) =>
+      tower({ holding_id: `f${i}`, name: `F${i}`, sector: SECTORS[i % SECTORS.length], weight_pct: String(60 - i), size_class: i % 2 ? "tiny" : "great" }),
+    );
+    const w = stateToWorld(state(full));
+    expect(w.towers).toHaveLength(HOLDING_SPOT_COUNT);
+    expect(w.hiddenCount).toBe(0);
+    expect(new Set(w.towers.map((t) => `${t.spot.x},${t.spot.z}`)).size).toBe(HOLDING_SPOT_COUNT);
+    const enter = w.towers.map(enterableOf);
+    for (const t of w.towers) {
+      // Standing at the door post, and anywhere between the post and the wall of the building, it is this holding you enter.
+      for (const step of [0, 0.5, 1]) {
+        const d = t.plot!.footprint + step * (Math.hypot(t.plot!.door.x - t.spot.x, t.plot!.door.z - t.spot.z) - t.plot!.footprint);
+        const at = { x: t.spot.x + Math.sin(t.plot!.doorYaw) * d, z: t.spot.z + Math.cos(t.plot!.doorYaw) * d };
+        expect(nearestTower(at, enter)?.holdingId, t.name).toBe(t.holdingId);
+      }
+      const out = outdoorExit(t.spot, t.plot!.doorYaw, t.plot!.footprint);
+      for (const o of w.towers) expect(Math.hypot(out.x - o.spot.x, out.z - o.spot.z), `${t.name} comes out on ${o.name}`).toBeGreaterThan(o.plot!.footprint);
     }
   });
 

@@ -22,9 +22,9 @@ import type {
   GameTower,
 } from "../lib/types";
 import { sortTowers } from "../lib/fortress";
-import { TOWER_SPOT_COUNT, towerSpots, type Spot } from "./layout";
+import { towerSpots, type Spot } from "./layout";
 import { MOAT_WIDTH, SIZE_HEIGHT, SIZE_RADIUS, WALL_LOOK } from "./towerLook";
-import { assignPlots, doorPointOf, type Plot } from "./outdoorPlan";
+import { HOLDING_SPOT_COUNT, assignPlots, doorPointOf, type Plot } from "./outdoorPlan";
 import { isFishFarm } from "./farmDressing";
 import { holdingTheme3d, type Theme3dId } from "../lib/sectors";
 
@@ -164,14 +164,14 @@ function viewOf(t: GameTower, slot: number, spot: Spot): TowerView {
 }
 
 /**
- * The yard has room for `TOWER_SPOT_COUNT` holdings. The biggest take it (same order as the flat Fortress); the rest
+ * The yard has room for `HOLDING_SPOT_COUNT` holdings (three rings inside the wall, #412). The biggest take it (same order as the flat Fortress); the rest
  * are counted, not drawn, and stay in the plain list. By default each stands on its spot of the ring (S31); a caller that
  * hands in `spots` gets the old pad positions instead. With no state yet, the result is an empty world.
  */
 export function stateToWorld(state: GameState | null, spots?: Spot[]): WorldModel {
   if (!state) return { demo: false, asOf: null, towers: [], hiddenCount: 0, plain: [] };
   const ordered = sortTowers(state.towers);
-  const limit = spots ? spots.length : TOWER_SPOT_COUNT;
+  const limit = spots ? spots.length : HOLDING_SPOT_COUNT;
   const plots = spots
     ? null
     : assignPlots(

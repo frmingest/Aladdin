@@ -4,6 +4,7 @@ import type { GameState, GameTower } from "../lib/types";
 import TowerPanel from "./TowerPanel";
 import { towerFacts } from "./towerFacts";
 import { stateToWorld } from "./stateToWorld";
+import { HOLDING_SPOT_COUNT } from "./outdoorPlan";
 
 function tower(o: Partial<GameTower>): GameTower {
   return {
@@ -45,9 +46,9 @@ describe("TowerPanel (plain view of the 3D scene)", () => {
   });
 
   it("mentions holdings that do not fit on the pads", () => {
-    const many = Array.from({ length: 10 }, (_, i) => tower({ holding_id: `h${i}`, name: `H${i}`, weight_pct: String(30 - i) }));
+    const many = Array.from({ length: HOLDING_SPOT_COUNT + 2 }, (_, i) => tower({ holding_id: `h${i}`, name: `H${i}`, weight_pct: String(60 - i) }));
     const html = renderToStaticMarkup(<TowerPanel world={stateToWorld(state(many))} loading={false} error={null} onRetry={noop} />);
-    expect(html).toContain("2 more than the courtyard has pads for");
-    expect(html).toContain("(not on a pad)");
+    expect(html).toContain("2 more than the yard has room for");
+    expect(html).toContain("(no room in the yard)");
   });
 });

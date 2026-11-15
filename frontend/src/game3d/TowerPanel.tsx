@@ -62,7 +62,7 @@ export default function TowerPanel({ world, loading, error, onRetry, onClose }: 
                 <h3>{t.name}</h3>
                 {f.weightPct !== null && <span className="g3d-weight">{Math.round(Number(f.weightPct))}%</span>}
               </div>
-              {t.slot >= world.towers.length && <p className="g3d-muted">(not on a pad)</p>}
+              {t.slot >= world.towers.length && <p className="g3d-muted">(no room in the yard)</p>}
               <ul className="mt-2 flex flex-wrap gap-1">
                 <Chip tone={WALL_TONE[f.wall] ?? "fog"}>{WALL_LABEL[f.wall]}</Chip>
                 <Chip tone={MOAT_TONE[f.moat] ?? "fog"}>{MOAT_LABEL[f.moat]}</Chip>
@@ -75,7 +75,7 @@ export default function TowerPanel({ world, loading, error, onRetry, onClose }: 
         })}
       </ol>
       {world.hiddenCount > 0 && (
-        <p className="g3d-muted mt-2">{world.hiddenCount} more than the courtyard has pads for. All are listed above.</p>
+        <p className="g3d-muted mt-2">{world.hiddenCount} more than the yard has room for. All are listed above.</p>
       )}
     </aside>
   );
