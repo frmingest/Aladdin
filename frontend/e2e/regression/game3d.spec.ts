@@ -160,17 +160,12 @@ test.describe("things you can walk up to", () => {
     await problems.assertNone();
   });
 
-  /** Walks with `key` until no prompt matches `text` (a missing prompt counts as not matching). */
-  async function walkUntilGone(page: Page, key: string, text: RegExp, holdMs = 300) {
-    const prompt = page.locator(".g3d-prompt");
-    await expect(async () => {
-      await page.keyboard.down(key);
-      await page.waitForTimeout(holdMs);
-      await page.keyboard.up(key);
-      const said = (await prompt.allInnerTexts()).join("|");
-      trail.push(`${key}: ${said || "(no prompt)"}`);
-      expect(said).not.toMatch(text);
-    }).toPass({ timeout: 60_000, intervals: [50] });
+  /** Holds `key` for `ms`, whatever happens: a walk that ends against a wall. */
+  async function hold(page: Page, key: string, ms: number) {
+    await page.keyboard.down(key);
+    await page.waitForTimeout(ms);
+    await page.keyboard.up(key);
+    trail.push(`${key} held ${ms} ms`);
   }
 
   // #431: the whole Royal Mint round, steered only by the prompts (a fixed time of walking is not reliable on software WebGL).
@@ -189,12 +184,15 @@ test.describe("things you can walk up to", () => {
     try {
       // Up to the press with nothing pulled: it says so and promises nothing.
       await walkUntil(page, "w", /Pull a lever first, then STAMP/, 300);
-      // West until the press prompt lets go (the press is solid, so go round it), then north along the lever wall: from
-      // there the Toll Gate (x -5.6) or the Great Press (x -2.8) is in reach, whichever the hero lands nearer.
-      await walkUntilGone(page, "a", /STAMP/);
-      await walkUntil(page, "w", /^E\s*Pull (Toll Gate|Great Press)/, 300);
+      // Find the lever row by the walls, not by guessing how far one step goes: a long walk west and a long walk north end
+      // against the room's own walls (the lever bases are solid but stand 2 m clear of the west wall), then a short step
+      // south puts the hero on the lever row, level with the stand spots at z -6.4.
+      await hold(page, "a", 5_000);
+      await hold(page, "w", 5_000);
+      await hold(page, "s", 450);
+      await walkUntil(page, "d", /^E\s*Pull Toll Gate/, 300);
       await page.keyboard.press("e");
-      // Back east along the lever row to the middle lever, then south: the press either blocks the way (it is solid) or is
+      // East along the lever row to the middle lever, then south: the press either blocks the way (it is solid) or is
       // passed, and either way its prompt now offers STAMP, because a lever is pulled.
       await walkUntil(page, "d", /^E\s*Pull Great Melt/, 300);
       await walkUntil(page, "s", /^E\s*STAMP/, 300);
@@ -203,17 +201,16 @@ test.describe("things you can walk up to", () => {
       await page.keyboard.press("e");
       const answer = await asked;
       expect(answer.status()).toBe(200);
-      expect(new URL(answer.url()).searchParams.get("pull")).toMatch(/^(toll_gate|great_press):/);
+      expect(new URL(answer.url()).searchParams.get("pull")).toMatch(/^toll_gate:/);
       // STAMP turns the camera to face east (#431), and walking keys follow the camera: W is east, S west, A north, D south.
       // Give the turn time to finish (software WebGL is slow) before steering again.
       await page.waitForTimeout(3_000);
 
-      // West round the press (it is solid), one step back east, then south to the door and out.
-      await walkUntilGone(page, "s", /STAMP/);
-      await page.keyboard.down("w");
-      await page.waitForTimeout(200);
-      await page.keyboard.up("w");
-      await walkUntil(page, "d", /Step back outside/);
+      // One step east (W, after the turn) takes the hero clear of the press's side, then a long walk south (D) ends at the
+      // south wall, inside the door's reach.
+      await hold(page, "w", 300);
+      await hold(page, "d", 5_000);
+      await walkUntil(page, "d", /Step back outside/, 150);
       await page.keyboard.press("e");
       await expect(page).toHaveTitle(/3D courtyard/);
       await expect(page).toHaveURL((u) => u.search === "");
