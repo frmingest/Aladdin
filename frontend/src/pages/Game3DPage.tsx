@@ -60,6 +60,8 @@ import { QUARTER_WORDS } from "../game3d/quarterWordsV1";
 import { prefersReducedMotion } from "../game3d/motionPref";
 import { standingAt } from "../game3d/near";
 import { archLit, holdingMarks, litStalls, noticeSheets, placeMarks, recentRavenIds, stallsRead, unseenWireIds } from "../game3d/marks";
+import { MAX_DONE, buildRound, loadRound, pruneDone, ravenFactIds, saveRound, stopId, wireFactIds } from "../game3d/round";
+import type { Stop } from "../game3d/round";
 import type { Standing as AtSpot } from "../game3d/near";
 import { useNears } from "../game3d/nearStore";
 import { deskBlock } from "../game3d/deskForm";
@@ -285,13 +287,45 @@ export default function Game3DPage() {
       .then(setRavens)
       .catch(() => setRavens(null));
   }, []);
+  // Today's round (#412 step 3): what you dealt with, kept in this browser like the Guide. A stop is ticked only when you did the
+  // thing at the spot; walking past ticks nothing. The sample fortress never ticks, never saves and never shows a real round.
+  const [roundSince] = useState(() => loadRound(guideStorage()).lastVisit);
+  const [visitAt] = useState(() => Date.now());
+  const [roundDone, setRoundDone] = useState<string[]>(() => loadRound(guideStorage()).done);
+  const roundOff = state?.demo === true || demoMode === true;
+  /** The latest facts and stops, for the event handlers below (read when you act, never while drawing). */
+  const roundRef = useRef<{
+    ravens: ReadonlyMap<string, string>;
+    wires: ReadonlyMap<string, string>;
+    lit: ReadonlySet<string>;
+    noticeDay: string | null;
+    noticeSheets: number;
+    stops: readonly Stop[];
+  }>({ ravens: new Map(), wires: new Map(), lit: new Set(), noticeDay: null, noticeSheets: 0, stops: [] });
+  /** Stops ticked this visit, kept so one whose fact has since left (a wire you looked at) still shows ticked. */
+  const roundCarry = useRef<Stop[]>([]);
+  const tickStops = useCallback(
+    (ids: string[]) => {
+      if (roundOff || ids.length === 0) return;
+      const shown = roundRef.current.stops.filter((s) => ids.includes(s.id));
+      roundCarry.current = [...roundCarry.current.filter((c) => !ids.includes(c.id)), ...shown.map((s) => ({ ...s, done: true }))];
+      setRoundDone((d) => {
+        const add = ids.filter((i) => !d.includes(i));
+        return add.length === 0 ? d : [...d, ...add].slice(-MAX_DONE);
+      });
+    },
+    [roundOff],
+  );
   const onRavensSeen = useCallback((ids: string[]) => {
+    const hit: string[] = [];
+    roundRef.current.ravens.forEach((rid, h) => ids.includes(rid) && hit.push(stopId("raven", h, rid)));
+    tickStops(hit);
     setSeenRavens((cur) => {
       const next = markSeen(cur, ids);
       saveSeen(next);
       return next;
     });
-  }, []);
+  }, [tickStops]);
   // One bird per raven the Ravens card calls "new" (landed in the last 48 hours and not marked seen). Older unseen ravens sit under
   // "Earlier" in the card and never show on the perch, so every bird you see is one you can actually mark seen.
   const unseenRavens = useMemo(() => splitRavens(ravens?.ravens ?? [], seenRavens, ravens?.as_of, "all").recent.length, [ravens, seenRavens]);
@@ -327,7 +361,16 @@ export default function Game3DPage() {
 
   // Face the wire (Standing 3): mark one fired wire seen, then read the Standing again. The level is
   // worked out from the facts, never from "I just clicked".
-  const lookAtWire = useCallback((id: string) => api.acknowledgeTripwire(id), []);
+  const lookAtWire = useCallback(
+    async (id: string) => {
+      const r = await api.acknowledgeTripwire(id);
+      const hit: string[] = [];
+      roundRef.current.wires.forEach((wid, h) => wid === id && hit.push(stopId("smoke", h, wid)));
+      tickStops(hit);
+      return r;
+    },
+    [tickStops],
+  );
   const refreshStanding = useCallback(
     () => api.getStanding().then((st) => { setStanding(st); setStandingFailed(false); }),
     [],
@@ -547,9 +590,10 @@ export default function Game3DPage() {
     const door = storeDoor(holdingId);
     if (!door) return;
     if (document.pointerLockElement) document.exitPointerLock();
+    if (roundRef.current.lit.has(holdingId)) tickStops([stopId("stall", holdingId, null)]);
     setWhereOpen(true);
     setWorldPage(door);
-  }, []);
+  }, [tickStops]);
 
   // The world reads the watchlist from the same facts as the flat Marketplace. A price saved in a store page, or a company added, changes
   // those facts behind the world's back, so read the watchlist again whenever a store page or the Where-to panel closes or goes back,
@@ -752,7 +796,13 @@ export default function Game3DPage() {
       press: (at) => openBuilding(at.id),
     },
     vault: { prompt: () => (vaultOpen ? null : VAULT_PROMPT), press: () => openSpotPanel("vault") },
-    watch: { prompt: () => (watchOpen ? null : WATCH_PROMPT), press: () => openSpotPanel("watch") },
+    watch: {
+      prompt: () => (watchOpen ? null : WATCH_PROMPT),
+      press: () => {
+        if (!watchOpen && roundRef.current.noticeSheets > 0) tickStops([stopId("notice", null, roundRef.current.noticeDay)]);
+        openSpotPanel("watch");
+      },
+    },
     // Without data there is nothing to open.
     perch: { prompt: () => (perchOpen || !ravens ? null : PERCH_PROMPT), press: () => ravens && openSpotPanel("perch") },
     realm: { prompt: () => (realmOpen || !state ? null : REALM_PROMPT), press: () => state && openSpotPanel("realm") },
@@ -921,6 +971,51 @@ export default function Game3DPage() {
   }, [shownWorld, ravens, seenRavens, standing, standingFailed, nightWatch, watchlist, nowMs]);
   const placedMarks = useMemo(() => placeMarks(shownWorld.towers, marks), [shownWorld, marks]);
 
+  // Today's round: the same marks, written as a short list. No real round in the sample fortress (step 4 adds a made-up one).
+  const round = useMemo(() => {
+    if (roundOff || state === null) return undefined;
+    const names = new Map<string, string>();
+    for (const r of ravens?.ravens ?? []) names.set(r.holding_id, r.name);
+    for (const r of watchlist?.rows ?? []) names.set(r.holding_id, r.name);
+    const litSet = litStalls(watchlist?.rows, nowMs);
+    const tickers = new Map((watchlist?.rows ?? []).map((r) => [r.holding_id, r.ticker]));
+    return buildRound(
+      {
+        towers: shownWorld.plain,
+        marks,
+        ravenFacts: ravenFactIds(ravens, seenRavens),
+        wireFacts: wireFactIds(standing, standingFailed),
+        lit: [...litSet].map((holdingId) => ({ holdingId, ticker: tickers.get(holdingId) ?? "" })),
+        names,
+        noticeSheets: noticeSheets(nightWatch, nowMs),
+        noticeDay: nightWatch?.last_frame_day ?? null,
+      },
+      { done: new Set(roundDone), since: roundSince, nowMs },
+      roundCarry.current,
+    );
+  }, [roundOff, state, ravens, seenRavens, watchlist, shownWorld, marks, standing, standingFailed, nightWatch, nowMs, roundDone, roundSince]);
+  useEffect(() => {
+    roundRef.current = {
+      ravens: ravenFactIds(ravens, seenRavens),
+      wires: wireFactIds(standing, standingFailed),
+      lit: litStalls(watchlist?.rows, nowMs),
+      noticeDay: nightWatch?.last_frame_day ?? null,
+      noticeSheets: noticeSheets(nightWatch, nowMs),
+      stops: round?.stops ?? [],
+    };
+  }, [ravens, seenRavens, standing, standingFailed, watchlist, nightWatch, nowMs, round]);
+  // Remember the visit and what you dealt with (this browser only; nothing for the sample fortress).
+  useEffect(() => {
+    if (roundOff || state === null) return;
+    saveRound(guideStorage(), { lastVisit: visitAt, done: pruneDone(roundDone, round?.stops ?? [], marks.sources) });
+  }, [roundOff, state, visitAt, roundDone, round, marks]);
+  // The bell is dealt with when you open that holding's thesis shelf in its land.
+  useEffect(() => {
+    if (!room || readShelf !== "oath") return;
+    const id = stopId("bell", room, null);
+    if (roundRef.current.stops.some((x) => x.id === id)) tickStops([id]);
+  }, [room, readShelf, tickStops]);
+
   // What the world shows from the facts (the scene takes them as one thing, not one input each).
   const look = useMemo<SceneLook>(
     () => ({
@@ -989,7 +1084,7 @@ export default function Game3DPage() {
       {whereOpen && !worldPage && <WhereToPanel onPick={pickDoor} onClose={closeWhere} only={onlyPlace} onlyRoutes={onlyRoutes} />}
       {whereOpen && worldPage && <WorldPanel door={worldPage} onBack={() => setWorldPage(null)} onClose={closeWhere} />}
       {panels.towers && <TowerPanel world={shownWorld} loading={loading} error={error} onRetry={load} onClose={() => flip("towers")} marks={marks} lit={lit} noticeSheets={noticeSheets(nightWatch, nowMs)} />}
-      {panels.quests && <QuestLog quest={quest} reviews={reviews} demo={world.demo} standing={standingText} wires={standing && !standingFailed ? (standing.wires ?? []) : undefined} onLookAtWire={lookAtWire} onRefreshStanding={refreshStanding} drill={drillQuest} guide={{ status: guide, saved: guideSaved, onReplay: replayGuideNow }} onClose={() => flip("quests")} />}
+      {panels.quests && <QuestLog quest={quest} reviews={reviews} demo={world.demo} standing={standingText} wires={standing && !standingFailed ? (standing.wires ?? []) : undefined} onLookAtWire={lookAtWire} onRefreshStanding={refreshStanding} drill={drillQuest} guide={{ status: guide, saved: guideSaved, onReplay: replayGuideNow }} round={round} onClose={() => flip("quests")} />}
       {vaultOpen && state && <VaultPanel state={state} onChanged={load} onClose={() => setSpotPanel("vault", false)} />}
       {realmOpen && state && <RealmPanel state={state} onClose={() => setSpotPanel("realm", false)} />}
       {watchOpen && <WatchPanel onClose={() => setSpotPanel("watch", false)} />}
