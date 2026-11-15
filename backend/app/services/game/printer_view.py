@@ -2,9 +2,15 @@
 pure engine in `printer.py`. Database only; no provider, LLM or write."""
 from __future__ import annotations
 
+from collections.abc import Callable
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 
+from sqlalchemy.orm import Session
+
+from app.domain.game_mapping import printer_sensitivity_v1 as R
 from app.domain.game_mapping import printer_v1 as T
+from app.domain.game_mapping.siege_scenarios_v1 import SiegeScenarios
 from app.schemas.game import GameStateOut
 from app.schemas.printer import (
     PrinterChannelOut,
@@ -19,15 +25,20 @@ from app.schemas.printer import (
     PrinterTermOut,
 )
 from app.services.game import printer as engine
+from app.services.game.printer_sensitivity import Measured, measure
+from app.services.game.sensitivity import to_nok
 from app.services.game.siege_view import SensitivityLookup
+from app.services.macro.refresh import stored_points
+from app.services.risk.price_history import TickerHistory, read_stored_history
 
 NOTES = [
     "Every number comes from a fixed table (see the Ledger of Truth) run by plain code. No AI computes anything here.",
     "Ranges are the widest case: every pulled lever is assumed wrong in the same direction at once.",
     "Where we are not sure (Low), we show a direction only, never a krone figure.",
     (
-        "A holding's reaction to the stock market uses its own measured beta; its reaction to rates, the krone, "
-        "inflation and credit comes from a sector guess, so any result that leans on it is Low."
+        "A holding's reaction to the stock market uses its own measured beta. Its reaction to long rates and the "
+        "krone is measured from its own price history when that history is long and clear enough; otherwise, and "
+        "always for inflation and credit, it is a sector guess, so any result that leans on a guess is Low."
     ),
     "Nothing here is saved and nothing changes a stored rating, wall or portfolio figure.",
 ]
@@ -68,16 +79,62 @@ def ledger() -> PrinterLedgerOut:
     )
 
 
+RateKroneLookup = Callable[[str], Measured | None]
+
+
+def stored_rate_krone_lookup(db: Session, scenarios: SiegeScenarios) -> RateKroneLookup:
+    """Each holding's measured rate and krone sensitivity (Printer P1.5), from stored data only: the
+    holding's and the Siege benchmark's closes in NOK, the Norway 10-year yield and USD/NOK. No
+    provider call, no write. A holding whose history is too short or missing gets None and keeps the
+    sector guess."""
+    since = datetime.now(timezone.utc).date() - timedelta(days=R.LOOKBACK_DAYS)
+    rate = stored_points(db, R.RATE_SERIES, since=since)
+    usd_nok = stored_points(db, R.FX_SERIES, since=since)
+    bench = read_stored_history(db, scenarios.benchmark_ticker, since=since)
+    fx_cache: dict[str, TickerHistory] = {}
+
+    def fx_for(currency: str) -> TickerHistory:
+        if currency not in fx_cache:
+            fx_cache[currency] = read_stored_history(db, f"{currency}NOK=X", since=since)
+        return fx_cache[currency]
+
+    def nok_points(history: TickerHistory) -> list[tuple[date, Decimal]] | None:
+        currency = (history.currency or "NOK").upper()
+        if currency == "NOK":
+            return history.points
+        fx = fx_for(currency)
+        return to_nok(history.points, fx.points) if fx.available else None
+
+    bench_points = nok_points(bench) if bench.available else None
+
+    def lookup(ticker: str) -> Measured | None:
+        if not rate or not usd_nok or not bench_points:
+            return None
+        history = read_stored_history(db, ticker, since=since)
+        if not history.available:
+            return None
+        points = nok_points(history)
+        if not points:
+            return None
+        found, _why = measure(points, bench_points, rate, usd_nok)
+        return found
+
+    return lookup
+
+
 def build_printer(
-    state: GameStateOut, lookup: SensitivityLookup, pulls: list[engine.Pull], horizon: int
+    state: GameStateOut, lookup: SensitivityLookup, pulls: list[engine.Pull], horizon: int,
+    measured_lookup: RateKroneLookup | None = None,
 ) -> PrinterOut:
     holdings = []
     for t in state.towers:
         sens = lookup(t.ticker)
+        m = measured_lookup(t.ticker) if measured_lookup is not None else None
         holdings.append(
             engine.SimHolding(
                 holding_id=t.holding_id, ticker=t.ticker, name=t.name, sector=t.sector,
                 value_nok=t.value_nok, beta=sens.beta, beta_method=sens.method if sens.beta is not None else None,
+                long_rate_coef=m.long_rate if m else None, krone_coef=m.krone if m else None,
             )
         )
     result = engine.run(holdings, pulls, horizon)
@@ -114,7 +171,9 @@ def build_printer(
                 nok=_r(r.nok), real_nok=_r(r.real_nok), direction=r.direction, real_direction=r.real_direction,
                 why=r.why,
                 terms=[
-                    PrinterTermOut(channel=t.channel, coefficient=t.coefficient, pct=_r(t.pct), confidence=t.confidence)  # type: ignore[arg-type]
+                    PrinterTermOut(
+                        channel=t.channel, coefficient=t.coefficient, pct=_r(t.pct), confidence=t.confidence, basis=t.basis,
+                    )  # type: ignore[arg-type]
                     for t in r.terms
                 ],
             )

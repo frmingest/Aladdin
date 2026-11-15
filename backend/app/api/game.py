@@ -171,7 +171,10 @@ def get_printer(
         demo_lookup = lambda ticker: Sensitivity(demo_beta(ticker), METHOD_DEMO)
         return printer_view.build_printer(state, demo_lookup, pulls, horizon)
     state = get_game_state(db, mapping.version)
-    return printer_view.build_printer(state, stored_sensitivity_lookup(db, scenarios), pulls, horizon)
+    return printer_view.build_printer(
+        state, stored_sensitivity_lookup(db, scenarios), pulls, horizon,
+        printer_view.stored_rate_krone_lookup(db, scenarios),
+    )
 
 
 @router.get("/siege/backtest", response_model=SiegeBacktestOut)

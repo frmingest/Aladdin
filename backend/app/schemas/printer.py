@@ -76,6 +76,7 @@ class PrinterTermOut(BaseModel):
     coefficient: Decimal
     pct: PrinterRangeOut
     confidence: str
+    basis: str = "sector_guess"  # measured | sector_guess | beta
 
 
 class PrinterHoldingOut(BaseModel):

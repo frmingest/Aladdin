@@ -1,6 +1,6 @@
 # The Printer: sprint plan and Stitch picture list (2026-10-20)
 
-Status: **Sprint P1 written, not merged, not deployed** ([P1 doc](printer-p1-ledger-engine-2026-10-20.md)); P2 to P5 not started. Decisions are in section 6. The 12 pictures in section 5 arrived 2026-10-20 and are not yet packed or wired. The style rules, truth rules and review checklist in [stitch-master-object-art-2026-10-11.md](stitch-master-object-art-2026-10-11.md) stay in force.
+Status: **Sprint P1 written, not merged, not deployed** ([P1 doc](printer-p1-ledger-engine-2026-10-20.md)); **P1.5 (measured rate and krone sensitivity, #426, PR #427) written, not merged, not deployed** ([P1.5 doc](printer-p15-measured-sensitivities-2026-11-15.md)); P2 to P5 not started. Decisions are in section 6. The 12 pictures in section 5 arrived 2026-10-20 and are not yet packed or wired. The style rules, truth rules and review checklist in [stitch-master-object-art-2026-10-11.md](stitch-master-object-art-2026-10-11.md) stay in force.
 
 ## 1. What The Printer is, in plain words
 
@@ -52,6 +52,9 @@ A sprint here is one small, finished step you can look at, so we never build a b
 *For:* getting the numbers honest before anything looks pretty.
 *Build:* the lever-to-world table with sources (Claude researches and cites each cell, and marks thin evidence Low), holding sensitivity profiles from existing data, the five core levers (Toll Gate, Great Press, Great Melt, Coin Rain, Harbour Guard), an endpoint, and hand-checked tests.
 *You see:* a plain page or JSON showing, for a chosen lever and size, the range per holding. Nothing playful yet.
+
+**Sprint P1.5, Measured sensitivities (added 2026-11-15, #426).**
+*For:* turning the guessed rate and krone terms into measured ones where the history is clear. Faiz chose this for #374 on 2026-11-15. It helps NOK ranges only for the Toll Gate at 1 year; the other levers need sourced lever-table cells (see the P1.5 doc).
 
 **Sprint P2, The Mint Floor.**
 *For:* making it playable.
