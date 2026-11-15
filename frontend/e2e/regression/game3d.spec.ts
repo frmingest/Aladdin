@@ -47,7 +47,15 @@ test.describe("courtyard", () => {
       const problems = watch(page);
       await openCourtyard(page);
       const panel = page.getByRole("complementary", { name });
-      await expect(panel).toHaveCount(0);
+      // The demo fortress opens the Quest log once on a cold load, so the made-up round is on screen with 0 taps
+      // (Morning Round step 4, #423). Every other panel starts shut. The key toggles, so a shut panel opens on one press.
+      if (key === "q") {
+        await expect(panel).toBeVisible();
+        await page.keyboard.press(key);
+        await expect(panel).toHaveCount(0);
+      } else {
+        await expect(panel).toHaveCount(0);
+      }
       await page.keyboard.press(key);
       await expect(panel).toBeVisible();
       await panel.getByRole("button", { name: /close/i }).click();
@@ -59,7 +67,9 @@ test.describe("courtyard", () => {
   test("Plain view leaves for the flat Fortress and game mode stays on", async ({ page }) => {
     const problems = watch(page);
     await openCourtyard(page);
-    await page.getByText(/Plain view/).first().click();
+    // The exact toolbar link. A looser match also finds the Quest log's "Old entries in Plain view" link (to /journal),
+    // which comes first in the page now that the demo opens the Quest log on a cold load.
+    await page.getByRole("link", { name: /^← Plain view$/ }).click();
     await expect(page).not.toHaveURL(/game3d/);
     await expect(page.getByRole("heading", { level: 1, name: "The Fortress" })).toBeVisible();
     await problems.assertNone();
