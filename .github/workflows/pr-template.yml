@@ -1,0 +1,44 @@
+name: PR template filled
+
+# Every PR uses .github/pull_request_template.md and says which review agents ran (CLAUDE.md "Pull requests").
+# The check is .github/scripts/check_pr_template.py; the Claude Code hook .claude/hooks/require_pr_template.py
+# runs the same code before a PR is even created. The `no-issue` label (trivial typo or link fix) skips it.
+# The checker comes from the PR's BASE branch, so a PR cannot edit the check that judges it; only the PR
+# that introduces the check (no base copy yet) is judged by its own.
+on:
+  pull_request:
+    types: [opened, edited, reopened, labeled, unlabeled, synchronize, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  template:
+    name: PR template filled
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
+          sparse-checkout: .github/scripts
+      - uses: actions/checkout@v4
+        with:
+          path: head
+          sparse-checkout: .github/scripts
+      - name: Check the PR body against the template
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          CHANGED_FILES="$(gh api "repos/$REPO/pulls/$PR_NUMBER/files" --paginate --jq '.[].filename')"
+          export CHANGED_FILES
+          if [ -f base/.github/scripts/check_pr_template.py ]; then
+            python3 base/.github/scripts/check_pr_template.py
+          else
+            python3 head/.github/scripts/check_pr_template.py
+          fi

@@ -262,6 +262,7 @@ Local LLM (Ollama), the worker and queue, evidence packets, LLM usage ledger.
 Running the app: hosting, auth gate, page-load, background jobs, audits, live checks.
 
 - [github-projects-workflow-2026-11-12.md](ops/github-projects-workflow-2026-11-12.md) — How the sprint board, milestones, issues and labels work (replaces the rolling progress log)
+- [pr-guardrails-2026-11-15.md](ops/pr-guardrails-2026-11-15.md) — The PR template and review agents are enforced by a Claude Code hook and a CI check, not just written; what the checker requires (#428)
 - [agentic-coding-audit-2026-09-27.md](ops/agentic-coding-audit-2026-09-27.md) — Agentic-coding audit — 2026-09-27
 - [agentic-coding-audit-2026-11-01.md](ops/agentic-coding-audit-2026-11-01.md) — Agentic-coding audit of PRs #147 to #246: rule breaks and rule contradictions (2026-11-01)
 - [backend-auth-cors-gate-2026-09-27.md](ops/backend-auth-cors-gate-2026-09-27.md) — Backend auth gate + CORS lockdown — 2026-09-27

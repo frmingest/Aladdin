@@ -139,17 +139,31 @@ code, tests, prompts, or session docs.
 ## Pull requests
 
 Faiz reviews and merges in GitHub. Finish every feature or fix by opening the PR yourself, from the
-chat, without being asked again:
+chat, without being asked again. **Use the `/ship-pr` command (`.claude/commands/ship-pr.md`); do not open a PR
+by hand.** The PR body is always `.github/pull_request_template.md`, filled in, never a free-form summary.
+Two guardrails enforce this and must never be weakened or bypassed to get a PR through: the Claude Code hook
+`.claude/hooks/require_pr_template.py` refuses to create or edit a PR whose body is not the filled-in template,
+and the CI check "PR template filled" (`.github/scripts/check_pr_template.py`) fails it. Only the `no-issue`
+label (trivial typo or link fix) skips the CI check.
 
 1. Work on a branch off the current `main` (`feature/<topic>`, `fix/<topic>`, `docs/<topic>`), never on `main`.
 2. Before opening the PR, run what CI runs: `ruff check .` and `pytest -q` in `backend/`
    (use the pinned ruff from `requirements-dev.txt` and `MACRO_DATA_PROVIDER=none`), and for frontend
    changes `tsc --noEmit`, `npm run lint`, `npm test`, `npm run build`. Don't open a PR with a known red check.
-3. Commit with a real message, push the branch, open the PR against `main` with a short body:
-   what changed and why, how it was verified, and anything Faiz must do after deploy. Give Faiz the PR link.
-4. Link the PR to its issue (`Closes #N`), attach the sprint milestone, and update the issue's labels and status in the same session.
-5. Watch the PR's checks; if one goes red, fix it on the same branch.
-6. Never merge for Faiz. A merge to `main` is a production deploy.
+3. Run the reviewers the change calls for, and record each in the template's "Who reviewed it" table: `rules-auditor`
+   for any backend, prompt or schema change; `docs-sync-checker` for any backend or docs change; `playtest-qa`,
+   `game-ux-designer`, `game-designer` and `game-feel-engineer` for any game UI change; the account skills `qa-testlead` and `code-auditor` when the work calls for them (a skipped row says why). Every row is answered: `yes`
+   with a result, or `skipped` with the reason. Findings are fixed (or listed as open) before the PR goes up. Never mark a
+   role as run when it was not.
+4. **Check a claim before you write it.** A doc, PR body or issue comment that says what code does ("helps most",
+   "unblocks", "built", "handles") is checked against the code or the engine in this session first. Run it, do not
+   reason from a summary. (2026-11-15: a doc said a change helped the Toll Gate most; the engine showed the opposite
+   for the channels it measured.)
+5. Commit with a real message, push the branch, open the PR against `main` with the filled-in template: what changed and
+   why, how it was verified, who reviewed it, and anything Faiz must do after deploy. Give Faiz the PR link.
+6. Link the PR to its issue (`Closes #N`), attach the sprint milestone, and update the issue's labels and status in the same session.
+7. Watch the PR's checks; if one goes red, fix it on the same branch.
+8. Never merge for Faiz. A merge to `main` is a production deploy.
 
 From a cloud session the `gh` CLI is usually absent: use the GitHub REST API with `GH_TOKEN`
 (`POST /repos/frmingest/Aladdin/pulls`, JSON body, `Content-Type: application/json`). Logs download
