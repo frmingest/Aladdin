@@ -1,0 +1,32 @@
+name: PR template filled
+
+# Every PR uses .github/pull_request_template.md and says which review agents ran (CLAUDE.md "Pull requests").
+# The check is .github/scripts/check_pr_template.py; the Claude Code hook .claude/hooks/require_pr_template.py
+# runs the same code before a PR is even created. The `no-issue` label (trivial typo or link fix) skips it.
+on:
+  pull_request:
+    types: [opened, edited, reopened, labeled, unlabeled, synchronize, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  template:
+    name: PR template filled
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/scripts
+      - name: Check the PR body against the template
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          CHANGED_FILES="$(gh api "repos/$REPO/pulls/$PR_NUMBER/files" --paginate --jq '.[].filename')"
+          export CHANGED_FILES
+          python3 .github/scripts/check_pr_template.py
