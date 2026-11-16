@@ -187,3 +187,97 @@ def test_refresh_endpoint_forces_a_provider_call(client, db_session):
 
     assert first.status_code == 200
     assert second.status_code == 200
+
+
+# --- ECON-007 (2026-11-15): regime-aware risk bands -------------------------
+
+
+def _seed_two_holdings(client, db_session):
+    holding_a = _create_holding(client, "AAA")
+    holding_b = _create_holding(client, "BBB")
+    _add_position(db_session, holding_a, 600_000)
+    _add_position(db_session, holding_b, 400_000)
+    points = _daily_points(60)
+    points_b = [
+        PricePoint(price=p.price * 2 + D(i % 3), currency="USD", observed_at=p.observed_at, provider="fake")
+        for i, p in enumerate(points)
+    ]
+    return _FakeMarket({"AAA": points, "BBB": points_b})
+
+
+def _patch_bands(monkeypatch, *, enabled: bool, regime: str):
+    from app.config.settings import Settings
+    from app.services.risk import portfolio_risk as module
+    from app.services.risk.regime import RegimeResult
+
+    monkeypatch.setattr(
+        module, "get_settings", lambda: Settings(_env_file=None, regime_aware_risk_bands_enabled=enabled)
+    )
+    monkeypatch.setattr(
+        module,
+        "classify_regime",
+        lambda db: RegimeResult(
+            regime=regime, home_market_series_included=True, curve_and_credit_are_us_only=True,
+            explanation="test", method_note="test",
+        ),
+    )
+
+
+def _stress(client, market):
+    # POST .../refresh rebuilds and replaces the stored page snapshot; a plain GET
+    # would serve the snapshot from the previous call in the same test.
+    _override(market, _FakeRiskFreeRate())
+    try:
+        response = client.post("/risk/portfolio/refresh")
+    finally:
+        _clear_overrides()
+    assert response.status_code == 200, response.text
+    return response.json()["stress"]
+
+
+def test_risk_bands_off_by_default_leave_stress_unchanged(client, db_session, monkeypatch):
+    market = _seed_two_holdings(client, db_session)
+    _patch_bands(monkeypatch, enabled=False, regime="crisis")
+    stress = _stress(client, market)
+
+    assert stress["regime"] is None
+    assert stress["band_multiplier"] is None
+    assert stress["bands_version"] is None
+    assert Decimal(stress["std_devs"]) == D("2")
+    assert "widened" not in stress["horizon_note"]
+
+
+def test_risk_bands_crisis_widens_volatility_shock_by_the_multiplier(client, db_session, monkeypatch):
+    market = _seed_two_holdings(client, db_session)
+    _patch_bands(monkeypatch, enabled=False, regime="crisis")
+    base = {h["ticker"]: Decimal(h["shock_pct"]) for h in _stress(client, market)["holdings"]}
+
+    assert base and all(shock < 0 for shock in base.values())  # a real shock, so the ratio check is not vacuous
+
+    _patch_bands(monkeypatch, enabled=True, regime="crisis")
+    stress = _stress(client, market)
+
+    assert stress["regime"] == "crisis"
+    assert stress["bands_version"] == "v1"
+    assert Decimal(stress["band_multiplier"]) == D("1.5")
+    assert Decimal(stress["base_std_devs"]) == D("2")
+    assert Decimal(stress["std_devs"]) == D("3.0")
+    assert "widened x1.5 for the crisis regime" in stress["horizon_note"]
+    for row in stress["holdings"]:
+        assert row["method"] == "volatility"
+        # Each shock is rounded to 4 dp, so allow that rounding on both sides.
+        assert abs(Decimal(row["shock_pct"]) - base[row["ticker"]] * D("1.5")) <= D("0.0002")
+
+
+def test_risk_bands_baseline_regime_changes_nothing_but_records_it(client, db_session, monkeypatch):
+    market = _seed_two_holdings(client, db_session)
+    _patch_bands(monkeypatch, enabled=False, regime="baseline")
+    base = {h["ticker"]: h["shock_pct"] for h in _stress(client, market)["holdings"]}
+
+    _patch_bands(monkeypatch, enabled=True, regime="baseline")
+    stress = _stress(client, market)
+
+    assert stress["regime"] == "baseline"
+    assert Decimal(stress["band_multiplier"]) == D("1")
+    assert {h["ticker"]: h["shock_pct"] for h in stress["holdings"]} == base
+    assert "widened" not in stress["horizon_note"]

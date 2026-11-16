@@ -62,6 +62,12 @@ class StressResult:
     portfolio_drawdown_nok: Decimal | None = None
     total_value_considered_nok: Decimal = ZERO
     holdings: list[HoldingStress] = field(default_factory=list)
+    # ECON-007: set only when regime-aware bands were applied (std_devs above is
+    # then the widened figure; base_std_devs is what it would be at baseline).
+    regime: str | None = None
+    base_std_devs: Decimal | None = None
+    band_multiplier: Decimal | None = None
+    bands_version: str | None = None
 
 
 def _volatility_shock_pct(history: TickerHistory | None, std_devs: Decimal) -> Decimal | None:

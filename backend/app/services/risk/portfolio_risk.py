@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session
 
 from app.config.settings import get_settings
 from app.domain.instrument_types import EQUITY_ANALYZABLE_TYPES
+from app.domain.risk_bands import get_risk_bands
 from app.providers.base import MarketDataProvider, RiskFreeRateProvider
 from app.services.portfolio_overview import Overview, build_overview
 from app.services.risk.correlation import (
@@ -57,7 +58,18 @@ def build_portfolio_risk(
     settings = get_settings()
     lookback_days = settings.risk_correlation_lookback_days
     cluster_threshold = Decimal(settings.risk_cluster_correlation_threshold)
-    std_devs = Decimal(settings.risk_stress_shock_std_devs)
+    base_std_devs = Decimal(settings.risk_stress_shock_std_devs)
+    std_devs = base_std_devs
+    # The regime is classified once and used twice: shown on the page, and (only
+    # when ECON-007's switch is on) to widen the volatility-sized stress shock.
+    regime = classify_regime(db)
+    bands_multiplier: Decimal | None = None
+    bands_version: str | None = None
+    if settings.regime_aware_risk_bands_enabled:
+        bands = get_risk_bands(settings.active_risk_bands_version)
+        bands_multiplier = bands.shock_multiplier.get(regime.regime, bands.default_multiplier)
+        bands_version = bands.version
+        std_devs = base_std_devs * bands_multiplier
 
     overview: Overview = build_overview(db)
     equity_positions = [p for p in overview.positions if p.instrument_type in EQUITY_ANALYZABLE_TYPES]
@@ -107,8 +119,16 @@ def build_portfolio_risk(
     stress = compute_stress(
         positions=positions_for_stress, histories=histories, dcf_by_ticker=dcf_by_ticker, std_devs=std_devs
     )
-
-    regime = classify_regime(db)
+    if bands_multiplier is not None:
+        stress.regime = regime.regime
+        stress.base_std_devs = base_std_devs
+        stress.band_multiplier = bands_multiplier
+        stress.bands_version = bands_version
+        if bands_multiplier != Decimal(1):
+            stress.horizon_note += (
+                f"; widened x{bands_multiplier.normalize():f} for the {regime.regime} regime "
+                f"(bands {bands_version}). Holdings sized from their own DCF bear case are not widened"
+            )
 
     return PortfolioRisk(
         as_of=overview.as_of,

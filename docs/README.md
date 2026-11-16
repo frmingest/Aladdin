@@ -232,6 +232,7 @@ Valuation and analysis numbers: DCF, ROIC/ROE, margin of safety, data gaps, fund
 - [own-year-fact-ownership-2026-10-08.md](valuation/own-year-fact-ownership-2026-10-08.md) — Own-year fact ownership (2026-10-08)
 - [owner-view-metrics-and-local-worker-plan-2026-09-23.md](valuation/owner-view-metrics-and-local-worker-plan-2026-09-23.md) — Owner's-view metric definitions + plan for local LLM from Railway (2026-09-23)
 - [regime-dcf-wiring-sprint14-2026-09-26.md](valuation/regime-dcf-wiring-sprint14-2026-09-26.md) — Sprint 14: regime → DCF discount-rate wiring (2026-09-26)
+- [regime-aware-risk-bands-2026-11-15.md](valuation/regime-aware-risk-bands-2026-11-15.md) — ECON-007: the volatility stress shock widens in stagflation and crisis; off by default (2026-11-15)
 - [roic-roe-multiples-sprint9-2026-09-25.md](valuation/roic-roe-multiples-sprint9-2026-09-25.md) — Sprint 9: ROIC, ROE, ROCE and market multiples (2026-09-25)
 - [sb1no-implausible-dcf-investigation-2026-09-29.md](valuation/sb1no-implausible-dcf-investigation-2026-09-29.md) — SB1NO.OL "incorrect data" investigation — 2026-09-29
 - [valuation-data-diagnosis-2026-10-06.md](valuation/valuation-data-diagnosis-2026-10-06.md) — Why 15 holdings and watchlist names cannot be valued: diagnosis from Faiz's SQL results (2026-10-06)
