@@ -1,10 +1,11 @@
 """SQLAlchemy engine and session management.
 
-Postgres (Supabase) is the system of record — see CLAUDE.md's "Database"
-section (the schema is not being reset; this rebuild's models simply never
-touch the legacy non-equity tables/columns). Models live under app/models/
-and share app.models.base.Base — this module does not define its own Base,
-so Alembic (alembic/env.py) and every ORM model agree on one metadata object.
+Postgres (Railway; Supabase was retired 2026-10-14) is the system of record —
+see CLAUDE.md's "Database" section (the schema is not being reset; this
+rebuild's models simply never touch the legacy non-equity tables/columns).
+Models live under app/models/ and share app.models.base.Base — this module
+does not define its own Base, so Alembic (alembic/env.py) and every ORM model
+agree on one metadata object.
 """
 from __future__ import annotations
 

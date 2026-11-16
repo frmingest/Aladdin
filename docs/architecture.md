@@ -78,10 +78,9 @@ either runs on Gemini/Mistral, or is queued for the worker ("Run on my PC").
 
 **Hosting changed since the first version of this diagram.** Supabase is retired for Aladdin (Faiz's
 decision, 2026-10-14): the database is Railway Postgres and the uploaded originals are on Cloudflare R2
-(`OBJECT_STORAGE_PROVIDER=r2`). The code still *accepts* `supabase` as a storage provider name and
-`backend/.env.example` still shows Supabase connection strings as an example; those are leftovers, not
-the live setup. The cut-over is described in
-`supabase-to-railway-postgres-runbook-2026-10-09.md` (see [section 11](#11-known-gaps-and-loose-ends)).
+(`OBJECT_STORAGE_PROVIDER=r2`). The code still *accepts* `supabase` as a storage provider name (a
+leftover, not the live setup). The cut-over runbook is not in the repo (see
+[section 11](#11-known-gaps-and-loose-ends)); the file is still to be supplied (#437).
 This pass did not re-check the live Railway services.
 
 ---
@@ -472,8 +471,8 @@ Found while rewriting this document; none of them were changed in the housekeepi
 
 | Item | Where | What |
 |---|---|---|
-| Supabase leftovers in code and config | `backend/.env.example`, `config/database.py` docstring, `providers/factory.py`, `system_status.py` | Still describe Supabase as the database and a valid storage name. Harmless, but misleading. Clean up with the next backend change |
-| Cut-over runbook not in `main` | `supabase-to-railway-postgres-runbook-2026-10-09.md` | Exists only in the local checkout (flat in `docs/`), uncommitted; its status line still says "written, not run" |
+| Supabase leftovers in code and config | `providers/factory.py`, `system_status.py` | Cleared from `backend/.env.example` and the `config/database.py` docstring (#381). The code still accepts `supabase` as an old storage-provider alias on purpose (no behaviour change) |
+| Cut-over runbook not in `main` | `supabase-to-railway-postgres-runbook-2026-10-09.md` | Not found on 2026-11-15: not in `main`, not in `E:\Aladdin` (any branch checked) and not in the Claude project docs. Faiz needs to supply the file (#437) |
 | Legacy tables with live foreign keys | `portfolio_risk_snapshots`, `llm_usage_events` | Reference `analysis_runs` / `holding_analyses`, so the "legacy, never queried" tables cannot be dropped without a migration. CLAUDE.md says leave them until Faiz asks |
 | `winter_orders` table | migration `x1f2a3b4c5d6` | Created, never used after PR #165 |
 | `docker-compose.yml` comment | `docker/docker-compose.yml` | Points at section 4 of this document for "production hosting"; that is still right |
