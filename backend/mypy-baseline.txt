@@ -13,7 +13,6 @@ app/api/holdings.py::arg-type::Argument 1 to "dict" has incompatible type "Seque
 app/api/holdings.py::var-annotated::Need type annotation for "document_counts" (hint: "document_counts: dict[<type>, <type>] = ...")
 app/api/holdings.py::var-annotated::Need type annotation for "position_counts" (hint: "position_counts: dict[<type>, <type>] = ...")
 app/api/journal.py::arg-type::Argument 2 to "run_in_force" has incompatible type "UUID | None"; expected "UUID"
-app/api/performance.py::misc::List comprehension has incompatible type List[DailyValueOut | None]; expected List[DailyValueOut]
 app/api/portfolio.py::arg-type::Argument 1 to "dict" has incompatible type "Sequence[Row[tuple[UUID, int]]]"; expected "Iterable[tuple[Never, Never]]"
 app/api/portfolio.py::var-annotated::Need type annotation for "position_counts" (hint: "position_counts: dict[<type>, <type>] = ...")
 app/api/precious_metals.py::return-value::Incompatible return value type (got "MetalPriceHistoryOut | None", expected "MetalPriceHistoryOut")
@@ -34,9 +33,6 @@ app/providers/sec_edgar_provider.py::assignment::Incompatible types in assignmen
 app/providers/sec_edgar_provider.py::var-annotated::Need type annotation for "out" (hint: "out: list[<type>] = ...")
 app/services/analysis/document_excerpts.py::arg-type::Argument 5 to "Passage" has incompatible type "**dict[str, str | None]"; expected "str"
 app/services/analysis/document_excerpts.py::arg-type::Argument 5 to "Passage" has incompatible type "**dict[str, str | None]"; expected "str"
-app/services/analysis/evidence_packet.py::arg-type::Argument 1 to "_fmt_pct" has incompatible type "Decimal | float"; expected "Decimal"
-app/services/analysis/evidence_packet.py::arg-type::Argument 1 to "_fmt_pct" has incompatible type "Decimal | float"; expected "Decimal"
-app/services/analysis/evidence_packet.py::arg-type::Argument 1 to "_fmt_pct" has incompatible type "Decimal | float"; expected "Decimal"
 app/services/analysis/packet_budget.py::operator::Unsupported operand types for > ("int" and "None")
 app/services/analysis/queue.py::arg-type::Argument "last_seen_at" to "WorkerStatus" has incompatible type "datetime | None"; expected "datetime"
 app/services/analysis/queue.py::arg-type::Argument "started_at" to "WorkerStatus" has incompatible type "datetime | None"; expected "datetime"
@@ -90,8 +86,6 @@ app/services/funds/holdings_import.py::attr-defined::"date" has no attribute "da
 app/services/funds/holdings_import.py::index::Value of type "tuple[str, list[list[object]]] | None" is not indexable
 app/services/funds/holdings_import.py::index::Value of type "tuple[str, list[list[object]]] | None" is not indexable
 app/services/funds/holdings_import.py::return-value::Incompatible return value type (got "list[tuple[str, list[list[bool | float | Decimal | str | CellRichText | date | time | timedelta | DataTableFormula | ArrayFormula | None]]]]", expected "list[tuple[str, list[list[object]]]]")
-app/services/game/backtest.py::operator::Unsupported operand types for / ("None" and "Decimal")
-app/services/game/backtest.py::type-var::Value of type variable "_AddableT1" of "sum" cannot be "Decimal | None"
 app/services/game/demo.py::arg-type::Argument 1 to "get" of "dict" has incompatible type "int | None"; expected "int"
 app/services/game/demo.py::arg-type::Argument 1 to "get" of "dict" has incompatible type "int | None"; expected "int"
 app/services/game/demo.py::arg-type::Argument 1 to "get" of "dict" has incompatible type "int | None"; expected "int"
@@ -106,11 +100,6 @@ app/services/game/demo.py::union-attr::Item "tuple[str, ...]" of "tuple[str, str
 app/services/game/demo.py::union-attr::Item "tuple[str, ...]" of "tuple[str, str, str] | None" has no attribute "status"
 app/services/game/night_watch.py::arg-type::Argument "status" to "NightWatchOut" has incompatible type "str"; expected "Literal['attention', 'quiet', 'unknown']"
 app/services/game/night_watch.py::arg-type::Argument "watch_state" to "NightWatchOut" has incompatible type "str"; expected "Literal['ok', 'old', 'never']"
-app/services/game/printer.py::arg-type::Argument 1 to "_nok" has incompatible type "Decimal | None"; expected "Decimal"
-app/services/game/printer.py::arg-type::Argument 1 to "_nok" has incompatible type "Decimal | None"; expected "Decimal"
-app/services/game/printer.py::arg-type::Argument 12 to "PrinterResult" has incompatible type "Decimal | None"; expected "Decimal"
-app/services/game/printer.py::operator::Unsupported operand types for / ("None" and "Decimal")
-app/services/game/printer.py::type-var::Value of type variable "_AddableT1" of "sum" cannot be "Decimal | None"
 app/services/game/printer_view.py::arg-type::Argument "pct" to "PrinterTermOut" has incompatible type "PrinterRangeOut | None"; expected "PrinterRangeOut"
 app/services/game/ravens.py::arg-type::Argument "direction" to "RavenLineOut" has incompatible type "str"; expected "Literal['better', 'worse', 'steady', 'unknown']"
 app/services/game/ravens.py::arg-type::Argument 1 to "RavenLineOut" has incompatible type "**dict[str, str | Decimal | None]"; expected "Decimal | None"
@@ -123,8 +112,6 @@ app/services/game/ravens.py::arg-type::Argument 1 to "RavenLineOut" has incompat
 app/services/game/ravens.py::arg-type::Argument 1 to "RavenLineOut" has incompatible type "**dict[str, str | Decimal | None]"; expected "str"
 app/services/game/ravens.py::arg-type::Argument 1 to "get" of "dict" has incompatible type "UUID | None"; expected "UUID"
 app/services/game/ravens.py::assignment::Incompatible types in assignment (expression has type "Holding | None", variable has type "Holding")
-app/services/game/siege.py::assignment::Incompatible types in assignment (expression has type "Decimal | None", variable has type "Decimal")
-app/services/game/siege.py::type-var::Value of type variable "_AddableT1" of "sum" cannot be "Decimal | None"
 app/services/game/state.py::arg-type::Argument "freshness" to "TowerOut" has incompatible type "str"; expected "Literal['fresh', 'weathered', 'overgrown', 'unsurveyed', 'not_applicable']"
 app/services/game/state.py::arg-type::Argument "land" to "TowerOut" has incompatible type "str"; expected "Literal['bargain', 'discount', 'full_price', 'overpriced', 'fog']"
 app/services/game/state.py::arg-type::Argument "level" to "SiegeOut" has incompatible type "str"; expected "Literal['calm', 'gathering', 'besieged', 'unsurveyed']"
@@ -149,17 +136,7 @@ app/services/macro/indicators.py::operator::No overload variant of "__sub__" of 
 app/services/macro/refresh.py::assignment::Incompatible types in assignment (expression has type "tuple[datetime | None, Decimal]", target has type "tuple[datetime, Decimal]")
 app/services/macro/refresh.py::operator::Unsupported operand types for <= ("datetime" and "None")
 app/services/macro/refresh.py::union-attr::Item "None" of "datetime | None" has no attribute "date"
-app/services/performance/portfolio_performance.py::arg-type::Argument "key" to "max" has incompatible type "Callable[[DailyValue], Decimal | None]"; expected "Callable[[DailyValue], SupportsDunderLT[Any] | SupportsDunderGT[Any]]"
-app/services/performance/portfolio_performance.py::arg-type::Argument "key" to "min" has incompatible type "Callable[[DailyValue], Decimal | None]"; expected "Callable[[DailyValue], SupportsDunderLT[Any] | SupportsDunderGT[Any]]"
-app/services/performance/portfolio_performance.py::operator::Unsupported operand types for / ("Decimal" and "None")
-app/services/performance/portfolio_performance.py::return-value::Incompatible return value type (got "Decimal | None", expected "SupportsDunderLT[Any] | SupportsDunderGT[Any]")
-app/services/performance/portfolio_performance.py::return-value::Incompatible return value type (got "Decimal | None", expected "SupportsDunderLT[Any] | SupportsDunderGT[Any]")
-app/services/portfolio_overview.py::assignment::Incompatible types in assignment (expression has type "dict[str, tuple[int, Decimal]]", variable has type "dict[str, tuple[str, Decimal, int]]")
-app/services/portfolio_overview.py::assignment::Incompatible types in assignment (expression has type "tuple[Any | int, Any | Decimal]", target has type "tuple[str, Decimal, int]")
-app/services/portfolio_overview.py::misc::Too many values to unpack (2 expected, 3 provided)
 app/services/risk/price_history.py::arg-type::Argument 1 to "_aware" has incompatible type "datetime | None"; expected "datetime"
-app/services/risk/stress.py::operator::Unsupported operand types for / ("None" and "Decimal")
-app/services/risk/stress.py::type-var::Value of type variable "_AddableT1" of "sum" cannot be "Decimal | None"
 app/services/settings/synthetic_data.py::arg-type::Argument 1 to "add" of "set" has incompatible type "object"; expected "str"
 app/services/system_status.py::operator::No overload variant of "__sub__" of "datetime" matches argument type "None"
 app/services/system_status.py::operator::No overload variant of "__sub__" of "datetime" matches argument type "None"
@@ -169,7 +146,5 @@ app/services/system_status.py::union-attr::Item "None" of "datetime | None" has 
 app/services/system_status.py::union-attr::Item "None" of "datetime | None" has no attribute "isoformat"
 app/services/tag_review.py::arg-type::Argument 1 to "get" of "dict" has incompatible type "UUID | None"; expected "UUID"
 app/services/tag_review.py::index::Invalid index type "UUID | None" for "dict[UUID, tuple[Document, dict[str, Any]]]"; expected type "UUID"
-app/services/thesis/metrics_registry.py::assignment::Incompatible types in assignment (expression has type "Decimal | None", variable has type "Decimal")
-app/services/thesis/metrics_registry.py::assignment::Incompatible types in assignment (expression has type "Decimal | None", variable has type "Decimal")
 app/services/valuation/fund_look_through.py::arg-type::Argument 1 to "get" of "dict" has incompatible type "UUID | None"; expected "UUID"
 app/worker/__main__.py::assignment::Incompatible types in assignment (expression has type "None", variable has type "Callable[[], LLMHealth]")

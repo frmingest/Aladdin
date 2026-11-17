@@ -8,6 +8,8 @@ method and its stated approximation.
 """
 from __future__ import annotations
 
+from typing import overload
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
@@ -31,6 +33,14 @@ from app.services.settings.synthetic_data import demo_performance
 from app.services.snapshots import get_or_build, performance_key
 
 router = APIRouter(prefix="/performance", tags=["performance"])
+
+
+@overload
+def _day_out(dv: DailyValue) -> DailyValueOut: ...
+
+
+@overload
+def _day_out(dv: None) -> None: ...
 
 
 def _day_out(dv: DailyValue | None) -> DailyValueOut | None:

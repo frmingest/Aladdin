@@ -282,9 +282,9 @@ def build_overview(db: Session, *, now: datetime | None = None) -> Overview:
             analyzed_value += value
             if analyzed_at is not None and (now - _aware(analyzed_at)).days > STALE_ANALYSIS_DAYS:
                 overview.stale_analysis_count += 1
-        for groups, key in ((verdict_groups, verdict or NOT_ANALYZED), (moat_groups, moat or NOT_ANALYZED)):
-            n, v = groups.get(key, (0, ZERO))
-            groups[key] = (n + 1, v + value)
+        for bucket, key in ((verdict_groups, verdict or NOT_ANALYZED), (moat_groups, moat or NOT_ANALYZED)):
+            n, v = bucket.get(key, (0, ZERO))
+            bucket[key] = (n + 1, v + value)
 
     def _rating_slices(groups: dict[str, tuple[int, Decimal]], order: tuple[str, ...]) -> list[RatingSlice]:
         return [

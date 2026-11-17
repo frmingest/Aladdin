@@ -266,7 +266,7 @@ def _add_return_on_capital_evidence(
         )
         latest = per_period[0][2]
         if series:
-            average = sum(v for _y, v in series) / len(series)
+            average = sum((v for _y, v in series), Decimal(0)) / len(series)
             content = (
                 ", ".join(f"{y}: {_fmt_pct(v)}" for y, v in series)
                 + f". {len(series)}-period average: {_fmt_pct(average)}."
@@ -561,7 +561,7 @@ def _add_financial_history_evidence(
     roe_series = sorted(((y, v) for y, _p, _m, v in per_period if v is not None), key=lambda r: r[0])
     latest_roe_skip = per_period[0][2].skipped.get("roe", "")
     if roe_series:
-        avg_roe = sum(v for _y, v in roe_series) / len(roe_series)
+        avg_roe = sum((v for _y, v in roe_series), Decimal(0)) / len(roe_series)
         hurdle = assumptions.capital_efficiency_hurdle
         comparison = "MEETS" if avg_roe >= hurdle else "BELOW"
         add(
@@ -597,7 +597,7 @@ def _add_financial_history_evidence(
             key=lambda row: row[0],
         )
         if series:
-            avg = sum(v for _y, v in series) / len(series)
+            avg = sum((v for _y, v in series), Decimal(0)) / len(series)
             add(
                 "financial_history",
                 f"{label} history",
