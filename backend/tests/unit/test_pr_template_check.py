@@ -27,6 +27,11 @@ def good_body(rows: dict[str, tuple[str, str, str]] | None = None) -> str:
         "game-designer": ("skipped", "", "no new game page"),
         "game-feel-engineer": ("skipped", "", "no UI change"),
         "qa-testlead": ("skipped", "", "not run"),
+        "compliance-officer": ("skipped", "", "no new vendor or data"),
+        "release-manager": ("skipped", "", "no CI or deploy files changed"),
+        "llm-quality-guard": ("skipped", "", "no prompt or schema change"),
+        "valuation-reviewer": ("skipped", "", "no valuation maths changed"),
+        "board-steward": ("skipped", "", "issue and milestone set by hand"),
     }
     default.update(rows)
     table = "\n".join(f"| `{r}` (what it checks) | {a} | {b} | {c} |" for r, (a, b, c) in default.items())
@@ -107,6 +112,25 @@ def test_a_backend_change_cannot_skip_the_rules_auditor_or_docs_check():
 def test_a_game_ui_change_needs_all_four_game_reviewers():
     errors = C.check(good_body(), ["frontend/src/components/fortress/Mint.tsx"])
     assert {e.split("`")[1] for e in errors if "must run" in e} == set(C.GAME_ROLES)
+
+
+def test_the_five_gap_roles_are_required_rows_and_run_for_what_they_guard():
+    for role in ("compliance-officer", "release-manager", "llm-quality-guard", "valuation-reviewer", "board-steward"):
+        body = "\n".join(line for line in good_body().splitlines() if f"`{role}`" not in line)
+        assert any(f"missing the row for `{role}`" in e for e in C.check(body, [])), role
+    cases = {
+        "release-manager": ".github/workflows/ci.yml",
+        "llm-quality-guard": "backend/prompts/analysis/blind_v3.md",
+        "valuation-reviewer": "backend/app/services/valuation/dcf.py",
+        "compliance-officer": "backend/requirements.txt",
+    }
+    for role, path in cases.items():
+        errors = C.check(good_body(), [path])
+        assert any(f"`{role}` must run" in e for e in errors), (role, errors)
+        ran = C.check(good_body({role: ("yes", "pass, nothing found", "")}), [path])
+        assert not any(f"`{role}` must run" in e for e in ran), (role, ran)
+    # a docs or typo change does not force them
+    assert not any("must run" in e and any(r in e for r in cases) for e in C.check(good_body(), ["README.md"]))
 
 
 def test_an_unticked_check_must_say_why():

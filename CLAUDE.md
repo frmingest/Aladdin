@@ -152,7 +152,7 @@ label (trivial typo or link fix) skips the CI check.
    changes `tsc --noEmit`, `npm run lint`, `npm test`, `npm run build`. Don't open a PR with a known red check.
 3. Run the reviewers the change calls for, and record each in the template's "Who reviewed it" table: `rules-auditor`
    for any backend, prompt or schema change; `docs-sync-checker` for any backend or docs change; `playtest-qa`,
-   `game-ux-designer`, `game-designer` and `game-feel-engineer` for any game UI change; the account skills `qa-testlead` and `code-auditor` when the work calls for them (a skipped row says why). Every row is answered: `yes`
+   `game-ux-designer`, `game-designer` and `game-feel-engineer` for any game UI change; the repo skills `qa-testlead` and `code-auditor` when the work calls for them; `release-manager` for CI, Docker or migration files; `llm-quality-guard` for a prompt or analysis schema; `valuation-reviewer` for valuation or risk maths; `compliance-officer` for a new dependency, data provider or LLM client; `board-steward` on every PR (a skipped row says why; the PR-template check refuses a skip for the first four when those paths changed). Every row is answered: `yes`
    with a result, or `skipped` with the reason. Findings are fixed (or listed as open) before the PR goes up. Never mark a
    role as run when it was not.
 4. **Check a claim before you write it.** A doc, PR body or issue comment that says what code does ("helps most",

@@ -29,12 +29,22 @@ ROLES = (
     "game-designer",
     "game-feel-engineer",
     "qa-testlead",
+    "compliance-officer",
+    "release-manager",
+    "llm-quality-guard",
+    "valuation-reviewer",
+    "board-steward",
 )
 GAME_ROLES = ("playtest-qa", "game-ux-designer", "game-designer", "game-feel-engineer")
 RAN = {"yes", "ran", "run"}
 NOT_RAN = {"skipped", "no", "n/a", "not run"}
 GAME_UI_PATH = re.compile(r"^frontend/src/.*(fortress|game|Game)")
 BACKEND_PATH = re.compile(r"^backend/")
+# Added with issue #444 (2026-11-17): the reviewers a change must not skip, by what it touches.
+RELEASE_PATH = re.compile(r"^(\.github/workflows/|backend/Dockerfile|backend/alembic/|docker/)")
+LLM_PATH = re.compile(r"^backend/(prompts/|app/domain/analysis_schema)")
+VALUATION_PATH = re.compile(r"^backend/app/(services/valuation/|domain/(valuation_assumptions|risk_bands|regime_adjustments|financial_metrics))")
+COMPLIANCE_PATH = re.compile(r"^(backend/requirements\.txt|frontend/package\.json|backend/app/providers/|backend/app/services/llm_)")
 
 
 def _sections(body: str) -> dict[str, str]:
@@ -115,6 +125,14 @@ def check(body: str, changed_files: list[str] | None = None) -> list[str]:
         must_run("rules-auditor", "backend files changed, CLAUDE.md Pull requests step 3")
     if any(BACKEND_PATH.match(f) or f.startswith("docs/") for f in files):
         must_run("docs-sync-checker", "backend or docs changed, claims must be checked against git")
+    if any(RELEASE_PATH.match(f) for f in files):
+        must_run("release-manager", "CI, Docker or migration files changed")
+    if any(LLM_PATH.match(f) for f in files):
+        must_run("llm-quality-guard", "a prompt or analysis schema changed, CLAUDE.md Rules 3 and 5")
+    if any(VALUATION_PATH.match(f) for f in files):
+        must_run("valuation-reviewer", "valuation or risk maths changed, the numbers must be recomputed")
+    if any(COMPLIANCE_PATH.match(f) for f in files):
+        must_run("compliance-officer", "a dependency, data provider or LLM client changed, so what leaves the app may have changed")
     if any(GAME_UI_PATH.match(f) for f in files):
         for role in GAME_ROLES:
             must_run(role, "game UI files changed, the template requires all four game rows")
