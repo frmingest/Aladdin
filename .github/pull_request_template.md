@@ -21,7 +21,12 @@ One row per role. Result = pass / findings fixed / findings open, with a link to
 | `game-ux-designer` (identity score, noise, a11y) | | | |
 | `game-designer` (spec before build) | | | |
 | `game-feel-engineer` (motion, sound, perf) | | | |
-| `qa-testlead` / `code-auditor` (account skills, if used) | | | |
+| `qa-testlead` / `code-auditor` (security and test depth, if used) | | | |
+| `compliance-officer` (data flows, vendors, AI use) | | | |
+| `release-manager` (CI, migrations, rollback, live check) | | | |
+| `llm-quality-guard` (prompt versions, golden cases, hostile documents) | | | |
+| `valuation-reviewer` (numbers recomputed independently) | | | |
+| `board-steward` (issue, milestone, labels, stacked PRs) | | | |
 
 Implemented by: <!-- e.g. frontend-engineer, backend-engineer, main session -->
 

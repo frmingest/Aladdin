@@ -13,6 +13,7 @@ Status: standing gate, proposed 2026-10-09. Standard: [.claude/standards/game-vi
 7. **Cut line.** One thing to cut if the sprint runs long; it is never the Plain view, the unknown state or the screenshots.
 8. **Rules.** Which Fortress rules each item touches and how truth / colour-blind / reduced-motion / performance are kept.
 9. **Taps.** For each touched page, its main task and the planned tap count from a cold load (target 2 or fewer for the common case). The default state already shows something useful; no control appears twice; selecting acts without a separate confirm step. Added 2026-10-18 after a game page needed four taps to get one answer.
+10. **3D places.** For any `/game3d` place the sprint changes, answer the same items per place, using `.claude/standards/game3d-standard.md` (identity ladder read as in its section 1, draw-call delta, token and kit use, Plain view or identity debt).
 
 ## B. Sprint review must answer
 1. **Pages touched** (as built, from the diff, not from the plan).
@@ -24,3 +25,4 @@ Status: standing gate, proposed 2026-10-09. Standard: [.claude/standards/game-vi
 7. **Direction memory.** Did the look change? If yes, update section 4 of the standard in the same PR and mirror per "Documentation sync".
 8. **Taps, measured.** From a cold load in a real browser (not from the diff): `page | task | taps before | taps after`, plus any duplicate control or confirm-only step found. A page over 2 taps for its common task, or with a duplicate control, is a review blocker.
 9. **Identity debt left**, ranked, as input to the next `/game-ideas`.
+10. **3D places.** Per touched `/game3d` place: identity before and after, draw-call delta (or "not measured: headless software GL" plus the press-P check for Faiz), the 4.5:1 text-pair test, and whether a Plain view exists.

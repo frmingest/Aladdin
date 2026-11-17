@@ -29,12 +29,22 @@ ROLES = (
     "game-designer",
     "game-feel-engineer",
     "qa-testlead",
+    "compliance-officer",
+    "release-manager",
+    "llm-quality-guard",
+    "valuation-reviewer",
+    "board-steward",
 )
 GAME_ROLES = ("playtest-qa", "game-ux-designer", "game-designer", "game-feel-engineer")
 RAN = {"yes", "ran", "run"}
 NOT_RAN = {"skipped", "no", "n/a", "not run"}
 GAME_UI_PATH = re.compile(r"^frontend/src/.*(fortress|game|Game)")
 BACKEND_PATH = re.compile(r"^backend/")
+# Added with issue #444 (2026-11-17): the reviewers a change must not skip, by what it touches.
+RELEASE_PATH = re.compile(r"^(\.github/(workflows|scripts)/|\.pre-commit-config\.yaml|\.claude/(hooks/|settings)|backend/Dockerfile|frontend/Dockerfile|backend/alembic/|docker/)")
+LLM_PATH = re.compile(r"^backend/(prompts/|app/schemas/analysis|app/domain/analysis_schema|app/services/analysis/|app/services/[a-z_]+/evidence\.py)")
+VALUATION_PATH = re.compile(r"^(backend/app/(api/valuation|schemas/valuation|services/(valuation/|metrics\.py|performance/|risk/|market_data/fx\.py)|domain/(valuation_assumptions|risk_bands|regime_adjustments|analysis_assumptions|financial_metrics))|docs/valuation/)")
+COMPLIANCE_PATH = re.compile(r"^(backend/(requirements(-dev)?\.txt|pyproject\.toml)|frontend/package(-lock)?\.json|backend/app/providers/|backend/app/services/llm_|backend/app/models/llm_)")
 
 
 def _sections(body: str) -> dict[str, str]:
@@ -115,6 +125,14 @@ def check(body: str, changed_files: list[str] | None = None) -> list[str]:
         must_run("rules-auditor", "backend files changed, CLAUDE.md Pull requests step 3")
     if any(BACKEND_PATH.match(f) or f.startswith("docs/") for f in files):
         must_run("docs-sync-checker", "backend or docs changed, claims must be checked against git")
+    if any(RELEASE_PATH.match(f) for f in files):
+        must_run("release-manager", "CI, Docker or migration files changed")
+    if any(LLM_PATH.match(f) for f in files):
+        must_run("llm-quality-guard", "a prompt or analysis schema changed, CLAUDE.md Rules 3 and 5")
+    if any(VALUATION_PATH.match(f) for f in files):
+        must_run("valuation-reviewer", "valuation or risk maths changed, the numbers must be recomputed")
+    if any(COMPLIANCE_PATH.match(f) for f in files):
+        must_run("compliance-officer", "a dependency, data provider or LLM client changed, so what leaves the app may have changed")
     if any(GAME_UI_PATH.match(f) for f in files):
         for role in GAME_ROLES:
             must_run(role, "game UI files changed, the template requires all four game rows")
@@ -124,13 +142,22 @@ def check(body: str, changed_files: list[str] | None = None) -> list[str]:
     return errors
 
 
+def docs_only(files: list[str]) -> bool:
+    """True when every changed file is a markdown file under docs/ (or the root README). An empty list is not docs-only:
+    if the file list is missing the check runs in full. Added with issue #444 (decided by Faiz 2026-11-17): the
+    `no-issue` label used to skip every must-run reviewer, including for prompt, valuation and CI changes."""
+    return bool(files) and all((f.startswith("docs/") and f.endswith(".md")) or f == "README.md" for f in files)
+
+
 def main() -> int:
     body = os.environ.get("PR_BODY", "")
     labels = os.environ.get("PR_LABELS", "")
     files = [f for f in os.environ.get("CHANGED_FILES", "").splitlines() if f.strip()]
-    if "no-issue" in labels.split(","):
-        print("no-issue label present (typo or link fix): template check skipped.")
+    if "no-issue" in labels.split(",") and docs_only(files):
+        print("no-issue label present and only docs changed (typo or link fix): template check skipped.")
         return 0
+    if "no-issue" in labels.split(","):
+        print("no-issue label ignored: it only skips this check when every changed file is a docs or README markdown file.")
     errors = check(body, files)
     for e in errors:
         print(f"::error::{e}")

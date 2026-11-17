@@ -280,11 +280,43 @@ export function bookPlate(r: PrinterResult): PlateText {
   };
 }
 
-/** Result plates on the east wall: two rows of columns, biggest swing first (the backend's order). */
-export const PLATE_ROWS = [4.3, 2.3] as const;
-export const PLATE_COLUMNS = 6;
-export const PLATE_GAP = 2.6;
+/**
+ * Result plates on the east wall, biggest swing first (the backend's order). Two layouts (#434): "wide" is two rows of six,
+ * for a landscape screen; "tall" is three rows of three at 90% size, for a portrait phone, where the view is only about 15
+ * degrees either side of the middle and the camera cannot back off further than the west wall. The tall wall keeps the nine
+ * biggest swings; the "more" banner counts the rest.
+ */
+export type PlateLayout = "wide" | "tall";
+const PLATE_LAYOUTS = {
+  wide: { rows: [4.3, 2.3], columns: 6, gap: 2.6, scale: 1, centre: 0 },
+  // The camera looks along the press (z -1.6), so the narrow wall is centred on that line, not on the middle of the wall.
+  tall: { rows: [4.45, 2.9, 1.35], columns: 3, gap: 2.3, scale: 0.9, centre: PRESS_SPOT.z },
+} as const;
+export const PLATE_ROWS = PLATE_LAYOUTS.wide.rows;
+export const PLATE_COLUMNS = PLATE_LAYOUTS.wide.columns;
+export const PLATE_GAP = PLATE_LAYOUTS.wide.gap;
 export const PLATE_CAPACITY = PLATE_ROWS.length * PLATE_COLUMNS;
+
+/** The layout for a screen: tall when it is taller than it is wide. */
+export function plateLayoutFor(aspect: number): PlateLayout {
+  return aspect < 1 ? "tall" : "wide";
+}
+
+/** How many plates a layout holds. */
+export function plateCapacityOf(layout: PlateLayout): number {
+  const l = PLATE_LAYOUTS[layout];
+  return l.rows.length * l.columns;
+}
+
+/** The z the layout is centred on (the heading and "more" banners follow it). */
+export function plateCentreOf(layout: PlateLayout): number {
+  return PLATE_LAYOUTS[layout].centre;
+}
+
+/** How big a layout draws a plate, as a fraction of full size. */
+export function plateScaleOf(layout: PlateLayout): number {
+  return PLATE_LAYOUTS[layout].scale;
+}
 
 export interface PlateSlot {
   x: number;
@@ -294,11 +326,12 @@ export interface PlateSlot {
   yaw: number;
 }
 
-export function plateSlot(index: number): PlateSlot {
-  const row = Math.floor(index / PLATE_COLUMNS);
-  const col = index % PLATE_COLUMNS;
-  const z = (col - (PLATE_COLUMNS - 1) / 2) * PLATE_GAP;
-  return { x: MINT.maxX - 0.08, y: PLATE_ROWS[row] ?? PLATE_ROWS[0], z, yaw: -Math.PI / 2 };
+export function plateSlot(index: number, layout: PlateLayout = "wide"): PlateSlot {
+  const { rows, columns, gap, centre } = PLATE_LAYOUTS[layout];
+  const row = Math.floor(index / columns);
+  const col = index % columns;
+  const z = centre + (col - (columns - 1) / 2) * gap;
+  return { x: MINT.maxX - 0.08, y: rows[row] ?? rows[0], z, yaw: -Math.PI / 2 };
 }
 
 /** The holdings that get a plate (the backend's order), and how many there was no room for. */

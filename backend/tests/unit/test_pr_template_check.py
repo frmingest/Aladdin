@@ -27,6 +27,11 @@ def good_body(rows: dict[str, tuple[str, str, str]] | None = None) -> str:
         "game-designer": ("skipped", "", "no new game page"),
         "game-feel-engineer": ("skipped", "", "no UI change"),
         "qa-testlead": ("skipped", "", "not run"),
+        "compliance-officer": ("skipped", "", "no new vendor or data"),
+        "release-manager": ("skipped", "", "no CI or deploy files changed"),
+        "llm-quality-guard": ("skipped", "", "no prompt or schema change"),
+        "valuation-reviewer": ("skipped", "", "no valuation maths changed"),
+        "board-steward": ("skipped", "", "issue and milestone set by hand"),
     }
     default.update(rows)
     table = "\n".join(f"| `{r}` (what it checks) | {a} | {b} | {c} |" for r, (a, b, c) in default.items())
@@ -56,6 +61,13 @@ Written, not yet deployed. Check /game/printer on the real portfolio.
 
 Closes #426
 """
+
+
+def all_ran_body() -> str:
+    """A body with every reviewer marked as run, so a hook test passes whatever files the checked-out branch changed."""
+    roles = ("rules-auditor", "docs-sync-checker", "playtest-qa", "game-ux-designer", "game-designer", "game-feel-engineer",
+             "qa-testlead", "compliance-officer", "release-manager", "llm-quality-guard", "valuation-reviewer", "board-steward")
+    return good_body({r: ("yes", "pass, nothing found", "") for r in roles})
 
 
 # What PR #427 was first opened with: a free-form body, no template.
@@ -109,6 +121,34 @@ def test_a_game_ui_change_needs_all_four_game_reviewers():
     assert {e.split("`")[1] for e in errors if "must run" in e} == set(C.GAME_ROLES)
 
 
+def test_the_five_gap_roles_are_required_rows_and_run_for_what_they_guard():
+    for role in ("compliance-officer", "release-manager", "llm-quality-guard", "valuation-reviewer", "board-steward"):
+        body = "\n".join(line for line in good_body().splitlines() if f"`{role}`" not in line)
+        assert any(f"missing the row for `{role}`" in e for e in C.check(body, [])), role
+    cases = {
+        "release-manager": ".github/workflows/ci.yml",
+        "llm-quality-guard": "backend/prompts/analysis/blind_v3.md",
+        "valuation-reviewer": "backend/app/services/valuation/dcf.py",
+        "compliance-officer": "backend/requirements.txt",
+    }
+    more = {
+        "release-manager": ["frontend/Dockerfile", ".github/scripts/check_pr_template.py", ".claude/hooks/require_pr_template.py", ".pre-commit-config.yaml"],
+        "llm-quality-guard": ["backend/app/schemas/analysis.py", "backend/app/services/instruments/evidence.py", "backend/app/services/analysis/blind_pass.py"],
+        "valuation-reviewer": ["backend/app/services/metrics.py", "backend/app/services/risk/x.py", "docs/valuation/y.md", "backend/app/services/market_data/fx.py", "backend/app/api/valuation.py", "backend/app/schemas/valuation.py"],
+        "compliance-officer": ["frontend/package-lock.json", "backend/pyproject.toml", "backend/app/models/llm_usage.py"],
+    }
+    for role, paths in more.items():
+        for path in paths:
+            assert any(f"`{role}` must run" in e for e in C.check(good_body(), [path])), (role, path)
+    for role, path in cases.items():
+        errors = C.check(good_body(), [path])
+        assert any(f"`{role}` must run" in e for e in errors), (role, errors)
+        ran = C.check(good_body({role: ("yes", "pass, nothing found", "")}), [path])
+        assert not any(f"`{role}` must run" in e for e in ran), (role, ran)
+    # a docs or typo change does not force them
+    assert not any("must run" in e and any(r in e for r in cases) for e in C.check(good_body(), ["README.md"]))
+
+
 def test_an_unticked_check_must_say_why():
     body = good_body().replace("Not run: no frontend files changed.", "")
     assert any("unticked check without a reason" in e for e in C.check(body, []))
@@ -129,7 +169,7 @@ def test_hook_blocks_a_hand_written_pr_but_lets_the_template_through(tmp_path):
     bad = tmp_path / "bad.json"
     bad.write_text(json.dumps({"title": "t", "head": "h", "base": "main", "body": HAND_WRITTEN}))
     good = tmp_path / "good.json"
-    good.write_text(json.dumps({"title": "t", "head": "h", "base": "main", "body": good_body()}))
+    good.write_text(json.dumps({"title": "t", "head": "h", "base": "main", "body": all_ran_body()}))
     blocked = _hook(f"gh api repos/frmingest/Aladdin/pulls -X POST --input {bad}")
     assert blocked.returncode == 2 and "template" in blocked.stderr
     assert _hook(f"gh api repos/frmingest/Aladdin/pulls -X POST --input {good}").returncode == 0
@@ -167,7 +207,7 @@ def test_hook_still_catches_the_real_command_behind_prefixes(tmp_path):
     bad = tmp_path / "bad.md"
     bad.write_text(HAND_WRITTEN)
     good = tmp_path / "good.md"
-    good.write_text(good_body())
+    good.write_text(all_ran_body())
     assert _hook(f"cd /tmp && GH_TOKEN=x gh pr create -t t --body-file {bad}").returncode == 2
     assert _hook(f"gh pr create -t t -F {bad}").returncode == 2
     assert _hook(f"gh pr create -t t -F {good}").returncode == 0
@@ -178,3 +218,23 @@ def test_hook_catches_a_graphql_pull_request_and_survives_bad_input():
     assert _hook("gh api graphql -f query='mutation{createPullRequest(input:{title:\"x\"}){clientMutationId}}'").returncode == 2
     p = subprocess.run([sys.executable, str(HOOK)], input="not json", capture_output=True, text=True, cwd=ROOT, check=False)
     assert p.returncode == 0
+
+
+def _main(monkeypatch, capsys, labels: str, files: list[str], body: str = "free text, no template") -> tuple[int, str]:
+    monkeypatch.setenv("PR_BODY", body)
+    monkeypatch.setenv("PR_LABELS", labels)
+    monkeypatch.setenv("CHANGED_FILES", "\n".join(files))
+    code = C.main()
+    return code, capsys.readouterr().out
+
+
+def test_no_issue_label_skips_the_check_only_for_a_docs_only_change(monkeypatch, capsys):
+    assert _main(monkeypatch, capsys, "no-issue", ["docs/game/typo.md", "README.md"])[0] == 0
+    for files in (["backend/prompts/analysis/blind_v3.md"], ["docs/x.md", ".github/workflows/ci.yml"],
+                  ["CLAUDE.md"], ["docs/x.py"], []):
+        code, out = _main(monkeypatch, capsys, "no-issue", files)
+        assert code == 1 and "no-issue label ignored" in out, files
+
+
+def test_without_the_label_nothing_is_skipped(monkeypatch, capsys):
+    assert _main(monkeypatch, capsys, "", ["docs/x.md"])[0] == 1

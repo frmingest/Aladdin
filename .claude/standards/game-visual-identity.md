@@ -1,5 +1,5 @@
 # Game visual identity (standard)
-Rule: every game tab must look like a game, not like the normal app with a sepia filter. Visuals replace words; they never replace truth, accessibility or performance (see `game-ui-standards.md`, which wins on conflict). Method: `.claude/skills/game-visual-identity/SKILL.md`. Sprint gate: `docs/game/game-sprint-checklist.md`.
+Rule: every game tab must look like a game, not like the normal app with a sepia filter. Visuals replace words; they never replace truth, accessibility or performance (see `game-ui-standards.md`, which wins on conflict). Method: `.claude/skills/game-visual-identity/SKILL.md`. For `/game3d` places see `.claude/standards/game3d-standard.md`. Sprint gate: `docs/game/game-sprint-checklist.md`.
 
 ## 1. Identity ladder (score per game page, 0-3)
 - **0 Generic.** `PageHeader` + `Card` + list/table. Same page would work in normal mode. (Today: Records, Siege rows, Marketplace cards.)

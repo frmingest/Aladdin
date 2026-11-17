@@ -14,6 +14,9 @@ import {
   MINT_DOOR,
   MINT_DOOR_LEAVE_RANGE,
   PLATE_CAPACITY,
+  plateCapacityOf,
+  plateLayoutFor,
+  plateScaleOf,
   PRESS_LEAVE_RANGE,
   PRESS_SPOT,
   SPAN_LEAVE_RANGE,
@@ -45,6 +48,8 @@ import {
 } from "./mintRoom";
 import { cameraOffset, MAX_PITCH, MIN_PITCH } from "./movement";
 import { cameraPull } from "./cameraRoom";
+import { PLATE } from "./weatherTowerRoom";
+import { PLATE_PX } from "./weatherPlateArt";
 import { MINT_WORDS } from "./mintWordsV1";
 import { BUILDINGS, doorSpot } from "./townPlan";
 
@@ -441,6 +446,48 @@ describe("stamp view (#431)", () => {
         expect(horizontal, `plate ${i} sideways`).toBeLessThan(halfH);
         expect(vertical, `plate ${i} up/down`).toBeLessThan(halfV);
       }
+    }
+  });
+
+  it("picks the tall plate layout on a portrait screen and the wide one otherwise (#434)", () => {
+    expect(plateLayoutFor(9 / 19.5)).toBe("tall");
+    expect(plateLayoutFor(1)).toBe("wide");
+    expect(plateLayoutFor(16 / 9)).toBe("wide");
+    expect(plateCapacityOf("wide")).toBe(PLATE_CAPACITY);
+    expect(plateCapacityOf("tall")).toBe(9);
+  });
+
+  it("has every tall-layout plate in view from the press on a tall phone, none touching another or the banners (#434)", () => {
+    for (const aspect of [9 / 21, 9 / 19.5, 9 / 16, 3 / 4, 0.99]) {
+    expect(plateLayoutFor(aspect)).toBe("tall");
+    const halfV = (60 * Math.PI) / 180 / 2;
+    const halfH = Math.atan(Math.tan(halfV) * aspect);
+    const focus: [number, number, number] = [PRESS_SPOT.x, 1.5, PRESS_SPOT.z];
+    const off = cameraOffset(MINT_RESULT_YAW, MINT_RESULT_PITCH, 7);
+    const pull = cameraPull(focus, off, MINT);
+    const cam = [focus[0] + off[0] * pull, focus[1] + off[1] * pull, focus[2] + off[2] * pull];
+    const axisPitch = Math.atan2(cam[1] - focus[1], Math.hypot(cam[0] - focus[0], cam[2] - focus[2]));
+    const scale = plateScaleOf("tall");
+    const halfW = (PLATE.width * scale) / 2;
+    const halfHt = ((PLATE.width * PLATE_PX.h) / PLATE_PX.w) * scale / 2;
+    const seen = new Set<string>();
+    for (let i = 0; i < plateCapacityOf("tall"); i++) {
+      const s = plateSlot(i, "tall");
+      seen.add(`${s.y}|${s.z}`);
+      expect(s.z - halfW).toBeGreaterThan(MINT.minZ);
+      expect(s.y + halfHt, `plate ${i} under the heading banner (y 5.2 and up)`).toBeLessThan(5.2);
+      expect(s.y - halfHt, `plate ${i} above the "more" banner`).toBeGreaterThan(0.55);
+      for (const dz of [-halfW, halfW]) for (const dy of [-halfHt, halfHt]) {
+        const dx = s.x - cam[0];
+        expect(Math.abs(Math.atan2(s.z + dz - cam[2], dx)), `plate ${i} sideways`).toBeLessThan(halfH);
+        expect(Math.abs(Math.atan2(s.y + dy - cam[1], dx) + axisPitch), `plate ${i} up/down`).toBeLessThan(halfV);
+      }
+    }
+    expect(seen.size).toBe(plateCapacityOf("tall"));
+    // Rows and columns are far enough apart that plates do not overlap.
+    expect(plateSlot(3, "tall").y - plateSlot(6, "tall").y).toBeGreaterThan(halfHt * 2);
+    expect(plateSlot(0, "tall").y - plateSlot(3, "tall").y).toBeGreaterThan(halfHt * 2);
+    expect(Math.abs(plateSlot(1, "tall").z - plateSlot(0, "tall").z)).toBeGreaterThan(halfW * 2);
     }
   });
 
