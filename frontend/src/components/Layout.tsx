@@ -38,6 +38,7 @@ function ThemeToggle() {
 }
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useGameMode } from "../lib/gameMode";
+import { WORLD_ROUTE } from "../game3d/parity3d";
 import CommandPalette from "./CommandPalette";
 import FortressTabs from "./fortress/FortressTabs";
 import { allNavSections, isFortressPath, MORE_NAV, moreContainsPath, primaryNavFor, type NavItem } from "../lib/nav";
@@ -87,7 +88,7 @@ function GameModeToggle() {
     const next = !gameMode;
     setGameMode(next);
     if (next) navigate("/fortress");
-    else if (pathname.startsWith("/fortress")) navigate("/");
+    else if (pathname.startsWith("/fortress") || pathname.startsWith(WORLD_ROUTE)) navigate("/");
   };
   return (
     <button
@@ -112,6 +113,49 @@ function GameModeToggle() {
         />
       </span>
     </button>
+  );
+}
+
+/** The second switch (#443): the 3D courtyard. Switching on turns game mode on too (the 3D world is part of it) and lands on the
+ * courtyard; switching off returns to the flat Fortress. A view preference only, like the Game mode switch. */
+export function View3DToggle() {
+  const { setGameMode } = useGameMode();
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const on = pathname.startsWith(WORLD_ROUTE);
+  const flip = () => {
+    if (on) {
+      navigate("/fortress");
+    } else {
+      setGameMode(true);
+      navigate(WORLD_ROUTE);
+    }
+  };
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      aria-label="3D view"
+      onClick={flip}
+      title="Walk your fortress in 3D. Same data, a different view."
+      className="flex items-center gap-2 rounded-full border border-border bg-raised py-1 pl-3 pr-1.5 text-xs font-medium text-ink-muted transition-colors hover:text-ink"
+    >
+      <span>3D</span>
+      <span aria-hidden className={`flex h-5 w-9 items-center rounded-full p-0.5 transition-colors ${on ? "bg-accent" : "bg-border"}`}>
+        <span className={`h-4 w-4 rounded-full shadow transition-transform ${on ? "translate-x-4 bg-onfill" : "translate-x-0 bg-ink-faint"}`} />
+      </span>
+    </button>
+  );
+}
+
+/** Both view switches, side by side. */
+function ViewToggles() {
+  return (
+    <div className="flex items-center gap-2">
+      <GameModeToggle />
+      <View3DToggle />
+    </div>
   );
 }
 
@@ -371,7 +415,7 @@ function FullLayout({ children }: { children: React.ReactNode }) {
           </svg>
         </IconButton>
         <Brand />
-        <GameModeToggle />
+        <ViewToggles />
       </div>
 
       {/* Mobile drawer + backdrop (< lg), only mounted while open. */}
@@ -431,7 +475,7 @@ function FullLayout({ children }: { children: React.ReactNode }) {
             ) : (
               <span />
             )}
-            <GameModeToggle />
+            <ViewToggles />
           </div>
           {gameMode && isFortressPath(pathname) && (
             <div className="print:hidden">
