@@ -63,6 +63,13 @@ Closes #426
 """
 
 
+def all_ran_body() -> str:
+    """A body with every reviewer marked as run, so a hook test passes whatever files the checked-out branch changed."""
+    roles = ("rules-auditor", "docs-sync-checker", "playtest-qa", "game-ux-designer", "game-designer", "game-feel-engineer",
+             "qa-testlead", "compliance-officer", "release-manager", "llm-quality-guard", "valuation-reviewer", "board-steward")
+    return good_body({r: ("yes", "pass, nothing found", "") for r in roles})
+
+
 # What PR #427 was first opened with: a free-form body, no template.
 HAND_WRITTEN = (
     "## What and why\nFaiz decided on #374 to measure sensitivities first.\n\n## Verified\n`ruff check .` clean; "
@@ -124,6 +131,15 @@ def test_the_five_gap_roles_are_required_rows_and_run_for_what_they_guard():
         "valuation-reviewer": "backend/app/services/valuation/dcf.py",
         "compliance-officer": "backend/requirements.txt",
     }
+    more = {
+        "release-manager": ["frontend/Dockerfile", ".github/scripts/check_pr_template.py", ".claude/hooks/require_pr_template.py", ".pre-commit-config.yaml"],
+        "llm-quality-guard": ["backend/app/schemas/analysis.py", "backend/app/services/instruments/evidence.py", "backend/app/services/analysis/blind_pass.py"],
+        "valuation-reviewer": ["backend/app/services/metrics.py", "backend/app/services/risk/x.py", "docs/valuation/y.md"],
+        "compliance-officer": ["frontend/package-lock.json", "backend/pyproject.toml", "backend/app/models/llm_usage.py"],
+    }
+    for role, paths in more.items():
+        for path in paths:
+            assert any(f"`{role}` must run" in e for e in C.check(good_body(), [path])), (role, path)
     for role, path in cases.items():
         errors = C.check(good_body(), [path])
         assert any(f"`{role}` must run" in e for e in errors), (role, errors)
@@ -153,7 +169,7 @@ def test_hook_blocks_a_hand_written_pr_but_lets_the_template_through(tmp_path):
     bad = tmp_path / "bad.json"
     bad.write_text(json.dumps({"title": "t", "head": "h", "base": "main", "body": HAND_WRITTEN}))
     good = tmp_path / "good.json"
-    good.write_text(json.dumps({"title": "t", "head": "h", "base": "main", "body": good_body()}))
+    good.write_text(json.dumps({"title": "t", "head": "h", "base": "main", "body": all_ran_body()}))
     blocked = _hook(f"gh api repos/frmingest/Aladdin/pulls -X POST --input {bad}")
     assert blocked.returncode == 2 and "template" in blocked.stderr
     assert _hook(f"gh api repos/frmingest/Aladdin/pulls -X POST --input {good}").returncode == 0
@@ -191,7 +207,7 @@ def test_hook_still_catches_the_real_command_behind_prefixes(tmp_path):
     bad = tmp_path / "bad.md"
     bad.write_text(HAND_WRITTEN)
     good = tmp_path / "good.md"
-    good.write_text(good_body())
+    good.write_text(all_ran_body())
     assert _hook(f"cd /tmp && GH_TOKEN=x gh pr create -t t --body-file {bad}").returncode == 2
     assert _hook(f"gh pr create -t t -F {bad}").returncode == 2
     assert _hook(f"gh pr create -t t -F {good}").returncode == 0

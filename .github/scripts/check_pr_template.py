@@ -41,10 +41,10 @@ NOT_RAN = {"skipped", "no", "n/a", "not run"}
 GAME_UI_PATH = re.compile(r"^frontend/src/.*(fortress|game|Game)")
 BACKEND_PATH = re.compile(r"^backend/")
 # Added with issue #444 (2026-11-17): the reviewers a change must not skip, by what it touches.
-RELEASE_PATH = re.compile(r"^(\.github/workflows/|backend/Dockerfile|backend/alembic/|docker/)")
-LLM_PATH = re.compile(r"^backend/(prompts/|app/domain/analysis_schema)")
-VALUATION_PATH = re.compile(r"^backend/app/(services/valuation/|domain/(valuation_assumptions|risk_bands|regime_adjustments|financial_metrics))")
-COMPLIANCE_PATH = re.compile(r"^(backend/requirements\.txt|frontend/package\.json|backend/app/providers/|backend/app/services/llm_)")
+RELEASE_PATH = re.compile(r"^(\.github/(workflows|scripts)/|\.pre-commit-config\.yaml|\.claude/(hooks/|settings)|backend/Dockerfile|frontend/Dockerfile|backend/alembic/|docker/)")
+LLM_PATH = re.compile(r"^backend/(prompts/|app/schemas/analysis|app/domain/analysis_schema|app/services/analysis/|app/services/[a-z_]+/evidence\.py)")
+VALUATION_PATH = re.compile(r"^(backend/app/(services/(valuation/|metrics\.py|performance/|risk/)|domain/(valuation_assumptions|risk_bands|regime_adjustments|analysis_assumptions|financial_metrics))|docs/valuation/)")
+COMPLIANCE_PATH = re.compile(r"^(backend/(requirements(-dev)?\.txt|pyproject\.toml)|frontend/package(-lock)?\.json|backend/app/providers/|backend/app/services/llm_|backend/app/models/llm_)")
 
 
 def _sections(body: str) -> dict[str, str]:

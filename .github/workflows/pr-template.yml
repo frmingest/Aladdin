@@ -35,7 +35,7 @@ jobs:
           REPO: ${{ github.repository }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          CHANGED_FILES="$(gh api "repos/$REPO/pulls/$PR_NUMBER/files" --paginate --jq '.[].filename')"
+          CHANGED_FILES="$(gh api "repos/$REPO/pulls/$PR_NUMBER/files" --paginate --jq '.[] | .filename, (.previous_filename // empty)')"
           export CHANGED_FILES
           if [ -f base/.github/scripts/check_pr_template.py ]; then
             python3 base/.github/scripts/check_pr_template.py
