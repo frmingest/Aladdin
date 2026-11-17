@@ -1,4 +1,4 @@
-import { BufferGeometry, Group, Matrix4, Mesh } from "three";
+import { BufferAttribute, BufferGeometry, FloatType, Group, Matrix4, Mesh } from "three";
 import type { Material, Object3D } from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 
@@ -90,6 +90,27 @@ function joinable(obj: Object3D): obj is Mesh {
   return shownAll(mesh);
 }
 
+/** Replace attribute `name` with a plain, non-normalised Float32 copy (values de-normalised), if it is not one already. */
+function toFloat32(geometry: BufferGeometry, name: string): void {
+  const attr = geometry.getAttribute(name);
+  if (!attr || name === "skinIndex" || name === "skinWeight") return; // joint lookups must stay integer
+  const plain =
+    attr instanceof BufferAttribute &&
+    attr.array instanceof Float32Array &&
+    !attr.normalized &&
+    attr.gpuType === FloatType;
+  if (plain) return;
+  // Interleaved attributes (common in glb files) and packed ones both end up as a plain Float32 copy.
+  const out = new Float32Array(attr.count * attr.itemSize);
+  for (let i = 0; i < attr.count; i += 1) {
+    out[i * attr.itemSize] = attr.getX(i);
+    if (attr.itemSize > 1) out[i * attr.itemSize + 1] = attr.getY(i);
+    if (attr.itemSize > 2) out[i * attr.itemSize + 2] = attr.getZ(i);
+    if (attr.itemSize > 3) out[i * attr.itemSize + 3] = attr.getW(i);
+  }
+  geometry.setAttribute(name, new BufferAttribute(out, attr.itemSize));
+}
+
 /** Keep the attributes every geometry has, drop the rest, and make indexing match, so they can be joined. */
 export function normalised(geometries: BufferGeometry[]): BufferGeometry[] {
   const common = Object.keys(geometries[0].attributes).filter((name) =>
@@ -102,6 +123,9 @@ export function normalised(geometries: BufferGeometry[]): BufferGeometry[] {
     for (const name of Object.keys(copy.attributes))
       if (!common.includes(name)) copy.deleteAttribute(name);
     copy.morphAttributes = {};
+    // Models from different files can store the same attribute differently (a glTF uv as normalised
+    // Uint16, another as Float32). three refuses to join those, so make each one plain Float32.
+    for (const name of Object.keys(copy.attributes)) toFloat32(copy, name);
     return copy;
   });
 }

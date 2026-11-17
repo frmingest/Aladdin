@@ -1,6 +1,9 @@
 import {
   BackSide,
   BoxGeometry,
+  BufferAttribute,
+  InterleavedBuffer,
+  InterleavedBufferAttribute,
   CylinderGeometry,
   Group,
   Mesh,
@@ -10,7 +13,7 @@ import {
   Vector3,
 } from "three";
 import type { BufferGeometry, Material, Object3D } from "three";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { batchStatic, materialKey, undoBatch } from "./staticBatch";
 
 const std = (color: string) =>
@@ -113,6 +116,42 @@ describe("batchStatic", () => {
     batchStatic(root);
     expect(worldTriangles(root)).toHaveLength(total);
     expect(visibleMeshes(root)).toHaveLength(2);
+  });
+
+  it("joins pieces whose uv is stored differently (normalised Uint16 against Float32)", () => {
+    const plain = new BoxGeometry();
+    const odd = new BoxGeometry();
+    const uv = odd.getAttribute("uv");
+    const packed = new Uint16Array(uv.count * 2);
+    for (let i = 0; i < packed.length; i += 1) packed[i] = Math.round(uv.array[i] * 65535);
+    odd.setAttribute("uv", new BufferAttribute(packed, 2, true));
+    const errors: unknown[] = [];
+    const spy = vi.spyOn(console, "error").mockImplementation((...a) => void errors.push(a));
+    const root = new Group();
+    const material = std("#333333");
+    root.add(mesh(plain, material), mesh(odd, material, 3, 0, 0));
+    const batch = batchStatic(root);
+    spy.mockRestore();
+    expect(errors).toHaveLength(0);
+    expect(batch.made).toHaveLength(1);
+    expect(batch.callsAfter).toBe(1);
+  });
+
+  it("joins pieces whose uv is an interleaved attribute (as in many glb files)", () => {
+    const plain = new BoxGeometry();
+    const odd = new BoxGeometry();
+    const uv = odd.getAttribute("uv");
+    const data = new InterleavedBuffer(new Float32Array(uv.array), 2);
+    odd.setAttribute("uv", new InterleavedBufferAttribute(data, 2, 0));
+    const errors: unknown[] = [];
+    const spy = vi.spyOn(console, "error").mockImplementation((...a) => void errors.push(a));
+    const root = new Group();
+    const material = std("#444444");
+    root.add(mesh(plain, material), mesh(odd, material, 3, 0, 0));
+    const batch = batchStatic(root);
+    spy.mockRestore();
+    expect(errors).toHaveLength(0);
+    expect(batch.made).toHaveLength(1);
   });
 
   it("keeps different materials apart", () => {
