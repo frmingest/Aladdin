@@ -36,7 +36,7 @@ from app.domain.sectors import is_financial_sector
 from app.models.document import Document
 from app.models.financial_line_item import FinancialLineItem
 from app.models.holding import Holding
-from app.schemas.game import RavenLineOut, RavenOut, RavensOut
+from app.schemas.game import RavenDirectionOut, RavenLineOut, RavenOut, RavensOut
 from app.services.filings.newsweb_annual_report import (
     ANNUAL_REPORT_DOCUMENT_TYPE,
     INTERIM_REPORT_DOCUMENT_TYPE,
@@ -88,28 +88,29 @@ def measure_line(
     """One compared measure; None when it exists in neither period."""
     if previous is None and current is None:
         return None
-    base = {"metric": measure.metric, "label": measure.label, "previous": previous, "current": current}
+
+    def line(direction: RavenDirectionOut, text: str) -> RavenLineOut:
+        return RavenLineOut(
+            metric=measure.metric, label=measure.label, previous=previous, current=current, direction=direction, text=text
+        )
+
     if previous is None or current is None:
         missing = previous_period_label if previous is None else current_period_label
-        return RavenLineOut(
-            **base, direction="unknown", text=f"{measure.label}: could not be computed for {missing}, so no comparison."
-        )
+        return line("unknown", f"{measure.label}: could not be computed for {missing}, so no comparison.")
     if measure.kind == "relative" and currency_changed:
-        return RavenLineOut(
-            **base, direction="unknown",
-            text=f"{measure.label}: the two periods are reported in different currencies, so they are not compared.",
+        return line(
+            "unknown", f"{measure.label}: the two periods are reported in different currencies, so they are not compared."
         )
 
     if measure.kind == "relative":
         if previous == ZERO:
-            return RavenLineOut(
-                **base, direction="unknown", text=f"{measure.label}: the earlier figure is zero, so no comparison."
-            )
+            return line("unknown", f"{measure.label}: the earlier figure is zero, so no comparison.")
         moved = (current - previous) / abs(previous)
     else:
         moved = current - previous
     step_met = abs(moved) >= measure.min_change
     went_up = current > previous
+    direction: RavenDirectionOut
     if not step_met:
         direction = "steady"
     elif went_up == (measure.direction == "higher_better"):
@@ -124,7 +125,7 @@ def measure_line(
     else:
         verb = "rose" if went_up else "fell"
         text = f"{measure.label} {verb} from {before} to {after}."
-    return RavenLineOut(**base, direction=direction, text=text)
+    return line(direction, text)
 
 
 def compare_periods(
@@ -272,8 +273,8 @@ def build_ravens(db: Session, rules_v: TimeAndFilingsRules, *, now: datetime | N
     for doc in docs:
         if doc.id in with_items or doc.id in figure_docs:
             continue
-        holding = holdings.get(doc.holding_id)
-        if holding is None:
+        doc_holding = holdings.get(doc.holding_id) if doc.holding_id is not None else None
+        if doc_holding is None:
             continue
         kind_word = "half-year or interim" if doc.type == INTERIM_REPORT_DOCUMENT_TYPE else "annual"
         captured = _aware(doc.uploaded_at)
@@ -281,10 +282,10 @@ def build_ravens(db: Session, rules_v: TimeAndFilingsRules, *, now: datetime | N
             RavenOut(
                 id=f"doc:{doc.id}",
                 kind="text_only",
-                holding_id=holding.id,
-                ticker=holding.ticker,
-                name=holding.name,
-                in_portfolio=holding.id in owned,
+                holding_id=doc_holding.id,
+                ticker=doc_holding.ticker,
+                name=doc_holding.name,
+                in_portfolio=doc_holding.id in owned,
                 period=doc.reporting_period,
                 previous_period=None,
                 captured_at=captured,

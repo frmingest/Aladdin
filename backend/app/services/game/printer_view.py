@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
+from typing import overload
 
 from sqlalchemy.orm import Session
 
@@ -42,6 +43,14 @@ NOTES = [
     ),
     "Nothing here is saved and nothing changes a stored rating, wall or portfolio figure.",
 ]
+
+
+@overload
+def _r(r: engine.Range) -> PrinterRangeOut: ...
+
+
+@overload
+def _r(r: None) -> None: ...
 
 
 def _r(r: engine.Range | None) -> PrinterRangeOut | None:
@@ -151,11 +160,11 @@ def build_printer(
         pulls=[{"lever": p.lever, "size": str(p.size), "variant": p.variant} for p in pulls],
         channels=[
             PrinterChannelOut(
-                channel=c.channel, range=_r(c.range), confidence=c.confidence,  # type: ignore[arg-type]
+                channel=c.channel, range=_r(c.range), confidence=c.confidence,
                 capped=c.capped, cancelling=c.cancelling,
                 contributions=[
                     PrinterContributionOut(
-                        lever=x.lever, range=_r(x.range), confidence=x.confidence,  # type: ignore[arg-type]
+                        lever=x.lever, range=_r(x.range), confidence=x.confidence,
                         source=x.source, basis=x.basis,
                     )
                     for x in c.contributions
@@ -173,7 +182,7 @@ def build_printer(
                 terms=[
                     PrinterTermOut(
                         channel=t.channel, coefficient=t.coefficient, pct=_r(t.pct), confidence=t.confidence, basis=t.basis,
-                    )  # type: ignore[arg-type]
+                    )
                     for t in r.terms
                 ],
             )

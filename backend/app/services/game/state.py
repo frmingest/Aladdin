@@ -248,8 +248,12 @@ def _snapshot_steps(
     for p in db.scalars(select(PortfolioPosition).where(PortfolioPosition.snapshot_id.in_(ids))):
         positions.setdefault(p.snapshot_id, {})[p.holding_id] = p
     holding_ids = {h for per in positions.values() for h in per}
-    names = dict(db.execute(select(Holding.id, Holding.name).where(Holding.id.in_(holding_ids))).all()) if holding_ids else {}
-    account_names = dict(db.execute(select(Account.id, Account.name)).all())
+    names = (
+        {hid: name for hid, name in db.execute(select(Holding.id, Holding.name).where(Holding.id.in_(holding_ids))).all()}
+        if holding_ids
+        else {}
+    )
+    account_names = {aid: name for aid, name in db.execute(select(Account.id, Account.name)).all()}
 
     steps: list[PositionStep] = []
     turnover: list[TurnoverFact] = []
@@ -434,7 +438,7 @@ def build_game_state(
     )
 
     with_cash = [a for a in inputs.accounts if a.cash_nok is not None]
-    cash_nok = sum((a.cash_nok for a in with_cash), ZERO) if with_cash else None
+    cash_nok = sum((c for a in with_cash if (c := a.cash_nok) is not None), ZERO) if with_cash else None
     vault_state, share = rules.vault_level(cash_nok, overview.total_value_nok, mapping)
     as_ofs = [_aware(a.cash_as_of) for a in with_cash if a.cash_as_of is not None]
     vault_accounts = [
