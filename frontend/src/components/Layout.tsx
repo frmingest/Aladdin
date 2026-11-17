@@ -96,10 +96,12 @@ function GameModeToggle() {
       role="switch"
       aria-checked={gameMode}
       onClick={flip}
+      aria-label="Game mode"
       title="Show your portfolio as a value investor's fortress. Same data, a different view."
       className="flex items-center gap-2 rounded-full border border-border bg-raised py-1 pl-3 pr-1.5 text-xs font-medium text-ink-muted transition-colors hover:text-ink"
     >
-      <span>Game mode</span>
+      <span aria-hidden className="sm:hidden">Game</span>
+      <span className="hidden sm:inline">Game mode</span>
       <span
         aria-hidden
         className={`flex h-5 w-9 items-center rounded-full p-0.5 transition-colors ${
@@ -152,7 +154,7 @@ export function View3DToggle() {
 /** Both view switches, side by side. */
 function ViewToggles() {
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
       <GameModeToggle />
       <View3DToggle />
     </div>
