@@ -279,6 +279,7 @@ Running the app: hosting, auth gate, page-load, background jobs, audits, live ch
 - [live-verification-2026-09-27.md](ops/live-verification-2026-09-27.md) — Live verification — 2026-09-27 (post API-key-gate deploy)
 - [macro-data-and-guardrails-sprint7-2026-09-24.md](ops/macro-data-and-guardrails-sprint7-2026-09-24.md) — Numeric macro data (Fed / Norges Bank) + Sprint 7 guardrail tooling
 - [mypy-report-only-2026-10-14.md](ops/mypy-report-only-2026-10-14.md) — Backend type check in CI: mypy, report only (2026-10-14)
+- [mypy-ratchet-2026-11-17.md](ops/mypy-ratchet-2026-11-17.md) — Backend type check in CI: blocking ratchet, old findings baselined (2026-11-17, #389)
 - [object-storage-free-tier-alternatives-2026-09-27.md](ops/object-storage-free-tier-alternatives-2026-09-27.md) — Object storage: free-tier alternatives to Supabase Storage (2026-09-27)
 - [test-strategy-2026-11-12.md](ops/test-strategy-2026-11-12.md) — Test strategy and the Playwright framework: levels, demo-stack E2E in CI, rule-to-test map, findings F-0 to F-3 (2026-11-12)
 - [game3d-postcards-2026-11-12.md](game/game3d-postcards-2026-11-12.md) — Postcards: seven pictures of the 3D world attached to every PR from the demo stack (D1 of the roadmap, 2026-11-12)

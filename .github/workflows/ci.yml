@@ -206,11 +206,11 @@ jobs:
         run: /tmp/gitleaks git . --redact --no-banner --config .gitleaks.toml
 
   typecheck:
-    name: Type check (mypy, report only)
+    name: Type check (mypy ratchet)
     runs-on: ubuntu-latest
-    # Report-only: the backend has about 170 old findings. This job prints them and a count in the run summary; it never
-    # blocks a change. Make it blocking once the count reaches zero (docs/ops/mypy-report-only-2026-10-14.md).
-    continue-on-error: true
+    # Blocking ratchet (issue #389): the ~170 old findings are listed in backend/mypy-baseline.txt and tolerated; any NEW
+    # finding fails this job. Fix a finding, then run `python scripts/mypy_ratchet.py --update` to shrink the baseline.
+    # The job is blocking at zero NEW findings; it becomes "zero findings" when the baseline file is empty.
     defaults:
       run:
         working-directory: backend
@@ -224,21 +224,18 @@ jobs:
             backend/requirements.txt
             backend/requirements-dev.txt
       - run: pip install -r requirements-dev.txt
-      - name: mypy
+      - name: mypy ratchet
         run: |
           set +e
-          mypy 2>&1 | tee /tmp/mypy.txt
+          python scripts/mypy_ratchet.py 2>&1 | tee /tmp/mypy.txt
           status=${PIPESTATUS[0]}
           {
-            echo "### mypy (report only)"
+            echo "### mypy ratchet"
             echo
-            tail -n 1 /tmp/mypy.txt
+            echo '```'
+            head -n 40 /tmp/mypy.txt
+            echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
-          # Report-only: findings show as a warning, the check stays green. Only a crash (exit 2+) fails.
-          if [ "$status" -eq 1 ]; then
-            echo "::warning title=mypy::$(tail -n 1 /tmp/mypy.txt)"
-            exit 0
-          fi
           exit "$status"
 
   dependency-audit:
