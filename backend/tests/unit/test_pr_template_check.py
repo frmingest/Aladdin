@@ -134,7 +134,7 @@ def test_the_five_gap_roles_are_required_rows_and_run_for_what_they_guard():
     more = {
         "release-manager": ["frontend/Dockerfile", ".github/scripts/check_pr_template.py", ".claude/hooks/require_pr_template.py", ".pre-commit-config.yaml"],
         "llm-quality-guard": ["backend/app/schemas/analysis.py", "backend/app/services/instruments/evidence.py", "backend/app/services/analysis/blind_pass.py"],
-        "valuation-reviewer": ["backend/app/services/metrics.py", "backend/app/services/risk/x.py", "docs/valuation/y.md"],
+        "valuation-reviewer": ["backend/app/services/metrics.py", "backend/app/services/risk/x.py", "docs/valuation/y.md", "backend/app/services/market_data/fx.py", "backend/app/api/valuation.py", "backend/app/schemas/valuation.py"],
         "compliance-officer": ["frontend/package-lock.json", "backend/pyproject.toml", "backend/app/models/llm_usage.py"],
     }
     for role, paths in more.items():
