@@ -26,10 +26,14 @@ disabled (no XXE); scripts/styles/fonts never reach the page text.
 from __future__ import annotations
 
 import re
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal, InvalidOperation
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from lxml import etree
 
 from app.domain.financial_metrics import PER_SHARE_METRICS, POSITIVE_MAGNITUDE_METRICS
 from app.providers.sec_edgar_provider import CONCEPT_MAP as EDGAR_CONCEPT_MAP
@@ -762,11 +766,19 @@ def _resolve_metric(
     def get(concept: str) -> TaggedFact | None:
         return resolved.get((concept, fy))
 
+    def present(concepts: Iterable[str]) -> list[TaggedFact]:
+        """The tagged facts that exist for these concepts, in order."""
+        return [f for c in concepts if (f := get(c)) is not None]
+
+    def first(concepts: Iterable[str]) -> TaggedFact | None:
+        """The first of these concepts that is tagged for this year, or None."""
+        return next(iter(present(concepts)), None)
+
     if metric == "capital_expenditures":
-        combined = next((get(c) for c in _CAPEX_COMBINED if get(c) is not None), None)
+        combined = first(_CAPEX_COMBINED)
         if combined is not None:
             return _positive(combined), IXBRL_CONFIDENCE, combined.concept, combined.unit, combined.page or None
-        parts = [get(c) for c in _CAPEX_COMPONENTS if get(c) is not None]
+        parts = present(_CAPEX_COMPONENTS)
         if parts and len({p.unit for p in parts}) == 1:
             if len(parts) == 1:
                 only = parts[0]
@@ -786,7 +798,7 @@ def _resolve_metric(
             return extension[:3] + (extension[4], extension[5])
         # fall through to the generic concept list
 
-    biological = next((get(c) for c in _BIOLOGICAL_FAIR_VALUE if get(c) is not None), None)
+    biological = first(_BIOLOGICAL_FAIR_VALUE)
     if biological is not None and biological.value == 0:
         biological = None
 
@@ -822,7 +834,7 @@ def _resolve_metric(
             addbacks = [combined_da]
             value = operating.value + _positive(combined_da)
         elif pure_da is not None or (
-            pure_da := next((get(c) for c in _PROXY_CONCEPTS["depreciation_and_amortization"] if get(c)), None)
+            pure_da := first(_PROXY_CONCEPTS["depreciation_and_amortization"])
         ) is not None:
             proxy_da = pure_da if get(_PURE_DA) is None else None
             addbacks = [pure_da]
@@ -856,13 +868,13 @@ def _resolve_metric(
         concepts = tuple(
             c for c in CONCEPT_MAP.get(metric, ()) if c != "ifrs-full:NoncurrentPortionOfNoncurrentBorrowings"
         )
-        direct = next((get(c) for c in concepts if get(c) is not None), None)
+        direct = first(concepts)
         if direct is not None:
             return direct.value, IXBRL_CONFIDENCE, direct.concept, direct.unit, direct.page or None
         return _resolve_total_debt(fy, resolved)
 
     concepts = CONCEPT_MAP.get(metric, ())
-    chosen = next((get(c) for c in concepts if get(c) is not None), None)
+    chosen = first(concepts)
     if chosen is not None:
         if metric == "shares_outstanding" and "WeightedAverage" in chosen.concept:
             # Not the year-end count: labelled so nothing mistakes it for one.
@@ -890,36 +902,36 @@ def _resolve_metric(
     if metric == "cost_of_goods_sold":
         # No cost-of-sales line (Subsea 7 tags operating expense and a gross
         # profit): revenue less the tagged gross profit IS the cost of sales.
-        gross = get("ifrs-full:GrossProfit") or _tagged_by_local_name(
+        gross_profit = get("ifrs-full:GrossProfit") or _tagged_by_local_name(
             fy, resolved, (), prefix="GrossProfit"
         )
         revenue = _resolve_metric("revenue", fy, resolved)
-        if gross is not None and revenue is not None and revenue[3] == gross.unit and revenue[0] >= gross.value:
+        if gross_profit is not None and revenue is not None and revenue[3] == gross_profit.unit and revenue[0] >= gross_profit.value:
             return (
-                revenue[0] - gross.value,
+                revenue[0] - gross_profit.value,
                 DERIVED_CONFIDENCE,
-                f"derived: revenue - {gross.concept}",
-                gross.unit,
-                gross.page or None,
+                f"derived: revenue - {gross_profit.concept}",
+                gross_profit.unit,
+                gross_profit.page or None,
             )
 
     if metric == "profit_continuing_operations":
         # No continuing-operations line tagged: total profit less the
         # discontinued result is, by definition, the continuing profit.
-        total = get("ifrs-full:ProfitLoss")
-        discontinued = next((get(c) for c in CONCEPT_MAP["profit_discontinued_operations"] if get(c)), None)
-        if total is not None and discontinued is not None and total.unit == discontinued.unit:
+        total_profit = get("ifrs-full:ProfitLoss")
+        discontinued = first(CONCEPT_MAP["profit_discontinued_operations"])
+        if total_profit is not None and discontinued is not None and total_profit.unit == discontinued.unit:
             return (
-                total.value - discontinued.value,
+                total_profit.value - discontinued.value,
                 DERIVED_CONFIDENCE,
-                f"derived: {total.concept} - {discontinued.concept}",
-                total.unit,
-                total.page or None,
+                f"derived: {total_profit.concept} - {discontinued.concept}",
+                total_profit.unit,
+                total_profit.page or None,
             )
         return None
 
     if metric == "lease_liabilities":
-        parts = [get(c) for c in _LEASE_COMPONENTS if get(c) is not None]
+        parts = present(_LEASE_COMPONENTS)
         if parts and len({p.unit for p in parts}) == 1:
             return (
                 sum((_positive(p) for p in parts), Decimal(0)),
@@ -930,7 +942,7 @@ def _resolve_metric(
             )
         return None
 
-    proxy = next((get(c) for c in _PROXY_CONCEPTS.get(metric, ()) if get(c) is not None), None)
+    proxy = first(_PROXY_CONCEPTS.get(metric, ()))
     if proxy is not None:
         return proxy.value, PROXY_CONFIDENCE, f"proxy: {proxy.concept}", proxy.unit, proxy.page or None
     return None
@@ -1120,8 +1132,8 @@ def _integrity_checks(
     for fy in years:
         for label, lhs_concept, terms in _INTEGRITY_CHECKS:
             lhs = resolved.get((lhs_concept, fy))
-            rhs = [(resolved.get((c, fy)), sign) for c, sign in terms]
-            if lhs is None or any(f is None for f, _ in rhs):
+            rhs = [(f, sign) for c, sign in terms if (f := resolved.get((c, fy))) is not None]
+            if lhs is None or len(rhs) != len(terms):
                 continue
             total = sum((f.value * sign for f, sign in rhs), Decimal(0))
             used = [lhs, *(f for f, _ in rhs)]
@@ -1227,6 +1239,8 @@ def _other_equity_instruments(
     notes: list[str] = []
     for fy in years:
         equity = resolved.get(("ifrs-full:Equity", fy))
+        if equity is None:
+            continue
         minority = next(
             (
                 resolved[(c, fy)].value
@@ -1492,7 +1506,7 @@ def extract_ixbrl(content: bytes, rules: Sequence[MappingRule] = ()) -> Extracti
     page_texts: list[str] = []
     # (element, page) for every ix:nonFraction; page 0 = not inside a page
     # container (or the document isn't paged).
-    numeric_elements: list[tuple[object, int]] = []
+    numeric_elements: list[tuple[etree._Element, int]] = []
     in_pages: set[str] = set()
     tree = root.getroottree()
     if containers:
