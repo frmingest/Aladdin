@@ -458,7 +458,8 @@ describe("stamp view (#431)", () => {
   });
 
   it("has every tall-layout plate in view from the press on a tall phone, none touching another or the banners (#434)", () => {
-    const aspect = 9 / 19.5; // a tall modern phone, upright
+    for (const aspect of [9 / 21, 9 / 19.5, 9 / 16, 3 / 4, 0.99]) {
+    expect(plateLayoutFor(aspect)).toBe("tall");
     const halfV = (60 * Math.PI) / 180 / 2;
     const halfH = Math.atan(Math.tan(halfV) * aspect);
     const focus: [number, number, number] = [PRESS_SPOT.x, 1.5, PRESS_SPOT.z];
@@ -483,10 +484,11 @@ describe("stamp view (#431)", () => {
       }
     }
     expect(seen.size).toBe(plateCapacityOf("tall"));
-    // Rows are far enough apart that plates do not overlap.
+    // Rows and columns are far enough apart that plates do not overlap.
     expect(plateSlot(3, "tall").y - plateSlot(6, "tall").y).toBeGreaterThan(halfHt * 2);
     expect(plateSlot(0, "tall").y - plateSlot(3, "tall").y).toBeGreaterThan(halfHt * 2);
     expect(Math.abs(plateSlot(1, "tall").z - plateSlot(0, "tall").z)).toBeGreaterThan(halfW * 2);
+    }
   });
 
   it("gives every lever a solid base that matches the iron block drawn, clear of the spot you stand at", () => {

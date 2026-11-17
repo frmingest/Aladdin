@@ -120,8 +120,8 @@ export default function MintRoom({ mint }: Props) {
     if (n) n.rotation.z = reduced || Math.abs(needleGoal - n.rotation.z) < 0.002 ? needleGoal : n.rotation.z + (needleGoal - n.rotation.z) * Math.min(1, dt * 6);
   });
   // A portrait screen gets the tall plate layout so every plate is in view when you stamp (#434).
-  const aspect = useThree((st) => st.size.width / Math.max(1, st.size.height));
-  const layout = plateLayoutFor(aspect);
+  // Select the layout itself (a string), so a resize only re-renders when the layout flips, not on every pixel.
+  const layout = useThree((st) => plateLayoutFor(st.size.width / Math.max(1, st.size.height)));
   const doorGap = MINT_DOOR.width / 2;
   const sideLen = (WIDTH_X - MINT_DOOR.width) / 2;
   const wallPlateY = 3.3;
@@ -234,10 +234,10 @@ export default function MintRoom({ mint }: Props) {
       </Part>
       <Banner position={[BOOK_SPOT.x, 1.6, BOOK_SPOT.z + 0.6]} yaw={Math.PI} width={1.8} big={MINT_WORDS.ledger} small={null} />
 
-      {/* The result wall (east): one plate per holding, biggest swing first (the backend's own order). */}
+      {/* The result wall (east): one plate per holding, biggest swing first (the backend's own order). The tall layout has no room for a per-plate "Old answer" tab between its rows; the wall heading says it instead. */}
       {plates.map((p, i) => {
         const s = slots[i];
-        return <ResultPlate key={p.key} p={p} stale={stale} position={[s.x, s.y, s.z]} yaw={s.yaw} scale={plateScale} />;
+        return <ResultPlate key={p.key} p={p} stale={stale && layout === "wide"} position={[s.x, s.y, s.z]} yaw={s.yaw} scale={plateScale} />;
       })}
       {heading && <Banner position={[MINT.maxX - 0.08, 5.7, plateCentre]} yaw={-Math.PI / 2} width={6.4} big={heading} small={null} />}
       {more > 0 && <Banner position={[MINT.maxX - 0.08, layout === "tall" ? 0.3 : 0.6, plateCentre]} yaw={-Math.PI / 2} width={layout === "tall" ? 3 : 4.4} big={MINT_WORDS.more(more)} small={null} />}
