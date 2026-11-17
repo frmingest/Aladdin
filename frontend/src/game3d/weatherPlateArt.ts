@@ -226,6 +226,22 @@ function fitSingleLine(ctx: CanvasRenderingContext2D, text: string, maxW: number
   return null;
 }
 
+/** Two lines of `text` split at the word break that makes the longer line shortest (no one-word widow), at the largest size from `sizes` where both fit `maxW`; null when none fits. */
+export function fitTwoLines(ctx: CanvasRenderingContext2D, text: string, maxW: number, sizes: readonly number[]): { size: number; lines: string[] } | null {
+  const words = text.split(/\s+/).filter(Boolean);
+  for (const size of sizes) {
+    ctx.font = `700 ${size}px ${FONT}`;
+    let best: { lines: string[]; longest: number } | null = null;
+    for (let i = 1; i < words.length; i++) {
+      const lines = [words.slice(0, i).join(" "), words.slice(i).join(" ")];
+      const longest = Math.max(...lines.map((l) => ctx.measureText(l).width));
+      if (longest <= maxW && (!best || longest < best.longest)) best = { lines, longest };
+    }
+    if (best) return { size, lines: best.lines };
+  }
+  return null;
+}
+
 /** A wide banner with one big line and, optionally, one smaller line under it. */
 export function drawBanner(ctx: CanvasRenderingContext2D, big: string, small: string | null): void {
   const { w, h } = BANNER_PX;
@@ -241,7 +257,7 @@ export function drawBanner(ctx: CanvasRenderingContext2D, big: string, small: st
       ctx.fillText(big, w / 2, 104);
       return;
     }
-    const two = fitText(ctx, big, w - 80, 2, [50, 44, 38, 32]);
+    const two = fitTwoLines(ctx, big, w - 80, [50, 44, 38, 32]) ?? fitText(ctx, big, w - 80, 2, [32]);
     ctx.font = `700 ${two.size}px ${FONT}`;
     const lineH = two.size + 6;
     const top = (h - (two.size + lineH * (two.lines.length - 1))) / 2;
@@ -251,10 +267,8 @@ export function drawBanner(ctx: CanvasRenderingContext2D, big: string, small: st
   const b = fitText(ctx, big, w - 80, 1, [64, 54, 46]);
   ctx.font = `700 ${b.size}px ${FONT}`;
   ctx.fillText(b.lines[0], w / 2, 78);
-  {
-    ctx.fillStyle = SOFT;
-    const s = fitText(ctx, small, w - 80, 1, [36, 30, 26]);
-    ctx.font = `600 ${s.size}px ${FONT}`;
-    ctx.fillText(s.lines[0], w / 2, 126);
-  }
+  ctx.fillStyle = SOFT;
+  const sm = fitText(ctx, small, w - 80, 1, [36, 30, 26]);
+  ctx.font = `600 ${sm.size}px ${FONT}`;
+  ctx.fillText(sm.lines[0], w / 2, 126);
 }

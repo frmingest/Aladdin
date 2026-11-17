@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { drawBanner, drawPlate, drawPost, plateText, wrapWords } from "./weatherPlateArt";
+import { drawBanner, drawPlate, drawPost, fitTwoLines, plateText, wrapWords } from "./weatherPlateArt";
 import type { DialPlan } from "./weatherTowerRoomLogic";
 import { WEATHER_WORDS } from "./weatherTowerWordsV2";
 
@@ -94,7 +94,8 @@ describe("the plates draw their words", () => {
     expect(banner.texts).toEqual([WEATHER_WORDS.title, "3 of 22 plates reading"]);
   });
 
-  it("never clips a long key sentence: it wraps to two lines that each fit (#440)", () => {
+  /** A recording 2D context whose text width grows with the font size the code actually set (0.55 em per character). */
+  function sizedCtx() {
     const texts: Array<{ text: string; size: number }> = [];
     const state: Record<string, unknown> = { font: "" };
     const sizeOf = () => Number(/(\d+)px/.exec(String(state.font))?.[1] ?? 0);
@@ -110,12 +111,29 @@ describe("the plates draw their words", () => {
         return true;
       },
     }) as unknown as CanvasRenderingContext2D;
-    drawBanner(ctx, WEATHER_WORDS.railKey, null);
-    expect(texts.map((t) => t.text).join(" ")).toBe(WEATHER_WORDS.railKey);
-    expect(texts.length).toBe(2);
-    for (const t of texts) expect(t.text.length * t.size * 0.55).toBeLessThanOrEqual(1024 - 80);
-    texts.length = 0;
-    drawBanner(ctx, WEATHER_WORDS.dotKey, null);
-    expect(texts.map((t) => t.text).join(" ")).toBe(WEATHER_WORDS.dotKey);
+    return { ctx, texts };
+  }
+
+  it("never clips a key sentence: two balanced lines that each fit, words unchanged (#440)", () => {
+    for (const key of [WEATHER_WORDS.railKey, WEATHER_WORDS.dotKey]) {
+      const { ctx, texts } = sizedCtx();
+      drawBanner(ctx, key, null);
+      expect(texts.map((t) => t.text).join(" ")).toBe(key);
+      expect(texts.length).toBe(2);
+      for (const t of texts) expect(t.text.length * t.size * 0.55).toBeLessThanOrEqual(1024 - 80);
+      // balanced: no one-word widow on the second line
+      expect(texts[1].text.split(" ").length).toBeGreaterThan(1);
+    }
+  });
+
+  it("keeps a short banner on one line and splits at the most balanced break", () => {
+    const short = sizedCtx();
+    drawBanner(short.ctx, "Short key", null);
+    expect(short.texts.map((t) => t.text)).toEqual(["Short key"]);
+    const { ctx } = sizedCtx();
+    ctx.font = "700 50px x";
+    const two = fitTwoLines(ctx, "aaaa bbbb cc dd", 10000, [50]);
+    expect(two?.lines).toEqual(["aaaa bbbb", "cc dd"]);
+    expect(fitTwoLines(ctx, "unbreakable", 10, [50])).toBeNull();
   });
 });
