@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import type { Standing } from "../lib/types";
 import QuestLog from "./QuestLog";
 import { sixMonthReckoning, unwrittenThesis } from "./quest";
-import { litTorches } from "./standingTorches";
+import { litTorches } from "./standingTorchesLogic";
 import { standingWordsV3, wordsFor } from "./standingWordsV3";
 
 const gate = (level: number, fact: string) => ({ level, title: "", met: false, done: null, total: null, fact });

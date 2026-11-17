@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { RESERVED_ZONES } from "./layout";
-import { DESK, SHELF } from "./desk";
+import { DESK, SHELF } from "./deskLogic";
 import { MARKET } from "./marketPieces";
 import { NPCS } from "./npcs";
 import { PROPS } from "./props";
 import { SCENERY } from "./sceneryPieces";
-import { STANDING_TORCHES } from "./standingTorches";
-import { TOWNSFOLK } from "./townsfolk";
+import { STANDING_TORCHES } from "./standingTorchesLogic";
+import { TOWNSFOLK } from "./townsfolkLogic";
 
 describe("reserved zones (siege simulator)", () => {
   it("have nothing standing in them today", () => {

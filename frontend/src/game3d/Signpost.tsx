@@ -1,7 +1,7 @@
 import { CuboidCollider, RigidBody } from "@react-three/rapier";
 import { PAL, Part } from "./Inked";
 import StaticBatch from "./StaticBatch";
-import { SIGN, SIGN_FACING } from "./signpost";
+import { SIGN, SIGN_FACING } from "./signpostLogic";
 
 /** Three arrow boards, turned a little apart, at fixed heights. Shape only: no words, no data. */
 const BOARDS = [

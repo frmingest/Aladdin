@@ -1,16 +1,16 @@
 import { describe, expect, it } from "vitest";
 import type { Theme3dId } from "../lib/sectors";
 import { COBBLE_RADIUS, KEEP, SPAWN, WALL_RADIUS, WALL_THICKNESS, cornerTowers } from "./layout";
-import { cornerTowerFootprint, keepModelFootprint } from "./keepModels";
-import { LAND_TOWER_REACH } from "./holdingLand";
-import { FENCE_RADIUS } from "./farmDressing";
+import { cornerTowerFootprint, keepModelFootprint } from "./keepModelsLogic";
+import { LAND_TOWER_REACH } from "./holdingLandLogic";
+import { FENCE_RADIUS } from "./farmDressingLogic";
 import { MARKET_CENTER, MARKET_REACH } from "./marketPieces";
 import { CAMP_CENTER, CAMP_REACH } from "./campPieces";
 import { PERCH } from "./watchPlan";
 import { QUARTER_GATE } from "./quarterPlan";
-import { SIEGE_GATE } from "./siegeField";
+import { SIEGE_GATE } from "./siegeFieldLogic";
 import { DRILL_POST } from "./stormDrill";
-import { DESK, SHELF } from "./desk";
+import { DESK, SHELF } from "./deskLogic";
 import { VAULT } from "./vaultPlan";
 import { REALM_POST } from "./realmPlan";
 import { NPCS } from "./npcs";
@@ -19,11 +19,11 @@ import { SCENERY } from "./sceneryPieces";
 import { MARKET } from "./marketPieces";
 import { CAMP } from "./campPieces";
 import { BOOTHS } from "./boothPlan";
-import { STANDING_TORCHES } from "./standingTorches";
-import { TOWNSFOLK } from "./townsfolk";
-import { WORKERS } from "./workers";
+import { STANDING_TORCHES } from "./standingTorchesLogic";
+import { TOWNSFOLK } from "./townsfolkLogic";
+import { WORKERS } from "./workersLogic";
 import { WATCH_POST } from "./watchPlan";
-import { SIGN } from "./signpost";
+import { SIGN } from "./signpostLogic";
 import {
   DOOR_REACH,
   FOOTPRINT,

@@ -10,7 +10,7 @@
  * Nothing here says good or bad. State is told by shape and word, never colour alone: no reading = dashed rim and
  * "No reading"; stale = a slate tab that says "stale" and a dimmed number.
  */
-import type { DialPlan } from "./weatherTowerRoom";
+import type { DialPlan } from "./weatherTowerRoomLogic";
 import { WEATHER_WORDS } from "./weatherTowerWordsV2";
 
 export const PLATE_PX = { w: 400, h: 338 } as const;

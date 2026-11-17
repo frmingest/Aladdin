@@ -4,10 +4,10 @@ import { useGLTF } from "@react-three/drei";
 import { Box3, Vector3 } from "three";
 import type { Object3D } from "three";
 import { INK, PAL, Part } from "./Inked";
-import { MILL_FILE_URL, millPlan } from "./millDressing";
-import type { MillPiece, MillTheme } from "./millDressing";
-import { WORKPLACE } from "./holdingLand";
-import type { LandCentreSlot } from "./landCentre";
+import { MILL_FILE_URL, millPlan } from "./millDressingLogic";
+import type { MillPiece, MillTheme } from "./millDressingLogic";
+import { WORKPLACE } from "./holdingLandLogic";
+import type { LandCentreSlot } from "./landCentreLogic";
 
 /** If a mill file fails to load, the land keeps its footing and stone but loses the mill (never the whole scene). */
 class MillBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {

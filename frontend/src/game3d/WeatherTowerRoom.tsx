@@ -19,8 +19,8 @@ import {
   towerFacts,
   towerLayout,
   towerPlate,
-} from "./weatherTowerRoom";
-import type { DialPlan, RailPost } from "./weatherTowerRoom";
+} from "./weatherTowerRoomLogic";
+import type { DialPlan, RailPost } from "./weatherTowerRoomLogic";
 import { BANNER_PX, PLATE_PX, POST_PX, drawBanner, drawPlate, drawPost } from "./weatherPlateArt";
 import { WEATHER_WORDS } from "./weatherTowerWordsV2";
 

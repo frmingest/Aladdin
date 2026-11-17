@@ -1,7 +1,7 @@
 import { CuboidCollider, RigidBody } from "@react-three/rapier";
 import { PAL, Part } from "./Inked";
 import StaticBatch from "./StaticBatch";
-import { SIEGE_GATE, SIEGE_GATE_FACING } from "./siegeField";
+import { SIEGE_GATE, SIEGE_GATE_FACING } from "./siegeFieldLogic";
 import { FIELD_WORDS } from "./siegeFieldWordsV1";
 import WorldSign from "./WorldSign";
 

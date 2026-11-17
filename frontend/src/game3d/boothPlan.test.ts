@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { COBBLE_RADIUS, SPAWN, towerSpots } from "./layout";
-import { DESK } from "./desk";
+import { DESK } from "./deskLogic";
 import { MARKET } from "./marketPieces";
 import { NPCS } from "./npcs";
 import { PROPS } from "./props";
 import { SCENERY } from "./sceneryPieces";
-import { SIGN } from "./signpost";
-import { STANDING_TORCHES } from "./standingTorches";
-import { TOWNSFOLK } from "./townsfolk";
+import { SIGN } from "./signpostLogic";
+import { STANDING_TORCHES } from "./standingTorchesLogic";
+import { TOWNSFOLK } from "./townsfolkLogic";
 import { STALL_SOLID, STREET_PLOTS } from "./streetPlan";
 import { CLIP } from "./animClips";
 import { MODELS3D } from "./models3d";

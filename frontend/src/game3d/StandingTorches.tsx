@@ -9,7 +9,7 @@ import {
   STANDING_TORCHES,
   STANDING_TORCH_SOLID,
   litTorches,
-} from "./standingTorches";
+} from "./standingTorchesLogic";
 
 const FLAME = "#f2b84b"; // one warm gold for every level: nothing here can read as a status colour
 const EMBER = "#2a2826";

@@ -4,8 +4,8 @@ import { useGLTF } from "@react-three/drei";
 import { CuboidCollider, RigidBody } from "@react-three/rapier";
 import { Euler, InstancedMesh, Matrix4, Mesh, Quaternion, Vector3 } from "three";
 import type { Object3D } from "three";
-import { FOREST_URL, PLANTS } from "./meadowPlants";
-import type { Plant, PlantModel } from "./meadowPlants";
+import { FOREST_URL, PLANTS } from "./meadowPlantsLogic";
+import type { Plant, PlantModel } from "./meadowPlantsLogic";
 
 /** If the forest file fails to load, draw and collide with nothing: the meadow stays as it was. */
 class PlantsBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {

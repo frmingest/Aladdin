@@ -3,14 +3,14 @@ import { orderStreet } from "../lib/marketplace";
 import { TONE_FLAG, gapLabel } from "../lib/marketStreet";
 import type { WatchlistRow } from "../lib/types";
 import { COBBLE_RADIUS, towerSpots } from "./layout";
-import { DESK } from "./desk";
+import { DESK } from "./deskLogic";
 import { MARKET } from "./marketPieces";
 import { NPCS } from "./npcs";
 import { PROPS } from "./props";
 import { SCENERY } from "./sceneryPieces";
-import { SIGN } from "./signpost";
-import { STANDING_TORCHES } from "./standingTorches";
-import { TOWNSFOLK } from "./townsfolk";
+import { SIGN } from "./signpostLogic";
+import { STANDING_TORCHES } from "./standingTorchesLogic";
+import { TOWNSFOLK } from "./townsfolkLogic";
 import { SPAWN } from "./layout";
 import {
   MAX_STALLS, PENNANT_COLOUR, PENNANT_SHAPE, STALL_MODELS, STALL_SOLID, STREET_PLOTS, buildStreet, stableIndex, streetOverflowLine,

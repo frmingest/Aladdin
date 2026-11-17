@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { drawBanner, drawPlate, drawPost, plateText, wrapWords } from "./weatherPlateArt";
-import type { DialPlan } from "./weatherTowerRoom";
+import type { DialPlan } from "./weatherTowerRoomLogic";
 import { WEATHER_WORDS } from "./weatherTowerWordsV2";
 
 /** A recording stand-in for a 2D canvas context: every call is a no-op, every `fillText` is kept. */

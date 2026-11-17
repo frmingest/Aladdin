@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../lib/api";
 import type { PrinterLever, PrinterResult } from "../lib/types";
-import { DEFAULT_HORIZON, HORIZONS, notches, nextNotch, pullKey, pullsFrom, wallStateOf } from "./mintRoom";
-import type { LeverState, WallState } from "./mintRoom";
+import { DEFAULT_HORIZON, HORIZONS, notches, nextNotch, pullKey, pullsFrom, wallStateOf } from "./mintRoomLogic";
+import type { LeverState, WallState } from "./mintRoomLogic";
 
 /** What the Mint room shows: the levers the ledger lists, where each is set, the span, and the last stamped answer. */
 export interface MintView {

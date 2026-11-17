@@ -6,7 +6,7 @@ import { Euler, InstancedMesh, Matrix4, Mesh, Quaternion, Vector3 } from "three"
 import type { Object3D } from "three";
 import { wallSegments } from "./layout";
 import { HORIZON_LIMIT, HORIZON_URL } from "./horizonPieces";
-import { thinnedHorizon } from "./countryside";
+import { thinnedHorizon } from "./countrysideLogic";
 import type { HorizonModel, HorizonPiece } from "./horizonPieces";
 
 /** If the horizon file fails to load, draw and collide with nothing: the courtyard stays as it was. */

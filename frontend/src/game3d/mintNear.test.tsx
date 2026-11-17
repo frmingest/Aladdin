@@ -5,7 +5,7 @@ import { AREAS, pathToCourtyard } from "./areas";
 import { areaLine, areaName } from "./areaWordsV1";
 import { cameraRoomOf } from "./cameraRoom";
 import MintPlainPanel from "./MintPlainPanel";
-import { LEVER_Z, MINT, MINT_DOOR, MINT_SPAWN, PRESS_SPOT, SPAN_SPOT, BOOK_SPOT, leverLayout } from "./mintRoom";
+import { LEVER_Z, MINT, MINT_DOOR, MINT_SPAWN, PRESS_SPOT, SPAN_SPOT, BOOK_SPOT, leverLayout } from "./mintRoomLogic";
 import { MINT_WORDS } from "./mintWordsV1";
 import { NO_NEARS, NO_SPOT_WORLD, standingAt, watchSpots } from "./near";
 import type { SpotWorld } from "./near";

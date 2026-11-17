@@ -1,9 +1,9 @@
 import StaticBatch from "./StaticBatch";
 import { INK, PAL } from "./Inked";
 import HoldingPiece from "./HoldingPiece";
-import { BARRIER_RING, BARRIER_SCALE, PILES, barrierAt, ingotsPlan } from "./ingotsDressing";
+import { BARRIER_RING, BARRIER_SCALE, PILES, barrierAt, ingotsPlan } from "./ingotsDressingLogic";
 import type { LandCondition } from "./landCondition";
-import { WORKPLACE } from "./holdingLand";
+import { WORKPLACE } from "./holdingLandLogic";
 import LandBlock from "./LandBlock";
 import { WithFallback } from "./KeepModels";
 

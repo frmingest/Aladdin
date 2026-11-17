@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { WALL_RADIUS, WALL_THICKNESS } from "./layout";
 import { ROAD_HALF_WIDTH, onGateRoad } from "./horizonPieces";
 import { AREAS, returnSpot, transitionSpot } from "./areas";
-import { RING_RADIUS, RING_WIDTH, RIVER_HALF, distToPolyline, riverLine, tracks } from "./countryside";
-import { hallExit } from "./townHallRoom";
+import { RING_RADIUS, RING_WIDTH, RIVER_HALF, distToPolyline, riverLine, tracks } from "./countrysideLogic";
+import { hallExit } from "./townHallRoomLogic";
 import { BUILDINGS, DOOR_LEAVE_RANGE, DOOR_RANGE, nearestBuilding } from "./townPlan";
 import {
   TOWN_HALL_GATE,

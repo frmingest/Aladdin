@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { formatNok } from "../lib/format";
 import { metalsValueText, policyRateText, portfolioValueText, rankedCounts, thesisSummaryText, totalReturnText } from "../lib/headlines";
 import { boardHeadline } from "./boardHeadlines";
-import { BOARDS } from "./townHallRoom";
+import { BOARDS } from "./townHallRoomLogic";
 import type { MacroIndicators, MarginOfSafetyBoard, PortfolioOverview, PortfolioPerformance, PreciousMetalsOverview, ThesisMonitor } from "../lib/types";
 
 const overview = { total_value_nok: "2500000.00" } as PortfolioOverview;

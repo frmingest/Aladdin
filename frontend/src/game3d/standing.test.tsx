@@ -12,11 +12,11 @@ import { PROPS } from "./props";
 import { sixMonthReckoning, unwrittenThesis } from "./quest";
 import { SCENERY, SCENERY_CLEARANCE } from "./sceneryPieces";
 import { withGaps } from "./standingGaps";
-import { STANDING_TORCHES, STANDING_TORCH_SOLID, litTorches } from "./standingTorches";
+import { STANDING_TORCHES, STANDING_TORCH_SOLID, litTorches } from "./standingTorchesLogic";
 import { standingWords } from "./standingWordsV1";
 import { standingWordsV2, wordsFor } from "./standingWordsV2";
 import { stateToWorld } from "./stateToWorld";
-import { TOWNSFOLK } from "./townsfolk";
+import { TOWNSFOLK } from "./townsfolkLogic";
 
 const standing = (over: Partial<Standing> = {}): Standing => ({
   version: "v1", demo: false, level: 2, max_level: 3, title: "The Survey",

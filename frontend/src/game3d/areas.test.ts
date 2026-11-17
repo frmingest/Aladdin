@@ -4,10 +4,10 @@ import type { AreaId, AreaRef } from "./areas";
 import { towerSpots } from "./layout";
 import { exitCameraYaw, exitSpot } from "./towerDoor";
 import type { Enterable } from "./towerDoor";
-import { hallExit, HALL as HALL_BOX } from "./townHallRoom";
+import { hallExit, HALL as HALL_BOX } from "./townHallRoomLogic";
 import { HALL as LIB_BOX } from "./libraryRoom";
 import { INTERIOR_BOX } from "./interiorBox";
-import { archiveExit } from "./recordsHallRoom";
+import { archiveExit } from "./recordsHallRoomLogic";
 
 const IDS = Object.keys(AREAS) as AreaId[];
 const towers: Enterable[] = towerSpots().map((spot, i) => ({ holdingId: `h${i}`, spot, radius: 1.5 + (i % 3) * 0.3 }));

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FIELD_BANNERS, FIELD_FOG_Z, FIELD_SPAWN, FIELD_TENT, FIELD_WALL_Z } from "./siegeField";
+import { FIELD_BANNERS, FIELD_FOG_Z, FIELD_SPAWN, FIELD_TENT, FIELD_WALL_Z } from "./siegeFieldLogic";
 import { SIEGE_STONE, STORM_STONE, WINCH } from "./siegeFieldTools";
 import { labelFor, labelOpacity, labelPx } from "./labelPlan";
 import { yardFogTag } from "./siegeYardWordsV3";

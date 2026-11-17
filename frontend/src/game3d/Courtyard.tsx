@@ -3,7 +3,7 @@ import { CuboidCollider, CylinderCollider, RigidBody } from "@react-three/rapier
 import OutdoorHoldings from "./OutdoorHoldings";
 import StaticBatch from "./StaticBatch";
 import { ModelClone, WithFallback } from "./KeepModels";
-import { CORNER_TOWER_MODEL, CORNER_TOWER_SCALE, KEEP_MODEL, KEEP_MODEL_SCALE, KEEP_URL, cornerTowerFootprint, keepModelFootprint } from "./keepModels";
+import { CORNER_TOWER_MODEL, CORNER_TOWER_SCALE, KEEP_MODEL, KEEP_MODEL_SCALE, KEEP_URL, cornerTowerFootprint, keepModelFootprint } from "./keepModelsLogic";
 import type { WorldModel } from "./stateToWorld";
 import {
   COBBLE_RADIUS,

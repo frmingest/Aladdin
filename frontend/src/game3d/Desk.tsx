@@ -1,7 +1,7 @@
 import { CuboidCollider, RigidBody } from "@react-three/rapier";
 import { PAL, Part } from "./Inked";
 import StaticBatch from "./StaticBatch";
-import { DESK, DESK_FACING, SHELF, bookSlots } from "./desk";
+import { DESK, DESK_FACING, SHELF, bookSlots } from "./deskLogic";
 
 /** Fixed colours by slot, never by data: the books are told apart by being there, not by colour. */
 /** Warm brass, the family of the Vault coins. Never red or green. */

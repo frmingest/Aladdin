@@ -1,5 +1,5 @@
 import { INK, PAL } from "./Inked";
-import type { FountainPlan } from "./fountainDressing";
+import type { FountainPlan } from "./fountainDressingLogic";
 
 const at = (angle: number, r: number): [number, number, number] => [Math.cos(angle) * r, 0, Math.sin(angle) * r];
 

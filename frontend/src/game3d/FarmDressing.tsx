@@ -14,7 +14,7 @@ import {
   TANK_WATER,
   fenceAt,
   farmLook,
-} from "./farmDressing";
+} from "./farmDressingLogic";
 import { HOLDING_URL } from "./holdingPieces";
 import type { LandCondition } from "./landCondition";
 import { TOWN_FILES } from "./townPieces";

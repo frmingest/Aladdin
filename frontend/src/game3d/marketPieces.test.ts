@@ -1,15 +1,15 @@
 import { readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { DESK, SHELF } from "./desk";
+import { DESK, SHELF } from "./deskLogic";
 import { COBBLE_RADIUS, KEEP, RESERVED_ZONES, SPAWN, towerSpots } from "./layout";
 import { MARKET, MARKET_CENTER, MARKET_REACH, MARKET_URL } from "./marketPieces";
 import type { MarketPiece } from "./marketPieces";
 import { NPCS } from "./npcs";
 import { PROPS } from "./props";
 import { SCENERY } from "./sceneryPieces";
-import { STANDING_TORCHES } from "./standingTorches";
-import { TOWNSFOLK } from "./townsfolk";
+import { STANDING_TORCHES } from "./standingTorchesLogic";
+import { TOWNSFOLK } from "./townsfolkLogic";
 
 /** A box is checked as its bounding circle: a little strict, never lenient. */
 const radius = (m: MarketPiece) => (m.solid.kind === "circle" ? m.solid.r : Math.hypot(m.solid.hx, m.solid.hz));

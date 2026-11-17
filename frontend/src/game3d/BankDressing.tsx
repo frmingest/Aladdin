@@ -1,9 +1,9 @@
 import StaticBatch from "./StaticBatch";
 import { INK, PAL } from "./Inked";
 import HoldingPiece from "./HoldingPiece";
-import { DESK_LEG_SCALE, DESK_SHELF_Y, DESK_SHELF_Z, DESK_LEG_X, DESK_SHELF_SCALE, DESK_THINGS, DESK_TOP, PILES, WALL_RING, WALL_SCALE, bankPlan, deskAt, wallAt, wallNode } from "./bankDressing";
+import { DESK_LEG_SCALE, DESK_SHELF_Y, DESK_SHELF_Z, DESK_LEG_X, DESK_SHELF_SCALE, DESK_THINGS, DESK_TOP, PILES, WALL_RING, WALL_SCALE, bankPlan, deskAt, wallAt, wallNode } from "./bankDressingLogic";
 import type { LandCondition } from "./landCondition";
-import { WORKPLACE } from "./holdingLand";
+import { WORKPLACE } from "./holdingLandLogic";
 import LandBlock from "./LandBlock";
 import { WithFallback } from "./KeepModels";
 

@@ -1,6 +1,6 @@
 import type { PrinterResult } from "../lib/types";
-import { bookPlate, holdingPlate } from "./mintRoom";
-import type { PlateText } from "./mintRoom";
+import { bookPlate, holdingPlate } from "./mintRoomLogic";
+import type { PlateText } from "./mintRoomLogic";
 import { MINT_WORDS } from "./mintWordsV1";
 
 interface Props {

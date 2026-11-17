@@ -2,7 +2,7 @@ import { CylinderCollider, RigidBody } from "@react-three/rapier";
 import Avatar from "./Avatar";
 import BlobShadow from "./BlobShadow";
 import { HeroFigure } from "./Figures";
-import { TOWNSFOLK } from "./townsfolk";
+import { TOWNSFOLK } from "./townsfolkLogic";
 
 /**
  * The townsfolk (S8): a guard and a scout who stand and breathe. No name tag, no dialogue, no data.

@@ -16,7 +16,7 @@
  * data can walk the guide again.
  */
 import { BOOTHS } from "./boothPlan";
-import { DESK } from "./desk";
+import { DESK } from "./deskLogic";
 import { NPCS } from "./npcs";
 import type { NpcId } from "./npcs";
 import { BUILDINGS, doorSpot } from "./townPlan";

@@ -1,4 +1,4 @@
-import { promptParts } from "./actionPrompt";
+import { promptParts } from "./actionPromptLogic";
 
 /**
  * The one HUD prompt, bottom centre: a key cap and the action ("[E] Talk to Barren Wuffet"), with an

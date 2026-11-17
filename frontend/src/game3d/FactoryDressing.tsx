@@ -1,9 +1,9 @@
 import StaticBatch from "./StaticBatch";
 import HoldingPiece from "./HoldingPiece";
 import RingWear from "./RingWear";
-import { PIECES, STOCK_RING, factoryPlan, stockAt, stockNode } from "./factoryDressing";
+import { PIECES, STOCK_RING, factoryPlan, stockAt, stockNode } from "./factoryDressingLogic";
 import type { LandCondition } from "./landCondition";
-import { WORKPLACE } from "./holdingLand";
+import { WORKPLACE } from "./holdingLandLogic";
 import LandBlock from "./LandBlock";
 import { Sparks } from "./Embers";
 import { FORGE_FIRE_HEIGHT } from "./fxPlan";

@@ -5,7 +5,7 @@ import { HOLDING_SPOT_COUNT } from "./outdoorPlan";
 import { WALL_RADIUS, WALL_THICKNESS } from "./layout";
 import { ENTER_REACH, enterableOf, nearestTower, outdoorExit } from "./towerDoor";
 import { returnSpot } from "./areas";
-import { centreChoice } from "./landCentre";
+import { centreChoice } from "./landCentreLogic";
 import { slotOf } from "./OutdoorHoldings";
 
 function tower(o: Partial<GameTower> = {}): GameTower {

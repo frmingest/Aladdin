@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Color, Object3D } from "three";
 import type { InstancedMesh } from "three";
-import { CONFETTI_COLOURS, CONFETTI_COUNT, burstActive, heightAt, makePieces } from "./confetti";
+import { CONFETTI_COLOURS, CONFETTI_COUNT, burstActive, heightAt, makePieces } from "./confettiLogic";
 import { prefersReducedMotion } from "./motionPref";
 
 /** Where the burst goes up: over the fountain. */

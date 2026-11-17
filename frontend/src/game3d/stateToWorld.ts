@@ -25,7 +25,7 @@ import { sortTowers } from "../lib/fortress";
 import { towerSpots, type Spot } from "./layout";
 import { MOAT_WIDTH, SIZE_HEIGHT, SIZE_RADIUS, WALL_LOOK } from "./towerLook";
 import { HOLDING_SPOT_COUNT, assignPlots, doorPointOf, type Plot } from "./outdoorPlan";
-import { isFishFarm } from "./farmDressing";
+import { isFishFarm } from "./farmDressingLogic";
 import { holdingTheme3d, type Theme3dId } from "../lib/sectors";
 
 export { MOAT_WIDTH, SIZE_HEIGHT, SIZE_RADIUS, WALL_LOOK };

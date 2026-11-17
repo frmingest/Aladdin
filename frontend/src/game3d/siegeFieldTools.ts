@@ -12,7 +12,7 @@
 import { BENCHMARK_SHORT } from "../lib/siege";
 import type { SiegeBenchmarkKey } from "../lib/types";
 import { FALL_DEFAULT, FALL_MAX, FALL_MIN, FALL_STEP, fallPercent } from "./stormDrill";
-import { FIELD_BANNERS, FIELD_WALL_Z } from "./siegeField";
+import { FIELD_BANNERS, FIELD_WALL_Z } from "./siegeFieldLogic";
 import { FIELD_TOOLS_WORDS as W } from "./siegeFieldToolsWordsV1";
 
 export type FieldSpotId = "winch" | "storm" | "siege" | "local" | "global";

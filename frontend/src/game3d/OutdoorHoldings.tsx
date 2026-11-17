@@ -3,11 +3,11 @@ import LandCentre from "./LandCentre";
 import StaticBatch from "./StaticBatch";
 import { WithFallback } from "./KeepModels";
 import TowerMesh, { OutdoorDoor } from "./TowerMesh";
-import { WORKPLACE } from "./holdingLand";
-import { centreChoice } from "./landCentre";
+import { WORKPLACE } from "./holdingLandLogic";
+import { centreChoice } from "./landCentreLogic";
 import { landCondition } from "./landCondition";
 import { landStream } from "./landStream";
-import type { LandCentreSlot } from "./landCentre";
+import type { LandCentreSlot } from "./landCentreLogic";
 import type { TowerView } from "./stateToWorld";
 
 const PLINTH = 3.4;

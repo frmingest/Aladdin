@@ -7,8 +7,8 @@ import {
   BOARD_SLOTS,
   HALL,
   HALL_DOOR,
-} from "./townHallRoom";
-import type { Board, BoardSlot } from "./townHallRoom";
+} from "./townHallRoomLogic";
+import type { Board, BoardSlot } from "./townHallRoomLogic";
 import { boardHeadline } from "./boardHeadlines";
 import { useBoardHeadlines } from "./useBoardHeadlines";
 import WorldLabel from "./WorldLabel";
