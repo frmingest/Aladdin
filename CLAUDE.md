@@ -25,7 +25,7 @@ Faiz can actually trust with real money):
    or claim without evidence.
 3. **Prompts and schemas are versioned files, not inline strings.** A change that could alter a
    real analysis output is a *new* version file (`v2.md`, `v2.json`, …) — never an in-place edit of
-   a version already used for a real run. The same applies to any versioned rule or wording file named `*_vN.*` (game
+   a version already used for a real run. The same applies to any versioned rule or wording file named `*_vN.*` or `*VN.*` (for example `standing_v1.py`, `pricePostWordsV2.ts`, `dialogueV7.ts`: game
    rules, word lists, assumptions): once it has been shown to Faiz or used for a real result, a change is a new `vN+1`
    file. (Extended in writing 2026-11-17, #378.)
 4. **The blind pass never sees the user's notes/thesis.** This is the confirmation-bias guardrail —
@@ -76,7 +76,7 @@ status` first instead of trusting the doc.
 
 Sprint status, backlog and history live on the GitHub Project "Aladdin" (see "Sprint board rules"). Write-ups
 (decisions, discovered discrepancies, a "what's actually true now") still go to the Claude project docs and are
-mirrored into this repo's `docs/` folder in the same change. Don't update one and skip the other. **The repo `docs/` copy is the source of truth.** A cloud session mirrors it to the
+mirrored into this repo's `docs/` folder in the same change. Don't update one and skip the other (exception below). **The repo `docs/` copy is the source of truth.** A cloud session mirrors it to the
 Claude project in the same change. A local session (`E:\Aladdin`) cannot reach the project: it writes "project mirror
 pending" in the PR, and the next cloud session mirrors it (`docs-sync-checker` lists unmirrored docs). It never skips the
 repo copy (decided 2026-11-17, #378). If `docs/`
@@ -173,7 +173,7 @@ label (trivial typo or link fix) skips the CI check.
    "unblocks", "built", "handles") is checked against the code or the engine in this session first. Run it, do not
    reason from a summary. (2026-11-15: a doc said a change helped the Toll Gate most; the engine showed the opposite
    for the channels it measured.)
-5. If a check cannot run in this session (disk full, no GPU, missing dependency), open the PR as a **draft**, tick only what
+5. If a check cannot run in this session (disk full, no GPU, missing dependency) or is red for a reason outside this change, open the PR as a **draft**, tick only what
    ran, and name each check that was not run in "How it was verified"; CI then runs it. Never target a branch whose PR is
    already merged: rebase onto `main`. (Decided 2026-11-17, #378.) Commit with a real message, push the branch, open the PR against `main` with the filled-in template: what changed and
    why, how it was verified, who reviewed it, and anything Faiz must do after deploy. Give Faiz the PR link.
@@ -197,5 +197,5 @@ Game mode must look like a game on every tab (painted fortress, scrolls, ravens,
 - Visuals replace words (noise-audit word budgets still apply) and never cost truth (unknown stays fog), colour-blind safety, reduced motion or phone performance.
 - Game voice (standard section 6): every game-mode string is short, plain and playful, written for the player's act ("Plant your stakes", "Caught it"), with caveats moved to a tooltip or rules foldout. Heavy, methods-style copy is a review finding, and the page cannot score 3.
 - **Interaction cost is a gate, same as identity.** Every game page's main task gets a tap count measured from a cold load in a real browser; target 2 or fewer for the common case. Blockers: a control that appears twice on one screen, an empty form when a default would do, a step that only unlocks the next ("Ask" after everything is already chosen), a button that only scrolls. Selecting should act. Sprint plan item 9 and review item 8 in `docs/game/game-sprint-checklist.md`; review step 0 in skill `game-ux-onboarding-accessibility`. Nobody ships a game page they have not clicked through, and Faiz is not the tester.
-- `/game3d` places follow `.claude/standards/game3d-standard.md`. A headless software-GL run counts as "headless only" in the PR, never as a real-GPU look or a draw-call measurement; the real look is Faiz's, written in "After deploy (Faiz)" (decided 2026-11-17, #378).
+- `/game3d` places follow `.claude/standards/game3d-standard.md` (added by PR #447; not on `main` until it merges). A headless software-GL run counts as "headless only" in the PR, never as a real-GPU look or a draw-call measurement; the real look is Faiz's, written in "After deploy (Faiz)" (decided 2026-11-17, #378).
 - The shared page-scene kit is owned by `game-feel-engineer`; add missing pieces there, do not inline one-off art or hex.
