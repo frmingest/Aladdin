@@ -34,7 +34,7 @@ Unknown stays fog: never drawn as a default-good state. The fog label plate neve
 - Text must not clip or wrap into a one-word column on a portrait phone (issues #439, #440, #434 are the reference failures).
 
 ## 6. Motion, sound and access
-Reduced motion is honoured through `motionPref.ts`; every loop and camera move has an instant alternative. Sound is off until the player opts in. Everything the mouse can do has a keyboard path, and the "press E" prompts say what E will actually do (the courtyard had up to 28 prompts of 12 kinds whose text could disagree with the action).
+Reduced motion is honoured through `motionPref.ts`; every loop and camera move has an instant alternative. Sound is off until the player opts in. Everything the mouse can do has a keyboard path, and the "press E" prompts say what E will actually do (the courtyard had up to 28 prompts of 12 kinds whose text could disagree with the action; source: `docs/game/game3d-discovery-sprint-plan-2026-11-02.md`).
 
 ## 7. Interaction cost
 Same gate as 2D: name the place's main task, count the taps or key presses from a cold load in a real browser, target 2 or fewer for the common case. Moving between places has a name and a fade, not an instant jump.

@@ -99,7 +99,7 @@ flowchart TD
 | [`release-manager`](https://github.com/frmingest/Aladdin/blob/main/.claude/agents/release-manager.md) | Checks | sonnet | Is it safe to reach production: every CI job green, migration additive with a rollback, new env vars named, branch protection reported, what was and was not checked live. Never merges. | CI, Docker or migration changes; before Faiz merges |
 | [`valuation-reviewer`](https://github.com/frmingest/Aladdin/blob/main/.claude/agents/valuation-reviewer.md) | Checks | opus | Recomputes valuation, DCF, multiples and risk figures by a second route and checks every sentence about what a number does. | Valuation or risk-maths changes; before a doc says what a number does |
 | [`board-steward`](https://github.com/frmingest/Aladdin/blob/main/.claude/agents/board-steward.md) | Checks | haiku | Issue first, milestone and labels true, no dead stacked-PR merges, "done" only when merged. Reports; never edits the board. | Every PR, last |
-| [`compliance-officer`](https://github.com/frmingest/Aladdin/blob/main/.claude/agents/compliance-officer.md) | Checks + writes docs | sonnet | Keeps the data map and vendor register in `docs/ops/compliance/`; reviews GDPR, EU AI Act and DORA exposure; separate section for the enterprise copy. | New dependency, provider, LLM client, or stored-data change |
+| [`compliance-officer`](https://github.com/frmingest/Aladdin/blob/main/.claude/agents/compliance-officer.md) | Checks + writes docs | sonnet | Will keep the data map and vendor register in `docs/ops/compliance/` (created on its first run); reviews GDPR, EU AI Act and DORA exposure; separate section for the enterprise copy. | New dependency, provider, LLM client, or stored-data change |
 | [`llm-quality-guard`](https://github.com/frmingest/Aladdin/blob/main/.claude/agents/llm-quality-guard.md) | Checks + writes tests | sonnet | Prompt-version diffs, golden cases, hostile-document red team (Rule 5), blind-pass test (Rule 4). Never edits prompts. | Prompt, schema or evidence-packet changes |
 
 ### Repo skills (methods the agents load)
@@ -164,7 +164,7 @@ The repo copy wins; it can drift from the account version. `qa-testlead` had its
 
 ## Known limits today (so nobody over-trusts the chart)
 
-- Verifiers are advisory. Nothing in GitHub forces a merge to wait for them or for CI: `main` has no branch protection (issue #377), and the 2026-11-01 audit found 35 of 97 PRs merged before CI finished.
+- Verifiers are advisory. Nothing in GitHub forces a merge to wait for them or for CI: the branches API reported `protected: false` for `main` on 2026-11-17 (issue #377 is open), and the 2026-11-01 audit found 35 of 97 PRs merged before CI finished.
 - The PR-template check proves a reviewer row is filled in, not that the reviewer ran. A row marked `yes` that never ran is a lie only the rules can catch.
 - The five specialist skills in `.claude/skills/` are copies; they can drift from the account versions Faiz edits, and nothing syncs them.
 - The agent definitions began as drafts on 2026-10-09 (`docs/ops/claude-setup-assessment-2026-10-09.md`); model choices and tool lists are still worth revisiting after real use.
