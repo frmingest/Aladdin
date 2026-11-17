@@ -2,6 +2,8 @@ import {
   BackSide,
   BoxGeometry,
   BufferAttribute,
+  InterleavedBuffer,
+  InterleavedBufferAttribute,
   CylinderGeometry,
   Group,
   Mesh,
@@ -133,6 +135,23 @@ describe("batchStatic", () => {
     expect(errors).toHaveLength(0);
     expect(batch.made).toHaveLength(1);
     expect(batch.callsAfter).toBe(1);
+  });
+
+  it("joins pieces whose uv is an interleaved attribute (as in many glb files)", () => {
+    const plain = new BoxGeometry();
+    const odd = new BoxGeometry();
+    const uv = odd.getAttribute("uv");
+    const data = new InterleavedBuffer(new Float32Array(uv.array), 2);
+    odd.setAttribute("uv", new InterleavedBufferAttribute(data, 2, 0));
+    const errors: unknown[] = [];
+    const spy = vi.spyOn(console, "error").mockImplementation((...a) => void errors.push(a));
+    const root = new Group();
+    const material = std("#444444");
+    root.add(mesh(plain, material), mesh(odd, material, 3, 0, 0));
+    const batch = batchStatic(root);
+    spy.mockRestore();
+    expect(errors).toHaveLength(0);
+    expect(batch.made).toHaveLength(1);
   });
 
   it("keeps different materials apart", () => {
