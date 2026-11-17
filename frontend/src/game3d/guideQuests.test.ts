@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { BOOTHS } from "./boothPlan";
-import { DESK } from "./desk";
+import { DESK } from "./deskLogic";
 import { NPCS } from "./npcs";
 import {
   EMPTY_GUIDE,

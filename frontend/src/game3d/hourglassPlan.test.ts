@@ -1,18 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { DESK, SHELF } from "./desk";
+import { DESK, SHELF } from "./deskLogic";
 import { MARKET } from "./marketPieces";
 import { NPCS } from "./npcs";
 import { PROPS } from "./props";
 import { SCENERY } from "./sceneryPieces";
-import { STANDING_TORCHES } from "./standingTorches";
-import { TOWNSFOLK } from "./townsfolk";
+import { STANDING_TORCHES } from "./standingTorchesLogic";
+import { TOWNSFOLK } from "./townsfolkLogic";
 import { towerSpots } from "./layout";
 import { WATCH_POST, PERCH } from "./watchPlan";
-import { SIGN } from "./signpost";
+import { SIGN } from "./signpostLogic";
 import { VAULT } from "./vaultPlan";
 import { REALM_POST } from "./realmPlan";
 import { DRILL_POST } from "./stormDrill";
-import { SIEGE_GATE } from "./siegeField";
+import { SIEGE_GATE } from "./siegeFieldLogic";
 import {
   HOURGLASS,
   HOURGLASS_LEAVE_RANGE,

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { COBBLE_RADIUS, KEEP, RESERVED_ZONES, towerSpots } from "./layout";
-import { DESK, SHELF } from "./desk";
+import { DESK, SHELF } from "./deskLogic";
 import { NPCS } from "./npcs";
 import { ENTER_LEAVE_REACH, ENTER_REACH, doorSpot, doorYaw, exitCameraYaw, exitSpot, nearestTower } from "./towerDoor";
 

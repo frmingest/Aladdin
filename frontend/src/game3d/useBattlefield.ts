@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../lib/api";
 import type { SiegeBacktest, StormDrills } from "../lib/types";
-import type { Loadable } from "./battlefield";
+import type { Loadable } from "./battlefieldLogic";
 
 /**
  * Reads the flat Siege page's stored back-test and the player's own Storm Drill notes, once, when the field opens.

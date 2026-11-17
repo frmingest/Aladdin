@@ -7,7 +7,7 @@
  */
 import { metalsValueText, policyRateText, portfolioValueText, rankedCounts, thesisSummaryText, totalReturnText } from "../lib/headlines";
 import type { MacroIndicators, MarginOfSafetyBoard, PortfolioOverview, PortfolioPerformance, PreciousMetalsOverview, ThesisMonitor } from "../lib/types";
-import type { BoardId } from "./townHallRoom";
+import type { BoardId } from "./townHallRoomLogic";
 
 export interface HeadlineData {
   overview?: PortfolioOverview;

@@ -12,8 +12,8 @@ import {
   boardLines,
   notesFor,
   tableLines,
-} from "./battlefield";
-import type { BattleRow } from "./battlefield";
+} from "./battlefieldLogic";
+import type { BattleRow } from "./battlefieldLogic";
 import { useBattlefield } from "./useBattlefield";
 import WorldLabel from "./WorldLabel";
 import WorldSign from "./WorldSign";

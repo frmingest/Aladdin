@@ -2,15 +2,15 @@ import { readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { CAMP, CAMP_CENTER, CAMP_REACH, CAMP_URL } from "./campPieces";
-import { DESK, SHELF } from "./desk";
+import { DESK, SHELF } from "./deskLogic";
 import { COBBLE_RADIUS, KEEP, SPAWN, towerSpots } from "./layout";
 import { MARKET } from "./marketPieces";
 import { NPCS } from "./npcs";
 import { PROPS } from "./props";
 import { SCENERY } from "./sceneryPieces";
 import { DRILL_POST } from "./stormDrill";
-import { STANDING_TORCHES } from "./standingTorches";
-import { TOWNSFOLK } from "./townsfolk";
+import { STANDING_TORCHES } from "./standingTorchesLogic";
+import { TOWNSFOLK } from "./townsfolkLogic";
 
 function glbNodes(): string[] {
   const buf = readFileSync(join(__dirname, "../../public", CAMP_URL));

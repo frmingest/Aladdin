@@ -24,14 +24,14 @@ import {
   plateSlot,
   wallHeading,
   wallPlates,
-} from "./mintRoom";
-import type { PlateText } from "./mintRoom";
+} from "./mintRoomLogic";
+import type { PlateText } from "./mintRoomLogic";
 import { MINT_WORDS } from "./mintWordsV1";
 import { PLATE_PX, drawMintPlate } from "./mintPlateArt";
 import { useNear } from "./nearStore";
 import { prefersReducedMotion } from "./motionPref";
 import type { MintView } from "./useMint";
-import { PLATE } from "./weatherTowerRoom";
+import { PLATE } from "./weatherTowerRoomLogic";
 
 const STONE = PAL.stone;
 const FLOOR = PAL.floor;

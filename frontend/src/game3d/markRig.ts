@@ -26,7 +26,7 @@ import {
 } from "three";
 import type { Texture } from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
-import { normalised } from "./staticBatch";
+import { normalised } from "./staticBatchLogic";
 import { BRONZE_COLOUR, FLAME_COLOUR, FROZEN_T, THIN_SMOKE, fxSide, fxStateInto, jitter } from "./fxPlan";
 import type { FxState } from "./fxPlan";
 import type { PlacedMarks } from "./marks";

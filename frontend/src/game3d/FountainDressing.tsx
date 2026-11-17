@@ -4,9 +4,9 @@ import type { Object3D } from "three";
 import StaticBatch from "./StaticBatch";
 import { INK, PAL } from "./Inked";
 import { HOLDING_URL } from "./holdingPieces";
-import { COLUMN_RING, COLUMN_SCALE, FOUNTAIN_SCALE, WELL_ANGLE, WELL_SCALE, fountainPlan } from "./fountainDressing";
+import { COLUMN_RING, COLUMN_SCALE, FOUNTAIN_SCALE, WELL_ANGLE, WELL_SCALE, fountainPlan } from "./fountainDressingLogic";
 import type { LandCondition } from "./landCondition";
-import { WORKPLACE } from "./holdingLand";
+import { WORKPLACE } from "./holdingLandLogic";
 import LandBlock from "./LandBlock";
 import { WithFallback } from "./KeepModels";
 

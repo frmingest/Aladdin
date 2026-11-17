@@ -4,7 +4,7 @@
  * and E takes you into that tower's library. Which tower you can enter depends only on where it stands.
  */
 import { COBBLE_RADIUS, KEEP, RESERVED_ZONES, towerSpots, type Spot } from "./layout";
-import { DESK, SHELF } from "./desk";
+import { DESK, SHELF } from "./deskLogic";
 import { VAULT } from "./vaultPlan";
 import { PERCH, WATCH_POST } from "./watchPlan";
 import { NPCS } from "./npcs";

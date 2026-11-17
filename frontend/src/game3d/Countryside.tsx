@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from "react";
 import { BufferGeometry, DoubleSide, Float32BufferAttribute, MeshStandardMaterial } from "three";
-import { countrysideMesh } from "./countryside";
+import { countrysideMesh } from "./countrysideLogic";
 
 /** One flat material for the whole countryside: the colour rides on vertex colours, so it is one mesh and one draw call. */
 const MATERIAL = new MeshStandardMaterial({ vertexColors: true, flatShading: true, side: DoubleSide });

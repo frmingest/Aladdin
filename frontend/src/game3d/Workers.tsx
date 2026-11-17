@@ -2,7 +2,7 @@ import { CylinderCollider, RigidBody } from "@react-three/rapier";
 import Avatar from "./Avatar";
 import BlobShadow from "./BlobShadow";
 import { HeroFigure } from "./Figures";
-import { WORKERS } from "./workers";
+import { WORKERS } from "./workersLogic";
 
 /**
  * The scribe at the writing desk and the vault keeper at the chest (S20). They play one held clip each

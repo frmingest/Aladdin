@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DESK } from "./desk";
+import { DESK } from "./deskLogic";
 import { DESK_NUDGE, DESK_WHERE, DIALOGUE_VERSION, DRILL_ORACLE, DRILL_PARTNER, closeLabel, pointsToDesk, pointsToImport, sayShare, talk } from "./dialogueV6";
 import { NPCS } from "./npcs";
 import { sixMonthReckoning } from "./quest";

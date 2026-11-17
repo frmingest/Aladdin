@@ -5,8 +5,8 @@ import type { Object3D } from "three";
 import { INK, PAL, Part } from "./Inked";
 import LandBlock from "./LandBlock";
 import { HOLDING_URL } from "./holdingPieces";
-import { mineDressing } from "./mineDressing";
-import type { MineTheme, Piece } from "./mineDressing";
+import { mineDressing } from "./mineDressingLogic";
+import type { MineTheme, Piece } from "./mineDressingLogic";
 import type { LandCondition } from "./landCondition";
 import { TOWN_FILES } from "./townPieces";
 

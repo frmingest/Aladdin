@@ -9,8 +9,8 @@
  */
 import { HORIZON_LIMIT } from "./horizonPieces";
 import { INTERIOR_BOX } from "./interiorBox";
-import { GATE_LEAVE_RANGE as LAND_GATE_LEAVE_RANGE, GATE_RANGE as LAND_GATE_RANGE, LAND_GATE, LAND_SPAWN, MIN_LAND_RADIUS } from "./holdingLand";
-import { HALL_DOOR, HALL_DOOR_LEAVE_RANGE, HALL_DOOR_RANGE, HALL_SPAWN, HALL_YAW, hallExit } from "./townHallRoom";
+import { GATE_LEAVE_RANGE as LAND_GATE_LEAVE_RANGE, GATE_RANGE as LAND_GATE_RANGE, LAND_GATE, LAND_SPAWN, MIN_LAND_RADIUS } from "./holdingLandLogic";
+import { HALL_DOOR, HALL_DOOR_LEAVE_RANGE, HALL_DOOR_RANGE, HALL_SPAWN, HALL_YAW, hallExit } from "./townHallRoomLogic";
 import {
   ARCHIVE,
   ARCHIVE_DOOR,
@@ -19,7 +19,7 @@ import {
   ARCHIVE_SPAWN,
   ARCHIVE_YAW,
   archiveExit,
-} from "./recordsHallRoom";
+} from "./recordsHallRoomLogic";
 import {
   MINT,
   MINT_DOOR,
@@ -28,7 +28,7 @@ import {
   MINT_SPAWN,
   MINT_YAW,
   mintExit,
-} from "./mintRoom";
+} from "./mintRoomLogic";
 import {
   TOWER,
   TOWER_DOOR,
@@ -37,7 +37,7 @@ import {
   TOWER_SPAWN,
   TOWER_YAW,
   towerExit,
-} from "./weatherTowerRoom";
+} from "./weatherTowerRoomLogic";
 import {
   BUILDINGS,
   DOOR_LEAVE_RANGE as BUILDING_DOOR_LEAVE_RANGE,
@@ -58,7 +58,7 @@ import {
   SIEGE_GATE_RANGE,
   SIEGE_GATE_RETURN,
   SIEGE_GATE_RETURN_YAW,
-} from "./siegeField";
+} from "./siegeFieldLogic";
 import {
   QUARTER_EXIT,
   QUARTER_EXIT_LEAVE_RANGE,

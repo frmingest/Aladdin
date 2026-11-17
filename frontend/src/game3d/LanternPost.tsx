@@ -1,6 +1,6 @@
 import { PAL, Part } from "./Inked";
-import { LANTERN_LOOKS } from "./holdingLand";
-import type { Lantern } from "./holdingLand";
+import { LANTERN_LOOKS } from "./holdingLandLogic";
+import type { Lantern } from "./holdingLandLogic";
 import { FLAME_COLOUR } from "./fxPlan";
 import WorldLabel from "./WorldLabel";
 

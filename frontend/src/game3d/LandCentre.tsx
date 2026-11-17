@@ -8,12 +8,12 @@ import IngotsDressing from "./IngotsDressing";
 import LandBlock from "./LandBlock";
 import StreamBand from "./StreamBand";
 import { TowerBody } from "./TowerMesh";
-import { WORKPLACE } from "./holdingLand";
+import { WORKPLACE } from "./holdingLandLogic";
 import MillDressing from "./MillDressing";
 import MineDressing from "./MineDressing";
 import StallDressing from "./StallDressing";
-import { centreChoice } from "./landCentre";
-import type { LandCentreSlot } from "./landCentre";
+import { centreChoice } from "./landCentreLogic";
+import type { LandCentreSlot } from "./landCentreLogic";
 import type { Theme3dId } from "../lib/sectors";
 import type { ComponentType } from "react";
 

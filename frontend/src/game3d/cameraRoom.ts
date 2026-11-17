@@ -7,9 +7,9 @@
  */
 import type { AreaId } from "./areas";
 import { INTERIOR_BOX } from "./interiorBox";
-import { MINT } from "./mintRoom";
-import { ARCHIVE } from "./recordsHallRoom";
-import { TOWER } from "./weatherTowerRoom";
+import { MINT } from "./mintRoomLogic";
+import { ARCHIVE } from "./recordsHallRoomLogic";
+import { TOWER } from "./weatherTowerRoomLogic";
 
 /** The inside of a room: its walls, its floor at 0 and its ceiling at `height`. */
 export interface CameraRoom {

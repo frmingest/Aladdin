@@ -7,7 +7,7 @@
  * diamond) beside the word; a holding the engine could not model has a dashed rim and says "Not modelled"; an answer that
  * no longer matches the levers wears a slate tab that says "stale".
  */
-import type { PlateText } from "./mintRoom";
+import type { PlateText } from "./mintRoomLogic";
 import { MINT_WORDS } from "./mintWordsV1";
 import { BANNER_PX, PLATE_PX, fitText, paper, wrapWords } from "./weatherPlateArt";
 

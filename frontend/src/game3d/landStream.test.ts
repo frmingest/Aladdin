@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ALL_STREAMS, STREAM_INNER, landStream } from "./landStream";
-import { LAND_TOWER_REACH } from "./holdingLand";
+import { LAND_TOWER_REACH } from "./holdingLandLogic";
 import type { FortressMoat } from "../lib/types";
 
 describe("the stream (S26 PR 1)", () => {

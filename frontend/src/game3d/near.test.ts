@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { AREAS } from "./areas";
 import type { AreaId } from "./areas";
-import { DESK } from "./desk";
-import { LAND_GATE } from "./holdingLand";
+import { DESK } from "./deskLogic";
+import { LAND_GATE } from "./holdingLandLogic";
 import { NO_NEARS, NO_SPOT_WORLD, SPOTS, pickNear, spotsOf, standingAt, watchSpots } from "./near";
 import type { NearTarget, Nears, SpotWorld } from "./near";
 import { NPCS } from "./npcs";
-import { ARCHIVE_DOOR } from "./recordsHallRoom";
-import { HALL_DOOR } from "./townHallRoom";
-import { TOWER_DOOR } from "./weatherTowerRoom";
+import { ARCHIVE_DOOR } from "./recordsHallRoomLogic";
+import { HALL_DOOR } from "./townHallRoomLogic";
+import { TOWER_DOOR } from "./weatherTowerRoomLogic";
 
 const T = (id: string, x: number, z = 0): NearTarget<string> => ({ id, x, z, range: 3, leaveRange: 4.5 });
 const at = (x: number) => ({ x, z: 0 });

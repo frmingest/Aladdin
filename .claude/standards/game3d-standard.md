@@ -25,7 +25,7 @@ Unknown stays fog: never drawn as a default-good state. The fog label plate neve
 ## 4. Art and assets
 - *Existing:* models are free CC0 packs (KayKit, Kenney, Quaternius and similar), packed by the `scripts/pack-*.mjs` scripts and kept small (GLB under about 0.9 MB each, `docs/ops/agentic-coding-audit-2026-11-01.md`). Check the licence before adding a pack. Run `scripts/glb-colour-audit.mjs` on every new GLB, and record the result in the sprint doc.
 - *Existing:* inline hex colours in `game3d/` are a finding when a token exists (65 were counted on 2026-11-01). New colours go into a token file, owned by `game-feel-engineer`.
-- *Existing:* file-name case collisions (29 pairs) are tracked in issue #382; do not add a new one.
+- Logic modules sit beside their component as `<name>Logic.ts`; never add a file whose name differs from another only by case (the 29 old pairs were renamed in issue #382).
 
 ## 5. Text in the world
 - *Existing:* every label is a parchment plate with ink that passes **4.5:1** contrast, checked by `gameTokens.test.ts`. A new text/plate pair is added to `LABEL_PAIRS` so the test covers it.

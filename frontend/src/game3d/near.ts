@@ -11,7 +11,7 @@
 import type { AreaId, AreaRef } from "./areas";
 import { BOOTHS, BOOTH_LEAVE_RANGE, BOOTH_RANGE } from "./boothPlan";
 import type { BoothId } from "./boothPlan";
-import { DESK, DESK_LEAVE_RANGE, DESK_RANGE } from "./desk";
+import { DESK, DESK_LEAVE_RANGE, DESK_RANGE } from "./deskLogic";
 import { setOpenDoor } from "./doorSwing";
 import {
   GATE_LEAVE_RANGE as LAND_GATE_LEAVE_RANGE,
@@ -24,7 +24,7 @@ import {
   TABLE_RANGE,
   nearLandTable,
   nearestLantern,
-} from "./holdingLand";
+} from "./holdingLandLogic";
 import { nearestShelf } from "./libraryRoom";
 import {
   BOOK_LEAVE_RANGE,
@@ -40,29 +40,29 @@ import {
   nearPress,
   nearSpan,
   nearestLever,
-} from "./mintRoom";
-import type { LeverPlan } from "./mintRoom";
+} from "./mintRoomLogic";
+import type { LeverPlan } from "./mintRoomLogic";
 import type { ShelfId } from "./libraryShelves";
 import { LEAVE_RANGE, NPCS, TALK_RANGE } from "./npcs";
 import type { NpcId } from "./npcs";
 import { QUARTER_EXIT, QUARTER_EXIT_LEAVE_RANGE, QUARTER_EXIT_RANGE, QUARTER_GATE, QUARTER_GATE_LEAVE_RANGE, QUARTER_GATE_RANGE } from "./quarterPlan";
 import { REALM_LEAVE_RANGE, REALM_POST, REALM_RANGE } from "./realmPlan";
-import { ARCHIVE_DOOR_LEAVE_RANGE, ARCHIVE_DOOR_RANGE, SHELF_LEAVE_RANGE, SHELF_RANGE, nearArchiveDoor, nearShelves } from "./recordsHallRoom";
-import { FIELD_EXIT, FIELD_EXIT_LEAVE_RANGE, FIELD_EXIT_RANGE, SIEGE_GATE, SIEGE_GATE_LEAVE_RANGE, SIEGE_GATE_RANGE } from "./siegeField";
+import { ARCHIVE_DOOR_LEAVE_RANGE, ARCHIVE_DOOR_RANGE, SHELF_LEAVE_RANGE, SHELF_RANGE, nearArchiveDoor, nearShelves } from "./recordsHallRoomLogic";
+import { FIELD_EXIT, FIELD_EXIT_LEAVE_RANGE, FIELD_EXIT_RANGE, SIEGE_GATE, SIEGE_GATE_LEAVE_RANGE, SIEGE_GATE_RANGE } from "./siegeFieldLogic";
 import { fieldSpotAt } from "./siegeFieldTools";
 import type { FieldSpotId } from "./siegeFieldTools";
-import { SIGN, SIGN_LEAVE_RANGE, SIGN_RANGE } from "./signpost";
+import { SIGN, SIGN_LEAVE_RANGE, SIGN_RANGE } from "./signpostLogic";
 import { STALL_LEAVE_RANGE, STALL_RANGE } from "./stallDoor";
 import { DRILL_LEAVE_RANGE, DRILL_POST, DRILL_RANGE } from "./stormDrill";
 import { ENTER_LEAVE_REACH, ENTER_REACH } from "./towerDoor";
-import { BOARD_LEAVE_RANGE, BOARD_RANGE, BOARD_SLOTS, HALL_DOOR_LEAVE_RANGE, HALL_DOOR_RANGE, nearHallDoor, nearestBoard } from "./townHallRoom";
-import type { BoardId } from "./townHallRoom";
+import { BOARD_LEAVE_RANGE, BOARD_RANGE, BOARD_SLOTS, HALL_DOOR_LEAVE_RANGE, HALL_DOOR_RANGE, nearHallDoor, nearestBoard } from "./townHallRoomLogic";
+import type { BoardId } from "./townHallRoomLogic";
 import { BUILDINGS, DOOR_LEAVE_RANGE, DOOR_RANGE, nearestBuilding } from "./townPlan";
 import type { BuildingId } from "./townPlan";
 import { HOURGLASS, HOURGLASS_LEAVE_RANGE, HOURGLASS_RANGE } from "./hourglassPlan";
 import { PERCH, PERCH_LEAVE_RANGE, PERCH_RANGE, WATCH_LEAVE_RANGE, WATCH_POST, WATCH_RANGE } from "./watchPlan";
 import { VAULT, VAULT_LEAVE_RANGE, VAULT_RANGE } from "./vaultPlan";
-import { DIALS_LEAVE_RANGE, DIALS_RANGE, TOWER_DOOR_LEAVE_RANGE, TOWER_DOOR_RANGE, nearDials, nearTowerDoor } from "./weatherTowerRoom";
+import { DIALS_LEAVE_RANGE, DIALS_RANGE, TOWER_DOOR_LEAVE_RANGE, TOWER_DOOR_RANGE, nearDials, nearTowerDoor } from "./weatherTowerRoomLogic";
 import type { SurveyCheckId } from "../lib/survey";
 
 export interface NearTarget<K> {

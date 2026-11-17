@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef } from "react";
 import type { ReactNode } from "react";
 import type { Group } from "three";
-import { batchStatic, undoBatch } from "./staticBatch";
+import { batchStatic, undoBatch } from "./staticBatchLogic";
 
 /** `/game3d?nobatch` turns batching off, to compare the same scene drawn the old way (a look-over aid). */
 function batchingOff(): boolean {

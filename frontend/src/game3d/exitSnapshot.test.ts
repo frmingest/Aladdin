@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { towerSpots } from "./layout";
 import { exitCameraYaw, exitSpot } from "./towerDoor";
-import { hallExit } from "./townHallRoom";
-import { archiveExit } from "./recordsHallRoom";
+import { hallExit } from "./townHallRoomLogic";
+import { archiveExit } from "./recordsHallRoomLogic";
 import { GATE_RETURN, GATE_RETURN_YAW } from "./townPlan";
 
 /**

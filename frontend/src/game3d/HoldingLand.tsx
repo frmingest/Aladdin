@@ -8,8 +8,8 @@ import { Bay } from "./LibraryBay";
 import LanternPost from "./LanternPost";
 import PricePost from "./PricePost";
 import LandCentre from "./LandCentre";
-import type { LandCentreSlot } from "./landCentre";
-import type { PricePost as PricePostData } from "./holdingLand";
+import type { LandCentreSlot } from "./landCentreLogic";
+import type { PricePost as PricePostData } from "./holdingLandLogic";
 import StaticBatch from "./StaticBatch";
 import {
   BAY_SCALE,
@@ -18,8 +18,8 @@ import {
   LAND_SHELF_SLOTS,
   LAND_TABLE,
   RECORDS_HOUSE,
-} from "./holdingLand";
-import type { GateStone, Lantern } from "./holdingLand";
+} from "./holdingLandLogic";
+import type { GateStone, Lantern } from "./holdingLandLogic";
 import { LAND_WORDS } from "./holdingLandWordsV1";
 import type { Shelf } from "./libraryShelves";
 import WorldLabel from "./WorldLabel";

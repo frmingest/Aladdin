@@ -8,7 +8,7 @@
  * Tiers differ by width AND by kind (water, stone, mist), never by colour alone, and no tint is red or green.
  */
 import type { FortressMoat } from "../lib/types";
-import { LAND_TOWER } from "./holdingLand";
+import { LAND_TOWER } from "./holdingLandLogic";
 
 export type StreamLook = "wide" | "narrow" | "none" | "mist" | "absent";
 

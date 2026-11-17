@@ -15,8 +15,8 @@ import {
   bookPlans,
   shelfFacts,
   shelfPlate,
-} from "./recordsHallRoom";
-import type { BookPlan } from "./recordsHallRoom";
+} from "./recordsHallRoomLogic";
+import type { BookPlan } from "./recordsHallRoomLogic";
 import WorldLabel from "./WorldLabel";
 
 const STONE = "#b9b2a4";

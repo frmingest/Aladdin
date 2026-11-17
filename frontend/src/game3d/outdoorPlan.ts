@@ -17,8 +17,8 @@
  */
 import type { Theme3dId } from "../lib/sectors";
 import type { Spot } from "./layout";
-import { LAND_TOWER_REACH } from "./holdingLand";
-import { FENCE_RADIUS } from "./farmDressing";
+import { LAND_TOWER_REACH } from "./holdingLandLogic";
+import { FENCE_RADIUS } from "./farmDressingLogic";
 import { MOAT_WIDTH, SIZE_RADIUS } from "./towerLook";
 
 /** How wide each theme stands on the ground, from the centre to the edge of its stream band (or fence, or moat). */

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { standingAt, NO_NEARS } from "./near";
-import { FIELD_BANNERS, FIELD_EXIT, FIELD_HALF, FIELD_ROCKS, ATTACKERS, ENGINES, FIELD_TENT } from "./siegeField";
+import { FIELD_BANNERS, FIELD_EXIT, FIELD_HALF, FIELD_ROCKS, ATTACKERS, ENGINES, FIELD_TENT } from "./siegeFieldLogic";
 import {
   BANNER_FOR,
   DEFAULT_TOOLS,
