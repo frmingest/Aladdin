@@ -26,7 +26,9 @@ jobs:
         run: |
           if echo ",$PR_LABELS," | grep -q ",no-issue,"; then
             FILES="$(gh api "repos/$REPO/pulls/$PR_NUMBER/files" --paginate --jq '.[] | .filename, (.previous_filename // empty)')"
-            if [ -n "$FILES" ] && ! printf '%s\n' "$FILES" | grep -Ev '^(docs/.*\.md|README\.md)$' | grep -q .; then
+            # No early-exit grep in a pipeline: under bash -eo pipefail a SIGPIPE (141) would read as "no offenders".
+            NON_DOCS="$(printf '%s\n' "$FILES" | grep -Ev '^(docs/.*\.md|README\.md)$' || true)"
+            if [ -n "$FILES" ] && [ -z "$NON_DOCS" ]; then
               echo "no-issue label present and only docs changed, skipping."; exit 0
             fi
             echo "no-issue label ignored: it only counts when every changed file is a docs or README markdown file."
