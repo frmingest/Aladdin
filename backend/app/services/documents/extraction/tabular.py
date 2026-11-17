@@ -293,13 +293,13 @@ def extract_statement_tables(sheets: list[tuple[str, list[list[object]]]]) -> Ex
 
     facts: list[ExtractedFact] = []
     conflicts: list[str] = []
-    for (metric, period), found in candidates.items():
+    for (metric, period_label), found in candidates.items():
         best = min(c.priority for c in found)
         top = [c for c in found if c.priority == best]
         values = {c.value for c in top}
         if len(values) > 1:
             shown = "; ".join(f"'{c.label}' p{c.page} = {c.value.normalize():f}" for c in top[:4])
-            conflicts.append(f"{period} {metric}: {shown}")
+            conflicts.append(f"{period_label} {metric}: {shown}")
             continue
         chosen = top[0]
         if chosen.confidence < CONFIDENCE_SCALE_STATED and "scale_not_stated" not in flags:
@@ -310,7 +310,7 @@ def extract_statement_tables(sheets: list[tuple[str, list[list[object]]]]) -> Ex
                 value=chosen.value,
                 unit=chosen.unit,
                 currency=chosen.currency,
-                period=period,
+                period=period_label,
                 source_page=chosen.page,
                 confidence=chosen.confidence,
             )

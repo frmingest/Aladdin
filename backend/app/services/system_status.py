@@ -13,6 +13,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
+from typing import overload
 
 from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
@@ -105,6 +106,14 @@ def _last_check_text(db) -> str:
     if when is None:
         return "has not run yet (the PC worker runs it daily)"
     return f"last ran {when.isoformat(timespec='minutes')}: {summary or 'no summary'}"
+
+
+@overload
+def _aware(value: datetime) -> datetime: ...
+
+
+@overload
+def _aware(value: None) -> None: ...
 
 
 def _aware(value: datetime | None) -> datetime | None:

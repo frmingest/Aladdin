@@ -37,7 +37,7 @@ def _fmt_change(snap: IndicatorSnapshot, change: Decimal) -> str:
 
 
 def describe(snap: IndicatorSnapshot) -> str:
-    if snap.value is None:
+    if snap.value is None or snap.observed_on is None:
         return "No observations stored yet."
     as_of = snap.observed_on.strftime("%Y-%m") if snap.frequency == "monthly" else snap.observed_on.isoformat()
     parts = [f"{_fmt_value(snap, snap.value)} as of {as_of}"]

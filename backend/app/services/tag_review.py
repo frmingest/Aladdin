@@ -74,6 +74,8 @@ def build_tag_review(db: Session, holding_id: UUID | None = None) -> dict[str, A
         review = _review_of(document)
         if review is None:
             continue
+        if document.holding_id is None:
+            continue
         current = newest.get(document.holding_id)
         key = (review["fiscal_year"], document.uploaded_at)
         if current is None or key > (current[1]["fiscal_year"], current[0].uploaded_at):

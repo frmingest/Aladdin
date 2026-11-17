@@ -35,7 +35,7 @@ def _pick_delimiter(text: str) -> str:
     except csv.Error:
         # Most common delimiter per line, ignoring quoted text roughly.
         counts = {d: sample.count(d) for d in _DELIMITERS}
-        return max(counts, key=counts.get)
+        return max(counts, key=lambda d: counts[d])
 
 
 def read_csv_rows(content: bytes) -> list[list[object]]:

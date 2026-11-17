@@ -14,6 +14,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta, timezone
 from decimal import Decimal
+from typing import overload
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -41,6 +42,14 @@ class SeriesRefreshResult:
     inserted: int = 0
     latest_observed: date | None = None
     error: str | None = None
+
+
+@overload
+def _utc(value: datetime) -> datetime: ...
+
+
+@overload
+def _utc(value: None) -> None: ...
 
 
 def _utc(value: datetime | None) -> datetime | None:

@@ -14,46 +14,19 @@ app/providers/sec_edgar_provider.py::assignment::Incompatible types in assignmen
 app/providers/sec_edgar_provider.py::var-annotated::Need type annotation for "out" (hint: "out: list[<type>] = ...")
 app/services/analysis/document_excerpts.py::arg-type::Argument 5 to "Passage" has incompatible type "**dict[str, str | None]"; expected "str"
 app/services/analysis/document_excerpts.py::arg-type::Argument 5 to "Passage" has incompatible type "**dict[str, str | None]"; expected "str"
-app/services/analysis/packet_budget.py::operator::Unsupported operand types for > ("int" and "None")
-app/services/analysis/queue.py::arg-type::Argument "last_seen_at" to "WorkerStatus" has incompatible type "datetime | None"; expected "datetime"
-app/services/analysis/queue.py::arg-type::Argument "started_at" to "WorkerStatus" has incompatible type "datetime | None"; expected "datetime"
-app/services/analysis/queue.py::operator::No overload variant of "__sub__" of "datetime" matches argument type "None"
 app/services/analysis/reconciliation_pass.py::arg-type::Argument "output" to "ReconciliationPassResult" has incompatible type "BaseModel"; expected "ReconciliationOutputV1"
 app/services/analysis/reconciliation_pass.py::arg-type::Argument 1 to "cited_evidence_ids_reconciliation" has incompatible type "BaseModel"; expected "ReconciliationOutputV1"
 app/services/documents/anchoring.py::arg-type::Argument 1 to "append" of "_Element" has incompatible type "object"; expected "_Element"
 app/services/documents/anchoring.py::attr-defined::"object" has no attribute "getparent"
 app/services/documents/anchoring.py::attr-defined::"object" has no attribute "tail"
-app/services/documents/extraction/csv_statement.py::arg-type::Argument "key" to "max" has incompatible type overloaded function; expected "Callable[[str], SupportsDunderLT[Any] | SupportsDunderGT[Any]]"
-app/services/documents/extraction/tabular.py::arg-type::Argument "period" to "ExtractedFact" has incompatible type "PeriodLabel"; expected "str"
-app/services/documents/extraction/tabular.py::assignment::Incompatible types in assignment (expression has type "str", variable has type "PeriodLabel")
 app/services/documents/extraction/xlsx.py::arg-type::Argument 1 to "extract_statement_tables" has incompatible type "list[tuple[str, list[list[bool | float | Decimal | str | CellRichText | date | time | timedelta | DataTableFormula | ArrayFormula | None]]]]"; expected "list[tuple[str, list[list[object]]]]"
 app/services/documents/ingestion.py::arg-type::Argument 1 to "update" of "MutableMapping" has incompatible type "dict[str, object]"; expected "SupportsKeysAndGetItem[str, bool]"
 app/services/documents/ingestion.py::assignment::Incompatible types in assignment (expression has type "list[str]", target has type "bool")
 app/services/documents/ingestion.py::assignment::Incompatible types in assignment (expression has type "object", variable has type "ExtractionResult")
 app/services/documents/ingestion.py::attr-defined::"object" has no attribute "get"
 app/services/filings/esef_index.py::call-overload::No overload variant of "list" matches argument type "object"
-app/services/funds/constituent_multiples.py::arg-type::Argument 1 to "get" of "dict" has incompatible type "UUID | None"; expected "UUID"
 app/services/funds/holdings_import.py::attr-defined::"date" has no attribute "date"
 app/services/funds/holdings_import.py::index::Value of type "tuple[str, list[list[object]]] | None" is not indexable
 app/services/funds/holdings_import.py::index::Value of type "tuple[str, list[list[object]]] | None" is not indexable
 app/services/funds/holdings_import.py::return-value::Incompatible return value type (got "list[tuple[str, list[list[bool | float | Decimal | str | CellRichText | date | time | timedelta | DataTableFormula | ArrayFormula | None]]]]", expected "list[tuple[str, list[list[object]]]]")
-app/services/macro/evidence.py::union-attr::Item "None" of "date | None" has no attribute "isoformat"
-app/services/macro/evidence.py::union-attr::Item "None" of "date | None" has no attribute "strftime"
-app/services/macro/indicators.py::arg-type::Argument 2 to "HistoryPoint" has incompatible type "Decimal | None"; expected "Decimal"
-app/services/macro/indicators.py::arg-type::Argument 2 to "HistoryPoint" has incompatible type "Decimal | None"; expected "Decimal"
-app/services/macro/indicators.py::operator::No overload variant of "__sub__" of "date" matches argument type "None"
-app/services/macro/refresh.py::assignment::Incompatible types in assignment (expression has type "tuple[datetime | None, Decimal]", target has type "tuple[datetime, Decimal]")
-app/services/macro/refresh.py::operator::Unsupported operand types for <= ("datetime" and "None")
-app/services/macro/refresh.py::union-attr::Item "None" of "datetime | None" has no attribute "date"
-app/services/risk/price_history.py::arg-type::Argument 1 to "_aware" has incompatible type "datetime | None"; expected "datetime"
-app/services/settings/synthetic_data.py::arg-type::Argument 1 to "add" of "set" has incompatible type "object"; expected "str"
-app/services/system_status.py::operator::No overload variant of "__sub__" of "datetime" matches argument type "None"
-app/services/system_status.py::operator::No overload variant of "__sub__" of "datetime" matches argument type "None"
-app/services/system_status.py::operator::No overload variant of "__sub__" of "datetime" matches argument type "None"
-app/services/system_status.py::operator::No overload variant of "__sub__" of "datetime" matches argument type "None"
-app/services/system_status.py::union-attr::Item "None" of "datetime | None" has no attribute "isoformat"
-app/services/system_status.py::union-attr::Item "None" of "datetime | None" has no attribute "isoformat"
-app/services/tag_review.py::arg-type::Argument 1 to "get" of "dict" has incompatible type "UUID | None"; expected "UUID"
-app/services/tag_review.py::index::Invalid index type "UUID | None" for "dict[UUID, tuple[Document, dict[str, Any]]]"; expected type "UUID"
-app/services/valuation/fund_look_through.py::arg-type::Argument 1 to "get" of "dict" has incompatible type "UUID | None"; expected "UUID"
 app/worker/__main__.py::assignment::Incompatible types in assignment (expression has type "None", variable has type "Callable[[], LLMHealth]")

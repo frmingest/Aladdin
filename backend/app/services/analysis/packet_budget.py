@@ -224,7 +224,7 @@ def apply_token_budget(packet: EvidencePacket, *, total_budget: int | None) -> B
                 break
 
     report.tokens_after = _tokens(packet.items)
-    report.over_budget = bool(total_budget) and report.tokens_after > total_budget
+    report.over_budget = bool(total_budget and report.tokens_after > total_budget)
     after: dict[str, list[EvidenceItem]] = {}
     for item in packet.items:
         after.setdefault(item.category, []).append(item)

@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, timezone
 from decimal import ROUND_HALF_UP, Decimal
+from typing import overload
 
 from sqlalchemy.orm import Session
 
@@ -108,6 +109,14 @@ def _change(kind: str, current: Decimal, earlier: Decimal) -> Decimal | None:
     return (current / earlier - 1) * _HUNDRED
 
 
+@overload
+def _q(value: Decimal, places: str) -> Decimal: ...
+
+
+@overload
+def _q(value: None, places: str) -> None: ...
+
+
 def _q(value: Decimal | None, places: str) -> Decimal | None:
     if value is None:
         return None
@@ -200,10 +209,13 @@ def build_derived(
         source_url="",
         derived=True,
     )
-    if left is None or right is None or left.value is None or right.value is None:
+    if (
+        left is None or right is None or left.value is None or right.value is None
+        or left.observed_on is None or right.observed_on is None
+    ):
         return snap
     snap.value = left.value - right.value
-    snap.observed_on = min(left.observed_on, right.observed_on)  # type: ignore[type-var]
+    snap.observed_on = min(left.observed_on, right.observed_on)
     snap.age_days = (today - snap.observed_on).days
     snap.stale = left.stale or right.stale
     snap.formula = (

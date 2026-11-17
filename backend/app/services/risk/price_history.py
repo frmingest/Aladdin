@@ -19,6 +19,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
+from typing import overload
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -54,7 +55,17 @@ def _newest_fetch(db: Session, ticker: str) -> datetime | None:
     return db.scalar(stmt)
 
 
-def _aware(value: datetime) -> datetime:
+@overload
+def _aware(value: datetime) -> datetime: ...
+
+
+@overload
+def _aware(value: None) -> None: ...
+
+
+def _aware(value: datetime | None) -> datetime | None:
+    if value is None:
+        return None
     return value if value.tzinfo is not None else value.replace(tzinfo=timezone.utc)
 
 

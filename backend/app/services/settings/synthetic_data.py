@@ -216,8 +216,9 @@ def universe_stocks(picks: list[tuple[str, str, str | None]]) -> list[dict]:
     for s in _RAW_STOCKS:
         if len(chosen) >= DEMO_UNIVERSE_SIZE:
             break
-        if s["ticker"] not in seen:
-            seen.add(s["ticker"])
+        raw_ticker = str(s["ticker"])
+        if raw_ticker not in seen:
+            seen.add(raw_ticker)
             chosen.append(dict(s))
     for slot, s in enumerate(chosen):
         s["account"] = 0 if slot < 4 else 1
