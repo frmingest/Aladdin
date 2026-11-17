@@ -33,7 +33,7 @@ Nothing stops a merge while `main` has no branch protection (#377, Faiz sets it)
 ## Still open on #389 (not in this PR)
 
 - Step 2: add the missing stubs. Step 3: clear findings package by package, money code first (`ixbrl.py` 30, `system_status.py` 22, `game/state.py` 16, `game/ravens.py` 11 were the biggest in the October count).
-- Review the 50 `# type: ignore` lines in money and backtest code.
+- Review the `# type: ignore` lines (50 then; 20 remain after the #455 PR, each with a reason).
 - Zero findings is the stretch goal; the ratchet is the must-have, and it also satisfies the gate Faiz set for starting #384 and #385 ("item 6, step 1").
 
 ## Cleanup of the baseline (#455)
@@ -49,12 +49,19 @@ turns on `warn_unused_ignores`. Written, not merged, not yet run in CI.
   (`BlindPassOutput`). No arithmetic was moved or reworded.
 - **`# type: ignore`:** 50 before, 20 after. All 20 now carry a reason on the same line. `warn_unused_ignores` makes an
   ignore that stops being needed a finding, so they cannot pile up silently.
-- **Behaviour that is not type-only (each was an AttributeError, TypeError or response-validation error before):**
+- **Behaviour that is not type-only.** Most rewrites are equivalent; these are not (before: an AttributeError, TypeError or
+  response-validation error, except where noted):
   - the equity note in `ixbrl.py` skips a year with no total-equity fact;
-  - `GET` precious-metals history in demo mode returns 404 for a metal with no demo series (was a 500);
+  - precious-metals history in demo mode returns 404 for a metal with no demo series (was a 500);
   - the watchlist row returns 404 if its holding is gone;
-  - `imported_at` on the ESEF and Newsweb responses is parsed from the stored ISO string, and an empty or unreadable one becomes null;
-  - the multiples helper in `metrics.py` skips a ratio whose denominator fact is stored as None, with the "missing" reason.
+  - `imported_at` on the ESEF and Newsweb responses is now parsed explicitly from the stored ISO string (pydantic parsed valid
+    strings before); an empty or unreadable one becomes null;
+  - `metrics.py` skips a ratio whose denominator fact is stored as None, with the "missing" reason;
+  - the macro snapshot difference and description return early when `observed_on` is None;
+  - a journal entry with no holding skips the verdict lookup; the tag-review inbox skips documents with no holding;
+  - the document view drops stored facts with no source page when adding anchors (a null page raised a TypeError there; no test yet);
+  - equivalent rewrites worth knowing: `PriceAssumesOut(**asdict(...))` in the valuation API, `(payload.ticker or "")` in the
+    watchlist, explicit keywords for `RavenLineOut`, `Passage` and `PromptLogListOut`, `.get()` guards in the demo data.
 - **Ratchet:** `mypy-baseline.txt` holds only its two header lines. The job still compares against it, so a new finding fails
   the build. `test_committed_baseline_is_well_formed` no longer requires a non-empty baseline.
 - Checked in this session: `mypy` clean (327 files), ruff clean, full backend suite 2,159 passed, 2 skipped. Not seen: the job on
