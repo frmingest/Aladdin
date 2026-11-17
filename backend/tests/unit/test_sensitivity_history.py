@@ -8,9 +8,9 @@ import pytest
 from sqlalchemy import create_engine, func, select
 from sqlalchemy.orm import Session
 
+from app.domain.game_mapping.registry import get_siege_scenarios
 from app.domain.game_mapping.siege_scenarios_v1 import (
     SIEGE_SCENARIOS_V1,
-    get_siege_scenarios,
 )
 from app.models import Base
 from app.models.account import Account

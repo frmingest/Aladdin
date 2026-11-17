@@ -21,9 +21,8 @@ from app.domain.game_mapping import get_game_mapping
 from app.domain.game_mapping import printer_v1 as printer_table
 from app.domain.game_mapping.backtest_v1 import get_backtest_rules
 from app.domain.game_mapping.calibration_v1 import get_calibration_rules
+from app.domain.game_mapping.registry import get_siege_scenarios, get_standing_rules
 from app.domain.game_mapping.rituals_v1 import get_rituals
-from app.domain.game_mapping.siege_scenarios_v1 import get_siege_scenarios
-from app.domain.game_mapping.standing_v1 import get_standing_rules
 from app.domain.game_mapping.time_and_filings_v1 import get_time_and_filings
 from app.models.thesis import ThesisTripwire
 from app.schemas.game import (

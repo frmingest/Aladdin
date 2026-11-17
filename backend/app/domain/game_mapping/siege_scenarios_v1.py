@@ -92,20 +92,3 @@ SIEGE_SCENARIOS_V1 = SiegeScenarios(
     min_beta_coverage=Decimal("0.50"),
     reverse_search_step=Decimal("0.001"),
 )
-
-def get_siege_scenarios(version: str) -> SiegeScenarios:
-    # Imported here: v2, v3 and v4 build on the SiegeScenarios class above.
-    from app.domain.game_mapping.siege_scenarios_v2 import SIEGE_SCENARIOS_V2
-    from app.domain.game_mapping.siege_scenarios_v3 import SIEGE_SCENARIOS_V3
-    from app.domain.game_mapping.siege_scenarios_v4 import SIEGE_SCENARIOS_V4
-
-    versions: dict[str, SiegeScenarios] = {
-        "v1": SIEGE_SCENARIOS_V1,
-        "v2": SIEGE_SCENARIOS_V2,
-        "v3": SIEGE_SCENARIOS_V3,
-        "v4": SIEGE_SCENARIOS_V4,
-    }
-    try:
-        return versions[version]
-    except KeyError as exc:
-        raise ValueError(f"Unknown siege scenarios version: {version!r}") from exc

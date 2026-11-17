@@ -7,7 +7,7 @@ from decimal import Decimal
 
 import pytest
 
-from app.domain.game_mapping.siege_scenarios_v1 import get_siege_scenarios
+from app.domain.game_mapping.registry import get_siege_scenarios
 from app.services.risk.sensitivity_history import wanted_tickers
 from tests.integration.test_game_api import _seed
 from tests.integration.test_game_siege_v2_api import _bench_returns, _by, _history
