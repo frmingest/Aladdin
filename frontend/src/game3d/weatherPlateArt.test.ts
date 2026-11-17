@@ -93,4 +93,29 @@ describe("the plates draw their words", () => {
     drawBanner(banner.ctx, WEATHER_WORDS.title, "3 of 22 plates reading");
     expect(banner.texts).toEqual([WEATHER_WORDS.title, "3 of 22 plates reading"]);
   });
+
+  it("never clips a long key sentence: it wraps to two lines that each fit (#440)", () => {
+    const texts: Array<{ text: string; size: number }> = [];
+    const state: Record<string, unknown> = { font: "" };
+    const sizeOf = () => Number(/(\d+)px/.exec(String(state.font))?.[1] ?? 0);
+    const ctx = new Proxy(state, {
+      get(target, prop: string) {
+        if (prop === "measureText") return (t: string) => ({ width: t.length * sizeOf() * 0.55 });
+        if (prop === "fillText") return (t: string) => void texts.push({ text: t, size: sizeOf() });
+        if (prop in target) return target[prop];
+        return () => undefined;
+      },
+      set(target, prop: string, value) {
+        target[prop] = value;
+        return true;
+      },
+    }) as unknown as CanvasRenderingContext2D;
+    drawBanner(ctx, WEATHER_WORDS.railKey, null);
+    expect(texts.map((t) => t.text).join(" ")).toBe(WEATHER_WORDS.railKey);
+    expect(texts.length).toBe(2);
+    for (const t of texts) expect(t.text.length * t.size * 0.55).toBeLessThanOrEqual(1024 - 80);
+    texts.length = 0;
+    drawBanner(ctx, WEATHER_WORDS.dotKey, null);
+    expect(texts.map((t) => t.text).join(" ")).toBe(WEATHER_WORDS.dotKey);
+  });
 });
