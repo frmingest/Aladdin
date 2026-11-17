@@ -304,7 +304,8 @@ def run(holdings: list[SimHolding], pulls: list[Pull], horizon: int = T.HORIZON_
 
     total_value = sum((h.value_nok for h in holdings if h.value_nok and h.value_nok > 0), ZERO)
     modelled = [r for r in readings if r.status == MODELLED]
-    covered = sum((r.holding.value_nok for r in modelled), ZERO)  # type: ignore[misc]
+    # A modelled holding always has a stored value (read_holding returns NOT_MODELLED without one).
+    covered = sum((v for r in modelled if (v := r.holding.value_nok) is not None), ZERO)
     coverage = (covered / total_value).quantize(Decimal("0.0001")) if total_value > 0 else None
 
     warnings: list[str] = []
@@ -329,8 +330,8 @@ def run(holdings: list[SimHolding], pulls: list[Pull], horizon: int = T.HORIZON_
         p_pct = ZERO_RANGE
         p_real = ZERO_RANGE
         for r in modelled:
-            w = r.holding.value_nok / covered  # type: ignore[operator]
-            assert r.pct is not None and r.real_pct is not None
+            assert r.holding.value_nok is not None and r.pct is not None and r.real_pct is not None
+            w = r.holding.value_nok / covered
             p_pct = p_pct.plus(r.pct.scaled(w))
             p_real = p_real.plus(r.real_pct.scaled(w))
         p_pct, p_real = _whole(p_pct), _whole(p_real)

@@ -197,12 +197,18 @@ def backcast_book(
     min_days: int,
 ) -> tuple[BookBackcast | None, str | None]:
     """Constant-weight replay of the tested holdings through their common days."""
-    valued = [t for t in tested if t.holding.value_nok and t.holding.value_nok > ZERO and t.holding.points]
+    # Only tested holdings arrive here, and a tested holding always has a predicted fall (see `check_holding`).
+    parts = [
+        (t, v, dict(pts), pred)
+        for t in tested
+        if (v := t.holding.value_nok) and v > ZERO and (pts := t.holding.points) and (pred := t.predicted) is not None
+    ]
+    valued = [t for t, _, _, _ in parts]
     if len(valued) < rules.min_book_holdings:
         return None, f"fewer than {rules.min_book_holdings} holdings could be tested, so there is no book to replay"
-    value = sum((t.holding.value_nok for t in valued), ZERO)  # type: ignore[misc]
-    weights = [t.holding.value_nok / value for t in valued]  # type: ignore[operator]
-    series = [dict(t.holding.points) for t in valued]  # type: ignore[arg-type]
+    value = sum((v for _, v, _, _ in parts), ZERO)
+    weights = [v / value for _, v, _, _ in parts]
+    series = [s for _, _, s, _ in parts]
     days = sorted(set.intersection(*(set(s) for s in series)))
     if len(days) < min_days:
         return None, (
@@ -239,7 +245,7 @@ def backcast_book(
     actual = error = None
     if ep_peak is not None and ep_trough is not None and episode.peak_date >= days[0]:
         actual = (ep_trough[1] / ep_peak[1] - ONE).quantize(_Q)
-    predicted = sum((w * t.predicted for w, t in zip(weights, valued, strict=True)), ZERO).quantize(_Q)  # type: ignore[operator]
+    predicted = sum((w * pred for w, (_, _, _, pred) in zip(weights, parts, strict=True)), ZERO).quantize(_Q)
     if actual is not None:
         error = (actual - predicted).quantize(_Q)
     return (
@@ -282,7 +288,7 @@ def run_backtest(
     result.fell_more_count = sum(1 for t in tested if t.verdict == VERDICT_FELL_MORE)
     result.fell_less_count = sum(1 for t in tested if t.verdict == VERDICT_FELL_LESS)
     if tested:
-        result.mean_abs_error = (sum((abs(t.error) for t in tested), ZERO) / len(tested)).quantize(_Q)  # type: ignore[arg-type]
+        result.mean_abs_error = (sum((abs(e) for t in tested if (e := t.error) is not None), ZERO) / len(tested)).quantize(_Q)
     # Worst-missed first; untested last.
     result.holdings.sort(key=lambda t: (not t.tested, t.error if t.error is not None else ZERO))
     result.book, result.book_reason = backcast_book(tested, episode, total, rules, scenarios.min_observations)
