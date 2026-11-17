@@ -6,9 +6,9 @@ from decimal import Decimal
 
 import pytest
 
+from app.domain.game_mapping.registry import get_siege_scenarios
 from app.domain.game_mapping.siege_scenarios_v1 import (
     SIEGE_SCENARIOS_V1,
-    get_siege_scenarios,
 )
 from app.domain.game_mapping.v1 import GAME_MAPPING_V1 as M
 from app.services.game.siege import SiegeHolding, holding_shock, simulate

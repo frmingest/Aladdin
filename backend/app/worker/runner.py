@@ -376,7 +376,7 @@ class AnalysisWorker:
             return
         self._last_siege_history = now
         try:
-            from app.domain.game_mapping.siege_scenarios_v1 import get_siege_scenarios
+            from app.domain.game_mapping.registry import get_siege_scenarios
             from app.services.risk.sensitivity_history import (
                 refresh_sensitivity_history,
             )

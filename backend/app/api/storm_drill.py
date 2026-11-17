@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.config.database import get_db
 from app.config.settings import get_settings
-from app.domain.game_mapping.siege_scenarios_v1 import get_siege_scenarios
+from app.domain.game_mapping.registry import get_siege_scenarios
 from app.models.storm_drill import StormDrill
 from app.schemas.storm_drill import StormDrillCreate, StormDrillOut, StormDrillsOut
 from app.services.settings.demo_guard import require_not_demo

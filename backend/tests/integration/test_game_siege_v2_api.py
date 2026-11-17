@@ -7,9 +7,9 @@ import json
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 
+from app.domain.game_mapping.registry import get_siege_scenarios
 from app.domain.game_mapping.siege_scenarios_v1 import (
     SIEGE_SCENARIOS_V1,
-    get_siege_scenarios,
 )
 from app.models.risk import PriceHistoryObservation
 from app.models.snapshot import ComputedSnapshot

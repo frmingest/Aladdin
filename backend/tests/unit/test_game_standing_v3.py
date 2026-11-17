@@ -9,7 +9,8 @@ import uuid
 
 import pytest
 
-from app.domain.game_mapping.standing_v1 import STANDING_V1, get_standing_rules
+from app.domain.game_mapping.registry import get_standing_rules
+from app.domain.game_mapping.standing_v1 import STANDING_V1
 from app.domain.game_mapping.standing_v2 import STANDING_V2
 from app.domain.game_mapping.standing_v3 import STANDING_V3
 from app.services import journal as journal_service

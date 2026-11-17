@@ -8,12 +8,12 @@ import uuid
 
 import pytest
 
+from app.domain.game_mapping.registry import get_standing_rules
 from app.domain.game_mapping.standing_v1 import (
     STANDING_V1,
     LevelRule,
     NamedGap,
     StandingRules,
-    get_standing_rules,
 )
 from app.services.game.standing import (
     JournalFact,
