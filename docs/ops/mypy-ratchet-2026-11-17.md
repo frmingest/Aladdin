@@ -24,7 +24,11 @@ report nobody has to read lets new ones in. The ratchet does the middle thing: *
 Baseline written (173 lines); check passes (exit 0); a probe file with one new type error fails (exit 1, names the line); `--update`
 with that probe refuses to grow the baseline (exit 1); ruff clean; full backend suite 2,159 passed, 2 skipped.
 Not yet seen: the job on GitHub's runner. Its count may differ by a few findings if CI resolves a different package version;
-if the first CI run is red on findings nobody touched, regenerate the baseline on that run's versions.
+if the first CI run is red on findings nobody touched, regenerate the baseline on that run's versions: empty the file below its two `#` header lines, run `python scripts/mypy_ratchet.py --update` with CI's Python 3.12 and pins, commit it. (`--update` only refuses to grow a baseline that already has lines.)
+
+## Branch protection
+
+Nothing stops a merge while `main` has no branch protection (#377, Faiz sets it). Until then "blocking" means the PR shows red. When #377 is done, add the check name `Type check (mypy ratchet)` to the required list; the old name `Type check (mypy, report only)` no longer exists.
 
 ## Still open on #389 (not in this PR)
 

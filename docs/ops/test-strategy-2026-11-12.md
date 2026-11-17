@@ -22,7 +22,7 @@ In scope: backend (FastAPI, pipeline), frontend (React, 2D game mode, 3D `/game3
 | Integration (API) | pytest + FastAPI test client | `backend/tests/integration` | same job | same | same |
 | Migration | Alembic up / down / up on Postgres 16 | `ci.yml`, Migrations | every push and PR | empty database | same |
 | Unit and component (frontend) | vitest (about 2,000 tests) | `frontend/src/**/*.test.ts(x)` | every push and PR (Frontend) | none | same |
-| Static | tsc, ESLint, ruff, gitleaks, pip-audit, npm audit, mypy | `ci.yml` | every push and PR | n/a | tsc, lint, ruff, gitleaks block; audits and mypy are report-only |
+| Static | tsc, ESLint, ruff, gitleaks, pip-audit, npm audit, mypy | `ci.yml` | every push and PR | n/a | tsc, lint, ruff, gitleaks and the mypy ratchet block; audits are report-only |
 | **E2E regression (new)** | **Playwright, project `regression`** | `frontend/e2e/regression/` | **every PR (`ci.yml`, E2E)** | **demo stack: fabricated data, writes refused** | **blocks merge when red** (see section 8: only once branch protection requires it) |
 | E2E smoke | Playwright, project `smoke` | `frontend/e2e/*.spec.ts` | daily 05:30 UTC and after each deploy (`smoke.yml`) | live Railway site, Faiz's real data | alerts, does not block |
 

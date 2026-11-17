@@ -1,5 +1,7 @@
 # Backend type check in CI: mypy, report only (2026-10-14)
 
+**Superseded 2026-11-17:** the job is now a blocking ratchet, see [mypy-ratchet-2026-11-17.md](mypy-ratchet-2026-11-17.md) (#389). Kept as history.
+
 **Status:** written and tested locally, not merged; the first CI run happens on its PR. Branch `chore/mypy-report-only-ci`, off `main` `5135a8f`.
 Decision (Faiz, 2026-10-14): add a report-only mypy job, with stubs for the untyped libraries.
 

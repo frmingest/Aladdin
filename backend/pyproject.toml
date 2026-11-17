@@ -22,7 +22,7 @@ extend-immutable-calls = [
     "fastapi.Cookie",
 ]
 
-# mypy runs in CI as a blocking ratchet (issue #389): the old findings are listed in backend/mypy-baseline.txt, a NEW
+# mypy runs in CI as a blocking ratchet (issue #389): the 173 old findings are listed in backend/mypy-baseline.txt, a NEW
 # finding fails the job. Tool: backend/scripts/mypy_ratchet.py (docs/ops/mypy-ratchet-2026-11-17.md).
 [tool.mypy]
 python_version = "3.12"

@@ -208,7 +208,7 @@ jobs:
   typecheck:
     name: Type check (mypy ratchet)
     runs-on: ubuntu-latest
-    # Blocking ratchet (issue #389): the ~170 old findings are listed in backend/mypy-baseline.txt and tolerated; any NEW
+    # Blocking ratchet (issue #389): the 173 old findings are listed in backend/mypy-baseline.txt and tolerated; any NEW
     # finding fails this job. Fix a finding, then run `python scripts/mypy_ratchet.py --update` to shrink the baseline.
     # The job is blocking at zero NEW findings; it becomes "zero findings" when the baseline file is empty.
     defaults:

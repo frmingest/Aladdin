@@ -455,7 +455,7 @@ in `lib/artManifest.ts`. Tests: Vitest for `src/lib` and components, Playwright 
 | Migrations up / down / up | `ci.yml` on Postgres 16 | Also checks for exactly one head |
 | tsc, eslint, vitest, build | `ci.yml` frontend job | |
 | gitleaks over full history | `ci.yml`, config `.gitleaks.toml` | Allowlists known false positives |
-| mypy | `ci.yml`, report only | Never blocks; becomes blocking only at zero findings (166 measured 2026-10-14) |
+| mypy ratchet | `ci.yml`, blocking | A new finding fails; 173 old ones are baselined in `backend/mypy-baseline.txt` (#389) |
 | Dependency audit | `ci.yml` | `pip-audit` and `npm audit --audit-level=high`; report-only for now |
 | Post-deploy smoke test | `smoke.yml` | Read-only Playwright against the live site, daily at 05:30 UTC; needs repository variables `SMOKE_FRONTEND_URL` and `SMOKE_API_URL` |
 | pre-commit | `.pre-commit-config.yaml` | Same ruff + gitleaks; blocks `.env` and document uploads outside `docs/` |
@@ -476,7 +476,7 @@ Found while rewriting this document; none of them were changed in the housekeepi
 | Legacy tables with live foreign keys | `portfolio_risk_snapshots`, `llm_usage_events` | Reference `analysis_runs` / `holding_analyses`, so the "legacy, never queried" tables cannot be dropped without a migration. CLAUDE.md says leave them until Faiz asks |
 | `winter_orders` table | migration `x1f2a3b4c5d6` | Created, never used after PR #165 |
 | `docker-compose.yml` comment | `docker/docker-compose.yml` | Points at section 4 of this document for "production hosting"; that is still right |
-| Backend typing | CI | 166 mypy findings, report only |
+| Backend typing | CI | 173 baselined mypy findings, new ones blocked (ratchet) |
 | Dashboard macro chart | Dashboard | Shows only the original six macro series (noted in PROGRESS, not re-checked) |
 | Calibration, analyst half | `GET /game/calibration` | Counts every run, so repeat runs on one holding weigh more |
 
