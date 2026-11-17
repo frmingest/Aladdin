@@ -9,7 +9,7 @@ The place is the page. A 3D place (courtyard, tower, Town Hall, Market Quarter, 
 - **(a) Scene header** becomes the place's own silhouette and signature object that a screenshot identifies as Aladdin (not a stock model dropped on grass).
 - **(b) Shared kit** becomes the shared 3D pieces: the CC0 pack models in `artManifest3d.ts`, the label tokens in `frontend/src/game3d/gameTokens.ts`, the label plan in `labelPlan.ts`. No one-off hex or one-off model where a token or kit piece exists.
 - **(c) One real fact encoded** in the world: a size, position, fill, crack, fog or weather that comes from a real number through a pure mapping with a test, with unknown drawn as fog. *Existing:* pure plans in `*.ts` with a `*.test.ts` beside them (for example `holdingLand.ts`, `hourglassPlan.ts`).
-- **(d) Plain view** is a flat, labelled copy of the same facts. *Existing rule* (`game-ui-standards.md` rule 3): a Plain view is always available. *Existing in 3D for the Royal Mint only* (`MintPlainPanel.tsx`); other places do not have one, so they are listed as identity debt, not blockers (decision 1 below).
+- **(d) Plain view** is a flat, labelled copy of the same facts. *Existing rule* (`game-ui-standards.md` rule 3): a Plain view is always available. *Existing in 3D for the Royal Mint only* (`MintPlainPanel.tsx`). *Decided 2026-11-17:* a place **built after this date** without a Plain view cannot score 2 (blocker); a place that already exists and is only changed keeps scoring on its other points, and its missing Plain view goes on the ranked identity-debt list with the place that should get one next (decision 1 below).
 - **(e)** truth, colour-blind, reduced-motion, keyboard, phone, performance (sections 2 to 6).
 A new or changed place below 2 is a blocker, same as a 2D page.
 
@@ -40,12 +40,12 @@ Reduced motion is honoured through `motionPref.ts`; every loop and camera move h
 Same gate as 2D: name the place's main task, count the taps or key presses from a cold load in a real browser, target 2 or fewer for the common case. Moving between places has a name and a fade, not an instant jump.
 
 ## 8. Evidence a review must show
-- `playtest-qa`: screenshots of each touched place at desktop and phone, and what could not be rendered. If the run was headless software WebGL with a mocked API, the PR says **"headless only"** in "Seen in a browser?". This stays honest until issue #378 decides who does the real-GPU look; until then the real-GPU look is Faiz's, written in "After deploy (Faiz)".
+- `playtest-qa`: screenshots of each touched place at desktop and phone, and what could not be rendered. If the run was headless software WebGL with a mocked API, the PR says **"headless only"** in "Seen in a browser?". The real-GPU look is Faiz's, written in "After deploy (Faiz)" (decision 2 below).
 - `game-ux-designer`: identity score before and after for each touched place, the tap count, and the identity-debt list.
 - `game-feel-engineer`: draw-call delta, token and kit use, reduced-motion path.
 - `rules-auditor` / `docs-sync-checker`: as for any change.
 
-## Decisions (Faiz, 2026-11-17: "go")
-1. The *Approved* rules above stand: reviewers may block on them. For Plain view, the conservative reading applies: a new or changed place without one is identity debt (listed, ranked, not a blocker) until a plan for how a 3D place satisfies `game-ui-standards.md` rule 3 exists; the Royal Mint's `MintPlainPanel.tsx` is the pattern. Say if you want it to block instead.
-2. Issue #378 (rule contradictions) is still open. Until it is decided, a headless run does not count as a real-GPU look; the real look stays in "After deploy (Faiz)".
-3. The 3D identity score is written into `docs/game/game-sprint-checklist.md` sections A and B (one line each).
+## Decisions (Faiz, 2026-11-17: "go", then "you decide")
+1. **Plain view in 3D.** The *Approved* rules above stand: reviewers may block on them. New 3D places need a Plain view to ship (blocker). Existing places keep it as ranked identity debt; the pattern is `MintPlainPanel.tsx`: the same facts as labelled blocks, reachable by one key or tap. Reason: it enforces the standing rule for everything new without freezing the places that already shipped.
+2. **Headless runs (the part of issue #378 that touches 3D).** A headless software-GL run counts as "headless only" in the PR template's "Seen in a browser?" and proves that a place loads and the clicks work. It does not count as a real-GPU look, and it cannot measure draw calls or fps. The real look stays in "After deploy (Faiz)" until issue #448 gives a measured draw-call count in CI; even then the look-and-judge stays Faiz's. The other contradictions in #378 are not decided here.
+3. The 3D identity score is written into `docs/game/game-sprint-checklist.md` sections A and B (item 10 in each).
