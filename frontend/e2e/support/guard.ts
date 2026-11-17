@@ -16,10 +16,6 @@ import { E2E_API } from "./api";
  */
 const KNOWN_CONSOLE_NOISE: { match: RegExp; why: string; url?: RegExp }[] = [
   {
-    match: /THREE\.BufferGeometryUtils: \.merge(Attributes|Geometries)\(\) failed/,
-    why: "Courtyard asset merge warning, logged on every load of /game3d with the CC0 models. Visible in the console, nothing missing on screen. Tracked in docs/ops/test-strategy-2026-11-12.md (known findings).",
-  },
-  {
     match: /Failed to load resource: net::ERR_(BLOCKED_BY_CLIENT|NAME_NOT_RESOLVED|CONNECTION_REFUSED|INTERNET_DISCONNECTED)/,
     why: "Outside requests (web fonts) are not reachable from the CI runner or the sandbox. The app falls back to local fonts.",
   },
