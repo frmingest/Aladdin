@@ -1,31 +1,12 @@
 # mypy baseline (issue #389). One finding per line: file::code::message (no line numbers).
 # Never add a line by hand. Fix a finding and run: python scripts/mypy_ratchet.py --update
-app/api/accounts.py::arg-type::Argument 1 to "dict" has incompatible type "Sequence[Row[tuple[UUID | None, int]]]"; expected "Iterable[tuple[Never, Never]]"
-app/api/accounts.py::arg-type::Argument 1 to "dict" has incompatible type "Sequence[Row[tuple[UUID | None, int]]]"; expected "Iterable[tuple[Never, Never]]"
-app/api/accounts.py::var-annotated::Need type annotation for "position_counts" (hint: "position_counts: dict[<type>, <type>] = ...")
-app/api/accounts.py::var-annotated::Need type annotation for "snapshot_counts" (hint: "snapshot_counts: dict[<type>, <type>] = ...")
 app/api/analysis.py::arg-type::Argument "blind_pass" to "EquityAnalysisRunOut" has incompatible type "BaseModel | None"; expected "BlindPassOutputV1 | FundBlindPassOutputV1 | IncomeBlindPassOutputV1 | CommodityBlindPassOutputV1 | None"
 app/api/analysis.py::arg-type::Argument "reconciliation" to "EquityAnalysisRunOut" has incompatible type "BaseModel | None"; expected "ReconciliationOutputV1 | None"
-app/api/catalogue.py::arg-type::Argument "size_band" to "CatalogueItemOut" has incompatible type "str"; expected "Literal['giant', 'big', 'small', 'tiny', 'unknown']"
-app/api/documents.py::arg-type::Argument 4 to "AnchorFact" has incompatible type "int | None"; expected "int"
-app/api/holdings.py::arg-type::Argument 1 to "dict" has incompatible type "Sequence[Row[tuple[UUID | None, int]]]"; expected "Iterable[tuple[Never, Never]]"
-app/api/holdings.py::arg-type::Argument 1 to "dict" has incompatible type "Sequence[Row[tuple[UUID, int]]]"; expected "Iterable[tuple[Never, Never]]"
-app/api/holdings.py::var-annotated::Need type annotation for "document_counts" (hint: "document_counts: dict[<type>, <type>] = ...")
-app/api/holdings.py::var-annotated::Need type annotation for "position_counts" (hint: "position_counts: dict[<type>, <type>] = ...")
-app/api/journal.py::arg-type::Argument 2 to "run_in_force" has incompatible type "UUID | None"; expected "UUID"
-app/api/portfolio.py::arg-type::Argument 1 to "dict" has incompatible type "Sequence[Row[tuple[UUID, int]]]"; expected "Iterable[tuple[Never, Never]]"
-app/api/portfolio.py::var-annotated::Need type annotation for "position_counts" (hint: "position_counts: dict[<type>, <type>] = ...")
 app/api/precious_metals.py::return-value::Incompatible return value type (got "MetalPriceHistoryOut | None", expected "MetalPriceHistoryOut")
 app/api/precious_metals.py::union-attr::Item "None" of "MetalPriceHistoryOut | None" has no attribute "points"
 app/api/sources.py::arg-type::Argument "imported_at" to "EsefImportOut" has incompatible type "str"; expected "datetime | None"
 app/api/sources.py::arg-type::Argument "imported_at" to "NewswebAnnualReportOut" has incompatible type "str | None"; expected "datetime | None"
-app/api/system.py::arg-type::Argument 4 to "PromptLogListOut" has incompatible type "**dict[str, int]"; expected "bool"
-app/api/system.py::arg-type::Argument 5 to "PromptLogListOut" has incompatible type "**dict[str, int]"; expected "bool"
-app/api/thesis.py::arg-type::Argument "group" to "MetricDefOut" has incompatible type "str"; expected "Literal['fundamentals', 'market_multiples', 'price']"
 app/api/valuation.py::arg-type::Argument "price_assumes" to "HoldingValuationOut" has incompatible type "PriceAssumes | None"; expected "PriceAssumesOut | None"
-app/api/watchlist.py::arg-type::Argument 2 to "build_row" has incompatible type "Holding | None"; expected "Holding"
-app/api/watchlist.py::union-attr::Item "None" of "Holding | None" has no attribute "id"
-app/api/watchlist.py::union-attr::Item "None" of "str | None" has no attribute "strip"
 app/providers/mistral_provider.py::arg-type::Argument "messages" to "complete" of "Chat" has incompatible type "list[BaseModel]"; expected "list[AssistantMessage | SystemMessage | ToolMessage | UserMessage] | list[SystemMessageTypedDict | UserMessageTypedDict | AssistantMessageTypedDict | ToolMessageTypedDict]"
 app/providers/mistral_provider.py::override::Signature of "_generate_structured" incompatible with supertype "app.providers.ledger_recording.LedgerRecordingMixin"
 app/providers/ollama_provider.py::override::Signature of "_generate_structured" incompatible with supertype "app.providers.ledger_recording.LedgerRecordingMixin"

@@ -20,6 +20,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from decimal import Decimal
+from typing import Literal
 
 from sqlalchemy.orm import Session
 
@@ -45,7 +46,7 @@ from app.services.thesis.prices import (
 class MetricDef:
     key: str
     label: str
-    group: str  # "fundamentals" | "market_multiples" | "price"
+    group: Literal["fundamentals", "market_multiples", "price"]
     unit: str  # "pct" | "x" | "money" | "price"
 
 

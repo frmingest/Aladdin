@@ -40,20 +40,22 @@ def _to_out_many(db: Session, accounts: list[Account]) -> list[AccountOut]:
         return []
 
     ids = [a.id for a in accounts]
-    position_counts = dict(
-        db.execute(
+    position_counts = {
+        key: count
+        for key, count in db.execute(
             select(PortfolioPosition.account_id, func.count())
             .where(PortfolioPosition.account_id.in_(ids))
             .group_by(PortfolioPosition.account_id)
         ).all()
-    )
-    snapshot_counts = dict(
-        db.execute(
+    }
+    snapshot_counts = {
+        key: count
+        for key, count in db.execute(
             select(PortfolioSnapshot.account_id, func.count())
             .where(PortfolioSnapshot.account_id.in_(ids))
             .group_by(PortfolioSnapshot.account_id)
         ).all()
-    )
+    }
 
     return [
         AccountOut(

@@ -13,6 +13,7 @@ LLM, no guessing):
 from __future__ import annotations
 
 from decimal import Decimal
+from typing import Literal
 
 from app.domain.sectors import SECTORS
 
@@ -67,11 +68,16 @@ GIANT_FROM = Decimal(50000000000)  # 50 bn
 BIG_FROM = Decimal(10000000000)  # 10 bn
 SMALL_FROM = Decimal(1000000000)  # 1 bn
 
-SIZE_GIANT, SIZE_BIG, SIZE_SMALL, SIZE_TINY, SIZE_UNKNOWN = "giant", "big", "small", "tiny", "unknown"
+SizeBand = Literal["giant", "big", "small", "tiny", "unknown"]
+SIZE_GIANT: SizeBand = "giant"
+SIZE_BIG: SizeBand = "big"
+SIZE_SMALL: SizeBand = "small"
+SIZE_TINY: SizeBand = "tiny"
+SIZE_UNKNOWN: SizeBand = "unknown"
 SIZE_BANDS: tuple[str, ...] = (SIZE_GIANT, SIZE_BIG, SIZE_SMALL, SIZE_TINY, SIZE_UNKNOWN)
 
 
-def size_band(market_cap: Decimal | float | None, currency: str | None) -> str:
+def size_band(market_cap: Decimal | float | None, currency: str | None) -> SizeBand:
     """giant (>= 50 bn NOK), big (>= 10 bn), small (>= 1 bn), tiny (below), or unknown.
 
     Unknown when there is no value, the value is not positive, or it is not in NOK: converting would

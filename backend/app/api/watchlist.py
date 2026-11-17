@@ -40,6 +40,8 @@ router = APIRouter(prefix="/watchlist", tags=["watchlist"])
 
 def _row_out(db: Session, item: WatchlistItem) -> WatchlistRowOut:
     holding = db.get(Holding, item.holding_id)
+    if holding is None:
+        raise HTTPException(status_code=404, detail="holding not found")
     owned = holding.id in {p.holding_id for p in current_positions(db)}
     return WatchlistRowOut.model_validate(build_row(item, holding, owned=owned), from_attributes=True)
 
@@ -116,7 +118,7 @@ def add_to_watchlist(payload: WatchlistCreate, db: Session = Depends(get_db)) ->
         if holding is None:
             raise HTTPException(status_code=404, detail="holding not found")
     else:
-        ticker = payload.ticker.strip().upper()
+        ticker = (payload.ticker or "").strip().upper()  # the schema guarantees a ticker when holding_id is absent
         holding = db.scalar(select(Holding).where(Holding.ticker == ticker))
         if holding is None:
             if not payload.name or not payload.trading_currency:

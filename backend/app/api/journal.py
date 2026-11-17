@@ -140,7 +140,7 @@ def update_entry(entry_id: UUID, payload: JournalEntryUpdate, db: Session = Depe
     if "confidence" in payload.model_fields_set and entry.confidence != before_confidence:
         db.add(Forecast(entry_id=entry.id, holding_id=entry.holding_id, source="user", confidence=entry.confidence))
     if "decided_on" in payload.model_fields_set:
-        run = run_in_force(db, entry.holding_id, entry.decided_on)
+        run = run_in_force(db, entry.holding_id, entry.decided_on) if entry.holding_id is not None else None
         entry.verdict_at_decision = run_ratings(run)[0] if run else None
     db.commit()
     db.refresh(entry)

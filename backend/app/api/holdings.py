@@ -102,20 +102,22 @@ def _to_out_many(db: Session, holdings: list[Holding]) -> list[HoldingOut]:
         return []
 
     ids = [h.id for h in holdings]
-    document_counts = dict(
-        db.execute(
+    document_counts = {
+        key: count
+        for key, count in db.execute(
             select(Document.holding_id, func.count())
             .where(Document.holding_id.in_(ids))
             .group_by(Document.holding_id)
         ).all()
-    )
-    position_counts = dict(
-        db.execute(
+    }
+    position_counts = {
+        key: count
+        for key, count in db.execute(
             select(PortfolioPosition.holding_id, func.count())
             .where(PortfolioPosition.holding_id.in_(ids))
             .group_by(PortfolioPosition.holding_id)
         ).all()
-    )
+    }
 
     return [
         HoldingOut(
