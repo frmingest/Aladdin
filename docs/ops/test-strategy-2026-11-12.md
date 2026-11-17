@@ -100,6 +100,7 @@ CI has no GPU: Chromium draws with software WebGL. The suite therefore never ass
 
 - E2E duration (about 2.5 minutes for the 3D tests locally with software WebGL; CI is not measured yet; plan for a few minutes more) and flaky tests: a test that needs the one CI retry twice in a month is rewritten or removed.
 - Allow-list size in `guard.ts` (one entry once the F-2 PR merges: unreachable web fonts); it should shrink.
+- Draw calls and triangles per `/game3d` place (issue #448; PR adds it, report-only). `regression/game3d.spec.ts` > "draw calls (report only)" opens the courtyard and each of the six places, presses P and reads the toolbar stats label ("N draws · Nk tris"). The number goes to the CI log (`[draw-calls] {...}`), the test annotations and a JSON attachment in the HTML report. **It never fails a run.** It is a headless software-GL count: it shows how many draws the scene asks for, not how fast they run, so it does not replace a real-GPU look (target 300 or fewer, then 150; `docs/game/game3d-discovery-sprint-plan-2026-11-02.md`). Triangles are rounded to thousands because the label is. A threshold is a later decision once a few runs show how stable the count is.
 - Share of game PRs whose body says "not seen in a browser" (20 of 37 on 2026-11-01).
 
 ## 10. Next steps (not in this PR)
