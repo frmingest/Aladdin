@@ -1,13 +1,15 @@
 name: PR has a linked issue
 
 # All development happens from the sprint board: every PR closes an issue.
-# Add the `no-issue` label for a trivial typo or link fix.
+# Add the `no-issue` label for a trivial typo or link fix: it only counts when every changed file is a markdown
+# file under docs/ (or the root README.md). On any other file the label is ignored (decided 2026-11-17, issue #444).
 on:
   pull_request:
     types: [opened, edited, reopened, labeled, unlabeled, synchronize]
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
   linked-issue:
@@ -18,9 +20,16 @@ jobs:
         env:
           PR_BODY: ${{ github.event.pull_request.body }}
           PR_LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           if echo ",$PR_LABELS," | grep -q ",no-issue,"; then
-            echo "no-issue label present, skipping."; exit 0
+            FILES="$(gh api "repos/$REPO/pulls/$PR_NUMBER/files" --paginate --jq '.[] | .filename, (.previous_filename // empty)')"
+            if [ -n "$FILES" ] && ! printf '%s\n' "$FILES" | grep -Ev '^(docs/.*\.md|README\.md)$' | grep -q .; then
+              echo "no-issue label present and only docs changed, skipping."; exit 0
+            fi
+            echo "no-issue label ignored: it only counts when every changed file is a docs or README markdown file."
           fi
           if printf '%s' "$PR_BODY" | grep -Eiq '(close[sd]?|fix(e[sd])?|resolve[sd]?)[[:space:]]+#[0-9]+'; then
             echo "Linked issue found."; exit 0

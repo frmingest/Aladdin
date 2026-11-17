@@ -142,13 +142,22 @@ def check(body: str, changed_files: list[str] | None = None) -> list[str]:
     return errors
 
 
+def docs_only(files: list[str]) -> bool:
+    """True when every changed file is a markdown file under docs/ (or the root README). An empty list is not docs-only:
+    if the file list is missing the check runs in full. Added with issue #444 (decided by Faiz 2026-11-17): the
+    `no-issue` label used to skip every must-run reviewer, including for prompt, valuation and CI changes."""
+    return bool(files) and all((f.startswith("docs/") and f.endswith(".md")) or f == "README.md" for f in files)
+
+
 def main() -> int:
     body = os.environ.get("PR_BODY", "")
     labels = os.environ.get("PR_LABELS", "")
     files = [f for f in os.environ.get("CHANGED_FILES", "").splitlines() if f.strip()]
-    if "no-issue" in labels.split(","):
-        print("no-issue label present (typo or link fix): template check skipped.")
+    if "no-issue" in labels.split(",") and docs_only(files):
+        print("no-issue label present and only docs changed (typo or link fix): template check skipped.")
         return 0
+    if "no-issue" in labels.split(","):
+        print("no-issue label ignored: it only skips this check when every changed file is a docs or README markdown file.")
     errors = check(body, files)
     for e in errors:
         print(f"::error::{e}")

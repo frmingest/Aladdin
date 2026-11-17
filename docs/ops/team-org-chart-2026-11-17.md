@@ -165,6 +165,7 @@ The repo copy wins; it can drift from the account version. `qa-testlead` had its
 ## Known limits today (so nobody over-trusts the chart)
 
 - Verifiers are advisory. Nothing in GitHub forces a merge to wait for them or for CI: the branches API reported `protected: false` for `main` on 2026-11-17 (issue #377 is open), and the 2026-11-01 audit found 35 of 97 PRs merged before CI finished.
+- The `no-issue` label now skips the template check and the linked-issue check only for a docs-only PR (decided 2026-11-17); on any other file it is ignored.
 - The PR-template check proves a reviewer row is filled in, not that the reviewer ran. A row marked `yes` that never ran is a lie only the rules can catch.
 - The five specialist skills in `.claude/skills/` are copies; they can drift from the account versions Faiz edits, and nothing syncs them.
 - The agent definitions began as drafts on 2026-10-09 (`docs/ops/claude-setup-assessment-2026-10-09.md`); model choices and tool lists are still worth revisiting after real use.
@@ -181,7 +182,7 @@ What each closes, and the evidence it came from. The PR-template checker now req
 | `valuation-reviewer` | `rules-auditor` checks where maths lives, not that it is right | 2026-11-15 Toll Gate claim (`docs/ops/pr-guardrails-2026-11-15.md`) |
 | `board-steward` | Board hygiene was policed by memory | Audit 2026-11-01 findings 5 and 6 |
 
-Also done: five specialist skills copied into the repo; `.claude/standards/game3d-standard.md` written (rules marked *Proposed* there need Faiz's yes before a reviewer may block on them); `/ship-pr`, the PR template, the checker and `CLAUDE.md` know the new rows.
+Also done: five specialist skills copied into the repo; `.claude/standards/game3d-standard.md` written (approved by Faiz on 2026-11-17; the draw-call count in the e2e report is issue #448); `/ship-pr`, the PR template, the checker and `CLAUDE.md` know the new rows.
 
 ## Still open (nothing here was run)
 

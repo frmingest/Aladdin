@@ -144,7 +144,8 @@ by hand.** The PR body is always `.github/pull_request_template.md`, filled in, 
 Two guardrails enforce this and must never be weakened or bypassed to get a PR through: the Claude Code hook
 `.claude/hooks/require_pr_template.py` refuses to create or edit a PR whose body is not the filled-in template,
 and the CI check "PR template filled" (`.github/scripts/check_pr_template.py`) fails it. Only the `no-issue`
-label (trivial typo or link fix) skips the CI check.
+label skips the CI check, and only when every changed file is a markdown file under `docs/` (or the root `README.md`);
+on any other file the label is ignored by this check (decided 2026-11-17, issue #444).
 
 1. Work on a branch off the current `main` (`feature/<topic>`, `fix/<topic>`, `docs/<topic>`), never on `main`.
 2. Before opening the PR, run what CI runs: `ruff check .` and `pytest -q` in `backend/`

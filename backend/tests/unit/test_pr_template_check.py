@@ -218,3 +218,23 @@ def test_hook_catches_a_graphql_pull_request_and_survives_bad_input():
     assert _hook("gh api graphql -f query='mutation{createPullRequest(input:{title:\"x\"}){clientMutationId}}'").returncode == 2
     p = subprocess.run([sys.executable, str(HOOK)], input="not json", capture_output=True, text=True, cwd=ROOT, check=False)
     assert p.returncode == 0
+
+
+def _main(monkeypatch, capsys, labels: str, files: list[str], body: str = "free text, no template") -> tuple[int, str]:
+    monkeypatch.setenv("PR_BODY", body)
+    monkeypatch.setenv("PR_LABELS", labels)
+    monkeypatch.setenv("CHANGED_FILES", "\n".join(files))
+    code = C.main()
+    return code, capsys.readouterr().out
+
+
+def test_no_issue_label_skips_the_check_only_for_a_docs_only_change(monkeypatch, capsys):
+    assert _main(monkeypatch, capsys, "no-issue", ["docs/game/typo.md", "README.md"])[0] == 0
+    for files in (["backend/prompts/analysis/blind_v3.md"], ["docs/x.md", ".github/workflows/ci.yml"],
+                  ["CLAUDE.md"], ["docs/x.py"], []):
+        code, out = _main(monkeypatch, capsys, "no-issue", files)
+        assert code == 1 and "no-issue label ignored" in out, files
+
+
+def test_without_the_label_nothing_is_skipped(monkeypatch, capsys):
+    assert _main(monkeypatch, capsys, "", ["docs/x.md"])[0] == 1
