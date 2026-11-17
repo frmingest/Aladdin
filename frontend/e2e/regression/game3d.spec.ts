@@ -238,3 +238,35 @@ test.describe("things you can walk up to", () => {
     await problems.assertNone();
   });
 });
+
+// Draw calls and triangles per place (#448). REPORT-ONLY: the numbers go to the console, the test annotations and a JSON
+// attachment in the HTML report, and nothing here can fail on how big they are. The count comes from the same stats label
+// the P key shows in the toolbar ("60 fps · 212 draws · 94k tris"), so it is what a person reads on a real GPU. It is a
+// count from a headless software-GL run: it says how many draws the scene asks for, not how fast they run. Frame rate and
+// the real look stay a person's (.claude/standards/game3d-standard.md, section on performance).
+test.describe("draw calls (report only)", () => {
+  const COURTYARD = { at: "", label: "courtyard" };
+  const WHERE = [COURTYARD, ...PLACES.map(({ at }) => ({ at, label: at }))];
+
+  for (const { at, label } of WHERE) {
+    test(`${label}: records draw calls and triangles`, async ({ page }, testInfo) => {
+      const problems = watch(page);
+      await page.goto(at ? `/game3d?at=${at}` : "/game3d");
+      await expect(page.locator("canvas")).toHaveCount(1, { timeout: 60_000 });
+      // P turns the stats label on in the toolbar; the first report arrives about half a second later.
+      await page.keyboard.press("p");
+      const stats = page.getByRole("button", { name: /\d+ draws/ });
+      await expect(stats).toBeVisible({ timeout: 60_000 });
+      const text = (await stats.innerText()).replace(/\s+/g, " ");
+      const found = /(\d+) draws · (\d+)k tris/.exec(text);
+      // Report-only means a missing number is a note, never a failure of the page.
+      const result = found
+        ? { place: label, drawCalls: Number(found[1]), trianglesThousands: Number(found[2]), source: "headless software GL" }
+        : { place: label, drawCalls: null, trianglesThousands: null, source: "headless software GL", unread: text };
+      console.log(`[draw-calls] ${JSON.stringify(result)}`);
+      testInfo.annotations.push({ type: "draw-calls", description: found ? `${label}: ${found[1]} draws, ${found[2]}k tris (headless software GL, report only)` : `${label}: stats label not readable ("${text}")` });
+      await testInfo.attach(`draw-calls-${label}.json`, { body: JSON.stringify(result, null, 2), contentType: "application/json" });
+      await problems.assertNone();
+    });
+  }
+});
