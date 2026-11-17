@@ -90,7 +90,7 @@ def body_text(seg: str, whole: str, kind: str) -> tuple[str, bool]:
 def changed_files() -> list[str]:
     for ref in ("origin/main...HEAD", "main...HEAD"):
         try:
-            res = subprocess.run(["git", "diff", "--name-only", ref], capture_output=True, text=True, timeout=20, cwd=ROOT, check=False)
+            res = subprocess.run(["git", "diff", "--name-only", "--no-renames", ref], capture_output=True, text=True, timeout=20, cwd=ROOT, check=False)
         except (OSError, subprocess.SubprocessError):
             res = None
         if res is not None and res.returncode == 0:

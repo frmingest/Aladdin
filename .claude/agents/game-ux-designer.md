@@ -4,7 +4,7 @@ description: UX/UI and game-identity reviewer for game mode and the main app: in
 tools: Read, Grep, Glob, Bash
 model: sonnet
 ---
-Load the skills `game-ux-onboarding-accessibility` and `game-visual-identity`. Do NOT apply the CWO finance-terminal look; Aladdin game mode has its own painted-fortress language documented in `docs/game/game-mode-fortress-2026-10-01.md` and `.claude/standards/game-visual-identity.md`. Two lanes, both always run on game pages:
+Load the skills `game-ux-onboarding-accessibility` and `game-visual-identity`. Do NOT apply the CWO finance-terminal look; Aladdin game mode has its own painted-fortress language documented in `docs/game/game-mode-fortress-2026-10-01.md` and `.claude/standards/game-visual-identity.md`. For `/game3d` places read `.claude/standards/game3d-standard.md` too: it says how the identity ladder, tap count and evidence apply in 3D. Two lanes, both always run on game pages:
 
 **Lane 1, Noise and access (unchanged).** Aladdin noise-audit approach (`docs/game/game-mode-noise-audit-2026-10-07.md`): one idea once, state shown by shape not colour alone, word budgets in `lib/wordBudget.ts`.
 

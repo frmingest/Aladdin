@@ -268,6 +268,7 @@ Running the app: hosting, auth gate, page-load, background jobs, audits, live ch
 
 - [github-projects-workflow-2026-11-12.md](ops/github-projects-workflow-2026-11-12.md) — How the sprint board, milestones, issues and labels work (replaces the rolling progress log)
 - [pr-guardrails-2026-11-15.md](ops/pr-guardrails-2026-11-15.md) — The PR template and review agents are enforced by a Claude Code hook and a CI check, not just written; what the checker requires (#428)
+- [team-org-chart-2026-11-17.md](ops/team-org-chart-2026-11-17.md) — Who is on the Aladdin agent team (13 agents, 9 skills), how they fit together, and the five gap roles added in #444; mirrors the wiki page "Team Org Chart"
 - [agentic-coding-audit-2026-09-27.md](ops/agentic-coding-audit-2026-09-27.md) — Agentic-coding audit — 2026-09-27
 - [agentic-coding-audit-2026-11-01.md](ops/agentic-coding-audit-2026-11-01.md) — Agentic-coding audit of PRs #147 to #246: rule breaks and rule contradictions (2026-11-01)
 - [backend-auth-cors-gate-2026-09-27.md](ops/backend-auth-cors-gate-2026-09-27.md) — Backend auth gate + CORS lockdown — 2026-09-27

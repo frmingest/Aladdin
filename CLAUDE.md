@@ -144,7 +144,8 @@ by hand.** The PR body is always `.github/pull_request_template.md`, filled in, 
 Two guardrails enforce this and must never be weakened or bypassed to get a PR through: the Claude Code hook
 `.claude/hooks/require_pr_template.py` refuses to create or edit a PR whose body is not the filled-in template,
 and the CI check "PR template filled" (`.github/scripts/check_pr_template.py`) fails it. Only the `no-issue`
-label (trivial typo or link fix) skips the CI check.
+label skips the CI check, and only when every changed file is a markdown file under `docs/` (or the root `README.md`);
+on any other file the label is ignored by this check (decided 2026-11-17, issue #444).
 
 1. Work on a branch off the current `main` (`feature/<topic>`, `fix/<topic>`, `docs/<topic>`), never on `main`.
 2. Before opening the PR, run what CI runs: `ruff check .` and `pytest -q` in `backend/`
@@ -152,7 +153,7 @@ label (trivial typo or link fix) skips the CI check.
    changes `tsc --noEmit`, `npm run lint`, `npm test`, `npm run build`. Don't open a PR with a known red check.
 3. Run the reviewers the change calls for, and record each in the template's "Who reviewed it" table: `rules-auditor`
    for any backend, prompt or schema change; `docs-sync-checker` for any backend or docs change; `playtest-qa`,
-   `game-ux-designer`, `game-designer` and `game-feel-engineer` for any game UI change; the account skills `qa-testlead` and `code-auditor` when the work calls for them (a skipped row says why). Every row is answered: `yes`
+   `game-ux-designer`, `game-designer` and `game-feel-engineer` for any game UI change; the repo skills `qa-testlead` and `code-auditor` when the work calls for them; `release-manager` for CI, Docker or migration files; `llm-quality-guard` for a prompt or analysis schema; `valuation-reviewer` for valuation or risk maths; `compliance-officer` for a new dependency, data provider or LLM client; `board-steward` on every PR (a skipped row says why; the PR-template check refuses a skip for the first four when those paths changed). Every row is answered: `yes`
    with a result, or `skipped` with the reason. Findings are fixed (or listed as open) before the PR goes up. Never mark a
    role as run when it was not.
 4. **Check a claim before you write it.** A doc, PR body or issue comment that says what code does ("helps most",
