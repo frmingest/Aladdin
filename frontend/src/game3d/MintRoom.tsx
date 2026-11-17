@@ -1,5 +1,5 @@
 import { useMemo, useRef } from "react";
-import { useFrame } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import { CuboidCollider, RigidBody } from "@react-three/rapier";
 import type { Group } from "three";
 import { PAL, Part } from "./Inked";
@@ -9,7 +9,10 @@ import {
   BOOK_SPOT,
   MINT,
   MINT_DOOR,
-  PLATE_CAPACITY,
+  plateCapacityOf,
+  plateCentreOf,
+  plateLayoutFor,
+  plateScaleOf,
   PRESS_SPOT,
   SPAN_SPOT,
   bookPlate,
@@ -38,13 +41,13 @@ const MID_Z = (MINT.maxZ + MINT.minZ) / 2;
 const WIDTH_X = MINT.maxX - MINT.minX;
 
 /** One result plate on the wall: the holding's name, its direction by mark and word, and a NOK range only if the backend allowed one. */
-function ResultPlate({ p, stale, position, yaw }: { p: PlateText; stale: boolean; position: [number, number, number]; yaw: number }) {
+function ResultPlate({ p, stale, position, yaw, scale = 1 }: { p: PlateText; stale: boolean; position: [number, number, number]; yaw: number; scale?: number }) {
   // The texture is drawn once per result; the "Old answer" tab is a small board in front, so a lever pull never redraws every plate.
   const texture = useMemo(() => makeTexture(PLATE_PX, (ctx) => drawMintPlate(ctx, p, false)), [p]);
   useDispose(texture);
   const height = (PLATE.width * PLATE_PX.h) / PLATE_PX.w;
   return (
-    <group position={position} rotation={[0, yaw, 0]}>
+    <group position={position} rotation={[0, yaw, 0]} scale={scale}>
       <Sheet texture={texture} width={PLATE.width} height={height} />
       {stale && <Banner position={[0, -height / 2 - 0.2, 0.03]} yaw={0} width={1.6} big={MINT_WORDS.stale} small={null} />}
     </group>
@@ -99,7 +102,7 @@ interface Props {
  */
 export default function MintRoom({ mint }: Props) {
   const { plans, more: leversMore } = useMemo(() => leverLayout(mint.levers), [mint.levers]);
-  const { plates, more } = useMemo(() => wallPlates(mint.result), [mint.result]);
+  const { plates: allPlates, more: leftOut } = useMemo(() => wallPlates(mint.result), [mint.result]);
   const book = useMemo(() => (mint.result ? bookPlate(mint.result) : null), [mint.result]);
   const stale = mint.wall === "stale";
   const heading = wallHeading(mint.wall);
@@ -116,10 +119,17 @@ export default function MintRoom({ mint }: Props) {
     const n = needle.current;
     if (n) n.rotation.z = reduced || Math.abs(needleGoal - n.rotation.z) < 0.002 ? needleGoal : n.rotation.z + (needleGoal - n.rotation.z) * Math.min(1, dt * 6);
   });
+  // A portrait screen gets the tall plate layout so every plate is in view when you stamp (#434).
+  const aspect = useThree((st) => st.size.width / Math.max(1, st.size.height));
+  const layout = plateLayoutFor(aspect);
   const doorGap = MINT_DOOR.width / 2;
   const sideLen = (WIDTH_X - MINT_DOOR.width) / 2;
   const wallPlateY = 3.3;
-  const slots = Array.from({ length: Math.min(plates.length, PLATE_CAPACITY) }, (_, i) => plateSlot(i));
+  const plates = allPlates.slice(0, plateCapacityOf(layout));
+  const more = leftOut + (allPlates.length - plates.length);
+  const plateScale = plateScaleOf(layout);
+  const plateCentre = plateCentreOf(layout);
+  const slots = plates.map((_, i) => plateSlot(i, layout));
   return (
     <group>
       <RigidBody type="fixed" colliders={false}>
@@ -227,10 +237,10 @@ export default function MintRoom({ mint }: Props) {
       {/* The result wall (east): one plate per holding, biggest swing first (the backend's own order). */}
       {plates.map((p, i) => {
         const s = slots[i];
-        return <ResultPlate key={p.key} p={p} stale={stale} position={[s.x, s.y, s.z]} yaw={s.yaw} />;
+        return <ResultPlate key={p.key} p={p} stale={stale} position={[s.x, s.y, s.z]} yaw={s.yaw} scale={plateScale} />;
       })}
-      {heading && <Banner position={[MINT.maxX - 0.08, 5.7, 0]} yaw={-Math.PI / 2} width={6.4} big={heading} small={null} />}
-      {more > 0 && <Banner position={[MINT.maxX - 0.08, 0.6, 0]} yaw={-Math.PI / 2} width={4.4} big={MINT_WORDS.more(more)} small={null} />}
+      {heading && <Banner position={[MINT.maxX - 0.08, 5.7, plateCentre]} yaw={-Math.PI / 2} width={6.4} big={heading} small={null} />}
+      {more > 0 && <Banner position={[MINT.maxX - 0.08, layout === "tall" ? 0.3 : 0.6, plateCentre]} yaw={-Math.PI / 2} width={layout === "tall" ? 3 : 4.4} big={MINT_WORDS.more(more)} small={null} />}
 
       {/* The west wall: the whole book, and the Mint's mood (it leans restless when the backend flags a wild pull). */}
       {book && <ResultPlate p={book} stale={stale} position={[MINT.minX + 0.08, wallPlateY, 0]} yaw={Math.PI / 2} />}
