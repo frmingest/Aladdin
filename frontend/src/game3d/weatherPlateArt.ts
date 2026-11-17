@@ -217,6 +217,31 @@ export function drawPost(ctx: CanvasRenderingContext2D, tenor: string, text: str
   }
 }
 
+/** The largest size from `sizes` at which `text` fits on one line of `maxW`, or null when even the smallest is too wide. */
+function fitSingleLine(ctx: CanvasRenderingContext2D, text: string, maxW: number, sizes: readonly number[]): { size: number } | null {
+  for (const size of sizes) {
+    ctx.font = `700 ${size}px ${FONT}`;
+    if (ctx.measureText(text).width <= maxW) return { size };
+  }
+  return null;
+}
+
+/** Two lines of `text` split at the word break that makes the longer line shortest (no one-word widow), at the largest size from `sizes` where both fit `maxW`; null when none fits. */
+export function fitTwoLines(ctx: CanvasRenderingContext2D, text: string, maxW: number, sizes: readonly number[]): { size: number; lines: string[] } | null {
+  const words = text.split(/\s+/).filter(Boolean);
+  for (const size of sizes) {
+    ctx.font = `700 ${size}px ${FONT}`;
+    let best: { lines: string[]; longest: number } | null = null;
+    for (let i = 1; i < words.length; i++) {
+      const lines = [words.slice(0, i).join(" "), words.slice(i).join(" ")];
+      const longest = Math.max(...lines.map((l) => ctx.measureText(l).width));
+      if (longest <= maxW && (!best || longest < best.longest)) best = { lines, longest };
+    }
+    if (best) return { size, lines: best.lines };
+  }
+  return null;
+}
+
 /** A wide banner with one big line and, optionally, one smaller line under it. */
 export function drawBanner(ctx: CanvasRenderingContext2D, big: string, small: string | null): void {
   const { w, h } = BANNER_PX;
@@ -224,13 +249,26 @@ export function drawBanner(ctx: CanvasRenderingContext2D, big: string, small: st
   paper(ctx, w, h, false, false);
   ctx.textAlign = "center";
   ctx.fillStyle = INK_TEXT;
-  const b = fitText(ctx, big, w - 80, 1, small ? [64, 54, 46] : [84, 70, 58]);
-  ctx.font = `700 ${b.size}px ${FONT}`;
-  ctx.fillText(b.lines[0], w / 2, small ? 78 : 104);
-  if (small) {
-    ctx.fillStyle = SOFT;
-    const s = fitText(ctx, small, w - 80, 1, [36, 30, 26]);
-    ctx.font = `600 ${s.size}px ${FONT}`;
-    ctx.fillText(s.lines[0], w / 2, 126);
+  if (!small) {
+    // A key sentence is never cut (#440): one line while it fits, else two lines at a smaller size.
+    const one = fitSingleLine(ctx, big, w - 80, [84, 70, 58]);
+    if (one) {
+      ctx.font = `700 ${one.size}px ${FONT}`;
+      ctx.fillText(big, w / 2, 104);
+      return;
+    }
+    const two = fitTwoLines(ctx, big, w - 80, [50, 44, 38, 32]) ?? fitText(ctx, big, w - 80, 2, [32]);
+    ctx.font = `700 ${two.size}px ${FONT}`;
+    const lineH = two.size + 6;
+    const top = (h - (two.size + lineH * (two.lines.length - 1))) / 2;
+    two.lines.forEach((line, i) => ctx.fillText(line, w / 2, top + two.size * 0.85 + i * lineH));
+    return;
   }
+  const b = fitText(ctx, big, w - 80, 1, [64, 54, 46]);
+  ctx.font = `700 ${b.size}px ${FONT}`;
+  ctx.fillText(b.lines[0], w / 2, 78);
+  ctx.fillStyle = SOFT;
+  const sm = fitText(ctx, small, w - 80, 1, [36, 30, 26]);
+  ctx.font = `600 ${sm.size}px ${FONT}`;
+  ctx.fillText(sm.lines[0], w / 2, 126);
 }
