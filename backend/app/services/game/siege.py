@@ -190,7 +190,7 @@ def simulate(
     result.portfolio_loss_nok = loss.quantize(Decimal(1))
     result.portfolio_shock_pct = (loss / covered).quantize(_PCT4)
     result.weighted_beta = (
-        sum((r.holding.value_nok * r.holding.beta for r in modelled), ZERO) / covered  # type: ignore[operator]
+        sum((r.holding.value_nok * r.holding.beta for r in modelled), ZERO) / covered  # type: ignore[operator]  # a modelled holding always has a value and a beta (checked in simulate)
     ).quantize(Decimal("0.01"))
 
     shock = result.portfolio_shock_pct

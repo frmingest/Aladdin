@@ -116,6 +116,8 @@ def get_price_history(
         raise HTTPException(status_code=404, detail=f"Unknown metal: {metal!r}")
     if is_demo_mode(db):
         demo = demo_precious_metals_price_history(metal)
+        if demo is None:
+            raise HTTPException(status_code=404, detail=f"No demo prices for {metal!r}")
         cutoff_count = max(days, 1)
         demo.points = demo.points[-cutoff_count:]
         return demo

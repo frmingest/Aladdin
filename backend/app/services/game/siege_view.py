@@ -203,7 +203,7 @@ def build_siege_sim(
         drop_min=scenarios.drop_min,
         drop_max=scenarios.drop_max,
         drop_step=scenarios.drop_step,
-        level=result.level,  # type: ignore[arg-type]
+        level=result.level,  # type: ignore[arg-type]  # str from the siege engine, always one of the schema's Literal values
         level_reason=result.level_reason,
         portfolio_shock_pct=result.portfolio_shock_pct,
         portfolio_loss_nok=result.portfolio_loss_nok,
@@ -222,10 +222,10 @@ def build_siege_sim(
         holdings=[
             SiegeSimHoldingOut(
                 holding_id=r.holding.holding_id, ticker=r.holding.ticker, name=r.holding.name,
-                structure=r.holding.structure, size_class=r.holding.size_class, wall=r.holding.wall,  # type: ignore[arg-type]
+                structure=r.holding.structure, size_class=r.holding.size_class, wall=r.holding.wall,  # type: ignore[arg-type]  # str from the siege engine, always one of the schema's Literal values
                 value_nok=r.holding.value_nok, weight_pct=r.holding.weight_pct, beta=r.holding.beta,
                 beta_as_of=r.holding.beta_as_of, modelled=r.modelled, shock_pct=r.shock_pct,
-                loss_nok=r.loss_nok, exposure=r.exposure if r.modelled else "unmodelled",  # type: ignore[arg-type]
+                loss_nok=r.loss_nok, exposure=r.exposure if r.modelled else "unmodelled",  # type: ignore[arg-type]  # str from the siege engine, always one of the schema's Literal values
                 stored_shock_pct=r.holding.stored_shock_pct, reason=r.reason,
                 method=r.holding.method, observations=r.holding.observations,
                 r_squared=r.holding.r_squared, caution=r.holding.caution,

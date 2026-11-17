@@ -167,8 +167,8 @@ def _value_row(
         row.bear, row.base, row.bull = values.get("bear"), values.get("base"), values.get("bull")
         row.margin_of_safety_base = valuation.headline_margin_of_safety("base")
         row.margin_of_safety_bear = valuation.headline_margin_of_safety("bear")
-        if None not in (row.price, row.bear, row.base, row.bull):
-            row.zone = _zone(row.price, row.bear, row.base, row.bull)  # type: ignore[arg-type]
+        if row.price is not None and row.bear is not None and row.base is not None and row.bull is not None:
+            row.zone = _zone(row.price, row.bear, row.base, row.bull)
     if row.zone == UNAVAILABLE:
         if valuation.valuation_status == "implausible":
             row.unavailable_reason = valuation.valuation_status_reason

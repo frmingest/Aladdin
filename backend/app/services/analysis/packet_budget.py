@@ -210,7 +210,7 @@ def apply_token_budget(packet: EvidencePacket, *, total_budget: int | None) -> B
         for floor_for in (lambda p: p.floor_tokens, lambda p: min(p.floor_tokens, 200)):
             ranked = sorted(
                 {i.category for i in packet.items if policy_for(i.category).trim_rank is not None},
-                key=lambda name: policy_for(name).trim_rank,  # type: ignore[arg-type,return-value]
+                key=lambda name: policy_for(name).trim_rank or 0,  # only categories with a rank are listed
             )
             for name in ranked:
                 excess = _tokens(packet.items) - total_budget

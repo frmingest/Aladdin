@@ -579,7 +579,7 @@ def _siege_notes(inputs: GameInputs, siege: SiegeOut, mapping: GameMapping) -> l
 def _build_temperament(inputs: GameInputs, mapping: GameMapping, now: datetime) -> TemperamentOut:
     result = temperament_rules.temperament(inputs.temperament, mapping, now=now)
     return TemperamentOut(
-        level=result.level,  # type: ignore[arg-type]
+        level=result.level,  # type: ignore[arg-type]  # str from the temperament engine, always one of the schema's Literal values
         needle_pct=result.needle_pct,
         low_confidence=result.low_confidence,
         decisions_logged=result.decisions_logged,
@@ -590,13 +590,13 @@ def _build_temperament(inputs: GameInputs, mapping: GameMapping, now: datetime) 
         summary=result.summary,
         events=[
             TemperamentEventOut(
-                kind=e.kind,  # type: ignore[arg-type]
+                kind=e.kind,  # type: ignore[arg-type]  # str from the temperament engine, always one of the schema's Literal values
                 rule=e.rule,
                 on=e.on,
                 holding_name=e.holding_name,
                 holding_id=e.holding_id,
                 explanation=e.explanation,
-                source=e.source,  # type: ignore[arg-type]
+                source=e.source,  # type: ignore[arg-type]  # str from the temperament engine, always one of the schema's Literal values
                 entry_id=e.entry_id,
             )
             for e in result.events

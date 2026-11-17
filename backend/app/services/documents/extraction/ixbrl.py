@@ -30,7 +30,7 @@ from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal, InvalidOperation
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from lxml import etree
@@ -1126,7 +1126,7 @@ def _decimals_tolerance(facts: list[TaggedFact]) -> Decimal:
 
 def _integrity_checks(
     resolved: dict[tuple[str, str], TaggedFact], years: list[str]
-) -> dict[str, object]:
+) -> dict[str, Any]:
     passed = 0
     failed: list[str] = []
     for fy in years:
@@ -1297,7 +1297,7 @@ class MappedFacts:
     mapping_lines: list[str]
     fact_sources: dict[str, str]
     years: list[str]
-    integrity: dict[str, object]
+    integrity: dict[str, Any]
     other_equity: list[str]
     conflicts: list[str]
     # Plain-language notes about how a number was built (e.g. Orkla's debt

@@ -11,6 +11,7 @@ not prompt-engineered JSON.
 from __future__ import annotations
 
 from mistralai import Mistral
+from mistralai.models import Messages
 from mistralai.models.chatcompletionresponse import ChatCompletionResponse
 from mistralai.models.jsonschema import JSONSchema
 from mistralai.models.responseformat import ResponseFormat
@@ -70,13 +71,15 @@ class MistralProvider(LedgerRecordingMixin, LLMProvider):
             ),
         )
 
+        messages: list[Messages] = [
+            SystemMessage(content=system_prompt),
+            UserMessage(content=user_prompt),
+        ]
+
         def _call() -> ChatCompletionResponse:
             result = self._client.chat.complete(
                 model=self._model,
-                messages=[
-                    SystemMessage(content=system_prompt),
-                    UserMessage(content=user_prompt),
-                ],
+                messages=messages,
                 temperature=self._temperature,
                 max_tokens=output_budget,
                 response_format=response_format,

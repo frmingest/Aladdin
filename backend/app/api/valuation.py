@@ -12,6 +12,7 @@ failing the whole response (CLAUDE.md: fail visibly, never silently).
 """
 from __future__ import annotations
 
+import dataclasses
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -32,6 +33,7 @@ from app.schemas.valuation import (
     LookThroughScenarioOut,
     MarginOfSafetyBoardOut,
     PeriodMultiplesOut,
+    PriceAssumesOut,
 )
 from app.services.market_data.fx import get_or_refresh_fx
 from app.services.settings.demo_guard import require_not_demo
@@ -194,7 +196,9 @@ def _to_out(result: HoldingValuationResult) -> HoldingValuationOut:
         financials=financials_out,
         fund_look_through=look_out,
         rejected_values=rejected_values,
-        price_assumes=result.price_assumes,
+        price_assumes=(
+            PriceAssumesOut(**dataclasses.asdict(result.price_assumes)) if result.price_assumes is not None else None
+        ),
     )
 
 

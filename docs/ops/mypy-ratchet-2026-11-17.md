@@ -35,3 +35,27 @@ Nothing stops a merge while `main` has no branch protection (#377, Faiz sets it)
 - Step 2: add the missing stubs. Step 3: clear findings package by package, money code first (`ixbrl.py` 30, `system_status.py` 22, `game/state.py` 16, `game/ravens.py` 11 were the biggest in the October count).
 - Review the 50 `# type: ignore` lines in money and backtest code.
 - Zero findings is the stretch goal; the ratchet is the must-have, and it also satisfies the gate Faiz set for starting #384 and #385 ("item 6, step 1").
+
+## Cleanup of the baseline (#455)
+
+**Status:** the PR for #455 empties the baseline (173 findings to 0 on Python 3.12 with the pins in `requirements-dev.txt`) and
+turns on `warn_unused_ignores`. Written, not merged, not yet run in CI.
+
+- **Stubs (step 2 of #389):** nothing to add. The only import mypy cannot type is `yfinance`, which has no stubs package; its
+  override in `pyproject.toml` stays.
+- **How the findings went:** most were Optional values mypy could not see were set (`Decimal | None` sums, `UUID | None`
+  lookups, `datetime | None` helpers), `str` where the schema has a `Literal`, and reused variable names. Fixes are narrowing,
+  overloads (`_aware`, `_utc`, `_q`, `_r`, `_day_out`), Literal return types on the game rules, and a typed schema registry
+  (`BlindPassOutput`). No arithmetic was moved or reworded.
+- **`# type: ignore`:** 50 before, 20 after. All 20 now carry a reason on the same line. `warn_unused_ignores` makes an
+  ignore that stops being needed a finding, so they cannot pile up silently.
+- **Behaviour that is not type-only (each was an AttributeError, TypeError or response-validation error before):**
+  - the equity note in `ixbrl.py` skips a year with no total-equity fact;
+  - `GET` precious-metals history in demo mode returns 404 for a metal with no demo series (was a 500);
+  - the watchlist row returns 404 if its holding is gone;
+  - `imported_at` on the ESEF and Newsweb responses is parsed from the stored ISO string, and an empty or unreadable one becomes null;
+  - the multiples helper in `metrics.py` skips a ratio whose denominator fact is stored as None, with the "missing" reason.
+- **Ratchet:** `mypy-baseline.txt` holds only its two header lines. The job still compares against it, so a new finding fails
+  the build. `test_committed_baseline_is_well_formed` no longer requires a non-empty baseline.
+- Checked in this session: `mypy` clean (327 files), ruff clean, full backend suite 2,159 passed, 2 skipped. Not seen: the job on
+  GitHub's runner.

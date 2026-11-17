@@ -207,7 +207,7 @@ def wall_margin_views(
     """A1 Knife-edge: the distance to each neighbouring tier (margins_v1)."""
     return [
         MarginOut(
-            metric=m.metric, label=m.label, value=m.value, boundary=m.boundary, direction=m.direction,  # type: ignore[arg-type]
+            metric=m.metric, label=m.label, value=m.value, boundary=m.boundary, direction=m.direction,  # type: ignore[arg-type]  # Margin.direction is 'weaker' or 'stronger' (margins_v1), typed str there
             to_tier=m.to_tier, distance=m.distance, near=m.near, text=margin_text(m),
         )
         for m in wall_margins(wall_inputs, financial=financial, mapping=mapping)

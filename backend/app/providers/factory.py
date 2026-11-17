@@ -83,7 +83,7 @@ def _build_provider(name: str, settings: Settings) -> LLMProvider:
             max_output_tokens=settings.llm_max_output_tokens,
             rpm=settings.mistral_rate_limit_rpm,
         )
-        provider.ledger_session_factory = _ledger_session_factory()  # type: ignore[attr-defined]
+        provider.ledger_session_factory = _ledger_session_factory()  # type: ignore[attr-defined]  # only providers that mix in LedgerRecordingMixin have this; the factory returns the base type
         return provider
     if name == "ollama":
         provider = OllamaProvider(
@@ -102,7 +102,7 @@ def _build_provider(name: str, settings: Settings) -> LLMProvider:
             think=settings.ollama_think,
             api_key=settings.ollama_api_key,
         )
-        provider.ledger_session_factory = _ledger_session_factory()  # type: ignore[attr-defined]
+        provider.ledger_session_factory = _ledger_session_factory()
         return provider
     raise LLMUnavailableError(f"Unknown LLM provider: {name!r}")
 

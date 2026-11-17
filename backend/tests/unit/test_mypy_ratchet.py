@@ -46,6 +46,5 @@ def test_a_brand_new_finding_is_new_and_a_removed_one_counts_as_fixed():
 
 
 def test_committed_baseline_is_well_formed():
-    base = ratchet.read_baseline()
-    assert sum(base.values()) > 0
+    base = ratchet.read_baseline()  # empty since #455 (zero findings); any line a later change adds must still parse
     assert all(k.count("::") >= 2 for k in base)

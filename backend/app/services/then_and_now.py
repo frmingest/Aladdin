@@ -132,14 +132,14 @@ def compare_runs(then_run: EquityAnalysisRun, now_run: EquityAnalysisRun) -> tup
         if before == after:
             unchanged += 1
             continue
-        changes.append(Change(key=key, label=label, kind="value", then_value=before, now_value=after))  # type: ignore[arg-type]
+        changes.append(Change(key=key, label=label, kind="value", then_value=before, now_value=after))  # type: ignore[arg-type]  # _VALUE_FIELDS hold str|None, _LIST_FIELDS hold list[str]; the view dict is typed as the union
     for key, label in _LIST_FIELDS:
         before_items, after_items = then_view[key], now_view[key]
-        if _normalised(before_items) == _normalised(after_items):  # type: ignore[arg-type]
+        if _normalised(before_items) == _normalised(after_items):  # type: ignore[arg-type]  # _VALUE_FIELDS hold str|None, _LIST_FIELDS hold list[str]; the view dict is typed as the union
             unchanged += 1
             continue
         changes.append(
-            Change(key=key, label=label, kind="list", then_items=before_items, now_items=after_items)  # type: ignore[arg-type]
+            Change(key=key, label=label, kind="list", then_items=before_items, now_items=after_items)  # type: ignore[arg-type]  # _VALUE_FIELDS hold str|None, _LIST_FIELDS hold list[str]; the view dict is typed as the union
         )
     return changes, unchanged
 
