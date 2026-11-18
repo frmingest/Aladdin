@@ -389,7 +389,7 @@ def build_portfolio_performance(
                     bench_pct = ((bu / benchmark_base - 1) * HUNDRED).quantize(Decimal("0.01"))
             if real_return_available:
                 cpi_d = cpi_filled.get(d)
-                if cpi_d is not None and cpi_d != 0:
+                if cpi_d is not None and cpi_d != 0 and cpi_anchor is not None:  # anchor is set whenever real_return_available
                     cpi_growth = cpi_d / cpi_anchor
                     real_pct = ((nominal_growth / cpi_growth - 1) * HUNDRED).quantize(Decimal("0.01"))
         series.append(
@@ -408,8 +408,8 @@ def build_portfolio_performance(
         real_return_reason = "no CPI-covered day fell within this window"
 
     covered_days = [dv for dv in series if dv.daily_pnl_nok is not None]
-    best_day = max(covered_days, key=lambda dv: dv.daily_pnl_nok) if covered_days else None
-    worst_day = min(covered_days, key=lambda dv: dv.daily_pnl_nok) if covered_days else None
+    best_day = max(covered_days, key=lambda dv: dv.daily_pnl_nok or ZERO) if covered_days else None
+    worst_day = min(covered_days, key=lambda dv: dv.daily_pnl_nok or ZERO) if covered_days else None
     ending = series[-1] if series else None
     starting_dv = next((dv for dv in series if not dv.partial), None)
 

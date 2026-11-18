@@ -85,17 +85,19 @@ def get_prompt_log_list(
     only — never calls a provider. Demo mode returns nothing: the rows hold
     real portfolio evidence."""
     settings = get_settings()
-    base = {"retention_days": settings.llm_prompt_log_retention_days,
-            "enabled": settings.llm_prompt_log_enabled}
     if is_demo_mode(db):
-        return PromptLogListOut(total=0, items=[], providers=[], demo_mode=True, **base)
+        return PromptLogListOut(
+            total=0, items=[], providers=[], demo_mode=True,
+            retention_days=settings.llm_prompt_log_retention_days, enabled=settings.llm_prompt_log_enabled,
+        )
     page = list_prompt_logs(
         db, provider=provider, outcome=outcome, call_type=call_type,
         search=search, limit=limit, offset=offset,
     )
     return PromptLogListOut(
         total=page["total"], items=[PromptLogItemOut(**_item(r)) for r in page["items"]],
-        providers=page["providers"], **base,
+        providers=page["providers"],
+        retention_days=settings.llm_prompt_log_retention_days, enabled=settings.llm_prompt_log_enabled,
     )
 
 

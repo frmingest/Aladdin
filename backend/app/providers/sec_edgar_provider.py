@@ -207,7 +207,7 @@ def _is_annual_duration(entry: dict) -> bool:
 
 def _annual_entries(payload: dict) -> list[dict]:
     """Every entry from an annual form, across the mapped concepts."""
-    out = []
+    out: list[dict] = []
     for concepts in CONCEPT_MAP.values():
         for concept in concepts:
             for entries in _concept_units(payload, concept).values():
@@ -282,20 +282,20 @@ def extract_annual_facts(payload: dict, *, max_years: int = 10) -> list[Reported
                     continue
                 if entry.get("start") is not None and not _is_annual_duration(entry):
                     continue
-                fy_end = _matching_fy_end(end, kept_ends)
-                if fy_end is None or fy_end in chosen:
+                matched_end = _matching_fy_end(end, kept_ends)
+                if matched_end is None or matched_end in chosen:
                     continue
                 if _to_decimal(entry.get("val")) is None:
                     continue
                 # Latest-filed wins: a later 10-K/A or the next year's 10-K
                 # carries the restated figure if there was a restatement.
-                current = best.get(fy_end)
+                current = best.get(matched_end)
                 if current is None or str(entry.get("filed", "")) > str(current.get("filed", "")):
-                    best[fy_end] = entry
+                    best[matched_end] = entry
             for fy_end, entry in best.items():
                 chosen[fy_end] = ReportedFact(
                     metric=metric,
-                    value=_to_decimal(entry["val"]),  # type: ignore[arg-type]
+                    value=_to_decimal(entry["val"]),  # type: ignore[arg-type]  # the SEC value was checked to parse as a Decimal before this entry was kept
                     unit=wanted_unit,
                     currency=(
                         None if metric in SHARE_METRICS
@@ -333,7 +333,7 @@ def extract_cover_shares(payload: dict) -> ReportedFact | None:
     entry = max(same_date, key=lambda e: str(e.get("filed", "")))
     return ReportedFact(
         metric="shares_outstanding",
-        value=_to_decimal(entry["val"]),  # type: ignore[arg-type]
+        value=_to_decimal(entry["val"]),  # type: ignore[arg-type]  # the SEC value was checked to parse as a Decimal before this entry was kept
         unit="shares",
         currency=None,
         period=f"as of {latest_end}",

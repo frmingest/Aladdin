@@ -29,7 +29,7 @@ from __future__ import annotations
 import io
 import re
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import PurePath
 
@@ -202,7 +202,7 @@ def _find_as_of(rows: list[list[object]], header_index: int) -> date | None:
     for row in rows[:header_index]:
         for cell in row:
             if isinstance(cell, date):
-                return cell if type(cell) is date else cell.date()  # datetime -> date
+                return cell.date() if isinstance(cell, datetime) else cell  # datetime -> date
             if cell is None:
                 continue
             found = _parse_date_text(str(cell))
@@ -232,7 +232,9 @@ def _read_sheets(filename: str, content: bytes) -> list[tuple[str, list[list[obj
             workbook = openpyxl.load_workbook(io.BytesIO(content), data_only=True, read_only=True)
         except Exception as exc:
             raise HoldingsFileError(f"could not open the Excel file: {exc}") from exc
-        sheets = [(ws.title, [list(r) for r in ws.iter_rows(values_only=True)]) for ws in workbook.worksheets]
+        sheets: list[tuple[str, list[list[object]]]] = [
+            (ws.title, [list[object](r) for r in ws.iter_rows(values_only=True)]) for ws in workbook.worksheets
+        ]
         workbook.close()
         return sheets
     if ext == ".pdf":
@@ -290,7 +292,7 @@ def _read_pdf_tables(content: bytes) -> list[tuple[str, list[list[object]]]]:
                     and any(_has_holdings_header(r) for r in previous[1][:HEADER_SCAN_ROWS])
                     and len(rows[0]) == max((len(r) for r in previous[1]), default=-1)
                 )
-                if continues:
+                if continues and previous is not None:
                     previous[1].extend(rows)
                     tables[-1] = (f"page {page_index + 1} " + previous[0].split(" ", 2)[2], previous[1])
                 else:
@@ -363,13 +365,13 @@ def _parse_table(
     scale = Decimal(100) if fractions else Decimal(1)
     parsed = [
         ParsedHoldingRow(
-            name=f["name"][:255],  # type: ignore[index]
+            name=f["name"][:255],  # type: ignore[index]  # rows without a name were dropped above, so name is set
             weight_pct=(w * scale).quantize(Decimal("0.0001")),
-            ticker=(f["ticker"] or None) and f["ticker"][:64],  # type: ignore[index]
+            ticker=(f["ticker"] or None) and f["ticker"][:64],
             isin=_valid_isin(f["isin"]),
-            sector=(f["sector"] or None) and f["sector"][:255],  # type: ignore[index]
-            country=(f["country"] or None) and f["country"][:255],  # type: ignore[index]
-            currency=(f["currency"] or None) and f["currency"][:255],  # type: ignore[index]
+            sector=(f["sector"] or None) and f["sector"][:255],
+            country=(f["country"] or None) and f["country"][:255],
+            currency=(f["currency"] or None) and f["currency"][:255],
         )
         for f, w in raw
     ]

@@ -33,6 +33,7 @@ from app.providers.object_storage import (
     ObjectStorageUnavailableError,
 )
 from app.services.documents.extraction import extract
+from app.services.documents.extraction.base import ExtractionResult
 from app.services.documents.extraction.ixbrl_slim import strip_embedded_media
 from app.services.documents.hashing import (
     HOLDING_DOCUMENT_EXTENSIONS,
@@ -341,7 +342,7 @@ def process_document(db: Session, document: Document, content: bytes) -> None:
     )
     facts_skipped_no_holding = facts_skipped_no_holding or no_holding
 
-    flags = evaluate_quality(result.pages)
+    flags: dict[str, object] = dict(evaluate_quality(result.pages))
     flags.update(kept_flags)
     for flag in result.quality_flags:
         flags[flag] = True
@@ -399,7 +400,7 @@ def refresh_document_facts(db: Session, storage: ObjectStorageProvider, holding:
         )
         if extension_of(d.original_filename) in IXBRL_EXTENSIONS and (d.quality_flags or {}).get("ixbrl")
     ]
-    reread: list[tuple[Document, object]] = []
+    reread: list[tuple[Document, ExtractionResult]] = []
     for document in documents:
         content = _stored_bytes(storage, document)
         if content is None:
@@ -434,7 +435,9 @@ def refresh_document_facts(db: Session, storage: ObjectStorageProvider, holding:
             if skipped:
                 flags["facts_differ_from_existing"] = skipped[:20]
             document.quality_flags = flags  # a new dict, so the JSON column is saved
-            result.rule_figures += len(extracted.details.get("ixbrl", {}).get("rules_applied", []))
+            ixbrl_details = extracted.details.get("ixbrl", {})
+            if isinstance(ixbrl_details, dict):
+                result.rule_figures += len(ixbrl_details.get("rules_applied", []))
     result.documents = len(reread)
     db.commit()
     result.facts_after = db.query(FinancialLineItem).filter(FinancialLineItem.holding_id == holding.id).count()

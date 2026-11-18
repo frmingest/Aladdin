@@ -21,6 +21,7 @@ from app.schemas.game import (
     GameStateOut,
     HoldingAdvisorsOut,
     RecordOut,
+    RecordReviewState,
     RecordsOut,
 )
 from app.schemas.journal import JournalEntryOut
@@ -61,7 +62,7 @@ def holding_advisor_lines(state: GameStateOut, holding_id: uuid.UUID) -> Holding
 # --- G18 -------------------------------------------------------------------
 
 
-def _review_state(text: str | None, due: bool) -> str:
+def _review_state(text: str | None, due: bool) -> RecordReviewState:
     if (text or "").strip():
         return "written"
     return "due" if due else "not_due"
@@ -85,8 +86,8 @@ def build_records(
                 price_then=e.price, price_now=o.latest_price, price_now_at=o.latest_price_at, currency=e.currency,
                 price_change_pct=o.return_pct,
                 price_note=o.note or (None if o.latest_price is not None else "no stored price since the decision"),
-                review_6m=_review_state(e.review_6m, o.review_6m_due),  # type: ignore[arg-type]
-                review_12m=_review_state(e.review_12m, o.review_12m_due),  # type: ignore[arg-type]
+                review_6m=_review_state(e.review_6m, o.review_6m_due),
+                review_12m=_review_state(e.review_12m, o.review_12m_due),
                 review_6m_text=e.review_6m, review_12m_text=e.review_12m,
             )
         )

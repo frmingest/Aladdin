@@ -20,6 +20,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from decimal import Decimal
+from typing import Literal
 
 from sqlalchemy.orm import Session
 
@@ -45,7 +46,7 @@ from app.services.thesis.prices import (
 class MetricDef:
     key: str
     label: str
-    group: str  # "fundamentals" | "market_multiples" | "price"
+    group: Literal["fundamentals", "market_multiples", "price"]
     unit: str  # "pct" | "x" | "money" | "price"
 
 
@@ -101,9 +102,10 @@ def _market_inputs(
     if price_row.currency == reporting_currency:
         price = price_row.price
     else:
-        price = convert_price(db, price_row, reporting_currency)
-        if price is None:
+        converted = convert_price(db, price_row, reporting_currency)
+        if converted is None:
             return None, f"price is in {price_row.currency}, no stored FX rate to {reporting_currency}"
+        price = converted
     shares = resolve_share_count(
         db,
         holding,
@@ -167,13 +169,14 @@ def _price_change_since_analysis(db: Session, holding: Holding) -> MetricValue:
     if current.currency == analysis_price.currency:
         current_price = current.price
     else:
-        current_price = convert_price(db, current, analysis_price.currency)
-        if current_price is None:
+        converted = convert_price(db, current, analysis_price.currency)
+        if converted is None:
             return MetricValue(
                 metric, None,
                 f"currency mismatch ({analysis_price.currency} vs {current.currency}) "
                 "and no stored FX rate",
             )
+        current_price = converted
     change = (current_price - analysis_price.price) / analysis_price.price
     return MetricValue(metric, change)
 

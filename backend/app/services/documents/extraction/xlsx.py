@@ -19,8 +19,8 @@ def extract_xlsx(content: bytes) -> ExtractionResult:
 
     workbook = openpyxl.load_workbook(io.BytesIO(content), data_only=True, read_only=True)
     try:
-        sheets = [
-            (sheet.title, [list(row) for row in sheet.iter_rows(values_only=True)])
+        sheets: list[tuple[str, list[list[object]]]] = [
+            (sheet.title, [list[object](row) for row in sheet.iter_rows(values_only=True)])
             for sheet in workbook.worksheets
         ]
     finally:

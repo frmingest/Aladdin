@@ -290,13 +290,14 @@ def list_snapshots(
     # query per snapshot — the page-load-speed fix (2026-09-21): with N
     # snapshots this used to be N round trips to Postgres, now it's 1.
     snapshot_ids = [snap.id for snap in snapshots]
-    position_counts = dict(
-        db.execute(
+    position_counts = {
+        key: count
+        for key, count in db.execute(
             select(PortfolioPosition.snapshot_id, func.count())
             .where(PortfolioPosition.snapshot_id.in_(snapshot_ids))
             .group_by(PortfolioPosition.snapshot_id)
         ).all()
-    )
+    }
 
     return [
         PortfolioSnapshotSummary(

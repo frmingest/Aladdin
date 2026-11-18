@@ -218,7 +218,7 @@ def get_document_file(
             )
             content = add_page_anchors(
                 content,
-                [AnchorFact(f.metric, f.period, f.value, f.source_page) for f in stored],
+                [AnchorFact(f.metric, f.period, f.value, f.source_page) for f in stored if f.source_page is not None],
             )
         headers["Content-Security-Policy"] = (
             "sandbox; default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:"

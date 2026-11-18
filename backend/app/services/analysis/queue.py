@@ -28,7 +28,7 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
-from typing import Literal
+from typing import Literal, overload
 
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session
@@ -66,6 +66,14 @@ class RunNotCancellableError(Exception):
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+@overload
+def _aware(value: datetime) -> datetime: ...
+
+
+@overload
+def _aware(value: None) -> None: ...
 
 
 def _aware(value: datetime | None) -> datetime | None:

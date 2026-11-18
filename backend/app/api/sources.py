@@ -17,7 +17,7 @@ never a 500 (fail visibly).
 """
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -78,6 +78,17 @@ from app.services.research.common import ResearchSnapshot
 from app.services.settings.demo_guard import require_not_demo
 from app.services.settings.demo_mode import is_demo_mode
 from app.services.settings.synthetic_data import demo_holding
+
+
+def _parse_iso(value: str | None) -> datetime | None:
+    """The services keep `imported_at` as an ISO string; the response model wants a datetime."""
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value)
+    except ValueError:
+        return None
+
 
 router = APIRouter(prefix="/sources", tags=["sources"])
 
@@ -188,7 +199,7 @@ def _esef_out(db: Session, holding: Holding, result: EsefImportResult | None) ->
         suggested_lei_source=suggested_source or None,
         lei=result.lei,
         lei_source=result.lei_source,
-        imported_at=result.imported_at,
+        imported_at=_parse_iso(result.imported_at),
         periods_imported=result.periods_imported,
         periods_skipped_existing=result.periods_skipped_existing,
         facts_imported=result.facts_imported,
@@ -293,7 +304,7 @@ def _newsweb_report_out(result: NewswebImportResult) -> NewswebAnnualReportOut:
         attachment_name=result.attachment_name,
         document_id=result.document_id,
         was_duplicate=result.was_duplicate,
-        imported_at=result.imported_at or None,
+        imported_at=_parse_iso(result.imported_at),
         facts_imported=result.facts_imported,
         periods_imported=result.periods_imported,
         metrics_by_period=result.metrics_by_period,

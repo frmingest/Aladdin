@@ -48,14 +48,14 @@ class DocumentOut(BaseModel):
     page_count: int
     fact_count: int
 
-    @computed_field  # type: ignore[prop-decorator]
+    @computed_field  # type: ignore[prop-decorator]  # known mypy limit: @computed_field over @property
     @property
     def file_url(self) -> str:
         """Where the stored original can be read (relative to the API root;
         needs the X-API-Key header like every route)."""
         return f"/documents/{self.id}/file"
 
-    @computed_field  # type: ignore[prop-decorator]
+    @computed_field  # type: ignore[prop-decorator]  # known mypy limit: @computed_field over @property
     @property
     def viewable_in_browser(self) -> bool:
         """PDF/HTML can be shown inline; PPTX/XLSX/CSV are download-only."""

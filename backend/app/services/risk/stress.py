@@ -125,9 +125,10 @@ def compute_stress(
         result.holdings.append(row)
 
     considered = [h for h in result.holdings if h.contribution_nok is not None]
-    result.total_value_considered_nok = sum((h.value_nok for h in considered), ZERO)
+    # `considered` only holds rows with a contribution, which is only set when value_nok is known (above).
+    result.total_value_considered_nok = sum((v for h in considered if (v := h.value_nok) is not None), ZERO)
     if considered and result.total_value_considered_nok > 0:
-        total_contribution = sum((h.contribution_nok for h in considered), ZERO)
+        total_contribution = sum((c for h in considered if (c := h.contribution_nok) is not None), ZERO)
         result.portfolio_drawdown_nok = total_contribution
         result.portfolio_shock_pct = (total_contribution / result.total_value_considered_nok).quantize(
             Decimal("0.0001")

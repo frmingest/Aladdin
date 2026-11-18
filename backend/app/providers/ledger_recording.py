@@ -12,7 +12,6 @@ turns recording into a no-op. The same wrapper also writes the prompt log
 from __future__ import annotations
 
 import time
-from typing import Any
 
 from pydantic import BaseModel
 
@@ -27,7 +26,14 @@ class LedgerRecordingMixin:
     _model: str
     ledger_session_factory: SessionFactory | None = None
 
-    def _generate_structured(self, **kwargs: Any) -> LLMResponse:  # pragma: no cover - overridden
+    def _generate_structured(
+        self,
+        *,
+        system_prompt: str,
+        user_prompt: str,
+        response_schema: type[BaseModel],
+        max_output_tokens: int | None = None,
+    ) -> LLMResponse:  # pragma: no cover - overridden
         raise NotImplementedError
 
     def generate_structured(

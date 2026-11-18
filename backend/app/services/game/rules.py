@@ -22,11 +22,24 @@ from app.domain.instrument_types import (
     MONEY_MARKET_FUND,
     STOCK,
 )
-from app.schemas.game import MarginOut
+from app.schemas.game import (
+    Freshness,
+    LandState,
+    MarginOut,
+    MoatTier,
+    Shantytown,
+    SiegeExposure,
+    SiegeLevel,
+    SizeClass,
+    Structure,
+    ThesisState,
+    VaultLevel,
+    WallMaterial,
+)
 
 ZERO = Decimal(0)
 
-_WALL_TIERS = ("basalt", "granite", "brick", "timber", "rotted")
+_WALL_TIERS: tuple[WallMaterial, ...] = ("basalt", "granite", "brick", "timber", "rotted")
 
 
 @dataclass
@@ -48,7 +61,7 @@ class WallFacts:
     inputs: dict[str, Decimal] = field(default_factory=dict)
 
 
-def structure_for(instrument_type: str) -> str:
+def structure_for(instrument_type: str) -> Structure:
     if instrument_type == STOCK:
         return "keep"
     if instrument_type in (EQUITY_ETF, EQUITY_FUND):
@@ -60,13 +73,14 @@ def structure_for(instrument_type: str) -> str:
     return "keep"
 
 
-def moat_tier(moat_rating: str | None, *, analyzable: bool) -> str:
+def moat_tier(moat_rating: str | None, *, analyzable: bool) -> MoatTier:
     if not analyzable:
         return "not_applicable"
-    return {"Wide": "wide", "Narrow": "narrow", "None": "none"}.get(moat_rating or "", "unsurveyed")
+    tiers: dict[str, MoatTier] = {"Wide": "wide", "Narrow": "narrow", "None": "none"}
+    return tiers.get(moat_rating or "", "unsurveyed")
 
 
-def size_class(weight_pct: Decimal | None, mapping: GameMapping) -> str:
+def size_class(weight_pct: Decimal | None, mapping: GameMapping) -> SizeClass:
     if weight_pct is None:
         return "unknown"
     if weight_pct >= mapping.large_position_pct:
@@ -80,7 +94,7 @@ def size_class(weight_pct: Decimal | None, mapping: GameMapping) -> str:
 
 def freshness(
     analyzed_at: datetime | None, now: datetime, mapping: GameMapping, *, analyzable: bool
-) -> tuple[str, int | None]:
+) -> tuple[Freshness, int | None]:
     if not analyzable:
         return "not_applicable", None
     if analyzed_at is None:
@@ -94,14 +108,14 @@ def freshness(
     return "overgrown", age
 
 
-def _tier_down(wall: str) -> str:
+def _tier_down(wall: WallMaterial) -> WallMaterial:
     index = _WALL_TIERS.index(wall)
     return _WALL_TIERS[min(index + 1, len(_WALL_TIERS) - 1)]
 
 
 def wall_for_stock(
     facts: WallFacts | None, *, financial: bool, mapping: GameMapping
-) -> tuple[str, str, dict[str, Decimal]]:
+) -> tuple[WallMaterial, str, dict[str, Decimal]]:
     """(wall material, reason, the inputs used). Banks and insurers are
     judged on equity / total assets; everything else on net debt / EBITDA,
     with weak interest cover pulling it down one tier."""
@@ -112,7 +126,7 @@ def wall_for_stock(
     return _wall_for_non_financial(facts, mapping)
 
 
-def _wall_for_financial(facts: WallFacts, mapping: GameMapping) -> tuple[str, str, dict[str, Decimal]]:
+def _wall_for_financial(facts: WallFacts, mapping: GameMapping) -> tuple[WallMaterial, str, dict[str, Decimal]]:
     if facts.total_equity is None or facts.total_assets is None or facts.total_assets <= ZERO:
         return "unsurveyed", facts.missing_reason or "equity or total assets not stored", {}
     ratio = facts.total_equity / facts.total_assets
@@ -127,7 +141,7 @@ def _wall_for_financial(facts: WallFacts, mapping: GameMapping) -> tuple[str, st
     return "rotted", f"equity is only {pct} of assets (bank rule: under 5%)", inputs
 
 
-def _wall_for_non_financial(facts: WallFacts, mapping: GameMapping) -> tuple[str, str, dict[str, Decimal]]:
+def _wall_for_non_financial(facts: WallFacts, mapping: GameMapping) -> tuple[WallMaterial, str, dict[str, Decimal]]:
     if facts.net_debt is None:
         return "unsurveyed", facts.missing_reason or "debt and cash not stored", {}
     inputs: dict[str, Decimal] = {"net_debt": facts.net_debt}
@@ -141,6 +155,7 @@ def _wall_for_non_financial(facts: WallFacts, mapping: GameMapping) -> tuple[str
     ratio = facts.net_debt / facts.ebitda
     inputs["net_debt_to_ebitda"] = ratio
     shown = ratio.quantize(Decimal("0.1"))
+    wall: WallMaterial
     if ratio <= mapping.granite_max_net_debt_to_ebitda:
         wall, reason = "granite", f"net debt is {shown}x EBITDA (granite: 1x or less)"
     elif ratio <= mapping.brick_max_net_debt_to_ebitda:
@@ -192,14 +207,14 @@ def wall_margin_views(
     """A1 Knife-edge: the distance to each neighbouring tier (margins_v1)."""
     return [
         MarginOut(
-            metric=m.metric, label=m.label, value=m.value, boundary=m.boundary, direction=m.direction,  # type: ignore[arg-type]
+            metric=m.metric, label=m.label, value=m.value, boundary=m.boundary, direction=m.direction,  # type: ignore[arg-type]  # Margin.direction is 'weaker' or 'stronger' (margins_v1), typed str there
             to_tier=m.to_tier, distance=m.distance, near=m.near, text=margin_text(m),
         )
         for m in wall_margins(wall_inputs, financial=financial, mapping=mapping)
     ]
 
 
-def wall_for_non_stock(instrument_type: str) -> tuple[str, str]:
+def wall_for_non_stock(instrument_type: str) -> tuple[WallMaterial, str]:
     structure = structure_for(instrument_type)
     if structure == "outpost":
         return "not_applicable", "fund: no balance sheet of its own (look-through comes in a later phase)"
@@ -210,7 +225,7 @@ def wall_for_non_stock(instrument_type: str) -> tuple[str, str]:
 
 def shantytown(
     weights_pct: list[Decimal | None], mapping: GameMapping
-) -> tuple[int, str]:
+) -> tuple[int, Shantytown]:
     """(shack count, level). A shack is a position below `tiny_position_pct`."""
     shacks = sum(1 for w in weights_pct if w is not None and w < mapping.tiny_position_pct)
     if shacks >= mapping.heavy_shantytown_min_shacks:
@@ -222,7 +237,7 @@ def shantytown(
 
 def vault_level(
     cash_nok: Decimal | None, portfolio_value_nok: Decimal, mapping: GameMapping
-) -> tuple[str, Decimal | None]:
+) -> tuple[VaultLevel, Decimal | None]:
     """(level, cash share of cash + portfolio in percent)."""
     if cash_nok is None:
         return "unsurveyed", None
@@ -303,7 +318,7 @@ class ThesisFacts:
 
 def siege_level(
     risk: RiskFacts | None, mapping: GameMapping, coverage: Decimal | None = None
-) -> tuple[str, list[str]]:
+) -> tuple[SiegeLevel, list[str]]:
     """(level, reasons). Level is calm / gathering / besieged / unsurveyed.
 
     Besieged: the macro regime is "crisis", or the stored stress scenario
@@ -361,7 +376,7 @@ def siege_level(
     return "calm", reasons
 
 
-def siege_exposure(shock_pct: Decimal | None, mapping: GameMapping) -> str:
+def siege_exposure(shock_pct: Decimal | None, mapping: GameMapping) -> SiegeExposure:
     """How hard the stored stress scenario hits one holding."""
     if shock_pct is None:
         return "unsurveyed"
@@ -384,7 +399,7 @@ def shared_wall_partners(ticker: str, clusters: list[ClusterFact]) -> list[str]:
     return partners
 
 
-def land_for_sale(facts: LandFacts | None) -> tuple[str, str]:
+def land_for_sale(facts: LandFacts | None) -> tuple[LandState, str]:
     """(land, reason) from the stored margin-of-safety zone.
 
     bargain = price below even the bear-case value; discount = below the base
@@ -409,7 +424,7 @@ def land_for_sale(facts: LandFacts | None) -> tuple[str, str]:
     return "fog", f"unrecognised valuation zone {facts.zone!r}"
 
 
-def thesis_state(facts: ThesisFacts | None, *, analyzable: bool) -> tuple[str, int]:
+def thesis_state(facts: ThesisFacts | None, *, analyzable: bool) -> tuple[ThesisState, int]:
     """(state, tripwires fired). breached = at least one tripwire fired."""
     if not analyzable:
         return "not_applicable", 0

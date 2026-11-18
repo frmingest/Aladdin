@@ -102,7 +102,7 @@ def _add_anchors(content: bytes, facts: Sequence[AnchorFact]) -> bytes:
         container.text = None
         container.insert(0, anchor)
 
-    outermost: dict[int, object] = {}  # id(element) -> the node now wrapping it
+    outermost: dict[int, etree._Element] = {}  # id(element) -> the node now wrapping it
     for fact, element in matches:
         node = outermost.get(id(element), element)
         parent = node.getparent()

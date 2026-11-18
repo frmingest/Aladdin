@@ -42,7 +42,7 @@ def _empty(
 ) -> SiegeBacktestOut:
     return SiegeBacktestOut(
         backtest_version=rules.version, scenarios_version=scenarios.version, demo=demo,
-        benchmark_ticker=scenarios.benchmark_ticker, status=status,  # type: ignore[arg-type]
+        benchmark_ticker=scenarios.benchmark_ticker, status=status,  # type: ignore[arg-type]  # str from the backtest engine, always one of the schema's Literal values
         status_reason=reason, total_count=total, close_points=rules.close_points, notes=[LIMITS_NOTE],
     )
 
@@ -144,8 +144,8 @@ def build_backtest(
         holdings=[
             SiegeBacktestHoldingOut(
                 holding_id=t.holding.holding_id, ticker=t.holding.ticker, name=t.holding.name,
-                weight_pct=t.holding.weight_pct, tested=t.tested, verdict=t.verdict,  # type: ignore[arg-type]
-                beta=t.beta, beta_basis=t.beta_basis,  # type: ignore[arg-type]
+                weight_pct=t.holding.weight_pct, tested=t.tested, verdict=t.verdict,  # type: ignore[arg-type]  # str from the backtest engine, always one of the schema's Literal values
+                beta=t.beta, beta_basis=t.beta_basis,  # type: ignore[arg-type]  # str from the backtest engine, always one of the schema's Literal values
                 predicted=t.predicted, actual=t.actual, error=t.error, reason=t.reason, caution=t.caution,
             )
             for t in result.holdings

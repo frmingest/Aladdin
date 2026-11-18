@@ -27,6 +27,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
+from typing import TypeVar
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -65,7 +66,10 @@ def _aware(value: datetime) -> datetime:
     return value if value.tzinfo else value.replace(tzinfo=timezone.utc)  # SQLite drops tz
 
 
-def _nearest(rows: list, target: datetime, when: Callable) -> object | None:
+_T = TypeVar("_T")
+
+
+def _nearest(rows: list[_T], target: datetime, when: Callable[[_T], datetime]) -> _T | None:
     if not rows:
         return None
     return min(rows, key=lambda row: abs((_aware(when(row)) - target).total_seconds()))
@@ -80,8 +84,8 @@ def _fx_rate(
 ) -> tuple[Decimal | None, str | None]:
     pair = [r for r in fx_rows if r.from_currency == from_currency and r.to_currency == to_currency]
     nearest = _nearest(pair, target, lambda r: r.observed_at)
-    if nearest is not None and abs(_aware(nearest.observed_at) - target) <= FX_MATCH_WINDOW:  # type: ignore[attr-defined]
-        return nearest.rate, None  # type: ignore[attr-defined]
+    if nearest is not None and abs(_aware(nearest.observed_at) - target) <= FX_MATCH_WINDOW:
+        return nearest.rate, None
     if fallback is not None:
         rate = fallback(from_currency, to_currency)
         if rate is not None:
@@ -129,9 +133,9 @@ def multiples_over_time(
         if observation is None:
             result.skipped["_period"] = "no market price observation available for this holding"
             continue
-        result.matched_price_observed_at = observation.observed_at  # type: ignore[attr-defined]
-        price: Decimal = observation.price  # type: ignore[attr-defined]
-        price_currency: str = observation.currency  # type: ignore[attr-defined]
+        result.matched_price_observed_at = observation.observed_at
+        price: Decimal = observation.price
+        price_currency: str = observation.currency
 
         currency = entry.currency
         if currency is None:
@@ -164,7 +168,7 @@ def multiples_over_time(
         facts = entry.facts
         if splits:
             factor = split_factor(
-                splits, after=target, up_to=observation.observed_at  # type: ignore[attr-defined]
+                splits, after=target, up_to=observation.observed_at
             )
             shares, restated = restate_shares(shares, factor, reference=reference_shares)
             if restated:

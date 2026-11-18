@@ -14,6 +14,7 @@ import argparse
 import logging
 import socket
 import sys
+from collections.abc import Callable
 
 from app.config.settings import get_settings
 
@@ -49,6 +50,7 @@ def main(argv: list[str] | None = None) -> int:
     fallback_name = settings.llm_fallback_provider
     fallback = None if fallback_name in ("none", llm_name) else build_llm_provider(fallback_name)
 
+    health_check: Callable[[], LLMHealth] | None = None
     if llm_name == "ollama":
         model_name = settings.ollama_model_name
 
@@ -57,9 +59,10 @@ def main(argv: list[str] | None = None) -> int:
                 base_url=settings.ollama_base_url, model=model_name, api_key=settings.ollama_api_key
             )
             return LLMHealth(h.ok, f"{h.detail} {h.warning}" if h.warning else h.detail)
+
+        health_check = health
     else:
         model_name = settings.llm_model_name if llm_name == "google_ai_studio" else settings.mistral_model_name
-        health = None
 
     providers = WorkerProviders(
         llm=build_llm_provider(llm_name),
@@ -80,7 +83,7 @@ def main(argv: list[str] | None = None) -> int:
         worker_id=worker_id,
         hostname=hostname,
         model_name=model_name,
-        llm_health_check=health,
+        llm_health_check=health_check,
     )
     log.info(
         "worker '%s' started: passes on %s (%s), fallback %s, polling every %ss. Ctrl+C to stop.",

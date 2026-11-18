@@ -50,7 +50,7 @@ from app.models.document import Document
 from app.models.financial_line_item import FinancialLineItem
 from app.models.holding import Holding
 from app.models.market import MarketObservation
-from app.models.research import ResearchRunType
+from app.models.research import ResearchRun, ResearchRunType
 from app.providers.budget import DailyBudgetGuard
 from app.providers.ollama_provider import check_ollama_health
 from app.services.funds.facts import get_profile, latest_exposures, list_returns
@@ -371,7 +371,7 @@ def _check_sector(holding: Holding) -> ReadinessCheck:
 def _check_research(db: Session, holding: Holding) -> tuple[ReadinessCheck, int]:
     """Returns the check and how many research refreshes (1 Gemini call
     each) the run will trigger."""
-    scopes: list[tuple[str, object]] = [
+    scopes: list[tuple[str, ResearchRun | None]] = [
         ("macro", latest_completed_run(db, type_=ResearchRunType.MACRO.value)),
     ]
     # A fund / bond fund / metal run does no company research
@@ -386,7 +386,7 @@ def _check_research(db: Session, holding: Holding) -> tuple[ReadinessCheck, int]
             ("sector", latest_completed_run(db, type_=ResearchRunType.SECTOR.value, sector=holding.sector)),
         )
 
-    stale = [name for name, run in scopes if is_stale(run)]  # type: ignore[arg-type]
+    stale = [name for name, run in scopes if is_stale(run)]
     fresh = [name for name, _run in scopes if name not in stale]
     if not stale:
         return (

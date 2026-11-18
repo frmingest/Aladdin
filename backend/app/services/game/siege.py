@@ -148,7 +148,8 @@ def simulate(
 
     result.total_value_nok = sum((h.value_nok for h in holdings if h.value_nok and h.value_nok > 0), ZERO)
     modelled = [r for r in result.holdings if r.modelled]
-    result.covered_value_nok = sum((r.holding.value_nok for r in modelled), ZERO)  # type: ignore[misc]
+    # A modelled holding always has a stored value (an unmodelled one is listed without it).
+    result.covered_value_nok = sum((v for r in modelled if (v := r.holding.value_nok) is not None), ZERO)
     if result.total_value_nok > 0:
         result.coverage = (result.covered_value_nok / result.total_value_nok).quantize(_PCT4)
 
@@ -189,7 +190,7 @@ def simulate(
     result.portfolio_loss_nok = loss.quantize(Decimal(1))
     result.portfolio_shock_pct = (loss / covered).quantize(_PCT4)
     result.weighted_beta = (
-        sum((r.holding.value_nok * r.holding.beta for r in modelled), ZERO) / covered  # type: ignore[operator]
+        sum((r.holding.value_nok * r.holding.beta for r in modelled), ZERO) / covered  # type: ignore[operator]  # a modelled holding always has a value and a beta (checked in simulate)
     ).quantize(Decimal("0.01"))
 
     shock = result.portfolio_shock_pct

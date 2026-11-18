@@ -54,7 +54,9 @@ def refresh_constituent_multiples(
     for exposure in exposures:
         # A real ISIN first; a list without ISINs is looked up through the
         # ticker of the holding the line is linked to. Never a guessed ISIN.
-        key = exposure.isin or linked_tickers.get(exposure.linked_holding_id)
+        key = exposure.isin or (
+            linked_tickers.get(exposure.linked_holding_id) if exposure.linked_holding_id is not None else None
+        )
         if not key:
             no_isin += 1
             continue

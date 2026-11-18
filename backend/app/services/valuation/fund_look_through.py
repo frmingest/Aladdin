@@ -170,7 +170,9 @@ def load_constituents(db: Session, fund: Holding) -> tuple[list[tuple[Decimal, D
     oldest: datetime | None = None
     unrefreshed = 0
     for exposure in exposures:
-        key = exposure.isin or linked_tickers.get(exposure.linked_holding_id)
+        key = exposure.isin or (
+            linked_tickers.get(exposure.linked_holding_id) if exposure.linked_holding_id is not None else None
+        )
         row = stored.get(key) if key else None
         if row is None:
             unrefreshed += 1

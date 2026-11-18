@@ -37,13 +37,15 @@ from app.domain.analysis_schema.v1 import (
 # has the same shape as v1's, so it reuses that class. "income_v1" (bond and
 # money-market funds) and "commodity_v1" (physical-metal ETC) were added
 # 2026-10-07 and reuse it the same way.
-_BLIND_SCHEMAS: dict[str, type[BaseModel]] = {
+BlindPassOutput = BlindPassOutputV1 | FundBlindPassOutputV1 | IncomeBlindPassOutputV1 | CommodityBlindPassOutputV1
+
+_BLIND_SCHEMAS: dict[str, type[BlindPassOutput]] = {
     "v1": BlindPassOutputV1,
     "fund_v1": FundBlindPassOutputV1,
     "income_v1": IncomeBlindPassOutputV1,
     "commodity_v1": CommodityBlindPassOutputV1,
 }
-_RECONCILIATION_SCHEMAS: dict[str, type[BaseModel]] = {
+_RECONCILIATION_SCHEMAS: dict[str, type[ReconciliationOutputV1]] = {
     "v1": ReconciliationOutputV1,
     "fund_v1": ReconciliationOutputV1,
     "income_v1": ReconciliationOutputV1,
@@ -71,14 +73,14 @@ def cited_evidence_ids_any_blind(output: BaseModel) -> set[str]:
     raise TypeError(f"unknown blind-pass output type: {type(output).__name__}")
 
 
-def get_blind_pass_schema(version: str) -> type[BaseModel]:
+def get_blind_pass_schema(version: str) -> type[BlindPassOutput]:
     try:
         return _BLIND_SCHEMAS[version]
     except KeyError as exc:
         raise ValueError(f"Unknown analysis schema version: {version!r}") from exc
 
 
-def get_reconciliation_schema(version: str) -> type[BaseModel]:
+def get_reconciliation_schema(version: str) -> type[ReconciliationOutputV1]:
     try:
         return _RECONCILIATION_SCHEMAS[version]
     except KeyError as exc:
@@ -87,6 +89,7 @@ def get_reconciliation_schema(version: str) -> type[BaseModel]:
 
 __all__ = [
     "MOAT_SOURCES",
+    "BlindPassOutput",
     "BlindPassOutputV1",
     "CommodityBlindPassOutputV1",
     "FundBlindPassOutputV1",

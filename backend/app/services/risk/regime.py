@@ -105,7 +105,10 @@ def _norway_curve(by_key: dict[str, IndicatorSnapshot]) -> Decimal | None:
     long, short = by_key.get("no_10y"), by_key.get("no_3m_bill")
     if long is None or short is None or long.value is None or short.value is None:
         return None
-    return _smoothed(long) - _smoothed(short)  # type: ignore[operator]
+    smoothed_long, smoothed_short = _smoothed(long), _smoothed(short)
+    if smoothed_long is None or smoothed_short is None:
+        return None
+    return smoothed_long - smoothed_short
 
 
 def classify_regime(db: Session, *, indicators: MacroIndicators | None = None) -> RegimeResult:

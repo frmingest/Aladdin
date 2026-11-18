@@ -196,14 +196,11 @@ def _passages_for(db: Session, document: Document) -> list[Passage]:
             .order_by(DocumentChunk.page_start)
         )
     )
-    base = {
-        "document_id": str(document.id),
-        "filename": document.original_filename,
-        "reporting_period": document.reporting_period,
-    }
+    doc_id, filename, period = str(document.id), document.original_filename, document.reporting_period
     if chunks and any(c.section is not None for c in chunks):
         return [
-            Passage(page_start=c.page_start, page_end=c.page_end, section=c.section or UNTITLED_SECTION, text=c.content, **base)
+            Passage(page_start=c.page_start, page_end=c.page_end, section=c.section or UNTITLED_SECTION, text=c.content,
+                    document_id=doc_id, filename=filename, reporting_period=period)
             for c in chunks
         ]
     # Uploaded before Sprint 6 (1 page = 1 chunk, no section): re-section
@@ -216,7 +213,8 @@ def _passages_for(db: Session, document: Document) -> list[Passage]:
         )
     )
     return [
-        Passage(page_start=c.page_start, page_end=c.page_end, section=c.section, text=c.content, **base)
+        Passage(page_start=c.page_start, page_end=c.page_end, section=c.section, text=c.content,
+                document_id=doc_id, filename=filename, reporting_period=period)
         for c in split_into_section_chunks([(p.page_number, p.extracted_text) for p in pages])
     ]
 

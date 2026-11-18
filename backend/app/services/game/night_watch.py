@@ -23,6 +23,8 @@ from app.schemas.game import (
     NightWatchFiredOut,
     NightWatchLineOut,
     NightWatchOut,
+    NightWatchState,
+    NightWatchStatus,
 )
 from app.services import snapshot_refresh
 from app.services.game import frame_diff, history
@@ -51,7 +53,7 @@ def _hours(now: datetime, then: datetime | None) -> int | None:
     return None if then is None else max(int((now - then).total_seconds() // 3600), 0)
 
 
-def watch_state(rules_v: TimeAndFilingsRules, now: datetime, watch_last_at: datetime | None) -> str:
+def watch_state(rules_v: TimeAndFilingsRules, now: datetime, watch_last_at: datetime | None) -> NightWatchState:
     """"never" (no check ever stored), "old" (longer ago than a night) or "ok". Shared with the
     Standing so both read the watch the same way."""
     if watch_last_at is None:
@@ -171,6 +173,7 @@ def build_night_watch(
     if state == "ok" and not firing and not changes and not ravens_landed:
         lines.append(NightWatchLineOut(tone="calm", text="Nothing fired, nothing is firing, and nothing changed overnight."))
 
+    status: NightWatchStatus
     if firing:
         status = "attention"
         headline = (

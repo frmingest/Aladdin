@@ -175,7 +175,7 @@ def demo_game_state(version: str) -> GameStateOut:
                 period="FY-DEMO", total_equity=D(equity), total_assets=D(assets)
             )
             continue
-        row = _DEMO_WALLS.get(slot)
+        row = _DEMO_WALLS.get(slot) if slot is not None else None
         if row is None:
             continue
         net_debt, ebitda, cover = (D(x) for x in row)
@@ -187,7 +187,9 @@ def demo_game_state(version: str) -> GameStateOut:
     # The demo board stores margins as percent; the real board stores fractions.
     land = {}
     for r in demo_valuation_board().rows:
-        zone, status = _DEMO_LAND.get(slot_of.get(r.holding_id), (r.zone, "ok"))
+        land_slot = slot_of.get(r.holding_id)
+        land_row = _DEMO_LAND.get(land_slot) if land_slot is not None else None
+        zone, status = land_row if land_row is not None else (r.zone, "ok")
         land[r.holding_id] = LandFacts(
             zone=zone,
             valuation_status=status,
@@ -195,9 +197,11 @@ def demo_game_state(version: str) -> GameStateOut:
             unavailable_reason="Demo data: valuation withheld as not reliable." if status != "ok" else None,
         )
     thesis: dict = {}
-    for row in demo_thesis_monitor().rows:
-        status, fired = _DEMO_THESIS.get(slot_of.get(row.holding_id), (row.status, row.firing_count))
-        thesis[row.holding_id] = ThesisFacts(status=status, firing_count=fired)
+    for monitor_row in demo_thesis_monitor().rows:
+        thesis_slot = slot_of.get(monitor_row.holding_id)
+        thesis_row = _DEMO_THESIS.get(thesis_slot) if thesis_slot is not None else None
+        status, fired = thesis_row if thesis_row is not None else (monitor_row.status, monitor_row.firing_count)
+        thesis[monitor_row.holding_id] = ThesisFacts(status=status, firing_count=fired)
     inputs = GameInputs(
         overview=overview,
         wall_facts=walls,

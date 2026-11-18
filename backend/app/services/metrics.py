@@ -755,7 +755,10 @@ def _market_multiples(
             result.skipped[name] = f"missing: {fact}"
             return
         denominator = facts.get(fact, result.computed.get(fact))
-        ratio(name, numerator, denominator, what, fn)  # type: ignore[arg-type]
+        if denominator is None:
+            result.skipped[name] = f"missing: {fact}"
+            return
+        ratio(name, numerator, denominator, what, fn)
 
     def ratio(name: str, numerator: Decimal, denominator: Decimal, what: str, fn) -> None:
         if denominator <= ZERO:
