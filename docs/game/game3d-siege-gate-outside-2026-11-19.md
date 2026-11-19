@@ -10,7 +10,7 @@ The field's content is about 66 x 60 units (from the fog ghosts to the road back
 
 ## What you will see
 
-- **PR for #460 puts the gate on the west lawn outside the fortress**, level with the Town's rows, the Royal Mint's mirror across the gate road (Mint at x 28, z 72; gate at x -28, z 72). Its plank faces the gate road. It was inside the courtyard, south of the drill post.
+- **This change (issue #460) puts the gate on the west lawn outside the fortress**, level with the Town's rows, the Royal Mint's mirror across the gate road (Mint at x 28, z 72; gate at x -28, z 72). Its plank faces the gate road. It was inside the courtyard, south of the drill post.
 - **Press E at the gate** still rides you out to the Siege Field. Riding back puts you on the meadow beside the gate, looking away from it.
 - **Grove and boulders keep off the gate's ground** (two more horizon pieces are dropped than before: 25 of 83 instead of 23).
 - **The old battlefield is removed from the field**: the scorch and chalk strip and the war table (and the two plain reads behind them). The flat Siege page and its back-test are untouched.
