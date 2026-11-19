@@ -13,6 +13,7 @@ import type { Spot } from "./layout";
 import { WALL_RADIUS, WALL_THICKNESS } from "./layout";
 import { HORIZON, HORIZON_LIMIT, ROAD_END_Z } from "./horizonPieces";
 import type { HorizonPiece } from "./horizonPieces";
+import { SIEGE_GATE, SIEGE_GATE_LEAVE_RANGE } from "./siegeFieldLogic";
 import { BUILDINGS, VILLAGE_MARGIN, buildingReach } from "./townPlan";
 
 /* ---------------------------------------------------------------- small maths */
@@ -289,6 +290,8 @@ export function inTheWay(p: HorizonPiece): boolean {
   for (const f of FIELDS) if (Math.hypot(p.x - f.x, p.z - f.z) < fieldReach(f) + reach) return true;
   // The Town beside the gate road keeps its ground clear too, door mats included.
   for (const b of BUILDINGS) if (Math.hypot(p.x - b.x, p.z - b.z) < buildingReach(b) + VILLAGE_MARGIN + reach) return true;
+  // So does the Siege Field's gate on the west lawn: its posts, plank and door mat.
+  if (Math.hypot(p.x - SIEGE_GATE.x, p.z - SIEGE_GATE.z) < SIEGE_GATE_LEAVE_RANGE + reach) return true;
   return false;
 }
 

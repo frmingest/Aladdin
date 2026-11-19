@@ -1,7 +1,7 @@
 /**
  * The Siege Field (asset plan A5, 2026-11-04). Pure data and maths, no three.js and no React.
  *
- * A place of its own, reached through a timber gate beside the drill camp: a wall line with one section per
+ * A place of its own, reached through a timber gate on the meadow outside the fortress, beside the Town: a wall line with one section per
  * holding, a camp of siege engines, skeleton attackers and a command tent. It puts art we already own on the map:
  * `siege.glb` (Kenney Castle Kit: wall, pillar, rocks, banners, the five engines), the four KayKit Skeletons and
  * the tent from `camp.glb`.
@@ -25,14 +25,17 @@ export const FIELD_MAX_SECTIONS = 12;
 /** Fog towers shown as ghosts behind the line; the rest are counted in the plate. */
 export const FIELD_MAX_FOG = 6;
 
-// --- The gate in the courtyard -------------------------------------------------------------------------------
-/** The gate stands south of the drill post, on the way out of the old siege ground. */
-export const SIEGE_GATE = { x: -24.2, z: 24 } as const;
-/** Faces the middle of the courtyard, like the drill post. */
-export const SIEGE_GATE_FACING = yawToward(SIEGE_GATE, { x: 0, z: 0 });
+// --- The gate on the meadow --------------------------------------------------------------------------------
+/**
+ * The gate stands outside the fortress, on the west lawn beside the Town: the Royal Mint's mirror on the other side of the
+ * gate road (the Mint is at x 28, z 72). It is a door like the Town's, not a building, and it leads to the field.
+ */
+export const SIEGE_GATE = { x: -28, z: 72 } as const;
+/** Faces the gate road, so its plank reads from the Town (yaw PI / 2 faces east). */
+export const SIEGE_GATE_FACING = yawToward(SIEGE_GATE, { x: 0, z: SIEGE_GATE.z });
 export const SIEGE_GATE_RANGE = 4.2;
 export const SIEGE_GATE_LEAVE_RANGE = 5.6;
-/** Where you stand in the courtyard on riding back: out of every reach, looking away from the gate. */
+/** Where you stand on the meadow on riding back: out of every reach, looking away from the gate. */
 export const SIEGE_GATE_RETURN = { x: SIEGE_GATE.x + 7, z: SIEGE_GATE.z } as const;
 /** Camera sits behind the hero, on the gate's side (same rule as `exitCameraYaw`). */
 export const SIEGE_GATE_RETURN_YAW = Math.atan2(SIEGE_GATE.x - SIEGE_GATE_RETURN.x, SIEGE_GATE.z - SIEGE_GATE_RETURN.z);
