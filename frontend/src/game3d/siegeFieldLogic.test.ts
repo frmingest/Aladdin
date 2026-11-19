@@ -14,6 +14,8 @@ import { HORIZON_LIMIT } from "./horizonPieces";
 import { FIELDS, RIVER_HALF, distToPolyline, fieldReach, riverLine, thinnedHorizon, tracks } from "./countrysideLogic";
 import { TOWNSFOLK } from "./townsfolkLogic";
 import { areaLine, areaName } from "./areaWordsV1";
+import * as V1 from "./siegeFieldWordsV1";
+import * as V2Mod from "./siegeFieldWordsV2";
 import {
   ATTACKERS,
   ENGINES,
@@ -33,6 +35,8 @@ import {
   SIEGE_GATE,
   SIEGE_GATE_FACING,
   SIEGE_GATE_LEAVE_RANGE,
+  SIEGE_FINGERPOST,
+  SIEGE_FINGERPOST_ARM_YAW,
   SIEGE_GATE_RETURN,
   TIER_HEIGHT,
   TIER_RUBBLE,
@@ -46,6 +50,7 @@ import type { BreachTier } from "./siegeFieldLogic";
 import type { YardFog, YardRow } from "./siegeYard";
 
 const KB = 1024;
+const V2 = { ...V2Mod.FIELD_WORDS, FIELD_WORDS: V2Mod.FIELD_WORDS, FIELD_WORDS_VERSION: V2Mod.FIELD_WORDS_VERSION };
 
 const row = (id: string, bar: number, extra: Partial<YardRow> = {}): YardRow => ({
   id,
@@ -237,6 +242,54 @@ describe("the gate on the meadow", () => {
     expect(Math.hypot(back.x, back.z)).toBeLessThan(HORIZON_LIMIT - 4);
     for (const d of doorsOfTheTown) expect(Math.hypot(d.x - back.x, d.z - back.z), d.id).toBeGreaterThan(DOOR_LEAVE_RANGE);
     for (const b of BUILDINGS) expect(Math.hypot(b.x - back.x, b.z - back.z), b.id).toBeGreaterThan(buildingReach(b) + 1);
+  });
+});
+
+describe("the fingerpost on the gate road (#462)", () => {
+  const post = SIEGE_FINGERPOST;
+  const doorsOfTheTown = BUILDINGS.map((b) => ({ id: b.id, ...doorSpot(b) }));
+
+  it("stands at the road's west edge, level with the gate, between the Town's rows, outside the wall", () => {
+    expect(post.z).toBe(SIEGE_GATE.z);
+    expect(post.x).toBeLessThan(-3); // off the 6-wide road (half 3)
+    expect(post.x).toBeGreaterThan(-8);
+    expect(post.x).toBeGreaterThan(SIEGE_GATE.x);
+    expect(Math.hypot(post.x, post.z)).toBeGreaterThan(WALL_RADIUS + 10);
+  });
+
+  it("points its arm west, at the gate", () => {
+    expect(Math.abs(SIEGE_FINGERPOST_ARM_YAW + Math.PI / 2)).toBeLessThan(1e-9);
+  });
+
+  it("is clear of every Town building, every door's reach, and every person, tree and boulder", () => {
+    for (const b of BUILDINGS) expect(Math.hypot(b.x - post.x, b.z - post.z), b.id).toBeGreaterThan(Math.min(b.hx, b.hz) + 0.5);
+    for (const d of doorsOfTheTown) expect(Math.hypot(d.x - post.x, d.z - post.z), d.id).toBeGreaterThan(DOOR_LEAVE_RANGE);
+    const others = [
+      ...NPCS.map((n) => ({ id: n.id, x: n.x, z: n.z, r: 0.5 })),
+      ...TOWNSFOLK.map((t) => ({ id: t.id, x: t.x, z: t.z, r: 0.5 })),
+      ...SCENERY.filter((s) => s.y === 0).map((s) => ({ id: s.id, x: s.x, z: s.z, r: s.solid })),
+      ...thinnedHorizon().filter((p) => p.solid > 0).map((p) => ({ id: p.id, x: p.x, z: p.z, r: Math.max(p.solid, p.scale * 0.45) })),
+    ];
+    for (const o of others) expect(Math.hypot(o.x - post.x, o.z - post.z), o.id).toBeGreaterThan(o.r + 1.5);
+  });
+
+  it("does not stand on the river, a field or a track", () => {
+    expect(distToPolyline(post, riverLine())).toBeGreaterThan(RIVER_HALF + 1);
+    for (const f of FIELDS) expect(Math.hypot(f.x - post.x, f.z - post.z), f.id).toBeGreaterThan(fieldReach(f) + 1);
+    for (const t of tracks()) expect(distToPolyline(post, t.points), t.id).toBeGreaterThan(t.width / 2 + 0.5);
+  });
+
+  it("says the same name as the gate, with one short line on where", () => {
+    expect(V2.fingerpostLabel).toBe(V2.gateLabel);
+    expect(V2.fingerpostWhere.length).toBeLessThanOrEqual(28);
+  });
+});
+
+describe("the Siege Field words keep version 1 as it was shown", () => {
+  it("v2 carries every v1 line unchanged", () => {
+    expect(V2.FIELD_WORDS_VERSION).toBe("v2");
+    expect(V1.FIELD_WORDS_VERSION).toBe("v1");
+    for (const [k, v] of Object.entries(V1.FIELD_WORDS)) expect((V2.FIELD_WORDS as Record<string, string>)[k], k).toBe(v);
   });
 });
 

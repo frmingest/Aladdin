@@ -6,7 +6,7 @@ import type { AreaRef } from "./areas";
 import { LAND_WORDS } from "./holdingLandWordsV1";
 import { MINT_WORDS } from "./mintWordsV1";
 import { QUARTER_WORDS } from "./quarterWordsV1";
-import { FIELD_WORDS } from "./siegeFieldWordsV1";
+import { FIELD_WORDS } from "./siegeFieldWordsV2";
 import { WEATHER_WORDS } from "./weatherTowerWordsV1";
 
 export const AREA_WORDS_VERSION = "v1";

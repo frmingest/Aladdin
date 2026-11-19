@@ -61,7 +61,7 @@ import AreaFade from "../game3d/AreaFade";
 import { INITIAL_AREA, areaReducer, isMoving } from "../game3d/areaMachine";
 import type { AreaAction, AreaState } from "../game3d/areaMachine";
 import { AREA_STUCK, areaLine, areaName } from "../game3d/areaWordsV1";
-import { FIELD_WORDS } from "../game3d/siegeFieldWordsV1";
+import { FIELD_WORDS } from "../game3d/siegeFieldWordsV2";
 import { DEFAULT_TOOLS, applySpot, spotPrompt as fieldSpotPrompt } from "../game3d/siegeFieldTools";
 import type { FieldSpotId, FieldTools } from "../game3d/siegeFieldTools";
 import { setYardBenchmark, yardBenchmark } from "../game3d/siegeYard";

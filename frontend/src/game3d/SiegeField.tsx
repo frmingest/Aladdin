@@ -28,7 +28,7 @@ import {
   sectionsFor,
 } from "./siegeFieldLogic";
 import type { Attacker, Section } from "./siegeFieldLogic";
-import { FIELD_WORDS } from "./siegeFieldWordsV1";
+import { FIELD_WORDS } from "./siegeFieldWordsV2";
 import { BANNER_FOR, SIEGE_STONE, STORM_STONE, WINCH, stonePlate, winchPosition, yardstickName } from "./siegeFieldTools";
 import type { FieldTools } from "./siegeFieldTools";
 import { FIELD_TOOLS_WORDS } from "./siegeFieldToolsWordsV1";
