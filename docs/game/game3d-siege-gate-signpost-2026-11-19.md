@@ -13,7 +13,7 @@ Issue #462, follow-up of #460. **Status: written on `feature/game3d-siege-gate-s
 - It is furniture: no prompt, no fact, nothing moves. One thin collider on the post.
 - **The gate has its own group in the press-P overlay**, `siegegate`, instead of being counted under `drill`. The fingerpost counts there too.
 
-**Visual verb + scene:** *follow the arm.* Walking south out of the fortress, a post at the road's edge points west across the lawn.
+**Visual verb + scene:** *follow the arm.* Walking south out of the fortress, a post at the road's edge points west across the lawn. Fact to shape: none (furniture, carries no data). Words: two short lines added, none deleted.
 
 ## What changed
 
@@ -38,6 +38,9 @@ Issue #462, follow-up of #460. **Status: written on `feature/game3d-siege-gate-s
 ## Open items
 
 - **Screen readers (follow-up issue #464).** The fingerpost is painted in the world, so it tells a screen-reader user nothing. The gate's own E prompt is real text; the post is not. A spoken hint (a polite line when you pass the post) would need a new "near" spot kind and a place in the HUD, and was left out of this change.
+- **Line of sight** from the post to the gate (the Town's rows may hide it) was not checked.
+- **Second plank line** ("Out on the west lawn" says where; the game-designer suggests the player's act instead) is Faiz's call; v2 can still change before merge.
+- **A "Where to?" menu entry** for the Siege Field may serve keyboard and screen-reader players better than a spoken hint; to weigh in #464.
 - **A quest line or Guide step** that sends a new player west was not added.
 
 ## Seen so far
