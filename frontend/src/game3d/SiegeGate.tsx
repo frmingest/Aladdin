@@ -6,7 +6,7 @@ import { FIELD_WORDS } from "./siegeFieldWordsV1";
 import WorldSign from "./WorldSign";
 
 /**
- * The gate to the Siege Field: two timber posts, a lintel and a teal pennant beside the drill camp. Plain code-built
+ * The gate to the Siege Field: two timber posts, a lintel and a teal pennant on the west lawn outside the fortress, beside the Town. Plain code-built
  * shapes with the usual ink outline. Furniture only: it carries no fact and does not move. The gap between the
  * posts is open ground, so the gate never blocks a path.
  */

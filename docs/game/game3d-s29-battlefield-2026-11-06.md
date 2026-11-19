@@ -1,5 +1,7 @@
 # 3D S29: the old battlefield and the war table (2026-11-06)
 
+> **Superseded 2026-11-19 (issue #460):** the old battlefield strip and the war table described here are removed from the Siege Field by [the gate-outside change](game3d-siege-gate-outside-2026-11-19.md). The river colour change stays.
+
 **Status: written and tested on `feature/game3d-s29-battlefield`, off `main` at `590896a` (A8 merged as #299). `tsc`, lint (0 errors), the full frontend test run (196 files, 1806 tests) and the build pass. Never seen in a browser, no fps, not merged, not deployed.** Plan: [discovery plan](game3d-discovery-sprint-plan-2026-11-02.md) (S29), [asset plan](game3d-asset-sprint-plan-2026-11-04.md). Also in this PR: the river outside is bluer.
 
 ## What you will see
