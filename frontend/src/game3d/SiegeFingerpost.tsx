@@ -6,7 +6,7 @@ import { FIELD_WORDS } from "./siegeFieldWordsV2";
 import WorldSign from "./WorldSign";
 
 /**
- * The fingerpost on the gate road (issue #462): a timber post, a name plank facing the player coming out of the fortress, and an
+ * The fingerpost on the gate road (issue #462): a timber post, a name plank facing the player coming out of the fortress (it hangs under the arm, west of the post, so the post never stands in front of the words), and an
  * arm with a pointed tip that turns toward the Siege Field gate on the west lawn. The arm points the way in both directions, so it
  * is told by shape and not by an arrow glyph that would flip on the plank's back face. Plain code-built shapes with the usual ink
  * outline. Furniture: it carries no fact, has no prompt and does not move.
@@ -31,7 +31,7 @@ export default function SiegeFingerpost() {
       </StaticBatch>
       <WorldSign
         spec={{ kind: "plank", lines: [FIELD_WORDS.fingerpostLabel, FIELD_WORDS.fingerpostWhere] }}
-        position={[0, 2.2, 0]}
+        position={[-1.75, 2.2, 0]}
         width={3.2}
         yaw={SIEGE_FINGERPOST_FACING}
       />

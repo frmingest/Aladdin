@@ -8,7 +8,7 @@ Issue #462, follow-up of #460. **Status: written on `feature/game3d-siege-gate-s
 
 ## What you will see
 
-- **A timber fingerpost on the west edge of the gate road**, level with the gate (x -4.4, z 72), between the Town Hall's row and the Cartographer's. A plank (3.2 wide, so the small line stays readable) facing the player walking out of the fortress reads "Siege Field" with one small line, "Out on the west lawn". An arm above it ends in a teal point and turns toward the gate.
+- **A timber fingerpost on the west edge of the gate road**, level with the gate (x -4.4, z 72), between the Town Hall's row and the Cartographer's. A plank (3.2 wide, hung under the arm on the west side of the post, so the post never covers the words) facing the player walking out of the fortress reads "Siege Field" with one small line, "Out on the west lawn". An arm above it ends in a teal point and turns toward the gate.
 - The direction is told by the arm's shape, not an arrow glyph: the plank's back face would flip a glyph the wrong way.
 - It is furniture: no prompt, no fact, nothing moves. One thin collider on the post.
 - **The gate has its own group in the press-P overlay**, `siegegate`, instead of being counted under `drill`. The fingerpost counts there too.
@@ -39,6 +39,10 @@ Issue #462, follow-up of #460. **Status: written on `feature/game3d-siege-gate-s
 
 - **Screen readers (follow-up issue #464).** The fingerpost is painted in the world, so it tells a screen-reader user nothing. The gate's own E prompt is real text; the post is not. A spoken hint (a polite line when you pass the post) would need a new "near" spot kind and a place in the HUD, and was left out of this change.
 - **A quest line or Guide step** that sends a new player west was not added.
+
+## Seen so far
+
+A headless run (software WebGL, demo data, `playtest-qa`, screenshots kept out of the repo) showed the plank with the post standing in front of its middle ("Sieg Field"); the plank was then moved off the post. **The moved plank has not been looked at again.** The arm pointed west at the gate; the gate prompt is real DOM text reached by Tab in two presses, and E opened the field; no console errors. The Quests panel, open by default, hides the left of the screen where the post stands (not changed here).
 
 ## Not checked
 
