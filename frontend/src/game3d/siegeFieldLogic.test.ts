@@ -260,7 +260,7 @@ describe("the Siege Field as a place", () => {
     expect(back!.z).toBe(SIEGE_GATE_RETURN.z);
   });
 
-  it("answers E with the gate in the courtyard, and the road back in the field", () => {
+  it("answers E at the gate on the meadow (a courtyard-area door), and the road back in the field", () => {
     expect(standingAt({ id: "courtyard" }, { ...NO_NEARS, siegeGate: true })).toEqual({ kind: "siegeGate" });
     expect(standingAt({ id: "siege" }, { ...NO_NEARS, fieldExit: true })).toEqual({ kind: "leave" });
     expect(standingAt({ id: "siege" }, NO_NEARS)).toEqual({ kind: "none" });

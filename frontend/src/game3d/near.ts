@@ -130,7 +130,7 @@ export interface Nears {
   mintPress: boolean;
   mintBook: boolean;
   mintDoor: boolean;
-  /** Courtyard: at the gate to the Siege Field. */
+  /** Courtyard area: at the gate to the Siege Field (it stands on the west lawn outside the wall). */
   siegeGate: boolean;
   /** Siege Field: the road back is in reach. */
   fieldExit: boolean;
