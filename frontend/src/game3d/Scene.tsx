@@ -43,6 +43,7 @@ import DrillPost from "./DrillPost";
 import SiegeField from "./SiegeField";
 import { DEFAULT_TOOLS } from "./siegeFieldTools";
 import type { FieldTools } from "./siegeFieldTools";
+import SiegeFingerpost from "./SiegeFingerpost";
 import SiegeGate from "./SiegeGate";
 import MarketQuarter from "./MarketQuarter";
 import QuarterArch from "./QuarterArch";
@@ -383,8 +384,11 @@ function World({ onLockChange, world, area, room, hold, look, onFieldPresets }: 
           <group userData={{ perfGroup: "drill" }}>
             <DrillPost />
             {look.drillOpen && <DrillCamp />}
-            <SiegeGate />
             <QuarterArch counts={look.archCounts} lit={look.archLit} />
+          </group>
+          <group userData={{ perfGroup: "siegegate" }}>
+            <SiegeGate />
+            <SiegeFingerpost />
           </group>
           <group userData={{ perfGroup: "signpost" }}>
             <Signpost />

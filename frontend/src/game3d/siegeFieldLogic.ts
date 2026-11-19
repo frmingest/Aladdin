@@ -33,6 +33,16 @@ export const FIELD_MAX_FOG = 6;
 export const SIEGE_GATE = { x: -28, z: 72 } as const;
 /** Faces the gate road, so its plank reads from the Town (yaw PI / 2 faces east). */
 export const SIEGE_GATE_FACING = yawToward(SIEGE_GATE, { x: 0, z: SIEGE_GATE.z });
+/**
+ * The fingerpost (issue #462): a timber post on the west edge of the gate road, level with the gate, its arm pointing west across
+ * the lawn. Without it the gate stands about 28 units off the road and nothing says it is there. Furniture only: no prompt, no fact.
+ * It stands between the Town Hall's row (z 66) and the Cartographer's (z 79), clear of every door's reach (test).
+ */
+export const SIEGE_FINGERPOST = { x: -4.4, z: SIEGE_GATE.z } as const;
+/** Yaw PI: the plank faces north, toward a player walking out of the fortress gate (the words read from both faces). */
+export const SIEGE_FINGERPOST_FACING = Math.PI;
+/** Where the arm points: due west, at the gate. */
+export const SIEGE_FINGERPOST_ARM_YAW = yawToward(SIEGE_FINGERPOST, SIEGE_GATE);
 export const SIEGE_GATE_RANGE = 4.2;
 export const SIEGE_GATE_LEAVE_RANGE = 5.6;
 /** Where you stand on the meadow on riding back: out of every reach, looking away from the gate. */
