@@ -32,7 +32,7 @@ export default function SiegeFingerpost() {
       <WorldSign
         spec={{ kind: "plank", lines: [FIELD_WORDS.fingerpostLabel, FIELD_WORDS.fingerpostWhere] }}
         position={[0, 2.2, 0]}
-        width={2.6}
+        width={3.2}
         yaw={SIEGE_FINGERPOST_FACING}
       />
     </RigidBody>

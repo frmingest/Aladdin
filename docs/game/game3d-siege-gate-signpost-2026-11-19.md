@@ -8,7 +8,7 @@ Issue #462, follow-up of #460. **Status: written on `feature/game3d-siege-gate-s
 
 ## What you will see
 
-- **A timber fingerpost on the west edge of the gate road**, level with the gate (x -4.4, z 72), between the Town Hall's row and the Cartographer's. A plank facing the player walking out of the fortress reads "Siege Field" with one small line, "Out on the west lawn". An arm above it ends in a teal point and turns toward the gate.
+- **A timber fingerpost on the west edge of the gate road**, level with the gate (x -4.4, z 72), between the Town Hall's row and the Cartographer's. A plank (3.2 wide, so the small line stays readable) facing the player walking out of the fortress reads "Siege Field" with one small line, "Out on the west lawn". An arm above it ends in a teal point and turns toward the gate.
 - The direction is told by the arm's shape, not an arrow glyph: the plank's back face would flip a glyph the wrong way.
 - It is furniture: no prompt, no fact, nothing moves. One thin collider on the post.
 - **The gate has its own group in the press-P overlay**, `siegegate`, instead of being counted under `drill`. The fingerpost counts there too.
@@ -37,7 +37,7 @@ Issue #462, follow-up of #460. **Status: written on `feature/game3d-siege-gate-s
 
 ## Open items
 
-- **Screen readers.** The fingerpost is painted in the world, so it tells a screen-reader user nothing. The gate's own E prompt is real text; the post is not. A spoken hint (a polite line when you pass the post) would need a new "near" spot kind and a place in the HUD, and was left out of this change.
+- **Screen readers (follow-up issue #464).** The fingerpost is painted in the world, so it tells a screen-reader user nothing. The gate's own E prompt is real text; the post is not. A spoken hint (a polite line when you pass the post) would need a new "near" spot kind and a place in the HUD, and was left out of this change.
 - **A quest line or Guide step** that sends a new player west was not added.
 
 ## Not checked
