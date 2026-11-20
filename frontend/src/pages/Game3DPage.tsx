@@ -1279,6 +1279,7 @@ export default function Game3DPage() {
       cheerKey,
       standingLevel: inPast ? null : standingText.lit,
       fieldTools,
+      fieldHidden: inPast,
       quarter,
       archCounts,
       marks: inPast ? NO_MARKS : placedMarks,

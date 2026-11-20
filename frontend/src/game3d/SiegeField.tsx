@@ -19,6 +19,8 @@ import {
   FIELD_MAX_SECTIONS,
   FIELD_ROCKS,
   FIELD_TENT,
+  FIELD_PRELOAD_RANGE,
+  FIELD_SLEEP_RANGE,
   FIELD_WAKE_RANGE,
   SIEGE_PLOT,
   SECTION_HEIGHT,
@@ -156,7 +158,7 @@ function Engines({ source }: { source: Object3D }) {
 }
 
 /** One skeleton, breathing. It never walks, never attacks and never reacts to anything: no number rides on it. */
-function Skeleton({ a }: { a: Attacker }) {
+function Skeleton({ a, active }: { a: Attacker; active: MutableRefObject<boolean> }) {
   const { scene, animations } = useGLTF(SKELETON_URL(a.file));
   const group = useRef<Group>(null);
   const mixer = useRef<AnimationMixer | null>(null);
@@ -194,7 +196,8 @@ function Skeleton({ a }: { a: Attacker }) {
   }, [fitted.object, animations, a.phase]);
   useEffect(() => addOutlines(fitted.object, OUTLINE_WORLD / fitted.scale), [fitted]);
   useFrame((_, delta) => {
-    if (!reduced.current) mixer.current?.update(delta);
+    // Asleep (the hero is far away): no bone work at all.
+    if (!reduced.current && active.current) mixer.current?.update(delta);
   });
   return (
     <RigidBody type="fixed" colliders={false} position={[a.x, 0, a.z]} rotation={[0, a.yaw, 0]}>
@@ -208,13 +211,13 @@ function Skeleton({ a }: { a: Attacker }) {
   );
 }
 
-function Attackers() {
+function Attackers({ active }: { active: MutableRefObject<boolean> }) {
   return (
     <>
       {ATTACKERS.map((a) => (
         <PiecesBoundary key={a.id} what={a.id}>
           <Suspense fallback={null}>
-            <Skeleton a={a} />
+            <Skeleton a={a} active={active} />
           </Suspense>
         </PiecesBoundary>
       ))}
@@ -348,20 +351,33 @@ interface Props {
   onPresets: (p: { toStorm: number | null; toSiege: number | null; min: number; max: number }) => void;
   /** The hero's place on the meadow: the field reads the book only once she walks up to it. */
   pos: MutableRefObject<{ x: number; z: number }>;
+  /** True while the Hourglass shows a past day: the camp reads today's book, so it is not drawn (the entrance stays). */
+  hidden?: boolean;
 }
 
-/** True once the hero has come within `FIELD_WAKE_RANGE` of the plot's middle, and stays true. A cold load makes no request for the field. */
-function useAwake(pos: MutableRefObject<{ x: number; z: number }>): boolean {
-  const [awake, setAwake] = useState(false);
+/** How the hero stands to the camp: `awake` once she has come near (stays true, so the camp is built once), `near` while she is within range (hysteresis). */
+function useAwake(pos: MutableRefObject<{ x: number; z: number }>): { awake: boolean; near: boolean; active: MutableRefObject<boolean> } {
+  const [state, setState] = useState({ awake: false, near: false });
+  const active = useRef(false);
+  const preloaded = useRef(false);
   useFrame(() => {
-    if (awake) return;
-    if (Math.hypot(pos.current.x - SIEGE_PLOT.x, pos.current.z - SIEGE_PLOT.z) <= FIELD_WAKE_RANGE) setAwake(true);
+    const d = Math.hypot(pos.current.x - SIEGE_PLOT.x, pos.current.z - SIEGE_PLOT.z);
+    if (!preloaded.current && d <= FIELD_PRELOAD_RANGE) {
+      preloaded.current = true;
+      // Start the files now (about 3 MB), so the camp builds from the cache when she gets close. Nothing is read from the backend yet.
+      useGLTF.preload(SIEGE_URL);
+      useGLTF.preload(CAMP_URL);
+      for (const f of new Set(ATTACKERS.map((a) => a.file))) useGLTF.preload(SKELETON_URL(f));
+    }
+    const near = active.current ? d <= FIELD_SLEEP_RANGE : d <= FIELD_WAKE_RANGE;
+    active.current = near;
+    if (near !== state.near || (near && !state.awake)) setState((s) => ({ awake: s.awake || near, near }));
   });
-  return awake;
+  return { ...state, active };
 }
 
 /** The part that reads the book and draws what it says. It only mounts once the field is awake. */
-function Camp({ tools, onPresets }: Omit<Props, "pos">) {
+function Camp({ tools, onPresets, active }: Omit<Props, "pos" | "hidden"> & { active: MutableRefObject<boolean> }) {
   const yard = useSiegeYard(tools.fall, FIELD_MAX_SECTIONS, tools.benchmark);
   const view = yard.status === "ready" ? yard.view : null;
   // The stones' numbers come from the same answer the wall line is drawn from.
@@ -380,7 +396,7 @@ function Camp({ tools, onPresets }: Omit<Props, "pos">) {
           <SiegePieces view={view} tools={tools} />
         </Suspense>
       </PiecesBoundary>
-      <Attackers />
+      <Attackers active={active} />
       <PiecesBoundary what="tent">
         <Suspense fallback={null}>
           <Tent status={yard.status === "ready" ? yard.view : yard.status} />
@@ -396,12 +412,16 @@ function Camp({ tools, onPresets }: Omit<Props, "pos">) {
  * the fortress. It stands on the courtyard's own ground: no ground, no invisible walls and no way back of its own. The camp is the same
  * whatever the fall says; only the wall line carries a number. A failed model load leaves a bare but working field.
  */
-export default function SiegeField({ tools, onPresets, pos }: Props) {
-  const awake = useAwake(pos);
+export default function SiegeField({ tools, onPresets, pos, hidden = false }: Props) {
+  const { awake, near, active } = useAwake(pos);
   return (
     <group position={[SIEGE_PLOT.x, 0, SIEGE_PLOT.z]} rotation={[0, SIEGE_PLOT.yaw, 0]}>
       <SiegeEntrance />
-      {awake && <Camp tools={tools} onPresets={onPresets} />}
+      {awake && !hidden && (
+        <group visible={near}>
+          <Camp tools={tools} onPresets={onPresets} active={active} />
+        </group>
+      )}
     </group>
   );
 }

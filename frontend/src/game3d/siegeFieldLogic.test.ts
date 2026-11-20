@@ -30,6 +30,8 @@ import {
   FIELD_ROCKS,
   FIELD_SOUTH,
   FIELD_TENT,
+  FIELD_PRELOAD_RANGE,
+  FIELD_SLEEP_RANGE,
   FIELD_WAKE_RANGE,
   FIELD_WALL_Z,
   SECTION_HEIGHT,
@@ -268,8 +270,15 @@ describe("the plot on the meadow (#466)", () => {
     expect(d(SPAWN)).toBeGreaterThan(FIELD_WAKE_RANGE);
     expect(d(GATE_RETURN)).toBeGreaterThan(FIELD_WAKE_RANGE);
     expect(d({ x: 0, z: 72 })).toBeGreaterThan(FIELD_WAKE_RANGE);
+    // It sleeps again further out than it wakes (no flicker at the edge), and its files start loading before it wakes.
+    expect(FIELD_SLEEP_RANGE).toBeGreaterThan(FIELD_WAKE_RANGE);
+    expect(FIELD_PRELOAD_RANGE).toBeGreaterThan(FIELD_SLEEP_RANGE);
     // ...and it is awake well before you reach the entrance.
     expect(d(fieldToWorld(FIELD_ENTRANCE))).toBeLessThan(FIELD_WAKE_RANGE - 20);
+  });
+
+  it("keeps the entrance's pole on the plot, off the gap between the posts", () => {
+    expect(onPlot(fieldToWorld({ x: FIELD_ENTRANCE.x + 4.5, z: FIELD_ENTRANCE.z }), 0)).toBe(true);
   });
 
   it("keeps the entrance's gap open and its posts on the plot", () => {

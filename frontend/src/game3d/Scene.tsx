@@ -103,6 +103,8 @@ export interface SceneLook {
   standingLevel: number | null;
   /** Siege Field: the fall and yardstick the winch, stones and banners steer. */
   fieldTools: FieldTools;
+  /** The Hourglass shows a past day: the Siege Field camp reads today's book, so it is left out. */
+  fieldHidden: boolean;
   /** Market Quarter: one stall per watchlist company, laid out up the lane (quarterPlan.ts). */
   quarter: Quarter;
   /** The arch's count line: how many stalls, how many in range. Null while the watchlist is unread. */
@@ -133,6 +135,7 @@ const EMPTY_LOOK: SceneLook = {
   cheerKey: null,
   standingLevel: null,
   fieldTools: DEFAULT_TOOLS("local"),
+  fieldHidden: false,
   quarter: { stalls: [], overflow: [], fogZ: null, total: 0, inRange: 0 },
   archCounts: null,
   marks: NO_MARKS,
@@ -376,7 +379,7 @@ function World({ onLockChange, world, area, room, hold, look, onFieldPresets }: 
             <QuarterArch counts={look.archCounts} lit={look.archLit} />
           </group>
           <group userData={{ perfGroup: "siege" }}>
-            <SiegeField tools={look.fieldTools} onPresets={onFieldPresets} pos={pos} />
+            <SiegeField tools={look.fieldTools} onPresets={onFieldPresets} pos={pos} hidden={look.fieldHidden} />
           </group>
           <group userData={{ perfGroup: "signpost" }}>
             <Signpost />

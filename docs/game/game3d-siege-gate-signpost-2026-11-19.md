@@ -1,5 +1,7 @@
 # 3D: a fingerpost to the Siege Field gate (2026-11-19)
 
+> **Superseded by [the Siege Field on the meadow (#466, 2026-11-20)](game3d-siege-field-on-meadow-2026-11-20.md):** the gate and the fingerpost described here are removed.
+
 Issue #462, follow-up of #460. **Status: written on `feature/game3d-siege-gate-signpost`, off `main` at `85b4ce0`. `tsc`, lint (0 errors), the full frontend test run (240 files, 2238 tests) and the build were run in a cloud workspace. Not seen on a real GPU, no fps, not deployed.** Earlier: [the gate moves outside](game3d-siege-gate-outside-2026-11-19.md).
 
 ## What was wrong

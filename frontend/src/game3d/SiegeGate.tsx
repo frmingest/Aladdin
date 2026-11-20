@@ -17,6 +17,7 @@ export default function SiegeEntrance() {
       {([-1.6, 1.6] as const).map((x) => (
         <CuboidCollider key={x} args={[0.2, 1.8, 0.2]} position={[x, 1.8, 0]} />
       ))}
+      <CuboidCollider args={[0.14, 5, 0.14]} position={[3.4, 5, 0]} />
       <StaticBatch>
         {([-1.6, 1.6] as const).map((x) => (
           <Part key={x} color={PAL.timberDark} position={[x, 1.8, 0]} grow={1.12}>

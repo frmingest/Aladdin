@@ -1,7 +1,8 @@
 /**
  * The Siege Field (asset plan A5, 2026-11-04). Pure data and maths, no three.js and no React.
  *
- * A place of its own, reached through a timber gate on the meadow outside the fortress, beside the Town: a wall line with one section per
+ * Part of the main map since issue #466: a compact camp on the south-west meadow, with an entrance and no gate of its own (it used to be a place
+ * reached through a gate; see `SIEGE_PLOT`): a wall line with one section per
  * holding, a camp of siege engines, skeleton attackers and a command tent. It puts art we already own on the map:
  * `siege.glb` (Kenney Castle Kit: wall, pillar, rocks, banners, the five engines), the four KayKit Skeletons and
  * the tent from `camp.glb`.
@@ -79,8 +80,14 @@ export function onPlot(p: Pt, margin = 0): boolean {
   return Math.abs(l.x) <= FIELD_HALF_WIDTH + margin && l.z >= FIELD_NORTH - margin && l.z <= FIELD_SOUTH + margin;
 }
 
-/** The field wakes (reads the book) once the hero is this close to the middle of the plot, so a cold load makes no request for it. */
+/**
+ * The camp wakes (is drawn, and reads the book) once the hero is this close to the middle of the plot, so a cold load makes no request for it
+ * and draws none of it. It is hidden again past `FIELD_SLEEP_RANGE` (wider, so standing on the edge does not flicker), which stops its
+ * skeletons and takes it out of the draw. Its model files start loading at `FIELD_PRELOAD_RANGE`, so waking is not a stall.
+ */
 export const FIELD_WAKE_RANGE = 50;
+export const FIELD_SLEEP_RANGE = 70;
+export const FIELD_PRELOAD_RANGE = 90;
 
 // --- The field itself ----------------------------------------------------------------------------------------
 export const FIELD_WALL_Z = -10;
