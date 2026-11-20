@@ -270,9 +270,10 @@ describe("the plot on the meadow (#466)", () => {
     expect(d(SPAWN)).toBeGreaterThan(FIELD_WAKE_RANGE);
     expect(d(GATE_RETURN)).toBeGreaterThan(FIELD_WAKE_RANGE);
     expect(d({ x: 0, z: 72 })).toBeGreaterThan(FIELD_WAKE_RANGE);
+    expect(d(SPAWN)).toBeGreaterThan(FIELD_PRELOAD_RANGE); // a cold load fetches no camp files either
     // It sleeps again further out than it wakes (no flicker at the edge), and its files start loading before it wakes.
     expect(FIELD_SLEEP_RANGE).toBeGreaterThan(FIELD_WAKE_RANGE);
-    expect(FIELD_PRELOAD_RANGE).toBeGreaterThan(FIELD_SLEEP_RANGE);
+    expect(FIELD_PRELOAD_RANGE).toBeGreaterThan(FIELD_WAKE_RANGE);
     // ...and it is awake well before you reach the entrance.
     expect(d(fieldToWorld(FIELD_ENTRANCE))).toBeLessThan(FIELD_WAKE_RANGE - 20);
   });

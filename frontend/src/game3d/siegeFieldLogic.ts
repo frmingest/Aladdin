@@ -87,7 +87,7 @@ export function onPlot(p: Pt, margin = 0): boolean {
  */
 export const FIELD_WAKE_RANGE = 50;
 export const FIELD_SLEEP_RANGE = 70;
-export const FIELD_PRELOAD_RANGE = 90;
+export const FIELD_PRELOAD_RANGE = 55;
 
 // --- The field itself ----------------------------------------------------------------------------------------
 export const FIELD_WALL_Z = -10;
