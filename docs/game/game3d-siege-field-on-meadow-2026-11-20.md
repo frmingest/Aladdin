@@ -23,6 +23,8 @@ The field's content is about 66 x 60 units (80 x 80 walkable). The meadow is wal
 
 **Visual verb + scene:** *walk out to the siege.* The camp stands on the open lawn, with the Town and the gate road on its fortress side.
 
+**Fact to shape (unchanged):** a wall section's height is the fall; the yardstick banners mark the benchmark. **Unknown state:** unknown stays fog (the fog ghosts at the wall line). With no data the field shows the engines and fog, never an invented number.
+
 ## Why this spot
 
 A search over the whole ring (angle and radius) for a 50 x 34 plot clear of the lane, the walkable edge and the Town's buildings found slack of under a metre at any angle, so the angle is free. -46 degrees (south-west of the gate road) is the closest to the gate road and the Town that clears the Town Hall's reach. The first fit checked only the plot's corners and put the inner edge on the lane; the test now samples the whole plot against the lane, river, road and Town.
@@ -51,6 +53,12 @@ A search over the whole ring (angle and radius) for a 50 x 34 plot clear of the 
 9. Draw calls: not measured. The entrance is always drawn (one batch, one plank, two colliders); the camp adds its meshes to the courtyard scene once you are within 50 units (the old Siege Field scene is no longer drawn on its own). The press-P check on real hardware is Faiz's.
 
 ## Open items (not done here)
+
+- **No text route to the field (review finding, open).** The game-ux-designer review calls this a blocker for screen-reader and keyboard players: the gate prompt is gone and "Where to?", quests and hints do not name the field. The fix is new words (a "Where to?" line, a polite line when you enter the 50-unit range, `questWordsV4`), so a follow-up issue carries it; it makes #464 obsolete.
+- **`?at=siege` opens the courtyard spawn.** Placing the player at the entrance is a follow-up.
+- **Sleeping camp beyond 50 units.** The game-designer suggests a low fog bank over a tent shape so waking reads as the fog lifting; and showing the entrance shut or fogged in the Hourglass past view. Neither is built.
+- **Tap count and keyboard path** are not measured in a real browser (a CLAUDE.md gate): Faiz or a real-browser session.
+- **Playtest note.** The headless run saw no winch prompt; the tester stood 5.1 units from the winch (its range is 2.8), so that was not a bug. Commit 9187056 was not re-tested in a browser.
 
 - **Real-GPU look and draw calls.** The camp now draws in the same scene as the courtyard (and casts shadows), so the 300-call budget must be re-read on a real GPU: press P near the field, then look away. If it is over, the skeleton outlines and shadows go first.
 - **Pop-in at 50 units.** The camp appears as you approach, unfogged; a longer range costs more draw calls on the road. Faiz to judge.
