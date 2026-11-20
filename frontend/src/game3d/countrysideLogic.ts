@@ -13,7 +13,7 @@ import type { Spot } from "./layout";
 import { WALL_RADIUS, WALL_THICKNESS } from "./layout";
 import { HORIZON, HORIZON_LIMIT, ROAD_END_Z } from "./horizonPieces";
 import type { HorizonPiece } from "./horizonPieces";
-import { SIEGE_GATE, SIEGE_GATE_LEAVE_RANGE } from "./siegeFieldLogic";
+import { onPlot } from "./siegeFieldLogic";
 import { BUILDINGS, VILLAGE_MARGIN, buildingReach } from "./townPlan";
 
 /* ---------------------------------------------------------------- small maths */
@@ -156,8 +156,8 @@ export interface FieldPatch {
   furrows: number;
 }
 
-/** Tilled patches in the west. Fixed: they do not grow, shrink or change colour with anything. */
-export const FIELDS: readonly FieldPatch[] = [
+/** The tilled patches in the west, before the Siege Field's plot takes its ground. */
+const ALL_FIELDS: readonly FieldPatch[] = [
   { id: "f1", x: -73, z: 17, w: 12, d: 8, yaw: 0.35, furrows: 6 },
   { id: "f2", x: -76, z: -11, w: 12, d: 8, yaw: -0.3, furrows: 6 },
   { id: "f3", x: -78, z: 43, w: 12, d: 8, yaw: 0.9, furrows: 6 },
@@ -178,6 +178,12 @@ export function fieldCorners(f: FieldPatch): Spot[] {
 }
 
 export const fieldReach = (f: FieldPatch): number => Math.hypot(f.w / 2, f.d / 2);
+
+/**
+ * Tilled patches in the west. Fixed: they do not grow, shrink or change colour with anything. A patch the Siege Field's plot would stand on
+ * is dropped, never moved (issue #466: the plot takes f3).
+ */
+export const FIELDS: readonly FieldPatch[] = ALL_FIELDS.filter((f) => !onPlot(f, fieldReach(f)));
 
 /* ---------------------------------------------------------------- flat strips for drawing */
 
@@ -290,8 +296,8 @@ export function inTheWay(p: HorizonPiece): boolean {
   for (const f of FIELDS) if (Math.hypot(p.x - f.x, p.z - f.z) < fieldReach(f) + reach) return true;
   // The Town beside the gate road keeps its ground clear too, door mats included.
   for (const b of BUILDINGS) if (Math.hypot(p.x - b.x, p.z - b.z) < buildingReach(b) + VILLAGE_MARGIN + reach) return true;
-  // So does the Siege Field's gate on the west lawn: its posts, plank and door mat.
-  if (Math.hypot(p.x - SIEGE_GATE.x, p.z - SIEGE_GATE.z) < SIEGE_GATE_LEAVE_RANGE + reach) return true;
+  // So does the Siege Field's plot on the south-west lawn: the whole camp, from the entrance to the fog ghosts (issue #466).
+  if (onPlot(at, reach)) return true;
   return false;
 }
 

@@ -43,8 +43,6 @@ import DrillPost from "./DrillPost";
 import SiegeField from "./SiegeField";
 import { DEFAULT_TOOLS } from "./siegeFieldTools";
 import type { FieldTools } from "./siegeFieldTools";
-import SiegeFingerpost from "./SiegeFingerpost";
-import SiegeGate from "./SiegeGate";
 import MarketQuarter from "./MarketQuarter";
 import QuarterArch from "./QuarterArch";
 import MarkLayer from "./MarkLayer";
@@ -105,6 +103,8 @@ export interface SceneLook {
   standingLevel: number | null;
   /** Siege Field: the fall and yardstick the winch, stones and banners steer. */
   fieldTools: FieldTools;
+  /** The Hourglass shows a past day: the Siege Field camp reads today's book, so it is left out. */
+  fieldHidden: boolean;
   /** Market Quarter: one stall per watchlist company, laid out up the lane (quarterPlan.ts). */
   quarter: Quarter;
   /** The arch's count line: how many stalls, how many in range. Null while the watchlist is unread. */
@@ -135,6 +135,7 @@ const EMPTY_LOOK: SceneLook = {
   cheerKey: null,
   standingLevel: null,
   fieldTools: DEFAULT_TOOLS("local"),
+  fieldHidden: false,
   quarter: { stalls: [], overflow: [], fogZ: null, total: 0, inRange: 0 },
   archCounts: null,
   marks: NO_MARKS,
@@ -273,8 +274,8 @@ function World({ onLockChange, world, area, room, hold, look, onFieldPresets }: 
   // walking cannot aim). Development builds only: the production build drops this hook.
   useEffect(() => {
     if (!import.meta.env.DEV) return;
-    const w = window as unknown as { __g3dPlace?: (x: number, z: number) => void };
-    w.__g3dPlace = (x, z) => setTeleport({ key: ++count.current, x, z, yaw: 0 });
+    const w = window as unknown as { __g3dPlace?: (x: number, z: number, yaw?: number) => void };
+    w.__g3dPlace = (x, z, yaw = 0) => setTeleport({ key: ++count.current, x, z, yaw });
     return () => {
       delete w.__g3dPlace;
     };
@@ -304,15 +305,6 @@ function World({ onLockChange, world, area, room, hold, look, onFieldPresets }: 
         <group userData={{ perfGroup: "hall" }}>
           <TownHallRoom />
         </group>
-      ) : area.id === "siege" ? (
-        <>
-          <group userData={{ perfGroup: "backdrop" }}>
-            <Backdrop />
-          </group>
-          <group userData={{ perfGroup: "siege" }}>
-            <SiegeField tools={look.fieldTools} onPresets={onFieldPresets} />
-          </group>
-        </>
       ) : area.id === "quarter" ? (
         <>
           <group userData={{ perfGroup: "backdrop" }}>
@@ -386,9 +378,8 @@ function World({ onLockChange, world, area, room, hold, look, onFieldPresets }: 
             {look.drillOpen && <DrillCamp />}
             <QuarterArch counts={look.archCounts} lit={look.archLit} />
           </group>
-          <group userData={{ perfGroup: "siegegate" }}>
-            <SiegeGate />
-            <SiegeFingerpost />
+          <group userData={{ perfGroup: "siege" }}>
+            <SiegeField tools={look.fieldTools} onPresets={onFieldPresets} pos={pos} hidden={look.fieldHidden} />
           </group>
           <group userData={{ perfGroup: "signpost" }}>
             <Signpost />

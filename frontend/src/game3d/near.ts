@@ -48,7 +48,6 @@ import type { NpcId } from "./npcs";
 import { QUARTER_EXIT, QUARTER_EXIT_LEAVE_RANGE, QUARTER_EXIT_RANGE, QUARTER_GATE, QUARTER_GATE_LEAVE_RANGE, QUARTER_GATE_RANGE } from "./quarterPlan";
 import { REALM_LEAVE_RANGE, REALM_POST, REALM_RANGE } from "./realmPlan";
 import { ARCHIVE_DOOR_LEAVE_RANGE, ARCHIVE_DOOR_RANGE, SHELF_LEAVE_RANGE, SHELF_RANGE, nearArchiveDoor, nearShelves } from "./recordsHallRoomLogic";
-import { FIELD_EXIT, FIELD_EXIT_LEAVE_RANGE, FIELD_EXIT_RANGE, SIEGE_GATE, SIEGE_GATE_LEAVE_RANGE, SIEGE_GATE_RANGE } from "./siegeFieldLogic";
 import { fieldSpotAt } from "./siegeFieldTools";
 import type { FieldSpotId } from "./siegeFieldTools";
 import { SIGN, SIGN_LEAVE_RANGE, SIGN_RANGE } from "./signpostLogic";
@@ -130,11 +129,7 @@ export interface Nears {
   mintPress: boolean;
   mintBook: boolean;
   mintDoor: boolean;
-  /** Courtyard area: at the gate to the Siege Field (it stands on the west lawn outside the wall). */
-  siegeGate: boolean;
-  /** Siege Field: the road back is in reach. */
-  fieldExit: boolean;
-  /** Siege Field: the winch, a marker stone or a yardstick banner within reach. */
+  /** Courtyard, on the Siege Field's plot: the winch, a marker stone or a yardstick banner within reach. */
   fieldSpot: FieldSpotId | null;
   /** Courtyard: at the arch to the Market Quarter. */
   quarterGate: boolean;
@@ -173,8 +168,6 @@ export const NO_NEARS: Nears = {
   mintPress: false,
   mintBook: false,
   mintDoor: false,
-  siegeGate: false,
-  fieldExit: false,
   fieldSpot: null,
   quarterGate: false,
   quarterExit: false,
@@ -183,7 +176,7 @@ export const NO_NEARS: Nears = {
 /** The spots that are one of several: the answer carries which one. */
 type ManyKind = "npc" | "tower" | "booth" | "stall" | "shelf" | "lantern" | "building" | "fieldSpot" | "board" | "mintLever";
 /** The spots there is one of. */
-type OneKind = "desk" | "drill" | "siegeGate" | "quarterGate" | "sign" | "vault" | "watch" | "perch" | "realm" | "hourglass" | "table" | "shelves" | "dials" | "mintSpan" | "mintPress" | "mintBook";
+type OneKind = "desk" | "drill" | "quarterGate" | "sign" | "vault" | "watch" | "perch" | "realm" | "hourglass" | "table" | "shelves" | "dials" | "mintSpan" | "mintPress" | "mintBook";
 
 export type Standing =
   | { kind: "none" }
@@ -270,7 +263,6 @@ export const SPOTS: readonly Spot[] = [
   }),
   spot({ key: "desk", kind: "desk", area: "courtyard", detect: single(DESK, DESK_RANGE, DESK_LEAVE_RANGE) }),
   spot({ key: "drill", kind: "drill", area: "courtyard", detect: single(DRILL_POST, DRILL_RANGE, DRILL_LEAVE_RANGE) }),
-  spot({ key: "siegeGate", kind: "siegeGate", area: "courtyard", detect: single(SIEGE_GATE, SIEGE_GATE_RANGE, SIEGE_GATE_LEAVE_RANGE) }),
   spot({ key: "quarterGate", kind: "quarterGate", area: "courtyard", detect: single(QUARTER_GATE, QUARTER_GATE_RANGE, QUARTER_GATE_LEAVE_RANGE) }),
   spot({ key: "sign", kind: "sign", area: "courtyard", detect: single(SIGN, SIGN_RANGE, SIGN_LEAVE_RANGE) }),
   spot({ key: "booth", kind: "booth", area: "courtyard", detect: (pos, held) => pickNear(pos, BOOTH_T, held) }),
@@ -311,9 +303,8 @@ export const SPOTS: readonly Spot[] = [
   spot({ key: "mintBook", kind: "mintBook", area: "mint", detect: ranged(nearBook, BOOK_RANGE, BOOK_LEAVE_RANGE) }),
   spot({ key: "mintDoor", kind: "leave", area: "mint", detect: ranged(nearMintDoor, MINT_DOOR_RANGE, MINT_DOOR_LEAVE_RANGE) }),
 
-  // The Siege Field: a tool beats the road back; the exit stands far from every tool (test).
-  spot({ key: "fieldSpot", kind: "fieldSpot", area: "siege", detect: (pos, held) => fieldSpotAt(pos, held) }),
-  spot({ key: "fieldExit", kind: "leave", area: "siege", detect: single(FIELD_EXIT, FIELD_EXIT_RANGE, FIELD_EXIT_LEAVE_RANGE) }),
+  // The Siege Field's tools stand on the meadow (issue #466), so they are courtyard spots; `fieldSpotAt` turns the world place into the field's own frame.
+  spot({ key: "fieldSpot", kind: "fieldSpot", area: "courtyard", detect: (pos, held) => fieldSpotAt(pos, held) }),
 
   // The Market Quarter: a stall beats the road back; the exit stands far from every stall (test).
   spot({

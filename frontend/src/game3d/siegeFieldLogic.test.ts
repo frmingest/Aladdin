@@ -1,50 +1,53 @@
 import { readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { AREAS, pathToCourtyard, returnSpot, transitionSpot } from "./areas";
+import { AREAS } from "./areas";
 import { CAMP_URL } from "./campPieces";
 import { glbJson, glbTopNodes } from "./glbJson";
 import { SIEGE_URL, SKELETON_URL } from "./holdingPieces";
 import { NPCS } from "./npcs";
 import { SCENERY } from "./sceneryPieces";
 import { standingAt, NO_NEARS } from "./near";
-import { BUILDINGS, DOOR_LEAVE_RANGE, VILLAGE_MARGIN, buildingReach, doorSpot } from "./townPlan";
+import { PLANTS } from "./meadowPlantsLogic";
+import { SPAWN } from "./layout";
+import { BUILDINGS, DOOR_LEAVE_RANGE, GATE_RETURN, VILLAGE_MARGIN, buildingReach, doorSpot } from "./townPlan";
 import { WALL_RADIUS } from "./layout";
-import { HORIZON_LIMIT } from "./horizonPieces";
+import { HORIZON_LIMIT, ROAD_HALF_WIDTH, onGateRoad } from "./horizonPieces";
 import { FIELDS, RIVER_HALF, distToPolyline, fieldReach, riverLine, thinnedHorizon, tracks } from "./countrysideLogic";
 import { TOWNSFOLK } from "./townsfolkLogic";
-import { areaLine, areaName } from "./areaWordsV1";
 import * as V1 from "./siegeFieldWordsV1";
 import * as V2Mod from "./siegeFieldWordsV2";
 import {
   ATTACKERS,
   ENGINES,
   FIELD_BANNERS,
-  FIELD_EXIT,
-  FIELD_EXIT_LEAVE_RANGE,
+  FIELD_ENTRANCE,
   FIELD_FOG_Z,
-  FIELD_HALF,
+  FIELD_HALF_WIDTH,
   FIELD_MAX_FOG,
   FIELD_MAX_SECTIONS,
+  FIELD_NORTH,
   FIELD_ROCKS,
-  FIELD_SPAWN,
+  FIELD_SOUTH,
   FIELD_TENT,
+  FIELD_PRELOAD_RANGE,
+  FIELD_SLEEP_RANGE,
+  FIELD_WAKE_RANGE,
   FIELD_WALL_Z,
   SECTION_HEIGHT,
   SECTION_WIDTH,
-  SIEGE_GATE,
-  SIEGE_GATE_FACING,
-  SIEGE_GATE_LEAVE_RANGE,
-  SIEGE_FINGERPOST,
-  SIEGE_FINGERPOST_ARM_YAW,
-  SIEGE_GATE_RETURN,
+  SIEGE_PLOT,
   TIER_HEIGHT,
   TIER_RUBBLE,
   breachTier,
+  fieldToWorld,
   ghostsFor,
+  onPlot,
+  plotCorners,
   rowX,
   sectionsFor,
   tierSolid,
+  worldToField,
 } from "./siegeFieldLogic";
 import type { BreachTier } from "./siegeFieldLogic";
 import type { YardFog, YardRow } from "./siegeYard";
@@ -130,7 +133,7 @@ describe("the wall line", () => {
     const rows = Array.from({ length: 20 }, (_, i) => row(`t${i}`, i * 5));
     const s = sectionsFor(rows);
     expect(s).toHaveLength(FIELD_MAX_SECTIONS);
-    for (const x of s) expect(Math.abs(x.x) + SECTION_WIDTH / 2).toBeLessThan(FIELD_HALF);
+    for (const x of s) expect(Math.abs(x.x) + SECTION_WIDTH / 2).toBeLessThan(FIELD_HALF_WIDTH);
   });
 
   it("shows a gaining tower unhurt, not as a made-up breach", () => {
@@ -169,7 +172,7 @@ describe("the camp is fixed: it never carries a fact", () => {
   it("takes no input: the module imports no holding, theme, wall, moat, backend type or verdict", () => {
     const src = readFileSync(join(__dirname, "siegeFieldLogic.ts"), "utf8");
     const imports = [...src.matchAll(/^import .* from "(.+)";$/gm)].map((m) => m[1]);
-    expect(imports.sort()).toEqual(["./npcs", "./siegeYard", "./stormDrill"].sort());
+    expect(imports.sort()).toEqual(["./siegeYard", "./stormDrill"].sort());
     expect(src).not.toMatch(/HoldingTheme|WallTier|MoatTier|\.level\b/);
   });
 
@@ -181,8 +184,8 @@ describe("the camp is fixed: it never carries a fact", () => {
       ...FIELD_ROCKS.map((r) => ({ id: r.id, x: r.x, z: r.z, r: 1.4 })),
     ];
     for (const t of things) {
-      expect(Math.abs(t.x) + t.r, t.id).toBeLessThan(FIELD_HALF);
-      expect(Math.abs(t.z) + t.r, t.id).toBeLessThan(FIELD_HALF);
+      expect(Math.abs(t.x) + t.r, t.id).toBeLessThan(FIELD_HALF_WIDTH);
+      expect(t.z + t.r, t.id).toBeLessThan(FIELD_ENTRANCE.z - 2);
       expect(t.z - t.r, t.id).toBeGreaterThan(FIELD_WALL_Z + 3);
     }
     for (let i = 0; i < things.length; i++)
@@ -191,97 +194,96 @@ describe("the camp is fixed: it never carries a fact", () => {
         const b = things[j];
         expect(Math.hypot(a.x - b.x, a.z - b.z), `${a.id} / ${b.id}`).toBeGreaterThan(a.r + b.r);
       }
-    for (const b of FIELD_BANNERS) expect(Math.abs(b.x)).toBeLessThan(FIELD_HALF);
+    for (const b of FIELD_BANNERS) expect(Math.abs(b.x) + 1.5).toBeLessThan(FIELD_HALF_WIDTH);
   });
 
-  it("keeps the spawn and the road back off every piece and out of each other's reach", () => {
-    expect(Math.hypot(FIELD_EXIT.x - FIELD_SPAWN.x, FIELD_EXIT.z - FIELD_SPAWN.z)).toBeGreaterThan(FIELD_EXIT_LEAVE_RANGE + 1);
-    expect(FIELD_EXIT.z).toBeLessThan(FIELD_HALF);
-    for (const a of ATTACKERS) expect(Math.hypot(a.x - FIELD_SPAWN.x, a.z - FIELD_SPAWN.z)).toBeGreaterThan(1.5);
-    for (const e of ENGINES) expect(Math.hypot(e.x - FIELD_SPAWN.x, e.z - FIELD_SPAWN.z)).toBeGreaterThan(e.solid + 1.5);
-  });
-});
-
-describe("the gate on the meadow", () => {
-  const road = 8; // half-width kept free either side of the gate road
-  const doorsOfTheTown = BUILDINGS.map((b) => ({ id: b.id, ...doorSpot(b) }));
-
-  it("stands outside the wall, on the west lawn beside the Town, inside the walkable meadow", () => {
-    expect(Math.hypot(SIEGE_GATE.x, SIEGE_GATE.z)).toBeGreaterThan(WALL_RADIUS + 10);
-    expect(Math.hypot(SIEGE_GATE.x, SIEGE_GATE.z)).toBeLessThan(HORIZON_LIMIT - 8);
-    expect(SIEGE_GATE.x).toBeLessThan(-road);
-    // Level with the Town's rows (z 66 to 92), the Royal Mint's mirror on the other side of the road.
-    expect(SIEGE_GATE.z).toBeGreaterThan(Math.min(...BUILDINGS.map((b) => b.z)));
-    expect(SIEGE_GATE.z).toBeLessThan(Math.max(...BUILDINGS.map((b) => b.z)));
-    // It faces the gate road (east).
-    expect(Math.abs(SIEGE_GATE_FACING - Math.PI / 2)).toBeLessThan(1e-9);
-  });
-
-  it("is clear of every Town building, every door's reach, the river, the fields and the tracks", () => {
-    for (const b of BUILDINGS) expect(Math.hypot(b.x - SIEGE_GATE.x, b.z - SIEGE_GATE.z), b.id).toBeGreaterThan(buildingReach(b) + VILLAGE_MARGIN + SIEGE_GATE_LEAVE_RANGE);
-    for (const d of doorsOfTheTown) expect(Math.hypot(d.x - SIEGE_GATE.x, d.z - SIEGE_GATE.z), d.id).toBeGreaterThan(DOOR_LEAVE_RANGE + SIEGE_GATE_LEAVE_RANGE);
-    expect(distToPolyline(SIEGE_GATE, riverLine())).toBeGreaterThan(RIVER_HALF + SIEGE_GATE_LEAVE_RANGE);
-    for (const f of FIELDS) expect(Math.hypot(f.x - SIEGE_GATE.x, f.z - SIEGE_GATE.z), f.id).toBeGreaterThan(fieldReach(f) + SIEGE_GATE_LEAVE_RANGE);
-    for (const t of tracks()) expect(distToPolyline(SIEGE_GATE, t.points), t.id).toBeGreaterThan(t.width / 2 + SIEGE_GATE_LEAVE_RANGE);
-  });
-
-  it("has no tree, boulder or person on its ground", () => {
-    const others = [
-      ...NPCS.map((n) => ({ id: n.id, x: n.x, z: n.z, r: 0.5 })),
-      ...TOWNSFOLK.map((t) => ({ id: t.id, x: t.x, z: t.z, r: 0.5 })),
-      ...SCENERY.filter((s) => s.y === 0).map((s) => ({ id: s.id, x: s.x, z: s.z, r: s.solid })),
-      ...thinnedHorizon().filter((p) => p.solid > 0).map((p) => ({ id: p.id, x: p.x, z: p.z, r: Math.max(p.solid, p.scale * 0.45) })),
-    ];
-    for (const o of others) expect(Math.hypot(o.x - SIEGE_GATE.x, o.z - SIEGE_GATE.z), o.id).toBeGreaterThan(o.r + 2.4);
-  });
-
-  it("lands you out of its reach on the way back, on the meadow, and never within a door's reach to bounce you", () => {
-    const back = SIEGE_GATE_RETURN;
-    expect(Math.hypot(back.x - SIEGE_GATE.x, back.z - SIEGE_GATE.z)).toBeGreaterThan(SIEGE_GATE_LEAVE_RANGE);
-    expect(Math.hypot(back.x, back.z)).toBeGreaterThan(WALL_RADIUS + 2);
-    expect(Math.hypot(back.x, back.z)).toBeLessThan(HORIZON_LIMIT - 4);
-    for (const d of doorsOfTheTown) expect(Math.hypot(d.x - back.x, d.z - back.z), d.id).toBeGreaterThan(DOOR_LEAVE_RANGE);
-    for (const b of BUILDINGS) expect(Math.hypot(b.x - back.x, b.z - back.z), b.id).toBeGreaterThan(buildingReach(b) + 1);
+  it("keeps the whole camp, the fog and the banners inside the plot's depth", () => {
+    expect(FIELD_FOG_Z - 1.4).toBeGreaterThan(FIELD_NORTH);
+    expect(FIELD_WALL_Z).toBeGreaterThan(FIELD_FOG_Z);
+    for (const e of ENGINES) expect(e.z - e.solid).toBeGreaterThan(FIELD_NORTH);
+    expect(FIELD_ENTRANCE.z).toBeLessThan(FIELD_SOUTH);
   });
 });
 
-describe("the fingerpost on the gate road (#462)", () => {
-  const post = SIEGE_FINGERPOST;
+describe("the plot on the meadow (#466)", () => {
   const doorsOfTheTown = BUILDINGS.map((b) => ({ id: b.id, ...doorSpot(b) }));
+  const corners = plotCorners();
+  /** Points on a grid over the plot (edges included), in the courtyard's frame. */
+  const samples = (() => {
+    const out: { x: number; z: number }[] = [];
+    for (let i = 0; i <= 10; i++)
+      for (let j = 0; j <= 10; j++) out.push(fieldToWorld({ x: -FIELD_HALF_WIDTH + (i / 10) * 2 * FIELD_HALF_WIDTH, z: FIELD_NORTH + (j / 10) * (FIELD_SOUTH - FIELD_NORTH) }));
+    return out;
+  })();
 
-  it("stands at the road's west edge, level with the gate, between the Town's rows, outside the wall", () => {
-    expect(post.z).toBe(SIEGE_GATE.z);
-    expect(post.x).toBeLessThan(-3); // off the 6-wide road (half 3)
-    expect(post.x).toBeGreaterThan(-8);
-    expect(post.x).toBeGreaterThan(SIEGE_GATE.x);
-    expect(Math.hypot(post.x, post.z)).toBeGreaterThan(WALL_RADIUS + 10);
+  it("turns local points into meadow points and back, without drift", () => {
+    for (const p of [{ x: 0, z: 0 }, { x: 12.5, z: -7 }, { x: -20, z: 15 }]) {
+      const back = worldToField(fieldToWorld(p));
+      expect(back.x).toBeCloseTo(p.x, 9);
+      expect(back.z).toBeCloseTo(p.z, 9);
+    }
+    expect(fieldToWorld({ x: 0, z: 0 })).toEqual({ x: SIEGE_PLOT.x, z: SIEGE_PLOT.z });
   });
 
-  it("points its arm west, at the gate", () => {
-    expect(Math.abs(SIEGE_FINGERPOST_ARM_YAW + Math.PI / 2)).toBeLessThan(1e-9);
+  it("stands on the meadow outside the wall and the lane, and inside the walkable edge", () => {
+    for (const c of corners) {
+      expect(Math.hypot(c.x, c.z)).toBeGreaterThan(WALL_RADIUS + 5);
+      expect(Math.hypot(c.x, c.z)).toBeLessThan(HORIZON_LIMIT - 4);
+    }
+    for (const p of samples) for (const t of tracks().filter((k) => k.kind === "ring")) expect(distToPolyline(p, t.points), "lane").toBeGreaterThan(t.width / 2 + 1);
   });
 
-  it("is clear of every Town building, every door's reach, and every person, tree and boulder", () => {
-    for (const b of BUILDINGS) expect(Math.hypot(b.x - post.x, b.z - post.z), b.id).toBeGreaterThan(Math.min(b.hx, b.hz) + 0.5);
-    for (const d of doorsOfTheTown) expect(Math.hypot(d.x - post.x, d.z - post.z), d.id).toBeGreaterThan(DOOR_LEAVE_RANGE);
-    const others = [
-      ...NPCS.map((n) => ({ id: n.id, x: n.x, z: n.z, r: 0.5 })),
-      ...TOWNSFOLK.map((t) => ({ id: t.id, x: t.x, z: t.z, r: 0.5 })),
-      ...SCENERY.filter((s) => s.y === 0).map((s) => ({ id: s.id, x: s.x, z: s.z, r: s.solid })),
-      ...thinnedHorizon().filter((p) => p.solid > 0).map((p) => ({ id: p.id, x: p.x, z: p.z, r: Math.max(p.solid, p.scale * 0.45) })),
-    ];
-    for (const o of others) expect(Math.hypot(o.x - post.x, o.z - post.z), o.id).toBeGreaterThan(o.r + 1.5);
+  it("has its wall line on the far side and its open end toward the fortress", () => {
+    const wall = fieldToWorld({ x: 0, z: FIELD_WALL_Z });
+    const entrance = fieldToWorld(FIELD_ENTRANCE);
+    expect(Math.hypot(wall.x, wall.z)).toBeGreaterThan(Math.hypot(entrance.x, entrance.z) + 20);
+    // South-west of the gate road, so the road and the Town are on its fortress side.
+    expect(SIEGE_PLOT.x).toBeLessThan(-ROAD_HALF_WIDTH);
+    expect(SIEGE_PLOT.z).toBeGreaterThan(0);
   });
 
-  it("does not stand on the river, a field or a track", () => {
-    expect(distToPolyline(post, riverLine())).toBeGreaterThan(RIVER_HALF + 1);
-    for (const f of FIELDS) expect(Math.hypot(f.x - post.x, f.z - post.z), f.id).toBeGreaterThan(fieldReach(f) + 1);
-    for (const t of tracks()) expect(distToPolyline(post, t.points), t.id).toBeGreaterThan(t.width / 2 + 0.5);
+  it("is clear of every Town building, every door's reach, the gate road, the river and the tracks", () => {
+    for (const b of BUILDINGS) expect(onPlot(b, buildingReach(b) + VILLAGE_MARGIN), b.id).toBe(false);
+    for (const d of doorsOfTheTown) expect(onPlot(d, DOOR_LEAVE_RANGE), d.id).toBe(false);
+    for (const p of samples) {
+      expect(onGateRoad(p.x, p.z, ROAD_HALF_WIDTH), "gate road").toBe(false);
+      expect(distToPolyline(p, riverLine()), "river").toBeGreaterThan(RIVER_HALF + 1);
+      for (const t of tracks()) expect(distToPolyline(p, t.points), t.id).toBeGreaterThan(t.width / 2 + 0.5);
+    }
   });
 
-  it("says the same name as the gate, with one short line on where", () => {
-    expect(V2.fingerpostLabel).toBe(V2.gateLabel);
-    expect(V2.fingerpostWhere.length).toBeLessThanOrEqual(28);
+  it("has no tilled patch, tree, boulder, meadow plant, person or scenery piece on its ground", () => {
+    for (const f of FIELDS) expect(onPlot(f, fieldReach(f)), f.id).toBe(false);
+    for (const p of thinnedHorizon().filter((h) => h.solid > 0)) expect(onPlot(p, Math.max(p.solid, p.scale * 0.45)), p.id).toBe(false);
+    for (const p of PLANTS) expect(onPlot(p, 0), p.id).toBe(false);
+    const people = [...NPCS, ...TOWNSFOLK, ...SCENERY.filter((s) => s.y === 0)];
+    for (const o of people) expect(onPlot(o, 0), o.id).toBe(false);
+  });
+
+  it("took a tilled patch and some of the grove, and only those (dropped, never moved)", () => {
+    expect(FIELDS.length).toBeLessThan(5);
+    expect(thinnedHorizon().length).toBeGreaterThan(40);
+  });
+
+  it("wakes the camp only when you come near: not at the courtyard's spawn or the head of the gate road", () => {
+    const d = (p: { x: number; z: number }) => Math.hypot(p.x - SIEGE_PLOT.x, p.z - SIEGE_PLOT.z);
+    expect(d(SPAWN)).toBeGreaterThan(FIELD_WAKE_RANGE);
+    expect(d(GATE_RETURN)).toBeGreaterThan(FIELD_WAKE_RANGE);
+    expect(d({ x: 0, z: 72 })).toBeGreaterThan(FIELD_WAKE_RANGE);
+    expect(d(SPAWN)).toBeGreaterThan(FIELD_PRELOAD_RANGE); // a cold load fetches no camp files either
+    // It sleeps again further out than it wakes (no flicker at the edge), and its files start loading before it wakes.
+    expect(FIELD_SLEEP_RANGE).toBeGreaterThan(FIELD_WAKE_RANGE);
+    expect(FIELD_PRELOAD_RANGE).toBeGreaterThan(FIELD_WAKE_RANGE);
+    // ...and it is awake well before you reach the entrance.
+    expect(d(fieldToWorld(FIELD_ENTRANCE))).toBeLessThan(FIELD_WAKE_RANGE - 20);
+  });
+
+  it("keeps the entrance's pole on the plot, off the gap between the posts", () => {
+    expect(onPlot(fieldToWorld({ x: FIELD_ENTRANCE.x + 4.5, z: FIELD_ENTRANCE.z }), 0)).toBe(true);
+  });
+
+  it("keeps the entrance's gap open and its posts on the plot", () => {
+    for (const x of [-1.6, 1.6]) expect(onPlot(fieldToWorld({ x: FIELD_ENTRANCE.x + x, z: FIELD_ENTRANCE.z }), 0)).toBe(true);
   });
 });
 
@@ -293,37 +295,15 @@ describe("the Siege Field words keep version 1 as it was shown", () => {
   });
 });
 
-describe("the Siege Field as a place", () => {
-  it("is registered, outdoor, a child of the courtyard, with the road back as its one door", () => {
-    const a = AREAS.siege;
-    expect(a.parent).toBe("courtyard");
-    expect(a.kind).toBe("outdoor");
-    expect(a.lighting).toBe("outdoor");
-    expect(a.doors.map((d) => d.id)).toEqual(["exit"]);
-    expect(a.doors[0].to).toBe("parent");
-    expect(pathToCourtyard("siege")).toEqual(["siege", "courtyard"]);
-    expect(AREAS.courtyard.doors.some((d) => d.id === "siege" && d.to === "siege")).toBe(true);
+describe("the Siege Field is no longer a place of its own (#466)", () => {
+  it("has no area, no door into it and no way back out", () => {
+    expect(Object.keys(AREAS)).not.toContain("siege");
+    for (const a of Object.values(AREAS)) expect(a.doors.some((d) => d.id === "siege" || d.to === ("siege" as never))).toBe(false);
   });
 
-  it("brings you in at the south of the field and back out beside the gate", () => {
-    expect(transitionSpot({ id: "courtyard" }, { id: "siege" }, [])).toEqual({ ...FIELD_SPAWN });
-    const back = returnSpot({ id: "siege" }, { id: "courtyard" }, []);
-    expect(back).not.toBeNull();
-    expect(back!.x).toBe(SIEGE_GATE_RETURN.x);
-    expect(back!.z).toBe(SIEGE_GATE_RETURN.z);
-  });
-
-  it("answers E at the gate on the meadow (a courtyard-area door), and the road back in the field", () => {
-    expect(standingAt({ id: "courtyard" }, { ...NO_NEARS, siegeGate: true })).toEqual({ kind: "siegeGate" });
-    expect(standingAt({ id: "siege" }, { ...NO_NEARS, fieldExit: true })).toEqual({ kind: "leave" });
-    expect(standingAt({ id: "siege" }, NO_NEARS)).toEqual({ kind: "none" });
-    // The drill post still beats the gate when both are in reach.
-    expect(standingAt({ id: "courtyard" }, { ...NO_NEARS, drill: true, siegeGate: true })).toEqual({ kind: "drill" });
-  });
-
-  it("has a name plate and a tab title in game voice", () => {
-    expect(areaLine({ id: "siege" })).toBe("The Siege Field");
-    expect(areaName({ id: "siege" })).toBe("Siege Field");
+  it("answers E at a field tool in the courtyard, and a person or the drill post still beat it", () => {
+    expect(standingAt({ id: "courtyard" }, { ...NO_NEARS, fieldSpot: "winch" })).toEqual({ kind: "fieldSpot", id: "winch" });
+    expect(standingAt({ id: "courtyard" }, { ...NO_NEARS, drill: true, fieldSpot: "winch" })).toEqual({ kind: "drill" });
   });
 });
 

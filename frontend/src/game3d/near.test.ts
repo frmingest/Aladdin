@@ -56,7 +56,7 @@ describe("standingAt: the one answer for E and for the prompt", () => {
     expect(standingAt(court, nears({ tower: "h1", desk: true }))).toEqual({ kind: "tower", id: "h1" });
   });
   it("follows the order E always used for the rest", () => {
-    const order: (keyof Nears)[] = ["desk", "drill", "siegeGate", "quarterGate", "sign", "booth", "building", "vault", "watch", "perch", "realm"];
+    const order: (keyof Nears)[] = ["desk", "drill", "quarterGate", "sign", "booth", "building", "vault", "watch", "perch", "realm"];
     const val = (k: keyof Nears) => (k === "booth" ? "sal" : k === "building" ? "archive" : true);
     const kinds = order;
     order.forEach((k, i) => {
@@ -109,7 +109,7 @@ describe("SPOTS: the one list of things you can walk up to", () => {
   });
   it("keeps the courtyard's order: a person, a door, the desk, and on down to the Realm post and the hourglass", () => {
     expect(spotsOf("courtyard").map((s) => s.key)).toEqual([
-      "npc", "tower", "desk", "drill", "siegeGate", "quarterGate", "sign", "booth", "building", "vault", "watch", "perch", "realm", "hourglass",
+      "npc", "tower", "desk", "drill", "quarterGate", "sign", "booth", "building", "vault", "watch", "perch", "realm", "hourglass", "fieldSpot",
     ]);
   });
 });

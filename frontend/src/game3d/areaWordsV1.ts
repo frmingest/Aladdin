@@ -6,7 +6,6 @@ import type { AreaRef } from "./areas";
 import { LAND_WORDS } from "./holdingLandWordsV1";
 import { MINT_WORDS } from "./mintWordsV1";
 import { QUARTER_WORDS } from "./quarterWordsV1";
-import { FIELD_WORDS } from "./siegeFieldWordsV2";
 import { WEATHER_WORDS } from "./weatherTowerWordsV1";
 
 export const AREA_WORDS_VERSION = "v1";
@@ -25,7 +24,6 @@ export const AREA_STUCK = "The door is stuck. Try again?";
 /** The plate for a place. A tower names its own holding, so nothing is invented. */
 export function areaLine(ref: AreaRef, holdingName?: string | null): string {
   if (ref.id === "holding") return holdingName ? LAND_WORDS.plate(holdingName) : LAND_WORDS.plateNoName;
-  if (ref.id === "siege") return FIELD_WORDS.plate;
   if (ref.id === "quarter") return QUARTER_WORDS.plate;
   return AREA_LINES[ref.id];
 }
@@ -43,8 +41,6 @@ export function areaName(ref: AreaRef, holdingName?: string | null): string {
       return WEATHER_WORDS.pageTitle;
     case "mint":
       return MINT_WORDS.pageTitle;
-    case "siege":
-      return FIELD_WORDS.title;
     case "quarter":
       return QUARTER_WORDS.title;
     case "holding":

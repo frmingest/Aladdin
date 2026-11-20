@@ -30,7 +30,7 @@ for (const p of PLACES) {
   });
 }
 
-// The Market Quarter has no Back button (like the Siege Field): B and the post at the south end walk back out.
+// The Market Quarter has no Back button: B and the post at the south end walk back out.
 test("opens the Market Quarter from its link and goes back with B", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));

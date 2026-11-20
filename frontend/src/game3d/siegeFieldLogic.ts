@@ -1,7 +1,8 @@
 /**
  * The Siege Field (asset plan A5, 2026-11-04). Pure data and maths, no three.js and no React.
  *
- * A place of its own, reached through a timber gate on the meadow outside the fortress, beside the Town: a wall line with one section per
+ * Part of the main map since issue #466: a compact camp on the south-west meadow, with an entrance and no gate of its own (it used to be a place
+ * reached through a gate; see `SIEGE_PLOT`): a wall line with one section per
  * holding, a camp of siege engines, skeleton attackers and a command tent. It puts art we already own on the map:
  * `siege.glb` (Kenney Castle Kit: wall, pillar, rocks, banners, the five engines), the four KayKit Skeletons and
  * the tent from `camp.glb`.
@@ -14,7 +15,6 @@
  * - A holding with no usable beta stands in fog: a pale ghost and a "?", never a made-up height.
  * Breach reads from shape, not colour: height, a gap and rubble. No red or green.
  */
-import { yawToward } from "./npcs";
 import { FALL_DEFAULT } from "./stormDrill";
 import type { YardRow, YardFog } from "./siegeYard";
 
@@ -25,44 +25,73 @@ export const FIELD_MAX_SECTIONS = 12;
 /** Fog towers shown as ghosts behind the line; the rest are counted in the plate. */
 export const FIELD_MAX_FOG = 6;
 
-// --- The gate on the meadow --------------------------------------------------------------------------------
+// --- Where the field stands on the meadow -----------------------------------------------------------------------
 /**
- * The gate stands outside the fortress, on the west lawn beside the Town: the Royal Mint's mirror on the other side of the
- * gate road (the Mint is at x 28, z 72). It is a door like the Town's, not a building, and it leads to the field.
+ * The field is part of the main map (issue #466): a compact camp on the open lawn south-west of the fortress, between the lane round the
+ * wall and the edge of the meadow, in sight of the Town. It is not a place of its own any more: no gate, no fade, no way back.
+ *
+ * Local coordinates are the field's own (x across the wall line, z down the field, the wall line at the north end, so camera yaw 0 looks up
+ * the field). `SIEGE_PLOT` puts that frame on the meadow: its origin, and a turn so the wall line stands on the far (outer) side and the open
+ * south end faces the fortress. The turn is the courtyard's own rule for "outward": local north (0, -1) maps to the radial direction at the
+ * plot's angle round the wall (-46 degrees, so the plot sits south-west of the gate road). The plot is 50 wide and 34 deep, fitted to the ground between the lane round the wall (r 58.6) and the walkable edge of the meadow (r 104).
  */
-export const SIEGE_GATE = { x: -28, z: 72 } as const;
-/** Faces the gate road, so its plank reads from the Town (yaw PI / 2 faces east). */
-export const SIEGE_GATE_FACING = yawToward(SIEGE_GATE, { x: 0, z: SIEGE_GATE.z });
+export const SIEGE_PLOT = { x: -56.7, z: 54.7, yaw: Math.PI + (-46 * Math.PI) / 180 } as const;
+/** Half the width of the plot, and its depth from the north edge to the south edge (local z). Everything the field draws stays inside. */
+export const FIELD_HALF_WIDTH = 25;
+export const FIELD_NORTH = -17;
+export const FIELD_SOUTH = 17;
+/** The entrance: two posts and a plank across the open south end, level with the plot's edge. Furniture only; the gap between the posts is open ground. */
+export const FIELD_ENTRANCE = { x: 0, z: 15.5 } as const;
+
+export interface Pt {
+  x: number;
+  z: number;
+}
+
+/** A point in the field's own frame, as a point on the meadow (the courtyard's world frame). */
+export function fieldToWorld(p: Pt): Pt {
+  const c = Math.cos(SIEGE_PLOT.yaw);
+  const s = Math.sin(SIEGE_PLOT.yaw);
+  return { x: SIEGE_PLOT.x + p.x * c + p.z * s, z: SIEGE_PLOT.z - p.x * s + p.z * c };
+}
+
+/** The other way: where a point on the meadow is in the field's own frame. */
+export function worldToField(p: Pt): Pt {
+  const c = Math.cos(SIEGE_PLOT.yaw);
+  const s = Math.sin(SIEGE_PLOT.yaw);
+  const dx = p.x - SIEGE_PLOT.x;
+  const dz = p.z - SIEGE_PLOT.z;
+  return { x: dx * c - dz * s, z: dx * s + dz * c };
+}
+
+/** The four corners of the plot on the meadow, for what has to keep off it (the grove, the boulders, a tilled patch, the meadow plants). */
+export function plotCorners(): Pt[] {
+  return [
+    { x: -FIELD_HALF_WIDTH, z: FIELD_NORTH },
+    { x: FIELD_HALF_WIDTH, z: FIELD_NORTH },
+    { x: FIELD_HALF_WIDTH, z: FIELD_SOUTH },
+    { x: -FIELD_HALF_WIDTH, z: FIELD_SOUTH },
+  ].map(fieldToWorld);
+}
+
+/** True when a point on the meadow is on the plot, or within `margin` of it. */
+export function onPlot(p: Pt, margin = 0): boolean {
+  const l = worldToField(p);
+  return Math.abs(l.x) <= FIELD_HALF_WIDTH + margin && l.z >= FIELD_NORTH - margin && l.z <= FIELD_SOUTH + margin;
+}
+
 /**
- * The fingerpost (issue #462): a timber post on the west edge of the gate road, level with the gate, its arm pointing west across
- * the lawn. Without it the gate stands about 28 units off the road and nothing says it is there. Furniture only: no prompt, no fact.
- * It stands between the Town Hall's row (z 66) and the Cartographer's (z 79), clear of every door's reach (test).
+ * The camp wakes (is drawn, and reads the book) once the hero is this close to the middle of the plot, so a cold load makes no request for it
+ * and draws none of it. It is hidden again past `FIELD_SLEEP_RANGE` (wider, so standing on the edge does not flicker), which stops its
+ * skeletons and takes it out of the draw. Its model files start loading at `FIELD_PRELOAD_RANGE`, so waking is not a stall.
  */
-export const SIEGE_FINGERPOST = { x: -4.4, z: SIEGE_GATE.z } as const;
-/** Yaw PI: the plank faces north, toward a player walking out of the fortress gate (the words read from both faces). */
-export const SIEGE_FINGERPOST_FACING = Math.PI;
-/** Where the arm points: due west, at the gate. */
-export const SIEGE_FINGERPOST_ARM_YAW = yawToward(SIEGE_FINGERPOST, SIEGE_GATE);
-export const SIEGE_GATE_RANGE = 4.2;
-export const SIEGE_GATE_LEAVE_RANGE = 5.6;
-/** Where you stand on the meadow on riding back: out of every reach, looking away from the gate. */
-export const SIEGE_GATE_RETURN = { x: SIEGE_GATE.x + 7, z: SIEGE_GATE.z } as const;
-/** Camera sits behind the hero, on the gate's side (same rule as `exitCameraYaw`). */
-export const SIEGE_GATE_RETURN_YAW = Math.atan2(SIEGE_GATE.x - SIEGE_GATE_RETURN.x, SIEGE_GATE.z - SIEGE_GATE_RETURN.z);
+export const FIELD_WAKE_RANGE = 50;
+export const FIELD_SLEEP_RANGE = 70;
+export const FIELD_PRELOAD_RANGE = 55;
 
 // --- The field itself ----------------------------------------------------------------------------------------
-/** Local coordinates: x east, z south, y up. Camera yaw 0 looks north, up the field to the wall line. */
-export const FIELD_RADIUS = 44;
-export const FIELD_SPAWN = { x: 0, z: 28, yaw: 0 } as const;
-/** The road back stands at the south end. */
-export const FIELD_EXIT = { x: 0, z: 36 } as const;
-export const FIELD_EXIT_RANGE = 4.5;
-export const FIELD_EXIT_LEAVE_RANGE = 6;
-/** Invisible walls keep the hero on the field: half the side of the square she may walk in. */
-export const FIELD_HALF = 40;
-
-export const FIELD_WALL_Z = -18;
-export const FIELD_FOG_Z = -30;
+export const FIELD_WALL_Z = -10;
+export const FIELD_FOG_Z = -15.5;
 /** One wall section is this wide (a native 1 x 1.31 x 1 piece, scaled). */
 export const SECTION_WIDTH = 3.4;
 export const SECTION_THICKNESS = 1.7;
@@ -194,7 +223,7 @@ export const ATTACKERS: readonly Attacker[] = Array.from({ length: 8 }, (_, i) =
     id: `field-skeleton-${i + 1}`,
     file: ATTACKER_FILES[(col + rank) % ATTACKER_FILES.length],
     x: (col - 1.5) * 8 + (rank === 1 ? 4 : 0),
-    z: 7 + rank * 4,
+    z: 4 + rank * 3.5,
     yaw: NORTH,
     height: 1.9,
     phase: ((i * 37) % 17) / 10,
@@ -202,15 +231,15 @@ export const ATTACKERS: readonly Attacker[] = Array.from({ length: 8 }, (_, i) =
 });
 
 /** The command tent (from camp.glb) and the two banners at the ends of the line (from siege.glb). */
-export const FIELD_TENT = { x: 27, z: 8, yaw: -0.7, scale: 4.2, solid: 1.6 } as const;
+export const FIELD_TENT = { x: 20.5, z: 5, yaw: -0.7, scale: 4.2, solid: 1.6 } as const;
 export const FIELD_BANNERS = [
   { id: "field-banner-west", x: -(rowX(FIELD_MAX_SECTIONS)[FIELD_MAX_SECTIONS - 1] + SECTION_WIDTH), z: FIELD_WALL_Z, scale: 3.4 },
   { id: "field-banner-east", x: rowX(FIELD_MAX_SECTIONS)[FIELD_MAX_SECTIONS - 1] + SECTION_WIDTH, z: FIELD_WALL_Z, scale: 3.4 },
 ] as const;
 /** Rocks scattered on the open ground, fixed. */
 export const FIELD_ROCKS = [
-  { id: "field-rock-1", model: "rocks_large", x: -30, z: 14, yaw: 0.4, scale: 2.6 },
-  { id: "field-rock-2", model: "rocks_small", x: -24, z: 22, yaw: 1.9, scale: 2.4 },
-  { id: "field-rock-3", model: "rocks_large", x: 31, z: 22, yaw: 2.7, scale: 2.8 },
-  { id: "field-rock-4", model: "rocks_small", x: 20, z: 16, yaw: 0.9, scale: 2.2 },
+  { id: "field-rock-1", model: "rocks_large", x: -22, z: 8, yaw: 0.4, scale: 2.6 },
+  { id: "field-rock-2", model: "rocks_small", x: -17, z: 11.5, yaw: 1.9, scale: 2.4 },
+  { id: "field-rock-3", model: "rocks_large", x: 22, z: 11, yaw: 2.7, scale: 2.8 },
+  { id: "field-rock-4", model: "rocks_small", x: 13.5, z: 11.5, yaw: 0.9, scale: 2.2 },
 ] as const;

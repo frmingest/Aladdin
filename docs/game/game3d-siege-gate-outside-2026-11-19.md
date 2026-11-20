@@ -1,5 +1,7 @@
 # 3D: the Siege Field gate moves outside, the old battlefield goes (2026-11-19)
 
+> **Superseded by [the Siege Field on the meadow (#466, 2026-11-20)](game3d-siege-field-on-meadow-2026-11-20.md):** the gate and the fingerpost described here are removed.
+
 Issue #460. **Status: written on `feature/game3d-siege-field-outside`, off `main` at `386f781`. `tsc`, lint (0 errors), the full frontend test run (240 files, 2232 tests) and the build pass. Never seen in a browser, no fps, not deployed.** Earlier plans: [A5 Siege Field](game3d-a5-siege-field-2026-11-04.md), [A8 tools](game3d-a8-siege-field-tools-2026-11-05.md).
 
 ## What Faiz asked for (2026-11-19)

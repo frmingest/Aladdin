@@ -1,5 +1,5 @@
-import { Component, Suspense, useEffect, useMemo, useRef } from "react";
-import type { ReactNode } from "react";
+import { Component, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import type { MutableRefObject, ReactNode } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
 import { CuboidCollider, CylinderCollider, RigidBody } from "@react-three/rapier";
@@ -16,11 +16,13 @@ import {
   ATTACKERS,
   ENGINES,
   FIELD_BANNERS,
-  FIELD_EXIT,
-  FIELD_HALF,
   FIELD_MAX_SECTIONS,
   FIELD_ROCKS,
   FIELD_TENT,
+  FIELD_PRELOAD_RANGE,
+  FIELD_SLEEP_RANGE,
+  FIELD_WAKE_RANGE,
+  SIEGE_PLOT,
   SECTION_HEIGHT,
   SECTION_THICKNESS,
   SECTION_WIDTH,
@@ -38,11 +40,9 @@ import { YARD_FAILED_TAG, yardFogTag } from "./siegeYardWordsV3";
 import { useSiegeYard } from "./useSiegeYard";
 import type { YardView } from "./siegeYard";
 import WorldLabel from "./WorldLabel";
+import SiegeEntrance from "./SiegeGate";
 import WorldSign from "./WorldSign";
 import { chalkFor, signHeight } from "./signTexture";
-
-/** The same flat ground colour as the Town and the courtyard, so nothing here is flattered by colour. */
-const GRASS = "#7a9e5c";
 
 /** If a model file fails to load, the piece (and only that group) is left out; the ground, the walls' plates and the road back stay. */
 class PiecesBoundary extends Component<{ what: string; children: ReactNode }, { failed: boolean }> {
@@ -158,7 +158,7 @@ function Engines({ source }: { source: Object3D }) {
 }
 
 /** One skeleton, breathing. It never walks, never attacks and never reacts to anything: no number rides on it. */
-function Skeleton({ a }: { a: Attacker }) {
+function Skeleton({ a, active }: { a: Attacker; active: MutableRefObject<boolean> }) {
   const { scene, animations } = useGLTF(SKELETON_URL(a.file));
   const group = useRef<Group>(null);
   const mixer = useRef<AnimationMixer | null>(null);
@@ -196,7 +196,8 @@ function Skeleton({ a }: { a: Attacker }) {
   }, [fitted.object, animations, a.phase]);
   useEffect(() => addOutlines(fitted.object, OUTLINE_WORLD / fitted.scale), [fitted]);
   useFrame((_, delta) => {
-    if (!reduced.current) mixer.current?.update(delta);
+    // Asleep (the hero is far away): no bone work at all.
+    if (!reduced.current && active.current) mixer.current?.update(delta);
   });
   return (
     <RigidBody type="fixed" colliders={false} position={[a.x, 0, a.z]} rotation={[0, a.yaw, 0]}>
@@ -210,13 +211,13 @@ function Skeleton({ a }: { a: Attacker }) {
   );
 }
 
-function Attackers() {
+function Attackers({ active }: { active: MutableRefObject<boolean> }) {
   return (
     <>
       {ATTACKERS.map((a) => (
         <PiecesBoundary key={a.id} what={a.id}>
           <Suspense fallback={null}>
-            <Skeleton a={a} />
+            <Skeleton a={a} active={active} />
           </Suspense>
         </PiecesBoundary>
       ))}
@@ -343,37 +344,40 @@ function Tent({ status }: { status: "reading" | "failed" | YardView }) {
   );
 }
 
-/** The post at the south end: a pennant and a board pointing back to the courtyard. Shape only. */
-function ExitPost() {
-  return (
-    <group position={[FIELD_EXIT.x + 4.5, 0, FIELD_EXIT.z]}>
-      <Part color={PAL.timberDark} position={[0, 1.75, 0]} grow={1.12}>
-        <boxGeometry args={[0.24, 3.5, 0.24]} />
-      </Part>
-      <Part color={PAL.timberLight} position={[-0.7, 2.6, 0.15]} grow={1.1}>
-        <boxGeometry args={[1.4, 0.34, 0.08]} />
-      </Part>
-      <Part color={PAL.teal} position={[0, 3.7, 0]} grow={1.15}>
-        <boxGeometry args={[0.7, 0.3, 0.05]} />
-      </Part>
-    </group>
-  );
-}
-
 interface Props {
   /** The fall and yardstick being drawn (the page owns them, so E can change them). */
   tools: FieldTools;
   /** The preset falls and range the backend answered with, so the stones know their numbers. */
   onPresets: (p: { toStorm: number | null; toSiege: number | null; min: number; max: number }) => void;
+  /** The hero's place on the meadow: the field reads the book only once she walks up to it. */
+  pos: MutableRefObject<{ x: number; z: number }>;
+  /** True while the Hourglass shows a past day: the camp reads today's book, so it is not drawn (the entrance stays). */
+  hidden?: boolean;
 }
 
-/**
- * The Siege Field: a wall line with one section per holding (its shape is the share that holding loses at the
- * drill's default fall), five siege engines, eight skeletons breathing in front of them and a command tent. The
- * ground, the invisible walls, the road back and the plates are code-built, so a failed model load leaves a bare but
- * working field. The camp is the same whatever the fall says; only the wall line carries a number.
- */
-export default function SiegeField({ tools, onPresets }: Props) {
+/** How the hero stands to the camp: `awake` once she has come near (stays true, so the camp is built once), `near` while she is within range (hysteresis). */
+function useAwake(pos: MutableRefObject<{ x: number; z: number }>): { awake: boolean; near: boolean; active: MutableRefObject<boolean> } {
+  const [state, setState] = useState({ awake: false, near: false });
+  const active = useRef(false);
+  const preloaded = useRef(false);
+  useFrame(() => {
+    const d = Math.hypot(pos.current.x - SIEGE_PLOT.x, pos.current.z - SIEGE_PLOT.z);
+    if (!preloaded.current && d <= FIELD_PRELOAD_RANGE) {
+      preloaded.current = true;
+      // Start the files now (about 3 MB), so the camp builds from the cache when she gets close. Nothing is read from the backend yet.
+      useGLTF.preload(SIEGE_URL);
+      useGLTF.preload(CAMP_URL);
+      for (const f of new Set(ATTACKERS.map((a) => a.file))) useGLTF.preload(SKELETON_URL(f));
+    }
+    const near = active.current ? d <= FIELD_SLEEP_RANGE : d <= FIELD_WAKE_RANGE;
+    active.current = near;
+    if (near !== state.near || (near && !state.awake)) setState((s) => ({ awake: s.awake || near, near }));
+  });
+  return { ...state, active };
+}
+
+/** The part that reads the book and draws what it says. It only mounts once the field is awake. */
+function Camp({ tools, onPresets, active }: Omit<Props, "pos" | "hidden"> & { active: MutableRefObject<boolean> }) {
   const yard = useSiegeYard(tools.fall, FIELD_MAX_SECTIONS, tools.benchmark);
   const view = yard.status === "ready" ? yard.view : null;
   // The stones' numbers come from the same answer the wall line is drawn from.
@@ -385,33 +389,39 @@ export default function SiegeField({ tools, onPresets }: Props) {
     if (dropMin !== undefined && dropMax !== undefined) onPresets({ toStorm, toSiege, min: dropMin, max: dropMax });
   }, [toStorm, toSiege, dropMin, dropMax, onPresets]);
   return (
-    <group>
-      <RigidBody type="fixed" colliders={false}>
-        {/* Deep on purpose: one long frame (a model loading) must not let the hero fall through a thin slab. */}
-        <CuboidCollider args={[170, 10, 170]} position={[0, -10, 0]} />
-        {/* Four invisible walls keep the hero on the field. */}
-        <CuboidCollider args={[FIELD_HALF + 2, 5, 1]} position={[0, 5, -FIELD_HALF - 1]} />
-        <CuboidCollider args={[FIELD_HALF + 2, 5, 1]} position={[0, 5, FIELD_HALF + 1]} />
-        <CuboidCollider args={[1, 5, FIELD_HALF + 2]} position={[-FIELD_HALF - 1, 5, 0]} />
-        <CuboidCollider args={[1, 5, FIELD_HALF + 2]} position={[FIELD_HALF + 1, 5, 0]} />
-      </RigidBody>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-        <circleGeometry args={[160, 48]} />
-        <meshStandardMaterial color={GRASS} flatShading />
-      </mesh>
-      <ExitPost />
+    <>
       <Winch tools={tools} />
       <PiecesBoundary what="pieces">
         <Suspense fallback={null}>
           <SiegePieces view={view} tools={tools} />
         </Suspense>
       </PiecesBoundary>
-      <Attackers />
+      <Attackers active={active} />
       <PiecesBoundary what="tent">
         <Suspense fallback={null}>
           <Tent status={yard.status === "ready" ? yard.view : yard.status} />
         </Suspense>
       </PiecesBoundary>
+    </>
+  );
+}
+
+/**
+ * The Siege Field, out on the meadow (issue #466): a wall line with one section per holding (its shape is the share that holding loses at the
+ * drill's default fall), five siege engines, eight skeletons breathing in front of them and a command tent, on the open lawn south-west of
+ * the fortress. It stands on the courtyard's own ground: no ground, no invisible walls and no way back of its own. The camp is the same
+ * whatever the fall says; only the wall line carries a number. A failed model load leaves a bare but working field.
+ */
+export default function SiegeField({ tools, onPresets, pos, hidden = false }: Props) {
+  const { awake, near, active } = useAwake(pos);
+  return (
+    <group position={[SIEGE_PLOT.x, 0, SIEGE_PLOT.z]} rotation={[0, SIEGE_PLOT.yaw, 0]}>
+      <SiegeEntrance />
+      {awake && !hidden && (
+        <group visible={near}>
+          <Camp tools={tools} onPresets={onPresets} active={active} />
+        </group>
+      )}
     </group>
   );
 }

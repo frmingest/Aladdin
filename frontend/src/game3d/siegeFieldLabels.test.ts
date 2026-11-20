@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FIELD_BANNERS, FIELD_FOG_Z, FIELD_SPAWN, FIELD_TENT, FIELD_WALL_Z } from "./siegeFieldLogic";
+import { FIELD_BANNERS, FIELD_ENTRANCE, FIELD_FOG_Z, FIELD_TENT, FIELD_WALL_Z } from "./siegeFieldLogic";
 import { SIEGE_STONE, STORM_STONE, WINCH } from "./siegeFieldTools";
 import { labelFor, labelOpacity, labelPx } from "./labelPlan";
 import { yardFogTag } from "./siegeYardWordsV3";
@@ -14,6 +14,8 @@ const TAGS = [
   { id: "fog", x: 0, y: 7.4, z: FIELD_FOG_Z },
   ...FIELD_BANNERS.map((b) => ({ id: b.id, x: b.x, y: 6, z: FIELD_WALL_Z })),
 ];
+/** Where you walk in: just inside the entrance posts, in the field's own frame. */
+const ARRIVE = { x: FIELD_ENTRANCE.x, z: FIELD_ENTRANCE.z - 1 };
 const FACTOR = 16;
 const FOV = 60; // Scene.tsx
 
@@ -27,12 +29,12 @@ function shownFrom(cam: { x: number; y: number; z: number }): string[] {
 
 describe("Siege Field tags from the camp", () => {
   it("shows at most about three tags where you arrive, standing or with the camera behind you", () => {
-    expect(shownFrom({ x: FIELD_SPAWN.x, y: 1.7, z: FIELD_SPAWN.z }).length).toBeLessThanOrEqual(3);
-    expect(shownFrom({ x: FIELD_SPAWN.x, y: 4, z: FIELD_SPAWN.z + 6 }).length).toBeLessThanOrEqual(3);
+    expect(shownFrom({ x: ARRIVE.x, y: 1.7, z: ARRIVE.z }).length).toBeLessThanOrEqual(3);
+    expect(shownFrom({ x: ARRIVE.x, y: 4, z: ARRIVE.z + 6 }).length).toBeLessThanOrEqual(3);
   });
 
   it("shows the nearby tools there, not the tent or the far wall", () => {
-    const here = shownFrom({ x: FIELD_SPAWN.x, y: 1.7, z: FIELD_SPAWN.z });
+    const here = shownFrom({ x: ARRIVE.x, y: 1.7, z: ARRIVE.z });
     expect(here).toContain("winch");
     expect(here).not.toContain("tent");
     expect(here).not.toContain("fog");
