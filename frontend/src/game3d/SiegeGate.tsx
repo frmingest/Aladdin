@@ -1,18 +1,19 @@
 import { CuboidCollider, RigidBody } from "@react-three/rapier";
 import { PAL, Part } from "./Inked";
 import StaticBatch from "./StaticBatch";
-import { SIEGE_GATE, SIEGE_GATE_FACING } from "./siegeFieldLogic";
+import { FIELD_ENTRANCE } from "./siegeFieldLogic";
 import { FIELD_WORDS } from "./siegeFieldWordsV2";
 import WorldSign from "./WorldSign";
 
 /**
- * The gate to the Siege Field: two timber posts, a lintel and a teal pennant on the west lawn outside the fortress, beside the Town. Plain code-built
- * shapes with the usual ink outline. Furniture only: it carries no fact and does not move. The gap between the
- * posts is open ground, so the gate never blocks a path.
+ * The entrance to the Siege Field (issue #466): two timber posts, a lintel and a teal pennant across the open south end of the field, with the
+ * field's name on a plank. It stands in the field's own frame, so it turns with the plot and its plank faces the fortress. Plain code-built shapes
+ * with the usual ink outline. Furniture only: it carries no fact, has no prompt and does not move. The gap between the posts is open ground, so it
+ * never blocks a path. It is always drawn (the camp behind it wakes when you come near), so the field can be seen and found from the road.
  */
-export default function SiegeGate() {
+export default function SiegeEntrance() {
   return (
-    <RigidBody type="fixed" colliders={false} position={[SIEGE_GATE.x, 0, SIEGE_GATE.z]} rotation={[0, SIEGE_GATE_FACING, 0]}>
+    <RigidBody type="fixed" colliders={false} position={[FIELD_ENTRANCE.x, 0, FIELD_ENTRANCE.z]}>
       {([-1.6, 1.6] as const).map((x) => (
         <CuboidCollider key={x} args={[0.2, 1.8, 0.2]} position={[x, 1.8, 0]} />
       ))}

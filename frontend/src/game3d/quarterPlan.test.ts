@@ -17,7 +17,6 @@ import { SCENERY } from "./sceneryPieces";
 import { BOOTHS } from "./boothPlan";
 import { REALM_POST } from "./realmPlan";
 import { SIGN } from "./signpostLogic";
-import { SIEGE_GATE } from "./siegeFieldLogic";
 import { STANDING_TORCHES } from "./standingTorchesLogic";
 import { DRILL_POST } from "./stormDrill";
 import { STALL_LEAVE_RANGE, nearestStall } from "./stallDoor";
@@ -246,7 +245,6 @@ describe("the arch in the courtyard", () => {
     { id: "desk", ...DESK },
     { id: "drill", ...DRILL_POST },
     { id: "gate", ...GATE_SPOT },
-    { id: "siege", ...SIEGE_GATE },
     { id: "vault", ...VAULT },
     { id: "realm", ...REALM_POST },
     { id: "watch", ...WATCH_POST },
@@ -294,9 +292,8 @@ describe("the Market Quarter as a place", () => {
     expect(standingAt({ id: "quarter" }, { ...NO_NEARS, stall: "h1" })).toEqual({ kind: "stall", id: "h1" });
     expect(standingAt({ id: "quarter" }, { ...NO_NEARS, quarterExit: true })).toEqual({ kind: "leave" });
     expect(standingAt({ id: "quarter" }, NO_NEARS)).toEqual({ kind: "none" });
-    // The drill post and the Siege Field's gate still beat the arch when two are in reach (they stand far apart).
+    // The drill post still beats the arch when two are in reach (they stand far apart).
     expect(standingAt({ id: "courtyard" }, { ...NO_NEARS, drill: true, quarterGate: true })).toEqual({ kind: "drill" });
-    expect(standingAt({ id: "courtyard" }, { ...NO_NEARS, siegeGate: true, quarterGate: true })).toEqual({ kind: "siegeGate" });
   });
 
   it("opens from ?at=quarter", () => {

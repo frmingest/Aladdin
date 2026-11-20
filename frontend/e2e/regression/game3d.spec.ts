@@ -14,7 +14,6 @@ const PLACES: { at: string; title: RegExp }[] = [
   { at: "townhall", title: /Town Hall/ },
   { at: "records", title: /Hall of Records/ },
   { at: "weather", title: /Weather Tower/ },
-  { at: "siege", title: /Siege/ },
   { at: "quarter", title: /Market Quarter/ },
   { at: "mint", title: /Royal Mint/ },
 ];
@@ -94,7 +93,8 @@ test.describe("places opened by their link", () => {
 
   // The Town stood outside the gate until 2026-11-10, when the Town Hall took its place. An old link must still land
   // somewhere sensible: the courtyard, never an error (placeLink.ts: "A broken link means the courtyard").
-  for (const at of ["town", "nowhere", "holding", "library"]) {
+  // The Siege Field was a place of its own until 2026-11-20 (#466); it now stands on the meadow, so its old link opens the courtyard too.
+  for (const at of ["town", "nowhere", "holding", "library", "siege"]) {
     test(`a retired or broken link (?at=${at}) opens the courtyard`, async ({ page }) => {
       const problems = watch(page);
       await page.goto(`/game3d?at=${at}`);

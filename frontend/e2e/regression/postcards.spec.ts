@@ -17,12 +17,14 @@ import { watch } from "../support/guard";
 const OUT = path.resolve(process.cwd(), "postcards");
 
 /** The places, in the order a visitor meets them. The last one (a holding's own land) is added once the demo holdings are known. */
-const PLACES: { file: string; at: string; title: RegExp }[] = [
+const PLACES: { file: string; at: string; title: RegExp; stand?: { x: number; z: number; yaw: number } }[] = [
   { file: "01-courtyard", at: "", title: /3D courtyard/ },
   { file: "02-town-hall", at: "townhall", title: /Town Hall/ },
   { file: "03-hall-of-records", at: "records", title: /Hall of Records/ },
   { file: "04-weather-tower", at: "weather", title: /Weather Tower/ },
-  { file: "05-siege-field", at: "siege", title: /Siege/ },
+  // The Siege Field stands on the south-west meadow (#466): the card is the courtyard with the hero placed just south of its entrance,
+  // the camera turned to look up the field at the wall line (x, z and yaw are `fieldToWorld` of local (0, 22) and the plot's turn; see siegeFieldLogic.ts).
+  { file: "05-siege-field", at: "", title: /3D courtyard/, stand: { x: -41.2, z: 39.8, yaw: 2.34 } },
   { file: "06-market-quarter", at: "quarter", title: /Market Quarter/ },
 ];
 
@@ -41,12 +43,18 @@ async function postcard(page: Page, file: string) {
 test.describe("postcards", () => {
   test.use({ viewport: { width: 1280, height: 720 } });
 
-  for (const { file, at, title } of PLACES) {
+  for (const { file, at, title, stand } of PLACES) {
     test(`${file}`, async ({ page }) => {
       const problems = watch(page);
       await page.goto(at ? `/game3d?at=${at}` : "/game3d");
       await settle(page);
       await expect(page).toHaveTitle(title);
+      if (stand) {
+        // Development builds publish this (Scene.tsx). Wait out the short hover after a placement, then let the camp (it wakes within 50 units) stream in.
+        await page.evaluate(([x, z, yaw]) => (window as unknown as { __g3dPlace: (a: number, b: number, c: number) => void }).__g3dPlace(x, z, yaw), [stand.x, stand.z, stand.yaw]);
+        await page.waitForTimeout(3_500);
+        await settle(page);
+      }
       await postcard(page, file);
       await problems.assertNone();
     });

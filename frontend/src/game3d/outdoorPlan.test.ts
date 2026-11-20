@@ -8,7 +8,7 @@ import { MARKET_CENTER, MARKET_REACH } from "./marketPieces";
 import { CAMP_CENTER, CAMP_REACH } from "./campPieces";
 import { PERCH } from "./watchPlan";
 import { QUARTER_GATE } from "./quarterPlan";
-import { SIEGE_GATE } from "./siegeFieldLogic";
+import { onPlot } from "./siegeFieldLogic";
 import { DRILL_POST } from "./stormDrill";
 import { DESK, SHELF } from "./deskLogic";
 import { VAULT } from "./vaultPlan";
@@ -119,12 +119,12 @@ describe("holding spots: inside the wall, evenly round it", () => {
     }
   });
 
-  it("keeps off the market corner, the quarter gate, the drill camp and the siege gate", () => {
+  it("keeps off the market corner, the quarter gate, the drill camp and the Siege Field's plot", () => {
     for (const s of HOLDING_SPOTS) {
       expect(dist(s, MARKET_CENTER) - MARKET_REACH - PLOT_FOOTPRINT_MAX, "market").toBeGreaterThan(0);
       expect(dist(s, CAMP_CENTER) - CAMP_REACH - PLOT_FOOTPRINT_MAX, "camp").toBeGreaterThan(0);
       expect(dist(s, QUARTER_GATE) - PLOT_FOOTPRINT_MAX, "quarter gate").toBeGreaterThan(8);
-      expect(dist(s, SIEGE_GATE) - PLOT_FOOTPRINT_MAX, "siege gate").toBeGreaterThan(8);
+      expect(onPlot(s, PLOT_FOOTPRINT_MAX + 8), "siege plot").toBe(false);
       expect(dist(s, DRILL_POST) - PLOT_FOOTPRINT_MAX, "drill post").toBeGreaterThan(8);
       expect(dist(s, PERCH) - PLOT_FOOTPRINT_MAX, "perch").toBeGreaterThan(4);
     }

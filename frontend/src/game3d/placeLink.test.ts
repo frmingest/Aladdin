@@ -17,9 +17,9 @@ describe("place links", () => {
     }
   });
 
-  it("opens the Siege Field from ?at=siege", () => {
-    expect(placeFromSearch("?at=siege")).toEqual({ id: "siege" });
-    expect(searchFor({ id: "siege" })).toBe("?at=siege");
+  it("has no Siege Field place any more: ?at=siege opens the courtyard, where the field stands (#466)", () => {
+    expect(placeFromSearch("?at=siege")).toEqual({ id: "courtyard" });
+    expect(parsePlace("siege")).toEqual({ id: "courtyard" });
   });
 
   it("keeps the old library:<id> link working as that holding's land (F1)", () => {

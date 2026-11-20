@@ -12,7 +12,6 @@ import { SIGN } from "./signpostLogic";
 import { VAULT } from "./vaultPlan";
 import { REALM_POST } from "./realmPlan";
 import { DRILL_POST } from "./stormDrill";
-import { SIEGE_GATE } from "./siegeFieldLogic";
 import {
   HOURGLASS,
   HOURGLASS_LEAVE_RANGE,
@@ -56,7 +55,7 @@ describe("the hourglass stand", () => {
   });
 
   it("does not crowd another spot you can stand at (so its prompt stays the only answer)", () => {
-    const others = [SIEGE_GATE, WATCH_POST, SIGN, PERCH, REALM_POST, VAULT, DESK, DRILL_POST, ...NPCS];
+    const others = [WATCH_POST, SIGN, PERCH, REALM_POST, VAULT, DESK, DRILL_POST, ...NPCS];
     for (const o of others) expect(Math.hypot(o.x - HOURGLASS.x, o.z - HOURGLASS.z)).toBeGreaterThan(HOURGLASS_LEAVE_RANGE + 1);
   });
 });

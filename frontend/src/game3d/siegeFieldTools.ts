@@ -12,26 +12,29 @@
 import { BENCHMARK_SHORT } from "../lib/siege";
 import type { SiegeBenchmarkKey } from "../lib/types";
 import { FALL_DEFAULT, FALL_MAX, FALL_MIN, FALL_STEP, fallPercent } from "./stormDrill";
-import { FIELD_BANNERS, FIELD_WALL_Z } from "./siegeFieldLogic";
+import { FIELD_BANNERS, FIELD_WALL_Z, fieldToWorld, worldToField } from "./siegeFieldLogic";
 import { FIELD_TOOLS_WORDS as W } from "./siegeFieldToolsWordsV1";
 
 export type FieldSpotId = "winch" | "storm" | "siege" | "local" | "global";
 
 export interface FieldSpot {
   id: FieldSpotId;
-  /** Where you stand to use it. */
+  /** Where you stand to use it, in the field's own frame (the world position is `fieldToWorld` of it). */
   x: number;
   z: number;
   range: number;
   leaveRange: number;
 }
 
-/** In front of the skeleton ranks and behind the road back: a winch in the middle and a stone on each side. */
-export const WINCH = { x: 0, z: 17 } as const;
-export const STORM_STONE = { x: -6.5, z: 22 } as const;
-export const SIEGE_STONE = { x: 6.5, z: 22 } as const;
+/** In front of the skeleton ranks and short of the entrance: a winch in the middle and a stone on each side. Local to the field (see `SIEGE_PLOT`). */
+export const WINCH = { x: 0, z: 10 } as const;
+export const STORM_STONE = { x: -6.5, z: 14.5 } as const;
+export const SIEGE_STONE = { x: 6.5, z: 14.5 } as const;
 /** You use a banner from the grass in front of it. */
 const BANNER_STAND_OFF = 3.4;
+
+/** Where a spot stands on the meadow. */
+export const spotOnMeadow = (s: FieldSpot): { x: number; z: number } => fieldToWorld(s);
 
 const bannerX = (key: "west" | "east"): number => FIELD_BANNERS.find((b) => b.id === `field-banner-${key}`)?.x ?? 0;
 
@@ -54,7 +57,9 @@ export const BANNER_FOR: Readonly<Record<SiegeBenchmarkKey, "field-banner-west" 
  * Which tool you stand at, nearest first. Once at one, stay at it until you walk past its leave range, so the prompt
  * does not flicker at the edge (same rule as every other post in the game).
  */
-export function fieldSpotAt(pos: { x: number; z: number }, current: FieldSpotId | null): FieldSpotId | null {
+export function fieldSpotAt(world: { x: number; z: number }, current: FieldSpotId | null): FieldSpotId | null {
+  // The hero's place on the meadow, in the field's own frame (a turn and a shift, so distances are the same).
+  const pos = worldToField(world);
   let best: { id: FieldSpotId; d: number } | null = null;
   for (const s of FIELD_SPOTS) {
     const d = Math.hypot(s.x - pos.x, s.z - pos.z);

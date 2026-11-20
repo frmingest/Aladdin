@@ -32,13 +32,13 @@ describe("area reducer", () => {
   });
 
   it("walks fadingOut, loading, fadingIn, idle, and stays in the old place until the screen is dark", () => {
-    const out = areaReducer(INITIAL_AREA, { type: "enter", ref: { id: "siege" } });
+    const out = areaReducer(INITIAL_AREA, { type: "enter", ref: { id: "quarter" } });
     expect(out.phase).toBe("fadingOut");
     expect(out.current.id).toBe("courtyard");
-    expect(out.next?.id).toBe("siege");
+    expect(out.next?.id).toBe("quarter");
     const loading = areaReducer(out, { type: "fadeDone" });
     expect(loading.phase).toBe("loading");
-    expect(loading.current.id).toBe("siege");
+    expect(loading.current.id).toBe("quarter");
     expect(loading.next).toBeNull();
     const inn = areaReducer(loading, { type: "ready" });
     expect(inn.phase).toBe("fadingIn");
@@ -46,7 +46,7 @@ describe("area reducer", () => {
   });
 
   it("does not stack: a second enter or leave during a move is ignored", () => {
-    const out = areaReducer(INITIAL_AREA, { type: "enter", ref: { id: "siege" } });
+    const out = areaReducer(INITIAL_AREA, { type: "enter", ref: { id: "quarter" } });
     expect(areaReducer(out, { type: "enter", ref: { id: "holding", holdingId: "h1" } })).toBe(out);
     expect(areaReducer(out, { type: "leave" })).toBe(out);
     const loading = areaReducer(out, { type: "fadeDone" });
@@ -60,9 +60,9 @@ describe("area reducer", () => {
   });
 
   it("cuts straight to idle when asked (reduced motion), even in the middle of a move", () => {
-    const cut = areaReducer(INITIAL_AREA, { type: "enter", ref: { id: "siege" }, instant: true });
-    expect(cut).toEqual({ current: { id: "siege" }, from: { id: "courtyard" }, phase: "idle", next: null, failed: false });
-    const out = areaReducer(INITIAL_AREA, { type: "enter", ref: { id: "siege" } });
+    const cut = areaReducer(INITIAL_AREA, { type: "enter", ref: { id: "quarter" }, instant: true });
+    expect(cut).toEqual({ current: { id: "quarter" }, from: { id: "courtyard" }, phase: "idle", next: null, failed: false });
+    const out = areaReducer(INITIAL_AREA, { type: "enter", ref: { id: "quarter" } });
     const mid = areaReducer(out, { type: "enter", ref: { id: "records" }, instant: true });
     expect(mid.phase).toBe("idle");
     expect(mid.current.id).toBe("records");
@@ -70,13 +70,13 @@ describe("area reducer", () => {
   });
 
   it("sends you back if the new place never appears, and says so until the next move", () => {
-    const loading = areaReducer(areaReducer(INITIAL_AREA, { type: "enter", ref: { id: "siege" } }), { type: "fadeDone" });
+    const loading = areaReducer(areaReducer(INITIAL_AREA, { type: "enter", ref: { id: "quarter" } }), { type: "fadeDone" });
     const back = areaReducer(loading, { type: "fail" });
     expect(back.current.id).toBe("courtyard");
     expect(back.phase).toBe("fadingIn");
     expect(back.failed).toBe(true);
     const idle = areaReducer(back, { type: "fadeDone" });
-    expect(areaReducer(idle, { type: "enter", ref: { id: "siege" } }).failed).toBe(false);
+    expect(areaReducer(idle, { type: "enter", ref: { id: "quarter" } }).failed).toBe(false);
   });
 
   it("leaves a holding's land to the courtyard", () => {
@@ -104,7 +104,7 @@ describe("area reducer", () => {
 
 describe("hold still", () => {
   it("holds the hero (no walking, no E) in every phase but idle", () => {
-    const out = areaReducer(INITIAL_AREA, { type: "enter", ref: { id: "siege" } });
+    const out = areaReducer(INITIAL_AREA, { type: "enter", ref: { id: "quarter" } });
     const loading = areaReducer(out, { type: "fadeDone" });
     const inn = areaReducer(loading, { type: "ready" });
     expect([INITIAL_AREA, out, loading, inn, areaReducer(inn, { type: "fadeDone" })].map(isMoving)).toEqual([false, true, true, true, false]);

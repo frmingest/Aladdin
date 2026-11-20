@@ -4,7 +4,7 @@
  * Every place you can stand in (the courtyard, the Town, the Town Hall (its door is on the meadow outside the gate), the Hall of Records, the Weather Tower, the Royal Mint, a holding's land)
  * is one entry here: where you arrive, where its doors are, how it is lit and where "leave" takes you. The numbers
  * are NOT new: each entry points at the spawn, door and exit constants that already live in the room modules, so
- * adding this list moved nothing. `siege` is the Siege Field (asset plan A5) and `quarter` the Market Quarter (A6). A tower door now leads to that holding's
+ * adding this list moved nothing. `quarter` is the Market Quarter (A6). The Siege Field (asset plan A5) is no longer a place: it stands on the meadow (issue #466). A tower door now leads to that holding's
  * own land (S25); the shared library room it used to open is no longer a place.
  */
 import { HORIZON_LIMIT } from "./horizonPieces";
@@ -48,18 +48,6 @@ import {
 } from "./townPlan";
 import { exitCameraYaw, exitSpot, outdoorExit } from "./towerDoor";
 import {
-  FIELD_EXIT,
-  FIELD_EXIT_LEAVE_RANGE,
-  FIELD_EXIT_RANGE,
-  FIELD_RADIUS,
-  FIELD_SPAWN,
-  SIEGE_GATE,
-  SIEGE_GATE_LEAVE_RANGE,
-  SIEGE_GATE_RANGE,
-  SIEGE_GATE_RETURN,
-  SIEGE_GATE_RETURN_YAW,
-} from "./siegeFieldLogic";
-import {
   QUARTER_EXIT,
   QUARTER_EXIT_LEAVE_RANGE,
   QUARTER_EXIT_RANGE,
@@ -83,7 +71,6 @@ export type AreaRef =
   | { id: "records" }
   | { id: "weather" }
   | { id: "mint" }
-  | { id: "siege" }
   | { id: "quarter" }
   | { id: "holding"; holdingId: string };
 
@@ -144,7 +131,6 @@ export const AREAS: Record<AreaId, AreaDef> = {
     spawn: { x: GATE_RETURN.x, z: GATE_RETURN.z, yaw: GATE_RETURN_YAW },
     // Tower doors stand wherever the towers do (see towerDoor.ts); the gate is the one fixed door.
     doors: [
-      { id: "siege", x: SIEGE_GATE.x, z: SIEGE_GATE.z, range: SIEGE_GATE_RANGE, leaveRange: SIEGE_GATE_LEAVE_RANGE, to: "siege" },
       { id: "quarter", x: QUARTER_GATE.x, z: QUARTER_GATE.z, range: QUARTER_GATE_RANGE, leaveRange: QUARTER_GATE_LEAVE_RANGE, to: "quarter" },
       // The Town stands on the meadow just outside the gate (2026-11-10): three of its doors lead into rooms of their own.
       buildingDoor("townhall"),
@@ -190,15 +176,6 @@ export const AREAS: Record<AreaId, AreaDef> = {
     bounds: insideBox(MINT),
     spawn: { x: MINT_SPAWN.x, z: MINT_SPAWN.z, yaw: MINT_YAW },
     doors: [{ id: "door", x: MINT_DOOR.x, z: MINT_DOOR.z, range: MINT_DOOR_RANGE, leaveRange: MINT_DOOR_LEAVE_RANGE, to: "parent" }],
-  },
-  siege: {
-    id: "siege",
-    parent: "courtyard",
-    kind: "outdoor",
-    lighting: "outdoor",
-    bounds: circleBox(FIELD_RADIUS),
-    spawn: { x: FIELD_SPAWN.x, z: FIELD_SPAWN.z, yaw: FIELD_SPAWN.yaw },
-    doors: [{ id: "exit", x: FIELD_EXIT.x, z: FIELD_EXIT.z, range: FIELD_EXIT_RANGE, leaveRange: FIELD_EXIT_LEAVE_RANGE, to: "parent" }],
   },
   quarter: {
     id: "quarter",
@@ -252,7 +229,6 @@ export function returnSpot(from: AreaRef, to: AreaRef, towers: readonly Enterabl
     const out = t.outdoorDoorYaw !== undefined ? outdoorExit(t.spot, t.outdoorDoorYaw, t.radius) : exitSpot(t.spot, t.radius);
     return { x: out.x, z: out.z, yaw: exitCameraYaw(t.spot, out) };
   }
-  if (from.id === "siege" && to.id === "courtyard") return { x: SIEGE_GATE_RETURN.x, z: SIEGE_GATE_RETURN.z, yaw: SIEGE_GATE_RETURN_YAW };
   if (from.id === "quarter" && to.id === "courtyard") return { x: QUARTER_GATE_RETURN.x, z: QUARTER_GATE_RETURN.z, yaw: QUARTER_GATE_RETURN_YAW };
   if (from.id === "townhall" && to.id === "courtyard") return hallExit();
   if (from.id === "records" && to.id === "courtyard") return archiveExit();

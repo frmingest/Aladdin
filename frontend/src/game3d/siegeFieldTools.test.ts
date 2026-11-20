@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { standingAt, NO_NEARS } from "./near";
-import { FIELD_BANNERS, FIELD_EXIT, FIELD_HALF, FIELD_ROCKS, ATTACKERS, ENGINES, FIELD_TENT } from "./siegeFieldLogic";
+import { FIELD_BANNERS, FIELD_ENTRANCE, FIELD_HALF_WIDTH, FIELD_NORTH, FIELD_ROCKS, FIELD_SOUTH, ATTACKERS, ENGINES, FIELD_TENT, fieldToWorld } from "./siegeFieldLogic";
 import {
   BANNER_FOR,
   DEFAULT_TOOLS,
@@ -105,21 +105,26 @@ describe("the yardstick banners", () => {
 });
 
 describe("where the tools stand", () => {
+  /** The tools are written in the field's own frame; the watcher is asked about a place on the meadow. */
+  const at = (p: { x: number; z: number }) => fieldToWorld(p);
   it("there is a fixed set of five", () => {
     expect(FIELD_SPOTS.map((s) => s.id).sort()).toEqual(["global", "local", "siege", "storm", "winch"]);
   });
   it("each tool is picked when you stand at it, and not from across the field", () => {
     for (const s of FIELD_SPOTS) {
-      expect(fieldSpotAt({ x: s.x, z: s.z }, null)).toBe(s.id);
-      expect(fieldSpotAt({ x: s.x + s.range + 0.5, z: s.z }, null)).not.toBe(s.id);
+      expect(fieldSpotAt(at({ x: s.x, z: s.z }), null)).toBe(s.id);
+      expect(fieldSpotAt(at({ x: s.x + s.range + 0.5, z: s.z }), null)).not.toBe(s.id);
     }
+  });
+  it("is not picked from anywhere else on the meadow (the gate road, the Town, the fortress)", () => {
+    for (const p of [{ x: 0, z: 72 }, { x: 0, z: 40 }, { x: -12.5, z: 66 }, { x: 0, z: 0 }]) expect(fieldSpotAt(p, null)).toBeNull();
   });
   it("keeps the tool a little past its reach, then lets go (no flicker)", () => {
     const s = FIELD_SPOTS[0];
-    const between = { x: s.x + (s.range + s.leaveRange) / 2, z: s.z };
+    const between = at({ x: s.x + (s.range + s.leaveRange) / 2, z: s.z });
     expect(fieldSpotAt(between, null)).toBeNull();
     expect(fieldSpotAt(between, s.id)).toBe(s.id);
-    expect(fieldSpotAt({ x: s.x + s.leaveRange + 0.3, z: s.z }, s.id)).toBeNull();
+    expect(fieldSpotAt(at({ x: s.x + s.leaveRange + 0.3, z: s.z }), s.id)).toBeNull();
   });
   it("no two tools overlap, so one E means one thing", () => {
     for (const a of FIELD_SPOTS)
@@ -128,28 +133,21 @@ describe("where the tools stand", () => {
         expect(Math.hypot(a.x - b.x, a.z - b.z)).toBeGreaterThan(a.leaveRange + b.leaveRange);
       }
   });
-  it("the road back is clear of every tool, and the arrival spot too", () => {
+  it("every tool stands on the field, off the entrance posts, engines, skeletons, tent and rocks", () => {
     for (const s of FIELD_SPOTS) {
-      expect(Math.hypot(s.x - FIELD_EXIT.x, s.z - FIELD_EXIT.z)).toBeGreaterThan(s.leaveRange + 6.5);
-    }
-  });
-  it("every tool stands on the field, off the engines, skeletons, tent and rocks", () => {
-    for (const s of FIELD_SPOTS) {
-      expect(Math.abs(s.x)).toBeLessThan(FIELD_HALF - 2);
-      expect(Math.abs(s.z)).toBeLessThan(FIELD_HALF - 2);
+      expect(Math.abs(s.x)).toBeLessThan(FIELD_HALF_WIDTH - 2);
+      expect(s.z).toBeGreaterThan(FIELD_NORTH + 2);
+      expect(s.z).toBeLessThan(FIELD_SOUTH - 2);
+      for (const x of [-1.6, 1.6]) expect(Math.hypot(s.x - (FIELD_ENTRANCE.x + x), s.z - FIELD_ENTRANCE.z)).toBeGreaterThan(s.leaveRange + 1);
       for (const e of ENGINES) expect(Math.hypot(s.x - e.x, s.z - e.z)).toBeGreaterThan(e.solid + 2);
       for (const a of ATTACKERS) expect(Math.hypot(s.x - a.x, s.z - a.z)).toBeGreaterThan(2);
       expect(Math.hypot(s.x - FIELD_TENT.x, s.z - FIELD_TENT.z)).toBeGreaterThan(FIELD_TENT.solid + 2);
       for (const r of FIELD_ROCKS) expect(Math.hypot(s.x - r.x, s.z - r.z)).toBeGreaterThan(4);
     }
   });
-  it("a tool beats the road back; with none in reach the road back still works", () => {
-    expect(standingAt({ id: "siege" }, { ...NO_NEARS, fieldSpot: "storm", fieldExit: true })).toEqual({ kind: "fieldSpot", id: "storm" });
-    expect(standingAt({ id: "siege" }, { ...NO_NEARS, fieldExit: true })).toEqual({ kind: "leave" });
-    expect(standingAt({ id: "siege" }, NO_NEARS)).toEqual({ kind: "none" });
-  });
-  it("tools are only offered inside the field", () => {
-    expect(standingAt({ id: "courtyard" }, { ...NO_NEARS, fieldSpot: "winch" })).toEqual({ kind: "none" });
+  it("a tool is a courtyard spot now: E answers it, and nothing is offered with none in reach", () => {
+    expect(standingAt({ id: "courtyard" }, { ...NO_NEARS, fieldSpot: "storm" })).toEqual({ kind: "fieldSpot", id: "storm" });
+    expect(standingAt({ id: "courtyard" }, NO_NEARS)).toEqual({ kind: "none" });
   });
 });
 
