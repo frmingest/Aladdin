@@ -176,7 +176,7 @@ export function ghostsFor(fog: readonly YardFog[]): FogGhost[] {
 }
 
 // --- The fixed camp (no input) -------------------------------------------------------------------------------
-export type EngineNode = "siege_catapult" | "siege_trebuchet" | "siege_ballista" | "siege_ram" | "siege_tower";
+export type EngineNode = "siege_catapult" | "siege_ballista" | "siege_ram";
 
 export interface Engine {
   id: string;
@@ -191,13 +191,11 @@ export interface Engine {
 
 const NORTH = Math.PI;
 
-/** Five engines, one of each, in a rank south of the wall line. Fixed: nothing here depends on anything. */
+/** Three engines, one of each, in a rank south of the wall line (the trebuchet and the siege tower were dropped, issue #468). Fixed. */
 export const ENGINES: readonly Engine[] = [
-  { id: "field-catapult", model: "siege_catapult", x: -16, z: -2, yaw: NORTH, scale: 2.4, solid: 1.9 },
-  { id: "field-trebuchet", model: "siege_trebuchet", x: -8, z: 0, yaw: NORTH, scale: 2.4, solid: 2.1 },
-  { id: "field-ballista", model: "siege_ballista", x: 0, z: -2, yaw: NORTH, scale: 2.4, solid: 1.8 },
-  { id: "field-ram", model: "siege_ram", x: 8, z: 0, yaw: NORTH, scale: 2.4, solid: 2.1 },
-  { id: "field-tower", model: "siege_tower", x: 16, z: -2, yaw: NORTH, scale: 2.4, solid: 2.3 },
+  { id: "field-catapult", model: "siege_catapult", x: -12, z: -2, yaw: NORTH, scale: 2.4, solid: 1.9 },
+  { id: "field-ballista", model: "siege_ballista", x: 0, z: 0, yaw: NORTH, scale: 2.4, solid: 1.8 },
+  { id: "field-ram", model: "siege_ram", x: 12, z: -2, yaw: NORTH, scale: 2.4, solid: 2.1 },
 ];
 
 export type AttackerFile = "Skeleton_Minion" | "Skeleton_Warrior" | "Skeleton_Rogue" | "Skeleton_Mage";
