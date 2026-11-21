@@ -163,8 +163,8 @@ describe("the wall line", () => {
 
 describe("the camp is fixed: it never carries a fact", () => {
   it("has five different engines and eight skeletons, always", () => {
-    expect(ENGINES).toHaveLength(5);
-    expect(new Set(ENGINES.map((e) => e.model)).size).toBe(5);
+    expect(ENGINES).toHaveLength(3);
+    expect(new Set(ENGINES.map((e) => e.model)).size).toBe(3);
     expect(ATTACKERS).toHaveLength(8);
     expect(new Set(ATTACKERS.map((a) => a.id)).size).toBe(8);
   });

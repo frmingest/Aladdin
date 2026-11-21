@@ -408,7 +408,7 @@ function Camp({ tools, onPresets, active }: Omit<Props, "pos" | "hidden"> & { ac
 
 /**
  * The Siege Field, out on the meadow (issue #466): a wall line with one section per holding (its shape is the share that holding loses at the
- * drill's default fall), five siege engines, eight skeletons breathing in front of them and a command tent, on the open lawn south-west of
+ * drill's default fall), three siege engines, eight skeletons breathing in front of them and a command tent, on the open lawn south-west of
  * the fortress. It stands on the courtyard's own ground: no ground, no invisible walls and no way back of its own. The camp is the same
  * whatever the fall says; only the wall line carries a number. A failed model load leaves a bare but working field.
  */
