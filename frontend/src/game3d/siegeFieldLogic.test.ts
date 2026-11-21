@@ -277,14 +277,6 @@ describe("the plot on the meadow (#466)", () => {
     // ...and it is awake well before you reach the entrance.
     expect(d(fieldToWorld(FIELD_ENTRANCE))).toBeLessThan(FIELD_WAKE_RANGE - 20);
   });
-
-  it("keeps the entrance's pole on the plot, off the gap between the posts", () => {
-    expect(onPlot(fieldToWorld({ x: FIELD_ENTRANCE.x + 4.5, z: FIELD_ENTRANCE.z }), 0)).toBe(true);
-  });
-
-  it("keeps the entrance's gap open and its posts on the plot", () => {
-    for (const x of [-1.6, 1.6]) expect(onPlot(fieldToWorld({ x: FIELD_ENTRANCE.x + x, z: FIELD_ENTRANCE.z }), 0)).toBe(true);
-  });
 });
 
 describe("the Siege Field words keep version 1 as it was shown", () => {

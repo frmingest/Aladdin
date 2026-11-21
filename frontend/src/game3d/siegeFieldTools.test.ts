@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { standingAt, NO_NEARS } from "./near";
-import { FIELD_BANNERS, FIELD_ENTRANCE, FIELD_HALF_WIDTH, FIELD_NORTH, FIELD_ROCKS, FIELD_SOUTH, ATTACKERS, ENGINES, FIELD_TENT, fieldToWorld } from "./siegeFieldLogic";
+import { FIELD_BANNERS, FIELD_HALF_WIDTH, FIELD_NORTH, FIELD_ROCKS, FIELD_SOUTH, ATTACKERS, ENGINES, FIELD_TENT, fieldToWorld } from "./siegeFieldLogic";
 import {
   BANNER_FOR,
   DEFAULT_TOOLS,
@@ -133,12 +133,11 @@ describe("where the tools stand", () => {
         expect(Math.hypot(a.x - b.x, a.z - b.z)).toBeGreaterThan(a.leaveRange + b.leaveRange);
       }
   });
-  it("every tool stands on the field, off the entrance posts, engines, skeletons, tent and rocks", () => {
+  it("every tool stands on the field, off the engines, skeletons, tent and rocks", () => {
     for (const s of FIELD_SPOTS) {
       expect(Math.abs(s.x)).toBeLessThan(FIELD_HALF_WIDTH - 2);
       expect(s.z).toBeGreaterThan(FIELD_NORTH + 2);
       expect(s.z).toBeLessThan(FIELD_SOUTH - 2);
-      for (const x of [-1.6, 1.6]) expect(Math.hypot(s.x - (FIELD_ENTRANCE.x + x), s.z - FIELD_ENTRANCE.z)).toBeGreaterThan(s.leaveRange + 1);
       for (const e of ENGINES) expect(Math.hypot(s.x - e.x, s.z - e.z)).toBeGreaterThan(e.solid + 2);
       for (const a of ATTACKERS) expect(Math.hypot(s.x - a.x, s.z - a.z)).toBeGreaterThan(2);
       expect(Math.hypot(s.x - FIELD_TENT.x, s.z - FIELD_TENT.z)).toBeGreaterThan(FIELD_TENT.solid + 2);

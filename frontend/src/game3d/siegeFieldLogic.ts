@@ -40,7 +40,7 @@ export const SIEGE_PLOT = { x: -56.7, z: 54.7, yaw: Math.PI + (-46 * Math.PI) / 
 export const FIELD_HALF_WIDTH = 25;
 export const FIELD_NORTH = -17;
 export const FIELD_SOUTH = 17;
-/** The entrance: two posts and a plank across the open south end, level with the plot's edge. Furniture only; the gap between the posts is open ground. */
+/** The open south end of the field, level with the plot's edge: where you walk in. Nothing stands here (the gate was removed, issue #470). */
 export const FIELD_ENTRANCE = { x: 0, z: 15.5 } as const;
 
 export interface Pt {
