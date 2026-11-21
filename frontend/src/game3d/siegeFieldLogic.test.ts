@@ -277,7 +277,6 @@ describe("the plot on the meadow (#466)", () => {
     // ...and it is awake well before you reach the entrance.
     expect(d(fieldToWorld(FIELD_ENTRANCE))).toBeLessThan(FIELD_WAKE_RANGE - 20);
   });
-
 });
 
 describe("the Siege Field words keep version 1 as it was shown", () => {
