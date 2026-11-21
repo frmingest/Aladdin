@@ -191,7 +191,7 @@ export interface Engine {
 
 const NORTH = Math.PI;
 
-/** Three engines, one of each, in a rank south of the wall line (the trebuchet and the siege tower were dropped, issue on the board 2026-11-21). Fixed. */
+/** Three engines, one of each, in a rank south of the wall line (the trebuchet and the siege tower were dropped, issue #468). Fixed. */
 export const ENGINES: readonly Engine[] = [
   { id: "field-catapult", model: "siege_catapult", x: -12, z: -2, yaw: NORTH, scale: 2.4, solid: 1.9 },
   { id: "field-ballista", model: "siege_ballista", x: 0, z: 0, yaw: NORTH, scale: 2.4, solid: 1.8 },
