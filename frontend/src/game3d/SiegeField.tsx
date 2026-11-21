@@ -40,7 +40,6 @@ import { YARD_FAILED_TAG, yardFogTag } from "./siegeYardWordsV3";
 import { useSiegeYard } from "./useSiegeYard";
 import type { YardView } from "./siegeYard";
 import WorldLabel from "./WorldLabel";
-import SiegeEntrance from "./SiegeGate";
 import WorldSign from "./WorldSign";
 import { chalkFor, signHeight } from "./signTexture";
 
@@ -351,7 +350,7 @@ interface Props {
   onPresets: (p: { toStorm: number | null; toSiege: number | null; min: number; max: number }) => void;
   /** The hero's place on the meadow: the field reads the book only once she walks up to it. */
   pos: MutableRefObject<{ x: number; z: number }>;
-  /** True while the Hourglass shows a past day: the camp reads today's book, so it is not drawn (the entrance stays). */
+  /** True while the Hourglass shows a past day: the camp reads today's book, so it is not drawn. */
   hidden?: boolean;
 }
 
@@ -416,7 +415,6 @@ export default function SiegeField({ tools, onPresets, pos, hidden = false }: Pr
   const { awake, near, active } = useAwake(pos);
   return (
     <group position={[SIEGE_PLOT.x, 0, SIEGE_PLOT.z]} rotation={[0, SIEGE_PLOT.yaw, 0]}>
-      <SiegeEntrance />
       {awake && !hidden && (
         <group visible={near}>
           <Camp tools={tools} onPresets={onPresets} active={active} />
