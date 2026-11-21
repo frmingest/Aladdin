@@ -5,9 +5,9 @@ import { FIELD_ENTRANCE } from "./siegeFieldLogic";
 
 /**
  * The entrance to the Siege Field (issue #466): two timber posts, a lintel and a teal pennant across the open south end of the field. The name
- * plank was dropped on 2026-11-21 at Faiz's ask; the gate is bare. It stands in the field's own frame, so it turns with the plot and its plank faces the fortress. Plain code-built shapes
+ * plank was dropped on 2026-11-21 at Faiz's ask; the gate is bare. It stands in the field's own frame, so it turns with the plot. Plain code-built shapes
  * with the usual ink outline. Furniture only: it carries no fact, has no prompt and does not move. The gap between the posts is open ground, so it
- * never blocks a path. It is always drawn (the camp behind it wakes when you come near), so the field can be seen and found from the road.
+ * never blocks a path. It is always drawn (the camp behind it wakes when you come near), so the field can be seen from the road.
  */
 export default function SiegeEntrance() {
   return (

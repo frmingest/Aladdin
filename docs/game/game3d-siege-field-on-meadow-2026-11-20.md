@@ -1,5 +1,7 @@
 # 3D: the Siege Field moves out onto the meadow, as part of the main map (2026-11-20)
 
+> **Trimmed 2026-11-21 (issue #468):** the entrance has no "Siege Field" plank any more, and the camp has three engines (catapult, ballista, ram; the trebuchet and siege tower are gone). Lines below that mention the plank describe the field before that change. With the plank gone, the open finding "no text route to the field" is a little sharper: from the road the field is known by its gate and wall line only.
+
 Issue #466. **Status: written on `feature/game3d-siege-on-meadow`, off `main` at `72cabe5`. `tsc`, lint (0 errors, the same 3 warnings as `main`), the full frontend test run (240 files, 2235 tests) and the build pass. Seen once in a headless browser (software WebGL, no backend), no fps, not deployed.** Earlier plans: [gate moved outside (#460)](game3d-siege-gate-outside-2026-11-19.md), [signpost (#462)](game3d-siege-gate-signpost-2026-11-19.md), [A5 Siege Field](game3d-a5-siege-field-2026-11-04.md), [A8 tools](game3d-a8-siege-field-tools-2026-11-05.md).
 
 ## What Faiz asked for (2026-11-20)

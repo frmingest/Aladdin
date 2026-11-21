@@ -1,5 +1,7 @@
 # 3D asset plan A5: the Siege Field (2026-11-04)
 
+> **Trimmed 2026-11-21 (issue #468):** the camp now has three engines (catapult, ballista, ram); the trebuchet and siege tower were dropped, and the entrance lost its name plank. See [the meadow move](game3d-siege-field-on-meadow-2026-11-20.md).
+
 > **Gate moved 2026-11-19 (issue #460):** the gate described below as standing in the courtyard south of the drill post now stands outside the wall, on the west lawn beside the Town. See [the gate-outside change](game3d-siege-gate-outside-2026-11-19.md).
 
 **Status: written and tested on `feature/game3d-a5-siege-field`, off `main` at `87a49d1` (A4 merged as #295). `tsc`, lint (0 errors), the full test run (191 files, 1704 tests) and the build pass. Never seen in a browser, no fps, not merged, not deployed.** Plan: [asset sprint plan](game3d-asset-sprint-plan-2026-11-04.md), earlier plan: [discovery plan](game3d-discovery-sprint-plan-2026-11-02.md) (S28).
