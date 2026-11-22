@@ -55,7 +55,7 @@ export const GUIDE_STEP_GOAL: Record<GuideStepId, string> = {
   meet: "Say hello to Barren and Marlie.",
   sal: "Go to Sal's counter and say hello.",
   stall: "Pick a company off Sal's shelves. It gets a stall.",
-  weather: "Calm, stormy, or not known yet? Read the plate on the pole by the keep.",
+  weather: "Calm skies, storm clouds, or not surveyed? Read the plate on the pole by the keep.",
   why: "Write one why at the desk, and what proves you wrong.",
 };
 
@@ -68,7 +68,7 @@ export function guideWhere(step: GuideStepId, taken: boolean): string {
 /** What an advisor says while `step` is the open Guide step. `metOther` is true when the other advisor was already met. */
 export function guideLines(npc: NpcId, step: GuideStepId, metOther: boolean): string[] | null {
   if (step === "weather" && npc === "partner") {
-    return ["Know the weather before you build.", "The pole by the keep says calm, stormy, or not surveyed. Go and read it.", "Not surveyed is not calm."];
+    return ["Know the weather before you build.", "The pole by the keep names the sky: calm, storm clouds, siege, or not surveyed. Go and read it.", "Not surveyed is not calm."];
   }
   return guideLinesV1(npc, step, metOther);
 }
