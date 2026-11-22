@@ -5,6 +5,7 @@ import Toolbar from "./Toolbar";
 import { autoOpenQuests } from "./hudPanels";
 import { roundChipCount } from "./round";
 import { KEY_ACTIONS } from "./movement";
+import { guideChipLabel } from "./guideWordsV2";
 
 const memory = () => {
   const m = new Map<string, string>();
@@ -105,6 +106,17 @@ describe("the round on the Quests chip", () => {
     expect(roundChipCount(undefined)).toBe(0);
     expect(roundChipCount({ open: 0, pending: false })).toBe(0);
     expect(roundChipCount({ open: 5, pending: false })).toBe(5);
+  });
+  it("while First Steps is open the chip counts its steps, over the round (#478)", () => {
+    const h = html({ roundOpen: 5, questsWaiting: 2, guideLeft: 4, guideLabel: guideChipLabel(4) });
+    expect(h).toContain(">4<");
+    expect(h).not.toContain(">5<");
+    expect(h).toContain('aria-label="Quests, 4 first steps to go"');
+    expect(guideChipLabel(1)).toBe("Quests, 1 first step to go");
+  });
+  it("with First Steps done the chip goes back to the round", () => {
+    const h = html({ roundOpen: 5, guideLeft: 0, guideLabel: guideChipLabel(0) });
+    expect(h).toContain('aria-label="Quests, 5 stops open"');
   });
 });
 

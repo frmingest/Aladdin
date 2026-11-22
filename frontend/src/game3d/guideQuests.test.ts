@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { BOOTHS } from "./boothPlan";
 import { DESK } from "./deskLogic";
 import { NPCS } from "./npcs";
+import { REALM_POST } from "./realmPlan";
 import {
   EMPTY_GUIDE,
   GUIDE_STEPS,
@@ -11,6 +12,9 @@ import {
   guideStatus,
   loadGuide,
   markSalVisited,
+  guideLeft,
+  guideTicked,
+  markSkyRead,
   markWeatherVisited,
   onGuideTalk,
   replayGuide,
@@ -143,13 +147,15 @@ describe("marks", () => {
     expect(guideMarks(guideStatus(metOther, NONE), metOther).map((m) => m.key)).toEqual(["head-oracle"]);
   });
 
-  it("lights the tower door and the desk only after the step is taken", () => {
+  it("lights the pole by the keep and the desk only after the step is taken", () => {
     const base = markSalVisited(talk(talk(EMPTY_GUIDE, NONE, "oracle"), NONE, "partner"));
     const f = { stalls: 1, whys: 0 };
     expect(guideMarks(guideStatus(base, f), base).map((m) => m.key)).toEqual(["head-partner"]);
     const taken = talk(base, f, "partner");
-    expect(guideMarks(guideStatus(taken, f), taken).map((m) => m.key)).toEqual(["weather"]);
-    const atWhy = talk(markWeatherVisited(taken), f, "partner");
+    expect(guideMarks(guideStatus(taken, f), taken).map((m) => m.key)).toEqual(["sky"]);
+    const sky = guideMarks(guideStatus(taken, f), taken)[0];
+    expect([sky.x, sky.z]).toEqual([REALM_POST.x, REALM_POST.z]);
+    const atWhy = talk(markSkyRead(taken), f, "partner");
     expect(guideMarks(guideStatus(atWhy, f), atWhy).map((m) => m.key)).toEqual(["head-oracle"]);
     const whyTaken = talk(atWhy, f, "oracle");
     expect(guideMarks(guideStatus(whyTaken, f), whyTaken).map((m) => m.key)).toEqual(["desk"]);
@@ -180,5 +186,48 @@ describe("marks", () => {
 
   it("has exactly five steps", () => {
     expect(GUIDE_STEPS).toHaveLength(5);
+  });
+});
+
+describe("step 4 reads the sky (#478)", () => {
+  const before4: GuideSaved = { ...EMPTY_GUIDE, met: ["oracle", "partner"], salVisited: true };
+  const f = { stalls: 1, whys: 0 };
+
+  it("is done by reading the pole by the keep, not by walking into the Weather Tower", () => {
+    expect(guideStatus(before4, f).current).toBe("weather");
+    expect(guideStatus(markSkyRead(before4), f).current).toBe("why");
+  });
+
+  it("an old save that already went into the Weather Tower keeps its tick", () => {
+    expect(guideStatus(markWeatherVisited(before4), f).done.weather).toBe(true);
+  });
+
+  it("remembers the sky read in this browser, and an old save without it reads as not yet", () => {
+    const store = new Map<string, string>();
+    const m = { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => void store.set(k, v) };
+    saveGuide(m, markSkyRead(before4));
+    expect(loadGuide(m).skyRead).toBe(true);
+    store.set(GUIDE_STORAGE_KEY, JSON.stringify({ met: [], taken: [], salVisited: true, weatherVisited: false }));
+    expect(loadGuide(m).skyRead).toBe(false);
+  });
+});
+
+describe("counting what the panel shows (#478)", () => {
+  it("counts every tick, not only a run from step 1", () => {
+    // The live case: step 3 ticked (a stall exists) while steps 1 and 2 are open. v1 said "0 of 5".
+    const st = guideStatus(EMPTY_GUIDE, { stalls: 2, whys: 0 });
+    expect(st.level).toBe(0);
+    // The next step is still the first one not done, never the ticked one.
+    expect(st.current).toBe("meet");
+    expect(guideTicked(st)).toBe(1);
+    expect(guideLeft(st)).toBe(4);
+  });
+
+  it("has nothing left once all five are done", () => {
+    const all: GuideSaved = { ...EMPTY_GUIDE, met: ["oracle", "partner"], salVisited: true, skyRead: true };
+    const st = guideStatus(all, { stalls: 1, whys: 1 });
+    expect(st.current).toBeNull();
+    expect(guideTicked(st)).toBe(5);
+    expect(guideLeft(st)).toBe(0);
   });
 });

@@ -1,7 +1,7 @@
 # The Morning Round: plan, and step 1 as built (2026-11-15)
 
 Issue #412, item 2 of 4 from the 3D review of 2026-11-14.
-Status: **steps 1 and 2 merged (PR #416, PR #420), not deployed (not checked). Step 3 (today's round) in PR #424 and step 4 (sample round) in PR #425, both open for review, not merged, not deployed.**
+Status: **steps 1 and 2 merged (PR #416, PR #420), not deployed (not checked). Step 3 (today's round, PR #424) and step 4 (sample round, PR #425) merged (3ac62da, 500981e); deployment not checked.**
 
 ## What this is for
 
@@ -18,8 +18,8 @@ it never rewards a trade.
 | --- | --- | --- |
 | 1. A place for everyone | Every holding has a building and a land to walk into. The yard held 8; it now holds 18 | Built, merged in #416 |
 | 2. The marks | A raven circling, smoke, a bell, a lit stall: one mark per kind of change, standing where the change is | Merged in #420. Spec: `docs/game/game3d-morning-round-marks-spec-2026-11-15.md` |
-| 3. Today's round | A short list in the quest log, one line per stop, each ticked off when you have dealt with it; "since last visit" is remembered; a quiet day says "All quiet" | PR #424 open |
-| 4. The sample round | The sample fortress shows a made-up round, so the feature can be seen without real data | PR #425 open (stacked on #424) |
+| 3. Today's round | A short list in the quest log, one line per stop, each ticked off when you have dealt with it; "since last visit" is remembered; a quiet day says "All quiet" | Merged in #424 |
+| 4. The sample round | The sample fortress shows a made-up round, so the feature can be seen without real data | Merged in #425 |
 
 ## Step 1 as built: no more cap of 8
 
@@ -79,7 +79,7 @@ The lit stall says "In your range", which is the number you wrote down yourself.
 - A stop is ticked when you have done the thing at the spot: read the raven, pressed "I have looked" on the wire,
   opened the holding's thesis, looked at the stall. Walking past does not tick it.
 - Quiet day: "All quiet since Tuesday. Nothing to do." and no marks.
-- Taps: from a cold load the round is already on screen (0 taps). One stop is walk there and press E (1 tap).
+- Taps: from a cold load the round is already on screen (0 taps), except with real data while First Steps is open: then the round sits under a folded "More quests" (1 tap) (#478). One stop is walk there and press E (1 tap).
 
 ### "Since last visit"
 
