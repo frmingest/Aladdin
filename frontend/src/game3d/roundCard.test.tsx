@@ -30,6 +30,8 @@ describe("Today's round in the quest log", () => {
     const html = render({ round: round(), guide: { status: { level: 0, done, current: "meet" }, saved: { met: [], taken: [], salVisited: false, weatherVisited: false, baseline: null }, onReplay: () => {} } });
     expect(html.indexOf("First Steps")).toBeLessThan(html.indexOf("<details"));
     expect(html.indexOf("<details")).toBeLessThan(html.indexOf("Today&#x27;s round"));
+    // The fold says the round is in there, with its open count.
+    expect(html).toContain("More quests · 1 stop open");
   });
   it("in the sample fortress the made-up round stays on top, First Steps next, the long quests folded", () => {
     const done = { meet: true, sal: true, stall: false, weather: false, why: false };

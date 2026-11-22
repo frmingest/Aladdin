@@ -989,8 +989,10 @@ export default function Game3DPage() {
       prompt: () => (realmOpen || !viewState ? null : REALM_PROMPT),
       press: () => {
         if (!viewState) return;
-        // First Steps step 4 (#478): reading the pole by the keep is reading the sky.
-        if (!realmOpen) setGuideSaved(markSkyRead);
+        // First Steps step 4 (#478): reading the pole by the keep is reading the sky. Only while step 4 is the open step, so
+        // the tick never lands out of order before the advisors have sent you.
+        const { saved, facts } = guideNow.current;
+        if (!realmOpen && guideStatus(saved, facts).current === "weather") setGuideSaved(markSkyRead);
         openSpotPanel("realm");
       },
     },

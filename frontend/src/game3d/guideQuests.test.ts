@@ -217,6 +217,8 @@ describe("counting what the panel shows (#478)", () => {
     // The live case: step 3 ticked (a stall exists) while steps 1 and 2 are open. v1 said "0 of 5".
     const st = guideStatus(EMPTY_GUIDE, { stalls: 2, whys: 0 });
     expect(st.level).toBe(0);
+    // The next step is still the first one not done, never the ticked one.
+    expect(st.current).toBe("meet");
     expect(guideTicked(st)).toBe(1);
     expect(guideLeft(st)).toBe(4);
   });

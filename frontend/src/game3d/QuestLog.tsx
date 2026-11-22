@@ -31,7 +31,6 @@ import type { GuideSaved, GuideStatus } from "./guideQuests";
 import {
   GUIDE_ALL_DONE,
   GUIDE_DONE_PILL,
-  GUIDE_MORE,
   GUIDE_REPLAY,
   GUIDE_SAMPLE,
   GUIDE_STEP_GOAL,
@@ -39,6 +38,7 @@ import {
   GUIDE_TAG,
   GUIDE_TITLE_DONE,
   GUIDE_TODO_PILL,
+  guideMoreLabel,
   guideTitle,
   guideWhere,
 } from "./guideWordsV2";
@@ -259,8 +259,15 @@ export default function QuestLog({
         <>
           {!guideAlone && roundCard}
           {guideCard}
-          <details className="g3d-card g3d-more">
-            <summary>{GUIDE_MORE}</summary>
+          <details
+            className="g3d-card g3d-more"
+            // The panel scrolls; bring what just unfolded into view instead of leaving it below the edge. No smooth scroll, so
+            // reduced motion needs nothing.
+            onToggle={(e) => {
+              if (e.currentTarget.open) e.currentTarget.scrollIntoView({ block: "nearest" });
+            }}
+          >
+            <summary>{guideMoreLabel(guideAlone && round && !round.pending ? round.open : 0)}</summary>
             {guideAlone && roundCard}
             {restCards}
           </details>

@@ -208,7 +208,7 @@ export function guideMarks(status: GuideStatus, saved: GuideSaved): GuideMark[] 
       return [overSal()];
     case "weather":
       // Over the banner pole by the keep, where the weather plate hangs.
-      return taken ? [{ key: "sky", x: REALM_POST.x, y: 5.2, z: REALM_POST.z, size: 1.2 }] : [overNpc("partner")];
+      return taken ? [{ key: "sky", x: REALM_POST.x, y: 5.4, z: REALM_POST.z, size: 1.6 }] : [overNpc("partner")];
     case "why":
       return taken ? [{ key: "desk", x: DESK.x, y: 2.7, z: DESK.z, size: 1 }] : [overNpc("oracle")];
   }

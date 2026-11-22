@@ -76,6 +76,10 @@ describe("dialogue v8 (guide words v2)", () => {
 });
 
 describe("guide words v2 (#478)", () => {
+  it("step 4 names the unknown sky too, so not surveyed is never read as calm", () => {
+    expect(GUIDE_STEP_GOAL.weather).toMatch(/not known/);
+    expect((guideLines("partner", "weather", true) ?? []).join(" ")).toMatch(/Not surveyed is not calm/);
+  });
   it("the title counts the ticks and names the one next step", () => {
     expect(guideTitle(1, "meet")).toBe("1 of 5 done. Next: Meet the advisors");
     expect(GUIDE_STEP_TITLE.weather).toBe("Read the sky");
