@@ -1,4 +1,5 @@
 import { Fragment, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { LoadProgress, SceneReady } from "./sceneLoad";
 import type { MutableRefObject } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Physics } from "@react-three/rapier";
@@ -464,7 +465,10 @@ export default function Scene({ world, onLockChange, onStats, statsDetail = fals
       )}
       <Suspense fallback={null}>
         <World world={world} onLockChange={onLockChange} area={area} room={room} hold={hold} look={look} onFieldPresets={onFieldPresets} />
+        {/* Mounted only when everything above has loaded; hidden again (and so "not ready") while a place re-loads. */}
+        <SceneReady />
       </Suspense>
+      <LoadProgress />
       <PerfProbe onStats={onStats} detail={statsDetail} />
     </Canvas>
   );

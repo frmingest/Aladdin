@@ -93,6 +93,34 @@ test.describe("courtyard", () => {
   });
 });
 
+test.describe("loading line (#479)", () => {
+  // Hold every model file back, so the world cannot finish drawing, then let them through. The line must show while
+  // held and be gone once everything is drawn, on a cold load and on a place link.
+  for (const { url, line } of [
+    { url: "/game3d", line: "Raising the walls…" },
+    { url: "/game3d?at=weather", line: "Climbing the Weather Tower…" },
+  ]) {
+    test(`${url}: says what is loading, then gets out of the way`, async ({ page }) => {
+      const problems = watch(page);
+      let release: () => void = () => {};
+      const gate = new Promise<void>((r) => (release = r));
+      await page.route("**/models/**", async (route) => {
+        await gate;
+        await route.continue();
+      });
+      await page.goto(url);
+      const status = page.getByRole("status").filter({ hasText: line });
+      // Wait for the canvas first, so the line is checked after the code has loaded: what keeps it up now is the held
+      // models, not the page's own chunk (otherwise this could pass without the scene ever reporting).
+      await expect(page.locator("canvas")).toHaveCount(1, { timeout: 60_000 });
+      await expect(status).toBeVisible();
+      release();
+      await expect(status).toHaveCount(0, { timeout: 60_000 });
+      await problems.assertNone();
+    });
+  }
+});
+
 test.describe("places opened by their link", () => {
   for (const { at, title } of PLACES) {
     test(`${at}: opens, sets the tab title and B walks back to the courtyard`, async ({ page }) => {

@@ -1064,3 +1064,5 @@
   .g3d-veil { transition-duration: 0ms !important; }
   .g3d-plate { animation: none; }
 }
+/* The loading line (#479): a small parchment card over the scene while it is drawn. No animation, on purpose. */
+.g3d-loading { min-width: 14rem; max-width: min(22rem, 90%); text-align: center; }
