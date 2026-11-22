@@ -1,8 +1,8 @@
 # 3D starter level in a practice fortress: spec (2026-11-22)
 
-**Status: Spec, not built. Issue #477 (this spec: #489; open questions: #490).** No code is changed by this file. Input: the review `docs/game/game3d-review-starter-level-2026-11-22.md` (#475).
+**Status: Spec, not built. Issue #477 (this spec: #489; questions: #490, closed 2026-11-22 with Faiz's answers in section 14; question 8 open in #492).** No code is changed by this file. Input: the review `docs/game/game3d-review-starter-level-2026-11-22.md` (#475).
 
-**Faiz's decisions this spec follows (#476, answered 2026-11-22; recorded in PR #488, not merged when this was written):**
+**Faiz's decisions this spec follows (#476, answered 2026-11-22; recorded in PR #488, merged 2026-11-22):**
 
 1. **Reward knowing, not acting: yes.** A visible reward for *understanding* is allowed: a page unlocked in the Book of Wisdom, a banner on the practice tower, a short cheer, when the player gets an idea right in practice. Earned once per idea, never repeats, never counts up, no score. Still banned: XP or points of any kind, streaks, daily pull, timers, leaderboards, any reward for buying, selling or trading.
 2. **Practice fortress: yes.** One made-up company with made-up numbers. Labelled practice everywhere it shows. Never writes anything to the server. Never mixed with or shown as real data. The real fortress stays real-data only.
@@ -42,9 +42,9 @@ Every claim here was read in the file named. Anything not read is in "Not checke
 
 ## 1. The practice company
 
-**Name: Pip's Lemonade.** A lemonade stand by the park. Made up; no real brand meant. (Open: a quick name check before ship, see section 15.)
+**Name: Pip's Lemonade.** A lemonade stand by the park. Made up; no real brand meant. (Open: a name check before ship, #499.)
 
-**Beat 2's pick: recommend no real companies in the starter at all.** Sal's practice counter holds Pip's Lemonade only.
+**Beat 2's pick: no real companies in the starter at all** (Faiz, #490 question 1). Sal's practice counter holds Pip's Lemonade only.
 
 - Why: decision 2 says made-up numbers never sit on real data. A familiar real name (a fizzy drink, a game console) next to made-up coins would teach a child a false fact about a real company, and it borrows a real brand. Six familiar picks with *no* numbers would not work either: beats 3 to 6 need numbers.
 - The cost: no "pick a company you know" moment. The choice in beat 2 is thin (one card). That is fine for a first run: the choices that matter are in beats 3 to 7.
@@ -72,8 +72,12 @@ Every claim here was read in the file named. Anything not read is in "Not checke
 | Storm | Every price falls 30% | | 6 |
 | Price after the storm | 4.9 coins | still below the low guess: gauge stays "Lots of room" | 6 |
 | Business after the storm | Still 10 coins a year, still owes 5, recipe still secret | walls granite, moat narrow, worth unchanged | 6 |
+| Second storm ("Play again" only) | The fridge broke. Pip's borrowed 10 coins for a new one. Every price falls 30%. | | 6b |
+| Owes, after the second storm | 15 coins | net debt 15 / earnings 10 = 1.5x, above 1x and at or under 2.5x: **brick** (v1). Interest 1.5 a year, cover above 3x: no tier down | 6b |
+| Worth of one piece after the second storm | low 7, middle 9, high 11 coins | the 10 new coins owed come off the stand's worth: 1 coin per piece | 6b |
+| Price after the second storm | 4.9 coins | still below the new low guess (7): gauge stays "Lots of room" | 6b |
 
-A unit test pins that the three tiers (granite, narrow, bargain) follow from these numbers under the v1 thresholds (1x / 2.5x / 4x, cover 3x; bear / base / bull), with a comment naming `backend/app/domain/game_mapping/v1.py`, so the practice can never teach a mapping the real fortress does not use. No other module carries a practice number.
+A unit test pins that the tiers (granite, narrow, bargain; brick and bargain after the second storm) follow from these numbers under the v1 thresholds (1x / 2.5x / 4x, cover 3x; bear / base / bull), with a comment naming `backend/app/domain/game_mapping/v1.py`, so the practice can never teach a mapping the real fortress does not use. No other module carries a practice number.
 
 ## 2. Where it happens: the practice yard
 
@@ -126,7 +130,7 @@ From a cold load to the end: **7 taps plus the final choice** on the common path
 - **Taught:** Barren: "Welcome! Each tower is a business you own a piece of." Marlie: "This is practice. Made-up shop, made-up coins."
 - **Made-up fact shown:** none yet; the yard says it is practice.
 - **Feedback:** the two lines show once in the arrival plate, no button to close; the plate goes when Sal's card opens, so the two are never on screen together. Goal strip. Diamond.
-- **Empty / unknown / wrong:** loading shows the loading line (#479) with a yard line ("Setting up the practice yard..."), a new loading words version. Storage blocked: the starter still plays; the rules foldout says "This browser won't keep your book." No WebGL: today's "can't open here" card; it points to the flat fortress, which is real data (open question 12).
+- **Empty / unknown / wrong:** loading shows the loading line (#479) with a yard line ("Setting up the practice yard..."), a new loading words version. Storage blocked: the starter still plays; the rules foldout says "This browser won't keep your book." No WebGL: today's "can't open here" card; it points to the flat fortress, which is real data (Faiz, #490 question 12: kept as is, no plain-text starter).
 - **Taps:** 0 from a cold load (keyboard and touch).
 - **Rules kept:** practice labelled in the world and the HUD; no score; no buy or sell wording; nothing fetched is shown in the yard.
 - **Cheapest prototype:** the yard as a holding-land layout with a hand-built `RoomView`-like object from `practiceCompanyV1.ts`, static, no animation.
@@ -210,6 +214,21 @@ From a cold load to the end: **7 taps plus the final choice** on the common path
 - **Rules kept:** no buy or sell wording; the price after the storm is exact (4.9), not rounded to flatter; the gauge still says "Lots of room" because that is what the rule gives, with no comment on it.
 - **Cheapest prototype:** price plate change and a grey sky tint, no shake.
 
+### Beat 6b: The second storm ("Play again" only)
+
+Faiz said yes to #490 question 9 (2026-11-22). To be built in build step 4 (#496). Without it, every storm the player ever sees says "only the price", which would teach that a price drop never matters.
+
+- **When:** on every run after the first ("Play again"), beat 6 is this storm instead. The first run always gets beat 6 as written, so the first lesson is the clean one.
+- **World:** the same order as beat 6 (2 seconds, "Storm coming", clouds, the price drops "7 coins -> 4.9 coins"), plus one change in the business: the Owes card flips from "Owes 5" to "Owes 15" with a plate "The fridge broke. Pip's borrowed 10 coins." Then one wall section cracks and the walls turn from granite to brick (the real v1 rule: 15 / 10 = 1.5x). Reduced motion: no crack animation, the brick look and the word "Brick walls" appear at once. The moat stays narrow (the recipe is still secret). The price post gauge stays "Lots of room" (price 4.9 below the new low guess 7).
+- **Card:** the same three choices as beat 6: "Only the price", "The lemonade got worse", "It owes more now". Same words on purpose: the player has to look, not remember.
+- **Getting it right:** "It owes more now".
+- **Result line (right):** "It owes more now. The walls cracked." Marlie: "If it owed more, that would be news. It does." (Marlie's line from beat 6, now true.)
+- **Wrong picks:** "Only the price": the Owes card gets the "Look here" tag: "Owes 15 now. Look again." "The lemonade got worse": the Year 3 card gets the tag: "Still 10 coins a year. Look again."
+- **Book page:** none new. The Storms page holds both halves from its first unlock (section 4). A right answer shows its result line only; nothing unlocks, nothing counts, no cheer.
+- **Rules kept:** no buy or sell wording (banned-word test covers it); the change is shown with its number, not hinted; brick comes from the same pinned rule as granite.
+- **On screen at once:** about 30 words with the card and one "Look here" tag open (card 17, goal strip, practice tag, tag, "Brick walls"), under the 35 cap; the word-cap test covers 6b's strings.
+- **Taps:** 1, as beat 6.
+
 ### Beat 7: Pin your why
 
 - **Player verb:** write (by picking fill-in chips).
@@ -251,6 +270,7 @@ Plain view (exact, neutral, section 9): "Practice yard, plain".
 - **Where it lives:** in the yard, on a reading lectern by the gate (E or tap). Outside the yard, as the first card of the Quests panel (Q), with no new key and no new toolbar chip, so no control appears twice.
 - **An unlocked page shows:** a small drawing of the look it taught (granite wall, filled moat, tipped scale, cloud over a steady tower, pinned sheet), the one sentence, the Pip's fact that taught it ("Pip's owes 5 and made 10 last year"), the grown-up word ("Grown-ups call this a margin of safety"; "...net debt"; "...a moat"; the Write it down page has no grown-up word, because the game word "why" is the one used everywhere), and one line on where to see it in the real fortress ("Press T: each tower says its walls").
 - **A locked page shows:** its title on a fogged page with a closed clasp drawn on it, and "Not learned yet"; an unlocked page shows its drawing and a ribbon. Shape and words, not fog alone. No "3 of 5", no bar, no "pages left", no number anywhere in the Book; the five titles are visible, and nothing more is added to them. A unit test checks that no Book string matches a count pattern (`\d+ of \d+`, `\d+/\d+`). Grown-up words such as "net debt" and "margin of safety" appear only on Book pages and in the Plain view, never on a card face (tested).
+- **The Storms page carries two lines:** "The price fell. The business did not." and "If the business changes, that is news." The second line is the half beat 6b shows in the world, so the page never teaches "price drops never matter" even to a player who never plays again.
 - **The unlock moment:** a plate "New page: Walls" slides in once beside the card. With sound on, one soft page-turn. Not repeated, ever, for that page in this browser.
 - **Where state is stored:** this browser only, key `aladdin.game3d.starter.v1`: `{ status: "new" | "veteran", pages: PageId[], finished: boolean, skipped: boolean, run: { beat, picks } }`. `pages` only ever gains an id it does not hold. Nothing on the server. A damaged or missing value reads as empty, like `loadGuide` does today. Storage blocked: pages live in memory for the visit, and the Book says "This browser won't keep your book."
 - **Play again without farming:** the run resets (pad empty, fog back, sky sunny); pages stay. A right answer still changes the world and shows its result line, but a page you already hold gives no unlock plate, no cheer and no banner, only "Already in your book." There is nothing left to gain, so nothing to farm.
@@ -297,7 +317,7 @@ The yard stays open after the end: "Where to?" lists "Practice yard", and `?at=p
 |---|---|
 | Royal Mint, Weather Tower, Town Hall doors | The buildings stay drawn (no layout or draw-call change). Their doors give no E prompt and show a small plate "After practice". |
 | Town Hall boards' pages and the Mint in "Where to?" | Not listed. "Practice yard" is listed first. |
-| Standing | Its Quests card is not shown. The Standing torches in the world stay as drawn (they carry a real fact; open question 10). |
+| Standing | Its Quests card is not shown. The Standing torches in the world stay as drawn (they carry a real fact; Faiz, #490 question 10). |
 | Today's round | Its Quests card and chip count are not shown. |
 
 **Nothing is deleted:** no place, file, link, save or test is removed. The gate is one pure function with tests; turning it off is one line.
@@ -330,7 +350,7 @@ The yard stays open after the end: "Where to?" lists "Practice yard", and `?at=p
     - Draw calls: not measured. Expected near a holding land's count plus the scale, cards and banner. A headless run cannot measure it; "open `/game3d?at=practice`, press P" goes in each PR's "After deploy (Faiz)".
     - New GLB (if the scale comes from a pack): licence check and `scripts/glb-colour-audit.mjs`, result in the PR.
 
-## 9. Invented names (proposal, Faiz picks)
+## 9. Invented names (accepted as proposed, Faiz, #490 question 14)
 
 From the review's item 7. "Keep and teach" means the starter teaches it by touch. "Hide until after" means a newcomer does not meet it until the starter is done or skipped. "Retire" means a new words version stops showing it, with the old version kept.
 
@@ -389,12 +409,12 @@ All shown wording and game rules go in new versioned files; no file already show
 
 Each PR: `tsc --noEmit`, `npm run lint`, `npm test`, `npm run build`; reviewers `playtest-qa`, `game-ux-designer`, `game-designer`, `game-feel-engineer`, `docs-sync-checker`, `board-steward`; taps measured from a cold load in a real browser by the session that builds it; screenshots desktop and phone, marked "headless only" if that is all it was; draw calls "not measured" plus the press-P line for Faiz.
 
-1. **The yard, beats 1 and 2, the Plain view, the no-write test.** `practiceCompanyV1.ts` with the tier test, `starterPlanV1.ts`, `starterWordsV1.ts` (beats 1 and 2), area `practice`, its spots, `?at=practice`, practice counter card, tower rises in fog, practice tag, "Practice yard, plain". Reached by `?at=practice` only (no newcomer gate yet).
-2. **Beats 3 and 4 and the Book of Wisdom.** Fact cards, granite walls, moat fill, the Book (lectern and Quests card), unlock-once.
-3. **Beats 5 and 6.** Gauge first, then the scale prop; the storm.
-4. **Beats 7 and 8 and the ending.** Chips, pinned sheet and flag, banner, cheer, "Bring your real fortress", "Play again", `dialogueV9.ts`.
-5. **The newcomer gate and First Steps absorbed.** `starterGateV1.ts`, cold load into the yard, hidden doors and lists, "Skip practice", `guideWordsV3.ts`, `loadingWordsV2.ts`. **E2E:** the existing regression tests start from a fresh browser, which would now be a newcomer; this PR seeds `{ status: "veteran" }` for them and adds newcomer tests.
-6. **Sound cues and polish** (the cut line).
+1. **The yard, beats 1 and 2, the Plain view, the no-write test** (#493). `practiceCompanyV1.ts` with the tier test, `starterPlanV1.ts`, `starterWordsV1.ts` (beats 1 and 2), area `practice`, its spots, `?at=practice`, practice counter card, tower rises in fog, practice tag, "Practice yard, plain". Reached by `?at=practice` only (no newcomer gate yet).
+2. **Beats 3 and 4 and the Book of Wisdom** (#494). Fact cards, granite walls, moat fill, the Book (lectern and Quests card), unlock-once.
+3. **Beats 5 and 6** (#495). Gauge first, then the scale prop; the storm.
+4. **Beats 7 and 8, the ending and the second storm** (#496). Chips, pinned sheet and flag, banner, cheer, "Bring your real fortress", "Play again", beat 6b on "Play again" (brick walls, Owes card flip), `dialogueV9.ts`.
+5. **The newcomer gate and First Steps absorbed** (#497). `starterGateV1.ts`, cold load into the yard, hidden doors and lists, "Skip practice", `guideWordsV3.ts`, `loadingWordsV2.ts`. **E2E:** the existing regression tests start from a fresh browser, which would now be a newcomer; this PR seeds `{ status: "veteran" }` for them and adds newcomer tests.
+6. **Sound cues and polish** (the cut line, #498).
 
 **The test that proves the practice fortress makes no write** (Playwright on the demo stack, `frontend/e2e/regression/`, added in step 1 and extended each step):
 
@@ -414,7 +434,7 @@ Each PR: `tsc --noEmit`, `npm run lint`, `npm test`, `npm run build`; reviewers 
 **How it is run (Faiz is not the tester):**
 
 1. **Scripted pass, every build PR:** `playtest-qa` plays the yard end to end in Playwright (keyboard and touch emulation), records taps per beat, screenshots each beat, and reads every string aloud against section 6 of the voice standard. This proves the yard works. It cannot answer the question.
-2. **Real young player, once, after step 4:** a child of about 12 who has not seen the app, on a laptop and on a phone. A written script: one sentence to start ("This is a game. Play it for 10 minutes."), no help, no hints. At 10 minutes, two questions: "What is a moat?" and "Why would you want room to be wrong?". Answers written down word for word, with where they got stuck. Watch point: does the child feel any choice before beat 3 (beat 2 has one company)? Write down what they say. Faiz picks who the child is and who sits with them (open question 8); the person who sits with them follows the script and does not teach. An AI reader cannot stand in for this; any proxy is labelled a proxy.
+2. **Real young player, once, after step 4:** a child of about 12 who has not seen the app, on a laptop and on a phone. A written script: one sentence to start ("This is a game. Play it for 10 minutes."), no help, no hints. At 10 minutes, two questions: "What is a moat?" and "Why would you want room to be wrong?". Answers written down word for word, with where they got stuck. Watch point: does the child feel any choice before beat 3 (beat 2 has one company)? Write down what they say. Faiz picks who the child is and who sits with them (#490 question 8, left open until after build step 4: #492); the person who sits with them follows the script and does not teach. An AI reader cannot stand in for this; any proxy is labelled a proxy.
 3. **Pass:** the child explains both ideas in their own words without using the game's lines back. A fail names the beat to fix before the expert places reopen.
 
 ## 13. One thing to cut if it runs long
@@ -423,29 +443,31 @@ Each PR: `tsc --noEmit`, `npm run lint`, `npm test`, `npm run build`; reviewers 
 
 (The review's off-screen arrow toward the quest mark is not needed in the yard: the yard leads the camera to each station. It stays a courtyard idea.)
 
-## 14. Open questions for Faiz
+## 14. Faiz's answers (#490, 2026-11-22)
 
-Also on the board as their own decision issue (#490); they block the build steps, not this spec.
+Faiz answered in the chat on 2026-11-22. Thirteen are answered; question 8 is left open until after build step 4, when it is needed. The build steps can start.
 
-1. **Company and beat 2:** Pip's Lemonade, one made-up company, no real companies in the starter? (Recommended.)
-2. **Walls:** teach walls as "makes money and owes little" (the real rule), not "profits" alone as the review had?
-3. **Storm:** replace "stay or run" with "What changed?"?
-4. **Area:** a separate `practice` area id as the one exception to the freeze?
-5. **First Steps:** absorbed into the starter, with stall and why kept as the two real steps after it?
-6. **Newcomer rule:** decided once per browser; any older 3D key means veteran; "Skip practice" on the arrival plate?
-7. **Book:** in the yard on a lectern and as the first Quests card outside, with no count shown?
-8. **Playtest:** who is the young player, and who sits with them?
-9. **A second storm** on "Play again" where the business *does* change (a year-card turns to a loss and a wall cracks), so "only the price" is not always the answer? Teaches the other half; costs one more card set. **Recommended: yes, in build step 4**, so the starter never teaches "price drops never matter" (game-ux-designer review).
-10. **Standing torches:** leave them as drawn for a newcomer (they carry a real fact), or hide them too?
-11. **Order against touch (#485):** starter first? The yard is tap-playable without #485; the courtyard is not.
-12. **No WebGL:** the fallback card sends a newcomer to the flat fortress (real or demo data). Fine, or a plain-text version of the starter?
-13. **Demo mode and the starter's key:** the sample round never stores anything in demo mode. Recommend the starter still saves its own key in demo mode, because it holds only page ids and no real or demo fact. Agree?
-14. **Names table (section 9):** pick per row.
+| # | Question | Answer |
+|---|---|---|
+| 1 | Company and beat 2 | **Pip's Lemonade only.** One made-up company, no real companies in the starter. |
+| 2 | Walls | **"Makes money and owes little"**, the real v1 rule, not "profits" alone. |
+| 3 | Storm | **"What changed?"** replaces "stay or run". |
+| 4 | Area | **A separate `practice` area**, the one exception to the freeze. (Accepted as proposed.) |
+| 5 | First Steps | **Absorbed into the starter**, with stall and why kept as the two real steps after it. |
+| 6 | Newcomer rule | **Once per browser; any older 3D key means veteran; "Skip practice" always one tap away.** |
+| 7 | Book | **On a lectern in the yard and as the first Quests card outside, no count shown.** (Accepted as proposed.) |
+| 8 | Playtest | **Open, now #492.** Faiz decides later who the young player is and who sits with them; needed only after build step 4. |
+| 9 | Second storm | **Yes**, in build step 4: beat 6b above. |
+| 10 | Standing torches | **Leave them drawn** for a newcomer; only the Standing Quests card is hidden. |
+| 11 | Order against touch (#485) | **Starter first.** (Accepted as proposed.) |
+| 12 | No WebGL | **The fallback card keeps pointing to the flat fortress.** No plain-text starter. |
+| 13 | Demo mode and the starter's key | **The starter saves its own key in demo mode** (the Book's page ids, the run's progress and the skip flag; no real or demo fact). (Accepted as proposed.) |
+| 14 | Names table | **Accepted as proposed** (section 9). |
 
 ## Review
 
 - `game-designer` wrote this spec (2026-11-22).
-- `game-ux-designer` reviewed it the same day: 3 blockers (the "Ride out the storm" strip, guessable two-choice checks, beat 7's card size) and 14 should-fixes (beat 2's one-choice button, the storm pile-up, beat 8 pile-up, `finished` and Skip gaps, gate order and deep links, glow-only hints, screen reader, Book count, on-screen word cap, "costs", the gauge label in beat 5, the one-lesson storm) plus nits. All are applied above; question 9 stays Faiz's.
+- `game-ux-designer` reviewed it the same day: 3 blockers (the "Ride out the storm" strip, guessable two-choice checks, beat 7's card size) and 14 should-fixes (beat 2's one-choice button, the storm pile-up, beat 8 pile-up, `finished` and Skip gaps, gate order and deep links, glow-only hints, screen reader, Book count, on-screen word cap, "costs", the gauge label in beat 5, the one-lesson storm) plus nits. All are applied above; question 9 answered yes on 2026-11-22 (beat 6b).
 
 ## Not checked
 
@@ -455,5 +477,5 @@ Also on the board as their own decision issue (#490); they block the build steps
 - How `Toolbar.tsx` would host a practice tag (not read beyond a search).
 - Which of Faiz's browsers hold `aladdin.game3d.visits.v1`. Goes into build step 5's "After deploy (Faiz)": open `/game3d` on each device once before the gate ships, or use "Skip practice".
 - The draw-call count of a holding land today (needs a real GPU and press P).
-- Whether "Pip's Lemonade" clashes with a real brand.
-- The decisions themselves as written in PR #488 (not merged, not on this branch); this spec uses the wording given by the main session.
+- Whether "Pip's Lemonade" clashes with a real brand (#499, Faiz, before build step 1 merges).
+- The decisions as worded in PR #488 (merged after this branch was cut, not on this branch); this spec uses the wording given by the main session.

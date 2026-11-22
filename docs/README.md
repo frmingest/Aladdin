@@ -196,7 +196,7 @@ Game mode (Fortress): concept, sprint plans and reviews, visual identity, art pa
 - [game3d-morning-round-marks-spec-2026-11-15.md](game/game3d-morning-round-marks-spec-2026-11-15.md) — The Morning Round step 2 (#412): the five marks (raven, smoke, bell, lit stall, notice), the one new backend field (`holding_id` on standing wires), unknown-stays-fog rule, tests, cut line. Spec only, not built.
 - [game3d-review-starter-level-2026-11-22.md](game/game3d-review-starter-level-2026-11-22.md) — Honest review of the 3D game (#475): fun 3/10 and clarity 2/10 for a young newcomer, decisions challenged, keep/improve/freeze, and an eight-beat starter level in a practice fortress. Follow-ups #476 to #480.
 - [game3d-touch-controls-plan-2026-11-22.md](game/game3d-touch-controls-plan-2026-11-22.md) — Plan for touch controls in the 3D game (#480): a thumb stick and an action seal that drive the same keys and E table as the keyboard (recommended), against tap-to-walk. Not built; the build is #485.
-- [game3d-starter-level-spec-2026-11-22.md](game/game3d-starter-level-spec-2026-11-22.md) — Spec for the 3D starter level (#477): eight beats in a practice yard with one made-up company (Pip's Lemonade), a Book of Wisdom for ideas understood, the newcomer gate, the invented-names proposal and 14 open questions for Faiz. Spec, not built.
+- [game3d-starter-level-spec-2026-11-22.md](game/game3d-starter-level-spec-2026-11-22.md) — Spec for the 3D starter level (#477): eight beats in a practice yard with one made-up company (Pip's Lemonade), a Book of Wisdom for ideas understood, the newcomer gate, the invented names, and Faiz's answers to its 14 questions (#490, 2026-11-22; the playtest question still open). Spec, not built.
 
 ### ingestion/
 
