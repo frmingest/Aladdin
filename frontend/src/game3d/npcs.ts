@@ -31,6 +31,12 @@ export const NPCS: readonly Npc[] = [
 
 
 /** Close enough to start talking, and how far you may drift before the talk ends. */
+/**
+ * How far an advisor's body reaches (#480): the solid cylinder you walk into. 0.6 m covers their cloak and cape at their
+ * fitted height, so with the hero's own 0.35 m the two never stand inside each other. Well inside the talk reach.
+ */
+export const NPC_SOLID_RADIUS = 0.6;
+
 export const TALK_RANGE = 3.6;
 export const LEAVE_RANGE = 5.2;
 

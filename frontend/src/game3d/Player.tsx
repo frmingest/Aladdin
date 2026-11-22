@@ -178,6 +178,10 @@ export default function Player({ keys, orbit, pos: posOut, teleport = null, chee
       colliders={false}
       canSleep={false}
       linearDamping={0}
+      // Continuous collision detection (#480): physics steps follow the frame time (timeStep "vary", clamped at 0.5 s), so
+      // on a slow frame (a phone, a hidden tab) one step can carry her several metres, straight through an advisor, a post
+      // or a thin wall. CCD sweeps the capsule along the step, so she stops at what is in the way.
+      ccd
     >
       <CapsuleCollider args={[HALF_HEIGHT, RADIUS]} friction={0} />
       <group ref={model} position={[0, -CENTRE_HEIGHT, 0]}>

@@ -68,6 +68,40 @@ export function drawMintPlate(ctx: CanvasRenderingContext2D, p: PlateText, stale
  * smaller line under it. The Weather Tower's banner keeps to one line; the Mint's banners carry sentences ("A game of consequences...",
  * a lever's notch in words), so they need the room.
  */
+/**
+ * The name board over one lever (#480). Twice as tall as a banner for the same width, so the lever's name can be drawn
+ * about two and a half times bigger: on an 800 px wide screen the banner's 64 px name came out a few pixels high.
+ */
+export const LEVER_BOARD_PX = { w: 1024, h: 320 } as const;
+
+/** Sizes tried for the lever's name (one line), then for its readout ("At rest", a notch). */
+export const LEVER_NAME_SIZES = [150, 132, 116, 100, 86, 72] as const;
+export const LEVER_READOUT_SIZES = [96, 84, 72, 60, 50] as const;
+
+/**
+ * `readout` is the lever's setting once it has been pulled, or null at rest: five boards all saying "At rest" is noise, and
+ * the lever's own tilt already shows it is at rest. A pulled setting is drawn in full ink, not grey (#480 UX review).
+ */
+export function drawLeverBoard(ctx: CanvasRenderingContext2D, name: string, readout: string | null): { nameSize: number; readoutSize: number } {
+  const { w, h } = LEVER_BOARD_PX;
+  ctx.clearRect(0, 0, w, h);
+  paper(ctx, w, h, false, false);
+  ctx.textAlign = "center";
+  ctx.textBaseline = "alphabetic";
+  const n = fitText(ctx, name, w - 70, 1, LEVER_NAME_SIZES);
+  const r = readout ? fitText(ctx, readout, w - 90, 1, LEVER_READOUT_SIZES) : null;
+  const gap = r ? 18 : 0;
+  const top = (h - (n.size + gap + (r?.size ?? 0))) / 2;
+  ctx.fillStyle = INK_TEXT;
+  ctx.font = `700 ${n.size}px ${FONT}`;
+  ctx.fillText(n.lines[0] ?? name, w / 2, top + n.size * 0.9);
+  if (r && readout) {
+    ctx.font = `700 ${r.size}px ${FONT}`;
+    ctx.fillText(r.lines[0] ?? readout, w / 2, top + n.size + gap + r.size * 0.9);
+  }
+  return { nameSize: n.size, readoutSize: r?.size ?? 0 };
+}
+
 export function drawMintBanner(ctx: CanvasRenderingContext2D, big: string, small: string | null): void {
   const { w, h } = BANNER_PX;
   ctx.clearRect(0, 0, w, h);

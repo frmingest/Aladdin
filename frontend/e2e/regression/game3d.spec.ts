@@ -217,6 +217,8 @@ test.describe("things you can walk up to", () => {
    * her several metres, so walking cannot aim at a stand spot. Then waits out the short hover that follows every placement.
    */
   async function placeAt(page: Page, x: number, z: number) {
+    // The hook is set up by the world once it has loaded, which can be a while after the canvas appears.
+    await page.waitForFunction(() => typeof (window as unknown as { __g3dPlace?: unknown }).__g3dPlace === "function", null, { timeout: 60_000 });
     await page.evaluate(([px, pz]) => (window as unknown as { __g3dPlace: (a: number, b: number) => void }).__g3dPlace(px, pz), [x, z]);
     trail.push(`placed at x ${x}, z ${z}`);
     await page.waitForTimeout(3_500);
@@ -280,6 +282,24 @@ test.describe("things you can walk up to", () => {
     } catch (e) {
       throw new Error(`${(e as Error).message}\nPrompts heard after each step (${trail.length} steps; first 40, then last 10):\n${[...trail.slice(0, 40), "...", ...trail.slice(-10)].join("\n")}`);
     }
+    await problems.assertNone();
+  });
+  // #480: the hero walked straight through Barren on a slow frame (physics steps follow the frame time, up to 0.5 s, so one
+  // step could carry her several metres). CI draws in software, slowly, which is exactly that case. Run at him from 4 m and
+  // she must stop in front of him, never come out the other side.
+  test("the advisors are solid: running into Barren stops in front of him", async ({ page }) => {
+    const problems = watch(page);
+    await page.goto("/game3d");
+    await expect(page.locator("canvas")).toHaveCount(1, { timeout: 60_000 });
+    await placeAt(page, -7.4, 30.4);
+    await page.keyboard.down("Shift");
+    await page.keyboard.down("w");
+    await page.waitForTimeout(3_000);
+    await page.keyboard.up("w");
+    await page.keyboard.up("Shift");
+    const at = await heroAt(page);
+    // Barren stands at z 26.4. Stopped against him she is about 0.95 m short of that; through him she would be far past it.
+    expect(at.z, `hero at x ${at.x.toFixed(2)}, z ${at.z.toFixed(2)}`).toBeGreaterThan(26.4);
     await problems.assertNone();
   });
 });

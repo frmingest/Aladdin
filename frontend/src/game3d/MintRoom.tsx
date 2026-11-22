@@ -3,7 +3,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { CuboidCollider, RigidBody } from "@react-three/rapier";
 import type { Group } from "three";
 import { PAL, Part } from "./Inked";
-import { Banner, Sheet } from "./PlateSheet";
+import { Banner, LeverBoard, Sheet } from "./PlateSheet";
 import { makeTexture, useDispose } from "./plateTexture";
 import {
   BOOK_SPOT,
@@ -33,6 +33,9 @@ import { prefersReducedMotion } from "./motionPref";
 import type { MintView } from "./useMint";
 import { PLATE } from "./weatherTowerRoomLogic";
 
+/** The lever name boards (#480): as wide as the lever spacing allows (2.8 m), centred just above the levers. */
+const LEVER_BOARD_W = 2.6;
+const LEVER_BOARD_Y = 3.55;
 const STONE = PAL.stone;
 const FLOOR = PAL.floor;
 const BRASS = PAL.brass;
@@ -193,7 +196,8 @@ export default function MintRoom({ mint }: Props) {
         return (
           <group key={p.key}>
             <Lever x={p.x} tilt={leverTilt(lever, index)} lit={nearLever === p.key} />
-            <Banner position={[p.x, 4.2, MINT.minZ + 0.06]} yaw={0} width={2.6} big={p.name} small={leverReadout(lever, index)} />
+            {/* Just above the lever's ball (top about 2.9 m), low enough to stay clear of the toolbar on a short screen (#480). */}
+            <LeverBoard position={[p.x, LEVER_BOARD_Y, MINT.minZ + 0.06]} width={LEVER_BOARD_W} name={p.name} readout={index < 0 ? null : leverReadout(lever, index)} />
           </group>
         );
       })}

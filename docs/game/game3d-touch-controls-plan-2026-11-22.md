@@ -1,0 +1,51 @@
+# 3D game: touch controls, a plan (2026-11-22)
+
+Issue #480 (feel fixes), item 4: "Touch controls: a plan first, its own issue if bigger than this." This is that plan. Nothing here is built. Building it is issue #485.
+
+## What is wrong today
+
+`/game3d` needs a keyboard for everything: W A S D to walk, Shift to run, Space to jump, E to act, Q T G M P H B for panels and places, and the mouse to look around. A phone or tablet player can open the page, read the panels and tap the toolbar, but cannot walk, so cannot reach an advisor, a stall, a door or a lever. Every walk-up place is out of reach on touch.
+
+## Visual verb + scene
+
+*Push* a brass compass rose with your thumb to walk the hero across the courtyard; *tap* the wax seal, which reads the prompt's own word ("Talk", "Read", "Pull"), to act. No prompt, no seal.
+
+- **Unknown state:** none of its own. The seal never shows a guess: it appears only when the on-screen prompt does, with the prompt's word.
+- **Identity score:** the controls are HUD, not a page; `/game3d` stays at its current score (2) before and after. The compass rose and seal come from the shared kit, so they add game look, not a re-skinned button bar.
+
+## The choice
+
+| | A. Stick and action seal | B. Tap to walk |
+|---|---|---|
+| How | A thumb stick (bottom-left by default) walks; a round wax seal (bottom-right) with the prompt's word acts; dragging on the open scene looks around | Tap the ground: the hero walks there; tap a thing to walk up to it and act |
+| Fits the code | Yes, with two small changes. The stick writes the same `keys` ref the keyboard writes (`useKeys.ts`); `moveVector` (`movement.ts`) takes on/off keys today, so it needs an analog stick vector added. The seal calls the same action table the E key uses (the `acts` table in `pages/Game3DPage.tsx`, run by its E handler), and `near.ts` keeps its rule that a prompt can never promise something E does not do. `useOrbit.ts` handles mouse and wheel only, so touch look and pinch are new there | No path finding exists. The hero would walk into stalls, advisors and walls on the way; it needs a nav grid or steering, and a "walk up and act" queue |
+| Taps for the common case | Walk there (hold), 1 tap on the seal. A Mint lever round is Pull, then STAMP: 2 taps. The gate's target of 2 or fewer holds | 1 to 2 taps, when the path works |
+| Risk | Low: input only, nothing new in the world | Medium to high: new movement logic, new failure cases (stuck on a corner) |
+| Size | One PR | Two or three PRs |
+
+**Recommendation: A.** It reuses what the keyboard already drives, so the prompt, the E table and the solid-body physics (#480 turned on CCD so the hero stops at solids on slow frames, which phones have; checked headless) stay the single source of truth. Tap-to-walk would leave a young newcomer stuck on corners without path finding. B can come later on top of A if players ask for it.
+
+## Plan A in detail
+
+- **When it shows:** only on a touch screen (`matchMedia("(pointer: coarse)")`), never on a desktop with a mouse. The keyboard keeps working everywhere.
+- **Stick:** a brass compass rose (shared kit, owned by `game-feel-engineer`), 96 px across. It floats: it appears where the thumb first lands in the bottom-left zone, so it suits small and large hands. Push past 85% of its radius to run, so Shift is not needed. Lift the thumb: the hero stops (the same rule as a key release). Left-handed: a setting swaps the stick and seal sides.
+- **Action seal:** 64 px, shows the prompt's word only (no "E": it means nothing on a phone), and only while the prompt is shown, using the same arrive and leave distances as the prompt so it does not flicker at the edge. Hidden while a panel or dialogue is open.
+- **Look:** dragging on the open scene (not on the stick, the seal or the toolbar) turns the camera; pinch zooms (the wheel's job). Both are new in `useOrbit.ts`.
+- **Who takes a touch:** the seal and the toolbar take their own taps first; the stick takes the touch that started on it; the scene gets the rest. Stick and look can run at once (two thumbs); a pinch never moves the stick. The canvas stops the browser's own pinch-zoom and scroll (`touch-action: none`).
+- **Screen edges:** the stick and seal keep clear of the notch and home bar (`env(safe-area-inset-*)`), in portrait and landscape.
+- **Words on screen:** the keyboard hint line ("W A S D walk · Shift run ...") is replaced on touch by a short touch line ("Push to walk · Tap the seal to act"). The toolbar chips (Quests, Towers, Where to?, Sound; Stats shows only with `?debug`) grow to 44 px tap targets on touch.
+- **Panels and places:** the toolbar already takes taps. "Back outside" and "Where to?" are already buttons. Jump is left out on touch at first (a third button can follow if a place turns out to need it).
+- **Accessibility:** both controls 44 px or larger, labelled for screen readers ("Walk", and the action's own word), no motion beyond what the thumb does, colour-blind safe (shape and word, never colour alone). Reduced motion: nothing animates.
+- **Phone performance:** no per-frame React state: the stick writes into the existing `keys` ref, as the keyboard does.
+
+## Done when (for #485)
+
+- A phone in a real browser can walk from the gate to Barren, talk to him, walk to Sal and open his counter, and walk to the desk (the starter route, not an expert place such as the Weather Tower), with tap and hold counts written in the PR.
+- The stick and the seal never show on a desktop with a mouse.
+- Playwright on the demo stack, with touch emulation, checks that the seal appears at an advisor with the prompt's word and opens the dialogue, and that it hides when the prompt does.
+- Reduced motion and a screen-reader pass (the stick's and seal's names) are written in the PR.
+- The real look on a phone is Faiz's (After deploy).
+
+## Not decided here
+
+Whether touch play should wait for the starter level (#476, #477). This plan does not add a place, a lever or a reward, so it does not cut across the "freeze new places" proposal, but its order against the starter level is Faiz's call; #485 should serve the route #477 will use.

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { KEEP, WALL_RADIUS, towerSpots } from "./layout";
-import { ADVISOR_PAIR_MAX_GAP, ADVISOR_PAIR_MIN_GAP, LEAVE_RANGE, alsoHereNote, NPCS, TALK_RANGE, nearestNpc, yawToward } from "./npcs";
+import { ADVISOR_PAIR_MAX_GAP, ADVISOR_PAIR_MIN_GAP, LEAVE_RANGE, NPC_SOLID_RADIUS, alsoHereNote, NPCS, TALK_RANGE, nearestNpc, yawToward } from "./npcs";
 
 describe("courtyard people", () => {
   it("finds the closest person in range, and nobody when out of range", () => {
@@ -56,5 +56,13 @@ describe("courtyard people", () => {
   it("each person has a model slot in the registry", async () => {
     const { MODELS3D } = await import("./models3d");
     for (const n of NPCS) expect(MODELS3D[n.art]).toBeDefined();
+  });
+});
+
+describe("solid advisors (#480)", () => {
+  it("their body is wider than before but you can still talk from outside it", () => {
+    // The hero's capsule is 0.35 m; standing against an advisor puts you NPC_SOLID_RADIUS + 0.35 from their middle.
+    expect(NPC_SOLID_RADIUS).toBeGreaterThan(0.5);
+    expect(NPC_SOLID_RADIUS + 0.35 + 1).toBeLessThan(TALK_RANGE);
   });
 });
