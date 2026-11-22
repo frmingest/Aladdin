@@ -5,7 +5,9 @@
  *   1 Meet the advisors   you talk to both Barren and Marlie
  *   2 Visit Sal's counter Barren sends you; you open Sal's counter
  *   3 Stock a stall       you pick a company off Sal's shelves (a stall now exists)
- *   4 See the weather     Marlie sends you; you walk into the Weather Tower
+ *   4 Read the sky        Marlie sends you; you read the weather plate on the banner pole by the keep (the Realm post)
+ *                         (until #478 this step sent you into the Weather Tower, a yield-curve room; an old save that
+ *                         already went in still counts, so nobody loses a tick)
  *   5 Write your first why Barren sends you; one holding gets a why (the journal has it)
  *
  * Rules kept from the other quests: no XP, no reward, no streak, no buy or sell wording. "Level" is only how many of the
@@ -18,8 +20,8 @@
 import { BOOTHS } from "./boothPlan";
 import { DESK } from "./deskLogic";
 import { NPCS } from "./npcs";
+import { REALM_POST } from "./realmPlan";
 import type { NpcId } from "./npcs";
-import { BUILDINGS, doorSpot } from "./townPlan";
 
 export type GuideStepId = "meet" | "sal" | "stall" | "weather" | "why";
 
@@ -43,12 +45,15 @@ export interface GuideSaved {
   /** Steps whose giver you have talked to (lights the place marker). */
   taken: GuideStepId[];
   salVisited: boolean;
+  /** Old rule (before #478): you walked into the Weather Tower. Still counts for step 4 when an old save has it. */
   weatherVisited: boolean;
+  /** You read the sky on the Realm post (step 4 since #478). Missing in old saves: read as false. */
+  skyRead?: boolean;
   /** Set by "replay": stalls and whys must rise above these numbers to count. Null: any one counts. */
   baseline: { stalls: number; whys: number } | null;
 }
 
-export const EMPTY_GUIDE: GuideSaved = { met: [], taken: [], salVisited: false, weatherVisited: false, baseline: null };
+export const EMPTY_GUIDE: GuideSaved = { met: [], taken: [], salVisited: false, weatherVisited: false, skyRead: false, baseline: null };
 
 /** The two real facts. Null means unknown (loading, unreadable, or the sample fortress). */
 export interface GuideFacts {
@@ -73,7 +78,7 @@ export function stepDone(saved: GuideSaved, facts: GuideFacts, step: GuideStepId
     case "stall":
       return facts.stalls !== null && facts.stalls > (saved.baseline?.stalls ?? 0);
     case "weather":
-      return saved.weatherVisited;
+      return saved.skyRead === true || saved.weatherVisited;
     case "why":
       return facts.whys !== null && facts.whys > (saved.baseline?.whys ?? 0);
   }
@@ -91,6 +96,12 @@ export function guideStatus(saved: GuideSaved, facts: GuideFacts): GuideStatus {
   return { level, done, current: GUIDE_STEPS[level] ?? null };
 }
 
+/** How many of the five are ticked, in any order (what the panel's ticks show). `level` counts only a run from step 1. */
+export const guideTicked = (status: GuideStatus): number => GUIDE_STEPS.filter((s) => status.done[s]).length;
+
+/** Steps still to do: the Quests chip shows this while First Steps is open, because First Steps is what the panel shows first. */
+export const guideLeft = (status: GuideStatus): number => (status.current ? GUIDE_STEPS.length - guideTicked(status) : 0);
+
 /**
  * You talked to an advisor. They count as met, and if they are the giver of the step that is now current, that step is
  * taken. (The second advisor you meet may complete step 1 and hand over step 2 in the same talk.)
@@ -105,6 +116,7 @@ export function onGuideTalk(saved: GuideSaved, facts: GuideFacts, npc: NpcId): G
 
 export const markSalVisited = (s: GuideSaved): GuideSaved => (s.salVisited ? s : { ...s, salVisited: true });
 export const markWeatherVisited = (s: GuideSaved): GuideSaved => (s.weatherVisited ? s : { ...s, weatherVisited: true });
+export const markSkyRead = (s: GuideSaved): GuideSaved => (s.skyRead ? s : { ...s, skyRead: true });
 
 /** Start the guide again, counting only what is added from now on. */
 export function replayGuide(facts: GuideFacts): GuideSaved {
@@ -139,6 +151,7 @@ export function loadGuide(storage: StorageLike | null): GuideSaved {
       taken: Array.isArray(j.taken) ? j.taken.filter(isStep) : [],
       salVisited: j.salVisited === true,
       weatherVisited: j.weatherVisited === true,
+      skyRead: j.skyRead === true,
       baseline,
     };
   } catch {
@@ -168,7 +181,6 @@ export interface GuideMark {
 }
 
 const SAL = BOOTHS.find((b) => b.id === "sal") ?? BOOTHS[0];
-const WEATHER = BUILDINGS.find((b) => b.id === "weather") ?? BUILDINGS[0];
 
 /** Over an advisor's head, above their name tag. */
 function overNpc(id: NpcId): GuideMark {
@@ -194,11 +206,9 @@ export function guideMarks(status: GuideStatus, saved: GuideSaved): GuideMark[] 
       return taken ? [overSal()] : [overNpc("oracle")];
     case "stall":
       return [overSal()];
-    case "weather": {
-      if (!taken) return [overNpc("partner")];
-      const d = doorSpot(WEATHER);
-      return [{ key: "weather", x: d.x, y: 5, z: d.z, size: 2.4 }];
-    }
+    case "weather":
+      // Over the banner pole by the keep, where the weather plate hangs.
+      return taken ? [{ key: "sky", x: REALM_POST.x, y: 5.2, z: REALM_POST.z, size: 1.2 }] : [overNpc("partner")];
     case "why":
       return taken ? [{ key: "desk", x: DESK.x, y: 2.7, z: DESK.z, size: 1 }] : [overNpc("oracle")];
   }

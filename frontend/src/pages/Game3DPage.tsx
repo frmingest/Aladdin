@@ -18,6 +18,7 @@ import WatchPanel from "../game3d/WatchPanel";
 import RavensPanel from "../game3d/RavensPanel";
 import RealmPanel from "../game3d/RealmPanel";
 import { REALM_PROMPT } from "../game3d/realmWordsV1";
+import { guideChipLabel } from "../game3d/guideWordsV2";
 import HourglassBanner from "../game3d/HourglassBanner";
 import HourglassPanel from "../game3d/HourglassPanel";
 import type { DayStatus, HistoryStatus } from "../game3d/HourglassPanel";
@@ -102,7 +103,8 @@ import {
   guideStatus,
   loadGuide,
   markSalVisited,
-  markWeatherVisited,
+  guideLeft,
+  markSkyRead,
   onGuideTalk,
   replayGuide,
   saveGuide,
@@ -801,7 +803,6 @@ export default function Game3DPage() {
       setLampOpen(false);
       closeLand();
       setPlainOpen(false);
-      if (ref.id === "weather") setGuideSaved(markWeatherVisited);
       dispatchArea({ type: "enter", ref });
     },
     [closeLand],
@@ -984,7 +985,15 @@ export default function Game3DPage() {
         openSpotPanel("perch");
       },
     },
-    realm: { prompt: () => (realmOpen || !viewState ? null : REALM_PROMPT), press: () => viewState && openSpotPanel("realm") },
+    realm: {
+      prompt: () => (realmOpen || !viewState ? null : REALM_PROMPT),
+      press: () => {
+        if (!viewState) return;
+        // First Steps step 4 (#478): reading the pole by the keep is reading the sky.
+        if (!realmOpen) setGuideSaved(markSkyRead);
+        openSpotPanel("realm");
+      },
+    },
     // The Hourglass: opening it reads the stored days (read-only); the panel then chooses the night.
     hourglass: {
       prompt: () => (hourglassOpen ? null : HOURGLASS_PROMPT),
@@ -1321,6 +1330,8 @@ export default function Game3DPage() {
         open={panels}
         onToggle={flip}
         roundOpen={roundChipCount(round)}
+        guideLeft={inPast || world.demo ? 0 : guideLeft(guide)}
+        guideLabel={guideChipLabel(guideLeft(guide))}
         questsWaiting={(quest.status === "open" ? 1 : 0) + (reviews.status === "open" ? 1 : 0)}
         towerCount={world.plain.length}
         statsOn={showPerf}

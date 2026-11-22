@@ -20,6 +20,14 @@ A new player used to walk in and hear about writing a "why" for every holding. N
 
 "Level" is only how many of the five are done in a row. No XP, no reward, no cheering, no buy or sell wording. After level 5 the old quests (Write Your Whys, Look-back, Storm Drill) carry on as before.
 
+## Changed by #478 (2026-11-22)
+
+The PR for issue #478 changes three things (written, not yet deployed; until it is merged the table above is what runs):
+
+- **Step 4 is "Read the sky"**: Marlie sends you to the banner pole by the keep (the Realm post), and pressing E there ticks it. The pole's weather plate says calm or stormy. The Weather Tower, a yield-curve room, is no longer part of the starter. An old save that already went into the Weather Tower keeps its tick. Saved as `skyRead` in the same browser key.
+- **The count matches the ticks**: the card reads "1 of 5 done. Next: Meet the advisors" (`guideWordsV2.ts`, `dialogueV8.ts`). "Level" (done in a row) still decides which step is next.
+- **One thing at a time**: while First Steps is open it is the only card in the Quests panel, and the rest (today's round, Standing, the long quests) folds under "More quests". The Quests chip counts the First Steps left. In the sample fortress the made-up round stays on top and keeps the chip, because there steps 3 and 5 can never finish (#476).
+
 ## How it works
 
 - **Handing a step over:** talking to the giver hands it over. The second advisor you meet can finish step 1 and hand over step 2 in the same talk. The other advisor says who has the job ("Barren has a job for you").

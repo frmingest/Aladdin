@@ -18,10 +18,25 @@ const stop = (o: Partial<Round["stops"][number]> = {}) => ({
 const round = (o: Partial<Round> = {}): Round => ({ stops: [stop()], more: 0, moreLine: null, open: 1, quiet: false, line: null, pending: false, ...o });
 
 describe("Today's round in the quest log", () => {
-  it("shows the stops at the top, before the Guide, with no tap needed", () => {
-    const html = render({ round: round(), guide: { status: { level: 0, done: {} as never, current: "meet" }, saved: { met: [], taken: [], salVisited: false, weatherVisited: false, baseline: null }, onReplay: () => {} } });
+  it("shows the stops at the top, before the Guide, once First Steps is done", () => {
+    const done = { meet: true, sal: true, stall: true, weather: true, why: true };
+    const html = render({ round: round(), guide: { status: { level: 5, done, current: null }, saved: { met: [], taken: [], salVisited: true, weatherVisited: false, skyRead: true, baseline: null }, onReplay: () => {} } });
     expect(html).toContain("Smoke at Vår Energi");
     expect(html.indexOf("Today&#x27;s round")).toBeLessThan(html.indexOf("First Steps"));
+    expect(html).not.toContain("<details");
+  });
+  it("while First Steps is open, the round waits folded under More quests (#478)", () => {
+    const done = { meet: false, sal: false, stall: false, weather: false, why: false };
+    const html = render({ round: round(), guide: { status: { level: 0, done, current: "meet" }, saved: { met: [], taken: [], salVisited: false, weatherVisited: false, baseline: null }, onReplay: () => {} } });
+    expect(html.indexOf("First Steps")).toBeLessThan(html.indexOf("<details"));
+    expect(html.indexOf("<details")).toBeLessThan(html.indexOf("Today&#x27;s round"));
+  });
+  it("in the sample fortress the made-up round stays on top, First Steps next, the long quests folded", () => {
+    const done = { meet: true, sal: true, stall: false, weather: false, why: false };
+    const html = render({ demo: true, round: round(), guide: { status: { level: 2, done, current: "stall" }, saved: { met: [], taken: [], salVisited: true, weatherVisited: false, baseline: null }, onReplay: () => {} } });
+    expect(html.indexOf("Today&#x27;s round")).toBeLessThan(html.indexOf("First Steps"));
+    expect(html.indexOf("First Steps")).toBeLessThan(html.indexOf("<details"));
+    expect(html.indexOf("<details")).toBeLessThan(html.indexOf("Write Your Whys"));
   });
   it("a ticked stop says done in words too, and an off-yard stop says it has no room", () => {
     const html = render({ round: round({ stops: [stop({ done: true, offYard: true })], open: 0 }) });
