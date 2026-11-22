@@ -55,8 +55,10 @@ after a finished run runs none).
 
 - Make the snapshot refresh resumable (a marker per snapshot) so an interrupted refresh does not
   start over.
-- Hide the FRED `api_key` from the httpx log line (set the `httpx` logger to WARNING). The key is in
-  the worker log in plain text; rotate it (see Progress, §2 D).
+- 2026-11-22: the PR for #472 adds `app/config/log_hygiene.py`, which holds `httpx`/`httpcore` at
+  WARNING and redacts any `api_key=` value in a log line. Written, not yet deployed or checked
+  against the real worker. Rotating the FRED key that was printed in the worker log is unverified
+  and is Faiz's action (see Progress, §2 D).
 
 ## After merge
 

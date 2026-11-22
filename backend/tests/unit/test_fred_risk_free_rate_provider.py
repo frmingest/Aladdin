@@ -91,3 +91,22 @@ def test_norwegian_krone_maps_to_oecd_series():
         rate = provider.get_risk_free_rate("NOK")
     assert rate.source_series_id == "IRLTLT01NOM156N"
     assert mock_get.call_args.kwargs["params"]["series_id"] == "IRLTLT01NOM156N"
+
+
+def test_http_error_message_never_contains_the_api_key():
+    import httpx
+
+    request = httpx.Request("GET", "https://api.stlouisfed.org/fred/series/observations?api_key=SECRETKEY123")
+    error = httpx.HTTPStatusError("400 for url", request=request, response=httpx.Response(400, request=request))
+    error.args = (f"Client error '400 Bad Request' for url '{request.url}'",)
+    response = MagicMock()
+    response.raise_for_status.side_effect = error
+    provider = _provider(api_key="SECRETKEY123")
+    with (
+        patch("app.providers.fred_risk_free_rate_provider.httpx.get", return_value=response),
+        pytest.raises(RiskFreeRateUnavailableError) as excinfo,
+    ):
+        provider.get_risk_free_rate("USD")
+    assert "SECRETKEY123" not in str(excinfo.value)
+    assert "HTTPStatusError 400" in str(excinfo.value)
+    assert excinfo.value.__cause__ is None
