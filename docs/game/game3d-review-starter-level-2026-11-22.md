@@ -6,7 +6,7 @@ Faiz asked for an honest review of the 3D game (`/game3d`): how engaging it is, 
 
 ## How it was reviewed
 
-- **Code:** `frontend/src/game3d/` on the session checkout (266 source files; about 36,000 lines with tests), `pages/Game3DPage.tsx`, the First Steps guide (`guideQuests.ts`, `guideWordsV1.ts`, `dialogueV7.ts`), the places map (`areas.ts`), the list of things you can walk up to (`near.ts`), and the 3D docs in `docs/game/`.
+- **Code:** `frontend/src/game3d/` (on `main` at `2d89d61`: 262 source files, 398 with tests, about 37,000 lines with tests), `pages/Game3DPage.tsx`, the First Steps guide (`guideQuests.ts`, `guideWordsV1.ts`, `dialogueV7.ts`), the places map (`areas.ts`), the list of things you can walk up to (`near.ts`), and the 3D docs in `docs/game/`.
 - **Live site, read-only:** the built-in browser on Faiz's computer, signed in on his real data (no names or amounts are copied here). Walked the courtyard as a newcomer: talked to both advisors, opened Sal's counter (picked nothing), the Night Watch post, the Quests, Towers and "Where to?" panels, then the Weather Tower and the Royal Mint by their `?at=` links. Which commit is deployed was **not checked**; `main` has moved since (the Siege Field changes in #460 to #471).
 - **Not done:** no local or demo-stack run (this machine has no Node.js or Postgres). The browser pane was **hidden** for the whole walk, so load times and frame rate from it mean nothing (the 2026-11-17 look found hidden panes load slowly). Not seen on a phone. No young player has tried it.
 - **Side effect:** talking to the advisors moved First Steps on in the built-in browser's own storage (`aladdin.game3d.guide.v1`). Nothing was written to the server.
@@ -28,15 +28,15 @@ Today the 3D game is **the investing app in a castle costume, not a game.** Near
 3. **Six lists in one Quests panel:** Today's round (four "Bell: TICKER is due a look"), First Steps, Standing ("Level 1 of 5: Bare Ground. Lift the fog: fetch reports, then ask for the analysis."), Write Your Whys, Six-Month Look-back and Storm Drill. The chip badge counted the bells. First Steps read **"0 of 5 done" with step 3 ticked**, because the level only counts steps done in a row (`guideStatus`). → #478
 4. **The starter sends a beginner to a yield curve.** First Steps step 4 is "Walk into the Weather Tower" ("Know the weather before you build"). Inside: "Norway's curve: one post for each maturity", posts from 3M to 10Y with percentages, and wall plates such as US unemployment. → #478
 5. **Sal's counter is the best moment, and still leaves you stuck.** The shelf names are lovely plain words ("Food & Fish", "Healers", "Wires & Waves", "Odds & Ends"). But there are 597 companies, sizes read "934 bn" with no unit, and nothing says why you would pick one.
-6. **"Where to?" is the app's menu, not a game map:** 22 destinations, almost all flat pages ("Label check", "Report line", "Purse", "Shiny Metal", "Cushion").
+6. **"Where to?" is the app's menu, not a game map:** 22 destinations on the live site (the register it reads, `parity3d.ts`, has 24 rows on `main`), almost all flat pages ("Label check", "Report line", "Purse", "Shiny Metal", "Cushion").
 7. **About 30 invented names to learn:** Standing, Realm, Siege, Storm Drill, Night Watch, night dispatch, ravens, wires, bells, smoke, marks, Vault, Hourglass, Royal Mint, Toll Gate, Great Press, Great Melt, Coin Rain, Harbour Guard, STAMP, Weather Tower, Hall of Records, Town Hall, Big Board, Market Quarter, stalls, Hype Booth, lanterns, gate stone, price post, why, wrong-if, look-back, Cushion, Purse. Each is a second thing to learn on top of the real idea, and none is taught by touch.
-8. **The Night Watch is written for the owner, not a newcomer:** "Quiet night. The Watch reported on time. Last look 1 hour ago · 40 readings saved. Break the seal: dispatch details."
+8. **The Night Watch is written for the owner, not a newcomer:** "Quiet night. The Watch reported on time. Last look ... · N readings saved. Break the seal: dispatch details."
 9. **The Towers panel holds the best idea, unexplained.** Each holding shows walls ("Granite walls", "Brick walls", "Rotted walls", "Walls not surveyed"), a moat ("Wide moat", "Narrow moat") and a tower size. Nothing in the world or the panel says what walls or a moat stand for.
 10. **Feel:** the hero walks into and through the advisors. In the Royal Mint the camera ended up high above the room after a short walk north. The lever labels cannot be read at 800 px wide. Everything needs a keyboard (W A S D, E, Q, T, G, M, P, H, B), so a phone or tablet player cannot walk. → #480
 
 ## Scope
 
-There are 7 places plus up to 18 holding lands, and about 15 kinds of thing to press E at in the courtyard alone (advisors, towers, desk, drill post, signpost, two booths, vault, Night Watch post, raven perch, Realm post, hourglass, four Town doors, the Market Quarter gate). Breadth has won over depth: the newest places shipped with "needs Faiz's eyes on a real GPU" still open (Royal Mint, Hourglass), and nobody has yet checked that a newcomer can follow the starter guide.
+There are 7 places plus up to 18 holding lands, and about 15 kinds of thing to press E at in the courtyard alone (advisors, towers, desk, drill post, signpost, two booths, vault, Night Watch post, raven perch, Realm post, hourglass, seven Town building doors, the Market Quarter gate). Breadth has won over depth: the newest places shipped with "needs Faiz's eyes on a real GPU" still open (Royal Mint, Hourglass), and nobody has yet checked that a newcomer can follow the starter guide.
 
 ## Decisions to challenge (#476)
 
@@ -44,7 +44,7 @@ There are 7 places plus up to 18 holding lands, and about 15 kinds of thing to p
 |---|---|
 | No XP, no reward, no cheering (`guideQuests.ts`, `guideWordsV1.ts`) | **Right for trading, wrong for learning.** The game's own rule is "progress = understanding" (skill `game-design-reward-knowing`). Reward understanding: a page in a Book of Wisdom unlocked by getting an idea right in practice, a banner on the practice tower. Still no points, no streaks, no daily pull, nothing for trading. Today finishing a step gives almost nothing to see. |
 | Every fact is real data | **Keep it for the real fortress, not for the starter.** First Steps steps 3 and 5 need a real watchlist row and a real journal entry; on the sample fortress they can never finish ("stalls and whys are not saved here"). A clearly labelled *practice fortress* with a made-up company is honest, and it is the only way a child or a person without a broker account can play. |
-| Every flat page gets a place in 3D (the parity register) | **Drop it as a goal.** It produced the 22-entry menu and places nobody new will understand. Freeze new places until the starter ships. |
+| Every flat page gets a place in 3D (the parity register) | **Drop it as a goal.** It produced the 22-item menu and places nobody new will understand. Freeze new places until the starter ships. |
 | The Weather Tower is a starter step | **Move it out.** For a starter, weather is one picture: calm or stormy. |
 | Barren Wuffet and Marlie Chunger | The joke only lands for adults who know Buffett and Munger, and it borrows real people's likeness. **Original characters** suit young players and age better. |
 
