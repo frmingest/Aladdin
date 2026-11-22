@@ -110,9 +110,11 @@ test.describe("loading line (#479)", () => {
       });
       await page.goto(url);
       const status = page.getByRole("status").filter({ hasText: line });
-      await expect(status).toBeVisible({ timeout: 60_000 });
-      release();
+      // Wait for the canvas first, so the line is checked after the code has loaded: what keeps it up now is the held
+      // models, not the page's own chunk (otherwise this could pass without the scene ever reporting).
       await expect(page.locator("canvas")).toHaveCount(1, { timeout: 60_000 });
+      await expect(status).toBeVisible();
+      release();
       await expect(status).toHaveCount(0, { timeout: 60_000 });
       await problems.assertNone();
     });

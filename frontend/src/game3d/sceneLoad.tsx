@@ -25,10 +25,25 @@ export function SceneReady() {
 }
 
 export function LoadProgress() {
-  const active = useProgress((s) => s.active);
   useEffect(() => {
-    setSceneBusy(active);
-  }, [active]);
-  useEffect(() => () => setSceneBusy(false), []);
+    // three.js starts a load inside another component's render, and drei's store updates right then. Reading it with
+    // the hook would re-render this component mid-render (React's "Cannot update a component while rendering a
+    // different component" warning, a console error on the dev server the E2E job runs). So: subscribe to the store
+    // directly, and pass the change on after the current render.
+    let alive = true;
+    const push = (busy: boolean) =>
+      queueMicrotask(() => {
+        if (alive) setSceneBusy(busy);
+      });
+    push(useProgress.getState().active);
+    const off = useProgress.subscribe((s, prev) => {
+      if (s.active !== prev.active) push(s.active);
+    });
+    return () => {
+      alive = false;
+      off();
+      setSceneBusy(false);
+    };
+  }, []);
   return null;
 }
