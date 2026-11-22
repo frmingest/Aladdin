@@ -1,6 +1,6 @@
 # 3D game review: is it fun, can a young player follow it, and a real starter level (2026-11-22)
 
-Issue #475. Status: **a review, no code changed.** Follow-up work is on the board: #476 (decisions), #477 (starter level), #478 (Quests panel), #479 (loading line), #480 (feel fixes).
+Issue #475. Status: **a review, no code changed.** Follow-up work is on the board: #476 (decisions, answered 2026-11-22, see "Decisions"), #477 (starter level), #478 (Quests panel), #479 (loading line), #480 (feel fixes); #478 to #480 are merged (PRs #483, #484, #487).
 
 Faiz asked for an honest review of the 3D game (`/game3d`): how engaging it is, how easy it is for a younger player who is not an economist, which decisions to challenge, and what to improve, scrap or add for a full starter level.
 
@@ -38,7 +38,22 @@ Today the 3D game is **the investing app in a castle costume, not a game.** Near
 
 There are 7 places plus up to 18 holding lands, and about 15 kinds of thing to press E at in the courtyard alone (advisors, towers, desk, drill post, signpost, two booths, vault, Night Watch post, raven perch, Realm post, hourglass, seven Town building doors, the Market Quarter gate). Breadth has won over depth: the newest places shipped with "needs Faiz's eyes on a real GPU" still open (Royal Mint, Hourglass), and nobody has yet checked that a newcomer can follow the starter guide.
 
-## Decisions to challenge (#476)
+## Decisions (#476, answered by Faiz 2026-11-22)
+
+Faiz answered the four questions in #476 on 2026-11-22. PR #488 adds the answers here and to the skill `game-design-reward-knowing`.
+
+| # | Question | Answer | What it means for the starter level (#477) |
+|---|---|---|---|
+| 1 | Reward knowing, not acting | **Yes** | A Book of Wisdom page, a banner on the practice tower and a short cheer when the player gets an idea right. Earned once per idea; no points, no streaks, no daily pull, nothing for trading. Written into `.claude/skills/game-design-reward-knowing/SKILL.md`. |
+| 2 | A practice fortress | **Yes** | The starter is played in a made-up fortress (one made-up company, made-up numbers), labelled practice, never writes, never shown as real. Also written into the skill as the one exception to "every fact is real". |
+| 3 | Original advisors | **No, keep the parody** | Barren Wuffet and Marlie Chunger stay, in the starter too. The starter must not lean on knowing who they parody: their lines teach the idea in plain words. |
+| 4 | Freeze new places | **Yes** | No new places, rooms or levers in `/game3d` until the starter level ships. Expert places (Royal Mint, Weather Tower plates, Town Hall boards, Standing, the Round) stay for Faiz and are hidden from a newcomer until the starter is done. |
+
+Still open, for the #477 spec: which invented names (list under "What a newcomer meets", item 7) to retire or hide until later. The spec proposes the list; Faiz picks.
+
+## Decisions as challenged in the review (#476)
+
+The table below is the review as written before Faiz answered; the answers are in the section above.
 
 | Decision today | Challenge |
 |---|---|
@@ -92,7 +107,7 @@ Played in a practice fortress, 10 to 15 minutes. Each beat is 2 presses or fewer
 
 ## Suggested order
 
-1. Decide #476 (Faiz).
+1. Decide #476 (Faiz). Answered 2026-11-22: yes, yes, keep the parody, yes.
 2. Quick wins: #479 loading line, #478 Quests panel, #480 feel fixes.
 3. Spec, then build, the starter level (#477) in steps, one PR each, each seen in a browser.
 4. Cut or hide the invented names the starter does not need.

@@ -5,7 +5,9 @@ description: Game-design method for Aladdin game mode. Use when designing or rev
 # Design for a long-term owner, not a trader
 - Core loop: look (read the realm) -> investigate (open a report, read a scroll) -> decide in writing (journal/thesis) -> revisit on a calendar rhythm. Verbs should be reading, comparing, writing why, waiting.
 - Progress = understanding. Allowed: fog of war that lifts when real work is done, scrolls read, reviews written. It can go backwards when data goes stale.
-- Banned: XP for trades, streaks, daily-login rewards, timers, loot boxes, leaderboards, anything that makes acting feel better than waiting.
+- Reward knowing, never acting (Faiz, #476, 2026-11-22): a visible reward is allowed when the player shows they *understand* an idea (gets it right in practice): a page unlocked in the Book of Wisdom, a banner on the practice tower, a short cheer. It is earned once per idea, never repeats, never counts up and never adds up to a score.
+- Banned: XP or points of any kind, XP for trades, streaks, daily-login rewards, timers, loot boxes, leaderboards, a reward for buying, selling or any other trade, anything that makes acting feel better than waiting.
 - Fantasy and metaphor must map 1:1 to a real, cited fact; the tooltip/detail view always reveals the number and its source.
+- The one exception is the practice fortress (Faiz, #476, 2026-11-22): a made-up company with made-up numbers, used for the starter level. It is labelled practice everywhere it shows, never writes anything, and never mixes with or is shown as real data. Outside it, the rule above holds.
 - Spec template: player verb | real fact surfaced | feedback (visual/audio/text) | empty/unknown/stale state | rules kept | cheapest prototype | how we will know it is good (a playtest question, not a metric).
 - Prefer a 1-day prototype behind a flag over a 2-week build. Always name one thing to cut.
