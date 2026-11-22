@@ -1,6 +1,6 @@
 # 3D starter level in a practice fortress: spec (2026-11-22)
 
-**Status: Spec. Build step 1 (#493) written, PR open, not deployed; build steps 2 to 6 not started. Issue #477 (this spec: #489; questions: #490, closed 2026-11-22 with Faiz's answers in section 14; question 8 open in #492).** No code is changed by this file. Input: the review `docs/game/game3d-review-starter-level-2026-11-22.md` (#475).
+**Status: Spec. Build step 1 (#493) written on branch `feature/game3d-practice-yard-493` and put up as its own PR (not merged, not deployed); build steps 2 to 6 not started. Issue #477 (this spec: #489; questions: #490, closed 2026-11-22 with Faiz's answers in section 14; question 8 open in #492).** No code is changed by this file. Input: the review `docs/game/game3d-review-starter-level-2026-11-22.md` (#475).
 
 **Faiz's decisions this spec follows (#476, answered 2026-11-22; recorded in PR #488, merged 2026-11-22):**
 
@@ -141,7 +141,7 @@ From a cold load to the end: **7 taps plus the final choice** on the common path
 - **World:** the practice counter card is already open after beat 1. Picking makes a tower rise from the pad (about one second; appears at once under reduced motion). Its walls are drawn as `unsurveyed` (the real fog look: a pale, see-through tower with no crenels; "stakes and rope" in an earlier draft is not a look the game has), the moat ditch as mist, the price post gauge as fog with "?". The gate stone reads "Pip's Lemonade · 1 of 10 pieces · Practice".
 - **Taught:** Sal: "A share is a small piece of a business. This piece is yours." Marlie: "Fog means nobody looked yet. Not good, not bad."
 - **Made-up fact:** Pip's Lemonade, a lemonade stand by the park, cut into 10 pieces, you own 1.
-- **Card:** title "Sal's counter (practice)". One company card: "Pip's Lemonade: a lemonade stand by the park". The whole company card is the tap target (a drawing of the stand plus the name); there is no separate button, because a one-choice button would only unlock the next step.
+- **Card:** title "Sal's counter (practice)". One company card: "Pip's Lemonade: a lemonade stand by the park". The whole company card is the tap target (a lemon, 🍋, plus the name; build 1 uses the emoji, a kit drawing can replace it); there is no separate button, because a one-choice button would only unlock the next step.
 - **Feedback:** tower rises; a stone thud if sound is on; goal strip turns to "Knock on the walls."
 - **Empty / unknown / wrong:** no wrong pick. If the player closes the card, the diamond stays over Sal; E or a tap on the counter opens it again.
 - **Taps:** 1 (keyboard: 1 or Enter; touch: tap the company card).
@@ -256,7 +256,7 @@ Faiz said yes to #490 question 9 (2026-11-22). To be built in build step 4 (#496
 
 ### Key labels in game voice
 
-Goal strip: "Build your first tower", "Knock on the walls", "Fill the moat", "Weigh the price", "Spot what changed", "Pin your why", "Your tower stands".
+Goal strip (build 1 ships the first two): "Build your first tower", "Knock on the walls", "Fill the moat", "Weigh the price", "Spot what changed", "Pin your why", "Your tower stands".
 HUD tag and gate plate: "Practice: made-up shop, made-up coins". (Build 1: the plate stands on its own board beside the path; over the gate it hid the yard from the follow camera.)
 Sal's card lead line (build 1): "Pick a shop. Its tower goes up." While the pick waits and the card is closed, the goal strip becomes the button "Open Sal's counter", so a phone (which cannot walk before #485) is never stuck.
 Buttons: "Bring your real fortress", "Play again", "Skip practice". Lectern prompt: "Read the Book" (the only way in, besides the Quests card outside the yard).
@@ -411,7 +411,7 @@ All shown wording and game rules go in new versioned files; no file already show
 
 Each PR: `tsc --noEmit`, `npm run lint`, `npm test`, `npm run build`; reviewers `playtest-qa`, `game-ux-designer`, `game-designer`, `game-feel-engineer`, `docs-sync-checker`, `board-steward`; taps measured from a cold load in a real browser by the session that builds it; screenshots desktop and phone, marked "headless only" if that is all it was; draw calls "not measured" plus the press-P line for Faiz.
 
-1. **The yard, beats 1 and 2, the Plain view, the no-write test** (#493; written, PR open). The Plain view's Cash and Interest rows (section 1 says "Plain view only") come with the walls in build 2. `practiceCompanyV1.ts` with the tier test, `starterPlanV1.ts`, `starterWordsV1.ts` (beats 1 and 2), area `practice`, its spots, `?at=practice`, practice counter card, tower rises in fog, practice tag, "Practice yard, plain". Reached by `?at=practice` only (no newcomer gate yet).
+1. **The yard, beats 1 and 2, the Plain view, the no-write test** (#493; written, in its own PR, not merged). The yard's Plain view rows are the section 8 item 10(d) list. `practiceCompanyV1.ts` with the tier test, `starterPlanV1.ts`, `starterWordsV1.ts` (beats 1 and 2), area `practice`, its spots, `?at=practice`, practice counter card, tower rises in fog, practice tag, "Practice yard, plain". Reached by `?at=practice` only (no newcomer gate yet).
 2. **Beats 3 and 4 and the Book of Wisdom** (#494). Fact cards, granite walls, moat fill, the Book (lectern and Quests card), unlock-once.
 3. **Beats 5 and 6** (#495). Gauge first, then the scale prop; the storm.
 4. **Beats 7 and 8, the ending and the second storm** (#496). Chips, pinned sheet and flag, banner, cheer, "Bring your real fortress", "Play again", beat 6b on "Play again" (brick walls, Owes card flip), `dialogueV9.ts`.
@@ -421,12 +421,12 @@ Each PR: `tsc --noEmit`, `npm run lint`, `npm test`, `npm run build`; reviewers 
 **The test that proves the practice fortress makes no write** (Playwright on the demo stack, `frontend/e2e/regression/`, added in step 1 and extended each step):
 
 - Open `/game3d?at=practice` in a fresh context; wait for the yard.
-- Snapshot `localStorage` (every key and value).
-- Record every request from that moment (`page.on("request")`).
+- Snapshot `localStorage` (every key and value), after the page has finished loading (the visits counter `visits.v1` is written on every load, before the snapshot).
+- Record every backend request (`/api/`) from that moment (`page.on("request")`).
 - Play every beat to the end by keyboard, then again with touch emulation by taps only, including one wrong pick per check beat and "Play again".
-- Assert: every recorded request is `GET`, `HEAD` or `OPTIONS` (no `POST`, `PUT`, `PATCH`, `DELETE`); no request goes to the watchlist, journal or storm-drill write routes; no request URL or body contains "Pip" or "practice".
+- Assert: every recorded `/api/` request is `GET`, `HEAD` or `OPTIONS` (no `POST`, `PUT`, `PATCH`, `DELETE`); no request goes to the watchlist, journal or storm-drill write routes; no request URL or body contains "Pip" or "practice".
 - Assert: every key in the snapshot is unchanged; the only key added or changed is `aladdin.game3d.starter.v1`; `aladdin.game3d.guide.v1` and `aladdin.game3d.round.v1` are untouched.
-- Assert: no real panel opens in the yard (build 1 hides the Quests and Towers tools there and Q and T do nothing; the yard's sky and sound are always calm, never the real siege level), the courtyard's Towers panel (T, after walking out) never lists Pip's Lemonade, and the yard shows the practice tag on every screenshot.
+- Assert: no real panel opens in the yard (Q and T open nothing and the Towers tool is not on the toolbar), the courtyard's Towers panel (T, after walking out) never lists Pip's Lemonade, and the yard shows the practice tag on every screenshot.
 - Plus a unit test: no `starter*.ts` or `practice*.ts` file imports `lib/api`.
 
 ## 12. The playtest

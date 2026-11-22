@@ -93,7 +93,10 @@ test.describe("practice yard: beats 1 and 2 make no write", () => {
     // No real panel opens in the yard: T does nothing there, and the toolbar has no Towers or Quests tool.
     await page.keyboard.press("t");
     await expect(page.getByRole("complementary", { name: "Your towers in words" })).toHaveCount(0);
+    await page.keyboard.press("q");
+    await expect(page.getByRole("complementary", { name: "Quest log" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: /Towers/ })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /Quests/ })).toHaveCount(0);
     await expect(page.getByTestId("practice-tag")).toBeVisible();
 
     await assertNoWrite(page, before, api);
