@@ -40,7 +40,7 @@ There are 7 places plus up to 18 holding lands, and about 15 kinds of thing to p
 
 ## Decisions (#476, answered by Faiz 2026-11-22)
 
-Faiz answered the four questions in #476 on 2026-11-22. PR #NNN adds the answers here and to the skill `game-design-reward-knowing`.
+Faiz answered the four questions in #476 on 2026-11-22. PR #488 adds the answers here and to the skill `game-design-reward-knowing`.
 
 | # | Question | Answer | What it means for the starter level (#477) |
 |---|---|---|---|
