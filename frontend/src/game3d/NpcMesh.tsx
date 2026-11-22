@@ -8,7 +8,7 @@ import BlobShadow from "./BlobShadow";
 import { CLIP } from "./animClips";
 import { OracleFigure, PartnerFigure } from "./Figures";
 import { shortestAngle } from "./movement";
-import { yawToward } from "./npcs";
+import { NPC_SOLID_RADIUS, yawToward } from "./npcs";
 import type { Npc } from "./npcs";
 import WorldLabel from "./WorldLabel";
 
@@ -49,7 +49,7 @@ export default function NpcMesh({
 
   return (
     <RigidBody type="fixed" colliders={false} position={[npc.x, 0, npc.z]} rotation={[0, npc.facing, 0]}>
-      <CylinderCollider args={[0.9, 0.5]} position={[0, 0.9, 0]} />
+      <CylinderCollider args={[0.9, NPC_SOLID_RADIUS]} position={[0, 0.9, 0]} />
       <BlobShadow radius={0.65} />
       <group ref={turn}>
         <Avatar

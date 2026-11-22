@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import type { CanvasTexture } from "three";
 import { makeTexture, useDispose } from "./plateTexture";
-import { BANNER_PX, drawMintBanner } from "./mintPlateArt";
+import { BANNER_PX, LEVER_BOARD_PX, drawLeverBoard, drawMintBanner } from "./mintPlateArt";
 
 /** One flat picture on a wall or post: unlit, so the words read the same wherever you stand. */
 export function Sheet({ texture, width, height }: { texture: CanvasTexture; width: number; height: number }) {
@@ -10,6 +10,17 @@ export function Sheet({ texture, width, height }: { texture: CanvasTexture; widt
       <planeGeometry args={[width, height]} />
       <meshBasicMaterial map={texture} transparent toneMapped={false} />
     </mesh>
+  );
+}
+
+/** The name board over one lever: the name big, the lever's setting under it (#480). */
+export function LeverBoard({ position, width, name, readout }: { position: [number, number, number]; width: number; name: string; readout: string }) {
+  const texture = useMemo(() => makeTexture(LEVER_BOARD_PX, (ctx) => void drawLeverBoard(ctx, name, readout)), [name, readout]);
+  useDispose(texture);
+  return (
+    <group position={position}>
+      <Sheet texture={texture} width={width} height={(width * LEVER_BOARD_PX.h) / LEVER_BOARD_PX.w} />
+    </group>
   );
 }
 

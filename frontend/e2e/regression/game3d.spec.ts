@@ -282,6 +282,24 @@ test.describe("things you can walk up to", () => {
     }
     await problems.assertNone();
   });
+  // #480: the hero walked straight through Barren on a slow frame (physics steps follow the frame time, up to 0.5 s, so one
+  // step could carry her several metres). CI draws in software, slowly, which is exactly that case. Run at him from 4 m and
+  // she must stop in front of him, never come out the other side.
+  test("the advisors are solid: running into Barren stops in front of him", async ({ page }) => {
+    const problems = watch(page);
+    await page.goto("/game3d");
+    await expect(page.locator("canvas")).toHaveCount(1, { timeout: 60_000 });
+    await placeAt(page, -7.4, 30.4);
+    await page.keyboard.down("Shift");
+    await page.keyboard.down("w");
+    await page.waitForTimeout(3_000);
+    await page.keyboard.up("w");
+    await page.keyboard.up("Shift");
+    const at = await heroAt(page);
+    // Barren stands at z 26.4. Stopped against him she is about 0.95 m short of that; through him she would be far past it.
+    expect(at.z, `hero at x ${at.x.toFixed(2)}, z ${at.z.toFixed(2)}`).toBeGreaterThan(26.4);
+    await problems.assertNone();
+  });
 });
 
 // Draw calls and triangles per place (#448). REPORT-ONLY: the numbers go to the console, the test annotations and a JSON
