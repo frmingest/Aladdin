@@ -3,9 +3,10 @@ import { afterEach, describe, expect, it } from "vitest";
 import LoadingLine from "./LoadingLine";
 import { LOADING_SLOW, loadingLine } from "./loadingWordsV1";
 import { getSceneLoad, setSceneBusy, setSceneReady, showLoading, subscribeSceneLoad } from "./sceneLoadStore";
-import type { AreaRef } from "./areas";
+import type { AreaRefV1 } from "./areas";
+import { loadingLine as loadingLineV2 } from "./loadingWordsV2";
 
-const PLACES: AreaRef[] = [
+const PLACES: AreaRefV1[] = [
   { id: "courtyard" },
   { id: "townhall" },
   { id: "records" },
@@ -38,6 +39,13 @@ describe("loading words v1 (#479)", () => {
   it("a holding's land uses the holding's own name without a clumsy possessive, and invents none when unknown", () => {
     expect(loadingLine({ id: "holding", holdingId: "h1" }, "Apple Inc.")).toBe("Walking to the land of Apple Inc.…");
     expect(loadingLine({ id: "holding", holdingId: "h1" }, null)).toBe("Walking to the land…");
+  });
+});
+
+describe("loading words v2 (#493)", () => {
+  it("keeps every version 1 line and adds the practice yard's", () => {
+    for (const ref of PLACES) expect(loadingLineV2(ref, "Apple Inc.")).toBe(loadingLine(ref, "Apple Inc."));
+    expect(loadingLineV2({ id: "practice" })).toBe("Setting up the practice yard…");
   });
 });
 

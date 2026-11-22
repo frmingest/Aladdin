@@ -3,7 +3,7 @@
  * drawn. Game voice: short, plain, one line, the place's own name, no promise of how long. A change to shown wording is a
  * new version file (`loadingWordsV2.ts`).
  */
-import type { AreaRef } from "./areas";
+import type { AreaRefV1 as AreaRef } from "./areas";
 
 export const LOADING_WORDS_VERSION = "v1";
 

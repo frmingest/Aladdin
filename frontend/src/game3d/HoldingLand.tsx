@@ -36,7 +36,7 @@ const WALL_H = 3.4;
 const WALL_T = 0.3;
 
 /** The hedge round the edge of the land: one drawn tube, and a ring of solid blocks so the hero cannot walk out. */
-function HedgeRing({ radius }: { radius: number }) {
+export function HedgeRing({ radius }: { radius: number }) {
   const blocks = useMemo(() => {
     const half = (Math.PI * radius) / HEDGE_SEGMENTS + 0.15;
     return Array.from({ length: HEDGE_SEGMENTS }, (_, i) => {

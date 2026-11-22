@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { AreaRef } from "./areas";
-import { LOADING_SLOW, loadingLine } from "./loadingWordsV1";
+import { LOADING_SLOW, loadingLine } from "./loadingWordsV2";
 import { showLoading, useSceneLoad } from "./sceneLoadStore";
 
 /** After this long the line adds that it is still working, so a slow line never looks frozen. */
