@@ -15,6 +15,7 @@ import logging
 import socket
 import sys
 
+from app.config.log_hygiene import quiet_noisy_libraries
 from app.config.settings import get_settings
 
 
@@ -24,6 +25,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    quiet_noisy_libraries()  # no FRED api_key in the log; hide yfinance's pandas warning
     log = logging.getLogger("aladdin.worker")
 
     settings = get_settings()

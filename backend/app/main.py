@@ -40,6 +40,7 @@ from app.api.thesis import router as thesis_router
 from app.api.usage import router as usage_router
 from app.api.valuation import router as valuation_router
 from app.api.watchlist import router as watchlist_router
+from app.config.log_hygiene import quiet_noisy_libraries
 from app.config.settings import get_settings
 from app.providers.base import (
     FundamentalsUnavailableError,
@@ -56,6 +57,7 @@ from app.services.settings.demo_guard import DemoModeWriteBlockedError
 from app.timing import TimingMiddleware
 
 settings = get_settings()
+quiet_noisy_libraries()
 
 
 
