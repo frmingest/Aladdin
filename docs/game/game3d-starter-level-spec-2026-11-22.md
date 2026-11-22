@@ -1,6 +1,6 @@
 # 3D starter level in a practice fortress: spec (2026-11-22)
 
-**Status: Spec, not built. Issue #477 (this spec: #489; questions: #490, closed 2026-11-22 with Faiz's answers in section 14; question 8 open in #492).** No code is changed by this file. Input: the review `docs/game/game3d-review-starter-level-2026-11-22.md` (#475).
+**Status: Spec. Build step 1 (#493) written, PR open, not deployed; build steps 2 to 6 not started. Issue #477 (this spec: #489; questions: #490, closed 2026-11-22 with Faiz's answers in section 14; question 8 open in #492).** No code is changed by this file. Input: the review `docs/game/game3d-review-starter-level-2026-11-22.md` (#475).
 
 **Faiz's decisions this spec follows (#476, answered 2026-11-22; recorded in PR #488, merged 2026-11-22):**
 
@@ -138,7 +138,7 @@ From a cold load to the end: **7 taps plus the final choice** on the common path
 ### Beat 2: Pick at Sal's counter
 
 - **Player verb:** pick.
-- **World:** the practice counter card is already open after beat 1. Picking makes a tower rise from the pad (about one second; appears at once under reduced motion). Its walls are drawn as `unsurveyed` (stakes and rope, no crenels), the moat ditch as mist, the price post gauge as fog with "?". The gate stone reads "Pip's Lemonade · 1 of 10 pieces · Practice".
+- **World:** the practice counter card is already open after beat 1. Picking makes a tower rise from the pad (about one second; appears at once under reduced motion). Its walls are drawn as `unsurveyed` (the real fog look: a pale, see-through tower with no crenels; "stakes and rope" in an earlier draft is not a look the game has), the moat ditch as mist, the price post gauge as fog with "?". The gate stone reads "Pip's Lemonade · 1 of 10 pieces · Practice".
 - **Taught:** Sal: "A share is a small piece of a business. This piece is yours." Marlie: "Fog means nobody looked yet. Not good, not bad."
 - **Made-up fact:** Pip's Lemonade, a lemonade stand by the park, cut into 10 pieces, you own 1.
 - **Card:** title "Sal's counter (practice)". One company card: "Pip's Lemonade: a lemonade stand by the park". The whole company card is the tap target (a drawing of the stand plus the name); there is no separate button, because a one-choice button would only unlock the next step.
@@ -257,7 +257,8 @@ Faiz said yes to #490 question 9 (2026-11-22). To be built in build step 4 (#496
 ### Key labels in game voice
 
 Goal strip: "Build your first tower", "Knock on the walls", "Fill the moat", "Weigh the price", "Spot what changed", "Pin your why", "Your tower stands".
-HUD tag and gate plate: "Practice: made-up shop, made-up coins".
+HUD tag and gate plate: "Practice: made-up shop, made-up coins". (Build 1: the plate stands on its own board beside the path; over the gate it hid the yard from the follow camera.)
+Sal's card lead line (build 1): "Pick a shop. Its tower goes up." While the pick waits and the card is closed, the goal strip becomes the button "Open Sal's counter", so a phone (which cannot walk before #485) is never stuck.
 Buttons: "Bring your real fortress", "Play again", "Skip practice". Lectern prompt: "Read the Book" (the only way in, besides the Quests card outside the yard).
 Result lines: "Granite walls. One good year pays its debt." / "Narrow moat. A recipe is hard to copy." / "Lots of room. Even a low guess beats the price." / "Only the price. Walls and moat held."
 Spelling: "practice" is only ever the noun (Practice yard, the practice tag); the verb on a button is "Play again", so a child never sees practice/practise side by side.
@@ -291,7 +292,7 @@ The yard stays open after the end: "Where to?" lists "Practice yard", and `?at=p
 - **Motifs:** tower, wall, moat, fog, banner, scroll (the pinned sheet), quest mark. One new motif, the **balance scale**, carrying one fact: worth against price.
 - **Where:** the practice yard (area `practice`), the tower on the centre pad, each station a few steps round it.
 - **Pure mapping** (`starterPlanV1.ts` reading `practiceCompanyV1.ts`, with tests): picked -> tower stands, size `great`; owes 5 / earned 10 -> walls `granite`; recipe -> moat `narrow`; price 7 against low guess 8 -> gauge `bargain`, fill 1, scale tipped; storm -> price 4.9, walls and moat unchanged; two chips -> sheet pinned, flag `intact`; all five pages -> banner.
-- **Unknown look:** every station starts in the real fortress's fog looks ("Walls not surveyed" stakes and rope, moat mist, "Not priced yet" gauge with "?", fogged scale) until the player looks. The player learns that fog is "nobody looked yet" before meeting it on real data.
+- **Unknown look:** every station starts in the real fortress's fog looks ("Walls not surveyed": pale tower, no crenels, moat mist, "Not priced yet" gauge with "?", fogged scale) until the player looks. The player learns that fog is "nobody looked yet" before meeting it on real data.
 - **Words it lets us delete:** for a newcomer, the First Steps card and its "Sample fortress: stalls and whys are not saved here." line (`GUIDE_SAMPLE`), the "Read the sky" step copy, and the need for any panel text explaining walls and moat (the yard shows them). In the real fortress, the Book page replaces a paragraph a Towers panel would otherwise need.
 - **Identity score:** practice yard, new: target **3**, scored at build from screenshots, not from this spec (minimum 2 to ship; it cannot be 3 while any card copy fails the voice rules). Courtyard (`/game3d`): **2 -> 2** (the touch plan's score; this work changes what a newcomer sees there, not its look).
 
@@ -402,18 +403,19 @@ All shown wording and game rules go in new versioned files; no file already show
 - `starterGateV1.ts`: the newcomer rule and what is hidden.
 - `dialogueV9.ts`: advisors in the yard speak `starterWordsV1`; elsewhere it falls back to `dialogueV8` unchanged.
 - `guideWordsV3.ts`: the two real steps after the starter.
-- `loadingWordsV2.ts`: the yard's loading line.
+- `loadingWordsV2.ts`: the yard's loading line (written in build 1, #493, so the yard can load by link). Build 5's loading line, if it changes, is `loadingWordsV3.ts`.
+- `areaWordsV2.ts`: the yard's name plate and page title (build 1). The V1 words files only took a narrower type (`AreaRefV1`); no shown wording changed.
 - A new `worldWordsV3.ts` (or `parity3d` words version) if "Where to?" gains "Practice yard" or "Cushion" is retired.
 
 ## 11. Build steps (one PR each, each seen in a browser)
 
 Each PR: `tsc --noEmit`, `npm run lint`, `npm test`, `npm run build`; reviewers `playtest-qa`, `game-ux-designer`, `game-designer`, `game-feel-engineer`, `docs-sync-checker`, `board-steward`; taps measured from a cold load in a real browser by the session that builds it; screenshots desktop and phone, marked "headless only" if that is all it was; draw calls "not measured" plus the press-P line for Faiz.
 
-1. **The yard, beats 1 and 2, the Plain view, the no-write test** (#493). `practiceCompanyV1.ts` with the tier test, `starterPlanV1.ts`, `starterWordsV1.ts` (beats 1 and 2), area `practice`, its spots, `?at=practice`, practice counter card, tower rises in fog, practice tag, "Practice yard, plain". Reached by `?at=practice` only (no newcomer gate yet).
+1. **The yard, beats 1 and 2, the Plain view, the no-write test** (#493; written, PR open). The Plain view's Cash and Interest rows (section 1 says "Plain view only") come with the walls in build 2. `practiceCompanyV1.ts` with the tier test, `starterPlanV1.ts`, `starterWordsV1.ts` (beats 1 and 2), area `practice`, its spots, `?at=practice`, practice counter card, tower rises in fog, practice tag, "Practice yard, plain". Reached by `?at=practice` only (no newcomer gate yet).
 2. **Beats 3 and 4 and the Book of Wisdom** (#494). Fact cards, granite walls, moat fill, the Book (lectern and Quests card), unlock-once.
 3. **Beats 5 and 6** (#495). Gauge first, then the scale prop; the storm.
 4. **Beats 7 and 8, the ending and the second storm** (#496). Chips, pinned sheet and flag, banner, cheer, "Bring your real fortress", "Play again", beat 6b on "Play again" (brick walls, Owes card flip), `dialogueV9.ts`.
-5. **The newcomer gate and First Steps absorbed** (#497). `starterGateV1.ts`, cold load into the yard, hidden doors and lists, "Skip practice", `guideWordsV3.ts`, `loadingWordsV2.ts`. **E2E:** the existing regression tests start from a fresh browser, which would now be a newcomer; this PR seeds `{ status: "veteran" }` for them and adds newcomer tests.
+5. **The newcomer gate and First Steps absorbed** (#497). `starterGateV1.ts`, cold load into the yard, hidden doors and lists, "Skip practice", `guideWordsV3.ts`, `loadingWordsV3.ts` if the loading line changes. The gate must also decide a browser whose starter key exists **without** `status` (every key written by builds 1 to 4 has none), and a first visit that lands on `?at=practice` (it writes `visits.v1` on load). **E2E:** the existing regression tests start from a fresh browser, which would now be a newcomer; this PR seeds `{ status: "veteran" }` for them and adds newcomer tests.
 6. **Sound cues and polish** (the cut line, #498).
 
 **The test that proves the practice fortress makes no write** (Playwright on the demo stack, `frontend/e2e/regression/`, added in step 1 and extended each step):
@@ -424,7 +426,7 @@ Each PR: `tsc --noEmit`, `npm run lint`, `npm test`, `npm run build`; reviewers 
 - Play every beat to the end by keyboard, then again with touch emulation by taps only, including one wrong pick per check beat and "Play again".
 - Assert: every recorded request is `GET`, `HEAD` or `OPTIONS` (no `POST`, `PUT`, `PATCH`, `DELETE`); no request goes to the watchlist, journal or storm-drill write routes; no request URL or body contains "Pip" or "practice".
 - Assert: every key in the snapshot is unchanged; the only key added or changed is `aladdin.game3d.starter.v1`; `aladdin.game3d.guide.v1` and `aladdin.game3d.round.v1` are untouched.
-- Assert: the Towers panel (T) never lists Pip's Lemonade, and the yard shows the practice tag on every screenshot.
+- Assert: no real panel opens in the yard (build 1 hides the Quests and Towers tools there and Q and T do nothing; the yard's sky and sound are always calm, never the real siege level), the courtyard's Towers panel (T, after walking out) never lists Pip's Lemonade, and the yard shows the practice tag on every screenshot.
 - Plus a unit test: no `starter*.ts` or `practice*.ts` file imports `lib/api`.
 
 ## 12. The playtest
