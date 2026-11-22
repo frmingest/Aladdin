@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import type { MutableRefObject } from "react";
 import { useFrame } from "@react-three/fiber";
 import { CuboidCollider, RigidBody } from "@react-three/rapier";
@@ -11,7 +11,9 @@ import { PAL, Part } from "./Inked";
 import { prefersReducedMotion } from "./motionPref";
 import NpcMesh from "./NpcMesh";
 import PricePost from "./PricePost";
+import { LAND_COLOURS } from "./holdingLandLogic";
 import type { PricePost as PricePostData } from "./holdingLandLogic";
+import type { GuideMark } from "./guideQuests";
 import QuestMarks from "./QuestMarks";
 import StaticBatch from "./StaticBatch";
 import { TowerBody } from "./TowerMesh";
@@ -29,11 +31,13 @@ import {
 } from "./practiceYardLogic";
 import type { PracticeLook } from "./practiceYardLogic";
 import { STARTER_WORDS } from "./starterWordsV1";
-import { WALL_LOOK } from "./towerLook";
+import { TOWER_FOG_COLOR, TOWER_PAD_TOP } from "./towerLook";
 
-const GRASS = "#7a9e5c";
-const PADDOCK = "#8fb06b";
-const PATH = "#a89f91";
+const GRASS = LAND_COLOURS.grass;
+const PADDOCK = LAND_COLOURS.paddock;
+const PATH = LAND_COLOURS.path;
+const NO_MARKS: readonly GuideMark[] = [];
+const COUNTER_MARKS: readonly GuideMark[] = [COUNTER_MARK];
 const RISE_SECONDS = 1;
 /** The practice plate's board: east of the path, between the gate and the price post. */
 const PLATE_AT = { x: 2.8, z: 9.2 } as const;
@@ -44,19 +48,19 @@ const FOG_POST: PricePostData = { gauge: "fog", scroll: "fog", banner: "fog", ga
 /** Sal's counter in the yard: the courtyard's own stand, moved here, with the same sign. */
 const PRACTICE_COUNTER: Booth = { ...BOOTHS[0], x: COUNTER_AT.x, z: COUNTER_AT.z, yaw: COUNTER_YAW };
 
+const TOWER_VIEW = practiceTowerView();
+
 /**
- * The tower rising from the pad (beat 2). The physics body cannot grow, so a plain pale column grows for one second and the
- * real tower (with its wall) takes its place when it is up. Reduced motion: no rise, it simply stands.
+ * The tower rising from the pad (beat 2). The physics body cannot grow, so a column with the tower's own colour, sides and
+ * radii grows for one second while the real tower is already mounted but hidden (its batch and collider are built during the
+ * rise, not on the frame it ends); then the column goes and the tower shows. Reduced motion: no rise, it simply stands. The
+ * caller keys this by `riseKey`, so a new rise always starts from the bottom.
  */
-function RisingTower({ riseKey }: { riseKey: number | null }) {
-  const view = practiceTowerView();
-  const [up, setUp] = useState(() => riseKey === null || prefersReducedMotion());
+function RisingTower({ rise }: { rise: boolean }) {
+  const view = TOWER_VIEW;
+  const [up, setUp] = useState(() => !rise || prefersReducedMotion());
   const g = useRef<Group>(null);
   const t = useRef(0);
-  useEffect(() => {
-    t.current = 0;
-    setUp(riseKey === null || prefersReducedMotion());
-  }, [riseKey]);
   useFrame((_, dt) => {
     if (up || !g.current) return;
     t.current = Math.min(1, t.current + Math.min(dt, 0.05) / RISE_SECONDS);
@@ -64,14 +68,20 @@ function RisingTower({ riseKey }: { riseKey: number | null }) {
     g.current.scale.y = Math.max(0.001, 1 - (1 - t.current) ** 3);
     if (t.current >= 1) setUp(true);
   });
-  if (up) return <TowerBody t={view} door={false} />;
   return (
-    <group ref={g} position={[view.spot.x, 0, view.spot.z]} scale={[1, 0.001, 1]}>
-      <mesh position={[0, view.height / 2, 0]}>
-        <cylinderGeometry args={[view.radius, view.radius * 1.05, view.height, 14]} />
-        <meshStandardMaterial color={WALL_LOOK.unsurveyed.color} flatShading />
-      </mesh>
-    </group>
+    <>
+      <group visible={up}>
+        <TowerBody t={view} door={false} />
+      </group>
+      {!up && (
+        <group ref={g} position={[view.spot.x, TOWER_PAD_TOP, view.spot.z]} scale={[1, 0.001, 1]}>
+          <mesh position={[0, view.height / 2, 0]}>
+            <cylinderGeometry args={[view.radius, view.radius + 0.25, view.height, 14]} />
+            <meshStandardMaterial color={TOWER_FOG_COLOR} flatShading />
+          </mesh>
+        </group>
+      )}
+    </>
   );
 }
 
@@ -136,13 +146,13 @@ export default function PracticeYard({ look, pos }: { look: PracticeLook; pos: M
         />
       )}
 
-      {look.standing && <RisingTower riseKey={look.riseKey} />}
+      {look.standing && <RisingTower key={look.riseKey ?? "standing"} rise={look.riseKey !== null} />}
       <BoothMesh booth={PRACTICE_COUNTER} />
       {YARD_ADVISORS.map((n) => (
         <NpcMesh key={n.id} npc={n} active={false} playerPos={pos} />
       ))}
       <PricePost post={FOG_POST} pos={pos} gaugeOnly />
-      <QuestMarks marks={look.counterWaiting ? [COUNTER_MARK] : []} />
+      <QuestMarks marks={look.counterWaiting ? COUNTER_MARKS : NO_MARKS} />
     </group>
   );
 }

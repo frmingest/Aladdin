@@ -23,6 +23,9 @@ import type { TowerView } from "./stateToWorld";
 import { SHELF_ORDER } from "./libraryShelves";
 import type { ShelfSlot } from "./libraryRoom";
 
+/** The ground of a land and of the practice yard: one set of colours, so the two never drift apart. Scenery, never a fact. */
+export const LAND_COLOURS = { grass: "#7a9e5c", paddock: "#8fb06b", path: "#a89f91" } as const;
+
 /** The ground radius per size class. Four fixed sizes; an unknown size takes the small one, never a flattering one. */
 export const LAND_RADIUS: Record<FortressSize, number> = {
   great: 22,

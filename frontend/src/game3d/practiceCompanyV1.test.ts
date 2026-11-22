@@ -4,8 +4,10 @@ import { PIP, V1_WALL, landFor, practiceTiers, wallFor } from "./practiceCompany
 /**
  * The practice can never teach a meaning the real fortress does not use (#493, spec section 1). The tiers below must follow
  * from Pip's numbers under the real thresholds in `backend/app/domain/game_mapping/v1.py` (granite up to 1x a year's
- * earnings, brick up to 2.5x, timber up to 4x, interest cover under 3x one tier down) and the land rule in
- * `backend/app/services/game/rules.py`. If either backend file changes, this test and `practiceCompanyV2.ts` change with it.
+ * earnings, brick up to 2.5x, timber up to 4x, interest cover under 3x one tier down; the active v2 keeps them) and the land
+ * zones in `backend/app/services/valuation/board.py` `_zone`. This test lives in the frontend, so it cannot see a backend
+ * change: a new mapping version with other wall thresholds, or an edit to `rules.py` or `_zone`, needs `practiceCompanyV2.ts`
+ * and this test changed with it (a backend cross-check is an open follow-up, see the PR).
  */
 describe("Pip's Lemonade under the real v1 rules", () => {
   it("carries the v1 thresholds", () => {
@@ -20,6 +22,8 @@ describe("Pip's Lemonade under the real v1 rules", () => {
     expect(t.price).toBe(7);
     expect(t.room).toBe(3);
     expect(t.roomShare).toBe(0.3);
+    expect(practiceTiers("storm").roomShare).toBe(0.51);
+    expect(practiceTiers("secondStorm").roomShare).toBe(0.46);
   });
 
   it("after the storm: the price is 4.9 exactly and nothing about the business moved", () => {
@@ -49,6 +53,9 @@ describe("Pip's Lemonade under the real v1 rules", () => {
     // Weak interest cover (10 / 4 = 2.5x) drops granite to brick, and never goes below rotted.
     expect(wallFor(5, 10, 4)).toBe("brick");
     expect(wallFor(50, 10, 4)).toBe("rotted");
+    // Unknown stays unknown, never a weak wall.
+    expect(wallFor(Number.NaN, 10, 0.5)).toBe("unsurveyed");
+    expect(wallFor(5, Number.NaN, 0.5)).toBe("unsurveyed");
   });
 
   it("the land rule matches the backend's zones", () => {
@@ -57,5 +64,9 @@ describe("Pip's Lemonade under the real v1 rules", () => {
     expect(landFor(9, w)).toBe("discount");
     expect(landFor(11, w)).toBe("full_price");
     expect(landFor(13, w)).toBe("overpriced");
+    // The edges, as board.py's _zone draws them: strict below the low guess, inclusive at the middle and the high.
+    expect(landFor(8, w)).toBe("discount");
+    expect(landFor(10, w)).toBe("discount");
+    expect(landFor(12, w)).toBe("full_price");
   });
 });

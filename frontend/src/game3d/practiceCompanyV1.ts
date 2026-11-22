@@ -9,9 +9,11 @@
  * The tiers the yard shows (granite walls, a narrow moat, a bargain price) are not typed in by hand: `practiceTiers` works
  * them out from the numbers with the same thresholds the real fortress uses, so the practice can never teach a meaning the
  * real towers do not have. The thresholds are copied from `backend/app/domain/game_mapping/v1.py` (granite up to 1x a
- * year's earnings, brick up to 2.5x, timber up to 4x, interest cover under 3x drops one tier) and the land rule from
- * `backend/app/services/game/rules.py` (bargain below the low guess, discount below the middle, full price up to the high
- * guess, overpriced above it). A test pins both. Pure data and maths: no three.js, no React, no network.
+ * year's earnings, brick up to 2.5x, timber up to 4x, interest cover under 3x drops one tier; the active mapping v2 keeps the
+ * same wall thresholds) and the land zones from `backend/app/services/valuation/board.py` `_zone` (bargain below the low
+ * guess, discount up to and including the middle, full price up to and including the high guess, overpriced above it). The
+ * real rule divides by EBITDA and uses an EBIT-based interest cover; Pip has one "money left over" figure for all three, which
+ * gives the same tiers here. A test pins both. Pure data and maths: no three.js, no React, no network.
  */
 
 export const PRACTICE_COMPANY_VERSION = "v1";
@@ -51,7 +53,7 @@ export const V1_WALL = {
   weakCover: 3,
 } as const;
 
-export type PracticeWall = "basalt" | "granite" | "brick" | "timber" | "rotted";
+export type PracticeWall = "basalt" | "granite" | "brick" | "timber" | "rotted" | "unsurveyed";
 export type PracticeLand = "bargain" | "discount" | "full_price" | "overpriced";
 
 const ORDER: readonly PracticeWall[] = ["basalt", "granite", "brick", "timber", "rotted"];
@@ -61,6 +63,8 @@ const ORDER: readonly PracticeWall[] = ["basalt", "granite", "brick", "timber", 
  * net debt against one year's earnings picks the tier, and interest cover under 3x drops it one tier (never below rotted).
  */
 export function wallFor(netDebt: number, earnings: number, interest: number): PracticeWall {
+  // Unknown stays unknown, as in the backend (a missing input is "unsurveyed", never a weak wall).
+  if (!Number.isFinite(netDebt) || !Number.isFinite(earnings) || !Number.isFinite(interest)) return "unsurveyed";
   if (netDebt <= 0) return "basalt";
   if (earnings <= 0) return "rotted";
   const ratio = netDebt / earnings;
@@ -69,16 +73,18 @@ export function wallFor(netDebt: number, earnings: number, interest: number): Pr
   return wall;
 }
 
-/** The land by the real rule: below the low guess is a bargain, below the middle a discount, up to the high full price. */
+/** The land by the real zones (`board.py` `_zone`): below the low guess a bargain, up to the middle a discount, up to the high full price. */
 export function landFor(price: number, worth: { low: number; middle: number; high: number }): PracticeLand {
   if (price < worth.low) return "bargain";
-  if (price < worth.middle) return "discount";
+  if (price <= worth.middle) return "discount";
   if (price <= worth.high) return "full_price";
   return "overpriced";
 }
 
 /** Rounded to one decimal, so 7 x 0.7 reads 4.9 and never 4.8999999. */
 const tenth = (n: number): number => Math.round(n * 10) / 10;
+/** Rounded to a whole percent (0.01), the precision a share is shown at. */
+const hundredth = (n: number): number => Math.round(n * 100) / 100;
 
 export interface PracticeTiers {
   wall: PracticeWall;
@@ -86,7 +92,7 @@ export interface PracticeTiers {
   land: PracticeLand;
   /** The price of one piece, in coins. */
   price: number;
-  /** Room to be wrong: the middle guess less the price, in coins and as a share of the middle guess. */
+  /** Room to be wrong: the middle guess less the price, in coins and as a share of the middle guess (whole percent). */
   room: number;
   roomShare: number;
   owes: number;
@@ -111,7 +117,7 @@ export function practiceTiers(when: "calm" | "storm" | "secondStorm" = "calm"): 
     land: landFor(price, worth),
     price,
     room,
-    roomShare: tenth(room / worth.middle),
+    roomShare: hundredth(room / worth.middle),
     owes,
     worth,
   };

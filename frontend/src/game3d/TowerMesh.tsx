@@ -1,4 +1,5 @@
 import StaticBatch from "./StaticBatch";
+import { TOWER_FOG_COLOR, TOWER_PAD_TOP } from "./towerLook";
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { CylinderCollider, RigidBody } from "@react-three/rapier";
 import {
@@ -19,9 +20,9 @@ import {
 } from "./signText";
 
 /** Pad top, so towers stand on it. */
-const PAD_TOP = 0.5;
+const PAD_TOP = TOWER_PAD_TOP;
 const MAX_CRENELS = 8;
-const FOG_COLOR = "#dfe5ea";
+const FOG_COLOR = TOWER_FOG_COLOR;
 const FLAG_COLOR: Record<Exclude<Flag, "none">, string> = {
   intact: "#4f8a4f",
   review: "#d6a53a",

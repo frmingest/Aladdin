@@ -52,6 +52,8 @@ export const STARTER_WORDS = {
     company: { name: PIP.name, what: "A lemonade stand by the park" },
     close: "Close",
     prompt: "Press E to open Sal's counter",
+    /** The goal strip turns into this button once the card has been closed, so a phone (which cannot walk yet) is never stuck. */
+    reopen: "Open Sal's counter",
   },
   /** Beat 2's result: the tower rises, then these two lines, one after the other. */
   picked: [
@@ -103,6 +105,7 @@ export function allStarterStrings(): string[] {
     w.counter.company.what,
     w.counter.close,
     w.counter.prompt,
+    w.counter.reopen,
     ...lines(w.picked),
     ...w.gateStone,
     w.leavePrompt,

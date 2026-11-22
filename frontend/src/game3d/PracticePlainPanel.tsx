@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { STARTER_WORDS } from "./starterWordsV1";
 
 type RowKey = keyof typeof STARTER_WORDS.plain.rows;
@@ -10,6 +11,22 @@ type RowKey = keyof typeof STARTER_WORDS.plain.rows;
 export default function PracticePlainPanel({ seen, onClose }: { seen: Partial<Record<RowKey, string>>; onClose: () => void }) {
   const p = STARTER_WORDS.plain;
   const keys = Object.keys(p.rows) as RowKey[];
+  // The same keyboard path as the other panels: focus moves in, Escape closes, and focus goes back to what opened it.
+  const close = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    close.current?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code !== "Escape") return;
+      e.preventDefault();
+      onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      opener?.focus();
+    };
+  }, [onClose]);
   return (
     <aside
       aria-label={p.title}
@@ -17,7 +34,7 @@ export default function PracticePlainPanel({ seen, onClose }: { seen: Partial<Re
     >
       <header className="g3d-head">
         <h2>{p.title}</h2>
-        <button type="button" className="g3d-x" aria-label={p.close} onClick={onClose}>
+        <button ref={close} type="button" className="g3d-x" aria-label={p.close} onClick={onClose}>
           ×
         </button>
       </header>

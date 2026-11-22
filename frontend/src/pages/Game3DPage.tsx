@@ -126,7 +126,7 @@ import PracticePlainPanel from "../game3d/PracticePlainPanel";
 import { StarterGoal, StarterLive, StarterPlate } from "../game3d/StarterHud";
 import { ARRIVAL_MS, PICKED_LINE_MS, arrived, counterWaiting, goalOf, loadStarter, pickCompany, plainSeen, saveStarter, towerStands } from "../game3d/starterPlanV1";
 import type { StarterSaved } from "../game3d/starterPlanV1";
-import { STARTER_WORDS } from "../game3d/starterWordsV1";
+import { SPEAKERS, STARTER_WORDS } from "../game3d/starterWordsV1";
 import type { PerfStats } from "../game3d/PerfProbe";
 
 // The 3D engine and the physics are heavy, so they only download on this page.
@@ -616,6 +616,14 @@ export default function Game3DPage() {
     document.querySelector<HTMLCanvasElement>("canvas")?.focus();
   }, []);
   const [practicePlainOpen, setPracticePlainOpen] = useState(false);
+  const closePracticePlain = useCallback(() => setPracticePlainOpen(false), []);
+  // What a screen reader hears, once, when it changes: the arrival lines, then each result line, then the goal. With the speaker.
+  const said = (l: { who: keyof typeof SPEAKERS; text: string }) => `${SPEAKERS[l.who]}: ${l.text}`;
+  const starterLiveText = arrivalShown
+    ? STARTER_WORDS.arrival.map(said).join(" ")
+    : pickedLine !== null
+      ? said(STARTER_WORDS.picked[pickedLine])
+      : STARTER_WORDS.goal[goalOf(starter.run)];
   useEffect(() => {
     if (!inYard) {
       setPracticePlainOpen(false);
@@ -1532,8 +1540,12 @@ export default function Game3DPage() {
       )}
       {inYard && (
         <>
-          <StarterGoal goal={STARTER_WORDS.goal[goalOf(starter.run)]} hidden={plate !== null} />
-          <StarterLive text={pickedLine !== null ? STARTER_WORDS.picked[pickedLine].text : STARTER_WORDS.goal[goalOf(starter.run)]} />
+          <StarterGoal
+            goal={STARTER_WORDS.goal[goalOf(starter.run)]}
+            hidden={plate !== null}
+            reopen={counterShut && starter.run.beat === "pick" ? { label: STARTER_WORDS.counter.reopen, onPress: () => setCounterShut(false) } : undefined}
+          />
+          <StarterLive text={starterLiveText} />
           {arrivalShown && <StarterPlate lines={STARTER_WORDS.arrival} label={STARTER_WORDS.place} />}
           {pickedLine !== null && !counterOpen && <StarterPlate lines={[STARTER_WORDS.picked[pickedLine]]} label={STARTER_WORDS.counter.company.name} />}
           {counterOpen && <PracticeCounterCard onPick={pickPractice} onClose={shutCounter} />}
@@ -1543,7 +1555,7 @@ export default function Game3DPage() {
                 company: plainSeen(starter.run).company ? STARTER_WORDS.plain.company : undefined,
                 pieces: plainSeen(starter.run).pieces ? STARTER_WORDS.plain.pieces : undefined,
               }}
-              onClose={() => setPracticePlainOpen(false)}
+              onClose={closePracticePlain}
             />
           )}
         </>

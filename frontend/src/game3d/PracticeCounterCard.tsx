@@ -50,7 +50,8 @@ export default function PracticeCounterCard({ onPick, onClose }: { onPick: () =>
           <span className="block font-semibold text-[#fff1cf]">{w.company.name}</span>
           <span className="g3d-muted block">{w.company.what}</span>
         </span>
-        <kbd aria-hidden className="g3d-keycap">1</kbd>
+        {/* The key only means something with a keyboard: no keycap on a touch screen. */}
+        <kbd aria-hidden className="g3d-keycap [@media(pointer:coarse)]:hidden">1</kbd>
       </button>
     </section>
   );

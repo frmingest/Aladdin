@@ -123,6 +123,6 @@ export function plainSeen(run: StarterRun): { company: boolean; pieces: boolean 
 }
 
 /** How long the arrival plate stays before Sal's card opens by itself (no tap: a button that only moves on teaches nothing). */
-export const ARRIVAL_MS = 5000;
+export const ARRIVAL_MS = 8000;
 /** How long each of beat 2's two result lines stays (they show one after the other). */
 export const PICKED_LINE_MS = 3800;
