@@ -23,9 +23,9 @@ export function loadingLine(ref: AreaRef, holdingName?: string | null): string {
     case "quarter":
       return "Setting out the Market Quarter…";
     case "holding":
-      return holdingName ? `Walking to ${holdingName}'s land…` : "Walking to the land…";
+      return holdingName ? `Walking to the land of ${holdingName}…` : "Walking to the land…";
   }
 }
 
-/** The progress bar's name for screen readers. */
-export const LOADING_BAR_LABEL = "Drawing the world";
+/** Added under the line after a long wait, so a slow connection never looks like a frozen page. */
+export const LOADING_SLOW = "Still drawing. A slow line takes a while.";

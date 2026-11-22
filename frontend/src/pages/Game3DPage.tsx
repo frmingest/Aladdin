@@ -18,9 +18,8 @@ import WatchPanel from "../game3d/WatchPanel";
 import RavensPanel from "../game3d/RavensPanel";
 import RealmPanel from "../game3d/RealmPanel";
 import { REALM_PROMPT } from "../game3d/realmWordsV1";
-import LoadingLine from "../game3d/LoadingLine";
-import { loadingLine } from "../game3d/loadingWordsV1";
 import { guideChipLabel } from "../game3d/guideWordsV2";
+import LoadingLine from "../game3d/LoadingLine";
 import HourglassBanner from "../game3d/HourglassBanner";
 import HourglassPanel from "../game3d/HourglassPanel";
 import type { DayStatus, HistoryStatus } from "../game3d/HourglassPanel";
@@ -583,10 +582,6 @@ export default function Game3DPage() {
 
   // The place's name in the tab title (S22).
   const placeName = areaName(area, roomView?.name);
-  // Drawn yet? The scene says (sceneLoad.tsx). Most models load inside their own small Suspense boundaries (a figure shows
-  // a stand-in meanwhile), so "the world is up" is not enough: the line stays until the loader has nothing in flight too.
-  const [sceneReady, setSceneReady] = useState(false);
-  const [loadPercent, setLoadPercent] = useState<number | null>(null);
   useEffect(() => {
     document.title = `${placeName} · Aladdin`;
   }, [placeName]);
@@ -1328,11 +1323,11 @@ export default function Game3DPage() {
     <div className="relative h-[calc(100dvh-5rem)] min-h-[480px] w-full overflow-hidden bg-surface">
       <SceneBoundary fallback={<Unavailable />}>
         <Suspense fallback={null}>
-          <Scene world={shownWorld} area={area} room={roomView} hold={isMoving(areaState)} look={look} onFieldPresets={onFieldPresets} onLockChange={setLocked} onStats={setStats} statsDetail={showPerf} onReady={setSceneReady} onProgress={setLoadPercent} />
+          <Scene world={shownWorld} area={area} room={roomView} hold={isMoving(areaState)} look={look} onFieldPresets={onFieldPresets} onLockChange={setLocked} onStats={setStats} statsDetail={showPerf} />
         </Suspense>
         {/* Until the world (or the place just entered) is drawn, say so (#479). Inside the boundary, so a crashed scene shows
             only the "unavailable" card, never a loading line that never ends. */}
-        {(!sceneReady || loadPercent !== null) && <LoadingLine text={loadingLine(area, roomView?.name)} percent={loadPercent} />}
+        <LoadingLine area={area} holdingName={roomView?.name} hidden={isMoving(areaState)} />
       </SceneBoundary>
 
       <AreaFade phase={movePhase} plate={plate} />

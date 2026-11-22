@@ -169,10 +169,6 @@ interface Props extends Omit<WorldProps, "area" | "room" | "hold" | "look" | "on
   onStats: (s: PerfStats) => void;
   /** Per-group draw-call walk for the stats overlay; off unless the overlay is open. */
   statsDetail?: boolean;
-  /** True once the world (or the place just entered) is drawn, false while it is still loading (#479). */
-  onReady?: (ready: boolean) => void;
-  /** The loader's own percent while models are loading, null when nothing is (#479). */
-  onProgress?: (percent: number | null) => void;
 }
 
 export interface RoomView {
@@ -413,7 +409,7 @@ function World({ onLockChange, world, area, room, hold, look, onFieldPresets }: 
  * The 3D courtyard canvas. Lighting is deliberately flat and the same
  * everywhere: no spotlight on a "good" tower, nothing that flatters a weak one.
  */
-export default function Scene({ world, onLockChange, onStats, statsDetail = false, area = COURTYARD, room = null, hold = false, look = EMPTY_LOOK, onFieldPresets = noop, onReady = noop, onProgress = noop }: Props) {
+export default function Scene({ world, onLockChange, onStats, statsDetail = false, area = COURTYARD, room = null, hold = false, look = EMPTY_LOOK, onFieldPresets = noop }: Props) {
   const inside = AREAS[area.id].lighting === "indoor";
   // The weather: only the sky and fog colour change (calm keeps the courtyard's own sky); lights stay as they are.
   const wx = weatherLook(look.siegeLevel);
@@ -470,9 +466,9 @@ export default function Scene({ world, onLockChange, onStats, statsDetail = fals
       <Suspense fallback={null}>
         <World world={world} onLockChange={onLockChange} area={area} room={room} hold={hold} look={look} onFieldPresets={onFieldPresets} />
         {/* Mounted only when everything above has loaded; hidden again (and so "not ready") while a place re-loads. */}
-        <SceneReady onReady={onReady} />
+        <SceneReady />
       </Suspense>
-      <LoadProgress onProgress={onProgress} />
+      <LoadProgress />
       <PerfProbe onStats={onStats} detail={statsDetail} />
     </Canvas>
   );

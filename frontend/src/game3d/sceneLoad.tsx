@@ -1,39 +1,34 @@
 /**
- * Telling the page when the 3D world is drawn (#479). Two small pieces that live inside the canvas:
+ * Telling the page when the 3D world is drawn (#479). Two small pieces inside the canvas write to one tiny store
+ * (`sceneLoadStore.ts`); only the loading line reads it, so a load never re-renders the page or the scene.
  *
  *  - `SceneReady` sits inside the same Suspense boundary as the world. React mounts it only once everything in that
  *    boundary has loaded, and when a later load (a place's models) suspends the boundary again, React hides the content
- *    and runs this layout effect's cleanup, so the page hears "not drawn" again. No timers, no guessing.
- *  - `LoadProgress` sits outside that boundary, so it keeps running while the world is suspended, and passes on the
- *    three.js loader's own percentage (drei's `useProgress`), whole percents only, so the page re-renders a few dozen
- *    times at most per load.
+ *    and runs this layout effect's cleanup (React 18.3 with the R3F reconciler), so the store hears "not drawn" again.
+ *  - `LoadProgress` sits outside that boundary, so it keeps running while the world is suspended, and passes on whether
+ *    the three.js loader has anything in flight (drei's `useProgress`). Only the yes/no: the loader's percent counts
+ *    files known so far, so it can run backwards, and a bar would read like quest progress (#479 design review).
  *
  * Most models load inside their own small Suspense boundaries (Avatar, KeepModels, Horizon...), so the world's boundary
- * can resolve while they are still arriving. The page therefore shows the line until both say done: the world is up AND
- * the loader has nothing in flight (percent null).
- *
- * Neither draws anything. The page shows the line (`LoadingLine.tsx`).
+ * can resolve while they are still arriving; the line uses both signals (`LoadingLine.tsx`).
  */
 import { useProgress } from "@react-three/drei";
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect } from "react";
+import { setSceneBusy, setSceneReady } from "./sceneLoadStore";
 
-export function SceneReady({ onReady }: { onReady: (ready: boolean) => void }) {
+export function SceneReady() {
   useLayoutEffect(() => {
-    onReady(true);
-    return () => onReady(false);
-  }, [onReady]);
+    setSceneReady(true);
+    return () => setSceneReady(false);
+  }, []);
   return null;
 }
 
-export function LoadProgress({ onProgress }: { onProgress: (percent: number | null) => void }) {
+export function LoadProgress() {
   const active = useProgress((s) => s.active);
-  const progress = useProgress((s) => s.progress);
-  const last = useRef<number | null | undefined>(undefined);
   useEffect(() => {
-    const next = active ? Math.max(0, Math.min(100, Math.floor(progress))) : null;
-    if (next === last.current) return;
-    last.current = next;
-    onProgress(next);
-  }, [active, progress, onProgress]);
+    setSceneBusy(active);
+  }, [active]);
+  useEffect(() => () => setSceneBusy(false), []);
   return null;
 }
