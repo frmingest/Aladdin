@@ -64,9 +64,14 @@ class FredRiskFreeRateProvider(RiskFreeRateProvider):
             response.raise_for_status()
             payload = response.json()
         except httpx.HTTPError as exc:
+            # Never put `str(exc)` here: an httpx status error embeds the full URL, and the URL
+            # carries `api_key=...` (it would reach logs, tracebacks and API error bodies).
+            detail = type(exc).__name__
+            if isinstance(exc, httpx.HTTPStatusError):
+                detail += f" {exc.response.status_code}"
             raise RiskFreeRateUnavailableError(
-                f"FRED request failed for {series.series_id}: {exc}"
-            ) from exc
+                f"FRED request failed for {series.series_id}: {detail}"
+            ) from None
 
         for observation in payload.get("observations", []):
             raw_value = observation.get("value")

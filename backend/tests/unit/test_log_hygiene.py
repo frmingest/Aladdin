@@ -1,10 +1,13 @@
-"""app/config/log_hygiene.py: no API key in logs, yfinance's pandas warning hidden, others kept."""
+"""app/config/log_hygiene.py: no API key in logs or tracebacks, yfinance's pandas warning hidden, others kept."""
 from __future__ import annotations
 
+import io
 import logging
 import warnings
 
-from app.config.log_hygiene import RedactSecretsFilter, quiet_noisy_libraries
+import pytest
+
+from app.config.log_hygiene import quiet_noisy_libraries, redact
 
 FRED_URL = (
     "HTTP Request: GET https://api.stlouisfed.org/fred/series/observations"
@@ -12,38 +15,68 @@ FRED_URL = (
 )
 
 
-def _record(msg: str, *args: object) -> logging.LogRecord:
-    return logging.LogRecord("httpx", logging.INFO, __file__, 1, msg, args or None, None)
+@pytest.fixture
+def captured():
+    """Install the hygiene, log through a fresh logger into a buffer, restore the factory after."""
+    original = logging.getLogRecordFactory()
+    quiet_noisy_libraries()
+    stream = io.StringIO()
+    handler = logging.StreamHandler(stream)
+    handler.setFormatter(logging.Formatter("%(levelname)s %(name)s: %(message)s"))
+    log = logging.getLogger("test_log_hygiene")
+    log.setLevel(logging.INFO)
+    log.addHandler(handler)
+    yield log, stream
+    log.removeHandler(handler)
+    logging.setLogRecordFactory(original)
 
 
-def test_filter_blanks_api_key_but_keeps_the_rest_of_the_url() -> None:
-    record = _record(FRED_URL)
-    assert RedactSecretsFilter().filter(record) is True
-    text = record.getMessage()
+def test_redact_blanks_api_key_but_keeps_the_rest_of_the_url() -> None:
+    text = redact(FRED_URL)
     assert "SECRETKEY123" not in text
     assert "api_key=REDACTED" in text
     assert "series_id=IRLTLT01NOM156N" in text and "limit=12" in text
 
 
-def test_filter_handles_percent_style_args() -> None:
-    record = _record("HTTP Request: GET %s", "https://x.test/?api_key=SECRETKEY123")
-    RedactSecretsFilter().filter(record)
-    assert "SECRETKEY123" not in record.getMessage()
+def test_free_text_key_and_token_are_not_blanked() -> None:
+    assert redact("cited key=E12 and token=7") == "cited key=E12 and token=7"
 
 
-def test_filter_leaves_clean_messages_alone() -> None:
-    record = _record("worker started")
-    RedactSecretsFilter().filter(record)
-    assert record.getMessage() == "worker started"
+def test_message_with_percent_style_args_is_redacted(captured) -> None:
+    log, stream = captured
+    log.info("HTTP Request: GET %s", "https://x.test/?api_key=SECRETKEY123")
+    assert "SECRETKEY123" not in stream.getvalue()
+    assert "api_key=REDACTED" in stream.getvalue()
 
 
-def test_httpx_info_is_silenced_and_call_is_idempotent() -> None:
-    quiet_noisy_libraries()
-    quiet_noisy_libraries()
-    assert logging.getLogger("httpx").level == logging.WARNING
-    assert logging.getLogger("httpcore").level == logging.WARNING
-    root_filters = [f for f in logging.getLogger().filters if isinstance(f, RedactSecretsFilter)]
-    assert len(root_filters) == 1
+def test_traceback_text_is_redacted(captured) -> None:
+    log, stream = captured
+    try:
+        raise RuntimeError("failed for url 'https://x.test/?a=1&api_key=SECRETKEY123'")
+    except RuntimeError:
+        log.exception("job crashed")
+    out = stream.getvalue()
+    assert "job crashed" in out and "RuntimeError" in out
+    assert "SECRETKEY123" not in out
+
+
+def test_clean_messages_are_untouched(captured) -> None:
+    log, stream = captured
+    log.info("worker started")
+    assert "INFO test_log_hygiene: worker started" in stream.getvalue()
+
+
+def test_httpx_info_is_silenced_and_install_is_idempotent() -> None:
+    original = logging.getLogRecordFactory()
+    try:
+        quiet_noisy_libraries()
+        first = logging.getLogRecordFactory()
+        quiet_noisy_libraries()
+        assert logging.getLogRecordFactory() is first
+        assert logging.getLogger("httpx").level == logging.WARNING
+        assert logging.getLogger("httpcore").level == logging.WARNING
+    finally:
+        logging.setLogRecordFactory(original)
 
 
 def _emit(message: str, module_name: str) -> list[warnings.WarningMessage]:
@@ -57,15 +90,12 @@ def _emit(message: str, module_name: str) -> list[warnings.WarningMessage]:
 
 
 def test_yfinance_inplace_warning_is_hidden() -> None:
-    caught = _emit("The inplace keyword in DataFrame.sort_index is deprecated", "yfinance.utils")
-    assert caught == []
+    assert _emit("The inplace keyword in DataFrame.sort_index is deprecated", "yfinance.utils") == []
 
 
 def test_same_warning_from_our_code_is_still_shown() -> None:
-    caught = _emit("The inplace keyword in DataFrame.sort_index is deprecated", "app.services.x")
-    assert len(caught) == 1
+    assert len(_emit("The inplace keyword in DataFrame.sort_index is deprecated", "app.services.x")) == 1
 
 
 def test_other_yfinance_warnings_are_still_shown() -> None:
-    caught = _emit("something else entirely", "yfinance.utils")
-    assert len(caught) == 1
+    assert len(_emit("something else entirely", "yfinance.utils")) == 1
