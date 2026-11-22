@@ -1,7 +1,7 @@
 # The Morning Round, step 2: the marks. Build spec (2026-11-15)
 
 Issue #412, step 2 of 4. Plan: `docs/game/game3d-morning-round-plan-2026-11-15.md`.
-Status: **built on branch `feature/3d-morning-round-marks`, PR #420 open for review. Not merged, not deployed.** The spec was written
+Status: **built in PR #420, merged (420d432); deployment not checked.** The spec was written
 from the code before the build; it records two defaults Faiz has not yet confirmed (price fresh for 5 days; bell for thesis review only).
 
 ## As built: where the build differs from this spec

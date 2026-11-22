@@ -23,7 +23,7 @@ import {
 import type { QuestState, ReviewQuestState } from "./quest";
 import { NPCS } from "./npcs";
 import type { StandingWords } from "./standingWordsV1";
-import { GUIDE_STEPS } from "./guideQuests";
+import { GUIDE_STEPS, guideTicked } from "./guideQuests";
 import RoundGlyph from "./RoundGlyph";
 import type { Round } from "./round";
 import { ROUND_AGAIN, ROUND_SAMPLE, ROUND_TITLE, ROUND_WORDS } from "./roundWordsV1";
@@ -36,10 +36,12 @@ import {
   GUIDE_STEP_GOAL,
   GUIDE_STEP_TITLE,
   GUIDE_TAG,
+  GUIDE_TITLE_DONE,
   GUIDE_TODO_PILL,
+  guideMoreLabel,
   guideTitle,
   guideWhere,
-} from "./guideWordsV1";
+} from "./guideWordsV2";
 
 type ShownStanding = StandingWords & { watch?: string | null; ledger?: string | null };
 import type { StandingWire } from "../lib/types";
@@ -66,7 +68,12 @@ function Pill({ done, children }: { done: boolean; children: string }) {
   return <span className={`g3d-pill ${done ? "good" : ""}`}>{done ? "✓ " : ""}{children}</span>;
 }
 
-/** The two quests, as two cards. Worked out fresh from the journal every time; nothing is saved. */
+/**
+ * The quest log. While First Steps (the Guide) is open it is the only card shown, so a newcomer sees one thing to do next;
+ * everything else (today's round, Standing, the long quests) waits under a folded "More quests" (#478). In the sample
+ * fortress the made-up round stays above First Steps. Once the guide is done the panel reads as before: the round first,
+ * then the rest. Worked out fresh every render; nothing is saved here.
+ */
 export default function QuestLog({
   quest,
   reviews,
@@ -104,16 +111,13 @@ export default function QuestLog({
   const reviewsClear = reviews.status === "clear";
   const counted = quest.status === "open" || quest.status === "done";
   const pct = counted && quest.total > 0 ? Math.round((quest.written / quest.total) * 100) : 0;
-  return (
-    <aside aria-label="Quest log" className="g3d-panel g3d-quests g3d-slide absolute left-3 top-14 z-20 max-h-[calc(100%-4.5rem)] w-72 max-w-[40%] overflow-y-auto p-3 text-sm">
-      <header className="g3d-head">
-        <h2>📜 Quests</h2>
-        {onClose && (
-          <button type="button" className="g3d-x" aria-label="Close quests" onClick={onClose}>×</button>
-        )}
-      </header>
-      {demo && <p className="g3d-demo">{QUEST_SAMPLE}</p>}
-
+  // First Steps still has a step to do: the long quests fold away. With real data First Steps shows alone; in the sample
+  // fortress the made-up round stays on top (it opens on a cold load, #423), because there First Steps cannot finish
+  // (steps 3 and 5 need real data, #476).
+  const guideOpen = !!guide && guide.status.current !== null;
+  const guideAlone = guideOpen && !demo;
+  const roundCard = (
+    <>
       {round && (
         <section className="g3d-card g3d-round" aria-label={ROUND_TITLE}>
           <h3 className="g3d-tag">{ROUND_TITLE}</h3>
@@ -139,11 +143,14 @@ export default function QuestLog({
           )}
         </section>
       )}
-
+    </>
+  );
+  const guideCard = (
+    <>
       {guide && (
         <section className="g3d-card" aria-label="First Steps">
           <p className="g3d-tag">{GUIDE_TAG}</p>
-          <h3>{guideTitle(guide.status.level)}</h3>
+          <h3>{guide.status.current ? guideTitle(guideTicked(guide.status), guide.status.current) : GUIDE_TITLE_DONE}</h3>
           <ol className="mt-2 space-y-1">
             {GUIDE_STEPS.map((s) => (
               <li key={s} className={s === guide.status.current ? "font-semibold" : "g3d-muted"}>
@@ -165,7 +172,10 @@ export default function QuestLog({
           <button type="button" className="g3d-btn mt-2" onClick={guide.onReplay}>{GUIDE_REPLAY}</button>
         </section>
       )}
-
+    </>
+  );
+  const restCards = (
+    <>
       {standing && (
         <section className="g3d-card" aria-label="Standing">
           <p className="g3d-tag">Standing</p>
@@ -232,6 +242,42 @@ export default function QuestLog({
           )}
           {drill.status === "open" && <p className="g3d-muted mt-2">{DRILL_CARD_WHERE}</p>}
         </section>
+      )}
+    </>
+  );
+  return (
+    <aside aria-label="Quest log" className="g3d-panel g3d-quests g3d-slide absolute left-3 top-14 z-20 max-h-[calc(100%-4.5rem)] w-72 max-w-[40%] overflow-y-auto p-3 text-sm">
+      <header className="g3d-head">
+        <h2>📜 Quests</h2>
+        {onClose && (
+          <button type="button" className="g3d-x" aria-label="Close quests" onClick={onClose}>×</button>
+        )}
+      </header>
+      {demo && <p className="g3d-demo">{QUEST_SAMPLE}</p>}
+
+      {guideOpen ? (
+        <>
+          {!guideAlone && roundCard}
+          {guideCard}
+          <details
+            className="g3d-card g3d-more"
+            // The panel scrolls; bring what just unfolded into view instead of leaving it below the edge. No smooth scroll, so
+            // reduced motion needs nothing.
+            onToggle={(e) => {
+              if (e.currentTarget.open) e.currentTarget.scrollIntoView({ block: "nearest" });
+            }}
+          >
+            <summary>{guideMoreLabel(guideAlone && round && !round.pending ? round.open : 0)}</summary>
+            {guideAlone && roundCard}
+            {restCards}
+          </details>
+        </>
+      ) : (
+        <>
+          {roundCard}
+          {guideCard}
+          {restCards}
+        </>
       )}
 
       <p className="g3d-muted mt-3">

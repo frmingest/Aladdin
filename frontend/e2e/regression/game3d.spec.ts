@@ -64,6 +64,23 @@ test.describe("courtyard", () => {
     });
   }
 
+  test("Quests on a cold load: the made-up round, then First Steps with one next step, the long quests folded (#478)", async ({ page }) => {
+    const problems = watch(page);
+    await openCourtyard(page);
+    // 0 taps: the demo opens the Quest log on a cold load (#423).
+    const panel = page.getByRole("complementary", { name: "Quest log" });
+    await expect(panel).toBeVisible();
+    const steps = panel.getByRole("region", { name: "First Steps" });
+    await expect(steps.getByRole("heading", { name: "0 of 5 done. Next: Meet the advisors" })).toBeVisible();
+    await expect(steps).not.toContainText(/Weather Tower|curve/);
+    await expect(steps).toContainText("Read the sky");
+    // The long quests wait under "More quests" until asked for: 1 tap.
+    await expect(panel.getByText("Write Your Whys")).toBeHidden();
+    await panel.getByText("More quests").click();
+    await expect(panel.getByText("Write Your Whys")).toBeVisible();
+    await problems.assertNone();
+  });
+
   test("Plain view leaves for the flat Fortress and game mode stays on", async ({ page }) => {
     const problems = watch(page);
     await openCourtyard(page);

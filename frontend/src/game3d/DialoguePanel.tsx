@@ -1,7 +1,7 @@
 import { NPCS } from "./npcs";
 import type { NpcId } from "./npcs";
-import { IMPORT_PATH, closeLabel, guideTalk, pointsToImport, talk } from "./dialogueV7";
-import type { GuideTalk } from "./dialogueV7";
+import { IMPORT_PATH, closeLabel, guideTalk, pointsToImport, talk } from "./dialogueV8";
+import type { GuideTalk } from "./dialogueV8";
 import type { QuestState, ReviewQuestState } from "./quest";
 import type { DrillQuestState } from "./stormDrill";
 
