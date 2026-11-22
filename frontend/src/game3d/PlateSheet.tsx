@@ -14,7 +14,7 @@ export function Sheet({ texture, width, height }: { texture: CanvasTexture; widt
 }
 
 /** The name board over one lever: the name big, the lever's setting under it (#480). */
-export function LeverBoard({ position, width, name, readout }: { position: [number, number, number]; width: number; name: string; readout: string }) {
+export function LeverBoard({ position, width, name, readout }: { position: [number, number, number]; width: number; name: string; readout: string | null }) {
   const texture = useMemo(() => makeTexture(LEVER_BOARD_PX, (ctx) => void drawLeverBoard(ctx, name, readout)), [name, readout]);
   useDispose(texture);
   return (

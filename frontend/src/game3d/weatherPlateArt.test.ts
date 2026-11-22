@@ -142,11 +142,18 @@ describe("Mint lever boards (#480)", () => {
   it("draw the lever's name much bigger than the old banner did, and its setting under it", async () => {
     const { drawLeverBoard, LEVER_BOARD_PX } = await import("./mintPlateArt");
     const { ctx, texts } = fakeCtx();
-    const sizes = drawLeverBoard(ctx, "Harbour Guard", "At rest");
-    expect(texts).toEqual(["Harbour Guard", "At rest"]);
+    const sizes = drawLeverBoard(ctx, "Harbour Guard", "+2.5% of GDP");
+    expect(texts).toEqual(["Harbour Guard", "+2.5% of GDP"]);
     // The old banner drew the name at 64 px on a 160 px tall board of the same width: 0.4 of its height, as text 2.5 x smaller.
     expect(sizes.nameSize).toBeGreaterThanOrEqual(64 * 2);
     expect(sizes.nameSize + sizes.readoutSize).toBeLessThan(LEVER_BOARD_PX.h);
+  });
+  it("a lever at rest shows only its name (its tilt already says it is at rest)", async () => {
+    const { drawLeverBoard } = await import("./mintPlateArt");
+    const { ctx, texts } = fakeCtx();
+    const sizes = drawLeverBoard(ctx, "Toll Gate", null);
+    expect(texts).toEqual(["Toll Gate"]);
+    expect(sizes.readoutSize).toBe(0);
   });
   it("a long name shrinks to fit one line instead of running off the board", async () => {
     const { drawLeverBoard } = await import("./mintPlateArt");

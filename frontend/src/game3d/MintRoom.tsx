@@ -197,7 +197,7 @@ export default function MintRoom({ mint }: Props) {
           <group key={p.key}>
             <Lever x={p.x} tilt={leverTilt(lever, index)} lit={nearLever === p.key} />
             {/* Just above the lever's ball (top about 2.9 m), low enough to stay clear of the toolbar on a short screen (#480). */}
-            <LeverBoard position={[p.x, LEVER_BOARD_Y, MINT.minZ + 0.06]} width={LEVER_BOARD_W} name={p.name} readout={leverReadout(lever, index)} />
+            <LeverBoard position={[p.x, LEVER_BOARD_Y, MINT.minZ + 0.06]} width={LEVER_BOARD_W} name={p.name} readout={index < 0 ? null : leverReadout(lever, index)} />
           </group>
         );
       })}
