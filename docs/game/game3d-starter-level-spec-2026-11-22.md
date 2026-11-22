@@ -1,6 +1,6 @@
 # 3D starter level in a practice fortress: spec (2026-11-22)
 
-**Status: Spec, not built. Issue #477.** No code is changed by this file. Input: the review `docs/game/game3d-review-starter-level-2026-11-22.md` (#475).
+**Status: Spec, not built. Issue #477 (this spec: #489; open questions: #490).** No code is changed by this file. Input: the review `docs/game/game3d-review-starter-level-2026-11-22.md` (#475).
 
 **Faiz's decisions this spec follows (#476, answered 2026-11-22; recorded in PR #488, not merged when this was written):**
 
@@ -25,12 +25,12 @@ Every claim here was read in the file named. Anything not read is in "Not checke
 | What walls mean | **Walls come from the balance sheet, not from profits:** net cash = basalt; net debt up to 1x a year's EBITDA = granite, up to 2.5x = brick, up to 4x = timber, above = rotted; interest cover under 3x drops one tier. Moat comes from the analysis's Wide / Narrow / None. Tower size comes from weight (15% / 7% / 3%). | `backend/app/services/game/rules.py` (`wall_for_stock`, `moat_tier`, `size_class`), `backend/app/domain/game_mapping/v1.py` |
 | Price land | bargain = price below the bear-case value; discount = below base; full_price = above base inside bull; overpriced = above bull. | `backend/app/services/game/rules.py` (around line 405) |
 | Tower flag | The flag on a tower shows the why: `intact`, `review`, `breached`, or none. | `frontend/src/game3d/stateToWorld.ts`, `TowerMesh.tsx` |
-| Sal's counter | E at the stand opens the flat Marketplace's own `SalesRepDialog`, whose one write is `api.addToWatchlist` (blocked in demo mode). Shelves use plain names ("Food & Fish", "Healers", "Wires & Waves", "Odds & Ends"). | `frontend/src/game3d/boothPlan.ts`, `frontend/src/components/marketplace/SalesRepDialog.tsx`, `frontend/src/lib/salShop.ts` |
-| Writing desk | Writes a new journal entry (`action: "hold"`, why and wrong-if) through `api.createJournalEntry`; blocked with "Sample fortress, not yours. Nothing is saved here." on the sample fortress. | `frontend/src/game3d/deskForm.ts`, `deskLogic.ts`, `pages/Game3DPage.tsx` (`saveAtDesk`) |
+| Sal's counter | E at the stand opens the flat Marketplace's own `SalesRepDialog`, which writes: `api.addToWatchlist` when a stall opens (line 227; blocked in demo mode by the `demoMode` gate, lines 196 and 206), then the NewsWeb report imports in `sendRunners` (line 267), which run only after a stall was opened, so demo mode blocks them too. Shelves use plain names ("Food & Fish", "Healers", "Wires & Waves", "Odds & Ends"). | `frontend/src/game3d/boothPlan.ts`, `frontend/src/components/marketplace/SalesRepDialog.tsx`, `frontend/src/lib/salShop.ts` |
+| Writing desk | Writes a new journal entry (`action: "hold"`, why and wrong-if) through `api.createJournalEntry` in `pages/Game3DPage.tsx` (`saveAtDesk`, line 399); the form blocks on the sample fortress (`deskForm.ts` line 51) with "Sample fortress, not yours. Nothing is saved here." (line 44). | `frontend/src/game3d/deskForm.ts`, `pages/Game3DPage.tsx` |
 | Storm Drill | A post where you pick a fall (5% to 60%, default 30%) and write a plan; saved to its own table; blocked on the sample fortress. | `frontend/src/game3d/stormDrill.ts`, `stormDrillWordsV1.ts` |
 | Real vs sample | The page fetches `/game/state` etc. on load. "Sample" is `state.demo === true` (server says so) or `demoMode === true` (from `GET /settings/demo-mode`, `lib/demoMode.tsx`). The sample round ticks in memory only and never stores; the panels are not saved in demo. Demo mode is a server-wide switch; its stocks are random watchlist picks with real ticker, name and sector and **invented numbers**. | `pages/Game3DPage.tsx` (lines about 245, 279-290, 336-370, 457-466), `backend/app/services/settings/demo_mode.py`, `backend/app/services/game/demo.py` |
 | Plain view | The "← Plain view" link on the 3D page goes to `/fortress` (real or demo data). Only the Royal Mint has an in-world Plain view panel. | `pages/Game3DPage.tsx` (around line 1441), `MintPlainPanel.tsx` |
-| Cheer | Confetti, 3 seconds, fixed seed, no red or green, nothing drawn with reduced motion. Today it fires only when quest 1 is "done" on the real journal, once per page load. | `frontend/src/game3d/confettiLogic.ts`, `Confetti.tsx`, `celebrate.ts` |
+| Cheer | Confetti, 3 seconds, fixed seed, no red or green, nothing drawn with reduced motion. Today it fires only when the unwritten-thesis quest (quest 1, `questV2.ts`) is "done" on the real journal, once per page load (the caller is `Game3DPage.tsx`; `celebrate.ts` holds the pure rule). | `frontend/src/game3d/confettiLogic.ts`, `Confetti.tsx`, `celebrate.ts` |
 | Clouds | Painted clouds by siege level, flat colour, no animation. | `frontend/src/game3d/Weather.tsx` |
 | Sound | Synthesised ambience only, no files, off until the player opts in, never remembered. | `frontend/src/game3d/soundPlan.ts` |
 | Local keys today | `aladdin.game3d.guide.v1`, `aladdin.game3d.visits.v1`, `aladdin.game3d.panels.v1`, `aladdin.game3d.round.v1`, `aladdin.siege.benchmark`, `aladdin-ravens-seen`, `aladdin-scrolls-opened`, `aladdin-game-mode`, `aladdin-fortress-view`, `aladdin-codex-seen`, `aladdin.marketView`. | grep of `frontend/src` |
@@ -98,7 +98,7 @@ A unit test pins that the three tiers (granite, narrow, bargain) follow from the
 
 Every card is a small parchment plate at the bottom of the screen with at most three choices, so the scene stays in view. **Selecting acts:** there is no Save, Next or Confirm button. On keyboard, choices take 1, 2, 3 or Tab and Enter; E at a station opens its card if the player walked away. Tap counts are from the end of the previous beat. "Touch" means today, before #485; after #485 the same taps work, and walking is optional.
 
-Taught lines are spoken by the named person **inside the card header** (one plate, not a speech plate plus a card), with the speaker's name and a one-word tag ("Barren, the patient one"; "Marlie, the blunt one"; "Sal, the shopkeeper") so the speaker is clear without knowing the parody. Every sentence passes the game voice test: one breath, under 12 words, words a 12-year-old knows. A unit test counts words per sentence over every string in `starterWordsV1.ts`. **On-screen cap:** at most 35 words on screen in any beat (goal strip, practice tag, card with its header and choices), tested from `starterWordsV1.ts`. The yard at rest stays under 40 (section 8 item 5).
+All shown words live in `starterWordsV1.ts` (to be written). Taught lines are spoken by the named person **inside the card header** (one plate, not a speech plate plus a card), with the speaker's name and a one-word tag ("Barren, the patient one"; "Marlie, the blunt one"; "Sal, the shopkeeper") so the speaker is clear without knowing the parody. Every sentence passes the game voice test: one breath, under 12 words, words a 12-year-old knows. A unit test counts words per sentence over every string in `starterWordsV1.ts`. **On-screen cap:** at most 35 words on screen in any beat (goal strip, practice tag, card with its header and choices), tested from `starterWordsV1.ts`. The yard at rest stays under 40 (section 8 item 5).
 
 **Getting it right, and when a page unlocks (check beats 3, 4, 5, 6):** every check card has three choices, none of whose labels gives the answer away; the reason is in the result line only. A wrong pick shows a hint and the card stays. A right answer on the first or second try unlocks the beat's Book page. After two misses the right answer is shown with its reason, the world still changes and the beat moves on, but the page stays locked with "Play again to earn this page." No counter of tries is ever shown. This keeps the reward for knowing, not for tapping through.
 
@@ -142,7 +142,7 @@ From a cold load to the end: **7 taps plus the final choice** on the common path
 - **Empty / unknown / wrong:** no wrong pick. If the player closes the card, the diamond stays over Sal; E or a tap on the counter opens it again.
 - **Taps:** 1 (keyboard: 1 or Enter; touch: tap the company card).
 - **Book page:** none. This idea is on the Book's cover, always open.
-- **Rules kept:** "Pick", never "Buy". The practice counter is its own component and never `SalesRepDialog` (whose one write is `api.addToWatchlist`). No real company appears.
+- **Rules kept:** "Pick", never "Buy". The practice counter is its own component and never `SalesRepDialog` (whose writes are the watchlist add and the NewsWeb imports). No real company appears.
 - **Cheapest prototype:** card plus a tower that appears with no rise.
 
 ### Beat 3: Knock on the walls
@@ -424,6 +424,8 @@ Each PR: `tsc --noEmit`, `npm run lint`, `npm test`, `npm run build`; reviewers 
 (The review's off-screen arrow toward the quest mark is not needed in the yard: the yard leads the camera to each station. It stays a courtyard idea.)
 
 ## 14. Open questions for Faiz
+
+Also on the board as their own decision issue (#490); they block the build steps, not this spec.
 
 1. **Company and beat 2:** Pip's Lemonade, one made-up company, no real companies in the starter? (Recommended.)
 2. **Walls:** teach walls as "makes money and owes little" (the real rule), not "profits" alone as the review had?
