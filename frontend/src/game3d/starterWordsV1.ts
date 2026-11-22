@@ -49,7 +49,7 @@ export const STARTER_WORDS = {
   counter: {
     title: "Sal's counter (practice)",
     lead: { who: "sal", text: "Pick a shop. Its tower goes up." } as Line,
-    company: { name: PIP.name, what: "A lemonade stand by the park" },
+    company: { name: PIP.name, what: PIP.what },
     close: "Close",
     prompt: "Press E to open Sal's counter",
     /** The goal strip turns into this button once the card has been closed, so a phone (which cannot walk yet) is never stuck. */
@@ -84,7 +84,7 @@ export const STARTER_WORDS = {
       room: "Room to be wrong",
       storm: "After the storm",
     },
-    company: `${PIP.name}: a lemonade stand by the park`,
+    company: `${PIP.name}: ${PIP.what.charAt(0).toLowerCase()}${PIP.what.slice(1)}`,
     pieces: `Cut into ${PIP.pieces} pieces. You own ${PIP.owned}.`,
   },
 } as const;

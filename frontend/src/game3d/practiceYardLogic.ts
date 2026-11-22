@@ -7,6 +7,7 @@
  */
 import { GATE_LEAVE_RANGE, GATE_RANGE, GATE_STONE, LAND_GATE, LAND_SPAWN, LAND_TOWER, PRICE_POST, WORKPLACE } from "./holdingLandLogic";
 import { NPCS, yawToward } from "./npcs";
+import { PIP } from "./practiceCompanyV1";
 import type { Npc } from "./npcs";
 import { SIZE_HEIGHT, WALL_LOOK } from "./towerLook";
 import type { TowerView } from "./stateToWorld";
@@ -33,14 +34,17 @@ export function nearCounter(p: { x: number; z: number }, range: number = COUNTER
   return Math.hypot(COUNTER_AT.x - p.x, COUNTER_AT.z - p.z) <= range;
 }
 
-/** Barren and Marlie by the gate, west of the path, turned toward the pad. Figures only: in the yard they speak in the plates. */
+/**
+ * Barren and Marlie west of the path, behind the gate stone and in the arrival view (further out they stood off the screen's
+ * edge), turned to greet you at the arrival spot. Figures only: in the yard they speak in the plates.
+ */
 const ADVISOR_AT: Record<Npc["id"], { x: number; z: number }> = {
-  oracle: { x: -5.6, z: 11.2 },
-  partner: { x: -7.4, z: 9.4 },
+  oracle: { x: -3.4, z: 5 },
+  partner: { x: -5, z: 3.6 },
 };
 export const YARD_ADVISORS: readonly Npc[] = NPCS.map((n) => {
   const at = ADVISOR_AT[n.id];
-  return { ...n, x: at.x, z: at.z, facing: yawToward(at, YARD_PAD) };
+  return { ...n, x: at.x, z: at.z, facing: yawToward(at, YARD_SPAWN) };
 });
 
 /** The quest diamond over Sal's counter roof (the courtyard's own mark look). */
@@ -57,7 +61,7 @@ export function practiceTowerView(): TowerView {
     slot: 0,
     spot: { x: YARD_PAD.x, z: YARD_PAD.z },
     holdingId: "practice",
-    name: "Pip's Lemonade",
+    name: PIP.name,
     ticker: "",
     shape: "keep",
     height: Math.min(SIZE_HEIGHT.great, LAND_TOWER.maxHeight),

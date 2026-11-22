@@ -1,6 +1,6 @@
 /**
  * Name plate on arrival and the page title (version 2, 2026-11-22, #493): version 1's words for every place it knew, plus
- * the starter's practice yard. Version 1 (`areaWordsV1.ts`) is not edited; this file only adds the yard. A change to any
+ * the starter's practice yard. Version 1 (`areaWordsV1.ts`) keeps its wording (its only change is a narrower type, `AreaRefV1`, so it never sees the yard); this file only adds the yard. A change to any
  * wording that could be shown is a new version file (areaWordsV3.ts).
  */
 import type { AreaRef } from "./areas";

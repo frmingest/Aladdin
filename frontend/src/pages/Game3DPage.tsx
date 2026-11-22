@@ -121,6 +121,7 @@ import { withGaps } from "../game3d/standingGaps";
 import { wordsFor } from "../game3d/standingWordsV3";
 import { withGameStandingLabels } from "../game3d/standingLabelsWordsV1";
 import { webglSupported } from "../game3d/webgl";
+import { useSceneLoad } from "../game3d/sceneLoadStore";
 import PracticeCounterCard from "../game3d/PracticeCounterCard";
 import PracticePlainPanel from "../game3d/PracticePlainPanel";
 import { StarterGoal, StarterLive, StarterPlate } from "../game3d/StarterHud";
@@ -281,7 +282,12 @@ export default function Game3DPage() {
   // The key hint teaches the controls, so it shows on the first few visits only (C2).
   const [showHint] = useState(() => hintWanted(countVisit()));
   // The Quest log holds the wires, so while you look back its key does nothing (it stays as you left it for today).
-  const flip = useCallback((id: PanelId) => { if (inPast && id === "quests") return; setPanels((p) => togglePanel(p, id)); }, [inPast]);
+  const flip = useCallback((id: PanelId) => {
+    if (inPast && id === "quests") return;
+    // The practice yard shows no real panel: Q and T do nothing there (#493).
+    if (areaState.current.id === "practice" && (id === "quests" || id === "towers")) return;
+    setPanels((p) => togglePanel(p, id));
+  }, [inPast, areaState]);
   // The sample fortress opens the Quests panel once so the made-up round shows with no tap; it never stores that (demo wins).
   const autoOpened = useRef(false);
   useEffect(() => {
@@ -292,10 +298,12 @@ export default function Game3DPage() {
     autoOpened.current = true;
     if (next) setPanels(next);
   }, [state, demoMode]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Not while in the practice yard (#493): the yard changes nothing in this browser but the starter's own key.
+  const yardNow = areaState.current.id === "practice";
   useEffect(() => {
-    if (state?.demo === true || demoMode === true) return;
+    if (state?.demo === true || demoMode === true || yardNow) return;
     savePanels(panels);
-  }, [panels, state, demoMode]);
+  }, [panels, state, demoMode, yardNow]);
 
   // Which of the round's own reads have answered (well or badly). Until they have, the round says nothing about them.
   const [settled, setSettled] = useState({ stalls: false, watch: false, ravens: false });
@@ -567,7 +575,7 @@ export default function Game3DPage() {
   // The place the scene draws: a land whose tower is gone is not a place, so it reads as the courtyard.
   const area: AreaRef = areaState.current.id === "holding" && !roomView ? COURTYARD : areaState.current;
   // Opt-in sound: off on every load, follows the same stored siege level as the sky, quiet indoors.
-  const sound = useAmbience(ambienceLevel(area.id, state?.siege?.level ?? null));
+  const sound = useAmbience(ambienceLevel(area.id, area.id === "practice" ? "calm" : (state?.siege?.level ?? null)));
   const inHall = area.id === "townhall";
   const inRecords = area.id === "records";
   // The Royal Mint: the lever list is read the first time you go in; the stamped answer lives here, not in the scene.
@@ -589,7 +597,9 @@ export default function Game3DPage() {
   // Sal's card opens by itself once the arrival plate has gone; Escape puts it away and E at the counter brings it back.
   const [counterShut, setCounterShut] = useState(false);
   const counterOpen = inYard && starter.run.beat === "pick" && !counterShut;
-  const arrivalShown = inYard && starter.run.beat === "arrive";
+  // The arrival plate waits for the yard to be drawn, so a slow load never eats the two lines.
+  const yardDrawn = useSceneLoad().ready;
+  const arrivalShown = inYard && starter.run.beat === "arrive" && yardDrawn;
   useEffect(() => {
     if (!arrivalShown) return;
     const t = setTimeout(() => updateStarter(arrived), ARRIVAL_MS);
@@ -628,8 +638,14 @@ export default function Game3DPage() {
     if (!inYard) {
       setPracticePlainOpen(false);
       setPickedLine(null);
+      // The yard leads: coming back while the pick still waits opens Sal's card by itself again.
+      setCounterShut(false);
     }
   }, [inYard]);
+  // A card you click needs the mouse free, as the other panels do.
+  useEffect(() => {
+    if (counterOpen && document.pointerLockElement) document.exitPointerLock();
+  }, [counterOpen]);
   // While a starter card is open, its number keys act and the page's own hotkeys (E, T, Q, G, P) stay quiet.
   const starterCardOpen = useRef(false);
   starterCardOpen.current = counterOpen;
@@ -1335,10 +1351,11 @@ export default function Game3DPage() {
     };
   }, [roundOff, shownWorld, sampleStalls, ravens, seenRavens, standing, standingFailed, watchlist, nightWatch, nowMs, round]);
   // Remember the visit and what you dealt with (this browser only; nothing for the sample fortress).
+  // Not while in the practice yard (#493): it is saved when you walk back out.
   useEffect(() => {
-    if (state === null) return;
+    if (state === null || inYard) return;
     persistRound(guideStorage(), roundOff, { lastVisit: visitAt, done: pruneDone(roundDone, round?.stops ?? [], marks.sources) });
-  }, [roundOff, state, visitAt, roundDone, round, marks]);
+  }, [roundOff, state, visitAt, roundDone, round, marks, inYard]);
   // The bell is dealt with when you open that holding's thesis shelf in its land.
   useEffect(() => {
     if (!room || readShelf !== "oath") return;
@@ -1363,7 +1380,8 @@ export default function Game3DPage() {
       watchStatus: inPast ? null : (nightWatch?.status ?? null),
       unseenRavens: inPast ? 0 : unseenRavens,
       realmLevel,
-      siegeLevel: viewState?.siege?.level ?? null,
+      // The practice yard's sky is its own (sunny until the storm beat), never the real fortress's weather.
+      siegeLevel: inYard ? "calm" : (viewState?.siege?.level ?? null),
       drillOpen,
       questMarks: inPast ? [] : questMarks,
       talking,
@@ -1380,7 +1398,7 @@ export default function Game3DPage() {
       mint: mint.view,
       practice: { standing: towerStands(starter.run), counterWaiting: counterWaiting(starter.run), riseKey },
     }),
-    [starter.run, riseKey, inPast, viewState, mint.view, sheets, quest.written, nightWatch, unseenRavens, realmLevel, drillOpen, questMarks, talking, cheerKey, standingText.lit, fieldTools, quarter, archCounts, placedMarks, lit],
+    [starter.run, riseKey, inYard, inPast, viewState, mint.view, sheets, quest.written, nightWatch, unseenRavens, realmLevel, drillOpen, questMarks, talking, cheerKey, standingText.lit, fieldTools, quarter, archCounts, placedMarks, lit],
   );
 
   if (!supported) return <Unavailable />;
@@ -1415,11 +1433,13 @@ export default function Game3DPage() {
       <Toolbar
         open={panels}
         onToggle={flip}
-        roundOpen={roundChipCount(round)}
-        guideLeft={inPast || world.demo ? 0 : guideLeft(guide)}
+        // In the practice yard the real panels and counts stay off the toolbar: the yard says nothing about the real fortress.
+        practice={inYard}
+        roundOpen={inYard ? 0 : roundChipCount(round)}
+        guideLeft={inPast || world.demo || inYard ? 0 : guideLeft(guide)}
         guideLabel={guideChipLabel(guideLeft(guide))}
-        questsWaiting={(quest.status === "open" ? 1 : 0) + (reviews.status === "open" ? 1 : 0)}
-        towerCount={world.plain.length}
+        questsWaiting={inYard ? 0 : (quest.status === "open" ? 1 : 0) + (reviews.status === "open" ? 1 : 0)}
+        towerCount={inYard ? 0 : world.plain.length}
         statsOn={showPerf}
         statsLabel={stats ? `${stats.fps} fps · ${stats.calls} draws · ${Math.round(stats.triangles / 1000)}k tris` : "Measuring..."}
         onToggleStats={() => setShowPerf((v) => !v)}
@@ -1432,8 +1452,8 @@ export default function Game3DPage() {
       {area.id === "mint" && plainOpen && <MintPlainPanel result={mint.view.result} stale={mint.view.wall === "stale"} onClose={() => setPlainOpen(false)} />}
       {whereOpen && !inPast && !worldPage && <WhereToPanel onPick={pickDoor} onClose={closeWhere} only={onlyPlace} onlyRoutes={onlyRoutes} />}
       {whereOpen && !inPast && worldPage && <WorldPanel door={worldPage} onBack={() => setWorldPage(null)} onClose={closeWhere} />}
-      {panels.towers && <TowerPanel world={shownWorld} loading={loading} error={error} onRetry={load} onClose={() => flip("towers")} marks={inPast ? undefined : marks} lit={inPast ? undefined : lit} noticeSheets={inPast ? 0 : sheets} />}
-      {panels.quests && !inPast && <QuestLog quest={quest} reviews={reviews} demo={world.demo} standing={standingText} wires={standing && !standingFailed ? (standing.wires ?? []) : undefined} onLookAtWire={lookAtWire} onRefreshStanding={refreshStanding} drill={drillQuest} guide={{ status: guide, saved: guideSaved, onReplay: replayGuideNow }} round={round} onRoundAgain={roundOff ? startSampleAgain : undefined} onClose={() => flip("quests")} />}
+      {panels.towers && !inYard && <TowerPanel world={shownWorld} loading={loading} error={error} onRetry={load} onClose={() => flip("towers")} marks={inPast ? undefined : marks} lit={inPast ? undefined : lit} noticeSheets={inPast ? 0 : sheets} />}
+      {panels.quests && !inPast && !inYard && <QuestLog quest={quest} reviews={reviews} demo={world.demo} standing={standingText} wires={standing && !standingFailed ? (standing.wires ?? []) : undefined} onLookAtWire={lookAtWire} onRefreshStanding={refreshStanding} drill={drillQuest} guide={{ status: guide, saved: guideSaved, onReplay: replayGuideNow }} round={round} onRoundAgain={roundOff ? startSampleAgain : undefined} onClose={() => flip("quests")} />}
       {vaultOpen && state && <VaultPanel state={state} onChanged={load} onClose={() => setSpotPanel("vault", false)} />}
       {realmOpen && viewState && <RealmPanel state={viewState} onClose={() => setSpotPanel("realm", false)} />}
       {inPast && past && (
@@ -1525,7 +1545,8 @@ export default function Game3DPage() {
           title={STARTER_WORDS.plain.title}
           aria-pressed={practicePlainOpen}
           onClick={() => setPracticePlainOpen((v) => !v)}
-          className="absolute left-3 top-3 rounded border border-border bg-surface/90 px-3 py-1.5 text-sm text-ink hover:opacity-80"
+          // On a phone the toolbar covers the top-left corner, so the yard's button sits under it there.
+          className="absolute left-3 top-14 z-30 sm:top-3 rounded border border-border bg-surface/90 px-3 py-1.5 text-sm text-ink hover:opacity-80"
         >
           {PLAIN_VIEW}
         </button>
@@ -1564,7 +1585,7 @@ export default function Game3DPage() {
         <button
           type="button"
           onClick={backOutside}
-          className="absolute left-3 top-14 rounded border border-border bg-surface/90 px-3 py-1.5 text-sm text-ink hover:opacity-80"
+          className={`absolute left-3 ${inYard ? "top-[6.25rem] sm:top-14" : "top-14"} rounded border border-border bg-surface/90 px-3 py-1.5 text-sm text-ink hover:opacity-80`}
         >
           ← Back outside
         </button>

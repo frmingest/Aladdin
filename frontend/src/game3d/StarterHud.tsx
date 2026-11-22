@@ -9,7 +9,7 @@ import type { Line } from "./starterWordsV1";
  */
 export function StarterGoal({ goal, hidden = false, reopen }: { goal: string; hidden?: boolean; reopen?: { label: string; onPress: () => void } }) {
   return (
-    <div className="pointer-events-none absolute inset-x-0 top-28 z-20 flex flex-col items-center gap-1 px-2 sm:top-16">
+    <div className="pointer-events-none absolute inset-x-0 top-[9.5rem] z-20 flex flex-col items-center gap-1 px-2 sm:top-16">
       {/* Sal's card was closed while the pick still waits: the goal becomes the way back, so a phone is never stuck. */}
       {!hidden && reopen ? (
         <button type="button" onClick={reopen.onPress} className="g3d-panel pointer-events-auto min-h-[44px] px-3 py-1 text-sm font-semibold">
