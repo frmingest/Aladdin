@@ -217,6 +217,8 @@ test.describe("things you can walk up to", () => {
    * her several metres, so walking cannot aim at a stand spot. Then waits out the short hover that follows every placement.
    */
   async function placeAt(page: Page, x: number, z: number) {
+    // The hook is set up by the world once it has loaded, which can be a while after the canvas appears.
+    await page.waitForFunction(() => typeof (window as unknown as { __g3dPlace?: unknown }).__g3dPlace === "function", null, { timeout: 60_000 });
     await page.evaluate(([px, pz]) => (window as unknown as { __g3dPlace: (a: number, b: number) => void }).__g3dPlace(px, pz), [x, z]);
     trail.push(`placed at x ${x}, z ${z}`);
     await page.waitForTimeout(3_500);
