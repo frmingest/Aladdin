@@ -185,5 +185,5 @@ export const LANE_BANNERS: readonly { id: string; x: number; z: number; yaw: num
 
 /** The house that closes the far end of the lane. */
 export const LANE_HOUSE = { x: 0, z: -37, yaw: 0, scale: 4, solid: 2 } as const;
-/** The lane sign where the boardwalk starts. */
-export const LANE_SIGN = { x: 0, z: 24 } as const;
+/** The lane sign where the boardwalk starts: it stands beside the road (west of the boardwalk), never across it (#502). */
+export const LANE_SIGN = { x: -6.5, z: 24 } as const;

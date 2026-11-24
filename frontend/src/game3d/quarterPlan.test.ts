@@ -32,6 +32,7 @@ import {
   LANE_BANNERS,
   LANE_HOUSE,
   LANE_SIGN,
+  LANE_TILE,
   LANE_TILES,
   QUARTER_EXIT,
   QUARTER_EXIT_LEAVE_RANGE,
@@ -197,6 +198,8 @@ describe("the goods and the lane's dressing never carry a fact", () => {
     }
     expect(LANE_HOUSE.z).toBeGreaterThan(-QUARTER_HALF);
     expect(LANE_SIGN.z).toBeLessThan(QUARTER_SPAWN.z);
+    // The sign and its posts (2 either side of its middle) stand clear of the boardwalk and the walking line (#502).
+    expect(Math.abs(LANE_SIGN.x) - 2).toBeGreaterThanOrEqual(LANE_TILE);
   });
 
   it("takes only a watchlist: the plan imports no holding theme, wall, moat, backend type or verdict", () => {
