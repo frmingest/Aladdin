@@ -12,6 +12,7 @@ import type { Board, BoardSlot } from "./townHallRoomLogic";
 import { boardHeadline } from "./boardHeadlines";
 import { useBoardHeadlines } from "./useBoardHeadlines";
 import WorldLabel from "./WorldLabel";
+import WorldSign from "./WorldSign";
 
 const PLASTER = "#d8c6a4";
 const FLOOR = "#7a5638";
@@ -56,8 +57,11 @@ function BoardMesh({ board, slot, active, headline }: { board: Board; slot: Boar
           ))}
         </group>
       )}
-      <WorldLabel position={[0, 2.2, 0.05]} distanceFactor={9} wrap maxWidth={220}>
-          <div className="text-sm font-semibold">{board.title}</div>
+      {/* The title is painted on the face so it reads from the door; the near label adds the line and headline below it (#502). */}
+      <WorldSign spec={{ kind: "plank", lines: [board.title] }} position={[0, 3.15, -0.11]} width={3.5} both={false} />
+      <WorldLabel position={[0, 1.9, 0.05]} distanceFactor={9} wrap maxWidth={220}>
+          {/* The title is painted on the face above; kept here for screen readers only, so the eye reads it once. */}
+          <div className="sr-only">{board.title}</div>
           <div className="text-xs opacity-80">{board.line}</div>
           {headline && <div className="tabular mt-1 whitespace-pre-line text-sm font-semibold">{headline}</div>}
         </WorldLabel>

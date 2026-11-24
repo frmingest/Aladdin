@@ -10,6 +10,7 @@ import {
   ARCHIVE_DOOR,
   BOOK,
   BOOKCASE,
+  BOOKCASE_PANEL,
   BOOKCASE_XS,
   ROW_YS,
   bookPlans,
@@ -85,14 +86,25 @@ function Book({ b }: { b: BookPlan }) {
 
 function Bookcase({ x }: { x: number }) {
   const { w, h, d, z } = BOOKCASE;
+  const { t, midZ, shelfZ, shelfD, shelfT } = BOOKCASE_PANEL;
+  // Hollow: back, two sides, top and bottom, so the books on the shelves show from the front (#502).
+  const boards: { key: string; pos: [number, number, number]; size: [number, number, number] }[] = [
+    { key: "back", pos: [0, h / 2, midZ - d / 2 + t / 2], size: [w, h, t] },
+    { key: "left", pos: [-(w / 2 - t / 2), h / 2, midZ], size: [t, h, d] },
+    { key: "right", pos: [w / 2 - t / 2, h / 2, midZ], size: [t, h, d] },
+    { key: "top", pos: [0, h - t / 2, midZ], size: [w, t, d] },
+    { key: "bottom", pos: [0, t / 2, midZ], size: [w, t, d] },
+  ];
   return (
     <group position={[x, 0, z]}>
-      <Part color={PAL.timberDark} position={[0, h / 2, -0.05]} grow={1.02}>
-        <boxGeometry args={[w, h, d]} />
-      </Part>
+      {boards.map((bd) => (
+        <Part key={bd.key} color={PAL.timberDark} position={bd.pos} grow={1.02}>
+          <boxGeometry args={bd.size} />
+        </Part>
+      ))}
       {ROW_YS.map((y) => (
-        <Part key={y} color={PAL.timber} position={[0, y - 0.03, 0.12]} grow={1.04}>
-          <boxGeometry args={[w - 0.2, 0.06, d - 0.1]} />
+        <Part key={y} color={PAL.timber} position={[0, y - shelfT / 2, shelfZ]} grow={1.04}>
+          <boxGeometry args={[w - 2 * t, shelfT, shelfD]} />
         </Part>
       ))}
     </group>

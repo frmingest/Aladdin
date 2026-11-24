@@ -1412,7 +1412,7 @@ export default function Game3DPage() {
 
 
   // One Back button for every room (C2): the Town Hall, the Hall of Records, the Weather Tower and a holding's tower.
-  const backOutside = roomView || inHall || inRecords || area.id === "weather" || area.id === "mint" || inYard ? leaveArea : null;
+  const backOutside = roomView || inHall || inRecords || area.id === "weather" || area.id === "mint" || area.id === "quarter" || inYard ? leaveArea : null;
   // Any panel or dialog on screen: the hint line steps aside for it.
   const anyPanelOpen =
     panels.quests || panels.towers || whereOpen || vaultOpen || realmOpen || watchOpen || perchOpen || hourglassOpen || deskOpen || drillOpen || lampOpen || boothOpen !== null || report !== null || counterOpen || practicePlainOpen || arrivalShown || pickedLine !== null;

@@ -32,6 +32,24 @@ export const RECORDS_ROUTE = "/fortress/records";
 /** Every book is the same size: a decision is a decision, a big one is not a bigger book. */
 export const BOOK = { w: 0.46, h: 0.74, d: 0.34 } as const;
 export const BOOKCASE = { w: 5.2, h: 3.4, d: 0.7, z: ARCHIVE.minZ + 0.5 } as const;
+/**
+ * The case is hollow: a thin back panel, two sides, top and bottom, so the books show from the front (#502). Values are
+ * relative to the case's own z (BOOKCASE.z); local z grows toward the room.
+ */
+export const BOOKCASE_PANEL = {
+  /** Thickness of the back, side, top and bottom boards. */
+  t: 0.1,
+  /** Centre of the case in local z (kept from the old solid box so the collider still matches). */
+  midZ: -0.05,
+  /** Shelf boards: centre z (local), depth, thickness; a board's top face is at its row y. */
+  shelfZ: 0.12,
+  shelfD: BOOKCASE.d - 0.1,
+  shelfT: 0.06,
+} as const;
+/** World z of the back panel's front face (books must stand in front of it). */
+export const BOOKCASE_BACK_FRONT_Z = BOOKCASE.z + BOOKCASE_PANEL.midZ - BOOKCASE.d / 2 + BOOKCASE_PANEL.t;
+/** World z of the side boards' front edge (books must not stand further out). */
+export const BOOKCASE_SIDE_FRONT_Z = BOOKCASE.z + BOOKCASE_PANEL.midZ + BOOKCASE.d / 2;
 /** Three bookcases side by side on the north wall. */
 export const BOOKCASE_XS = [-6, 0, 6] as const;
 /** Two rows of books in each case, low then high. */

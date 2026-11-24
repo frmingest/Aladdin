@@ -208,14 +208,15 @@ export default function WeatherTowerRoom({ pos }: Props) {
       {posts.map((p) => (
         <Post key={p.key} p={p} />
       ))}
-      <Banner position={[0, 0.42, RAIL.z + 0.9]} yaw={0} width={4.2} big={WEATHER_WORDS.railKey} small={null} />
+      <Banner position={[-2.6, 0.42, RAIL.z + 0.9]} yaw={0} width={4.2} big={WEATHER_WORDS.railKey} small={null} />
 
       {layout.dials.map((d) => (
         <Plate key={d.key} d={d} lit={d.key === readoutKey} />
       ))}
 
       <Banner position={[0, 6.45, TOWER.minZ + 0.1]} yaw={0} width={6} big={plate[0]} small={plate.length > 1 ? plate.slice(1).join(" · ") : null} />
-      <Banner position={[0, 0.42, TOWER.minZ + 0.1]} yaw={0} width={5} big={WEATHER_WORDS.dotKey} small={null} />
+      {/* The dot caption stands beside the rail key on the rail's front: on the north wall at floor height the curve's posts and their value labels stood in front of it (#502). */}
+      <Banner position={[2.6, 0.42, RAIL.z + 0.9]} yaw={0} width={4.4} big={WEATHER_WORDS.dotKey} small={null} />
       <Banner position={[TOWER.minX + 0.1, 6.45, MID_Z]} yaw={Math.PI / 2} width={3.6} big={WEATHER_WORDS.west} small={null} />
       <Banner position={[TOWER.maxX - 0.1, 6.45, MID_Z]} yaw={-Math.PI / 2} width={3.6} big={WEATHER_WORDS.east} small={null} />
 
