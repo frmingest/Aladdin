@@ -79,11 +79,26 @@ function Plate({ d, lit }: { d: DialPlan; lit: boolean }) {
 }
 
 /** A wide wall banner (a heading or a key). */
-function Banner({ position, yaw, width, big, small }: { position: [number, number, number]; yaw: number; width: number; big: string; small: string | null }) {
+function Banner({
+  position,
+  yaw,
+  width,
+  big,
+  small,
+  flat = false,
+}: {
+  position: [number, number, number];
+  yaw: number;
+  width: number;
+  big: string;
+  small: string | null;
+  /** Lying on the floor, text running east-west and reading from the south (the door side). */
+  flat?: boolean;
+}) {
   const texture = useMemo(() => makeTexture(BANNER_PX, (ctx) => drawBanner(ctx, big, small)), [big, small]);
   useDispose(texture);
   return (
-    <group position={position} rotation={[0, yaw, 0]}>
+    <group position={position} rotation={flat ? [-Math.PI / 2, 0, yaw] : [0, yaw, 0]}>
       <Sheet texture={texture} width={width} height={(width * BANNER_PX.h) / BANNER_PX.w} />
     </group>
   );
@@ -215,7 +230,8 @@ export default function WeatherTowerRoom({ pos }: Props) {
       ))}
 
       <Banner position={[0, 6.45, TOWER.minZ + 0.1]} yaw={0} width={6} big={plate[0]} small={plate.length > 1 ? plate.slice(1).join(" · ") : null} />
-      <Banner position={[0, 0.42, TOWER.minZ + 0.1]} yaw={0} width={5} big={WEATHER_WORDS.dotKey} small={null} />
+      {/* The dot caption lies on the floor in front of the rail: on the north wall at floor height the curve's posts and their value labels stood in front of it (#502). */}
+      <Banner position={[0, 0.03, RAIL.z + 2.2]} yaw={0} width={5} big={WEATHER_WORDS.dotKey} small={null} flat />
       <Banner position={[TOWER.minX + 0.1, 6.45, MID_Z]} yaw={Math.PI / 2} width={3.6} big={WEATHER_WORDS.west} small={null} />
       <Banner position={[TOWER.maxX - 0.1, 6.45, MID_Z]} yaw={-Math.PI / 2} width={3.6} big={WEATHER_WORDS.east} small={null} />
 
