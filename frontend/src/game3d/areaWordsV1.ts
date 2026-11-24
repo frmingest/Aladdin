@@ -2,7 +2,7 @@
  * Name plate on arrival: the words (version 1, 2026-11-03). Short, game voice. A change to any wording that could be
  * shown for real is a NEW version file (areaWordsV2.ts), never an edit of this one.
  */
-import type { AreaRef } from "./areas";
+import type { AreaRefV1 as AreaRef } from "./areas";
 import { LAND_WORDS } from "./holdingLandWordsV1";
 import { MINT_WORDS } from "./mintWordsV1";
 import { QUARTER_WORDS } from "./quarterWordsV1";

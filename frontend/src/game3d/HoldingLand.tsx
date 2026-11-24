@@ -14,6 +14,7 @@ import StaticBatch from "./StaticBatch";
 import {
   BAY_SCALE,
   GATE_STONE,
+  LAND_COLOURS,
   LAND_GATE,
   LAND_SHELF_SLOTS,
   LAND_TABLE,
@@ -25,9 +26,9 @@ import type { Shelf } from "./libraryShelves";
 import WorldLabel from "./WorldLabel";
 import WorldSign from "./WorldSign";
 
-const GRASS = "#7a9e5c";
-const PADDOCK = "#8fb06b";
-const PATH = "#a89f91";
+const GRASS = LAND_COLOURS.grass;
+const PADDOCK = LAND_COLOURS.paddock;
+const PATH = LAND_COLOURS.path;
 const HEDGE = "#4f7a3a";
 const PLASTER = "#d8c6a4";
 const FLOOR = "#7a5638";
@@ -36,7 +37,7 @@ const WALL_H = 3.4;
 const WALL_T = 0.3;
 
 /** The hedge round the edge of the land: one drawn tube, and a ring of solid blocks so the hero cannot walk out. */
-function HedgeRing({ radius }: { radius: number }) {
+export function HedgeRing({ radius }: { radius: number }) {
   const blocks = useMemo(() => {
     const half = (Math.PI * radius) / HEDGE_SEGMENTS + 0.15;
     return Array.from({ length: HEDGE_SEGMENTS }, (_, i) => {

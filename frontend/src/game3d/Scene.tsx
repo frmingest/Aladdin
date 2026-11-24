@@ -53,6 +53,9 @@ import type { Quarter } from "./quarterPlan";
 import Signpost from "./Signpost";
 import { PROPS } from "./props";
 import HoldingLand from "./HoldingLand";
+import PracticeYard from "./PracticeYard";
+import { NO_PRACTICE } from "./practiceYardLogic";
+import type { PracticeLook } from "./practiceYardLogic";
 import type { GateStone, Lantern, PricePost } from "./holdingLandLogic";
 import type { LandCentreSlot } from "./landCentreLogic";
 import Village from "./Village";
@@ -120,6 +123,8 @@ export interface SceneLook {
   noticeSheets: number;
   /** The Royal Mint: the levers, where each is set, the span and the last stamped answer. */
   mint: MintView;
+  /** The practice yard (#493): whether the made-up tower stands. Nothing here comes from the fortress. */
+  practice: PracticeLook;
 }
 
 /** A world with nothing read yet: bare, dark and honest. */
@@ -144,6 +149,7 @@ const EMPTY_LOOK: SceneLook = {
   archLit: false,
   noticeSheets: 0,
   mint: EMPTY_MINT,
+  practice: NO_PRACTICE,
 };
 
 interface WorldProps {
@@ -313,6 +319,15 @@ function World({ onLockChange, world, area, room, hold, look, onFieldPresets }: 
           </group>
           <group userData={{ perfGroup: "quarter" }}>
             <MarketQuarter quarter={look.quarter} lit={look.litStalls} />
+          </group>
+        </>
+      ) : area.id === "practice" ? (
+        <>
+          <group userData={{ perfGroup: "backdrop" }}>
+            <Backdrop />
+          </group>
+          <group userData={{ perfGroup: "practice" }}>
+            <PracticeYard look={look.practice} pos={pos} />
           </group>
         </>
       ) : area.id === "holding" && room ? (

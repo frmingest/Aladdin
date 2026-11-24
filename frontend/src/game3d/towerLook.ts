@@ -4,6 +4,10 @@
  */
 import type { FortressMoat, FortressSize, FortressWall } from "../lib/types";
 
+/** The tower body stands on a pad this high, and a tower nobody has surveyed is drawn in this pale fog colour (TowerMesh). */
+export const TOWER_PAD_TOP = 0.5;
+export const TOWER_FOG_COLOR = "#dfe5ea";
+
 /** Tower height (world units) by size class. Unknown size is a low stub, drawn in fog. */
 export const SIZE_HEIGHT: Record<FortressSize, number> = {
   great: 15,

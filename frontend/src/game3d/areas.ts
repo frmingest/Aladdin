@@ -8,6 +8,7 @@
  * own land (S25); the shared library room it used to open is no longer a place.
  */
 import { HORIZON_LIMIT } from "./horizonPieces";
+import { YARD_GATE, YARD_GATE_LEAVE_RANGE, YARD_GATE_RANGE, YARD_RADIUS, YARD_SPAWN } from "./practiceYardLogic";
 import { INTERIOR_BOX } from "./interiorBox";
 import { GATE_LEAVE_RANGE as LAND_GATE_LEAVE_RANGE, GATE_RANGE as LAND_GATE_RANGE, LAND_GATE, LAND_SPAWN, MIN_LAND_RADIUS } from "./holdingLandLogic";
 import { HALL_DOOR, HALL_DOOR_LEAVE_RANGE, HALL_DOOR_RANGE, HALL_SPAWN, HALL_YAW, hallExit } from "./townHallRoomLogic";
@@ -72,9 +73,14 @@ export type AreaRef =
   | { id: "weather" }
   | { id: "mint" }
   | { id: "quarter" }
-  | { id: "holding"; holdingId: string };
+  | { id: "holding"; holdingId: string }
+  /** The starter level's practice yard (#477, #493): a made-up shop, nothing real, nothing saved but the starter's own key. */
+  | { id: "practice" };
 
 export type AreaId = AreaRef["id"];
+
+/** The places that existed before the practice yard. The version 1 words files were written for these and are not edited. */
+export type AreaRefV1 = Exclude<AreaRef, { id: "practice" }>;
 
 /** Names held back for later sprints. None now: the Market Quarter became the place `quarter` (asset plan A6). */
 export const RESERVED_AREA_IDS: readonly string[] = [];
@@ -196,6 +202,16 @@ export const AREAS: Record<AreaId, AreaDef> = {
     spawn: { x: LAND_SPAWN.x, z: LAND_SPAWN.z, yaw: LAND_SPAWN.yaw },
     doors: [{ id: "gate", x: LAND_GATE.x, z: LAND_GATE.z, range: LAND_GATE_RANGE, leaveRange: LAND_GATE_LEAVE_RANGE, to: "parent" }],
   },
+  // The starter's practice yard (#493): a land's layout with one empty pad. Its gate goes back to the courtyard.
+  practice: {
+    id: "practice",
+    parent: "courtyard",
+    kind: "outdoor",
+    lighting: "outdoor",
+    bounds: circleBox(YARD_RADIUS),
+    spawn: { x: YARD_SPAWN.x, z: YARD_SPAWN.z, yaw: YARD_SPAWN.yaw },
+    doors: [{ id: "gate", x: YARD_GATE.x, z: YARD_GATE.z, range: YARD_GATE_RANGE, leaveRange: YARD_GATE_LEAVE_RANGE, to: "parent" }],
+  },
 };
 
 export const COURTYARD: AreaRef = { id: "courtyard" };
@@ -234,6 +250,8 @@ export function returnSpot(from: AreaRef, to: AreaRef, towers: readonly Enterabl
   if (from.id === "records" && to.id === "courtyard") return archiveExit();
   if (from.id === "weather" && to.id === "courtyard") return towerExit();
   if (from.id === "mint" && to.id === "courtyard") return mintExit();
+  // The yard is reached by link or menu, not by a door in the courtyard, so you come back out where the courtyard starts.
+  if (from.id === "practice" && to.id === "courtyard") return { ...AREAS.courtyard.spawn };
   return null;
 }
 

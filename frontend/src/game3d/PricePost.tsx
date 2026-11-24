@@ -16,7 +16,16 @@ const BANNER = "#d6a53a";
  * (siege exposure). Shape and height carry the meaning, never colour alone. An unknown fact is mist with a "?", never a
  * made-up height. Walk up to it to read the stored reason; no key press is needed.
  */
-export default function PricePost({ post, pos }: { post: PricePostData; pos: MutableRefObject<{ x: number; z: number }> }) {
+export default function PricePost({
+  post,
+  pos,
+  gaugeOnly = false,
+}: {
+  post: PricePostData;
+  pos: MutableRefObject<{ x: number; z: number }>;
+  /** The practice yard (#493) shows the gauge alone: its scroll and banner carry facts the starter does not teach. */
+  gaugeOnly?: boolean;
+}) {
   const [near, setNear] = useState(false);
   const last = useRef(false);
   useFrame(() => {
@@ -53,6 +62,7 @@ export default function PricePost({ post, pos }: { post: PricePostData; pos: Mut
       )}
 
       {/* The sealed scroll on its own post: whole, cracked (a gap), broken (two halves apart), or mist. */}
+      {!gaugeOnly && (<>
       <Part color={PAL.timber} position={[0, 0.8, 0]} grow={1.1}>
         <boxGeometry args={[0.2, 1.6, 0.2]} />
       </Part>
@@ -118,14 +128,15 @@ export default function PricePost({ post, pos }: { post: PricePostData; pos: Mut
           <meshStandardMaterial color={MIST} transparent opacity={0.4} depthWrite={false} />
         </mesh>
       )}
+      </>)}
 
       <WorldLabel position={[0, 3.1, 0]} distanceFactor={9}>
           <div className="whitespace-nowrap font-semibold">{PRICE_WORDS.title}</div>
           {near && (
             <>
               <div className="whitespace-nowrap">{fill === null ? "? " : ""}{PRICE_WORDS.gauge[post.gauge]}</div>
-              <div className="whitespace-nowrap">{scroll === "fog" ? "? " : ""}{PRICE_WORDS.scroll[scroll]}</div>
-              <div className="whitespace-nowrap">{shape === "mist" ? "? " : ""}{PRICE_WORDS.banner[post.banner]}</div>
+              {!gaugeOnly && <div className="whitespace-nowrap">{scroll === "fog" ? "? " : ""}{PRICE_WORDS.scroll[scroll]}</div>}
+              {!gaugeOnly && <div className="whitespace-nowrap">{shape === "mist" ? "? " : ""}{PRICE_WORDS.banner[post.banner]}</div>}
               {post.gaugeReason && <div className="max-w-[16rem] whitespace-normal text-[11px] italic opacity-90">{post.gaugeReason}</div>}
             </>
           )}

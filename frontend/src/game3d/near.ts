@@ -59,6 +59,7 @@ import type { BoardId } from "./townHallRoomLogic";
 import { BUILDINGS, DOOR_LEAVE_RANGE, DOOR_RANGE, nearestBuilding } from "./townPlan";
 import type { BuildingId } from "./townPlan";
 import { HOURGLASS, HOURGLASS_LEAVE_RANGE, HOURGLASS_RANGE } from "./hourglassPlan";
+import { COUNTER_LEAVE_RANGE, COUNTER_RANGE, YARD_GATE, YARD_GATE_LEAVE_RANGE, YARD_GATE_RANGE, nearCounter } from "./practiceYardLogic";
 import { PERCH, PERCH_LEAVE_RANGE, PERCH_RANGE, WATCH_LEAVE_RANGE, WATCH_POST, WATCH_RANGE } from "./watchPlan";
 import { VAULT, VAULT_LEAVE_RANGE, VAULT_RANGE } from "./vaultPlan";
 import { DIALS_LEAVE_RANGE, DIALS_RANGE, TOWER_DOOR_LEAVE_RANGE, TOWER_DOOR_RANGE, nearDials, nearTowerDoor } from "./weatherTowerRoomLogic";
@@ -135,6 +136,9 @@ export interface Nears {
   quarterGate: boolean;
   /** Market Quarter: the road back is in reach. */
   quarterExit: boolean;
+  /** Practice yard (#493): at Sal's practice counter, and at the gate back out. */
+  counter: boolean;
+  yardGate: boolean;
 }
 
 export type SpotKey = keyof Nears;
@@ -171,12 +175,14 @@ export const NO_NEARS: Nears = {
   fieldSpot: null,
   quarterGate: false,
   quarterExit: false,
+  counter: false,
+  yardGate: false,
 };
 
 /** The spots that are one of several: the answer carries which one. */
 type ManyKind = "npc" | "tower" | "booth" | "stall" | "shelf" | "lantern" | "building" | "fieldSpot" | "board" | "mintLever";
 /** The spots there is one of. */
-type OneKind = "desk" | "drill" | "quarterGate" | "sign" | "vault" | "watch" | "perch" | "realm" | "hourglass" | "table" | "shelves" | "dials" | "mintSpan" | "mintPress" | "mintBook";
+type OneKind = "desk" | "drill" | "quarterGate" | "sign" | "vault" | "watch" | "perch" | "realm" | "hourglass" | "table" | "shelves" | "dials" | "mintSpan" | "mintPress" | "mintBook" | "counter";
 
 export type Standing =
   | { kind: "none" }
@@ -314,6 +320,10 @@ export const SPOTS: readonly Spot[] = [
     detect: (pos, held, w) => pickNear(pos, stallTargets(w.stalls), held),
   }),
   spot({ key: "quarterExit", kind: "leave", area: "quarter", detect: single(QUARTER_EXIT, QUARTER_EXIT_RANGE, QUARTER_EXIT_LEAVE_RANGE) }),
+
+  // The practice yard (#493): Sal's practice counter beats the gate back out.
+  spot({ key: "counter", kind: "counter", area: "practice", detect: ranged(nearCounter, COUNTER_RANGE, COUNTER_LEAVE_RANGE) }),
+  spot({ key: "yardGate", kind: "leave", area: "practice", detect: single(YARD_GATE, YARD_GATE_RANGE, YARD_GATE_LEAVE_RANGE) }),
 ];
 
 /** The spots of one place, in E order. */

@@ -28,7 +28,7 @@ function paintSign(text: string): HTMLCanvasElement {
 }
 
 /** One stand: counter, two posts, a cloth roof and a sign. All code-built, no model, so nothing can fail to load. */
-function BoothMesh({ booth }: { booth: Booth }) {
+export function BoothMesh({ booth }: { booth: Booth }) {
   const tex = useMemo(() => {
     const t = new CanvasTexture(paintSign(booth.sign));
     t.colorSpace = SRGBColorSpace;

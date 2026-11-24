@@ -62,7 +62,7 @@ import { placeFromSearch, searchFor } from "../game3d/placeLink";
 import AreaFade from "../game3d/AreaFade";
 import { INITIAL_AREA, areaReducer, isMoving } from "../game3d/areaMachine";
 import type { AreaAction, AreaState } from "../game3d/areaMachine";
-import { AREA_STUCK, areaLine, areaName } from "../game3d/areaWordsV1";
+import { AREA_STUCK, areaLine, areaName } from "../game3d/areaWordsV2";
 import { DEFAULT_TOOLS, applySpot, spotPrompt as fieldSpotPrompt } from "../game3d/siegeFieldTools";
 import type { FieldSpotId, FieldTools } from "../game3d/siegeFieldTools";
 import { setYardBenchmark, yardBenchmark } from "../game3d/siegeYard";
@@ -121,6 +121,13 @@ import { withGaps } from "../game3d/standingGaps";
 import { wordsFor } from "../game3d/standingWordsV3";
 import { withGameStandingLabels } from "../game3d/standingLabelsWordsV1";
 import { webglSupported } from "../game3d/webgl";
+import { useSceneLoad } from "../game3d/sceneLoadStore";
+import PracticeCounterCard from "../game3d/PracticeCounterCard";
+import PracticePlainPanel from "../game3d/PracticePlainPanel";
+import { StarterGoal, StarterLive, StarterPlate } from "../game3d/StarterHud";
+import { ARRIVAL_MS, PICKED_LINE_MS, arrived, counterWaiting, goalOf, loadStarter, pickCompany, plainSeen, saveStarter, towerStands } from "../game3d/starterPlanV1";
+import type { StarterSaved } from "../game3d/starterPlanV1";
+import { SPEAKERS, STARTER_WORDS } from "../game3d/starterWordsV1";
 import type { PerfStats } from "../game3d/PerfProbe";
 
 // The 3D engine and the physics are heavy, so they only download on this page.
@@ -275,19 +282,28 @@ export default function Game3DPage() {
   // The key hint teaches the controls, so it shows on the first few visits only (C2).
   const [showHint] = useState(() => hintWanted(countVisit()));
   // The Quest log holds the wires, so while you look back its key does nothing (it stays as you left it for today).
-  const flip = useCallback((id: PanelId) => { if (inPast && id === "quests") return; setPanels((p) => togglePanel(p, id)); }, [inPast]);
+  const flip = useCallback((id: PanelId) => {
+    if (inPast && id === "quests") return;
+    // The practice yard shows no real panel: Q and T do nothing there (#493).
+    if (areaState.current.id === "practice" && (id === "quests" || id === "towers")) return;
+    setPanels((p) => togglePanel(p, id));
+  }, [inPast, areaState]);
   // The sample fortress opens the Quests panel once so the made-up round shows with no tap; it never stores that (demo wins).
   const autoOpened = useRef(false);
   useEffect(() => {
     if (state === null || !(state.demo === true || demoMode === true)) return;
+    // The practice yard (#493) shows no round, real or made up: the Quests panel would only cover the yard.
+    if (areaState.current.id === "practice") return;
     const next = autoOpenQuests(panels, true, autoOpened.current);
     autoOpened.current = true;
     if (next) setPanels(next);
   }, [state, demoMode]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Not while in the practice yard (#493): the yard changes nothing in this browser but the starter's own key.
+  const yardNow = areaState.current.id === "practice";
   useEffect(() => {
-    if (state?.demo === true || demoMode === true) return;
+    if (state?.demo === true || demoMode === true || yardNow) return;
     savePanels(panels);
-  }, [panels, state, demoMode]);
+  }, [panels, state, demoMode, yardNow]);
 
   // Which of the round's own reads have answered (well or badly). Until they have, the round says nothing about them.
   const [settled, setSettled] = useState({ stalls: false, watch: false, ravens: false });
@@ -559,12 +575,80 @@ export default function Game3DPage() {
   // The place the scene draws: a land whose tower is gone is not a place, so it reads as the courtyard.
   const area: AreaRef = areaState.current.id === "holding" && !roomView ? COURTYARD : areaState.current;
   // Opt-in sound: off on every load, follows the same stored siege level as the sky, quiet indoors.
-  const sound = useAmbience(ambienceLevel(area.id, state?.siege?.level ?? null));
+  const sound = useAmbience(ambienceLevel(area.id, area.id === "practice" ? "calm" : (state?.siege?.level ?? null)));
   const inHall = area.id === "townhall";
   const inRecords = area.id === "records";
   // The Royal Mint: the lever list is read the first time you go in; the stamped answer lives here, not in the scene.
   const mint = useMint(area.id === "mint");
   const [plainOpen, setPlainOpen] = useState(false);
+
+  // --- The practice yard (starter level, #477 build step 1, #493) ---------------------------------------------------
+  // Made up end to end: nothing in the yard reads the fortress, and the only thing saved is the starter's own key, in this
+  // browser. It is written only when the starter changes, never on load, so walking the courtyard leaves no key behind.
+  const inYard = area.id === "practice";
+  const [starter, setStarter] = useState<StarterSaved>(() => loadStarter(guideStorage()));
+  const updateStarter = useCallback((step: (s: StarterSaved) => StarterSaved) => {
+    setStarter((prev) => {
+      const next = step(prev);
+      if (next !== prev) saveStarter(guideStorage(), next);
+      return next;
+    });
+  }, []);
+  // Sal's card opens by itself once the arrival plate has gone; Escape puts it away and E at the counter brings it back.
+  const [counterShut, setCounterShut] = useState(false);
+  const counterOpen = inYard && starter.run.beat === "pick" && !counterShut;
+  // The arrival plate waits for the yard to be drawn, so a slow load never eats the two lines.
+  const yardDrawn = useSceneLoad().ready;
+  const arrivalShown = inYard && starter.run.beat === "arrive" && yardDrawn;
+  useEffect(() => {
+    if (!arrivalShown) return;
+    const t = setTimeout(() => updateStarter(arrived), ARRIVAL_MS);
+    return () => clearTimeout(t);
+  }, [arrivalShown, updateStarter]);
+  // Beat 2's result: the tower rises (once, in this visit) and Sal's and Marlie's lines show for a while.
+  const [riseKey, setRiseKey] = useState<number | null>(null);
+  // Which of beat 2's two result lines is up (one at a time), or null.
+  const [pickedLine, setPickedLine] = useState<number | null>(null);
+  useEffect(() => {
+    if (pickedLine === null) return;
+    const t = setTimeout(() => setPickedLine((i) => (i !== null && i + 1 < STARTER_WORDS.picked.length ? i + 1 : null)), PICKED_LINE_MS);
+    return () => clearTimeout(t);
+  }, [pickedLine]);
+  const pickPractice = useCallback(() => {
+    updateStarter(pickCompany);
+    setRiseKey(Date.now());
+    setPickedLine(0);
+    // Focus goes back to the world when the card closes.
+    document.querySelector<HTMLCanvasElement>("canvas")?.focus();
+  }, [updateStarter]);
+  const shutCounter = useCallback(() => {
+    setCounterShut(true);
+    document.querySelector<HTMLCanvasElement>("canvas")?.focus();
+  }, []);
+  const [practicePlainOpen, setPracticePlainOpen] = useState(false);
+  const closePracticePlain = useCallback(() => setPracticePlainOpen(false), []);
+  // What a screen reader hears, once, when it changes: the arrival lines, then each result line, then the goal. With the speaker.
+  const said = (l: { who: keyof typeof SPEAKERS; text: string }) => `${SPEAKERS[l.who]}: ${l.text}`;
+  const starterLiveText = arrivalShown
+    ? STARTER_WORDS.arrival.map(said).join(" ")
+    : pickedLine !== null
+      ? said(STARTER_WORDS.picked[pickedLine])
+      : STARTER_WORDS.goal[goalOf(starter.run)];
+  useEffect(() => {
+    if (!inYard) {
+      setPracticePlainOpen(false);
+      setPickedLine(null);
+      // The yard leads: coming back while the pick still waits opens Sal's card by itself again.
+      setCounterShut(false);
+    }
+  }, [inYard]);
+  // A card you click needs the mouse free, as the other panels do.
+  useEffect(() => {
+    if (counterOpen && document.pointerLockElement) document.exitPointerLock();
+  }, [counterOpen]);
+  // While a starter card is open, its number keys act and the page's own hotkeys (E, T, Q, G, P) stay quiet.
+  const starterCardOpen = useRef(false);
+  starterCardOpen.current = counterOpen;
 
   // The address follows the place (replace, not push, so the browser's Back leaves the page instead of re-walking your steps).
   useEffect(() => {
@@ -1056,10 +1140,21 @@ export default function Game3DPage() {
       note: () => (quarter.overflow.length > 0 ? streetOverflowLine(quarter.overflow.length) : null),
       press: (at) => openStore(at.id),
     },
+    // The practice yard: E at Sal's counter opens the card while the pick is waiting (and ends the arrival plate early).
+    counter: {
+      prompt: () => (counterWaiting(starter.run) && !counterOpen ? STARTER_WORDS.counter.prompt : null),
+      press: () => {
+        if (!counterWaiting(starter.run)) return;
+        updateStarter(arrived);
+        setCounterShut(false);
+      },
+    },
     // The way back out, whichever place you are in.
     leave: {
       prompt: () =>
-        area.id === "holding"
+        area.id === "practice"
+          ? STARTER_WORDS.leavePrompt
+          : area.id === "holding"
           ? LAND_WORDS.gatePrompt
           : area.id === "quarter"
             ? QUARTER_WORDS.exitPrompt
@@ -1080,14 +1175,14 @@ export default function Game3DPage() {
   const spotAct =
     atSpot.kind === "none" ? null : inPast && !openInThePast(atSpot.kind) ? shutAct : (acts[atSpot.kind] as SpotAct<AtSpot>);
   // E waits while something covers the world: a page over a room or a field, the report in a holding's land.
-  const eBlocked = boothOpen !== null || lampOpen || isMoving(areaState) || (area.id === "holding" ? !!report || !room : area.id !== "courtyard" && whereOpen);
+  const eBlocked = boothOpen !== null || lampOpen || counterOpen || isMoving(areaState) || (area.id === "holding" ? !!report || !room : area.id !== "courtyard" && whereOpen);
   const pressSpot = useRef<(() => void) | null>(null);
   pressSpot.current = spotAct && !eBlocked ? () => spotAct.press(atSpot) : null;
 
   // The E key: does the one thing `atSpot` names (the prompt shows the same thing).
   useEffect(() => {
     const onE = (e: KeyboardEvent) => {
-      if (e.code !== "KeyE" || typingInField(e.target as HTMLElement | null) || !pressSpot.current) return;
+      if (e.code !== "KeyE" || typingInField(e.target as HTMLElement | null) || !pressSpot.current || starterCardOpen.current) return;
       e.preventDefault();
       pressSpot.current();
     };
@@ -1099,7 +1194,7 @@ export default function Game3DPage() {
     const onPanelKey = (e: KeyboardEvent) => {
       const id = PANEL_KEYS[e.code];
       if (!id || e.ctrlKey || e.metaKey || e.altKey) return;
-      if (typingInField(e.target)) return;
+      if (typingInField(e.target) || starterCardOpen.current) return;
       e.preventDefault();
       flip(id);
     };
@@ -1121,7 +1216,7 @@ export default function Game3DPage() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       // F3 is often grabbed by the browser or editor ("find"), so P works too.
-      if ((e.code === "F3" || e.code === "KeyP") && !e.ctrlKey && !e.metaKey && !e.altKey && !typingInField(e.target)) {
+      if ((e.code === "F3" || e.code === "KeyP") && !e.ctrlKey && !e.metaKey && !e.altKey && !typingInField(e.target) && !starterCardOpen.current) {
         e.preventDefault();
         setShowPerf((v) => !v);
       }
@@ -1155,7 +1250,7 @@ export default function Game3DPage() {
   const layerKey = JSON.stringify(layers);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey || e.altKey || typingInField(e.target)) return;
+      if (e.ctrlKey || e.metaKey || e.altKey || typingInField(e.target) || starterCardOpen.current) return;
       const open = JSON.parse(layerKey) as OpenLayers;
       if (e.code === "KeyG") {
         e.preventDefault();
@@ -1256,10 +1351,11 @@ export default function Game3DPage() {
     };
   }, [roundOff, shownWorld, sampleStalls, ravens, seenRavens, standing, standingFailed, watchlist, nightWatch, nowMs, round]);
   // Remember the visit and what you dealt with (this browser only; nothing for the sample fortress).
+  // Not while in the practice yard (#493): it is saved when you walk back out.
   useEffect(() => {
-    if (state === null) return;
+    if (state === null || inYard) return;
     persistRound(guideStorage(), roundOff, { lastVisit: visitAt, done: pruneDone(roundDone, round?.stops ?? [], marks.sources) });
-  }, [roundOff, state, visitAt, roundDone, round, marks]);
+  }, [roundOff, state, visitAt, roundDone, round, marks, inYard]);
   // The bell is dealt with when you open that holding's thesis shelf in its land.
   useEffect(() => {
     if (!room || readShelf !== "oath") return;
@@ -1284,7 +1380,8 @@ export default function Game3DPage() {
       watchStatus: inPast ? null : (nightWatch?.status ?? null),
       unseenRavens: inPast ? 0 : unseenRavens,
       realmLevel,
-      siegeLevel: viewState?.siege?.level ?? null,
+      // The practice yard's sky is its own (sunny until the storm beat), never the real fortress's weather.
+      siegeLevel: inYard ? "calm" : (viewState?.siege?.level ?? null),
       drillOpen,
       questMarks: inPast ? [] : questMarks,
       talking,
@@ -1299,8 +1396,9 @@ export default function Game3DPage() {
       archLit: archLit(lit),
       noticeSheets: inPast ? 0 : sheets,
       mint: mint.view,
+      practice: { standing: towerStands(starter.run), counterWaiting: counterWaiting(starter.run), riseKey },
     }),
-    [inPast, viewState, mint.view, sheets, quest.written, nightWatch, unseenRavens, realmLevel, drillOpen, questMarks, talking, cheerKey, standingText.lit, fieldTools, quarter, archCounts, placedMarks, lit],
+    [starter.run, riseKey, inYard, inPast, viewState, mint.view, sheets, quest.written, nightWatch, unseenRavens, realmLevel, drillOpen, questMarks, talking, cheerKey, standingText.lit, fieldTools, quarter, archCounts, placedMarks, lit],
   );
 
   if (!supported) return <Unavailable />;
@@ -1314,10 +1412,10 @@ export default function Game3DPage() {
 
 
   // One Back button for every room (C2): the Town Hall, the Hall of Records, the Weather Tower and a holding's tower.
-  const backOutside = roomView || inHall || inRecords || area.id === "weather" || area.id === "mint" ? leaveArea : null;
+  const backOutside = roomView || inHall || inRecords || area.id === "weather" || area.id === "mint" || inYard ? leaveArea : null;
   // Any panel or dialog on screen: the hint line steps aside for it.
   const anyPanelOpen =
-    panels.quests || panels.towers || whereOpen || vaultOpen || realmOpen || watchOpen || perchOpen || hourglassOpen || deskOpen || drillOpen || lampOpen || boothOpen !== null || report !== null;
+    panels.quests || panels.towers || whereOpen || vaultOpen || realmOpen || watchOpen || perchOpen || hourglassOpen || deskOpen || drillOpen || lampOpen || boothOpen !== null || report !== null || counterOpen || practicePlainOpen || arrivalShown || pickedLine !== null;
 
   return (
     <div className="relative h-[calc(100dvh-5rem)] min-h-[480px] w-full overflow-hidden bg-surface">
@@ -1335,11 +1433,13 @@ export default function Game3DPage() {
       <Toolbar
         open={panels}
         onToggle={flip}
-        roundOpen={roundChipCount(round)}
-        guideLeft={inPast || world.demo ? 0 : guideLeft(guide)}
+        // In the practice yard the real panels and counts stay off the toolbar: the yard says nothing about the real fortress.
+        practice={inYard}
+        roundOpen={inYard ? 0 : roundChipCount(round)}
+        guideLeft={inPast || world.demo || inYard ? 0 : guideLeft(guide)}
         guideLabel={guideChipLabel(guideLeft(guide))}
-        questsWaiting={(quest.status === "open" ? 1 : 0) + (reviews.status === "open" ? 1 : 0)}
-        towerCount={world.plain.length}
+        questsWaiting={inYard ? 0 : (quest.status === "open" ? 1 : 0) + (reviews.status === "open" ? 1 : 0)}
+        towerCount={inYard ? 0 : world.plain.length}
         statsOn={showPerf}
         statsLabel={stats ? `${stats.fps} fps · ${stats.calls} draws · ${Math.round(stats.triangles / 1000)}k tris` : "Measuring..."}
         onToggleStats={() => setShowPerf((v) => !v)}
@@ -1352,8 +1452,8 @@ export default function Game3DPage() {
       {area.id === "mint" && plainOpen && <MintPlainPanel result={mint.view.result} stale={mint.view.wall === "stale"} onClose={() => setPlainOpen(false)} />}
       {whereOpen && !inPast && !worldPage && <WhereToPanel onPick={pickDoor} onClose={closeWhere} only={onlyPlace} onlyRoutes={onlyRoutes} />}
       {whereOpen && !inPast && worldPage && <WorldPanel door={worldPage} onBack={() => setWorldPage(null)} onClose={closeWhere} />}
-      {panels.towers && <TowerPanel world={shownWorld} loading={loading} error={error} onRetry={load} onClose={() => flip("towers")} marks={inPast ? undefined : marks} lit={inPast ? undefined : lit} noticeSheets={inPast ? 0 : sheets} />}
-      {panels.quests && !inPast && <QuestLog quest={quest} reviews={reviews} demo={world.demo} standing={standingText} wires={standing && !standingFailed ? (standing.wires ?? []) : undefined} onLookAtWire={lookAtWire} onRefreshStanding={refreshStanding} drill={drillQuest} guide={{ status: guide, saved: guideSaved, onReplay: replayGuideNow }} round={round} onRoundAgain={roundOff ? startSampleAgain : undefined} onClose={() => flip("quests")} />}
+      {panels.towers && !inYard && <TowerPanel world={shownWorld} loading={loading} error={error} onRetry={load} onClose={() => flip("towers")} marks={inPast ? undefined : marks} lit={inPast ? undefined : lit} noticeSheets={inPast ? 0 : sheets} />}
+      {panels.quests && !inPast && !inYard && <QuestLog quest={quest} reviews={reviews} demo={world.demo} standing={standingText} wires={standing && !standingFailed ? (standing.wires ?? []) : undefined} onLookAtWire={lookAtWire} onRefreshStanding={refreshStanding} drill={drillQuest} guide={{ status: guide, saved: guideSaved, onReplay: replayGuideNow }} round={round} onRoundAgain={roundOff ? startSampleAgain : undefined} onClose={() => flip("quests")} />}
       {vaultOpen && state && <VaultPanel state={state} onChanged={load} onClose={() => setSpotPanel("vault", false)} />}
       {realmOpen && viewState && <RealmPanel state={viewState} onClose={() => setSpotPanel("realm", false)} />}
       {inPast && past && (
@@ -1438,18 +1538,54 @@ export default function Game3DPage() {
       {report && <DocumentReader document={report} origin="50% 50%" onClosed={() => setReport(null)} />}
       {talking && <DialoguePanel npc={talking} quest={quest} reviews={reviews} drill={drillQuest} guide={guideTalkSnap} onClose={() => setTalking(null)} onRetry={load} />}
 
-      <Link
-        to="/fortress"
-        title={PLAIN_VIEW_TITLE}
-        className="absolute left-3 top-3 rounded border border-border bg-surface/90 px-3 py-1.5 text-sm text-ink hover:opacity-80"
-      >
-        {PLAIN_VIEW}
-      </Link>
+      {inYard ? (
+        // In the yard the Plain view is the yard's own: the flat Fortress would show real data next to a made-up shop.
+        <button
+          type="button"
+          title={STARTER_WORDS.plain.title}
+          aria-pressed={practicePlainOpen}
+          onClick={() => setPracticePlainOpen((v) => !v)}
+          // On a phone the toolbar covers the top-left corner, so the yard's button sits under it there.
+          className="absolute left-3 top-14 z-30 sm:top-3 rounded border border-border bg-surface/90 px-3 py-1.5 text-sm text-ink hover:opacity-80"
+        >
+          {PLAIN_VIEW}
+        </button>
+      ) : (
+        <Link
+          to="/fortress"
+          title={PLAIN_VIEW_TITLE}
+          className="absolute left-3 top-3 rounded border border-border bg-surface/90 px-3 py-1.5 text-sm text-ink hover:opacity-80"
+        >
+          {PLAIN_VIEW}
+        </Link>
+      )}
+      {inYard && (
+        <>
+          <StarterGoal
+            goal={STARTER_WORDS.goal[goalOf(starter.run)]}
+            hidden={plate !== null}
+            reopen={counterShut && starter.run.beat === "pick" ? { label: STARTER_WORDS.counter.reopen, onPress: () => setCounterShut(false) } : undefined}
+          />
+          <StarterLive text={starterLiveText} />
+          {arrivalShown && <StarterPlate lines={STARTER_WORDS.arrival} label={STARTER_WORDS.place} />}
+          {pickedLine !== null && !counterOpen && <StarterPlate lines={[STARTER_WORDS.picked[pickedLine]]} label={STARTER_WORDS.counter.company.name} />}
+          {counterOpen && <PracticeCounterCard onPick={pickPractice} onClose={shutCounter} />}
+          {practicePlainOpen && (
+            <PracticePlainPanel
+              seen={{
+                company: plainSeen(starter.run).company ? STARTER_WORDS.plain.company : undefined,
+                pieces: plainSeen(starter.run).pieces ? STARTER_WORDS.plain.pieces : undefined,
+              }}
+              onClose={closePracticePlain}
+            />
+          )}
+        </>
+      )}
       {backOutside && (
         <button
           type="button"
           onClick={backOutside}
-          className="absolute left-3 top-14 rounded border border-border bg-surface/90 px-3 py-1.5 text-sm text-ink hover:opacity-80"
+          className={`absolute left-3 ${inYard ? "top-[6.25rem] sm:top-14" : "top-14"} rounded border border-border bg-surface/90 px-3 py-1.5 text-sm text-ink hover:opacity-80`}
         >
           ← Back outside
         </button>
