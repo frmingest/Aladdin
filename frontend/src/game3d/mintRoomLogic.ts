@@ -406,7 +406,8 @@ export function nearBook(pos: { x: number; z: number }, range: number = BOOK_RAN
 /**
  * Where the hero stands, and the camera yaw, when stepping out of the Mint door (#502). The Mint faces west, so the plain
  * step straight out of its door landed behind the Archive and the Workshop. Instead the hero steps out onto the open lawn
- * just north of the door, a little past the door's leave range so the door does not re-trigger, looking at the door.
+ * just north of the door, a little past the door's leave range so the door does not re-trigger, looking north toward the
+ * courtyard (camera yaw 0 looks north, as at the gate; seen in a browser 2026-11-24).
  */
 export function mintExit(): { x: number; z: number; yaw: number } {
   const b = BUILDINGS.find((x) => x.id === "mint");
