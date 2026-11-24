@@ -16,7 +16,7 @@
 import { formatNok } from "../lib/format";
 import type { PrinterHolding, PrinterLever, PrinterPull, PrinterRange, PrinterResult } from "../lib/types";
 import { MINT_WORDS } from "./mintWordsV1";
-import { BUILDINGS, stepOutOf } from "./townPlan";
+import { BUILDINGS, DOOR_LEAVE_RANGE, doorSpot } from "./townPlan";
 
 export const MINT = { minX: -8, maxX: 8, minZ: -9, maxZ: 9, height: 6.5 } as const;
 /** A closed pair of doors in the south wall; E beside it leads back out onto the road. */
@@ -403,9 +403,16 @@ export function nearBook(pos: { x: number; z: number }, range: number = BOOK_RAN
   return Math.hypot(BOOK_SPOT.x - pos.x, BOOK_SPOT.z - pos.z) <= range;
 }
 
-/** Where the hero stands on the road, and the camera yaw, when stepping out of the Mint door. */
+/**
+ * Where the hero stands, and the camera yaw, when stepping out of the Mint door (#502). The Mint faces west, so the plain
+ * step straight out of its door landed behind the Archive and the Workshop. Instead the hero steps out onto the open lawn
+ * just north of the door, a little past the door's leave range so the door does not re-trigger, looking at the door.
+ */
 export function mintExit(): { x: number; z: number; yaw: number } {
   const b = BUILDINGS.find((x) => x.id === "mint");
   if (!b) return { x: 0, z: 0, yaw: 0 };
-  return stepOutOf(b);
+  const s = doorSpot(b);
+  const x = s.x;
+  const z = s.z - (DOOR_LEAVE_RANGE + 0.6);
+  return { x, z, yaw: Math.atan2(s.x - x, s.z - z) };
 }

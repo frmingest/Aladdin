@@ -51,7 +51,7 @@ import { cameraPull } from "./cameraRoom";
 import { PLATE } from "./weatherTowerRoomLogic";
 import { PLATE_PX } from "./weatherPlateArt";
 import { MINT_WORDS } from "./mintWordsV1";
-import { BUILDINGS, doorSpot } from "./townPlan";
+import { BUILDINGS, DOOR_LEAVE_RANGE, doorSpot } from "./townPlan";
 
 const lever = (key: string, min: string, max: string, variants = ["default"]): PrinterLever => ({
   key,
@@ -386,7 +386,20 @@ describe("the room", () => {
     expect(b).toBeDefined();
     const out = mintExit();
     const s = doorSpot(b!);
-    expect(Math.hypot(out.x - s.x, out.z - s.z)).toBeGreaterThan(4.6);
+    expect(Math.hypot(out.x - s.x, out.z - s.z)).toBeGreaterThan(DOOR_LEAVE_RANGE);
+  });
+
+  it("lands on open ground: outside every building's footprint, with room to spare (#502)", () => {
+    const out = mintExit();
+    for (const o of BUILDINGS) {
+      // The point in the building's own frame (the footprint turns with its yaw).
+      const dx = out.x - o.x;
+      const dz = out.z - o.z;
+      const lx = dx * Math.cos(o.yaw) - dz * Math.sin(o.yaw);
+      const lz = dx * Math.sin(o.yaw) + dz * Math.cos(o.yaw);
+      const inside = Math.abs(lx) < o.hx + 1.5 && Math.abs(lz) < o.hz + 1.5;
+      expect(inside, o.id).toBe(false);
+    }
   });
 });
 
