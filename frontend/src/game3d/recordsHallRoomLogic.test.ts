@@ -6,7 +6,11 @@ import {
   ARCHIVE_SPAWN,
   BOOK,
   BOOKCASE,
+  BOOKCASE_BACK_FRONT_Z,
+  BOOKCASE_PANEL,
+  BOOKCASE_SIDE_FRONT_Z,
   BOOKCASE_XS,
+  ROW_YS,
   CAPACITY,
   RECORDS_ROUTE,
   SHELF_RANGE,
@@ -157,5 +161,24 @@ describe("the Hall of Records inside", () => {
   it("leaves the door's reach narrower than the shelves' reach so the two prompts never overlap at the spawn", () => {
     expect(SHELF_RANGE).toBeGreaterThan(0);
     expect(nearArchiveDoor(SHELF_SPOT)).toBe(false);
+  });
+});
+
+describe("the hollow bookcase (#502)", () => {
+  it("keeps every book in front of the back panel, no further out than the sides, and standing on a shelf", () => {
+    for (let i = 0; i < CAPACITY; i++) {
+      const s = bookSlot(i);
+      expect(s.z - BOOK.d / 2).toBeGreaterThan(BOOKCASE_BACK_FRONT_Z);
+      expect(s.z + BOOK.d / 2).toBeLessThanOrEqual(BOOKCASE_SIDE_FRONT_Z);
+      const bottom = s.y - BOOK.h / 2;
+      expect(ROW_YS.some((y) => Math.abs(y - bottom) < 1e-9)).toBe(true);
+    }
+  });
+
+  it("keeps the books' depth within the shelf boards' depth", () => {
+    const localBookZ = bookSlot(0).z - BOOKCASE.z;
+    const { shelfZ, shelfD } = BOOKCASE_PANEL;
+    expect(localBookZ - BOOK.d / 2).toBeGreaterThanOrEqual(shelfZ - shelfD / 2);
+    expect(localBookZ + BOOK.d / 2).toBeLessThanOrEqual(shelfZ + shelfD / 2);
   });
 });
