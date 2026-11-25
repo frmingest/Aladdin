@@ -8,6 +8,12 @@ import type { FortressMoat, FortressSize, FortressWall } from "../lib/types";
 export const TOWER_PAD_TOP = 0.5;
 export const TOWER_FOG_COLOR = "#dfe5ea";
 
+/**
+ * Height of every flat water/mist ring (a tower's moat, a land's stream band). The cobble plaza top is at 0.06 and the gate
+ * road top at 0.07 (Courtyard.tsx); a ring within 0.01 of them z-fights on the 24-bit depth buffer and blinks (#510).
+ */
+export const MOAT_Y = 0.12;
+
 /** Tower height (world units) by size class. Unknown size is a low stub, drawn in fog. */
 export const SIZE_HEIGHT: Record<FortressSize, number> = {
   great: 15,

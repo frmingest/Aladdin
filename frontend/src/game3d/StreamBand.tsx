@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { Color, Float32BufferAttribute, MeshStandardMaterial, RingGeometry } from "three";
 import { PAL } from "./Inked";
+import { MOAT_Y } from "./towerLook";
 import { STREAM_INNER } from "./landStream";
 import type { LandStream } from "./landStream";
 import WorldLabel from "./WorldLabel";
@@ -27,7 +28,7 @@ export default function StreamBand({ stream, position = [0, 0, 0], inner = STREA
   const mid = inner + stream.width / 2;
   return (
     <group position={position}>
-      <mesh geometry={geo} material={STREAM_MATERIAL} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.06, 0]} receiveShadow />
+      <mesh geometry={geo} material={STREAM_MATERIAL} rotation={[-Math.PI / 2, 0, 0]} position={[0, MOAT_Y, 0]} receiveShadow />
       {stream.bed &&
         Array.from({ length: BED_STONES }, (_, i) => {
           const a = (i / BED_STONES) * Math.PI * 2;

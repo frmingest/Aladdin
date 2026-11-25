@@ -1,5 +1,5 @@
 import StaticBatch from "./StaticBatch";
-import { TOWER_FOG_COLOR, TOWER_PAD_TOP } from "./towerLook";
+import { MOAT_Y, TOWER_FOG_COLOR, TOWER_PAD_TOP } from "./towerLook";
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { CylinderCollider, RigidBody } from "@react-three/rapier";
 import {
@@ -249,7 +249,7 @@ export function TowerBody({ t, door = true }: { t: TowerView; door?: boolean }) 
       <StaticBatch rebuildKey={JSON.stringify(t)}>
         {/* Moat: water ring when surveyed, pale mist when not. Visual only. */}
         {(t.moatWidth > 0 || t.moatFog) && (
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.07, 0]}>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, MOAT_Y, 0]}>
             <ringGeometry
               args={[
                 t.radius + 2.2,
