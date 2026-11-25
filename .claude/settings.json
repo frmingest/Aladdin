@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude/hooks/block_used_prompt_edit.py"
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/block_used_prompt_edit.py\""
           }
         ]
       },
@@ -24,7 +24,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude/hooks/require_pr_template.py"
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/require_pr_template.py\""
           }
         ]
       }
