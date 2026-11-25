@@ -75,24 +75,28 @@ async function playChecksByKeyboard(page: Page) {
   await expect(walls).toBeVisible({ timeout: 30_000 });
   // Focus lands on the first choice, which is never the right one: Enter alone cannot win.
   await expect(walls.getByRole("button", { name: /Timber/ })).toBeFocused();
-  // Timber (key 1) is wrong. Marlie's hint replaces the taught line and Timber leaves the card; the keys renumber.
+  // Timber (key 1) is wrong. Marlie's hint replaces the taught line and Timber's slot goes blank; the others keep their keys.
   await page.keyboard.press("1");
   await expect(walls).toContainText("Look again. It owes 5. Last year it made 10.");
   await expect(walls.getByRole("button", { name: /Timber/ })).toHaveCount(0);
-  await expect(walls.getByRole("button")).toHaveCount(3); // Close, Granite, Rotted
+  await expect(walls.getByRole("button")).toHaveCount(3); // Close, Granite, Rotted: Timber's slot stays, blank
+  // The slots do not move: pressing 1 again picks nothing (the blank slot), so "1, 1" cannot win.
+  await page.keyboard.press("1");
+  await expect(walls).toBeVisible();
+  await expect(walls).toContainText("Look again.");
   // While the card is open the page's own hotkeys stay quiet.
   await page.keyboard.press("t");
   await expect(page.getByRole("complementary", { name: "Your towers in words" })).toHaveCount(0);
-  await page.keyboard.press("1"); // Granite, now first
+  await page.keyboard.press("2"); // Granite, still in slot 2
   await expect(walls).toHaveCount(0);
-  await expect(page.getByText("Granite walls. One good year pays its debt.")).toBeVisible();
+  await expect(page.getByText("Granite walls. One year's money pays its debt.")).toBeVisible();
   await expect(page.getByTestId("starter-page-line")).toHaveText(/New page: Walls/);
 
   const moat = page.getByRole("dialog", { name: "What stops others copying Pip's?" });
   await expect(moat).toBeVisible({ timeout: 30_000 });
   await page.keyboard.press("2"); // Cheapest lemonade this week: wrong
   await expect(moat).toContainText("Anyone can cut prices tomorrow.");
-  await page.keyboard.press("2"); // Gran's secret recipe, now second
+  await page.keyboard.press("3"); // Gran's secret recipe, still in slot 3
   await expect(moat).toHaveCount(0);
   await expect(page.getByText("Narrow moat. A recipe is hard to copy.")).toBeVisible();
   await expect(page.getByTestId("starter-page-line")).toHaveText(/New page: Moat/);

@@ -1,48 +1,62 @@
-import { useEffect, useRef } from "react";
-import type { ReactNode } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { SPEAKERS, STARTER_WORDS } from "./starterWordsV1";
 import type { Line } from "./starterWordsV1";
+import { SETTLE_MS, choiceForKey } from "./checkCardLogic";
+import type { CheckChoice } from "./checkCardLogic";
 
-export interface CheckChoice {
-  id: string;
-  label: string;
-  /** A small drawing beside the word (the walls check): shape and word carry the meaning, never colour alone. */
-  icon?: ReactNode;
-}
+export type { CheckChoice } from "./checkCardLogic";
 
 /**
  * A check card (beats 3 and 4, #494): a small parchment plate at the bottom of the screen, so the tower stays in view. The
- * header is the person speaking (the taught line, or Marlie's hint after a miss), then the question, then the choices still
- * on the card. Selecting acts: no Save, Next or Confirm. Keyboard: focus lands on the first choice; 1 to 3 pick the visible
- * choices only; Escape closes the card, and E (or a tap) at the tower opens it again. While it is open the page's own hotkeys
- * stay quiet. The hint is read once by the page's live region, not here, so it is never read twice.
+ * header is the person speaking (the taught line, or Marlie's hint after a miss), then the question, then the choices.
+ * Selecting acts: no Save, Next or Confirm.
+ *
+ * Every choice keeps its slot and its key number for the whole check. A tried choice becomes a blank slot with no words, so
+ * the right answer never slides up into the slot just tapped (with the slots moving, "Enter, Enter" or a double tap won the
+ * page without reading; game-designer review, #494). After a miss focus goes to the hint, not to a choice; a held key
+ * repeats nothing, and for a moment after a miss no pick lands.
+ *
+ * Keyboard: focus lands on the first choice; 1 to 3 pick by slot; Escape closes the card, and E (or a tap) at the tower opens
+ * it again. While it is open the page's own hotkeys stay quiet. The hint is read once by the page's live region, not here.
  */
 export default function StarterCheckCard({
   title,
   line,
+  missed,
   choices,
   onPick,
   onClose,
 }: {
   title: string;
   line: Line;
+  /** The header is Marlie's hint after a miss: focus moves there. */
+  missed: boolean;
   choices: readonly CheckChoice[];
   onPick: (id: string) => void;
   onClose: () => void;
 }) {
   const first = useRef<HTMLButtonElement>(null);
-  // After a miss the card keeps its place and focus goes back to its first choice (the tried one has left the card).
-  const ids = choices.map((c) => c.id).join(" ");
+  const hint = useRef<HTMLParagraphElement>(null);
+  const settledAt = useRef(0);
+  const tried = choices.filter((c) => c.tried).map((c) => c.id).join(" ");
   useEffect(() => {
-    first.current?.focus();
-  }, [ids]);
+    settledAt.current = performance.now() + (tried ? SETTLE_MS : 0);
+    if (missed) hint.current?.focus();
+    else first.current?.focus();
+  }, [tried, missed]);
+  const pick = useCallback(
+    (c: CheckChoice | undefined) => {
+      if (!c || c.tried || performance.now() < settledAt.current) return;
+      onPick(c.id);
+    },
+    [onPick],
+  );
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey || e.altKey) return;
-      const n = /^(?:Digit|Numpad)([1-9])$/.exec(e.code);
-      if (n) {
-        const c = choices[Number(n[1]) - 1];
+      if (/^(?:Digit|Numpad)[1-9]$/.test(e.code)) {
         e.preventDefault();
+        const c = choiceForKey(choices, e.code, { repeat: e.repeat, now: performance.now(), settledAt: settledAt.current });
         if (c) onPick(c.id);
       } else if (e.code === "Escape") {
         e.preventDefault();
@@ -57,7 +71,9 @@ export default function StarterCheckCard({
       <header className="g3d-head">
         <div>
           <p className="g3d-tag">{SPEAKERS[line.who]}</p>
-          <p className="text-[0.95rem] leading-snug">{line.text}</p>
+          <p ref={hint} tabIndex={-1} className="text-[0.95rem] leading-snug outline-none">
+            {line.text}
+          </p>
         </div>
         <button type="button" className="g3d-x" aria-label={STARTER_WORDS.checks.close} onClick={onClose}>
           ×
@@ -65,26 +81,33 @@ export default function StarterCheckCard({
       </header>
       <h2 className="mt-2 font-semibold text-[#fff1cf]">{title}</h2>
       <ul className="mt-2 space-y-1">
-        {choices.map((c, i) => (
-          <li key={c.id}>
-            <button
-              ref={i === 0 ? first : undefined}
-              type="button"
-              onClick={() => onPick(c.id)}
-              className="g3d-card flex min-h-[44px] w-full items-center gap-3 text-left hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#f2d27a]"
-            >
-              {c.icon && (
-                <span aria-hidden className="shrink-0 text-[#fff1cf]">
-                  {c.icon}
-                </span>
-              )}
-              <span className="flex-1 font-semibold">{c.label}</span>
-              <kbd aria-hidden className="g3d-keycap [@media(pointer:coarse)]:hidden">
-                {i + 1}
-              </kbd>
-            </button>
-          </li>
-        ))}
+        {choices.map((c, i) =>
+          c.tried ? (
+            // The slot stays, empty: a dashed outline, no words, nothing to pick, hidden from screen readers.
+            <li key={c.id} aria-hidden className="min-h-[44px] rounded border border-dashed border-white/20" />
+          ) : (
+            <li key={c.id}>
+              <button
+                ref={i === choices.findIndex((x) => !x.tried) ? first : undefined}
+                type="button"
+                onClick={(e) => {
+                  if (!e.detail || e.detail === 1) pick(c);
+                }}
+                className="g3d-card flex min-h-[44px] w-full items-center gap-3 text-left hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#f2d27a]"
+              >
+                {c.icon && (
+                  <span aria-hidden className="shrink-0 text-[#fff1cf]">
+                    {c.icon}
+                  </span>
+                )}
+                <span className="flex-1 font-semibold">{c.label}</span>
+                <kbd aria-hidden className="g3d-keycap [@media(pointer:coarse)]:hidden">
+                  {i + 1}
+                </kbd>
+              </button>
+            </li>
+          ),
+        )}
       </ul>
     </section>
   );

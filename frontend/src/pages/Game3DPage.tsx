@@ -129,8 +129,10 @@ import StarterCheckCard, { WallIcon } from "../game3d/StarterCheckCard";
 import BookOfWisdom from "../game3d/BookOfWisdom";
 import {
   ARRIVAL_MS,
+  MOAT_CHOICES,
   PICKED_LINE_MS,
   RESULT_MS,
+  WALL_CHOICES,
   answerCheck,
   arrived,
   bookOffered,
@@ -697,8 +699,15 @@ export default function Game3DPage() {
       : STARTER_WORDS.checks[waitingCheck].taught
     : null;
   const checkChoices = useMemo(() => {
-    if (waitingCheck === "walls") return choicesLeft(starter.run, "walls").map((id) => ({ id, label: STARTER_WORDS.checks.walls.choices[id], icon: <WallIcon wall={id} /> }));
-    if (waitingCheck === "moat") return choicesLeft(starter.run, "moat").map((id) => ({ id, label: STARTER_WORDS.checks.moat.choices[id] }));
+    // Every choice keeps its slot; a tried one is a blank slot (#494 review: sliding choices let a double tap win).
+    if (waitingCheck === "walls") {
+      const left = choicesLeft(starter.run, "walls");
+      return WALL_CHOICES.map((id) => ({ id, label: STARTER_WORDS.checks.walls.choices[id], icon: <WallIcon wall={id} />, tried: !left.includes(id) }));
+    }
+    if (waitingCheck === "moat") {
+      const left = choicesLeft(starter.run, "moat");
+      return MOAT_CHOICES.map((id) => ({ id, label: STARTER_WORDS.checks.moat.choices[id], tried: !left.includes(id) }));
+    }
     return [];
   }, [waitingCheck, starter.run]);
   const pageLine = (r: NonNullable<typeof checkResult>) =>
@@ -1677,7 +1686,7 @@ export default function Game3DPage() {
           {pickedLine !== null && !counterOpen && <StarterPlate lines={[STARTER_WORDS.picked[pickedLine]]} label={STARTER_WORDS.counter.company.name} />}
           {counterOpen && <PracticeCounterCard onPick={pickPractice} onClose={shutCounter} />}
           {checkOpen && waitingCheck && checkLine && (
-            <StarterCheckCard title={STARTER_WORDS.checks[waitingCheck].title} line={checkLine} choices={checkChoices} onPick={pickCheck} onClose={shutCheck} />
+            <StarterCheckCard title={STARTER_WORDS.checks[waitingCheck].title} line={checkLine} missed={missed !== null} choices={checkChoices} onPick={pickCheck} onClose={shutCheck} />
           )}
           {checkResult && (
             <StarterResult

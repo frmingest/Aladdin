@@ -24,6 +24,7 @@ export type { Beat, PageId } from "./starterPlanV1";
  * "pick the same slot" never works either. The order stays put across a miss: the tried choice leaves, the rest keep theirs.
  */
 export const WALL_CHOICES = ["timber", "granite", "rotted"] as const;
+// Slots stay fixed across a miss (the card blanks a tried one), so the right answer never slides up into a slot just used.
 export const MOAT_CHOICES = ["sign", "cheap", "recipe"] as const;
 export type WallChoice = (typeof WALL_CHOICES)[number];
 export type MoatChoice = (typeof MOAT_CHOICES)[number];
@@ -81,7 +82,7 @@ export function checkDone(run: StarterRun, beat: CheckBeat): boolean {
   return tries.includes(CHECKS[beat].right) || tries.length >= MAX_MISSES;
 }
 
-/** The choices still on the card: a choice you already tried is taken off, so a second try never repeats the first. */
+/** The choices not yet tried. The card keeps every slot and shows a tried one blank, so the others never move. */
 export function choicesLeft(run: StarterRun, beat: "walls"): WallChoice[];
 export function choicesLeft(run: StarterRun, beat: "moat"): MoatChoice[];
 export function choicesLeft(run: StarterRun, beat: CheckBeat): string[] {
@@ -235,7 +236,7 @@ export function moatOf(run: StarterRun): typeof PIP.moat | "unsurveyed" {
   return towerStands(run) && checkDone(run, "moat") ? PIP.moat : "unsurveyed";
 }
 
-/** The four fact cards on the plank by the tower stand once the tower does. */
+/** The four fact cards on the board over the path stand once the tower does. */
 export function factCardsShown(run: StarterRun): boolean {
   return towerStands(run);
 }

@@ -85,6 +85,11 @@ export default function BookOfWisdom({ pages, blocked, onClose }: { pages: reado
           ×
         </button>
       </header>
+      {/* Labelled practice wherever it opens: outside the yard it sits beside real towers (Faiz's decision 2). */}
+      <p className="g3d-worldtag mt-2 inline-block">
+        <span aria-hidden>🍋 </span>
+        {STARTER_WORDS.tag}
+      </p>
       <div className="g3d-card mt-2 text-center">
         {b.cover.map((l) => (
           <p key={l} className="leading-snug">

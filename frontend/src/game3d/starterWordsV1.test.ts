@@ -8,8 +8,13 @@ import { STARTER_WORDS, allStarterStrings, bookStrings, plainStrings, screensOfB
 const words = (s: string) => s.split(/\s+/).filter(Boolean).length;
 const sentences = (s: string) => s.split(/(?<=[.!?…])\s+/).filter(Boolean);
 
-/** Banned in every starter string (spec section 3, beat 6): the storm must never teach hold, sell or "ride it out". */
-const BANNED = /\b(stay|run|ride|ride out|weather it|hold|keep it|sell|sold|buy|bought|pay|cost|costs|trade)\b/i;
+/**
+ * Banned in every starter string (spec section 3, beat 6): the storm must never teach hold, sell or "ride it out". The
+ * trading words are banned with any ending ("selling", "buys", "holding"); "pays its debt" is the one allowed use of "pay",
+ * because it is about paying back a loan, not buying (#494 review).
+ */
+const BANNED_RE = /\b(stay|run|ride|ride out|weather it|keep it|cost|costs)\b|\b(hold|sell|sold|buy|bought|pay|paid|trade)\w*/i;
+const BANNED = { test: (s: string) => BANNED_RE.test(s.replace(/\bpays its debt\b/gi, "")) };
 /** Grown-up words live only in the Book and the Plain view, never on a card face. */
 const GROWN_UP = /net debt|ebitda|bear case|bull case|base case|margin of safety|valuation|dividend|p\/e/i;
 
@@ -19,7 +24,7 @@ describe("starter words v1 (#493): game voice", () => {
   });
 
   it("no buy, sell, hold or pay wording anywhere", () => {
-    for (const s of allStarterStrings()) expect(s, s).not.toMatch(BANNED);
+    for (const s of allStarterStrings()) expect(BANNED.test(s), s).toBe(false);
   });
 
   it("no grown-up word on any card face, plate or label", () => {
@@ -45,6 +50,11 @@ describe("starter words v1 (#493): game voice", () => {
 });
 
 describe("starter words v1, build step 2 (#494): checks and the Book", () => {
+  it("the banned-word check catches word endings and allows only 'pays its debt'", () => {
+    for (const bad of ["Selling now", "She buys it", "Holding on", "Trades fast", "Paid off"]) expect(BANNED.test(bad), bad).toBe(true);
+    expect(BANNED.test("Granite walls. One year's money pays its debt.")).toBe(false);
+  });
+
   it("no Book string counts anything (no '3 of 5', no '2/5')", () => {
     for (const s of bookStrings()) expect(s, s).not.toMatch(/\d+\s*of\s*\d+|\d+\s*\/\s*\d+/i);
   });
@@ -52,7 +62,7 @@ describe("starter words v1, build step 2 (#494): checks and the Book", () => {
   it("Book and Plain view lines also fit in one breath and carry no buy or sell wording", () => {
     for (const s of [...bookStrings(), ...plainStrings()]) {
       for (const sentence of sentences(s)) expect(words(sentence), sentence).toBeLessThan(12);
-      expect(s, s).not.toMatch(BANNED);
+      expect(BANNED.test(s), s).toBe(false);
     }
   });
 
