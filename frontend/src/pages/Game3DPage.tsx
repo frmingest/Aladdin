@@ -124,9 +124,31 @@ import { webglSupported } from "../game3d/webgl";
 import { useSceneLoad } from "../game3d/sceneLoadStore";
 import PracticeCounterCard from "../game3d/PracticeCounterCard";
 import PracticePlainPanel from "../game3d/PracticePlainPanel";
-import { StarterGoal, StarterLive, StarterPlate } from "../game3d/StarterHud";
-import { ARRIVAL_MS, PICKED_LINE_MS, arrived, counterWaiting, goalOf, loadStarter, pickCompany, plainSeen, saveStarter, towerStands } from "../game3d/starterPlanV1";
-import type { StarterSaved } from "../game3d/starterPlanV1";
+import { StarterGoal, StarterLive, StarterPlate, StarterResult } from "../game3d/StarterHud";
+import StarterCheckCard, { WallIcon } from "../game3d/StarterCheckCard";
+import BookOfWisdom from "../game3d/BookOfWisdom";
+import {
+  ARRIVAL_MS,
+  PICKED_LINE_MS,
+  RESULT_MS,
+  answerCheck,
+  arrived,
+  bookOffered,
+  checkWaiting,
+  choicesLeft,
+  counterWaiting,
+  factCardsShown,
+  goalOf,
+  lastMiss,
+  loadStarter,
+  moatOf,
+  pickCompany,
+  plainSeen,
+  saveStarter,
+  towerStands,
+  wallsOf,
+} from "../game3d/starterPlanV2";
+import type { CheckBeat, CheckOutcome, StarterSaved } from "../game3d/starterPlanV2";
 import { SPEAKERS, STARTER_WORDS } from "../game3d/starterWordsV1";
 import type { PerfStats } from "../game3d/PerfProbe";
 
@@ -587,10 +609,12 @@ export default function Game3DPage() {
   // browser. It is written only when the starter changes, never on load, so walking the courtyard leaves no key behind.
   const inYard = area.id === "practice";
   const [starter, setStarter] = useState<StarterSaved>(() => loadStarter(guideStorage()));
+  // Storage this browser refuses: the starter still plays, and the Book says it will not be kept (#494).
+  const [starterUnkept, setStarterUnkept] = useState(() => guideStorage() === null);
   const updateStarter = useCallback((step: (s: StarterSaved) => StarterSaved) => {
     setStarter((prev) => {
       const next = step(prev);
-      if (next !== prev) saveStarter(guideStorage(), next);
+      if (next !== prev && !saveStarter(guideStorage(), next)) setStarterUnkept(true);
       return next;
     });
   }, []);
@@ -627,28 +651,85 @@ export default function Game3DPage() {
   }, []);
   const [practicePlainOpen, setPracticePlainOpen] = useState(false);
   const closePracticePlain = useCallback(() => setPracticePlainOpen(false), []);
+
+  // Beats 3 and 4 (#494): a check card opens by itself once the station before it has finished talking (the yard leads).
+  // Escape puts it away; E at the tower, or the goal strip turned button, brings it back.
+  const [bookOpen, setBookOpen] = useState(false);
+  const openBook = useCallback(() => {
+    if (document.pointerLockElement) document.exitPointerLock();
+    setBookOpen(true);
+  }, []);
+  const closeBook = useCallback(() => setBookOpen(false), []);
+  const waitingCheck: CheckBeat | null = inYard ? checkWaiting(starter.run) : null;
+  const [checkShut, setCheckShut] = useState(false);
+  // The last check's result plate, while it is up: which check, and what the Book did.
+  const [checkResult, setCheckResult] = useState<{ beat: CheckBeat; page: Extract<CheckOutcome, { kind: "done" }>["page"] } | null>(null);
+  const checkOpen = waitingCheck !== null && !checkShut && pickedLine === null && checkResult === null && yardDrawn && !bookOpen;
+  // A new check (the moat after the walls) opens by itself, even if the last one was put away.
+  useEffect(() => setCheckShut(false), [waitingCheck]);
+  useEffect(() => {
+    if (checkResult === null) return;
+    const t = setTimeout(() => setCheckResult(null), RESULT_MS);
+    return () => clearTimeout(t);
+  }, [checkResult]);
+  const pickCheck = useCallback(
+    (choice: string) => {
+      if (!waitingCheck) return;
+      const { outcome } = answerCheck(starter, waitingCheck, choice);
+      if (outcome.kind === "ignored") return;
+      updateStarter((s) => answerCheck(s, waitingCheck, choice).saved);
+      if (outcome.kind === "done") {
+        setCheckResult({ beat: waitingCheck, page: outcome.page });
+        document.querySelector<HTMLCanvasElement>("canvas")?.focus();
+      }
+    },
+    [starter, waitingCheck, updateStarter],
+  );
+  const shutCheck = useCallback(() => {
+    setCheckShut(true);
+    document.querySelector<HTMLCanvasElement>("canvas")?.focus();
+  }, []);
+  const missed = waitingCheck ? lastMiss(starter.run, waitingCheck) : null;
+  const checkLine = waitingCheck
+    ? missed
+      ? (STARTER_WORDS.checks[waitingCheck].hints as Record<string, { who: keyof typeof SPEAKERS; text: string }>)[missed]
+      : STARTER_WORDS.checks[waitingCheck].taught
+    : null;
+  const checkChoices = useMemo(() => {
+    if (waitingCheck === "walls") return choicesLeft(starter.run, "walls").map((id) => ({ id, label: STARTER_WORDS.checks.walls.choices[id], icon: <WallIcon wall={id} /> }));
+    if (waitingCheck === "moat") return choicesLeft(starter.run, "moat").map((id) => ({ id, label: STARTER_WORDS.checks.moat.choices[id] }));
+    return [];
+  }, [waitingCheck, starter.run]);
+  const pageLine = (r: NonNullable<typeof checkResult>) =>
+    r.page === "new" ? STARTER_WORDS.book.newPage(STARTER_WORDS.book.pages[r.beat].title) : r.page === "held" ? STARTER_WORDS.book.held : STARTER_WORDS.book.earnLater;
   // What a screen reader hears, once, when it changes: the arrival lines, then each result line, then the goal. With the speaker.
   const said = (l: { who: keyof typeof SPEAKERS; text: string }) => `${SPEAKERS[l.who]}: ${l.text}`;
   const starterLiveText = arrivalShown
     ? STARTER_WORDS.arrival.map(said).join(" ")
     : pickedLine !== null
       ? said(STARTER_WORDS.picked[pickedLine])
-      : STARTER_WORDS.goal[goalOf(starter.run)];
+      : checkResult !== null
+        ? `${STARTER_WORDS.checks[checkResult.beat].result} ${pageLine(checkResult)}`
+        : checkOpen && missed && checkLine
+          ? said(checkLine)
+          : STARTER_WORDS.goal[goalOf(starter.run)];
   useEffect(() => {
     if (!inYard) {
       setPracticePlainOpen(false);
       setPickedLine(null);
       // The yard leads: coming back while the pick still waits opens Sal's card by itself again.
       setCounterShut(false);
+      setCheckShut(false);
+      setCheckResult(null);
     }
   }, [inYard]);
   // A card you click needs the mouse free, as the other panels do.
   useEffect(() => {
-    if (counterOpen && document.pointerLockElement) document.exitPointerLock();
-  }, [counterOpen]);
-  // While a starter card is open, its number keys act and the page's own hotkeys (E, T, Q, G, P) stay quiet.
+    if ((counterOpen || checkOpen) && document.pointerLockElement) document.exitPointerLock();
+  }, [counterOpen, checkOpen]);
+  // While a starter card or the Book is open, its own keys act and the page's hotkeys (E, T, Q, G, P) stay quiet.
   const starterCardOpen = useRef(false);
-  starterCardOpen.current = counterOpen;
+  starterCardOpen.current = counterOpen || checkOpen || bookOpen;
 
   // The address follows the place (replace, not push, so the browser's Back leaves the page instead of re-walking your steps).
   useEffect(() => {
@@ -1149,6 +1230,15 @@ export default function Game3DPage() {
         setCounterShut(false);
       },
     },
+    // The practice yard (#494): E round the tower opens the check card that is waiting, if it was put away.
+    station: {
+      prompt: () => (waitingCheck && !checkOpen && pickedLine === null && checkResult === null ? STARTER_WORDS.checks[waitingCheck].prompt : null),
+      press: () => {
+        if (waitingCheck) setCheckShut(false);
+      },
+    },
+    // The Book's lectern by the yard's gate.
+    lectern: { prompt: () => (bookOpen ? null : STARTER_WORDS.book.prompt), press: openBook },
     // The way back out, whichever place you are in.
     leave: {
       prompt: () =>
@@ -1175,7 +1265,7 @@ export default function Game3DPage() {
   const spotAct =
     atSpot.kind === "none" ? null : inPast && !openInThePast(atSpot.kind) ? shutAct : (acts[atSpot.kind] as SpotAct<AtSpot>);
   // E waits while something covers the world: a page over a room or a field, the report in a holding's land.
-  const eBlocked = boothOpen !== null || lampOpen || counterOpen || isMoving(areaState) || (area.id === "holding" ? !!report || !room : area.id !== "courtyard" && whereOpen);
+  const eBlocked = boothOpen !== null || lampOpen || counterOpen || checkOpen || bookOpen || isMoving(areaState) || (area.id === "holding" ? !!report || !room : area.id !== "courtyard" && whereOpen);
   const pressSpot = useRef<(() => void) | null>(null);
   pressSpot.current = spotAct && !eBlocked ? () => spotAct.press(atSpot) : null;
 
@@ -1396,7 +1486,14 @@ export default function Game3DPage() {
       archLit: archLit(lit),
       noticeSheets: inPast ? 0 : sheets,
       mint: mint.view,
-      practice: { standing: towerStands(starter.run), counterWaiting: counterWaiting(starter.run), riseKey },
+      practice: {
+        standing: towerStands(starter.run),
+        counterWaiting: counterWaiting(starter.run),
+        riseKey,
+        wall: wallsOf(starter.run),
+        moat: moatOf(starter.run),
+        factCards: factCardsShown(starter.run),
+      },
     }),
     [starter.run, riseKey, inYard, inPast, viewState, mint.view, sheets, quest.written, nightWatch, unseenRavens, realmLevel, drillOpen, questMarks, talking, cheerKey, standingText.lit, fieldTools, quarter, archCounts, placedMarks, lit],
   );
@@ -1415,7 +1512,7 @@ export default function Game3DPage() {
   const backOutside = roomView || inHall || inRecords || area.id === "weather" || area.id === "mint" || area.id === "quarter" || inYard ? leaveArea : null;
   // Any panel or dialog on screen: the hint line steps aside for it.
   const anyPanelOpen =
-    panels.quests || panels.towers || whereOpen || vaultOpen || realmOpen || watchOpen || perchOpen || hourglassOpen || deskOpen || drillOpen || lampOpen || boothOpen !== null || report !== null || counterOpen || practicePlainOpen || arrivalShown || pickedLine !== null;
+    panels.quests || panels.towers || whereOpen || vaultOpen || realmOpen || watchOpen || perchOpen || hourglassOpen || deskOpen || drillOpen || lampOpen || boothOpen !== null || report !== null || counterOpen || practicePlainOpen || arrivalShown || pickedLine !== null || checkOpen || bookOpen || checkResult !== null;
 
   return (
     <div className="relative h-[calc(100dvh-5rem)] min-h-[480px] w-full overflow-hidden bg-surface">
@@ -1453,7 +1550,7 @@ export default function Game3DPage() {
       {whereOpen && !inPast && !worldPage && <WhereToPanel onPick={pickDoor} onClose={closeWhere} only={onlyPlace} onlyRoutes={onlyRoutes} />}
       {whereOpen && !inPast && worldPage && <WorldPanel door={worldPage} onBack={() => setWorldPage(null)} onClose={closeWhere} />}
       {panels.towers && !inYard && <TowerPanel world={shownWorld} loading={loading} error={error} onRetry={load} onClose={() => flip("towers")} marks={inPast ? undefined : marks} lit={inPast ? undefined : lit} noticeSheets={inPast ? 0 : sheets} />}
-      {panels.quests && !inPast && !inYard && <QuestLog quest={quest} reviews={reviews} demo={world.demo} standing={standingText} wires={standing && !standingFailed ? (standing.wires ?? []) : undefined} onLookAtWire={lookAtWire} onRefreshStanding={refreshStanding} drill={drillQuest} guide={{ status: guide, saved: guideSaved, onReplay: replayGuideNow }} round={round} onRoundAgain={roundOff ? startSampleAgain : undefined} onClose={() => flip("quests")} />}
+      {panels.quests && !inPast && !inYard && <QuestLog book={bookOffered(starter) ? { onOpen: openBook } : undefined} quest={quest} reviews={reviews} demo={world.demo} standing={standingText} wires={standing && !standingFailed ? (standing.wires ?? []) : undefined} onLookAtWire={lookAtWire} onRefreshStanding={refreshStanding} drill={drillQuest} guide={{ status: guide, saved: guideSaved, onReplay: replayGuideNow }} round={round} onRoundAgain={roundOff ? startSampleAgain : undefined} onClose={() => flip("quests")} />}
       {vaultOpen && state && <VaultPanel state={state} onChanged={load} onClose={() => setSpotPanel("vault", false)} />}
       {realmOpen && viewState && <RealmPanel state={viewState} onClose={() => setSpotPanel("realm", false)} />}
       {inPast && past && (
@@ -1563,24 +1660,48 @@ export default function Game3DPage() {
         <>
           <StarterGoal
             goal={STARTER_WORDS.goal[goalOf(starter.run)]}
-            hidden={plate !== null}
-            reopen={counterShut && starter.run.beat === "pick" ? { label: STARTER_WORDS.counter.reopen, onPress: () => setCounterShut(false) } : undefined}
+            // While a check card is open its title says the goal: the strip steps aside rather than say it twice.
+            hidden={plate !== null || checkOpen}
+            reopen={
+              counterShut && starter.run.beat === "pick"
+                ? { label: STARTER_WORDS.counter.reopen, onPress: () => setCounterShut(false) }
+                : waitingCheck && checkShut && pickedLine === null && checkResult === null
+                  ? { label: STARTER_WORDS.goal[goalOf(starter.run)], onPress: () => setCheckShut(false) }
+                  : undefined
+            }
           />
           <StarterLive text={starterLiveText} />
           {arrivalShown && <StarterPlate lines={STARTER_WORDS.arrival} label={STARTER_WORDS.place} />}
           {pickedLine !== null && !counterOpen && <StarterPlate lines={[STARTER_WORDS.picked[pickedLine]]} label={STARTER_WORDS.counter.company.name} />}
           {counterOpen && <PracticeCounterCard onPick={pickPractice} onClose={shutCounter} />}
+          {checkOpen && waitingCheck && checkLine && (
+            <StarterCheckCard title={STARTER_WORDS.checks[waitingCheck].title} line={checkLine} choices={checkChoices} onPick={pickCheck} onClose={shutCheck} />
+          )}
+          {checkResult && (
+            <StarterResult
+              label={STARTER_WORDS.book.pages[checkResult.beat].title}
+              result={STARTER_WORDS.checks[checkResult.beat].result}
+              page={pageLine(checkResult)}
+              isNew={checkResult.page === "new"}
+            />
+          )}
           {practicePlainOpen && (
             <PracticePlainPanel
               seen={{
                 company: plainSeen(starter.run).company ? STARTER_WORDS.plain.company : undefined,
                 pieces: plainSeen(starter.run).pieces ? STARTER_WORDS.plain.pieces : undefined,
+                leftOver: plainSeen(starter.run).leftOver ? STARTER_WORDS.plain.leftOver : undefined,
+                owes: plainSeen(starter.run).owes ? STARTER_WORDS.plain.owes : undefined,
+                walls: plainSeen(starter.run).walls ? STARTER_WORDS.plain.walls : undefined,
+                moat: plainSeen(starter.run).moat ? STARTER_WORDS.plain.moat : undefined,
               }}
               onClose={closePracticePlain}
             />
           )}
         </>
       )}
+      {/* The Book of Wisdom: from the lectern in the yard, or the first Quests card outside (#494). */}
+      {bookOpen && <BookOfWisdom pages={starter.pages} blocked={starterUnkept} onClose={closeBook} />}
       {backOutside && (
         <button
           type="button"

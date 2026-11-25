@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { areaLine, areaName } from "./areaWordsV2";
 import { areaLine as areaLineV1 } from "./areaWordsV1";
-import { STARTER_WORDS, allStarterStrings, screensOfBeats } from "./starterWordsV1";
+import { STARTER_WORDS, allStarterStrings, bookStrings, plainStrings, screensOfBeats } from "./starterWordsV1";
 
 const words = (s: string) => s.split(/\s+/).filter(Boolean).length;
 const sentences = (s: string) => s.split(/(?<=[.!?…])\s+/).filter(Boolean);
@@ -41,6 +41,50 @@ describe("starter words v1 (#493): game voice", () => {
     expect(STARTER_WORDS.counter.company.name).toBe("Pip's Lemonade");
     expect(STARTER_WORDS.counter.title).toMatch(/practice/);
     expect(STARTER_WORDS.tag).toMatch(/made-up/);
+  });
+});
+
+describe("starter words v1, build step 2 (#494): checks and the Book", () => {
+  it("no Book string counts anything (no '3 of 5', no '2/5')", () => {
+    for (const s of bookStrings()) expect(s, s).not.toMatch(/\d+\s*of\s*\d+|\d+\s*\/\s*\d+/i);
+  });
+
+  it("Book and Plain view lines also fit in one breath and carry no buy or sell wording", () => {
+    for (const s of [...bookStrings(), ...plainStrings()]) {
+      for (const sentence of sentences(s)) expect(words(sentence), sentence).toBeLessThan(12);
+      expect(s, s).not.toMatch(BANNED);
+    }
+  });
+
+  it("grown-up words appear only in a Book page's grown-up line (or the Plain view), never on a card face", () => {
+    const grownUpLines = Object.values(STARTER_WORDS.book.pages).flatMap((p) => (p.grownUp ? [p.grownUp] : []));
+    expect(grownUpLines.some((l) => GROWN_UP.test(l))).toBe(true);
+    const outside = bookStrings().filter((s) => !grownUpLines.includes(s));
+    for (const s of outside) expect(s, s).not.toMatch(GROWN_UP);
+  });
+
+  it("no choice label gives the answer away: no 'strong', 'weak', 'right' or 'best' on a choice", () => {
+    for (const b of ["walls", "moat"] as const) {
+      for (const label of Object.values(STARTER_WORDS.checks[b].choices)) expect(label).not.toMatch(/strong|weak|right|best|good|bad/i);
+    }
+  });
+
+  it("each check names a hint for every wrong choice and none for the right one", () => {
+    expect(Object.keys(STARTER_WORDS.checks.walls.hints).sort()).toEqual(["rotted", "timber"]);
+    expect(Object.keys(STARTER_WORDS.checks.moat.hints).sort()).toEqual(["cheap", "sign"]);
+  });
+
+  it("the fact cards and the Plain view say Pip's real practice numbers", () => {
+    expect(STARTER_WORDS.facts).toEqual([["Year 1: 6", "coins left over"], ["Year 2: 8"], ["Year 3: 10"], ["Owes: 5 coins"]]);
+    expect(STARTER_WORDS.plain.walls).toMatch(/^Granite\./);
+    expect(STARTER_WORDS.plain.moat).toMatch(/^Narrow\./);
+  });
+
+  it("only the pages this build unlocks are written; the rest are titles only", () => {
+    const p = STARTER_WORDS.book.pages;
+    expect(p.walls.lines?.length).toBeGreaterThan(0);
+    expect(p.moat.lines?.length).toBeGreaterThan(0);
+    for (const id of ["room", "storms", "why"] as const) expect(p[id].lines).toBeUndefined();
   });
 });
 
