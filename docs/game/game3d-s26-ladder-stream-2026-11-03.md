@@ -24,7 +24,7 @@ Nothing new in a land yet, on purpose. Every theme still has no dressing, so eac
 ## Code
 
 - `game3d/landCondition.ts`, `landStream.ts`, `landCentre.ts` (pure, tested).
-- `game3d/LandCentre.tsx` (the slot), `LandBlock.tsx` (placeholder at any rung, ghost, neutral), `StreamBand.tsx` (one shared material), `LandLadder.tsx` (the picture).
+- `game3d/LandCentre.tsx` (the slot), `LandBlock.tsx` (placeholder at any rung, ghost, neutral), `StreamBand.tsx` (one shared material), `LandLadder.tsx` (the picture; nothing in the app mounted it, and the cleanup PR for issue #509 deletes it: written, PR open. The picture stays below).
 - `HoldingLand.tsx`, `Scene.tsx`, `Game3DPage.tsx`: the centre now carries the slot; the page calls `holdingTheme3d` through `centreSlotFor`.
 - `DRESSING_BUILT` in `landCentre.ts` is the switch each dressing PR flips.
 
