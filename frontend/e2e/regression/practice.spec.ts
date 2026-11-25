@@ -124,6 +124,8 @@ const AFTER_CHECKS: Run = { beat: "price", picks: { company: "pip", walls: ["tim
 
 test.describe("practice yard: beats 1 to 4 make no write", () => {
   test("keyboard: arrive, pick, knock and fill with one miss each; the Book holds two pages outside the yard", async ({ page }) => {
+    // Four beats, a walk out and the courtyard's load on CI's software WebGL take about 90 s, the project's whole budget.
+    test.setTimeout(240_000);
     const problems = watch(page);
     await openYard(page);
     const before = await storage(page);
@@ -202,6 +204,8 @@ test.describe("practice yard: beats 1 to 4 make no write", () => {
     test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
 
     test("taps only: reopen each card from the goal strip; two misses at the moat keep its page locked", async ({ page }) => {
+      // Four beats by touch on CI's software WebGL take about 70 s of the project's 90 s budget.
+      test.setTimeout(180_000);
       const problems = watch(page);
       await openYard(page);
       const before = await storage(page);
