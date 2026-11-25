@@ -67,6 +67,14 @@ async function assertNoWrite(page: Page, before: Record<string, string>, api: ()
 }
 
 /**
+ * After a miss the card ignores picks for SETTLE_MS (0.4 s, `checkCardLogic.ts`), so a double tap cannot land. A player's
+ * next pick comes later than that; the test waits it out too, so each pick below lands, or is ignored, for its own reason.
+ */
+async function settle(page: Page) {
+  await page.waitForTimeout(500);
+}
+
+/**
  * Beats 3 and 4 (#494) by keyboard: each card opens by itself, one wrong pick shows the hint and takes that choice off the
  * card, then the right one (now key 1) gives the result and the new page. The keys are the visible choices' numbers.
  */
@@ -80,7 +88,8 @@ async function playChecksByKeyboard(page: Page) {
   await expect(walls).toContainText("Look again. It owes 5. Last year it made 10.");
   await expect(walls.getByRole("button", { name: /Timber/ })).toHaveCount(0);
   await expect(walls.getByRole("button")).toHaveCount(3); // Close, Granite, Rotted: Timber's slot stays, blank
-  // The slots do not move: pressing 1 again picks nothing (the blank slot), so "1, 1" cannot win.
+  // The slots do not move: once the card has settled, pressing 1 again picks nothing (the blank slot), so "1, 1" cannot win.
+  await settle(page);
   await page.keyboard.press("1");
   await expect(walls).toBeVisible();
   await expect(walls).toContainText("Look again.");
@@ -89,16 +98,17 @@ async function playChecksByKeyboard(page: Page) {
   await expect(page.getByRole("complementary", { name: "Your towers in words" })).toHaveCount(0);
   await page.keyboard.press("2"); // Granite, still in slot 2
   await expect(walls).toHaveCount(0);
-  await expect(page.getByText("Granite walls. One year's money pays its debt.")).toBeVisible();
+  await expect(page.getByText("Granite walls. One year's money pays its debt.", { exact: true })).toBeVisible();
   await expect(page.getByTestId("starter-page-line")).toHaveText(/New page: Walls/);
 
   const moat = page.getByRole("dialog", { name: "What stops others copying Pip's?" });
   await expect(moat).toBeVisible({ timeout: 30_000 });
   await page.keyboard.press("2"); // Cheapest lemonade this week: wrong
   await expect(moat).toContainText("Anyone can cut prices tomorrow.");
+  await settle(page);
   await page.keyboard.press("3"); // Gran's secret recipe, still in slot 3
   await expect(moat).toHaveCount(0);
-  await expect(page.getByText("Narrow moat. A recipe is hard to copy.")).toBeVisible();
+  await expect(page.getByText("Narrow moat. A recipe is hard to copy.", { exact: true })).toBeVisible();
   await expect(page.getByTestId("starter-page-line")).toHaveText(/New page: Moat/);
 }
 
@@ -175,7 +185,8 @@ test.describe("practice yard: beats 1 to 4 make no write", () => {
     await expect(book).not.toContainText(/\d+\s*of\s*\d+/);
     await page.keyboard.press("Escape");
     await expect(book).toHaveCount(0);
-    await expect(quests).toBeVisible();
+    // Opening the Book put the Quests panel away, so two panels never stack; Escape leaves the courtyard clear.
+    await expect(quests).toHaveCount(0);
     await problems.assertNone();
   });
 
@@ -208,6 +219,7 @@ test.describe("practice yard: beats 1 to 4 make no write", () => {
       await page.getByRole("button", { name: "Knock on the walls" }).tap();
       await walls.getByRole("button", { name: /Rotted/ }).tap();
       await expect(walls).toContainText("Look again.");
+      await settle(page);
       await walls.getByRole("button", { name: /Granite/ }).tap();
       await expect(page.getByTestId("starter-page-line")).toHaveText(/New page: Walls/);
 
@@ -215,9 +227,11 @@ test.describe("practice yard: beats 1 to 4 make no write", () => {
       const moat = page.getByRole("dialog", { name: "What stops others copying Pip's?" });
       await expect(moat).toBeVisible({ timeout: 30_000 });
       await moat.getByRole("button", { name: /shiny new sign/ }).tap();
+      await expect(moat).toContainText("Anyone can paint a sign.");
+      await settle(page);
       await moat.getByRole("button", { name: /Cheapest lemonade/ }).tap();
       await expect(moat).toHaveCount(0);
-      await expect(page.getByText("Narrow moat. A recipe is hard to copy.")).toBeVisible();
+      await expect(page.getByText("Narrow moat. A recipe is hard to copy.", { exact: true })).toBeVisible();
       await expect(page.getByTestId("starter-page-line")).toHaveText("Play again to earn this page.");
 
       await assertNoWrite(page, before, api, { beat: "price", picks: { company: "pip", walls: ["rotted", "granite"], moat: ["sign", "cheap"] } });
