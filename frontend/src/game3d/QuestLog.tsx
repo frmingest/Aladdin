@@ -49,6 +49,7 @@ import WireList from "./WireList";
 import { fallPercent } from "./stormDrill";
 import type { DrillQuestState } from "./stormDrill";
 import { DRILL_GOAL, DRILL_TITLE } from "./stormDrillWordsV1";
+import { STARTER_WORDS } from "./starterWordsV1";
 
 /** A short row of name chips, then "+N more" so a long list never grows the panel. */
 function Chips({ items, max }: { items: string[]; max: number }) {
@@ -87,6 +88,7 @@ export default function QuestLog({
   round,
   onRoundAgain,
   onClose,
+  book,
 }: {
   quest: QuestState;
   reviews: ReviewQuestState;
@@ -106,6 +108,8 @@ export default function QuestLog({
   /** The sample fortress only: tick everything off again. */
   onRoundAgain?: () => void;
   onClose?: () => void;
+  /** The Book of Wisdom from the practice yard (#494): the first card, once the yard has been played. Left out, not shown. */
+  book?: { onOpen: () => void };
 }) {
   const questDone = quest.status === "done";
   const reviewsClear = reviews.status === "clear";
@@ -254,6 +258,20 @@ export default function QuestLog({
         )}
       </header>
       {demo && <p className="g3d-demo">{QUEST_SAMPLE}</p>}
+
+      {/* The Book of Wisdom (#494): first, with no count. Practice only: it holds nothing about the real fortress. */}
+      {book && (
+        <section className="g3d-card" aria-label={STARTER_WORDS.book.title}>
+          <p className="g3d-tag">
+            <span aria-hidden>📖 </span>
+            {STARTER_WORDS.book.title}
+          </p>
+          <p className="g3d-muted">{STARTER_WORDS.book.questLead}</p>
+          <button type="button" className="g3d-btn mt-2 [@media(pointer:coarse)]:min-h-[44px]" onClick={book.onOpen}>
+            {STARTER_WORDS.book.questOpen}
+          </button>
+        </section>
+      )}
 
       {guideOpen ? (
         <>

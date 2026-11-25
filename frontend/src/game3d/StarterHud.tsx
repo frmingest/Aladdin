@@ -47,6 +47,25 @@ export function StarterPlate({ lines, label }: { lines: readonly Line[]; label: 
   );
 }
 
+/**
+ * A check's result (#494): the result line, with its reason, and under it what the Book did ("New page: Walls", "Already in
+ * your book." or "Play again to earn this page."). No button: it goes by itself and the next station's card opens.
+ */
+export function StarterResult({ label, result, page, isNew }: { label: string; result: string; page: string; isNew: boolean }) {
+  return (
+    <section
+      aria-label={label}
+      className="g3d-panel g3d-slide pointer-events-none absolute bottom-16 left-1/2 z-20 w-[24rem] max-w-[92%] -translate-x-1/2 space-y-1 p-3 text-sm"
+    >
+      <p className="text-[0.95rem] font-semibold leading-snug">{result}</p>
+      <p className={isNew ? "g3d-tag" : "g3d-muted"} data-testid="starter-page-line">
+        {isNew && <span aria-hidden>📖 </span>}
+        {page}
+      </p>
+    </section>
+  );
+}
+
 /** Read once by screen readers when it changes: the goal, then the latest result line. */
 export function StarterLive({ text }: { text: string }) {
   return (

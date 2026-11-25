@@ -6,6 +6,7 @@ import { LAND_GATE } from "./holdingLandLogic";
 import { NO_NEARS, NO_SPOT_WORLD, SPOTS, pickNear, spotsOf, standingAt, watchSpots } from "./near";
 import type { NearTarget, Nears, SpotWorld } from "./near";
 import { NPCS } from "./npcs";
+import { COUNTER_AT, LECTERN_AT, YARD_GATE, YARD_PAD, YARD_SPAWN, nearLectern } from "./practiceYardLogic";
 import { ARCHIVE_DOOR } from "./recordsHallRoomLogic";
 import { HALL_DOOR } from "./townHallRoomLogic";
 import { TOWER_DOOR } from "./weatherTowerRoomLogic";
@@ -153,5 +154,25 @@ describe("watchSpots: one watcher for every place", () => {
   it("gives the page the same answer the watcher found", () => {
     const got = watchSpots("records", ARCHIVE_DOOR, NO_NEARS, NO_SPOT_WORLD);
     expect(standingAt({ id: "records" }, { ...NO_NEARS, ...got })).toEqual({ kind: "leave" });
+  });
+});
+
+describe("practice yard spots (#494): the tower's station and the Book's lectern", () => {
+  const yard = { id: "practice" } as const;
+  const watch = (p: { x: number; z: number }) => ({ ...NO_NEARS, ...(watchSpots("practice", p, NO_NEARS, NO_SPOT_WORLD) ?? {}) });
+
+  it("the arrival spot is near nothing, so no prompt shows on arrival", () => {
+    expect(standingAt(yard, watch(YARD_SPAWN))).toEqual({ kind: "none" });
+  });
+
+  it("round the tower, E is the station; at the lectern, E is the Book", () => {
+    expect(standingAt(yard, watch({ x: YARD_PAD.x, z: YARD_PAD.z + 6 }))).toEqual({ kind: "station" });
+    expect(standingAt(yard, watch(LECTERN_AT))).toEqual({ kind: "lectern" });
+  });
+
+  it("the lectern never shadows the gate back out, and the counter still beats the station", () => {
+    expect(nearLectern(YARD_GATE)).toBe(false);
+    expect(standingAt(yard, watch(YARD_GATE))).toEqual({ kind: "leave" });
+    expect(standingAt(yard, watch(COUNTER_AT))).toEqual({ kind: "counter" });
   });
 });

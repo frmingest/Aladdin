@@ -3,13 +3,18 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { areaLine, areaName } from "./areaWordsV2";
 import { areaLine as areaLineV1 } from "./areaWordsV1";
-import { STARTER_WORDS, allStarterStrings, screensOfBeats } from "./starterWordsV1";
+import { STARTER_WORDS, allStarterStrings, bookStrings, plainStrings, screensOfBeats } from "./starterWordsV1";
 
 const words = (s: string) => s.split(/\s+/).filter(Boolean).length;
 const sentences = (s: string) => s.split(/(?<=[.!?…])\s+/).filter(Boolean);
 
-/** Banned in every starter string (spec section 3, beat 6): the storm must never teach hold, sell or "ride it out". */
-const BANNED = /\b(stay|run|ride|ride out|weather it|hold|keep it|sell|sold|buy|bought|pay|cost|costs|trade)\b/i;
+/**
+ * Banned in every starter string (spec section 3, beat 6): the storm must never teach hold, sell or "ride it out". The
+ * trading words are banned with any ending ("selling", "buys", "holding"); "pays its debt" is the one allowed use of "pay",
+ * because it is about paying back a loan, not buying (#494 review).
+ */
+const BANNED_RE = /\b(stay|run|ride|ride out|weather it|keep it|cost|costs)\b|\b(hold|sell|sold|buy|bought|pay|paid|trade)\w*/i;
+const BANNED = { test: (s: string) => BANNED_RE.test(s.replace(/\bpays its debt\b/gi, "")) };
 /** Grown-up words live only in the Book and the Plain view, never on a card face. */
 const GROWN_UP = /net debt|ebitda|bear case|bull case|base case|margin of safety|valuation|dividend|p\/e/i;
 
@@ -19,7 +24,7 @@ describe("starter words v1 (#493): game voice", () => {
   });
 
   it("no buy, sell, hold or pay wording anywhere", () => {
-    for (const s of allStarterStrings()) expect(s, s).not.toMatch(BANNED);
+    for (const s of allStarterStrings()) expect(BANNED.test(s), s).toBe(false);
   });
 
   it("no grown-up word on any card face, plate or label", () => {
@@ -41,6 +46,55 @@ describe("starter words v1 (#493): game voice", () => {
     expect(STARTER_WORDS.counter.company.name).toBe("Pip's Lemonade");
     expect(STARTER_WORDS.counter.title).toMatch(/practice/);
     expect(STARTER_WORDS.tag).toMatch(/made-up/);
+  });
+});
+
+describe("starter words v1, build step 2 (#494): checks and the Book", () => {
+  it("the banned-word check catches word endings and allows only 'pays its debt'", () => {
+    for (const bad of ["Selling now", "She buys it", "Holding on", "Trades fast", "Paid off"]) expect(BANNED.test(bad), bad).toBe(true);
+    expect(BANNED.test("Granite walls. One year's money pays its debt.")).toBe(false);
+  });
+
+  it("no Book string counts anything (no '3 of 5', no '2/5')", () => {
+    for (const s of bookStrings()) expect(s, s).not.toMatch(/\d+\s*of\s*\d+|\d+\s*\/\s*\d+/i);
+  });
+
+  it("Book and Plain view lines also fit in one breath and carry no buy or sell wording", () => {
+    for (const s of [...bookStrings(), ...plainStrings()]) {
+      for (const sentence of sentences(s)) expect(words(sentence), sentence).toBeLessThan(12);
+      expect(BANNED.test(s), s).toBe(false);
+    }
+  });
+
+  it("grown-up words appear only in a Book page's grown-up line (or the Plain view), never on a card face", () => {
+    const grownUpLines = Object.values(STARTER_WORDS.book.pages).flatMap((p) => (p.grownUp ? [p.grownUp] : []));
+    expect(grownUpLines.some((l) => GROWN_UP.test(l))).toBe(true);
+    const outside = bookStrings().filter((s) => !grownUpLines.includes(s));
+    for (const s of outside) expect(s, s).not.toMatch(GROWN_UP);
+  });
+
+  it("no choice label gives the answer away: no 'strong', 'weak', 'right' or 'best' on a choice", () => {
+    for (const b of ["walls", "moat"] as const) {
+      for (const label of Object.values(STARTER_WORDS.checks[b].choices)) expect(label).not.toMatch(/strong|weak|right|best|good|bad/i);
+    }
+  });
+
+  it("each check names a hint for every wrong choice and none for the right one", () => {
+    expect(Object.keys(STARTER_WORDS.checks.walls.hints).sort()).toEqual(["rotted", "timber"]);
+    expect(Object.keys(STARTER_WORDS.checks.moat.hints).sort()).toEqual(["cheap", "sign"]);
+  });
+
+  it("the fact cards and the Plain view say Pip's real practice numbers", () => {
+    expect(STARTER_WORDS.facts).toEqual([["Year 1: 6", "coins left over"], ["Year 2: 8"], ["Year 3: 10"], ["Owes: 5 coins"]]);
+    expect(STARTER_WORDS.plain.walls).toMatch(/^Granite\./);
+    expect(STARTER_WORDS.plain.moat).toMatch(/^Narrow\./);
+  });
+
+  it("only the pages this build unlocks are written; the rest are titles only", () => {
+    const p = STARTER_WORDS.book.pages;
+    expect(p.walls.lines?.length).toBeGreaterThan(0);
+    expect(p.moat.lines?.length).toBeGreaterThan(0);
+    for (const id of ["room", "storms", "why"] as const) expect(p[id].lines).toBeUndefined();
   });
 });
 

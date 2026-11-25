@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { MutableRefObject } from "react";
 import { useFrame } from "@react-three/fiber";
 import { CuboidCollider, RigidBody } from "@react-three/rapier";
@@ -10,6 +10,7 @@ import { HedgeRing } from "./HoldingLand";
 import { PAL, Part } from "./Inked";
 import { prefersReducedMotion } from "./motionPref";
 import NpcMesh from "./NpcMesh";
+import { yawToward } from "./npcs";
 import PricePost from "./PricePost";
 import { LAND_COLOURS } from "./holdingLandLogic";
 import type { PricePost as PricePostData } from "./holdingLandLogic";
@@ -18,18 +19,28 @@ import QuestMarks from "./QuestMarks";
 import StaticBatch from "./StaticBatch";
 import { TowerBody } from "./TowerMesh";
 import WorldSign from "./WorldSign";
+import { MOAT_LABEL, WALL_LABEL } from "../lib/fortress";
 import {
   COUNTER_AT,
   COUNTER_MARK,
   COUNTER_YAW,
+  FACT_CARD_STEP,
+  FACT_CARD_ROWS,
+  FACT_CARD_W,
+  LECTERN_AT,
+  LECTERN_YAW,
+  PLANK_AT,
+  PLANK_YAW,
+  TOWER_PLATE_AT,
   YARD_ADVISORS,
   YARD_GATE,
   YARD_PAD,
   YARD_RADIUS,
+  YARD_SPAWN,
   YARD_STONE,
   practiceTowerView,
 } from "./practiceYardLogic";
-import type { PracticeLook } from "./practiceYardLogic";
+import type { PracticeLook, YardMoat, YardWall } from "./practiceYardLogic";
 import { STARTER_WORDS } from "./starterWordsV1";
 import { TOWER_FOG_COLOR, TOWER_PAD_TOP } from "./towerLook";
 
@@ -42,13 +53,79 @@ const RISE_SECONDS = 1;
 /** The practice plate's board: east of the path, between the gate and the price post. */
 const PLATE_AT = { x: 2.8, z: 9.2 } as const;
 
+/** The tower's word plate faces the arrival spot, like the practice plate. */
+const PLATE_YAW = yawToward(TOWER_PLATE_AT, YARD_SPAWN);
+
+/**
+ * The four fact cards on a notice board (beat 3, #494): money left over in each of three years, and what it owes. Two rows of
+ * two. They stand once the tower does and never change in this build; beat 6 will point at them.
+ */
+function FactPlank() {
+  const half = FACT_CARD_STEP / 2;
+  const top = FACT_CARD_ROWS[0] + 0.4;
+  const postX = FACT_CARD_STEP + 0.12;
+  return (
+    <group position={[PLANK_AT.x, 0, PLANK_AT.z]} rotation={[0, PLANK_YAW, 0]}>
+      <StaticBatch>
+        {/* Only the posts are solid: you walk under the board. */}
+        <RigidBody type="fixed" colliders={false}>
+          {([-1, 1] as const).map((s) => (
+            <CuboidCollider key={s} args={[0.1, top / 2, 0.1]} position={[s * postX, top / 2, -0.08]} />
+          ))}
+        </RigidBody>
+        {/* The backing board and its two posts. */}
+        <Part color={PAL.timber} position={[0, (FACT_CARD_ROWS[0] + FACT_CARD_ROWS[1]) / 2, -0.08]} grow={1.04}>
+          <boxGeometry args={[2 * FACT_CARD_STEP + 0.1, FACT_CARD_ROWS[0] - FACT_CARD_ROWS[1] + 0.75, 0.1]} />
+        </Part>
+        {([-1, 1] as const).map((s) => (
+          <Part key={s} color={PAL.timberDark} position={[s * postX, top / 2, -0.08]} grow={1.1}>
+            <boxGeometry args={[0.16, top, 0.16]} />
+          </Part>
+        ))}
+      </StaticBatch>
+      {STARTER_WORDS.facts.map((f, i) => (
+        <WorldSign
+          key={f[0]}
+          spec={{ kind: "plank", lines: [...f] }}
+          position={[(i % 2 === 0 ? -1 : 1) * half, FACT_CARD_ROWS[Math.floor(i / 2)], 0]}
+          width={FACT_CARD_W}
+          // Front face only: the backing board covers the back, and a mirrored back plane would sit on its face.
+          both={false}
+        />
+      ))}
+    </group>
+  );
+}
+
+/** The reading lectern by the gate (#494): a post, a slanted top and the Book lying open on it. E here opens the Book. */
+function Lectern() {
+  return (
+    <group position={[LECTERN_AT.x, 0, LECTERN_AT.z]} rotation={[0, LECTERN_YAW, 0]}>
+      <StaticBatch>
+        <RigidBody type="fixed" colliders={false}>
+          <CuboidCollider args={[0.4, 0.6, 0.3]} position={[0, 0.6, 0]} />
+        </RigidBody>
+        <Part color={PAL.timberDark} position={[0, 0.55, 0]} grow={1.08}>
+          <boxGeometry args={[0.3, 1.1, 0.3]} />
+        </Part>
+        <Part color={PAL.timber} position={[0, 1.15, 0]} rotation={[-0.45, 0, 0]} grow={1.06}>
+          <boxGeometry args={[0.9, 0.1, 0.65]} />
+        </Part>
+        {/* The Book, lying open: one cream block for its pages. */}
+        <Part color={PAL.cream} position={[0, 1.23, 0.02]} rotation={[-0.45, 0, 0]} grow={1.04}>
+          <boxGeometry args={[0.76, 0.06, 0.5]} />
+        </Part>
+      </StaticBatch>
+      <WorldSign spec={{ kind: "plank", lines: [STARTER_WORDS.book.title] }} position={[0, 1.85, 0]} width={1.5} />
+    </group>
+  );
+}
+
 /** Nobody has looked at the price yet: the gauge is mist with a "?", like an unpriced real tower. */
 const FOG_POST: PricePostData = { gauge: "fog", scroll: "fog", banner: "fog", gaugeReason: "" };
 
 /** Sal's counter in the yard: the courtyard's own stand, moved here, with the same sign. */
 const PRACTICE_COUNTER: Booth = { ...BOOTHS[0], x: COUNTER_AT.x, z: COUNTER_AT.z, yaw: COUNTER_YAW };
-
-const TOWER_VIEW = practiceTowerView();
 
 /**
  * The tower rising from the pad (beat 2). The physics body cannot grow, so a column with the tower's own colour, sides and
@@ -56,8 +133,9 @@ const TOWER_VIEW = practiceTowerView();
  * rise, not on the frame it ends); then the column goes and the tower shows. Reduced motion: no rise, it simply stands. The
  * caller keys this by `riseKey`, so a new rise always starts from the bottom.
  */
-function RisingTower({ rise }: { rise: boolean }) {
-  const view = TOWER_VIEW;
+function RisingTower({ rise, wall, moat }: { rise: boolean; wall: YardWall; moat: YardMoat }) {
+  // The walls and the moat change in place when a check is answered (#494); the tower does not rise again.
+  const view = useMemo(() => practiceTowerView(wall, moat), [wall, moat]);
   const [up, setUp] = useState(() => !rise || prefersReducedMotion());
   const g = useRef<Group>(null);
   const t = useRef(0);
@@ -146,7 +224,18 @@ export default function PracticeYard({ look, pos }: { look: PracticeLook; pos: M
         />
       )}
 
-      {look.standing && <RisingTower key={look.riseKey ?? "standing"} rise={look.riseKey !== null} />}
+      {look.standing && <RisingTower key={look.riseKey ?? "standing"} rise={look.riseKey !== null} wall={look.wall} moat={look.moat} />}
+      {look.standing && (
+        // The tower's walls and moat in words, as a real tower's panel says them: "Walls not surveyed" until you have looked.
+        <WorldSign
+          spec={{ kind: "stone", lines: [WALL_LABEL[look.wall], MOAT_LABEL[look.moat]], fog: look.wall === "unsurveyed" && look.moat === "unsurveyed" }}
+          position={[TOWER_PLATE_AT.x, 0.75, TOWER_PLATE_AT.z]}
+          width={1.9}
+          yaw={PLATE_YAW}
+        />
+      )}
+      {look.factCards && <FactPlank />}
+      <Lectern />
       <BoothMesh booth={PRACTICE_COUNTER} />
       {YARD_ADVISORS.map((n) => (
         <NpcMesh key={n.id} npc={n} active={false} playerPos={pos} />
