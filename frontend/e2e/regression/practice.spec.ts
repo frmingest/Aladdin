@@ -75,6 +75,16 @@ async function settle(page: Page) {
 }
 
 /**
+ * The result plate shows for 3.5 s, and on a software-GL runner two separate checks can outlast it. So its result line and
+ * its page line are checked in one assertion on the plate itself (a region named after the Book page).
+ */
+async function expectResult(page: Page, label: string, result: string, pageLine: string) {
+  const esc = (t: string) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const plate = page.getByRole("region", { name: label, exact: true });
+  await expect(plate).toHaveText(new RegExp(`^${esc(result)}[\\s\\S]*${esc(pageLine)}$`));
+}
+
+/**
  * Beats 3 and 4 (#494) by keyboard: each card opens by itself, one wrong pick shows the hint and takes that choice off the
  * card, then the right one (now key 1) gives the result and the new page. The keys are the visible choices' numbers.
  */
@@ -98,8 +108,7 @@ async function playChecksByKeyboard(page: Page) {
   await expect(page.getByRole("complementary", { name: "Your towers in words" })).toHaveCount(0);
   await page.keyboard.press("2"); // Granite, still in slot 2
   await expect(walls).toHaveCount(0);
-  await expect(page.getByText("Granite walls. One year's money pays its debt.", { exact: true })).toBeVisible();
-  await expect(page.getByTestId("starter-page-line")).toHaveText(/New page: Walls/);
+  await expectResult(page, "Walls", "Granite walls. One year's money pays its debt.", "New page: Walls");
 
   const moat = page.getByRole("dialog", { name: "What stops others copying Pip's?" });
   await expect(moat).toBeVisible({ timeout: 30_000 });
@@ -108,8 +117,7 @@ async function playChecksByKeyboard(page: Page) {
   await settle(page);
   await page.keyboard.press("3"); // Gran's secret recipe, still in slot 3
   await expect(moat).toHaveCount(0);
-  await expect(page.getByText("Narrow moat. A recipe is hard to copy.", { exact: true })).toBeVisible();
-  await expect(page.getByTestId("starter-page-line")).toHaveText(/New page: Moat/);
+  await expectResult(page, "Moat", "Narrow moat. A recipe is hard to copy.", "New page: Moat");
 }
 
 const AFTER_CHECKS: Run = { beat: "price", picks: { company: "pip", walls: ["timber", "granite"], moat: ["cheap", "recipe"] } };
@@ -221,7 +229,7 @@ test.describe("practice yard: beats 1 to 4 make no write", () => {
       await expect(walls).toContainText("Look again.");
       await settle(page);
       await walls.getByRole("button", { name: /Granite/ }).tap();
-      await expect(page.getByTestId("starter-page-line")).toHaveText(/New page: Walls/);
+      await expectResult(page, "Walls", "Granite walls. One year's money pays its debt.", "New page: Walls");
 
       // Beat 4 by taps: two misses show the answer, fill the moat anyway, and keep the page locked.
       const moat = page.getByRole("dialog", { name: "What stops others copying Pip's?" });
@@ -231,8 +239,7 @@ test.describe("practice yard: beats 1 to 4 make no write", () => {
       await settle(page);
       await moat.getByRole("button", { name: /Cheapest lemonade/ }).tap();
       await expect(moat).toHaveCount(0);
-      await expect(page.getByText("Narrow moat. A recipe is hard to copy.", { exact: true })).toBeVisible();
-      await expect(page.getByTestId("starter-page-line")).toHaveText("Play again to earn this page.");
+      await expectResult(page, "Moat", "Narrow moat. A recipe is hard to copy.", "Play again to earn this page.");
 
       await assertNoWrite(page, before, api, { beat: "price", picks: { company: "pip", walls: ["rotted", "granite"], moat: ["sign", "cheap"] } });
       expect(JSON.parse((await storage(page))[STARTER_KEY]).pages).toEqual(["walls"]);
