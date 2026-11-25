@@ -2,7 +2,6 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { GameState, GameTower } from "../lib/types";
 import TowerPanel from "./TowerPanel";
-import { towerFacts } from "./towerFacts";
 import { stateToWorld } from "./stateToWorld";
 import { HOLDING_SPOT_COUNT } from "./outdoorPlan";
 import { holdingMarks } from "./marks";
@@ -33,9 +32,9 @@ describe("TowerPanel (plain view of the 3D scene)", () => {
 
   it("keeps unknown as 'not surveyed' in words too", () => {
     const w = stateToWorld(state([tower({ wall: "unsurveyed", moat: "unsurveyed", size_class: "unknown" })]));
-    const facts = towerFacts(w.towers[0]);
-    expect(facts).toContain("not surveyed");
-    expect(facts).toContain("Size unknown");
+    const html = renderToStaticMarkup(<TowerPanel world={w} loading={false} error={null} onRetry={noop} />);
+    expect(html).toContain("not surveyed");
+    expect(html).toContain("Size unknown");
   });
 
   it("labels sample data and never shows towers when loading failed", () => {
