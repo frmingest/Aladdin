@@ -267,7 +267,7 @@ export default function QuestLog({
             {STARTER_WORDS.book.title}
           </p>
           <p className="g3d-muted">{STARTER_WORDS.book.questLead}</p>
-          <button type="button" className="g3d-btn mt-2" onClick={book.onOpen}>
+          <button type="button" className="g3d-btn mt-2 [@media(pointer:coarse)]:min-h-[44px]" onClick={book.onOpen}>
             {STARTER_WORDS.book.questOpen}
           </button>
         </section>

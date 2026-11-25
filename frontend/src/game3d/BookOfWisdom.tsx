@@ -81,7 +81,7 @@ export default function BookOfWisdom({ pages, blocked, onClose }: { pages: reado
     >
       <header className="g3d-head">
         <h2>{b.title}</h2>
-        <button ref={close} type="button" className="g3d-x" aria-label={b.close} onClick={onClose}>
+        <button ref={close} type="button" className="g3d-x [@media(pointer:coarse)]:min-h-[44px] [@media(pointer:coarse)]:min-w-[44px]" aria-label={b.close} onClick={onClose}>
           ×
         </button>
       </header>

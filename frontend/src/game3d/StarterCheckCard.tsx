@@ -75,7 +75,7 @@ export default function StarterCheckCard({
             {line.text}
           </p>
         </div>
-        <button type="button" className="g3d-x" aria-label={STARTER_WORDS.checks.close} onClick={onClose}>
+        <button type="button" className="g3d-x [@media(pointer:coarse)]:min-h-[44px] [@media(pointer:coarse)]:min-w-[44px]" aria-label={STARTER_WORDS.checks.close} onClick={onClose}>
           ×
         </button>
       </header>

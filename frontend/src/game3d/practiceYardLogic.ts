@@ -71,8 +71,11 @@ export const FACT_CARD_W = 1.35;
 export const FACT_CARD_STEP = 1.45;
 export const FACT_CARD_ROWS = [3.2, 2.55] as const;
 
-/** The plate that says the tower's walls and moat in words, west of the path in front of the moat. */
-export const TOWER_PLATE_AT = { x: -2.0, z: 2.2 } as const;
+/**
+ * The plate that says the tower's walls and moat in words, west of the path in front of the moat, and far enough west that
+ * the notice board's post does not cut it from the arrival view (playtest, #494).
+ */
+export const TOWER_PLATE_AT = { x: -3.0, z: 1.6 } as const;
 
 /** The reading lectern with the Book of Wisdom, by the gate on the west of the path (#494). */
 export const LECTERN_AT = { x: -2.6, z: 11.8 } as const;
