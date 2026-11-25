@@ -664,7 +664,8 @@ export default function Game3DPage() {
   const [checkShut, setCheckShut] = useState(false);
   // The last check's result plate, while it is up: which check, and what the Book did.
   const [checkResult, setCheckResult] = useState<{ beat: CheckBeat; page: Extract<CheckOutcome, { kind: "done" }>["page"] } | null>(null);
-  const checkOpen = waitingCheck !== null && !checkShut && pickedLine === null && checkResult === null && yardDrawn && !bookOpen;
+  // It also waits while the yard's Plain view is open, so two panels' words are never on screen at once.
+  const checkOpen = waitingCheck !== null && !checkShut && pickedLine === null && checkResult === null && yardDrawn && !bookOpen && !practicePlainOpen;
   // A new check (the moat after the walls) opens by itself, even if the last one was put away.
   useEffect(() => setCheckShut(false), [waitingCheck]);
   useEffect(() => {
@@ -710,8 +711,9 @@ export default function Game3DPage() {
       ? said(STARTER_WORDS.picked[pickedLine])
       : checkResult !== null
         ? `${STARTER_WORDS.checks[checkResult.beat].result} ${pageLine(checkResult)}`
-        : checkOpen && missed && checkLine
-          ? said(checkLine)
+        : checkOpen && waitingCheck && checkLine
+          ? // The card's header, read once: the taught line when it opens, Marlie's hint after a miss; then the question.
+            `${said(checkLine)}${missed ? "" : ` ${STARTER_WORDS.checks[waitingCheck].title}`}`
           : STARTER_WORDS.goal[goalOf(starter.run)];
   useEffect(() => {
     if (!inYard) {

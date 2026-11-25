@@ -98,10 +98,14 @@ export default function BookOfWisdom({ pages, blocked, onClose }: { pages: reado
           const p = b.pages[id];
           const learned = pages.includes(id) && !!p.lines;
           return (
-            <li key={id} className={`g3d-card relative flex gap-3 ${learned ? "" : "opacity-70"}`} aria-label={`${p.title}: ${learned ? b.learned : b.locked}`}>
-              <span className="shrink-0 pt-1 text-[#fff1cf]">{learned ? <PageDrawing id={id} /> : <Clasp />}</span>
+            <li key={id} className="g3d-card relative flex gap-3">
+              {/* Only the drawing is dimmed on a locked page: its words keep full contrast. */}
+              <span className={`shrink-0 pt-1 text-[#fff1cf] ${learned ? "" : "opacity-60"}`}>{learned ? <PageDrawing id={id} /> : <Clasp />}</span>
               <div className="flex-1">
-                <h3 className="font-semibold">{p.title}</h3>
+                <h3 className="font-semibold">
+                  {p.title}
+                  {learned && <span className="sr-only"> ({b.learned})</span>}
+                </h3>
                 {learned ? (
                   <>
                     {p.lines?.map((l) => (

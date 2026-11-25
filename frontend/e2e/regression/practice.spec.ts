@@ -73,25 +73,26 @@ async function assertNoWrite(page: Page, before: Record<string, string>, api: ()
 async function playChecksByKeyboard(page: Page) {
   const walls = page.getByRole("dialog", { name: "Knock on the walls. Which walls?" });
   await expect(walls).toBeVisible({ timeout: 30_000 });
-  await expect(walls.getByRole("button", { name: /Granite/ })).toBeFocused();
-  // Timber is the second choice: wrong. Marlie's hint replaces the taught line and Timber leaves the card.
-  await page.keyboard.press("2");
+  // Focus lands on the first choice, which is never the right one: Enter alone cannot win.
+  await expect(walls.getByRole("button", { name: /Timber/ })).toBeFocused();
+  // Timber (key 1) is wrong. Marlie's hint replaces the taught line and Timber leaves the card; the keys renumber.
+  await page.keyboard.press("1");
   await expect(walls).toContainText("Look again. It owes 5. Last year it made 10.");
   await expect(walls.getByRole("button", { name: /Timber/ })).toHaveCount(0);
   await expect(walls.getByRole("button")).toHaveCount(3); // Close, Granite, Rotted
   // While the card is open the page's own hotkeys stay quiet.
   await page.keyboard.press("t");
   await expect(page.getByRole("complementary", { name: "Your towers in words" })).toHaveCount(0);
-  await page.keyboard.press("1");
+  await page.keyboard.press("1"); // Granite, now first
   await expect(walls).toHaveCount(0);
   await expect(page.getByText("Granite walls. One good year pays its debt.")).toBeVisible();
   await expect(page.getByTestId("starter-page-line")).toHaveText(/New page: Walls/);
 
   const moat = page.getByRole("dialog", { name: "What stops others copying Pip's?" });
   await expect(moat).toBeVisible({ timeout: 30_000 });
-  await page.keyboard.press("3"); // Cheapest lemonade this week: wrong
+  await page.keyboard.press("2"); // Cheapest lemonade this week: wrong
   await expect(moat).toContainText("Anyone can cut prices tomorrow.");
-  await page.keyboard.press("1"); // Gran's secret recipe
+  await page.keyboard.press("2"); // Gran's secret recipe, now second
   await expect(moat).toHaveCount(0);
   await expect(page.getByText("Narrow moat. A recipe is hard to copy.")).toBeVisible();
   await expect(page.getByTestId("starter-page-line")).toHaveText(/New page: Moat/);
@@ -163,9 +164,10 @@ test.describe("practice yard: beats 1 to 4 make no write", () => {
     await quests.getByRole("button", { name: "Read the Book" }).click();
     const book = page.getByRole("dialog", { name: "Book of Wisdom" });
     await expect(book).toBeVisible();
-    await expect(book.getByRole("listitem", { name: "Walls: Learned" })).toContainText("Strong walls: it makes money and owes little.");
-    await expect(book.getByRole("listitem", { name: "Moat: Learned" })).toBeVisible();
-    await expect(book.getByRole("listitem", { name: "Room to be wrong: Not learned yet" })).toBeVisible();
+    const page_ = (title: string) => book.getByRole("listitem").filter({ has: page.getByRole("heading", { name: new RegExp(`^${title}`) }) });
+    await expect(page_("Walls")).toContainText("Strong walls: it makes money and owes little.");
+    await expect(page_("Moat")).toContainText("A moat is what stops others copying it.");
+    await expect(page_("Room to be wrong")).toContainText("Not learned yet");
     await expect(book).not.toContainText(/\d+\s*of\s*\d+/);
     await page.keyboard.press("Escape");
     await expect(book).toHaveCount(0);

@@ -89,6 +89,8 @@ function FactPlank() {
           spec={{ kind: "plank", lines: [...f] }}
           position={[(i % 2 === 0 ? -1 : 1) * half, FACT_CARD_ROWS[Math.floor(i / 2)], 0]}
           width={FACT_CARD_W}
+          // Front face only: the backing board covers the back, and a mirrored back plane would sit on its face.
+          both={false}
         />
       ))}
     </group>
@@ -109,7 +111,7 @@ function Lectern() {
         <Part color={PAL.timber} position={[0, 1.15, 0]} rotation={[-0.45, 0, 0]} grow={1.06}>
           <boxGeometry args={[0.9, 0.1, 0.65]} />
         </Part>
-        {/* The Book, open: two cream pages. */}
+        {/* The Book, lying open: one cream block for its pages. */}
         <Part color={PAL.cream} position={[0, 1.23, 0.02]} rotation={[-0.45, 0, 0]} grow={1.04}>
           <boxGeometry args={[0.76, 0.06, 0.5]} />
         </Part>

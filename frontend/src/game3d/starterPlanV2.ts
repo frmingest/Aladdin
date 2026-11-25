@@ -18,9 +18,13 @@ import type { Beat, PageId, StarterSaved as StarterSavedV1 } from "./starterPlan
 export { ARRIVAL_MS, BEATS, PAGES, PICKED_LINE_MS, STARTER_KEY } from "./starterPlanV1";
 export type { Beat, PageId } from "./starterPlanV1";
 
-/** The two checks this build plays. Each beat's choices are listed in the order the card shows them. */
-export const WALL_CHOICES = ["granite", "timber", "rotted"] as const;
-export const MOAT_CHOICES = ["recipe", "sign", "cheap"] as const;
+/**
+ * The two checks this build plays. Each beat's choices are listed in the order the card shows them. The right answer is
+ * never first (focus lands on the first choice, so Enter alone must not win) and sits in a different place on each card, so
+ * "pick the same slot" never works either. The order stays put across a miss: the tried choice leaves, the rest keep theirs.
+ */
+export const WALL_CHOICES = ["timber", "granite", "rotted"] as const;
+export const MOAT_CHOICES = ["sign", "cheap", "recipe"] as const;
 export type WallChoice = (typeof WALL_CHOICES)[number];
 export type MoatChoice = (typeof MOAT_CHOICES)[number];
 export type CheckBeat = "walls" | "moat";
@@ -264,4 +268,4 @@ export function bookOffered(s: StarterSaved): boolean {
 }
 
 /** How long a check's result plate stays before the next station's card opens by itself. */
-export const RESULT_MS = 5500;
+export const RESULT_MS = 3500;

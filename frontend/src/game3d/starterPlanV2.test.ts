@@ -45,6 +45,13 @@ describe("starter plan v2 (#494): the right answers come from the real rules", (
       expect(CHECKS[b].page).toBe(b);
     }
   });
+
+  it("the right answer is never the first choice (focus lands there) and not in the same slot on both cards", () => {
+    const slot = (b: "walls" | "moat") => (CHECKS[b].choices as readonly string[]).indexOf(CHECKS[b].right);
+    expect(slot("walls")).not.toBe(0);
+    expect(slot("moat")).not.toBe(0);
+    expect(slot("walls")).not.toBe(slot("moat"));
+  });
 });
 
 describe("beat 3: knock on the walls", () => {
