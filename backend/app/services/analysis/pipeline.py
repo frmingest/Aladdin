@@ -167,6 +167,8 @@ def run_full_analysis(
         run.reconciliation_json = None
         run.reconciliation_citation_warnings = None
         run.completed_at = None
+        run.user_notes_snapshot = None
+        run.reconciliation_prompt_version = None
     db.flush()
 
     _report_stage(on_stage, "evidence_packet")

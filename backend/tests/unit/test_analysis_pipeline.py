@@ -490,6 +490,7 @@ def test_a_requeued_run_does_not_keep_an_earlier_attempts_blind_pass():
     run, _ = queue.enqueue_local_run(db, holding, settings=Settings(_env_file=None))
     run.blind_pass_json = {"from": "attempt 1"}
     run.blind_completed_at = datetime.now(timezone.utc)
+    run.user_notes_snapshot = "notes seen by attempt 1"
     db.commit()
 
     try:
@@ -504,3 +505,4 @@ def test_a_requeued_run_does_not_keep_an_earlier_attempts_blind_pass():
     db.refresh(run)
     assert run.status == "FAILED"
     assert run.blind_pass_json is None and run.blind_completed_at is None
+    assert run.user_notes_snapshot is None
