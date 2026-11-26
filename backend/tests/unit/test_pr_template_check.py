@@ -238,3 +238,24 @@ def test_no_issue_label_skips_the_check_only_for_a_docs_only_change(monkeypatch,
 
 def test_without_the_label_nothing_is_skipped(monkeypatch, capsys):
     assert _main(monkeypatch, capsys, "", ["docs/x.md"])[0] == 1
+
+
+def test_every_hook_command_runs_by_the_project_root():
+    """#508: a hook run by a path relative to the shell's folder fails ("can't open file") after any `cd` into a
+    subfolder, and every later Bash/Edit/Write call is refused. Each command must name its script by $CLAUDE_PROJECT_DIR."""
+    settings = json.loads((ROOT / ".claude" / "settings.json").read_text(encoding="utf-8"))
+    commands = [h["command"] for entry in settings["hooks"]["PreToolUse"] for h in entry["hooks"]]
+    assert commands
+    for cmd in commands:
+        assert '"$CLAUDE_PROJECT_DIR/.claude/hooks/' in cmd, cmd
+
+
+def test_hook_runs_from_a_subfolder(tmp_path):
+    """The registered command still reaches the hook when the shell sits in a subfolder (#508)."""
+    settings = json.loads((ROOT / ".claude" / "settings.json").read_text(encoding="utf-8"))
+    cmd = next(h["command"] for e in settings["hooks"]["PreToolUse"] if e["matcher"] == "Bash" for h in e["hooks"])
+    env = {"CLAUDE_PROJECT_DIR": str(ROOT), "PATH": "/usr/bin:/bin:/usr/local/bin", "PYTHONPATH": ""}
+    cmd = cmd.replace("python ", f'"{sys.executable}" ', 1)
+    res = subprocess.run(["bash", "-c", cmd], input=json.dumps({"tool_input": {"command": "ls"}}), capture_output=True,
+                         text=True, cwd=ROOT / "backend" / "tests", env=env, timeout=30, check=False)
+    assert res.returncode == 0, res.stderr
