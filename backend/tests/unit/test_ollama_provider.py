@@ -451,3 +451,138 @@ def test_chars_per_token_is_learned_from_the_real_prompt_size(monkeypatch):
     _call_needing(provider, 6000)
     assert 2.0 <= provider._chars_per_token <= 5.0
     assert provider._chars_per_token != 3.0
+
+
+# --- One retry for a cut-off or stuck answer (2026-11-26, #514) -------------
+
+def _sequence(*responses):
+    """A chat handler that answers each call with the next response."""
+    queue = list(responses)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return queue.pop(0)() if callable(queue[0]) else queue.pop(0)
+
+    return handler
+
+
+def test_cut_off_answer_runs_once_more_with_more_output_room():
+    provider, seen = _provider(
+        _sequence(_ok(content='{"verd', done_reason="length", output=8192), _ok()), max_output_tokens=8192
+    )
+    result = _call(provider)
+    assert result.content == '{"verdict": "Hold"}'
+    assert len(seen) == 2
+    assert seen[0]["options"]["num_predict"] == 8192
+    # Twice the cap would be 16384; the 16384 context minus the 1200-token prompt
+    # and the 256 margin leaves 14928.
+    assert seen[1]["options"]["num_predict"] == 16384 - 1200 - 256
+
+
+def test_cut_off_twice_fails_and_says_it_retried():
+    cut = lambda: _ok(content='{"verd', done_reason="length", output=8192)
+    provider, seen = _provider(_sequence(cut, cut, cut), max_output_tokens=8192)
+    with pytest.raises(LLMUnavailableError, match="output limit.*after one retry"):
+        _call(provider)
+    assert len(seen) == 2
+
+
+def test_no_retry_when_the_context_has_no_more_room():
+    provider, seen = _provider(_sequence(_ok(content='{"verd', done_reason="length", output=16384)))
+    with pytest.raises(LLMUnavailableError, match=r"16384/16384 tokens"):
+        _call(provider, max_output_tokens=16384)
+    assert len(seen) == 1
+
+
+def _looping_body() -> bytes:
+    return _stream_body(['{"verdict": "'] + ["The moat is wide because the moat is wide. "] * 400)
+
+
+def test_model_repeating_itself_is_stopped_early_and_run_once_more():
+    provider, seen = _provider(_sequence(httpx.Response(200, content=_looping_body()), _ok()))
+    assert _call(provider).content == '{"verdict": "Hold"}'
+    assert len(seen) == 2
+
+
+def test_model_repeating_itself_twice_fails_clearly():
+    loop = lambda: httpx.Response(200, content=_looping_body())
+    provider, seen = _provider(_sequence(loop, loop, loop))
+    with pytest.raises(LLMUnavailableError, match="stuck repeating the same text"):
+        _call(provider)
+    assert len(seen) == 2
+
+
+def test_blank_output_also_gets_one_more_try():
+    blank = httpx.Response(200, content=_stream_body(['{"verdict": '] + ["\n"] * 700))
+    provider, seen = _provider(_sequence(blank, _ok()))
+    assert _call(provider).content == '{"verdict": "Hold"}'
+    assert len(seen) == 2
+
+
+def test_long_varied_answer_is_not_taken_for_a_loop():
+    pieces = ['{"verdict": "'] + [f"point {i} cites E{i % 37} on margin {i * 7 % 101}; " for i in range(1500)] + ['"}']
+    provider, seen = _provider(lambda r: httpx.Response(200, content=_stream_body(pieces)))
+    assert _call(provider).content.startswith('{"verdict"')
+    assert len(seen) == 1
+
+
+def test_is_looping_needs_several_exact_copies():
+    sentence = "x" * 50 + " the same words again. "
+    assert op._is_looping(sentence * 60)
+    assert not op._is_looping(sentence * 3)  # too short to judge
+    assert not op._is_looping("".join(f"line {i}: a different fact.\n" for i in range(400)))
+    assert not op._is_looping(" " * 6000)  # blank output is the whitespace guard's job
+
+
+def test_adaptive_retry_moves_a_cut_off_answer_to_the_model_with_room(monkeypatch):
+    """VEND.OL (2026-11-26): the 14b did not fit, the 8b ran and hit 8192/8192.
+    The retry asks for twice the room; only the 8b's larger context holds it."""
+    loads: list = []
+    state: dict = {}
+    chats: list = []
+    answers = [_ok(content='{"verd', done_reason="length", prompt=14000, output=8192), _ok(prompt=14000)]
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content) if request.content else {}
+        if request.url.path == "/api/tags":
+            return httpx.Response(200, json={"models": [{"name": "qwen3:14b"}, {"name": "qwen3:8b"}]})
+        if request.url.path == "/api/generate":
+            state["loaded"] = (body["model"], body["options"]["num_ctx"])
+            loads.append(state["loaded"])
+            return httpx.Response(200, json={"done": True})
+        chats.append((body["model"], body["options"]["num_ctx"], body["options"]["num_predict"]))
+        return answers.pop(0)
+
+    shares = {("qwen3:14b", 24576): 0.78, ("qwen3:8b", 24576): 1.0, ("qwen3:8b", 32768): 1.0}
+    monkeypatch.setattr(op, "gpu_share", lambda **kw: shares.get(state.get("loaded")))
+    provider, _ = _provider(
+        handler, min_gpu_share=0.95, adaptive_fit=True, fallback_model="qwen3:8b",
+        num_ctx=24576, max_output_tokens=8192,
+    )
+    result = _call_needing(provider, 14000)
+    assert result.content == '{"verdict": "Hold"}'
+    assert chats == [("qwen3:8b", 24576, 8192), ("qwen3:8b", 32768, 16384)]
+    assert result.usage.model == "qwen3:8b"
+
+
+def test_adaptive_retry_gives_up_cleanly_when_nothing_has_the_room(monkeypatch):
+    state: dict = {}
+    answers = [_ok(content='{"verd', done_reason="length", prompt=14000, output=8192)]
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content) if request.content else {}
+        if request.url.path == "/api/tags":
+            return httpx.Response(200, json={"models": [{"name": "qwen3:14b"}, {"name": "qwen3:8b"}]})
+        if request.url.path == "/api/generate":
+            state["loaded"] = (body["model"], body["options"]["num_ctx"])
+            return httpx.Response(200, json={"done": True})
+        return answers.pop(0)
+
+    # The 8b fits at 24576 but spills at 32768, so the longer retry has nowhere to run.
+    shares = {("qwen3:14b", 24576): 0.78, ("qwen3:8b", 24576): 1.0, ("qwen3:8b", 32768): 0.8}
+    monkeypatch.setattr(op, "gpu_share", lambda **kw: shares.get(state.get("loaded")))
+    provider, _ = _provider(
+        handler, min_gpu_share=0.95, adaptive_fit=True, fallback_model="qwen3:8b",
+        num_ctx=24576, max_output_tokens=8192,
+    )
+    with pytest.raises(LLMUnavailableError, match=r"output limit \(8192/8192 tokens\).*model=qwen3:8b\)"):
+        _call_needing(provider, 14000)

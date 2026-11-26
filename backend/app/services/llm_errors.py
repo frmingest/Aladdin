@@ -61,6 +61,10 @@ _RULES: list[tuple[str, re.Pattern[str]]] = [
         re.compile(r"timed? ?out|timeout|stalled", re.IGNORECASE),
     ),
     (
+        "The local model got stuck repeating itself on two tries, so it was stopped. Run it again; if it keeps happening, try another model.",
+        re.compile(r"got stuck (emitting blank output|repeating)", re.IGNORECASE),
+    ),
+    (
         "The model ran out of output space before finishing its answer. Raise the output token limit and run it again.",
         re.compile(r"max_output_tokens|LLM_MAX_OUTPUT_TOKENS|output limit|finish_reason.*length|truncated", re.IGNORECASE),
     ),

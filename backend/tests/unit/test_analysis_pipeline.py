@@ -319,6 +319,76 @@ def test_reconciliation_failure_keeps_blind_pass_result():
     assert run.error_message and "reconciliation pass failed" in run.error_message
 
 
+# --- No transaction held open through an LLM pass (2026-11-26, #514) -------
+
+class _TransactionCheckingLLM(_RecordingLLM):
+    """Records whether the session had a transaction open when each pass
+    started. A local pass can run 20+ minutes; a transaction left open that
+    long lost its Postgres connection (TEL.OL)."""
+
+    name = "tx_checking"
+
+    def __init__(self, db: Session, crash_on_reconciliation: bool = False):
+        super().__init__()
+        self.db = db
+        self.crash_on_reconciliation = crash_on_reconciliation
+        self.open_during: list[bool] = []
+
+    def generate_structured(self, *, system_prompt, user_prompt, response_schema, max_output_tokens=None):
+        self.open_during.append(self.db.in_transaction())
+        if self.crash_on_reconciliation and response_schema is not BlindPassOutputV1:
+            raise RuntimeError("server closed the connection unexpectedly")
+        return super().generate_structured(
+            system_prompt=system_prompt, user_prompt=user_prompt,
+            response_schema=response_schema, max_output_tokens=max_output_tokens,
+        )
+
+
+def test_no_transaction_is_open_while_an_llm_pass_runs():
+    db = _session()
+    holding = _stock_holding()
+    db.add(holding)
+    db.commit()
+    _with_two_periods(db, holding)
+    llm = _TransactionCheckingLLM(db)
+
+    run = run_full_analysis(
+        db, holding, llm_provider=llm, llm_fallback_provider=None,
+        market_data_provider=_FakeMarket(), risk_free_rate_provider=_FakeRate(), research_provider=_FakeResearch(),
+    )
+    assert run.status == EquityAnalysisRunStatus.COMPLETED.value
+    assert llm.open_during == [False, False]  # blind pass, reconciliation pass
+
+
+def test_blind_pass_is_saved_before_the_reconciliation_pass():
+    """A crash during the reconciliation pass (not an LLM outage: the
+    worker's database connection dropping, say) no longer loses the
+    finished blind pass; the run stays RUNNING for the worker to record."""
+    db = _session()
+    holding = _stock_holding()
+    db.add(holding)
+    db.commit()
+    _with_two_periods(db, holding)
+    llm = _TransactionCheckingLLM(db, crash_on_reconciliation=True)
+
+    try:
+        run_full_analysis(
+            db, holding, llm_provider=llm, llm_fallback_provider=None,
+            market_data_provider=_FakeMarket(), risk_free_rate_provider=_FakeRate(), research_provider=_FakeResearch(),
+        )
+        raise AssertionError("expected the crash to escape")
+    except RuntimeError:
+        db.rollback()
+
+    from app.models.analysis import EquityAnalysisRun
+
+    saved = db.query(EquityAnalysisRun).one()
+    assert saved.status == EquityAnalysisRunStatus.RUNNING.value
+    assert saved.blind_pass_json is not None
+    assert saved.blind_completed_at is not None
+    assert saved.reconciliation_json is None
+
+
 # --- Evidence packet size limit (2026-10-02, Equinor / Aker BP) -------------
 
 class _BloatedResearch:
