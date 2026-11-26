@@ -2,7 +2,6 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it } from "vitest";
 import { GameModeProvider } from "../lib/gameMode";
-import ParchmentPanel from "./fortress/kit/ParchmentPanel";
 import { LoadError, PageHeader } from "./ui";
 
 /** PageHeader chooses between the painted banner and the plain header. The node test environment has
@@ -54,15 +53,6 @@ describe("PageHeader", () => {
   it("renders without a Router (as other tests and pages do)", () => {
     stub(true);
     expect(renderToStaticMarkup(<PageHeader title="Room" />)).toContain("Room");
-  });
-});
-
-describe("ParchmentPanel", () => {
-  it("is a parchment folio with the same content", () => {
-    stub(true);
-    const painted = renderToStaticMarkup(<ParchmentPanel>Same facts</ParchmentPanel>);
-    expect(painted).toContain("parchment");
-    expect(painted).toContain("Same facts");
   });
 });
 

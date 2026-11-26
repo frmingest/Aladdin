@@ -6,7 +6,7 @@ Status: **written and tested, not merged, not deployed. Seen only in headless Ch
 
 ## What changed
 
-- **Page-scene kit** (`components/fortress/kit/`): `Crest` (one shield per room), `TorchPair`, `GamePageHeader`, `ParchmentPanel`, `SealMark`, `FogPanel`, `Speaker`. Pure mappings in `lib/seals.ts`, `lib/councilSeats.ts`, `lib/crest.ts`, `lib/plainView.ts`. CSS in `index.css` (`.parchment`, `.game-banner`, `.fog-panel`, `.chamber`, `.market-bubble-right`).
+- **Page-scene kit** (`components/fortress/kit/`): `Crest` (one shield per room), `TorchPair`, `GamePageHeader`. Pure mappings in `lib/seals.ts`, `lib/crest.ts`. CSS in `index.css` (`.game-banner`, `.market-bubble-right`). (#511, 2026-11-26: `ParchmentPanel`, `SealMark`, `SealArt`, `FogPanel` and `Speaker` were removed with their tests and the `.parchment` and `.fog-panel` CSS, because no page used them; `lib/councilSeats.ts`, `lib/plainView.ts` and `.chamber` had already gone.)
 - **Banner on every fortress room except the Fortress home and the Marketplace** (they already have their own scene): `PageHeader` renders the painted banner in game mode on `/fortress/*` rooms; otherwise it is unchanged. Records, Chronicle, Siege, Circle and Map get the banner with this PR; their bodies are unchanged.
 - **Plain view** (button in the banner, kept in this browser): drops the painted scene and shows the same facts as ordinary cards. A way back is always shown.
 - **Fix found on the way:** the Fortress tab strip was 695 px wide on a 390 px phone (the page scrolled sideways) because of `mx-auto` without `w-full`. One class.

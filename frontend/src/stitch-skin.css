@@ -36,7 +36,6 @@
 }
 /* The painted frames, banners and parchment kit carry their own corners. */
 :root[data-skin="study"] .game-frame .ui-card::before,
-:root[data-skin="study"] .parchment.ui-card::before,
 :root[data-skin="study"] .nightpanel.ui-card::before { content: none; }
 
 /* Section titles: the gilded lozenge (already there) now leads a fine rule that runs to the edge. */
