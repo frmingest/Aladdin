@@ -22,11 +22,13 @@ import {
   nearArchiveDoor,
   nearShelves,
   shelfFacts,
+  BOOKCASE_SHELF_FRONT_Z,
+  DUST_SHEET_T,
   shelfLook,
   shelfPlate,
   SEAL_SHAPE_OF,
 } from "./recordsHallRoomLogic";
-import { RECORDS_HALL_NOT_READ } from "./recordsHallWordsV1";
+import { RECORDS_HALL_NOT_READ, RECORDS_HALL_READ_FAILED } from "./recordsHallWordsV1";
 import { BUILDINGS, DOOR_LEAVE_RANGE, DOOR_RANGE, doorSpot, nearestBuilding } from "./townPlan";
 import { SEAL_LOOK, tomeFor } from "../lib/hall";
 import type { DecisionRecord, RecordReviewState } from "../lib/types";
@@ -155,7 +157,7 @@ describe("the Hall of Records inside", () => {
       expect(text).not.toMatch(BUY_SELL);
       expect(text).not.toMatch(/[\u{1F300}-\u{1FAFF}\u{25A0}-\u{25FF}]/u);
     }
-    expect(shelfPlate(null)).toEqual(["The Hall of Records", "Not read yet. The shelves are under dust sheets."]);
+    expect(shelfPlate(null)).toEqual(["The Hall of Records", "Not read yet."]);
     expect(shelfPlate(shelfFacts([rec(0)]))[1]).toBe("1 decision on the shelves");
     expect(shelfPlate(shelfFacts([rec(0, { review_6m: "due" }), rec(1)])).join("|")).toContain("1 book wears a ribbon");
     expect(shelfPlate(shelfFacts(Array.from({ length: CAPACITY + 2 }, (_, i) => rec(i)))).join("|")).toContain("2 more in the page");
@@ -196,20 +198,31 @@ describe("unknown shelves are fog, not bare (#505)", () => {
 
   it("puts no number on the not-read plate, and a different line from the empty journal", () => {
     const fog = shelfPlate(null);
-    expect(fog.join(" ")).not.toMatch(/\d/);
+    const failed = shelfPlate(null, true);
+    for (const plate of [fog, failed]) {
+      expect(plate.join(" ")).not.toMatch(/\d/);
+      expect(plate).not.toEqual(shelfPlate(shelfFacts([])));
+    }
     expect(fog[1]).toBe(RECORDS_HALL_NOT_READ);
-    expect(fog).not.toEqual(shelfPlate(shelfFacts([])));
+    expect(failed[1]).toBe(RECORDS_HALL_READ_FAILED);
+    // A failed flag never hides a journal that was read.
+    expect(shelfPlate(shelfFacts([rec(0)]), true)[1]).toBe("1 decision on the shelves");
   });
 
   it("hangs one dust sheet over each bookcase's open front, covering both rows of books", () => {
     const sheets = dustSheets();
     expect(sheets.map((s) => s.x)).toEqual([...BOOKCASE_XS]);
     for (const s of sheets) {
-      expect(s.z).toBeGreaterThan(BOOKCASE_SIDE_FRONT_Z);
+      // The sheet's back face hangs clear of the side boards and the shelf boards (which stand out further; #505 review).
+      const back = s.z - DUST_SHEET_T / 2;
+      expect(back).toBeGreaterThan(BOOKCASE_SIDE_FRONT_Z + 0.02);
+      expect(back).toBeGreaterThan(BOOKCASE_SHELF_FRONT_Z + 0.02);
+      // The fold rests on the case top and reaches back no further than the case.
+      expect(s.y + s.h / 2).toBeCloseTo(BOOKCASE.h);
+      expect(s.foldD).toBeLessThanOrEqual(BOOKCASE.d);
       expect(s.w).toBeGreaterThanOrEqual(BOOKCASE.w);
       expect(s.y - s.h / 2).toBeLessThanOrEqual(ROW_YS[0]);
       expect(s.y + s.h / 2).toBeGreaterThanOrEqual(ROW_YS[ROW_YS.length - 1] + BOOK.h);
-      expect(s.y + s.h / 2).toBeLessThanOrEqual(BOOKCASE.h);
     }
   });
 });

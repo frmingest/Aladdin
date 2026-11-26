@@ -15,6 +15,7 @@ import {
   BOOKCASE_XS,
   ROW_YS,
   bookPlans,
+  DUST_SHEET_T,
   dustSheets,
   shelfFacts,
   shelfLook,
@@ -115,14 +116,20 @@ function Bookcase({ x }: { x: number }) {
 }
 
 /**
- * A dust sheet hung over a bookcase while the journal is not read yet (#505): the kit's fog parchment with a fog-rim hem,
- * so unknown never looks like an empty shelf. Still, no motion, so reduced motion needs no other form.
+ * A dust sheet hung over a bookcase while the journal is not read yet (#505): the kit's fog parchment with a fog-rim hem
+ * and a fold laid back over the top, so unknown never looks like an empty shelf. Still, no motion, so reduced motion
+ * needs no other form.
  */
 function DustSheet({ s }: { s: DustSheetPlan }) {
+  const t = DUST_SHEET_T;
+  // The fold floats 0.01 above the case top so the two faces are never coplanar (no flicker, #510/#516).
   return (
     <group position={[s.x, s.y, s.z]}>
       <Part color={LABEL_TOKENS.fogPlate} grow={1.01}>
-        <boxGeometry args={[s.w, s.h, 0.04]} />
+        <boxGeometry args={[s.w, s.h, t]} />
+      </Part>
+      <Part color={LABEL_TOKENS.fogPlate} position={[0, s.h / 2 + t / 2 + 0.01, -s.foldD / 2 + t / 2]} grow={1.01}>
+        <boxGeometry args={[s.w, t, s.foldD]} />
       </Part>
       <mesh position={[0, -s.h / 2 + 0.12, 0.03]}>
         <boxGeometry args={[s.w - 0.1, 0.08, 0.01]} />
@@ -134,8 +141,8 @@ function DustSheet({ s }: { s: DustSheetPlan }) {
 
 /**
  * The inside of the Hall of Records: one archive room, three bookcases, one same-size book per decision, a door.
- * Read through the same call as the flat page (`getRecords`); while it loads or after a failed read the shelves wear
- * dust sheets under a fog plate that says "not read yet", never bare and never a guess (#505). Code-built shapes with the same ink outline as the rest; walls are drawn from inside only so
+ * Read through the same call as the flat page (`getRecords`); until the journal has been read once (loading, or the
+ * first read failed) the shelves wear dust sheets under a fog plate with no number, never bare and never a guess (#505). Code-built shapes with the same ink outline as the rest; walls are drawn from inside only so
  * the follow camera can sit outside them. The room is furniture and carries no fact beyond the books themselves.
  */
 export default function RecordsHallRoom() {
@@ -143,7 +150,7 @@ export default function RecordsHallRoom() {
   const list = records.data?.records;
   const books = useMemo(() => (list ? bookPlans(list) : []), [list]);
   const look = shelfLook(list);
-  const plate = shelfPlate(list ? shelfFacts(list) : null);
+  const plate = shelfPlate(list ? shelfFacts(list) : null, records.error !== null);
   const doorGap = ARCHIVE_DOOR.width / 2;
   const sideLen = (WIDTH_X - ARCHIVE_DOOR.width) / 2;
   return (

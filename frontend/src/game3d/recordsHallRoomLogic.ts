@@ -17,7 +17,15 @@ import type { CapsuleState } from "../lib/capsules";
 import type { DecisionRecord } from "../lib/types";
 import type { Spot } from "./layout";
 import { BUILDINGS, stepOutOf } from "./townPlan";
-import { RECORDS_HALL_EMPTY, RECORDS_HALL_NOT_READ, RECORDS_HALL_TITLE, decisionsLine, moreLine, owedLine } from "./recordsHallWordsV1";
+import {
+  RECORDS_HALL_EMPTY,
+  RECORDS_HALL_NOT_READ,
+  RECORDS_HALL_READ_FAILED,
+  RECORDS_HALL_TITLE,
+  decisionsLine,
+  moreLine,
+  owedLine,
+} from "./recordsHallWordsV1";
 
 export const ARCHIVE = { minX: -9, maxX: 9, minZ: -8, maxZ: 8, height: 6 } as const;
 /** A closed pair of doors in the south wall; E beside it leads back out into the Town. */
@@ -117,9 +125,12 @@ export function shelfFacts(records: readonly DecisionRecord[], capacity: number 
   };
 }
 
-/** The words on the plate over the shelves: short and playful, numbers exact. Unknown (not read yet) says so, with no number. */
-export function shelfPlate(facts: ShelfFacts | null): string[] {
-  if (facts === null) return [RECORDS_HALL_TITLE, RECORDS_HALL_NOT_READ];
+/**
+ * The words on the plate over the shelves: short and playful, numbers exact. Unknown (`facts` null) says so with no
+ * number: "not read yet" while the first read is on its way, or that it could not be read when it `failed`.
+ */
+export function shelfPlate(facts: ShelfFacts | null, failed: boolean = false): string[] {
+  if (facts === null) return [RECORDS_HALL_TITLE, failed ? RECORDS_HALL_READ_FAILED : RECORDS_HALL_NOT_READ];
   if (facts.total === 0) return [RECORDS_HALL_TITLE, RECORDS_HALL_EMPTY];
   const lines = [RECORDS_HALL_TITLE, decisionsLine(facts.total)];
   if (facts.owed > 0) lines.push(owedLine(facts.owed));
@@ -128,8 +139,9 @@ export function shelfPlate(facts: ShelfFacts | null): string[] {
 }
 
 /**
- * How the shelves look (#505). Unknown is fog, never bare: while the journal loads, or after a failed read, the shelves
- * wear dust sheets, so they never look like a journal with no decisions ("bare"). Books only when there are books.
+ * How the shelves look (#505). Unknown is fog, never bare: until the journal has been read once (the first load is on
+ * its way, or the first read failed) the shelves wear dust sheets, so they never look like a journal with no decisions
+ * ("bare"). Books only when there are books. A failed re-fetch after a good read keeps the books (`lib/queryCache.ts`).
  */
 export type ShelfLook = "fog" | "bare" | "books";
 
@@ -138,18 +150,32 @@ export function shelfLook(records: readonly DecisionRecord[] | null | undefined)
   return records.length === 0 ? "bare" : "books";
 }
 
-/** One dust sheet over the open front of each bookcase: just in front of the side boards, covering both rows. */
+/** World z of the shelf boards' front edge: they stand out past the side boards, so a sheet must hang in front of them. */
+export const BOOKCASE_SHELF_FRONT_Z = BOOKCASE.z + BOOKCASE_PANEL.shelfZ + BOOKCASE_PANEL.shelfD / 2;
+
+/** How thick a dust sheet is (and its fold over the top). */
+export const DUST_SHEET_T = 0.04;
+
+/**
+ * One dust sheet over the open front of each bookcase, from the floor board to the top, hung clear in front of whatever
+ * stands furthest out (the shelf boards), with a fold laid back over the case top so it reads as cloth, not a panel.
+ */
 export interface DustSheetPlan {
   x: number;
+  /** Centre of the hanging part. */
   y: number;
   z: number;
   w: number;
   h: number;
+  /** How far the fold over the top reaches back toward the wall. */
+  foldD: number;
 }
 
 export function dustSheets(): DustSheetPlan[] {
-  const h = BOOKCASE.h - 0.2;
-  return BOOKCASE_XS.map((x) => ({ x, y: 0.1 + h / 2, z: BOOKCASE_SIDE_FRONT_Z + 0.04, w: BOOKCASE.w + 0.1, h }));
+  const bottom = 0.1;
+  const h = BOOKCASE.h - bottom;
+  const front = Math.max(BOOKCASE_SIDE_FRONT_Z, BOOKCASE_SHELF_FRONT_Z);
+  return BOOKCASE_XS.map((x) => ({ x, y: bottom + h / 2, z: front + 0.06, w: BOOKCASE.w + 0.1, h, foldD: BOOKCASE.d * 0.6 }));
 }
 
 /** The shape of a seal, in words, for the plate and the tests: the same three words the flat Hall prints. */
