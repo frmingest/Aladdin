@@ -5,6 +5,7 @@ import { useCachedQuery } from "../lib/queryCache";
 import type { Records } from "../lib/types";
 import type { CapsuleState } from "../lib/capsules";
 import { PAL, Part } from "./Inked";
+import { LABEL_TOKENS } from "./gameTokens";
 import {
   ARCHIVE,
   ARCHIVE_DOOR,
@@ -14,10 +15,12 @@ import {
   BOOKCASE_XS,
   ROW_YS,
   bookPlans,
+  dustSheets,
   shelfFacts,
+  shelfLook,
   shelfPlate,
 } from "./recordsHallRoomLogic";
-import type { BookPlan } from "./recordsHallRoomLogic";
+import type { BookPlan, DustSheetPlan } from "./recordsHallRoomLogic";
 import WorldLabel from "./WorldLabel";
 
 const STONE = "#b9b2a4";
@@ -112,15 +115,34 @@ function Bookcase({ x }: { x: number }) {
 }
 
 /**
+ * A dust sheet hung over a bookcase while the journal is not read yet (#505): the kit's fog parchment with a fog-rim hem,
+ * so unknown never looks like an empty shelf. Still, no motion, so reduced motion needs no other form.
+ */
+function DustSheet({ s }: { s: DustSheetPlan }) {
+  return (
+    <group position={[s.x, s.y, s.z]}>
+      <Part color={LABEL_TOKENS.fogPlate} grow={1.01}>
+        <boxGeometry args={[s.w, s.h, 0.04]} />
+      </Part>
+      <mesh position={[0, -s.h / 2 + 0.12, 0.03]}>
+        <boxGeometry args={[s.w - 0.1, 0.08, 0.01]} />
+        <meshBasicMaterial color={LABEL_TOKENS.fogRim} />
+      </mesh>
+    </group>
+  );
+}
+
+/**
  * The inside of the Hall of Records: one archive room, three bookcases, one same-size book per decision, a door.
- * Read through the same call as the flat page (`getRecords`); a failed read leaves the shelves bare with the plain
- * plate, never a guess. Code-built shapes with the same ink outline as the rest; walls are drawn from inside only so
+ * Read through the same call as the flat page (`getRecords`); while it loads or after a failed read the shelves wear
+ * dust sheets under a fog plate that says "not read yet", never bare and never a guess (#505). Code-built shapes with the same ink outline as the rest; walls are drawn from inside only so
  * the follow camera can sit outside them. The room is furniture and carries no fact beyond the books themselves.
  */
 export default function RecordsHallRoom() {
   const records = useCachedQuery<Records>("records", () => api.getRecords());
   const list = records.data?.records;
   const books = useMemo(() => (list ? bookPlans(list) : []), [list]);
+  const look = shelfLook(list);
   const plate = shelfPlate(list ? shelfFacts(list) : null);
   const doorGap = ARCHIVE_DOOR.width / 2;
   const sideLen = (WIDTH_X - ARCHIVE_DOOR.width) / 2;
@@ -188,8 +210,9 @@ export default function RecordsHallRoom() {
       {books.map((b) => (
         <Book key={b.id} b={b} />
       ))}
+      {look === "fog" && dustSheets().map((s) => <DustSheet key={s.x} s={s} />)}
 
-      <WorldLabel position={[0, 4.4, ARCHIVE.minZ + 0.9]} distanceFactor={9} wrap maxWidth={260}>
+      <WorldLabel position={[0, 4.4, ARCHIVE.minZ + 0.9]} distanceFactor={9} wrap maxWidth={260} fog={look === "fog"}>
           {plate.map((line, i) => (
             <div key={line} className={i === 0 ? "text-sm font-semibold" : "text-xs opacity-80"}>
               {line}
