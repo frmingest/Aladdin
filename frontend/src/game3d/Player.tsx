@@ -156,6 +156,8 @@ export default function Player({ keys, orbit, pos: posOut, teleport = null, chee
     // fixed steps and rapier draws her between the last two, so following the body itself would make her judder.
     const o = orbit.current;
     const [ox, oy, oz] = cameraOffset(o.yaw, o.pitch, o.distance);
+    // Known, cosmetic: right after a teleport, on a frame where no step runs (120/144 Hz), rapier still draws her part way
+    // from the old spot for that one frame; doors hide it behind the area fade.
     const drawn = model.current?.parent ? model.current.parent.getWorldPosition(drawnAt.current) : null;
     const seen = drawn ?? pos;
     const fx = seen.x;

@@ -29,14 +29,18 @@ export default function PerfProbe({ onStats, detail = false }: { onStats: (s: Pe
   const camera = useThree((s) => s.camera);
   const view = useRef({ frustum: new Frustum(), matrix: new Matrix4() });
   const frames = useRef(0);
-  const elapsed = useRef(0);
+  const since = useRef<number | null>(null);
   const reports = useRef(0);
   const groups = useRef<GroupTally[] | undefined>(undefined);
 
-  useFrame((_, delta) => {
+  // Real time, not useFrame's delta: the delta is capped at a few physics steps (#486), so summing it would never show a
+  // slow device below about 20 fps.
+  useFrame(() => {
+    const now = performance.now();
+    if (since.current === null) since.current = now;
     frames.current += 1;
-    elapsed.current += delta;
-    if (elapsed.current >= 0.5) {
+    const elapsed = (now - since.current) / 1000;
+    if (elapsed >= 0.5) {
       if (detail) {
         if (reports.current % DETAIL_EVERY === 0) {
           camera.updateMatrixWorld();
@@ -49,7 +53,7 @@ export default function PerfProbe({ onStats, detail = false }: { onStats: (s: Pe
       }
       reports.current += 1;
       onStats({
-        fps: Math.round(frames.current / elapsed.current),
+        fps: Math.round(frames.current / elapsed),
         calls: gl.info.render.calls,
         triangles: gl.info.render.triangles,
         geometries: gl.info.memory.geometries,
@@ -57,7 +61,7 @@ export default function PerfProbe({ onStats, detail = false }: { onStats: (s: Pe
         groups: groups.current,
       });
       frames.current = 0;
-      elapsed.current = 0;
+      since.current = now;
     }
   });
   return null;
