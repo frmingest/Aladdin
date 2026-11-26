@@ -467,3 +467,40 @@ def test_long_owner_notes_are_cut_in_the_reconciliation_prompt_only():
     assert TRIM_MARKER in reconciliation_prompt
     notes_part = reconciliation_prompt.split("notes on this holding:\n\n", 1)[1]
     assert estimate_tokens(notes_part) < get_settings().analysis_notes_max_tokens + 300
+
+
+class _CrashingLLM:
+    name = "crashing"
+
+    def generate_structured(self, *, system_prompt, user_prompt, response_schema, max_output_tokens=None):
+        raise RuntimeError("server closed the connection unexpectedly")
+
+
+def test_a_requeued_run_does_not_keep_an_earlier_attempts_blind_pass():
+    """Issue 514: the blind pass is saved mid-run, so a run that is re-queued and
+    then crashes before its own blind pass must not show the earlier one."""
+    from app.config.settings import Settings
+    from app.services.analysis import queue
+
+    db = _session()
+    holding = _stock_holding()
+    db.add(holding)
+    db.commit()
+    _with_two_periods(db, holding)
+    run, _ = queue.enqueue_local_run(db, holding, settings=Settings(_env_file=None))
+    run.blind_pass_json = {"from": "attempt 1"}
+    run.blind_completed_at = datetime.now(timezone.utc)
+    db.commit()
+
+    try:
+        run_full_analysis(
+            db, holding, llm_provider=_CrashingLLM(), llm_fallback_provider=None, run=run,
+            market_data_provider=_FakeMarket(), risk_free_rate_provider=_FakeRate(), research_provider=_FakeResearch(),
+        )
+        raise AssertionError("expected the crash to escape")
+    except RuntimeError:
+        db.rollback()
+    queue.fail_run(db, run.id, message="worker error: boom")
+    db.refresh(run)
+    assert run.status == "FAILED"
+    assert run.blind_pass_json is None and run.blind_completed_at is None

@@ -157,6 +157,16 @@ def run_full_analysis(
         run.blind_prompt_version = prompt_version
         run.evidence_packet_version = packet_version
         run.error_message = None
+        # A re-queued run starts clean (issue 514): the blind pass is now saved
+        # mid-run, so an earlier attempt may have left one. Without this, a crash
+        # before this attempt reached its own blind pass would be recorded by
+        # queue.fail_run as BLIND_ONLY with the earlier attempt in it.
+        run.blind_pass_json = None
+        run.blind_pass_citation_warnings = None
+        run.blind_completed_at = None
+        run.reconciliation_json = None
+        run.reconciliation_citation_warnings = None
+        run.completed_at = None
     db.flush()
 
     _report_stage(on_stage, "evidence_packet")

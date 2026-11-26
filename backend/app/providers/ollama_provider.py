@@ -71,7 +71,7 @@ _MAX_WHITESPACE_RUN = 600
 # sentence or list item again and again) until num_predict. Every
 # _REPEAT_CHECK_EVERY chunks, the last _REPEAT_TAIL_CHARS of output are
 # looked up in the last _REPEAT_WINDOW_CHARS; _REPEAT_MIN_COUNT or more
-# exact copies means a loop. A real answer never repeats a 300-character
+# exact copies means a loop. A real answer should not repeat a 300-character
 # stretch four times.
 _REPEAT_WINDOW_CHARS = 6000
 _REPEAT_TAIL_CHARS = 300
