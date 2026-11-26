@@ -3,6 +3,8 @@ import { CuboidCollider, RigidBody } from "@react-three/rapier";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 import { PAL, Part } from "./Inked";
 import StaticBatch from "./StaticBatch";
+import { BAY_CARCASS, BAY_H, BAY_W, BOARD_Y } from "./libraryBayParts";
+import type { CarcassTone } from "./libraryBayParts";
 import { describeShelf, shelfMark } from "./libraryShelves";
 import type { Shelf } from "./libraryShelves";
 import WorldLabel from "./WorldLabel";
@@ -10,9 +12,7 @@ import WorldLabel from "./WorldLabel";
 const MIST = "#dfe5ea";
 const LAMP = "#f2d27a";
 const BOOK_HEIGHTS = [0.95, 1.05, 0.9, 1.0] as const;
-const BOARD_Y = [0.15, 1.3, 2.45] as const;
-const BAY_W = 3.6;
-const BAY_H = 3.45;
+const CARCASS_COLOR: Record<CarcassTone, string> = { back: PAL.timberDark, side: PAL.timber, board: PAL.timberLight };
 
 const GOLD = "#d6b35a";
 /** Fixed by slot, never by data. No red or green: a cover colour must not read as a verdict. */
@@ -86,17 +86,10 @@ export function Bay({ shelf, x, z, yaw, active, scale = 1 }: { shelf: Shelf; x: 
       <group scale={scale}>
         {/* The carcass and the books are still; the books are the fact, so the batch is rebuilt when their number changes. */}
         <StaticBatch rebuildKey={shelf.books}>
-        <Part color={PAL.timberDark} position={[0, BAY_H / 2, -0.32]} grow={1.02}>
-          <boxGeometry args={[BAY_W, BAY_H, 0.1]} />
-        </Part>
-        {([-1, 1] as const).map((s) => (
-          <Part key={s} color={PAL.timber} position={[s * (BAY_W / 2 - 0.05), BAY_H / 2, 0]} grow={1.1}>
-            <boxGeometry args={[0.12, BAY_H, 0.8]} />
-          </Part>
-        ))}
-        {[...BOARD_Y, BAY_H - 0.05].map((y) => (
-          <Part key={y} color={PAL.timberLight} position={[0, y, 0]} grow={1.05}>
-            <boxGeometry args={[BAY_W, 0.1, 0.8]} />
+        {/* Back panel, side panels and boards; sized so no two share a face, which would blink (#516). */}
+        {BAY_CARCASS.map((b) => (
+          <Part key={b.key} color={CARCASS_COLOR[b.tone]} position={b.at} grow={b.grow}>
+            <boxGeometry args={b.size} />
           </Part>
         ))}
         {books.map((b) => (

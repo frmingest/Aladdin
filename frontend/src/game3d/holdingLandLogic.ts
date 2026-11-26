@@ -70,6 +70,14 @@ export const WORKPLACE = { x: 0, z: -3, r: 3 } as const;
  * west wall, two on the south wall; the reading table stands in the open middle.
  */
 export const RECORDS_HOUSE = { x: -9, z: -3, hx: 3.3, hz: 5.2 } as const;
+/**
+ * Heights of the flat layers under the records house: the paddock disc, the house floor on it, the rug on the floor.
+ * Each stands at least 0.04 clear of the one below. The floor used to sit 0.01 above the paddock (and the rug 0.02 above
+ * the floor), so they z-fought on the 24-bit depth buffer and the floor under the shelves blinked (#516, same as the moat, #510).
+ */
+export const PADDOCK_Y = 0.02;
+export const HOUSE_FLOOR_Y = 0.06;
+export const HOUSE_RUG_Y = 0.1;
 /** The bays are drawn at this share of the library's size, so seven fit in a house that fits the smallest land. */
 export const BAY_SCALE = 0.75;
 /** You stand in the open front to read a shelf or the table. */
