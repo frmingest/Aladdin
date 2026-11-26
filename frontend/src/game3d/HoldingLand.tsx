@@ -14,10 +14,13 @@ import StaticBatch from "./StaticBatch";
 import {
   BAY_SCALE,
   GATE_STONE,
+  HOUSE_FLOOR_Y,
+  HOUSE_RUG_Y,
   LAND_COLOURS,
   LAND_GATE,
   LAND_SHELF_SLOTS,
   LAND_TABLE,
+  PADDOCK_Y,
   RECORDS_HOUSE,
 } from "./holdingLandLogic";
 import type { GateStone, Lantern } from "./holdingLandLogic";
@@ -105,7 +108,7 @@ export default function HoldingLand({ ticker, gap = null, gate, radius, shelves,
         <circleGeometry args={[160, 48]} />
         <meshStandardMaterial color={GRASS} flatShading />
       </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]} receiveShadow>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, PADDOCK_Y, 0]} receiveShadow>
         <circleGeometry args={[radius, 48]} />
         <meshStandardMaterial color={PADDOCK} flatShading />
       </mesh>
@@ -156,7 +159,7 @@ export default function HoldingLand({ ticker, gap = null, gate, radius, shelves,
           <CuboidCollider key={s} args={[0.2, WALL_H / 2, 0.2]} position={[east, WALL_H / 2, hz0 + s * (hz - 0.2)]} />
         ))}
       </RigidBody>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[hx0, 0.03, hz0]} receiveShadow>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[hx0, HOUSE_FLOOR_Y, hz0]} receiveShadow>
         <planeGeometry args={[hx * 2, hz * 2]} />
         <meshStandardMaterial color={FLOOR} flatShading />
       </mesh>
@@ -187,7 +190,7 @@ export default function HoldingLand({ ticker, gap = null, gate, radius, shelves,
       <WorldSign spec={{ kind: "plank", lines: [LAND_WORDS.houseLabel] }} position={[east, WALL_H + 0.75, hz0]} width={3} yaw={Math.PI / 2} />
 
       {/* A rug, the reading table and an open book: furniture, no facts. */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[LAND_TABLE.x, 0.05, LAND_TABLE.z]} receiveShadow>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[LAND_TABLE.x, HOUSE_RUG_Y, LAND_TABLE.z]} receiveShadow>
         <planeGeometry args={[4.2, 3.2]} />
         <meshStandardMaterial color={PAL.tealDark} flatShading />
       </mesh>
