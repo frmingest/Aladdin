@@ -227,7 +227,7 @@ def test_risk_free_rate_falls_back_to_stale_cache_on_provider_failure():
         db.add(
             RiskFreeRateObservation(
                 currency="USD", rate=Decimal("4.00"), observed_at=old_observed_at,
-                provider="fred", source_series_id="DGS10",
+                provider="fred", source_series_id="DGS10", created_at=old_observed_at,
             )
         )
         db.commit()
@@ -238,3 +238,68 @@ def test_risk_free_rate_falls_back_to_stale_cache_on_provider_failure():
         assert snapshot.available is True
         assert snapshot.value.rate == Decimal("4.00")
         assert "FRED down" in snapshot.reason
+
+
+# --- #473: a monthly series is judged by when we fetched it, not by the month it covers ---------
+
+
+def _monthly_rate(days_old: int = 40, rate: str = "3.10") -> RiskFreeRate:
+    """Like FRED's IRLTLT01NOM156N: `observed_at` is the first day of the month the value covers, weeks old."""
+    return RiskFreeRate(
+        currency="NOK", rate=Decimal(rate), observed_at=datetime.now(timezone.utc) - timedelta(days=days_old),
+        provider="fred", source_series_id="IRLTLT01NOM156N",
+    )
+
+
+def test_risk_free_rate_monthly_observation_is_not_refetched_within_the_stale_window():
+    with _session() as db:
+        provider = _FakeRiskFreeRateProvider(rate=_monthly_rate())
+        first = get_or_refresh_risk_free_rate(db, provider, currency="NOK")
+        second = get_or_refresh_risk_free_rate(db, provider, currency="NOK")
+        third = get_or_refresh_risk_free_rate(db, provider, currency="NOK", refresh_live=False)
+
+        assert provider.calls == 1
+        assert db.query(RiskFreeRateObservation).count() == 1
+        assert second.value.id == first.value.id
+        assert second.reason is None and third.reason is None
+
+
+def test_risk_free_rate_as_of_stays_the_observation_date():
+    with _session() as db:
+        rate = _monthly_rate(days_old=40)
+        snapshot = get_or_refresh_risk_free_rate(db, _FakeRiskFreeRateProvider(rate=rate), currency="NOK")
+        cached = get_or_refresh_risk_free_rate(db, _FakeRiskFreeRateProvider(rate=rate), currency="NOK")
+        for snap in (snapshot, cached):
+            assert snap.as_of.replace(tzinfo=timezone.utc) == rate.observed_at
+
+
+def test_risk_free_rate_refetches_once_the_fetch_is_older_than_the_window():
+    with _session() as db:
+        month = datetime.now(timezone.utc) - timedelta(days=40)
+        db.add(RiskFreeRateObservation(
+            currency="NOK", rate=Decimal("3.00"), observed_at=month, provider="fred",
+            source_series_id="IRLTLT01NOM156N", created_at=datetime.now(timezone.utc) - timedelta(hours=25),
+        ))
+        db.commit()
+        provider = _FakeRiskFreeRateProvider(rate=_monthly_rate(rate="3.10"))
+        snapshot = get_or_refresh_risk_free_rate(db, provider, currency="NOK")
+
+        assert provider.calls == 1
+        assert snapshot.value.rate == Decimal("3.10")
+
+
+def test_risk_free_rate_latest_is_the_newest_fetch_when_rows_share_a_month():
+    """Duplicate rows already in the database (one per call before #473) share `observed_at`; the newest fetch wins."""
+    with _session() as db:
+        month = datetime.now(timezone.utc) - timedelta(days=40)
+        for hours_ago, rate in ((30, "3.00"), (2, "3.05")):
+            db.add(RiskFreeRateObservation(
+                currency="NOK", rate=Decimal(rate), observed_at=month, provider="fred",
+                source_series_id="IRLTLT01NOM156N", created_at=datetime.now(timezone.utc) - timedelta(hours=hours_ago),
+            ))
+        db.commit()
+        provider = _FakeRiskFreeRateProvider(rate=_monthly_rate())
+        snapshot = get_or_refresh_risk_free_rate(db, provider, currency="NOK")
+
+        assert provider.calls == 0
+        assert snapshot.value.rate == Decimal("3.05")

@@ -1,6 +1,11 @@
 """Live risk-free-rate refresh for one currency — staleness-checked
 caching via app/services/market_data/common.py. Feeds the DCF discount
-rate (app/services/valuation/discount_rate.py)."""
+rate (app/services/valuation/discount_rate.py).
+
+Staleness is judged by when the row was fetched (`created_at`), not by
+`observed_at`: FRED's series are monthly, so `observed_at` (the month the
+yield covers) is always weeks old, and judging by it refetched FRED and
+added a duplicate row on every valuation (#473)."""
 from __future__ import annotations
 
 from sqlalchemy import select
@@ -16,7 +21,8 @@ def _latest_risk_free_rate(db: Session, currency: str) -> RiskFreeRateObservatio
     stmt = (
         select(RiskFreeRateObservation)
         .where(RiskFreeRateObservation.currency == currency)
-        .order_by(RiskFreeRateObservation.observed_at.desc())
+        # created_at breaks ties: rows written before #473 repeat the same month, and the newest fetch wins.
+        .order_by(RiskFreeRateObservation.observed_at.desc(), RiskFreeRateObservation.created_at.desc())
         .limit(1)
     )
     return db.scalar(stmt)
@@ -50,6 +56,8 @@ def get_or_refresh_risk_free_rate(
         db,
         latest=lambda: _latest_risk_free_rate(db, currency),
         observed_at_of=lambda obs: obs.observed_at,
+        # #473: FRED's observed_at is the month the yield covers (weeks old), so judge staleness by fetch time.
+        fetched_at_of=lambda obs: obs.created_at,
         fetch_and_persist=_fetch_and_persist,
         stale_after_hours=settings.risk_free_rate_stale_after_hours,
         unavailable_error=RiskFreeRateUnavailableError,

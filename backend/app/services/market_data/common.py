@@ -73,6 +73,7 @@ def get_or_refresh(
     unavailable_error: type[Exception],
     force: bool = False,
     refresh_live: bool = True,
+    fetched_at_of: Callable[[T], datetime] | None = None,
 ) -> MarketDataSnapshot[T]:
     """The one entry point price.py/fx.py/risk_free_rate.py/shares.py call.
 
@@ -88,9 +89,16 @@ def get_or_refresh(
     GET in the valuation path so a page load never blocks on a live vendor
     call; the matching POST .../refresh endpoint passes `force=True`, which
     always fetches regardless of this flag.
+
+    `fetched_at_of` (#473): when the row's `observed_at` is the period the
+    value covers rather than when we fetched it (FRED's monthly bond yields:
+    the first of the month), staleness is judged by this instead, so a value
+    that cannot change for weeks is not refetched on every call. `as_of`
+    still reports `observed_at_of`. Omitted: staleness uses `observed_at_of`.
     """
     existing = latest()
-    if not force and existing is not None and _age_hours(observed_at_of(existing)) <= stale_after_hours:
+    stale_clock = fetched_at_of or observed_at_of
+    if not force and existing is not None and _age_hours(stale_clock(existing)) <= stale_after_hours:
         return MarketDataSnapshot(available=True, as_of=observed_at_of(existing), value=existing)
 
     if not force and not refresh_live and existing is not None:
