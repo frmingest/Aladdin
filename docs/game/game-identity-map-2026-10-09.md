@@ -1,5 +1,7 @@
 # Game identity: Map fog patches, slate and commission seals — 2026-10-09
 
+> Note (#511, 2026-11-26): `ParchmentPanel`, `SealMark`, `SealArt`, `FogPanel` and `Speaker` were removed from the kit because no page used them. Where this plan names them, rebuild the piece in the kit first if the plan is picked up again.
+
 Status: **written and tested, not merged, not deployed. Seen only in headless Chromium with synthetic fixtures (desktop 1280 px and phone 390 px), never with real data and never in your browser.** Frontend only: no backend, API, migration, dependency or `survey.ts` change (survey-v1 text untouched). Stacked on PR #89 (`feature/game-page-kit-council`); retarget to `main` after #89 merges. Design: `claude/map-design-2026-10-09.md` (project doc), wins 1 to 4 only. The drawn realm map (win 5) is not built.
 
 `survey.ts` check: `git log -- frontend/src/lib/survey.ts` shows the Sprint 28 change is already on `main` (PR #87 merge is this branch's base), so this PR builds on it directly.

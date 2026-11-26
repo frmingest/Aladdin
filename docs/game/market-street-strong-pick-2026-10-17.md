@@ -1,5 +1,7 @@
 # Market Street: the analyst's top mark (2026-10-17)
 
+> Note (#511, 2026-11-26): `ParchmentPanel`, `SealMark`, `SealArt`, `FogPanel` and `Speaker` were removed from the kit because no page used them. Where this plan names them, rebuild the piece in the kit first if the plan is picked up again.
+
 Status: **built on `feature/market-street` (written and tested, not deployed).** Defaults taken: F1 "Top mark", F2 animate in every priced district, F3 90/180 days, F4 no loop, F5 cap 3, F6 no mark for Avoid/Sell yet, F7 static seal under the fog. Built deviations: the seal and printed ribbon sit on the top-right corner of the slim signboard (it shows only the name); an old read beats the fog, so an old unpriced Strong Buy shows "Old mark"; the motion follows the game-feel-engineer doc for the performance rules (one shared observer, transform and opacity only). Original status: spec only. Branch `feature/market-street`. It builds on `docs/game/market-street-redesign-2026-10-17.md` (the lane, the parchment plate, decision D2 that takes the "Buy"/"Hold" badge off the plate face) and keeps `.claude/standards/game-visual-identity.md` and `game-ui-standards.md`.
 
 Faiz asked: "when a company has a strong buy, ask the designers to come up with a cool animation engaging users to look at it."
