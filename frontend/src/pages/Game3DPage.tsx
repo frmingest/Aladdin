@@ -1719,7 +1719,7 @@ export default function Game3DPage() {
         <button
           type="button"
           onClick={backOutside}
-          className={`absolute left-3 ${inYard ? "top-[6.25rem] sm:top-14" : "top-14"} rounded border border-border bg-surface/90 px-3 py-1.5 text-sm text-ink hover:opacity-80`}
+          className={`absolute left-3 z-20 ${inYard ? "top-[6.25rem] sm:top-14" : "top-14"} rounded border border-border bg-surface/90 px-3 py-1.5 text-sm text-ink hover:opacity-80`}
         >
           ← Back outside
         </button>
