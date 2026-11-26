@@ -364,8 +364,14 @@ def fail_run(db: Session, run_id: uuid.UUID, *, message: str) -> None:
     run = db.get(EquityAnalysisRun, run_id)
     if run is None:
         return
-    run.status = FAILED
-    run.error_message = message[:4000]
+    if run.blind_pass_json and run.blind_completed_at is not None:
+        # The blind pass was already saved (#514): keep it, the way a failed
+        # reconciliation pass does in pipeline.py.
+        run.status = EquityAnalysisRunStatus.BLIND_ONLY.value
+        run.error_message = f"reconciliation pass did not finish (blind pass result kept): {message}"[:4000]
+    else:
+        run.status = FAILED
+        run.error_message = message[:4000]
     db.commit()
 
 

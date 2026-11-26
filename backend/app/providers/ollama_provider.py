@@ -67,6 +67,18 @@ _CONNECT_RETRY_DELAYS_SECONDS = (2.0, 5.0)
 # Grammar-constrained JSON sometimes degenerates into an endless run of
 # newlines/spaces until num_predict. Real indentation never gets near this.
 _MAX_WHITESPACE_RUN = 600
+# 2026-11-26 (#514): a small model can also loop on real text (the same
+# sentence or list item again and again) until num_predict. Every
+# _REPEAT_CHECK_EVERY chunks, the last _REPEAT_TAIL_CHARS of output are
+# looked up in the last _REPEAT_WINDOW_CHARS; _REPEAT_MIN_COUNT or more
+# exact copies means a loop. A real answer should not repeat a 300-character
+# stretch four times.
+_REPEAT_WINDOW_CHARS = 6000
+_REPEAT_TAIL_CHARS = 300
+_REPEAT_MIN_COUNT = 4
+_REPEAT_CHECK_EVERY = 64
+# Margin kept free in the context on the output-limit retry.
+_RETRY_CTX_MARGIN_TOKENS = 256
 _PROGRESS_LOG_SECONDS = 60.0
 
 log = logging.getLogger(__name__)
@@ -77,6 +89,11 @@ _CONTEXT_BANDS = (8192, 12288, 16384, 20480, 24576, 32768)
 _CHARS_PER_TOKEN = 3.0  # conservative for Norwegian text, numbers and JSON
 _MISFIT_MEMORY_SECONDS = 600.0
 _OUTPUT_RESERVE_TOKENS = 8192
+
+
+class _RunawayOutputError(LLMUnavailableError):
+    """The model got stuck (blank output or the same text over and over).
+    ``_generate_structured`` runs such a call once more before giving up."""
 
 
 @dataclass(frozen=True)
@@ -128,6 +145,18 @@ def _model_matches(wanted: str, installed: str) -> bool:
     if ":" in wanted:
         return installed == wanted
     return installed == wanted or installed == f"{wanted}:latest"
+
+
+def _is_looping(recent: str) -> bool:
+    """True when the newest output is a stretch the model has already written
+    several times in a row (see _REPEAT_* above). Blank output is left to the
+    whitespace guard."""
+    if len(recent) < _REPEAT_TAIL_CHARS * _REPEAT_MIN_COUNT:
+        return False
+    tail = recent[-_REPEAT_TAIL_CHARS:]
+    if not tail.strip():
+        return False
+    return recent.count(tail) >= _REPEAT_MIN_COUNT
 
 
 def check_ollama_health(
@@ -419,6 +448,7 @@ class OllamaProvider(LedgerRecordingMixin, LLMProvider):
         parts: list[str] = []
         chunks = 0
         whitespace_run = 0
+        recent = ""  # the last _REPEAT_WINDOW_CHARS of output, for the loop check
         try:
             with self._client.stream("POST", url, json=payload) as resp:
                 if resp.status_code >= 400:
@@ -451,11 +481,19 @@ class OllamaProvider(LedgerRecordingMixin, LLMProvider):
                         else:
                             whitespace_run = len(piece) - len(stripped)
                         if whitespace_run > _MAX_WHITESPACE_RUN:
-                            raise LLMUnavailableError(
+                            raise _RunawayOutputError(
                                 f"Ollama got stuck emitting blank output after {chunks:,} chunks "
                                 f"(model={self._model}) — stopped early instead of waiting for the "
                                 "output limit. Running again usually works; if it repeats, try "
                                 "another model."
+                            )
+                        recent = (recent + piece)[-_REPEAT_WINDOW_CHARS:]
+                        if chunks % _REPEAT_CHECK_EVERY == 0 and _is_looping(recent):
+                            raise _RunawayOutputError(
+                                f"Ollama got stuck repeating the same text after {chunks:,} chunks "
+                                f"(model={self._model}) — stopped early instead of running on to the "
+                                "end of its output room. Running again usually works; if it repeats, "
+                                "try another model."
                             )
                     if chunk.get("done"):
                         return _ChatResult(resp.status_code, content="".join(parts), final=chunk)
@@ -482,6 +520,54 @@ class OllamaProvider(LedgerRecordingMixin, LLMProvider):
             f"Ollama closed the stream before finishing (model={self._model}, {chunks:,} chunks)."
         )
 
+    def _chat_once(
+        self, system_prompt: str, user_prompt: str, schema: dict[str, Any], *, max_output_tokens: int, num_ctx: int
+    ) -> _ChatResult:
+        result = self._chat(
+            self._payload(
+                system_prompt, user_prompt, schema, with_think=True,
+                max_output_tokens=max_output_tokens, num_ctx=num_ctx,
+            )
+        )
+        # Models without a thinking mode reject the `think` field outright;
+        # retry once without it rather than making the setting a trap.
+        if (
+            result.status_code == 400
+            and "think" in result.error_text.lower()
+            and self._think is not None
+        ):
+            result = self._chat(
+                self._payload(
+                    system_prompt, user_prompt, schema, with_think=False,
+                    max_output_tokens=max_output_tokens, num_ctx=num_ctx,
+                )
+            )
+        return result
+
+    def _retry_room(self, prompt_tokens: int, output_budget: int) -> tuple[int, int] | None:
+        """(output budget, num_ctx) for one more try after the answer hit the
+        output cap: up to twice the cap, as far as the context allows. With
+        adaptive fit the planner picks the model again for the bigger context
+        (in practice the smaller fallback model, whose context is larger).
+        None = no more room than the first try had, or nothing fits."""
+        if self._adaptive_fit:
+            ceiling = max(self._ceiling_for(m) for m in [self._primary_model, self._fallback_model] if m)
+        else:
+            ceiling = self._num_ctx
+        budget = min(output_budget * 2, ceiling - prompt_tokens - _RETRY_CTX_MARGIN_TOKENS)
+        if budget <= output_budget:
+            return None
+        if not self._adaptive_fit:
+            return budget, self._num_ctx
+        model_before = self._model
+        try:
+            ctx = self._plan_fit(prompt_tokens + budget + _RETRY_CTX_MARGIN_TOKENS)
+        except LLMUnavailableError as exc:
+            self._model = model_before  # the error names the model that actually ran
+            log.warning("ollama: no room for a longer retry: %s", exc)
+            return None
+        return budget, ctx
+
     def _generate_structured(
         self,
         *,
@@ -503,57 +589,69 @@ class OllamaProvider(LedgerRecordingMixin, LLMProvider):
             # output cap: a fund answer is ~6-7k tokens, the cap is 16k. If the
             # answer still outgrows the context, done_reason=length is caught.
             call_ctx = self._plan_fit(est_prompt + min(output_budget, _OUTPUT_RESERVE_TOKENS))
-        result = self._chat(
-            self._payload(
-                system_prompt, user_prompt, schema, with_think=True,
-                max_output_tokens=output_budget, num_ctx=call_ctx,
-            )
-        )
 
-        # Models without a thinking mode reject the `think` field outright;
-        # retry once without it rather than making the setting a trap.
-        if (
-            result.status_code == 400
-            and "think" in result.error_text.lower()
-            and self._think is not None
-        ):
-            result = self._chat(
-                self._payload(
-                    system_prompt, user_prompt, schema, with_think=False,
-                    max_output_tokens=output_budget, num_ctx=call_ctx,
+        # 2026-11-26 (#514): one more try before failing the pass, either when
+        # the model got stuck (blank or repeated output) or when it used the
+        # whole output cap without closing the JSON. A stuck model runs again
+        # as it was (sampling differs); a cut-off answer runs again with more
+        # output room (see _retry_room). Never more than one retry per call.
+        retried = False
+        while True:
+            try:
+                result = self._chat_once(
+                    system_prompt, user_prompt, schema, max_output_tokens=output_budget, num_ctx=call_ctx
                 )
-            )
+            except _RunawayOutputError as exc:
+                if retried:
+                    raise
+                retried = True
+                log.warning("ollama: %s; running the call once more", exc)
+                continue
 
-        if result.status_code == 404:
-            raise LLMUnavailableError(
-                f"Ollama doesn't have model '{self._model}' — run: ollama pull {self._model}"
-            )
-        if result.status_code >= 400:
-            raise LLMUnavailableError(
-                f"Ollama returned HTTP {result.status_code} (model={self._model}): {result.error_text[:500]}"
-            )
+            if result.status_code == 404:
+                raise LLMUnavailableError(
+                    f"Ollama doesn't have model '{self._model}' — run: ollama pull {self._model}"
+                )
+            if result.status_code >= 400:
+                raise LLMUnavailableError(
+                    f"Ollama returned HTTP {result.status_code} (model={self._model}): {result.error_text[:500]}"
+                )
 
-        body = result.final
-        prompt_tokens = int(body.get("prompt_eval_count") or 0)
-        output_tokens = int(body.get("eval_count") or 0)
+            body = result.final
+            prompt_tokens = int(body.get("prompt_eval_count") or 0)
+            output_tokens = int(body.get("eval_count") or 0)
 
-        if prompt_tokens > 500:
-            # Learn this model's real chars-per-token so the next estimate is
-            # tight (bounded, and shaded down for safety).
-            measured = (len(system_prompt) + len(user_prompt)) / prompt_tokens
-            self._chars_per_token = min(5.0, max(2.0, measured * 0.95))
-        if prompt_tokens >= call_ctx - 16:
-            raise LLMUnavailableError(
-                f"The analysis prompt ({prompt_tokens} tokens) filled Ollama's context window "
-                f"(num_ctx={call_ctx}, OLLAMA_NUM_CTX={self._num_ctx}), so evidence may have been cut off. "
-                "Raise OLLAMA_NUM_CTX (and keep OLLAMA_KV_CACHE_TYPE=q8_0 so it still fits in VRAM)."
-            )
-        if body.get("done_reason") == "length":
-            raise LLMUnavailableError(
-                f"Ollama stopped at the output limit ({output_tokens}/{output_budget} tokens) before "
-                f"finishing the JSON (model={self._model}) — raise LLM_MAX_OUTPUT_TOKENS "
-                "(LLM_MAX_OUTPUT_TOKENS_FUND for a fund/ETF) or OLLAMA_NUM_CTX."
-            )
+            if prompt_tokens > 500:
+                # Learn this model's real chars-per-token so the next estimate is
+                # tight (bounded, and shaded down for safety).
+                measured = (len(system_prompt) + len(user_prompt)) / prompt_tokens
+                self._chars_per_token = min(5.0, max(2.0, measured * 0.95))
+            if prompt_tokens >= call_ctx - 16:
+                raise LLMUnavailableError(
+                    f"The analysis prompt ({prompt_tokens} tokens) filled Ollama's context window "
+                    f"(num_ctx={call_ctx}, OLLAMA_NUM_CTX={self._num_ctx}), so evidence may have been cut off. "
+                    "Raise OLLAMA_NUM_CTX (and keep OLLAMA_KV_CACHE_TYPE=q8_0 so it still fits in VRAM)."
+                )
+            if body.get("done_reason") == "length":
+                cut_model = self._model
+                room = None if retried else self._retry_room(prompt_tokens, output_budget)
+                if room is not None:
+                    retried = True
+                    log.warning(
+                        "ollama: %s stopped at the output limit (%d/%d tokens); running once more with "
+                        "%d tokens of output room on %s",
+                        cut_model, output_tokens, output_budget, room[0], self._model,
+                    )
+                    output_budget, call_ctx = room
+                    continue
+                raise LLMUnavailableError(
+                    f"Ollama stopped at the output limit ({output_tokens}/{output_budget} tokens) before "
+                    f"finishing the JSON (model={self._model}"
+                    + (", after one retry" if retried else "")
+                    + ") — raise LLM_MAX_OUTPUT_TOKENS "
+                    "(LLM_MAX_OUTPUT_TOKENS_FUND for a fund/ETF) or OLLAMA_NUM_CTX."
+                )
+            break
 
         content = result.content
         if not content.strip():

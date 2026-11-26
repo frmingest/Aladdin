@@ -112,3 +112,12 @@ def test_output_limit_message_is_not_labelled_as_an_oversized_evidence_packet():
     )
     assert "ran out of output space" in message
     assert "context window" not in message.split("(Technical detail:")[0]
+
+
+def test_a_stuck_local_model_gets_its_own_sentence():
+    for raw in (
+        "Ollama got stuck repeating the same text after 512 chunks (model=qwen3:8b) — stopped early",
+        ("Ollama got stuck emitting blank output after 700 chunks (model=qwen3:8b) — stopped early instead "
+        "of waiting for the output limit."),
+    ):
+        assert explain_llm_failure(raw).startswith("The local model got stuck repeating itself on two tries")

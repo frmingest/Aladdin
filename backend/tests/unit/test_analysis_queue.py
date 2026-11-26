@@ -180,6 +180,22 @@ def test_fail_run_records_the_message():
     assert run.status == "FAILED" and run.error_message == "worker error: boom"
 
 
+def test_fail_run_keeps_a_blind_pass_that_was_already_saved():
+    """#514: the pipeline commits the blind pass before the reconciliation
+    pass, so a crash after it records BLIND_ONLY and keeps the result."""
+    db = _session()
+    run = _queue(db, _holding(db))
+    queue.claim_next_run(db, "pc-1")
+    run.blind_pass_json = {"verdict": "kept"}
+    run.blind_completed_at = NOW
+    db.commit()
+    queue.fail_run(db, run.id, message="worker error: OperationalError: server closed the connection")
+    db.refresh(run)
+    assert run.status == "BLIND_ONLY"
+    assert run.blind_pass_json == {"verdict": "kept"}
+    assert run.error_message.startswith("reconciliation pass did not finish (blind pass result kept): worker error")
+
+
 def test_worker_statuses_online_offline_and_stopped():
     db = _session()
     queue.record_heartbeat(db, "fresh", state="idle", model_name="qwen3:14b", now=NOW - timedelta(seconds=30))

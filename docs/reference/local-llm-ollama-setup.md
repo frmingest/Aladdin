@@ -194,7 +194,7 @@ restarts the worker if it crashes. To start it at log-on: Task Scheduler → *Cr
 | Checks Ollama | If Ollama is stopped, it waits — the run stays queued, nothing is spent. |
 | Checks Gemini budget | If today's research budget can't cover the next run, it waits until 00:00 UTC (the overnight queue). |
 | Runs the oldest queued run | Research → evidence packet → blind pass → reconciliation. A few minutes per holding. |
-| Recovers | A run whose worker went silent for 30 min is re-queued; after 2 tries it's marked failed. Ctrl+C mid-run puts the run back in the queue. |
+| Recovers | A run whose worker went silent for 30 min is re-queued; after 2 tries it's marked failed. Ctrl+C mid-run puts the run back in the queue. A run that hits an error after its blind pass is saved keeps that pass and shows *Blind only* (issue 514), as long as the worker can still reach the database; a stopped worker is re-queued as before. |
 
 ## Troubleshooting
 
@@ -206,7 +206,9 @@ restarts the worker if it crashes. To start it at log-on: Task Scheduler → *Cr
 | "Stopped early … only N% of the model is on the GPU" | The app refused to start a pass that would crawl on the CPU (partly-offloaded model, e.g. 78% GPU ≈ 3.5 tokens/s). Server-side, set `OLLAMA_FLASH_ATTENTION=1`, `OLLAMA_KV_CACHE_TYPE=q8_0`, `OLLAMA_NUM_PARALLEL=1` and restart Ollama; if it still spills, lower `OLLAMA_NUM_CTX` (each +8k of context costs roughly 1 GB of f16 KV cache for qwen3:14b) or use `qwen3:8b`. `OLLAMA_MIN_GPU_SHARE=0` runs anyway. |
 | "timed out generating … no new output for 600s" | Nothing came back at all: the model was still loading or reading the prompt. Check `ollama ps`; raise `OLLAMA_STALL_TIMEOUT_SECONDS` if the PC is just slow. |
 | "timed out generating … passed the 1800s limit … ~N tokens/s" | Tokens were coming, just slowly. Under ~10 tokens/s means the model is partly on the CPU (the message says how much is on the GPU): close GPU-heavy apps, set `OLLAMA_NUM_PARALLEL=1`, lower `OLLAMA_NUM_CTX`, or use `qwen3:8b`. |
-| "got stuck emitting blank output" | The model looped on whitespace inside the JSON; the app stops it early. Run again; if it repeats, try another model. |
+| "got stuck emitting blank output" / "got stuck repeating the same text" | The model looped on whitespace, or wrote the same stretch of text again and again, inside the JSON; the app stops it early. (2026-11-26, issue 514) The pass already runs once more by itself before it fails, so this message means it got stuck twice. Run again; if it repeats, try another model. |
+| "stopped at the output limit ... after one retry" | (2026-11-26, issue 514) A cut-off answer already runs once more with up to twice the output room, as far as the context allows; with adaptive fit the retry can move to `qwen3:8b`, because only its larger context may hold the extra room. Failing after that can mean a loop the repeat check missed: run again, or raise `OLLAMA_FALLBACK_NUM_CTX`. The two-Qwen fallback itself only covers "the main model does not fit on the GPU", not a bad answer. |
+| "worker error: ... server closed the connection unexpectedly" | (2026-11-26, issue 514) The PC lost its connection to Railway Postgres during a run. With the issue 514 change the run commits before each LLM pass (no connection idles in a transaction through a 20-minute pass), the connection uses TCP keepalives, and a finished blind pass is kept (the run shows Blind only) if a later step fails and the worker can still reach the database to record it; otherwise the run is re-queued after the 30-minute lease. If it still happens, check the network on the PC and queue the holding again. |
 | Readiness shows "only N% of it is on the GPU" | Same cause as a slow pass — fix before running. |
 | Very slow, `ollama ps` shows CPU | Model spilling to RAM — see Step 4. |
 | Output quality looks weak | Try `gemma3:12b` on the same holding and compare side by side. |

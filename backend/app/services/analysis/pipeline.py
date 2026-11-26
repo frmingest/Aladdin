@@ -157,6 +157,18 @@ def run_full_analysis(
         run.blind_prompt_version = prompt_version
         run.evidence_packet_version = packet_version
         run.error_message = None
+        # A re-queued run starts clean (issue 514): the blind pass is now saved
+        # mid-run, so an earlier attempt may have left one. Without this, a crash
+        # before this attempt reached its own blind pass would be recorded by
+        # queue.fail_run as BLIND_ONLY with the earlier attempt in it.
+        run.blind_pass_json = None
+        run.blind_pass_citation_warnings = None
+        run.blind_completed_at = None
+        run.reconciliation_json = None
+        run.reconciliation_citation_warnings = None
+        run.completed_at = None
+        run.user_notes_snapshot = None
+        run.reconciliation_prompt_version = None
     db.flush()
 
     _report_stage(on_stage, "evidence_packet")
@@ -178,6 +190,12 @@ def run_full_analysis(
     )
     run.evidence_packet_json = packet.as_dict()
     run.evidence_unavailable_reasons = packet.unavailable_reasons
+    # 2026-11-26 (#514): commit before every LLM pass. A local pass can take
+    # 20+ minutes; a transaction held open that long sat idle on its
+    # connection, Railway's Postgres dropped it, and the final commit lost
+    # the whole run (TEL.OL). Nothing below reads the database until the
+    # pass returns, so no new transaction opens during it.
+    db.commit()
 
     _report_stage(on_stage, "blind_pass")
     try:
@@ -200,12 +218,16 @@ def run_full_analysis(
     run.blind_pass_json = blind_result.output.model_dump(mode="json")
     run.blind_pass_citation_warnings = blind_result.citation_warnings
     run.blind_completed_at = datetime.now(timezone.utc)
-    run.status = EquityAnalysisRunStatus.BLIND_ONLY.value
 
     note = get_holding_note(db, holding.id)
     user_notes = note.content if note is not None else None
     run.user_notes_snapshot = user_notes
     run.reconciliation_prompt_version = prompt_version
+    # Saved before the reconciliation pass (#514), so a finished blind pass
+    # survives anything that goes wrong after it. The run stays RUNNING
+    # until the reconciliation pass ends; a crash after this point is
+    # recorded by the worker as BLIND_ONLY (queue.fail_run).
+    db.commit()
 
     _report_stage(on_stage, "reconciliation_pass")
     try:
@@ -222,6 +244,7 @@ def run_full_analysis(
             ),
         )
     except LLMUnavailableError as exc:
+        run.status = EquityAnalysisRunStatus.BLIND_ONLY.value
         run.error_message = f"reconciliation pass failed (blind pass result kept): {explain_llm_failure(exc)}"
         db.commit()
         db.refresh(run)
