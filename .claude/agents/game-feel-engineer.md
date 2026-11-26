@@ -1,6 +1,6 @@
 ---
 name: game-feel-engineer
-description: Motion, SVG/CSS art effects, sound and performance for game mode, and owner of the shared page-scene kit (scene header, parchment panel, seal, crest, banner, fog patch, Plain-view toggle, tokens). Use for animation, filters, audio, frame-rate budgets, and when a page needs a kit piece that does not exist.
+description: Motion, SVG/CSS art effects, sound and performance for game mode, and owner of the shared page-scene kit (scene header, crest, torches, banner, fog patch, night panel, Plain-view toggle, tokens). Use for animation, filters, audio, frame-rate budgets, and when a page needs a kit piece that does not exist.
 tools: Read, Edit, Write, Grep, Glob, Bash
 model: sonnet
 ---
