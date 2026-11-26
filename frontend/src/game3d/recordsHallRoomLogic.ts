@@ -153,6 +153,19 @@ export function shelfLook(records: readonly DecisionRecord[] | null | undefined)
 /** World z of the shelf boards' front edge: they stand out past the side boards, so a sheet must hang in front of them. */
 export const BOOKCASE_SHELF_FRONT_Z = BOOKCASE.z + BOOKCASE_PANEL.shelfZ + BOOKCASE_PANEL.shelfD / 2;
 
+/**
+ * The plate over the shelves (#521): hung from the top of the middle case, its top edge on the case top, in front of
+ * the shelf boards. Higher up (it was at y 4.4) it sat under the HUD bar, and at drei size 9 it was smaller than the
+ * 12 px floor from both the spawn and the shelf spot, so it never showed. It is the room's one sign, so it always shows
+ * (`reveal="always"`); size 12 reads at 12 px or more from the shelf spot's camera.
+ */
+export const SHELF_PLATE = {
+  y: BOOKCASE.h + 0.05,
+  z: Math.max(BOOKCASE_SIDE_FRONT_Z, BOOKCASE_SHELF_FRONT_Z) + 0.05,
+  distanceFactor: 12,
+  maxWidth: 260,
+} as const;
+
 /** How thick a dust sheet is (and its fold over the top). */
 export const DUST_SHEET_T = 0.04;
 
