@@ -18,7 +18,7 @@ The Hall of Records building in the Town used to be a door that opened a page. N
 
 - Books are read through the same call as the flat page (`getRecords`) and drawn from the flat Hall's own mapping (`lib/hall.ts` `tomeFor`); a test checks each book equals `tomeFor` of its record.
 - **No outcome is drawn:** a test builds two records that differ only in price change and verdict and checks the two books are identical.
-- A failed or slow read leaves the shelves bare with the plain plate; no placeholder books, no guessed numbers.
+- Until the journal has been read once in this page session (the first load is on its way, or the first read failed), a dust sheet in the kit fog colours hangs over each bookcase, with a fold over the top, under a fog plate with no number: "Not read yet." or "Could not read the books just now." (#505; before it the shelves stood bare, which looked the same as an empty journal). A failed re-fetch after a good read keeps the books shown (`lib/queryCache.ts`). An empty journal stays bare boards. No placeholder books, no guessed numbers.
 - No buy or sell words and no picture characters on the plate (tested). Game voice: short, playful, numbers exact.
 - The Records page is still reachable the two other ways it was: the "Where to?" sign and E at the shelves (register row `/fortress/records`, level A).
 

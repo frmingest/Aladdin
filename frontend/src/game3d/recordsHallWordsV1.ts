@@ -1,0 +1,15 @@
+/**
+ * Words on the plate over the Hall of Records shelves (version 1, #505). A change that alters meaning is a new version
+ * file (CLAUDE.md rule 3). The counted lines moved here unchanged from `recordsHallRoomLogic.ts`; NOT_READ is new.
+ */
+export const RECORDS_HALL_TITLE = "The Hall of Records";
+/** The journal was read and holds no decisions. */
+export const RECORDS_HALL_EMPTY = "No books yet. Write a decision at the desk.";
+/** The journal has not been read yet (first load still on its way): unknown, so no number and no guess (fog). */
+export const RECORDS_HALL_NOT_READ = "Not read yet.";
+/** The first read failed: still unknown (fog), and says so without promising a retry that may not come. */
+export const RECORDS_HALL_READ_FAILED = "Could not read the books just now.";
+
+export const decisionsLine = (n: number): string => `${n} ${n === 1 ? "decision" : "decisions"} on the shelves`;
+export const owedLine = (n: number): string => `${n} ${n === 1 ? "book wears" : "books wear"} a ribbon: a look-back is owed`;
+export const moreLine = (n: number): string => `${n} more in the page`;
