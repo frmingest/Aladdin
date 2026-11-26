@@ -1,6 +1,6 @@
 # Map (Cartographer's table): making fog look like fog
 
-> Note (#511, 2026-11-26): `ParchmentPanel`, `SealMark`, `SealArt`, `FogPanel` and `Speaker` were removed from the kit because no page used them. Where this plan names them, rebuild the piece in the kit first if the plan is picked up again.
+> Note (#511, 2026-11-26): `ParchmentPanel`, `SealMark`, `SealArt`, `FogPanel` and `Speaker` were removed from the kit because no page used them. The Map was built without them: its commission seals are `kit/CommissionSeal.tsx` and its frame is `kit/realmMap.css`.
 
 Role: game-designer + art director. Date: 2026-10-09. Proposal only; nothing built, nothing under `$HOME/mnt` touched.
 Paths relative to `frontend/src/`. Read: circle-design.md, game-pages-identity-audit.md, `pages/CartographerPage.tsx`, `lib/survey.ts` + test, sprint-28 doc, sprint-plan v2 (G34/G35), `lib/fortress.ts` (layout), `lib/fortressArt.ts`, `GameFrame.tsx`, `TowerSurvey.tsx`, `wordBudget.ts`, parts of `FortressScene.tsx` (`GhostKeep`) and `sceneWorld.tsx`.

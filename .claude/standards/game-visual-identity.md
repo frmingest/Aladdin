@@ -36,7 +36,7 @@ Today's look, as built on `main`:
 - **Faiz's direction (2026-10-09):** visibly a game on every game tab (painted fortress, scrolls, ravens, seals); visuals added rather than paragraphs; never at the cost of truth, accessibility or performance.
 
 ## 5. Shared kit contract
-Owned by `game-feel-engineer`. Location: `frontend/src/components/fortress/kit/` (page scene header, crest, torches, banner, fog patch, night panel, plain-view toggle) with tokens in CSS variables (`index.css`; the 3D world's in `game3d/gameTokens.ts`) and pure mappings in `lib/` (`lib/seals.ts`, `lib/crest.ts`) with tests. New pages compose from the kit; a missing piece is added to the kit first, not inlined.
+Owned by `game-feel-engineer`. Location: `frontend/src/components/fortress/kit/` (page scene header, crest, torches, banner, fog patch, night panel, plain-view toggle) with tokens in CSS variables (`index.css`; the 3D world's in `game3d/gameTokens.ts`) and pure mappings in `lib/` (for example `lib/crest.ts`) with tests. New pages compose from the kit; a missing piece is added to the kit first, not inlined.
 
 ## 6. Game voice (Faiz, 2026-10-15; applies to every game page, dialog, caption, button, empty state and error)
 Game mode talks like a game, not like a methods section. Faiz on Blindfold Years: the first copy "doesn't engage me like a game should but rather a lot of text opting me to try to understand." The numbers stay exact; only the words change.
