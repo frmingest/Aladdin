@@ -4,8 +4,9 @@ rate (app/services/valuation/discount_rate.py).
 
 Staleness is judged by when the row was fetched (`created_at`), not by
 `observed_at`: FRED's series are monthly, so `observed_at` (the month the
-yield covers) is always weeks old, and judging by it refetched FRED and
-added a duplicate row on every valuation (#473)."""
+yield covers) is always weeks old. Judging by it refetched FRED and added a
+duplicate row on every warm-up of a holding and every Refresh, and made
+every plain page load say the cached rate was out of date (#473)."""
 from __future__ import annotations
 
 from sqlalchemy import select
