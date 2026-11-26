@@ -1,8 +1,9 @@
 import { Fragment, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { LoadProgress, SceneReady } from "./sceneLoad";
 import type { MutableRefObject } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Physics } from "@react-three/rapier";
+import { PHYSICS_STEP, capClockDelta } from "./physicsStep";
 import Courtyard from "./Courtyard";
 import type { WorldModel } from "./stateToWorld";
 import PerfProbe from "./PerfProbe";
@@ -295,7 +296,7 @@ function World({ onLockChange, world, area, room, hold, look, onFieldPresets }: 
   const { cheerKey } = look;
 
   return (
-    <Physics gravity={[0, -25, 0]} timeStep="vary">
+    <Physics gravity={[0, -25, 0]} timeStep={PHYSICS_STEP} interpolate>
       {area.id === "records" ? (
         <group userData={{ perfGroup: "records" }}>
           <RecordsHallRoom />
@@ -424,6 +425,13 @@ function World({ onLockChange, world, area, room, hold, look, onFieldPresets }: 
  * The 3D courtyard canvas. Lighting is deliberately flat and the same
  * everywhere: no spotlight on a "good" tower, nothing that flatters a weak one.
  */
+/** Caps the frame time every useFrame sees at a few physics steps (#486, `physicsStep.ts`). */
+function FrameTimeCap() {
+  const clock = useThree((s) => s.clock);
+  useEffect(() => capClockDelta(clock), [clock]);
+  return null;
+}
+
 export default function Scene({ world, onLockChange, onStats, statsDetail = false, area = COURTYARD, room = null, hold = false, look = EMPTY_LOOK, onFieldPresets = noop }: Props) {
   const inside = AREAS[area.id].lighting === "indoor";
   // The weather: only the sky and fog colour change (calm keeps the courtyard's own sky); lights stay as they are.
@@ -437,6 +445,7 @@ export default function Scene({ world, onLockChange, onStats, statsDetail = fals
       tabIndex={0}
       aria-label="3D courtyard. Walk with W A S D, look with the mouse."
     >
+      <FrameTimeCap />
       {inside ? (
         <Fragment key="in">
           {/* Indoors: warm and dim, the same everywhere; no shelf is lit more kindly than another. */}
