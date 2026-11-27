@@ -23,6 +23,7 @@ import {
 } from "./movement";
 import type { Keys } from "./movement";
 import type { OrbitState } from "./useOrbit";
+import { touchStick } from "./touchInput";
 
 const HALF_HEIGHT = 0.5;
 const RADIUS = 0.35;
@@ -134,8 +135,10 @@ export default function Player({ keys, orbit, pos: posOut, teleport = null, chee
       return;
     }
 
-    const dir = moveVector(k, orbit.current.yaw);
-    const speed = k.run ? RUN_SPEED : WALK_SPEED;
+    // The touch stick (#485) walks too: its push adds to the keys, and pushed to the rim it runs.
+    const dir = moveVector(k, orbit.current.yaw, touchStick);
+    const running = k.run || touchStick.run;
+    const speed = running ? RUN_SPEED : WALK_SPEED;
 
     // Standing on something? A short ray down from the capsule centre.
     const ray = new rapier.Ray({ x: pos.x, y: pos.y, z: pos.z }, { x: 0, y: -1, z: 0 });
@@ -144,7 +147,7 @@ export default function Player({ keys, orbit, pos: posOut, teleport = null, chee
     if (!frozen) rb.setLinvel({ x: dir.x * speed, y: vy, z: dir.z * speed }, true);
 
     motion.current.moving = dir.x !== 0 || dir.z !== 0;
-    motion.current.running = k.run;
+    motion.current.running = running;
 
     // Turn the body towards where it is walking.
     if (dir.x !== 0 || dir.z !== 0) {

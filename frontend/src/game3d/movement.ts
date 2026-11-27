@@ -42,10 +42,13 @@ export interface Vec2 {
   z: number;
 }
 
-/** World-space move direction (length 0 to 1) for the held keys and camera yaw. */
-export function moveVector(keys: Keys, yaw: number): Vec2 {
-  const fwd = (keys.forward ? 1 : 0) - (keys.back ? 1 : 0);
-  const side = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+/**
+ * World-space move direction (length 0 to 1) for the held keys and camera yaw. A touch stick (#485) adds its analog push
+ * (`fwd` and `side`, each -1 to 1) to the keys, so a half push walks at half speed; keys and stick together never pass 1.
+ */
+export function moveVector(keys: Keys, yaw: number, stick?: { fwd: number; side: number }): Vec2 {
+  const fwd = (keys.forward ? 1 : 0) - (keys.back ? 1 : 0) + (stick?.fwd ?? 0);
+  const side = (keys.right ? 1 : 0) - (keys.left ? 1 : 0) + (stick?.side ?? 0);
   if (fwd === 0 && side === 0) return { x: 0, z: 0 };
   // Looking direction (camera to player) and the player's right-hand side.
   const fx = -Math.sin(yaw);
