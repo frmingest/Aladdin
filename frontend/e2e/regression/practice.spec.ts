@@ -78,10 +78,13 @@ async function settle(page: Page) {
  * The result plate shows for 3.5 s, and on a software-GL runner two separate checks can outlast it. So its result line and
  * its page line are checked in one assertion on the plate itself (a region named after the Book page).
  */
-async function expectResult(page: Page, label: string, result: string, pageLine: string) {
+async function expectResult(page: Page, label: string, result: string, pageLine: string, said?: string) {
   const esc = (t: string) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const plate = page.getByRole("region", { name: label, exact: true });
-  await expect(plate).toHaveText(new RegExp(`^${esc(result)}[\\s\\S]*${esc(pageLine)}$`));
+  // A line said on the plate (the storm's Marlie line) is matched in the same assertion: a second one after it raced the
+  // plate's 3.5 s on a slow runner (#528's CI, twice).
+  const middle = said ? `[\\s\\S]*${esc(said)}` : "";
+  await expect(plate).toHaveText(new RegExp(`^${esc(result)}${middle}[\\s\\S]*${esc(pageLine)}$`));
 }
 
 /**
@@ -151,8 +154,7 @@ async function playPriceAndStormByKeyboard(page: Page) {
   await settle(page);
   await page.keyboard.press("3"); // Only the price
   await expect(storm).toHaveCount(0);
-  await expectResult(page, "Storms", "Only the price. Walls and moat held.", "New page: Storms");
-  await expect(page.getByRole("region", { name: "Storms", exact: true })).toContainText("If it owed more, that would be news.");
+  await expectResult(page, "Storms", "Only the price. Walls and moat held.", "New page: Storms", "If it owed more, that would be news.");
 }
 
 const AFTER_CHECKS: Run = {

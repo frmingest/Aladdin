@@ -1,5 +1,7 @@
 import type { OpenPanels, PanelId } from "./hudPanels";
 import { soundLabel } from "./soundPlan";
+import type { StickSide } from "./touchInput";
+import { TOUCH_WORDS } from "./touchWordsV1";
 
 interface Props {
   open: OpenPanels;
@@ -28,6 +30,8 @@ interface Props {
   sound?: { on: boolean; onToggle: () => void };
   /** In the practice yard: hide the tools that open the real fortress's panels. */
   practice?: boolean;
+  /** Touch screens only (#485): which side the thumb stick is on, and a way to swap it with the seal. Left out on a desktop. */
+  hands?: { side: StickSide; onSwap: () => void };
 }
 
 function Tool({
@@ -58,7 +62,7 @@ function Tool({
 }
 
 /** The little menu at the top: open or shut each panel, so the scene stays clear until you want a panel. */
-export default function Toolbar({ open, onToggle, questsWaiting, roundOpen = 0, guideLeft = 0, guideLabel, towerCount, statsOn, statsLabel, onToggleStats, showStats = true, whereOpen, onToggleWhere, sound, practice = false }: Props) {
+export default function Toolbar({ open, onToggle, questsWaiting, roundOpen = 0, guideLeft = 0, guideLabel, towerCount, statsOn, statsLabel, onToggleStats, showStats = true, whereOpen, onToggleWhere, sound, practice = false, hands }: Props) {
   return (
     <div role="toolbar" aria-label="Courtyard menu" className="g3d-toolbar absolute left-1/2 top-3 z-30 -translate-x-1/2">
       {/* The practice yard (#493) shows nothing of the real fortress: no Quests or Towers there, only the way out and sound. */}
@@ -74,6 +78,13 @@ export default function Toolbar({ open, onToggle, questsWaiting, roundOpen = 0, 
       {!practice && <Tool label="Towers" hint="T" icon="🏰" pressed={open.towers} badge={towerCount} onClick={() => onToggle("towers")} />}
       <Tool label="Where to?" hint="G" icon="🪧" pressed={whereOpen} onClick={onToggleWhere} />
       {sound && <Tool label={soundLabel(sound.on).label} hint="M" icon={soundLabel(sound.on).icon} pressed={sound.on} onClick={sound.onToggle} />}
+      {/* Touch only: swap the stick and the seal for a left hand. */}
+      {hands && (
+        <button type="button" className="g3d-tool" title={TOUCH_WORDS.swapChip} aria-label={TOUCH_WORDS.swapLabel(hands.side)} onClick={hands.onSwap}>
+          <span aria-hidden className="g3d-tool-icon">🤚</span>
+          <span>{TOUCH_WORDS.swapChip}</span>
+        </button>
+      )}
       {(showStats || statsOn) && <Tool label={statsOn ? statsLabel : "Stats"} hint="P" icon="📊" pressed={statsOn} onClick={onToggleStats} />}
     </div>
   );

@@ -55,6 +55,7 @@ import { shelvesFor } from "../game3d/libraryShelves";
 import type { CouncilInput, ShelfId } from "../game3d/libraryShelves";
 import type { RoomView, SceneLook } from "../game3d/Scene";
 import { COURTYARD } from "../game3d/areas";
+import { useFitToScreen } from "../game3d/fitToScreen";
 import type { AreaRef } from "../game3d/areas";
 import { canGoBack, escapeTarget } from "../game3d/layers";
 import type { OpenLayers } from "../game3d/layers";
@@ -116,6 +117,10 @@ import { NPCS, alsoHereNote } from "../game3d/npcs";
 import type { NpcId } from "../game3d/npcs";
 import ActionPrompt from "../game3d/ActionPrompt";
 import HudBottomStack from "../game3d/HudBottomStack";
+import TouchControls from "../game3d/TouchControls";
+import { loadStickSide, saveStickSide } from "../game3d/touchInput";
+import { TOUCH_WORDS } from "../game3d/touchWordsV1";
+import { useTouchScreen } from "../game3d/useTouchScreen";
 import { emptyStreetNote, streetOverflowLine } from "../game3d/streetPlan";
 import { stateToWorld } from "../game3d/stateToWorld";
 import { withGaps } from "../game3d/standingGaps";
@@ -300,6 +305,8 @@ export default function Game3DPage() {
   // Which flat-page dialog (Sal or the Hype Booth) is open over the world.
   const [boothOpen, setBoothOpen] = useState<BoothId | null>(null);
   const { demoMode } = useDemoMode();
+  // The view fits below the header and the demo strip, however many lines the strip wraps to (#528).
+  const [fitRef, fitStyle] = useFitToScreen<HTMLDivElement>(demoMode);
   // The Storm Drill: the stored drills.
   const [drills, setDrills] = useState<StormDrills | null>(null);
   const [drillsFailed, setDrillsFailed] = useState(false);
@@ -331,6 +338,14 @@ export default function Game3DPage() {
   const [panels, setPanels] = useState(loadPanels);
   // The key hint teaches the controls, so it shows on the first few visits only (C2).
   const [showHint] = useState(() => hintWanted(countVisit()));
+  // Touch screens get a thumb stick and an action seal (#485); a desktop with a mouse never does. The stick's side is saved.
+  const touch = useTouchScreen();
+  const [stickSide, setStickSide] = useState(loadStickSide);
+  const swapHands = useCallback(() => setStickSide((s) => {
+    const next = s === "left" ? "right" : "left";
+    saveStickSide(next);
+    return next;
+  }), []);
   // The Quest log holds the wires, so while you look back its key does nothing (it stays as you left it for today).
   const flip = useCallback((id: PanelId) => {
     if (inPast && id === "quests") return;
@@ -1705,7 +1720,9 @@ export default function Game3DPage() {
     panels.quests || panels.towers || whereOpen || vaultOpen || realmOpen || watchOpen || perchOpen || hourglassOpen || deskOpen || drillOpen || lampOpen || boothOpen !== null || report !== null || counterOpen || practicePlainOpen || arrivalShown || pickedLine !== null || checkOpen || bookOpen || checkResult !== null || stormNoteShown || whyOpen || whyResult !== null || cheering || endShown;
 
   return (
-    <div className="relative h-[calc(100dvh-5rem)] min-h-[480px] w-full overflow-hidden bg-surface">
+    // On a touch screen the 480 px floor goes: a phone held sideways is about 390 px tall, and the floor pushed the stick and
+    // the seal below the fold (#485).
+    <div ref={fitRef} style={{ height: fitStyle }} className={`relative ${touch ? "min-h-[160px]" : "min-h-[480px]"} w-full overflow-hidden bg-surface`}>
       <SceneBoundary fallback={<Unavailable />}>
         <Suspense fallback={null}>
           <Scene world={shownWorld} area={area} room={roomView} hold={isMoving(areaState)} look={look} onFieldPresets={onFieldPresets} onLockChange={setLocked} onStats={setStats} statsDetail={showPerf} />
@@ -1734,6 +1751,7 @@ export default function Game3DPage() {
         whereOpen={whereOpen}
         onToggleWhere={toggleWhere}
         sound={sound.supported ? { on: sound.on, onToggle: sound.toggle } : undefined}
+        hands={touch ? { side: stickSide, onSwap: swapHands } : undefined}
       />
       {showPerf && <PerfBreakdown stats={stats} />}
       {area.id === "mint" && plainOpen && <MintPlainPanel result={mint.view.result} stale={mint.view.wall === "stale"} onClose={() => setPlainOpen(false)} />}
@@ -1947,7 +1965,7 @@ export default function Game3DPage() {
         <button
           type="button"
           onClick={backOutside}
-          className={`absolute left-3 z-20 ${inYard ? "top-[6.25rem] sm:top-14" : "top-14"} rounded border border-border bg-surface/90 px-3 py-1.5 text-sm text-ink hover:opacity-80`}
+          className={`g3d-back absolute left-3 z-20 ${inYard ? "top-[6.25rem] sm:top-14" : "top-14"} rounded border border-border bg-surface/90 px-3 py-1.5 text-sm text-ink hover:opacity-80`}
         >
           ← Back outside
         </button>
@@ -1956,14 +1974,17 @@ export default function Game3DPage() {
       {boothOpen === "hype" && <HypeBoothDialog voice="game" demoMode={demoMode === true} rows={watchlist?.rows ?? []} onClose={closeBooth} onAdded={setWatchlist} />}
 
       {/* Prompt above hint in one stack, so a hint that wraps on a phone never slides under the prompt (#524). */}
+      {/* Touch only (#485): the stick and the seal, while nothing covers the world. The seal acts only when E would. */}
+      {touch && !anyPanelOpen && !talking && <TouchControls side={stickSide} prompt={spotPrompt && !eBlocked ? spotPrompt : null} onAct={pressE} />}
       <HudBottomStack
-        prompt={spotPrompt && <ActionPrompt text={spotPrompt} note={spotNote} onPress={pressE} />}
+        lift={touch}
+        prompt={spotPrompt && <ActionPrompt text={spotPrompt} note={spotNote} onPress={pressE} touch={touch} />}
         hint={
           showHint &&
           !locked &&
           !talking &&
           !anyPanelOpen && (
-            <p data-testid="controls-hint" className="mt-2 w-max max-w-[90%] rounded bg-black/60 px-4 py-2 text-center text-sm text-white">{HINT_TEXT}</p>
+            <p data-testid="controls-hint" className="mt-2 w-max max-w-[90%] rounded bg-black/60 px-4 py-2 text-center text-sm text-white">{touch ? TOUCH_WORDS.hint : HINT_TEXT}</p>
           )
         }
       />
