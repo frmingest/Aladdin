@@ -31,7 +31,7 @@ import {
   shelfPlate,
   SEAL_SHAPE_OF,
 } from "./recordsHallRoomLogic";
-import { RECORDS_HALL_NOT_READ, RECORDS_HALL_READ_FAILED } from "./recordsHallWordsV1";
+import { RECORDS_HALL_NOT_READ, RECORDS_HALL_READ_FAILED } from "./recordsHallWordsV2";
 import { BUILDINGS, DOOR_LEAVE_RANGE, DOOR_RANGE, doorSpot, nearestBuilding } from "./townPlan";
 import { SEAL_LOOK, tomeFor } from "../lib/hall";
 import type { DecisionRecord, RecordReviewState } from "../lib/types";
@@ -162,8 +162,21 @@ describe("the Hall of Records inside", () => {
     }
     expect(shelfPlate(null)).toEqual(["The Hall of Records", "Not read yet."]);
     expect(shelfPlate(shelfFacts([rec(0)]))[1]).toBe("1 decision on the shelves");
-    expect(shelfPlate(shelfFacts([rec(0, { review_6m: "due" }), rec(1)])).join("|")).toContain("1 book wears a ribbon");
-    expect(shelfPlate(shelfFacts(Array.from({ length: CAPACITY + 2 }, (_, i) => rec(i)))).join("|")).toContain("2 more in the page");
+    expect(shelfPlate(shelfFacts([rec(0, { review_6m: "due" }), rec(1)]))).toContain("1 owes a look-back");
+    expect(shelfPlate(shelfFacts([rec(0, { review_6m: "due" }), rec(1, { review_12m: "due" })]))).toContain("2 owe a look-back");
+    expect(shelfPlate(shelfFacts(Array.from({ length: CAPACITY + 2 }, (_, i) => rec(i))))).toContain("2 more on the page");
+  });
+
+  // #523: in the books state the plate is the title, the count, and at most the owed and overflow lines, each one short
+  // clause. V1's owed line had two clauses and wrapped to three lines on its own.
+  it("keeps every books-state line one short clause (V2 words)", () => {
+    const full = shelfFacts(Array.from({ length: CAPACITY + 5 }, (_, i) => rec(i, i < 20 ? { review_6m: "due" } : {})));
+    const lines = shelfPlate(full);
+    expect(lines).toEqual(["The Hall of Records", `${CAPACITY + 5} decisions on the shelves`, "20 owe a look-back", "5 more on the page"]);
+    for (const line of lines) {
+      expect(line).not.toMatch(/[:;]/);
+      expect(line.length).toBeLessThanOrEqual(30);
+    }
   });
 
   it("leaves the door's reach narrower than the shelves' reach so the two prompts never overlap at the spawn", () => {

@@ -25,7 +25,7 @@ import {
   decisionsLine,
   moreLine,
   owedLine,
-} from "./recordsHallWordsV1";
+} from "./recordsHallWordsV2";
 
 export const ARCHIVE = { minX: -9, maxX: 9, minZ: -8, maxZ: 8, height: 6 } as const;
 /** A closed pair of doors in the south wall; E beside it leads back out into the Town. */
