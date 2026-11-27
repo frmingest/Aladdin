@@ -52,7 +52,7 @@ Whether touch play should wait for the starter level (#476, #477). This plan doe
 
 ## Build (#485, 2026-11-27)
 
-The #485 PR builds plan A. Written, PR to open, not deployed. What it does, checked against the code in that PR:
+PR #537 adds plan A (issue #485). Written, PR open, not deployed. What it does, checked against the code in that PR:
 
 - **Where (all under `frontend/src/`):** `game3d/TouchControls.tsx` (stick and seal), `game3d/touchInput.ts` (pure maths: stick vector, dead zone 12%, run past 85%, seal word, pinch, hand setting), `game3d/useTouchScreen.ts` (`(pointer: coarse)`), `game3d/touchWordsV1.ts` (the touch hint and names), `game3d/useOrbit.ts` (one-finger look, two-finger pinch, no pointer-lock request after a touch), `game3d/movement.ts` (`moveVector` takes the stick's analog push), kit art `components/fortress/kit/TouchControlsArt.tsx` (compass rose, knob, wax seal; colours in `TOUCH_TOKENS`, `game3d/gameTokens.ts`).
 - **One deviation from the plan:** the stick writes one shared stick value (`touchStick` in `game3d/touchInput.ts`) that the hero reads every frame beside the keyboard's `keys` ref, rather than the `keys` ref itself, because the keys are on/off and the stick is analog (a half push walks at half speed). Still no React state per frame.
@@ -63,5 +63,5 @@ The #485 PR builds plan A. Written, PR to open, not deployed. What it does, chec
 - **Practice yard by emulated touch** (same local run, `?at=practice`): Sal's card opens by itself; closing it is 1 tap, walking to the counter 1 hold, and the seal "Open" brings the card back (1 tap). The lectern: 1 hold, seal "Read" opens the Book (1 tap). The gate: 1 hold, seal "Leave". The stick is hidden while a card or a plate is up, so the yard leads.
 - **The seal's word:** the first word of an E prompt, three shapes ("Press E to talk...", "Press E at the shelves to read...", "Press E: look 3 years ahead"); a verb with "back" keeps it ("Head back"). Unit-tested in `frontend/src/game3d/touchInput.test.ts`.
 - **Sideways phone:** on a touch screen the 3D view's floor is 160 px (480 px with a mouse), so the stick and the seal stay on a 390 px tall screen; held sideways the prompt and hint stay low, between the two controls.
-- **Identity:** `/game3d` 2 before and 2 after, as judged by the game-ux-designer review of the #485 PR (the controls are HUD).
+- **Identity:** `/game3d` 2 before and 2 after, as judged by the game-ux-designer review of PR #537 (the controls are HUD).
 - **Open for Faiz:** whether the controls should stay up under the Quest log and Towers panels (built: hidden under every panel), whether "Swap hands" stays a toolbar chip, and the real look on a phone.
