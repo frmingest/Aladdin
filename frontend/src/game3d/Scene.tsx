@@ -76,8 +76,6 @@ import type { SpotWorld } from "./near";
 import { nearStore, useNear } from "./nearStore";
 import type { Shelf } from "./libraryShelves";
 import { enterableOf } from "./towerDoor";
-import { useTouchScreen } from "./useTouchScreen";
-import { TOUCH_WORDS } from "./touchWordsV2";
 
 const HALL_DARK = "#1d1712";
 const noop = () => {};
@@ -175,6 +173,8 @@ interface Props extends Omit<WorldProps, "area" | "room" | "hold" | "look" | "on
   hold?: boolean;
   look?: SceneLook;
   onFieldPresets?: WorldProps["onFieldPresets"];
+  /** The canvas's screen-reader name; a touch screen names the rose, not the keys (#536). */
+  label?: string;
   onStats: (s: PerfStats) => void;
   /** Per-group draw-call walk for the stats overlay; off unless the overlay is open. */
   statsDetail?: boolean;
@@ -439,8 +439,10 @@ function FrameTimeCap() {
   return null;
 }
 
-export default function Scene({ world, onLockChange, onStats, statsDetail = false, area = COURTYARD, room = null, hold = false, look = EMPTY_LOOK, onFieldPresets = noop }: Props) {
-  const touch = useTouchScreen();
+/** The 3D view's name for a screen reader with a keyboard and mouse; a touch screen passes its own (touchWordsV2). */
+const DESK_LABEL = "3D courtyard. Walk with W A S D, look with the mouse.";
+
+export default function Scene({ world, onLockChange, onStats, statsDetail = false, area = COURTYARD, room = null, hold = false, look = EMPTY_LOOK, onFieldPresets = noop, label = DESK_LABEL }: Props) {
   const inside = AREAS[area.id].lighting === "indoor";
   // The weather: only the sky and fog colour change (calm keeps the courtyard's own sky); lights stay as they are.
   const wx = weatherLook(look.siegeLevel);
@@ -451,7 +453,7 @@ export default function Scene({ world, onLockChange, onStats, statsDetail = fals
       camera={{ fov: 60, near: 0.1, far: 500, position: [0, 6, 44] }}
       gl={{ antialias: true, powerPreference: "high-performance" }}
       tabIndex={0}
-      aria-label={touch ? TOUCH_WORDS.canvas : "3D courtyard. Walk with W A S D, look with the mouse."}
+      aria-label={label}
     >
       <FrameTimeCap />
       {inside ? (

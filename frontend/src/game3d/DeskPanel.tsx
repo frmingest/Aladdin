@@ -88,7 +88,7 @@ export default function DeskPanel({
   };
 
   return (
-    <aside aria-label="Writing desk" className="g3d-panel g3d-slide absolute right-3 top-14 z-20 max-h-[calc(100%-4.5rem)] w-80 max-w-[44%] overflow-y-auto p-3 text-sm">
+    <aside aria-label="Writing desk" className="g3d-panel g3d-slide absolute right-3 top-[4.5rem] z-20 max-h-[calc(100%-5.25rem)] md:top-14 md:max-h-[calc(100%-4.5rem)] w-80 max-w-[44%] overflow-y-auto p-3 text-sm">
       <header className="g3d-head">
         <h2>✒️ Writing desk</h2>
         <button type="button" className="g3d-x" aria-label="Close the desk" onClick={onClose}>×</button>

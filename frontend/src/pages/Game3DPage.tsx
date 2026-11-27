@@ -1617,7 +1617,7 @@ export default function Game3DPage() {
     <div ref={fitRef} style={{ height: fitStyle }} className={`relative ${touch ? "min-h-[160px]" : "min-h-[480px]"} w-full overflow-hidden bg-surface`}>
       <SceneBoundary fallback={<Unavailable />}>
         <Suspense fallback={null}>
-          <Scene world={shownWorld} area={area} room={roomView} hold={isMoving(areaState)} look={look} onFieldPresets={onFieldPresets} onLockChange={setLocked} onStats={setStats} statsDetail={showPerf} />
+          <Scene world={shownWorld} area={area} room={roomView} hold={isMoving(areaState)} look={look} onFieldPresets={onFieldPresets} onLockChange={setLocked} onStats={setStats} statsDetail={showPerf} label={touch ? TOUCH_WORDS.canvas : undefined} />
         </Suspense>
         {/* Until the world (or the place just entered) is drawn, say so (#479). Inside the boundary, so a crashed scene shows
             only the "unavailable" card, never a loading line that never ends. */}
@@ -1745,7 +1745,7 @@ export default function Game3DPage() {
           aria-pressed={practicePlainOpen}
           onClick={() => setPracticePlainOpen((v) => !v)}
           // Below md the toolbar can reach the top-left corner, so the Plain view sits under it there (#536).
-          className="absolute left-3 top-[4.5rem] z-30 md:top-3 rounded border border-border bg-surface/90 px-3 py-1.5 text-sm text-ink hover:opacity-80"
+          className="g3d-plain absolute left-3 top-[4.5rem] z-30 md:top-3 rounded border border-border bg-surface/90 px-3 py-1.5 text-sm text-ink hover:opacity-80"
         >
           {PLAIN_VIEW}
         </button>
@@ -1754,7 +1754,7 @@ export default function Game3DPage() {
           to="/fortress"
           title={PLAIN_VIEW_TITLE}
           // Below md the toolbar can reach the top-left corner, so the Plain view sits under it there (#536).
-          className="absolute left-3 top-[4.5rem] z-30 md:top-3 rounded border border-border bg-surface/90 px-3 py-1.5 text-sm text-ink hover:opacity-80"
+          className="g3d-plain absolute left-3 top-[4.5rem] z-30 md:top-3 rounded border border-border bg-surface/90 px-3 py-1.5 text-sm text-ink hover:opacity-80"
         >
           {PLAIN_VIEW}
         </Link>
@@ -1817,7 +1817,7 @@ export default function Game3DPage() {
         <button
           type="button"
           onClick={backOutside}
-          className={`g3d-back absolute left-3 z-20 top-[7.25rem] md:top-14 rounded border border-border bg-surface/90 px-3 py-1.5 text-sm text-ink hover:opacity-80`}
+          className={`g3d-back absolute left-3 z-20 top-[7.5rem] md:top-14 rounded border border-border bg-surface/90 px-3 py-1.5 text-sm text-ink hover:opacity-80`}
         >
           ← Back outside
         </button>

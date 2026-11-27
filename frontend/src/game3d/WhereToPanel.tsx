@@ -20,7 +20,7 @@ export default function WhereToPanel({ onPick, onClose, only = null, onlyRoutes 
   return (
     <aside
       aria-label={MENU_TITLE}
-      className="g3d-panel g3d-slide absolute bottom-3 left-3 top-[7.25rem] z-30 md:top-14 w-96 max-w-[94%] overflow-y-auto p-3 text-sm"
+      className="g3d-panel g3d-slide absolute bottom-3 left-3 top-[7.5rem] z-30 md:top-14 w-96 max-w-[94%] overflow-y-auto p-3 text-sm"
     >
       <header className="g3d-head">
         <h2>🪧 {MENU_TITLE}</h2>

@@ -33,7 +33,7 @@ export default function HourglassBanner({
   return (
     <div
       role="status"
-      className="g3d-panel absolute left-1/2 top-14 z-30 flex w-max max-w-[92%] -translate-x-1/2 flex-wrap items-center justify-center gap-x-3 gap-y-1 px-3 py-1.5 text-sm"
+      className="g3d-panel absolute left-[8.5rem] right-3 top-[4.5rem] z-30 flex flex-wrap md:left-1/2 md:right-auto md:top-14 md:w-max md:max-w-[92%] md:-translate-x-1/2 items-center justify-center gap-x-3 gap-y-1 px-3 py-1.5 text-sm"
     >
       <strong>{dayLabel(day)}</strong>
       <span>{HOURGLASS_BANNER}</span>

@@ -134,7 +134,7 @@ test.describe("on a desktop with a mouse", () => {
 
 /** The Plain view is on screen, not under the toolbar or the Back button, and a tap at its centre lands on it (#536). */
 async function expectPlainViewClear(page: Page) {
-  const plain = page.getByRole("link", { name: /Plain view/ }).or(page.getByRole("button", { name: /Plain view/ })).first();
+  const plain = page.locator(".g3d-plain");
   await expect(plain).toBeVisible();
   const r = await plain.evaluate((el) => {
     const b = el.getBoundingClientRect();
@@ -156,15 +156,17 @@ for (const [name, opts] of [
 ] as const) {
   test.describe(`on ${name}`, () => {
     test.use(opts);
-    test("the Plain view is clear of the toolbar and the Back button, in the courtyard and in a room (#536)", async ({ page }) => {
+    test("the Plain view is clear of the toolbar and the Back button, in the courtyard and in two rooms (#536)", async ({ page }) => {
       test.setTimeout(150_000);
       const problems = watch(page);
       await openCourtyard(page);
       await expectPlainViewClear(page);
-      await page.goto("/game3d?at=mint");
-      await expect(page.locator("canvas")).toHaveCount(1, { timeout: 60_000 });
-      await expect(page.locator(".g3d-back")).toBeVisible();
-      await expectPlainViewClear(page);
+      for (const room of ["mint", "records"]) {
+        await page.goto(`/game3d?at=${room}`);
+        await expect(page.locator("canvas")).toHaveCount(1, { timeout: 60_000 });
+        await expect(page.locator(".g3d-back")).toBeVisible();
+        await expectPlainViewClear(page);
+      }
       await problems.assertNone();
     });
   });

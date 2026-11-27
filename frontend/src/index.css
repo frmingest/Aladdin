@@ -1046,7 +1046,7 @@
 @media (pointer: coarse) {
   .g3d-tool { min-height: 44px; min-width: 44px; justify-content: center; }
   .g3d-kbd { display: none; }
-  .g3d-back { min-height: 44px; }
+  .g3d-back, .g3d-plain { min-height: 44px; }
 }
 /* A phone-wide window: the chips stack their icon over a small name, so the whole toolbar fits the screen (489 px wide on a
    390 px touch phone before #485; 441 px on a 375 px window with a mouse before #536). On touch each chip stays a 44 px
