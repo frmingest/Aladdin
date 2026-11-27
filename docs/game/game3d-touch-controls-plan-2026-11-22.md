@@ -68,7 +68,7 @@ PR #537 added plan A (issue #485); merged into main (eea1ae6). Whether it is dep
 
 ## Follow-up: Plain view on a phone, key words on touch (#536, 2026-11-27)
 
-The PR for #536 adds this (written, not yet deployed).
+PR #539 adds this (written, PR open, not deployed).
 
 - **Below `md` (768 px) the HUD stacks under the toolbar:** the "← Plain view" link (courtyard and every room) and the yard's Plain view button at `top-[4.5rem]` (44 px tall on touch, class `g3d-plain`), the Back button and the left-hand panels (Quest log, Where to?, the Mint's and the yard's Plain view) at `top-[7.5rem]`, the right-hand panels (desk, drill, shelf, tower) at `top-[4.5rem]`, and the Hourglass banner at `top-[4.5rem]` right of the Plain view. `md` and up is as before. The Quest log now sits over the Back button like the other panels (it was drawn under it).
 - **Measured** (ad hoc, not asserted by a committed test) in a local run (headless Chromium, API stubbed, software WebGL; headless only): at 320 and 390 px (touch) and 375 px (mouse) the link is at y 129 to 163 (173 on touch), under the toolbar (bottom 110 or 121) and over Back (177); a tap at its centre lands on it in the courtyard, the Mint, the Hall of Records and the yard; at 1280 px it is where it was. The Hourglass banner and the right-hand panels were not reached with the API stubbed. The committed check is `frontend/e2e/regression/touch.spec.ts` (390 touch and 375 mouse; courtyard, the Mint and the Hall of Records).
