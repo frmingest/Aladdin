@@ -183,6 +183,7 @@ import {
 } from "../game3d/starterPlanV4";
 import type { CheckBeat, CheckOutcome, StarterSaved } from "../game3d/starterPlanV4";
 import { SPEAKERS, STARTER_WORDS } from "../game3d/starterWordsV3";
+import type { Line } from "../game3d/starterWordsV3";
 import { PIP } from "../game3d/practiceCompanyV1";
 import type { PerfStats } from "../game3d/PerfProbe";
 
@@ -814,6 +815,12 @@ export default function Game3DPage() {
     if (whyRow(starter.run) === "why") return WHY_CHIPS.map((id) => ({ id, label: STARTER_WORDS.why.chips[id], tried: false }));
     return WRONG_CHIPS.map((id) => ({ id, label: STARTER_WORDS.why.wrongChips[id], tried: false }));
   }, [starter.run]);
+  // Row 2's header is the half-written sheet ("Your why: Price below worth."), so the "wrong if" is picked beside its why.
+  const whyHeader = useMemo((): Line => {
+    const first = starter.run.picks.why?.[0];
+    if (whyRow(starter.run) === "why" || !first) return STARTER_WORDS.why.taught;
+    return { who: STARTER_WORDS.why.taught.who, text: `${STARTER_WORDS.plain.rows.why}: ${STARTER_WORDS.why.chips[first]}.` };
+  }, [starter.run]);
   // Beat 8: with all five pages, once ever, the banner unrolls and the cheer plays after the why's result plate; then Barren.
   const cheerDue = useRef(false);
   const [yardCheerKey, setYardCheerKey] = useState<number | null>(null);
@@ -874,7 +881,7 @@ export default function Game3DPage() {
         : endShown
           ? `${said(endLine)}`
         : whyOpen
-          ? `${said(STARTER_WORDS.why.taught)} ${STARTER_WORDS.why.rows[whyRow(starter.run)]}`
+          ? `${said(whyHeader)} ${STARTER_WORDS.why.rows[whyRow(starter.run)]}`
         : stormWaits && stormStep === "falling" && starter.run.second
           ? `${STARTER_WORDS.storm2.fridge} ${STARTER_WORDS.scale.priceAfter.replace("→", "to")}.`
         : stormWaits && stormStep === "coming"
@@ -1909,7 +1916,7 @@ export default function Game3DPage() {
             <StarterCheckCard
               key={whyRow(starter.run)}
               title={STARTER_WORDS.why.rows[whyRow(starter.run)]}
-              line={STARTER_WORDS.why.taught}
+              line={whyHeader}
               missed={false}
               choices={whyChoices}
               onPick={pickWhyChip}

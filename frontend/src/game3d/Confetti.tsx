@@ -18,7 +18,6 @@ export default function Confetti({ burstKey, origin = FOUNTAIN }: { burstKey: nu
   const seen = useRef<number | null>(null);
   const dummy = useMemo(() => new Object3D(), []);
   const pieces = useMemo(() => makePieces(), []);
-  const reduced = useRef(prefersReducedMotion());
 
   useEffect(() => {
     const m = mesh.current;
@@ -33,7 +32,7 @@ export default function Confetti({ burstKey, origin = FOUNTAIN }: { burstKey: nu
     if (!m) return;
     if (burstKey != null && burstKey !== seen.current) {
       seen.current = burstKey;
-      started.current = reduced.current ? null : state.clock.elapsedTime;
+      started.current = prefersReducedMotion() ? null : state.clock.elapsedTime;
     }
     const t0 = started.current;
     const age = t0 == null ? -1 : state.clock.elapsedTime - t0;

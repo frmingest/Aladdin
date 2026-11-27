@@ -259,7 +259,7 @@ function PinnedSheet({ lines }: { lines: readonly [string, string] }) {
   return (
     <group position={[SHEET_AT.x, 1.75, SHEET_AT.z]} rotation={[0, SHEET_AT.yaw, 0]}>
       <WorldSign spec={{ kind: "plank", lines: [...lines] }} position={[0, 0, 0.05]} width={2.3} both={false} />
-      <Part color={PAL.iron} position={[0, 0.34, 0.1]} grow={1.2}>
+      <Part ink={false} color={PAL.iron} position={[0, 0.34, 0.1]} grow={1.2}>
         <sphereGeometry args={[0.06, 8, 6]} />
       </Part>
     </group>

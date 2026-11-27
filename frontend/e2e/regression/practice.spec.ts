@@ -164,7 +164,7 @@ const AFTER_CHECKS: Run = {
 
 /**
  * Beat 7 (#496) by keyboard: the why card opens by itself after the storm's result, one row of chips at a time, focus on
- * Barren's line each time. One chip per row; the second pins the sheet. Then the result plate with its page line.
+ * Barren's line (row 2: the half-written sheet). One chip per row; the second pins the sheet. Then the result plate with its page line.
  */
 async function pinWhyByKeyboard(page: Page, chips: [string, string], pageLine: string) {
   const row1 = page.getByRole("dialog", { name: "Why I own it" });
@@ -173,7 +173,8 @@ async function pinWhyByKeyboard(page: Page, chips: [string, string], pageLine: s
   await page.keyboard.press(chips[0]);
   const row2 = page.getByRole("dialog", { name: "I'm wrong if" });
   await expect(row2).toBeVisible();
-  await expect(row2.getByText("Write why you own it, and what proves you wrong.")).toBeFocused();
+  // Row 2's header is the half-written sheet: the why just picked, so the "wrong if" is chosen beside it.
+  await expect(row2.getByText(/^Your why: .+\.$/)).toBeFocused();
   await page.keyboard.press(chips[1]);
   await expect(row2).toHaveCount(0);
   await expectResult(page, "Write it down", "Pinned on the door. The flag is up.", pageLine);
