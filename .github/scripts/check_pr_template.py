@@ -16,6 +16,7 @@ import re
 import sys
 
 REQUIRED_SECTIONS = (
+    "In plain words",
     "What changed and why",
     "How it was verified",
     "Who reviewed it (agents and skills)",
@@ -35,6 +36,13 @@ ROLES = (
     "valuation-reviewer",
     "board-steward",
 )
+# Plain words (CLAUDE.md "Plain words", issue #541, decided 2026-11-27): Faiz reads these, so they stay short.
+# Limits come from a review of all 398 PRs: median body 239 words, 774 since the template, titles over 72 in 131.
+TITLE_MAX_CHARS = 72
+PLAIN_MAX_WORDS = 60
+PLAIN_MIN_WORDS = 8
+BODY_MAX_WORDS = 400  # everything except the reviewer section; long detail goes to a linked docs/ file
+RESULT_MAX_WORDS = 25  # one reviewer-table "Result / link" cell
 GAME_ROLES = ("playtest-qa", "game-ux-designer", "game-designer", "game-feel-engineer")
 RAN = {"yes", "ran", "run"}
 NOT_RAN = {"skipped", "no", "n/a", "not run"}
@@ -64,8 +72,39 @@ def _cells(row: str) -> list[str]:
     return [c.strip() for c in row.strip().strip("|").split("|")]
 
 
-def check(body: str, changed_files: list[str] | None = None) -> list[str]:
-    """Problems with the body; an empty list means it passes."""
+def _words(text: str) -> int:
+    return len(re.findall(r"\S+", text))
+
+
+def check_plain_words(body: str, secs: dict[str, str], title: str | None = None) -> list[str]:
+    """Short, human wording (CLAUDE.md "Plain words"). Counts words, not understanding: it cannot judge jargon,
+    so the opening section may not hold code, a file path or an issue number, which is where jargon starts."""
+    errors: list[str] = []
+    if title is not None and len(title.strip()) > TITLE_MAX_CHARS:
+        errors.append(f"the title is {len(title.strip())} characters; keep it to {TITLE_MAX_CHARS} or fewer, in plain words")
+    plain = re.sub(r"<!--.*?-->", "", secs.get("In plain words", ""), flags=re.DOTALL).strip()
+    n = _words(plain)
+    if n < PLAIN_MIN_WORDS:
+        errors.append("'In plain words' is empty or too thin: say what changes for Faiz in two or three short sentences")
+    elif n > PLAIN_MAX_WORDS:
+        errors.append(f"'In plain words' is {n} words; the limit is {PLAIN_MAX_WORDS}. Cut it, the detail goes under 'What changed and why'")
+    if re.search(r"`|#\d+|\b[\w.-]+/[\w.-]+\.\w{1,5}\b", plain):
+        errors.append("'In plain words' holds code, a file path or an issue number; say it the way you would to a friend, put those below")
+    reviewer = secs.get("Who reviewed it (agents and skills)", "")
+    total = _words(body) - _words(reviewer) - _words("## Who reviewed it (agents and skills)")
+    if total > BODY_MAX_WORDS:
+        errors.append(f"the body is {total} words outside the reviewer table; the limit is {BODY_MAX_WORDS}. Move detail to a docs/ file and link it")
+    for line in reviewer.splitlines():
+        if line.lstrip().startswith("|") and "`" in line:
+            cells = _cells(line)
+            if len(cells) >= 4 and _words(cells[2]) > RESULT_MAX_WORDS:
+                role = re.search(r"`([a-z\-]+)`", cells[0])
+                errors.append(f"`{role.group(1) if role else cells[0][:20]}`: the result is {_words(cells[2])} words; the limit is {RESULT_MAX_WORDS}. Link the report instead")
+    return errors
+
+
+def check(body: str, changed_files: list[str] | None = None, title: str | None = None) -> list[str]:
+    """Problems with the body (and the title, when given); an empty list means it passes."""
     errors: list[str] = []
     body = body or ""
     files = changed_files or []
@@ -139,6 +178,7 @@ def check(body: str, changed_files: list[str] | None = None) -> list[str]:
 
     if not re.search(r"Implemented by:\s*\S{3,}", body):
         errors.append("'Implemented by:' has no answer")
+    errors += check_plain_words(body, secs, title)
     return errors
 
 
@@ -158,7 +198,7 @@ def main() -> int:
         return 0
     if "no-issue" in labels.split(","):
         print("no-issue label ignored: it only skips this check when every changed file is a docs or README markdown file.")
-    errors = check(body, files)
+    errors = check(body, files, os.environ.get("PR_TITLE"))
     for e in errors:
         print(f"::error::{e}")
     if errors:

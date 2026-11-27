@@ -1,3 +1,7 @@
+## In plain words
+
+<!-- Two or three short sentences, at most 60 words: what changes for Faiz and what he has to do. No code, file paths or issue numbers here. Write it the way you would say it to a friend. -->
+
 ## What changed and why
 
 ## How it was verified

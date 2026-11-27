@@ -30,6 +30,7 @@ jobs:
       - name: Check the PR body against the template
         env:
           PR_BODY: ${{ github.event.pull_request.body }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
           PR_LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
