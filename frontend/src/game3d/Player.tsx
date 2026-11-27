@@ -9,6 +9,7 @@ import type { Motion } from "./animClips";
 import { CAMERA_HIDE_HERO_WITHIN, cameraPull } from "./cameraRoom";
 import type { CameraRoom } from "./cameraRoom";
 import { HeroFigure } from "./Figures";
+import { MAX_FRAME_DT } from "./physicsStep";
 import { SPAWN } from "./layout";
 import {
   JUMP_SPEED,
@@ -68,9 +69,11 @@ export default function Player({ keys, orbit, pos: posOut, teleport = null, chee
   const model = useRef<THREE.Group>(null);
   const facing = useRef(0);
   const motion = useRef<Motion>({ moving: false, running: false });
+  const drawnAt = useRef(new THREE.Vector3());
   const { world, rapier } = useRapier();
   // After a door the hero hovers until the scene has settled: the first frames of a new room hitch (shaders,
-  // models), and one long physics step drops a falling hero straight through the floor.
+  // models). With fixed steps (#486) a long frame no longer means one long step, but the hover stays: it also keeps her
+  // still while the new floor's colliders arrive.
   const hover = useRef<{ frames: number; until: number } | null>(null);
   const holdRef = useRef(hold);
   holdRef.current = hold;
@@ -98,7 +101,7 @@ export default function Player({ keys, orbit, pos: posOut, teleport = null, chee
   useFrame((state, delta) => {
     const rb = body.current;
     if (!rb) return;
-    const dt = Math.min(delta, 0.05);
+    const dt = Math.min(delta, MAX_FRAME_DT);
     const pos = rb.translation();
     const vel = rb.linvel();
     posOut.current.x = pos.x;
@@ -114,7 +117,8 @@ export default function Player({ keys, orbit, pos: posOut, teleport = null, chee
       rb.setLinvel({ x: 0, y: rb.linvel().y, z: 0 }, true);
     }
     if (h) {
-      if (delta < 0.05) h.frames -= 1;
+      // A calm frame is shorter than the frame-time cap; a capped (slow) frame reports exactly MAX_FRAME_DT, so never counts.
+      if (delta < MAX_FRAME_DT) h.frames -= 1;
       if (h.frames <= 0 || performance.now() > h.until) {
         hover.current = null;
         rb.setGravityScale(1, true);
@@ -148,12 +152,17 @@ export default function Player({ keys, orbit, pos: posOut, teleport = null, chee
     }
     if (model.current) model.current.rotation.y = facing.current;
 
-    // Follow camera: behind and above, easing so it never snaps.
+    // Follow camera: behind and above, easing so it never snaps. It follows the hero as drawn (#486): physics runs in
+    // fixed steps and rapier draws her between the last two, so following the body itself would make her judder.
     const o = orbit.current;
     const [ox, oy, oz] = cameraOffset(o.yaw, o.pitch, o.distance);
-    const fx = pos.x;
-    const fy = pos.y - CENTRE_HEIGHT + FOCUS_HEIGHT;
-    const fz = pos.z;
+    // Known, cosmetic: right after a teleport, on a frame where no step runs (120/144 Hz), rapier still draws her part way
+    // from the old spot for that one frame; doors hide it behind the area fade.
+    const drawn = model.current?.parent ? model.current.parent.getWorldPosition(drawnAt.current) : null;
+    const seen = drawn ?? pos;
+    const fx = seen.x;
+    const fy = seen.y - CENTRE_HEIGHT + FOCUS_HEIGHT;
+    const fz = seen.z;
     // In a room the camera comes in along its own line of sight until it is inside the walls (same view, closer).
     const walls = roomRef.current;
     const pull = walls ? cameraPull([fx, fy, fz], [ox, oy, oz], walls) : 1;
@@ -178,9 +187,8 @@ export default function Player({ keys, orbit, pos: posOut, teleport = null, chee
       colliders={false}
       canSleep={false}
       linearDamping={0}
-      // Continuous collision detection (#480): physics steps follow the frame time (timeStep "vary", clamped at 0.5 s), so
-      // on a slow frame (a phone, a hidden tab) one step can carry her several metres, straight through an advisor, a post
-      // or a thin wall. CCD sweeps the capsule along the step, so she stops at what is in the way.
+      // Continuous collision detection (#480). Physics now runs in fixed 1/60 s steps (#486), so one step carries her at
+      // most about 0.2 m; CCD stays as a second guard for thin posts and walls.
       ccd
     >
       <CapsuleCollider args={[HALF_HEIGHT, RADIUS]} friction={0} />
