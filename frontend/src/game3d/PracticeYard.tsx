@@ -48,7 +48,7 @@ import {
 import type { PracticeLook, YardMoat, YardWall } from "./practiceYardLogic";
 import { WORLD_TOKENS } from "./gameTokens";
 import { PIP } from "./practiceCompanyV1";
-import { STARTER_WORDS } from "./starterWordsV1";
+import { STARTER_WORDS } from "./starterWordsV2";
 import { TOWER_FOG_COLOR, TOWER_PAD_TOP } from "./towerLook";
 
 const GRASS = LAND_COLOURS.grass;

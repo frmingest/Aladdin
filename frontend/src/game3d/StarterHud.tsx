@@ -1,5 +1,5 @@
-import { SPEAKERS, STARTER_WORDS } from "./starterWordsV1";
-import type { Line } from "./starterWordsV1";
+import { SPEAKERS, STARTER_WORDS } from "./starterWordsV2";
+import type { Line } from "./starterWordsV2";
 
 /**
  * The practice yard's heads-up line (#493): the goal strip and the practice tag, under the toolbar (lower on a phone, clear of

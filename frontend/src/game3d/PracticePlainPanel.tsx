@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { STARTER_WORDS } from "./starterWordsV1";
+import { STARTER_WORDS } from "./starterWordsV2";
 
 type RowKey = keyof typeof STARTER_WORDS.plain.rows;
 
