@@ -5,10 +5,15 @@ import type { ReactNode } from "react";
  * (prompt 4 rem up, hint 1 rem up), so on a phone the hint wrapped to three lines and grew up under the prompt. Stacked, a tall
  * hint pushes the prompt up instead. The hint slot keeps at least 3 rem, so on a desktop, where the hint is one line, and when
  * there is no hint at all, the prompt sits exactly where it always did (4 rem up).
+ *
+ * On a touch screen (#485) the stack lifts above the thumb stick and the action seal, so neither covers the words.
  */
-export default function HudBottomStack({ prompt, hint }: { prompt: ReactNode; hint: ReactNode }) {
+export default function HudBottomStack({ prompt, hint, lift = false }: { prompt: ReactNode; hint: ReactNode; lift?: boolean }) {
   return (
-    <div className="pointer-events-none absolute inset-x-0 bottom-4 flex flex-col items-center" data-testid="hud-bottom-stack">
+    <div
+      className={`pointer-events-none absolute inset-x-0 flex flex-col items-center ${lift ? "bottom-[calc(7.5rem+env(safe-area-inset-bottom))]" : "bottom-4"}`}
+      data-testid="hud-bottom-stack"
+    >
       {prompt}
       <div className="flex min-h-[3rem] w-full flex-col items-center justify-end">{hint}</div>
     </div>

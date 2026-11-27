@@ -30,11 +30,26 @@ export const WORLD_TOKENS = {
   stormPaddock: "#75876a",
 } as const;
 
+/**
+ * The touch controls (#485): a brass compass rose (the stick) and a red wax seal with cream letters (the action). Brass and
+ * wax are ornament; the seal's word and the rose's shape carry the meaning, never the colour.
+ */
+export const TOUCH_TOKENS = {
+  brass: "#c9a653",
+  brassDeep: "#8a6a32",
+  brassLight: "#f2d27a",
+  wax: "#7a1f14",
+  waxDeep: "#4e120b",
+  waxInk: "#fbe9c2",
+  outline: "#26253B",
+} as const;
+
 /** The (ink, plate) pairs the tokens promise are readable. */
 export const LABEL_PAIRS: ReadonlyArray<readonly [string, string, string]> = [
   ["plate", LABEL_TOKENS.ink, LABEL_TOKENS.plate],
   ["fog", LABEL_TOKENS.fogInk, LABEL_TOKENS.fogPlate],
   ["now", LABEL_TOKENS.nowInk, LABEL_TOKENS.nowPlate],
+  ["seal", TOUCH_TOKENS.waxInk, TOUCH_TOKENS.wax],
 ];
 
 function channel(v: number): number {

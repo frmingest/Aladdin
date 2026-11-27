@@ -49,3 +49,14 @@ Issue #480 (feel fixes), item 4: "Touch controls: a plan first, its own issue if
 ## Not decided here
 
 Whether touch play should wait for the starter level (#476, #477). This plan does not add a place, a lever or a reward, so it does not cut across the "freeze new places" proposal, but its order against the starter level is Faiz's call; #485 should serve the route #477 will use.
+
+## Build (#485, 2026-11-27)
+
+The #485 PR builds plan A. Written, PR open, not deployed. What it does, checked against the code in that PR:
+
+- **Where:** `frontend/src/game3d/TouchControls.tsx` (stick and seal), `touchInput.ts` (pure maths: stick vector, dead zone 12%, run past 85%, seal word, pinch, hand setting), `useTouchScreen.ts` (`(pointer: coarse)`), `touchWordsV1.ts` (the touch hint and names), `useOrbit.ts` (one-finger look, two-finger pinch, no pointer-lock request after a touch), `movement.ts` (`moveVector` takes the stick's analog push), kit art `components/fortress/kit/TouchControlsArt.tsx` (compass rose, knob, wax seal; colours in `TOUCH_TOKENS`, `gameTokens.ts`).
+- **One deviation from the plan:** the stick writes one shared stick value (`touchStick` in `touchInput.ts`) that the hero reads every frame beside the keyboard's `keys` ref, rather than the `keys` ref itself, because the keys are on/off and the stick is analog (a half push walks at half speed). Still no React state per frame.
+- **The prompt on touch** is a plain plate with the words only (no key cap, no button), so the seal is the one control for the action: no control appears twice on one screen.
+- **Hidden** while any panel, card, plate or the talk is open (the same rule as the hint line), and the seal shows only while the prompt names an E action and E is not blocked.
+- **Toolbar on a touch phone:** chips stack their icon over a small name so the toolbar fits (it ran about 50 px past both edges of a 390 px phone before), each at least 44 px; key letters hidden. A "Swap hands" chip shows on touch only.
+- **Starter route by emulated touch** (headless Chromium, `hasTouch` + `isMobile`, 390 x 844, API stubbed, software WebGL; headless only): gate to Barren 1 hold + 1 tap (Talk), close the talk 1 tap, Barren to Sal 1 hold + 1 tap (Talk: open a new stall), close Sal's card 1 tap, Sal to the desk 1 hold + 1 tap (Write). Total 3 holds and 5 taps; each place is one hold and one tap. The real look on a phone is Faiz's.

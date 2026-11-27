@@ -1022,6 +1022,38 @@
   .g3d-kbd { display: none; }
 }
 
+/* Touch controls (#485): a brass compass rose to walk, a wax seal to act. Touch screens only (the page mounts them only
+   there). Both keep clear of the notch and the home bar. No transition or animation: only the thumb moves them. */
+.g3d-stick-zone { position: absolute; bottom: 0; z-index: 15; width: min(48%, 16rem); height: min(42%, 15rem); touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; padding-bottom: env(safe-area-inset-bottom); }
+.g3d-stick-zone.left { left: 0; padding-left: env(safe-area-inset-left); }
+.g3d-stick-zone.right { right: 0; padding-right: env(safe-area-inset-right); }
+.g3d-stick-rose { position: absolute; bottom: calc(1rem + env(safe-area-inset-bottom)); opacity: 0.7; pointer-events: none; filter: drop-shadow(0 3px 6px rgb(0 0 0 / 0.5)); }
+.g3d-stick-zone.left .g3d-stick-rose { left: calc(1rem + env(safe-area-inset-left)); }
+.g3d-stick-zone.right .g3d-stick-rose { right: calc(1rem + env(safe-area-inset-right)); }
+.g3d-stick-zone[data-active] .g3d-stick-rose { opacity: 1; }
+.g3d-stick-knob { position: absolute; pointer-events: none; }
+.g3d-seal { position: absolute; z-index: 15; bottom: calc(1.5rem + env(safe-area-inset-bottom)); display: grid; place-items: center; border-radius: 50%; touch-action: manipulation; user-select: none; -webkit-user-select: none; filter: drop-shadow(0 3px 6px rgb(0 0 0 / 0.55)); }
+.g3d-seal.right { right: calc(1.25rem + env(safe-area-inset-right)); }
+.g3d-seal.left { left: calc(1.25rem + env(safe-area-inset-left)); }
+.g3d-seal > svg { position: absolute; inset: 0; }
+.g3d-seal-word { position: relative; max-width: 3.6rem; font-family: Georgia, serif; font-size: 0.9rem; font-weight: 700; line-height: 1; text-align: center; color: #fbe9c2; overflow-wrap: anywhere; }
+.g3d-seal-word.long { font-size: 0.7rem; }
+.g3d-seal:focus-visible { outline: 3px solid #f2d27a; outline-offset: 2px; }
+/* On a touch screen the toolbar chips and the Back button are 44 px tap targets, and the key letters go (no keyboard).
+   The prompt and the hint lift above the stick and the seal. */
+@media (pointer: coarse) {
+  .g3d-tool { min-height: 44px; min-width: 44px; justify-content: center; }
+  .g3d-kbd { display: none; }
+  .g3d-back { min-height: 44px; }
+}
+/* A touch phone: the chips stack their icon over a small name, so the whole toolbar fits the screen (it ran 50 px past
+   both edges of a 390 px phone before), and each chip stays a 44 px target. The badge sits on the chip's corner. */
+@media (pointer: coarse) and (max-width: 640px) {
+  .g3d-toolbar { max-width: calc(100vw - 0.5rem); }
+  .g3d-tool { position: relative; flex-direction: column; gap: 0.1rem; padding: 0.25rem 0.45rem; font-size: 0.66rem; line-height: 1.1; }
+  .g3d-tool .g3d-badge { position: absolute; top: 1px; right: 1px; min-width: 1rem; padding: 0 0.2rem; font-size: 0.6rem; line-height: 1rem; }
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .g3d-slide { animation: g3d-in 0.18s ease-out; }
   @keyframes g3d-in { from { opacity: 0; } to { opacity: 1; } }

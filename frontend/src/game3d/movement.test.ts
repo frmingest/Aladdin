@@ -51,6 +51,29 @@ describe("moveVector", () => {
   it("cancels opposite keys", () => {
     expect(moveVector({ ...NO_KEYS, forward: true, back: true }, 0)).toEqual({ x: 0, z: 0 });
   });
+
+  // #485: the touch stick walks the same way the keys do, at its own strength.
+  it("walks forward at half speed for a half push of the stick", () => {
+    const v = moveVector(NO_KEYS, 0, { fwd: 0.5, side: 0 });
+    close(v.x, 0);
+    close(v.z, -0.5);
+  });
+
+  it("turns the stick with the camera, as it turns the keys", () => {
+    const keys = moveVector({ ...NO_KEYS, right: true }, 1.1);
+    const stick = moveVector(NO_KEYS, 1.1, { fwd: 0, side: 1 });
+    close(stick.x, keys.x);
+    close(stick.z, keys.z);
+  });
+
+  it("never passes full speed with a key and the stick together", () => {
+    const v = moveVector({ ...NO_KEYS, forward: true }, 0, { fwd: 1, side: 0 });
+    close(Math.hypot(v.x, v.z), 1);
+  });
+
+  it("stands still for a stick at rest", () => {
+    expect(moveVector(NO_KEYS, 0.3, { fwd: 0, side: 0 })).toEqual({ x: 0, z: 0 });
+  });
 });
 
 describe("camera limits", () => {
