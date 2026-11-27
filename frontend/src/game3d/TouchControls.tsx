@@ -3,6 +3,7 @@ import type { PointerEvent as ReactPointerEvent } from "react";
 import { CompassRose, RoseKnob, WaxSealDisc } from "../components/fortress/kit/TouchControlsArt";
 import { STICK_RADIUS, STICK_SIZE, knobOffset, releaseStick, sealLabel, sealWord, setStick, stickCentre, stickInput } from "./touchInput";
 import type { StickSide } from "./touchInput";
+import { TOUCH_TOKENS } from "./gameTokens";
 import { TOUCH_WORDS } from "./touchWordsV1";
 
 const KNOB = 44;
@@ -25,12 +26,17 @@ export default function TouchControls({ side, prompt, onAct }: { side: StickSide
   const finger = useRef<{ id: number; cx: number; cy: number } | null>(null);
   const [active, setActive] = useState(false);
 
-  // Unmounting (a panel opened, the page left) or the page hiding lets go, as a key release does.
+  // Unmounting (a panel opened, the page left) or the page hiding lets go, as a key release does, and the rose goes back
+  // to its corner.
   useEffect(() => {
     const letGo = () => {
       finger.current = null;
       releaseStick();
       setActive(false);
+      const r = rose.current;
+      if (r) r.style.left = r.style.top = r.style.right = r.style.bottom = "";
+      const k = knob.current;
+      if (k) k.style.transform = "";
     };
     const onHide = () => {
       if (document.hidden) letGo();
@@ -127,7 +133,8 @@ export default function TouchControls({ side, prompt, onAct }: { side: StickSide
           type="button"
           data-testid="touch-seal"
           className={`g3d-seal ${side === "left" ? "right" : "left"}`}
-          style={{ width: SEAL, height: SEAL }}
+          // The word's ink and the focus ring come from the tokens (CSS cannot read them).
+          style={{ width: SEAL, height: SEAL, color: TOUCH_TOKENS.waxInk, ["--seal-focus" as string]: TOUCH_TOKENS.brassLight }}
           aria-label={sealLabel(prompt)}
           onClick={onAct}
         >

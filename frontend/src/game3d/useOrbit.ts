@@ -97,6 +97,15 @@ export function useOrbit(onLockChange?: (locked: boolean) => void): MutableRefOb
       pinchGap = fingers.size === 2 ? gap() : null;
     };
 
+    // A lost touch end must not leave a ghost finger (the next one-finger drag would count as a pinch and not look).
+    const forgetFingers = () => {
+      fingers.clear();
+      pinchGap = null;
+    };
+    const onHidden = () => {
+      if (document.hidden) forgetFingers();
+    };
+
     const touchAction = el.style.touchAction;
     el.style.touchAction = "none";
     el.addEventListener("mousedown", onDown);
@@ -107,8 +116,12 @@ export function useOrbit(onLockChange?: (locked: boolean) => void): MutableRefOb
     el.addEventListener("pointercancel", onTouchUp);
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup", onUp);
+    window.addEventListener("blur", forgetFingers);
+    document.addEventListener("visibilitychange", onHidden);
     document.addEventListener("pointerlockchange", onLock);
     return () => {
+      window.removeEventListener("blur", forgetFingers);
+      document.removeEventListener("visibilitychange", onHidden);
       el.style.touchAction = touchAction;
       el.removeEventListener("mousedown", onDown);
       el.removeEventListener("wheel", onWheel);

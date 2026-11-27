@@ -5,9 +5,9 @@ import { TOUCH_WORDS } from "./touchWordsV1";
 const words = (s: string) => s.trim().split(/\s+/).length;
 
 describe("touch words v1 (#485)", () => {
-  it("keeps the touch hint short: four short parts, no longer than the keyboard hint", () => {
+  it("keeps the touch hint short: three short parts, no longer than the keyboard hint", () => {
     const parts = TOUCH_WORDS.hint.split(" · ");
-    expect(parts).toHaveLength(4);
+    expect(parts).toHaveLength(3);
     for (const p of parts) expect(words(p)).toBeLessThanOrEqual(5);
     expect(TOUCH_WORDS.hint.length).toBeLessThanOrEqual(HINT_TEXT.length);
   });

@@ -45,6 +45,9 @@ describe("ActionPrompt on a touch screen", () => {
     expect(h).not.toContain("<button");
     expect(h).not.toContain("<kbd");
   });
+  it("drops 'Press E' from a prompt worded another way", () => {
+    expect(renderToStaticMarkup(<ActionPrompt text="Press E: look 3 years ahead" touch />)).toContain(">Look 3 years ahead<");
+  });
   it("keeps the key cap and the button with a keyboard", () => {
     const h = renderToStaticMarkup(<ActionPrompt text="Press E to talk to Barren Wuffet" />);
     expect(h).toContain("<button");

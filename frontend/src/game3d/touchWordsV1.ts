@@ -3,8 +3,8 @@
  * a new `touchWordsV2.ts`, never an edit here (CLAUDE.md rule 3).
  */
 export const TOUCH_WORDS = {
-  /** Replaces the keyboard hint line on a touch screen (the toolbar's own chips say the rest). */
-  hint: "Push the rose to walk · Push far to run · Tap the seal to act · Drag to look",
+  /** Replaces the keyboard hint line on a touch screen. The seal teaches itself: it shows its word when there is something to do. */
+  hint: "Push the rose to walk · Push far to run · Drag to look",
   /** The stick's name for a screen reader. */
   stick: "Walk",
   /** The toolbar chip that swaps the stick and the seal, and its screen-reader name for each side. */

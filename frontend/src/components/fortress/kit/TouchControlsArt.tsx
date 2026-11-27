@@ -3,7 +3,8 @@ import { TOUCH_TOKENS as T } from "../../../game3d/gameTokens";
 /**
  * Shared kit (#485): the art of the 3D touch controls. Both are decoration (aria-hidden); the buttons around them carry
  * the names. Shape carries the meaning, never colour alone: the rose has four long points (where you can push), the
- * seal is a round blob with a scalloped rim and a word.
+ * seal is a round blob with a scalloped rim and a word. They are controls, not facts, so they have no unknown (fog) or Plain
+ * variant: the seal only exists while the prompt names a real E action. Used by /game3d only, as its touch signature.
  */
 
 const POINTS = [0, 90, 180, 270];
@@ -13,7 +14,8 @@ const SMALL_POINTS = [45, 135, 225, 315];
 export function CompassRose({ size }: { size: number }) {
   return (
     <svg viewBox="-50 -50 100 100" width={size} height={size} aria-hidden focusable="false" data-kit="compass-rose">
-      <circle r="47" fill="rgb(18 13 8 / 0.45)" stroke={T.brassDeep} strokeWidth="3" />
+      <circle r="49" cy="2" fill={T.shadow} />
+      <circle r="47" fill={T.roseGround} stroke={T.brassDeep} strokeWidth="3" />
       <circle r="41" fill="none" stroke={T.brass} strokeWidth="1.5" strokeDasharray="2 4" />
       {SMALL_POINTS.map((a) => (
         <path key={a} d="M0 -26 L5 -5 L0 0 L-5 -5 Z" transform={`rotate(${a})`} fill={T.brassDeep} stroke={T.outline} strokeWidth="1" />

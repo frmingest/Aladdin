@@ -1027,18 +1027,20 @@
 .g3d-stick-zone { position: absolute; bottom: 0; z-index: 15; width: min(48%, 16rem); height: min(42%, 15rem); touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; padding-bottom: env(safe-area-inset-bottom); }
 .g3d-stick-zone.left { left: 0; padding-left: env(safe-area-inset-left); }
 .g3d-stick-zone.right { right: 0; padding-right: env(safe-area-inset-right); }
-.g3d-stick-rose { position: absolute; bottom: calc(1rem + env(safe-area-inset-bottom)); opacity: 0.7; pointer-events: none; filter: drop-shadow(0 3px 6px rgb(0 0 0 / 0.5)); }
+.g3d-stick-rose { position: absolute; bottom: calc(1rem + env(safe-area-inset-bottom)); opacity: 0.7; pointer-events: none; }
 .g3d-stick-zone.left .g3d-stick-rose { left: calc(1rem + env(safe-area-inset-left)); }
 .g3d-stick-zone.right .g3d-stick-rose { right: calc(1rem + env(safe-area-inset-right)); }
 .g3d-stick-zone[data-active] .g3d-stick-rose { opacity: 1; }
-.g3d-stick-knob { position: absolute; pointer-events: none; }
+.g3d-stick-knob { position: absolute; pointer-events: none; will-change: transform; }
 .g3d-seal { position: absolute; z-index: 15; bottom: calc(1.5rem + env(safe-area-inset-bottom)); display: grid; place-items: center; border-radius: 50%; touch-action: manipulation; user-select: none; -webkit-user-select: none; filter: drop-shadow(0 3px 6px rgb(0 0 0 / 0.55)); }
 .g3d-seal.right { right: calc(1.25rem + env(safe-area-inset-right)); }
 .g3d-seal.left { left: calc(1.25rem + env(safe-area-inset-left)); }
 .g3d-seal > svg { position: absolute; inset: 0; }
-.g3d-seal-word { position: relative; max-width: 3.6rem; font-family: Georgia, serif; font-size: 0.9rem; font-weight: 700; line-height: 1; text-align: center; color: #fbe9c2; overflow-wrap: anywhere; }
-.g3d-seal-word.long { font-size: 0.7rem; }
-.g3d-seal:focus-visible { outline: 3px solid #f2d27a; outline-offset: 2px; }
+.g3d-seal-word { position: relative; max-width: 3.6rem; font-family: Georgia, serif; font-size: 0.9rem; font-weight: 700; line-height: 1; text-align: center; color: inherit; overflow-wrap: anywhere; }
+.g3d-seal-word.long { font-size: 0.78rem; }
+.g3d-hud-lift { bottom: calc(7.5rem + env(safe-area-inset-bottom)); }
+@media (orientation: landscape) { .g3d-hud-lift { bottom: calc(1rem + env(safe-area-inset-bottom)); padding-inline: 9rem; } }
+.g3d-seal:focus-visible { outline: 3px solid var(--seal-focus); outline-offset: 2px; }
 /* On a touch screen the toolbar chips and the Back button are 44 px tap targets, and the key letters go (no keyboard).
    The prompt and the hint lift above the stick and the seal. */
 @media (pointer: coarse) {

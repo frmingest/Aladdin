@@ -1,6 +1,6 @@
 # 3D game: touch controls, a plan (2026-11-22)
 
-Issue #480 (feel fixes), item 4: "Touch controls: a plan first, its own issue if bigger than this." This is that plan. Nothing here is built. Building it is issue #485.
+Issue #480 (feel fixes), item 4: "Touch controls: a plan first, its own issue if bigger than this." This is that plan. The build is issue #485: see "Build" at the end.
 
 ## What is wrong today
 
@@ -52,11 +52,15 @@ Whether touch play should wait for the starter level (#476, #477). This plan doe
 
 ## Build (#485, 2026-11-27)
 
-The #485 PR builds plan A. Written, PR open, not deployed. What it does, checked against the code in that PR:
+The #485 PR builds plan A. Written, PR to open, not deployed. What it does, checked against the code in that PR:
 
-- **Where:** `frontend/src/game3d/TouchControls.tsx` (stick and seal), `touchInput.ts` (pure maths: stick vector, dead zone 12%, run past 85%, seal word, pinch, hand setting), `useTouchScreen.ts` (`(pointer: coarse)`), `touchWordsV1.ts` (the touch hint and names), `useOrbit.ts` (one-finger look, two-finger pinch, no pointer-lock request after a touch), `movement.ts` (`moveVector` takes the stick's analog push), kit art `components/fortress/kit/TouchControlsArt.tsx` (compass rose, knob, wax seal; colours in `TOUCH_TOKENS`, `gameTokens.ts`).
-- **One deviation from the plan:** the stick writes one shared stick value (`touchStick` in `touchInput.ts`) that the hero reads every frame beside the keyboard's `keys` ref, rather than the `keys` ref itself, because the keys are on/off and the stick is analog (a half push walks at half speed). Still no React state per frame.
+- **Where (all under `frontend/src/`):** `game3d/TouchControls.tsx` (stick and seal), `game3d/touchInput.ts` (pure maths: stick vector, dead zone 12%, run past 85%, seal word, pinch, hand setting), `game3d/useTouchScreen.ts` (`(pointer: coarse)`), `game3d/touchWordsV1.ts` (the touch hint and names), `game3d/useOrbit.ts` (one-finger look, two-finger pinch, no pointer-lock request after a touch), `game3d/movement.ts` (`moveVector` takes the stick's analog push), kit art `components/fortress/kit/TouchControlsArt.tsx` (compass rose, knob, wax seal; colours in `TOUCH_TOKENS`, `game3d/gameTokens.ts`).
+- **One deviation from the plan:** the stick writes one shared stick value (`touchStick` in `game3d/touchInput.ts`) that the hero reads every frame beside the keyboard's `keys` ref, rather than the `keys` ref itself, because the keys are on/off and the stick is analog (a half push walks at half speed). Still no React state per frame.
 - **The prompt on touch** is a plain plate with the words only (no key cap, no button), so the seal is the one control for the action: no control appears twice on one screen.
-- **Hidden** while any panel, card, plate or the talk is open (the same rule as the hint line), and the seal shows only while the prompt names an E action and E is not blocked.
-- **Toolbar on a touch phone:** chips stack their icon over a small name so the toolbar fits (it ran about 50 px past both edges of a 390 px phone before), each at least 44 px; key letters hidden. A "Swap hands" chip shows on touch only.
-- **Starter route by emulated touch** (headless Chromium, `hasTouch` + `isMobile`, 390 x 844, API stubbed, software WebGL; headless only): gate to Barren 1 hold + 1 tap (Talk), close the talk 1 tap, Barren to Sal 1 hold + 1 tap (Talk: open a new stall), close Sal's card 1 tap, Sal to the desk 1 hold + 1 tap (Write). Total 3 holds and 5 taps; each place is one hold and one tap. The real look on a phone is Faiz's.
+- **Hidden** while any panel, card, plate or the talk is open (the hint line's rule, without its mouse-lock check), and the seal shows only while the prompt names an E action and E is not blocked.
+- **Toolbar on a touch phone:** chips stack their icon over a small name so the toolbar fits (measured in the local run below: on `main` it is 441 px wide on a 375 px phone, and with the new chip but before the stacked chips 489 px on a 390 px touch phone; 333 px after. Not a check in the PR), each at least 44 px; key letters hidden. A "Swap hands" chip shows on touch only.
+- **Starter route by emulated touch**, an ad hoc local run, not a committed check (the PR's `frontend/e2e/regression/touch.spec.ts` covers the stick, Barren and the seal; headless Chromium, `hasTouch` + `isMobile`, 390 x 844, API stubbed, software WebGL; headless only): gate to Barren 1 hold + 1 tap (Talk), close the talk 1 tap, Barren to Sal 1 hold + 1 tap (Talk: open a new stall), close Sal's card 1 tap, Sal to the desk 1 hold + 1 tap (Write). Total 3 holds and 5 taps; each place is one hold and one tap. The real look on a phone is Faiz's.
+- **Practice yard by emulated touch** (same local run, `?at=practice`): Sal's card opens by itself; closing it is 1 tap, walking to the counter 1 hold, and the seal "Open" brings the card back (1 tap). The lectern: 1 hold, seal "Read" opens the Book (1 tap). The gate: 1 hold, seal "Leave". The stick is hidden while a card or a plate is up, so the yard leads.
+- **The seal's word:** the first word of an E prompt, three shapes ("Press E to talk...", "Press E at the shelves to read...", "Press E: look 3 years ahead"); a verb with "back" keeps it ("Head back"). Unit-tested in `frontend/src/game3d/touchInput.test.ts`.
+- **Sideways phone:** on a touch screen the 3D view's floor is 160 px (480 px with a mouse), so the stick and the seal stay on a 390 px tall screen; held sideways the prompt and hint stay low, between the two controls.
+- **Open for Faiz:** whether the controls should stay up under the Quest log and Towers panels (built: hidden under every panel), whether "Swap hands" stays a toolbar chip, and the real look on a phone.

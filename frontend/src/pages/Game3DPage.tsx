@@ -1612,7 +1612,9 @@ export default function Game3DPage() {
     panels.quests || panels.towers || whereOpen || vaultOpen || realmOpen || watchOpen || perchOpen || hourglassOpen || deskOpen || drillOpen || lampOpen || boothOpen !== null || report !== null || counterOpen || practicePlainOpen || arrivalShown || pickedLine !== null || checkOpen || bookOpen || checkResult !== null || stormNoteShown;
 
   return (
-    <div ref={fitRef} style={{ height: fitStyle }} className="relative min-h-[480px] w-full overflow-hidden bg-surface">
+    // On a touch screen the 480 px floor goes: a phone held sideways is about 390 px tall, and the floor pushed the stick and
+    // the seal below the fold (#485).
+    <div ref={fitRef} style={{ height: fitStyle }} className={`relative ${touch ? "min-h-[160px]" : "min-h-[480px]"} w-full overflow-hidden bg-surface`}>
       <SceneBoundary fallback={<Unavailable />}>
         <Suspense fallback={null}>
           <Scene world={shownWorld} area={area} room={roomView} hold={isMoving(areaState)} look={look} onFieldPresets={onFieldPresets} onLockChange={setLocked} onStats={setStats} statsDetail={showPerf} />

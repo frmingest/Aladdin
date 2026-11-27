@@ -1,4 +1,5 @@
 import { promptParts } from "./actionPromptLogic";
+import { touchAction } from "./touchInput";
 
 /**
  * The one HUD prompt, bottom centre: a key cap and the action ("[E] Talk to Barren Wuffet"), with an
@@ -14,8 +15,9 @@ export default function ActionPrompt({ text, note, onPress, touch = false }: { t
   return (
     <div className="pointer-events-none w-max max-w-[90%]">
       {touch ? (
-        <p className="g3d-prompt">
-          <span>{action}</span>
+        // A status, so a screen reader hears what the seal will do when it appears (a plain paragraph is not announced).
+        <p className="g3d-prompt" role="status">
+          <span>{touchAction(text)?.label ?? action}</span>
         </p>
       ) : (
         <button type="button" onClick={onPress} className="g3d-prompt" aria-label={key ? `${key}: ${action}` : action}>

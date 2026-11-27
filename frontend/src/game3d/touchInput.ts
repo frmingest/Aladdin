@@ -3,7 +3,6 @@
  * No React, no DOM events: the stick's maths, the seal's word, the pinch, the hand setting, and the one shared stick
  * value the hero reads every frame (no per-frame React state, the same way the keyboard's `keys` ref works).
  */
-import { promptParts } from "./actionPromptLogic";
 
 /** The stick's whole width in CSS pixels (the plan's 96 px). Its knob travels at most half of it. */
 export const STICK_SIZE = 96;
@@ -66,21 +65,38 @@ export function releaseStick(): void {
 }
 
 /**
- * The seal's word: the first word of what E will do, read from the prompt itself ("Press E to talk to Barren" gives "Talk",
- * "Press E to STAMP" gives "STAMP"). A prompt that is not an E action (a note such as "Pull a lever first, then STAMP", or
- * "Shut while you look back") gives no word, so no seal shows: the seal never promises something E does not do.
+ * What the seal says for a prompt, or null for no seal. Only an E action gets one, so the seal never promises something E
+ * does not do. Three shapes of E prompt are in the game:
+ * - "Press E to talk to Barren" gives the word "Talk" and the name "Talk to Barren";
+ * - "Press E at the shelves to read the Hall of Records" gives "Read" and "Read the Hall of Records";
+ * - "Press E: look 3 years ahead" gives "Look" and "Look 3 years ahead".
+ * A verb with "back" keeps it ("Head back", "Step back"): "Head" alone reads as a noun. A note that is not an E action
+ * ("Pull a lever first, then STAMP", "Shut while you look back. Press H for today", "Stamping...") gives null.
  */
-export function sealWord(prompt: string | null | undefined): string | null {
+export function touchAction(prompt: string | null | undefined): { word: string; label: string } | null {
   if (!prompt) return null;
-  const { key, action } = promptParts(prompt);
-  if (key !== "E") return null;
-  const first = action.trim().split(/\s+/)[0]?.replace(/[^\p{L}\p{N}'-]/gu, "") ?? "";
-  return first || null;
+  const m = /^Press E\b:?\s*(.*)$/.exec(prompt.trim());
+  if (!m) return null;
+  let rest = m[1];
+  if (rest.startsWith("to ")) rest = rest.slice(3);
+  else if (rest.includes(" to ")) rest = rest.slice(rest.indexOf(" to ") + 4);
+  rest = rest.trim();
+  if (!rest) return null;
+  const label = rest.charAt(0).toUpperCase() + rest.slice(1);
+  const words = label.split(/\s+/).map((w) => w.replace(/[^\p{L}\p{N}'-]/gu, ""));
+  if (!words[0]) return null;
+  const word = words[1]?.toLowerCase() === "back" ? `${words[0]} back` : words[0];
+  return { word, label };
+}
+
+/** The seal's word alone (see `touchAction`). */
+export function sealWord(prompt: string | null | undefined): string | null {
+  return touchAction(prompt)?.word ?? null;
 }
 
 /** The seal's name for a screen reader: the whole action ("Talk to Barren Wuffet"), not just its word. */
 export function sealLabel(prompt: string): string {
-  return promptParts(prompt).action;
+  return touchAction(prompt)?.label ?? prompt;
 }
 
 /** Pinch: how much to move the camera for a change in the distance between two fingers (pixels). Spread is zoom in. */

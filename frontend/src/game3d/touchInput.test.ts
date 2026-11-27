@@ -14,6 +14,8 @@ import {
   stickInput,
   touchStick,
 } from "./touchInput";
+import { MINT_WORDS } from "./mintWordsV1";
+import { shelfPrompt } from "./recordsHallRoomLogic";
 
 const R = STICK_RADIUS;
 
@@ -81,6 +83,19 @@ describe("sealWord: the seal shows the prompt's own word, only for an E action",
     expect(sealWord("Stamping...")).toBeNull();
     expect(sealWord(null)).toBeNull();
     expect(sealWord("")).toBeNull();
+  });
+
+  it("reads the two E prompts not worded 'Press E to' (the Hall of Records shelves, the Mint's span post)", () => {
+    expect(sealWord(shelfPrompt)).toBe("Read");
+    expect(sealLabel(shelfPrompt)).toBe("Read the Hall of Records");
+    expect(sealWord(MINT_WORDS.spanPrompt(1))).toBe("Look");
+    expect(sealLabel(MINT_WORDS.spanPrompt(1))).toBe("Look 3 years ahead");
+  });
+
+  it("keeps 'back' with its verb, so the seal never says just 'Head'", () => {
+    expect(sealWord("Press E to head back outside")).toBe("Head back");
+    expect(sealWord("Press E to step back outside")).toBe("Step back");
+    expect(sealWord("Press E to ride back")).toBe("Ride back");
   });
 
   it("names the whole action for a screen reader", () => {

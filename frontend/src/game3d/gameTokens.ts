@@ -35,6 +35,10 @@ export const WORLD_TOKENS = {
  * wax are ornament; the seal's word and the rose's shape carry the meaning, never the colour.
  */
 export const TOUCH_TOKENS = {
+  /** The rose's see-through ground, so the scene shows through it. */
+  roseGround: "rgb(18 13 8 / 0.45)",
+  /** A soft shadow drawn in the art (not a CSS filter, which would repaint on every thumb move). */
+  shadow: "rgb(0 0 0 / 0.35)",
   brass: "#c9a653",
   brassDeep: "#8a6a32",
   brassLight: "#f2d27a",
