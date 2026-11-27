@@ -9,6 +9,8 @@ import { DESK_JOURNAL_LEAD, DESK_JOURNAL_LINK, DESK_LAMP_HINT, DESK_PROGRESS, DE
 import { LAMP_BUTTON } from "./realmWordsV1";
 import { SAVE_FAILED } from "./voiceV2";
 import type { TowerView } from "./stateToWorld";
+import { useTouchScreen } from "./useTouchScreen";
+import { keyWords } from "./touchWordsV2";
 
 /**
  * The writing desk panel (Standing 2): pick a holding (the biggest one still unwritten is already
@@ -45,6 +47,7 @@ export default function DeskPanel({
   /** Rubs the Magic Lamp on the desk: the flat Fortress's Genie opens. Absent: no lamp button. */
   onRubLamp?: () => void;
 }) {
+  const touch = useTouchScreen();
   const firstId = (missing[0] ?? holdings[0])?.holdingId ?? "";
   const [holdingId, setHoldingId] = useState(firstId);
   const [why, setWhy] = useState("");
@@ -85,7 +88,7 @@ export default function DeskPanel({
   };
 
   return (
-    <aside aria-label="Writing desk" className="g3d-panel g3d-slide absolute right-3 top-14 z-20 max-h-[calc(100%-4.5rem)] w-80 max-w-[44%] overflow-y-auto p-3 text-sm">
+    <aside aria-label="Writing desk" className="g3d-panel g3d-slide absolute right-3 top-[4.5rem] z-20 max-h-[calc(100%-5.25rem)] md:top-14 md:max-h-[calc(100%-4.5rem)] w-80 max-w-[44%] overflow-y-auto p-3 text-sm">
       <header className="g3d-head">
         <h2>✒️ Writing desk</h2>
         <button type="button" className="g3d-x" aria-label="Close the desk" onClick={onClose}>×</button>
@@ -128,7 +131,7 @@ export default function DeskPanel({
         <button type="button" className="g3d-btn" disabled={!ready} onClick={save}>
           {saving ? "Writing..." : "Write it down"}
         </button>
-        <button type="button" className="g3d-btn" onClick={onClose}>Close (E)</button>
+        <button type="button" className="g3d-btn" onClick={onClose}>{keyWords("Close (E)", touch)}</button>
       </div>
 
       <div aria-live="polite">

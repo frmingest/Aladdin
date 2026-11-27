@@ -97,6 +97,8 @@ test.describe("on a touch screen", () => {
     const talk = page.getByRole("dialog", { name: "Talking to Barren Wuffet" });
     await expect(talk).toBeVisible();
     await expect(seal).toHaveCount(0);
+    // No key names on a touch screen (#536): the close button is the tap.
+    await expect(talk.getByRole("button").last()).not.toContainText("(E)");
     await talk.getByRole("button").last().tap();
     await expect(talk).toHaveCount(0);
     await expect(seal).toHaveText("Talk");
@@ -126,6 +128,61 @@ test.describe("on a desktop with a mouse", () => {
     await expect(page.getByTestId("touch-stick")).toHaveCount(0);
     await expect(page.getByTestId("touch-seal")).toHaveCount(0);
     await expect(page.getByRole("button", { name: /^Swap hands/ })).toHaveCount(0);
+    await problems.assertNone();
+  });
+});
+
+/** The Plain view is on screen, not under the toolbar or the Back button, and a tap at its centre lands on it (#536). */
+async function expectPlainViewClear(page: Page) {
+  const plain = page.locator(".g3d-plain");
+  await expect(plain).toBeVisible();
+  const r = await plain.evaluate((el) => {
+    const b = el.getBoundingClientRect();
+    const hit = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
+    const bar = document.querySelector("[role=toolbar]")!.getBoundingClientRect();
+    const back = document.querySelector(".g3d-back")?.getBoundingClientRect() ?? null;
+    return { onTop: hit === el || el.contains(hit), top: b.top, bottom: b.bottom, barBottom: bar.bottom, barLeft: bar.left, barRight: bar.right, backTop: back?.top ?? null, vw: innerWidth };
+  });
+  expect(r.onTop, "a tap on the Plain view reaches it").toBe(true);
+  expect(r.top, "the Plain view sits below the toolbar").toBeGreaterThanOrEqual(r.barBottom);
+  if (r.backTop !== null) expect(r.backTop, "the Back button sits below the Plain view").toBeGreaterThanOrEqual(r.bottom);
+  expect(r.barLeft, "the toolbar fits the screen").toBeGreaterThanOrEqual(0);
+  expect(r.barRight, "the toolbar fits the screen").toBeLessThanOrEqual(r.vw);
+}
+
+for (const [name, opts] of [
+  ["a 390 px touch phone", { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true }],
+  ["a 375 px window with a mouse", { viewport: { width: 375, height: 812 } }],
+] as const) {
+  test.describe(`on ${name}`, () => {
+    test.use(opts);
+    test("the Plain view is clear of the toolbar and the Back button, in the courtyard and in two rooms (#536)", async ({ page }) => {
+      test.setTimeout(150_000);
+      const problems = watch(page);
+      await openCourtyard(page);
+      await expectPlainViewClear(page);
+      for (const room of ["mint", "records"]) {
+        await page.goto(`/game3d?at=${room}`);
+        await expect(page.locator("canvas")).toHaveCount(1, { timeout: 60_000 });
+        await expect(page.locator(".g3d-back")).toBeVisible();
+        await expectPlainViewClear(page);
+      }
+      await problems.assertNone();
+    });
+  });
+}
+
+test.describe("key words on a touch screen", () => {
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+
+  test("the Quest log names no key (#536)", async ({ page }) => {
+    test.setTimeout(120_000);
+    const problems = watch(page);
+    await openCourtyard(page);
+    const quests = page.getByRole("complementary", { name: "Quest log" });
+    if (!(await quests.isVisible())) await page.getByRole("button", { name: /^Quests/ }).tap();
+    await expect(quests).toBeVisible();
+    await expect(quests).not.toContainText(/Press [EHTQG]\b|\([EH]\)/);
     await problems.assertNone();
   });
 });

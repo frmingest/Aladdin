@@ -4,6 +4,8 @@ import { IMPORT_PATH, closeLabel, guideTalk, pointsToImport, talk } from "./dial
 import type { GuideTalk } from "./dialogueV8";
 import type { QuestState, ReviewQuestState } from "./quest";
 import type { DrillQuestState } from "./stormDrill";
+import { useTouchScreen } from "./useTouchScreen";
+import { keyWords } from "./touchWordsV2";
 
 interface Props {
   npc: NpcId;
@@ -19,6 +21,7 @@ interface Props {
 
 /** What the person you are talking to says. A speech scroll over the scene, not in it. */
 export default function DialoguePanel({ npc, quest, reviews, drill, guide, onClose, onRetry }: Props) {
+  const touch = useTouchScreen();
   const who = NPCS.find((n) => n.id === npc);
   // While the Guide is speaking, the only button is the close one: the import and retry buttons belong to the journal talk.
   const guided = guideTalk(npc, guide) !== null;
@@ -47,7 +50,7 @@ export default function DialoguePanel({ npc, quest, reviews, drill, guide, onClo
         {!guided && quest.status === "unreadable" && (
           <button type="button" onClick={onRetry} className="g3d-btn">Try again</button>
         )}
-        <button type="button" onClick={onClose} className="g3d-btn">{guided ? "Got it (E)" : closeLabel(npc, quest)}</button>
+        <button type="button" onClick={onClose} className="g3d-btn">{keyWords(guided ? "Got it (E)" : closeLabel(npc, quest), touch)}</button>
       </div>
     </section>
   );

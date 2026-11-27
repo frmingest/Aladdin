@@ -1,7 +1,7 @@
 import type { OpenPanels, PanelId } from "./hudPanels";
 import { soundLabel } from "./soundPlan";
 import type { StickSide } from "./touchInput";
-import { TOUCH_WORDS } from "./touchWordsV1";
+import { TOUCH_WORDS } from "./touchWordsV2";
 
 interface Props {
   open: OpenPanels;
@@ -41,6 +41,7 @@ function Tool({
   pressed,
   badge,
   label_aria,
+  touch = false,
   onClick,
 }: {
   label: string;
@@ -49,10 +50,12 @@ function Tool({
   pressed: boolean;
   badge?: number;
   label_aria?: string;
+  /** On a touch screen the title names no key (#536). */
+  touch?: boolean;
   onClick: () => void;
 }) {
   return (
-    <button type="button" className="g3d-tool" aria-pressed={pressed} title={`${label} (${hint})`} aria-label={label_aria} onClick={onClick}>
+    <button type="button" className="g3d-tool" aria-pressed={pressed} title={touch ? label : `${label} (${hint})`} aria-label={label_aria} onClick={onClick}>
       <span aria-hidden className="g3d-tool-icon">{icon}</span>
       <span>{label}</span>
       {badge !== undefined && badge > 0 && <span className="g3d-badge">{badge}</span>}
@@ -63,10 +66,13 @@ function Tool({
 
 /** The little menu at the top: open or shut each panel, so the scene stays clear until you want a panel. */
 export default function Toolbar({ open, onToggle, questsWaiting, roundOpen = 0, guideLeft = 0, guideLabel, towerCount, statsOn, statsLabel, onToggleStats, showStats = true, whereOpen, onToggleWhere, sound, practice = false, hands }: Props) {
+  // "Swap hands" is offered on touch screens only, so it marks one.
+  const touch = hands !== undefined;
   return (
     <div role="toolbar" aria-label="Courtyard menu" className="g3d-toolbar absolute left-1/2 top-3 z-30 -translate-x-1/2">
       {/* The practice yard (#493) shows nothing of the real fortress: no Quests or Towers there, only the way out and sound. */}
       {!practice && <Tool
+        touch={touch}
         label="Quests"
         hint="Q"
         icon="📜"
@@ -75,9 +81,9 @@ export default function Toolbar({ open, onToggle, questsWaiting, roundOpen = 0, 
         label_aria={guideLeft > 0 ? guideLabel : roundOpen > 0 ? `Quests, ${roundOpen} stops open` : undefined}
         onClick={() => onToggle("quests")}
       />}
-      {!practice && <Tool label="Towers" hint="T" icon="🏰" pressed={open.towers} badge={towerCount} onClick={() => onToggle("towers")} />}
-      <Tool label="Where to?" hint="G" icon="🪧" pressed={whereOpen} onClick={onToggleWhere} />
-      {sound && <Tool label={soundLabel(sound.on).label} hint="M" icon={soundLabel(sound.on).icon} pressed={sound.on} onClick={sound.onToggle} />}
+      {!practice && <Tool touch={touch} label="Towers" hint="T" icon="🏰" pressed={open.towers} badge={towerCount} onClick={() => onToggle("towers")} />}
+      <Tool touch={touch} label="Where to?" hint="G" icon="🪧" pressed={whereOpen} onClick={onToggleWhere} />
+      {sound && <Tool touch={touch} label={soundLabel(sound.on).label} hint="M" icon={soundLabel(sound.on).icon} pressed={sound.on} onClick={sound.onToggle} />}
       {/* Touch only: swap the stick and the seal for a left hand. */}
       {hands && (
         <button type="button" className="g3d-tool" title={TOUCH_WORDS.swapChip} aria-label={TOUCH_WORDS.swapLabel(hands.side)} onClick={hands.onSwap}>
@@ -85,7 +91,7 @@ export default function Toolbar({ open, onToggle, questsWaiting, roundOpen = 0, 
           <span>{TOUCH_WORDS.swapChip}</span>
         </button>
       )}
-      {(showStats || statsOn) && <Tool label={statsOn ? statsLabel : "Stats"} hint="P" icon="📊" pressed={statsOn} onClick={onToggleStats} />}
+      {(showStats || statsOn) && <Tool touch={touch} label={statsOn ? statsLabel : "Stats"} hint="P" icon="📊" pressed={statsOn} onClick={onToggleStats} />}
     </div>
   );
 }
