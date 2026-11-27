@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 
 /**
  * The 3D view fills the screen below whatever sits above it (#528). It used to be `100dvh - 5rem`, which leaves room for
@@ -17,26 +17,29 @@ export function fitHeight(topPx: number): string {
 }
 
 /**
- * Measures where the element starts on the page and keeps it current: on a resize (the strip wraps differently) and when
- * `dep` changes (demo mode switching the strip on or off). Returns the ref to attach and the height to give it.
+ * Measures where the element starts on the page and keeps it current. It measures before the first paint (no frame at the
+ * old size, no extra canvas resize), then again whenever the page's layout changes size: the strip rewrapping on a resize or
+ * a late font, or `dep` changing (demo mode switching the strip on or off). The box's own height never moves its top, so a
+ * re-measure after the box resizes finds the same value and renders nothing.
  */
 export function useFitToScreen<T extends HTMLElement>(dep: unknown): [React.RefObject<T>, string] {
   const ref = useRef<T>(null);
   const [top, setTop] = useState(0);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const measure = () => {
       const el = ref.current;
       if (el === null) return;
-      setTop(el.getBoundingClientRect().top + window.scrollY);
+      // Whole pixels, so sub-pixel noise never re-renders the page.
+      setTop(Math.round(el.getBoundingClientRect().top + window.scrollY));
     };
     measure();
-    // The strip's own height settles after fonts load; one more look on the next frame catches that.
-    const raf = window.requestAnimationFrame(measure);
-    window.addEventListener("resize", measure);
-    return () => {
-      window.cancelAnimationFrame(raf);
-      window.removeEventListener("resize", measure);
-    };
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", measure);
+      return () => window.removeEventListener("resize", measure);
+    }
+    const seen = new ResizeObserver(measure);
+    seen.observe(document.body);
+    return () => seen.disconnect();
   }, [dep]);
   return [ref, fitHeight(top)];
 }
