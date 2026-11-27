@@ -398,7 +398,7 @@ From the review's item 7. "Keep and teach" means the starter teaches it by touch
 All shown wording and game rules go in new versioned files; no file already shown to Faiz is edited:
 
 - `practiceCompanyV1.ts`: the numbers table (section 1). A change is `practiceCompanyV2.ts`.
-- `starterWordsV1.ts`: every card, line, result, Book page and label in sections 3 and 4. The PR for #530 adds `starterWordsV2.ts`, which changes one line, the Storms page's grown-up word ("Mr. Market"); the yard reads V2. Once V2 is merged it has been shown, so build step 4 writes its words in a new `starterWordsV3.ts`, whose word-cap, voice and banned-word helpers must read V3's own words (V2 re-exports V1's helpers, which read V1).
+- `starterWordsV1.ts`: every card, line, result, Book page and label in sections 3 and 4. PR #533 adds `starterWordsV2.ts` (#530), which changes one line, the Storms page's grown-up word ("Mr. Market"); the yard reads V2. Once V2 is merged it has been shown, so build step 4 writes its words in a new `starterWordsV3.ts`, whose word-cap, voice and banned-word helpers must read V3's own words (V2 re-exports V1's helpers, which read V1).
 - `starterPlanV1.ts`: beats, right answers, unlock-once rule, the run, saving under `aladdin.game3d.starter.v1`. Build step 2 (#494) needed two rule changes, so its rules are `starterPlanV2.ts` (same key, same shape); V1 is unchanged.
 - `starterGateV1.ts`: the newcomer rule and what is hidden.
 - `dialogueV9.ts`: advisors in the yard speak `starterWordsV1`; elsewhere it falls back to `dialogueV8` unchanged.
