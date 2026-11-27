@@ -55,6 +55,7 @@ import { shelvesFor } from "../game3d/libraryShelves";
 import type { CouncilInput, ShelfId } from "../game3d/libraryShelves";
 import type { RoomView, SceneLook } from "../game3d/Scene";
 import { COURTYARD } from "../game3d/areas";
+import { useFitToScreen } from "../game3d/fitToScreen";
 import type { AreaRef } from "../game3d/areas";
 import { canGoBack, escapeTarget } from "../game3d/layers";
 import type { OpenLayers } from "../game3d/layers";
@@ -286,6 +287,8 @@ export default function Game3DPage() {
   // Which flat-page dialog (Sal or the Hype Booth) is open over the world.
   const [boothOpen, setBoothOpen] = useState<BoothId | null>(null);
   const { demoMode } = useDemoMode();
+  // The view fits below the header and the demo strip, however many lines the strip wraps to (#528).
+  const [fitRef, fitStyle] = useFitToScreen<HTMLDivElement>(demoMode);
   // The Storm Drill: the stored drills.
   const [drills, setDrills] = useState<StormDrills | null>(null);
   const [drillsFailed, setDrillsFailed] = useState(false);
@@ -1597,7 +1600,7 @@ export default function Game3DPage() {
     panels.quests || panels.towers || whereOpen || vaultOpen || realmOpen || watchOpen || perchOpen || hourglassOpen || deskOpen || drillOpen || lampOpen || boothOpen !== null || report !== null || counterOpen || practicePlainOpen || arrivalShown || pickedLine !== null || checkOpen || bookOpen || checkResult !== null || stormNoteShown;
 
   return (
-    <div className="relative h-[calc(100dvh-5rem)] min-h-[480px] w-full overflow-hidden bg-surface">
+    <div ref={fitRef} style={{ height: fitStyle }} className="relative min-h-[480px] w-full overflow-hidden bg-surface">
       <SceneBoundary fallback={<Unavailable />}>
         <Suspense fallback={null}>
           <Scene world={shownWorld} area={area} room={roomView} hold={isMoving(areaState)} look={look} onFieldPresets={onFieldPresets} onLockChange={setLocked} onStats={setStats} statsDetail={showPerf} />

@@ -327,6 +327,25 @@ test.describe("things you can walk up to", () => {
       expect(p.y + p.height, `prompt bottom ${p.y + p.height} vs hint top ${h.y}`).toBeLessThanOrEqual(h.y);
       await problems.assertNone();
     });
+
+    // #528: the demo strip wraps to three lines on a phone. The 3D view used to leave room for the header only, so its
+    // bottom (hint, prompt, the yard's plates) sat below the fold. Now the view ends at the bottom of the screen.
+    test("the 3D view fits the screen under the wrapped demo strip", async ({ page }) => {
+      const problems = watch(page);
+      await page.goto("/game3d?at=records");
+      await expect(page.locator("canvas")).toHaveCount(1, { timeout: 60_000 });
+      await expect(page.getByText(/DEMO MODE/)).toBeVisible();
+      const hint = page.getByTestId("controls-hint");
+      const quests = page.getByRole("complementary", { name: "Quest log" });
+      await expect(quests).toBeVisible();
+      await page.keyboard.press("q");
+      await expect(hint).toBeVisible();
+      const fit = await page.evaluate(() => ({ page: document.documentElement.scrollHeight, screen: window.innerHeight }));
+      expect(fit.page, `page ${fit.page} px tall on a ${fit.screen} px screen`).toBeLessThanOrEqual(fit.screen);
+      const h = (await hint.boundingBox())!;
+      expect(h.y + h.height, "the hint's bottom is on screen").toBeLessThanOrEqual(fit.screen);
+      await problems.assertNone();
+    });
   });
 });
 
