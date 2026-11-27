@@ -55,7 +55,7 @@ import Signpost from "./Signpost";
 import { PROPS } from "./props";
 import HoldingLand from "./HoldingLand";
 import PracticeYard from "./PracticeYard";
-import { NO_PRACTICE } from "./practiceYardLogic";
+import { DOOR_VIEW, NO_PRACTICE } from "./practiceYardLogic";
 import type { PracticeLook } from "./practiceYardLogic";
 import type { GateStone, Lantern, PricePost } from "./holdingLandLogic";
 import type { LandCentreSlot } from "./landCentreLogic";
@@ -279,6 +279,13 @@ function World({ onLockChange, world, area, room, hold, look, onFieldPresets }: 
     const spot = transitionSpot(from, area, world.towers.map(enterableOf));
     if (spot) setTeleport({ key: ++count.current, x: spot.x, z: spot.z, yaw: spot.yaw });
   }, [area, world.towers]);
+
+  // Beat 7 in the practice yard (#496): the hero is put where the tower door is in view, once, when the why card opens.
+  const doorViewKey = look.practice.doorViewKey;
+  useEffect(() => {
+    if (doorViewKey === null) return;
+    setTeleport({ key: ++count.current, x: DOOR_VIEW.x, z: DOOR_VIEW.z, yaw: DOOR_VIEW.yaw });
+  }, [doorViewKey]);
 
   // Browser tests place the hero at an exact spot (a key press moves her several metres on a slow software-rendered frame, so
   // walking cannot aim). Development builds only: the production build drops this hook.

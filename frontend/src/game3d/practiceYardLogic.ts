@@ -113,7 +113,7 @@ export type YardMoat = typeof PIP.moat | "unsurveyed";
  * the fog into what the numbers give (#494): the walls into their real look once the walls check is over, the moat into
  * water at the land's narrow width once the moat check is.
  */
-export function practiceTowerView(wall: YardWall = "unsurveyed", moat: YardMoat = "unsurveyed"): TowerView {
+export function practiceTowerView(wall: YardWall = "unsurveyed", moat: YardMoat = "unsurveyed", flag: "none" | "intact" = "none"): TowerView {
   const look = WALL_LOOK[wall];
   const known = wall !== "unsurveyed";
   const moatKnown = moat !== "unsurveyed";
@@ -136,9 +136,27 @@ export function practiceTowerView(wall: YardWall = "unsurveyed", moat: YardMoat 
     // The body is pale fog until the walls are known; the moat can still be mist after that.
     fog: !known,
     freshness: known ? "fresh" : "unsurveyed",
-    flag: "none",
+    // Build step 4 (#496): the flag goes up whole once the why is pinned, as on a real tower whose why still stands.
+    flag,
     facts: { size: "great", wall, moat, thesis: "not_analyzed", weightPct: null, wallReason: "Not looked at yet" },
   };
+}
+
+/**
+ * Beat 7 (#496): where the why is pinned and the banner hangs, and where the hero is put to see them. From the arrival spot the
+ * notice board and the HUD hide the tower's lower face, so when the why card opens the hero is placed once, front-left of the
+ * tower, facing it (the cheap stand-in for the spec's camera turn). The sheet and the banner hang on the tower face toward that
+ * spot, a little out from the wall so the 14-sided body never cuts them.
+ */
+// West of the tower, clear of the two advisors by the gate (their name tags filled a phone screen from a spot nearer them).
+const DOOR_SPOT = { x: -4.4, z: -2.0 } as const;
+// Facing the tower: yaw 0 looks down -z (the arrival spot's own yaw).
+export const DOOR_VIEW = { ...DOOR_SPOT, yaw: Math.atan2(-(YARD_PAD.x - DOOR_SPOT.x), -(YARD_PAD.z - DOOR_SPOT.z)) } as const;
+const toView = { x: DOOR_VIEW.x - YARD_PAD.x, z: DOOR_VIEW.z - YARD_PAD.z };
+const toViewLen = Math.hypot(toView.x, toView.z);
+/** The point on the tower face toward the door view, `out` metres from the tower's centre, and the yaw that faces the view. */
+export function doorFace(out: number): { x: number; z: number; yaw: number } {
+  return { x: YARD_PAD.x + (toView.x / toViewLen) * out, z: YARD_PAD.z + (toView.z / toViewLen) * out, yaw: Math.atan2(toView.x, toView.z) };
 }
 
 /** What the page tells the yard: whether the tower stands, and a new number when it has just been raised (so it rises once). */
@@ -163,6 +181,18 @@ export interface PracticeLook {
   shakeKey: number | null;
   /** The storm is overhead (beat 6, until its card is answered): the yard's ground goes the grey-green of a clouded field. */
   stormy: boolean;
+  /** Build step 4 (#496): what the Owes card says (5, or 15 once the second storm has hit). */
+  owes: number;
+  /** The worth of a piece on the scale's sign: "calm" (10, low 8), or "second" after the second storm (9, low 7). */
+  worth: "calm" | "second";
+  /** The why pinned on the tower door (beat 7): its two lines, or null; and the flag, up whole once it is pinned. */
+  sheet: readonly [string, string] | null;
+  flag: "none" | "intact";
+  /** The lemon banner down the tower (beat 8, all five pages, once), and the cheer's burst when it unrolls in this visit. */
+  banner: boolean;
+  cheerKey: number | null;
+  /** A new number puts the hero at `DOOR_VIEW`, facing the tower door (once per visit, when the why card opens). */
+  doorViewKey: number | null;
 }
 
 export const NO_PRACTICE: PracticeLook = {
@@ -178,4 +208,19 @@ export const NO_PRACTICE: PracticeLook = {
   pointAt: null,
   shakeKey: null,
   stormy: false,
+  owes: PIP.owes,
+  worth: "calm",
+  sheet: null,
+  flag: "none",
+  banner: false,
+  cheerKey: null,
+  doorViewKey: null,
 };
+
+/** How long after the end shows an Enter or Space is ignored, so a key held from the last card does not leave the yard. */
+export const END_KEY_GUARD_MS = 400;
+
+/** Beat 8's end panel: an Enter or Space that repeats, or comes within the guard after the panel took focus, presses nothing. */
+export function endKeyBlocked(key: string, repeat: boolean, sinceShownMs: number): boolean {
+  return (key === "Enter" || key === " ") && (repeat || sinceShownMs < END_KEY_GUARD_MS);
+}

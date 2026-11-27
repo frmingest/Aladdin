@@ -1,5 +1,8 @@
-import { SPEAKERS, STARTER_WORDS } from "./starterWordsV2";
-import type { Line } from "./starterWordsV2";
+import { useEffect, useRef } from "react";
+import type { KeyboardEvent } from "react";
+import { endKeyBlocked } from "./practiceYardLogic";
+import { SPEAKERS, STARTER_WORDS } from "./starterWordsV3";
+import type { Line } from "./starterWordsV3";
 
 /**
  * The practice yard's heads-up line (#493): the goal strip and the practice tag, under the toolbar (lower on a phone, clear of
@@ -86,6 +89,58 @@ export function StarterNote({ text }: { text: string }) {
     >
       {text}
     </p>
+  );
+}
+
+/**
+ * Beat 8 (#496): Barren's last line and the two ways on, at the bottom of the screen. "Bring your real fortress" goes back to
+ * the courtyard; "Play again" starts a new run in the yard (the Book is kept). Focus lands on the first button, so one key
+ * or one tap chooses. Selecting acts: no Close, no Next.
+ */
+export function StarterEnd({
+  line,
+  realLabel,
+  againLabel,
+  onReal,
+  onAgain,
+}: {
+  line: Line;
+  realLabel: string;
+  againLabel: string;
+  onReal: () => void;
+  onAgain: () => void;
+}) {
+  const first = useRef<HTMLButtonElement>(null);
+  const shownAt = useRef(0);
+  useEffect(() => {
+    shownAt.current = performance.now();
+    first.current?.focus();
+  }, []);
+  // Focus lands on "Bring your real fortress" at once; an Enter or Space still held from the why card (or repeating) must not press it.
+  const guardKeys = (e: KeyboardEvent) => {
+    if (endKeyBlocked(e.key, e.repeat, performance.now() - shownAt.current)) e.preventDefault();
+  };
+  return (
+    <section
+      aria-label={realLabel}
+      data-testid="starter-end"
+      onKeyDown={guardKeys}
+      onKeyUp={guardKeys}
+      className="g3d-panel g3d-slide absolute bottom-16 left-1/2 z-20 w-[26rem] max-w-[92%] -translate-x-1/2 space-y-2 p-3 text-sm"
+    >
+      <div>
+        <p className="g3d-tag">{SPEAKERS[line.who]}</p>
+        <p className="text-[0.95rem] leading-snug">{line.text}</p>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <button ref={first} type="button" onClick={onReal} className="g3d-btn min-h-[44px] flex-1 px-3 font-semibold">
+          {realLabel}
+        </button>
+        <button type="button" onClick={onAgain} className="g3d-btn min-h-[44px] flex-1 px-3">
+          {againLabel}
+        </button>
+      </div>
+    </section>
   );
 }
 

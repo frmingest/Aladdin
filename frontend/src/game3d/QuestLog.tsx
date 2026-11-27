@@ -49,7 +49,7 @@ import WireList from "./WireList";
 import { fallPercent } from "./stormDrill";
 import type { DrillQuestState } from "./stormDrill";
 import { DRILL_GOAL, DRILL_TITLE } from "./stormDrillWordsV1";
-import { STARTER_WORDS } from "./starterWordsV2";
+import { STARTER_WORDS } from "./starterWordsV3";
 import { useTouchScreen } from "./useTouchScreen";
 import { TOUCH_WORDS } from "./touchWordsV2";
 

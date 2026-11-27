@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { SPEAKERS, STARTER_WORDS } from "./starterWordsV2";
+import { SPEAKERS, STARTER_WORDS } from "./starterWordsV3";
 
 /**
  * Sal's practice counter (beat 2, #493). Its own small card, never the flat Marketplace's `SalesRepDialog` (which writes to

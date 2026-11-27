@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { PAGES } from "./starterPlanV3";
 import type { PageId } from "./starterPlanV3";
-import { STARTER_WORDS } from "./starterWordsV2";
+import { STARTER_WORDS } from "./starterWordsV3";
 import { useTouchScreen } from "./useTouchScreen";
 import { keyWords } from "./touchWordsV2";
 

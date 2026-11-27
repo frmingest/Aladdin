@@ -43,12 +43,14 @@ import {
   YARD_SPAWN,
   YARD_POST_AT,
   YARD_STONE,
+  doorFace,
   practiceTowerView,
 } from "./practiceYardLogic";
 import type { PracticeLook, YardMoat, YardWall } from "./practiceYardLogic";
 import { WORLD_TOKENS } from "./gameTokens";
 import { PIP } from "./practiceCompanyV1";
-import { STARTER_WORDS } from "./starterWordsV2";
+import { STARTER_WORDS } from "./starterWordsV3";
+import Confetti from "./Confetti";
 import { TOWER_FOG_COLOR, TOWER_PAD_TOP } from "./towerLook";
 
 const GRASS = LAND_COLOURS.grass;
@@ -69,7 +71,9 @@ const PLATE_YAW = yawToward(TOWER_PLATE_AT, YARD_SPAWN);
  * The four fact cards on a notice board (beat 3, #494): money left over in each of three years, and what it owes. Two rows of
  * two. They stand once the tower does and never change in this build; beat 6 will point at them.
  */
-function FactPlank({ pointAt }: { pointAt: number | null }) {
+function FactPlank({ pointAt, owes }: { pointAt: number | null; owes: number }) {
+  // Beat 6b (#496): the Owes card flips to what Pip's owes after the second storm.
+  const facts = owes === PIP.owes ? STARTER_WORDS.facts : STARTER_WORDS.factsSecond;
   const half = FACT_CARD_STEP / 2;
   const top = FACT_CARD_ROWS[0] + 0.4;
   const postX = FACT_CARD_STEP + 0.12;
@@ -92,7 +96,7 @@ function FactPlank({ pointAt }: { pointAt: number | null }) {
           </Part>
         ))}
       </StaticBatch>
-      {STARTER_WORDS.facts.map((f, i) => (
+      {facts.map((f, i) => (
         <WorldSign
           key={f[0]}
           spec={{ kind: "plank", lines: [...f] }}
@@ -152,7 +156,8 @@ const MIST = WORLD_TOKENS.mist;
  * tipped through the storm: worth did not change, and fewer coins (4.9 against 7) only tip it further, so it never moves back.
  * The tip eases over about half a second; under reduced motion it is simply tipped.
  */
-function PriceScale({ look, price }: { look: "fog" | "tipped"; price: number }) {
+function PriceScale({ look, price, worth }: { look: "fog" | "tipped"; price: number; worth: "calm" | "second" }) {
+  const worthSign = worth === "second" ? STARTER_WORDS.scale2 : STARTER_WORDS.scale;
   const target = look === "tipped" ? SCALE_TIP : 0;
   const beam = useRef<Group>(null);
   const pans = useRef<(Group | null)[]>([]);
@@ -227,7 +232,7 @@ function PriceScale({ look, price }: { look: "fog" | "tipped"; price: number }) 
         </mesh>
       )}
       {/* The two pans in words, always on show: the card asks about these very numbers. */}
-      <WorldSign spec={{ kind: "plank", lines: [STARTER_WORDS.scale.worth, STARTER_WORDS.scale.low] }} position={[-0.78, 3.05, 0]} width={1.6} />
+      <WorldSign spec={{ kind: "plank", lines: [worthSign.worth, worthSign.low] }} position={[-0.78, 3.05, 0]} width={1.6} />
       <WorldSign
         key={price}
         spec={{ kind: "plank", lines: [price < PIP_PRICE ? STARTER_WORDS.scale.priceAfter : STARTER_WORDS.scale.price] }}
@@ -236,6 +241,57 @@ function PriceScale({ look, price }: { look: "fog" | "tipped"; price: number }) 
         position={[0.78, 0.55, 0.42]}
         width={price < PIP_PRICE ? 1.6 : 1.15}
       />
+    </group>
+  );
+}
+
+/** The tower face toward the door view: the sheet just off the wall, the banner a hair further out. */
+const SHEET_AT = doorFace(2.05);
+const BANNER_AT = doorFace(2.1);
+/** Beat 8's burst goes up over the practice tower, not the courtyard fountain. */
+const CHEER_AT = { x: YARD_PAD.x, y: 6, z: YARD_PAD.z } as const;
+
+/**
+ * Beat 7 (#496): the why on a sheet pinned to the tower's door side, facing the gate, at eye height. Two lines: the reason, and
+ * what would prove it wrong. A pin of iron at the top; nothing moves.
+ */
+function PinnedSheet({ lines }: { lines: readonly [string, string] }) {
+  return (
+    <group position={[SHEET_AT.x, 1.75, SHEET_AT.z]} rotation={[0, SHEET_AT.yaw, 0]}>
+      <WorldSign spec={{ kind: "plank", lines: [...lines] }} position={[0, 0, 0.05]} width={2.3} both={false} />
+      <Part ink={false} color={PAL.iron} position={[0, 0.34, 0.1]} grow={1.2}>
+        <sphereGeometry args={[0.06, 8, 6]} />
+      </Part>
+    </group>
+  );
+}
+
+/**
+ * Beat 8 (#496): a long cream banner down the tower wall with a lemon on it, above the pinned sheet. A hanging banner, not the
+ * flag, so it never reads as the why. It carries no words; the page's live region says it once. Palette colours only.
+ */
+function LemonBanner() {
+  return (
+    <group position={[BANNER_AT.x, 4.6, BANNER_AT.z]} rotation={[0, BANNER_AT.yaw, 0]}>
+      <Part ink={false} color={PAL.brass} position={[0, 1.85, 0]} grow={1.06}>
+        <boxGeometry args={[1.3, 0.12, 0.12]} />
+      </Part>
+      <Part ink={false} color={PAL.cream} position={[0, 0, 0]} grow={1.03}>
+        <boxGeometry args={[1.1, 3.6, 0.04]} />
+      </Part>
+      {/* The lemon: an oval of sand yellow with a moss leaf, low on the banner so the HUD's goal strip never covers it. */}
+      <Part ink={false} color={PAL.sand} position={[0, -0.45, 0.06]} scale={[1, 0.75, 0.4]} grow={1.08}>
+        <sphereGeometry args={[0.38, 14, 10]} />
+      </Part>
+      <Part ink={false} color={PAL.moss} position={[0.22, -0.1, 0.08]} rotation={[0, 0, -0.6]} grow={1.1}>
+        <boxGeometry args={[0.24, 0.1, 0.03]} />
+      </Part>
+      {/* The swallow-tail end: two brass points. */}
+      {([-1, 1] as const).map((side) => (
+        <Part key={side} ink={false} color={PAL.brass} position={[side * 0.3, -1.9, 0]} rotation={[0, 0, side * 0.5]} grow={1.08}>
+          <boxGeometry args={[0.3, 0.3, 0.05]} />
+        </Part>
+      ))}
     </group>
   );
 }
@@ -252,9 +308,9 @@ const PRACTICE_COUNTER: Booth = { ...BOOTHS[0], x: COUNTER_AT.x, z: COUNTER_AT.z
  * rise, not on the frame it ends); then the column goes and the tower shows. Reduced motion: no rise, it simply stands. The
  * caller keys this by `riseKey`, so a new rise always starts from the bottom.
  */
-function RisingTower({ rise, wall, moat, shakeKey }: { rise: boolean; wall: YardWall; moat: YardMoat; shakeKey: number | null }) {
+function RisingTower({ rise, wall, moat, flag, shakeKey }: { rise: boolean; wall: YardWall; moat: YardMoat; flag: "none" | "intact"; shakeKey: number | null }) {
   // The walls and the moat change in place when a check is answered (#494); the tower does not rise again.
-  const view = useMemo(() => practiceTowerView(wall, moat), [wall, moat]);
+  const view = useMemo(() => practiceTowerView(wall, moat, flag), [wall, moat, flag]);
   const [up, setUp] = useState(() => !rise || prefersReducedMotion());
   const g = useRef<Group>(null);
   const t = useRef(0);
@@ -364,7 +420,7 @@ export default function PracticeYard({ look, pos }: { look: PracticeLook; pos: M
         />
       )}
 
-      {look.standing && <RisingTower key={look.riseKey ?? "standing"} rise={look.riseKey !== null} wall={look.wall} moat={look.moat} shakeKey={look.shakeKey} />}
+      {look.standing && <RisingTower key={look.riseKey ?? "standing"} rise={look.riseKey !== null} wall={look.wall} moat={look.moat} flag={look.flag} shakeKey={look.shakeKey} />}
       {look.standing && (
         // The tower's walls and moat in words, as a real tower's panel says them: "Walls not surveyed" until you have looked.
         <WorldSign
@@ -374,9 +430,13 @@ export default function PracticeYard({ look, pos }: { look: PracticeLook; pos: M
           yaw={PLATE_YAW}
         />
       )}
-      {look.factCards && <FactPlank pointAt={look.pointAt} />}
+      {/* Beat 7 (#496): the why, pinned on the tower door; beat 8: the lemon banner down the wall, once. */}
+      {look.standing && look.sheet && <PinnedSheet lines={look.sheet} />}
+      {look.standing && look.banner && <LemonBanner />}
+      <Confetti burstKey={look.cheerKey} origin={CHEER_AT} />
+      {look.factCards && <FactPlank pointAt={look.pointAt} owes={look.owes} />}
       {/* Beat 5's scale stands with the tower: before the pick there is no price to weigh. */}
-      {look.standing && <PriceScale look={look.scale} price={look.price} />}
+      {look.standing && <PriceScale look={look.scale} price={look.price} worth={look.worth} />}
       <Lectern />
       <BoothMesh booth={PRACTICE_COUNTER} />
       {YARD_ADVISORS.map((n) => (
