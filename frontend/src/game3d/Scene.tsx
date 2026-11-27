@@ -38,7 +38,7 @@ import RavenBirds from "./RavenBirds";
 import RealmPost from "./RealmPost";
 import Weather from "./Weather";
 import SkyDome from "./SkyDome";
-import { weatherLook } from "./weatherPlan";
+import { YARD_CLOUD_SLOTS, weatherLook } from "./weatherPlan";
 import type { RealmLevel } from "../lib/realmVerdict";
 import DrillCamp from "./DrillCamp";
 import DrillPost from "./DrillPost";
@@ -325,10 +325,15 @@ function World({ onLockChange, world, area, room, hold, look, onFieldPresets }: 
       ) : area.id === "practice" ? (
         <>
           <group userData={{ perfGroup: "backdrop" }}>
-            <Backdrop />
+            {/* Under the storm (#495) the painted mountains go the storm sky's grey, so the whole horizon says "storm". */}
+            <Backdrop tint={look.siegeLevel === "calm" ? undefined : weatherLook(look.siegeLevel).sky} />
           </group>
           <group userData={{ perfGroup: "practice" }}>
             <PracticeYard look={look.practice} pos={pos} />
+          </group>
+          {/* Beat 6 (#495): the storm's clouds, the courtyard's own painted ones. The yard's sky is calm until then. */}
+          <group userData={{ perfGroup: "weather" }}>
+            <Weather level={look.siegeLevel} slots={YARD_CLOUD_SLOTS} />
           </group>
         </>
       ) : area.id === "holding" && room ? (

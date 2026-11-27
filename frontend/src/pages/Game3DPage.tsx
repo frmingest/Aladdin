@@ -125,14 +125,19 @@ import { webglSupported } from "../game3d/webgl";
 import { useSceneLoad } from "../game3d/sceneLoadStore";
 import PracticeCounterCard from "../game3d/PracticeCounterCard";
 import PracticePlainPanel from "../game3d/PracticePlainPanel";
-import { StarterGoal, StarterLive, StarterPlate, StarterResult } from "../game3d/StarterHud";
+import { StarterGoal, StarterLive, StarterNote, StarterPlate, StarterResult } from "../game3d/StarterHud";
 import StarterCheckCard, { WallIcon } from "../game3d/StarterCheckCard";
 import BookOfWisdom from "../game3d/BookOfWisdom";
 import {
   ARRIVAL_MS,
+  CHECKS,
   MOAT_CHOICES,
   PICKED_LINE_MS,
+  PRICE_CHOICES,
   RESULT_MS,
+  STORM_CHOICES,
+  STORM_COMING_MS,
+  STORM_FALL_MS,
   WALL_CHOICES,
   answerCheck,
   arrived,
@@ -141,17 +146,23 @@ import {
   choicesLeft,
   counterWaiting,
   factCardsShown,
+  factPointedAt,
+  gaugeOf,
   goalOf,
   lastMiss,
   loadStarter,
   moatOf,
   pickCompany,
   plainSeen,
+  priceOf,
   saveStarter,
+  scaleOf,
+  stormCame,
+  stormOverhead,
   towerStands,
   wallsOf,
-} from "../game3d/starterPlanV2";
-import type { CheckBeat, CheckOutcome, StarterSaved } from "../game3d/starterPlanV2";
+} from "../game3d/starterPlanV3";
+import type { CheckBeat, CheckOutcome, StarterSaved } from "../game3d/starterPlanV3";
 import { SPEAKERS, STARTER_WORDS } from "../game3d/starterWordsV1";
 import type { PerfStats } from "../game3d/PerfProbe";
 
@@ -667,8 +678,40 @@ export default function Game3DPage() {
   const [checkShut, setCheckShut] = useState(false);
   // The last check's result plate, while it is up: which check, and what the Book did.
   const [checkResult, setCheckResult] = useState<{ beat: CheckBeat; page: Extract<CheckOutcome, { kind: "done" }>["page"] } | null>(null);
+  // Beat 6 (#495): the storm comes on its own, not on top of beat 5. Beat 5's result plate goes, "Storm coming" shows, then
+  // the clouds come and the price falls (the tower shakes, or under reduced motion a plate says so), and only then does the
+  // card open, so the change is the first thing seen. Arriving at the storm any other way (a reload, walking back in) skips
+  // straight to the storm being in: the price has already fallen. The steps are this visit's timing only, never saved.
+  const [stormStep, setStormStep] = useState<"coming" | "falling" | "in" | null>(null);
+  const [shakeKey, setShakeKey] = useState<number | null>(null);
+  const stormFromPrice = useRef(false);
+  const stormWaits = waitingCheck === "storm";
+  useEffect(() => {
+    if (!stormWaits) {
+      setStormStep(null);
+      return;
+    }
+    if (checkResult !== null || stormStep !== null) return;
+    setStormStep(stormFromPrice.current ? "coming" : "in");
+    stormFromPrice.current = false;
+  }, [stormWaits, checkResult, stormStep]);
+  useEffect(() => {
+    if (stormStep === "coming") {
+      const t = setTimeout(() => setStormStep("falling"), STORM_COMING_MS);
+      return () => clearTimeout(t);
+    }
+    if (stormStep === "falling") {
+      setShakeKey(Date.now());
+      const t = setTimeout(() => setStormStep("in"), STORM_FALL_MS);
+      return () => clearTimeout(t);
+    }
+  }, [stormStep]);
+  // Until the storm has come the yard is calm and the scale shows 7: "coming" is the plate alone.
+  const stormShown = inYard && stormCame(starter.run) && !(stormWaits && (stormStep === null || stormStep === "coming"));
+  const stormNoteShown = stormWaits && (stormStep === "coming" || stormStep === "falling");
   // It also waits while the yard's Plain view is open, so two panels' words are never on screen at once.
-  const checkOpen = waitingCheck !== null && !checkShut && pickedLine === null && checkResult === null && yardDrawn && !bookOpen && !practicePlainOpen;
+  const checkOpen =
+    waitingCheck !== null && !checkShut && pickedLine === null && checkResult === null && yardDrawn && !bookOpen && !practicePlainOpen && (!stormWaits || stormStep === "in");
   // A new check (the moat after the walls) opens by itself, even if the last one was put away.
   useEffect(() => setCheckShut(false), [waitingCheck]);
   useEffect(() => {
@@ -683,6 +726,8 @@ export default function Game3DPage() {
       if (outcome.kind === "ignored") return;
       updateStarter((s) => answerCheck(s, waitingCheck, choice).saved);
       if (outcome.kind === "done") {
+        // The price is weighed: the storm that follows plays its own short sequence (beat 6).
+        if (waitingCheck === "price") stormFromPrice.current = true;
         setCheckResult({ beat: waitingCheck, page: outcome.page });
         document.querySelector<HTMLCanvasElement>("canvas")?.focus();
       }
@@ -709,10 +754,21 @@ export default function Game3DPage() {
       const left = choicesLeft(starter.run, "moat");
       return MOAT_CHOICES.map((id) => ({ id, label: STARTER_WORDS.checks.moat.choices[id], tried: !left.includes(id) }));
     }
+    if (waitingCheck === "price") {
+      const left = choicesLeft(starter.run, "price");
+      return PRICE_CHOICES.map((id) => ({ id, label: STARTER_WORDS.checks.price.choices[id], tried: !left.includes(id) }));
+    }
+    if (waitingCheck === "storm") {
+      const left = choicesLeft(starter.run, "storm");
+      return STORM_CHOICES.map((id) => ({ id, label: STARTER_WORDS.checks.storm.choices[id], tried: !left.includes(id) }));
+    }
     return [];
   }, [waitingCheck, starter.run]);
+  const pageTitle = (beat: CheckBeat) => STARTER_WORDS.book.pages[CHECKS[beat].page].title;
   const pageLine = (r: NonNullable<typeof checkResult>) =>
-    r.page === "new" ? STARTER_WORDS.book.newPage(STARTER_WORDS.book.pages[r.beat].title) : r.page === "held" ? STARTER_WORDS.book.held : STARTER_WORDS.book.earnLater;
+    r.page === "new" ? STARTER_WORDS.book.newPage(pageTitle(r.beat)) : r.page === "held" ? STARTER_WORDS.book.held : STARTER_WORDS.book.earnLater;
+  // The storm's result carries Marlie's line: the other half of the lesson (a change in the business is news).
+  const resultSaid = (beat: CheckBeat) => (beat === "storm" ? STARTER_WORDS.checks.storm.after : null);
   // What a screen reader hears, once, when it changes: the arrival lines, then each result line, then the goal. With the speaker.
   const said = (l: { who: keyof typeof SPEAKERS; text: string }) => `${SPEAKERS[l.who]}: ${l.text}`;
   const starterLiveText = arrivalShown
@@ -720,7 +776,11 @@ export default function Game3DPage() {
     : pickedLine !== null
       ? said(STARTER_WORDS.picked[pickedLine])
       : checkResult !== null
-        ? `${STARTER_WORDS.checks[checkResult.beat].result} ${pageLine(checkResult)}`
+        ? [STARTER_WORDS.checks[checkResult.beat].result, resultSaid(checkResult.beat) ? said(resultSaid(checkResult.beat)!) : "", pageLine(checkResult)].filter(Boolean).join(" ")
+        : stormWaits && stormStep === "coming"
+          ? STARTER_WORDS.storm.coming
+          : stormWaits && stormStep === "falling"
+            ? `${STARTER_WORDS.storm.fell}. ${STARTER_WORDS.scale.priceAfter}.`
         : checkOpen && waitingCheck && checkLine
           ? // The card's header, read once: the taught line when it opens, Marlie's hint after a miss; then the question.
             `${said(checkLine)}${missed ? "" : ` ${STARTER_WORDS.checks[waitingCheck].title}`}`
@@ -733,6 +793,8 @@ export default function Game3DPage() {
       setCounterShut(false);
       setCheckShut(false);
       setCheckResult(null);
+      setStormStep(null);
+      stormFromPrice.current = false;
     }
   }, [inYard]);
   // A card you click needs the mouse free, as the other panels do.
@@ -1244,7 +1306,7 @@ export default function Game3DPage() {
     },
     // The practice yard (#494): E round the tower opens the check card that is waiting, if it was put away.
     station: {
-      prompt: () => (waitingCheck && !checkOpen && pickedLine === null && checkResult === null ? STARTER_WORDS.checks[waitingCheck].prompt : null),
+      prompt: () => (waitingCheck && !checkOpen && pickedLine === null && checkResult === null && !stormNoteShown && (!stormWaits || stormStep === "in") ? STARTER_WORDS.checks[waitingCheck].prompt : null),
       press: () => {
         if (waitingCheck) setCheckShut(false);
       },
@@ -1482,8 +1544,9 @@ export default function Game3DPage() {
       watchStatus: inPast ? null : (nightWatch?.status ?? null),
       unseenRavens: inPast ? 0 : unseenRavens,
       realmLevel,
-      // The practice yard's sky is its own (sunny until the storm beat), never the real fortress's weather.
-      siegeLevel: inYard ? "calm" : (viewState?.siege?.level ?? null),
+      // The practice yard's sky is its own (sunny until the storm beat), never the real fortress's weather. The storm's clouds
+      // are the courtyard's darkest ones; they clear once the storm card is answered (#495).
+      siegeLevel: inYard ? (stormShown && stormOverhead(starter.run) ? "besieged" : "calm") : (viewState?.siege?.level ?? null),
       drillOpen,
       questMarks: inPast ? [] : questMarks,
       talking,
@@ -1505,9 +1568,15 @@ export default function Game3DPage() {
         wall: wallsOf(starter.run),
         moat: moatOf(starter.run),
         factCards: factCardsShown(starter.run),
+        gauge: gaugeOf(starter.run),
+        scale: scaleOf(starter.run),
+        price: stormShown ? priceOf(starter.run) : priceOf({ ...starter.run, beat: "price" }),
+        pointAt: factPointedAt(starter.run),
+        shakeKey,
+        stormy: stormShown && stormOverhead(starter.run),
       },
     }),
-    [starter.run, riseKey, inYard, inPast, viewState, mint.view, sheets, quest.written, nightWatch, unseenRavens, realmLevel, drillOpen, questMarks, talking, cheerKey, standingText.lit, fieldTools, quarter, archCounts, placedMarks, lit],
+    [starter.run, riseKey, stormShown, shakeKey, inYard, inPast, viewState, mint.view, sheets, quest.written, nightWatch, unseenRavens, realmLevel, drillOpen, questMarks, talking, cheerKey, standingText.lit, fieldTools, quarter, archCounts, placedMarks, lit],
   );
 
   if (!supported) return <Unavailable />;
@@ -1524,7 +1593,7 @@ export default function Game3DPage() {
   const backOutside = roomView || inHall || inRecords || area.id === "weather" || area.id === "mint" || area.id === "quarter" || inYard ? leaveArea : null;
   // Any panel or dialog on screen: the hint line steps aside for it.
   const anyPanelOpen =
-    panels.quests || panels.towers || whereOpen || vaultOpen || realmOpen || watchOpen || perchOpen || hourglassOpen || deskOpen || drillOpen || lampOpen || boothOpen !== null || report !== null || counterOpen || practicePlainOpen || arrivalShown || pickedLine !== null || checkOpen || bookOpen || checkResult !== null;
+    panels.quests || panels.towers || whereOpen || vaultOpen || realmOpen || watchOpen || perchOpen || hourglassOpen || deskOpen || drillOpen || lampOpen || boothOpen !== null || report !== null || counterOpen || practicePlainOpen || arrivalShown || pickedLine !== null || checkOpen || bookOpen || checkResult !== null || stormNoteShown;
 
   return (
     <div className="relative h-[calc(100dvh-5rem)] min-h-[480px] w-full overflow-hidden bg-surface">
@@ -1693,12 +1762,16 @@ export default function Game3DPage() {
           )}
           {checkResult && (
             <StarterResult
-              label={STARTER_WORDS.book.pages[checkResult.beat].title}
+              label={pageTitle(checkResult.beat)}
               result={STARTER_WORDS.checks[checkResult.beat].result}
+              said={resultSaid(checkResult.beat)}
               page={pageLine(checkResult)}
               isNew={checkResult.page === "new"}
             />
           )}
+          {/* Beat 6's plates before its card: the storm is coming; then, under reduced motion (no shake), what it did. */}
+          {stormWaits && stormStep === "coming" && <StarterNote text={STARTER_WORDS.storm.coming} />}
+          {stormWaits && stormStep === "falling" && prefersReducedMotion() && <StarterNote text={STARTER_WORDS.storm.fell} />}
           {practicePlainOpen && (
             <PracticePlainPanel
               seen={{
@@ -1708,6 +1781,10 @@ export default function Game3DPage() {
                 owes: plainSeen(starter.run).owes ? STARTER_WORDS.plain.owes : undefined,
                 walls: plainSeen(starter.run).walls ? STARTER_WORDS.plain.walls : undefined,
                 moat: plainSeen(starter.run).moat ? STARTER_WORDS.plain.moat : undefined,
+                worth: plainSeen(starter.run).worth ? STARTER_WORDS.plain.worth : undefined,
+                price: plainSeen(starter.run).price ? STARTER_WORDS.plain.price : undefined,
+                room: plainSeen(starter.run).room ? STARTER_WORDS.plain.room : undefined,
+                storm: plainSeen(starter.run).storm ? STARTER_WORDS.plain.storm : undefined,
               }}
               onClose={closePracticePlain}
             />

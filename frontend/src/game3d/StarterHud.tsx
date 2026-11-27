@@ -51,18 +51,41 @@ export function StarterPlate({ lines, label }: { lines: readonly Line[]; label: 
  * A check's result (#494): the result line, with its reason, and under it what the Book did ("New page: Walls", "Already in
  * your book." or "Play again to earn this page."). No button: it goes by itself and the next station's card opens.
  */
-export function StarterResult({ label, result, page, isNew }: { label: string; result: string; page: string; isNew: boolean }) {
+export function StarterResult({ label, result, said, page, isNew }: { label: string; result: string; said?: Line | null; page: string; isNew: boolean }) {
   return (
     <section
       aria-label={label}
       className="g3d-panel g3d-slide pointer-events-none absolute bottom-16 left-1/2 z-20 w-[24rem] max-w-[92%] -translate-x-1/2 space-y-1 p-3 text-sm"
     >
       <p className="text-[0.95rem] font-semibold leading-snug">{result}</p>
+      {/* The storm's result (#495) carries Marlie's line too: who says it, then the line. */}
+      {said && (
+        <div>
+          <p className="g3d-tag">{SPEAKERS[said.who]}</p>
+          <p className="leading-snug">{said.text}</p>
+        </div>
+      )}
       <p className={isNew ? "g3d-tag" : "g3d-muted"} data-testid="starter-page-line">
         {isNew && <span aria-hidden>📖 </span>}
         {page}
       </p>
     </section>
+  );
+}
+
+/**
+ * A short plate with no speaker and no button (#495): "Storm coming", and under reduced motion "Prices fell 30%" where the
+ * tower would shake. It goes by itself; the card opens after it. Hidden from screen readers: the live region says it once.
+ */
+export function StarterNote({ text }: { text: string }) {
+  return (
+    <p
+      aria-hidden
+      data-testid="starter-note"
+      className="g3d-panel g3d-slide pointer-events-none absolute bottom-16 left-1/2 z-20 -translate-x-1/2 px-4 py-2 text-base font-semibold"
+    >
+      {text}
+    </p>
   );
 }
 

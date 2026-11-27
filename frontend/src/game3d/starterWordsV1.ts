@@ -10,7 +10,7 @@
  * their own beats here before any of them is shown. A change to a string that has been shown is a new version file
  * (`starterWordsV2.ts`), never an edit of this one (CLAUDE.md rule 3).
  */
-import { PIP } from "./practiceCompanyV1";
+import { PIP, practiceTiers } from "./practiceCompanyV1";
 
 export const STARTER_WORDS_VERSION = "v1";
 
@@ -40,6 +40,9 @@ export const STARTER_WORDS = {
     // Build step 2 (#494):
     moat: "Fill the moat",
     price: "Weigh the price",
+    // Build step 3 (#495):
+    storm: "Spot what changed",
+    why: "Pin your why",
   },
 
   /** Beat 1: the arrival plate. Shown once; it goes when Sal's card opens, so the two are never on screen together. */
@@ -94,6 +97,11 @@ export const STARTER_WORDS = {
     owes: `${PIP.owes} coins. Cash: ${PIP.cash}. Interest: ${PIP.interest} coins a year.`,
     walls: `Granite. Owes ${PIP.owes}. Made ${PIP.leftOver[2]} last year. Half of one year: granite.`,
     moat: `Narrow. ${PIP.moatReason} is hard to copy, not impossible.`,
+    // Build step 3 (#495): the rows beats 5 and 6 look at. Numbers from the one table, the room worked out by `practiceTiers`.
+    worth: `Low ${PIP.worth.low}, middle ${PIP.worth.middle}, high ${PIP.worth.high} coins.`,
+    price: `${PIP.price} coins.`,
+    room: `${practiceTiers().room} coins on ${PIP.worth.middle} (${Math.round(practiceTiers().roomShare * 100)}%). Lots of room. Grown-ups say margin of safety.`,
+    storm: `Every price fell ${Math.round(PIP.stormFall * 100)}%: ${practiceTiers("storm").price} coins. Still made ${PIP.leftOver[2]}, still owes ${PIP.owes}.`,
   },
 
   // --- Build step 2 (#494): beats 3 and 4 and the Book of Wisdom. -------------------------------------------------------
@@ -128,7 +136,51 @@ export const STARTER_WORDS = {
       },
       prompt: "Press E to fill the moat",
     },
+    // Build step 3 (#495): beats 5 and 6. Right answer never first, never in the slot the card before used (starterPlanV3).
+    price: {
+      title: `Worth about ${PIP.worth.middle}. Price ${PIP.price}. How much room?`,
+      taught: { who: "barren", text: `Worth ${PIP.worth.middle}, price ${PIP.price}. That gap is room to be wrong.` } as Line,
+      // The real price post's own words, so the yard teaches the gauge the real lands show.
+      choices: { some: "Some room", lots: "Lots of room", none: "No room" },
+      result: "Lots of room. Even a low guess beats the price.",
+      hints: {
+        some: { who: "marlie", text: `Weigh it again. Even the low guess is ${PIP.worth.low}.` } as Line,
+        none: { who: "marlie", text: `Weigh it again. Even the low guess is ${PIP.worth.low}.` } as Line,
+      },
+      prompt: "Press E to weigh the price",
+    },
+    storm: {
+      title: `Storm! Prices fell ${Math.round(PIP.stormFall * 100)}%. What changed?`,
+      // Not the taught line: "The price fell. The business did not." is the answer, so it waits for the Storms page.
+      taught: { who: "barren", text: "Look at the cards, then the price." } as Line,
+      choices: { worse: "The lemonade got worse", owes: "It owes more now", price: "Only the price" },
+      result: "Only the price. Walls and moat held.",
+      /** Said with the result: the other half of the lesson (a business change is news), true in beat 6b. */
+      after: { who: "marlie", text: "If it owed more, that would be news." } as Line,
+      hints: {
+        worse: { who: "marlie", text: `Still ${PIP.leftOver[2]} coins a year. Look again.` } as Line,
+        owes: { who: "marlie", text: `Still owes ${PIP.owes}. Look again.` } as Line,
+      },
+      /** The tag under the fact card a wrong pick points at. */
+      lookHere: "Look here",
+      prompt: "Press E to spot what changed",
+    },
     close: "Close",
+  },
+
+  /** Beat 5's balance scale by the price post (#495): worth in one pan, the price in the other. */
+  scale: {
+    worth: `Worth about ${PIP.worth.middle}`,
+    low: `low guess ${PIP.worth.low}`,
+    price: `Price ${PIP.price}`,
+    priceAfter: `Price ${PIP.price} → ${practiceTiers("storm").price}`,
+    /** The gauge before the price is weighed: a "?" in the mist, and what to do, not "Not priced yet" (a price is on show). */
+    gaugeFog: "Weigh it",
+  },
+  /** Beat 6's two plates before the card: the storm comes, and (reduced motion, no shake) what it did. */
+  storm: {
+    coming: "Storm coming",
+    fell: `Prices fell ${Math.round(PIP.stormFall * 100)}%`,
   },
 
   /** The Book of Wisdom (section 4). No number anywhere in it: five titles, each learned or not, and nothing counted. */
@@ -166,8 +218,22 @@ export const STARTER_WORDS = {
         grownUp: "Grown-ups say moat too: wide, narrow or none.",
         real: "Press T: each tower says its moat.",
       },
-      room: { title: "Room to be wrong" },
-      storms: { title: "Storms" },
+      // Build step 3 (#495):
+      room: {
+        title: "Room to be wrong",
+        lines: [`Worth ${PIP.worth.middle}, price ${PIP.price}. That gap is room to be wrong.`],
+        fact: `Pip's low guess is ${PIP.worth.low}, middle ${PIP.worth.middle}. Price ${PIP.price}.`,
+        grownUp: "Grown-ups call this a margin of safety.",
+        real: "On a real tower's land, the price post shows its room.",
+      },
+      storms: {
+        title: "Storms",
+        // Both halves from the first unlock (spec section 4), so the page never teaches "a price drop never matters".
+        lines: ["The price fell. The business did not.", "If the business changes, that is news."],
+        fact: `Pip's price fell from ${PIP.price} to ${practiceTiers("storm").price}. It still made ${PIP.leftOver[2]}.`,
+        grownUp: "Grown-ups call a fall this big a bear market.",
+        real: "Press T: walls and moat say if a business changed.",
+      },
       why: { title: "Write it down" },
     } as Record<"walls" | "moat" | "room" | "storms" | "why", BookPage>,
   },
@@ -222,11 +288,18 @@ export function allStarterStrings(): string[] {
     w.goal.moat,
     w.goal.price,
     ...w.facts.flat(),
-    ...(["walls", "moat"] as const).flatMap((b) => {
+    ...(["walls", "moat", "price", "storm"] as const).flatMap((b) => {
       const c = w.checks[b];
       return [c.title, c.taught.text, ...Object.values(c.choices), c.result, ...lines(Object.values(c.hints)), c.prompt];
     }),
     w.checks.close,
+    // Build step 3 (#495).
+    w.goal.storm,
+    w.goal.why,
+    w.checks.storm.after.text,
+    w.checks.storm.lookHere,
+    ...Object.values(w.scale),
+    ...Object.values(w.storm),
     ...bookStrings().filter((s) => !Object.values(w.book.pages).some((p) => p.grownUp === s)),
   ];
 }
@@ -234,7 +307,7 @@ export function allStarterStrings(): string[] {
 /** The Plain view's own lines (neutral and exact; grown-up words are allowed here, but none is needed yet). */
 export function plainStrings(): string[] {
   const p = STARTER_WORDS.plain;
-  return [p.title, p.intro, p.notYet, p.close, ...Object.values(p.rows), p.company, p.pieces, p.leftOver, p.owes, p.walls, p.moat];
+  return [p.title, p.intro, p.notYet, p.close, ...Object.values(p.rows), p.company, p.pieces, p.leftOver, p.owes, p.walls, p.moat, p.worth, p.price, p.room, p.storm];
 }
 
 /** What is on screen at once in each beat, for the 35-word cap: the goal strip, the practice tag and the open card or plate. */
@@ -249,18 +322,25 @@ export function screensOfBeats(): { beat: string; strings: string[] }[] {
     // Build step 2 (#494): while a check card is open the goal strip steps aside (the card's title says the same), so a
     // screen is the tag and the card: its header (the taught line, or the hint after a miss), its title and the choices
     // still on it. After a miss the tried choice is off the card. Then the result plate with its page line, under the goal.
-    ...(["walls", "moat"] as const).flatMap((b) => {
+    // Build step 3 (#495) adds the price and storm cards the same way. A storm miss also puts a "Look here" tag under a fact
+    // card, counted with it; the storm's result plate carries Marlie's line too.
+    ...(["walls", "moat", "price", "storm"] as const).flatMap((b) => {
       const c = w.checks[b];
       const choices = Object.entries(c.choices) as [string, string][];
       const open = { beat: `${b}-card`, strings: [w.tag, ...said([c.taught]), c.title, ...choices.map(([, t]) => t)] };
       const misses = (Object.entries(c.hints) as [string, Line][]).map(([id, hint]) => ({
         beat: `${b}-miss-${id}`,
-        strings: [w.tag, ...said([hint]), c.title, ...choices.filter(([k]) => k !== id).map(([, t]) => t)],
+        strings: [w.tag, ...said([hint]), c.title, ...choices.filter(([k]) => k !== id).map(([, t]) => t), ...(b === "storm" ? [w.checks.storm.lookHere] : [])],
       }));
-      const next = b === "walls" ? w.goal.moat : w.goal.price;
-      const pageLines = [w.book.newPage(w.book.pages[b].title), w.book.held, w.book.earnLater];
-      const results = pageLines.map((line, i) => ({ beat: `${b}-result-${i + 1}`, strings: [next, w.tag, c.result, line] }));
+      const next = { walls: w.goal.moat, moat: w.goal.price, price: w.goal.storm, storm: w.goal.why }[b];
+      const page = { walls: "walls", moat: "moat", price: "room", storm: "storms" } as const;
+      const pageLines = [w.book.newPage(w.book.pages[page[b]].title), w.book.held, w.book.earnLater];
+      const extra = b === "storm" ? said([w.checks.storm.after]) : [];
+      const results = pageLines.map((line, i) => ({ beat: `${b}-result-${i + 1}`, strings: [next, w.tag, c.result, ...extra, line] }));
       return [open, ...misses, ...results];
     }),
+    // Beat 6's plates before its card: the goal strip, the tag and one short plate.
+    { beat: "storm-coming", strings: [w.goal.storm, w.tag, w.storm.coming] },
+    { beat: "storm-fell", strings: [w.goal.storm, w.tag, w.storm.fell] },
   ];
 }

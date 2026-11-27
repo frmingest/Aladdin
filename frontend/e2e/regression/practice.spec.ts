@@ -6,8 +6,8 @@ import { watch } from "../support/guard";
  * write (spec `docs/game/game3d-starter-level-spec-2026-11-22.md` section 11). Each later build step extends it to its beats.
  *
  * From the moment the yard has settled, it records every request the page sends and every key in the browser's storage,
- * plays the starter as far as it is built (beats 1 to 4, with one wrong pick at each check, #494) by keyboard and then by
- * touch, and checks that:
+ * plays the starter as far as it is built (beats 1 to 6, with one wrong pick at each check, #494, #495) by keyboard and then
+ * by touch, and checks that:
  * - every request to the backend is a read (GET, HEAD or OPTIONS), and none carries the practice company's name;
  * - the only storage key added or changed is the starter's own (`aladdin.game3d.starter.v1`); the Guide and the round keys
  *   are untouched;
@@ -120,12 +120,43 @@ async function playChecksByKeyboard(page: Page) {
   await expectResult(page, "Moat", "Narrow moat. A recipe is hard to copy.", "New page: Moat");
 }
 
-const AFTER_CHECKS: Run = { beat: "price", picks: { company: "pip", walls: ["timber", "granite"], moat: ["cheap", "recipe"] } };
+/**
+ * Beats 5 and 6 (#495) by keyboard. The price card opens by itself after the moat's result; one wrong pick, then the right one
+ * (slot 2). Then the storm comes on its own: "Storm coming", then the card. One wrong pick, then the right one (slot 3).
+ */
+async function playPriceAndStormByKeyboard(page: Page) {
+  const price = page.getByRole("dialog", { name: "Worth about 10. Price 7. How much room?" });
+  await expect(price).toBeVisible({ timeout: 30_000 });
+  await expect(price.getByRole("button", { name: /Some room/ })).toBeFocused();
+  await page.keyboard.press("1"); // Some room: wrong
+  await expect(price).toContainText("Weigh it again. Even the low guess is 8.");
+  await settle(page);
+  await page.keyboard.press("2"); // Lots of room, still in slot 2
+  await expect(price).toHaveCount(0);
+  await expectResult(page, "Room to be wrong", "Lots of room. Even a low guess beats the price.", "New page: Room to be wrong");
 
-test.describe("practice yard: beats 1 to 4 make no write", () => {
-  test("keyboard: arrive, pick, knock and fill with one miss each; the Book holds two pages outside the yard", async ({ page }) => {
-    // Four beats, a walk out and the courtyard's load on CI's software WebGL take about 90 s, the project's whole budget.
-    test.setTimeout(240_000);
+  // The storm is not on top of beat 5: its plate first, then the card, with no tap.
+  await expect(page.getByTestId("starter-note")).toHaveText("Storm coming", { timeout: 30_000 });
+  const storm = page.getByRole("dialog", { name: "Storm! Prices fell 30%. What changed?" });
+  await expect(storm).toBeVisible({ timeout: 30_000 });
+  await page.keyboard.press("2"); // It owes more now: wrong
+  await expect(storm).toContainText("Still owes 5. Look again.");
+  await settle(page);
+  await page.keyboard.press("3"); // Only the price
+  await expect(storm).toHaveCount(0);
+  await expectResult(page, "Storms", "Only the price. Walls and moat held.", "New page: Storms");
+  await expect(page.getByRole("region", { name: "Storms", exact: true })).toContainText("If it owed more, that would be news.");
+}
+
+const AFTER_CHECKS: Run = {
+  beat: "why",
+  picks: { company: "pip", walls: ["timber", "granite"], moat: ["cheap", "recipe"], price: ["some", "lots"], storm: ["owes", "price"] },
+};
+
+test.describe("practice yard: beats 1 to 6 make no write", () => {
+  test("keyboard: arrive, pick, knock, fill, weigh and the storm with one miss each; the Book holds four pages outside", async ({ page }) => {
+    // Six beats, a walk out and the courtyard's load on CI's software WebGL take about two minutes.
+    test.setTimeout(300_000);
     const problems = watch(page);
     await openYard(page);
     const before = await storage(page);
@@ -153,11 +184,15 @@ test.describe("practice yard: beats 1 to 4 make no write", () => {
     await expect(plain).not.toContainText("Half of one year: granite.");
     await plain.getByRole("button", { name: "Close" }).click();
 
-    // Beats 3 and 4, each with one wrong pick.
+    // Beats 3 to 6, each with one wrong pick.
     await playChecksByKeyboard(page);
+    await playPriceAndStormByKeyboard(page);
+    await expect(page.getByText("Pin your why", { exact: true }).first()).toBeVisible();
     await page.getByRole("button", { name: /Plain view/ }).click();
     await expect(plain).toContainText("Owes 5. Made 10 last year. Half of one year: granite.");
     await expect(plain).toContainText("Narrow. Gran's secret recipe is hard to copy, not impossible.");
+    await expect(plain).toContainText("3 coins on 10 (30%). Lots of room.");
+    await expect(plain).toContainText("Every price fell 30%: 4.9 coins. Still made 10, still owes 5.");
     await plain.getByRole("button", { name: "Close" }).click();
 
     // No real panel opens in the yard: T does nothing there, and the toolbar has no Towers or Quests tool.
@@ -170,7 +205,7 @@ test.describe("practice yard: beats 1 to 4 make no write", () => {
     await expect(page.getByTestId("practice-tag")).toBeVisible();
 
     await assertNoWrite(page, before, api, AFTER_CHECKS);
-    expect(JSON.parse((await storage(page))[STARTER_KEY]).pages).toEqual(["walls", "moat"]);
+    expect(JSON.parse((await storage(page))[STARTER_KEY]).pages).toEqual(["walls", "moat", "room", "storms"]);
 
     // The made-up company never reaches a real list: walk out and read the courtyard's Towers panel.
     await page.keyboard.press("b");
@@ -181,7 +216,7 @@ test.describe("practice yard: beats 1 to 4 make no write", () => {
     await expect(towers).not.toContainText("Pip");
     await page.keyboard.press("t");
 
-    // Outside the yard the Book is the first Quests card: two pages learned, the rest locked, and no count anywhere.
+    // Outside the yard the Book is the first Quests card: four pages learned, the last locked, and no count anywhere.
     const quests = page.getByRole("complementary", { name: "Quest log" });
     // The sample fortress may already have opened the Quests panel by itself; Q would then shut it.
     if (!(await quests.isVisible())) await page.keyboard.press("q");
@@ -191,7 +226,9 @@ test.describe("practice yard: beats 1 to 4 make no write", () => {
     const page_ = (title: string) => book.getByRole("listitem").filter({ has: page.getByRole("heading", { name: new RegExp(`^${title}`) }) });
     await expect(page_("Walls")).toContainText("Strong walls: it makes money and owes little.");
     await expect(page_("Moat")).toContainText("A moat is what stops others copying it.");
-    await expect(page_("Room to be wrong")).toContainText("Not learned yet");
+    await expect(page_("Room to be wrong")).toContainText("That gap is room to be wrong.");
+    await expect(page_("Storms")).toContainText("The price fell. The business did not.");
+    await expect(page_("Write it down")).toContainText("Not learned yet");
     await expect(book).not.toContainText(/\d+\s*of\s*\d+/);
     await page.keyboard.press("Escape");
     await expect(book).toHaveCount(0);
@@ -204,8 +241,8 @@ test.describe("practice yard: beats 1 to 4 make no write", () => {
     test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
 
     test("taps only: reopen each card from the goal strip; two misses at the moat keep its page locked", async ({ page }) => {
-      // Four beats by touch on CI's software WebGL take about 70 s of the project's 90 s budget.
-      test.setTimeout(180_000);
+      // Six beats by touch on CI's software WebGL take about 100 s.
+      test.setTimeout(240_000);
       const problems = watch(page);
       await openYard(page);
       const before = await storage(page);
@@ -245,8 +282,30 @@ test.describe("practice yard: beats 1 to 4 make no write", () => {
       await expect(moat).toHaveCount(0);
       await expectResult(page, "Moat", "Narrow moat. A recipe is hard to copy.", "Play again to earn this page.");
 
-      await assertNoWrite(page, before, api, { beat: "price", picks: { company: "pip", walls: ["rotted", "granite"], moat: ["sign", "cheap"] } });
-      expect(JSON.parse((await storage(page))[STARTER_KEY]).pages).toEqual(["walls"]);
+      // Beat 5 by taps (#495): put the card away, the goal strip brings it back; one miss, then the right one.
+      const price = page.getByRole("dialog", { name: "Worth about 10. Price 7. How much room?" });
+      await expect(price).toBeVisible({ timeout: 30_000 });
+      await price.getByRole("button", { name: "Close" }).tap();
+      await expect(price).toHaveCount(0);
+      await page.getByRole("button", { name: "Weigh the price" }).tap();
+      await price.getByRole("button", { name: /No room/ }).tap();
+      await expect(price).toContainText("Weigh it again.");
+      await settle(page);
+      await price.getByRole("button", { name: /Lots of room/ }).tap();
+      await expectResult(page, "Room to be wrong", "Lots of room. Even a low guess beats the price.", "New page: Room to be wrong");
+
+      // Beat 6 by one tap: 0 to start (it comes on its own), 1 to answer.
+      const storm = page.getByRole("dialog", { name: "Storm! Prices fell 30%. What changed?" });
+      await expect(storm).toBeVisible({ timeout: 30_000 });
+      await storm.getByRole("button", { name: /Only the price/ }).tap();
+      await expectResult(page, "Storms", "Only the price. Walls and moat held.", "New page: Storms");
+      await expect(page.getByTestId("practice-tag")).toBeVisible();
+
+      await assertNoWrite(page, before, api, {
+        beat: "why",
+        picks: { company: "pip", walls: ["rotted", "granite"], moat: ["sign", "cheap"], price: ["none", "lots"], storm: ["price"] },
+      });
+      expect(JSON.parse((await storage(page))[STARTER_KEY]).pages).toEqual(["walls", "room", "storms"]);
       await problems.assertNone();
     });
   });
@@ -266,6 +325,33 @@ test.describe("practice yard: beats 1 to 4 make no write", () => {
     await page.keyboard.press("b");
     await expect(page).toHaveURL((u) => u.search === "");
     await expect(page).toHaveTitle(/3D courtyard/);
+    await problems.assertNone();
+  });
+
+  // #495: under reduced motion the tower does not shake; a plate says what the storm did instead. A reload into the storm
+  // skips "Storm coming" (the price has already fallen) and opens the card straight away.
+  test("storm under reduced motion says 'Prices fell 30%'; a reload into the storm opens its card at once", async ({ page }) => {
+    test.setTimeout(180_000);
+    const problems = watch(page);
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    // Start at the price card: the earlier beats are played above. Seeded once, so the reload below keeps what was played.
+    await page.addInitScript((key) => {
+      if (sessionStorage.getItem("seeded")) return;
+      sessionStorage.setItem("seeded", "1");
+      localStorage.setItem(key, JSON.stringify({ pages: [], finished: false, skipped: false, run: { beat: "price", picks: { company: "pip", walls: ["granite"], moat: ["recipe"] } } }));
+    }, STARTER_KEY);
+    await openYard(page);
+    const price = page.getByRole("dialog", { name: "Worth about 10. Price 7. How much room?" });
+    await expect(price).toBeVisible({ timeout: 30_000 });
+    await page.keyboard.press("2");
+    await expect(page.getByTestId("starter-note")).toHaveText("Storm coming", { timeout: 30_000 });
+    await expect(page.getByTestId("starter-note")).toHaveText("Prices fell 30%", { timeout: 10_000 });
+    const storm = page.getByRole("dialog", { name: "Storm! Prices fell 30%. What changed?" });
+    await expect(storm).toBeVisible({ timeout: 30_000 });
+
+    await openYard(page);
+    await expect(storm).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByTestId("starter-note")).toHaveCount(0);
     await problems.assertNone();
   });
 });

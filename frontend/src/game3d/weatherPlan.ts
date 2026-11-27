@@ -85,7 +85,24 @@ const SLOTS: readonly CloudSlot[] = [
   { x: 14, y: 56, z: -14, s: 1.2 },
 ];
 
-export function cloudSlots(count: number): CloudSlot[] {
+/**
+ * The practice yard's storm clouds (#495): low (about 10 to 14 m) and behind the tower, in front of the yard's
+ * painted mountains, so the follow camera sees them from the arrival spot on a wide screen and on a portrait phone. (The
+ * courtyard's slots hang 45 m up, above that camera's view; in the yard the storm would not have shown.) Fixed places.
+ */
+export const YARD_CLOUD_SLOTS: readonly CloudSlot[] = [
+  { x: 0, y: 12, z: -26, s: 0.6 },
+  { x: -10, y: 10, z: -24, s: 0.5 },
+  { x: 10, y: 10.5, z: -24, s: 0.5 },
+  { x: -19, y: 11, z: -22, s: 0.55 },
+  { x: 19, y: 11, z: -22, s: 0.55 },
+  { x: -5, y: 13.5, z: -34, s: 0.65 },
+  { x: 6, y: 14, z: -36, s: 0.65 },
+  { x: -27, y: 9.5, z: -12, s: 0.5 },
+  { x: 27, y: 9.5, z: -13, s: 0.5 },
+];
+
+export function cloudSlots(count: number, slots: readonly CloudSlot[] = SLOTS): CloudSlot[] {
   const n = Number.isFinite(count) ? Math.max(0, Math.min(MAX_CLOUDS, Math.floor(count))) : 0;
-  return SLOTS.slice(0, n);
+  return slots.slice(0, n);
 }

@@ -1,14 +1,16 @@
 import { cloudSlots, weatherLook } from "./weatherPlan";
+import type { CloudSlot } from "./weatherPlan";
 import type { FortressSiegeLevel } from "../lib/types";
 
 /**
  * Painted clouds over the walls (S16, PR 3): how many follows the backend's siege level (weatherPlan.ts). Flat colour,
  * no light, no animation, so flat neutral lighting stays and reduced motion needs nothing. Calm weather draws none.
  */
-export default function Weather({ level }: { level: FortressSiegeLevel | null }) {
+export default function Weather({ level, slots: places }: { level: FortressSiegeLevel | null; slots?: readonly CloudSlot[] }) {
   const look = weatherLook(level);
   const color = look.cloudColor;
-  const slots = cloudSlots(look.clouds);
+  // A place can hang its clouds where its own camera sees them (the practice yard, #495); the courtyard keeps its slots.
+  const slots = cloudSlots(look.clouds, places);
   if (slots.length === 0) return null;
   return (
     <group>

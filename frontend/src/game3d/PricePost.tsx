@@ -20,16 +20,25 @@ export default function PricePost({
   post,
   pos,
   gaugeOnly = false,
+  at = PRICE_POST,
+  label,
 }: {
   post: PricePostData;
   pos: MutableRefObject<{ x: number; z: number }>;
   /** The practice yard (#493) shows the gauge alone: its scroll and banner carry facts the starter does not teach. */
   gaugeOnly?: boolean;
+  /** Where the post stands. A land's post stands by its exit; the practice yard's stands in view of the arrival (#495). */
+  at?: { x: number; z: number };
+  /**
+   * The practice yard's own words over the gauge, always shown (#495): the yard teaches the gauge, so its words do not wait
+   * for you to walk up. A land's post leaves this out and keeps its title, with the details when you are near.
+   */
+  label?: readonly string[];
 }) {
   const [near, setNear] = useState(false);
   const last = useRef(false);
   useFrame(() => {
-    const d = Math.hypot(PRICE_POST.x - pos.current.x, PRICE_POST.z - pos.current.z);
+    const d = Math.hypot(at.x - pos.current.x, at.z - pos.current.z);
     const n = d <= (last.current ? PRICE_LEAVE_RANGE : PRICE_RANGE);
     if (n !== last.current) {
       last.current = n;
@@ -40,7 +49,7 @@ export default function PricePost({
   const shape = BANNER_SHAPE[post.banner];
   const scroll = post.scroll;
   return (
-    <group position={[PRICE_POST.x, 0, PRICE_POST.z]}>
+    <group position={[at.x, 0, at.z]}>
       {/* The plank gauge: a post with four notches; the marker sits at the stored margin of safety. */}
       <Part color={PAL.timber} position={[-0.9, GAUGE_H / 2, 0]} grow={1.08}>
         <boxGeometry args={[0.3, GAUGE_H, 0.2]} />
@@ -130,6 +139,16 @@ export default function PricePost({
       )}
       </>)}
 
+      {label ? (
+        // The yard is walled in by its hedge, like a room, so its gauge's words may show from anywhere in it (`reveal`).
+        <WorldLabel position={[-0.9, GAUGE_H + 0.55, 0]} distanceFactor={12} reveal="always" fog={fill === null}>
+          {label.map((l) => (
+            <div key={l} className="whitespace-nowrap font-semibold">
+              {l}
+            </div>
+          ))}
+        </WorldLabel>
+      ) : (
       <WorldLabel position={[0, 3.1, 0]} distanceFactor={9}>
           <div className="whitespace-nowrap font-semibold">{PRICE_WORDS.title}</div>
           {near && (
@@ -141,6 +160,7 @@ export default function PricePost({
             </>
           )}
         </WorldLabel>
+      )}
     </group>
   );
 }
