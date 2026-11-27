@@ -1,5 +1,7 @@
 # Market Street redesign: critique and spec (2026-10-17)
 
+> Note (#511, 2026-11-26): `ParchmentPanel`, `SealMark`, `SealArt`, `FogPanel` and `Speaker` were removed from the kit because no page used them. Where this spec points at the `ParchmentPanel` palette, the plate now carries its own colours.
+
 Status: **built on `feature/market-street` (written and tested, not deployed).** Decisions D1-D7 taken as recommended. Two changes after the spec: plates show only the name, and a stall is a button that opens its card in place (tone, gap, ticker, pips, "Step inside"); stall art is 12.5 rem tall (square scaled down to cost less scroll). Original status: spec only. Covers the Game-mode Market Street on branch `feature/market-street` (PR #173), files `frontend/src/components/marketplace/MarketStreet.tsx`, `street.css`, `frontend/src/lib/marketStreet.ts`. Comes after `docs/game/marketplace-landscape-2026-10-17.md` (concept and Stitch list, still in force) and keeps the rules of `docs/game/stitch-master-object-art-2026-10-11.md`.
 
 Trigger: Faiz looked at the live street (demo data, 2 stalls) and said "it's not looking good, we need to improve it". Inputs: his four screenshots (top of page, square plus first stall, second stall, gate), the code above, and the packed pictures in `frontend/src/assets/art/`.

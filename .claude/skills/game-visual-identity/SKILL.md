@@ -9,7 +9,7 @@ Standard: `.claude/standards/game-visual-identity.md` (ladder 0-3, anti-patterns
 1. **Name the page verb** (read, weigh, judge, remember, mark). Pick the one real fact the page is about.
 2. **Pick the visual verb + scene**: a noun in the existing motif list that carries that fact (tower, moat, fog, raven, scroll, seal, lamp, crest, map ring, hourglass) and a place it sits (header band, centre object, margin).
 3. **Write the mapping as a pure function** `fact -> {shape, size, fill, crack, fog, label}`; unknown -> fog or "?" glyph, never a default-good draw. Name the file in `lib/`.
-4. **Compose from the kit** (parchment panel, seal badge, crest, banner, frame corners). Add to the kit before inlining.
+4. **Compose from the kit** (crest, torches, banner, fog patch, night panel, frame corners). Add to the kit before inlining.
 5. **Cut words**: remove the sentence the picture now says; keep one caption line; number and source in the tooltip/detail.
    - **Game voice** (standard section 6): write every string as a player would say it: short, plain, verbs for the player's act (Plant your stakes, Reveal the answer, Caught it). Move caveats to the rules foldout. Read each aloud before shipping.
 6. **Plain view**: same facts as labelled blocks with numbers. Colour never alone.

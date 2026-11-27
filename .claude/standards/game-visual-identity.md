@@ -4,7 +4,7 @@ Rule: every game tab must look like a game, not like the normal app with a sepia
 ## 1. Identity ladder (score per game page, 0-3)
 - **0 Generic.** `PageHeader` + `Card` + list/table. Same page would work in normal mode. (Today: Records, Siege rows, Marketplace cards.)
 - **1 Skinned.** Study skin colours and Marcellus headings only. Better, still not a game.
-- **2 Game page (minimum to ship).** All of: (a) a scene header or bespoke illustration at the top of the page, not a stock icon; (b) uses the shared kit (parchment panel, seal, crest, raven, scroll, frame corners) instead of one-off hex and `ui-card`; (c) encodes at least one real fact visually (shape, size, position, fill level, crack, fog), and that fact is named in the spec; (d) a Plain view toggle (same facts as labelled blocks); (e) passes truth, colour-blind, reduced-motion, keyboard, phone, performance.
+- **2 Game page (minimum to ship).** All of: (a) a scene header or bespoke illustration at the top of the page, not a stock icon; (b) uses the shared kit (crest, torches, banner, fog patch, night panel, raven, scroll, frame corners) instead of one-off hex and `ui-card`; (c) encodes at least one real fact visually (shape, size, position, fill level, crack, fog), and that fact is named in the spec; (d) a Plain view toggle (same facts as labelled blocks); (e) passes truth, colour-blind, reduced-motion, keyboard, phone, performance.
 - **3 Signature.** Also has one memorable object tied to the page's verb (e.g. a sealed minutes scroll, a sector picture standing on a map) that a screenshot alone identifies as Aladdin; hand-painted or illustrated asset allowed when it has an SVG fallback.
 
 Definition of done for any new or changed game page: score >= 2, with the score before/after written in the sprint doc. A changed page that scores below 2 is a blocker, not a nit.
@@ -36,7 +36,7 @@ Today's look, as built on `main`:
 - **Faiz's direction (2026-10-09):** visibly a game on every game tab (painted fortress, scrolls, ravens, seals); visuals added rather than paragraphs; never at the cost of truth, accessibility or performance.
 
 ## 5. Shared kit contract
-Owned by `game-feel-engineer`. Location: `frontend/src/components/fortress/kit/` (page scene header, parchment panel, seal badge, crest, banner, fog patch, plain-view toggle) with tokens in one file (`lib/gameTokens.ts` plus CSS variables), pure mapping in `lib/pageScene.ts` with tests. New pages compose from the kit; a missing piece is added to the kit first, not inlined.
+Owned by `game-feel-engineer`. Location: `frontend/src/components/fortress/kit/` (page scene header, crest, torches, banner, fog patch, night panel, plain-view toggle) with tokens in CSS variables (`index.css`; the 3D world's in `game3d/gameTokens.ts`) and pure mappings in `lib/` (for example `lib/crest.ts`) with tests. New pages compose from the kit; a missing piece is added to the kit first, not inlined.
 
 ## 6. Game voice (Faiz, 2026-10-15; applies to every game page, dialog, caption, button, empty state and error)
 Game mode talks like a game, not like a methods section. Faiz on Blindfold Years: the first copy "doesn't engage me like a game should but rather a lot of text opting me to try to understand." The numbers stay exact; only the words change.
