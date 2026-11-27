@@ -248,6 +248,8 @@ function PriceScale({ look, price, worth }: { look: "fog" | "tipped"; price: num
 /** The tower face toward the door view: the sheet just off the wall, the banner a hair further out. */
 const SHEET_AT = doorFace(2.05);
 const BANNER_AT = doorFace(2.1);
+/** Beat 8's burst goes up over the practice tower, not the courtyard fountain. */
+const CHEER_AT = { x: YARD_PAD.x, y: 6, z: YARD_PAD.z } as const;
 
 /**
  * Beat 7 (#496): the why on a sheet pinned to the tower's door side, facing the gate, at eye height. Two lines: the reason, and
@@ -256,7 +258,7 @@ const BANNER_AT = doorFace(2.1);
 function PinnedSheet({ lines }: { lines: readonly [string, string] }) {
   return (
     <group position={[SHEET_AT.x, 1.75, SHEET_AT.z]} rotation={[0, SHEET_AT.yaw, 0]}>
-      <WorldSign spec={{ kind: "plank", lines: [...lines] }} position={[0, 0, 0.05]} width={1.7} both={false} />
+      <WorldSign spec={{ kind: "plank", lines: [...lines] }} position={[0, 0, 0.05]} width={2.3} both={false} />
       <Part color={PAL.iron} position={[0, 0.34, 0.1]} grow={1.2}>
         <sphereGeometry args={[0.06, 8, 6]} />
       </Part>
@@ -271,22 +273,22 @@ function PinnedSheet({ lines }: { lines: readonly [string, string] }) {
 function LemonBanner() {
   return (
     <group position={[BANNER_AT.x, 4.6, BANNER_AT.z]} rotation={[0, BANNER_AT.yaw, 0]}>
-      <Part color={PAL.brass} position={[0, 1.85, 0]} grow={1.06}>
+      <Part ink={false} color={PAL.brass} position={[0, 1.85, 0]} grow={1.06}>
         <boxGeometry args={[1.3, 0.12, 0.12]} />
       </Part>
-      <Part color={PAL.cream} position={[0, 0, 0]} grow={1.03}>
+      <Part ink={false} color={PAL.cream} position={[0, 0, 0]} grow={1.03}>
         <boxGeometry args={[1.1, 3.6, 0.04]} />
       </Part>
       {/* The lemon: an oval of sand yellow with a moss leaf, low on the banner so the HUD's goal strip never covers it. */}
-      <Part color={PAL.sand} position={[0, -0.45, 0.06]} scale={[1, 0.75, 0.4]} grow={1.08}>
+      <Part ink={false} color={PAL.sand} position={[0, -0.45, 0.06]} scale={[1, 0.75, 0.4]} grow={1.08}>
         <sphereGeometry args={[0.38, 14, 10]} />
       </Part>
-      <Part color={PAL.moss} position={[0.22, -0.1, 0.08]} rotation={[0, 0, -0.6]} grow={1.1}>
+      <Part ink={false} color={PAL.moss} position={[0.22, -0.1, 0.08]} rotation={[0, 0, -0.6]} grow={1.1}>
         <boxGeometry args={[0.24, 0.1, 0.03]} />
       </Part>
       {/* The swallow-tail end: two brass points. */}
       {([-1, 1] as const).map((side) => (
-        <Part key={side} color={PAL.brass} position={[side * 0.3, -1.9, 0]} rotation={[0, 0, side * 0.5]} grow={1.08}>
+        <Part key={side} ink={false} color={PAL.brass} position={[side * 0.3, -1.9, 0]} rotation={[0, 0, side * 0.5]} grow={1.08}>
           <boxGeometry args={[0.3, 0.3, 0.05]} />
         </Part>
       ))}
@@ -431,7 +433,7 @@ export default function PracticeYard({ look, pos }: { look: PracticeLook; pos: M
       {/* Beat 7 (#496): the why, pinned on the tower door; beat 8: the lemon banner down the wall, once. */}
       {look.standing && look.sheet && <PinnedSheet lines={look.sheet} />}
       {look.standing && look.banner && <LemonBanner />}
-      <Confetti burstKey={look.cheerKey} />
+      <Confetti burstKey={look.cheerKey} origin={CHEER_AT} />
       {look.factCards && <FactPlank pointAt={look.pointAt} owes={look.owes} />}
       {/* Beat 5's scale stands with the tower: before the pick there is no price to weigh. */}
       {look.standing && <PriceScale look={look.scale} price={look.price} worth={look.worth} />}

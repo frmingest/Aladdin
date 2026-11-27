@@ -461,3 +461,6 @@ export function bookOffered(s: StarterSaved): boolean {
 
 /** Beat 8's cheer plays this long (the existing confetti burst); then Barren's line and the two buttons show. */
 export const CHEER_MS = 3000;
+
+/** Under reduced motion there is no burst to wait for: the banner hangs at once and its line is read, then the end shows. */
+export const CHEER_REDUCED_MS = 1000;

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import type { KeyboardEvent } from "react";
 import { SPEAKERS, STARTER_WORDS } from "./starterWordsV3";
 import type { Line } from "./starterWordsV3";
 
@@ -95,6 +96,9 @@ export function StarterNote({ text }: { text: string }) {
  * the courtyard; "Play again" starts a new run in the yard (the Book is kept). Focus lands on the first button, so one key
  * or one tap chooses. Selecting acts: no Close, no Next.
  */
+/** How long after the end shows an Enter or Space is ignored, so a key held from the last card does not leave the yard. */
+const END_KEY_GUARD_MS = 400;
+
 export function StarterEnd({
   line,
   realLabel,
@@ -109,13 +113,21 @@ export function StarterEnd({
   onAgain: () => void;
 }) {
   const first = useRef<HTMLButtonElement>(null);
+  const shownAt = useRef(0);
   useEffect(() => {
+    shownAt.current = performance.now();
     first.current?.focus();
   }, []);
+  // Focus lands on "Bring your real fortress" at once; an Enter or Space still held from the why card must not press it.
+  const guardKeys = (e: KeyboardEvent) => {
+    if ((e.key === "Enter" || e.key === " ") && performance.now() - shownAt.current < END_KEY_GUARD_MS) e.preventDefault();
+  };
   return (
     <section
       aria-label={realLabel}
       data-testid="starter-end"
+      onKeyDown={guardKeys}
+      onKeyUp={guardKeys}
       className="g3d-panel g3d-slide absolute bottom-16 left-1/2 z-20 w-[26rem] max-w-[92%] -translate-x-1/2 space-y-2 p-3 text-sm"
     >
       <div>

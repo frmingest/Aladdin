@@ -144,6 +144,7 @@ import {
   STORM_COMING_MS,
   STORM_FALL_MS,
   CHEER_MS,
+  CHEER_REDUCED_MS,
   WALL_CHOICES,
   WHY_CHIPS,
   WRONG_CHIPS,
@@ -844,7 +845,7 @@ export default function Game3DPage() {
     cheerDue.current = false;
     setYardCheerKey(Date.now());
     setCheering(true);
-    const t = setTimeout(() => setCheering(false), CHEER_MS);
+    const t = setTimeout(() => setCheering(false), prefersReducedMotion() ? CHEER_REDUCED_MS : CHEER_MS);
     return () => clearTimeout(t);
   }, [whyResult]);
   // Once per visit, when the why card (or the end, after a reload) first shows, the hero is put where the door is in view.
@@ -1952,7 +1953,11 @@ export default function Game3DPage() {
                 price: plainSeen(starter.run).price ? STARTER_WORDS.plain.price : undefined,
                 room: plainSeen(starter.run).room ? STARTER_WORDS.plain.room : undefined,
                 storm: plainSeen(starter.run).storm ? (starter.run.second ? STARTER_WORDS.plain.storm2 : STARTER_WORDS.plain.storm) : undefined,
-                why: plainSeen(starter.run).why ? STARTER_WORDS.plain.why : undefined,
+                why: plainSeen(starter.run).why
+                  ? starter.run.picks.why?.length === 2
+                    ? `${STARTER_WORDS.why.sheet.why} ${STARTER_WORDS.why.chips[starter.run.picks.why[0]]}. ${STARTER_WORDS.why.sheet.wrong} ${STARTER_WORDS.why.wrongChips[starter.run.picks.why[1]]}.`
+                    : STARTER_WORDS.plain.why
+                  : undefined,
               }}
               onClose={closePracticePlain}
             />

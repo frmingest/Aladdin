@@ -5,14 +5,14 @@ import type { InstancedMesh } from "three";
 import { CONFETTI_COLOURS, CONFETTI_COUNT, burstActive, heightAt, makePieces } from "./confettiLogic";
 import { prefersReducedMotion } from "./motionPref";
 
-/** Where the burst goes up: over the fountain. */
-const ORIGIN = { x: 0, y: 3.2, z: 2 };
+/** Where the burst goes up by default: over the courtyard fountain. */
+const FOUNTAIN = { x: 0, y: 3.2, z: 2 } as const;
 
 /**
  * One instanced burst (about 150 flat pieces, one draw call) when `burstKey` changes to a number.
  * Nothing is allocated per frame, and nothing is drawn with reduced motion or between bursts.
  */
-export default function Confetti({ burstKey }: { burstKey: number | null }) {
+export default function Confetti({ burstKey, origin = FOUNTAIN }: { burstKey: number | null; origin?: { x: number; y: number; z: number } }) {
   const mesh = useRef<InstancedMesh>(null);
   const started = useRef<number | null>(null);
   const seen = useRef<number | null>(null);
@@ -44,7 +44,7 @@ export default function Confetti({ burstKey }: { burstKey: number | null }) {
     m.visible = true;
     for (let i = 0; i < pieces.length; i++) {
       const p = pieces[i];
-      dummy.position.set(ORIGIN.x + p.vx * age, ORIGIN.y + heightAt(p, age), ORIGIN.z + p.vz * age);
+      dummy.position.set(origin.x + p.vx * age, origin.y + heightAt(p, age), origin.z + p.vz * age);
       dummy.rotation.set(p.spin * age, p.spin * age * 0.7, 0);
       dummy.scale.setScalar(p.size);
       dummy.updateMatrix();
