@@ -231,8 +231,9 @@ function PriceScale({ look, price }: { look: "fog" | "tipped"; price: number }) 
       <WorldSign
         key={price}
         spec={{ kind: "plank", lines: [price < PIP_PRICE ? STARTER_WORDS.scale.priceAfter : STARTER_WORDS.scale.price] }}
-        // Higher than the pan, so from the arrival view it clears the walls-and-moat plate behind it (game-designer review).
-        position={[0.78, 2.85, 0]}
+        // Low, under its pan and in front of the base: above the pan it covered the walls-and-moat plate or the board's Year 3
+        // card from the arrival view (game-designer and playtest reviews); down here nothing stands between it and the camera.
+        position={[0.78, 0.55, 0.42]}
         width={price < PIP_PRICE ? 1.6 : 1.15}
       />
     </group>
