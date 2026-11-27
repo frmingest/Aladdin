@@ -302,6 +302,32 @@ test.describe("things you can walk up to", () => {
     expect(at.z, `hero at x ${at.x.toFixed(2)}, z ${at.z.toFixed(2)}`).toBeGreaterThan(26.4);
     await problems.assertNone();
   });
+
+  // #524: on a phone the controls hint wraps to three lines. It used to grow up under the action prompt; now the two stack, so
+  // the prompt's box ends above the hint's box. A cold context is a first visit, so the hint shows. Boxes only, not the look.
+  test.describe("on a phone", () => {
+    test.use({ viewport: { width: 375, height: 812 } });
+    test("the action prompt sits above the controls hint, never over it", async ({ page }) => {
+      const problems = watch(page);
+      await page.goto("/game3d?at=records");
+      await expect(page.locator("canvas")).toHaveCount(1, { timeout: 60_000 });
+      // The demo opens the Quest log on a cold load, and the hint steps aside for any panel: shut it first.
+      const quests = page.getByRole("complementary", { name: "Quest log" });
+      await expect(quests).toBeVisible();
+      await page.keyboard.press("q");
+      await expect(quests).toHaveCount(0);
+      await placeAt(page, 0, -4);
+      const prompt = page.locator(".g3d-prompt");
+      const hint = page.getByTestId("controls-hint");
+      await expect(prompt).toContainText(/read the Hall of Records/i);
+      await expect(hint).toBeVisible();
+      const p = (await prompt.boundingBox())!;
+      const h = (await hint.boundingBox())!;
+      expect(h.height, "the hint wraps on a phone (the case this guards)").toBeGreaterThan(40);
+      expect(p.y + p.height, `prompt bottom ${p.y + p.height} vs hint top ${h.y}`).toBeLessThanOrEqual(h.y);
+      await problems.assertNone();
+    });
+  });
 });
 
 // Draw calls and triangles per place (#448). REPORT-ONLY: the numbers go to the console, the test annotations and a JSON

@@ -115,6 +115,7 @@ import { unwrittenThesisV2 } from "../game3d/questV2";
 import { NPCS, alsoHereNote } from "../game3d/npcs";
 import type { NpcId } from "../game3d/npcs";
 import ActionPrompt from "../game3d/ActionPrompt";
+import HudBottomStack from "../game3d/HudBottomStack";
 import { emptyStreetNote, streetOverflowLine } from "../game3d/streetPlan";
 import { stateToWorld } from "../game3d/stateToWorld";
 import { withGaps } from "../game3d/standingGaps";
@@ -1727,13 +1728,18 @@ export default function Game3DPage() {
       {boothOpen === "sal" && <SalesRepDialog voice="game" demoMode={demoMode === true} rows={watchlist?.rows ?? []} onClose={closeBooth} onAdded={setWatchlist} />}
       {boothOpen === "hype" && <HypeBoothDialog voice="game" demoMode={demoMode === true} rows={watchlist?.rows ?? []} onClose={closeBooth} onAdded={setWatchlist} />}
 
-      {spotPrompt && <ActionPrompt text={spotPrompt} note={spotNote} onPress={pressE} />}
-
-      {showHint && !locked && !talking && !anyPanelOpen && (
-        <p className="pointer-events-none absolute bottom-4 left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded bg-black/60 px-4 py-2 text-center text-sm text-white">
-          {HINT_TEXT}
-        </p>
-      )}
+      {/* Prompt above hint in one stack, so a hint that wraps on a phone never slides under the prompt (#524). */}
+      <HudBottomStack
+        prompt={spotPrompt && <ActionPrompt text={spotPrompt} note={spotNote} onPress={pressE} />}
+        hint={
+          showHint &&
+          !locked &&
+          !talking &&
+          !anyPanelOpen && (
+            <p data-testid="controls-hint" className="mt-2 w-max max-w-[90%] rounded bg-black/60 px-4 py-2 text-center text-sm text-white">{HINT_TEXT}</p>
+          )
+        }
+      />
     </div>
   );
 }
