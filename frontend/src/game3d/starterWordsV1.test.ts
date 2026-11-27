@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { areaLine, areaName } from "./areaWordsV2";
 import { areaLine as areaLineV1 } from "./areaWordsV1";
+import { PRICE_WORDS } from "./pricePostWordsV2";
 import { STARTER_WORDS, allStarterStrings, bookStrings, plainStrings, screensOfBeats } from "./starterWordsV1";
 
 const words = (s: string) => s.split(/\s+/).filter(Boolean).length;
@@ -74,7 +75,7 @@ describe("starter words v1, build step 2 (#494): checks and the Book", () => {
   });
 
   it("no choice label gives the answer away: no 'strong', 'weak', 'right' or 'best' on a choice", () => {
-    for (const b of ["walls", "moat"] as const) {
+    for (const b of ["walls", "moat", "price", "storm"] as const) {
       for (const label of Object.values(STARTER_WORDS.checks[b].choices)) expect(label).not.toMatch(/strong|weak|right|best|good|bad/i);
     }
   });
@@ -82,6 +83,9 @@ describe("starter words v1, build step 2 (#494): checks and the Book", () => {
   it("each check names a hint for every wrong choice and none for the right one", () => {
     expect(Object.keys(STARTER_WORDS.checks.walls.hints).sort()).toEqual(["rotted", "timber"]);
     expect(Object.keys(STARTER_WORDS.checks.moat.hints).sort()).toEqual(["cheap", "sign"]);
+    // Build step 3 (#495).
+    expect(Object.keys(STARTER_WORDS.checks.price.hints).sort()).toEqual(["none", "some"]);
+    expect(Object.keys(STARTER_WORDS.checks.storm.hints).sort()).toEqual(["owes", "worse"]);
   });
 
   it("the fact cards and the Plain view say Pip's real practice numbers", () => {
@@ -90,11 +94,44 @@ describe("starter words v1, build step 2 (#494): checks and the Book", () => {
     expect(STARTER_WORDS.plain.moat).toMatch(/^Narrow\./);
   });
 
-  it("only the pages this build unlocks are written; the rest are titles only", () => {
+  it("only the pages built so far are written; the rest are titles only", () => {
     const p = STARTER_WORDS.book.pages;
-    expect(p.walls.lines?.length).toBeGreaterThan(0);
-    expect(p.moat.lines?.length).toBeGreaterThan(0);
-    for (const id of ["room", "storms", "why"] as const) expect(p[id].lines).toBeUndefined();
+    for (const id of ["walls", "moat", "room", "storms"] as const) expect(p[id].lines?.length, id).toBeGreaterThan(0);
+    expect(p.why.lines).toBeUndefined();
+  });
+});
+
+describe("starter words v1, build step 3 (#495): the price and the storm", () => {
+  it("the price card's choices are the real price post's own gauge words", () => {
+    const c = STARTER_WORDS.checks.price.choices;
+    expect([c.lots, c.some, c.none]).toEqual([PRICE_WORDS.gauge.bargain, PRICE_WORDS.gauge.discount, PRICE_WORDS.gauge.full_price]);
+  });
+
+  it("the storm says Pip's exact numbers: 30%, 7 to 4.9, still 10 a year, still owes 5", () => {
+    expect(STARTER_WORDS.checks.storm.title).toBe("Storm! Prices fell 30%. What changed?");
+    expect(STARTER_WORDS.scale.priceAfter).toBe("Price 7 → 4.9");
+    expect(STARTER_WORDS.storm.fell).toBe("Prices fell 30%");
+    expect(STARTER_WORDS.checks.storm.hints.worse.text).toContain("10 coins a year");
+    expect(STARTER_WORDS.checks.storm.hints.owes.text).toContain("owes 5");
+  });
+
+  it("the storm card's header does not say the answer before it is picked", () => {
+    expect(STARTER_WORDS.checks.storm.taught.text).not.toMatch(/business did not|only the price/i);
+    // The answer's sentence lives on the Storms page, with the other half of the lesson.
+    expect(STARTER_WORDS.book.pages.storms.lines).toEqual(["The price fell. The business did not.", "If the business changes, that is news."]);
+  });
+
+  it("the Room page carries the grown-up word, and the price card does not", () => {
+    expect(STARTER_WORDS.book.pages.room.grownUp).toMatch(/margin of safety/);
+    const card = STARTER_WORDS.checks.price;
+    for (const s of [card.title, card.taught.text, card.result, ...Object.values(card.choices)]) expect(s).not.toMatch(/margin of safety/i);
+  });
+
+  it("the Plain view's new rows say the same numbers as the table", () => {
+    expect(STARTER_WORDS.plain.worth).toBe("Low 8, middle 10, high 12 coins.");
+    expect(STARTER_WORDS.plain.price).toBe("7 coins.");
+    expect(STARTER_WORDS.plain.room).toMatch(/^3 coins on 10 \(30%\)\./);
+    expect(STARTER_WORDS.plain.storm).toBe("Every price fell 30%: 4.9 coins. Still made 10, still owes 5.");
   });
 });
 

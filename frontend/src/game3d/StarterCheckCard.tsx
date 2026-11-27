@@ -16,7 +16,7 @@ export type { CheckChoice } from "./checkCardLogic";
  * page without reading; game-designer review, #494). After a miss focus goes to the hint, not to a choice; a held key
  * repeats nothing, and for a moment after a miss no pick lands.
  *
- * Keyboard: focus lands on the first choice; 1 to 3 pick by slot; Escape closes the card, and E (or a tap) at the tower opens
+ * Keyboard: focus lands on the speaker's line (#495), so Enter alone picks nothing; Tab reaches the choices; 1 to 3 pick by slot; Escape closes the card, and E (or a tap) at the tower opens
  * it again. While it is open the page's own hotkeys stay quiet. The hint is read once by the page's live region, not here.
  */
 export default function StarterCheckCard({
@@ -35,14 +35,15 @@ export default function StarterCheckCard({
   onPick: (id: string) => void;
   onClose: () => void;
 }) {
-  const first = useRef<HTMLButtonElement>(null);
   const hint = useRef<HTMLParagraphElement>(null);
   const settledAt = useRef(0);
   const tried = choices.filter((c) => c.tried).map((c) => c.id).join(" ");
   useEffect(() => {
     settledAt.current = performance.now() + (tried ? SETTLE_MS : 0);
-    if (missed) hint.current?.focus();
-    else first.current?.focus();
+    // Focus goes to the speaker's line, on open and after a miss, never to a choice: Enter alone picks nothing, and a screen
+    // reader hears the line first. Tab reaches the choices; 1 to 3 pick by slot (#495 review: with focus on the first
+    // choice, the right answer could never be first, and "2, then 3" won every card).
+    hint.current?.focus();
   }, [tried, missed]);
   const pick = useCallback(
     (c: CheckChoice | undefined) => {
@@ -88,7 +89,6 @@ export default function StarterCheckCard({
           ) : (
             <li key={c.id}>
               <button
-                ref={i === choices.findIndex((x) => !x.tried) ? first : undefined}
                 type="button"
                 onClick={(e) => {
                   if (!e.detail || e.detail === 1) pick(c);

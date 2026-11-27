@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
-import { PAGES } from "./starterPlanV2";
-import type { PageId } from "./starterPlanV2";
+import { PAGES } from "./starterPlanV3";
+import type { PageId } from "./starterPlanV3";
 import { STARTER_WORDS } from "./starterWordsV1";
 
 const svg = { width: 44, height: 36, viewBox: "0 0 44 36", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinejoin: "round" as const };
@@ -21,6 +21,28 @@ function PageDrawing({ id }: { id: PageId }) {
         <path d="M17 26 V8 H20 V5 H24 V8 H27 V26" />
         <path d="M3 30 Q8 26 13 30 T23 30 T33 30 T43 30" />
         <path d="M3 34 Q8 30 13 34 T23 34 T33 34 T43 34" />
+      </svg>
+    );
+  }
+  if (id === "room") {
+    // A scale tipped toward worth: weights low on the left, one coin high on the right (#495).
+    return (
+      <svg {...svg} aria-hidden>
+        <path d="M22 32 V8 M14 33 H30" />
+        <path d="M6 12 L38 4" />
+        <path d="M6 12 V20 M38 4 V12" />
+        <path d="M1 20 H11 M33 12 H43" />
+        <rect x="3" y="15" width="6" height="5" />
+        <path d="M36 9 H40" />
+      </svg>
+    );
+  }
+  if (id === "storms") {
+    // A cloud over a tower that still stands straight (#495).
+    return (
+      <svg {...svg} aria-hidden>
+        <path d="M8 14 a5 5 0 0 1 5 -6 a7 7 0 0 1 13 -1 a5 5 0 0 1 8 5 a3 3 0 0 1 -1 6 H11 a3 3 0 0 1 -3 -4 Z" />
+        <path d="M16 34 V24 H18 V22 H21 V24 H23 V22 H26 V24 H28 V34 Z" />
       </svg>
     );
   }

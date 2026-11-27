@@ -6,9 +6,10 @@
  * time, so the yard sits at the origin like a land. Local frame: x east, z south; you arrive at the south gate looking north.
  */
 import { GATE_LEAVE_RANGE, GATE_RANGE, GATE_STONE, LAND_GATE, LAND_SPAWN, LAND_TOWER, PRICE_POST, WORKPLACE } from "./holdingLandLogic";
+import { WORLD_TOKENS } from "./gameTokens";
 import { NPCS, yawToward } from "./npcs";
 import { PIP } from "./practiceCompanyV1";
-import type { PracticeWall } from "./practiceCompanyV1";
+import type { PracticeLand, PracticeWall } from "./practiceCompanyV1";
 import type { Npc } from "./npcs";
 import { SIZE_HEIGHT, WALL_LOOK } from "./towerLook";
 import { strengthOf } from "./stateToWorld";
@@ -87,6 +88,21 @@ export function nearLectern(p: { x: number; z: number }, range: number = LECTERN
   return Math.hypot(LECTERN_AT.x - p.x, LECTERN_AT.z - p.z) <= range;
 }
 
+/**
+ * Beat 5's scale and gauge (#495): either side of the path, in front of the notice board, so both are in view from the
+ * arrival spot on a wide screen and on a portrait phone. (A land's price post stands by its exit, behind the arrival camera:
+ * in the yard, where the camera does not turn yet, nobody saw it move. Under the board, the board's posts hid them.) The path
+ * between them stays open to the tower.
+ */
+export const SCALE_AT = { x: -2.0, z: 6.6 } as const;
+/** The gauge plank stands here; the post's own group sits 0.9 east of it (`PricePost` draws the plank at x -0.9). */
+export const YARD_GAUGE_AT = { x: 2.0, z: 6.6 } as const;
+export const YARD_POST_AT = { x: YARD_GAUGE_AT.x + 0.9, z: YARD_GAUGE_AT.z } as const;
+/** How far the scale's beam tips toward worth once the price has been weighed (radians, left pan down). */
+export const SCALE_TIP = 0.28;
+/** The yard's ground under the storm (#495): the same grass and paddock, greyed as a field under cloud. Never red or green-for-good. */
+export const STORM_GROUND = { grass: WORLD_TOKENS.stormGrass, paddock: WORLD_TOKENS.stormPaddock } as const;
+
 /** The two looks the checks change (#494): the walls, and the moat. Fog until the player has looked. */
 export type YardWall = PracticeWall;
 export type YardMoat = typeof PIP.moat | "unsurveyed";
@@ -136,6 +152,30 @@ export interface PracticeLook {
   wall: YardWall;
   moat: YardMoat;
   factCards: boolean;
+  /** Build step 3 (#495): the gauge and the scale once the price has been weighed, the price on the scale, the storm. */
+  gauge: PracticeLand | "fog";
+  scale: "fog" | "tipped";
+  /** The price of one piece on the scale's sign: 7, then 4.9 once the storm has come. */
+  price: number;
+  /** The fact card a wrong storm pick points at (index into the four), or null. */
+  pointAt: number | null;
+  /** Set when the storm hits in this visit: the tower shakes once (never under reduced motion). */
+  shakeKey: number | null;
+  /** The storm is overhead (beat 6, until its card is answered): the yard's ground goes the grey-green of a clouded field. */
+  stormy: boolean;
 }
 
-export const NO_PRACTICE: PracticeLook = { standing: false, counterWaiting: false, riseKey: null, wall: "unsurveyed", moat: "unsurveyed", factCards: false };
+export const NO_PRACTICE: PracticeLook = {
+  standing: false,
+  counterWaiting: false,
+  riseKey: null,
+  wall: "unsurveyed",
+  moat: "unsurveyed",
+  factCards: false,
+  gauge: "fog",
+  scale: "fog",
+  price: PIP.price,
+  pointAt: null,
+  shakeKey: null,
+  stormy: false,
+};

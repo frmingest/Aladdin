@@ -19,6 +19,17 @@ export const LABEL_TOKENS = {
   outline: "#26253B",
 } as const;
 
+/**
+ * World colours the practice yard's storm and fog use (#495), in one place. `mist` is the same pale mist the price post,
+ * the lanterns and an unsurveyed tower already draw. The storm ground is the yard's grass and paddock
+ * (`LAND_COLOURS`) greyed by one step, as a field under cloud; never red, never a good-or-bad green.
+ */
+export const WORLD_TOKENS = {
+  mist: "#cfd6dc",
+  stormGrass: "#66805a",
+  stormPaddock: "#75876a",
+} as const;
+
 /** The (ink, plate) pairs the tokens promise are readable. */
 export const LABEL_PAIRS: ReadonlyArray<readonly [string, string, string]> = [
   ["plate", LABEL_TOKENS.ink, LABEL_TOKENS.plate],
