@@ -1,7 +1,7 @@
 import type { OpenPanels, PanelId } from "./hudPanels";
 import { soundLabel } from "./soundPlan";
 import type { StickSide } from "./touchInput";
-import { TOUCH_WORDS } from "./touchWordsV1";
+import { TOUCH_WORDS } from "./touchWordsV2";
 
 interface Props {
   open: OpenPanels;

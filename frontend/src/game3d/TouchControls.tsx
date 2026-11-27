@@ -4,7 +4,7 @@ import { CompassRose, RoseKnob, WaxSealDisc } from "../components/fortress/kit/T
 import { STICK_RADIUS, STICK_SIZE, knobOffset, releaseStick, sealLabel, sealWord, setStick, stickCentre, stickInput } from "./touchInput";
 import type { StickSide } from "./touchInput";
 import { TOUCH_TOKENS } from "./gameTokens";
-import { TOUCH_WORDS } from "./touchWordsV1";
+import { TOUCH_WORDS } from "./touchWordsV2";
 
 const KNOB = 44;
 const SEAL = 64;

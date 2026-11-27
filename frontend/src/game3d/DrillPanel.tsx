@@ -15,6 +15,8 @@ import {
   DRILL_SAVE,
   DRILL_SAVING,
 } from "./stormDrillWordsV1";
+import { useTouchScreen } from "./useTouchScreen";
+import { keyWords } from "./touchWordsV2";
 
 /**
  * The Storm Drill panel: pick a fall (the camp is already standing), write what you would do,
@@ -33,6 +35,7 @@ export default function DrillPanel({
   onSave: (input: StormDrillInput) => Promise<void>;
   onClose: () => void;
 }) {
+  const touch = useTouchScreen();
   const [fall, setFall] = useState(FALL_DEFAULT);
   const [plan, setPlan] = useState("");
   const [saving, setSaving] = useState(false);
@@ -104,7 +107,7 @@ export default function DrillPanel({
         <button type="button" className="g3d-btn" disabled={!ready} onClick={save}>
           {saving ? DRILL_SAVING : DRILL_SAVE}
         </button>
-        <button type="button" className="g3d-btn" onClick={onClose}>Close (E)</button>
+        <button type="button" className="g3d-btn" onClick={onClose}>{keyWords("Close (E)", touch)}</button>
       </div>
 
       <div aria-live="polite">

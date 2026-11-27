@@ -9,6 +9,7 @@ import {
 } from "./hourglassWordsV1";
 import { dayLabel } from "./hourglassPlan";
 import type { DayStatus } from "./HourglassPanel";
+import { useTouchScreen } from "./useTouchScreen";
 
 /**
  * Always on screen while you look back: the date, that nothing can be written, Play or Pause (so a replay can be
@@ -28,6 +29,7 @@ export default function HourglassBanner({
   onPlayToggle: () => void;
   onToday: () => void;
 }) {
+  const touch = useTouchScreen();
   return (
     <div
       role="status"
@@ -41,7 +43,7 @@ export default function HourglassBanner({
         {playing ? HOURGLASS_PAUSE : HOURGLASS_PLAY}
       </button>
       <button type="button" className="g3d-btn" onClick={onToday}>
-        {HOURGLASS_TODAY} ({HOURGLASS_BANNER_KEY})
+        {HOURGLASS_TODAY}{touch ? "" : ` (${HOURGLASS_BANNER_KEY})`}
       </button>
     </div>
   );

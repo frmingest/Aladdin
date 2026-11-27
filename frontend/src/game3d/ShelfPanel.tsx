@@ -1,6 +1,8 @@
 import type { Shelf, ShelfTone } from "./libraryShelves";
 import { SHELF_MARK, shelfMark } from "./libraryShelves";
 import { SHELF_STATE_WORDS as STATE_WORDS } from "./shelfSignsV2";
+import { useTouchScreen } from "./useTouchScreen";
+import { keyWords } from "./touchWordsV2";
 
 interface Props {
   name: string;
@@ -19,6 +21,7 @@ function Mark({ tone, mark }: { tone: ShelfTone; mark?: string }) {
  * The facts of one shelf, in words (the plain view of what you stand at). Unknown stays "In fog".
  */
 export default function ShelfPanel({ name, shelf: s, demo, onClose }: Props) {
+  const touch = useTouchScreen();
   return (
     <aside
       aria-label={`${name}, ${s.title}, in words`}
@@ -45,7 +48,7 @@ export default function ShelfPanel({ name, shelf: s, demo, onClose }: Props) {
           </li>
         ))}
       </ul>
-      <button type="button" className="g3d-btn mt-3" onClick={onClose}>Close (E)</button>
+      <button type="button" className="g3d-btn mt-3" onClick={onClose}>{keyWords("Close (E)", touch)}</button>
     </aside>
   );
 }

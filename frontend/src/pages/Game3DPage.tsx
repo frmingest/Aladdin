@@ -119,7 +119,7 @@ import ActionPrompt from "../game3d/ActionPrompt";
 import HudBottomStack from "../game3d/HudBottomStack";
 import TouchControls from "../game3d/TouchControls";
 import { loadStickSide, saveStickSide } from "../game3d/touchInput";
-import { TOUCH_WORDS } from "../game3d/touchWordsV1";
+import { TOUCH_WORDS } from "../game3d/touchWordsV2";
 import { useTouchScreen } from "../game3d/useTouchScreen";
 import { emptyStreetNote, streetOverflowLine } from "../game3d/streetPlan";
 import { stateToWorld } from "../game3d/stateToWorld";
@@ -1744,8 +1744,8 @@ export default function Game3DPage() {
           title={STARTER_WORDS.plain.title}
           aria-pressed={practicePlainOpen}
           onClick={() => setPracticePlainOpen((v) => !v)}
-          // On a phone the toolbar covers the top-left corner, so the yard's button sits under it there.
-          className="absolute left-3 top-14 z-30 sm:top-3 rounded border border-border bg-surface/90 px-3 py-1.5 text-sm text-ink hover:opacity-80"
+          // Below md the toolbar can reach the top-left corner, so the Plain view sits under it there (#536).
+          className="absolute left-3 top-[4.5rem] z-30 md:top-3 rounded border border-border bg-surface/90 px-3 py-1.5 text-sm text-ink hover:opacity-80"
         >
           {PLAIN_VIEW}
         </button>
@@ -1753,7 +1753,8 @@ export default function Game3DPage() {
         <Link
           to="/fortress"
           title={PLAIN_VIEW_TITLE}
-          className="absolute left-3 top-3 rounded border border-border bg-surface/90 px-3 py-1.5 text-sm text-ink hover:opacity-80"
+          // Below md the toolbar can reach the top-left corner, so the Plain view sits under it there (#536).
+          className="absolute left-3 top-[4.5rem] z-30 md:top-3 rounded border border-border bg-surface/90 px-3 py-1.5 text-sm text-ink hover:opacity-80"
         >
           {PLAIN_VIEW}
         </Link>
@@ -1816,7 +1817,7 @@ export default function Game3DPage() {
         <button
           type="button"
           onClick={backOutside}
-          className={`g3d-back absolute left-3 z-20 ${inYard ? "top-[6.25rem] sm:top-14" : "top-14"} rounded border border-border bg-surface/90 px-3 py-1.5 text-sm text-ink hover:opacity-80`}
+          className={`g3d-back absolute left-3 z-20 top-[7.25rem] md:top-14 rounded border border-border bg-surface/90 px-3 py-1.5 text-sm text-ink hover:opacity-80`}
         >
           ← Back outside
         </button>

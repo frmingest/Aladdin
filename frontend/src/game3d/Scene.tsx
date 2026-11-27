@@ -76,6 +76,8 @@ import type { SpotWorld } from "./near";
 import { nearStore, useNear } from "./nearStore";
 import type { Shelf } from "./libraryShelves";
 import { enterableOf } from "./towerDoor";
+import { useTouchScreen } from "./useTouchScreen";
+import { TOUCH_WORDS } from "./touchWordsV2";
 
 const HALL_DARK = "#1d1712";
 const noop = () => {};
@@ -438,6 +440,7 @@ function FrameTimeCap() {
 }
 
 export default function Scene({ world, onLockChange, onStats, statsDetail = false, area = COURTYARD, room = null, hold = false, look = EMPTY_LOOK, onFieldPresets = noop }: Props) {
+  const touch = useTouchScreen();
   const inside = AREAS[area.id].lighting === "indoor";
   // The weather: only the sky and fog colour change (calm keeps the courtyard's own sky); lights stay as they are.
   const wx = weatherLook(look.siegeLevel);
@@ -448,7 +451,7 @@ export default function Scene({ world, onLockChange, onStats, statsDetail = fals
       camera={{ fov: 60, near: 0.1, far: 500, position: [0, 6, 44] }}
       gl={{ antialias: true, powerPreference: "high-performance" }}
       tabIndex={0}
-      aria-label="3D courtyard. Walk with W A S D, look with the mouse."
+      aria-label={touch ? TOUCH_WORDS.canvas : "3D courtyard. Walk with W A S D, look with the mouse."}
     >
       <FrameTimeCap />
       {inside ? (
