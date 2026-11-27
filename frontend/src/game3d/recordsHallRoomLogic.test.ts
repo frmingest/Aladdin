@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { REGISTER } from "./parity3d";
+import { MIN_LABEL_PX, labelPx } from "./labelPlan";
+import { cameraOffset } from "./movement";
 import {
   ARCHIVE,
   ARCHIVE_DOOR,
@@ -15,6 +17,7 @@ import {
   RECORDS_ROUTE,
   SHELF_RANGE,
   SHELF_SPOT,
+  SHELF_PLATE,
   archiveExit,
   bookPlans,
   bookSlot,
@@ -224,5 +227,22 @@ describe("unknown shelves are fog, not bare (#505)", () => {
       expect(s.y - s.h / 2).toBeLessThanOrEqual(ROW_YS[0]);
       expect(s.y + s.h / 2).toBeGreaterThanOrEqual(ROW_YS[ROW_YS.length - 1] + BOOK.h);
     }
+  });
+});
+
+describe("the plate over the shelves (#521)", () => {
+  it("hangs from the middle case top, in front of the shelf boards and any dust sheet", () => {
+    expect(SHELF_PLATE.y).toBeGreaterThanOrEqual(BOOKCASE.h);
+    expect(SHELF_PLATE.y).toBeLessThan(ARCHIVE.height);
+    expect(SHELF_PLATE.z).toBeGreaterThan(Math.max(BOOKCASE_SIDE_FRONT_Z, BOOKCASE_SHELF_FRONT_Z) + DUST_SHEET_T);
+  });
+
+  it("reads at 12 px or more from the camera behind the hero at the shelf spot", () => {
+    // The default follow camera (useOrbit: pitch 0.45, distance 7) looking north (yaw 0) from the shelf spot's focus point.
+    const [ox, oy, oz] = cameraOffset(0, 0.45, 7);
+    const cam = { x: SHELF_SPOT.x + ox, y: 1.5 + oy, z: SHELF_SPOT.z + oz };
+    expect(cam.z).toBeLessThan(ARCHIVE.maxZ); // inside the walls, so the room does not pull it closer
+    const d = Math.hypot(cam.x, cam.y - SHELF_PLATE.y, cam.z - SHELF_PLATE.z);
+    expect(labelPx(SHELF_PLATE.distanceFactor, 60, d)).toBeGreaterThanOrEqual(MIN_LABEL_PX);
   });
 });

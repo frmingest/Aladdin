@@ -14,6 +14,7 @@ import {
   BOOKCASE_PANEL,
   BOOKCASE_XS,
   ROW_YS,
+  SHELF_PLATE,
   bookPlans,
   DUST_SHEET_T,
   dustSheets,
@@ -219,13 +220,21 @@ export default function RecordsHallRoom() {
       ))}
       {look === "fog" && dustSheets().map((s) => <DustSheet key={s.x} s={s} />)}
 
-      <WorldLabel position={[0, 4.4, ARCHIVE.minZ + 0.9]} distanceFactor={9} wrap maxWidth={260} fog={look === "fog"}>
-          {plate.map((line, i) => (
-            <div key={line} className={i === 0 ? "text-sm font-semibold" : "text-xs opacity-80"}>
-              {line}
-            </div>
-          ))}
-        </WorldLabel>
+      <WorldLabel
+        position={[0, SHELF_PLATE.y, SHELF_PLATE.z]}
+        distanceFactor={SHELF_PLATE.distanceFactor}
+        reveal="always"
+        hang
+        wrap
+        maxWidth={SHELF_PLATE.maxWidth}
+        fog={look === "fog"}
+      >
+        {plate.map((line, i) => (
+          <div key={line} className={i === 0 ? "text-sm font-semibold" : "text-xs opacity-80"}>
+            {line}
+          </div>
+        ))}
+      </WorldLabel>
 
     </group>
   );

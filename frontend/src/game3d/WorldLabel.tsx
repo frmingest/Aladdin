@@ -24,9 +24,12 @@ interface WorldLabelProps {
   ariaHidden?: boolean;
   /**
    * "near" (the default): shows only when you are close and the text would be at least 12 px, fading out between
-   * 12 and 18 m. "always": a label you must be able to read from anywhere. Never used for a sentence.
+   * 12 and 18 m. "always": a label you must be able to read from anywhere. Never used for a sentence on open ground; a
+   * room's one sign (the Hall of Records shelf plate, #521) may use it, since the room's walls bound how far away it is.
    */
   reveal?: "near" | "always";
+  /** Hang the tag below its point (its top edge on the point) instead of centring it there: a plate hung from a ledge. */
+  hang?: boolean;
 }
 
 /**
@@ -47,6 +50,7 @@ export default function WorldLabel({
   title,
   ariaHidden = false,
   reveal = "near",
+  hang = false,
 }: WorldLabelProps) {
   const cls = ["g3d-worldtag", fog ? "fog" : "", now ? "now" : "", wrap ? "wrap" : ""].filter(Boolean).join(" ");
   const group = useRef<Group>(null);
@@ -88,6 +92,7 @@ export default function WorldLabel({
   // A near-only tag starts hidden and is revealed by the first check, so it never flashes on at the wrong distance.
   const style = {
     ...(maxWidth ? { maxWidth } : {}),
+    ...(hang ? { transform: "translateY(50%)" } : {}),
     ...(near ? { opacity: 0, visibility: "hidden" as const } : {}),
   };
 
