@@ -29,12 +29,14 @@ export type { Beat, PageId } from "./starterPlanV1";
 export type { MoatChoice, WallChoice } from "./starterPlanV2";
 
 /**
- * Beat 5's choices: the real price post's own words. The right one ("lots") sits in slot 2, the moat card's right answer was
- * in slot 3: never first, never the slot just used.
+ * Beat 5's choices: the real price post's own words, in the gauge's own order, top to bottom. The right one ("lots") is in
+ * slot 1. Until V3 no right answer was ever first, so "press 2, then 3" earned every page without reading (game-designer
+ * review, #495); with one right answer in each slot across the starter, no fixed key pattern wins. Enter alone cannot win
+ * either: a card now opens with focus on the speaker's line, not on a choice (`StarterCheckCard.tsx`).
  */
-export const PRICE_CHOICES = ["some", "lots", "none"] as const;
+export const PRICE_CHOICES = ["lots", "some", "none"] as const;
 /**
- * Beat 6's choices. The right one ("price") sits in slot 3, the price card's was in slot 2. The same three words come back in
+ * Beat 6's choices. The right one ("price") sits in slot 3, the price card's was in slot 1. The same three words come back in
  * the second storm (build step 4), where "owes" (slot 2) is right, so the slot never gives it away either.
  */
 export const STORM_CHOICES = ["worse", "owes", "price"] as const;
@@ -328,9 +330,10 @@ export function plainSeen(run: StarterRun): {
     owes: factCardsShown(run),
     walls: wallsOf(run) !== "unsurveyed",
     moat: moatOf(run) !== "unsurveyed",
-    // The worth and the price are on the scale and the card from the start of beat 5; the room is the answer, so it waits.
-    worth: picked && checkDone(run, "moat"),
-    price: picked && checkDone(run, "moat"),
+    // The worth and the price are on the scale's signs from the moment the tower stands (the world and this view agree);
+    // the room is the answer, so it waits.
+    worth: picked,
+    price: picked,
     room: weighed,
     storm: picked && checkDone(run, "storm"),
   };

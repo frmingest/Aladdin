@@ -780,7 +780,8 @@ export default function Game3DPage() {
         : stormWaits && stormStep === "coming"
           ? STARTER_WORDS.storm.coming
           : stormWaits && stormStep === "falling"
-            ? `${STARTER_WORDS.storm.fell}. ${STARTER_WORDS.scale.priceAfter}.`
+            ? // Spoken, so "to", not the sign's arrow.
+              `${STARTER_WORDS.storm.fell}. ${STARTER_WORDS.scale.priceAfter.replace("→", "to")}.`
         : checkOpen && waitingCheck && checkLine
           ? // The card's header, read once: the taught line when it opens, Marlie's hint after a miss; then the question.
             `${said(checkLine)}${missed ? "" : ` ${STARTER_WORDS.checks[waitingCheck].title}`}`

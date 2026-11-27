@@ -46,6 +46,7 @@ import {
   practiceTowerView,
 } from "./practiceYardLogic";
 import type { PracticeLook, YardMoat, YardWall } from "./practiceYardLogic";
+import { WORLD_TOKENS } from "./gameTokens";
 import { PIP } from "./practiceCompanyV1";
 import { STARTER_WORDS } from "./starterWordsV1";
 import { TOWER_FOG_COLOR, TOWER_PAD_TOP } from "./towerLook";
@@ -107,7 +108,8 @@ function FactPlank({ pointAt }: { pointAt: number | null }) {
       */}
       {pointAt !== null && (
         <group position={[(pointAt % 2 === 0 ? -1 : 1) * half, FACT_CARD_ROWS[Math.floor(pointAt / 2)], -0.02]}>
-          <Part color={PAL.void} position={[0, 0, 0]} grow={1}>
+          {/* Brass, so the frame shows on the dark board (a dark frame vanished there; game-designer review). */}
+          <Part color={PAL.brass} position={[0, 0, 0]} grow={1}>
             <boxGeometry args={[FACT_CARD_W + 0.22, FACT_CARD_W * 0.42 + 0.22, 0.04]} />
           </Part>
           <WorldSign spec={{ kind: "plank", lines: [`↑ ${STARTER_WORDS.checks.storm.lookHere}`] }} position={[0, -0.62, 0.04]} width={1.05} both={false} />
@@ -142,7 +144,7 @@ function Lectern() {
 }
 
 /** Pale mist over a fact nobody has weighed yet (the price post's own mist). */
-const MIST = "#cfd6dc";
+const MIST = WORLD_TOKENS.mist;
 
 /**
  * Beat 5's balance scale (#495), the one new motif: worth in the left pan (weights), the price in the right (coins). One fact,
@@ -156,7 +158,9 @@ function PriceScale({ look, price }: { look: "fog" | "tipped"; price: number }) 
   const pans = useRef<(Group | null)[]>([]);
   const tilt = useRef(prefersReducedMotion() ? target : 0);
   useFrame((_, dt) => {
-    if (prefersReducedMotion()) tilt.current = target;
+    // Settled: nothing to write until the target changes.
+    if (Math.abs(target - tilt.current) < 1e-3 && beam.current?.rotation.z === tilt.current) return;
+    if (prefersReducedMotion() || Math.abs(target - tilt.current) < 1e-3) tilt.current = target;
     else tilt.current += (target - tilt.current) * Math.min(1, Math.min(dt, 0.05) * 6);
     if (beam.current) beam.current.rotation.z = tilt.current;
     // The pans hang straight down whatever the beam does.
@@ -166,15 +170,18 @@ function PriceScale({ look, price }: { look: "fog" | "tipped"; price: number }) 
   const yaw = useMemo(() => yawToward(SCALE_AT, YARD_SPAWN), []);
   return (
     <group position={[SCALE_AT.x, 0, SCALE_AT.z]} rotation={[0, yaw, 0]}>
-      <RigidBody type="fixed" colliders={false}>
-        <CuboidCollider args={[0.55, 0.8, 0.35]} position={[0, 0.8, 0]} />
-      </RigidBody>
-      <Part color={PAL.slate} position={[0, 0.08, 0]} grow={1.05}>
-        <boxGeometry args={[1.0, 0.16, 0.6]} />
-      </Part>
-      <Part color={PAL.timberDark} position={[0, 0.85, 0]} grow={1.1}>
-        <boxGeometry args={[0.14, 1.5, 0.14]} />
-      </Part>
+      {/* The parts that never move are batched; the beam and its pans move, so they stay out of the batch. */}
+      <StaticBatch>
+        <RigidBody type="fixed" colliders={false}>
+          <CuboidCollider args={[0.55, 0.8, 0.35]} position={[0, 0.8, 0]} />
+        </RigidBody>
+        <Part color={PAL.slate} position={[0, 0.08, 0]} grow={1.05}>
+          <boxGeometry args={[1.0, 0.16, 0.6]} />
+        </Part>
+        <Part color={PAL.timberDark} position={[0, 0.85, 0]} grow={1.1}>
+          <boxGeometry args={[0.14, 1.5, 0.14]} />
+        </Part>
+      </StaticBatch>
       <group ref={beam} position={[0, 1.6, 0]}>
         <Part color={PAL.timber} grow={1.08}>
           <boxGeometry args={[1.7, 0.1, 0.1]} />
@@ -220,11 +227,12 @@ function PriceScale({ look, price }: { look: "fog" | "tipped"; price: number }) 
         </mesh>
       )}
       {/* The two pans in words, always on show: the card asks about these very numbers. */}
-      <WorldSign spec={{ kind: "plank", lines: [STARTER_WORDS.scale.worth, STARTER_WORDS.scale.low] }} position={[-0.78, 2.5, 0]} width={1.6} />
+      <WorldSign spec={{ kind: "plank", lines: [STARTER_WORDS.scale.worth, STARTER_WORDS.scale.low] }} position={[-0.78, 3.05, 0]} width={1.6} />
       <WorldSign
         key={price}
         spec={{ kind: "plank", lines: [price < PIP_PRICE ? STARTER_WORDS.scale.priceAfter : STARTER_WORDS.scale.price] }}
-        position={[0.78, 2.3, 0]}
+        // Higher than the pan, so from the arrival view it clears the walls-and-moat plate behind it (game-designer review).
+        position={[0.78, 2.85, 0]}
         width={price < PIP_PRICE ? 1.6 : 1.15}
       />
     </group>
@@ -250,7 +258,8 @@ function RisingTower({ rise, wall, moat, shakeKey }: { rise: boolean; wall: Yard
   const g = useRef<Group>(null);
   const t = useRef(0);
   // Beat 6 (#495): when the storm hits in this visit the tower shakes once, for half a second, a few centimetres. Never under
-  // reduced motion (the page shows a "Prices fell" plate instead). The walls and the moat stay exactly as they were.
+  // reduced motion (the page shows a "Prices fell" plate instead). The walls and the moat stay exactly as they were. Only the
+  // picture shakes: the tower's fixed collider keeps the place it was made at, on purpose (7 cm for half a second).
   const shaker = useRef<Group>(null);
   const shakeLeft = useRef(0);
   useEffect(() => {

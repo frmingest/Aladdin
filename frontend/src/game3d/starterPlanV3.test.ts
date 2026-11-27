@@ -70,10 +70,13 @@ describe("starter plan v3 (#495): the right answers come from the real rules", (
     }
   });
 
-  it("the right answer is never first and never in the slot the card before used", () => {
+  it("no fixed key pattern wins: every slot is right somewhere, and no card repeats the slot before it", () => {
     const slot = (b: CheckBeat) => (CHECKS[b].choices as readonly string[]).indexOf(CHECKS[b].right);
-    for (const b of CHECK_ORDER) expect(slot(b), b).not.toBe(0);
+    // "Press 2, then 3" on every card used to earn every page (#495 review): now some card's answer is in each slot.
+    expect(new Set(CHECK_ORDER.map(slot))).toEqual(new Set([0, 1, 2]));
     for (let i = 1; i < CHECK_ORDER.length; i++) expect(slot(CHECK_ORDER[i]), CHECK_ORDER[i]).not.toBe(slot(CHECK_ORDER[i - 1]));
+    // Any two fixed slots tried in the same order on every card lose at least one page.
+    for (const a of [0, 1, 2]) for (const b of [0, 1, 2]) if (a !== b) expect(CHECK_ORDER.every((c) => [a, b].includes(slot(c))), `${a},${b}`).toBe(false);
     // In the second storm (build step 4) "owes" is right: slot 2, not the first storm's slot 3.
     expect(STORM_CHOICES.indexOf("owes")).not.toBe(STORM_CHOICES.indexOf("price"));
   });

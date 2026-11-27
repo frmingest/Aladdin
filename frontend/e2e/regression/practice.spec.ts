@@ -91,8 +91,11 @@ async function expectResult(page: Page, label: string, result: string, pageLine:
 async function playChecksByKeyboard(page: Page) {
   const walls = page.getByRole("dialog", { name: "Knock on the walls. Which walls?" });
   await expect(walls).toBeVisible({ timeout: 30_000 });
-  // Focus lands on the first choice, which is never the right one: Enter alone cannot win.
-  await expect(walls.getByRole("button", { name: /Timber/ })).toBeFocused();
+  // Focus lands on the speaker's line, not on a choice (#495): Enter alone picks nothing.
+  await expect(walls.getByText("Strong walls: it makes money and owes little.")).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(walls).toBeVisible();
+  await expect(walls.getByRole("button")).toHaveCount(4); // Close and the three choices: nothing was picked
   // Timber (key 1) is wrong. Marlie's hint replaces the taught line and Timber's slot goes blank; the others keep their keys.
   await page.keyboard.press("1");
   await expect(walls).toContainText("Look again. It owes 5. Last year it made 10.");
@@ -112,6 +115,7 @@ async function playChecksByKeyboard(page: Page) {
 
   const moat = page.getByRole("dialog", { name: "What stops others copying Pip's?" });
   await expect(moat).toBeVisible({ timeout: 30_000 });
+  await expect(moat.getByText("A moat is what stops others copying it.")).toBeFocused();
   await page.keyboard.press("2"); // Cheapest lemonade this week: wrong
   await expect(moat).toContainText("Anyone can cut prices tomorrow.");
   await settle(page);
@@ -127,11 +131,13 @@ async function playChecksByKeyboard(page: Page) {
 async function playPriceAndStormByKeyboard(page: Page) {
   const price = page.getByRole("dialog", { name: "Worth about 10. Price 7. How much room?" });
   await expect(price).toBeVisible({ timeout: 30_000 });
-  await expect(price.getByRole("button", { name: /Some room/ })).toBeFocused();
-  await page.keyboard.press("1"); // Some room: wrong
+  // The card is ready once its speaker's line has focus (set with its keys, so a key pressed before then could be lost).
+  await expect(price.getByText("Worth 10, price 7. That gap is room to be wrong.")).toBeFocused();
+  // The right answer is in slot 1 here (the gauge's own order), so no fixed key pattern wins every card.
+  await page.keyboard.press("2"); // Some room: wrong
   await expect(price).toContainText("Weigh it again. Even the low guess is 8.");
   await settle(page);
-  await page.keyboard.press("2"); // Lots of room, still in slot 2
+  await page.keyboard.press("1"); // Lots of room, still in slot 1
   await expect(price).toHaveCount(0);
   await expectResult(page, "Room to be wrong", "Lots of room. Even a low guess beats the price.", "New page: Room to be wrong");
 
@@ -139,6 +145,7 @@ async function playPriceAndStormByKeyboard(page: Page) {
   await expect(page.getByTestId("starter-note")).toHaveText("Storm coming", { timeout: 30_000 });
   const storm = page.getByRole("dialog", { name: "Storm! Prices fell 30%. What changed?" });
   await expect(storm).toBeVisible({ timeout: 30_000 });
+  await expect(storm.getByText("Look at the cards, then the price.")).toBeFocused();
   await page.keyboard.press("2"); // It owes more now: wrong
   await expect(storm).toContainText("Still owes 5. Look again.");
   await settle(page);
@@ -343,7 +350,8 @@ test.describe("practice yard: beats 1 to 6 make no write", () => {
     await openYard(page);
     const price = page.getByRole("dialog", { name: "Worth about 10. Price 7. How much room?" });
     await expect(price).toBeVisible({ timeout: 30_000 });
-    await page.keyboard.press("2");
+    await expect(price.getByText("Worth 10, price 7. That gap is room to be wrong.")).toBeFocused();
+    await page.keyboard.press("1"); // Lots of room
     await expect(page.getByTestId("starter-note")).toHaveText("Storm coming", { timeout: 30_000 });
     await expect(page.getByTestId("starter-note")).toHaveText("Prices fell 30%", { timeout: 10_000 });
     const storm = page.getByRole("dialog", { name: "Storm! Prices fell 30%. What changed?" });

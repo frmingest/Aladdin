@@ -6,6 +6,7 @@
  * time, so the yard sits at the origin like a land. Local frame: x east, z south; you arrive at the south gate looking north.
  */
 import { GATE_LEAVE_RANGE, GATE_RANGE, GATE_STONE, LAND_GATE, LAND_SPAWN, LAND_TOWER, PRICE_POST, WORKPLACE } from "./holdingLandLogic";
+import { WORLD_TOKENS } from "./gameTokens";
 import { NPCS, yawToward } from "./npcs";
 import { PIP } from "./practiceCompanyV1";
 import type { PracticeLand, PracticeWall } from "./practiceCompanyV1";
@@ -100,7 +101,7 @@ export const YARD_POST_AT = { x: YARD_GAUGE_AT.x + 0.9, z: YARD_GAUGE_AT.z } as 
 /** How far the scale's beam tips toward worth once the price has been weighed (radians, left pan down). */
 export const SCALE_TIP = 0.28;
 /** The yard's ground under the storm (#495): the same grass and paddock, greyed as a field under cloud. Never red or green-for-good. */
-export const STORM_GROUND = { grass: "#66805a", paddock: "#75876a" } as const;
+export const STORM_GROUND = { grass: WORLD_TOKENS.stormGrass, paddock: WORLD_TOKENS.stormPaddock } as const;
 
 /** The two looks the checks change (#494): the walls, and the moat. Fog until the player has looked. */
 export type YardWall = PracticeWall;

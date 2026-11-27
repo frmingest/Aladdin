@@ -145,7 +145,7 @@ export const STARTER_WORDS = {
       result: "Lots of room. Even a low guess beats the price.",
       hints: {
         some: { who: "marlie", text: `Weigh it again. Even the low guess is ${PIP.worth.low}.` } as Line,
-        none: { who: "marlie", text: `Weigh it again. Even the low guess is ${PIP.worth.low}.` } as Line,
+        none: { who: "marlie", text: `Price ${PIP.price}, low guess ${PIP.worth.low}. Weigh it again.` } as Line,
       },
       prompt: "Press E to weigh the price",
     },
@@ -230,7 +230,7 @@ export const STARTER_WORDS = {
         title: "Storms",
         // Both halves from the first unlock (spec section 4), so the page never teaches "a price drop never matters".
         lines: ["The price fell. The business did not.", "If the business changes, that is news."],
-        fact: `Pip's price fell from ${PIP.price} to ${practiceTiers("storm").price}. It still made ${PIP.leftOver[2]}.`,
+        fact: `Pip's price fell from ${PIP.price} to ${practiceTiers("storm").price}. Still makes ${PIP.leftOver[2]} a year.`,
         grownUp: "Grown-ups call a fall this big a bear market.",
         real: "Press T: walls and moat say if a business changed.",
       },
