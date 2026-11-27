@@ -49,7 +49,7 @@ import WireList from "./WireList";
 import { fallPercent } from "./stormDrill";
 import type { DrillQuestState } from "./stormDrill";
 import { DRILL_GOAL, DRILL_TITLE } from "./stormDrillWordsV1";
-import { STARTER_WORDS } from "./starterWordsV1";
+import { STARTER_WORDS } from "./starterWordsV2";
 
 /** A short row of name chips, then "+N more" so a long list never grows the panel. */
 function Chips({ items, max }: { items: string[]; max: number }) {

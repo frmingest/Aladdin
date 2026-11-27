@@ -398,7 +398,7 @@ From the review's item 7. "Keep and teach" means the starter teaches it by touch
 All shown wording and game rules go in new versioned files; no file already shown to Faiz is edited:
 
 - `practiceCompanyV1.ts`: the numbers table (section 1). A change is `practiceCompanyV2.ts`.
-- `starterWordsV1.ts`: every card, line, result, Book page and label in sections 3 and 4.
+- `starterWordsV1.ts`: every card, line, result, Book page and label in sections 3 and 4. `starterWordsV2.ts` (#530) changes one line, the Storms page's grown-up word ("Mr. Market"); the yard reads V2, and later build steps add their words there.
 - `starterPlanV1.ts`: beats, right answers, unlock-once rule, the run, saving under `aladdin.game3d.starter.v1`. Build step 2 (#494) needed two rule changes, so its rules are `starterPlanV2.ts` (same key, same shape); V1 is unchanged.
 - `starterGateV1.ts`: the newcomer rule and what is hidden.
 - `dialogueV9.ts`: advisors in the yard speak `starterWordsV1`; elsewhere it falls back to `dialogueV8` unchanged.
@@ -428,7 +428,7 @@ Each PR: `tsc --noEmit`, `npm run lint`, `npm test`, `npm run build`; reviewers 
    - **The storm card's header is not the taught line.** "The price fell. The business did not." is the answer, so the header before the pick is Barren's "Look at the cards, then the price."; the sentence lives on the Storms page. Marlie's "If it owed more, that would be news." is on the result plate.
    - **Beat 5's result stays 3.5 s, not 2 s**, the same as beats 3 and 4: the plate carries the result and the page line. Then "Storm coming" 1 s, then the storm (1.4 s for the shake, or under reduced motion the "Prices fell 30%" plate), then the card.
    - **The storm shows on the ground, not only in the sky.** From the follow camera only a thin band of sky is in view, so the courtyard's clouds (45 m up) never showed. The yard has its own low cloud places (`YARD_CLOUD_SLOTS`), the painted mountains take the storm sky's grey, and the grass and paddock go a clouded grey-green (no light changes; walls, moat, cards and price post keep their colours). All clear once the storm card is answered.
-   - **Book pages written:** Room to be wrong (grown-up line "margin of safety"; where on real towers: a land's price post) and Storms (both halves; grown-up line "bear market"). Plain view rows: worth, price, room (after the pick), after the storm.
+   - **Book pages written:** Room to be wrong (grown-up line "margin of safety"; where on real towers: a land's price post) and Storms (both halves; grown-up line "bear market" as merged in PR #529, then "Mr. Market" in `starterWordsV2.ts` by Faiz's call, #530: Graham's name for the moody price names the lesson, where "bear market" only named the size of the fall). Plain view rows: worth, price, room (after the pick), after the storm.
    - **Not built in this step:** the camera turning to the scale; the coin and weight sounds (build step 6). The "Look here" tag is a painted plank under the card with a brass frame round the card, not a 3D arrow.
    - **Seen on the way, not fixed here:** with the demo banner on a 390 px phone, the 3D view runs below the fold, so a plate at the bottom of the screen (results, "Storm coming") sits partly under it (#528).
 4. **Beats 7 and 8, the ending and the second storm** (#496). Chips, pinned sheet and flag, banner, cheer, "Bring your real fortress", "Play again", beat 6b on "Play again" (brick walls, Owes card flip), `dialogueV9.ts`.

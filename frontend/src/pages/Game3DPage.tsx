@@ -163,7 +163,7 @@ import {
   wallsOf,
 } from "../game3d/starterPlanV3";
 import type { CheckBeat, CheckOutcome, StarterSaved } from "../game3d/starterPlanV3";
-import { SPEAKERS, STARTER_WORDS } from "../game3d/starterWordsV1";
+import { SPEAKERS, STARTER_WORDS } from "../game3d/starterWordsV2";
 import type { PerfStats } from "../game3d/PerfProbe";
 
 // The 3D engine and the physics are heavy, so they only download on this page.
