@@ -44,7 +44,7 @@ export default function TowerPanel({ world, loading, error, onRetry, onClose, ma
   return (
     <aside
       aria-label="Your towers in words"
-      className="g3d-panel g3d-slide absolute bottom-3 right-3 top-14 z-20 w-72 max-w-[40%] overflow-y-auto p-3 text-sm"
+      className="g3d-panel g3d-slide absolute bottom-3 right-3 top-[4.5rem] z-20 md:top-14 w-72 max-w-[40%] overflow-y-auto p-3 text-sm"
     >
       <header className="g3d-head">
         <h2>🏰 Your towers</h2>

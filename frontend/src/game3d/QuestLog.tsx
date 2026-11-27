@@ -50,6 +50,8 @@ import { fallPercent } from "./stormDrill";
 import type { DrillQuestState } from "./stormDrill";
 import { DRILL_GOAL, DRILL_TITLE } from "./stormDrillWordsV1";
 import { STARTER_WORDS } from "./starterWordsV2";
+import { useTouchScreen } from "./useTouchScreen";
+import { TOUCH_WORDS } from "./touchWordsV2";
 
 /** A short row of name chips, then "+N more" so a long list never grows the panel. */
 function Chips({ items, max }: { items: string[]; max: number }) {
@@ -111,6 +113,7 @@ export default function QuestLog({
   /** The Book of Wisdom from the practice yard (#494): the first card, once the yard has been played. Left out, not shown. */
   book?: { onOpen: () => void };
 }) {
+  const touch = useTouchScreen();
   const questDone = quest.status === "done";
   const reviewsClear = reviews.status === "clear";
   const counted = quest.status === "open" || quest.status === "done";
@@ -250,7 +253,7 @@ export default function QuestLog({
     </>
   );
   return (
-    <aside aria-label="Quest log" className="g3d-panel g3d-quests g3d-slide absolute left-3 top-14 z-20 max-h-[calc(100%-4.5rem)] w-72 max-w-[40%] overflow-y-auto p-3 text-sm">
+    <aside aria-label="Quest log" className="g3d-panel g3d-quests g3d-slide absolute left-3 top-[7.5rem] z-30 max-h-[calc(100%-8.25rem)] md:top-14 md:max-h-[calc(100%-4.5rem)] w-72 max-w-[40%] overflow-y-auto p-3 text-sm">
       <header className="g3d-head">
         <h2>📜 Quests</h2>
         {onClose && (
@@ -299,7 +302,7 @@ export default function QuestLog({
       )}
 
       <p className="g3d-muted mt-3">
-        {talkHint(NPCS.map((n) => n.name))}
+        {touch ? TOUCH_WORDS.talkHint(NPCS.map((n) => n.name)) : talkHint(NPCS.map((n) => n.name))}
       </p>
     </aside>
   );

@@ -30,7 +30,7 @@ export default function PracticePlainPanel({ seen, onClose }: { seen: Partial<Re
   return (
     <aside
       aria-label={p.title}
-      className="g3d-panel g3d-slide absolute bottom-3 left-3 top-[6.5rem] z-30 sm:top-[6.25rem] w-80 max-w-[94%] overflow-y-auto p-3 text-sm"
+      className="g3d-panel g3d-slide absolute bottom-3 left-3 top-[7.5rem] z-30 md:top-[6.25rem] w-80 max-w-[94%] overflow-y-auto p-3 text-sm"
     >
       <header className="g3d-head">
         <h2>{p.title}</h2>

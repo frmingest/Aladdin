@@ -2,6 +2,8 @@ import { useEffect, useRef } from "react";
 import { PAGES } from "./starterPlanV3";
 import type { PageId } from "./starterPlanV3";
 import { STARTER_WORDS } from "./starterWordsV2";
+import { useTouchScreen } from "./useTouchScreen";
+import { keyWords } from "./touchWordsV2";
 
 const svg = { width: 44, height: 36, viewBox: "0 0 44 36", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinejoin: "round" as const };
 
@@ -77,6 +79,7 @@ function Ribbon() {
  * panels (focus moves in, Escape closes, focus goes back).
  */
 export default function BookOfWisdom({ pages, blocked, onClose }: { pages: readonly PageId[]; blocked: boolean; onClose: () => void }) {
+  const touch = useTouchScreen();
   const b = STARTER_WORDS.book;
   const close = useRef<HTMLButtonElement>(null);
   useEffect(() => {
@@ -142,7 +145,7 @@ export default function BookOfWisdom({ pages, blocked, onClose }: { pages: reado
                     ))}
                     {p.fact && <p className="g3d-muted mt-1">{p.fact}</p>}
                     {p.grownUp && <p className="g3d-muted italic">{p.grownUp}</p>}
-                    {p.real && <p className="g3d-muted mt-1">{p.real}</p>}
+                    {p.real && <p className="g3d-muted mt-1">{keyWords(p.real, touch)}</p>}
                   </>
                 ) : (
                   <p className="g3d-muted italic">{b.locked}</p>
