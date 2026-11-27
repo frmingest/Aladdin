@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { PAGES } from "./starterPlanV3";
 import type { PageId } from "./starterPlanV3";
-import { STARTER_WORDS } from "./starterWordsV2";
+import { STARTER_WORDS } from "./starterWordsV3";
 
 const svg = { width: 44, height: 36, viewBox: "0 0 44 36", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinejoin: "round" as const };
 

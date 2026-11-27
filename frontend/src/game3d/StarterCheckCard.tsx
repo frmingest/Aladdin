@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef } from "react";
-import { SPEAKERS, STARTER_WORDS } from "./starterWordsV2";
-import type { Line } from "./starterWordsV2";
+import { SPEAKERS, STARTER_WORDS } from "./starterWordsV3";
+import type { Line } from "./starterWordsV3";
 import { SETTLE_MS, choiceForKey } from "./checkCardLogic";
 import type { CheckChoice } from "./checkCardLogic";
 

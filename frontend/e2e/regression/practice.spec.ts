@@ -50,7 +50,7 @@ function recordApi(page: Page): () => { method: string; url: string; body: strin
   return () => seen;
 }
 
-type Run = { beat: string; picks: Record<string, unknown> };
+type Run = { beat: string; picks: Record<string, unknown>; second?: true };
 const AFTER_PICK: Run = { beat: "walls", picks: { company: "pip" } };
 
 async function assertNoWrite(page: Page, before: Record<string, string>, api: () => { method: string; url: string; body: string }[], run: Run = AFTER_PICK) {
@@ -160,10 +160,49 @@ const AFTER_CHECKS: Run = {
   picks: { company: "pip", walls: ["timber", "granite"], moat: ["cheap", "recipe"], price: ["some", "lots"], storm: ["owes", "price"] },
 };
 
-test.describe("practice yard: beats 1 to 6 make no write", () => {
-  test("keyboard: arrive, pick, knock, fill, weigh and the storm with one miss each; the Book holds four pages outside", async ({ page }) => {
-    // Six beats, a walk out and the courtyard's load on CI's software WebGL take about two minutes.
-    test.setTimeout(300_000);
+/**
+ * Beat 7 (#496) by keyboard: the why card opens by itself after the storm's result, one row of chips at a time, focus on
+ * Barren's line each time. One chip per row; the second pins the sheet. Then the result plate with its page line.
+ */
+async function pinWhyByKeyboard(page: Page, chips: [string, string], pageLine: string) {
+  const row1 = page.getByRole("dialog", { name: "Why I own it" });
+  await expect(row1).toBeVisible({ timeout: 30_000 });
+  await expect(row1.getByText("Write why you own it, and what proves you wrong.")).toBeFocused();
+  await page.keyboard.press(chips[0]);
+  const row2 = page.getByRole("dialog", { name: "I'm wrong if" });
+  await expect(row2).toBeVisible();
+  await expect(row2.getByText("Write why you own it, and what proves you wrong.")).toBeFocused();
+  await page.keyboard.press(chips[1]);
+  await expect(row2).toHaveCount(0);
+  await expectResult(page, "Write it down", "Pinned on the door. The flag is up.", pageLine);
+}
+
+/** Beats 3 to 5 with the right answer at once (a second run: the lesson is the storm). */
+async function playToStormByKeyboard(page: Page) {
+  for (const [name, line, key] of [
+    ["Knock on the walls. Which walls?", "Strong walls: it makes money and owes little.", "2"],
+    ["What stops others copying Pip's?", "A moat is what stops others copying it.", "3"],
+    ["Worth about 10. Price 7. How much room?", "Worth 10, price 7. That gap is room to be wrong.", "1"],
+  ] as const) {
+    const card = page.getByRole("dialog", { name });
+    await expect(card).toBeVisible({ timeout: 30_000 });
+    await expect(card.getByText(line)).toBeFocused();
+    await page.keyboard.press(key);
+    await expect(card).toHaveCount(0);
+  }
+}
+
+/** The end of a full run, then "Play again" with the second storm (beat 6b), then the end again: no banner the second time. */
+const AFTER_PLAY_AGAIN: Run = {
+  beat: "end",
+  picks: { company: "pip", walls: ["granite"], moat: ["recipe"], price: ["lots"], storm: ["price", "owes"], why: ["price", "owing"] },
+  second: true,
+} as Run;
+
+test.describe("practice yard: the whole starter and Play again make no write", () => {
+  test("keyboard: every beat with one miss at each check, the end, Play again with the second storm; the Book is full outside", async ({ page }) => {
+    // Two runs, a walk out and the courtyard's load on CI's software WebGL take about three minutes.
+    test.setTimeout(420_000);
     const problems = watch(page);
     await openYard(page);
     const before = await storage(page);
@@ -201,6 +240,43 @@ test.describe("practice yard: beats 1 to 6 make no write", () => {
     await expect(plain).toContainText("3 coins on 10 (30%). Lots of room.");
     await expect(plain).toContainText("Every price fell 30%: 4.9 coins. Still made 10, still owes 5.");
     await plain.getByRole("button", { name: "Close" }).click();
+    await assertNoWrite(page, before, api, AFTER_CHECKS);
+
+    // Beat 7 (#496): pin the why, two keys. All five pages: the banner and the cheer, then Barren and the two buttons.
+    await pinWhyByKeyboard(page, ["1", "1"], "New page: Write it down");
+    const end = page.getByTestId("starter-end");
+    await expect(end).toBeVisible({ timeout: 30_000 });
+    await expect(end).toContainText("You can read a tower now. Next, real ones.");
+    await expect(end.getByRole("button", { name: "Bring your real fortress" })).toBeFocused();
+    let saved = JSON.parse((await storage(page))[STARTER_KEY]);
+    expect(saved.finished).toBe(true);
+    expect(saved.banner).toBe("now");
+    expect([...saved.pages].sort()).toEqual(["moat", "room", "storms", "walls", "why"]);
+
+    // Play again: back at Sal's counter, the Book kept. The second storm: the fridge broke, owes 15, brick walls.
+    await end.getByRole("button", { name: "Play again" }).click();
+    await expect(card).toBeVisible({ timeout: 30_000 });
+    await page.keyboard.press("1");
+    await playToStormByKeyboard(page);
+    await expect(page.getByTestId("starter-note")).toHaveText("The fridge broke. Pip's borrowed 10 coins.", { timeout: 30_000 });
+    const storm2 = page.getByRole("dialog", { name: "Storm! Prices fell 30%. What changed?" });
+    await expect(storm2).toBeVisible({ timeout: 30_000 });
+    await expect(storm2.getByText("Look at the cards, then the price.")).toBeFocused();
+    await page.keyboard.press("3"); // Only the price: wrong this time
+    await expect(storm2).toContainText("Owes 15 now. Look again.");
+    await settle(page);
+    await page.keyboard.press("2"); // It owes more now
+    await expect(storm2).toHaveCount(0);
+    await expectResult(page, "Storms", "It owes more now. The walls cracked.", "Already in your book.");
+    await pinWhyByKeyboard(page, ["3", "2"], "Already in your book.");
+    await expect(end).toBeVisible({ timeout: 30_000 });
+    await page.getByRole("button", { name: /Plain view/ }).click();
+    await expect(plain).toContainText("Brick. Owes 15. Made 10 last year.");
+    await expect(plain).toContainText("Every price fell 30%: 4.9 coins. Borrowed 10, so it owes 15.");
+    await expect(plain).toContainText("Low 7, middle 9, high 11 coins.");
+    await plain.getByRole("button", { name: "Close" }).click();
+    saved = JSON.parse((await storage(page))[STARTER_KEY]);
+    expect(saved.banner).toBe("done");
 
     // No real panel opens in the yard: T does nothing there, and the toolbar has no Towers or Quests tool.
     await page.keyboard.press("t");
@@ -211,8 +287,8 @@ test.describe("practice yard: beats 1 to 6 make no write", () => {
     await expect(page.getByRole("button", { name: /Quests/ })).toHaveCount(0);
     await expect(page.getByTestId("practice-tag")).toBeVisible();
 
-    await assertNoWrite(page, before, api, AFTER_CHECKS);
-    expect(JSON.parse((await storage(page))[STARTER_KEY]).pages).toEqual(["walls", "moat", "room", "storms"]);
+    await assertNoWrite(page, before, api, AFTER_PLAY_AGAIN);
+    expect(JSON.parse((await storage(page))[STARTER_KEY]).pages).toEqual(["walls", "moat", "room", "storms", "why"]);
 
     // The made-up company never reaches a real list: walk out and read the courtyard's Towers panel.
     await page.keyboard.press("b");
@@ -223,7 +299,7 @@ test.describe("practice yard: beats 1 to 6 make no write", () => {
     await expect(towers).not.toContainText("Pip");
     await page.keyboard.press("t");
 
-    // Outside the yard the Book is the first Quests card: four pages learned, the last locked, and no count anywhere.
+    // Outside the yard the Book is the first Quests card: all five pages learned, and no count anywhere.
     const quests = page.getByRole("complementary", { name: "Quest log" });
     // The sample fortress may already have opened the Quests panel by itself; Q would then shut it.
     if (!(await quests.isVisible())) await page.keyboard.press("q");
@@ -235,7 +311,7 @@ test.describe("practice yard: beats 1 to 6 make no write", () => {
     await expect(page_("Moat")).toContainText("A moat is what stops others copying it.");
     await expect(page_("Room to be wrong")).toContainText("That gap is room to be wrong.");
     await expect(page_("Storms")).toContainText("The price fell. The business did not.");
-    await expect(page_("Write it down")).toContainText("Not learned yet");
+    await expect(page_("Write it down")).toContainText("Write why you own it, and what proves you wrong.");
     await expect(book).not.toContainText(/\d+\s*of\s*\d+/);
     await page.keyboard.press("Escape");
     await expect(book).toHaveCount(0);
@@ -308,11 +384,25 @@ test.describe("practice yard: beats 1 to 6 make no write", () => {
       await expectResult(page, "Storms", "Only the price. Walls and moat held.", "New page: Storms");
       await expect(page.getByTestId("practice-tag")).toBeVisible();
 
+      // Beat 7 by two taps (#496). Beat 8 by sight: the Moat page is still locked, so no banner and no cheer; Barren says to
+      // play again to fill the book.
+      const why1 = page.getByRole("dialog", { name: "Why I own it" });
+      await expect(why1).toBeVisible({ timeout: 30_000 });
+      await why1.getByRole("button", { name: /Price below worth/ }).tap();
+      await page.getByRole("dialog", { name: "I'm wrong if" }).getByRole("button", { name: /Customers stop coming/ }).tap();
+      await expectResult(page, "Write it down", "Pinned on the door. The flag is up.", "New page: Write it down");
+      const end = page.getByTestId("starter-end");
+      await expect(end).toContainText("Play again to fill your book.", { timeout: 30_000 });
+      await expect(end.getByRole("button", { name: "Play again" })).toBeVisible();
+
       await assertNoWrite(page, before, api, {
-        beat: "why",
-        picks: { company: "pip", walls: ["rotted", "granite"], moat: ["sign", "cheap"], price: ["none", "lots"], storm: ["price"] },
+        beat: "end",
+        picks: { company: "pip", walls: ["rotted", "granite"], moat: ["sign", "cheap"], price: ["none", "lots"], storm: ["price"], why: ["price", "customers"] },
       });
-      expect(JSON.parse((await storage(page))[STARTER_KEY]).pages).toEqual(["walls", "room", "storms"]);
+      const saved = JSON.parse((await storage(page))[STARTER_KEY]);
+      expect(saved.pages).toEqual(["walls", "room", "storms", "why"]);
+      expect(saved.finished).toBe(true);
+      expect(saved.banner).toBeUndefined();
       await problems.assertNone();
     });
   });

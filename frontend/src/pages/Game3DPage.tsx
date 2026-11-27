@@ -125,7 +125,7 @@ import { webglSupported } from "../game3d/webgl";
 import { useSceneLoad } from "../game3d/sceneLoadStore";
 import PracticeCounterCard from "../game3d/PracticeCounterCard";
 import PracticePlainPanel from "../game3d/PracticePlainPanel";
-import { StarterGoal, StarterLive, StarterNote, StarterPlate, StarterResult } from "../game3d/StarterHud";
+import { StarterEnd, StarterGoal, StarterLive, StarterNote, StarterPlate, StarterResult } from "../game3d/StarterHud";
 import StarterCheckCard, { WallIcon } from "../game3d/StarterCheckCard";
 import BookOfWisdom from "../game3d/BookOfWisdom";
 import {
@@ -138,32 +138,46 @@ import {
   STORM_CHOICES,
   STORM_COMING_MS,
   STORM_FALL_MS,
+  CHEER_MS,
   WALL_CHOICES,
+  WHY_CHIPS,
+  WRONG_CHIPS,
   answerCheck,
   arrived,
+  atEnd,
+  bannerUp,
+  bookFull,
   bookOffered,
   checkWaiting,
   choicesLeft,
   counterWaiting,
   factCardsShown,
   factPointedAt,
+  flagOf,
   gaugeOf,
   goalOf,
   lastMiss,
   loadStarter,
   moatOf,
+  owesShown,
   pickCompany,
+  pickWhy,
   plainSeen,
+  playAgain,
   priceOf,
   saveStarter,
   scaleOf,
+  sheetPinned,
   stormCame,
   stormOverhead,
   towerStands,
   wallsOf,
-} from "../game3d/starterPlanV3";
-import type { CheckBeat, CheckOutcome, StarterSaved } from "../game3d/starterPlanV3";
-import { SPEAKERS, STARTER_WORDS } from "../game3d/starterWordsV2";
+  whyRow,
+  whyWaiting,
+} from "../game3d/starterPlanV4";
+import type { CheckBeat, CheckOutcome, StarterSaved } from "../game3d/starterPlanV4";
+import { SPEAKERS, STARTER_WORDS } from "../game3d/starterWordsV3";
+import { PIP } from "../game3d/practiceCompanyV1";
 import type { PerfStats } from "../game3d/PerfProbe";
 
 // The 3D engine and the physics are heavy, so they only download on this page.
@@ -739,9 +753,11 @@ export default function Game3DPage() {
     document.querySelector<HTMLCanvasElement>("canvas")?.focus();
   }, []);
   const missed = waitingCheck ? lastMiss(starter.run, waitingCheck) : null;
+  // Beat 6b (#496): the second storm's card is beat 6's, but Marlie's hints point at what changed this time.
+  const secondStorm = waitingCheck === "storm" && starter.run.second === true;
   const checkLine = waitingCheck
     ? missed
-      ? (STARTER_WORDS.checks[waitingCheck].hints as Record<string, { who: keyof typeof SPEAKERS; text: string }>)[missed]
+      ? ((secondStorm ? STARTER_WORDS.storm2.hints : STARTER_WORDS.checks[waitingCheck].hints) as Record<string, { who: keyof typeof SPEAKERS; text: string }>)[missed]
       : STARTER_WORDS.checks[waitingCheck].taught
     : null;
   const checkChoices = useMemo(() => {
@@ -767,8 +783,66 @@ export default function Game3DPage() {
   const pageTitle = (beat: CheckBeat) => STARTER_WORDS.book.pages[CHECKS[beat].page].title;
   const pageLine = (r: NonNullable<typeof checkResult>) =>
     r.page === "new" ? STARTER_WORDS.book.newPage(pageTitle(r.beat)) : r.page === "held" ? STARTER_WORDS.book.held : STARTER_WORDS.book.earnLater;
-  // The storm's result carries Marlie's line: the other half of the lesson (a change in the business is news).
-  const resultSaid = (beat: CheckBeat) => (beat === "storm" ? STARTER_WORDS.checks.storm.after : null);
+  // The storm's result carries Marlie's line: the other half of the lesson (a change in the business is news). In the second
+  // storm (#496) the result says what changed, and Marlie's line is now true.
+  const resultSaid = (beat: CheckBeat) => (beat === "storm" ? (starter.run.second ? STARTER_WORDS.storm2.after : STARTER_WORDS.checks.storm.after) : null);
+  const resultLine = (beat: CheckBeat) => (beat === "storm" && starter.run.second ? STARTER_WORDS.storm2.result : STARTER_WORDS.checks[beat].result);
+
+  // Beat 7 (#496): the why card opens by itself once the storm's result has gone. One row of chips at a time; the second chip
+  // pins the sheet. Escape puts it away; E at the tower, or the goal strip turned button, brings it back.
+  const [whyShut, setWhyShut] = useState(false);
+  const [whyResult, setWhyResult] = useState<"new" | "held" | null>(null);
+  const whyOpen =
+    inYard && whyWaiting(starter.run) && !whyShut && checkResult === null && yardDrawn && !bookOpen && !practicePlainOpen;
+  const whyChoices = useMemo(() => {
+    if (whyRow(starter.run) === "why") return WHY_CHIPS.map((id) => ({ id, label: STARTER_WORDS.why.chips[id], tried: false }));
+    return WRONG_CHIPS.map((id) => ({ id, label: STARTER_WORDS.why.wrongChips[id], tried: false }));
+  }, [starter.run]);
+  // Beat 8: with all five pages, once ever, the banner unrolls and the cheer plays after the why's result plate; then Barren.
+  const cheerDue = useRef(false);
+  const [yardCheerKey, setYardCheerKey] = useState<number | null>(null);
+  const [cheering, setCheering] = useState(false);
+  const pickWhyChip = useCallback(
+    (chip: string) => {
+      const { outcome } = pickWhy(starter, chip);
+      if (outcome.kind === "ignored") return;
+      updateStarter((s) => pickWhy(s, chip).saved);
+      if (outcome.kind === "pinned") {
+        cheerDue.current = outcome.banner;
+        setWhyResult(outcome.page);
+        document.querySelector<HTMLCanvasElement>("canvas")?.focus();
+      }
+    },
+    [starter, updateStarter],
+  );
+  const shutWhy = useCallback(() => {
+    setWhyShut(true);
+    document.querySelector<HTMLCanvasElement>("canvas")?.focus();
+  }, []);
+  useEffect(() => {
+    if (whyResult === null) return;
+    const t = setTimeout(() => setWhyResult(null), RESULT_MS);
+    return () => clearTimeout(t);
+  }, [whyResult]);
+  useEffect(() => {
+    if (whyResult !== null || !cheerDue.current) return;
+    cheerDue.current = false;
+    setYardCheerKey(Date.now());
+    setCheering(true);
+    const t = setTimeout(() => setCheering(false), CHEER_MS);
+    return () => clearTimeout(t);
+  }, [whyResult]);
+  // Once per visit, when the why card (or the end, after a reload) first shows, the hero is put where the door is in view.
+  const [doorViewKey, setDoorViewKey] = useState<number | null>(null);
+  const doorViewed = useRef(false);
+  const endShown = inYard && atEnd(starter.run) && whyResult === null && !cheering && !bookOpen && !practicePlainOpen;
+  useEffect(() => {
+    if (!(whyOpen || endShown) || doorViewed.current) return;
+    doorViewed.current = true;
+    setDoorViewKey(Date.now());
+  }, [whyOpen, endShown]);
+  const endLine = bookFull(starter) ? STARTER_WORDS.end.line : STARTER_WORDS.end.notFull;
+  const whyPageLine = (page: "new" | "held") => (page === "new" ? STARTER_WORDS.book.newPage(STARTER_WORDS.book.pages.why.title) : STARTER_WORDS.book.held);
   // What a screen reader hears, once, when it changes: the arrival lines, then each result line, then the goal. With the speaker.
   const said = (l: { who: keyof typeof SPEAKERS; text: string }) => `${SPEAKERS[l.who]}: ${l.text}`;
   const starterLiveText = arrivalShown
@@ -776,7 +850,17 @@ export default function Game3DPage() {
     : pickedLine !== null
       ? said(STARTER_WORDS.picked[pickedLine])
       : checkResult !== null
-        ? [STARTER_WORDS.checks[checkResult.beat].result, resultSaid(checkResult.beat) ? said(resultSaid(checkResult.beat)!) : "", pageLine(checkResult)].filter(Boolean).join(" ")
+        ? [resultLine(checkResult.beat), resultSaid(checkResult.beat) ? said(resultSaid(checkResult.beat)!) : "", pageLine(checkResult)].filter(Boolean).join(" ")
+        : whyResult !== null
+          ? [STARTER_WORDS.why.result, said(STARTER_WORDS.why.after), whyPageLine(whyResult)].join(" ")
+        : cheering
+          ? STARTER_WORDS.end.banner
+        : endShown
+          ? `${said(endLine)}`
+        : whyOpen
+          ? `${said(STARTER_WORDS.why.taught)} ${STARTER_WORDS.why.rows[whyRow(starter.run)]}`
+        : stormWaits && stormStep === "falling" && starter.run.second
+          ? `${STARTER_WORDS.storm2.fridge} ${STARTER_WORDS.scale.priceAfter.replace("→", "to")}.`
         : stormWaits && stormStep === "coming"
           ? STARTER_WORDS.storm.coming
           : stormWaits && stormStep === "falling"
@@ -796,15 +880,20 @@ export default function Game3DPage() {
       setCheckResult(null);
       setStormStep(null);
       stormFromPrice.current = false;
+      setWhyShut(false);
+      setWhyResult(null);
+      setCheering(false);
+      cheerDue.current = false;
+      doorViewed.current = false;
     }
   }, [inYard]);
   // A card you click needs the mouse free, as the other panels do.
   useEffect(() => {
-    if ((counterOpen || checkOpen) && document.pointerLockElement) document.exitPointerLock();
-  }, [counterOpen, checkOpen]);
+    if ((counterOpen || checkOpen || whyOpen || endShown) && document.pointerLockElement) document.exitPointerLock();
+  }, [counterOpen, checkOpen, whyOpen, endShown]);
   // While a starter card or the Book is open, its own keys act and the page's hotkeys (E, T, Q, G, P) stay quiet.
   const starterCardOpen = useRef(false);
-  starterCardOpen.current = counterOpen || checkOpen || bookOpen;
+  starterCardOpen.current = counterOpen || checkOpen || whyOpen || bookOpen;
 
   // The address follows the place (replace, not push, so the browser's Back leaves the page instead of re-walking your steps).
   useEffect(() => {
@@ -1307,9 +1396,15 @@ export default function Game3DPage() {
     },
     // The practice yard (#494): E round the tower opens the check card that is waiting, if it was put away.
     station: {
-      prompt: () => (waitingCheck && !checkOpen && pickedLine === null && checkResult === null && !stormNoteShown && (!stormWaits || stormStep === "in") ? STARTER_WORDS.checks[waitingCheck].prompt : null),
+      prompt: () =>
+        waitingCheck && !checkOpen && pickedLine === null && checkResult === null && !stormNoteShown && (!stormWaits || stormStep === "in")
+          ? STARTER_WORDS.checks[waitingCheck].prompt
+          : inYard && whyWaiting(starter.run) && !whyOpen && checkResult === null
+            ? STARTER_WORDS.why.prompt
+            : null,
       press: () => {
         if (waitingCheck) setCheckShut(false);
+        else if (whyWaiting(starter.run)) setWhyShut(false);
       },
     },
     // The Book's lectern by the yard's gate.
@@ -1566,7 +1661,8 @@ export default function Game3DPage() {
         standing: towerStands(starter.run),
         counterWaiting: counterWaiting(starter.run),
         riseKey,
-        wall: wallsOf(starter.run),
+        // Until the second storm has fallen in this visit, the walls are granite (the change is the first thing seen, #496).
+        wall: stormShown ? wallsOf(starter.run) : wallsOf({ ...starter.run, beat: "price" }),
         moat: moatOf(starter.run),
         factCards: factCardsShown(starter.run),
         gauge: gaugeOf(starter.run),
@@ -1575,9 +1671,21 @@ export default function Game3DPage() {
         pointAt: factPointedAt(starter.run),
         shakeKey,
         stormy: stormShown && stormOverhead(starter.run),
+        owes: stormShown ? owesShown(starter.run) : owesShown({ ...starter.run, beat: "price" }),
+        worth: stormShown && owesShown(starter.run) !== PIP.owes ? "second" : "calm",
+        sheet: sheetPinned(starter.run) && starter.run.picks.why?.length === 2
+          ? [
+              `${STARTER_WORDS.why.sheet.why} ${STARTER_WORDS.why.chips[starter.run.picks.why[0]]}`,
+              `${STARTER_WORDS.why.sheet.wrong} ${STARTER_WORDS.why.wrongChips[starter.run.picks.why[1]]}`,
+            ]
+          : null,
+        flag: flagOf(starter.run),
+        banner: bannerUp(starter) && whyResult === null,
+        cheerKey: yardCheerKey,
+        doorViewKey,
       },
     }),
-    [starter.run, riseKey, stormShown, shakeKey, inYard, inPast, viewState, mint.view, sheets, quest.written, nightWatch, unseenRavens, realmLevel, drillOpen, questMarks, talking, cheerKey, standingText.lit, fieldTools, quarter, archCounts, placedMarks, lit],
+    [starter, whyResult, yardCheerKey, doorViewKey, riseKey, stormShown, shakeKey, inYard, inPast, viewState, mint.view, sheets, quest.written, nightWatch, unseenRavens, realmLevel, drillOpen, questMarks, talking, cheerKey, standingText.lit, fieldTools, quarter, archCounts, placedMarks, lit],
   );
 
   if (!supported) return <Unavailable />;
@@ -1594,7 +1702,7 @@ export default function Game3DPage() {
   const backOutside = roomView || inHall || inRecords || area.id === "weather" || area.id === "mint" || area.id === "quarter" || inYard ? leaveArea : null;
   // Any panel or dialog on screen: the hint line steps aside for it.
   const anyPanelOpen =
-    panels.quests || panels.towers || whereOpen || vaultOpen || realmOpen || watchOpen || perchOpen || hourglassOpen || deskOpen || drillOpen || lampOpen || boothOpen !== null || report !== null || counterOpen || practicePlainOpen || arrivalShown || pickedLine !== null || checkOpen || bookOpen || checkResult !== null || stormNoteShown;
+    panels.quests || panels.towers || whereOpen || vaultOpen || realmOpen || watchOpen || perchOpen || hourglassOpen || deskOpen || drillOpen || lampOpen || boothOpen !== null || report !== null || counterOpen || practicePlainOpen || arrivalShown || pickedLine !== null || checkOpen || bookOpen || checkResult !== null || stormNoteShown || whyOpen || whyResult !== null || cheering || endShown;
 
   return (
     <div className="relative h-[calc(100dvh-5rem)] min-h-[480px] w-full overflow-hidden bg-surface">
@@ -1745,13 +1853,15 @@ export default function Game3DPage() {
           <StarterGoal
             goal={STARTER_WORDS.goal[goalOf(starter.run)]}
             // While a check card is open its title says the goal: the strip steps aside rather than say it twice.
-            hidden={plate !== null || checkOpen}
+            hidden={plate !== null || checkOpen || whyOpen}
             reopen={
               counterShut && starter.run.beat === "pick"
                 ? { label: STARTER_WORDS.counter.reopen, onPress: () => setCounterShut(false) }
                 : waitingCheck && checkShut && pickedLine === null && checkResult === null
                   ? { label: STARTER_WORDS.goal[goalOf(starter.run)], onPress: () => setCheckShut(false) }
-                  : undefined
+                  : whyWaiting(starter.run) && whyShut && checkResult === null
+                    ? { label: STARTER_WORDS.goal.why, onPress: () => setWhyShut(false) }
+                    : undefined
             }
           />
           <StarterLive text={starterLiveText} />
@@ -1764,7 +1874,7 @@ export default function Game3DPage() {
           {checkResult && (
             <StarterResult
               label={pageTitle(checkResult.beat)}
-              result={STARTER_WORDS.checks[checkResult.beat].result}
+              result={resultLine(checkResult.beat)}
               said={resultSaid(checkResult.beat)}
               page={pageLine(checkResult)}
               isNew={checkResult.page === "new"}
@@ -1772,20 +1882,59 @@ export default function Game3DPage() {
           )}
           {/* Beat 6's plates before its card: the storm is coming; then, under reduced motion (no shake), what it did. */}
           {stormWaits && stormStep === "coming" && <StarterNote text={STARTER_WORDS.storm.coming} />}
-          {stormWaits && stormStep === "falling" && prefersReducedMotion() && <StarterNote text={STARTER_WORDS.storm.fell} />}
+          {/* Beat 6b (#496): while the price falls, what changed in the business, with its number (with or without the shake). */}
+          {stormWaits && stormStep === "falling" && starter.run.second && <StarterNote text={STARTER_WORDS.storm2.fridge} />}
+          {stormWaits && stormStep === "falling" && !starter.run.second && prefersReducedMotion() && <StarterNote text={STARTER_WORDS.storm.fell} />}
+          {/* Beat 7 (#496): the why card, one row of chips at a time (keyed by row, so focus starts at Barren's line again). */}
+          {whyOpen && (
+            <StarterCheckCard
+              key={whyRow(starter.run)}
+              title={STARTER_WORDS.why.rows[whyRow(starter.run)]}
+              line={STARTER_WORDS.why.taught}
+              missed={false}
+              choices={whyChoices}
+              onPick={pickWhyChip}
+              onClose={shutWhy}
+            />
+          )}
+          {whyResult !== null && (
+            <StarterResult
+              label={STARTER_WORDS.book.pages.why.title}
+              result={STARTER_WORDS.why.result}
+              said={STARTER_WORDS.why.after}
+              page={whyPageLine(whyResult)}
+              isNew={whyResult === "new"}
+            />
+          )}
+          {/* Beat 8: Barren's line and the two ways on. Play again keeps the Book; the next storm is the second storm. */}
+          {endShown && (
+            <StarterEnd
+              line={endLine}
+              realLabel={STARTER_WORDS.end.real}
+              againLabel={STARTER_WORDS.end.again}
+              onReal={leaveArea}
+              onAgain={() => {
+                updateStarter(playAgain);
+                doorViewed.current = false;
+                setCounterShut(false);
+                setRiseKey(null);
+              }}
+            />
+          )}
           {practicePlainOpen && (
             <PracticePlainPanel
               seen={{
                 company: plainSeen(starter.run).company ? STARTER_WORDS.plain.company : undefined,
                 pieces: plainSeen(starter.run).pieces ? STARTER_WORDS.plain.pieces : undefined,
                 leftOver: plainSeen(starter.run).leftOver ? STARTER_WORDS.plain.leftOver : undefined,
-                owes: plainSeen(starter.run).owes ? STARTER_WORDS.plain.owes : undefined,
-                walls: plainSeen(starter.run).walls ? STARTER_WORDS.plain.walls : undefined,
+                owes: plainSeen(starter.run).owes ? (owesShown(starter.run) === PIP.owes ? STARTER_WORDS.plain.owes : STARTER_WORDS.plain.owes2) : undefined,
+                walls: plainSeen(starter.run).walls ? (wallsOf(starter.run) === "brick" ? STARTER_WORDS.plain.walls2 : STARTER_WORDS.plain.walls) : undefined,
                 moat: plainSeen(starter.run).moat ? STARTER_WORDS.plain.moat : undefined,
-                worth: plainSeen(starter.run).worth ? STARTER_WORDS.plain.worth : undefined,
+                worth: plainSeen(starter.run).worth ? (owesShown(starter.run) === PIP.owes ? STARTER_WORDS.plain.worth : STARTER_WORDS.plain.worth2) : undefined,
                 price: plainSeen(starter.run).price ? STARTER_WORDS.plain.price : undefined,
                 room: plainSeen(starter.run).room ? STARTER_WORDS.plain.room : undefined,
-                storm: plainSeen(starter.run).storm ? STARTER_WORDS.plain.storm : undefined,
+                storm: plainSeen(starter.run).storm ? (starter.run.second ? STARTER_WORDS.plain.storm2 : STARTER_WORDS.plain.storm) : undefined,
+                why: plainSeen(starter.run).why ? STARTER_WORDS.plain.why : undefined,
               }}
               onClose={closePracticePlain}
             />
