@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { KeyboardEvent } from "react";
+import { endKeyBlocked } from "./practiceYardLogic";
 import { SPEAKERS, STARTER_WORDS } from "./starterWordsV3";
 import type { Line } from "./starterWordsV3";
 
@@ -91,9 +92,6 @@ export function StarterNote({ text }: { text: string }) {
   );
 }
 
-/** How long after the end shows an Enter or Space is ignored, so a key held from the last card does not leave the yard. */
-const END_KEY_GUARD_MS = 400;
-
 /**
  * Beat 8 (#496): Barren's last line and the two ways on, at the bottom of the screen. "Bring your real fortress" goes back to
  * the courtyard; "Play again" starts a new run in the yard (the Book is kept). Focus lands on the first button, so one key
@@ -120,7 +118,7 @@ export function StarterEnd({
   }, []);
   // Focus lands on "Bring your real fortress" at once; an Enter or Space still held from the why card (or repeating) must not press it.
   const guardKeys = (e: KeyboardEvent) => {
-    if ((e.key === "Enter" || e.key === " ") && (e.repeat || performance.now() - shownAt.current < END_KEY_GUARD_MS)) e.preventDefault();
+    if (endKeyBlocked(e.key, e.repeat, performance.now() - shownAt.current)) e.preventDefault();
   };
   return (
     <section

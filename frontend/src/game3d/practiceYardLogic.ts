@@ -216,3 +216,11 @@ export const NO_PRACTICE: PracticeLook = {
   cheerKey: null,
   doorViewKey: null,
 };
+
+/** How long after the end shows an Enter or Space is ignored, so a key held from the last card does not leave the yard. */
+export const END_KEY_GUARD_MS = 400;
+
+/** Beat 8's end panel: an Enter or Space that repeats, or comes within the guard after the panel took focus, presses nothing. */
+export function endKeyBlocked(key: string, repeat: boolean, sinceShownMs: number): boolean {
+  return (key === "Enter" || key === " ") && (repeat || sinceShownMs < END_KEY_GUARD_MS);
+}
