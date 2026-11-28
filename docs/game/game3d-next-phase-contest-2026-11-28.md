@@ -45,13 +45,13 @@ Its replay idea, a bell that rings when your own "I'm wrong if" comes true, teac
 
 | Claim | Team | Holds? |
 |---|---|---|
-| The practice yard opens only by the `?at=practice` link; no door, no "Where to?" row | Atlas, Keystone | Yes. `areas.ts:251` says "reached by link or menu, not by a door"; `WhereToPanel.tsx` and `parity3d.ts` have no practice row |
-| "Bring your real fortress" just leaves the yard to the courtyard start | Atlas, Keystone | Yes. `Game3DPage.tsx:1942` calls `leaveArea`; `areas.ts:252` returns the courtyard spawn |
+| The practice yard opens only by the `?at=practice` link; no door, no "Where to?" row | Atlas, Keystone | Yes. `areas.ts:253` says "reached by link or menu, not by a door"; `WhereToPanel.tsx` and `parity3d.ts` have no practice row |
+| "Bring your real fortress" just leaves the yard to the courtyard start | Atlas, Keystone | Yes. `Game3DPage.tsx:1942` calls `leaveArea`; `areas.ts:254` returns the courtyard spawn |
 | The Book's real lines say "Press T", which opens a list | Atlas, Keystone | Yes. `starterWordsV1.ts:212,219,235`; on touch "Tap Towers" (`touchWordsV2.ts:28-30`) |
 | "Play again" always gives the second storm, so run 3 equals run 2 | Keystone | Yes. `starterPlanV4.ts:346-349` sets `second: true` every time |
-| The real-fortress confetti fires once per page load, not once ever | Keystone | Yes. `celebrate.ts:3`, `Game3DPage.tsx:565-570` |
-| The practice walls use the real thresholds | Keystone | Yes. `practiceCompanyV1.ts:65-75` (`wallFor`) |
-| Courtyard draws 528 against a limit of 300 | Lantern | Yes, as last measured: `game3d-s23-measure-2026-11-03.md`. No later number found |
+| The real-fortress confetti fires once per page load, not once ever | Keystone | Yes. `celebrate.ts:4`, `Game3DPage.tsx:565-570` |
+| The practice walls use the real thresholds | Keystone | Yes. `practiceCompanyV1.ts:65-74` (`wallFor`) |
+| Courtyard draws 528 against a limit of 300 | Lantern | Yes, from discovery QA: `docs/game/game3d-s22-s23-sprint-plan-2026-11-02.md:50`. No later number found |
 | Shadows and 2x resolution on every device, no phone tier | Lantern | Yes. `Scene.tsx` sets `shadows`, `dpr={[1, 2]}`, 1024 and 2048 shadow maps |
 | `Game3DPage.tsx` is about 2,000 lines with the starter inline | Compass, Keystone | Yes, 2,006 lines |
 | The Hall of Records bookcase bug (#502) is still to fix | Compass | **No.** Closed, fixed in `c80ac68` |
@@ -67,7 +67,7 @@ Keystone's five sprints are the spine. Pieces from the other teams are marked wi
 
 - #497: the newcomer gate, "Skip practice", First Steps folded in, and "Practice yard" first in "Where to?".
 - A lemon-crest gate in the courtyard by the arrival spot, so veterans can find the yard too (Atlas). It is a door to a place that exists, not a new place (decision 3).
-- #538, first part: the fridge plate stays until the storm card opens. Today it shows 7 words for 1.4 seconds (`starterWordsV3.ts:36`, `STORM_FALL_MS`).
+- #538, first part: the fridge plate stays until the storm card opens. Today it shows 7 words for 1.4 seconds (`starterWordsV3.ts:36`; `STORM_FALL_MS` in `starterPlanV3.ts:350`).
 - The real-fortress confetti fires once ever, as #476 says ("never repeats").
 - #499 name check. #498 sound cues stay the cut line, made by code with no sound files (Lantern).
 - A tap-count script from a cold load, desktop and 390 px phone (Compass).
