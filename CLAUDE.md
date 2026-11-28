@@ -150,11 +150,28 @@ irreversible, say so — and what it will delete — before running it, not afte
 Real credentials only ever live in `backend/.env` (gitignored) or Railway's env vars — never in
 code, tests, prompts, or session docs.
 
+## Plain words
+
+Faiz reads every PR, issue comment, sprint note and end-of-session summary, and long abstract text is hard for him to
+review (decided 2026-11-27, #541, after a review of all 398 PRs: `docs/ops/pr-language-review-2026-11-27.md`). So:
+
+1. **Short.** Sentences of about 15 words, never over 25. One idea per sentence. Cut anything he does not need to decide or do.
+2. **Human.** Say what changes for him, in the words he would use: "the page loads faster", not "reduced TTFB via cache".
+   A technical term is allowed only if he needs it, and then it gets a few plain words beside it the first time.
+   Code names, file paths and issue numbers go below the plain part, never in it.
+3. **Answer first.** The first lines of any PR, comment or summary say what happened and what he must do. Details follow.
+4. **Limits the checker enforces** (`.github/scripts/check_pr_template.py`, hook and CI): PR title 72 characters or fewer;
+   an "In plain words" opening of 60 words or fewer with no code, path or issue number; 400 words for the whole body outside
+   the reviewer table; 25 words per reviewer result. Longer detail goes in a `docs/` file the PR links.
+5. **Same for chat.** The summary at the end of a session is the plain part first, in about 100 words, then the commit text.
+6. Numbers stay exact and caveats stay honest. Plain words change the wording, never the facts. Game-mode copy has its own
+   rule (Game voice, below).
+
 ## Pull requests
 
 Faiz reviews and merges in GitHub. Finish every feature or fix by opening the PR yourself, from the
 chat, without being asked again. **Use the `/ship-pr` command (`.claude/commands/ship-pr.md`); do not open a PR
-by hand.** The PR body is always `.github/pull_request_template.md`, filled in, never a free-form summary.
+by hand.** The PR body is always `.github/pull_request_template.md`, filled in, never a free-form summary, and written in plain words (see "Plain words").
 Two guardrails enforce this and must never be weakened or bypassed to get a PR through: the Claude Code hook
 `.claude/hooks/require_pr_template.py` refuses to create or edit a PR whose body is not the filled-in template,
 and the CI check "PR template filled" (`.github/scripts/check_pr_template.py`) fails it. Only the `no-issue`

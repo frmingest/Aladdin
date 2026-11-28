@@ -27,3 +27,7 @@ It checks structure and honesty, not whether the work is good. A reviewer marked
 - In GitHub branch protection for `main`, add **PR template filled** (and **PR has a linked issue**) to the required checks, so a red one blocks the merge button. This cannot be set from the agent's session.
 - Claude Code normally reads `.claude/settings.json` when a session starts (not tested here), so the hook should apply to sessions started after this is merged. Until then the CI job is the backstop.
 - CI runs the checker from the PR's base branch, so a PR cannot weaken the check that judges it. The one exception is the PR that introduces it, which has no base copy yet and is checked by its own.
+
+## Added 2026-11-27 (#541): plain words
+
+The checker also limits wording: a 72-character title, a new "In plain words" opening (60 words, no code, paths or issue numbers), 400 words for the body outside the reviewer table, and 25 words per reviewer result. See `docs/ops/pr-language-review-2026-11-27.md`.

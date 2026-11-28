@@ -35,7 +35,11 @@ def good_body(rows: dict[str, tuple[str, str, str]] | None = None) -> str:
     }
     default.update(rows)
     table = "\n".join(f"| `{r}` (what it checks) | {a} | {b} | {c} |" for r, (a, b, c) in default.items())
-    return f"""## What changed and why
+    return f"""## In plain words
+
+The Printer can now show more amounts. Nothing changes until you open the page.
+
+## What changed and why
 
 Measures each holding's rate and krone sensitivity from stored history so the Printer can show more amounts.
 
@@ -259,3 +263,48 @@ def test_hook_runs_from_a_subfolder(tmp_path):
     res = subprocess.run(["bash", "-c", cmd], input=json.dumps({"tool_input": {"command": "ls"}}), capture_output=True,
                          text=True, cwd=ROOT / "backend" / "tests", env=env, timeout=30, check=False)
     assert res.returncode == 0, res.stderr
+
+
+# --- Plain words (2026-11-27, issue #541) ---
+
+def test_a_good_title_and_opening_pass():
+    assert C.check(good_body(), [], "Printer shows more amounts") == []
+
+
+def test_a_long_title_is_refused():
+    assert any("title" in e for e in C.check(good_body(), [], "x" * 73))
+    assert not any("title" in e for e in C.check(good_body(), [], "x" * 72))
+    assert not any("title" in e for e in C.check(good_body(), []))  # no title given, no title check
+
+
+def test_the_plain_opening_is_required():
+    body = good_body().replace("## In plain words\n\nThe Printer can now show more amounts. Nothing changes until you open the page.\n\n", "")
+    assert any("missing the section '## In plain words'" in e for e in C.check(body, []))
+
+
+def test_an_empty_or_long_plain_opening_is_refused():
+    opening = "The Printer can now show more amounts. Nothing changes until you open the page."
+    assert any("empty or too thin" in e for e in C.check(good_body().replace(opening, "Fixes it."), []))
+    long = " ".join(["word"] * 61)
+    assert any("61 words" in e for e in C.check(good_body().replace(opening, long), []))
+
+
+def test_the_plain_opening_may_not_hold_code_paths_or_issue_numbers():
+    opening = "The Printer can now show more amounts. Nothing changes until you open the page."
+    for bad in ("The `Printer` can now show more amounts when you open it.",
+                "The page backend/app/printer.py now shows more amounts to you.",
+                "The Printer shows more amounts now, as asked in #426 by you."):
+        assert any("code, a file path or an issue number" in e for e in C.check(good_body().replace(opening, bad), [])), bad
+
+
+def test_a_body_over_the_word_limit_is_refused_but_the_reviewer_table_is_not_counted():
+    padding = "\n" + " ".join(["detail"] * C.BODY_MAX_WORDS) + "\n"
+    long_body = good_body().replace("## How it was verified", padding + "\n## How it was verified")
+    assert any("words outside the reviewer table" in e for e in C.check(long_body, []))
+    assert not any("outside the reviewer table" in e for e in C.check(good_body(), []))
+
+
+def test_a_long_reviewer_result_is_refused():
+    long = " ".join(["finding"] * 26)
+    assert any("`rules-auditor`" in e and "26 words" in e for e in C.check(good_body({"rules-auditor": ("yes", long, "")}), []))
+    assert not any("words; the limit" in e for e in C.check(good_body({"rules-auditor": ("yes", " ".join(["ok"] * 25), "")}), []))
